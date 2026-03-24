@@ -86,6 +86,7 @@ const saveBadge = computed(() => {
 function normalizeNode(node: WorkspaceNode): WorkspaceNode {
     return {
         ...node,
+        content: node.content ?? "",
         label: node.label ?? node.title,
         minWidth: node.minWidth ?? 260,
         minHeight: node.minHeight ?? 180,

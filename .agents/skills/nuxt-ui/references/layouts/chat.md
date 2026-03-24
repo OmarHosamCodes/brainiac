@@ -30,44 +30,44 @@ pnpm add ai @ai-sdk/gateway @ai-sdk/vue
 ### Server endpoint
 
 ```ts [server/api/chat.post.ts]
-import { streamText, convertToModelMessages } from 'ai'
-import { gateway } from '@ai-sdk/gateway'
+import { streamText, convertToModelMessages } from "ai";
+import { gateway } from "@ai-sdk/gateway";
 
 export default defineEventHandler(async (event) => {
-  const { messages } = await readBody(event)
+  const { messages } = await readBody(event);
 
   return streamText({
-    model: gateway('anthropic/claude-sonnet-4.6'),
-    system: 'You are a helpful assistant.',
-    messages: await convertToModelMessages(messages)
-  }).toUIMessageStreamResponse()
-})
+    model: gateway("anthropic/claude-sonnet-4.6"),
+    system: "You are a helpful assistant.",
+    messages: await convertToModelMessages(messages),
+  }).toUIMessageStreamResponse();
+});
 ```
 
 ## Full page chat
 
 ```vue [pages/chat/[id].vue]
 <script setup lang="ts">
-import { isReasoningUIPart, isTextUIPart, isToolUIPart, getToolName } from 'ai'
-import { Chat } from '@ai-sdk/vue'
-import { isReasoningStreaming, isToolStreaming } from '@nuxt/ui/utils/ai'
+import { isReasoningUIPart, isTextUIPart, isToolUIPart, getToolName } from "ai";
+import { Chat } from "@ai-sdk/vue";
+import { isReasoningStreaming, isToolStreaming } from "@nuxt/ui/utils/ai";
 
-definePageMeta({ layout: 'dashboard' })
+definePageMeta({ layout: "dashboard" });
 
-const input = ref('')
+const input = ref("");
 
 const chat = new Chat({
   onError(error) {
-    console.error(error)
-  }
-})
+    console.error(error);
+  },
+});
 
 function onSubmit() {
-  if (!input.value.trim()) return
+  if (!input.value.trim()) return;
 
-  chat.sendMessage({ text: input.value })
+  chat.sendMessage({ text: input.value });
 
-  input.value = ''
+  input.value = "";
 }
 </script>
 
@@ -81,7 +81,10 @@ function onSubmit() {
       <UContainer>
         <UChatMessages :messages="chat.messages" :status="chat.status">
           <template #content="{ message }">
-            <template v-for="(part, index) in message.parts" :key="`${message.id}-${part.type}-${index}`">
+            <template
+              v-for="(part, index) in message.parts"
+              :key="`${message.id}-${part.type}-${index}`"
+            >
               <UChatReasoning
                 v-if="isReasoningUIPart(part)"
                 :text="part.text"
@@ -115,7 +118,11 @@ function onSubmit() {
     <template #footer>
       <UContainer class="pb-4 sm:pb-6">
         <UChatPrompt v-model="input" :error="chat.error" @submit="onSubmit">
-          <UChatPromptSubmit :status="chat.status" @stop="chat.stop()" @reload="chat.regenerate()" />
+          <UChatPromptSubmit
+            :status="chat.status"
+            @stop="chat.stop()"
+            @reload="chat.regenerate()"
+          />
         </UChatPrompt>
       </UContainer>
     </template>
@@ -129,10 +136,10 @@ function onSubmit() {
 
 Scrollable message list with auto-scroll and loading indicator.
 
-| Prop | Description |
-|---|---|
-| `messages` | Array of AI SDK messages |
-| `status` | `'submitted'`, `'streaming'`, `'ready'`, `'error'` |
+| Prop       | Description                                        |
+| ---------- | -------------------------------------------------- |
+| `messages` | Array of AI SDK messages                           |
+| `status`   | `'submitted'`, `'streaming'`, `'ready'`, `'error'` |
 
 Slots: `#content` (receives `{ message }`), `#actions` (per-message), `#indicator` (loading)
 
@@ -140,20 +147,20 @@ Slots: `#content` (receives `{ message }`), `#actions` (per-message), `#indicato
 
 Individual message bubble with avatar, actions, and slots.
 
-| Prop | Description |
-|---|---|
-| `message` | AI SDK UIMessage object |
-| `side` | `'left'` (default), `'right'` |
+| Prop      | Description                   |
+| --------- | ----------------------------- |
+| `message` | AI SDK UIMessage object       |
+| `side`    | `'left'` (default), `'right'` |
 
 ### ChatReasoning
 
 Collapsible block for AI reasoning / thinking process. Auto-opens during streaming, auto-closes when done.
 
-| Prop | Description |
-|---|---|
-| `text` | Reasoning text (displayed inside collapsible content) |
-| `streaming` | Whether reasoning is actively streaming |
-| `open` | Controlled open state |
+| Prop        | Description                                           |
+| ----------- | ----------------------------------------------------- |
+| `text`      | Reasoning text (displayed inside collapsible content) |
+| `streaming` | Whether reasoning is actively streaming               |
+| `open`      | Controlled open state                                 |
 
 Use `isReasoningStreaming(message, index, chat)` from `@nuxt/ui/utils/ai` to determine streaming state.
 
@@ -161,15 +168,15 @@ Use `isReasoningStreaming(message, index, chat)` from `@nuxt/ui/utils/ai` to det
 
 Collapsible block for AI tool invocation status.
 
-| Prop | Description |
-|---|---|
-| `text` | Tool status text (displayed in trigger) |
-| `icon` | Icon name |
-| `loading` | Show loading spinner on icon |
-| `streaming` | Whether tool is actively running |
-| `suffix` | Secondary text after label |
-| `variant` | `'inline'` (default), `'card'` |
-| `chevron` | `'trailing'` (default), `'leading'` |
+| Prop        | Description                             |
+| ----------- | --------------------------------------- |
+| `text`      | Tool status text (displayed in trigger) |
+| `icon`      | Icon name                               |
+| `loading`   | Show loading spinner on icon            |
+| `streaming` | Whether tool is actively running        |
+| `suffix`    | Secondary text after label              |
+| `variant`   | `'inline'` (default), `'card'`          |
+| `chevron`   | `'trailing'` (default), `'leading'`     |
 
 Use `isToolStreaming(part)` from `@nuxt/ui/utils/ai` to determine if a tool is still running.
 
@@ -181,10 +188,10 @@ Text shimmer animation for streaming states. Automatically used by ChatReasoning
 
 Enhanced textarea form for prompts. Accepts all Textarea props.
 
-| Prop | Description |
-|---|---|
-| `v-model` | Input text binding |
-| `error` | Error from chat instance |
+| Prop      | Description                                                      |
+| --------- | ---------------------------------------------------------------- |
+| `v-model` | Input text binding                                               |
+| `error`   | Error from chat instance                                         |
 | `variant` | `'outline'` (default), `'subtle'`, `'soft'`, `'ghost'`, `'none'` |
 
 Slots: `#default` (submit button), `#footer` (below input, e.g. model selector)
@@ -219,13 +226,13 @@ Layout wrapper for chat inside overlays (Modal, Slideover, Drawer).
 
 ```vue
 <script setup lang="ts">
-const input = ref('')
-const model = ref('claude-opus-4.6')
+const input = ref("");
+const model = ref("claude-opus-4.6");
 const models = [
-  { label: 'Claude Opus 4.6', value: 'claude-opus-4.6', icon: 'i-simple-icons-anthropic' },
-  { label: 'Gemini 3 Pro', value: 'gemini-3-pro', icon: 'i-simple-icons-googlegemini' },
-  { label: 'GPT-5', value: 'gpt-5', icon: 'i-simple-icons-openai' }
-]
+  { label: "Claude Opus 4.6", value: "claude-opus-4.6", icon: "i-simple-icons-anthropic" },
+  { label: "Gemini 3 Pro", value: "gemini-3-pro", icon: "i-simple-icons-googlegemini" },
+  { label: "GPT-5", value: "gpt-5", icon: "i-simple-icons-openai" },
+];
 </script>
 
 <template>
@@ -235,7 +242,7 @@ const models = [
     <template #footer>
       <USelect
         v-model="model"
-        :icon="models.find(m => m.value === model)?.icon"
+        :icon="models.find((m) => m.value === model)?.icon"
         placeholder="Select a model"
         variant="ghost"
         :items="models"

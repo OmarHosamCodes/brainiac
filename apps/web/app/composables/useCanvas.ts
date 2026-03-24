@@ -33,6 +33,11 @@ interface Camera {
 const GRID_SPACING = 28;
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 3;
+
+export type CanvasPointerDownOptions = {
+  /** Primary-button pan on empty canvas (caller decides what counts as empty). */
+  allowPrimaryPan?: boolean;
+};
 const ZOOM_SENSITIVITY = 0.0014;
 const ZOOM_STEP = 1.2;
 
@@ -215,14 +220,22 @@ export function useCanvas(viewportRef: Ref<HTMLElement | null>) {
     zoomTo(event.clientX, event.clientY, camera.zoom * zoomMultiplier);
   }
 
-  function onMouseDown(event: MouseEvent) {
-    if (event.button === 1 || (event.button === 0 && isSpacePressed.value)) {
+  function onMouseDown(event: MouseEvent, options?: CanvasPointerDownOptions) {
+    const shouldPrevent =
+      event.button === 1 ||
+      (event.button === 0 && isSpacePressed.value) ||
+      (event.button === 0 && options?.allowPrimaryPan);
+
+    if (shouldPrevent) {
       event.preventDefault();
     }
   }
 
-  function onPointerDown(event: PointerEvent) {
-    const shouldPan = event.button === 1 || (event.button === 0 && isSpacePressed.value);
+  function onPointerDown(event: PointerEvent, options?: CanvasPointerDownOptions) {
+    const shouldPan =
+      event.button === 1 ||
+      (event.button === 0 && isSpacePressed.value) ||
+      (event.button === 0 && options?.allowPrimaryPan);
 
     if (!shouldPan) {
       return;
@@ -256,7 +269,10 @@ export function useCanvas(viewportRef: Ref<HTMLElement | null>) {
   }
 
   function onPointerUp(event: PointerEvent) {
-    if (activePointerId === event.pointerId && viewportRef.value?.hasPointerCapture(event.pointerId)) {
+    if (
+      activePointerId === event.pointerId &&
+      viewportRef.value?.hasPointerCapture(event.pointerId)
+    ) {
       viewportRef.value?.releasePointerCapture(event.pointerId);
     }
 

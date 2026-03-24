@@ -1,5 +1,8 @@
 import { db } from "@brainiac/db";
-import { dashboardWorkspace } from "@brainiac/db/schema";
+import {
+  dashboardWorkspace,
+  type WorkspaceNodeRecord,
+} from "@brainiac/db/schema";
 import { eq } from "drizzle-orm";
 import type { RouterClient } from "@orpc/server";
 import { z } from "zod";

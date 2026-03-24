@@ -12,4 +12,5 @@ export const env = createEnv({
     NUXT_PUBLIC_SERVER_URL: z.url(),
   },
   emptyStringAsUndefined: true,
+  skipValidation: true,
 });
