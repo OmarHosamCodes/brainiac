@@ -1,0 +1,23 @@
+name: brainiac
+
+services:
+  postgres:
+    image: postgres
+    container_name: brainiac-postgres
+    environment:
+      POSTGRES_DB: brainiac
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - brainiac_postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  brainiac_postgres_data:

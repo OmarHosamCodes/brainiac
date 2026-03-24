@@ -1,0 +1,33 @@
+{
+  "name": "web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@brainiac/api": "workspace:*",
+    "@brainiac/auth": "workspace:*",
+    "@brainiac/env": "workspace:*",
+    "@nuxt/ui": "^4.5.1",
+    "@orpc/client": "catalog:",
+    "@orpc/server": "catalog:",
+    "@orpc/tanstack-query": "^1.13.6",
+    "@tanstack/vue-query": "^5.92.9",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "nuxt": "^4.4.2",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@brainiac/config": "workspace:*",
+    "@iconify-json/lucide": "^1.2.96",
+    "@tanstack/vue-query-devtools": "^6.1.5",
+    "tailwindcss": "^4.2.1",
+    "typescript": "catalog:"
+  }
+}

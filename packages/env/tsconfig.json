@@ -1,0 +1,3 @@
+{
+  "extends": "@brainiac/config/tsconfig.base.json"
+}

@@ -1,0 +1,24 @@
+{
+  "name": "@brainiac/auth",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {},
+  "dependencies": {
+    "@brainiac/db": "workspace:*",
+    "@brainiac/env": "workspace:*",
+    "better-auth": "catalog:",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@brainiac/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}
