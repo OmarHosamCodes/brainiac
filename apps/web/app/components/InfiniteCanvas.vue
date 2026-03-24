@@ -1,30 +1,82 @@
 <script setup lang="ts">
+import type { ContextMenuItem } from "@nuxt/ui";
 import {
   computed,
-  nextTick,
   onBeforeUnmount,
   onMounted,
-  onUpdated,
   ref,
   useTemplateRef,
+  watch,
   type CSSProperties,
 } from "vue";
-import { useCanvas, type CanvasRect } from "~/composables/useCanvas";
+import {
+  useCanvas,
+  type CanvasNodeModel,
+  type CanvasRect,
+} from "~/composables/useCanvas";
+
+type ResizeHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+
+type NodeInteraction = {
+  mode: "drag" | "resize";
+  nodeId: string;
+  pointerId: number;
+  startClientX: number;
+  startClientY: number;
+  selectedIds: string[];
+  startNodes: Map<string, CanvasNodeModel>;
+  handle?: ResizeHandle;
+};
+
+type CreateNodePayload = {
+  x: number;
+  y: number;
+};
+
+type ContextTarget = {
+  nodeId: string | null;
+  worldX: number;
+  worldY: number;
+};
 
 const MINIMAP_WIDTH = 224;
 const MINIMAP_HEIGHT = 160;
 const MINIMAP_PADDING = 12;
 const SCENE_PADDING = 160;
+const FIT_PADDING = 120;
+const NODE_MIN_WIDTH = 260;
+const NODE_MIN_HEIGHT = 180;
+
+const props = withDefaults(
+  defineProps<{
+    nodes: CanvasNodeModel[];
+    selectedNodeIds?: string[];
+  }>(),
+  {
+    selectedNodeIds: () => [],
+  },
+);
+
+const emit = defineEmits<{
+  "update:nodes": [nodes: CanvasNodeModel[]];
+  "update:selectedNodeIds": [selectedNodeIds: string[]];
+  "create-node": [payload: CreateNodePayload];
+  "edit-node": [payload: { nodeId: string }];
+  "remove-node": [payload: { nodeId: string }];
+}>();
 
 const shellRef = useTemplateRef<HTMLDivElement>("shellRef");
 const viewportRef = useTemplateRef<HTMLElement>("viewportRef");
-const worldRef = useTemplateRef<HTMLElement>("worldRef");
 
 const {
+  camera,
   canvasStyle,
   backgroundStyle,
+  centerOnWorldPoint,
+  fitToRect,
   isPanning,
   isSpacePressed,
+  screenToWorld,
   visibleWorldRect,
   zoomPercent,
   onLostPointerCapture,
@@ -39,77 +91,74 @@ const {
 } = useCanvas(viewportRef);
 
 const isFullscreen = ref(false);
-const nodeRects = ref<CanvasRect[]>([]);
+const activeInteraction = ref<NodeInteraction | null>(null);
+const minimapPointerId = ref<number | null>(null);
+const contextTarget = ref<ContextTarget>({
+  nodeId: null,
+  worldX: 0,
+  worldY: 0,
+});
+let handleWindowBlur: (() => void) | null = null;
 
-let fullscreenListener: (() => void) | null = null;
-let mutationObserver: MutationObserver | null = null;
-let resizeObserver: ResizeObserver | null = null;
-let measureFrame = 0;
+const selectedNodeIdSet = computed(() => new Set(props.selectedNodeIds));
+const selectedNodes = computed(() =>
+  props.nodes.filter((node) => selectedNodeIdSet.value.has(node.id)),
+);
 
-function getCanvasNodes() {
-  const world = worldRef.value;
+const resizeHandles = [
+  { edge: "nw", className: "left-0 top-0 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize" },
+  { edge: "n", className: "left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 cursor-ns-resize" },
+  { edge: "ne", className: "right-0 top-0 translate-x-1/2 -translate-y-1/2 cursor-nesw-resize" },
+  { edge: "e", className: "right-0 top-1/2 translate-x-1/2 -translate-y-1/2 cursor-ew-resize" },
+  { edge: "se", className: "bottom-0 right-0 translate-x-1/2 translate-y-1/2 cursor-nwse-resize" },
+  { edge: "s", className: "bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 cursor-ns-resize" },
+  { edge: "sw", className: "bottom-0 left-0 -translate-x-1/2 translate-y-1/2 cursor-nesw-resize" },
+  { edge: "w", className: "left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize" },
+] satisfies Array<{ edge: ResizeHandle; className: string }>;
 
-  if (!world) {
-    return [] as HTMLElement[];
-  }
-
-  const taggedNodes = Array.from(world.querySelectorAll<HTMLElement>("[data-canvas-node]"));
-
-  if (taggedNodes.length > 0) {
-    return taggedNodes;
-  }
-
-  return Array.from(world.children).filter(
-    (child): child is HTMLElement => child instanceof HTMLElement,
-  );
+function setSelection(nextSelection: string[]) {
+  emit("update:selectedNodeIds", [...new Set(nextSelection)]);
 }
 
-function syncNodeObservers(nodes: HTMLElement[]) {
-  if (!resizeObserver) {
-    resizeObserver = new ResizeObserver(() => scheduleMeasure());
-  }
-
-  resizeObserver.disconnect();
-
-  for (const node of nodes) {
-    resizeObserver.observe(node);
+function clearSelection() {
+  if (props.selectedNodeIds.length > 0) {
+    setSelection([]);
   }
 }
 
-function measureNodes() {
-  measureFrame = 0;
+function selectNode(nodeId: string, isToggle = false) {
+  if (isToggle) {
+    if (selectedNodeIdSet.value.has(nodeId)) {
+      setSelection(props.selectedNodeIds.filter((id) => id !== nodeId));
+      return;
+    }
 
-  const nodes = getCanvasNodes();
-  syncNodeObservers(nodes);
-
-  nodeRects.value = nodes
-    .map((node) => ({
-      x: node.offsetLeft,
-      y: node.offsetTop,
-      width: node.offsetWidth,
-      height: node.offsetHeight,
-    }))
-    .filter((node) => node.width > 0 && node.height > 0);
-}
-
-function scheduleMeasure() {
-  if (!import.meta.client || measureFrame) {
+    setSelection([...props.selectedNodeIds, nodeId]);
     return;
   }
 
-  measureFrame = window.requestAnimationFrame(measureNodes);
+  if (props.selectedNodeIds.length !== 1 || props.selectedNodeIds[0] !== nodeId) {
+    setSelection([nodeId]);
+  }
+}
+
+function getNodeHeading(node: CanvasNodeModel) {
+  return node.title?.trim() || node.label?.trim() || "Untitled node";
+}
+
+function onNodePointerDown(event: PointerEvent, nodeId: string) {
+  if (event.button !== 0 || isSpacePressed.value) {
+    return;
+  }
+
+  selectNode(nodeId, event.shiftKey);
 }
 
 function createRectUnion(rects: CanvasRect[]) {
   const [firstRect, ...rest] = rects;
 
   if (!firstRect) {
-    return {
-      x: -400,
-      y: -300,
-      width: 800,
-      height: 600,
-    } satisfies CanvasRect;
+    return null;
   }
 
   let minX = firstRect.x;
@@ -132,8 +181,293 @@ function createRectUnion(rects: CanvasRect[]) {
   } satisfies CanvasRect;
 }
 
+function frameSelection() {
+  const bounds = createRectUnion(selectedNodes.value);
+
+  if (bounds) {
+    fitToRect(bounds, FIT_PADDING);
+  }
+}
+
+function fitAllNodes() {
+  const bounds = createRectUnion(props.nodes);
+
+  if (bounds) {
+    fitToRect(bounds, FIT_PADDING);
+    return;
+  }
+
+  resetView();
+}
+
+function getNodeStyle(node: CanvasNodeModel): CSSProperties {
+  return {
+    left: `${node.x}px`,
+    top: `${node.y}px`,
+    width: `${node.width}px`,
+    height: `${node.height}px`,
+  };
+}
+
+function updateNodes(nextNodes: CanvasNodeModel[]) {
+  emit(
+    "update:nodes",
+    nextNodes.map((node) => ({
+      ...node,
+      minWidth: node.minWidth ?? NODE_MIN_WIDTH,
+      minHeight: node.minHeight ?? NODE_MIN_HEIGHT,
+    })),
+  );
+}
+
+function snapshotNodes(ids: string[]) {
+  return new Map(
+    props.nodes
+      .filter((node) => ids.includes(node.id))
+      .map((node) => [node.id, { ...node }]),
+  );
+}
+
+function beginDrag(event: PointerEvent, node: CanvasNodeModel) {
+  if (event.button !== 0 || isSpacePressed.value) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+
+  const selectedIds = selectedNodeIdSet.value.has(node.id) ? [...props.selectedNodeIds] : [node.id];
+  selectNode(node.id);
+
+  activeInteraction.value = {
+    mode: "drag",
+    nodeId: node.id,
+    pointerId: event.pointerId,
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    selectedIds,
+    startNodes: snapshotNodes(selectedIds),
+  };
+}
+
+function beginResize(event: PointerEvent, node: CanvasNodeModel, handle: ResizeHandle) {
+  if (event.button !== 0 || isSpacePressed.value) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  selectNode(node.id);
+
+  activeInteraction.value = {
+    mode: "resize",
+    nodeId: node.id,
+    pointerId: event.pointerId,
+    startClientX: event.clientX,
+    startClientY: event.clientY,
+    selectedIds: [node.id],
+    startNodes: snapshotNodes([node.id]),
+    handle,
+  };
+}
+
+function resizeNodeRect(node: CanvasNodeModel, deltaX: number, deltaY: number, handle: ResizeHandle) {
+  const minWidth = node.minWidth ?? NODE_MIN_WIDTH;
+  const minHeight = node.minHeight ?? NODE_MIN_HEIGHT;
+
+  let nextX = node.x;
+  let nextY = node.y;
+  let nextWidth = node.width;
+  let nextHeight = node.height;
+
+  if (handle.includes("e")) {
+    nextWidth = Math.max(minWidth, node.width + deltaX);
+  }
+
+  if (handle.includes("s")) {
+    nextHeight = Math.max(minHeight, node.height + deltaY);
+  }
+
+  if (handle.includes("w")) {
+    const widthFromWest = Math.max(minWidth, node.width - deltaX);
+    nextX = node.x + node.width - widthFromWest;
+    nextWidth = widthFromWest;
+  }
+
+  if (handle.includes("n")) {
+    const heightFromNorth = Math.max(minHeight, node.height - deltaY);
+    nextY = node.y + node.height - heightFromNorth;
+    nextHeight = heightFromNorth;
+  }
+
+  return {
+    ...node,
+    x: nextX,
+    y: nextY,
+    width: nextWidth,
+    height: nextHeight,
+  } satisfies CanvasNodeModel;
+}
+
+function onWindowPointerMove(event: PointerEvent) {
+  const interaction = activeInteraction.value;
+
+  if (!interaction || interaction.pointerId !== event.pointerId) {
+    return;
+  }
+
+  const deltaX = (event.clientX - interaction.startClientX) / camera.zoom;
+  const deltaY = (event.clientY - interaction.startClientY) / camera.zoom;
+
+  if (interaction.mode === "drag") {
+    updateNodes(
+      props.nodes.map((node) => {
+        const startNode = interaction.startNodes.get(node.id);
+
+        if (!startNode) {
+          return node;
+        }
+
+        return {
+          ...node,
+          x: startNode.x + deltaX,
+          y: startNode.y + deltaY,
+        };
+      }),
+    );
+
+    return;
+  }
+
+  const startNode = interaction.startNodes.get(interaction.nodeId);
+
+  if (!startNode || !interaction.handle) {
+    return;
+  }
+
+  updateNodes(
+    props.nodes.map((node) =>
+      node.id === interaction.nodeId
+        ? resizeNodeRect(startNode, deltaX, deltaY, interaction.handle)
+        : node,
+    ),
+  );
+}
+
+function endInteraction(pointerId?: number | null) {
+  if (!activeInteraction.value) {
+    return;
+  }
+
+  if (pointerId != null && activeInteraction.value.pointerId !== pointerId) {
+    return;
+  }
+
+  activeInteraction.value = null;
+}
+
+function onWindowPointerUp(event: PointerEvent) {
+  endInteraction(event.pointerId);
+}
+
+function onViewportPointerDown(event: PointerEvent) {
+  if (event.target === event.currentTarget && event.button === 0 && !isSpacePressed.value) {
+    clearSelection();
+  }
+
+  if (activeInteraction.value) {
+    return;
+  }
+
+  const shouldPan = event.button === 1 || (event.button === 0 && isSpacePressed.value);
+
+  if (shouldPan) {
+    const currentTarget = event.currentTarget as HTMLElement | null;
+
+    currentTarget?.setPointerCapture(event.pointerId);
+  }
+
+  if (shouldPan || event.target === event.currentTarget) {
+    onPointerDown(event);
+  }
+}
+
+function captureContextMenu(event: MouseEvent) {
+  const worldPoint = screenToWorld(event.clientX, event.clientY);
+
+  if (!worldPoint) {
+    return;
+  }
+
+  const nodeElement = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-canvas-node-id]");
+  const nodeId = nodeElement?.dataset.canvasNodeId ?? null;
+
+  contextTarget.value = {
+    nodeId,
+    worldX: worldPoint.x,
+    worldY: worldPoint.y,
+  };
+
+  if (nodeId) {
+    selectNode(nodeId);
+    return;
+  }
+
+  if (!isSpacePressed.value) {
+    clearSelection();
+  }
+}
+
+const contextMenuItems = computed<ContextMenuItem[][]>(() => {
+  const items: ContextMenuItem[][] = [
+    [
+      {
+        label: "Add node here",
+        icon: "i-lucide-plus",
+        onSelect: () => {
+          emit("create-node", {
+            x: contextTarget.value.worldX,
+            y: contextTarget.value.worldY,
+          });
+        },
+      },
+    ],
+  ];
+
+  if (contextTarget.value.nodeId) {
+    items.push([
+      {
+        label: "Edit node",
+        icon: "i-lucide-pencil",
+        onSelect: () => {
+          emit("edit-node", { nodeId: contextTarget.value.nodeId! });
+        },
+      },
+      {
+        label: "Remove node",
+        icon: "i-lucide-trash-2",
+        color: "error",
+        onSelect: () => {
+          emit("remove-node", { nodeId: contextTarget.value.nodeId! });
+        },
+      },
+    ]);
+  }
+
+  return items;
+});
+
 const minimapScene = computed(() => {
-  const union = createRectUnion([...nodeRects.value, visibleWorldRect.value]);
+  const union = createRectUnion([...props.nodes, visibleWorldRect.value]);
+
+  if (!union) {
+    return {
+      x: -400,
+      y: -300,
+      width: 800,
+      height: 600,
+    } satisfies CanvasRect;
+  }
 
   return {
     x: union.x - SCENE_PADDING,
@@ -156,8 +490,6 @@ function projectToMinimap(rect: CanvasRect, minimumWidth = 6, minimumHeight = 6)
   const bounds = minimapScene.value;
   const scale = minimapScale.value;
 
-  // The minimap uses the scene's union bounds as its local origin, so every
-  // world-space rectangle is translated into that frame and then scaled down.
   const left = MINIMAP_PADDING + (rect.x - bounds.x) * scale;
   const top = MINIMAP_PADDING + (rect.y - bounds.y) * scale;
   const width = Math.max(rect.width * scale, minimumWidth);
@@ -172,9 +504,10 @@ function projectToMinimap(rect: CanvasRect, minimumWidth = 6, minimumHeight = 6)
 }
 
 const minimapNodeRects = computed(() =>
-  nodeRects.value.map((rect, index) => ({
-    key: `node-${index}`,
-    ...projectToMinimap(rect),
+  props.nodes.map((node) => ({
+    key: node.id,
+    selected: selectedNodeIdSet.value.has(node.id),
+    ...projectToMinimap(node),
   })),
 );
 
@@ -194,6 +527,65 @@ const viewportClasses = computed(() => ({
 
 const controlButtonClass =
   "inline-flex size-10 items-center justify-center rounded-2xl border border-muted/70 bg-elevated/90 text-highlighted transition hover:border-primary/60 hover:bg-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50";
+
+const canFrameSelection = computed(() => selectedNodes.value.length > 0);
+
+function focusNode(nodeId: string) {
+  const node = props.nodes.find((item) => item.id === nodeId);
+
+  if (node) {
+    fitToRect(node, FIT_PADDING);
+  }
+}
+
+function navigateFromMinimap(event: PointerEvent) {
+  const target = event.currentTarget as HTMLElement | null;
+
+  if (!target) {
+    return;
+  }
+
+  const rect = target.getBoundingClientRect();
+  const localX = Math.min(Math.max(event.clientX - rect.left, MINIMAP_PADDING), rect.width - MINIMAP_PADDING);
+  const localY = Math.min(Math.max(event.clientY - rect.top, MINIMAP_PADDING), rect.height - MINIMAP_PADDING);
+  const worldX = minimapScene.value.x + (localX - MINIMAP_PADDING) / minimapScale.value;
+  const worldY = minimapScene.value.y + (localY - MINIMAP_PADDING) / minimapScale.value;
+
+  centerOnWorldPoint(worldX, worldY);
+}
+
+function onMinimapPointerDown(event: PointerEvent) {
+  if (event.button !== 0) {
+    return;
+  }
+
+  event.preventDefault();
+  minimapPointerId.value = event.pointerId;
+  (event.currentTarget as HTMLElement | null)?.setPointerCapture(event.pointerId);
+  navigateFromMinimap(event);
+}
+
+function onMinimapPointerMove(event: PointerEvent) {
+  if (minimapPointerId.value !== event.pointerId) {
+    return;
+  }
+
+  navigateFromMinimap(event);
+}
+
+function releaseMinimapPointer(event: PointerEvent) {
+  if (minimapPointerId.value !== event.pointerId) {
+    return;
+  }
+
+  const target = event.currentTarget as HTMLElement | null;
+
+  if (target?.hasPointerCapture(event.pointerId)) {
+    target.releasePointerCapture(event.pointerId);
+  }
+
+  minimapPointerId.value = null;
+}
 
 async function toggleFullscreen() {
   if (!import.meta.client || !shellRef.value) {
@@ -220,39 +612,34 @@ function syncFullscreenState() {
   isFullscreen.value = document.fullscreenElement === shellRef.value;
 }
 
-onMounted(async () => {
-  await nextTick();
-  scheduleMeasure();
+watch(
+  () => props.nodes.map((node) => node.id),
+  (nodeIds) => {
+    const nextSelection = props.selectedNodeIds.filter((nodeId) => nodeIds.includes(nodeId));
 
-  if (worldRef.value) {
-    mutationObserver = new MutationObserver(() => scheduleMeasure());
-    mutationObserver.observe(worldRef.value, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ["style", "class"],
-    });
-  }
+    if (nextSelection.length !== props.selectedNodeIds.length) {
+      setSelection(nextSelection);
+    }
+  },
+);
 
-  fullscreenListener = () => syncFullscreenState();
-  document.addEventListener("fullscreenchange", fullscreenListener);
+onMounted(() => {
+  document.addEventListener("fullscreenchange", syncFullscreenState);
+  window.addEventListener("pointermove", onWindowPointerMove);
+  window.addEventListener("pointerup", onWindowPointerUp);
+  window.addEventListener("pointercancel", onWindowPointerUp);
+  handleWindowBlur = () => endInteraction();
+  window.addEventListener("blur", handleWindowBlur);
   syncFullscreenState();
 });
 
-onUpdated(() => {
-  scheduleMeasure();
-});
-
 onBeforeUnmount(() => {
-  mutationObserver?.disconnect();
-  resizeObserver?.disconnect();
-
-  if (measureFrame) {
-    window.cancelAnimationFrame(measureFrame);
-  }
-
-  if (fullscreenListener) {
-    document.removeEventListener("fullscreenchange", fullscreenListener);
+  document.removeEventListener("fullscreenchange", syncFullscreenState);
+  window.removeEventListener("pointermove", onWindowPointerMove);
+  window.removeEventListener("pointerup", onWindowPointerUp);
+  window.removeEventListener("pointercancel", onWindowPointerUp);
+  if (handleWindowBlur) {
+    window.removeEventListener("blur", handleWindowBlur);
   }
 });
 </script>
@@ -262,21 +649,83 @@ onBeforeUnmount(() => {
     ref="shellRef"
     class="workspace-shell relative h-full min-h-0 overflow-hidden rounded-[2rem] border border-muted/60 bg-default"
   >
-    <div
-      ref="viewportRef"
-      class="canvas-viewport absolute inset-0"
-      :class="viewportClasses"
-      :style="backgroundStyle"
-      @mousedown="onMouseDown"
-      @pointerdown="onPointerDown"
-      @pointermove="onPointerMove"
-      @pointerup="onPointerUp"
-      @pointercancel="onPointerUp"
-      @lostpointercapture="onLostPointerCapture"
-      @wheel="onWheel"
-    >
-      <div ref="worldRef" class="canvas-plane" :style="canvasStyle">
-        <slot />
+    <UContextMenu :items="contextMenuItems" :modal="false">
+      <div
+        ref="viewportRef"
+        class="canvas-viewport absolute inset-0"
+        :class="viewportClasses"
+        :style="backgroundStyle"
+        @contextmenu.capture="captureContextMenu"
+        @mousedown="onMouseDown"
+        @pointerdown="onViewportPointerDown"
+        @pointermove="onPointerMove"
+        @pointerup="onPointerUp"
+        @pointercancel="onPointerUp"
+        @lostpointercapture="onLostPointerCapture"
+        @wheel="onWheel"
+      >
+        <div class="canvas-plane" :style="canvasStyle">
+          <article
+            v-for="node in props.nodes"
+            :key="node.id"
+            class="canvas-node absolute"
+            :class="{ 'is-selected': selectedNodeIdSet.has(node.id) }"
+            :style="getNodeStyle(node)"
+            :data-canvas-node-id="node.id"
+            data-canvas-node
+            @pointerdown.stop="onNodePointerDown($event, node.id)"
+            @dblclick.stop="focusNode(node.id)"
+          >
+            <div class="canvas-node-shell relative flex h-full flex-col rounded-[1.5rem] border border-muted/60 bg-default/85 shadow-[0_24px_80px_rgba(15,23,42,0.14)] backdrop-blur-sm">
+              <div class="canvas-node-toolbar flex items-center justify-between gap-3 border-b border-muted/60 px-4 py-3">
+                <button
+                  type="button"
+                  class="drag-handle inline-flex items-center gap-2 rounded-full border border-muted/70 bg-elevated/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-toned transition hover:border-primary/60 hover:text-highlighted"
+                  @pointerdown="beginDrag($event, node)"
+                >
+                  <UIcon name="i-lucide-grip" class="size-3.5" />
+                  {{ getNodeHeading(node) }}
+                </button>
+
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1 rounded-full border border-transparent px-2 py-1 text-xs text-muted transition hover:border-muted/70 hover:bg-elevated/70 hover:text-highlighted"
+                  @click.stop="focusNode(node.id)"
+                >
+                  <UIcon name="i-lucide-scan-search" class="size-3.5" />
+                  Focus
+                </button>
+              </div>
+
+              <div class="canvas-node-content min-h-0 flex-1 p-1.5">
+                <slot name="node" :node="node" :selected="selectedNodeIdSet.has(node.id)" />
+              </div>
+
+              <button
+                v-for="handle in resizeHandles"
+                v-show="selectedNodeIdSet.has(node.id)"
+                :key="`${node.id}-${handle.edge}`"
+                type="button"
+                class="resize-handle absolute z-20 size-4 rounded-full border border-primary/70 bg-default shadow-sm"
+                :class="handle.className"
+                :aria-label="`Resize ${getNodeHeading(node)} from ${handle.edge}`"
+                @pointerdown="beginResize($event, node, handle.edge)"
+              />
+            </div>
+          </article>
+        </div>
+      </div>
+    </UContextMenu>
+
+    <div v-if="!props.nodes.length" class="pointer-events-none absolute inset-0 flex items-center justify-center px-6">
+      <div class="empty-state max-w-md rounded-[2rem] border border-dashed border-muted/70 bg-default/80 p-8 text-center shadow-xl shadow-black/5 backdrop-blur-md">
+        <div class="mx-auto inline-flex size-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary">
+          <UIcon name="i-lucide-layout-panel-top" class="size-6" />
+        </div>
+        <h3 class="mt-5 text-2xl font-semibold text-highlighted">Start with an empty workspace</h3>
+        <p class="mt-3 text-sm leading-6 text-toned">
+          Right-click anywhere on the canvas to add your first node. Every card is user-defined, so each workspace can evolve independently.
+        </p>
       </div>
     </div>
 
@@ -286,11 +735,10 @@ onBeforeUnmount(() => {
           Infinite Workspace
         </p>
         <h2 class="mt-3 font-serif text-2xl leading-tight text-highlighted">
-          Navigate the dashboard like a living surface.
+          Right-click to create nodes, then shape the board around your own workflow.
         </h2>
         <p class="mt-3 text-sm leading-6 text-toned">
-          Pan with middle mouse or hold Space and drag. Mouse-wheel zoom stays anchored to the cursor,
-          so inspection feels local instead of snapping toward the corner.
+          Drag cards from their chrome bar, resize from any edge, and use the minimap to move across the plane without losing orientation.
         </p>
       </div>
 
@@ -312,6 +760,20 @@ onBeforeUnmount(() => {
           <UIcon name="i-lucide-rotate-ccw" class="size-4" />
         </button>
 
+        <button type="button" :class="controlButtonClass" aria-label="Fit all nodes" @click="fitAllNodes">
+          <UIcon name="i-lucide-scan" class="size-4" />
+        </button>
+
+        <button
+          type="button"
+          :class="controlButtonClass"
+          :disabled="!canFrameSelection"
+          aria-label="Frame selection"
+          @click="frameSelection"
+        >
+          <UIcon name="i-lucide-focus" class="size-4" />
+        </button>
+
         <button
           type="button"
           :class="controlButtonClass"
@@ -327,18 +789,29 @@ onBeforeUnmount(() => {
       <div class="flex items-center justify-between gap-3 border-b border-muted/60 px-4 py-3">
         <div>
           <p class="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted">Mini-map</p>
-          <p class="mt-1 text-xs text-toned">{{ minimapNodeRects.length }} nodes in view</p>
+          <p class="mt-1 text-xs text-toned">
+            {{ props.nodes.length }} nodes, {{ selectedNodes.length || 0 }} selected
+          </p>
         </div>
         <div class="rounded-full border border-muted/60 bg-elevated/80 px-3 py-1 text-xs font-medium text-toned">
           {{ zoomPercent }}%
         </div>
       </div>
 
-      <div class="minimap-surface relative overflow-hidden" :style="minimapSceneStyle">
+      <div
+        class="minimap-surface relative overflow-hidden"
+        :style="minimapSceneStyle"
+        @pointerdown="onMinimapPointerDown"
+        @pointermove="onMinimapPointerMove"
+        @pointerup="releaseMinimapPointer"
+        @pointercancel="releaseMinimapPointer"
+        @lostpointercapture="releaseMinimapPointer"
+      >
         <div
           v-for="node in minimapNodeRects"
           :key="node.key"
-          class="absolute rounded-md border border-primary/60 bg-primary/20"
+          class="absolute rounded-md border bg-primary/20"
+          :class="node.selected ? 'border-primary bg-primary/35' : 'border-primary/60'"
           :style="{
             left: `${node.left}px`,
             top: `${node.top}px`,
@@ -392,8 +865,45 @@ onBeforeUnmount(() => {
   height: 0;
 }
 
+.canvas-node {
+  will-change: transform, width, height;
+}
+
+.canvas-node-shell {
+  height: 100%;
+}
+
+.canvas-node.is-selected .canvas-node-shell {
+  border-color: color-mix(in srgb, var(--ui-primary) 55%, var(--ui-border));
+  box-shadow: 0 28px 100px rgba(16, 24, 40, 0.18), 0 0 0 1px color-mix(in srgb, var(--ui-primary) 35%, transparent);
+}
+
+.drag-handle {
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.resize-handle {
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+
+.canvas-node.is-selected .resize-handle {
+  opacity: 1;
+}
+
 .minimap-surface {
+  cursor: crosshair;
   background-color: color-mix(in srgb, var(--ui-bg-elevated) 82%, black 18%);
   background-image: radial-gradient(var(--ui-border) 1px, transparent 1px);
+}
+
+.empty-state {
+  background-image:
+    linear-gradient(180deg, color-mix(in srgb, var(--ui-bg-elevated) 72%, transparent), transparent),
+    radial-gradient(circle at top, color-mix(in srgb, var(--ui-primary) 10%, transparent), transparent 60%);
 }
 </style>

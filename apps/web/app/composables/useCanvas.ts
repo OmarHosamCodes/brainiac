@@ -15,6 +15,15 @@ export interface CanvasRect {
   height: number;
 }
 
+export interface CanvasNodeModel extends CanvasRect {
+  id: string;
+  label?: string;
+  title?: string;
+  content?: string;
+  minWidth?: number;
+  minHeight?: number;
+}
+
 interface Camera {
   x: number;
   y: number;
@@ -52,6 +61,14 @@ export function useCanvas(viewportRef: Ref<HTMLElement | null>) {
 
   function clampZoom(nextZoom: number) {
     return Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, nextZoom));
+  }
+
+  function applyCamera(nextX: number, nextY: number, nextZoom = camera.zoom) {
+    camera.x = nextX;
+    camera.y = nextY;
+    camera.zoom = clampZoom(nextZoom);
+    pendingPanX = 0;
+    pendingPanY = 0;
   }
 
   function flushPan() {
@@ -102,6 +119,53 @@ export function useCanvas(viewportRef: Ref<HTMLElement | null>) {
     };
   }
 
+  function screenToWorld(clientX: number, clientY: number) {
+    const viewport = viewportRef.value;
+
+    if (!viewport) {
+      return null;
+    }
+
+    const rect = viewport.getBoundingClientRect();
+    const pointerX = clientX - rect.left;
+    const pointerY = clientY - rect.top;
+
+    return {
+      x: (pointerX - camera.x) / camera.zoom,
+      y: (pointerY - camera.y) / camera.zoom,
+    };
+  }
+
+  function centerOnWorldPoint(worldX: number, worldY: number, targetZoom = camera.zoom) {
+    const nextZoom = clampZoom(targetZoom);
+
+    applyCamera(
+      viewportSize.width / 2 - worldX * nextZoom,
+      viewportSize.height / 2 - worldY * nextZoom,
+      nextZoom,
+    );
+  }
+
+  function fitToRect(rect: CanvasRect, padding = 120) {
+    if (!viewportSize.width || !viewportSize.height) {
+      return;
+    }
+
+    const availableWidth = Math.max(viewportSize.width - padding * 2, 1);
+    const availableHeight = Math.max(viewportSize.height - padding * 2, 1);
+    const targetZoom = Math.min(
+      availableWidth / Math.max(rect.width, 1),
+      availableHeight / Math.max(rect.height, 1),
+    );
+
+    const centerX = rect.x + rect.width / 2;
+    const centerY = rect.y + rect.height / 2;
+
+    // Fit uses the rect center as the destination focal point, then derives the
+    // zoom that allows the full rect to live inside the viewport padding.
+    centerOnWorldPoint(centerX, centerY, targetZoom);
+  }
+
   function zoomTo(clientX: number, clientY: number, targetZoom: number) {
     const viewport = viewportRef.value;
 
@@ -121,9 +185,7 @@ export function useCanvas(viewportRef: Ref<HTMLElement | null>) {
 
     // After changing scale, translate the world so the exact same world point
     // stays under the cursor. This is the core zoom-to-cursor relationship.
-    camera.zoom = nextZoom;
-    camera.x = pointerX - worldX * nextZoom;
-    camera.y = pointerY - worldY * nextZoom;
+    applyCamera(pointerX - worldX * nextZoom, pointerY - worldY * nextZoom, nextZoom);
   }
 
   function zoomBy(multiplier: number, anchor = getViewportAnchor()) {
@@ -143,11 +205,7 @@ export function useCanvas(viewportRef: Ref<HTMLElement | null>) {
   }
 
   function resetView() {
-    camera.x = 0;
-    camera.y = 0;
-    camera.zoom = 1;
-    pendingPanX = 0;
-    pendingPanY = 0;
+    applyCamera(0, 0, 1);
   }
 
   function onWheel(event: WheelEvent) {
@@ -299,6 +357,9 @@ export function useCanvas(viewportRef: Ref<HTMLElement | null>) {
     visibleWorldRect,
     viewportSize,
     zoomPercent: computed(() => Math.round(camera.zoom * 100)),
+    centerOnWorldPoint,
+    fitToRect,
+    screenToWorld,
     onMouseDown,
     onPointerDown,
     onPointerMove,
