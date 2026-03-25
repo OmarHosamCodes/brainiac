@@ -202,6 +202,7 @@ export function useWorkspaceBoard() {
       updatedAt: timestamp,
       tabs: [createDefaultWorkspaceTab("Overview", content)],
       customBlockTemplates: [],
+      viewState: {},
     });
 
     nodes.value = [...nodes.value, nextNode];

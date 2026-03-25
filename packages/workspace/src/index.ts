@@ -161,6 +161,11 @@ export const workspaceNodeTabSchema = z.object({
   updatedAt: isoTimestampSchema,
 });
 
+export const workspaceNodeViewStateSchema = z.object({
+  activeTabId: z.string().min(1).nullable().optional(),
+  notePreviewState: z.record(z.string(), z.boolean()).default({}),
+});
+
 export const workspaceNodeSchema = z.object({
   id: z.string().min(1),
   title: z.string().trim().min(1).max(120),
@@ -179,6 +184,10 @@ export const workspaceNodeSchema = z.object({
     .array(workspaceCustomBlockTemplateSchema)
     .max(WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT)
     .default([]),
+  viewState: workspaceNodeViewStateSchema.default({
+    activeTabId: null,
+    notePreviewState: {},
+  }),
 });
 
 export const workspaceSaveInputSchema = z.object({
@@ -213,6 +222,7 @@ export type WorkspaceTimeOrchestratorBlock = z.infer<
 export type WorkspaceCustomBlock = z.infer<typeof workspaceCustomBlockSchema>;
 export type WorkspaceBlock = z.infer<typeof workspaceBlockSchema>;
 export type WorkspaceNodeTab = z.infer<typeof workspaceNodeTabSchema>;
+export type WorkspaceNodeViewState = z.infer<typeof workspaceNodeViewStateSchema>;
 export type WorkspaceNode = z.infer<typeof workspaceNodeSchema>;
 export type WorkspaceSaveInput = z.infer<typeof workspaceSaveInputSchema>;
 export type WorkspaceCustomBlockValue = z.infer<
@@ -460,6 +470,15 @@ export function createWorkspaceNodeTab(
   });
 }
 
+export function createWorkspaceNodeViewState(
+  partial: Partial<WorkspaceNodeViewState> = {},
+): WorkspaceNodeViewState {
+  return workspaceNodeViewStateSchema.parse({
+    activeTabId: partial.activeTabId ?? null,
+    notePreviewState: partial.notePreviewState ?? {},
+  });
+}
+
 export function createDefaultWorkspaceTab(title = "Overview", body = "") {
   return createWorkspaceNodeTab({
     title,
@@ -529,12 +548,28 @@ export function normalizeWorkspaceNode(node: WorkspaceNode): WorkspaceNode {
     content: node.content ?? "",
     tabs: node.tabs ?? [],
     customBlockTemplates: node.customBlockTemplates ?? [],
+    viewState: node.viewState ?? {},
   });
 
   const tabs =
     parsed.tabs.length > 0
       ? parsed.tabs.map((tab) => normalizeWorkspaceNodeTab(tab))
       : [createDefaultWorkspaceTab("Overview", parsed.content)];
+  const validTabIds = new Set(tabs.map((tab) => tab.id));
+  const noteBlockIds = new Set(
+    tabs.flatMap((tab) =>
+      tab.blocks.flatMap((block) => (block.type === "notes" ? [block.id] : [])),
+    ),
+  );
+  const activeTabId =
+    parsed.viewState.activeTabId && validTabIds.has(parsed.viewState.activeTabId)
+      ? parsed.viewState.activeTabId
+      : tabs[0]?.id ?? null;
+  const notePreviewState = Object.fromEntries(
+    Object.entries(parsed.viewState.notePreviewState ?? {}).filter(([blockId]) =>
+      noteBlockIds.has(blockId),
+    ),
+  );
 
   return {
     ...parsed,
@@ -550,6 +585,10 @@ export function normalizeWorkspaceNode(node: WorkspaceNode): WorkspaceNode {
         aiPromptTemplate: template.aiPromptTemplate ?? null,
       }),
     ),
+    viewState: createWorkspaceNodeViewState({
+      activeTabId,
+      notePreviewState,
+    }),
   };
 }
 

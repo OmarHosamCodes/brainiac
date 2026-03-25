@@ -66,12 +66,10 @@ const saveWorkspace = useMutation(orpc.workspace.save.mutationOptions());
 
 const nodeId = computed(() => String(route.params.id ?? ""));
 const draftNodes = ref<WorkspaceNode[]>([]);
-const activeTabId = ref("");
 const loadApplied = ref(false);
 const isHydrating = ref(false);
 const saveState = ref<SaveState>("idle");
 const saveError = ref<string | null>(null);
-const notePreviewState = ref<Record<string, boolean>>({});
 const emptyDropdownItems: DropdownMenuItem[][] = [];
 
 const tabEditor = reactive({
@@ -103,6 +101,8 @@ const workspaceReadyForEdits = computed(
 const node = computed(() => {
   return draftNodes.value.find((entry) => entry.id === nodeId.value) ?? null;
 });
+
+const activeTabId = computed(() => node.value?.viewState.activeTabId ?? "");
 
 const activeTab = computed(() => {
   if (!node.value) {
@@ -281,13 +281,30 @@ function syncActiveTab() {
   const currentNode = node.value;
 
   if (!currentNode || currentNode.tabs.length === 0) {
-    activeTabId.value = "";
     return;
   }
 
   if (!currentNode.tabs.some((tab) => tab.id === activeTabId.value)) {
-    activeTabId.value = currentNode.tabs[0]?.id ?? "";
+    const nextTabId = currentNode.tabs[0]?.id ?? null;
+
+    if (currentNode.viewState.activeTabId === nextTabId) {
+      return;
+    }
+
+    mutateCurrentNode((entry) => {
+      entry.viewState.activeTabId = nextTabId;
+    });
   }
+}
+
+function setActiveTab(tabId: string) {
+  if (!node.value || node.value.viewState.activeTabId === tabId) {
+    return;
+  }
+
+  mutateCurrentNode((entry) => {
+    entry.viewState.activeTabId = tabId;
+  });
 }
 
 async function persistWorkspace(snapshot: WorkspaceNode[]) {
@@ -419,9 +436,8 @@ function submitTabEditor() {
 
     mutateCurrentNode((entry) => {
       entry.tabs.push(nextTab);
+      entry.viewState.activeTabId = nextTab.id;
     });
-
-    activeTabId.value = nextTab.id;
   } else if (activeTab.value) {
     mutateTab(activeTab.value.id, (tab) => {
       tab.title = title;
@@ -449,14 +465,14 @@ function deleteActiveTab() {
     if (entry.tabs.length === 0) {
       const fallbackTab = createDefaultWorkspaceTab("Overview", entry.content);
       entry.tabs = [fallbackTab];
-      activeTabId.value = fallbackTab.id;
+      entry.viewState.activeTabId = fallbackTab.id;
       return;
     }
 
     const nextTab =
       entry.tabs[currentIndex] ?? entry.tabs[Math.max(0, currentIndex - 1)] ?? entry.tabs[0];
 
-    activeTabId.value = nextTab?.id ?? "";
+    entry.viewState.activeTabId = nextTab?.id ?? null;
   });
 }
 
@@ -754,10 +770,16 @@ function runCustomPrompt(tabId: string, blockId: string) {
 }
 
 function toggleNotePreview(blockId: string) {
-  notePreviewState.value = {
-    ...notePreviewState.value,
-    [blockId]: !notePreviewState.value[blockId],
-  };
+  mutateCurrentNode((entry) => {
+    entry.viewState.notePreviewState = {
+      ...entry.viewState.notePreviewState,
+      [blockId]: !entry.viewState.notePreviewState?.[blockId],
+    };
+  });
+}
+
+function isNotePreviewEnabled(blockId: string) {
+  return Boolean(node.value?.viewState.notePreviewState?.[blockId]);
 }
 
 function createTemplateFieldDraft(): TemplateFieldDraft {
@@ -1168,7 +1190,7 @@ function renderNotesPreview(input: string) {
                           ? 'border-primary/40 bg-primary/10 text-primary'
                           : 'border-muted/60 bg-elevated/70 text-toned hover:border-primary/30 hover:text-highlighted'
                       "
-                      @click="activeTabId = tab.id"
+                      @click="setActiveTab(tab.id)"
                     >
                       {{ getDisplayTabTitle(tab) }}
                     </button>
@@ -1386,15 +1408,15 @@ function renderNotesPreview(input: string) {
                         <UButton
                           color="neutral"
                           variant="ghost"
-                          :icon="notePreviewState[block.id] ? 'i-lucide-pencil' : 'i-lucide-eye'"
+                          :icon="isNotePreviewEnabled(block.id) ? 'i-lucide-pencil' : 'i-lucide-eye'"
                           @click="toggleNotePreview(block.id)"
                         >
-                          {{ notePreviewState[block.id] ? "Edit" : "Preview" }}
+                          {{ isNotePreviewEnabled(block.id) ? "Edit" : "Preview" }}
                         </UButton>
                       </div>
 
                       <div
-                        v-if="notePreviewState[block.id]"
+                        v-if="isNotePreviewEnabled(block.id)"
                         class="prose prose-sm max-w-none rounded-2xl border border-muted/60 bg-elevated/30 p-4 text-toned"
                         v-html="renderNotesPreview(block.body)"
                       />
