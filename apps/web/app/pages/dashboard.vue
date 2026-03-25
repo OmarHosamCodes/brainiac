@@ -48,7 +48,7 @@ const {
                 >
                     <template #node="{ node, selected }">
                         <WorkspaceNodeCard
-                            :content="node.content"
+                            :node="node"
                             :selected="selected"
                         />
                     </template>

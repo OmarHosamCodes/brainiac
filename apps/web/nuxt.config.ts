@@ -12,6 +12,18 @@ export default defineNuxtConfig({
   devServer: {
     port: 3001,
   },
+  vite: {
+    optimizeDeps: {
+      include: [
+        "@tanstack/vue-query-devtools",
+        "better-auth/vue",
+        "@orpc/client",
+        "@orpc/client/fetch",
+        "@orpc/tanstack-query",
+        "@tanstack/vue-query",
+      ],
+    },
+  },
   runtimeConfig: {
     public: {
       serverUrl: process.env.NUXT_PUBLIC_SERVER_URL,

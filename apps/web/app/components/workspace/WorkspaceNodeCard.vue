@@ -1,13 +1,22 @@
 <script setup lang="ts">
-defineProps<{
-  content: string;
+import {
+  getWorkspaceNodePreview,
+  getWorkspaceNodeStats,
+  type WorkspaceNode,
+} from "@brainiac/workspace";
+
+const props = defineProps<{
+  node: WorkspaceNode;
   selected: boolean;
 }>();
+
+const preview = computed(() => getWorkspaceNodePreview(props.node, 140));
+const stats = computed(() => getWorkspaceNodeStats(props.node));
 </script>
 
 <template>
   <div class="node-card flex h-full min-h-0 flex-col px-4 pb-4 pt-1">
-    <div class="mb-2 flex shrink-0 items-center justify-end">
+    <div class="mb-3 flex shrink-0 items-center justify-between gap-3">
       <span
         class="rounded-full border px-2.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide"
         :class="
@@ -18,10 +27,28 @@ defineProps<{
       >
         {{ selected ? "Selected" : "Saved" }}
       </span>
+
+      <div class="flex items-center gap-1 text-[0.65rem] text-muted">
+        <UBadge color="neutral" variant="subtle" size="sm">
+          {{ stats.tabsCount }} tabs
+        </UBadge>
+        <UBadge color="neutral" variant="soft" size="sm">
+          {{ stats.blocksCount }} blocks
+        </UBadge>
+      </div>
     </div>
+
     <p class="min-h-0 flex-1 overflow-y-auto text-sm leading-relaxed whitespace-pre-wrap text-toned">
-      {{ content || "No content yet. Right-click the card to edit." }}
+      {{ preview }}
     </p>
+
+    <div class="mt-3 flex shrink-0 items-center justify-between text-xs text-muted">
+      <span>{{ stats.completedTasks }}/{{ stats.totalTasks }} tasks done</span>
+      <span v-if="stats.overdueTasks > 0" class="font-medium text-error">
+        {{ stats.overdueTasks }} overdue
+      </span>
+      <span v-else>On track</span>
+    </div>
   </div>
 </template>
 

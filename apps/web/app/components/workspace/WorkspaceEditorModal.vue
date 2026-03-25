@@ -17,8 +17,8 @@ const emit = defineEmits<{
 const modalTitle = computed(() => (props.mode === "create" ? "Create node" : "Edit node"));
 const modalDescription = computed(() =>
   props.mode === "create"
-    ? "Define the title and content for a new workspace node."
-    : "Update the selected node without leaving the canvas.",
+    ? "Create the node title and optional board summary. Tabs and blocks are managed inside the node page."
+    : "Update the selected node title or summary without leaving the canvas.",
 );
 
 function handleOpenChange(isOpen: boolean) {
@@ -50,16 +50,12 @@ function handleOpenChange(isOpen: boolean) {
         />
       </UFormField>
 
-      <UFormField
-        label="Content"
-        name="content"
-        description="Keep it concise enough to scan while navigating the board."
-      >
+      <UFormField label="Summary" name="content" description="Optional board preview text.">
         <UTextarea
           :model-value="content"
           :rows="7"
           autoresize
-          placeholder="Capture the idea, reminder, or workflow step for this node."
+          placeholder="Add a short summary for the canvas card."
           @update:model-value="emit('update:content', $event ?? '')"
         />
       </UFormField>

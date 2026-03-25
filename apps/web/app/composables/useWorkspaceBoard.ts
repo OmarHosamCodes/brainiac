@@ -1,5 +1,6 @@
 import {
   cloneWorkspaceNodes,
+  createDefaultWorkspaceTab,
   DEFAULT_WORKSPACE_NODE_HEIGHT,
   DEFAULT_WORKSPACE_NODE_MIN_HEIGHT,
   DEFAULT_WORKSPACE_NODE_MIN_WIDTH,
@@ -199,6 +200,8 @@ export function useWorkspaceBoard() {
       minHeight: DEFAULT_WORKSPACE_NODE_MIN_HEIGHT,
       createdAt: timestamp,
       updatedAt: timestamp,
+      tabs: [createDefaultWorkspaceTab("Overview", content)],
+      customBlockTemplates: [],
     });
 
     nodes.value = [...nodes.value, nextNode];
