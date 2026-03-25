@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import {
+  WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT,
+  WORKSPACE_NODE_LIMIT,
+  WORKSPACE_NODE_TAB_LIMIT,
+  WORKSPACE_TAB_BLOCK_LIMIT,
   cloneWorkspaceNodes,
   createDefaultWorkspaceTab,
   createWorkspaceAiPromptBlock,
@@ -26,6 +30,7 @@ import {
   type WorkspaceCustomBlock,
   type WorkspaceCustomBlockField,
   type WorkspaceCustomFieldType,
+  type WorkspaceMarketplaceItem,
   type WorkspaceNode,
   type WorkspaceNodeTab,
   type WorkspaceTaskPriority,
@@ -34,6 +39,16 @@ import { useMutation, useQuery } from "@tanstack/vue-query";
 
 import { formatDateTime } from "~/utils/format-date-time";
 import { getErrorMessage } from "~/utils/get-error-message";
+import {
+  cloneMarketplaceBlockPayload,
+  cloneMarketplaceNodePayloadAsNode,
+  cloneMarketplaceTabPayload,
+  createBlockMarketplacePayload,
+  createNodeMarketplacePayload,
+  createTabMarketplacePayload,
+  getMarketplacePayloadSummary,
+  getMarketplacePayloadTypeLabel,
+} from "~/utils/workspace-marketplace";
 
 definePageMeta({
   middleware: ["auth"],
@@ -60,6 +75,12 @@ const workspaceQuery = useQuery({
 });
 
 const saveWorkspace = useMutation(orpc.workspace.save.mutationOptions());
+const marketplaceQuery = useQuery({
+  ...orpc.workspace.marketplace.list.queryOptions(),
+  enabled: computed(() => Boolean(authSession.value?.data?.user)),
+  staleTime: 15_000,
+});
+const saveMarketplaceItem = useMutation(orpc.workspace.marketplace.save.mutationOptions());
 
 const nodeId = computed(() => String(route.params.id ?? ""));
 const draftNodes = ref<WorkspaceNode[]>([]);
@@ -139,8 +160,32 @@ const nodeTimeSummary = computed(() =>
   node.value ? getTimeOrchestratorSummary(node.value) : null,
 );
 const blockSearch = ref("");
+const marketplaceSearch = ref("");
 
 const normalizedBlockSearch = computed(() => blockSearch.value.trim().toLowerCase());
+const normalizedMarketplaceSearch = computed(() =>
+  marketplaceSearch.value.trim().toLowerCase(),
+);
+
+const marketplaceItems = computed(() => marketplaceQuery.data.value?.items ?? []);
+
+const visibleMarketplaceItems = computed(() => {
+  if (!normalizedMarketplaceSearch.value) {
+    return marketplaceItems.value;
+  }
+
+  return marketplaceItems.value.filter((item) => {
+    const terms = [
+      item.title,
+      item.summary,
+      item.createdByName,
+      getMarketplacePayloadTypeLabel(item.payload),
+      getMarketplacePayloadSummary(item.payload),
+    ];
+
+    return terms.join(" ").toLowerCase().includes(normalizedMarketplaceSearch.value);
+  });
+});
 
 const visibleBlocks = computed(() => {
   if (!activeTab.value) {
@@ -897,6 +942,232 @@ function deleteTemplate(templateId: string) {
   });
 }
 
+async function saveToMarketplace(
+  title: string,
+  summary: string,
+  payload: ReturnType<typeof createNodeMarketplacePayload>,
+) {
+  try {
+    await saveMarketplaceItem.mutateAsync({
+      title,
+      summary,
+      payload,
+    });
+    await marketplaceQuery.refetch();
+
+    toast.add({
+      title: "Saved to team marketplace",
+      description: `${title} is now available from any dashboard or node page.`,
+      color: "success",
+      icon: "i-lucide-store",
+    });
+  } catch (error) {
+    toast.add({
+      title: "Could not save to marketplace",
+      description: getErrorMessage(error, "Marketplace save failed"),
+      color: "error",
+      icon: "i-lucide-alert-circle",
+    });
+  }
+}
+
+async function saveNodeToMarketplace() {
+  if (!node.value) {
+    return;
+  }
+
+  const payload = createNodeMarketplacePayload(node.value);
+  await saveToMarketplace(node.value.title, `${node.value.tabs.length} tabs`, payload);
+}
+
+async function saveActiveTabToMarketplace() {
+  if (!node.value || !activeTab.value) {
+    return;
+  }
+
+  const payload = createTabMarketplacePayload(node.value, activeTab.value);
+  await saveToMarketplace(
+    `${node.value.title} / ${getDisplayTabTitle(activeTab.value)}`,
+    `${activeTab.value.blocks.length} blocks`,
+    payload,
+  );
+}
+
+async function saveBlockToMarketplace(block: WorkspaceBlock) {
+  if (!node.value || !activeTab.value) {
+    return;
+  }
+
+  const payload = createBlockMarketplacePayload(node.value, block);
+  await saveToMarketplace(
+    `${node.value.title} / ${getDisplayTabTitle(activeTab.value)} / ${getDisplayBlockTitle(block)}`,
+    block.type,
+    payload,
+  );
+}
+
+function getMarketplaceInsertLabel(item: WorkspaceMarketplaceItem) {
+  if (item.payload.kind === "node") {
+    return "Insert node";
+  }
+
+  if (item.payload.kind === "tab") {
+    return "Insert tab";
+  }
+
+  return "Insert block";
+}
+
+function insertMarketplaceItemAsNode(item: WorkspaceMarketplaceItem) {
+  if (!node.value) {
+    return;
+  }
+
+  if (draftNodes.value.length >= WORKSPACE_NODE_LIMIT) {
+    toast.add({
+      title: "Node limit reached",
+      description: `A workspace can store up to ${WORKSPACE_NODE_LIMIT} nodes.`,
+      color: "warning",
+      icon: "i-lucide-alert-triangle",
+    });
+    return;
+  }
+
+  const nextNode = cloneMarketplaceNodePayloadAsNode(item.payload);
+  const xOffset = 56;
+  const yOffset = 56;
+
+  updateDraftNodes((nodes) => {
+    nextNode.x = node.value ? node.value.x + xOffset : 0;
+    nextNode.y = node.value ? node.value.y + yOffset : 0;
+    nodes.push(nextNode);
+  });
+
+  toast.add({
+    title: "Node inserted",
+    description: `${item.title} was added as a new node.`,
+    color: "success",
+    icon: "i-lucide-check",
+  });
+}
+
+function insertMarketplaceTab(item: WorkspaceMarketplaceItem) {
+  if (!node.value) {
+    return;
+  }
+
+  const cloned = cloneMarketplaceTabPayload(item.payload);
+
+  if (!cloned) {
+    return;
+  }
+
+  if (node.value.tabs.length >= WORKSPACE_NODE_TAB_LIMIT) {
+    toast.add({
+      title: "Tab limit reached",
+      description: `A node can contain up to ${WORKSPACE_NODE_TAB_LIMIT} tabs.`,
+      color: "warning",
+      icon: "i-lucide-alert-triangle",
+    });
+    return;
+  }
+
+  if (
+    node.value.customBlockTemplates.length + cloned.templates.length >
+    WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT
+  ) {
+    toast.add({
+      title: "Template limit reached",
+      description: `A node can store up to ${WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT} custom templates.`,
+      color: "warning",
+      icon: "i-lucide-alert-triangle",
+    });
+    return;
+  }
+
+  mutateCurrentNode((entry) => {
+    entry.customBlockTemplates.push(...cloned.templates);
+    entry.tabs.push(cloned.tab);
+    entry.viewState.activeTabId = cloned.tab.id;
+  });
+
+  toast.add({
+    title: "Tab inserted",
+    description: `${item.title} was added to this node.`,
+    color: "success",
+    icon: "i-lucide-check",
+  });
+}
+
+function insertMarketplaceBlock(item: WorkspaceMarketplaceItem) {
+  if (!activeTab.value || !node.value) {
+    return;
+  }
+
+  const cloned = cloneMarketplaceBlockPayload(item.payload);
+
+  if (!cloned) {
+    return;
+  }
+
+  if (activeTab.value.blocks.length >= WORKSPACE_TAB_BLOCK_LIMIT) {
+    toast.add({
+      title: "Block limit reached",
+      description: `A tab can contain up to ${WORKSPACE_TAB_BLOCK_LIMIT} blocks.`,
+      color: "warning",
+      icon: "i-lucide-alert-triangle",
+    });
+    return;
+  }
+
+  if (
+    node.value.customBlockTemplates.length + cloned.templates.length >
+    WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT
+  ) {
+    toast.add({
+      title: "Template limit reached",
+      description: `A node can store up to ${WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT} custom templates.`,
+      color: "warning",
+      icon: "i-lucide-alert-triangle",
+    });
+    return;
+  }
+
+  const targetTabId = activeTab.value.id;
+  mutateCurrentNode((entry, timestamp) => {
+    const tab = entry.tabs.find((candidate) => candidate.id === targetTabId);
+
+    if (!tab) {
+      return;
+    }
+
+    entry.customBlockTemplates.push(...cloned.templates);
+    tab.blocks.push(cloned.block);
+    tab.updatedAt = timestamp;
+  });
+
+  toast.add({
+    title: "Block inserted",
+    description: `${item.title} was added to this tab.`,
+    color: "success",
+    icon: "i-lucide-check",
+  });
+}
+
+function insertMarketplaceItem(item: WorkspaceMarketplaceItem) {
+  if (item.payload.kind === "node") {
+    insertMarketplaceItemAsNode(item);
+    return;
+  }
+
+  if (item.payload.kind === "tab") {
+    insertMarketplaceTab(item);
+    return;
+  }
+
+  insertMarketplaceBlock(item);
+}
+
 function getDisplayTabTitle(tab: WorkspaceNodeTab | null | undefined) {
   return tab?.title.trim() || "Untitled tab";
 }
@@ -1150,6 +1421,22 @@ function renderNotesPreview(input: string) {
             <div class="flex flex-wrap items-center gap-2">
               <UButton
                 color="neutral"
+                variant="soft"
+                icon="i-lucide-store"
+                @click="saveNodeToMarketplace"
+              >
+                Save node
+              </UButton>
+              <UButton
+                color="neutral"
+                variant="soft"
+                icon="i-lucide-store"
+                @click="saveActiveTabToMarketplace"
+              >
+                Save tab
+              </UButton>
+              <UButton
+                color="neutral"
                 variant="ghost"
                 icon="i-lucide-pencil"
                 @click="openTabEditor('rename')"
@@ -1319,12 +1606,20 @@ function renderNotesPreview(input: string) {
                         </UBadge>
                       </div>
 
-                      <UButton
-                        color="neutral"
-                        variant="ghost"
-                        icon="i-lucide-trash-2"
-                        @click="removeBlock(activeTab.id, block.id)"
-                      />
+                      <div class="flex items-center gap-1">
+                        <UButton
+                          color="neutral"
+                          variant="ghost"
+                          icon="i-lucide-store"
+                          @click="saveBlockToMarketplace(block)"
+                        />
+                        <UButton
+                          color="neutral"
+                          variant="ghost"
+                          icon="i-lucide-trash-2"
+                          @click="removeBlock(activeTab.id, block.id)"
+                        />
+                      </div>
                     </template>
 
                     <div
@@ -2219,6 +2514,76 @@ function renderNotesPreview(input: string) {
                   class="rounded-2xl border border-dashed border-muted/70 bg-elevated/20 p-6 text-sm text-muted"
                 >
                   No custom templates yet.
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-[24px] border border-muted/60 bg-default p-5 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="text-xs font-medium uppercase tracking-[0.2em] text-muted">
+                  Team Marketplace
+                </p>
+                <p class="mt-1 text-sm text-muted">
+                  Save once, insert anywhere across dashboards and node tabs.
+                </p>
+              </div>
+              <UBadge color="neutral" variant="soft">
+                {{ marketplaceItems.length }} items
+              </UBadge>
+            </div>
+
+            <UInput
+              v-model="marketplaceSearch"
+              icon="i-lucide-search"
+              class="mt-4"
+              placeholder="Search marketplace"
+            />
+
+            <div v-if="marketplaceQuery.isLoading.value" class="mt-5 flex justify-center py-6">
+              <UIcon name="i-lucide-loader-2" class="size-5 animate-spin text-muted" />
+            </div>
+
+            <div
+              v-else-if="visibleMarketplaceItems.length === 0"
+              class="mt-5 rounded-2xl border border-dashed border-muted/70 bg-elevated/20 p-6 text-sm text-muted"
+            >
+              No marketplace items match this search.
+            </div>
+
+            <div v-else class="mt-5 space-y-3">
+              <div
+                v-for="item in visibleMarketplaceItems"
+                :key="item.id"
+                class="rounded-2xl border border-muted/60 bg-elevated/30 p-4"
+              >
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div class="min-w-0 space-y-2">
+                    <p class="font-medium text-highlighted">
+                      {{ item.title }}
+                    </p>
+                    <p class="text-sm text-muted">
+                      {{ item.summary || getMarketplacePayloadSummary(item.payload) }}
+                    </p>
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
+                      <UBadge color="neutral" variant="subtle">
+                        {{ getMarketplacePayloadTypeLabel(item.payload) }}
+                      </UBadge>
+                      <span>{{ getMarketplacePayloadSummary(item.payload) }}</span>
+                      <span>By {{ item.createdByName }}</span>
+                      <span>{{ formatDateTime(item.createdAt) }}</span>
+                    </div>
+                  </div>
+
+                  <UButton
+                    color="primary"
+                    variant="soft"
+                    icon="i-lucide-download"
+                    @click="insertMarketplaceItem(item)"
+                  >
+                    {{ getMarketplaceInsertLabel(item) }}
+                  </UButton>
                 </div>
               </div>
             </div>

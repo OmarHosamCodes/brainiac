@@ -6,6 +6,7 @@ export const WORKSPACE_TAB_BLOCK_LIMIT = 24;
 export const WORKSPACE_TASK_LIMIT = 100;
 export const WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT = 20;
 export const WORKSPACE_CUSTOM_BLOCK_FIELD_LIMIT = 12;
+export const WORKSPACE_MARKETPLACE_ITEM_LIMIT = 200;
 export const DEFAULT_WORKSPACE_NODE_WIDTH = 320;
 export const DEFAULT_WORKSPACE_NODE_HEIGHT = 220;
 export const DEFAULT_WORKSPACE_NODE_MIN_WIDTH = 260;
@@ -194,6 +195,53 @@ export const workspaceSaveInputSchema = z.object({
   nodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT),
 });
 
+export const workspaceMarketplacePayloadSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("node"),
+    node: workspaceNodeSchema,
+  }),
+  z.object({
+    kind: z.literal("tab"),
+    tab: workspaceNodeTabSchema,
+    customBlockTemplates: z
+      .array(workspaceCustomBlockTemplateSchema)
+      .max(WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT)
+      .default([]),
+  }),
+  z.object({
+    kind: z.literal("block"),
+    block: workspaceBlockSchema,
+    customBlockTemplates: z
+      .array(workspaceCustomBlockTemplateSchema)
+      .max(WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT)
+      .default([]),
+  }),
+]);
+
+export const workspaceMarketplaceItemSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().min(1).max(120),
+  summary: z.string().trim().max(240).default(""),
+  payload: workspaceMarketplacePayloadSchema,
+  createdByUserId: z.string().min(1).nullable().optional(),
+  createdByName: z.string().trim().min(1).max(120).default("Unknown"),
+  createdAt: isoTimestampSchema,
+  updatedAt: isoTimestampSchema,
+});
+
+export const workspaceMarketplaceSaveInputSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  summary: z.string().trim().max(240).optional(),
+  payload: workspaceMarketplacePayloadSchema,
+});
+
+export const workspaceMarketplaceListSchema = z.object({
+  items: z
+    .array(workspaceMarketplaceItemSchema)
+    .max(WORKSPACE_MARKETPLACE_ITEM_LIMIT)
+    .default([]),
+});
+
 export type WorkspaceTaskPriority = z.infer<typeof workspaceTaskPrioritySchema>;
 export type WorkspaceTask = z.infer<typeof workspaceTaskSchema>;
 export type WorkspacePromptOutput = z.infer<typeof workspacePromptOutputSchema>;
@@ -225,6 +273,15 @@ export type WorkspaceNodeTab = z.infer<typeof workspaceNodeTabSchema>;
 export type WorkspaceNodeViewState = z.infer<typeof workspaceNodeViewStateSchema>;
 export type WorkspaceNode = z.infer<typeof workspaceNodeSchema>;
 export type WorkspaceSaveInput = z.infer<typeof workspaceSaveInputSchema>;
+export type WorkspaceMarketplacePayload = z.infer<
+  typeof workspaceMarketplacePayloadSchema
+>;
+export type WorkspaceMarketplaceItem = z.infer<
+  typeof workspaceMarketplaceItemSchema
+>;
+export type WorkspaceMarketplaceSaveInput = z.infer<
+  typeof workspaceMarketplaceSaveInputSchema
+>;
 export type WorkspaceCustomBlockValue = z.infer<
   typeof workspaceCustomBlockValueSchema
 >;
@@ -606,6 +663,167 @@ export function cloneWorkspaceNodes(nodes: WorkspaceNode[]) {
   }
 
   return cloned.map((node: WorkspaceNode) => normalizeWorkspaceNode(node));
+}
+
+function clonePromptOutputsForInsertion(outputs: WorkspacePromptOutput[]) {
+  return outputs.map((entry) => ({
+    ...entry,
+    id: createWorkspaceId("output"),
+  }));
+}
+
+export function cloneWorkspaceTemplatesForInsertion(
+  templates: WorkspaceCustomBlockTemplate[],
+  timestamp = getNowIsoString(),
+) {
+  const templateIdMap = new Map<string, string>();
+  const clonedTemplates = templates.map((template) => {
+    const nextTemplateId = createWorkspaceId("template");
+    templateIdMap.set(template.id, nextTemplateId);
+
+    return workspaceCustomBlockTemplateSchema.parse({
+      ...template,
+      id: nextTemplateId,
+      fields: template.fields.map((field) => ({
+        ...field,
+        id: createWorkspaceId("field"),
+      })),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+  });
+
+  return {
+    templateIdMap,
+    templates: clonedTemplates,
+  };
+}
+
+export function cloneWorkspaceBlockForInsertion(
+  block: WorkspaceBlock,
+  templateIdMap = new Map<string, string>(),
+  timestamp = getNowIsoString(),
+): WorkspaceBlock {
+  switch (block.type) {
+    case "task-list":
+      return workspaceTaskListBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        tasks: block.tasks.map((task) => ({
+          ...task,
+          id: createWorkspaceId("task"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "notes":
+      return workspaceNotesBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "decision":
+      return workspaceDecisionBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        pros: block.pros.map((item) => ({
+          ...item,
+          id: createWorkspaceId("decision"),
+        })),
+        cons: block.cons.map((item) => ({
+          ...item,
+          id: createWorkspaceId("decision"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "tracker":
+      return workspaceTrackerBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        entries: block.entries.map((entry) => ({
+          ...entry,
+          id: createWorkspaceId("entry"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "ai-prompt":
+      return workspaceAiPromptBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        outputHistory: clonePromptOutputsForInsertion(block.outputHistory),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "time-orchestrator":
+      return workspaceTimeOrchestratorBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "custom":
+      return workspaceCustomBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        definitionId: templateIdMap.get(block.definitionId) ?? block.definitionId,
+        outputHistory: clonePromptOutputsForInsertion(block.outputHistory),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+  }
+}
+
+export function cloneWorkspaceTabForInsertion(
+  tab: WorkspaceNodeTab,
+  templateIdMap = new Map<string, string>(),
+  timestamp = getNowIsoString(),
+): WorkspaceNodeTab {
+  return workspaceNodeTabSchema.parse({
+    ...tab,
+    id: createWorkspaceId("tab"),
+    blocks: tab.blocks.map((block) =>
+      cloneWorkspaceBlockForInsertion(block, templateIdMap, timestamp),
+    ),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  });
+}
+
+export function cloneWorkspaceNodeForInsertion(
+  node: WorkspaceNode,
+  timestamp = getNowIsoString(),
+): WorkspaceNode {
+  const { templateIdMap, templates } = cloneWorkspaceTemplatesForInsertion(
+    node.customBlockTemplates,
+    timestamp,
+  );
+  const tabIdMap = new Map<string, string>();
+  const tabs = node.tabs.map((tab) => {
+    const clonedTab = cloneWorkspaceTabForInsertion(tab, templateIdMap, timestamp);
+    tabIdMap.set(tab.id, clonedTab.id);
+    return clonedTab;
+  });
+  const activeTabId =
+    node.viewState.activeTabId && tabIdMap.has(node.viewState.activeTabId)
+      ? tabIdMap.get(node.viewState.activeTabId) ?? tabs[0]?.id ?? null
+      : tabs[0]?.id ?? null;
+
+  return normalizeWorkspaceNode({
+    ...node,
+    id: createWorkspaceId("node"),
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    label: node.title,
+    tabs,
+    customBlockTemplates: templates,
+    viewState: {
+      activeTabId,
+      notePreviewState: {},
+    },
+  });
 }
 
 export function getTaskListProgress(block: WorkspaceTaskListBlock) {

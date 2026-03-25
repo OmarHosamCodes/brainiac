@@ -1,7 +1,16 @@
-import { workspaceSaveInputSchema } from "@brainiac/workspace";
+import {
+  workspaceMarketplaceListSchema,
+  workspaceMarketplaceSaveInputSchema,
+  workspaceSaveInputSchema,
+} from "@brainiac/workspace";
 
 import { protectedProcedure } from "../../procedures";
-import { getWorkspaceNodes, saveWorkspaceNodes } from "./service";
+import {
+  getWorkspaceMarketplaceItems,
+  getWorkspaceNodes,
+  saveWorkspaceMarketplaceItem,
+  saveWorkspaceNodes,
+} from "./service";
 
 export const workspaceRouter = {
   get: protectedProcedure.handler(async ({ context }) => {
@@ -14,4 +23,20 @@ export const workspaceRouter = {
     .handler(async ({ input, context }) => {
       return saveWorkspaceNodes(context.session.user.id, input.nodes);
     }),
+  marketplace: {
+    list: protectedProcedure.handler(async () => {
+      return workspaceMarketplaceListSchema.parse({
+        items: await getWorkspaceMarketplaceItems(),
+      });
+    }),
+    save: protectedProcedure
+      .input(workspaceMarketplaceSaveInputSchema)
+      .handler(async ({ input, context }) => {
+        return saveWorkspaceMarketplaceItem(
+          context.session.user.id,
+          context.session.user.name,
+          input,
+        );
+      }),
+  },
 };
