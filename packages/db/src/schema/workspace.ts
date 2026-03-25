@@ -1,21 +1,9 @@
+import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
+import type { WorkspaceNode } from "@brainiac/workspace";
+
 import { user } from "./auth";
 
-import { pgTable, text, timestamp, jsonb } from "drizzle-orm/pg-core";
-
-export type WorkspaceNodeRecord = {
-  id: string;
-  title: string;
-  content: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  label?: string;
-  minWidth?: number;
-  minHeight?: number;
-  createdAt: string;
-  updatedAt: string;
-};
+export type WorkspaceNodeRecord = WorkspaceNode;
 
 export const dashboardWorkspace = pgTable("dashboard_workspace", {
   userId: text("user_id")

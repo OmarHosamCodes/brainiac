@@ -1,0 +1,16 @@
+{
+  "name": "@brainiac/workspace",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@brainiac/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

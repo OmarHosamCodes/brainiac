@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@brainiac/env": "workspace:*",
+    "@brainiac/workspace": "workspace:*",
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "pg": "^8.17.1",

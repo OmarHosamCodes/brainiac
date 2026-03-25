@@ -46,6 +46,7 @@
         "@brainiac/api": "workspace:*",
         "@brainiac/auth": "workspace:*",
         "@brainiac/env": "workspace:*",
+        "@brainiac/workspace": "workspace:*",
         "@nuxt/ui": "^4.5.1",
         "@orpc/client": "catalog:",
         "@orpc/server": "catalog:",
@@ -70,6 +71,7 @@
         "@brainiac/auth": "workspace:*",
         "@brainiac/db": "workspace:*",
         "@brainiac/env": "workspace:*",
+        "@brainiac/workspace": "workspace:*",
         "@orpc/client": "catalog:",
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
@@ -107,6 +109,7 @@
       "name": "@brainiac/db",
       "dependencies": {
         "@brainiac/env": "workspace:*",
+        "@brainiac/workspace": "workspace:*",
         "dotenv": "catalog:",
         "drizzle-orm": "catalog:",
         "pg": "^8.17.1",
@@ -131,6 +134,16 @@
       "devDependencies": {
         "@brainiac/config": "workspace:*",
         "@types/bun": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
+    "packages/workspace": {
+      "name": "@brainiac/workspace",
+      "dependencies": {
+        "zod": "catalog:",
+      },
+      "devDependencies": {
+        "@brainiac/config": "workspace:*",
         "typescript": "catalog:",
       },
     },
@@ -238,6 +251,8 @@
     "@brainiac/db": ["@brainiac/db@workspace:packages/db"],
 
     "@brainiac/env": ["@brainiac/env@workspace:packages/env"],
+
+    "@brainiac/workspace": ["@brainiac/workspace@workspace:packages/workspace"],
 
     "@capsizecss/unpack": ["@capsizecss/unpack@4.0.0", "", { "dependencies": { "fontkitten": "^1.0.0" } }, "sha512-VERIM64vtTP1C4mxQ5thVT9fK0apjPFobqybMtA1UdUujWka24ERHbRHFGmpbbhp73MhV+KSsHQH9C6uOTdEQA=="],
 

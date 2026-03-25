@@ -13,6 +13,7 @@
     "@brainiac/api": "workspace:*",
     "@brainiac/auth": "workspace:*",
     "@brainiac/env": "workspace:*",
+    "@brainiac/workspace": "workspace:*",
     "@nuxt/ui": "^4.5.1",
     "@orpc/client": "catalog:",
     "@orpc/server": "catalog:",
