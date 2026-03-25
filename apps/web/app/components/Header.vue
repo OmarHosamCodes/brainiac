@@ -12,6 +12,11 @@ const items = computed<NavigationMenuItem[]>(() => [
     to: "/dashboard",
     active: route.path.startsWith("/dashboard"),
   },
+  {
+    label: "Marketplace",
+    to: "/marketplace",
+    active: route.path.startsWith("/marketplace"),
+  },
 ]);
 </script>
 
