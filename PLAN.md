@@ -27,72 +27,49 @@ Do not use:
 WHAT TO BUILD
 ================================
 
-Build a single-workspace MVP with these features:
-
-1. Infinite Canvas
-
-- pannable
-- zoomable
-- supports many blocks
-- blocks rendered on canvas with absolute positions
-- free placement
-- smooth dragging
-
-2. Block Types
+1. Block Types
    Implement these block types:
-
-A. Task List Block
-
-- title
-- list of tasks
-- each task has checkbox
-- optional due date
-- optional priority
-- progress bar or progress count
-
-B. Notes Block
-
-- title
-- multiline notes
-- simple formatting optional
-- autosave
-
-C. Decision Block
-
-- title
-- pros list
-- cons list
-- simple weighted scoring
-- final recommendation text
-
-D. Tracker Block
-
-- title
-- list of numeric entries
-- simple trend calculation
-- tiny chart if easy
-- do not overcomplicate charting
-
-E. AI Prompt Block
-
-- title
-- prompt input
-- run button
-- output area
-- save previous output in the block
-- only run on click
-
-F. Time Orchestrator Block
-
-- special node/block
-- gathers tasks from all Task List blocks
-- shows:
-  - overdue
-  - upcoming
-  - high priority
-  - suggested next actions
-- prioritization should use logic, not expensive AI
-- formula can combine due date and priority
+   A. Task List Block
+   - title
+   - list of tasks
+   - each task has checkbox
+   - optional due date
+   - optional priority
+   - progress bar or progress count
+     B. Notes Block
+   - title
+   - multiline notes
+   - simple formatting optional
+   - autosave
+     C. Decision Block
+   - title
+   - pros list
+   - cons list
+   - simple weighted scoring
+   - final recommendation text
+     D. Tracker Block
+   - title
+   - list of numeric entries
+   - simple trend calculation
+   - tiny chart if easy
+   - do not overcomplicate charting
+     E. AI Prompt Block
+   - title
+   - prompt input
+   - run button
+   - output area
+   - save previous output in the block
+   - only run on click
+     F. Time Orchestrator Block
+   - special node/block
+   - gathers tasks from all Task List blocks
+   - shows:
+     - overdue
+     - upcoming
+     - high priority
+     - suggested next actions
+   - prioritization should use logic, not expensive AI
+   - formula can combine due date and priority
 
 G. Custom Block Builder
 
@@ -126,52 +103,6 @@ G. Custom Block Builder
 - search knowledge blocks
 - use simple local search
 - prioritize speed and usability over advanced semantic systems
-
-5. Persistence
-
-- persist everything to localStorage for MVP
-- save workspace state automatically
-- save block positions, sizes if used, content, and viewport state
-
-================================
-FILE STRUCTURE
-================================
-
-Create the project with a clean structure like this:
-
-/src
-/components
-Canvas.tsx
-CanvasToolbar.tsx
-Sidebar.tsx
-SearchBar.tsx
-BlockRenderer.tsx
-blocks/
-TaskBlock.tsx
-NotesBlock.tsx
-DecisionBlock.tsx
-TrackerBlock.tsx
-AIPromptBlock.tsx
-TimeOrchestratorBlock.tsx
-CustomBlock.tsx
-KnowledgeBlock.tsx
-/store
-workspaceStore.ts
-/types
-blocks.ts
-workspace.ts
-/utils
-canvas.ts
-search.ts
-prioritization.ts
-storage.ts
-ai.ts
-customBlocks.ts
-App.tsx
-main.tsx
-index.css
-
-If you need a backend, add it minimally and keep it separate.
 
 ================================
 DATA MODEL
@@ -267,28 +198,6 @@ The store should support:
 - save/load from localStorage
 
 Do not make the state layer overly complex.
-
-================================
-CANVAS IMPLEMENTATION GUIDANCE
-================================
-
-Implement the infinite canvas in a lightweight way.
-
-Preferred approach:
-
-- a large logical coordinate space
-- transform-based pan/zoom
-- mouse drag for panning
-- wheel or trackpad zoom
-- block drag based on canvas coordinates
-- maintain zoom and translation state in store
-
-Important:
-
-- dragging a block should feel correct at different zoom levels
-- panning should not interfere with editing inside blocks
-- clicking into text areas should still work
-- keep math simple and readable
 
 ================================
 TIME ORCHESTRATOR LOGIC

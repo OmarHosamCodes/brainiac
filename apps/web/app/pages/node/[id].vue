@@ -2,7 +2,6 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import {
   cloneWorkspaceNodes,
-  collectWorkspaceNodeTasks,
   createDefaultWorkspaceTab,
   createWorkspaceAiPromptBlock,
   createWorkspaceCustomBlock,
@@ -21,8 +20,6 @@ import {
   getTaskListProgress,
   getTimeOrchestratorSummary,
   getTrackerTrend,
-  getWorkspaceNodePreview,
-  getWorkspaceNodeStats,
   normalizeWorkspaceNode,
   type WorkspaceBlock,
   type WorkspaceCollectedTask,
@@ -87,6 +84,7 @@ const templateForm = reactive({
   aiPromptTemplate: "",
   fields: [createTemplateFieldDraft()],
 });
+const customBlockBuilderOpen = ref(false);
 
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let latestSaveRequest = 0;
@@ -137,16 +135,26 @@ const saveBadge = computed(() => {
   }
 });
 
-const nodeStats = computed(() => (node.value ? getWorkspaceNodeStats(node.value) : null));
-const nodePreview = computed(() =>
-  node.value ? getWorkspaceNodePreview(node.value, 220) : "",
-);
 const nodeTimeSummary = computed(() =>
   node.value ? getTimeOrchestratorSummary(node.value) : null,
 );
-const nodeTaskLedger = computed(() =>
-  node.value ? collectWorkspaceNodeTasks(node.value) : [],
-);
+const blockSearch = ref("");
+
+const normalizedBlockSearch = computed(() => blockSearch.value.trim().toLowerCase());
+
+const visibleBlocks = computed(() => {
+  if (!activeTab.value) {
+    return [];
+  }
+
+  if (!normalizedBlockSearch.value) {
+    return activeTab.value.blocks;
+  }
+
+  return activeTab.value.blocks.filter((block) =>
+    getBlockSearchText(block).includes(normalizedBlockSearch.value),
+  );
+});
 
 const addBlockMenuItems = computed(() => {
   if (!activeTab.value || !node.value) {
@@ -155,27 +163,6 @@ const addBlockMenuItems = computed(() => {
 
   const groups: DropdownMenuItem[][] = [
     [
-      {
-        label: "Task list",
-        icon: "i-lucide-list-checks",
-        onSelect: () => {
-          addBlockToActiveTab("task-list");
-        },
-      },
-      {
-        label: "Notes",
-        icon: "i-lucide-notebook-tabs",
-        onSelect: () => {
-          addBlockToActiveTab("notes");
-        },
-      },
-      {
-        label: "Decision",
-        icon: "i-lucide-scale",
-        onSelect: () => {
-          addBlockToActiveTab("decision");
-        },
-      },
       {
         label: "Tracker",
         icon: "i-lucide-chart-column",
@@ -199,19 +186,6 @@ const addBlockMenuItems = computed(() => {
       },
     ],
   ];
-
-  if (node.value.customBlockTemplates.length > 0) {
-    groups.push(
-      node.value.customBlockTemplates.map((template) => ({
-        label: template.name,
-        description: "Create a custom block from this template",
-        icon: "i-lucide-blocks",
-        onSelect: () => {
-          addCustomBlockToActiveTab(template.id);
-        },
-      })),
-    );
-  }
 
   return groups;
 });
@@ -538,12 +512,6 @@ function addCustomBlockToActiveTab(templateId: string) {
 function removeBlock(tabId: string, blockId: string) {
   mutateTab(tabId, (tab) => {
     tab.blocks = tab.blocks.filter((block) => block.id !== blockId);
-  });
-}
-
-function updateNodeSummary(value: string) {
-  mutateCurrentNode((entry) => {
-    entry.content = value;
   });
 }
 
@@ -937,6 +905,95 @@ function getDisplayBlockTitle(block: WorkspaceBlock) {
   return block.title.trim() || "Untitled block";
 }
 
+function getBlockSearchText(block: WorkspaceBlock) {
+  const fragments: string[] = [block.type, getDisplayBlockTitle(block)];
+
+  if (block.type === "task-list") {
+    fragments.push(
+      ...block.tasks.flatMap((task) => [task.text, task.dueDate ?? "", task.priority ?? ""]),
+    );
+  } else if (block.type === "notes") {
+    fragments.push(block.body);
+  } else if (block.type === "decision") {
+    fragments.push(
+      block.recommendation,
+      ...block.pros.flatMap((item) => [item.text, String(item.weight)]),
+      ...block.cons.flatMap((item) => [item.text, String(item.weight)]),
+    );
+  } else if (block.type === "tracker") {
+    fragments.push(
+      ...block.entries.flatMap((entry) => [entry.label, String(entry.value)]),
+    );
+  } else if (block.type === "ai-prompt") {
+    fragments.push(block.prompt, block.latestOutput);
+  } else if (block.type === "custom") {
+    const templateName = getCustomTemplate(block.definitionId)?.name ?? "";
+    fragments.push(templateName, block.notes, ...Object.values(block.values).map(String));
+  }
+
+  return fragments.join(" ").toLowerCase();
+}
+
+function escapeForRegex(input: string) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function escapeHtml(input: string) {
+  return input
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
+function collectBlockSearchDetails(block: WorkspaceBlock) {
+  const details: string[] = [getDisplayBlockTitle(block)];
+
+  if (block.type === "task-list") {
+    details.push(...block.tasks.map((task) => task.text));
+  } else if (block.type === "notes") {
+    details.push(...block.body.split("\n"));
+  } else if (block.type === "decision") {
+    details.push(
+      block.recommendation,
+      ...block.pros.map((item) => item.text),
+      ...block.cons.map((item) => item.text),
+    );
+  } else if (block.type === "tracker") {
+    details.push(...block.entries.map((entry) => entry.label));
+  } else if (block.type === "ai-prompt") {
+    details.push(block.prompt, block.latestOutput);
+  } else if (block.type === "custom") {
+    const templateName = getCustomTemplate(block.definitionId)?.name ?? "";
+    details.push(templateName, block.notes, ...Object.values(block.values).map(String));
+  }
+
+  return details.map((detail) => detail.trim()).filter(Boolean);
+}
+
+function getBlockSearchMatches(block: WorkspaceBlock) {
+  if (!normalizedBlockSearch.value) {
+    return [];
+  }
+
+  return collectBlockSearchDetails(block)
+    .filter((detail) => detail.toLowerCase().includes(normalizedBlockSearch.value))
+    .slice(0, 3);
+}
+
+function highlightSearchMatch(value: string) {
+  const safeValue = escapeHtml(value);
+
+  if (!normalizedBlockSearch.value) {
+    return safeValue;
+  }
+
+  const pattern = new RegExp(escapeForRegex(normalizedBlockSearch.value), "ig");
+  return safeValue.replace(
+    pattern,
+    `<mark class="rounded bg-warning/25 px-1 text-highlighted">$&</mark>`,
+  );
+}
+
 function getInputValue(event: Event) {
   return (event.target as HTMLInputElement | null)?.value ?? "";
 }
@@ -1075,173 +1132,145 @@ function renderNotesPreview(input: string) {
     </div>
 
     <template v-else-if="node && activeTab">
-      <div class="mx-auto flex w-full max-w-[1800px] flex-col gap-6">
-        <section
-          class="relative overflow-hidden rounded-[28px] border border-muted/70 bg-gradient-to-br from-elevated via-default to-primary/5 p-6 shadow-sm"
-        >
-          <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_38%)]" />
-
-          <div class="relative flex flex-col gap-6">
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div class="flex flex-wrap items-center gap-3">
-                <UButton
-                  to="/dashboard"
-                  color="neutral"
-                  variant="ghost"
-                  icon="i-lucide-arrow-left"
-                  class="-ml-2"
-                >
-                  Back to board
-                </UButton>
-
-                <span
-                  class="rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.2em]"
-                  :class="saveBadge.className"
-                >
-                  {{ saveBadge.label }}
-                </span>
-
-                <span class="text-xs text-muted">
-                  Updated {{ formatDateTime(node.updatedAt) }}
-                </span>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-2">
-                <UBadge color="neutral" variant="soft">
-                  {{ nodeStats?.tabsCount ?? 0 }} tabs
-                </UBadge>
-                <UBadge color="neutral" variant="soft">
-                  {{ nodeStats?.blocksCount ?? 0 }} blocks
-                </UBadge>
-                <UBadge color="neutral" variant="soft">
-                  {{ nodeStats?.completedTasks ?? 0 }}/{{ nodeStats?.totalTasks ?? 0 }} tasks done
-                </UBadge>
-              </div>
+      <div class="mx-auto flex w-full max-w-[1600px] flex-col gap-6">
+        <section class="rounded-2xl border border-muted/60 bg-default p-5 shadow-sm">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-3">
+              <UButton to="/dashboard" color="neutral" variant="ghost" icon="i-lucide-arrow-left">
+                Back
+              </UButton>
+              <span
+                class="rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.2em]"
+                :class="saveBadge.className"
+              >
+                {{ saveBadge.label }}
+              </span>
             </div>
 
-            <div class="grid gap-6 xl:grid-cols-12">
-              <div class="space-y-4 xl:col-span-8">
-                <div>
-                  <p class="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-primary">
-                    Node Workspace
-                  </p>
-                  <h1 class="text-3xl font-semibold tracking-tight text-highlighted md:text-4xl">
-                    {{ node.title }}
-                  </h1>
-                </div>
-
-                <UFormField
-                  label="Board Summary"
-                  description="Optional summary text for the canvas card preview."
-                >
-                  <UTextarea
-                    :model-value="node.content"
-                    :rows="4"
-                    autoresize
-                    placeholder="Capture the purpose of this node in one or two concise paragraphs."
-                    @update:model-value="updateNodeSummary($event ?? '')"
-                  />
-                </UFormField>
-              </div>
-
-              <div class="space-y-4 xl:col-span-4">
-                <div class="rounded-2xl border border-muted/60 bg-default/90 p-4">
-                  <p class="text-xs font-medium uppercase tracking-[0.2em] text-muted">
-                    Snapshot
-                  </p>
-                  <p class="mt-3 text-sm leading-relaxed text-toned">
-                    {{ nodePreview }}
-                  </p>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div class="rounded-2xl border border-muted/60 bg-default/90 p-4">
-                      <p class="text-xs uppercase tracking-[0.2em] text-muted">Overdue</p>
-                      <p class="mt-2 text-2xl font-semibold text-highlighted">
-                      {{ nodeTimeSummary?.overdue.length ?? 0 }}
-                      </p>
-                    </div>
-
-                  <div class="rounded-2xl border border-muted/60 bg-default/90 p-4">
-                    <p class="text-xs uppercase tracking-[0.2em] text-muted">High Priority</p>
-                    <p class="mt-2 text-2xl font-semibold text-highlighted">
-                      {{ nodeTimeSummary?.highPriority.length ?? 0 }}
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <UButton
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-pencil"
+                @click="openTabEditor('rename')"
+              >
+                Rename tab
+              </UButton>
+              <UButton
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-trash-2"
+                @click="deleteActiveTab"
+              >
+                Delete tab
+              </UButton>
+              <UButton
+                color="primary"
+                variant="soft"
+                icon="i-lucide-plus"
+                @click="openTabEditor('create')"
+              >
+                New tab
+              </UButton>
             </div>
+          </div>
+
+          <div class="mt-4">
+            <h1 class="text-2xl font-semibold tracking-tight text-highlighted md:text-3xl">
+              {{ node.title }}
+            </h1>
+          </div>
+
+          <div class="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              v-for="tab in node.tabs"
+              :key="tab.id"
+              type="button"
+              class="rounded-full border px-4 py-2 text-sm font-medium transition"
+              :class="
+                tab.id === activeTabId
+                  ? 'border-primary/40 bg-primary/10 text-primary'
+                  : 'border-muted/60 bg-elevated/70 text-toned hover:border-primary/30 hover:text-highlighted'
+              "
+              @click="setActiveTab(tab.id)"
+            >
+              {{ getDisplayTabTitle(tab) }}
+            </button>
           </div>
         </section>
 
-        <div class="grid gap-6 xl:grid-cols-12">
-          <div class="space-y-6 xl:col-span-8">
+        <div class="space-y-6">
+          <div class="space-y-6">
             <section class="rounded-[24px] border border-muted/60 bg-default p-5 shadow-sm">
               <div class="flex flex-col gap-4">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <button
-                      v-for="tab in node.tabs"
-                      :key="tab.id"
-                      type="button"
-                      class="rounded-full border px-4 py-2 text-sm font-medium transition"
-                      :class="
-                        tab.id === activeTabId
-                          ? 'border-primary/40 bg-primary/10 text-primary'
-                          : 'border-muted/60 bg-elevated/70 text-toned hover:border-primary/30 hover:text-highlighted'
-                      "
-                      @click="setActiveTab(tab.id)"
-                    >
-                      {{ getDisplayTabTitle(tab) }}
-                    </button>
-                  </div>
-
-                  <div class="flex flex-wrap items-center gap-2">
-                    <UButton
-                      color="neutral"
-                      variant="ghost"
-                      icon="i-lucide-pencil"
-                      @click="openTabEditor('rename')"
-                    >
-                      Rename tab
-                    </UButton>
-
-                    <UButton
-                      color="neutral"
-                      variant="ghost"
-                      icon="i-lucide-trash-2"
-                      @click="deleteActiveTab"
-                    >
-                      Delete tab
-                    </UButton>
-
-                    <UButton
-                      color="primary"
-                      variant="soft"
-                      icon="i-lucide-plus"
-                      @click="openTabEditor('create')"
-                    >
-                      New tab
-                    </UButton>
-                  </div>
-                </div>
-
-                <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-muted/70 bg-elevated/40 p-4">
-                  <div>
+                <div class="space-y-4 rounded-2xl border border-muted/60 bg-elevated/30 p-4">
+                  <div class="flex flex-wrap items-center justify-between gap-2">
                     <p class="text-sm font-medium text-highlighted">
                       {{ getDisplayTabTitle(activeTab) }}
                     </p>
                     <p class="text-sm text-muted">
-                      {{ activeTab.blocks.length }} block{{ activeTab.blocks.length === 1 ? "" : "s" }}
-                      in this tab
+                      {{ visibleBlocks.length }} of {{ activeTab.blocks.length }} block{{
+                        activeTab.blocks.length === 1 ? "" : "s"
+                      }}
                     </p>
                   </div>
 
-                  <UDropdownMenu :items="addBlockMenuItems">
-                    <UButton color="primary" icon="i-lucide-layout-panel-top">
-                      Add block
+                  <UInput
+                    v-model="blockSearch"
+                    icon="i-lucide-search"
+                    placeholder="Search blocks by title or content"
+                    size="lg"
+                  />
+
+                  <div class="flex flex-wrap items-center gap-2">
+                    <UButton
+                      color="primary"
+                      variant="soft"
+                      icon="i-lucide-list-checks"
+                      @click="addBlockToActiveTab('task-list')"
+                    >
+                      Task list
                     </UButton>
-                  </UDropdownMenu>
+                    <UButton
+                      color="primary"
+                      variant="soft"
+                      icon="i-lucide-notebook-tabs"
+                      @click="addBlockToActiveTab('notes')"
+                    >
+                      Notes
+                    </UButton>
+                    <UButton
+                      color="primary"
+                      variant="soft"
+                      icon="i-lucide-scale"
+                      @click="addBlockToActiveTab('decision')"
+                    >
+                      Decision
+                    </UButton>
+                    <UDropdownMenu :items="addBlockMenuItems">
+                      <UButton color="primary" icon="i-lucide-plus">
+                        More
+                      </UButton>
+                    </UDropdownMenu>
+                  </div>
+
+                  <div
+                    v-if="node.customBlockTemplates.length > 0"
+                    class="flex flex-wrap items-center gap-2 border-t border-muted/60 pt-3"
+                  >
+                    <UBadge color="neutral" variant="subtle">Templates</UBadge>
+                    <UButton
+                      v-for="template in node.customBlockTemplates"
+                      :key="`quick-template-${template.id}`"
+                      color="neutral"
+                      variant="soft"
+                      size="sm"
+                      icon="i-lucide-blocks"
+                      @click="addCustomBlockToActiveTab(template.id)"
+                    >
+                      {{ template.name }}
+                    </UButton>
+                  </div>
                 </div>
 
                 <div v-if="activeTab.blocks.length === 0" class="rounded-2xl border border-dashed border-muted/70 bg-elevated/30 p-10 text-center">
@@ -1251,9 +1280,19 @@ function renderNotesPreview(input: string) {
                   </p>
                 </div>
 
+                <div
+                  v-else-if="visibleBlocks.length === 0"
+                  class="rounded-2xl border border-dashed border-muted/70 bg-elevated/30 p-10 text-center"
+                >
+                  <p class="text-base font-medium text-highlighted">No blocks match your search.</p>
+                  <p class="mt-2 text-sm text-muted">
+                    Try a different term or clear the search to see all blocks.
+                  </p>
+                </div>
+
                 <div v-else class="space-y-5">
                   <UCard
-                    v-for="block in activeTab.blocks"
+                    v-for="block in visibleBlocks"
                     :key="block.id"
                     :ui="{
                       body: 'space-y-5',
@@ -1287,6 +1326,21 @@ function renderNotesPreview(input: string) {
                         @click="removeBlock(activeTab.id, block.id)"
                       />
                     </template>
+
+                    <div
+                      v-if="normalizedBlockSearch && getBlockSearchMatches(block).length > 0"
+                      class="space-y-2 rounded-2xl border border-warning/40 bg-warning/10 p-3"
+                    >
+                      <p class="text-xs font-medium uppercase tracking-[0.15em] text-warning">
+                        Search matches
+                      </p>
+                      <p
+                        v-for="(match, index) in getBlockSearchMatches(block)"
+                        :key="`${block.id}-match-${index}`"
+                        class="text-sm text-toned"
+                        v-html="highlightSearchMatch(match)"
+                      />
+                    </div>
 
                     <template v-if="block.type === 'task-list'">
                       <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-muted/60 bg-elevated/40 p-4">
@@ -1987,156 +2041,154 @@ function renderNotesPreview(input: string) {
             </section>
           </div>
 
-          <aside class="space-y-6 xl:col-span-4">
-            <section class="rounded-[24px] border border-muted/60 bg-default p-5 shadow-sm">
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <p class="text-xs font-medium uppercase tracking-[0.2em] text-muted">
-                    Custom Block Builder
-                  </p>
-                  <p class="mt-2 text-sm text-muted">
-                    Define lightweight templates with fields, notes, a formula, and an optional prompt template.
-                  </p>
-                </div>
+          <section class="rounded-[24px] border border-muted/60 bg-default p-5 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p class="text-xs font-medium uppercase tracking-[0.2em] text-muted">
+                  Custom Block Creator
+                </p>
+                <p class="mt-1 text-sm text-muted">
+                  Hidden by default to keep the editor focused.
+                </p>
               </div>
+              <UButton
+                color="neutral"
+                variant="soft"
+                icon="i-lucide-blocks"
+                @click="customBlockBuilderOpen = !customBlockBuilderOpen"
+              >
+                {{ customBlockBuilderOpen ? "Hide creator" : "Show creator" }}
+              </UButton>
+            </div>
 
-              <div class="mt-5 space-y-4">
-                <UFormField label="Template title">
-                  <UInput
-                    :model-value="templateForm.name"
-                    placeholder="Weekly review"
-                    @update:model-value="templateForm.name = $event ?? ''"
-                  />
-                </UFormField>
+            <div v-if="customBlockBuilderOpen" class="mt-5 space-y-5">
+              <UFormField label="Template title">
+                <UInput
+                  :model-value="templateForm.name"
+                  placeholder="Weekly review"
+                  @update:model-value="templateForm.name = $event ?? ''"
+                />
+              </UFormField>
 
-                <div class="space-y-3">
-                  <div class="flex items-center justify-between gap-3">
-                    <p class="text-sm font-medium text-highlighted">Fields</p>
-                    <UButton
-                      color="neutral"
-                      variant="soft"
-                      size="sm"
-                      icon="i-lucide-plus"
-                      @click="addTemplateField"
-                    >
-                      Add field
-                    </UButton>
-                  </div>
-
-                  <div
-                    v-for="field in templateForm.fields"
-                    :key="field.id"
-                    class="grid gap-3 rounded-2xl border border-muted/60 bg-elevated/30 p-4"
+              <div class="space-y-3">
+                <div class="flex items-center justify-between gap-3">
+                  <p class="text-sm font-medium text-highlighted">Fields</p>
+                  <UButton
+                    color="neutral"
+                    variant="soft"
+                    size="sm"
+                    icon="i-lucide-plus"
+                    @click="addTemplateField"
                   >
-                    <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_140px_auto]">
-                      <UInput
-                        :model-value="field.label"
-                        placeholder="Field label"
-                        @update:model-value="
-                          field.label = $event ?? '';
-                          syncTemplateFieldKey(field);
-                        "
-                      />
-
-                      <select
-                        :value="field.type"
-                        class="w-full rounded-xl border border-muted bg-default px-3 py-2 text-sm text-default outline-none ring-inset transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        @change="
-                          field.type = toCustomFieldType(getSelectValue($event))
-                        "
-                      >
-                        <option
-                          v-for="option in customFieldTypeOptions"
-                          :key="option.value"
-                          :value="option.value"
-                        >
-                          {{ option.label }}
-                        </option>
-                      </select>
-
-                      <UButton
-                        color="neutral"
-                        variant="ghost"
-                        icon="i-lucide-x"
-                        @click="removeTemplateField(field.id)"
-                      />
-                    </div>
-
-                    <UInput
-                      :model-value="field.key"
-                      placeholder="field_key"
-                      @update:model-value="field.key = ($event ?? '').replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()"
-                    />
-                  </div>
-                </div>
-
-                <label class="flex items-center gap-3 rounded-2xl border border-muted/60 bg-elevated/30 px-4 py-3">
-                  <input
-                    :checked="templateForm.includeNotes"
-                    type="checkbox"
-                    class="size-4 rounded border border-muted/80 text-primary focus:ring-primary"
-                    @change="templateForm.includeNotes = getCheckedValue($event)"
-                  />
-                  <span class="text-sm text-toned">Include notes area</span>
-                </label>
-
-                <label class="flex items-center gap-3 rounded-2xl border border-muted/60 bg-elevated/30 px-4 py-3">
-                  <input
-                    :checked="templateForm.formulaEnabled"
-                    type="checkbox"
-                    class="size-4 rounded border border-muted/80 text-primary focus:ring-primary"
-                    @change="templateForm.formulaEnabled = getCheckedValue($event)"
-                  />
-                  <span class="text-sm text-toned">Include formula field</span>
-                </label>
-
-                <div v-if="templateForm.formulaEnabled" class="grid gap-3 rounded-2xl border border-muted/60 bg-elevated/30 p-4">
-                  <UInput
-                    :model-value="templateForm.formulaLabel"
-                    placeholder="Formula label"
-                    @update:model-value="templateForm.formulaLabel = $event ?? ''"
-                  />
-                  <UInput
-                    :model-value="templateForm.formulaExpression"
-                    placeholder="budget - spend"
-                    @update:model-value="templateForm.formulaExpression = $event ?? ''"
-                  />
-                  <p class="text-xs text-muted">
-                    Use numeric field keys with +, -, *, /, and parentheses.
-                  </p>
-                </div>
-
-                <UFormField label="Optional AI prompt template">
-                  <UTextarea
-                    :model-value="templateForm.aiPromptTemplate"
-                    :rows="4"
-                    autoresize
-                    placeholder="Summarize the status of {{goal}} given the values above."
-                    @update:model-value="templateForm.aiPromptTemplate = $event ?? ''"
-                  />
-                </UFormField>
-
-                <div class="flex justify-end">
-                  <UButton color="primary" icon="i-lucide-blocks" @click="submitTemplateForm">
-                    Save template
+                    Add field
                   </UButton>
                 </div>
-              </div>
-            </section>
 
-            <section class="rounded-[24px] border border-muted/60 bg-default p-5 shadow-sm">
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <p class="text-xs font-medium uppercase tracking-[0.2em] text-muted">
-                    Templates
-                  </p>
-                  <p class="mt-2 text-sm text-muted">
-                    Create blocks from any saved template inside the active tab.
-                  </p>
+                <div
+                  v-for="field in templateForm.fields"
+                  :key="field.id"
+                  class="grid gap-3 rounded-2xl border border-muted/60 bg-elevated/30 p-4"
+                >
+                  <div class="grid gap-3 md:grid-cols-[minmax(0,1fr)_140px_auto]">
+                    <UInput
+                      :model-value="field.label"
+                      placeholder="Field label"
+                      @update:model-value="
+                        field.label = $event ?? '';
+                        syncTemplateFieldKey(field);
+                      "
+                    />
+
+                    <select
+                      :value="field.type"
+                      class="w-full rounded-xl border border-muted bg-default px-3 py-2 text-sm text-default outline-none ring-inset transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      @change="
+                        field.type = toCustomFieldType(getSelectValue($event))
+                      "
+                    >
+                      <option
+                        v-for="option in customFieldTypeOptions"
+                        :key="option.value"
+                        :value="option.value"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
+
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      icon="i-lucide-x"
+                      @click="removeTemplateField(field.id)"
+                    />
+                  </div>
+
+                  <UInput
+                    :model-value="field.key"
+                    placeholder="field_key"
+                    @update:model-value="field.key = ($event ?? '').replace(/[^a-zA-Z0-9_]/g, '').toLowerCase()"
+                  />
                 </div>
               </div>
 
-              <div class="mt-5 space-y-3">
+              <label class="flex items-center gap-3 rounded-2xl border border-muted/60 bg-elevated/30 px-4 py-3">
+                <input
+                  :checked="templateForm.includeNotes"
+                  type="checkbox"
+                  class="size-4 rounded border border-muted/80 text-primary focus:ring-primary"
+                  @change="templateForm.includeNotes = getCheckedValue($event)"
+                />
+                <span class="text-sm text-toned">Include notes area</span>
+              </label>
+
+              <label class="flex items-center gap-3 rounded-2xl border border-muted/60 bg-elevated/30 px-4 py-3">
+                <input
+                  :checked="templateForm.formulaEnabled"
+                  type="checkbox"
+                  class="size-4 rounded border border-muted/80 text-primary focus:ring-primary"
+                  @change="templateForm.formulaEnabled = getCheckedValue($event)"
+                />
+                <span class="text-sm text-toned">Include formula field</span>
+              </label>
+
+              <div v-if="templateForm.formulaEnabled" class="grid gap-3 rounded-2xl border border-muted/60 bg-elevated/30 p-4">
+                <UInput
+                  :model-value="templateForm.formulaLabel"
+                  placeholder="Formula label"
+                  @update:model-value="templateForm.formulaLabel = $event ?? ''"
+                />
+                <UInput
+                  :model-value="templateForm.formulaExpression"
+                  placeholder="budget - spend"
+                  @update:model-value="templateForm.formulaExpression = $event ?? ''"
+                />
+                <p class="text-xs text-muted">
+                  Use numeric field keys with +, -, *, /, and parentheses.
+                </p>
+              </div>
+
+              <UFormField label="Optional AI prompt template">
+                <UTextarea
+                  :model-value="templateForm.aiPromptTemplate"
+                  :rows="4"
+                  autoresize
+                  placeholder="Summarize the status of {{goal}} given the values above."
+                  @update:model-value="templateForm.aiPromptTemplate = $event ?? ''"
+                />
+              </UFormField>
+
+              <div class="flex justify-end">
+                <UButton color="primary" icon="i-lucide-blocks" @click="submitTemplateForm">
+                  Save template
+                </UButton>
+              </div>
+
+              <div class="space-y-3 border-t border-muted/60 pt-4">
+                <div class="flex items-center gap-2">
+                  <UBadge color="neutral" variant="subtle">Templates</UBadge>
+                  <p class="text-sm text-muted">Manage saved templates</p>
+                </div>
+
                 <div
                   v-for="template in node.customBlockTemplates"
                   :key="template.id"
@@ -2160,28 +2212,6 @@ function renderNotesPreview(input: string) {
                       @click="deleteTemplate(template.id)"
                     />
                   </div>
-
-                  <div class="mt-4 flex flex-wrap items-center gap-2">
-                    <UBadge
-                      v-for="field in template.fields"
-                      :key="field.id"
-                      color="neutral"
-                      variant="soft"
-                    >
-                      {{ field.label }}
-                    </UBadge>
-                  </div>
-
-                  <div class="mt-4 flex justify-end">
-                    <UButton
-                      color="primary"
-                      variant="soft"
-                      icon="i-lucide-plus"
-                      @click="addCustomBlockToActiveTab(template.id)"
-                    >
-                      Add to active tab
-                    </UButton>
-                  </div>
                 </div>
 
                 <div
@@ -2191,45 +2221,8 @@ function renderNotesPreview(input: string) {
                   No custom templates yet.
                 </div>
               </div>
-            </section>
-
-            <section class="rounded-[24px] border border-muted/60 bg-default p-5 shadow-sm">
-              <p class="text-xs font-medium uppercase tracking-[0.2em] text-muted">
-                Task Ledger
-              </p>
-
-              <div class="mt-4 space-y-3">
-                <div
-                  v-for="item in nodeTaskLedger.slice(0, 8)"
-                  :key="`ledger-${item.task.id}`"
-                  class="rounded-2xl border border-muted/60 bg-elevated/30 p-4"
-                >
-                  <div class="flex flex-wrap items-center justify-between gap-2">
-                    <p class="font-medium text-highlighted">
-                      {{ item.task.text || "Untitled task" }}
-                    </p>
-                    <UBadge
-                      color="neutral"
-                      variant="subtle"
-                      :class="getPriorityBadgeClass(item.task.priority)"
-                    >
-                      {{ item.task.priority || "No priority" }}
-                    </UBadge>
-                  </div>
-                  <p class="mt-2 text-sm text-muted">
-                    {{ formatRelativeTaskMeta(item) }}
-                  </p>
-                </div>
-
-                <div
-                  v-if="nodeTaskLedger.length === 0"
-                  class="rounded-2xl border border-dashed border-muted/70 bg-elevated/20 p-6 text-sm text-muted"
-                >
-                  No tasks captured in this node yet.
-                </div>
-              </div>
-            </section>
-          </aside>
+            </div>
+          </section>
         </div>
 
         <UAlert
