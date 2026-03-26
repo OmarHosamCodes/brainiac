@@ -8,13 +8,18 @@ const props = defineProps<{
 
 const chatViewport = useTemplateRef<HTMLDivElement>("chatViewport");
 const {
+  addMentionedNode,
+  activeMention,
   canSend,
   draft,
   error,
   isPending,
+  mentionSuggestions,
   messages,
   promptSuggestions,
+  removeMentionedNode,
   resetChat,
+  selectedNodes,
   sendMessage,
 } = useDashboardAgentChat(toRef(props, "nodes"));
 
@@ -30,11 +35,28 @@ async function scrollToBottom() {
 }
 
 function handleSubmit() {
+  if (activeMention.value && mentionSuggestions.value.length > 0) {
+    const firstSuggestion = mentionSuggestions.value[0];
+
+    if (firstSuggestion) {
+      addMentionedNode(firstSuggestion);
+    }
+  }
+
   void sendMessage();
 }
 
 function handlePromptClick(prompt: string) {
   void sendMessage(prompt);
+}
+
+function handleMentionClick(node: WorkspaceNode) {
+  addMentionedNode(node);
+}
+
+function handleEnterKeydown(event: KeyboardEvent) {
+  event.preventDefault();
+  handleSubmit();
 }
 
 watch(
@@ -64,9 +86,7 @@ watch(
         </div>
 
         <div class="flex items-center gap-2">
-          <UBadge color="neutral" variant="subtle">
-            {{ nodes.length }} nodes
-          </UBadge>
+          <UBadge color="neutral" variant="subtle"> {{ nodes.length }} nodes </UBadge>
           <UButton
             color="neutral"
             variant="ghost"
@@ -87,9 +107,7 @@ watch(
     >
       <template v-if="messages.length === 0">
         <div class="rounded-3xl border border-dashed border-primary/30 bg-primary/5 p-4">
-          <p class="text-sm font-medium text-highlighted">
-            Start with a concrete question.
-          </p>
+          <p class="text-sm font-medium text-highlighted">Start with a concrete question.</p>
           <p class="mt-1 text-sm text-muted">
             The agent can inspect live dashboard nodes, search them, and pull node details before
             answering.
@@ -130,6 +148,13 @@ watch(
           </p>
 
           <p
+            v-if="message.role === 'user' && message.contextNodeTitles?.length"
+            class="mt-2 text-[11px] font-medium uppercase tracking-[0.18em] opacity-70"
+          >
+            Context · {{ message.contextNodeTitles.join(", ") }}
+          </p>
+
+          <p
             v-if="message.role === 'assistant' && (message.model || message.toolsCalled?.length)"
             class="mt-2 text-[11px] font-medium uppercase tracking-[0.18em] opacity-70"
           >
@@ -142,7 +167,9 @@ watch(
       </article>
 
       <article v-if="isPending" class="flex justify-start">
-        <div class="flex items-center gap-2 rounded-[24px] border border-muted/70 bg-default px-4 py-3 text-sm text-muted shadow-sm">
+        <div
+          class="flex items-center gap-2 rounded-[24px] border border-muted/70 bg-default px-4 py-3 text-sm text-muted shadow-sm"
+        >
           <UIcon name="i-lucide-loader-2" class="size-4 animate-spin" />
           Reading the dashboard
         </div>
@@ -164,13 +191,53 @@ watch(
         v-model="draft"
         :rows="4"
         autoresize
-        placeholder="Ask the agent about this dashboard"
-        @keydown.enter.exact.prevent="handleSubmit"
+        placeholder="Ask the agent about this dashboard. Type @ to narrow the turn to a node."
+        @keydown.enter.exact="handleEnterKeydown"
       />
+
+      <div v-if="selectedNodes.length > 0" class="mt-3 flex flex-wrap items-center gap-2">
+        <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted">Context</p>
+
+        <button
+          v-for="node in selectedNodes"
+          :key="node.id"
+          type="button"
+          class="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/8 px-3 py-1 text-xs font-medium text-highlighted transition hover:border-primary/40 hover:bg-primary/12"
+          @click="removeMentionedNode(node.id)"
+        >
+          <span>{{ node.title }}</span>
+          <UIcon name="i-lucide-x" class="size-3" />
+        </button>
+      </div>
+
+      <div v-if="activeMention" class="mt-3 rounded-2xl border border-muted/70 bg-elevated/40 p-2">
+        <div v-if="mentionSuggestions.length > 0" class="flex flex-col gap-1">
+          <button
+            v-for="node in mentionSuggestions"
+            :key="node.id"
+            type="button"
+            class="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm text-toned transition hover:bg-default"
+            @click="handleMentionClick(node)"
+          >
+            <span class="min-w-0 truncate font-medium text-highlighted">
+              {{ node.title }}
+            </span>
+            <span class="truncate text-xs text-muted">
+              {{ node.label || node.id }}
+            </span>
+          </button>
+        </div>
+
+        <p v-else class="px-3 py-2 text-sm text-muted">
+          No nodes match
+          <span class="font-medium text-highlighted">{{ `@${activeMention.query}` }}</span
+          >.
+        </p>
+      </div>
 
       <div class="mt-3 flex items-center justify-between gap-3">
         <p class="text-xs text-muted">
-          Press Enter to send. Use Shift+Enter for a new line.
+          Press Enter to send. Use Shift+Enter for a new line. Type @ to scope the turn.
         </p>
 
         <UButton
