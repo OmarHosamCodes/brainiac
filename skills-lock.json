@@ -6,6 +6,11 @@
       "sourceType": "github",
       "computedHash": "a4c830509e85557b59339d8d93a4e243e9e59c686e7678854d39230e12c2a6dc"
     },
+    "frontend-design": {
+      "source": "vudovn/antigravity-kit",
+      "sourceType": "github",
+      "computedHash": "a96704c64a0f8850d44454f95ea1238a75ebac909cb055614c641f903e297f3a"
+    },
     "hono": {
       "source": "yusukebe/hono-skill",
       "sourceType": "github",

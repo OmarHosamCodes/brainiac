@@ -8,6 +8,7 @@ const {
     closeEditor,
     editorMode,
     editorOpen,
+    editorBlockOptions,
     isDraftValid,
     isWorkspaceInitialLoading,
     isWorkspaceRefreshing,
@@ -29,12 +30,12 @@ const {
     <div class="h-full min-h-0 p-4 md:p-6">
         <div class="flex h-full min-h-0 flex-col gap-4">
             <UAlert
-                v-if="workspaceQuery.status.value === 'error'"
+                v-if="workspaceQuery.status === 'error'"
                 color="error"
                 icon="i-lucide-alert-circle"
                 title="Workspace unavailable"
                 :description="
-                    workspaceQuery.error.value?.message ||
+                    workspaceQuery.error?.message ||
                     'The user workspace could not be loaded.'
                 "
             />
@@ -64,7 +65,7 @@ const {
                         v-if="!isWorkspaceInitialLoading"
                         :badge="saveBadge"
                         :nodes-count="nodes.length"
-                        :user-name="authSession.value?.data?.user?.name"
+                        :user-name="authSession.data?.user?.name"
                     />
                 </div>
 
@@ -101,10 +102,15 @@ const {
             :mode="editorMode"
             :open="editorOpen"
             :title="nodeDraft.title"
+            :tint="nodeDraft.tint"
             :valid="isDraftValid"
+            :available-blocks="editorBlockOptions"
+            :featured-blocks="nodeDraft.featuredBlocks"
             @close="closeEditor"
             @submit="submitNodeEditor"
             @update:content="nodeDraft.content = $event"
+            @update:featured-blocks="nodeDraft.featuredBlocks = $event"
+            @update:tint="nodeDraft.tint = $event"
             @update:title="nodeDraft.title = $event"
         />
     </div>

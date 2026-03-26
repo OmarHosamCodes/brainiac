@@ -85,12 +85,12 @@ function insertMarketplaceItem(item: WorkspaceMarketplaceItem) {
   <div class="h-full min-h-0 overflow-y-auto p-4 md:p-6">
     <div class="mx-auto flex w-full max-w-[1200px] flex-col gap-4">
       <UAlert
-        v-if="workspaceQuery.status.value === 'error'"
+        v-if="workspaceQuery.status === 'error'"
         color="error"
         icon="i-lucide-alert-circle"
         title="Workspace unavailable"
         :description="
-          workspaceQuery.error.value?.message || 'The user workspace could not be loaded.'
+          workspaceQuery.error?.message || 'The user workspace could not be loaded.'
         "
       />
 

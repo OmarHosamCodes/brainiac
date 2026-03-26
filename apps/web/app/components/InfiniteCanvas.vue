@@ -15,6 +15,7 @@ import {
   type CanvasPointerDownOptions,
   type CanvasRect,
 } from "~/composables/useCanvas";
+import { getWorkspaceNodeTintStyle } from "~/utils/workspace-node-dashboard";
 
 type ResizeHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -244,6 +245,10 @@ function getNodeStyle(node: CanvasNodeModel): CSSProperties {
     width: `${node.width}px`,
     height: `${node.height}px`,
   };
+}
+
+function getNodeTintStyle(node: CanvasNodeModel): CSSProperties {
+  return getWorkspaceNodeTintStyle(node.dashboard?.tint);
 }
 
 function updateNodes(nextNodes: CanvasNodeModel[]) {
@@ -792,6 +797,7 @@ onBeforeUnmount(() => {
                 'is-dragging':
                   activeInteraction?.mode === 'drag' && activeInteraction.nodeId === node.id,
               }"
+              :style="getNodeTintStyle(node)"
               @pointerdown="onNodeShellPointerDown($event, node)"
             >
               <div
@@ -1029,13 +1035,45 @@ onBeforeUnmount(() => {
 
 .canvas-node-shell {
   height: 100%;
+  --workspace-node-rgb: 148 163 184;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgb(var(--workspace-node-rgb) / 0.18),
+      transparent 58%
+    ),
+    linear-gradient(
+      180deg,
+      rgb(var(--workspace-node-rgb) / 0.11),
+      color-mix(in srgb, var(--ui-bg) 94%, white 6%)
+    );
+  border-color: color-mix(
+    in srgb,
+    rgb(var(--workspace-node-rgb) / 0.28) 58%,
+    var(--ui-border)
+  );
+  box-shadow:
+    0 24px 80px rgba(15, 23, 42, 0.14),
+    0 0 0 1px rgb(var(--workspace-node-rgb) / 0.06);
+}
+
+.canvas-node-toolbar {
+  background: linear-gradient(
+    90deg,
+    rgb(var(--workspace-node-rgb) / 0.14),
+    transparent 48%
+  );
 }
 
 .canvas-node.is-selected .canvas-node-shell {
-  border-color: color-mix(in srgb, var(--ui-primary) 55%, var(--ui-border));
+  border-color: color-mix(
+    in srgb,
+    rgb(var(--workspace-node-rgb) / 0.6) 68%,
+    var(--ui-border)
+  );
   box-shadow:
     0 28px 100px rgba(16, 24, 40, 0.18),
-    0 0 0 1px color-mix(in srgb, var(--ui-primary) 35%, transparent);
+    0 0 0 1px rgb(var(--workspace-node-rgb) / 0.2);
 }
 
 .canvas-node-shell.is-dragging {

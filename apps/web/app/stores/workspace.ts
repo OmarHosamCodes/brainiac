@@ -5,8 +5,12 @@ import {
   DEFAULT_WORKSPACE_NODE_MIN_HEIGHT,
   DEFAULT_WORKSPACE_NODE_MIN_WIDTH,
   DEFAULT_WORKSPACE_NODE_WIDTH,
+  getWorkspaceNodeDashboardSelectableBlocks,
   normalizeWorkspaceNode,
+  type WorkspaceNodeDashboardFeaturedBlock,
+  type WorkspaceNodeDashboardSelectableBlock,
   type WorkspaceNode,
+  type WorkspaceNodeTint,
 } from "@brainiac/workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { defineStore, skipHydrate } from "pinia";
@@ -41,9 +45,16 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   const isPreloadingWorkspace = ref(false);
   const localRevision = ref(0);
   const syncedRevision = ref(0);
-  const nodeDraft = reactive({
+  const nodeDraft = reactive<{
+    title: string;
+    content: string;
+    tint: WorkspaceNodeTint;
+    featuredBlocks: WorkspaceNodeDashboardFeaturedBlock[];
+  }>({
     title: "",
     content: "",
+    tint: "neutral",
+    featuredBlocks: [],
   });
 
   const workspaceQuery = skipHydrate(
@@ -82,6 +93,15 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       (workspaceQuery.isRefetching.value || isPreloadingWorkspace.value),
   );
   const isDraftValid = computed(() => nodeDraft.title.trim().length > 0);
+  const editorBlockOptions = computed<WorkspaceNodeDashboardSelectableBlock[]>(() => {
+    if (!activeNodeId.value) {
+      return [];
+    }
+
+    const node = findNode(activeNodeId.value);
+
+    return node ? getWorkspaceNodeDashboardSelectableBlocks(node) : [];
+  });
   const hasPendingLocalChanges = computed(
     () =>
       localRevision.value > syncedRevision.value ||
@@ -134,6 +154,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   function resetDraft() {
     nodeDraft.title = "";
     nodeDraft.content = "";
+    nodeDraft.tint = "neutral";
+    nodeDraft.featuredBlocks = [];
   }
 
   function closeEditor() {
@@ -310,6 +332,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     pendingNodePosition.value = null;
     nodeDraft.title = node.title;
     nodeDraft.content = node.content;
+    nodeDraft.tint = node.dashboard.tint;
+    nodeDraft.featuredBlocks = [...node.dashboard.featuredBlocks];
     editorOpen.value = true;
   }
 
@@ -346,6 +370,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
               title,
               content,
               label: title,
+              dashboard: {
+                tint: nodeDraft.tint,
+                featuredBlocks: [...nodeDraft.featuredBlocks],
+              },
               updatedAt: timestamp,
             })
           : node,
@@ -371,7 +399,13 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       updatedAt: timestamp,
       tabs: [createDefaultWorkspaceTab("Overview", content)],
       customBlockTemplates: [],
-      viewState: {},
+      viewState: {
+        notePreviewState: {},
+      },
+      dashboard: {
+        tint: nodeDraft.tint,
+        featuredBlocks: [],
+      },
     });
 
     nodes.value = [...nodes.value, nextNode];
@@ -451,6 +485,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     editorOpen,
     editorMode,
     nodeDraft,
+    editorBlockOptions,
     isDraftValid,
     closeEditor,
     openCreateNode,

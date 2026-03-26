@@ -19,7 +19,7 @@ const {
 } = useWorkspaceNodeEditorContext();
 
 const registryEntry = computed(() => getWorkspaceBlockRegistryEntry(props.block.type));
-const editorComponent = computed(() => registryEntry.value.component);
+const editorComponent = computed(() => registryEntry.value.component as any);
 </script>
 
 <template>

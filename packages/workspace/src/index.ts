@@ -11,6 +11,7 @@ export const WORKSPACE_SCORECARD_METRIC_LIMIT = 40;
 export const WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT = 20;
 export const WORKSPACE_CUSTOM_BLOCK_FIELD_LIMIT = 12;
 export const WORKSPACE_MARKETPLACE_ITEM_LIMIT = 200;
+export const WORKSPACE_NODE_DASHBOARD_DETAIL_LIMIT = 4;
 export const DEFAULT_WORKSPACE_NODE_WIDTH = 320;
 export const DEFAULT_WORKSPACE_NODE_HEIGHT = 220;
 export const DEFAULT_WORKSPACE_NODE_MIN_WIDTH = 260;
@@ -41,6 +42,14 @@ export const WORKSPACE_TIMELINE_MILESTONE_STATUSES = [
   "done",
   "blocked",
 ] as const;
+export const WORKSPACE_NODE_TINTS = [
+  "neutral",
+  "emerald",
+  "sky",
+  "amber",
+  "rose",
+  "indigo",
+] as const;
 
 export const workspaceTaskPrioritySchema = z.enum(["low", "medium", "high"]);
 export const workspaceTaskDomainSchema = z.enum(WORKSPACE_TASK_DOMAINS);
@@ -48,6 +57,7 @@ export const workspaceTaskQuadrantSchema = z.enum(WORKSPACE_TASK_QUADRANTS);
 export const workspaceTimelineMilestoneStatusSchema = z.enum(
   WORKSPACE_TIMELINE_MILESTONE_STATUSES,
 );
+export const workspaceNodeTintSchema = z.enum(WORKSPACE_NODE_TINTS);
 export const workspaceCustomFieldTypeSchema = z.enum([
   "text",
   "number",
@@ -281,6 +291,19 @@ export const workspaceNodeViewStateSchema = z.object({
   notePreviewState: z.record(z.string(), z.boolean()).default({}),
 });
 
+export const workspaceNodeDashboardFeaturedBlockSchema = z.object({
+  tabId: z.string().min(1),
+  blockId: z.string().min(1),
+});
+
+export const workspaceNodeDashboardSchema = z.object({
+  tint: workspaceNodeTintSchema.default("neutral"),
+  featuredBlocks: z
+    .array(workspaceNodeDashboardFeaturedBlockSchema)
+    .max(WORKSPACE_NODE_DASHBOARD_DETAIL_LIMIT)
+    .default([]),
+});
+
 export const workspaceNodeSchema = z.object({
   id: z.string().min(1),
   title: z.string().trim().min(1).max(120),
@@ -305,6 +328,10 @@ export const workspaceNodeSchema = z.object({
   viewState: workspaceNodeViewStateSchema.default({
     activeTabId: null,
     notePreviewState: {},
+  }),
+  dashboard: workspaceNodeDashboardSchema.default({
+    tint: "neutral",
+    featuredBlocks: [],
   }),
 });
 
@@ -374,6 +401,7 @@ export type WorkspaceKanbanCard = z.infer<typeof workspaceKanbanCardSchema>;
 export type WorkspaceTimelineMilestoneStatus = z.infer<
   typeof workspaceTimelineMilestoneStatusSchema
 >;
+export type WorkspaceNodeTint = z.infer<typeof workspaceNodeTintSchema>;
 export type WorkspaceTimelineMilestone = z.infer<
   typeof workspaceTimelineMilestoneSchema
 >;
@@ -419,6 +447,10 @@ export type WorkspaceNodeTab = z.infer<typeof workspaceNodeTabSchema>;
 export type WorkspaceNodeViewState = z.infer<
   typeof workspaceNodeViewStateSchema
 >;
+export type WorkspaceNodeDashboardFeaturedBlock = z.infer<
+  typeof workspaceNodeDashboardFeaturedBlockSchema
+>;
+export type WorkspaceNodeDashboard = z.infer<typeof workspaceNodeDashboardSchema>;
 export type WorkspaceNode = z.infer<typeof workspaceNodeSchema>;
 export type WorkspaceSaveInput = z.infer<typeof workspaceSaveInputSchema>;
 export type WorkspaceMarketplacePayload = z.infer<
@@ -489,6 +521,30 @@ export type WorkspaceDecisionSummary = {
   signal: "lean-yes" | "lean-no" | "balanced";
 };
 
+export type WorkspaceNodeDashboardSelectableBlock = {
+  tabId: string;
+  tabTitle: string;
+  blockId: string;
+  blockTitle: string;
+  blockType: WorkspaceBlock["type"];
+};
+
+export type WorkspaceNodeDashboardDetailMetric = {
+  label: string;
+  value: string;
+};
+
+export type WorkspaceNodeDashboardDetail = {
+  tabId: string;
+  tabTitle: string;
+  blockId: string;
+  blockTitle: string;
+  blockType: WorkspaceBlock["type"];
+  summary: string;
+  metrics: WorkspaceNodeDashboardDetailMetric[];
+  highlights: string[];
+};
+
 function normalizeSelection<T extends string>(
   values: readonly T[] | undefined,
   allowed: readonly T[],
@@ -546,6 +602,14 @@ function truncateText(value: string, maxLength = 180) {
   }
 
   return `${trimmed.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
+}
+
+function getDisplayTabTitle(tab: WorkspaceNodeTab | null | undefined) {
+  return tab?.title.trim() || "Untitled tab";
+}
+
+function getDisplayBlockTitle(block: WorkspaceBlock | null | undefined) {
+  return block?.title.trim() || "Untitled block";
 }
 
 export function createWorkspaceId(prefix = "item") {
@@ -857,6 +921,15 @@ export function createWorkspaceNodeViewState(
   });
 }
 
+export function createWorkspaceNodeDashboard(
+  partial: Partial<WorkspaceNodeDashboard> = {},
+): WorkspaceNodeDashboard {
+  return workspaceNodeDashboardSchema.parse({
+    tint: partial.tint ?? "neutral",
+    featuredBlocks: partial.featuredBlocks ?? [],
+  });
+}
+
 export function createDefaultWorkspaceTab(title = "Overview", body = "") {
   return createWorkspaceNodeTab({
     title,
@@ -968,6 +1041,7 @@ export function normalizeWorkspaceNode(node: WorkspaceNode): WorkspaceNode {
     tabs: node.tabs ?? [],
     customBlockTemplates: node.customBlockTemplates ?? [],
     viewState: node.viewState ?? {},
+    dashboard: node.dashboard ?? {},
   });
 
   const tabs =
@@ -990,6 +1064,12 @@ export function normalizeWorkspaceNode(node: WorkspaceNode): WorkspaceNode {
       ([blockId]) => noteBlockIds.has(blockId),
     ),
   );
+  const featuredBlocks = parsed.dashboard.featuredBlocks.filter(({ tabId, blockId }) =>
+    tabs.some(
+      (tab) =>
+        tab.id === tabId && tab.blocks.some((block) => block.id === blockId),
+    ),
+  );
 
   return {
     ...parsed,
@@ -1008,6 +1088,10 @@ export function normalizeWorkspaceNode(node: WorkspaceNode): WorkspaceNode {
     viewState: createWorkspaceNodeViewState({
       activeTabId,
       notePreviewState,
+    }),
+    dashboard: createWorkspaceNodeDashboard({
+      tint: parsed.dashboard.tint,
+      featuredBlocks,
     }),
   };
 }
@@ -1214,6 +1298,7 @@ export function cloneWorkspaceNodeForInsertion(
     timestamp,
   );
   const tabIdMap = new Map<string, string>();
+  const blockIdMap = new Map<string, string>();
   const tabs = node.tabs.map((tab) => {
     const clonedTab = cloneWorkspaceTabForInsertion(
       tab,
@@ -1221,12 +1306,34 @@ export function cloneWorkspaceNodeForInsertion(
       timestamp,
     );
     tabIdMap.set(tab.id, clonedTab.id);
+    tab.blocks.forEach((block, index) => {
+      const clonedBlockId = clonedTab.blocks[index]?.id;
+
+      if (clonedBlockId) {
+        blockIdMap.set(block.id, clonedBlockId);
+      }
+    });
     return clonedTab;
   });
   const activeTabId =
     node.viewState.activeTabId && tabIdMap.has(node.viewState.activeTabId)
       ? (tabIdMap.get(node.viewState.activeTabId) ?? tabs[0]?.id ?? null)
       : (tabs[0]?.id ?? null);
+  const featuredBlocks = node.dashboard.featuredBlocks.flatMap((selection) => {
+    const nextTabId = tabIdMap.get(selection.tabId);
+    const nextBlockId = blockIdMap.get(selection.blockId);
+
+    if (!nextTabId || !nextBlockId) {
+      return [];
+    }
+
+    return [
+      {
+        tabId: nextTabId,
+        blockId: nextBlockId,
+      },
+    ];
+  });
 
   return normalizeWorkspaceNode({
     ...node,
@@ -1239,6 +1346,10 @@ export function cloneWorkspaceNodeForInsertion(
     viewState: {
       activeTabId,
       notePreviewState: {},
+    },
+    dashboard: {
+      tint: node.dashboard.tint,
+      featuredBlocks,
     },
   });
 }
@@ -1634,6 +1745,420 @@ export function getWorkspaceNodeStats(node: WorkspaceNode) {
     completedTasks,
     overdueTasks,
   };
+}
+
+function formatDashboardTaskLine(task: WorkspaceTask) {
+  const fragments: string[] = [];
+
+  if (task.domain) {
+    fragments.push(getWorkspaceTaskDomainLabel(task.domain));
+  }
+
+  if (task.priority) {
+    fragments.push(`${task.priority} priority`);
+  }
+
+  if (task.dueDate) {
+    fragments.push(`due ${task.dueDate}`);
+  }
+
+  return fragments.length > 0
+    ? `${task.text} (${fragments.join(", ")})`
+    : task.text;
+}
+
+function getTimelineMilestoneSortValue(milestone: WorkspaceTimelineMilestone) {
+  return milestone.date ? getDueDateValue(milestone.date) : Number.MAX_SAFE_INTEGER;
+}
+
+function isScorecardMetricOnTarget(metric: WorkspaceScorecardMetric) {
+  return metric.target >= 0 ? metric.value >= metric.target : metric.value <= metric.target;
+}
+
+function buildWorkspaceNodeDashboardDetail(
+  node: WorkspaceNode,
+  tab: WorkspaceNodeTab,
+  block: WorkspaceBlock,
+): WorkspaceNodeDashboardDetail {
+  if (block.type === "task-list") {
+    const completedTasks = block.tasks.filter((task) => task.completed).length;
+    const openTasks = block.tasks.filter((task) => !task.completed);
+    const overdueTasks = openTasks.filter(
+      (task) => task.dueDate && getDueDateValue(task.dueDate) < getTodayValue(),
+    ).length;
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        block.tasks.length > 0
+          ? `${openTasks.length} open tasks out of ${block.tasks.length}.`
+          : "No tasks added yet.",
+      metrics: [
+        {
+          label: "Done",
+          value: `${completedTasks}/${block.tasks.length}`,
+        },
+        {
+          label: "Open",
+          value: String(openTasks.length),
+        },
+        ...(overdueTasks > 0
+          ? [
+              {
+                label: "Overdue",
+                value: String(overdueTasks),
+              },
+            ]
+          : []),
+      ],
+      highlights: openTasks.slice(0, 2).map((task) => formatDashboardTaskLine(task)),
+    };
+  }
+
+  if (block.type === "notes") {
+    const lines = block.body
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: lines[0]
+        ? truncateText(lines[0], 110)
+        : "No notes captured yet.",
+      metrics: [
+        {
+          label: "Lines",
+          value: String(lines.length),
+        },
+      ],
+      highlights: lines.slice(1, 3).map((line) => truncateText(line, 110)),
+    };
+  }
+
+  if (block.type === "decision") {
+    const summary = getDecisionSummary(block);
+    const recommendation = trimToEmpty(block.recommendation);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        recommendation ||
+        `Decision signal is ${summary.signal.replace("-", " ")} with score ${summary.totalScore}.`,
+      metrics: [
+        {
+          label: "Score",
+          value: String(summary.totalScore),
+        },
+        {
+          label: "Pros",
+          value: String(block.pros.length),
+        },
+        {
+          label: "Cons",
+          value: String(block.cons.length),
+        },
+      ],
+      highlights: [
+        ...block.pros.slice(0, 1).map((item) => `Upside: ${truncateText(item.text, 90)}`),
+        ...block.cons.slice(0, 1).map((item) => `Risk: ${truncateText(item.text, 90)}`),
+      ],
+    };
+  }
+
+  if (block.type === "tracker") {
+    const trend = getTrackerTrend(block);
+    const latestEntry = block.entries[block.entries.length - 1];
+    const trendLabel =
+      trend.direction === "flat"
+        ? "Flat"
+        : `${trend.direction === "up" ? "+" : ""}${trend.delta}`;
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: latestEntry
+        ? `${latestEntry.label || "Latest value"} is ${latestEntry.value}.`
+        : "No tracker entries yet.",
+      metrics: [
+        {
+          label: "Entries",
+          value: String(block.entries.length),
+        },
+        ...(latestEntry
+          ? [
+              {
+                label: "Trend",
+                value: trendLabel,
+              },
+            ]
+          : []),
+      ],
+      highlights: block.entries
+        .slice(-2)
+        .reverse()
+        .map((entry) => `${entry.label || "Entry"}: ${entry.value}`),
+    };
+  }
+
+  if (block.type === "ai-prompt") {
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: trimToEmpty(block.prompt)
+        ? truncateText(block.prompt, 110)
+        : "Prompt not configured yet.",
+      metrics: [
+        {
+          label: "Runs",
+          value: String(block.outputHistory.length),
+        },
+        {
+          label: "Output",
+          value: trimToEmpty(block.latestOutput) ? "Saved" : "Empty",
+        },
+      ],
+      highlights: trimToEmpty(block.latestOutput)
+        ? [truncateText(block.latestOutput, 110)]
+        : [],
+    };
+  }
+
+  if (block.type === "time-orchestrator") {
+    const orchestration = getTimeOrchestratorSummary(node, block.settings);
+    const estimateHours = Number((orchestration.totalEstimateMinutes / 60).toFixed(1));
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        orchestration.totalOpenTasks > 0
+          ? `${orchestration.suggestedNextActions.length} suggested next actions across ${orchestration.totalOpenTasks} open tasks.`
+          : "No open tasks match the current orchestration filters.",
+      metrics: [
+        {
+          label: "Open",
+          value: String(orchestration.totalOpenTasks),
+        },
+        {
+          label: "Estimate",
+          value: `${estimateHours}h`,
+        },
+        {
+          label: "Overdue",
+          value: String(orchestration.overdue.length),
+        },
+      ],
+      highlights: orchestration.suggestedNextActions
+        .slice(0, 2)
+        .map(({ task }) => formatDashboardTaskLine(task)),
+    };
+  }
+
+  if (block.type === "kanban") {
+    const cardsByColumn = block.columns.map((column) => ({
+      title: column.title.trim() || "Untitled column",
+      count: block.cards.filter((card) => card.columnId === column.id).length,
+    }));
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        block.cards.length > 0
+          ? `${block.cards.length} cards across ${block.columns.length} columns.`
+          : "No cards on the board yet.",
+      metrics: [
+        {
+          label: "Cards",
+          value: String(block.cards.length),
+        },
+        {
+          label: "Columns",
+          value: String(block.columns.length),
+        },
+      ],
+      highlights: cardsByColumn
+        .filter((entry) => entry.count > 0)
+        .slice(0, 3)
+        .map((entry) => `${entry.title}: ${entry.count}`),
+    };
+  }
+
+  if (block.type === "timeline") {
+    const sortedMilestones = [...block.milestones].sort(
+      (left, right) =>
+        getTimelineMilestoneSortValue(left) - getTimelineMilestoneSortValue(right),
+    );
+    const nextMilestone = sortedMilestones.find(
+      (milestone) => milestone.status !== "done",
+    );
+    const doneCount = block.milestones.filter(
+      (milestone) => milestone.status === "done",
+    ).length;
+    const activeCount = block.milestones.filter(
+      (milestone) => milestone.status === "active",
+    ).length;
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: nextMilestone
+        ? `Next milestone is ${nextMilestone.title}${nextMilestone.date ? ` on ${nextMilestone.date}` : ""}.`
+        : block.milestones.length > 0
+          ? "All milestones are marked done."
+          : "No milestones planned yet.",
+      metrics: [
+        {
+          label: "Milestones",
+          value: String(block.milestones.length),
+        },
+        {
+          label: "Done",
+          value: String(doneCount),
+        },
+        {
+          label: "Active",
+          value: String(activeCount),
+        },
+      ],
+      highlights: sortedMilestones
+        .slice(0, 2)
+        .map(
+          (milestone) =>
+            `${milestone.title}${milestone.date ? ` (${milestone.date})` : ""}`,
+        ),
+    };
+  }
+
+  if (block.type === "scorecard") {
+    const onTargetCount = block.metrics.filter((metric) =>
+      isScorecardMetricOnTarget(metric),
+    ).length;
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        block.metrics.length > 0
+          ? `${onTargetCount} of ${block.metrics.length} metrics are on target.`
+          : "No scorecard metrics tracked yet.",
+      metrics: [
+        {
+          label: "Metrics",
+          value: String(block.metrics.length),
+        },
+        {
+          label: "On target",
+          value: String(onTargetCount),
+        },
+      ],
+      highlights: block.metrics
+        .slice(0, 2)
+        .map(
+          (metric) =>
+            `${metric.label}: ${metric.value}/${metric.target}${metric.unit ? ` ${metric.unit}` : ""}`,
+        ),
+    };
+  }
+
+  const template = node.customBlockTemplates.find(
+    (entry) => entry.id === block.definitionId,
+  );
+  const formulaResult = evaluateCustomBlockFormula(template?.formula?.expression, block.values);
+  const filledValues = Object.entries(block.values)
+    .filter(([, value]) => value !== null && String(value).trim().length > 0)
+    .slice(0, 2)
+    .map(([key, value]) => `${key}: ${String(value)}`);
+
+  return {
+    tabId: tab.id,
+    tabTitle: getDisplayTabTitle(tab),
+    blockId: block.id,
+    blockTitle: getDisplayBlockTitle(block),
+    blockType: block.type,
+    summary:
+      formulaResult !== null
+        ? `${template?.formula?.label || "Formula"} is ${formulaResult}.`
+        : template?.name
+          ? `${template.name} block with ${Object.keys(block.values).length} fields.`
+          : "Custom block data captured.",
+    metrics: [
+      {
+        label: "Fields",
+        value: String(Object.keys(block.values).length),
+      },
+      {
+        label: "Outputs",
+        value: String(block.outputHistory.length),
+      },
+    ],
+    highlights:
+      filledValues.length > 0
+        ? filledValues
+        : trimToEmpty(block.notes)
+          ? [truncateText(block.notes, 110)]
+          : [],
+  };
+}
+
+export function getWorkspaceNodeDashboardSelectableBlocks(
+  node: WorkspaceNode,
+): WorkspaceNodeDashboardSelectableBlock[] {
+  return node.tabs.flatMap((tab) =>
+    tab.blocks.map((block) => ({
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+    })),
+  );
+}
+
+export function getWorkspaceNodeDashboardDetails(
+  node: WorkspaceNode,
+): WorkspaceNodeDashboardDetail[] {
+  return node.dashboard.featuredBlocks.flatMap((selection) => {
+    const tab = node.tabs.find((entry) => entry.id === selection.tabId);
+    const block = tab?.blocks.find((entry) => entry.id === selection.blockId);
+
+    if (!tab || !block) {
+      return [];
+    }
+
+    return [buildWorkspaceNodeDashboardDetail(node, tab, block)];
+  });
 }
 
 export function getTrackerTrend(

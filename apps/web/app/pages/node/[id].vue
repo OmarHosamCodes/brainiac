@@ -1441,12 +1441,12 @@ provide(workspaceNodeEditorContextKey, {
 <template>
     <div class="h-full overflow-y-auto px-4 py-6 md:px-6 xl:px-10">
         <UAlert
-            v-if="workspaceQuery.status.value === 'error'"
+            v-if="workspaceQuery.status === 'error'"
             color="error"
             icon="i-lucide-alert-circle"
             title="Workspace unavailable"
             :description="
-                workspaceQuery.error.value?.message ||
+                workspaceQuery.error?.message ||
                 'The user workspace could not be loaded.'
             "
         />

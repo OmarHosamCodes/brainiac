@@ -13,6 +13,7 @@ export function useWorkspaceBoard() {
     editorOpen,
     editorMode,
     nodeDraft,
+    editorBlockOptions,
     isDraftValid,
   } = storeToRefs(workspaceStore);
 
@@ -36,6 +37,7 @@ export function useWorkspaceBoard() {
     editorOpen,
     editorMode,
     nodeDraft,
+    editorBlockOptions,
     isDraftValid,
     closeEditor: workspaceStore.closeEditor,
     openCreateNode: workspaceStore.openCreateNode,

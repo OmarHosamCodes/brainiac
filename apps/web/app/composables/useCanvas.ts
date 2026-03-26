@@ -1,3 +1,4 @@
+import type { WorkspaceNodeTint } from "@brainiac/workspace";
 import {
   computed,
   onBeforeUnmount,
@@ -22,6 +23,9 @@ export interface CanvasNodeModel extends CanvasRect {
   content?: string;
   minWidth?: number;
   minHeight?: number;
+  dashboard?: {
+    tint?: WorkspaceNodeTint;
+  };
 }
 
 interface Camera {

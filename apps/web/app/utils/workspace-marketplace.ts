@@ -111,6 +111,10 @@ export function cloneMarketplaceNodePayloadAsNode(payload: WorkspaceMarketplaceP
         activeTabId: tab.id,
         notePreviewState: {},
       },
+      dashboard: {
+        tint: "neutral",
+        featuredBlocks: [],
+      },
     });
   }
 
@@ -146,6 +150,10 @@ export function cloneMarketplaceNodePayloadAsNode(payload: WorkspaceMarketplaceP
     viewState: {
       activeTabId: tab.id,
       notePreviewState: {},
+    },
+    dashboard: {
+      tint: "neutral",
+      featuredBlocks: [],
     },
   });
 }
