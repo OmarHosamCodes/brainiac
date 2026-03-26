@@ -26,6 +26,7 @@ const props = defineProps<{
 const {
     blockSearch,
     addBlockMenuItems,
+    blockPresetMenuItems,
     tabEditor,
     setActiveTab,
     openTabEditor,
@@ -176,6 +177,15 @@ const primaryBlockTypes = workspacePrimaryBlockTypes;
                             >
                                 {{ getWorkspaceBlockRegistryEntry(type).label }}
                             </UButton>
+                            <UDropdownMenu :items="blockPresetMenuItems">
+                                <UButton
+                                    color="neutral"
+                                    variant="soft"
+                                    icon="i-lucide-layers-3"
+                                >
+                                    Preset packs
+                                </UButton>
+                            </UDropdownMenu>
                             <UDropdownMenu :items="addBlockMenuItems">
                                 <UButton color="primary" icon="i-lucide-plus"
                                     >More</UButton

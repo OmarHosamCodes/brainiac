@@ -14,6 +14,7 @@ const {
     removeKanbanColumn,
     addKanbanCard,
     mutateKanbanCard,
+    moveKanbanCard,
     removeKanbanCard,
 } = useWorkspaceNodeEditorContext();
 
@@ -30,12 +31,77 @@ function getInputValue(event: Event) {
     return (event.target as HTMLInputElement | null)?.value ?? "";
 }
 
-function getSelectValue(event: Event) {
-    return (event.target as HTMLSelectElement | null)?.value ?? "";
-}
-
 function canRemoveColumn() {
     return props.block.columns.length > 1;
+}
+
+const draggingCardId = ref<string | null>(null);
+const dragOverColumnId = ref<string | null>(null);
+
+function onCardDragStart(cardId: string, event: DragEvent) {
+    draggingCardId.value = cardId;
+
+    if (!event.dataTransfer) {
+        return;
+    }
+
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("application/x-workspace-kanban-card", cardId);
+    event.dataTransfer.setData("text/plain", cardId);
+}
+
+function clearDragState() {
+    draggingCardId.value = null;
+    dragOverColumnId.value = null;
+}
+
+function onColumnDragOver(columnId: string, event: DragEvent) {
+    if (!draggingCardId.value) {
+        return;
+    }
+
+    event.preventDefault();
+
+    if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "move";
+    }
+
+    dragOverColumnId.value = columnId;
+}
+
+function onColumnDragLeave(columnId: string, event: DragEvent) {
+    const currentTarget = event.currentTarget;
+    const nextTarget = event.relatedTarget;
+
+    if (
+        currentTarget instanceof HTMLElement &&
+        nextTarget instanceof Node &&
+        currentTarget.contains(nextTarget)
+    ) {
+        return;
+    }
+
+    if (dragOverColumnId.value === columnId) {
+        dragOverColumnId.value = null;
+    }
+}
+
+function onColumnDrop(columnId: string, event: DragEvent) {
+    event.preventDefault();
+
+    const cardId =
+        draggingCardId.value ||
+        event.dataTransfer?.getData("application/x-workspace-kanban-card") ||
+        event.dataTransfer?.getData("text/plain") ||
+        "";
+
+    if (!cardId) {
+        clearDragState();
+        return;
+    }
+
+    moveKanbanCard(props.tabId, props.block.id, cardId, columnId);
+    clearDragState();
 }
 </script>
 
@@ -49,7 +115,7 @@ function canRemoveColumn() {
                     Structured kanban board
                 </p>
                 <p class="text-sm text-muted">
-                    Track cards across explicit workflow columns.
+                    Drag cards between columns to move work forward.
                 </p>
             </div>
 
@@ -73,7 +139,15 @@ function canRemoveColumn() {
             <section
                 v-for="column in block.columns"
                 :key="column.id"
-                class="min-w-[300px] flex-1 rounded-2xl border border-muted/60 bg-elevated/20 p-4"
+                class="min-w-[300px] flex-1 rounded-2xl border border-muted/60 bg-elevated/20 p-4 transition"
+                :class="
+                    dragOverColumnId === column.id
+                        ? 'border-primary/40 bg-primary/5 ring-2 ring-inset ring-primary/30'
+                        : ''
+                "
+                @dragover="onColumnDragOver(column.id, $event)"
+                @dragleave="onColumnDragLeave(column.id, $event)"
+                @drop="onColumnDrop(column.id, $event)"
             >
                 <div class="flex items-center gap-2">
                     <UInput
@@ -108,8 +182,20 @@ function canRemoveColumn() {
                         v-for="card in cardsByColumn[column.id] ?? []"
                         :key="card.id"
                         class="space-y-3 rounded-2xl border border-muted/60 bg-default p-3"
+                        :class="
+                            draggingCardId === card.id
+                                ? 'cursor-grabbing opacity-60'
+                                : 'cursor-grab'
+                        "
+                        draggable="true"
+                        @dragstart="onCardDragStart(card.id, $event)"
+                        @dragend="clearDragState"
                     >
                         <div class="flex items-start gap-2">
+                            <UIcon
+                                name="i-lucide-grip-vertical"
+                                class="mt-2 size-4 shrink-0 text-muted"
+                            />
                             <UInput
                                 :model-value="card.title"
                                 class="flex-1"
@@ -158,7 +244,7 @@ function canRemoveColumn() {
                             "
                         />
 
-                        <div class="grid gap-3 md:grid-cols-3">
+                        <div class="grid gap-3 md:grid-cols-2">
                             <UInput
                                 :model-value="card.assignee"
                                 placeholder="Assignee"
@@ -192,30 +278,6 @@ function canRemoveColumn() {
                                     )
                                 "
                             />
-
-                            <select
-                                :value="card.columnId"
-                                class="w-full rounded-xl border border-muted bg-default px-3 py-2 text-sm text-default outline-none ring-inset transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                                @change="
-                                    mutateKanbanCard(
-                                        tabId,
-                                        block.id,
-                                        card.id,
-                                        (entry) => {
-                                            entry.columnId =
-                                                getSelectValue($event);
-                                        },
-                                    )
-                                "
-                            >
-                                <option
-                                    v-for="option in block.columns"
-                                    :key="option.id"
-                                    :value="option.id"
-                                >
-                                    {{ option.title || "Untitled column" }}
-                                </option>
-                            </select>
                         </div>
                     </article>
 

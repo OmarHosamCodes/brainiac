@@ -28,6 +28,7 @@ import {
     type WorkspaceBlock,
     type WorkspaceCollectedTask,
     type WorkspaceCustomBlock,
+    type WorkspaceKanbanCard,
     type WorkspaceNode,
     type WorkspaceNodeTab,
     type WorkspaceTaskPriority,
@@ -47,6 +48,11 @@ import {
     createNodeMarketplacePayload,
     createTabMarketplacePayload,
 } from "~/utils/workspace-marketplace";
+import {
+    getWorkspaceBlockPreset,
+    workspaceBlockPresets,
+    type WorkspaceBlockPresetId,
+} from "~/utils/workspace-block-presets";
 
 definePageMeta({
     middleware: ["auth"],
@@ -211,6 +217,22 @@ const addBlockMenuItems = computed(() => {
     ];
 
     return groups;
+});
+
+const blockPresetMenuItems = computed(() => {
+    if (!activeTab.value) {
+        return emptyDropdownItems;
+    }
+
+    return [
+        workspaceBlockPresets.map((preset) => ({
+            label: preset.label,
+            icon: preset.icon,
+            onSelect: () => {
+                addBlockPresetToActiveTab(preset.id);
+            },
+        })),
+    ];
 });
 
 const priorityOptions = [
@@ -535,6 +557,22 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
     });
 }
 
+function addBlockPresetToActiveTab(presetId: WorkspaceBlockPresetId) {
+    if (!activeTab.value) {
+        return;
+    }
+
+    const preset = getWorkspaceBlockPreset(presetId);
+
+    if (!preset) {
+        return;
+    }
+
+    mutateTab(activeTab.value.id, (tab) => {
+        tab.blocks.push(...preset.createBlocks());
+    });
+}
+
 function removeBlock(tabId: string, blockId: string) {
     mutateTab(tabId, (tab) => {
         tab.blocks = tab.blocks.filter((block) => block.id !== blockId);
@@ -764,6 +802,19 @@ function addKanbanCard(tabId: string, blockId: string, columnId: string) {
     });
 }
 
+function getKanbanColumnInsertIndex(
+    cards: WorkspaceKanbanCard[],
+    columnId: string,
+) {
+    for (let index = cards.length - 1; index >= 0; index -= 1) {
+        if (cards[index]?.columnId === columnId) {
+            return index + 1;
+        }
+    }
+
+    return cards.length;
+}
+
 function mutateKanbanCard(
     tabId: string,
     blockId: string,
@@ -782,6 +833,43 @@ function mutateKanbanCard(
         }
 
         mutator(card);
+    });
+}
+
+function moveKanbanCard(
+    tabId: string,
+    blockId: string,
+    cardId: string,
+    targetColumnId: string,
+) {
+    mutateBlock(tabId, blockId, (block) => {
+        if (block.type !== "kanban") {
+            return;
+        }
+
+        if (!block.columns.some((column) => column.id === targetColumnId)) {
+            return;
+        }
+
+        const fromIndex = block.cards.findIndex((card) => card.id === cardId);
+
+        if (fromIndex < 0) {
+            return;
+        }
+
+        const [card] = block.cards.splice(fromIndex, 1);
+
+        if (!card) {
+            return;
+        }
+
+        card.columnId = targetColumnId;
+
+        const insertIndex = getKanbanColumnInsertIndex(
+            block.cards,
+            targetColumnId,
+        );
+        block.cards.splice(insertIndex, 0, card);
     });
 }
 
@@ -843,6 +931,41 @@ function removeTimelineMilestone(
         block.milestones = block.milestones.filter(
             (milestone) => milestone.id !== milestoneId,
         );
+    });
+}
+
+function moveTimelineMilestone(
+    tabId: string,
+    blockId: string,
+    milestoneId: string,
+    direction: "up" | "down",
+) {
+    mutateBlock(tabId, blockId, (block) => {
+        if (block.type !== "timeline") {
+            return;
+        }
+
+        const fromIndex = block.milestones.findIndex(
+            (milestone) => milestone.id === milestoneId,
+        );
+
+        if (fromIndex < 0) {
+            return;
+        }
+
+        const toIndex = direction === "up" ? fromIndex - 1 : fromIndex + 1;
+
+        if (toIndex < 0 || toIndex >= block.milestones.length) {
+            return;
+        }
+
+        const [milestone] = block.milestones.splice(fromIndex, 1);
+
+        if (!milestone) {
+            return;
+        }
+
+        block.milestones.splice(toIndex, 0, milestone);
     });
 }
 
@@ -1383,6 +1506,7 @@ provide(workspaceNodeEditorContextKey, {
     blockSearch,
     normalizedBlockSearch,
     addBlockMenuItems,
+    blockPresetMenuItems,
     tabEditor,
     priorityOptions,
     domainOptions,
@@ -1394,6 +1518,7 @@ provide(workspaceNodeEditorContextKey, {
     saveNodeToMarketplace,
     saveActiveTabToMarketplace,
     addBlockToActiveTab,
+    addBlockPresetToActiveTab,
     removeBlock,
     updateBlockTitle,
     saveBlockToMarketplace,
@@ -1413,10 +1538,12 @@ provide(workspaceNodeEditorContextKey, {
     removeKanbanColumn,
     addKanbanCard,
     mutateKanbanCard,
+    moveKanbanCard,
     removeKanbanCard,
     addTimelineMilestone,
     mutateTimelineMilestone,
     removeTimelineMilestone,
+    moveTimelineMilestone,
     addScorecardMetric,
     mutateScorecardMetric,
     removeScorecardMetric,

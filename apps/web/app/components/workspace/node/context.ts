@@ -17,6 +17,7 @@ import type {
 } from "@brainiac/workspace";
 import type { ComputedRef, InjectionKey, Ref } from "vue";
 import { inject } from "vue";
+import type { WorkspaceBlockPresetId } from "~/utils/workspace-block-presets";
 
 export type WorkspaceNodePriorityOption = {
   label: string;
@@ -48,6 +49,7 @@ export type WorkspaceNodeEditorContext = {
   blockSearch: Ref<string>;
   normalizedBlockSearch: ComputedRef<string>;
   addBlockMenuItems: ComputedRef<DropdownMenuItem[][]>;
+  blockPresetMenuItems: ComputedRef<DropdownMenuItem[][]>;
   tabEditor: WorkspaceTabEditorState;
   priorityOptions: WorkspaceNodePriorityOption[];
   domainOptions: WorkspaceNodeDomainOption[];
@@ -59,6 +61,7 @@ export type WorkspaceNodeEditorContext = {
   saveNodeToMarketplace(): MaybePromise;
   saveActiveTabToMarketplace(): MaybePromise;
   addBlockToActiveTab(type: WorkspaceBlock["type"]): void;
+  addBlockPresetToActiveTab(presetId: WorkspaceBlockPresetId): void;
   removeBlock(tabId: string, blockId: string): void;
   updateBlockTitle(tabId: string, blockId: string, value: string): void;
   saveBlockToMarketplace(block: WorkspaceBlock): MaybePromise;
@@ -125,6 +128,12 @@ export type WorkspaceNodeEditorContext = {
     cardId: string,
     mutator: (card: WorkspaceKanbanBlock["cards"][number]) => void,
   ): void;
+  moveKanbanCard(
+    tabId: string,
+    blockId: string,
+    cardId: string,
+    targetColumnId: string,
+  ): void;
   removeKanbanCard(tabId: string, blockId: string, cardId: string): void;
   addTimelineMilestone(tabId: string, blockId: string): void;
   mutateTimelineMilestone(
@@ -137,6 +146,12 @@ export type WorkspaceNodeEditorContext = {
     tabId: string,
     blockId: string,
     milestoneId: string,
+  ): void;
+  moveTimelineMilestone(
+    tabId: string,
+    blockId: string,
+    milestoneId: string,
+    direction: "up" | "down",
   ): void;
   addScorecardMetric(tabId: string, blockId: string): void;
   mutateScorecardMetric(

@@ -16,6 +16,7 @@ const {
     addTimelineMilestone,
     mutateTimelineMilestone,
     removeTimelineMilestone,
+    moveTimelineMilestone,
 } = useWorkspaceNodeEditorContext();
 
 const statusLabels: Record<WorkspaceTimelineMilestoneStatus, string> = {
@@ -24,24 +25,6 @@ const statusLabels: Record<WorkspaceTimelineMilestoneStatus, string> = {
     done: "Done",
     blocked: "Blocked",
 };
-
-const sortedMilestones = computed(() =>
-    [...props.block.milestones].sort((left, right) => {
-        if (!left.date && !right.date) {
-            return 0;
-        }
-
-        if (!left.date) {
-            return 1;
-        }
-
-        if (!right.date) {
-            return -1;
-        }
-
-        return left.date.localeCompare(right.date);
-    }),
-);
 
 function getInputValue(event: Event) {
     return (event.target as HTMLInputElement | null)?.value ?? "";
@@ -104,7 +87,7 @@ function getStatusTone(status: WorkspaceTimelineMilestoneStatus) {
 
         <div class="space-y-3">
             <article
-                v-for="milestone in sortedMilestones"
+                v-for="(milestone, milestoneIndex) in block.milestones"
                 :key="milestone.id"
                 class="rounded-2xl border border-muted/60 bg-default p-4"
             >
@@ -125,19 +108,53 @@ function getStatusTone(status: WorkspaceTimelineMilestoneStatus) {
                         </div>
                     </div>
 
-                    <UButton
-                        color="neutral"
-                        variant="ghost"
-                        size="sm"
-                        icon="i-lucide-trash-2"
-                        @click="
-                            removeTimelineMilestone(
-                                tabId,
-                                block.id,
-                                milestone.id,
-                            )
-                        "
-                    />
+                    <div class="flex items-center gap-1">
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            size="sm"
+                            icon="i-lucide-chevron-up"
+                            :disabled="milestoneIndex === 0"
+                            @click="
+                                moveTimelineMilestone(
+                                    tabId,
+                                    block.id,
+                                    milestone.id,
+                                    'up',
+                                )
+                            "
+                        />
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            size="sm"
+                            icon="i-lucide-chevron-down"
+                            :disabled="
+                                milestoneIndex === block.milestones.length - 1
+                            "
+                            @click="
+                                moveTimelineMilestone(
+                                    tabId,
+                                    block.id,
+                                    milestone.id,
+                                    'down',
+                                )
+                            "
+                        />
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            size="sm"
+                            icon="i-lucide-trash-2"
+                            @click="
+                                removeTimelineMilestone(
+                                    tabId,
+                                    block.id,
+                                    milestone.id,
+                                )
+                            "
+                        />
+                    </div>
                 </div>
 
                 <div
