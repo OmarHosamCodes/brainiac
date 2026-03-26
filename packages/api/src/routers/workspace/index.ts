@@ -6,17 +6,15 @@ import {
 
 import { protectedProcedure } from "../../procedures";
 import {
+  getWorkspaceSnapshot,
   getWorkspaceMarketplaceItems,
-  getWorkspaceNodes,
   saveWorkspaceMarketplaceItem,
   saveWorkspaceNodes,
 } from "./service";
 
 export const workspaceRouter = {
   get: protectedProcedure.handler(async ({ context }) => {
-    return {
-      nodes: await getWorkspaceNodes(context.session.user.id),
-    };
+    return getWorkspaceSnapshot(context.session.user.id);
   }),
   save: protectedProcedure
     .input(workspaceSaveInputSchema)

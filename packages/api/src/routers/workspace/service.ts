@@ -10,16 +10,20 @@ import {
 } from "@brainiac/workspace";
 import { desc, eq } from "drizzle-orm";
 
-export async function getWorkspaceNodes(userId: string): Promise<WorkspaceNode[]> {
+export async function getWorkspaceSnapshot(userId: string) {
   const [workspace] = await db
     .select({
       nodes: dashboardWorkspace.nodes,
+      updatedAt: dashboardWorkspace.updatedAt,
     })
     .from(dashboardWorkspace)
     .where(eq(dashboardWorkspace.userId, userId))
     .limit(1);
 
-  return workspace?.nodes ?? [];
+  return {
+    nodes: workspace?.nodes ?? [],
+    updatedAt: workspace?.updatedAt?.toISOString() ?? null,
+  };
 }
 
 export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[]) {
@@ -43,6 +47,7 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
   return {
     nodeCount: nodes.length,
     savedAt: now.toISOString(),
+    updatedAt: now.toISOString(),
   };
 }
 

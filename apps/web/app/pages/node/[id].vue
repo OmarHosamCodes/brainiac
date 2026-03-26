@@ -2,7 +2,6 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import {
     WORKSPACE_TASK_DOMAINS,
-    cloneWorkspaceNodes,
     createDefaultWorkspaceTab,
     createWorkspaceAiPromptBlock,
     createWorkspaceDecisionBlock,
@@ -34,7 +33,8 @@ import {
     type WorkspaceTaskPriority,
     type WorkspaceTimeOrchestratorBlock,
 } from "@brainiac/workspace";
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useMutation } from "@tanstack/vue-query";
+import { storeToRefs } from "pinia";
 
 import {
     workspaceNodeEditorContextKey,
@@ -58,30 +58,18 @@ definePageMeta({
     middleware: ["auth"],
 });
 
-type SaveState = "idle" | "saving" | "saved" | "error";
-
 const route = useRoute();
-const authSession = useAuthSession();
-const orpc = useOrpc();
 const toast = useToast();
+const orpc = useOrpc();
+const workspaceStore = useWorkspaceStore();
+const { nodes: draftNodes, saveBadge, saveError } = storeToRefs(workspaceStore);
+const workspaceQuery = workspaceStore.workspaceQuery;
 
-const workspaceQuery = useQuery({
-    ...orpc.workspace.get.queryOptions(),
-    enabled: computed(() => Boolean(authSession.value?.data?.user)),
-    staleTime: Number.POSITIVE_INFINITY,
-});
-
-const saveWorkspace = useMutation(orpc.workspace.save.mutationOptions());
 const saveMarketplaceItem = useMutation(
     orpc.workspace.marketplace.save.mutationOptions(),
 );
 
 const nodeId = computed(() => String(route.params.id ?? ""));
-const draftNodes = ref<WorkspaceNode[]>([]);
-const loadApplied = ref(false);
-const isHydrating = ref(false);
-const saveState = ref<SaveState>("idle");
-const saveError = ref<string | null>(null);
 const emptyDropdownItems: DropdownMenuItem[][] = [];
 
 const tabEditor = reactive({
@@ -89,16 +77,6 @@ const tabEditor = reactive({
     mode: "create" as WorkspaceTabEditorMode,
     title: "",
 });
-
-let saveTimer: ReturnType<typeof setTimeout> | null = null;
-let latestSaveRequest = 0;
-
-const workspaceReadyForEdits = computed(
-    () =>
-        Boolean(authSession.value?.data?.user) &&
-        loadApplied.value &&
-        !isHydrating.value,
-);
 
 const node = computed(() => {
     return draftNodes.value.find((entry) => entry.id === nodeId.value) ?? null;
@@ -118,30 +96,6 @@ const activeTab = computed(() => {
     );
 });
 
-const saveBadge = computed(() => {
-    switch (saveState.value) {
-        case "saving":
-            return {
-                label: "Saving",
-                className: "border-warning/40 bg-warning/10 text-warning",
-            };
-        case "saved":
-            return {
-                label: "Saved",
-                className: "border-success/40 bg-success/10 text-success",
-            };
-        case "error":
-            return {
-                label: "Save failed",
-                className: "border-error/40 bg-error/10 text-error",
-            };
-        default:
-            return {
-                label: "Ready",
-                className: "border-muted/60 bg-elevated/80 text-toned",
-            };
-    }
-});
 const blockSearch = ref("");
 
 const normalizedBlockSearch = computed(() =>
@@ -251,51 +205,12 @@ const domainOptions = [
 ] satisfies WorkspaceNodeDomainOption[];
 
 watch(
-    () => workspaceQuery.data.value?.nodes,
-    (remoteNodes) => {
-        if (!remoteNodes) {
-            return;
-        }
-
-        isHydrating.value = true;
-        draftNodes.value = cloneWorkspaceNodes(remoteNodes);
-        loadApplied.value = true;
-        saveState.value = "idle";
-        saveError.value = null;
-        syncActiveTab();
-
-        nextTick(() => {
-            isHydrating.value = false;
-        });
-    },
-    { immediate: true },
-);
-
-watch(
-    draftNodes,
-    () => {
-        if (!workspaceReadyForEdits.value) {
-            return;
-        }
-
-        scheduleSave();
-    },
-    { deep: true },
-);
-
-watch(
     () => node.value?.tabs.map((tab) => tab.id).join(","),
     () => {
         syncActiveTab();
     },
     { immediate: true },
 );
-
-onBeforeUnmount(() => {
-    if (saveTimer) {
-        clearTimeout(saveTimer);
-    }
-});
 
 function syncActiveTab() {
     const currentNode = node.value;
@@ -327,56 +242,8 @@ function setActiveTab(tabId: string) {
     });
 }
 
-async function persistWorkspace(snapshot: WorkspaceNode[]) {
-    const requestId = ++latestSaveRequest;
-
-    try {
-        await saveWorkspace.mutateAsync({
-            nodes: snapshot,
-        });
-
-        if (requestId === latestSaveRequest) {
-            saveState.value = "saved";
-            saveError.value = null;
-        }
-    } catch (error) {
-        if (requestId === latestSaveRequest) {
-            saveState.value = "error";
-            saveError.value = getErrorMessage(
-                error,
-                "Failed to save node changes",
-            );
-        }
-    }
-}
-
-function scheduleSave() {
-    if (!workspaceReadyForEdits.value) {
-        return;
-    }
-
-    if (saveTimer) {
-        clearTimeout(saveTimer);
-    }
-
-    saveState.value = "saving";
-    saveError.value = null;
-    const snapshot = cloneWorkspaceNodes(draftNodes.value);
-
-    saveTimer = setTimeout(() => {
-        saveTimer = null;
-        void persistWorkspace(snapshot);
-    }, 350);
-}
-
 function updateDraftNodes(mutator: (nodes: WorkspaceNode[]) => void) {
-    if (!workspaceReadyForEdits.value) {
-        return;
-    }
-
-    const nextNodes = cloneWorkspaceNodes(draftNodes.value);
-    mutator(nextNodes);
-    draftNodes.value = nextNodes;
+    workspaceStore.updateNodes(mutator);
 }
 
 function mutateCurrentNode(
