@@ -286,8 +286,14 @@ function onNodeShellPointerDown(event: PointerEvent, node: CanvasNodeModel) {
     startClientY: event.clientY,
     selectedIds,
     startNodes: snapshotNodes(selectedIds),
-    openOnRelease: !event.shiftKey && !event.metaKey && !event.ctrlKey && !event.altKey,
+    openOnRelease: false, // Disabling single click navigation
   };
+}
+
+function onNodeShellDblClick(event: MouseEvent, node: CanvasNodeModel) {
+  event.preventDefault();
+  event.stopPropagation();
+  emit("open-node", { nodeId: node.id });
 }
 
 function beginResize(event: PointerEvent, node: CanvasNodeModel, handle: ResizeHandle) {
@@ -796,10 +802,11 @@ onBeforeUnmount(() => {
               :class="{
                 'is-dragging':
                   activeInteraction?.mode === 'drag' && activeInteraction.nodeId === node.id,
-                'ring-2 ring-blue-500/50 dark:ring-blue-400/50 shadow-blue-500/10': selectedNodeIdSet.has(node.id),
+                'ring-2 ring-emerald-500/50 dark:ring-emerald-400/50 shadow-emerald-500/10': selectedNodeIdSet.has(node.id),
               }"
               :style="getNodeTintStyle(node)"
               @pointerdown="onNodeShellPointerDown($event, node)"
+              @dblclick="onNodeShellDblClick($event, node)"
             >
               <div
                 class="canvas-node-toolbar flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200/30 dark:border-zinc-800/30 px-5 py-4"
@@ -810,7 +817,7 @@ onBeforeUnmount(() => {
 
                 <button
                   type="button"
-                  class="inline-flex shrink-0 items-center justify-center size-8 rounded-full border border-zinc-200 dark:border-zinc-800 text-zinc-500 transition hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-blue-500"
+                  class="inline-flex shrink-0 items-center justify-center size-8 rounded-full border border-zinc-200 dark:border-zinc-800 text-zinc-500 transition hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-emerald-500"
                   @pointerdown.stop
                   @click.stop="focusNode(node.id)"
                 >
@@ -827,7 +834,7 @@ onBeforeUnmount(() => {
                 v-show="selectedNodeIdSet.has(node.id)"
                 :key="`${node.id}-${handle.edge}`"
                 type="button"
-                class="resize-handle absolute z-20 size-4 rounded-full border-2 border-white dark:border-zinc-900 bg-blue-500 shadow-lg transition-transform hover:scale-125"
+                class="resize-handle absolute z-20 size-4 rounded-full border-2 border-white dark:border-zinc-900 bg-emerald-500 shadow-lg transition-transform hover:scale-125"
                 :class="handle.className"
                 :aria-label="`Resize ${getNodeHeading(node)} from ${handle.edge}`"
                 @pointerdown.stop="beginResize($event, node, handle.edge)"

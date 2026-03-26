@@ -25,13 +25,13 @@ const items = computed(() => [
         class="relative flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all group overflow-hidden"
         :class="[
             item.active
-                ? 'text-blue-600 dark:text-blue-400'
+                ? 'text-emerald-600 dark:text-emerald-400'
                 : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50'
         ]"
       >
         <UIcon :name="item.icon" class="size-4" />
         {{ item.label }}
-        <div v-if="item.active" class="absolute inset-0 bg-blue-500/10 dark:bg-blue-400/10 -z-10 rounded-full" />
+        <div v-if="item.active" class="absolute inset-0 bg-emerald-500/10 dark:bg-emerald-400/10 -z-10 rounded-full" />
       </ULink>
     </div>
 

@@ -35,18 +35,22 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
 </script>
 
 <template>
-  <div class="node-card group relative flex h-full flex-col p-5 transition-all duration-300" :style="tintStyle">
+  <div class="node-card group relative flex h-full flex-col p-5 transition-all duration-300 rounded-[2rem]" :style="tintStyle">
+    <!-- Tinted Background Layer -->
+    <div class="absolute inset-0 rounded-[2rem] bg-zinc-50/50 dark:bg-zinc-950/50 -z-20" />
+    <div class="absolute inset-0 rounded-[2rem] bg-[rgb(var(--workspace-node-rgb)/0.05)] dark:bg-[rgb(var(--workspace-node-rgb)/0.1)] border border-[rgb(var(--workspace-node-rgb)/0.2)] dark:border-[rgb(var(--workspace-node-rgb)/0.3)] -z-10" />
+
     <!-- Selection Glow -->
     <div 
         v-if="selected" 
-        class="absolute -inset-[2px] rounded-[1.6rem] bg-gradient-to-br from-blue-500 to-indigo-500 -z-10 opacity-50 blur-[2px]" 
+        class="absolute -inset-[2px] rounded-[2.1rem] bg-emerald-500/50 -z-10 opacity-50 blur-[2px]" 
     />
 
     <div class="mb-5 flex items-center justify-between gap-3">
         <div class="flex items-center gap-2">
             <div 
                 class="size-2 rounded-full" 
-                :class="selected ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-zinc-300 dark:bg-zinc-700'"
+                :class="selected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-zinc-300 dark:bg-zinc-700'"
             />
             <span class="text-[10px] font-bold uppercase tracking-widest text-zinc-400">
                 {{ selected ? 'Active' : 'Saved' }}
@@ -54,7 +58,7 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
         </div>
 
         <div class="flex items-center gap-1.5">
-             <div class="px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-[9px] font-bold text-zinc-500 uppercase tracking-wider">
+             <div class="px-2 py-0.5 rounded-md bg-[rgb(var(--workspace-node-rgb)/0.1)] text-[9px] font-bold text-[rgb(var(--workspace-node-rgb))] uppercase tracking-wider">
                 {{ stats.blocksCount }} blks
             </div>
              <div 
@@ -75,11 +79,11 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
             <div 
                 v-for="detail in featuredDetails" 
                 :key="`${detail.tabId}-${detail.blockId}`"
-                class="relative p-3.5 rounded-2xl bg-white/40 dark:bg-zinc-900/40 border border-zinc-200/30 dark:border-zinc-800/30 group/detail hover:border-blue-500/30 transition-colors"
+                class="relative p-3.5 rounded-2xl bg-white/40 dark:bg-zinc-900/40 border border-zinc-200/30 dark:border-zinc-800/30 group/detail hover:border-emerald-500/30 transition-colors"
             >
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center gap-2">
-                        <UIcon :name="getDetailEntry(detail.blockType).icon" class="size-3 text-blue-500" />
+                        <UIcon :name="getDetailEntry(detail.blockType).icon" class="size-3 text-emerald-500" />
                         <span class="text-[10px] font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[120px]">
                             {{ detail.blockTitle }}
                         </span>
@@ -100,7 +104,7 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
         <div class="flex items-center gap-2">
             <div class="w-12 h-1 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
                 <div 
-                    class="h-full bg-blue-500 transition-all duration-500" 
+                    class="h-full bg-emerald-500 transition-all duration-500" 
                     :style="{ width: `${(stats.completedTasks / (stats.totalTasks || 1)) * 100}%` }"
                 />
             </div>
@@ -111,11 +115,12 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
 
         <div class="flex -space-x-1.5">
             <div class="size-4 rounded-full border border-white dark:border-zinc-900 bg-zinc-200 dark:bg-zinc-800" />
-            <div class="size-4 rounded-full border border-white dark:border-zinc-900 bg-zinc-300 dark:bg-zinc-700" />
+            <div class="size-4 rounded-full border border-white dark:border-zinc-900 bg-zinc-300 dark:border-zinc-700" />
         </div>
     </div>
   </div>
 </template>
+
 
 <style scoped>
 .node-card {

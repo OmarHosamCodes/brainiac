@@ -87,7 +87,7 @@ watch(
     >
         <div class="flex items-center justify-between px-6 py-5 border-b border-zinc-200/30 dark:border-zinc-800/30">
             <div class="flex items-center gap-3">
-                <div class="flex size-8 items-center justify-center rounded-xl bg-blue-500 text-white shadow-lg shadow-blue-500/20">
+                <div class="flex size-8 items-center justify-center rounded-xl bg-emerald-500 text-white shadow-lg shadow-emerald-500/20">
                     <UIcon name="i-lucide-sparkles" class="size-4" />
                 </div>
                 <div>
@@ -135,7 +135,7 @@ watch(
                                 v-for="prompt in promptSuggestions"
                                 :key="prompt"
                                 type="button"
-                                class="px-4 py-2 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:border-blue-500/50 hover:text-blue-600 transition-all active:scale-95 shadow-sm"
+                                class="px-4 py-2 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:border-emerald-500/50 hover:text-emerald-600 transition-all active:scale-95 shadow-sm"
                                 @click="handlePromptClick(prompt)"
                             >
                                 {{ prompt }}
@@ -178,7 +178,7 @@ watch(
 
             <div v-if="isPending" class="flex justify-start">
                 <div class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-zinc-900 border border-zinc-200/50 dark:border-zinc-800/50 rounded-2xl text-xs text-zinc-500">
-                    <UIcon name="i-lucide-loader-2" class="size-3 animate-spin text-blue-500" />
+                    <UIcon name="i-lucide-loader-2" class="size-3 animate-spin text-emerald-500" />
                     Thinking...
                 </div>
             </div>
@@ -192,7 +192,7 @@ watch(
                     autoresize
                     :placeholder="composerPlaceholder"
                     variant="none"
-                    class="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl px-5 py-4 text-sm focus:ring-2 focus:ring-blue-500/20 transition-all shadow-sm pr-12"
+                    class="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl px-5 py-4 text-sm focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm pr-12"
                     @keydown.enter.exact="handleEnterKeydown"
                 />
                 
@@ -200,7 +200,7 @@ watch(
                     size="sm"
                     icon="i-lucide-arrow-up"
                     color="primary"
-                    class="absolute right-2 bottom-2 rounded-2xl size-10 flex items-center justify-center p-0 shadow-lg shadow-blue-500/20"
+                    class="absolute right-2 bottom-2 rounded-2xl size-10 flex items-center justify-center p-0 shadow-lg shadow-emerald-500/20"
                     :loading="isPending"
                     :disabled="!canSend"
                     @click="handleSubmit"
@@ -229,7 +229,7 @@ watch(
                     <div 
                         v-for="node in selectedNodes.slice(0, 3)" 
                         :key="node.id"
-                        class="size-5 rounded-full border border-white dark:border-zinc-950 bg-blue-500 flex items-center justify-center text-[8px] text-white font-bold"
+                        class="size-5 rounded-full border border-white dark:border-zinc-950 bg-emerald-500 flex items-center justify-center text-[8px] text-white font-bold"
                         :title="node.title"
                     >
                         {{ node.title.charAt(0) }}
