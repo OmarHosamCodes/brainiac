@@ -28,6 +28,9 @@
       "cache": false,
       "persistent": true
     },
+    "db:seed": {
+      "cache": false
+    },
     "db:studio": {
       "cache": false,
       "persistent": true
@@ -47,6 +50,9 @@
       "cache": false
     },
     "clean": {
+      "cache": false
+    },
+    "//clean": {
       "cache": false
     }
   }

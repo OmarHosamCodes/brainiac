@@ -7,19 +7,22 @@
     "check-types": "tsc -b",
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "dev": "bun run --hot src/index.ts",
+    "db:seed": "bun run src/seed.ts",
     "start": "bun run dist/index.mjs",
-    "clean": "rm -rf .turbo node_modules dist .nuxt .output"
+    "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"
   },
   "dependencies": {
     "@brainiac/api": "workspace:*",
     "@brainiac/auth": "workspace:*",
     "@brainiac/db": "workspace:*",
     "@brainiac/env": "workspace:*",
+    "@brainiac/workspace": "workspace:*",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
+    "drizzle-orm": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"
   },

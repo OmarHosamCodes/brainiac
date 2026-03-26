@@ -37,6 +37,28 @@ This project uses PostgreSQL with Drizzle ORM.
 bun run db:push
 ```
 
+4. Seed demo data for a full testing workspace:
+
+```bash
+bun run db:seed
+```
+
+This creates three reserved demo users with curated dashboard and marketplace data:
+
+- `founder@brainiac.test`
+- `ops@brainiac.test`
+- `analyst@brainiac.test`
+
+All three use the password `brainiac1234` by default. Override it with `BRAINIAC_SEED_PASSWORD` before running the seed if needed.
+
+To seed the full testing workspace into an existing account instead of recreating the demo users:
+
+```bash
+bun run db:seed -- --email you@example.com
+```
+
+This mode replaces that user's workspace snapshot and refreshes the reserved seed marketplace items without creating or deleting users.
+
 Then, run the development server:
 
 ```bash
@@ -73,5 +95,6 @@ brainiac/
 - `bun run db:push`: Push schema changes to database
 - `bun run db:generate`: Generate database client/types
 - `bun run db:migrate`: Run database migrations
+- `bun run db:seed`: Seed reserved demo users, workspaces, and marketplace items
 - `bun run db:studio`: Open database studio UI
 - `bun run check`: Run Oxlint and Oxfmt

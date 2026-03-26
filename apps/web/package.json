@@ -8,7 +8,7 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "clean": "rm -rf .turbo node_modules dist .nuxt .output"
+    "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"
   },
   "dependencies": {
     "@brainiac/api": "workspace:*",

@@ -18,7 +18,7 @@
     "db:watch": "docker compose up",
     "db:stop": "docker compose stop",
     "db:down": "docker compose down",
-    "clean": "rm -rf .turbo node_modules dist .nuxt .output"
+    "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"
   },
   "dependencies": {
     "@brainiac/env": "workspace:*",
