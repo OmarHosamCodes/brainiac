@@ -1,38 +1,62 @@
 <script setup lang="ts">
-import type { NavigationMenuItem } from "@nuxt/ui";
-
 import UserMenu from "./UserMenu.vue";
 
 const route = useRoute();
 
-const items = computed<NavigationMenuItem[]>(() => [
-  { label: "Home", to: "/", active: route.path === "/" },
-  {
-    label: "Dashboard",
-    to: "/dashboard",
-    active: route.path.startsWith("/dashboard"),
-  },
-  {
-    label: "Marketplace",
-    to: "/marketplace",
-    active: route.path.startsWith("/marketplace"),
-  },
+const items = computed(() => [
+  { label: "Dashboard", to: "/dashboard", icon: "i-lucide-layout-dashboard", active: route.path.startsWith("/dashboard") },
+  { label: "Marketplace", to: "/marketplace", icon: "i-lucide-shopping-bag", active: route.path.startsWith("/marketplace") },
 ]);
 </script>
 
 <template>
-  <UHeader>
-    <template #left>
-      <UNavigationMenu :items="items" />
-    </template>
+  <nav class="fixed top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1.5 p-1.5 rounded-full border border-zinc-200/50 dark:border-zinc-800/50 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl shadow-2xl shadow-black/10 ring-1 ring-black/[0.03] transition-all duration-300 hover:scale-[1.02]">
+    <ULink to="/" class="flex items-center justify-center size-9 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-lg transition hover:scale-105 active:scale-95 group relative overflow-hidden">
+        <UIcon name="i-lucide-brain-circuit" class="size-5" />
+    </ULink>
 
-    <template #right>
-      <UColorModeButton />
+    <div class="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1" />
+
+    <div class="flex items-center gap-1">
+      <ULink
+        v-for="item in items"
+        :key="item.to"
+        :to="item.to"
+        class="relative flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all group overflow-hidden"
+        :class="[
+            item.active
+                ? 'text-blue-600 dark:text-blue-400'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100/50 dark:hover:bg-zinc-800/50'
+        ]"
+      >
+        <UIcon :name="item.icon" class="size-4" />
+        {{ item.label }}
+        <div v-if="item.active" class="absolute inset-0 bg-blue-500/10 dark:bg-blue-400/10 -z-10 rounded-full" />
+      </ULink>
+    </div>
+
+    <div class="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1" />
+
+    <div class="flex items-center gap-1">
+      <UColorModeButton variant="ghost" size="sm" class="rounded-full size-9" />
       <UserMenu />
-    </template>
-
-    <template #body>
-      <UNavigationMenu :items="items" orientation="vertical" class="-mx-2.5" />
-    </template>
-  </UHeader>
+    </div>
+  </nav>
 </template>
+
+<style scoped>
+nav {
+    animation: toolbar-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes toolbar-enter {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -100%) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, 0) scale(1);
+    }
+}
+</style>

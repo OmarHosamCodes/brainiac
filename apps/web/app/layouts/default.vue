@@ -1,10 +1,5 @@
-<script setup></script>
-
 <template>
-  <div class="flex flex-col h-screen overflow-hidden">
-    <Header />
-    <UMain class="flex-1 min-h-0">
-      <slot />
-    </UMain>
+  <div class="h-screen overflow-hidden bg-white dark:bg-zinc-950 font-sans antialiased text-zinc-900 dark:text-zinc-100">
+    <slot />
   </div>
 </template>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from 'vue';
+
 definePageMeta({
     middleware: ["auth", "workspace"],
 });
@@ -24,77 +26,89 @@ const {
     submitNodeEditor,
     workspaceQuery,
 } = useWorkspaceBoard();
+
+const isChatVisible = ref(true);
 </script>
 
 <template>
-    <div class="h-full min-h-0 p-4 md:p-6">
-        <div class="flex h-full min-h-0 flex-col gap-4">
-            <UAlert
-                v-if="workspaceQuery.status === 'error'"
-                color="error"
-                icon="i-lucide-alert-circle"
-                title="Workspace unavailable"
-                :description="
-                    workspaceQuery.error?.message ||
-                    'The user workspace could not be loaded.'
-                "
-            />
+    <div class="relative h-screen w-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950 selection:bg-blue-500/30">
+        <Header />
 
-            <div class="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
-                <div class="flex min-h-0 flex-col gap-4">
-                    <div class="min-h-0 flex-1">
-                        <InfiniteCanvas
-                            v-model:nodes="nodes"
-                            v-model:selected-node-ids="selectedNodeIds"
-                            :loading="isWorkspaceInitialLoading"
-                            @create-node="openCreateNode"
-                            @edit-node="openEditNode"
-                            @remove-node="removeNode"
-                            @open-node="openNodePage"
-                        >
-                            <template #node="{ node, selected }">
-                                <WorkspaceNodeCard
-                                    :node="node"
-                                    :selected="selected"
-                                />
-                            </template>
-                        </InfiniteCanvas>
-                    </div>
-
-                    <WorkspaceBoardStatus
-                        v-if="!isWorkspaceInitialLoading"
-                        :badge="saveBadge"
-                        :nodes-count="nodes.length"
-                        :user-name="authSession.data?.user?.name"
-                    />
-                </div>
-
-                <DashboardAgentChatPanel :nodes="nodes" />
-            </div>
-
-            <div
-                v-if="isWorkspaceRefreshing"
-                class="pointer-events-none fixed right-6 top-20 z-20"
+        <main class="h-full w-full">
+            <InfiniteCanvas
+                v-model:nodes="nodes"
+                v-model:selected-node-ids="selectedNodeIds"
+                :loading="isWorkspaceInitialLoading"
+                @create-node="openCreateNode"
+                @edit-node="openEditNode"
+                @remove-node="removeNode"
+                @open-node="openNodePage"
             >
-                <div
-                    class="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-muted/70 bg-default/90 px-3 py-2 text-xs font-medium text-toned shadow-lg shadow-black/5 backdrop-blur-md"
-                >
-                    <UIcon
-                        name="i-lucide-loader-2"
-                        class="size-3.5 animate-spin text-primary"
+                <template #node="{ node, selected }">
+                    <WorkspaceNodeCard
+                        :node="node"
+                        :selected="selected"
                     />
-                    Refreshing workspace
-                </div>
-            </div>
+                </template>
+            </InfiniteCanvas>
+        </main>
+
+        <!-- Floating Agent Chat Panel -->
+        <div 
+            class="fixed right-6 top-24 bottom-6 z-40 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+            :class="[isChatVisible ? 'w-96 translate-x-0 opacity-100' : 'w-0 translate-x-12 opacity-0 pointer-events-none']"
+        >
+            <DashboardAgentChatPanel :nodes="nodes" @close="isChatVisible = false" />
+        </div>
+
+        <!-- Chat Toggle Button -->
+        <button 
+            v-if="!isChatVisible"
+            type="button"
+            class="fixed bottom-8 right-8 z-50 flex size-14 items-center justify-center rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-2xl shadow-black/20 hover:scale-110 active:scale-95 transition-all duration-300 ring-1 ring-white/10"
+            @click="isChatVisible = true"
+        >
+            <UIcon name="i-lucide-sparkles" class="size-6" />
+        </button>
+
+        <!-- Overlay Notifications -->
+        <div class="fixed left-6 bottom-6 z-50 flex flex-col gap-3">
+             <WorkspaceBoardStatus
+                v-if="!isWorkspaceInitialLoading"
+                :badge="saveBadge"
+                :nodes-count="nodes.length"
+                :user-name="authSession.data?.user?.name"
+                class="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border border-zinc-200/50 dark:border-zinc-800/50 rounded-2xl p-3 shadow-xl"
+            />
 
             <UAlert
                 v-if="saveError"
                 color="error"
                 variant="soft"
                 icon="i-lucide-cloud-off"
-                title="Unable to persist workspace"
+                title="Save Failed"
                 :description="saveError"
+                class="max-w-xs shadow-xl backdrop-blur-xl bg-red-500/10 border-red-500/20"
             />
+
+            <UAlert
+                v-if="workspaceQuery.status === 'error'"
+                color="error"
+                icon="i-lucide-alert-circle"
+                title="Workspace Error"
+                :description="workspaceQuery.error?.message"
+                class="max-w-xs shadow-xl backdrop-blur-xl bg-red-500/10 border-red-500/20"
+            />
+        </div>
+
+        <div
+            v-if="isWorkspaceRefreshing"
+            class="fixed right-6 top-8 z-[60]"
+        >
+            <div class="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 dark:bg-blue-400/10 border border-blue-500/20 dark:border-blue-400/20 rounded-full text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 backdrop-blur-xl shadow-lg">
+                <UIcon name="i-lucide-loader-2" class="size-3 animate-spin" />
+                Syncing
+            </div>
         </div>
 
         <WorkspaceEditorModal
@@ -115,3 +129,15 @@ const {
         />
     </div>
 </template>
+
+<style scoped>
+/* Smooth entrance for elements */
+main, aside {
+    animation: fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>

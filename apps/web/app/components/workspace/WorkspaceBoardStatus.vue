@@ -10,22 +10,21 @@ defineProps<{
 </script>
 
 <template>
-  <div class="pointer-events-none fixed bottom-6 left-1/2 z-20 -translate-x-1/2 px-4">
-    <div
-      class="pointer-events-auto flex items-center gap-3 rounded-full border border-muted/70 bg-default/90 px-4 py-2 shadow-lg shadow-black/5 backdrop-blur-md"
-    >
-      <div>
-        <div class="text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-muted">
-          Workspace
-        </div>
-        <div class="text-sm font-semibold text-highlighted">
-          {{ userName ? `${userName}'s board` : "Personal board" }}
-        </div>
-      </div>
-      <div class="h-8 w-px bg-border" />
-      <div class="text-sm text-toned">{{ nodesCount }} node{{ nodesCount === 1 ? "" : "s" }}</div>
-      <div class="rounded-full border px-3 py-1 text-xs font-medium" :class="badge.className">
-        {{ badge.label }}
+  <div class="flex items-center gap-4 px-4 py-3 rounded-2xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl shadow-2xl transition-all duration-300">
+    <div class="flex size-10 items-center justify-center rounded-xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900">
+        <UIcon name="i-lucide-layout-grid" class="size-5" />
+    </div>
+
+    <div class="flex-1 min-w-0">
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 leading-none mb-1">
+        {{ userName ? `${userName}'s Workspace` : "Personal Workspace" }}
+      </p>
+      <div class="flex items-center gap-2">
+          <span class="text-sm font-bold text-zinc-900 dark:text-zinc-100">{{ nodesCount }} Nodes</span>
+          <div class="size-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
+          <div class="px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-widest border border-zinc-200/50 dark:border-zinc-800/50 bg-zinc-50 dark:bg-zinc-900 text-zinc-500" :class="badge.className">
+            {{ badge.label }}
+          </div>
       </div>
     </div>
   </div>
