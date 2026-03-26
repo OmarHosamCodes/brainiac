@@ -4,6 +4,10 @@ export const WORKSPACE_NODE_LIMIT = 200;
 export const WORKSPACE_NODE_TAB_LIMIT = 12;
 export const WORKSPACE_TAB_BLOCK_LIMIT = 24;
 export const WORKSPACE_TASK_LIMIT = 100;
+export const WORKSPACE_KANBAN_COLUMN_LIMIT = 6;
+export const WORKSPACE_KANBAN_CARD_LIMIT = 120;
+export const WORKSPACE_TIMELINE_MILESTONE_LIMIT = 40;
+export const WORKSPACE_SCORECARD_METRIC_LIMIT = 40;
 export const WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT = 20;
 export const WORKSPACE_CUSTOM_BLOCK_FIELD_LIMIT = 12;
 export const WORKSPACE_MARKETPLACE_ITEM_LIMIT = 200;
@@ -15,7 +19,35 @@ export const DEFAULT_WORKSPACE_NODE_MIN_HEIGHT = 180;
 const isoTimestampSchema = z.string().datetime();
 const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
+export const WORKSPACE_TASK_DOMAINS = [
+  "strategy",
+  "people",
+  "sales",
+  "content",
+  "brand",
+  "finance",
+  "education",
+  "orchestrator",
+] as const;
+export const WORKSPACE_TASK_QUADRANTS = [
+  "do",
+  "schedule",
+  "delegate",
+  "eliminate",
+] as const;
+export const WORKSPACE_TIMELINE_MILESTONE_STATUSES = [
+  "planned",
+  "active",
+  "done",
+  "blocked",
+] as const;
+
 export const workspaceTaskPrioritySchema = z.enum(["low", "medium", "high"]);
+export const workspaceTaskDomainSchema = z.enum(WORKSPACE_TASK_DOMAINS);
+export const workspaceTaskQuadrantSchema = z.enum(WORKSPACE_TASK_QUADRANTS);
+export const workspaceTimelineMilestoneStatusSchema = z.enum(
+  WORKSPACE_TIMELINE_MILESTONE_STATUSES,
+);
 export const workspaceCustomFieldTypeSchema = z.enum([
   "text",
   "number",
@@ -29,6 +61,10 @@ export const workspaceTaskSchema = z.object({
   completed: z.boolean().default(false),
   dueDate: isoDateSchema.nullable().optional(),
   priority: workspaceTaskPrioritySchema.nullable().optional(),
+  domain: workspaceTaskDomainSchema.nullable().optional(),
+  urgency: z.number().int().min(1).max(10).default(5),
+  importance: z.number().int().min(1).max(10).default(5),
+  estimateMinutes: z.number().int().min(0).max(1440).default(30),
 });
 
 export const workspacePromptOutputSchema = z.object({
@@ -49,6 +85,48 @@ export const workspaceTrackerEntrySchema = z.object({
   label: z.string().max(120).default(""),
   value: z.number().finite(),
   createdAt: isoTimestampSchema,
+});
+
+export const workspaceTimeOrchestratorSettingsSchema = z.object({
+  domains: z
+    .array(workspaceTaskDomainSchema)
+    .max(WORKSPACE_TASK_DOMAINS.length)
+    .default([...WORKSPACE_TASK_DOMAINS]),
+  includeUnassigned: z.boolean().default(true),
+  quadrants: z
+    .array(workspaceTaskQuadrantSchema)
+    .max(WORKSPACE_TASK_QUADRANTS.length)
+    .default([...WORKSPACE_TASK_QUADRANTS]),
+});
+
+export const workspaceKanbanColumnSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().max(80),
+});
+
+export const workspaceKanbanCardSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().max(240),
+  description: z.string().max(4000).default(""),
+  columnId: z.string().min(1),
+  assignee: z.string().trim().max(120).default(""),
+  dueDate: isoDateSchema.nullable().optional(),
+});
+
+export const workspaceTimelineMilestoneSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().max(160),
+  date: isoDateSchema.nullable().optional(),
+  status: workspaceTimelineMilestoneStatusSchema.default("planned"),
+  note: z.string().max(2000).default(""),
+});
+
+export const workspaceScorecardMetricSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().trim().max(120),
+  value: z.number().finite().default(0),
+  target: z.number().finite().default(100),
+  unit: z.string().trim().max(24).default(""),
 });
 
 export const workspaceCustomBlockFieldSchema = z.object({
@@ -133,7 +211,37 @@ export const workspaceAiPromptBlockSchema = workspaceBlockBaseSchema.extend({
 export const workspaceTimeOrchestratorBlockSchema =
   workspaceBlockBaseSchema.extend({
     type: z.literal("time-orchestrator"),
+    settings: workspaceTimeOrchestratorSettingsSchema.default({
+      domains: [...WORKSPACE_TASK_DOMAINS],
+      includeUnassigned: true,
+      quadrants: [...WORKSPACE_TASK_QUADRANTS],
+    }),
   });
+
+export const workspaceKanbanBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("kanban"),
+  columns: z
+    .array(workspaceKanbanColumnSchema)
+    .min(1)
+    .max(WORKSPACE_KANBAN_COLUMN_LIMIT),
+  cards: z.array(workspaceKanbanCardSchema).max(WORKSPACE_KANBAN_CARD_LIMIT),
+});
+
+export const workspaceTimelineBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("timeline"),
+  milestones: z
+    .array(workspaceTimelineMilestoneSchema)
+    .max(WORKSPACE_TIMELINE_MILESTONE_LIMIT)
+    .default([]),
+});
+
+export const workspaceScorecardBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("scorecard"),
+  metrics: z
+    .array(workspaceScorecardMetricSchema)
+    .max(WORKSPACE_SCORECARD_METRIC_LIMIT)
+    .default([]),
+});
 
 export const workspaceCustomBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("custom"),
@@ -151,13 +259,19 @@ export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceTrackerBlockSchema,
   workspaceAiPromptBlockSchema,
   workspaceTimeOrchestratorBlockSchema,
+  workspaceKanbanBlockSchema,
+  workspaceTimelineBlockSchema,
+  workspaceScorecardBlockSchema,
   workspaceCustomBlockSchema,
 ]);
 
 export const workspaceNodeTabSchema = z.object({
   id: z.string().min(1),
   title: z.string().trim().max(80),
-  blocks: z.array(workspaceBlockSchema).max(WORKSPACE_TAB_BLOCK_LIMIT).default([]),
+  blocks: z
+    .array(workspaceBlockSchema)
+    .max(WORKSPACE_TAB_BLOCK_LIMIT)
+    .default([]),
   createdAt: isoTimestampSchema,
   updatedAt: isoTimestampSchema,
 });
@@ -180,7 +294,10 @@ export const workspaceNodeSchema = z.object({
   minHeight: z.number().positive().optional(),
   createdAt: isoTimestampSchema,
   updatedAt: isoTimestampSchema,
-  tabs: z.array(workspaceNodeTabSchema).max(WORKSPACE_NODE_TAB_LIMIT).default([]),
+  tabs: z
+    .array(workspaceNodeTabSchema)
+    .max(WORKSPACE_NODE_TAB_LIMIT)
+    .default([]),
   customBlockTemplates: z
     .array(workspaceCustomBlockTemplateSchema)
     .max(WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT)
@@ -243,10 +360,26 @@ export const workspaceMarketplaceListSchema = z.object({
 });
 
 export type WorkspaceTaskPriority = z.infer<typeof workspaceTaskPrioritySchema>;
+export type WorkspaceTaskDomain = z.infer<typeof workspaceTaskDomainSchema>;
+export type WorkspaceTaskQuadrant = z.infer<typeof workspaceTaskQuadrantSchema>;
 export type WorkspaceTask = z.infer<typeof workspaceTaskSchema>;
 export type WorkspacePromptOutput = z.infer<typeof workspacePromptOutputSchema>;
 export type WorkspaceDecisionItem = z.infer<typeof workspaceDecisionItemSchema>;
 export type WorkspaceTrackerEntry = z.infer<typeof workspaceTrackerEntrySchema>;
+export type WorkspaceTimeOrchestratorSettings = z.infer<
+  typeof workspaceTimeOrchestratorSettingsSchema
+>;
+export type WorkspaceKanbanColumn = z.infer<typeof workspaceKanbanColumnSchema>;
+export type WorkspaceKanbanCard = z.infer<typeof workspaceKanbanCardSchema>;
+export type WorkspaceTimelineMilestoneStatus = z.infer<
+  typeof workspaceTimelineMilestoneStatusSchema
+>;
+export type WorkspaceTimelineMilestone = z.infer<
+  typeof workspaceTimelineMilestoneSchema
+>;
+export type WorkspaceScorecardMetric = z.infer<
+  typeof workspaceScorecardMetricSchema
+>;
 export type WorkspaceCustomFieldType = z.infer<
   typeof workspaceCustomFieldTypeSchema
 >;
@@ -259,18 +392,33 @@ export type WorkspaceCustomBlockFormula = z.infer<
 export type WorkspaceCustomBlockTemplate = z.infer<
   typeof workspaceCustomBlockTemplateSchema
 >;
-export type WorkspaceTaskListBlock = z.infer<typeof workspaceTaskListBlockSchema>;
+export type WorkspaceTaskListBlock = z.infer<
+  typeof workspaceTaskListBlockSchema
+>;
 export type WorkspaceNotesBlock = z.infer<typeof workspaceNotesBlockSchema>;
-export type WorkspaceDecisionBlock = z.infer<typeof workspaceDecisionBlockSchema>;
+export type WorkspaceDecisionBlock = z.infer<
+  typeof workspaceDecisionBlockSchema
+>;
 export type WorkspaceTrackerBlock = z.infer<typeof workspaceTrackerBlockSchema>;
-export type WorkspaceAiPromptBlock = z.infer<typeof workspaceAiPromptBlockSchema>;
+export type WorkspaceAiPromptBlock = z.infer<
+  typeof workspaceAiPromptBlockSchema
+>;
 export type WorkspaceTimeOrchestratorBlock = z.infer<
   typeof workspaceTimeOrchestratorBlockSchema
+>;
+export type WorkspaceKanbanBlock = z.infer<typeof workspaceKanbanBlockSchema>;
+export type WorkspaceTimelineBlock = z.infer<
+  typeof workspaceTimelineBlockSchema
+>;
+export type WorkspaceScorecardBlock = z.infer<
+  typeof workspaceScorecardBlockSchema
 >;
 export type WorkspaceCustomBlock = z.infer<typeof workspaceCustomBlockSchema>;
 export type WorkspaceBlock = z.infer<typeof workspaceBlockSchema>;
 export type WorkspaceNodeTab = z.infer<typeof workspaceNodeTabSchema>;
-export type WorkspaceNodeViewState = z.infer<typeof workspaceNodeViewStateSchema>;
+export type WorkspaceNodeViewState = z.infer<
+  typeof workspaceNodeViewStateSchema
+>;
 export type WorkspaceNode = z.infer<typeof workspaceNodeSchema>;
 export type WorkspaceSaveInput = z.infer<typeof workspaceSaveInputSchema>;
 export type WorkspaceMarketplacePayload = z.infer<
@@ -295,11 +443,36 @@ export type WorkspaceCollectedTask = {
   task: WorkspaceTask;
 };
 
+export type WorkspaceTimeOrchestratorDomainSummary = {
+  domain: WorkspaceTaskDomain | null;
+  label: string;
+  count: number;
+  estimateMinutes: number;
+  tasks: WorkspaceCollectedTask[];
+};
+
+export type WorkspaceTimeOrchestratorQuadrantSummary = {
+  key: WorkspaceTaskQuadrant;
+  label: string;
+  count: number;
+  estimateMinutes: number;
+  tasks: WorkspaceCollectedTask[];
+};
+
 export type WorkspaceTimeOrchestratorSummary = {
   overdue: WorkspaceCollectedTask[];
   upcoming: WorkspaceCollectedTask[];
   highPriority: WorkspaceCollectedTask[];
   suggestedNextActions: WorkspaceCollectedTask[];
+  totalOpenTasks: number;
+  totalEstimateMinutes: number;
+  averageUrgency: number;
+  averageImportance: number;
+  domainBreakdown: WorkspaceTimeOrchestratorDomainSummary[];
+  quadrants: Record<
+    WorkspaceTaskQuadrant,
+    WorkspaceTimeOrchestratorQuadrantSummary
+  >;
 };
 
 export type WorkspaceTrackerTrend = {
@@ -315,6 +488,31 @@ export type WorkspaceDecisionSummary = {
   totalScore: number;
   signal: "lean-yes" | "lean-no" | "balanced";
 };
+
+function normalizeSelection<T extends string>(
+  values: readonly T[] | undefined,
+  allowed: readonly T[],
+  fallback: readonly T[],
+) {
+  const selected = values === undefined ? fallback : values;
+  const seen = new Set<T>();
+  const result: T[] = [];
+
+  for (const value of selected) {
+    if (!allowed.includes(value) || seen.has(value)) {
+      continue;
+    }
+
+    seen.add(value);
+    result.push(value);
+  }
+
+  if (result.length > 0 || values !== undefined) {
+    return result;
+  }
+
+  return [...fallback];
+}
 
 function getNowIsoString() {
   return new Date().toISOString();
@@ -369,6 +567,74 @@ export function createWorkspaceTask(
     completed: partial.completed ?? false,
     dueDate: partial.dueDate ?? null,
     priority: partial.priority ?? "medium",
+    domain: partial.domain ?? null,
+    urgency: partial.urgency ?? 5,
+    importance: partial.importance ?? 5,
+    estimateMinutes: partial.estimateMinutes ?? 30,
+  });
+}
+
+export function createWorkspaceTimeOrchestratorSettings(
+  partial: Partial<WorkspaceTimeOrchestratorSettings> = {},
+): WorkspaceTimeOrchestratorSettings {
+  return workspaceTimeOrchestratorSettingsSchema.parse({
+    domains: normalizeSelection(
+      partial.domains,
+      WORKSPACE_TASK_DOMAINS,
+      WORKSPACE_TASK_DOMAINS,
+    ),
+    includeUnassigned: partial.includeUnassigned ?? true,
+    quadrants: normalizeSelection(
+      partial.quadrants,
+      WORKSPACE_TASK_QUADRANTS,
+      WORKSPACE_TASK_QUADRANTS,
+    ),
+  });
+}
+
+export function createWorkspaceKanbanColumn(
+  partial: Partial<WorkspaceKanbanColumn> = {},
+): WorkspaceKanbanColumn {
+  return workspaceKanbanColumnSchema.parse({
+    id: partial.id ?? createWorkspaceId("column"),
+    title: partial.title ?? "New column",
+  });
+}
+
+export function createWorkspaceKanbanCard(
+  partial: Partial<WorkspaceKanbanCard> & { columnId: string },
+): WorkspaceKanbanCard {
+  return workspaceKanbanCardSchema.parse({
+    id: partial.id ?? createWorkspaceId("card"),
+    title: partial.title ?? "New card",
+    description: partial.description ?? "",
+    columnId: partial.columnId,
+    assignee: partial.assignee ?? "",
+    dueDate: partial.dueDate ?? null,
+  });
+}
+
+export function createWorkspaceTimelineMilestone(
+  partial: Partial<WorkspaceTimelineMilestone> = {},
+): WorkspaceTimelineMilestone {
+  return workspaceTimelineMilestoneSchema.parse({
+    id: partial.id ?? createWorkspaceId("milestone"),
+    title: partial.title ?? "Milestone",
+    date: partial.date ?? null,
+    status: partial.status ?? "planned",
+    note: partial.note ?? "",
+  });
+}
+
+export function createWorkspaceScorecardMetric(
+  partial: Partial<WorkspaceScorecardMetric> = {},
+): WorkspaceScorecardMetric {
+  return workspaceScorecardMetricSchema.parse({
+    id: partial.id ?? createWorkspaceId("metric"),
+    label: partial.label ?? "Metric",
+    value: partial.value ?? 0,
+    target: partial.target ?? 100,
+    unit: partial.unit ?? "",
   });
 }
 
@@ -460,6 +726,61 @@ export function createWorkspaceTimeOrchestratorBlock(
     id: partial.id ?? createWorkspaceId("block"),
     type: "time-orchestrator",
     title: partial.title ?? "Time orchestrator",
+    settings: createWorkspaceTimeOrchestratorSettings(partial.settings),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceKanbanBlock(
+  partial: Partial<WorkspaceKanbanBlock> = {},
+): WorkspaceKanbanBlock {
+  const timestamp = getNowIsoString();
+  const columns =
+    partial.columns && partial.columns.length > 0
+      ? partial.columns
+      : [
+          createWorkspaceKanbanColumn({ title: "Backlog" }),
+          createWorkspaceKanbanColumn({ title: "In progress" }),
+          createWorkspaceKanbanColumn({ title: "Done" }),
+        ];
+
+  return workspaceKanbanBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "kanban",
+    title: partial.title ?? "Kanban board",
+    columns,
+    cards: partial.cards ?? [],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceTimelineBlock(
+  partial: Partial<WorkspaceTimelineBlock> = {},
+): WorkspaceTimelineBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceTimelineBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "timeline",
+    title: partial.title ?? "Timeline",
+    milestones: partial.milestones ?? [],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceScorecardBlock(
+  partial: Partial<WorkspaceScorecardBlock> = {},
+): WorkspaceScorecardBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceScorecardBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "scorecard",
+    title: partial.title ?? "Scorecard",
+    metrics: partial.metrics ?? [],
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
   });
@@ -543,7 +864,33 @@ export function createDefaultWorkspaceTab(title = "Overview", body = "") {
   });
 }
 
-export function normalizeWorkspaceNodeTab(tab: WorkspaceNodeTab): WorkspaceNodeTab {
+function normalizeWorkspaceKanbanBlock(
+  block:
+    | WorkspaceKanbanBlock
+    | (Partial<WorkspaceKanbanBlock> & { type: "kanban" }),
+) {
+  const columns =
+    block.columns && block.columns.length > 0
+      ? block.columns.map((column) => workspaceKanbanColumnSchema.parse(column))
+      : createWorkspaceKanbanBlock().columns;
+  const fallbackColumnId = columns[0]!.id;
+  const validColumnIds = new Set(columns.map((column) => column.id));
+
+  return workspaceKanbanBlockSchema.parse({
+    ...block,
+    columns,
+    cards: (block.cards ?? []).map((card) => ({
+      ...card,
+      columnId: validColumnIds.has(card.columnId)
+        ? card.columnId
+        : fallbackColumnId,
+    })),
+  });
+}
+
+export function normalizeWorkspaceNodeTab(
+  tab: WorkspaceNodeTab,
+): WorkspaceNodeTab {
   const parsed = workspaceNodeTabSchema.parse({
     ...tab,
     blocks: tab.blocks ?? [],
@@ -587,7 +934,22 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         outputHistory: block.outputHistory ?? [],
       });
     case "time-orchestrator":
-      return workspaceTimeOrchestratorBlockSchema.parse(block);
+      return workspaceTimeOrchestratorBlockSchema.parse({
+        ...block,
+        settings: createWorkspaceTimeOrchestratorSettings(block.settings),
+      });
+    case "kanban":
+      return normalizeWorkspaceKanbanBlock(block);
+    case "timeline":
+      return workspaceTimelineBlockSchema.parse({
+        ...block,
+        milestones: block.milestones ?? [],
+      });
+    case "scorecard":
+      return workspaceScorecardBlockSchema.parse({
+        ...block,
+        metrics: block.metrics ?? [],
+      });
     case "custom":
       return workspaceCustomBlockSchema.parse({
         ...block,
@@ -619,12 +981,13 @@ export function normalizeWorkspaceNode(node: WorkspaceNode): WorkspaceNode {
     ),
   );
   const activeTabId =
-    parsed.viewState.activeTabId && validTabIds.has(parsed.viewState.activeTabId)
+    parsed.viewState.activeTabId &&
+    validTabIds.has(parsed.viewState.activeTabId)
       ? parsed.viewState.activeTabId
-      : tabs[0]?.id ?? null;
+      : (tabs[0]?.id ?? null);
   const notePreviewState = Object.fromEntries(
-    Object.entries(parsed.viewState.notePreviewState ?? {}).filter(([blockId]) =>
-      noteBlockIds.has(blockId),
+    Object.entries(parsed.viewState.notePreviewState ?? {}).filter(
+      ([blockId]) => noteBlockIds.has(blockId),
     ),
   );
 
@@ -761,6 +1124,55 @@ export function cloneWorkspaceBlockForInsertion(
       return workspaceTimeOrchestratorBlockSchema.parse({
         ...block,
         id: createWorkspaceId("block"),
+        settings: createWorkspaceTimeOrchestratorSettings(block.settings),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "kanban": {
+      const columnIdMap = new Map<string, string>();
+      const columns = block.columns.map((column) => {
+        const nextColumnId = createWorkspaceId("column");
+        columnIdMap.set(column.id, nextColumnId);
+
+        return workspaceKanbanColumnSchema.parse({
+          ...column,
+          id: nextColumnId,
+        });
+      });
+      const fallbackColumnId = columns[0]?.id ?? createWorkspaceId("column");
+
+      return workspaceKanbanBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        columns,
+        cards: block.cards.map((card) => ({
+          ...card,
+          id: createWorkspaceId("card"),
+          columnId: columnIdMap.get(card.columnId) ?? fallbackColumnId,
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    }
+    case "timeline":
+      return workspaceTimelineBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        milestones: block.milestones.map((milestone) => ({
+          ...milestone,
+          id: createWorkspaceId("milestone"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "scorecard":
+      return workspaceScorecardBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        metrics: block.metrics.map((metric) => ({
+          ...metric,
+          id: createWorkspaceId("metric"),
+        })),
         createdAt: timestamp,
         updatedAt: timestamp,
       });
@@ -768,7 +1180,8 @@ export function cloneWorkspaceBlockForInsertion(
       return workspaceCustomBlockSchema.parse({
         ...block,
         id: createWorkspaceId("block"),
-        definitionId: templateIdMap.get(block.definitionId) ?? block.definitionId,
+        definitionId:
+          templateIdMap.get(block.definitionId) ?? block.definitionId,
         outputHistory: clonePromptOutputsForInsertion(block.outputHistory),
         createdAt: timestamp,
         updatedAt: timestamp,
@@ -802,14 +1215,18 @@ export function cloneWorkspaceNodeForInsertion(
   );
   const tabIdMap = new Map<string, string>();
   const tabs = node.tabs.map((tab) => {
-    const clonedTab = cloneWorkspaceTabForInsertion(tab, templateIdMap, timestamp);
+    const clonedTab = cloneWorkspaceTabForInsertion(
+      tab,
+      templateIdMap,
+      timestamp,
+    );
     tabIdMap.set(tab.id, clonedTab.id);
     return clonedTab;
   });
   const activeTabId =
     node.viewState.activeTabId && tabIdMap.has(node.viewState.activeTabId)
-      ? tabIdMap.get(node.viewState.activeTabId) ?? tabs[0]?.id ?? null
-      : tabs[0]?.id ?? null;
+      ? (tabIdMap.get(node.viewState.activeTabId) ?? tabs[0]?.id ?? null)
+      : (tabs[0]?.id ?? null);
 
   return normalizeWorkspaceNode({
     ...node,
@@ -872,15 +1289,82 @@ function getPriorityScore(priority: WorkspaceTaskPriority | null | undefined) {
   }
 }
 
+export function getWorkspaceTaskDomainLabel(
+  domain: WorkspaceTaskDomain | null | undefined,
+) {
+  switch (domain) {
+    case "strategy":
+      return "Strategy";
+    case "people":
+      return "People";
+    case "sales":
+      return "Sales";
+    case "content":
+      return "Content";
+    case "brand":
+      return "Brand";
+    case "finance":
+      return "Finance";
+    case "education":
+      return "Education";
+    case "orchestrator":
+      return "Orchestrator";
+    default:
+      return "Unassigned";
+  }
+}
+
+export function getWorkspaceTaskQuadrantLabel(quadrant: WorkspaceTaskQuadrant) {
+  switch (quadrant) {
+    case "do":
+      return "Do first";
+    case "schedule":
+      return "Schedule";
+    case "delegate":
+      return "Delegate";
+    case "eliminate":
+      return "Eliminate";
+  }
+}
+
+export function getWorkspaceTaskQuadrant(
+  task: WorkspaceTask,
+): WorkspaceTaskQuadrant {
+  const highUrgency = task.urgency >= 7;
+  const highImportance = task.importance >= 7;
+
+  if (highUrgency && highImportance) {
+    return "do";
+  }
+
+  if (highImportance) {
+    return "schedule";
+  }
+
+  if (highUrgency) {
+    return "delegate";
+  }
+
+  return "eliminate";
+}
+
+function getTaskEstimatePenalty(task: WorkspaceTask) {
+  return Math.min(task.estimateMinutes / 30, 12);
+}
+
 function getTaskUrgencyScore(task: WorkspaceTask, now = new Date()) {
   if (task.completed) {
     return Number.NEGATIVE_INFINITY;
   }
 
-  const priorityScore = getPriorityScore(task.priority);
+  const baseScore =
+    getPriorityScore(task.priority) +
+    task.urgency * 4 +
+    task.importance * 3 -
+    getTaskEstimatePenalty(task);
 
   if (!task.dueDate) {
-    return priorityScore;
+    return baseScore;
   }
 
   const todayValue = getTodayValue(now);
@@ -888,38 +1372,76 @@ function getTaskUrgencyScore(task: WorkspaceTask, now = new Date()) {
   const dayDelta = Math.round((dueDateValue - todayValue) / 86_400_000);
 
   if (dayDelta < 0) {
-    return priorityScore + Math.abs(dayDelta) * 8 + 18;
+    return baseScore + Math.abs(dayDelta) * 8 + 18;
   }
 
   if (dayDelta === 0) {
-    return priorityScore + 16;
+    return baseScore + 16;
   }
 
   if (dayDelta <= 3) {
-    return priorityScore + (4 - dayDelta) * 5;
+    return baseScore + (4 - dayDelta) * 5;
   }
 
   if (dayDelta <= 7) {
-    return priorityScore + 2;
+    return baseScore + 2;
   }
 
-  return priorityScore;
+  return baseScore;
 }
 
 export function getTimeOrchestratorSummary(
   node: WorkspaceNode,
+  settings: Partial<WorkspaceTimeOrchestratorSettings> = {},
   now = new Date(),
 ): WorkspaceTimeOrchestratorSummary {
-  const tasks = collectWorkspaceNodeTasks(node).filter(
-    ({ task }) => !task.completed,
-  );
+  const resolvedSettings = createWorkspaceTimeOrchestratorSettings(settings);
+  const tasks = collectWorkspaceNodeTasks(node).filter(({ task }) => {
+    if (task.completed) {
+      return false;
+    }
+
+    const domainAllowed = task.domain
+      ? resolvedSettings.domains.includes(task.domain)
+      : resolvedSettings.includeUnassigned;
+    const quadrantAllowed = resolvedSettings.quadrants.includes(
+      getWorkspaceTaskQuadrant(task),
+    );
+
+    return domainAllowed && quadrantAllowed;
+  });
   const todayValue = getTodayValue(now);
+  const totalEstimateMinutes = tasks.reduce(
+    (sum, { task }) => sum + task.estimateMinutes,
+    0,
+  );
+  const averageUrgency =
+    tasks.length === 0
+      ? 0
+      : Number(
+          (
+            tasks.reduce((sum, { task }) => sum + task.urgency, 0) /
+            tasks.length
+          ).toFixed(1),
+        );
+  const averageImportance =
+    tasks.length === 0
+      ? 0
+      : Number(
+          (
+            tasks.reduce((sum, { task }) => sum + task.importance, 0) /
+            tasks.length
+          ).toFixed(1),
+        );
 
   const overdue = tasks
-    .filter(({ task }) => task.dueDate && getDueDateValue(task.dueDate) < todayValue)
+    .filter(
+      ({ task }) => task.dueDate && getDueDateValue(task.dueDate) < todayValue,
+    )
     .sort(
       (left, right) =>
-        getDueDateValue(left.task.dueDate!) - getDueDateValue(right.task.dueDate!),
+        getDueDateValue(left.task.dueDate!) -
+        getDueDateValue(right.task.dueDate!),
     );
 
   const upcoming = tasks
@@ -935,22 +1457,111 @@ export function getTimeOrchestratorSummary(
     })
     .sort(
       (left, right) =>
-        getDueDateValue(left.task.dueDate!) - getDueDateValue(right.task.dueDate!),
+        getDueDateValue(left.task.dueDate!) -
+        getDueDateValue(right.task.dueDate!),
     );
 
-  const highPriority = tasks.filter(({ task }) => task.priority === "high");
+  const highPriority = tasks.filter(
+    ({ task }) =>
+      task.priority === "high" || task.urgency >= 8 || task.importance >= 8,
+  );
   const suggestedNextActions = [...tasks]
     .sort(
       (left, right) =>
-        getTaskUrgencyScore(right.task, now) - getTaskUrgencyScore(left.task, now),
+        getTaskUrgencyScore(right.task, now) -
+        getTaskUrgencyScore(left.task, now),
     )
     .slice(0, 5);
+  const quadrants = {
+    do: {
+      key: "do",
+      label: getWorkspaceTaskQuadrantLabel("do"),
+      count: 0,
+      estimateMinutes: 0,
+      tasks: [] as WorkspaceCollectedTask[],
+    },
+    schedule: {
+      key: "schedule",
+      label: getWorkspaceTaskQuadrantLabel("schedule"),
+      count: 0,
+      estimateMinutes: 0,
+      tasks: [] as WorkspaceCollectedTask[],
+    },
+    delegate: {
+      key: "delegate",
+      label: getWorkspaceTaskQuadrantLabel("delegate"),
+      count: 0,
+      estimateMinutes: 0,
+      tasks: [] as WorkspaceCollectedTask[],
+    },
+    eliminate: {
+      key: "eliminate",
+      label: getWorkspaceTaskQuadrantLabel("eliminate"),
+      count: 0,
+      estimateMinutes: 0,
+      tasks: [] as WorkspaceCollectedTask[],
+    },
+  } satisfies Record<
+    WorkspaceTaskQuadrant,
+    WorkspaceTimeOrchestratorQuadrantSummary
+  >;
+
+  for (const item of tasks) {
+    const quadrant = quadrants[getWorkspaceTaskQuadrant(item.task)];
+    quadrant.count += 1;
+    quadrant.estimateMinutes += item.task.estimateMinutes;
+    quadrant.tasks.push(item);
+  }
+
+  for (const quadrant of Object.values(quadrants)) {
+    quadrant.tasks.sort(
+      (left, right) =>
+        getTaskUrgencyScore(right.task, now) -
+        getTaskUrgencyScore(left.task, now),
+    );
+  }
+
+  const domainGroups = new Map<
+    WorkspaceTaskDomain | null,
+    WorkspaceTimeOrchestratorDomainSummary
+  >();
+
+  for (const item of tasks) {
+    const key = item.task.domain ?? null;
+    const existing = domainGroups.get(key);
+
+    if (existing) {
+      existing.count += 1;
+      existing.estimateMinutes += item.task.estimateMinutes;
+      existing.tasks.push(item);
+      continue;
+    }
+
+    domainGroups.set(key, {
+      domain: key,
+      label: getWorkspaceTaskDomainLabel(key),
+      count: 1,
+      estimateMinutes: item.task.estimateMinutes,
+      tasks: [item],
+    });
+  }
+
+  const domainBreakdown = [...domainGroups.values()].sort(
+    (left, right) =>
+      right.estimateMinutes - left.estimateMinutes || right.count - left.count,
+  );
 
   return {
     overdue,
     upcoming,
     highPriority,
     suggestedNextActions,
+    totalOpenTasks: tasks.length,
+    totalEstimateMinutes,
+    averageUrgency,
+    averageImportance,
+    domainBreakdown,
+    quadrants,
   };
 }
 
@@ -979,6 +1590,27 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
       if (block.type === "decision" && trimToEmpty(block.recommendation)) {
         return truncateText(block.recommendation, maxLength);
       }
+
+      if (block.type === "kanban" && block.cards.length > 0) {
+        return truncateText(
+          `${block.title}: ${block.cards.length} cards across ${block.columns.length} columns.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "timeline" && block.milestones.length > 0) {
+        return truncateText(
+          `${block.title}: ${block.milestones.length} milestones tracked.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "scorecard" && block.metrics.length > 0) {
+        return truncateText(
+          `${block.title}: ${block.metrics.length} metrics being tracked.`,
+          maxLength,
+        );
+      }
     }
   }
 
@@ -987,7 +1619,10 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
 
 export function getWorkspaceNodeStats(node: WorkspaceNode) {
   const tabsCount = node.tabs.length;
-  const blocksCount = node.tabs.reduce((count, tab) => count + tab.blocks.length, 0);
+  const blocksCount = node.tabs.reduce(
+    (count, tab) => count + tab.blocks.length,
+    0,
+  );
   const tasks = collectWorkspaceNodeTasks(node);
   const completedTasks = tasks.filter(({ task }) => task.completed).length;
   const overdueTasks = getTimeOrchestratorSummary(node).overdue.length;
@@ -1001,7 +1636,9 @@ export function getWorkspaceNodeStats(node: WorkspaceNode) {
   };
 }
 
-export function getTrackerTrend(block: WorkspaceTrackerBlock): WorkspaceTrackerTrend {
+export function getTrackerTrend(
+  block: WorkspaceTrackerBlock,
+): WorkspaceTrackerTrend {
   const values = block.entries.map((entry) => entry.value);
 
   if (values.length === 0) {
@@ -1017,7 +1654,9 @@ export function getTrackerTrend(block: WorkspaceTrackerBlock): WorkspaceTrackerT
   const last = values[values.length - 1]!;
   const delta = Number((last - first).toFixed(2));
   const percentChange =
-    first === 0 ? null : Number((((last - first) / Math.abs(first)) * 100).toFixed(1));
+    first === 0
+      ? null
+      : Number((((last - first) / Math.abs(first)) * 100).toFixed(1));
   const min = Math.min(...values);
   const max = Math.max(...values);
   const points =
@@ -1033,7 +1672,9 @@ export function getTrackerTrend(block: WorkspaceTrackerBlock): WorkspaceTrackerT
   };
 }
 
-export function getDecisionSummary(block: WorkspaceDecisionBlock): WorkspaceDecisionSummary {
+export function getDecisionSummary(
+  block: WorkspaceDecisionBlock,
+): WorkspaceDecisionSummary {
   const prosWeight = block.pros.reduce((sum, item) => sum + item.weight, 0);
   const consWeight = block.cons.reduce((sum, item) => sum + item.weight, 0);
   const totalScore = prosWeight - consWeight;
@@ -1058,11 +1699,15 @@ export function evaluateCustomBlockFormula(
   }
 
   const numericValues = Object.fromEntries(
-    Object.entries(values).map(([key, value]) => [key, typeof value === "number" ? value : 0]),
+    Object.entries(values).map(([key, value]) => [
+      key,
+      typeof value === "number" ? value : 0,
+    ]),
   );
 
-  const substituted = source.replace(/\b[a-zA-Z_][a-zA-Z0-9_]*\b/g, (identifier) =>
-    String(numericValues[identifier] ?? 0),
+  const substituted = source.replace(
+    /\b[a-zA-Z_][a-zA-Z0-9_]*\b/g,
+    (identifier) => String(numericValues[identifier] ?? 0),
   );
 
   if (!/^[0-9+\-*/().\s]+$/.test(substituted)) {
@@ -1092,14 +1737,21 @@ export function fillCustomBlockPromptTemplate(
 
   const valuePairs = Object.entries(block.values).map(([key, value]) => [
     key,
-    typeof value === "boolean" ? (value ? "true" : "false") : String(value ?? ""),
+    typeof value === "boolean"
+      ? value
+        ? "true"
+        : "false"
+      : String(value ?? ""),
   ]);
 
-  return promptTemplate.replace(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g, (_, key) => {
-    const match = valuePairs.find(([entryKey]) => entryKey === key);
+  return promptTemplate.replace(
+    /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g,
+    (_, key) => {
+      const match = valuePairs.find(([entryKey]) => entryKey === key);
 
-    return match?.[1] ?? "";
-  });
+      return match?.[1] ?? "";
+    },
+  );
 }
 
 export function generateWorkspacePromptOutput(
@@ -1122,7 +1774,10 @@ export function generateWorkspacePromptOutput(
     `Tasks: ${stats.completedTasks}/${stats.totalTasks} complete`,
   ].join(" | ");
 
-  if (/decision|recommend|choose/i.test(normalizedPrompt) && decisionBlocks.length > 0) {
+  if (
+    /decision|recommend|choose/i.test(normalizedPrompt) &&
+    decisionBlocks.length > 0
+  ) {
     const recommendations = decisionBlocks.map((block) => {
       const summary = getDecisionSummary(block);
       const base = `${block.title}: score ${summary.totalScore} (${summary.signal})`;
@@ -1142,7 +1797,7 @@ export function generateWorkspacePromptOutput(
       timeSummary.suggestedNextActions.length > 0
         ? timeSummary.suggestedNextActions.map(
             ({ task, tabTitle, blockTitle }) =>
-              `${task.text} [${tabTitle} / ${blockTitle}]${task.dueDate ? ` due ${task.dueDate}` : ""}${task.priority ? `, ${task.priority} priority` : ""}`,
+              `${task.text} [${tabTitle} / ${blockTitle}]${task.domain ? `, ${getWorkspaceTaskDomainLabel(task.domain)}` : ""}${task.dueDate ? ` due ${task.dueDate}` : ""}${task.priority ? `, ${task.priority} priority` : ""}, urgency ${task.urgency}/10, importance ${task.importance}/10${task.estimateMinutes ? `, ${task.estimateMinutes}m` : ""}`,
           )
         : ["No outstanding tasks found."];
 
@@ -1163,6 +1818,7 @@ export function generateWorkspacePromptOutput(
     `Overdue tasks: ${timeSummary.overdue.length}`,
     `Upcoming tasks: ${timeSummary.upcoming.length}`,
     `High priority tasks: ${timeSummary.highPriority.length}`,
+    `Open task load: ${timeSummary.totalOpenTasks} tasks / ${timeSummary.totalEstimateMinutes} minutes`,
   ];
 
   if (notes.length > 0) {
