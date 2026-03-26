@@ -36,7 +36,8 @@
     "db:watch": "turbo -F @brainiac/db db:watch",
     "db:stop": "turbo -F @brainiac/db db:stop",
     "db:down": "turbo -F @brainiac/db db:down",
-    "check": "oxlint && oxfmt --write"
+    "check": "oxlint && oxfmt --write",
+    "clean": "turbo clean"
   },
   "dependencies": {
     "@brainiac/env": "workspace:*",

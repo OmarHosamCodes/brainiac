@@ -9,7 +9,9 @@
       "default": "./src/*.ts"
     }
   },
-  "scripts": {},
+  "scripts": {
+    "clean": "rm -rf .turbo node_modules dist .nuxt .output"
+  },
   "dependencies": {
     "@brainiac/agent": "workspace:*",
     "@brainiac/auth": "workspace:*",

@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "clean": "rm -rf .turbo node_modules dist .nuxt .output"
+  },
   "exports": {
     "./server": "./src/server.ts",
     "./web": "./src/web.ts"

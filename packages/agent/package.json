@@ -10,7 +10,8 @@
     }
   },
   "scripts": {
-    "check-types": "tsc -b"
+    "check-types": "tsc -b",
+    "clean": "rm -rf .turbo node_modules dist .nuxt .output"
   },
   "dependencies": {
     "@brainiac/env": "workspace:*",

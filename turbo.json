@@ -45,6 +45,9 @@
     },
     "db:down": {
       "cache": false
+    },
+    "clean": {
+      "cache": false
     }
   }
 }
