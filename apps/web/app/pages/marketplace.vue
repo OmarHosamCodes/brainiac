@@ -9,10 +9,18 @@ import {
 } from "~/utils/workspace-marketplace";
 
 definePageMeta({
-  middleware: ["auth"],
+  middleware: ["auth", "workspace"],
 });
 
-const { authSession, nodes, saveBadge, saveError, workspaceQuery } = useWorkspaceBoard();
+const {
+  authSession,
+  isWorkspaceInitialLoading,
+  isWorkspaceRefreshing,
+  nodes,
+  saveBadge,
+  saveError,
+  workspaceQuery,
+} = useWorkspaceBoard();
 const orpc = useOrpc();
 const toast = useToast();
 
@@ -86,6 +94,15 @@ function insertMarketplaceItem(item: WorkspaceMarketplaceItem) {
         "
       />
 
+      <UAlert
+        v-else-if="isWorkspaceInitialLoading"
+        color="primary"
+        variant="soft"
+        icon="i-lucide-loader-2"
+        title="Loading workspace"
+        description="Syncing your dashboard so marketplace inserts land in the latest version."
+      />
+
       <section class="rounded-2xl border border-muted/60 bg-default p-5 shadow-sm">
         <div class="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -103,6 +120,15 @@ function insertMarketplaceItem(item: WorkspaceMarketplaceItem) {
           <div class="flex items-center gap-2">
             <UBadge color="neutral" variant="soft">
               {{ marketplaceItems.length }} items
+            </UBadge>
+            <UBadge
+              v-if="isWorkspaceRefreshing"
+              color="primary"
+              variant="soft"
+              class="gap-1.5"
+            >
+              <UIcon name="i-lucide-loader-2" class="size-3 animate-spin" />
+              Refreshing
             </UBadge>
             <span
               class="rounded-full border px-3 py-1 text-xs font-medium uppercase tracking-[0.2em]"
@@ -158,6 +184,7 @@ function insertMarketplaceItem(item: WorkspaceMarketplaceItem) {
                 color="primary"
                 variant="soft"
                 icon="i-lucide-download"
+                :disabled="isWorkspaceInitialLoading"
                 @click="insertMarketplaceItem(item)"
               >
                 Insert as node

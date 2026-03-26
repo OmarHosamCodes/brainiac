@@ -6,6 +6,8 @@ export function useWorkspaceBoard() {
     authSession,
     nodes,
     selectedNodeIds,
+    isWorkspaceInitialLoading,
+    isWorkspaceRefreshing,
     saveBadge,
     saveError,
     editorOpen,
@@ -14,15 +16,21 @@ export function useWorkspaceBoard() {
     isDraftValid,
   } = storeToRefs(workspaceStore);
 
-  function openNodePage(payload: { nodeId: string }) {
-    void navigateTo(`/node/${payload.nodeId}`);
+  async function openNodePage(payload: { nodeId: string }) {
+    const target = `/node/${payload.nodeId}`;
+
+    await preloadRouteComponents(target);
+    void navigateTo(target);
   }
 
   return {
     authSession,
     workspaceQuery: workspaceStore.workspaceQuery,
+    preloadWorkspace: workspaceStore.preloadWorkspace,
     nodes,
     selectedNodeIds,
+    isWorkspaceInitialLoading,
+    isWorkspaceRefreshing,
     saveBadge,
     saveError,
     editorOpen,

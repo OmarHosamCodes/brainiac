@@ -65,9 +65,11 @@ const props = withDefaults(
   defineProps<{
     nodes: CanvasNodeModel[];
     selectedNodeIds?: string[];
+    loading?: boolean;
   }>(),
   {
     selectedNodeIds: () => [],
+    loading: false,
   },
 );
 
@@ -761,7 +763,7 @@ onBeforeUnmount(() => {
       <div
         ref="viewportRef"
         class="canvas-viewport absolute inset-0"
-        :class="viewportClasses"
+        :class="[viewportClasses, props.loading ? 'pointer-events-none opacity-60' : '']"
         :style="backgroundStyle"
         @contextmenu.capture="captureContextMenu"
         @mousedown="onViewportMouseDown"
@@ -831,7 +833,26 @@ onBeforeUnmount(() => {
     </UContextMenu>
 
     <div
-      v-if="!props.nodes.length"
+      v-if="props.loading"
+      class="pointer-events-none absolute inset-0 flex items-center justify-center px-6"
+    >
+      <div
+        class="max-w-md rounded-4xl border border-muted/70 bg-default/85 p-8 text-center shadow-xl shadow-black/5 backdrop-blur-md"
+      >
+        <div
+          class="mx-auto inline-flex size-14 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary"
+        >
+          <UIcon name="i-lucide-loader-2" class="size-6 animate-spin" />
+        </div>
+        <h3 class="mt-5 text-2xl font-semibold text-highlighted">Loading workspace</h3>
+        <p class="mt-3 text-sm leading-6 text-toned">
+          Pulling your latest nodes and layout from the database.
+        </p>
+      </div>
+    </div>
+
+    <div
+      v-else-if="!props.nodes.length"
       class="pointer-events-none absolute inset-0 flex items-center justify-center px-6"
     >
       <div

@@ -55,14 +55,20 @@ import {
 } from "~/utils/workspace-block-presets";
 
 definePageMeta({
-    middleware: ["auth"],
+    middleware: ["auth", "workspace"],
 });
 
 const route = useRoute();
 const toast = useToast();
 const orpc = useOrpc();
 const workspaceStore = useWorkspaceStore();
-const { nodes: draftNodes, saveBadge, saveError } = storeToRefs(workspaceStore);
+const {
+    isWorkspaceInitialLoading,
+    isWorkspaceRefreshing,
+    nodes: draftNodes,
+    saveBadge,
+    saveError,
+} = storeToRefs(workspaceStore);
 const workspaceQuery = workspaceStore.workspaceQuery;
 
 const saveMarketplaceItem = useMutation(
@@ -1445,25 +1451,63 @@ provide(workspaceNodeEditorContextKey, {
             "
         />
 
-        <div
-            v-else-if="workspaceQuery.isLoading.value"
-            class="flex justify-center py-20"
-        >
-            <UIcon
-                name="i-lucide-loader-2"
-                class="size-8 animate-spin text-muted"
-            />
+        <div v-else-if="isWorkspaceInitialLoading" class="mx-auto max-w-6xl py-8">
+            <div class="rounded-[2rem] border border-muted/60 bg-default p-6 shadow-sm">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="space-y-3">
+                        <USkeleton class="h-4 w-24" />
+                        <USkeleton class="h-10 w-72 max-w-full" />
+                        <USkeleton class="h-4 w-48" />
+                    </div>
+                    <USkeleton class="h-9 w-28 rounded-full" />
+                </div>
+
+                <div class="mt-8 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
+                    <div class="space-y-3 rounded-[1.5rem] border border-muted/50 p-4">
+                        <USkeleton class="h-4 w-20" />
+                        <USkeleton class="h-10 w-full rounded-xl" />
+                        <USkeleton class="h-10 w-full rounded-xl" />
+                        <USkeleton class="h-10 w-4/5 rounded-xl" />
+                    </div>
+
+                    <div class="space-y-4 rounded-[1.5rem] border border-muted/50 p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <USkeleton class="h-8 w-48 rounded-full" />
+                            <USkeleton class="h-8 w-32 rounded-full" />
+                        </div>
+                        <USkeleton class="h-40 w-full rounded-2xl" />
+                        <USkeleton class="h-28 w-full rounded-2xl" />
+                        <USkeleton class="h-56 w-full rounded-2xl" />
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <WorkspaceNodeShell
-            v-else-if="node && activeTab"
-            :node="node"
-            :active-tab="activeTab"
-            :active-tab-id="activeTabId"
-            :save-badge="saveBadge"
-            :save-error="saveError"
-            :visible-blocks="visibleBlocks"
-        />
+        <template v-else-if="node && activeTab">
+            <WorkspaceNodeShell
+                :node="node"
+                :active-tab="activeTab"
+                :active-tab-id="activeTabId"
+                :save-badge="saveBadge"
+                :save-error="saveError"
+                :visible-blocks="visibleBlocks"
+            />
+
+            <div
+                v-if="isWorkspaceRefreshing"
+                class="pointer-events-none fixed right-6 top-20 z-20"
+            >
+                <div
+                    class="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-muted/70 bg-default/90 px-3 py-2 text-xs font-medium text-toned shadow-lg shadow-black/5 backdrop-blur-md"
+                >
+                    <UIcon
+                        name="i-lucide-loader-2"
+                        class="size-3.5 animate-spin text-primary"
+                    />
+                    Refreshing workspace
+                </div>
+            </div>
+        </template>
 
         <div v-else class="mx-auto flex max-w-xl flex-col gap-4 py-16">
             <UAlert

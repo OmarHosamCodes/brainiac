@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-    middleware: ["auth"],
+    middleware: ["auth", "workspace"],
 });
 
 const {
@@ -9,6 +9,8 @@ const {
     editorMode,
     editorOpen,
     isDraftValid,
+    isWorkspaceInitialLoading,
+    isWorkspaceRefreshing,
     nodeDraft,
     nodes,
     openCreateNode,
@@ -41,6 +43,7 @@ const {
                 <InfiniteCanvas
                     v-model:nodes="nodes"
                     v-model:selected-node-ids="selectedNodeIds"
+                    :loading="isWorkspaceInitialLoading"
                     @create-node="openCreateNode"
                     @edit-node="openEditNode"
                     @remove-node="removeNode"
@@ -56,10 +59,26 @@ const {
             </div>
 
             <WorkspaceBoardStatus
+                v-if="!isWorkspaceInitialLoading"
                 :badge="saveBadge"
                 :nodes-count="nodes.length"
                 :user-name="authSession.value?.data?.user?.name"
             />
+
+            <div
+                v-if="isWorkspaceRefreshing"
+                class="pointer-events-none fixed right-6 top-20 z-20"
+            >
+                <div
+                    class="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-muted/70 bg-default/90 px-3 py-2 text-xs font-medium text-toned shadow-lg shadow-black/5 backdrop-blur-md"
+                >
+                    <UIcon
+                        name="i-lucide-loader-2"
+                        class="size-3.5 animate-spin text-primary"
+                    />
+                    Refreshing workspace
+                </div>
+            </div>
 
             <UAlert
                 v-if="saveError"

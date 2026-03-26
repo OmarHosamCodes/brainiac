@@ -8,7 +8,7 @@ import {
   normalizeWorkspaceNode,
   type WorkspaceNode,
 } from "@brainiac/workspace";
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { defineStore, skipHydrate } from "pinia";
 import { computed, nextTick, onScopeDispose, reactive, ref, watch } from "vue";
 
@@ -24,6 +24,8 @@ type NodePosition = {
 export const useWorkspaceStore = defineStore("workspace", () => {
   const authSession = useAuthSession();
   const orpc = useOrpc();
+  const queryClient = useQueryClient();
+  const workspaceGetQueryOptions = orpc.workspace.get.queryOptions();
 
   const nodes = ref<WorkspaceNode[]>([]);
   const selectedNodeIds = ref<string[]>([]);
@@ -36,6 +38,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   const saveState = ref<SaveState>("idle");
   const saveError = ref<string | null>(null);
   const syncedAt = ref<string | null>(null);
+  const isPreloadingWorkspace = ref(false);
   const localRevision = ref(0);
   const syncedRevision = ref(0);
   const nodeDraft = reactive({
@@ -45,7 +48,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
   const workspaceQuery = skipHydrate(
     useQuery({
-      ...orpc.workspace.get.queryOptions(),
+      ...workspaceGetQueryOptions,
       enabled: computed(() => Boolean(authSession.value?.data?.user)),
       staleTime: 1_500,
       refetchInterval: 4_000,
@@ -64,6 +67,19 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       Boolean(authSession.value?.data?.user) &&
       loadApplied.value &&
       !isHydratingWorkspace.value,
+  );
+  const isWorkspaceInitialLoading = computed(
+    () =>
+      Boolean(authSession.value?.data?.user) &&
+      !loadApplied.value &&
+      (workspaceQuery.isLoading.value ||
+        workspaceQuery.isFetching.value ||
+        isPreloadingWorkspace.value),
+  );
+  const isWorkspaceRefreshing = computed(
+    () =>
+      loadApplied.value &&
+      (workspaceQuery.isRefetching.value || isPreloadingWorkspace.value),
   );
   const isDraftValid = computed(() => nodeDraft.title.trim().length > 0);
   const hasPendingLocalChanges = computed(
@@ -138,8 +154,31 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     saveState.value = "idle";
     saveError.value = null;
     syncedAt.value = null;
+    isPreloadingWorkspace.value = false;
     localRevision.value = 0;
     syncedRevision.value = 0;
+  }
+
+  async function preloadWorkspace() {
+    if (!authSession.value?.data?.user) {
+      return;
+    }
+
+    if (isPreloadingWorkspace.value) {
+      return;
+    }
+
+    isPreloadingWorkspace.value = true;
+
+    try {
+      await queryClient.ensureQueryData({
+        ...workspaceGetQueryOptions,
+        staleTime: 1_500,
+      });
+    } catch {}
+    finally {
+      isPreloadingWorkspace.value = false;
+    }
   }
 
   function applyRemoteSnapshot(remoteNodes: WorkspaceNode[], updatedAt: string | null) {
@@ -401,7 +440,10 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   return {
     authSession,
     workspaceQuery,
+    preloadWorkspace,
     workspaceReadyForEdits,
+    isWorkspaceInitialLoading,
+    isWorkspaceRefreshing,
     nodes,
     selectedNodeIds,
     saveBadge,
