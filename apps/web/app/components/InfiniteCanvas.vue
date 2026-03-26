@@ -15,7 +15,10 @@ import {
   type CanvasPointerDownOptions,
   type CanvasRect,
 } from "~/composables/useCanvas";
-import { getWorkspaceNodeTintStyle } from "~/utils/workspace-node-dashboard";
+import {
+  getWorkspaceNodeTintOption,
+  getWorkspaceNodeTintStyle,
+} from "~/utils/workspace-node-dashboard";
 
 type ResizeHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -613,6 +616,7 @@ const minimapNodeRects = computed(() =>
   props.nodes.map((node) => ({
     key: node.id,
     selected: selectedNodeIdSet.value.has(node.id),
+    rgb: getWorkspaceNodeTintOption(node.dashboard?.tint).rgb,
     ...projectToMinimap(node),
   })),
 );
@@ -622,8 +626,30 @@ const minimapViewfinder = computed(() => projectToMinimap(visibleWorldRect.value
 const minimapSceneStyle = computed<CSSProperties>(() => ({
   width: `${MINIMAP_WIDTH}px`,
   height: `${MINIMAP_HEIGHT}px`,
-  backgroundSize: "18px 18px",
-  backgroundPosition: `${MINIMAP_PADDING}px ${MINIMAP_PADDING}px`,
+  backgroundSize: "auto, auto, 18px 18px",
+  backgroundPosition: `center, center, ${MINIMAP_PADDING}px ${MINIMAP_PADDING}px`,
+}));
+
+function getMinimapNodeStyle(nodeRect: (typeof minimapNodeRects.value)[number]): CSSProperties {
+  return {
+    left: `${nodeRect.left}px`,
+    top: `${nodeRect.top}px`,
+    width: `${nodeRect.width}px`,
+    height: `${nodeRect.height}px`,
+    zIndex: nodeRect.selected ? 2 : 1,
+    borderColor: `rgb(${nodeRect.rgb} / ${nodeRect.selected ? "0.8" : "0.42"})`,
+    background: `linear-gradient(180deg, rgb(${nodeRect.rgb} / ${nodeRect.selected ? "0.52" : "0.2"}), rgb(${nodeRect.rgb} / ${nodeRect.selected ? "0.22" : "0.08"}))`,
+  };
+}
+
+const minimapViewfinderStyle = computed<CSSProperties>(() => ({
+  left: `${minimapViewfinder.value.left}px`,
+  top: `${minimapViewfinder.value.top}px`,
+  width: `${minimapViewfinder.value.width}px`,
+  height: `${minimapViewfinder.value.height}px`,
+  borderColor: "rgb(255 255 255 / 0.92)",
+  background:
+    "linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02))",
 }));
 
 const viewportClasses = computed(() => ({
@@ -907,11 +933,19 @@ onBeforeUnmount(() => {
 
     <!-- Mini-map -->
     <div
-      class="pointer-events-none absolute top-24 right-6 overflow-hidden rounded-3xl border border-neutral-200/50 dark:border-neutral-800/50 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:opacity-100 opacity-40 group/minimap"
+      class="pointer-events-none absolute top-24 right-6 overflow-hidden rounded-3xl border border-neutral-200/50 dark:border-neutral-800/50 bg-white/55 dark:bg-neutral-950/60 backdrop-blur-xl transition-all duration-300 hover:opacity-100 opacity-75 group/minimap"
     >
       <div class="minimap-surface relative overflow-hidden" :style="minimapSceneStyle" @pointerdown="onMinimapPointerDown" @pointermove="onMinimapPointerMove" @pointerup="releaseMinimapPointer" @pointercancel="releaseMinimapPointer" @lostpointercapture="releaseMinimapPointer">
-        <div v-for="node in minimapNodeRects" :key="node.key" class="absolute rounded-sm border" :class="node.selected ? 'border-primary-500 bg-primary-500/30' : 'border-neutral-400/30 bg-neutral-400/10'" :style="{ left: `${node.left}px`, top: `${node.top}px`, width: `${node.width}px`, height: `${node.height}px` }" />
-        <div class="absolute border-2 border-primary-500/50 bg-primary-500/5 rounded-sm" :style="{ left: `${minimapViewfinder.left}px`, top: `${minimapViewfinder.top}px`, width: `${minimapViewfinder.width}px`, height: `${minimapViewfinder.height}px` }" />
+        <div
+          v-for="node in minimapNodeRects"
+          :key="node.key"
+          class="absolute rounded-[5px] border transition-all duration-200"
+          :style="getMinimapNodeStyle(node)"
+        />
+        <div
+          class="absolute rounded-[7px] border-2"
+          :style="minimapViewfinderStyle"
+        />
       </div>
     </div>
   </div>
@@ -962,6 +996,8 @@ onBeforeUnmount(() => {
 
 .minimap-surface {
   cursor: crosshair;
+  background-color: color-mix(in srgb, var(--ui-bg) 95%, black 5%);
+  background-image:
+    radial-gradient(circle at 2px 2px, var(--ui-border) 1px, transparent 0);
 }
 </style>
-
