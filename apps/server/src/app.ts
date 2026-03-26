@@ -7,8 +7,52 @@ import { logger } from "hono/logger";
 
 import { handleAppRouterRequest } from "./lib/handlers";
 
+function getRpcDebugResponse(error: unknown, path: string) {
+  const message =
+    error instanceof Error && error.message ? error.message : "Unhandled server error";
+  const cause =
+    error instanceof Error && error.cause instanceof Error
+      ? error.cause.message
+      : error instanceof Error && typeof error.cause === "string"
+        ? error.cause
+        : undefined;
+
+  return Response.json(
+    {
+      defined: false,
+      code: "INTERNAL_SERVER_ERROR",
+      status: 500,
+      message,
+      data: {
+        debug: JSON.stringify(
+          {
+            procedure: path,
+            errorName: error instanceof Error ? error.name : typeof error,
+            message,
+            cause,
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+          null,
+          2,
+        ),
+      },
+    },
+    { status: 500 },
+  );
+}
+
 export function createApp() {
   const app = new Hono();
+
+  app.onError((error, context) => {
+    console.error(error);
+
+    if (env.NODE_ENV === "development" && context.req.path.startsWith("/rpc/")) {
+      return getRpcDebugResponse(error, context.req.path);
+    }
+
+    return context.text("Internal Server Error", 500);
+  });
 
   app.use(logger());
   app.use(

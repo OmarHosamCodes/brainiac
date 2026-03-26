@@ -1,7 +1,7 @@
 import { stepCountIs } from "@openrouter/sdk";
 
 import { createOpenRouterClient } from "./client";
-import { getOpenRouterFreeModel } from "./models";
+import { resolveOpenRouterFreeModel } from "./models";
 import { buildDashboardAgentTools, buildWorkspaceOverview } from "./tools";
 import {
   DEFAULT_AGENT_MODEL,
@@ -57,8 +57,8 @@ export async function runDashboardAgent(
   const tools = buildDashboardAgentTools(workspace.nodes);
   const calledTools = new Set<string>();
   const normalizedMessages = normalizeMessages(messages);
-  const model = config.model?.trim() || DEFAULT_AGENT_MODEL;
-  const selectedModel = await getOpenRouterFreeModel(model).catch(() => null);
+  const selectedModel = await resolveOpenRouterFreeModel(config.model);
+  const model = selectedModel?.id ?? config.model?.trim() ?? DEFAULT_AGENT_MODEL;
   const shouldUseTools = selectedModel?.supportsTools ?? true;
 
   let responseText = "";

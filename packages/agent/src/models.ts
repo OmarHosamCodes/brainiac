@@ -1,4 +1,5 @@
 import type { Model } from "@openrouter/sdk/models";
+import { env } from "@brainiac/env/server";
 import { z } from "zod";
 
 import { createOpenRouterClient } from "./client";
@@ -101,8 +102,16 @@ function sortFreeModels(models: OpenRouterFreeModel[]) {
   });
 }
 
+function getDefaultFreeModelId(models: OpenRouterFreeModel[]) {
+  return models.find((model) => model.id === DEFAULT_AGENT_MODEL)?.id
+    ?? models[0]?.id
+    ?? DEFAULT_AGENT_MODEL;
+}
+
 async function fetchOpenRouterFreeModels() {
-  const response = await createOpenRouterClient().models.list();
+  const response = await createOpenRouterClient().models.listForUser({
+    bearer: env.OPENROUTER_API_KEY,
+  });
   const models = sortFreeModels(
     response.data
       .map(toFreeModel)
@@ -110,7 +119,7 @@ async function fetchOpenRouterFreeModels() {
   );
 
   return openRouterFreeModelsResponseSchema.parse({
-    defaultModel: DEFAULT_AGENT_MODEL,
+    defaultModel: getDefaultFreeModelId(models),
     models,
   });
 }
@@ -159,4 +168,25 @@ export async function getOpenRouterFreeModel(modelId: string) {
   const { models } = await listOpenRouterFreeModels();
 
   return models.find((model) => model.id === normalizedModelId) ?? null;
+}
+
+export async function resolveOpenRouterFreeModel(modelId?: string | null) {
+  const normalizedModelId = modelId?.trim();
+
+  try {
+    const catalog = await listOpenRouterFreeModels();
+    const selectedModel = normalizedModelId
+      ? catalog.models.find((model) => model.id === normalizedModelId)
+      : null;
+
+    if (selectedModel) {
+      return selectedModel;
+    }
+
+    return catalog.models.find((model) => model.id === catalog.defaultModel)
+      ?? catalog.models[0]
+      ?? null;
+  } catch {
+    return null;
+  }
 }
