@@ -47,9 +47,9 @@ watch(
 
 <template>
   <section
-    class="flex min-h-[420px] flex-col overflow-hidden rounded-[28px] border border-muted/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(247,248,250,0.92))] shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)]"
+    class="flex min-h-[420px] flex-col overflow-hidden rounded-[28px] border border-muted/60 bg-default shadow-lg shadow-black/5"
   >
-    <div class="border-b border-muted/60 px-5 py-4">
+    <div class="border-b border-muted/60 bg-elevated/50 px-5 py-4">
       <div class="flex items-start justify-between gap-3">
         <div>
           <p class="text-[11px] font-semibold uppercase tracking-[0.28em] text-primary">
@@ -83,7 +83,7 @@ watch(
 
     <div
       ref="chatViewport"
-      class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-4"
+      class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto bg-elevated/20 px-4 py-4"
     >
       <template v-if="messages.length === 0">
         <div class="rounded-3xl border border-dashed border-primary/30 bg-primary/5 p-4">
@@ -118,11 +118,11 @@ watch(
         :class="message.role === 'user' ? 'justify-end' : 'justify-start'"
       >
         <div
-          class="max-w-[92%] rounded-[24px] px-4 py-3 text-sm shadow-sm"
+          class="max-w-[92%] rounded-[24px] border px-4 py-3 text-sm shadow-sm"
           :class="
             message.role === 'user'
-              ? 'bg-primary text-primary-foreground'
-              : 'border border-muted/70 bg-default text-toned'
+              ? 'border-primary/30 bg-primary/10 text-highlighted'
+              : 'border-muted/70 bg-default text-toned'
           "
         >
           <p class="whitespace-pre-wrap leading-6">
@@ -149,7 +149,7 @@ watch(
       </article>
     </div>
 
-    <div class="border-t border-muted/60 px-4 py-4">
+    <div class="border-t border-muted/60 bg-default px-4 py-4">
       <UAlert
         v-if="error"
         color="error"
