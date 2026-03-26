@@ -11,14 +11,24 @@ const {
   addMentionedNode,
   activeMention,
   canSend,
+  clearMentionedNodes,
+  composerPlaceholder,
   draft,
   error,
+  isLoadingModels,
   isPending,
   mentionSuggestions,
   messages,
+  modelCount,
+  modelError,
+  modelHint,
+  modelOptions,
   promptSuggestions,
   removeMentionedNode,
   resetChat,
+  scopeLabel,
+  selectedModel,
+  selectedModelId,
   selectedNodes,
   sendMessage,
 } = useDashboardAgentChat(toRef(props, "nodes"));
@@ -187,68 +197,177 @@ watch(
         class="mb-3"
       />
 
-      <UTextarea
-        v-model="draft"
-        :rows="4"
-        autoresize
-        placeholder="Ask the agent about this dashboard. Type @ to narrow the turn to a node."
-        @keydown.enter.exact="handleEnterKeydown"
+      <UAlert
+        v-if="modelError"
+        color="warning"
+        variant="soft"
+        icon="i-lucide-cloud-off"
+        title="Free model catalog unavailable"
+        :description="modelError"
+        class="mb-3"
       />
 
-      <div v-if="selectedNodes.length > 0" class="mt-3 flex flex-wrap items-center gap-2">
-        <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted">Context</p>
-
-        <button
-          v-for="node in selectedNodes"
-          :key="node.id"
-          type="button"
-          class="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/8 px-3 py-1 text-xs font-medium text-highlighted transition hover:border-primary/40 hover:bg-primary/12"
-          @click="removeMentionedNode(node.id)"
+      <div
+        class="rounded-[26px] border border-muted/70 bg-elevated/25 p-3 shadow-sm shadow-black/5"
+      >
+        <div
+          class="flex flex-wrap items-start justify-between gap-3 border-b border-muted/60 pb-3"
         >
-          <span>{{ node.title }}</span>
-          <UIcon name="i-lucide-x" class="size-3" />
-        </button>
-      </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.24em] text-muted">
+              Model
+            </p>
 
-      <div v-if="activeMention" class="mt-3 rounded-2xl border border-muted/70 bg-elevated/40 p-2">
-        <div v-if="mentionSuggestions.length > 0" class="flex flex-col gap-1">
-          <button
-            v-for="node in mentionSuggestions"
-            :key="node.id"
-            type="button"
-            class="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm text-toned transition hover:bg-default"
-            @click="handleMentionClick(node)"
-          >
-            <span class="min-w-0 truncate font-medium text-highlighted">
-              {{ node.title }}
-            </span>
-            <span class="truncate text-xs text-muted">
-              {{ node.label || node.id }}
-            </span>
-          </button>
+            <USelectMenu
+              v-model="selectedModelId"
+              :items="modelOptions"
+              value-key="id"
+              label-key="label"
+              description-key="description"
+              :filter-fields="['label', 'description', 'id', 'provider']"
+              :loading="isLoadingModels && modelCount === 0"
+              :disabled="modelCount === 0"
+              :search-input="{ placeholder: 'Search OpenRouter free models' }"
+              :virtualize="{ estimateSize: 56, overscan: 12 }"
+              color="neutral"
+              variant="subtle"
+              size="lg"
+              class="mt-2 w-full md:max-w-[460px]"
+              placeholder="Select a free model"
+            />
+
+            <p class="mt-2 truncate text-xs text-muted">
+              {{ modelHint }}
+            </p>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2">
+            <UBadge v-if="modelCount > 0" color="neutral" variant="subtle">
+              {{ modelCount }} free models
+            </UBadge>
+            <UBadge
+              v-if="selectedModel"
+              color="neutral"
+              variant="subtle"
+            >
+              {{ selectedModel.provider }}
+            </UBadge>
+            <UBadge
+              v-if="selectedModel"
+              :color="selectedModel.supportsTools ? 'primary' : 'warning'"
+              variant="soft"
+            >
+              {{ selectedModel.supportsTools ? "Tool use" : "Direct answers" }}
+            </UBadge>
+            <UBadge color="primary" variant="soft">
+              {{ scopeLabel }}
+            </UBadge>
+            <UButton
+              v-if="selectedNodes.length > 0"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              icon="i-lucide-eraser"
+              @click="clearMentionedNodes"
+            >
+              Clear context
+            </UButton>
+          </div>
         </div>
 
-        <p v-else class="px-3 py-2 text-sm text-muted">
-          No nodes match
-          <span class="font-medium text-highlighted">{{ `@${activeMention.query}` }}</span
-          >.
-        </p>
-      </div>
-
-      <div class="mt-3 flex items-center justify-between gap-3">
-        <p class="text-xs text-muted">
-          Press Enter to send. Use Shift+Enter for a new line. Type @ to scope the turn.
-        </p>
-
-        <UButton
-          color="primary"
-          icon="i-lucide-send"
-          :loading="isPending"
-          :disabled="!canSend"
-          @click="handleSubmit"
+        <div
+          v-if="selectedNodes.length > 0"
+          class="mt-3 rounded-[22px] border border-primary/15 bg-primary/5 p-3"
         >
-          Send
-        </UButton>
+          <div class="flex flex-wrap items-center gap-2">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+              Context
+            </p>
+
+            <button
+              v-for="node in selectedNodes"
+              :key="node.id"
+              type="button"
+              class="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-default/85 px-3 py-1 text-xs font-medium text-highlighted transition hover:border-primary/40 hover:bg-default"
+              @click="removeMentionedNode(node.id)"
+            >
+              <span>{{ node.title }}</span>
+              <UIcon name="i-lucide-x" class="size-3" />
+            </button>
+          </div>
+        </div>
+
+        <UTextarea
+          v-model="draft"
+          :rows="4"
+          autoresize
+          :placeholder="composerPlaceholder"
+          class="mt-3"
+          @keydown.enter.exact="handleEnterKeydown"
+        />
+
+        <div
+          v-if="activeMention"
+          class="mt-3 rounded-[22px] border border-muted/70 bg-default/85 p-2 shadow-sm shadow-black/5"
+        >
+          <div class="mb-2 flex items-center justify-between gap-2 px-2">
+            <p class="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted">
+              Node Matches
+            </p>
+            <p v-if="mentionSuggestions.length > 0" class="text-xs text-muted">
+              {{ mentionSuggestions.length }} available
+            </p>
+          </div>
+
+          <div v-if="mentionSuggestions.length > 0" class="flex max-h-56 flex-col gap-1 overflow-y-auto">
+            <button
+              v-for="node in mentionSuggestions"
+              :key="node.id"
+              type="button"
+              class="flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-sm text-toned transition hover:bg-elevated"
+              @click="handleMentionClick(node)"
+            >
+              <span class="min-w-0 truncate font-medium text-highlighted">
+                {{ node.title }}
+              </span>
+              <span class="truncate text-xs text-muted">
+                {{ node.label || node.id }}
+              </span>
+            </button>
+          </div>
+
+          <p v-else class="px-3 py-2 text-sm text-muted">
+            No nodes match
+            <span class="font-medium text-highlighted">{{ `@${activeMention.query}` }}</span
+            >.
+          </p>
+        </div>
+
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-muted/60 pt-3">
+          <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
+            <span class="rounded-full border border-muted/70 bg-default px-2.5 py-1">
+              Enter to send
+            </span>
+            <span class="rounded-full border border-muted/70 bg-default px-2.5 py-1">
+              Shift+Enter for a new line
+            </span>
+            <span class="rounded-full border border-muted/70 bg-default px-2.5 py-1">
+              Type @ to scope the turn
+            </span>
+          </div>
+
+          <UButton
+            color="primary"
+            icon="i-lucide-send"
+            size="lg"
+            class="min-w-[124px] justify-center rounded-full px-5"
+            :loading="isPending"
+            :disabled="!canSend"
+            @click="handleSubmit"
+          >
+            Send
+          </UButton>
+        </div>
       </div>
     </div>
   </section>

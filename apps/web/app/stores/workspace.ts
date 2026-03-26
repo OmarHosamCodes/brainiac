@@ -438,7 +438,6 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   });
 
   return {
-    authSession,
     workspaceQuery,
     preloadWorkspace,
     workspaceReadyForEdits,

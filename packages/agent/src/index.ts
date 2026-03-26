@@ -1,6 +1,7 @@
 import { stepCountIs } from "@openrouter/sdk";
 
 import { createOpenRouterClient } from "./client";
+import { getOpenRouterFreeModel } from "./models";
 import { buildDashboardAgentTools, buildWorkspaceOverview } from "./tools";
 import {
   DEFAULT_AGENT_MODEL,
@@ -31,6 +32,15 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
   ].join("\n");
 }
 
+function buildDirectAnswerInstructions(workspace: DashboardAgentWorkspaceContext) {
+  return [
+    buildAgentInstructions(workspace),
+    "Answer directly from the provided workspace context.",
+    "Do not call tools in this pass.",
+    "If the context is incomplete, say what is missing instead of returning an empty response.",
+  ].join("\n");
+}
+
 function normalizeMessages(messages: AgentMessage[]) {
   return messages.map((message) => ({
     role: message.role,
@@ -48,31 +58,60 @@ export async function runDashboardAgent(
   const calledTools = new Set<string>();
   const normalizedMessages = normalizeMessages(messages);
   const model = config.model?.trim() || DEFAULT_AGENT_MODEL;
+  const selectedModel = await getOpenRouterFreeModel(model).catch(() => null);
+  const shouldUseTools = selectedModel?.supportsTools ?? true;
 
-  const result = client.callModel({
-    model,
-    instructions: buildAgentInstructions(workspace),
-    input: normalizedMessages,
-    tools,
-    stopWhen: [stepCountIs(8)],
-    ...(config.temperature === undefined ? {} : { temperature: config.temperature }),
-    ...(config.maxOutputTokens === undefined
-      ? {}
-      : { maxOutputTokens: config.maxOutputTokens }),
-  });
+  let responseText = "";
 
-  const collectToolNames = (async () => {
-    for await (const event of result.getFullResponsesStream()) {
-      if (event.type === "response.function_call_arguments.done") {
-        calledTools.add(event.name);
-      }
+  if (shouldUseTools) {
+    try {
+      const result = client.callModel({
+        model,
+        instructions: buildAgentInstructions(workspace),
+        input: normalizedMessages,
+        tools,
+        stopWhen: [stepCountIs(8)],
+        ...(config.temperature === undefined ? {} : { temperature: config.temperature }),
+        ...(config.maxOutputTokens === undefined
+          ? {}
+          : { maxOutputTokens: config.maxOutputTokens }),
+      });
+
+      const collectToolNames = (async () => {
+        for await (const event of result.getFullResponsesStream()) {
+          if (event.type === "response.function_call_arguments.done") {
+            calledTools.add(event.name);
+          }
+        }
+      })();
+
+      [responseText] = await Promise.all([result.getText(), collectToolNames]);
+    } catch {
+      responseText = "";
+      calledTools.clear();
     }
-  })();
+  }
 
-  const [responseText] = await Promise.all([result.getText(), collectToolNames]);
+  let finalResponse = responseText.trim();
+
+  if (!finalResponse) {
+    finalResponse = (
+      await client
+        .callModel({
+          model,
+          instructions: buildDirectAnswerInstructions(workspace),
+          input: normalizedMessages,
+          ...(config.temperature === undefined ? {} : { temperature: config.temperature }),
+          ...(config.maxOutputTokens === undefined
+            ? {}
+            : { maxOutputTokens: config.maxOutputTokens }),
+        })
+        .getText()
+    ).trim();
+  }
 
   return {
-    response: responseText.trim() || "I couldn't generate a response.",
+    response: finalResponse || "I couldn't generate a response.",
     messagesCount: normalizedMessages.length + 1,
     model,
     toolsCalled: [...calledTools],
@@ -80,4 +119,5 @@ export async function runDashboardAgent(
   };
 }
 
+export * from "./models";
 export * from "./types";

@@ -1,6 +1,8 @@
 import {
   agentChatResponseSchema,
   agentMessageSchema,
+  listOpenRouterFreeModels,
+  openRouterFreeModelsResponseSchema,
   runDashboardAgent,
 } from "@brainiac/agent";
 import {
@@ -19,6 +21,11 @@ const agentChatInputSchema = z.object({
 });
 
 export const agentRouter = {
+  freeModels: protectedProcedure.handler(async () => {
+    return openRouterFreeModelsResponseSchema.parse(
+      await listOpenRouterFreeModels(),
+    );
+  }),
   chat: protectedProcedure
     .input(agentChatInputSchema)
     .handler(async ({ input, context }) => {

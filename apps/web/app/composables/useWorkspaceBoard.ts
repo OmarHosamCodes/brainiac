@@ -1,9 +1,9 @@
 import { storeToRefs } from "pinia";
 
 export function useWorkspaceBoard() {
+  const authSession = useAuthSession();
   const workspaceStore = useWorkspaceStore();
   const {
-    authSession,
     nodes,
     selectedNodeIds,
     isWorkspaceInitialLoading,
