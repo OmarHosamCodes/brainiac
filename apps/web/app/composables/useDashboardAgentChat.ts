@@ -7,6 +7,7 @@ import {
   getDashboardNodeMentionSuggestions,
   stripActiveDashboardNodeMention,
 } from "~/utils/dashboard-agent-mentions";
+import { getErrorDebugDetails } from "~/utils/get-error-debug-details";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 type DashboardAgentRole = "user" | "assistant";
@@ -40,6 +41,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   const orpc = useOrpc();
   const draft = ref("");
   const error = ref<string | null>(null);
+  const errorDebugDetails = ref<string | null>(null);
   const messages = ref<DashboardAgentMessage[]>([]);
   const selectedNodeIds = ref<string[]>([]);
   const chatMutation = useMutation(orpc.agent.chat.mutationOptions());
@@ -95,6 +97,9 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
           "Unable to load the OpenRouter free-model catalog.",
         )
       : null,
+  );
+  const modelDebugDetails = computed(() =>
+    freeModelsQuery.isError.value ? getErrorDebugDetails(freeModelsQuery.error.value) : null,
   );
   const mentionSuggestions = computed(() => {
     if (!activeMention.value) {
@@ -224,6 +229,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     const scopedNodes = selectedNodes.value.length > 0 ? selectedNodes.value : nodes.value;
 
     error.value = null;
+    errorDebugDetails.value = null;
     draft.value = "";
     selectedNodeIds.value = [];
     pushUserMessage({
@@ -241,12 +247,14 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       pushAssistantMessage(result);
     } catch (mutationError) {
       error.value = getErrorMessage(mutationError, "Failed to reach the dashboard agent.");
+      errorDebugDetails.value = getErrorDebugDetails(mutationError);
     }
   }
 
   function resetChat() {
     draft.value = "";
     error.value = null;
+    errorDebugDetails.value = null;
     messages.value = [];
     selectedNodeIds.value = [];
   }
@@ -278,11 +286,13 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     composerPlaceholder,
     draft,
     error,
+    errorDebugDetails,
     isLoadingModels: freeModelsQuery.isLoading,
     isPending: chatMutation.isPending,
     mentionSuggestions,
     messages,
     modelCount,
+    modelDebugDetails,
     modelError,
     modelHint,
     modelOptions,
