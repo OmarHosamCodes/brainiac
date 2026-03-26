@@ -31,7 +31,7 @@ const isChatVisible = ref(true);
 </script>
 
 <template>
-    <div class="relative h-screen w-screen overflow-hidden bg-zinc-50 dark:bg-zinc-950 selection:bg-blue-500/30">
+    <div class="relative h-screen w-screen overflow-hidden bg-neutral-50 dark:bg-neutral-950 selection:bg-blue-500/30">
         <Header />
 
         <main class="h-full w-full">
@@ -65,7 +65,7 @@ const isChatVisible = ref(true);
         <button 
             v-if="!isChatVisible"
             type="button"
-            class="fixed bottom-8 right-8 z-50 flex size-14 items-center justify-center rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-2xl shadow-black/20 hover:scale-110 active:scale-95 transition-all duration-300 ring-1 ring-white/10"
+            class="fixed bottom-8 right-8 z-50 flex size-14 items-center justify-center rounded-2xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 shadow-2xl shadow-black/20 hover:scale-110 active:scale-95 transition-all duration-300 ring-1 ring-white/10"
             @click="isChatVisible = true"
         >
             <UIcon name="i-lucide-sparkles" class="size-6" />
@@ -78,7 +78,7 @@ const isChatVisible = ref(true);
                 :badge="saveBadge"
                 :nodes-count="nodes.length"
                 :user-name="authSession.data?.user?.name"
-                class="bg-white/70 dark:bg-zinc-900/70 backdrop-blur-xl border border-zinc-200/50 dark:border-zinc-800/50 rounded-2xl p-3 shadow-xl"
+                class="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 rounded-2xl p-3 shadow-xl"
             />
 
             <UAlert

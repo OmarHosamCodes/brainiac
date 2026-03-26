@@ -798,26 +798,26 @@ onBeforeUnmount(() => {
             data-canvas-node
           >
             <div
-              class="canvas-node-shell group relative flex h-full cursor-grab flex-col rounded-[2rem] border border-zinc-200/50 dark:border-zinc-800/50 bg-white/80 dark:bg-zinc-950/80 shadow-2xl shadow-black/5 backdrop-blur-xl active:cursor-grabbing transition-shadow duration-300"
+              class="canvas-node-shell group relative flex h-full cursor-grab flex-col rounded-[2rem] border border-neutral-200/50 dark:border-neutral-800/50 bg-white/80 dark:bg-neutral-950/80 shadow-2xl shadow-black/5 backdrop-blur-xl active:cursor-grabbing transition-shadow duration-300"
               :class="{
                 'is-dragging':
                   activeInteraction?.mode === 'drag' && activeInteraction.nodeId === node.id,
-                'ring-2 ring-emerald-500/50 dark:ring-emerald-400/50 shadow-emerald-500/10': selectedNodeIdSet.has(node.id),
+                'ring-2 ring-primary-500/50 dark:ring-primary-400/50 shadow-primary-500/10': selectedNodeIdSet.has(node.id),
               }"
               :style="getNodeTintStyle(node)"
               @pointerdown="onNodeShellPointerDown($event, node)"
               @dblclick="onNodeShellDblClick($event, node)"
             >
               <div
-                class="canvas-node-toolbar flex shrink-0 items-center justify-between gap-3 border-b border-zinc-200/30 dark:border-zinc-800/30 px-5 py-4"
+                class="canvas-node-toolbar flex shrink-0 items-center justify-between gap-3 border-b border-neutral-200/30 dark:border-neutral-800/30 px-5 py-4"
               >
-                <h3 class="min-w-0 flex-1 truncate text-[13px] font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-widest">
+                <h3 class="min-w-0 flex-1 truncate text-[13px] font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-widest">
                   {{ getNodeHeading(node) }}
                 </h3>
 
                 <button
                   type="button"
-                  class="inline-flex shrink-0 items-center justify-center size-8 rounded-full border border-zinc-200 dark:border-zinc-800 text-zinc-500 transition hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-emerald-500"
+                  class="inline-flex shrink-0 items-center justify-center size-8 rounded-full border border-neutral-200 dark:border-neutral-800 text-neutral-500 transition hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-primary-500"
                   @pointerdown.stop
                   @click.stop="focusNode(node.id)"
                 >
@@ -834,7 +834,7 @@ onBeforeUnmount(() => {
                 v-show="selectedNodeIdSet.has(node.id)"
                 :key="`${node.id}-${handle.edge}`"
                 type="button"
-                class="resize-handle absolute z-20 size-4 rounded-full border-2 border-white dark:border-zinc-900 bg-emerald-500 shadow-lg transition-transform hover:scale-125"
+                class="resize-handle absolute z-20 size-4 rounded-full border-2 border-white dark:border-neutral-900 bg-primary-500 shadow-lg transition-transform hover:scale-125"
                 :class="handle.className"
                 :aria-label="`Resize ${getNodeHeading(node)} from ${handle.edge}`"
                 @pointerdown.stop="beginResize($event, node, handle.edge)"
@@ -847,11 +847,11 @@ onBeforeUnmount(() => {
 
     <div
       v-if="props.loading"
-      class="pointer-events-none absolute inset-0 flex items-center justify-center px-6 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-sm z-50"
+      class="pointer-events-none absolute inset-0 flex items-center justify-center px-6 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-sm z-50"
     >
         <div class="flex flex-col items-center gap-4">
-            <UIcon name="i-lucide-loader-2" class="size-8 animate-spin text-blue-500" />
-            <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-zinc-500">Loading Workspace</p>
+            <UIcon name="i-lucide-loader-2" class="size-8 animate-spin text-primary-500" />
+            <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-500">Loading Workspace</p>
         </div>
     </div>
 
@@ -860,15 +860,15 @@ onBeforeUnmount(() => {
       class="pointer-events-none absolute inset-0 flex items-center justify-center px-6"
     >
       <div
-        class="max-w-md rounded-[2.5rem] border border-dashed border-zinc-300 dark:border-zinc-700 p-12 text-center"
+        class="max-w-md rounded-[2.5rem] border border-dashed border-neutral-300 dark:border-neutral-700 p-12 text-center"
       >
         <div
-          class="mx-auto inline-flex size-16 items-center justify-center rounded-[1.5rem] bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-2xl mb-6"
+          class="mx-auto inline-flex size-16 items-center justify-center rounded-[1.5rem] bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 shadow-2xl mb-6"
         >
           <UIcon name="i-lucide-plus" class="size-8" />
         </div>
-        <h3 class="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">Empty Canvas</h3>
-        <p class="mt-4 text-sm leading-relaxed text-zinc-500 max-w-xs mx-auto">
+        <h3 class="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">Empty Canvas</h3>
+        <p class="mt-4 text-sm leading-relaxed text-neutral-500 max-w-xs mx-auto">
           Right-click anywhere to begin. Your nodes will appear here in your infinite workspace.
         </p>
       </div>
@@ -879,13 +879,13 @@ onBeforeUnmount(() => {
       class="pointer-events-none absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3"
     >
       <div
-        class="pointer-events-auto flex items-center gap-1.5 p-1.5 rounded-full border border-zinc-200/50 dark:border-zinc-800/50 bg-white/70 dark:bg-zinc-950/70 backdrop-blur-xl shadow-2xl"
+        class="pointer-events-auto flex items-center gap-1.5 p-1.5 rounded-full border border-neutral-200/50 dark:border-neutral-800/50 bg-white/70 dark:bg-neutral-950/70 backdrop-blur-xl shadow-2xl"
       >
         <button type="button" :class="controlButtonClass" @click="zoomOut">
           <UIcon name="i-lucide-minus" class="size-4" />
         </button>
 
-        <div class="px-3 text-xs font-bold text-zinc-500 w-12 text-center tabular-nums">
+        <div class="px-3 text-xs font-bold text-neutral-500 w-12 text-center tabular-nums">
           {{ zoomPercent }}%
         </div>
 
@@ -893,7 +893,7 @@ onBeforeUnmount(() => {
           <UIcon name="i-lucide-plus" class="size-4" />
         </button>
 
-        <div class="w-px h-4 bg-zinc-200 dark:bg-zinc-800 mx-1" />
+        <div class="w-px h-4 bg-neutral-200 dark:bg-neutral-800 mx-1" />
 
         <button type="button" :class="controlButtonClass" @click="fitAllNodes">
           <UIcon name="i-lucide-scan" class="size-4" />
@@ -907,11 +907,11 @@ onBeforeUnmount(() => {
 
     <!-- Mini-map -->
     <div
-      class="pointer-events-none absolute top-24 right-6 overflow-hidden rounded-3xl border border-zinc-200/50 dark:border-zinc-800/50 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:opacity-100 opacity-40 group/minimap"
+      class="pointer-events-none absolute top-24 right-6 overflow-hidden rounded-3xl border border-neutral-200/50 dark:border-neutral-800/50 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-xl shadow-2xl transition-all duration-300 hover:opacity-100 opacity-40 group/minimap"
     >
       <div class="minimap-surface relative overflow-hidden" :style="minimapSceneStyle" @pointerdown="onMinimapPointerDown" @pointermove="onMinimapPointerMove" @pointerup="releaseMinimapPointer" @pointercancel="releaseMinimapPointer" @lostpointercapture="releaseMinimapPointer">
-        <div v-for="node in minimapNodeRects" :key="node.key" class="absolute rounded-sm border" :class="node.selected ? 'border-blue-500 bg-blue-500/30' : 'border-zinc-400/30 bg-zinc-400/10'" :style="{ left: `${node.left}px`, top: `${node.top}px`, width: `${node.width}px`, height: `${node.height}px` }" />
-        <div class="absolute border-2 border-blue-500/50 bg-blue-500/5 rounded-sm" :style="{ left: `${minimapViewfinder.left}px`, top: `${minimapViewfinder.top}px`, width: `${minimapViewfinder.width}px`, height: `${minimapViewfinder.height}px` }" />
+        <div v-for="node in minimapNodeRects" :key="node.key" class="absolute rounded-sm border" :class="node.selected ? 'border-primary-500 bg-primary-500/30' : 'border-neutral-400/30 bg-neutral-400/10'" :style="{ left: `${node.left}px`, top: `${node.top}px`, width: `${node.width}px`, height: `${node.height}px` }" />
+        <div class="absolute border-2 border-primary-500/50 bg-primary-500/5 rounded-sm" :style="{ left: `${minimapViewfinder.left}px`, top: `${minimapViewfinder.top}px`, width: `${minimapViewfinder.width}px`, height: `${minimapViewfinder.height}px` }" />
       </div>
     </div>
   </div>

@@ -12,7 +12,7 @@ onServerPrefetch(async () => {
 </script>
 
 <template>
-    <div class="relative h-screen w-screen flex flex-col items-center justify-center overflow-hidden bg-white dark:bg-zinc-950 selection:bg-blue-500/30">
+    <div class="relative h-screen w-screen flex flex-col items-center justify-center overflow-hidden bg-white dark:bg-neutral-950 selection:bg-blue-500/30">
         <Header />
 
         <div class="absolute inset-0 -z-10">
@@ -21,16 +21,16 @@ onServerPrefetch(async () => {
         </div>
 
         <div class="max-w-3xl w-full px-6 text-center">
-            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900/5 dark:bg-zinc-100/5 border border-zinc-200/50 dark:border-zinc-800/50 text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-8 animate-fade-in">
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-900/5 dark:bg-neutral-100/5 border border-neutral-200/50 dark:border-neutral-800/50 text-[10px] font-bold uppercase tracking-widest text-neutral-500 mb-8 animate-fade-in">
                 <UIcon name="i-lucide-brain-circuit" class="size-3.5 text-blue-500" />
                 The Future of Knowledge
             </div>
 
-            <h1 class="text-6xl md:text-8xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-8 animate-title">
+            <h1 class="text-6xl md:text-8xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100 mb-8 animate-title">
                 Brainiac <span class="text-blue-500 text-6xl md:text-7xl block md:inline">Studio</span>
             </h1>
 
-            <p class="text-lg md:text-xl text-zinc-500 dark:text-zinc-400 mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in-delayed">
+            <p class="text-lg md:text-xl text-neutral-500 dark:text-neutral-400 mb-12 max-w-2xl mx-auto leading-relaxed animate-fade-in-delayed">
                 An infinite spatial workspace for your mind. Organize, collaborate, and evolve with AI agents in a beautiful, distraction-free environment.
             </p>
 
@@ -48,7 +48,7 @@ onServerPrefetch(async () => {
                     size="xl"
                     variant="ghost"
                     color="neutral"
-                    class="rounded-2xl px-8 h-14 font-bold border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    class="rounded-2xl px-8 h-14 font-bold border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900"
                 >
                     Marketplace
                 </UButton>
@@ -56,12 +56,12 @@ onServerPrefetch(async () => {
         </div>
 
         <div class="fixed bottom-12 left-1/2 -translate-x-1/2 animate-fade-in-delayed-2">
-            <div class="flex items-center gap-3 px-4 py-2 rounded-full border border-zinc-200/50 dark:border-zinc-800/50 bg-white/50 dark:bg-zinc-950/50 backdrop-blur-xl">
+            <div class="flex items-center gap-3 px-4 py-2 rounded-full border border-neutral-200/50 dark:border-neutral-800/50 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-xl">
                  <div class="size-2 rounded-full" :class="healthCheck.isSuccess.value ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-red-500'" />
-                 <span class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                 <span class="text-[10px] font-bold uppercase tracking-widest text-neutral-500">
                     System {{ healthCheck.isSuccess.value ? 'Operational' : 'Offline' }}
                  </span>
-                 <span v-if="healthCheck.isSuccess.value" class="text-[10px] font-medium text-zinc-400">
+                 <span v-if="healthCheck.isSuccess.value" class="text-[10px] font-medium text-neutral-400">
                     ({{ healthCheck.data.value }}ms)
                  </span>
             </div>
