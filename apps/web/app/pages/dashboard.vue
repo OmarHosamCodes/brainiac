@@ -39,31 +39,37 @@ const {
                 "
             />
 
-            <div class="min-h-0 flex-1">
-                <InfiniteCanvas
-                    v-model:nodes="nodes"
-                    v-model:selected-node-ids="selectedNodeIds"
-                    :loading="isWorkspaceInitialLoading"
-                    @create-node="openCreateNode"
-                    @edit-node="openEditNode"
-                    @remove-node="removeNode"
-                    @open-node="openNodePage"
-                >
-                    <template #node="{ node, selected }">
-                        <WorkspaceNodeCard
-                            :node="node"
-                            :selected="selected"
-                        />
-                    </template>
-                </InfiniteCanvas>
-            </div>
+            <div class="grid min-h-0 flex-1 gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
+                <div class="flex min-h-0 flex-col gap-4">
+                    <div class="min-h-0 flex-1">
+                        <InfiniteCanvas
+                            v-model:nodes="nodes"
+                            v-model:selected-node-ids="selectedNodeIds"
+                            :loading="isWorkspaceInitialLoading"
+                            @create-node="openCreateNode"
+                            @edit-node="openEditNode"
+                            @remove-node="removeNode"
+                            @open-node="openNodePage"
+                        >
+                            <template #node="{ node, selected }">
+                                <WorkspaceNodeCard
+                                    :node="node"
+                                    :selected="selected"
+                                />
+                            </template>
+                        </InfiniteCanvas>
+                    </div>
 
-            <WorkspaceBoardStatus
-                v-if="!isWorkspaceInitialLoading"
-                :badge="saveBadge"
-                :nodes-count="nodes.length"
-                :user-name="authSession.value?.data?.user?.name"
-            />
+                    <WorkspaceBoardStatus
+                        v-if="!isWorkspaceInitialLoading"
+                        :badge="saveBadge"
+                        :nodes-count="nodes.length"
+                        :user-name="authSession.value?.data?.user?.name"
+                    />
+                </div>
+
+                <DashboardAgentChatPanel :nodes="nodes" />
+            </div>
 
             <div
                 v-if="isWorkspaceRefreshing"

@@ -1,0 +1,25 @@
+{
+  "name": "@brainiac/agent",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc -b"
+  },
+  "dependencies": {
+    "@brainiac/env": "workspace:*",
+    "@brainiac/workspace": "workspace:*",
+    "@openrouter/sdk": "latest",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@brainiac/config": "workspace:*",
+    "typescript": "catalog:"
+  }
+}

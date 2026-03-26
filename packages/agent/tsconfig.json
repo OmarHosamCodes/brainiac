@@ -1,0 +1,9 @@
+{
+  "extends": "@brainiac/config/tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "composite": true
+  },
+  "include": ["src"]
+}
