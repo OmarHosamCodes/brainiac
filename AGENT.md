@@ -1,1 +1,2 @@
 - Always Use bun/bunx not npm,pnpm,yarn, etc.
+- Never Run `bun x nuxi typecheck` or `nuxi typecheck`

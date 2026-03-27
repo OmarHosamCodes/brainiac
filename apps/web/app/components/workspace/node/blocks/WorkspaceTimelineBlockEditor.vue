@@ -41,10 +41,14 @@ function toTimelineStatus(value: string): WorkspaceTimelineMilestoneStatus {
 
 function getStatusColor(status: WorkspaceTimelineMilestoneStatus) {
     switch (status) {
-        case "done": return "text-success bg-success/10 border-success/20";
-        case "active": return "text-primary bg-primary/10 border-primary/20";
-        case "blocked": return "text-error bg-error/10 border-error/20";
-        default: return "text-muted bg-muted/10 border-muted/20";
+        case "done":
+            return "text-success bg-success/10 border-success/20";
+        case "active":
+            return "text-primary bg-primary/10 border-primary/20";
+        case "blocked":
+            return "text-error bg-error/10 border-error/20";
+        default:
+            return "text-muted bg-muted/10 border-muted/20";
     }
 }
 
@@ -60,8 +64,14 @@ function toggleMilestone(id: string) {
         <!-- Timeline Header -->
         <div class="flex items-center justify-between px-2">
             <div class="space-y-1">
-                <h3 class="text-sm font-bold uppercase tracking-widest text-muted/60">Milestone Journey</h3>
-                <p class="text-xs text-muted/40">Chronological project roadmap</p>
+                <h3
+                    class="text-sm font-bold uppercase tracking-widest text-muted/60"
+                >
+                    Milestone Journey
+                </h3>
+                <p class="text-xs text-muted/40">
+                    Chronological project roadmap
+                </p>
             </div>
             <UButton
                 color="primary"
@@ -78,7 +88,9 @@ function toggleMilestone(id: string) {
         <!-- Vertical Timeline Container -->
         <div class="relative pl-8 space-y-8">
             <!-- Continuous Line -->
-            <div class="absolute left-[15px] top-4 bottom-4 w-0.5 bg-gradient-to-b from-primary/30 via-muted/20 to-transparent" />
+            <div
+                class="absolute left-[15px] top-4 bottom-4 w-0.5 bg-gradient-to-b from-primary/30 via-muted/20 to-transparent"
+            />
 
             <article
                 v-for="(milestone, index) in block.milestones"
@@ -86,26 +98,37 @@ function toggleMilestone(id: string) {
                 class="group relative"
             >
                 <!-- Milestone Dot -->
-                <div 
-                    class="absolute -left-[25px] top-1.5 z-10 size-5 rounded-full border-2 bg-default transition-all duration-300 group-hover:scale-125"
+                <div
+                    class="absolute -left-[21px] top-0 z-10 size-5 rounded-full border-2 bg-default transition-all duration-300 group-hover:scale-125"
                     :class="getStatusColor(milestone.status)"
                 >
-                    <div v-if="milestone.status === 'active'" class="absolute inset-0 animate-ping rounded-full bg-primary/20" />
+                    <div
+                        v-if="milestone.status === 'active'"
+                        class="absolute inset-0 animate-ping rounded-full bg-primary/20"
+                    />
                 </div>
 
                 <!-- Milestone Card -->
-                <div 
+                <div
                     class="rounded-3xl border border-muted/20 bg-default/40 p-5 transition-all hover:border-primary/20 hover:bg-default/60 hover:shadow-xl hover:shadow-black/5"
-                    :class="{ 'ring-1 ring-primary/20': expandedMilestoneId === milestone.id }"
+                    :class="{
+                        'ring-1 ring-primary/20':
+                            expandedMilestoneId === milestone.id,
+                    }"
                 >
                     <div class="flex items-start justify-between gap-4">
-                        <div class="flex-1 min-w-0" @click="toggleMilestone(milestone.id)">
+                        <div
+                            class="flex-1 min-w-0"
+                            @click="toggleMilestone(milestone.id)"
+                        >
                             <div class="flex flex-wrap items-center gap-2 mb-1">
-                                <span class="text-[10px] font-black uppercase tracking-widest opacity-60">
-                                    {{ milestone.date || 'No Date Set' }}
+                                <span
+                                    class="text-[10px] font-black uppercase tracking-widest opacity-60"
+                                >
+                                    {{ milestone.date || "No Date Set" }}
                                 </span>
-                                <UBadge 
-                                    variant="subtle" 
+                                <UBadge
+                                    variant="subtle"
                                     size="xs"
                                     class="rounded-lg text-[9px] uppercase font-bold"
                                     :class="getStatusColor(milestone.status)"
@@ -113,17 +136,36 @@ function toggleMilestone(id: string) {
                                     {{ statusLabels[milestone.status] }}
                                 </UBadge>
                             </div>
-                            
+
                             <UInput
                                 :model-value="milestone.title"
                                 variant="none"
                                 placeholder="Milestone name..."
                                 class="w-full"
-                                :ui="{ base: 'px-0 py-0 text-lg font-bold text-highlighted leading-tight' }"
-                                @update:model-value="mutateTimelineMilestone(tabId, block.id, milestone.id, (entry) => entry.title = ($event ?? '').slice(0, 160))"
+                                :ui="{
+                                    base: 'px-0 py-0 text-lg font-bold text-highlighted leading-tight',
+                                }"
+                                @update:model-value="
+                                    mutateTimelineMilestone(
+                                        tabId,
+                                        block.id,
+                                        milestone.id,
+                                        (entry) =>
+                                            (entry.title = ($event ?? '').slice(
+                                                0,
+                                                160,
+                                            )),
+                                    )
+                                "
                             />
-                            
-                            <p v-if="milestone.note && expandedMilestoneId !== milestone.id" class="mt-2 text-sm text-toned line-clamp-2">
+
+                            <p
+                                v-if="
+                                    milestone.note &&
+                                    expandedMilestoneId !== milestone.id
+                                "
+                                class="mt-2 text-sm text-toned line-clamp-2"
+                            >
                                 {{ milestone.note }}
                             </p>
                         </div>
@@ -133,12 +175,18 @@ function toggleMilestone(id: string) {
                                 color="neutral"
                                 variant="ghost"
                                 size="xs"
-                                :icon="expandedMilestoneId === milestone.id ? 'i-lucide-chevron-up' : 'i-lucide-settings-2'"
+                                :icon="
+                                    expandedMilestoneId === milestone.id
+                                        ? 'i-lucide-chevron-up'
+                                        : 'i-lucide-settings-2'
+                                "
                                 class="rounded-lg opacity-0 group-hover:opacity-100"
                                 @click="toggleMilestone(milestone.id)"
                             />
-                            
-                            <div class="flex flex-col gap-1 opacity-0 group-hover:opacity-100">
+
+                            <div
+                                class="flex flex-col gap-1 opacity-0 group-hover:opacity-100"
+                            >
                                 <UButton
                                     color="neutral"
                                     variant="ghost"
@@ -146,16 +194,32 @@ function toggleMilestone(id: string) {
                                     icon="i-lucide-chevron-up"
                                     :disabled="index === 0"
                                     class="rounded-lg h-6"
-                                    @click="moveTimelineMilestone(tabId, block.id, milestone.id, 'up')"
+                                    @click="
+                                        moveTimelineMilestone(
+                                            tabId,
+                                            block.id,
+                                            milestone.id,
+                                            'up',
+                                        )
+                                    "
                                 />
                                 <UButton
                                     color="neutral"
                                     variant="ghost"
                                     size="xs"
                                     icon="i-lucide-chevron-down"
-                                    :disabled="index === block.milestones.length - 1"
+                                    :disabled="
+                                        index === block.milestones.length - 1
+                                    "
                                     class="rounded-lg h-6"
-                                    @click="moveTimelineMilestone(tabId, block.id, milestone.id, 'down')"
+                                    @click="
+                                        moveTimelineMilestone(
+                                            tabId,
+                                            block.id,
+                                            milestone.id,
+                                            'down',
+                                        )
+                                    "
                                 />
                             </div>
 
@@ -165,13 +229,22 @@ function toggleMilestone(id: string) {
                                 size="xs"
                                 icon="i-lucide-trash-2"
                                 class="rounded-lg opacity-0 group-hover:opacity-100 hover:text-error"
-                                @click="removeTimelineMilestone(tabId, block.id, milestone.id)"
+                                @click="
+                                    removeTimelineMilestone(
+                                        tabId,
+                                        block.id,
+                                        milestone.id,
+                                    )
+                                "
                             />
                         </div>
                     </div>
 
                     <!-- Expanded Details -->
-                    <div v-if="expandedMilestoneId === milestone.id" class="mt-6 space-y-4 border-t border-muted/10 pt-6">
+                    <div
+                        v-if="expandedMilestoneId === milestone.id"
+                        class="mt-6 space-y-4 border-t border-muted/10 pt-6"
+                    >
                         <div class="grid grid-cols-2 gap-4">
                             <UFormField label="Milestone Date" size="sm">
                                 <UInput
@@ -179,16 +252,40 @@ function toggleMilestone(id: string) {
                                     type="date"
                                     icon="i-lucide-calendar"
                                     class="rounded-xl"
-                                    @update:model-value="mutateTimelineMilestone(tabId, block.id, milestone.id, (entry) => entry.date = $event || null)"
+                                    @update:model-value="
+                                        mutateTimelineMilestone(
+                                            tabId,
+                                            block.id,
+                                            milestone.id,
+                                            (entry) =>
+                                                (entry.date = $event || null),
+                                        )
+                                    "
                                 />
                             </UFormField>
 
                             <UFormField label="Status" size="sm">
                                 <USelect
                                     :model-value="milestone.status"
-                                    :items="WORKSPACE_TIMELINE_MILESTONE_STATUSES.map(s => ({ label: statusLabels[s], value: s }))"
+                                    :items="
+                                        WORKSPACE_TIMELINE_MILESTONE_STATUSES.map(
+                                            (s) => ({
+                                                label: statusLabels[s],
+                                                value: s,
+                                            }),
+                                        )
+                                    "
                                     class="rounded-xl"
-                                    @update:model-value="mutateTimelineMilestone(tabId, block.id, milestone.id, (entry) => entry.status = toTimelineStatus($event))"
+                                    @update:model-value="
+                                        mutateTimelineMilestone(
+                                            tabId,
+                                            block.id,
+                                            milestone.id,
+                                            (entry) =>
+                                                (entry.status =
+                                                    toTimelineStatus($event)),
+                                        )
+                                    "
                                 />
                             </UFormField>
                         </div>
@@ -201,8 +298,21 @@ function toggleMilestone(id: string) {
                                 autoresize
                                 :max-rows="10"
                                 class="rounded-2xl"
-                                :ui="{ base: 'text-sm text-toned leading-relaxed' }"
-                                @update:model-value="mutateTimelineMilestone(tabId, block.id, milestone.id, (entry) => entry.note = ($event ?? '').slice(0, 2000))"
+                                :ui="{
+                                    base: 'text-sm text-toned leading-relaxed',
+                                }"
+                                @update:model-value="
+                                    mutateTimelineMilestone(
+                                        tabId,
+                                        block.id,
+                                        milestone.id,
+                                        (entry) =>
+                                            (entry.note = ($event ?? '').slice(
+                                                0,
+                                                2000,
+                                            )),
+                                    )
+                                "
                             />
                         </UFormField>
                     </div>
@@ -210,9 +320,19 @@ function toggleMilestone(id: string) {
             </article>
 
             <!-- Empty State -->
-            <div v-if="block.milestones.length === 0" class="flex flex-col items-center justify-center rounded-[32px] border border-dashed border-muted/30 bg-default/20 py-20 text-center">
-                <UIcon name="i-lucide-milestone" class="size-10 text-muted/40 mb-4" />
-                <p class="text-sm font-bold text-muted/60 uppercase tracking-widest">No milestones defined</p>
+            <div
+                v-if="block.milestones.length === 0"
+                class="flex flex-col items-center justify-center rounded-[32px] border border-dashed border-muted/30 bg-default/20 py-20 text-center"
+            >
+                <UIcon
+                    name="i-lucide-milestone"
+                    class="size-10 text-muted/40 mb-4"
+                />
+                <p
+                    class="text-sm font-bold text-muted/60 uppercase tracking-widest"
+                >
+                    No milestones defined
+                </p>
                 <UButton
                     color="primary"
                     variant="link"

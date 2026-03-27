@@ -5,6 +5,7 @@ import {
 } from "@brainiac/workspace";
 
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
+import { formatDateTime } from "~/utils/format-date-time";
 
 const props = defineProps<{
     block: WorkspaceTrackerBlock;
@@ -57,7 +58,7 @@ function toNumber(value: string) {
                     :style="{ height: `${Math.max(point, 4)}%` }"
                 >
                     <div class="absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
-                        {{ trend.values[index] }}
+                        {{ block.entries[index]?.value }}
                     </div>
                 </div>
             </div>

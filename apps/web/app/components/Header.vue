@@ -65,20 +65,3 @@ const items = computed(() => [
         </div>
     </nav>
 </template>
-
-<style scoped>
-nav {
-    animation: toolbar-enter 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes toolbar-enter {
-    from {
-        opacity: 0;
-        transform: translate(-50%, -100%) scale(0.9);
-    }
-    to {
-        opacity: 1;
-        transform: translate(-50%, 0) scale(1);
-    }
-}
-</style>
