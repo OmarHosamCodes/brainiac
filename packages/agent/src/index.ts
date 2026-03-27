@@ -2,7 +2,12 @@ import { stepCountIs } from "@openrouter/sdk";
 
 import { createOpenRouterClient } from "./client";
 import { resolveOpenRouterFreeModel } from "./models";
-import { buildDashboardAgentTools, buildWorkspaceOverview } from "./tools";
+import {
+  buildDashboardAgentTools,
+  buildWorkspaceOverview,
+  createDashboardAgentWorkspaceRuntime,
+  type DashboardAgentWorkspaceRuntime,
+} from "./tools";
 import {
   DEFAULT_AGENT_MODEL,
   type AgentChatResponse,
@@ -12,12 +17,32 @@ import {
   type DashboardAgentWorkspaceContext,
 } from "./types";
 
-function buildFocusedWorkspaceDetails(workspace: DashboardAgentWorkspaceContext) {
-  if (workspace.nodes.length !== 1) {
+function getScopedWorkspaceNodes(workspace: DashboardAgentWorkspaceContext) {
+  if (workspace.scopeNodes && workspace.scopeNodes.length > 0) {
+    return workspace.scopeNodes;
+  }
+
+  return workspace.nodes;
+}
+
+function hasScopedWorkspace(workspace: DashboardAgentWorkspaceContext) {
+  if (!workspace.scopeNodes || workspace.scopeNodes.length === 0) {
+    return false;
+  }
+
+  if (workspace.scopeNodes.length !== workspace.nodes.length) {
+    return true;
+  }
+
+  return workspace.scopeNodes.some((node, index) => node.id !== workspace.nodes[index]?.id);
+}
+
+function buildFocusedWorkspaceDetails(nodes: ReturnType<typeof getScopedWorkspaceNodes>) {
+  if (nodes.length !== 1) {
     return null;
   }
 
-  const node = workspace.nodes[0];
+  const node = nodes[0];
 
   if (!node || node.tabs.length !== 1) {
     return null;
@@ -48,6 +73,8 @@ function buildFocusedWorkspaceDetails(workspace: DashboardAgentWorkspaceContext)
 }
 
 function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
+  const scopedNodes = getScopedWorkspaceNodes(workspace);
+  const scopedWorkspace = hasScopedWorkspace(workspace);
   const updatedLabel = workspace.updatedAt
     ? `Workspace updated at ${workspace.updatedAt}.`
     : "Workspace update time is unavailable.";
@@ -55,7 +82,7 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
     ? `The current user is ${workspace.userName.trim()}.`
     : "The current user name is unavailable.";
   const marketplaceCount = workspace.marketplaceItems?.length ?? 0;
-  const focusedWorkspaceDetails = buildFocusedWorkspaceDetails(workspace);
+  const focusedWorkspaceDetails = buildFocusedWorkspaceDetails(scopedNodes);
 
   return [
     "You are Brainiac's dashboard agent.",
@@ -65,10 +92,22 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
     userLabel,
     updatedLabel,
     `The dashboard currently has ${workspace.nodes.length} nodes.`,
+    ...(scopedWorkspace
+      ? [
+          `The current turn is scoped to ${scopedNodes.length} node${scopedNodes.length === 1 ? "" : "s"}. Prioritize those unless the user asks you to work elsewhere.`,
+        ]
+      : []),
     `The marketplace currently has ${marketplaceCount} items.`,
-    "Dashboard overview:",
-    buildWorkspaceOverview(workspace.nodes),
+    scopedWorkspace ? "Scoped dashboard overview:" : "Dashboard overview:",
+    buildWorkspaceOverview(scopedNodes),
     ...(focusedWorkspaceDetails ? [focusedWorkspaceDetails] : []),
+  ].join("\n");
+}
+
+function buildToolEnabledAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
+  return [
+    buildAgentInstructions(workspace),
+    "When the user asks you to create, rename, update, or delete nodes, tabs, or blocks, use the workspace mutation tools instead of only describing the change.",
   ].join("\n");
 }
 
@@ -87,7 +126,7 @@ function buildWorkspaceSearchInstructions(
   toolingUnavailable = false,
 ) {
   return [
-    buildAgentInstructions(workspace),
+    buildToolEnabledAgentInstructions(workspace),
     toolingUnavailable
       ? "The selected model cannot call tools in this pass, so answer directly and say when deeper workspace inspection would require a tools-capable model."
       : "When the user asks about the workspace, prefer listing or searching the workspace before synthesizing an answer.",
@@ -100,7 +139,7 @@ function buildDeepInspectInstructions(
   toolingUnavailable = false,
 ) {
   return [
-    buildAgentInstructions(workspace),
+    buildToolEnabledAgentInstructions(workspace),
     toolingUnavailable
       ? "The selected model cannot call tools in this pass, so explain that deep inspection is limited and answer from the provided context only."
       : "Inspect the workspace before concluding. Use workspace tools to verify specifics, especially for prioritization, gaps, and recommendations.",
@@ -168,7 +207,7 @@ function resolveAgentExecutionConfig(
     default:
       return {
         shouldUseTools: supportsTools,
-        instructions: buildAgentInstructions(workspace),
+        instructions: buildToolEnabledAgentInstructions(workspace),
         fallbackInstructions: buildDirectAnswerInstructions(workspace),
         maxSteps: 8,
         maxOutputTokens: undefined,
@@ -180,16 +219,14 @@ function resolveAgentExecutionConfig(
 async function runToolEnabledPass(args: {
   model: string;
   workspace: DashboardAgentWorkspaceContext;
+  workspaceRuntime: DashboardAgentWorkspaceRuntime;
   normalizedMessages: ReturnType<typeof normalizeMessages>;
   instructions: string;
   maxSteps: number;
   temperature?: number;
   maxOutputTokens?: number;
 }) {
-  const tools = buildDashboardAgentTools(
-    args.workspace.nodes,
-    args.workspace.marketplaceItems ?? [],
-  );
+  const tools = buildDashboardAgentTools(args.workspaceRuntime, args.workspace.marketplaceItems ?? []);
   const calledTools = new Set<string>();
   const result = createOpenRouterClient().callModel({
     model: args.model,
@@ -225,6 +262,10 @@ export async function runDashboardAgent(
   const client = createOpenRouterClient();
   const calledTools = new Set<string>();
   const normalizedMessages = normalizeMessages(messages);
+  const workspaceRuntime = createDashboardAgentWorkspaceRuntime({
+    nodes: workspace.nodes,
+    updatedAt: workspace.updatedAt,
+  });
   const selectedModel = await resolveOpenRouterFreeModel(config.model);
   const model = selectedModel?.id ?? config.model?.trim() ?? DEFAULT_AGENT_MODEL;
   const toolPreset = config.toolPreset ?? "auto";
@@ -238,6 +279,7 @@ export async function runDashboardAgent(
       const initialPass = await runToolEnabledPass({
         model,
         workspace,
+        workspaceRuntime,
         normalizedMessages,
         instructions: executionConfig.instructions,
         maxSteps: executionConfig.maxSteps,
@@ -258,6 +300,7 @@ export async function runDashboardAgent(
         const retryPass = await runToolEnabledPass({
           model,
           workspace,
+          workspaceRuntime,
           normalizedMessages,
           instructions: `${executionConfig.instructions}\nYou have not inspected the workspace yet. Call a relevant tool before answering.`,
           maxSteps: executionConfig.maxSteps,
@@ -304,7 +347,8 @@ export async function runDashboardAgent(
     messagesCount: normalizedMessages.length + 1,
     model,
     toolsCalled: [...calledTools],
-    workspaceNodeCount: workspace.nodes.length,
+    workspaceNodeCount: workspaceRuntime.getNodes().length,
+    workspaceSnapshot: workspaceRuntime.hasChanges() ? workspaceRuntime.toSnapshot() : null,
   };
 }
 

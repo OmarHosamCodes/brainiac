@@ -1,4 +1,5 @@
 import {
+  WORKSPACE_NODE_LIMIT,
   workspaceNodeSchema,
   type WorkspaceMarketplaceItem,
   type WorkspaceNode,
@@ -30,6 +31,13 @@ export const agentChatResponseSchema = z.object({
   model: z.string(),
   toolsCalled: z.array(z.string()),
   workspaceNodeCount: z.number().int().nonnegative(),
+  workspaceSnapshot: z
+    .object({
+      nodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT),
+      updatedAt: z.string().datetime().nullable(),
+    })
+    .nullable()
+    .default(null),
 });
 
 export const dashboardConversationSummarySchema = z.object({
@@ -80,7 +88,8 @@ export const dashboardConversationDeleteInputSchema = z.object({
 export const agentChatTurnInputSchema = z.object({
   conversationId: z.string().trim().min(1).optional(),
   content: z.string().trim().min(1).max(20_000),
-  nodes: z.array(workspaceNodeSchema).optional(),
+  nodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
+  scopeNodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
   contextNodeTitles: z.array(z.string().trim().min(1).max(120)).max(24).optional(),
   model: z.string().trim().min(1).optional(),
   toolPreset: dashboardAgentToolPresetSchema,
@@ -91,6 +100,7 @@ export const agentChatTurnResponseSchema = z.object({
   userMessage: dashboardConversationMessageSchema,
   assistantMessage: dashboardConversationMessageSchema,
   createdConversation: z.boolean(),
+  workspaceSnapshot: agentChatResponseSchema.shape.workspaceSnapshot,
 });
 
 export type AgentMessage = z.infer<typeof agentMessageSchema>;
@@ -104,6 +114,7 @@ export type AgentChatTurnResponse = z.infer<typeof agentChatTurnResponseSchema>;
 
 export type DashboardAgentWorkspaceContext = {
   nodes: WorkspaceNode[];
+  scopeNodes?: WorkspaceNode[];
   marketplaceItems?: WorkspaceMarketplaceItem[];
   updatedAt?: string | null;
   userName?: string | null;

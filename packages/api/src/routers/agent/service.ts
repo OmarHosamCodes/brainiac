@@ -22,7 +22,11 @@ import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 
-import { getWorkspaceMarketplaceItems, getWorkspaceSnapshot } from "../workspace/service";
+import {
+  getWorkspaceMarketplaceItems,
+  getWorkspaceSnapshot,
+  saveWorkspaceNodes,
+} from "../workspace/service";
 
 function buildConversationTitle(content: string) {
   return content.trim().slice(0, DASHBOARD_CONVERSATION_TITLE_LIMIT) || "New conversation";
@@ -225,7 +229,7 @@ export async function appendDashboardConversationTurn(
   input: AgentChatTurnInput,
 ) {
   const now = new Date();
-  const [workspaceSnapshot, marketplaceItems] = await Promise.all([
+  const [fullWorkspaceSnapshot, marketplaceItems] = await Promise.all([
     input.nodes
       ? Promise.resolve({
           nodes: input.nodes,
@@ -276,6 +280,7 @@ export async function appendDashboardConversationTurn(
     role: message.role as "user" | "assistant",
     content: message.content,
   }));
+  const scopeNodes = input.scopeNodes ?? input.nodes;
 
   const result = await runDashboardAgent(
     [
@@ -286,9 +291,10 @@ export async function appendDashboardConversationTurn(
       },
     ],
     {
-      nodes: workspaceSnapshot.nodes,
+      nodes: fullWorkspaceSnapshot.nodes,
+      scopeNodes,
       marketplaceItems,
-      updatedAt: workspaceSnapshot.updatedAt,
+      updatedAt: fullWorkspaceSnapshot.updatedAt,
       userName,
     },
     {
@@ -296,6 +302,12 @@ export async function appendDashboardConversationTurn(
       toolPreset: input.toolPreset,
     },
   );
+  const workspaceSnapshot = result.workspaceSnapshot
+    ? {
+        nodes: result.workspaceSnapshot.nodes,
+        updatedAt: (await saveWorkspaceNodes(userId, result.workspaceSnapshot.nodes)).updatedAt,
+      }
+    : null;
 
   const userMessageRow = {
     id: createWorkspaceId("message"),
@@ -351,5 +363,6 @@ export async function appendDashboardConversationTurn(
     userMessage: mapConversationMessage(userMessageRow),
     assistantMessage: mapConversationMessage(assistantMessageRow),
     createdConversation,
+    workspaceSnapshot,
   });
 }

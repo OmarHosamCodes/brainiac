@@ -220,6 +220,16 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     });
   }
 
+  function applyWorkspaceSnapshot(remoteNodes: WorkspaceNode[], updatedAt: string | null) {
+    clearSaveTimer();
+    clearRetryTimer();
+    queryClient.setQueryData(workspaceGetQueryOptions.queryKey, {
+      nodes: remoteNodes,
+      updatedAt,
+    });
+    applyRemoteSnapshot(remoteNodes, updatedAt);
+  }
+
   async function persistWorkspace(snapshot: WorkspaceNode[], revision: number) {
     try {
       const response = await saveWorkspace.mutateAsync({
@@ -492,6 +502,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     openEditNode,
     removeNode,
     submitNodeEditor,
+    applyWorkspaceSnapshot,
     updateNodes,
   };
 });

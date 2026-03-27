@@ -930,6 +930,40 @@ export function createWorkspaceNodeDashboard(
   });
 }
 
+export function createWorkspaceNode(
+  partial: Partial<WorkspaceNode> & {
+    title: string;
+  },
+): WorkspaceNode {
+  const timestamp = getNowIsoString();
+  const content = partial.content ?? "";
+
+  return normalizeWorkspaceNode({
+    id: partial.id ?? createWorkspaceId("node"),
+    title: partial.title,
+    content,
+    label: partial.label ?? partial.title,
+    x: partial.x ?? 0,
+    y: partial.y ?? 0,
+    width: partial.width ?? DEFAULT_WORKSPACE_NODE_WIDTH,
+    height: partial.height ?? DEFAULT_WORKSPACE_NODE_HEIGHT,
+    minWidth: partial.minWidth ?? DEFAULT_WORKSPACE_NODE_MIN_WIDTH,
+    minHeight: partial.minHeight ?? DEFAULT_WORKSPACE_NODE_MIN_HEIGHT,
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+    tabs: partial.tabs ?? [createDefaultWorkspaceTab("Overview", content)],
+    customBlockTemplates: partial.customBlockTemplates ?? [],
+    viewState: partial.viewState ?? {
+      activeTabId: partial.tabs?.[0]?.id ?? null,
+      notePreviewState: {},
+    },
+    dashboard: partial.dashboard ?? {
+      tint: "neutral",
+      featuredBlocks: [],
+    },
+  });
+}
+
 export function createDefaultWorkspaceTab(title = "Overview", body = "") {
   return createWorkspaceNodeTab({
     title,

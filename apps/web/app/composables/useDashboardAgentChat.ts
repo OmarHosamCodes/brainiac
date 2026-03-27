@@ -6,6 +6,7 @@ import type {
 } from "@brainiac/agent";
 import type { WorkspaceNode } from "@brainiac/workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import { storeToRefs } from "pinia";
 import { computed, onMounted, ref, watch, type Ref } from "vue";
 
 import {
@@ -172,6 +173,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   const authSession = useAuthSession();
   const orpc = useOrpc();
   const queryClient = useQueryClient();
+  const workspaceStore = useWorkspaceStore();
+  const { nodes: workspaceNodes } = storeToRefs(workspaceStore);
   const draft = ref("");
   const renameDraft = ref("");
   const error = ref<string | null>(null);
@@ -671,7 +674,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       const result = await chatTurnMutation.mutateAsync({
         conversationId: activeConversationId.value ?? undefined,
         content,
-        nodes: scopedNodes,
+        nodes: workspaceNodes.value,
+        scopeNodes: scopedNodes,
         contextNodeTitles:
           activeContextNodeTitles.value.length > 0
             ? activeContextNodeTitles.value
@@ -698,6 +702,13 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
             result.assistantMessage,
           ]),
       );
+
+      if (result.workspaceSnapshot) {
+        workspaceStore.applyWorkspaceSnapshot(
+          result.workspaceSnapshot.nodes,
+          result.workspaceSnapshot.updatedAt,
+        );
+      }
     } catch (mutationError) {
       pendingMessages.value = [];
       draft.value = content;

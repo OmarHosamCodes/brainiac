@@ -67,7 +67,10 @@ const {
 } = useDashboardAgentChat(toRef(props, "nodes"));
 
 const activeConversationMeta = computed(
-    () => conversationOptions.value.find((conversation) => conversation.id === activeConversationId.value)?.meta ?? scopeLabel.value,
+    () =>
+        conversationOptions.value.find(
+            (conversation) => conversation.id === activeConversationId.value,
+        )?.meta ?? scopeLabel.value,
 );
 const visibleHistory = computed(() => conversationOptions.value);
 const emptyMentionResults = computed(
@@ -140,7 +143,12 @@ function selectModel(modelId: string) {
 }
 
 watch(
-    () => [messages.value.length, isPending.value, isLoadingConversation.value, activePane.value],
+    () => [
+        messages.value.length,
+        isPending.value,
+        isLoadingConversation.value,
+        activePane.value,
+    ],
     () => {
         void scrollToBottom();
     },
@@ -168,13 +176,23 @@ function renderAssistantMessage(content: string) {
                         </div>
 
                         <div class="min-w-0">
-                            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-neutral-400">
+                            <p
+                                class="text-[10px] font-bold uppercase tracking-[0.24em] text-neutral-400"
+                            >
                                 Dashboard agent
                             </p>
-                            <h2 class="truncate text-base font-semibold text-neutral-950 dark:text-neutral-50">
-                                {{ activePane === "history" ? "Conversation history" : activeConversationTitle }}
+                            <h2
+                                class="truncate text-base font-semibold text-neutral-950 dark:text-neutral-50"
+                            >
+                                {{
+                                    activePane === "history"
+                                        ? "Conversation history"
+                                        : activeConversationTitle
+                                }}
                             </h2>
-                            <p class="truncate text-xs text-neutral-500 dark:text-neutral-400">
+                            <p
+                                class="truncate text-xs text-neutral-500 dark:text-neutral-400"
+                            >
                                 {{
                                     activePane === "history"
                                         ? `${conversationList.length} saved conversation${conversationList.length === 1 ? "" : "s"}`
@@ -226,7 +244,9 @@ function renderAssistantMessage(content: string) {
                             size="xs"
                             icon="i-lucide-ellipsis"
                             class="rounded-full"
-                            :disabled="!canRenameConversation && !canDeleteConversation"
+                            :disabled="
+                                !canRenameConversation && !canDeleteConversation
+                            "
                         />
                     </UDropdownMenu>
                     <UButton
@@ -245,15 +265,22 @@ function renderAssistantMessage(content: string) {
             v-if="activePane === 'history'"
             class="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
-            <div class="border-b border-neutral-200/40 px-5 py-4 dark:border-neutral-800/40">
+            <div
+                class="border-b border-neutral-200/40 px-5 py-4 dark:border-neutral-800/40"
+            >
                 <div
                     class="rounded-[1.75rem] border border-neutral-200/70 bg-white/80 p-4 shadow-sm dark:border-neutral-800/70 dark:bg-neutral-900/70"
                 >
-                    <p class="text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+                    <p
+                        class="text-sm font-semibold text-neutral-950 dark:text-neutral-50"
+                    >
                         Pick up where you left off
                     </p>
-                    <p class="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-                        History stays inside the panel now, so switching conversations never changes the canvas layout.
+                    <p
+                        class="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400"
+                    >
+                        History stays inside the panel now, so switching
+                        conversations never changes the canvas layout.
                     </p>
                 </div>
             </div>
@@ -263,14 +290,24 @@ function renderAssistantMessage(content: string) {
                     v-if="!hasConversations"
                     class="flex h-full flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-neutral-300/80 bg-white/60 px-6 py-10 text-center dark:border-neutral-700/80 dark:bg-neutral-900/50"
                 >
-                    <div class="flex size-12 items-center justify-center rounded-2xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900">
-                        <UIcon name="i-lucide-message-square-dashed" class="size-5" />
+                    <div
+                        class="flex size-12 items-center justify-center rounded-2xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+                    >
+                        <UIcon
+                            name="i-lucide-message-square-dashed"
+                            class="size-5"
+                        />
                     </div>
-                    <p class="mt-4 text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+                    <p
+                        class="mt-4 text-sm font-semibold text-neutral-950 dark:text-neutral-50"
+                    >
                         No saved conversations yet
                     </p>
-                    <p class="mt-1 max-w-[22rem] text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-                        Start a new thread from this panel and it will appear here automatically.
+                    <p
+                        class="mt-1 max-w-[22rem] text-xs leading-relaxed text-neutral-500 dark:text-neutral-400"
+                    >
+                        Start a new thread from this panel and it will appear
+                        here automatically.
                     </p>
                     <UButton
                         color="neutral"
@@ -289,9 +326,11 @@ function renderAssistantMessage(content: string) {
                         :key="conversation.id"
                         type="button"
                         class="w-full rounded-[1.5rem] border px-4 py-4 text-left transition-all duration-200"
-                        :class="conversation.id === activeConversationId
-                            ? 'border-neutral-900 bg-neutral-900 text-white shadow-lg shadow-black/10 dark:border-white dark:bg-white dark:text-neutral-900'
-                            : 'border-neutral-200/80 bg-white/85 hover:border-neutral-300 hover:bg-white dark:border-neutral-800/80 dark:bg-neutral-900/80 dark:hover:border-neutral-700 dark:hover:bg-neutral-900'"
+                        :class="
+                            conversation.id === activeConversationId
+                                ? 'border-neutral-900 bg-neutral-900 text-white shadow-lg shadow-black/10 dark:border-white dark:bg-white dark:text-neutral-900'
+                                : 'border-neutral-200/80 bg-white/85 hover:border-neutral-300 hover:bg-white dark:border-neutral-800/80 dark:bg-neutral-900/80 dark:hover:border-neutral-700 dark:hover:bg-neutral-900'
+                        "
                         @click="handleSelectConversation(conversation.id)"
                     >
                         <div class="flex items-start justify-between gap-3">
@@ -301,7 +340,11 @@ function renderAssistantMessage(content: string) {
                                 </p>
                                 <p
                                     class="mt-1 line-clamp-2 text-xs leading-relaxed"
-                                    :class="conversation.id === activeConversationId ? 'text-white/75 dark:text-neutral-600' : 'text-neutral-500 dark:text-neutral-400'"
+                                    :class="
+                                        conversation.id === activeConversationId
+                                            ? 'text-white/75 dark:text-neutral-600'
+                                            : 'text-neutral-500 dark:text-neutral-400'
+                                    "
                                 >
                                     {{ conversation.preview }}
                                 </p>
@@ -314,7 +357,11 @@ function renderAssistantMessage(content: string) {
                         </div>
                         <p
                             class="mt-3 text-[10px] font-semibold uppercase tracking-[0.2em]"
-                            :class="conversation.id === activeConversationId ? 'text-white/60 dark:text-neutral-500' : 'text-neutral-400'"
+                            :class="
+                                conversation.id === activeConversationId
+                                    ? 'text-white/60 dark:text-neutral-500'
+                                    : 'text-neutral-400'
+                            "
                         >
                             {{ conversation.meta }}
                         </p>
@@ -328,32 +375,13 @@ function renderAssistantMessage(content: string) {
                 ref="chatViewport"
                 class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5 scroll-smooth"
             >
-                <template v-if="messages.length === 0 && !isLoadingConversation">
-                    <div
-                        class="rounded-[1.75rem] border border-neutral-200/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(248,248,247,0.9))] p-5 shadow-sm dark:border-neutral-800/70 dark:bg-[linear-gradient(180deg,rgba(24,24,24,0.96),rgba(16,16,16,0.92))]"
-                    >
-                        <div class="flex items-start justify-between gap-3">
-                            <div>
-                                <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
-                                    Ready
-                                </p>
-                                <p class="mt-2 text-sm font-semibold text-neutral-950 dark:text-neutral-50">
-                                    {{ activeConversationTitle }}
-                                </p>
-                            </div>
-                            <span
-                                class="rounded-full border border-neutral-200/80 bg-white/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500 dark:border-neutral-700/80 dark:bg-neutral-900/80 dark:text-neutral-400"
-                            >
-                                {{ scopeLabel }}
-                            </span>
-                        </div>
-                        <p class="mt-3 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
-                            Ask directly, mention nodes with <span class="font-semibold">@</span>, or use one of the suggested starting points below.
-                        </p>
-                    </div>
-
+                <template
+                    v-if="messages.length === 0 && !isLoadingConversation"
+                >
                     <div class="space-y-3">
-                        <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
+                        <p
+                            class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400"
+                        >
                             Suggested starts
                         </p>
                         <div class="grid gap-2">
@@ -374,7 +402,9 @@ function renderAssistantMessage(content: string) {
                     v-for="message in messages"
                     :key="message.id"
                     class="flex flex-col gap-2"
-                    :class="message.role === 'user' ? 'items-end' : 'items-start'"
+                    :class="
+                        message.role === 'user' ? 'items-end' : 'items-start'
+                    "
                 >
                     <div
                         class="max-w-[88%] px-5 py-4 text-sm leading-relaxed"
@@ -411,11 +441,17 @@ function renderAssistantMessage(content: string) {
                     </div>
 
                     <div
-                        v-if="message.role === 'assistant' && (message.model || message.toolsCalled.length > 0)"
+                        v-if="
+                            message.role === 'assistant' &&
+                            (message.model || message.toolsCalled.length > 0)
+                        "
                         class="flex flex-wrap gap-2 px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400"
                     >
                         <span v-if="message.model">{{ message.model }}</span>
-                        <span v-for="toolName in message.toolsCalled" :key="toolName">
+                        <span
+                            v-for="toolName in message.toolsCalled"
+                            :key="toolName"
+                        >
                             {{ toolName }}
                         </span>
                     </div>
@@ -456,7 +492,9 @@ function renderAssistantMessage(content: string) {
                         class="inline-flex items-center gap-2 rounded-full border border-neutral-200/80 bg-white/90 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-sm transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:text-neutral-300 dark:hover:border-neutral-700"
                         @click="removeMentionedNode(node.id)"
                     >
-                        <span class="truncate max-w-[10rem]">{{ node.title }}</span>
+                        <span class="truncate max-w-[10rem]">{{
+                            node.title
+                        }}</span>
                         <UIcon name="i-lucide-x" class="size-3.5" />
                     </button>
                     <UButton
@@ -475,7 +513,9 @@ function renderAssistantMessage(content: string) {
                         v-if="activeMention && mentionSuggestions.length > 0"
                         class="absolute bottom-[calc(100%+0.75rem)] left-0 right-0 z-20 rounded-[1.5rem] border border-neutral-200/80 bg-white/95 p-2 shadow-2xl shadow-black/10 backdrop-blur-xl dark:border-neutral-800/80 dark:bg-neutral-950/95"
                     >
-                        <p class="px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
+                        <p
+                            class="px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400"
+                        >
                             Mention a node
                         </p>
                         <button
@@ -486,14 +526,21 @@ function renderAssistantMessage(content: string) {
                             @mousedown.prevent="handleMentionPick(node)"
                         >
                             <span class="min-w-0">
-                                <span class="block truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                                <span
+                                    class="block truncate text-sm font-medium text-neutral-900 dark:text-neutral-100"
+                                >
                                     {{ node.title }}
                                 </span>
-                                <span class="block truncate text-xs text-neutral-500 dark:text-neutral-400">
+                                <span
+                                    class="block truncate text-xs text-neutral-500 dark:text-neutral-400"
+                                >
                                     {{ node.label || node.id }}
                                 </span>
                             </span>
-                            <UIcon name="i-lucide-corner-down-left" class="size-4 shrink-0 text-neutral-400" />
+                            <UIcon
+                                name="i-lucide-corner-down-left"
+                                class="size-4 shrink-0 text-neutral-400"
+                            />
                         </button>
                     </div>
 
@@ -526,7 +573,9 @@ function renderAssistantMessage(content: string) {
                 </div>
 
                 <div class="mt-2 flex items-center justify-between gap-3">
-                    <p class="min-w-0 truncate text-[11px] text-neutral-500 dark:text-neutral-400">
+                    <p
+                        class="min-w-0 truncate text-[11px] text-neutral-500 dark:text-neutral-400"
+                    >
                         {{ selectedModelOption?.description || modelHint }}
                     </p>
                     <span
@@ -543,11 +592,18 @@ function renderAssistantMessage(content: string) {
                         :title="selectedToolPresetOption?.description"
                         @click="cycleToolPreset"
                     >
-                        <UIcon name="i-lucide-sliders-horizontal" class="size-3.5 shrink-0 text-neutral-500 dark:text-neutral-400" />
-                        <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+                        <UIcon
+                            name="i-lucide-sliders-horizontal"
+                            class="size-3.5 shrink-0 text-neutral-500 dark:text-neutral-400"
+                        />
+                        <span
+                            class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400"
+                        >
                             Mode
                         </span>
-                        <span class="truncate text-xs font-semibold text-neutral-950 dark:text-neutral-50">
+                        <span
+                            class="truncate text-xs font-semibold text-neutral-950 dark:text-neutral-50"
+                        >
                             {{ selectedToolPresetOption?.label }}
                         </span>
                     </button>
@@ -557,11 +613,18 @@ function renderAssistantMessage(content: string) {
                         class="inline-flex min-w-0 flex-1 items-center gap-2 rounded-full border border-neutral-200/80 bg-white/90 px-3 py-2 text-left shadow-sm transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:hover:border-neutral-700"
                         @click="toggleModelLibrary"
                     >
-                        <UIcon name="i-lucide-cpu" class="size-3.5 shrink-0 text-neutral-500 dark:text-neutral-400" />
-                        <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+                        <UIcon
+                            name="i-lucide-cpu"
+                            class="size-3.5 shrink-0 text-neutral-500 dark:text-neutral-400"
+                        />
+                        <span
+                            class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400"
+                        >
                             Model
                         </span>
-                        <span class="min-w-0 flex-1 truncate text-xs font-semibold text-neutral-950 dark:text-neutral-50">
+                        <span
+                            class="min-w-0 flex-1 truncate text-xs font-semibold text-neutral-950 dark:text-neutral-50"
+                        >
                             {{ selectedModelOption?.label || "Default model" }}
                         </span>
                         <span
@@ -576,8 +639,12 @@ function renderAssistantMessage(content: string) {
                     <div
                         class="rounded-[1.2rem] border border-neutral-200/80 bg-white/85 p-2 shadow-sm dark:border-neutral-800/80 dark:bg-neutral-900/80"
                     >
-                        <div class="mb-1.5 flex items-center justify-between gap-2 px-1">
-                            <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+                        <div
+                            class="mb-1.5 flex items-center justify-between gap-2 px-1"
+                        >
+                            <p
+                                class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400"
+                            >
                                 Quick models
                             </p>
                             <button
@@ -589,26 +656,36 @@ function renderAssistantMessage(content: string) {
                             </button>
                         </div>
 
-                        <div class="-mx-0.5 flex gap-2 overflow-x-auto px-0.5 pb-0.5">
+                        <div
+                            class="-mx-0.5 flex gap-2 overflow-x-auto px-0.5 pb-0.5"
+                        >
                             <div
                                 v-for="model in topModelOptions"
                                 :key="model.id"
                                 class="relative min-w-[10.5rem] shrink-0 rounded-[1rem] border px-3 py-2.5 text-left shadow-sm transition"
-                                :class="selectedModelId === model.id
-                                    ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
-                                    : 'border-neutral-200/80 bg-white/95 text-neutral-700 hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/95 dark:text-neutral-300 dark:hover:border-neutral-700'"
+                                :class="
+                                    selectedModelId === model.id
+                                        ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
+                                        : 'border-neutral-200/80 bg-white/95 text-neutral-700 hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/95 dark:text-neutral-300 dark:hover:border-neutral-700'
+                                "
                             >
                                 <button
                                     type="button"
                                     class="w-full text-left"
                                     @click="selectModel(model.id)"
                                 >
-                                    <p class="truncate pr-6 text-xs font-semibold">
+                                    <p
+                                        class="truncate pr-6 text-xs font-semibold"
+                                    >
                                         {{ model.label }}
                                     </p>
                                     <p
                                         class="mt-1 truncate text-[10px]"
-                                        :class="selectedModelId === model.id ? 'text-white/70 dark:text-neutral-500' : 'text-neutral-500 dark:text-neutral-400'"
+                                        :class="
+                                            selectedModelId === model.id
+                                                ? 'text-white/70 dark:text-neutral-500'
+                                                : 'text-neutral-500 dark:text-neutral-400'
+                                        "
                                     >
                                         {{ model.description }}
                                     </p>
@@ -616,11 +693,19 @@ function renderAssistantMessage(content: string) {
                                 <button
                                     type="button"
                                     class="absolute right-2 top-2 rounded-full p-1 transition"
-                                    :class="selectedModelId === model.id ? 'hover:bg-white/10 dark:hover:bg-neutral-200/70' : 'hover:bg-neutral-200 dark:hover:bg-neutral-800'"
+                                    :class="
+                                        selectedModelId === model.id
+                                            ? 'hover:bg-white/10 dark:hover:bg-neutral-200/70'
+                                            : 'hover:bg-neutral-200 dark:hover:bg-neutral-800'
+                                    "
                                     @click.stop="toggleFavoriteModel(model.id)"
                                 >
                                     <UIcon
-                                        :name="isFavoriteModel(model.id) ? 'i-lucide-star' : 'i-lucide-star-off'"
+                                        :name="
+                                            isFavoriteModel(model.id)
+                                                ? 'i-lucide-star'
+                                                : 'i-lucide-star-off'
+                                        "
                                         class="size-3.5"
                                     />
                                 </button>
@@ -652,13 +737,21 @@ function renderAssistantMessage(content: string) {
             @update:open="(value) => (isModelLibraryOpen = value)"
         >
             <template #body>
-                <div v-if="isLoadingModels" class="px-2 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
+                <div
+                    v-if="isLoadingModels"
+                    class="px-2 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400"
+                >
                     Loading models...
                 </div>
 
                 <div v-else class="space-y-4">
-                    <div v-if="favoriteModelOptions.length > 0" class="space-y-2">
-                        <p class="px-1 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
+                    <div
+                        v-if="favoriteModelOptions.length > 0"
+                        class="space-y-2"
+                    >
+                        <p
+                            class="px-1 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400"
+                        >
                             Starred
                         </p>
                         <div class="space-y-2">
@@ -667,16 +760,22 @@ function renderAssistantMessage(content: string) {
                                 :key="model.id"
                                 class="rounded-[1.2rem] border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70"
                             >
-                                <div class="flex items-start justify-between gap-3">
+                                <div
+                                    class="flex items-start justify-between gap-3"
+                                >
                                     <button
                                         type="button"
                                         class="min-w-0 flex-1 text-left"
                                         @click="selectModel(model.id)"
                                     >
-                                        <p class="truncate text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+                                        <p
+                                            class="truncate text-sm font-semibold text-neutral-950 dark:text-neutral-50"
+                                        >
                                             {{ model.label }}
                                         </p>
-                                        <p class="mt-1 truncate text-xs text-neutral-500 dark:text-neutral-400">
+                                        <p
+                                            class="mt-1 truncate text-xs text-neutral-500 dark:text-neutral-400"
+                                        >
                                             {{ model.description }}
                                         </p>
                                     </button>
@@ -685,17 +784,32 @@ function renderAssistantMessage(content: string) {
                                             color="neutral"
                                             variant="ghost"
                                             size="xs"
-                                            :icon="currentDefaultModelId === model.id ? 'i-lucide-badge-check' : 'i-lucide-circle'"
+                                            :icon="
+                                                currentDefaultModelId ===
+                                                model.id
+                                                    ? 'i-lucide-badge-check'
+                                                    : 'i-lucide-circle'
+                                            "
                                             class="rounded-full"
-                                            @click="setPreferredDefaultModel(model.id)"
+                                            @click="
+                                                setPreferredDefaultModel(
+                                                    model.id,
+                                                )
+                                            "
                                         />
                                         <UButton
                                             color="neutral"
                                             variant="ghost"
                                             size="xs"
-                                            :icon="isFavoriteModel(model.id) ? 'i-lucide-star' : 'i-lucide-star-off'"
+                                            :icon="
+                                                isFavoriteModel(model.id)
+                                                    ? 'i-lucide-star'
+                                                    : 'i-lucide-star-off'
+                                            "
                                             class="rounded-full"
-                                            @click="toggleFavoriteModel(model.id)"
+                                            @click="
+                                                toggleFavoriteModel(model.id)
+                                            "
                                         />
                                     </div>
                                 </div>
@@ -704,30 +818,45 @@ function renderAssistantMessage(content: string) {
                     </div>
 
                     <div class="space-y-2">
-                        <p class="px-1 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
+                        <p
+                            class="px-1 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400"
+                        >
                             All models
                         </p>
-                        <div class="max-h-[52vh] space-y-2 overflow-y-auto pr-1">
+                        <div
+                            class="max-h-[52vh] space-y-2 overflow-y-auto pr-1"
+                        >
                             <div
                                 v-for="model in otherModelOptions"
                                 :key="model.id"
                                 class="rounded-[1.2rem] border p-3 transition"
-                                :class="selectedModelId === model.id
-                                    ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
-                                    : 'border-neutral-200/80 bg-neutral-50/80 dark:border-neutral-800/80 dark:bg-neutral-900/70'"
+                                :class="
+                                    selectedModelId === model.id
+                                        ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
+                                        : 'border-neutral-200/80 bg-neutral-50/80 dark:border-neutral-800/80 dark:bg-neutral-900/70'
+                                "
                             >
-                                <div class="flex items-start justify-between gap-3">
+                                <div
+                                    class="flex items-start justify-between gap-3"
+                                >
                                     <button
                                         type="button"
                                         class="min-w-0 flex-1 text-left"
                                         @click="selectModel(model.id)"
                                     >
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <p class="truncate text-sm font-semibold">
+                                        <div
+                                            class="flex flex-wrap items-center gap-2"
+                                        >
+                                            <p
+                                                class="truncate text-sm font-semibold"
+                                            >
                                                 {{ model.label }}
                                             </p>
                                             <UBadge
-                                                v-if="currentDefaultModelId === model.id"
+                                                v-if="
+                                                    currentDefaultModelId ===
+                                                    model.id
+                                                "
                                                 color="neutral"
                                                 variant="soft"
                                                 size="sm"
@@ -737,7 +866,11 @@ function renderAssistantMessage(content: string) {
                                         </div>
                                         <p
                                             class="mt-1 truncate text-xs"
-                                            :class="selectedModelId === model.id ? 'text-white/70 dark:text-neutral-500' : 'text-neutral-500 dark:text-neutral-400'"
+                                            :class="
+                                                selectedModelId === model.id
+                                                    ? 'text-white/70 dark:text-neutral-500'
+                                                    : 'text-neutral-500 dark:text-neutral-400'
+                                            "
                                         >
                                             {{ model.description }}
                                         </p>
@@ -746,19 +879,42 @@ function renderAssistantMessage(content: string) {
                                     <div class="flex items-center gap-1">
                                         <UButton
                                             color="neutral"
-                                            :variant="selectedModelId === model.id ? 'outline' : 'ghost'"
+                                            :variant="
+                                                selectedModelId === model.id
+                                                    ? 'outline'
+                                                    : 'ghost'
+                                            "
                                             size="xs"
-                                            :icon="currentDefaultModelId === model.id ? 'i-lucide-badge-check' : 'i-lucide-circle'"
+                                            :icon="
+                                                currentDefaultModelId ===
+                                                model.id
+                                                    ? 'i-lucide-badge-check'
+                                                    : 'i-lucide-circle'
+                                            "
                                             class="rounded-full"
-                                            @click="setPreferredDefaultModel(model.id)"
+                                            @click="
+                                                setPreferredDefaultModel(
+                                                    model.id,
+                                                )
+                                            "
                                         />
                                         <UButton
                                             color="neutral"
-                                            :variant="selectedModelId === model.id ? 'outline' : 'ghost'"
+                                            :variant="
+                                                selectedModelId === model.id
+                                                    ? 'outline'
+                                                    : 'ghost'
+                                            "
                                             size="xs"
-                                            :icon="isFavoriteModel(model.id) ? 'i-lucide-star' : 'i-lucide-star-off'"
+                                            :icon="
+                                                isFavoriteModel(model.id)
+                                                    ? 'i-lucide-star'
+                                                    : 'i-lucide-star-off'
+                                            "
                                             class="rounded-full"
-                                            @click="toggleFavoriteModel(model.id)"
+                                            @click="
+                                                toggleFavoriteModel(model.id)
+                                            "
                                         />
                                     </div>
                                 </div>
@@ -802,7 +958,11 @@ function renderAssistantMessage(content: string) {
             </template>
 
             <template #footer>
-                <UButton color="neutral" variant="ghost" @click="closeRenameDialog">
+                <UButton
+                    color="neutral"
+                    variant="ghost"
+                    @click="closeRenameDialog"
+                >
                     Cancel
                 </UButton>
                 <UButton
@@ -829,18 +989,24 @@ function renderAssistantMessage(content: string) {
             @update:open="(value) => !value && closeDeleteDialog()"
         >
             <template #body>
-                <div class="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-neutral-600 dark:text-neutral-300">
-                    <p class="font-semibold text-neutral-900 dark:text-neutral-100">
+                <div
+                    class="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-neutral-600 dark:text-neutral-300"
+                >
+                    <p
+                        class="font-semibold text-neutral-900 dark:text-neutral-100"
+                    >
                         {{ activeConversationTitle }}
                     </p>
-                    <p class="mt-1">
-                        This action cannot be undone.
-                    </p>
+                    <p class="mt-1">This action cannot be undone.</p>
                 </div>
             </template>
 
             <template #footer>
-                <UButton color="neutral" variant="ghost" @click="closeDeleteDialog">
+                <UButton
+                    color="neutral"
+                    variant="ghost"
+                    @click="closeDeleteDialog"
+                >
                     Cancel
                 </UButton>
                 <UButton
