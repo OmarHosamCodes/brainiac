@@ -858,7 +858,7 @@ export function buildDashboardAgentTools(
       ? "Start with summary data and request full raw payloads only for mutation prep or exact structural verification."
       : "Prefer the summary response and avoid full raw payloads unless the answer is blocked or you are preparing a replace mutation.";
 
-  return [
+  const tools = [
     tool({
       name: "list_dashboard_nodes",
       description:
@@ -1000,479 +1000,502 @@ export function buildDashboardAgentTools(
         };
       },
     }),
-    tool({
-      name: "create_node",
-      description:
-        "Create a new dashboard node with a default overview tab. Use this when the user asks to add a node.",
-      inputSchema: z.object({
-        title: z.string().trim().min(1).max(120),
-        content: z.string().max(4000).optional(),
-        x: z.number().finite().optional(),
-        y: z.number().finite().optional(),
-        width: z.number().positive().optional(),
-        height: z.number().positive().optional(),
-        tint: workspaceNodeTintSchema.optional(),
-        overviewTabTitle: z.string().trim().min(1).max(80).optional(),
-      }),
-      outputSchema: nodeMutationOutputSchema,
-      execute: async ({
-        title,
-        content,
-        x,
-        y,
-        width,
-        height,
-        tint,
-        overviewTabTitle,
-      }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
-          (draft) => {
-            const suggestedPosition = getSuggestedNodePosition(draft);
-            const trimmedContent = content?.trim() ?? "";
-            const node = createWorkspaceNode({
+    ...(profile === "agent"
+      ? [
+          tool({
+            name: "create_node",
+            description:
+              "Create a new dashboard node with a default overview tab. Use this when the user asks to add a node.",
+            inputSchema: z.object({
+              title: z.string().trim().min(1).max(120),
+              content: z.string().max(4000).optional(),
+              x: z.number().finite().optional(),
+              y: z.number().finite().optional(),
+              width: z.number().positive().optional(),
+              height: z.number().positive().optional(),
+              tint: workspaceNodeTintSchema.optional(),
+              overviewTabTitle: z.string().trim().min(1).max(80).optional(),
+            }),
+            outputSchema: nodeMutationOutputSchema,
+            execute: async ({
               title,
-              content: trimmedContent,
-              x: x ?? suggestedPosition.x,
-              y: y ?? suggestedPosition.y,
+              content,
+              x,
+              y,
               width,
               height,
-              tabs: overviewTabTitle
-                ? [createDefaultWorkspaceTab(overviewTabTitle, trimmedContent)]
-                : undefined,
-              dashboard: tint
-                ? {
-                    tint,
-                    featuredBlocks: [],
-                  }
-                : undefined,
-            });
+              tint,
+              overviewTabTitle,
+            }) => {
+              const { result, updatedAt, nodeCount } =
+                await workspace.applyMutation((draft) => {
+                  const suggestedPosition = getSuggestedNodePosition(draft);
+                  const trimmedContent = content?.trim() ?? "";
+                  const node = createWorkspaceNode({
+                    title,
+                    content: trimmedContent,
+                    x: x ?? suggestedPosition.x,
+                    y: y ?? suggestedPosition.y,
+                    width,
+                    height,
+                    tabs: overviewTabTitle
+                      ? [
+                          createDefaultWorkspaceTab(
+                            overviewTabTitle,
+                            trimmedContent,
+                          ),
+                        ]
+                      : undefined,
+                    dashboard: tint
+                      ? {
+                          tint,
+                          featuredBlocks: [],
+                        }
+                      : undefined,
+                  });
 
-            draft.push(node);
+                  draft.push(node);
 
-            return {
-              nodeId: node.id,
-            };
-          },
-        );
-        const node = requireNode(workspace.getNodes(), result.nodeId);
+                  return {
+                    nodeId: node.id,
+                  };
+                });
+              const node = requireNode(workspace.getNodes(), result.nodeId);
 
-        return {
-          node: describeNodeReference(node),
-          updatedAt,
-          nodeCount,
-          tabsCount: node.tabs.length,
-          blockCount: getNodeBlockCount(node),
-        };
-      },
-    }),
-    tool({
-      name: "replace_node",
-      description:
-        'Replace a node with a full raw node payload. Call get_node_details with detailLevel: "full" first, edit the raw node, then call this tool.',
-      inputSchema: z.object({
-        nodeId: z.string().trim().min(1),
-        node: workspaceNodeSchema,
-      }),
-      outputSchema: nodeMutationOutputSchema,
-      execute: async ({ nodeId, node }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
-          (draft, timestamp) => {
-            const currentNode = requireNode(draft, nodeId);
-            const currentIndex = draft.findIndex(
-              (entry) => entry.id === nodeId,
-            );
-            const nextNode = createWorkspaceNode({
-              ...node,
-              id: currentNode.id,
-              createdAt: currentNode.createdAt,
-              updatedAt: timestamp,
-            });
+              return {
+                node: describeNodeReference(node),
+                updatedAt,
+                nodeCount,
+                tabsCount: node.tabs.length,
+                blockCount: getNodeBlockCount(node),
+              };
+            },
+          }),
+          tool({
+            name: "replace_node",
+            description:
+              'Replace a node with a full raw node payload. Call get_node_details with detailLevel: "full" first, edit the raw node, then call this tool.',
+            inputSchema: z.object({
+              nodeId: z.string().trim().min(1),
+              node: workspaceNodeSchema,
+            }),
+            outputSchema: nodeMutationOutputSchema,
+            execute: async ({ nodeId, node }) => {
+              const { result, updatedAt, nodeCount } =
+                await workspace.applyMutation((draft, timestamp) => {
+                  const currentNode = requireNode(draft, nodeId);
+                  const currentIndex = draft.findIndex(
+                    (entry) => entry.id === nodeId,
+                  );
+                  const nextNode = createWorkspaceNode({
+                    ...node,
+                    id: currentNode.id,
+                    createdAt: currentNode.createdAt,
+                    updatedAt: timestamp,
+                  });
 
-            assertNodeUsesKnownCustomTemplates(nextNode);
-            draft[currentIndex] = nextNode;
+                  assertNodeUsesKnownCustomTemplates(nextNode);
+                  draft[currentIndex] = nextNode;
 
-            return {
-              nodeId: nextNode.id,
-            };
-          },
-        );
-        const nextNode = requireNode(workspace.getNodes(), result.nodeId);
+                  return {
+                    nodeId: nextNode.id,
+                  };
+                });
+              const nextNode = requireNode(workspace.getNodes(), result.nodeId);
 
-        return {
-          node: describeNodeReference(nextNode),
-          updatedAt,
-          nodeCount,
-          tabsCount: nextNode.tabs.length,
-          blockCount: getNodeBlockCount(nextNode),
-        };
-      },
-    }),
-    tool({
-      name: "delete_node",
-      description: "Delete a dashboard node by id.",
-      inputSchema: z.object({
-        nodeId: z.string().trim().min(1),
-      }),
-      outputSchema: deleteNodeOutputSchema,
-      execute: async (input) => {
-        const { nodeId } = input;
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
-          (draft) => {
-            const node = requireNode(draft, nodeId);
-            const currentIndex = draft.findIndex(
-              (entry) => entry.id === node.id,
-            );
+              return {
+                node: describeNodeReference(nextNode),
+                updatedAt,
+                nodeCount,
+                tabsCount: nextNode.tabs.length,
+                blockCount: getNodeBlockCount(nextNode),
+              };
+            },
+          }),
+          tool({
+            name: "delete_node",
+            description: "Delete a dashboard node by id.",
+            inputSchema: z.object({
+              nodeId: z.string().trim().min(1),
+            }),
+            outputSchema: deleteNodeOutputSchema,
+            execute: async (input) => {
+              const { nodeId } = input;
+              const { result, updatedAt, nodeCount } =
+                await workspace.applyMutation((draft) => {
+                  const node = requireNode(draft, nodeId);
+                  const currentIndex = draft.findIndex(
+                    (entry) => entry.id === node.id,
+                  );
 
-            draft.splice(currentIndex, 1);
+                  draft.splice(currentIndex, 1);
 
-            return {
-              nodeId: node.id,
-              title: node.title,
-            };
-          },
-        );
+                  return {
+                    nodeId: node.id,
+                    title: node.title,
+                  };
+                });
 
-        return deleteNodeOutputSchema.parse({
-          deleted: true,
-          nodeId: result.nodeId,
-          title: result.title,
-          updatedAt,
-          nodeCount,
-        });
-      },
-    }),
-    tool({
-      name: "create_tab",
-      description:
-        "Create a new tab on an existing node and make it the active tab for that node.",
-      inputSchema: z.object({
-        nodeId: z.string().trim().min(1),
-        title: z.string().trim().min(1).max(80).optional(),
-      }),
-      outputSchema: tabMutationOutputSchema,
-      execute: async ({ nodeId, title }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
-          (draft, timestamp) => {
-            const node = requireNode(draft, nodeId);
-            const tab = createDefaultWorkspaceTab(title?.trim() || "New tab");
+              return deleteNodeOutputSchema.parse({
+                deleted: true,
+                nodeId: result.nodeId,
+                title: result.title,
+                updatedAt,
+                nodeCount,
+              });
+            },
+          }),
+          tool({
+            name: "create_tab",
+            description:
+              "Create a new tab on an existing node and make it the active tab for that node.",
+            inputSchema: z.object({
+              nodeId: z.string().trim().min(1),
+              title: z.string().trim().min(1).max(80).optional(),
+            }),
+            outputSchema: tabMutationOutputSchema,
+            execute: async ({ nodeId, title }) => {
+              const { result, updatedAt, nodeCount } =
+                await workspace.applyMutation((draft, timestamp) => {
+                  const node = requireNode(draft, nodeId);
+                  const tab = createDefaultWorkspaceTab(
+                    title?.trim() || "New tab",
+                  );
 
-            node.tabs.push(tab);
-            node.viewState.activeTabId = tab.id;
-            node.updatedAt = timestamp;
+                  node.tabs.push(tab);
+                  node.viewState.activeTabId = tab.id;
+                  node.updatedAt = timestamp;
 
-            return {
-              nodeId: node.id,
-              tabId: tab.id,
-            };
-          },
-        );
-        const { node, tab: nextTab } = requireTab(
-          workspace.getNodes(),
-          result.nodeId,
-          result.tabId,
-        );
-
-        return {
-          node: describeNodeReference(node),
-          tab: describeTabReference(nextTab),
-          updatedAt,
-          nodeCount,
-          blockCount: nextTab.blocks.length,
-        };
-      },
-    }),
-    tool({
-      name: "replace_tab",
-      description:
-        'Replace a tab with a full raw tab payload. Call get_tab_details with detailLevel: "full" first, edit the raw tab, then call this tool.',
-      inputSchema: z.object({
-        nodeId: z.string().trim().min(1),
-        tabId: z.string().trim().min(1),
-        tab: workspaceNodeTabSchema,
-      }),
-      outputSchema: tabMutationOutputSchema,
-      execute: async ({ nodeId, tabId, tab }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
-          (draft, timestamp) => {
-            const { node, tab: currentTab } = requireTab(draft, nodeId, tabId);
-            const currentIndex = node.tabs.findIndex(
-              (entry) => entry.id === currentTab.id,
-            );
-            const nextTab = workspaceNodeTabSchema.parse({
-              ...tab,
-              id: currentTab.id,
-              createdAt: currentTab.createdAt,
-              updatedAt: timestamp,
-            });
-
-            assertBlocksUseKnownCustomTemplates(node, nextTab.blocks);
-            node.tabs[currentIndex] = nextTab;
-            node.updatedAt = timestamp;
-
-            return {
-              nodeId: node.id,
-              tabId: nextTab.id,
-            };
-          },
-        );
-        const { node, tab: nextTab } = requireTab(
-          workspace.getNodes(),
-          result.nodeId,
-          result.tabId,
-        );
-
-        return {
-          node: describeNodeReference(node),
-          tab: describeTabReference(nextTab),
-          updatedAt,
-          nodeCount,
-          blockCount: nextTab.blocks.length,
-        };
-      },
-    }),
-    tool({
-      name: "delete_tab",
-      description:
-        "Delete a tab from a node. If it was the last tab, the node gets a fallback Overview tab so the workspace stays usable.",
-      inputSchema: z.object({
-        nodeId: z.string().trim().min(1),
-        tabId: z.string().trim().min(1),
-      }),
-      outputSchema: deleteTabOutputSchema,
-      execute: async ({ nodeId, tabId }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
-          (draft, timestamp) => {
-            const { node, tab } = requireTab(draft, nodeId, tabId);
-            const deletedTabTitle = tab.title;
-            const currentIndex = node.tabs.findIndex(
-              (entry) => entry.id === tab.id,
-            );
-            let fallbackTabId: string | null = null;
-
-            node.tabs = node.tabs.filter((entry) => entry.id !== tab.id);
-
-            if (node.tabs.length === 0) {
-              const fallbackTab = createDefaultWorkspaceTab(
-                "Overview",
-                node.content,
+                  return {
+                    nodeId: node.id,
+                    tabId: tab.id,
+                  };
+                });
+              const { node, tab: nextTab } = requireTab(
+                workspace.getNodes(),
+                result.nodeId,
+                result.tabId,
               );
-              node.tabs = [fallbackTab];
-              node.viewState.activeTabId = fallbackTab.id;
-              fallbackTabId = fallbackTab.id;
-            } else if (node.viewState.activeTabId === tab.id) {
-              const nextTab =
-                node.tabs[currentIndex] ??
-                node.tabs[Math.max(0, currentIndex - 1)] ??
-                node.tabs[0] ??
-                null;
-              node.viewState.activeTabId = nextTab?.id ?? null;
-            }
 
-            node.updatedAt = timestamp;
+              return {
+                node: describeNodeReference(node),
+                tab: describeTabReference(nextTab),
+                updatedAt,
+                nodeCount,
+                blockCount: nextTab.blocks.length,
+              };
+            },
+          }),
+          tool({
+            name: "replace_tab",
+            description:
+              'Replace a tab with a full raw tab payload. Call get_tab_details with detailLevel: "full" first, edit the raw tab, then call this tool.',
+            inputSchema: z.object({
+              nodeId: z.string().trim().min(1),
+              tabId: z.string().trim().min(1),
+              tab: workspaceNodeTabSchema,
+            }),
+            outputSchema: tabMutationOutputSchema,
+            execute: async ({ nodeId, tabId, tab }) => {
+              const { result, updatedAt, nodeCount } =
+                await workspace.applyMutation((draft, timestamp) => {
+                  const { node, tab: currentTab } = requireTab(
+                    draft,
+                    nodeId,
+                    tabId,
+                  );
+                  const currentIndex = node.tabs.findIndex(
+                    (entry) => entry.id === currentTab.id,
+                  );
+                  const nextTab = workspaceNodeTabSchema.parse({
+                    ...tab,
+                    id: currentTab.id,
+                    createdAt: currentTab.createdAt,
+                    updatedAt: timestamp,
+                  });
 
-            return {
-              nodeId: node.id,
-              deletedTabId: tab.id,
-              deletedTabTitle,
-              fallbackTabId,
-            };
-          },
-        );
-        const node = requireNode(workspace.getNodes(), result.nodeId);
-        const fallbackTab = result.fallbackTabId
-          ? (node.tabs.find((tab) => tab.id === result.fallbackTabId) ?? null)
-          : null;
+                  assertBlocksUseKnownCustomTemplates(node, nextTab.blocks);
+                  node.tabs[currentIndex] = nextTab;
+                  node.updatedAt = timestamp;
 
-        return {
-          node: describeNodeReference(node),
-          deletedTabId: result.deletedTabId,
-          deletedTabTitle: result.deletedTabTitle,
-          updatedAt,
-          nodeCount,
-          tabsCount: node.tabs.length,
-          activeTabId: node.viewState.activeTabId ?? null,
-          fallbackTab: fallbackTab ? describeTabReference(fallbackTab) : null,
-        };
-      },
-    }),
-    tool({
-      name: "create_block",
-      description:
-        "Create a new block inside an existing tab. Use customTemplateId when creating a custom block.",
-      inputSchema: z.object({
-        nodeId: z.string().trim().min(1),
-        tabId: z.string().trim().min(1),
-        type: workspaceBlockTypeSchema,
-        title: z.string().trim().min(1).max(120).optional(),
-        customTemplateId: z.string().trim().min(1).optional(),
-      }),
-      outputSchema: blockMutationOutputSchema,
-      execute: async ({ nodeId, tabId, type, title, customTemplateId }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
-          (draft, timestamp) => {
-            const { node, tab } = requireTab(draft, nodeId, tabId);
-            const block = createBlockByType({
-              node,
+                  return {
+                    nodeId: node.id,
+                    tabId: nextTab.id,
+                  };
+                });
+              const { node, tab: nextTab } = requireTab(
+                workspace.getNodes(),
+                result.nodeId,
+                result.tabId,
+              );
+
+              return {
+                node: describeNodeReference(node),
+                tab: describeTabReference(nextTab),
+                updatedAt,
+                nodeCount,
+                blockCount: nextTab.blocks.length,
+              };
+            },
+          }),
+          tool({
+            name: "delete_tab",
+            description:
+              "Delete a tab from a node. If it was the last tab, the node gets a fallback Overview tab so the workspace stays usable.",
+            inputSchema: z.object({
+              nodeId: z.string().trim().min(1),
+              tabId: z.string().trim().min(1),
+            }),
+            outputSchema: deleteTabOutputSchema,
+            execute: async ({ nodeId, tabId }) => {
+              const { result, updatedAt, nodeCount } =
+                await workspace.applyMutation((draft, timestamp) => {
+                  const { node, tab } = requireTab(draft, nodeId, tabId);
+                  const deletedTabTitle = tab.title;
+                  const currentIndex = node.tabs.findIndex(
+                    (entry) => entry.id === tab.id,
+                  );
+                  let fallbackTabId: string | null = null;
+
+                  node.tabs = node.tabs.filter((entry) => entry.id !== tab.id);
+
+                  if (node.tabs.length === 0) {
+                    const fallbackTab = createDefaultWorkspaceTab(
+                      "Overview",
+                      node.content,
+                    );
+                    node.tabs = [fallbackTab];
+                    node.viewState.activeTabId = fallbackTab.id;
+                    fallbackTabId = fallbackTab.id;
+                  } else if (node.viewState.activeTabId === tab.id) {
+                    const nextTab =
+                      node.tabs[currentIndex] ??
+                      node.tabs[Math.max(0, currentIndex - 1)] ??
+                      node.tabs[0] ??
+                      null;
+                    node.viewState.activeTabId = nextTab?.id ?? null;
+                  }
+
+                  node.updatedAt = timestamp;
+
+                  return {
+                    nodeId: node.id,
+                    deletedTabId: tab.id,
+                    deletedTabTitle,
+                    fallbackTabId,
+                  };
+                });
+              const node = requireNode(workspace.getNodes(), result.nodeId);
+              const fallbackTab = result.fallbackTabId
+                ? (node.tabs.find((tab) => tab.id === result.fallbackTabId) ??
+                  null)
+                : null;
+
+              return {
+                node: describeNodeReference(node),
+                deletedTabId: result.deletedTabId,
+                deletedTabTitle: result.deletedTabTitle,
+                updatedAt,
+                nodeCount,
+                tabsCount: node.tabs.length,
+                activeTabId: node.viewState.activeTabId ?? null,
+                fallbackTab: fallbackTab
+                  ? describeTabReference(fallbackTab)
+                  : null,
+              };
+            },
+          }),
+          tool({
+            name: "create_block",
+            description:
+              "Create a new block inside an existing tab. Use customTemplateId when creating a custom block.",
+            inputSchema: z.object({
+              nodeId: z.string().trim().min(1),
+              tabId: z.string().trim().min(1),
+              type: workspaceBlockTypeSchema,
+              title: z.string().trim().min(1).max(120).optional(),
+              customTemplateId: z.string().trim().min(1).optional(),
+            }),
+            outputSchema: blockMutationOutputSchema,
+            execute: async ({
+              nodeId,
+              tabId,
               type,
               title,
               customTemplateId,
-            });
+            }) => {
+              const { result, updatedAt, nodeCount } =
+                await workspace.applyMutation((draft, timestamp) => {
+                  const { node, tab } = requireTab(draft, nodeId, tabId);
+                  const block = createBlockByType({
+                    node,
+                    type,
+                    title,
+                    customTemplateId,
+                  });
 
-            tab.blocks.push(block);
-            tab.updatedAt = timestamp;
-            node.updatedAt = timestamp;
+                  tab.blocks.push(block);
+                  tab.updatedAt = timestamp;
+                  node.updatedAt = timestamp;
 
-            return {
-              nodeId: node.id,
-              tabId: tab.id,
-              blockId: block.id,
-            };
-          },
-        );
-        const {
-          node,
-          tab,
-          block: nextBlock,
-        } = requireBlock(
-          workspace.getNodes(),
-          result.nodeId,
-          result.tabId,
-          result.blockId,
-        );
+                  return {
+                    nodeId: node.id,
+                    tabId: tab.id,
+                    blockId: block.id,
+                  };
+                });
+              const {
+                node,
+                tab,
+                block: nextBlock,
+              } = requireBlock(
+                workspace.getNodes(),
+                result.nodeId,
+                result.tabId,
+                result.blockId,
+              );
 
-        return {
-          node: describeNodeReference(node),
-          tab: describeTabReference(tab),
-          block: describeBlockReference(nextBlock),
-          customBlockTemplate: (() => {
-            const template = getCustomBlockTemplateForBlock(node, nextBlock);
+              return {
+                node: describeNodeReference(node),
+                tab: describeTabReference(tab),
+                block: describeBlockReference(nextBlock),
+                customBlockTemplate: (() => {
+                  const template = getCustomBlockTemplateForBlock(
+                    node,
+                    nextBlock,
+                  );
 
-            return template
-              ? describeCustomBlockTemplateReference(template)
-              : null;
-          })(),
-          updatedAt,
-          nodeCount,
-        };
-      },
-    }),
-    tool({
-      name: "replace_block",
-      description:
-        'Replace a block with a full raw block payload. Call get_block_details with detailLevel: "full" first, edit the raw block, then call this tool.',
-      inputSchema: z.object({
-        nodeId: z.string().trim().min(1),
-        tabId: z.string().trim().min(1),
-        blockId: z.string().trim().min(1),
-        block: workspaceBlockSchema,
-      }),
-      outputSchema: blockMutationOutputSchema,
-      execute: async ({ nodeId, tabId, blockId, block }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
-          (draft, timestamp) => {
-            const {
-              node,
-              tab,
-              block: currentBlock,
-            } = requireBlock(draft, nodeId, tabId, blockId);
-            const currentIndex = tab.blocks.findIndex(
-              (entry) => entry.id === currentBlock.id,
-            );
-            const nextBlock = workspaceBlockSchema.parse({
-              ...block,
-              id: currentBlock.id,
-              createdAt: currentBlock.createdAt,
-              updatedAt: timestamp,
-            });
+                  return template
+                    ? describeCustomBlockTemplateReference(template)
+                    : null;
+                })(),
+                updatedAt,
+                nodeCount,
+              };
+            },
+          }),
+          tool({
+            name: "replace_block",
+            description:
+              'Replace a block with a full raw block payload. Call get_block_details with detailLevel: "full" first, edit the raw block, then call this tool.',
+            inputSchema: z.object({
+              nodeId: z.string().trim().min(1),
+              tabId: z.string().trim().min(1),
+              blockId: z.string().trim().min(1),
+              block: workspaceBlockSchema,
+            }),
+            outputSchema: blockMutationOutputSchema,
+            execute: async ({ nodeId, tabId, blockId, block }) => {
+              const { result, updatedAt, nodeCount } =
+                await workspace.applyMutation((draft, timestamp) => {
+                  const {
+                    node,
+                    tab,
+                    block: currentBlock,
+                  } = requireBlock(draft, nodeId, tabId, blockId);
+                  const currentIndex = tab.blocks.findIndex(
+                    (entry) => entry.id === currentBlock.id,
+                  );
+                  const nextBlock = workspaceBlockSchema.parse({
+                    ...block,
+                    id: currentBlock.id,
+                    createdAt: currentBlock.createdAt,
+                    updatedAt: timestamp,
+                  });
 
-            assertBlocksUseKnownCustomTemplates(node, [nextBlock]);
-            tab.blocks[currentIndex] = nextBlock;
-            tab.updatedAt = timestamp;
-            node.updatedAt = timestamp;
+                  assertBlocksUseKnownCustomTemplates(node, [nextBlock]);
+                  tab.blocks[currentIndex] = nextBlock;
+                  tab.updatedAt = timestamp;
+                  node.updatedAt = timestamp;
 
-            return {
-              nodeId: node.id,
-              tabId: tab.id,
-              blockId: nextBlock.id,
-            };
-          },
-        );
-        const {
-          node,
-          tab,
-          block: nextBlock,
-        } = requireBlock(
-          workspace.getNodes(),
-          result.nodeId,
-          result.tabId,
-          result.blockId,
-        );
+                  return {
+                    nodeId: node.id,
+                    tabId: tab.id,
+                    blockId: nextBlock.id,
+                  };
+                });
+              const {
+                node,
+                tab,
+                block: nextBlock,
+              } = requireBlock(
+                workspace.getNodes(),
+                result.nodeId,
+                result.tabId,
+                result.blockId,
+              );
 
-        return {
-          node: describeNodeReference(node),
-          tab: describeTabReference(tab),
-          block: describeBlockReference(nextBlock),
-          customBlockTemplate: (() => {
-            const template = getCustomBlockTemplateForBlock(node, nextBlock);
+              return {
+                node: describeNodeReference(node),
+                tab: describeTabReference(tab),
+                block: describeBlockReference(nextBlock),
+                customBlockTemplate: (() => {
+                  const template = getCustomBlockTemplateForBlock(
+                    node,
+                    nextBlock,
+                  );
 
-            return template
-              ? describeCustomBlockTemplateReference(template)
-              : null;
-          })(),
-          updatedAt,
-          nodeCount,
-        };
-      },
-    }),
-    tool({
-      name: "delete_block",
-      description: "Delete a block from a tab by id.",
-      inputSchema: z.object({
-        nodeId: z.string().trim().min(1),
-        tabId: z.string().trim().min(1),
-        blockId: z.string().trim().min(1),
-      }),
-      outputSchema: deleteBlockOutputSchema,
-      execute: async ({ nodeId, tabId, blockId }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
-          (draft, timestamp) => {
-            const { node, tab, block } = requireBlock(
-              draft,
-              nodeId,
-              tabId,
-              blockId,
-            );
-            const deletedBlockTitle = block.title;
+                  return template
+                    ? describeCustomBlockTemplateReference(template)
+                    : null;
+                })(),
+                updatedAt,
+                nodeCount,
+              };
+            },
+          }),
+          tool({
+            name: "delete_block",
+            description: "Delete a block from a tab by id.",
+            inputSchema: z.object({
+              nodeId: z.string().trim().min(1),
+              tabId: z.string().trim().min(1),
+              blockId: z.string().trim().min(1),
+            }),
+            outputSchema: deleteBlockOutputSchema,
+            execute: async ({ nodeId, tabId, blockId }) => {
+              const { result, updatedAt, nodeCount } =
+                await workspace.applyMutation((draft, timestamp) => {
+                  const { node, tab, block } = requireBlock(
+                    draft,
+                    nodeId,
+                    tabId,
+                    blockId,
+                  );
+                  const deletedBlockTitle = block.title;
 
-            tab.blocks = tab.blocks.filter((entry) => entry.id !== block.id);
-            tab.updatedAt = timestamp;
-            node.updatedAt = timestamp;
+                  tab.blocks = tab.blocks.filter(
+                    (entry) => entry.id !== block.id,
+                  );
+                  tab.updatedAt = timestamp;
+                  node.updatedAt = timestamp;
 
-            return {
-              nodeId: node.id,
-              tabId: tab.id,
-              deletedBlockId: block.id,
-              deletedBlockTitle,
-            };
-          },
-        );
-        const { node, tab } = requireTab(
-          workspace.getNodes(),
-          result.nodeId,
-          result.tabId,
-        );
+                  return {
+                    nodeId: node.id,
+                    tabId: tab.id,
+                    deletedBlockId: block.id,
+                    deletedBlockTitle,
+                  };
+                });
+              const { node, tab } = requireTab(
+                workspace.getNodes(),
+                result.nodeId,
+                result.tabId,
+              );
 
-        return {
-          node: describeNodeReference(node),
-          tab: describeTabReference(tab),
-          deletedBlockId: result.deletedBlockId,
-          deletedBlockTitle: result.deletedBlockTitle,
-          updatedAt,
-          nodeCount,
-          remainingBlockCount: tab.blocks.length,
-        };
-      },
-    }),
+              return {
+                node: describeNodeReference(node),
+                tab: describeTabReference(tab),
+                deletedBlockId: result.deletedBlockId,
+                deletedBlockTitle: result.deletedBlockTitle,
+                updatedAt,
+                nodeCount,
+                remainingBlockCount: tab.blocks.length,
+              };
+            },
+          }),
+        ]
+      : []),
     tool({
       name: "get_marketplace_item_details",
       description: `Inspect a marketplace item. ${profileGuidance}`,
@@ -1514,4 +1537,6 @@ export function buildDashboardAgentTools(
       }),
     }),
   ];
+
+  return tools;
 }

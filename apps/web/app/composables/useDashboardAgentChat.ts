@@ -291,7 +291,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
           value: "ask",
           label: "Ask",
           description:
-            "Start from the current context and use compact inspection only when needed.",
+            "Read-only mode. Start from the current context and use compact inspection only when needed.",
         },
         {
           value: "agent",

@@ -112,10 +112,7 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
 function buildToolEnabledAgentInstructions(
   workspace: DashboardAgentWorkspaceContext,
 ) {
-  return [
-    buildAgentInstructions(workspace),
-    "When the user asks you to create, rename, update, or delete nodes, tabs, or blocks, use the workspace mutation tools instead of only describing the change.",
-  ].join("\n");
+  return [buildAgentInstructions(workspace)].join("\n");
 }
 
 function buildDirectAnswerInstructions(
@@ -140,6 +137,7 @@ function buildAskInstructions(
     toolingUnavailable
       ? "The selected model cannot call tools in this pass, so answer directly from the provided context and say when deeper inspection would require a tools-capable model."
       : "Start from the provided workspace context. If you need inspection, prefer one compact list, search, or summary detail tool before answering.",
+    "Ask mode is read-only. Do not create, rename, update, or delete nodes, tabs, or blocks.",
     "Avoid full raw node, tab, block, or marketplace payloads unless the answer is blocked or you are preparing a replace mutation.",
   ].join("\n");
 }
@@ -153,6 +151,7 @@ function buildAgentOnlyInstructions(
     toolingUnavailable
       ? "The selected model cannot call tools in this pass, so explain that deep inspection is limited and answer from the provided context only."
       : "Inspect the workspace before concluding. Start with list, search, or summary detail tools to verify specifics before you answer.",
+    "When the user asks you to create, rename, update, or delete nodes, tabs, or blocks, use the workspace mutation tools instead of only describing the change.",
     "Escalate to full raw node, tab, block, or marketplace payloads only when mutation prep or exact structural verification requires it.",
     "If tools are available and the workspace has nodes, do at least one inspection step before your final answer.",
   ].join("\n");
