@@ -192,6 +192,20 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   const selectedNodes = computed(() =>
     nodes.value.filter((node) => selectedNodeIdSet.value.has(node.id)),
   );
+  const singleScopeTitle = computed(() => {
+    if (selectedNodes.value.length === 0 && nodes.value.length === 1) {
+      return nodes.value[0]?.title?.trim() || null;
+    }
+
+    return null;
+  });
+  const activeContextNodeTitles = computed(() => {
+    if (selectedNodes.value.length > 0) {
+      return selectedNodes.value.map((node) => node.title);
+    }
+
+    return singleScopeTitle.value ? [singleScopeTitle.value] : [];
+  });
 
   const conversationsListQueryOptions = orpc.agent.conversations.list.queryOptions();
   const freeModelsQuery = useQuery({
@@ -293,6 +307,14 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
 
     const firstNode = nodes.value[0];
 
+    if (nodes.value.length === 1 && firstNode) {
+      return [
+        `Summarize "${firstNode.title}".`,
+        `What stands out about "${firstNode.title}"?`,
+        `What should I do next based on "${firstNode.title}"?`,
+      ];
+    }
+
     return [
       "Summarize the main themes in this dashboard.",
       "Which nodes look like the highest leverage items right now?",
@@ -309,6 +331,10 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       return `Ask about these ${selectedNodes.value.length} selected nodes. Type @ to refine the scope.`;
     }
 
+    if (singleScopeTitle.value) {
+      return `Ask about "${singleScopeTitle.value}". Type @ to refine the scope.`;
+    }
+
     return "Ask the agent about this dashboard. Type @ to narrow the turn to a node.";
   });
   const scopeLabel = computed(() => {
@@ -316,6 +342,10 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       return `${selectedNodes.value.length} selected node${
         selectedNodes.value.length === 1 ? "" : "s"
       } in scope`;
+    }
+
+    if (singleScopeTitle.value) {
+      return `"${singleScopeTitle.value}" in scope`;
     }
 
     return `All ${nodes.value.length} node${nodes.value.length === 1 ? "" : "s"} in scope`;
@@ -624,7 +654,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       id: `pending-${crypto.randomUUID()}`,
       role: "user",
       content,
-      contextNodeTitles: selectedNodes.value.map((node) => node.title),
+      contextNodeTitles: activeContextNodeTitles.value,
       model: model ?? null,
       toolsCalled: [],
       createdAt: new Date().toISOString(),
@@ -643,8 +673,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         content,
         nodes: scopedNodes,
         contextNodeTitles:
-          optimisticUserMessage.contextNodeTitles.length > 0
-            ? optimisticUserMessage.contextNodeTitles
+          activeContextNodeTitles.value.length > 0
+            ? activeContextNodeTitles.value
             : undefined,
         ...(model ? { model } : {}),
         toolPreset: selectedToolPreset.value,

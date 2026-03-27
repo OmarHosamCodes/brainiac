@@ -18,6 +18,7 @@ import {
     createWorkspaceTimelineBlock,
     createWorkspaceTimelineMilestone,
     createWorkspaceTrackerBlock,
+    cloneWorkspaceNodes,
     evaluateCustomBlockFormula,
     fillCustomBlockPromptTemplate,
     generateWorkspacePromptOutput,
@@ -90,6 +91,8 @@ const node = computed(() => {
 });
 
 const activeTabId = computed(() => node.value?.viewState.activeTabId ?? "");
+const isAgentChatVisible = ref(true);
+const agentContextTarget = ref<{ tabId: string; blockId: string } | null>(null);
 
 const activeTab = computed(() => {
     if (!node.value) {
@@ -121,6 +124,57 @@ const visibleBlocks = computed(() => {
     return activeTab.value.blocks.filter((block) =>
         getBlockSearchText(block).includes(normalizedBlockSearch.value),
     );
+});
+
+const agentContextState = computed(() => {
+    if (!node.value || !agentContextTarget.value) {
+        return null;
+    }
+
+    const tab = node.value.tabs.find(
+        (entry) => entry.id === agentContextTarget.value?.tabId,
+    );
+
+    if (!tab) {
+        return null;
+    }
+
+    const block = tab.blocks.find(
+        (entry) => entry.id === agentContextTarget.value?.blockId,
+    );
+
+    if (!block) {
+        return null;
+    }
+
+    return {
+        tab,
+        block,
+    };
+});
+
+const agentChatNodes = computed(() => {
+    if (!node.value) {
+        return [];
+    }
+
+    if (!agentContextState.value) {
+        return [node.value];
+    }
+
+    return [
+        createAgentContextNode(
+            node.value,
+            agentContextState.value.tab,
+            agentContextState.value.block,
+        ),
+    ];
+});
+
+watch(agentContextState, (value) => {
+    if (!value && agentContextTarget.value) {
+        agentContextTarget.value = null;
+    }
 });
 
 const addBlockMenuItems = computed(() => {
@@ -448,6 +502,10 @@ function addBlockPresetToActiveTab(presetId: WorkspaceBlockPresetId) {
 }
 
 function removeBlock(tabId: string, blockId: string) {
+    if (isAgentContextBlock(tabId, blockId)) {
+        clearAgentContextBlock();
+    }
+
     mutateTab(tabId, (tab) => {
         tab.blocks = tab.blocks.filter((block) => block.id !== blockId);
     });
@@ -1068,6 +1126,70 @@ function getDisplayBlockTitle(block: WorkspaceBlock) {
     return block.title.trim() || "Untitled block";
 }
 
+function createAgentContextNode(
+    nodeEntry: WorkspaceNode,
+    tab: WorkspaceNodeTab,
+    block: WorkspaceBlock,
+) {
+    const clonedNode = cloneWorkspaceNodes([nodeEntry])[0];
+    const scopedTab = clonedNode?.tabs.find((entry) => entry.id === tab.id);
+
+    if (!clonedNode || !scopedTab) {
+        return nodeEntry;
+    }
+
+    clonedNode.id = `${nodeEntry.id}::context::${block.id}`;
+    clonedNode.title = `${getDisplayBlockTitle(block)} - ${nodeEntry.title}`.slice(
+        0,
+        120,
+    );
+    clonedNode.label = getDisplayTabTitle(tab).slice(0, 120);
+    clonedNode.content = `Block-only context from node "${nodeEntry.title}" in tab "${getDisplayTabTitle(tab)}".`;
+    scopedTab.blocks = scopedTab.blocks.filter((entry) => entry.id === block.id);
+    clonedNode.tabs = [scopedTab];
+    clonedNode.viewState = {
+        activeTabId: scopedTab.id,
+        notePreviewState: {},
+    };
+    clonedNode.dashboard = {
+        ...clonedNode.dashboard,
+        featuredBlocks: [],
+    };
+    clonedNode.customBlockTemplates =
+        block.type === "custom"
+            ? clonedNode.customBlockTemplates.filter(
+                  (template) => template.id === block.definitionId,
+              )
+            : [];
+
+    return clonedNode;
+}
+
+function setAgentContextBlock(tabId: string, blockId: string) {
+    agentContextTarget.value = { tabId, blockId };
+    isAgentChatVisible.value = true;
+}
+
+function toggleAgentContextBlock(tabId: string, blockId: string) {
+    if (isAgentContextBlock(tabId, blockId)) {
+        clearAgentContextBlock();
+        return;
+    }
+
+    setAgentContextBlock(tabId, blockId);
+}
+
+function clearAgentContextBlock() {
+    agentContextTarget.value = null;
+}
+
+function isAgentContextBlock(tabId: string, blockId: string) {
+    return (
+        agentContextTarget.value?.tabId === tabId &&
+        agentContextTarget.value?.blockId === blockId
+    );
+}
+
 function getBlockSearchText(block: WorkspaceBlock) {
     const fragments: string[] = [block.type, getDisplayBlockTitle(block)];
 
@@ -1350,6 +1472,9 @@ provide(workspaceNodeEditorContextKey, {
     addBlockPresetToActiveTab,
     removeBlock,
     updateBlockTitle,
+    toggleAgentContextBlock,
+    clearAgentContextBlock,
+    isAgentContextBlock,
     saveBlockToMarketplace,
     getTimeOrchestratorSummaryForBlock,
     mutateBlock,
@@ -1448,6 +1573,63 @@ provide(workspaceNodeEditorContextKey, {
                 :save-error="saveError"
                 :visible-blocks="visibleBlocks"
             />
+
+            <div
+                class="pointer-events-none fixed bottom-4 right-3 top-20 z-40 flex w-[min(26rem,calc(100vw-1.5rem))] flex-col gap-3 transition-all duration-300 sm:bottom-6 sm:right-6 sm:top-24"
+                :class="
+                    isAgentChatVisible
+                        ? 'translate-x-0 opacity-100'
+                        : 'pointer-events-none translate-x-8 opacity-0'
+                "
+            >
+                <div
+                    v-if="agentContextState"
+                    class="pointer-events-auto rounded-[1.75rem] border border-neutral-200/70 bg-white/92 px-4 py-3 shadow-xl shadow-black/10 backdrop-blur-xl dark:border-neutral-800/70 dark:bg-neutral-950/92"
+                >
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+                        >
+                            <UIcon name="i-lucide-square-dashed-mouse-pointer" class="size-4" />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
+                                Block context
+                            </p>
+                            <p class="truncate text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+                                {{ getDisplayBlockTitle(agentContextState.block) }}
+                            </p>
+                            <p class="truncate text-xs text-neutral-500 dark:text-neutral-400">
+                                {{ node.title }} / {{ getDisplayTabTitle(agentContextState.tab) }}
+                            </p>
+                        </div>
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            size="xs"
+                            icon="i-lucide-x"
+                            class="rounded-full"
+                            @click="clearAgentContextBlock"
+                        />
+                    </div>
+                </div>
+
+                <div class="pointer-events-auto min-h-0 flex-1">
+                    <DashboardAgentChatPanel
+                        :nodes="agentChatNodes"
+                        @close="isAgentChatVisible = false"
+                    />
+                </div>
+            </div>
+
+            <button
+                v-if="!isAgentChatVisible"
+                type="button"
+                class="fixed bottom-8 right-8 z-50 flex size-14 items-center justify-center rounded-2xl bg-neutral-900 text-white shadow-2xl shadow-black/20 transition-all duration-300 hover:scale-110 active:scale-95 dark:bg-neutral-100 dark:text-neutral-900"
+                @click="isAgentChatVisible = true"
+            >
+                <UIcon name="i-lucide-sparkles" class="size-6" />
+            </button>
 
             <div
                 v-if="isWorkspaceRefreshing"

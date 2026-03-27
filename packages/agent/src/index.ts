@@ -12,6 +12,41 @@ import {
   type DashboardAgentWorkspaceContext,
 } from "./types";
 
+function buildFocusedWorkspaceDetails(workspace: DashboardAgentWorkspaceContext) {
+  if (workspace.nodes.length !== 1) {
+    return null;
+  }
+
+  const node = workspace.nodes[0];
+
+  if (!node || node.tabs.length !== 1) {
+    return null;
+  }
+
+  const tab = node.tabs[0];
+
+  if (!tab || tab.blocks.length !== 1) {
+    return null;
+  }
+
+  const block = tab.blocks[0];
+
+  if (!block) {
+    return null;
+  }
+
+  return [
+    "Focused scope details:",
+    `Node title: ${node.title}`,
+    ...(node.label ? [`Node label: ${node.label}`] : []),
+    ...(node.content ? [`Node context: ${node.content}`] : []),
+    `Tab title: ${tab.title}`,
+    `Block type: ${block.type}`,
+    `Block title: ${block.title || "Untitled block"}`,
+    `Block data JSON: ${JSON.stringify(block)}`,
+  ].join("\n");
+}
+
 function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
   const updatedLabel = workspace.updatedAt
     ? `Workspace updated at ${workspace.updatedAt}.`
@@ -20,6 +55,7 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
     ? `The current user is ${workspace.userName.trim()}.`
     : "The current user name is unavailable.";
   const marketplaceCount = workspace.marketplaceItems?.length ?? 0;
+  const focusedWorkspaceDetails = buildFocusedWorkspaceDetails(workspace);
 
   return [
     "You are Brainiac's dashboard agent.",
@@ -32,6 +68,7 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
     `The marketplace currently has ${marketplaceCount} items.`,
     "Dashboard overview:",
     buildWorkspaceOverview(workspace.nodes),
+    ...(focusedWorkspaceDetails ? [focusedWorkspaceDetails] : []),
   ].join("\n");
 }
 

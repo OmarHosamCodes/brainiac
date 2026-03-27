@@ -14,12 +14,15 @@ const {
   getBlockSearchMatches,
   highlightSearchMatch,
   updateBlockTitle,
+  toggleAgentContextBlock,
+  isAgentContextBlock,
   saveBlockToMarketplace,
   removeBlock,
 } = useWorkspaceNodeEditorContext();
 
 const registryEntry = computed(() => getWorkspaceBlockRegistryEntry(props.block.type));
 const editorComponent = computed(() => registryEntry.value.component as any);
+const isContextBlock = computed(() => isAgentContextBlock(props.tabId, props.block.id));
 
 const isHovered = ref(false);
 </script>
@@ -58,8 +61,17 @@ const isHovered = ref(false);
 
       <div 
         class="flex items-center gap-1 transition-opacity duration-200"
-        :class="isHovered ? 'opacity-100' : 'opacity-0'"
+        :class="isHovered || isContextBlock ? 'opacity-100' : 'pointer-events-none opacity-0'"
       >
+        <UButton
+          color="primary"
+          :variant="isContextBlock ? 'soft' : 'ghost'"
+          :icon="isContextBlock ? 'i-lucide-check' : 'i-lucide-plus'"
+          class="rounded-xl"
+          @click="toggleAgentContextBlock(tabId, block.id)"
+        >
+          {{ isContextBlock ? "In context" : "Add to context" }}
+        </UButton>
         <UButton
           color="neutral"
           variant="ghost"

@@ -64,6 +64,9 @@ export type WorkspaceNodeEditorContext = {
   addBlockPresetToActiveTab(presetId: WorkspaceBlockPresetId): void;
   removeBlock(tabId: string, blockId: string): void;
   updateBlockTitle(tabId: string, blockId: string, value: string): void;
+  toggleAgentContextBlock(tabId: string, blockId: string): void;
+  clearAgentContextBlock(): void;
+  isAgentContextBlock(tabId: string, blockId: string): boolean;
   saveBlockToMarketplace(block: WorkspaceBlock): MaybePromise;
   getTimeOrchestratorSummaryForBlock(
     block: WorkspaceTimeOrchestratorBlock,
