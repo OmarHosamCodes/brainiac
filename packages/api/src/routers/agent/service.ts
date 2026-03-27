@@ -22,7 +22,7 @@ import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 
-import { getWorkspaceSnapshot } from "../workspace/service";
+import { getWorkspaceMarketplaceItems, getWorkspaceSnapshot } from "../workspace/service";
 
 function buildConversationTitle(content: string) {
   return content.trim().slice(0, DASHBOARD_CONVERSATION_TITLE_LIMIT) || "New conversation";
@@ -54,9 +54,7 @@ function mapConversationSummary(args: {
   });
 }
 
-function mapConversationMessage(
-  row: typeof dashboardConversationMessage.$inferSelect,
-) {
+function mapConversationMessage(row: typeof dashboardConversationMessage.$inferSelect) {
   return dashboardConversationMessageSchema.parse({
     id: row.id,
     role: row.role,
@@ -104,10 +102,7 @@ async function getConversationPreviewMap(conversationIds: string[]) {
     })
     .from(dashboardConversationMessage)
     .where(inArray(dashboardConversationMessage.conversationId, conversationIds))
-    .orderBy(
-      desc(dashboardConversationMessage.createdAt),
-      desc(dashboardConversationMessage.id),
-    );
+    .orderBy(desc(dashboardConversationMessage.createdAt), desc(dashboardConversationMessage.id));
 
   const previewMap = new Map<string, string | null>();
 
@@ -203,10 +198,7 @@ export async function renameDashboardConversation(
       updatedAt: now,
     })
     .where(
-      and(
-        eq(dashboardConversation.id, conversationId),
-        eq(dashboardConversation.userId, userId),
-      ),
+      and(eq(dashboardConversation.id, conversationId), eq(dashboardConversation.userId, userId)),
     );
 
   return getDashboardConversation(userId, conversationId);
@@ -218,10 +210,7 @@ export async function deleteDashboardConversation(userId: string, conversationId
   await db
     .delete(dashboardConversation)
     .where(
-      and(
-        eq(dashboardConversation.id, conversationId),
-        eq(dashboardConversation.userId, userId),
-      ),
+      and(eq(dashboardConversation.id, conversationId), eq(dashboardConversation.userId, userId)),
     );
 
   return {
@@ -236,12 +225,15 @@ export async function appendDashboardConversationTurn(
   input: AgentChatTurnInput,
 ) {
   const now = new Date();
-  const workspaceSnapshot = input.nodes
-    ? {
-        nodes: input.nodes,
-        updatedAt: null,
-      }
-    : await getWorkspaceSnapshot(userId);
+  const [workspaceSnapshot, marketplaceItems] = await Promise.all([
+    input.nodes
+      ? Promise.resolve({
+          nodes: input.nodes,
+          updatedAt: null,
+        })
+      : getWorkspaceSnapshot(userId),
+    getWorkspaceMarketplaceItems(),
+  ]);
 
   const conversation = input.conversationId
     ? await getConversationRecord(userId, input.conversationId)
@@ -295,6 +287,7 @@ export async function appendDashboardConversationTurn(
     ],
     {
       nodes: workspaceSnapshot.nodes,
+      marketplaceItems,
       updatedAt: workspaceSnapshot.updatedAt,
       userName,
     },
@@ -339,10 +332,7 @@ export async function appendDashboardConversationTurn(
       lastMessageAt: assistantCreatedAt,
     })
     .where(
-      and(
-        eq(dashboardConversation.id, conversation.id),
-        eq(dashboardConversation.userId, userId),
-      ),
+      and(eq(dashboardConversation.id, conversation.id), eq(dashboardConversation.userId, userId)),
     );
 
   const conversationSummary = mapConversationSummary({

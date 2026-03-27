@@ -19,6 +19,7 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
   const userLabel = workspace.userName?.trim()
     ? `The current user is ${workspace.userName.trim()}.`
     : "The current user name is unavailable.";
+  const marketplaceCount = workspace.marketplaceItems?.length ?? 0;
 
   return [
     "You are Brainiac's dashboard agent.",
@@ -28,15 +29,13 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
     userLabel,
     updatedLabel,
     `The dashboard currently has ${workspace.nodes.length} nodes.`,
+    `The marketplace currently has ${marketplaceCount} items.`,
     "Dashboard overview:",
     buildWorkspaceOverview(workspace.nodes),
   ].join("\n");
 }
 
-function buildDirectAnswerInstructions(
-  workspace: DashboardAgentWorkspaceContext,
-  note?: string,
-) {
+function buildDirectAnswerInstructions(workspace: DashboardAgentWorkspaceContext, note?: string) {
   return [
     buildAgentInstructions(workspace),
     "Answer directly from the provided workspace context.",
@@ -150,7 +149,10 @@ async function runToolEnabledPass(args: {
   temperature?: number;
   maxOutputTokens?: number;
 }) {
-  const tools = buildDashboardAgentTools(args.workspace.nodes);
+  const tools = buildDashboardAgentTools(
+    args.workspace.nodes,
+    args.workspace.marketplaceItems ?? [],
+  );
   const calledTools = new Set<string>();
   const result = createOpenRouterClient().callModel({
     model: args.model,

@@ -1,4 +1,8 @@
-import { workspaceNodeSchema, type WorkspaceNode } from "@brainiac/workspace";
+import {
+  workspaceNodeSchema,
+  type WorkspaceMarketplaceItem,
+  type WorkspaceNode,
+} from "@brainiac/workspace";
 import { z } from "zod";
 
 export const DEFAULT_AGENT_MODEL = "openai/gpt-5-nano";
@@ -100,6 +104,7 @@ export type AgentChatTurnResponse = z.infer<typeof agentChatTurnResponseSchema>;
 
 export type DashboardAgentWorkspaceContext = {
   nodes: WorkspaceNode[];
+  marketplaceItems?: WorkspaceMarketplaceItem[];
   updatedAt?: string | null;
   userName?: string | null;
 };
