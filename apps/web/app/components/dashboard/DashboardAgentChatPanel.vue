@@ -132,7 +132,7 @@ function toggleHistoryPane() {
 }
 
 function toggleModelLibrary() {
-    isModelLibraryOpen.value = !isModelLibraryOpen.value;
+    isModelLibraryOpen.value = true;
 }
 
 function selectModel(modelId: string) {
@@ -525,243 +525,108 @@ function renderAssistantMessage(content: string) {
                     />
                 </div>
 
-                <div class="mt-3 flex items-start justify-between gap-3">
-                    <div class="min-w-0">
-                        <p class="truncate text-[11px] text-neutral-500 dark:text-neutral-400">
-                            {{ selectedModelOption?.description || modelHint }}
-                        </p>
-                    </div>
-                    <div class="shrink-0">
-                        <span
-                            class="rounded-full border border-neutral-200/80 bg-white/90 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-500 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:text-neutral-400"
-                        >
-                            {{ scopeLabel }}
-                        </span>
-                    </div>
+                <div class="mt-2 flex items-center justify-between gap-3">
+                    <p class="min-w-0 truncate text-[11px] text-neutral-500 dark:text-neutral-400">
+                        {{ selectedModelOption?.description || modelHint }}
+                    </p>
+                    <span
+                        class="shrink-0 rounded-full border border-neutral-200/80 bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-500 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:text-neutral-400"
+                    >
+                        {{ scopeLabel }}
+                    </span>
                 </div>
 
-                <div class="mt-4 grid grid-cols-2 gap-3">
+                <div class="mt-2 flex flex-wrap items-center gap-2">
                     <button
                         type="button"
-                        class="rounded-[1.4rem] border border-neutral-200/80 bg-white/90 px-4 py-3 text-left shadow-sm transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:hover:border-neutral-700"
+                        class="inline-flex min-w-0 items-center gap-2 rounded-full border border-neutral-200/80 bg-white/90 px-3 py-2 text-left shadow-sm transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:hover:border-neutral-700"
+                        :title="selectedToolPresetOption?.description"
                         @click="cycleToolPreset"
                     >
-                        <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
+                        <UIcon name="i-lucide-sliders-horizontal" class="size-3.5 shrink-0 text-neutral-500 dark:text-neutral-400" />
+                        <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
                             Mode
-                        </p>
-                        <p class="mt-1 text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+                        </span>
+                        <span class="truncate text-xs font-semibold text-neutral-950 dark:text-neutral-50">
                             {{ selectedToolPresetOption?.label }}
-                        </p>
-                        <p class="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-                            {{ selectedToolPresetOption?.description }}
-                        </p>
+                        </span>
                     </button>
 
                     <button
                         type="button"
-                        class="rounded-[1.4rem] border border-neutral-200/80 bg-white/90 px-4 py-3 text-left shadow-sm transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:hover:border-neutral-700"
+                        class="inline-flex min-w-0 flex-1 items-center gap-2 rounded-full border border-neutral-200/80 bg-white/90 px-3 py-2 text-left shadow-sm transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:hover:border-neutral-700"
                         @click="toggleModelLibrary"
                     >
-                        <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
+                        <UIcon name="i-lucide-cpu" class="size-3.5 shrink-0 text-neutral-500 dark:text-neutral-400" />
+                        <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
                             Model
-                        </p>
-                        <p class="mt-1 truncate text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+                        </span>
+                        <span class="min-w-0 flex-1 truncate text-xs font-semibold text-neutral-950 dark:text-neutral-50">
                             {{ selectedModelOption?.label || "Default model" }}
-                        </p>
-                        <p class="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-                            {{ isModelLibraryOpen ? "Hide model library" : `${modelCount} models available` }}
-                        </p>
+                        </span>
+                        <span
+                            class="rounded-full border border-neutral-200/80 bg-neutral-50/90 px-2 py-0.5 text-[10px] font-semibold text-neutral-500 dark:border-neutral-800/80 dark:bg-neutral-800/80 dark:text-neutral-400"
+                        >
+                            {{ modelCount }}
+                        </span>
                     </button>
                 </div>
 
-                <div v-if="topModelOptions.length > 0" class="mt-4">
-                    <div class="mb-2 flex items-center justify-between gap-3">
-                        <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
-                            Quick models
-                        </p>
-                        <p class="text-[10px] text-neutral-400">
-                            Starred models stay here.
-                        </p>
-                    </div>
-
-                    <div class="flex flex-wrap gap-2">
-                        <div
-                            v-for="model in topModelOptions"
-                            :key="model.id"
-                            class="inline-flex items-center gap-1.5 rounded-full border px-2 py-1.5 shadow-sm"
-                            :class="selectedModelId === model.id
-                                ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
-                                : 'border-neutral-200/80 bg-white/90 text-neutral-700 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:text-neutral-300'"
-                        >
+                <div v-if="topModelOptions.length > 0" class="mt-2">
+                    <div
+                        class="rounded-[1.2rem] border border-neutral-200/80 bg-white/85 p-2 shadow-sm dark:border-neutral-800/80 dark:bg-neutral-900/80"
+                    >
+                        <div class="mb-1.5 flex items-center justify-between gap-2 px-1">
+                            <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+                                Quick models
+                            </p>
                             <button
                                 type="button"
-                                class="max-w-[10rem] truncate px-1 text-xs font-medium"
-                                @click="selectModel(model.id)"
+                                class="rounded-full border border-neutral-200/80 bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500 transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:text-neutral-400 dark:hover:border-neutral-700"
+                                @click="toggleModelLibrary"
                             >
-                                {{ model.label }}
-                            </button>
-                            <button
-                                type="button"
-                                class="rounded-full p-1 transition"
-                                :class="selectedModelId === model.id ? 'hover:bg-white/10 dark:hover:bg-neutral-200/70' : 'hover:bg-neutral-200 dark:hover:bg-neutral-800'"
-                                @click="toggleFavoriteModel(model.id)"
-                            >
-                                <UIcon
-                                    :name="isFavoriteModel(model.id) ? 'i-lucide-star' : 'i-lucide-star-off'"
-                                    class="size-3.5"
-                                />
+                                Browse
                             </button>
                         </div>
-                    </div>
-                </div>
 
-                <div
-                    v-if="isModelLibraryOpen"
-                    class="mt-4 rounded-[1.75rem] border border-neutral-200/80 bg-white/95 p-3 shadow-xl shadow-black/10 dark:border-neutral-800/80 dark:bg-neutral-950/95"
-                >
-                    <div class="flex items-center justify-between gap-3 px-2 pb-3">
-                        <div>
-                            <p class="text-sm font-semibold text-neutral-950 dark:text-neutral-50">
-                                Model library
-                            </p>
-                            <p class="text-xs text-neutral-500 dark:text-neutral-400">
-                                Pick a model, set your new default, and star the ones you want pinned at the top.
-                            </p>
-                        </div>
-                        <UButton
-                            color="neutral"
-                            variant="ghost"
-                            size="xs"
-                            icon="i-lucide-x"
-                            class="rounded-full"
-                            @click="isModelLibraryOpen = false"
-                        />
-                    </div>
-
-                    <div v-if="isLoadingModels" class="px-2 py-6 text-center text-sm text-neutral-500 dark:text-neutral-400">
-                        Loading models...
-                    </div>
-
-                    <div v-else class="space-y-4">
-                        <div v-if="favoriteModelOptions.length > 0" class="space-y-2">
-                            <p class="px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
-                                Starred
-                            </p>
-                            <div class="space-y-2">
-                                <div
-                                    v-for="model in favoriteModelOptions"
-                                    :key="model.id"
-                                    class="rounded-[1.4rem] border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70"
+                        <div class="-mx-0.5 flex gap-2 overflow-x-auto px-0.5 pb-0.5">
+                            <div
+                                v-for="model in topModelOptions"
+                                :key="model.id"
+                                class="relative min-w-[10.5rem] shrink-0 rounded-[1rem] border px-3 py-2.5 text-left shadow-sm transition"
+                                :class="selectedModelId === model.id
+                                    ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
+                                    : 'border-neutral-200/80 bg-white/95 text-neutral-700 hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/95 dark:text-neutral-300 dark:hover:border-neutral-700'"
+                            >
+                                <button
+                                    type="button"
+                                    class="w-full text-left"
+                                    @click="selectModel(model.id)"
                                 >
-                                    <div class="flex items-start justify-between gap-3">
-                                        <button
-                                            type="button"
-                                            class="min-w-0 flex-1 text-left"
-                                            @click="selectModel(model.id)"
-                                        >
-                                            <p class="truncate text-sm font-semibold text-neutral-950 dark:text-neutral-50">
-                                                {{ model.label }}
-                                            </p>
-                                            <p class="mt-1 truncate text-xs text-neutral-500 dark:text-neutral-400">
-                                                {{ model.description }}
-                                            </p>
-                                        </button>
-                                        <div class="flex items-center gap-1">
-                                            <UButton
-                                                color="neutral"
-                                                variant="ghost"
-                                                size="xs"
-                                                :icon="currentDefaultModelId === model.id ? 'i-lucide-badge-check' : 'i-lucide-circle'"
-                                                class="rounded-full"
-                                                @click="setPreferredDefaultModel(model.id)"
-                                            />
-                                            <UButton
-                                                color="neutral"
-                                                variant="ghost"
-                                                size="xs"
-                                                :icon="isFavoriteModel(model.id) ? 'i-lucide-star' : 'i-lucide-star-off'"
-                                                class="rounded-full"
-                                                @click="toggleFavoriteModel(model.id)"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="space-y-2">
-                            <p class="px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
-                                All models
-                            </p>
-                            <div class="max-h-64 space-y-2 overflow-y-auto pr-1">
-                                <div
-                                    v-for="model in otherModelOptions"
-                                    :key="model.id"
-                                    class="rounded-[1.4rem] border p-3 transition"
-                                    :class="selectedModelId === model.id
-                                        ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
-                                        : 'border-neutral-200/80 bg-neutral-50/80 dark:border-neutral-800/80 dark:bg-neutral-900/70'"
+                                    <p class="truncate pr-6 text-xs font-semibold">
+                                        {{ model.label }}
+                                    </p>
+                                    <p
+                                        class="mt-1 truncate text-[10px]"
+                                        :class="selectedModelId === model.id ? 'text-white/70 dark:text-neutral-500' : 'text-neutral-500 dark:text-neutral-400'"
+                                    >
+                                        {{ model.description }}
+                                    </p>
+                                </button>
+                                <button
+                                    type="button"
+                                    class="absolute right-2 top-2 rounded-full p-1 transition"
+                                    :class="selectedModelId === model.id ? 'hover:bg-white/10 dark:hover:bg-neutral-200/70' : 'hover:bg-neutral-200 dark:hover:bg-neutral-800'"
+                                    @click.stop="toggleFavoriteModel(model.id)"
                                 >
-                                    <div class="flex items-start justify-between gap-3">
-                                        <button
-                                            type="button"
-                                            class="min-w-0 flex-1 text-left"
-                                            @click="selectModel(model.id)"
-                                        >
-                                            <div class="flex flex-wrap items-center gap-2">
-                                                <p class="truncate text-sm font-semibold">
-                                                    {{ model.label }}
-                                                </p>
-                                                <UBadge
-                                                    v-if="currentDefaultModelId === model.id"
-                                                    color="neutral"
-                                                    variant="soft"
-                                                    size="sm"
-                                                >
-                                                    Default
-                                                </UBadge>
-                                            </div>
-                                            <p
-                                                class="mt-1 truncate text-xs"
-                                                :class="selectedModelId === model.id ? 'text-white/70 dark:text-neutral-500' : 'text-neutral-500 dark:text-neutral-400'"
-                                            >
-                                                {{ model.description }}
-                                            </p>
-                                        </button>
-
-                                        <div class="flex items-center gap-1">
-                                            <UButton
-                                                color="neutral"
-                                                :variant="selectedModelId === model.id ? 'outline' : 'ghost'"
-                                                size="xs"
-                                                :icon="currentDefaultModelId === model.id ? 'i-lucide-badge-check' : 'i-lucide-circle'"
-                                                class="rounded-full"
-                                                @click="setPreferredDefaultModel(model.id)"
-                                            />
-                                            <UButton
-                                                color="neutral"
-                                                :variant="selectedModelId === model.id ? 'outline' : 'ghost'"
-                                                size="xs"
-                                                :icon="isFavoriteModel(model.id) ? 'i-lucide-star' : 'i-lucide-star-off'"
-                                                class="rounded-full"
-                                                @click="toggleFavoriteModel(model.id)"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+                                    <UIcon
+                                        :name="isFavoriteModel(model.id) ? 'i-lucide-star' : 'i-lucide-star-off'"
+                                        class="size-3.5"
+                                    />
+                                </button>
                             </div>
                         </div>
                     </div>
-
-                    <UAlert
-                        v-if="modelError"
-                        class="mt-3 rounded-2xl"
-                        color="error"
-                        variant="soft"
-                        icon="i-lucide-alert-circle"
-                        title="Model catalog error"
-                        :description="modelError"
-                    />
                 </div>
 
                 <UAlert
@@ -775,6 +640,144 @@ function renderAssistantMessage(content: string) {
                 />
             </div>
         </template>
+
+        <UModal
+            :open="isModelLibraryOpen"
+            title="Model library"
+            description="Pick a model, set your new default, and star the ones you want pinned."
+            :ui="{
+                content: 'sm:max-w-3xl overflow-hidden rounded-[28px]',
+                body: 'space-y-4 p-4 sm:p-5',
+            }"
+            @update:open="(value) => (isModelLibraryOpen = value)"
+        >
+            <template #body>
+                <div v-if="isLoadingModels" class="px-2 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
+                    Loading models...
+                </div>
+
+                <div v-else class="space-y-4">
+                    <div v-if="favoriteModelOptions.length > 0" class="space-y-2">
+                        <p class="px-1 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
+                            Starred
+                        </p>
+                        <div class="space-y-2">
+                            <div
+                                v-for="model in favoriteModelOptions"
+                                :key="model.id"
+                                class="rounded-[1.2rem] border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70"
+                            >
+                                <div class="flex items-start justify-between gap-3">
+                                    <button
+                                        type="button"
+                                        class="min-w-0 flex-1 text-left"
+                                        @click="selectModel(model.id)"
+                                    >
+                                        <p class="truncate text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+                                            {{ model.label }}
+                                        </p>
+                                        <p class="mt-1 truncate text-xs text-neutral-500 dark:text-neutral-400">
+                                            {{ model.description }}
+                                        </p>
+                                    </button>
+                                    <div class="flex items-center gap-1">
+                                        <UButton
+                                            color="neutral"
+                                            variant="ghost"
+                                            size="xs"
+                                            :icon="currentDefaultModelId === model.id ? 'i-lucide-badge-check' : 'i-lucide-circle'"
+                                            class="rounded-full"
+                                            @click="setPreferredDefaultModel(model.id)"
+                                        />
+                                        <UButton
+                                            color="neutral"
+                                            variant="ghost"
+                                            size="xs"
+                                            :icon="isFavoriteModel(model.id) ? 'i-lucide-star' : 'i-lucide-star-off'"
+                                            class="rounded-full"
+                                            @click="toggleFavoriteModel(model.id)"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <p class="px-1 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
+                            All models
+                        </p>
+                        <div class="max-h-[52vh] space-y-2 overflow-y-auto pr-1">
+                            <div
+                                v-for="model in otherModelOptions"
+                                :key="model.id"
+                                class="rounded-[1.2rem] border p-3 transition"
+                                :class="selectedModelId === model.id
+                                    ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
+                                    : 'border-neutral-200/80 bg-neutral-50/80 dark:border-neutral-800/80 dark:bg-neutral-900/70'"
+                            >
+                                <div class="flex items-start justify-between gap-3">
+                                    <button
+                                        type="button"
+                                        class="min-w-0 flex-1 text-left"
+                                        @click="selectModel(model.id)"
+                                    >
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <p class="truncate text-sm font-semibold">
+                                                {{ model.label }}
+                                            </p>
+                                            <UBadge
+                                                v-if="currentDefaultModelId === model.id"
+                                                color="neutral"
+                                                variant="soft"
+                                                size="sm"
+                                            >
+                                                Default
+                                            </UBadge>
+                                        </div>
+                                        <p
+                                            class="mt-1 truncate text-xs"
+                                            :class="selectedModelId === model.id ? 'text-white/70 dark:text-neutral-500' : 'text-neutral-500 dark:text-neutral-400'"
+                                        >
+                                            {{ model.description }}
+                                        </p>
+                                    </button>
+
+                                    <div class="flex items-center gap-1">
+                                        <UButton
+                                            color="neutral"
+                                            :variant="selectedModelId === model.id ? 'outline' : 'ghost'"
+                                            size="xs"
+                                            :icon="currentDefaultModelId === model.id ? 'i-lucide-badge-check' : 'i-lucide-circle'"
+                                            class="rounded-full"
+                                            @click="setPreferredDefaultModel(model.id)"
+                                        />
+                                        <UButton
+                                            color="neutral"
+                                            :variant="selectedModelId === model.id ? 'outline' : 'ghost'"
+                                            size="xs"
+                                            :icon="isFavoriteModel(model.id) ? 'i-lucide-star' : 'i-lucide-star-off'"
+                                            class="rounded-full"
+                                            @click="toggleFavoriteModel(model.id)"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <UAlert
+                    v-if="modelError"
+                    class="mt-1 rounded-2xl"
+                    color="error"
+                    variant="soft"
+                    icon="i-lucide-alert-circle"
+                    title="Model catalog error"
+                    :description="modelError"
+                />
+            </template>
+        </UModal>
 
         <UModal
             :open="isRenameDialogOpen"
