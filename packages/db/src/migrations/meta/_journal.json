@@ -8,6 +8,13 @@
       "when": 1774576755617,
       "tag": "0000_fantastic_wild_child",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1774602000000,
+      "tag": "0001_collapse_agent_modes",
+      "breakpoints": true
     }
   ]
 }

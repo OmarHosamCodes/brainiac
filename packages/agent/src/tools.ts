@@ -56,10 +56,31 @@ const workspaceBlockTypeSchema = z.enum([
   "custom",
 ]);
 
+const detailLevelSchema = z.enum(["summary", "full"]);
+
 const nodeReferenceSchema = z.object({
   id: z.string(),
   title: z.string(),
   label: z.string().nullable(),
+});
+
+const tabReferenceSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+});
+
+const customBlockTemplateReferenceSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  fieldCount: z.number().int().nonnegative(),
+  includeNotes: z.boolean(),
+});
+
+const blockReferenceSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  title: z.string(),
+  summary: z.string(),
 });
 
 const nodeSummarySchema = nodeReferenceSchema.extend({
@@ -77,16 +98,24 @@ const nodeSummarySchema = nodeReferenceSchema.extend({
       id: z.string(),
       title: z.string(),
       blockCount: z.number().int().nonnegative(),
-      blocks: z.array(
-        z.object({
-          id: z.string(),
-          type: z.string(),
-          title: z.string(),
-          summary: z.string(),
-        }),
-      ),
+      blocks: z.array(blockReferenceSchema),
     }),
   ),
+});
+
+const tabSummarySchema = tabReferenceSchema.extend({
+  blockCount: z.number().int().nonnegative(),
+  blocks: z.array(blockReferenceSchema),
+});
+
+const marketplaceItemSummarySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  kind: z.enum(["node", "tab", "block"]),
+  createdByName: z.string(),
+  updatedAt: z.string().datetime(),
+  payloadSummary: z.string(),
 });
 
 const mutationMetaSchema = z.object({
@@ -151,28 +180,30 @@ const getNodeDetailsOutputSchema = z.object({
 
 const getTabDetailsOutputSchema = z.object({
   node: nodeReferenceSchema.nullable(),
+  summary: tabSummarySchema.nullable(),
   tab: workspaceNodeTabSchema.nullable(),
-  customBlockTemplates: z.array(workspaceCustomBlockTemplateSchema),
+  customBlockTemplates: z.array(customBlockTemplateReferenceSchema),
+  rawCustomBlockTemplates: z.array(workspaceCustomBlockTemplateSchema),
 });
 
 const getBlockDetailsOutputSchema = z.object({
   node: nodeReferenceSchema.nullable(),
-  tab: z
-    .object({
-      id: z.string(),
-      title: z.string(),
-    })
-    .nullable(),
+  tab: tabReferenceSchema.nullable(),
+  summary: blockReferenceSchema.nullable(),
   block: workspaceBlockSchema.nullable(),
-  customBlockTemplate: workspaceCustomBlockTemplateSchema.nullable(),
+  customBlockTemplate: customBlockTemplateReferenceSchema.nullable(),
+  rawCustomBlockTemplate: workspaceCustomBlockTemplateSchema.nullable(),
 });
 
 const getMarketplaceItemDetailsOutputSchema = z.object({
+  summary: marketplaceItemSummarySchema.nullable(),
   item: workspaceMarketplaceItemSchema.nullable(),
 });
 
 const nodeMutationOutputSchema = mutationMetaSchema.extend({
-  node: workspaceNodeSchema,
+  node: nodeReferenceSchema,
+  tabsCount: z.number().int().nonnegative(),
+  blockCount: z.number().int().nonnegative(),
 });
 
 const deleteNodeOutputSchema = mutationMetaSchema.extend({
@@ -183,27 +214,32 @@ const deleteNodeOutputSchema = mutationMetaSchema.extend({
 
 const tabMutationOutputSchema = mutationMetaSchema.extend({
   node: nodeReferenceSchema,
-  tab: workspaceNodeTabSchema,
+  tab: tabReferenceSchema,
+  blockCount: z.number().int().nonnegative(),
 });
 
 const deleteTabOutputSchema = mutationMetaSchema.extend({
-  node: workspaceNodeSchema,
+  node: nodeReferenceSchema,
   deletedTabId: z.string(),
   deletedTabTitle: z.string(),
+  tabsCount: z.number().int().nonnegative(),
+  activeTabId: z.string().nullable(),
+  fallbackTab: tabReferenceSchema.nullable(),
 });
 
 const blockMutationOutputSchema = mutationMetaSchema.extend({
   node: nodeReferenceSchema,
-  tab: workspaceNodeTabSchema,
-  block: workspaceBlockSchema,
-  customBlockTemplate: workspaceCustomBlockTemplateSchema.nullable(),
+  tab: tabReferenceSchema,
+  block: blockReferenceSchema,
+  customBlockTemplate: customBlockTemplateReferenceSchema.nullable(),
 });
 
 const deleteBlockOutputSchema = mutationMetaSchema.extend({
   node: nodeReferenceSchema,
-  tab: workspaceNodeTabSchema,
+  tab: tabReferenceSchema,
   deletedBlockId: z.string(),
   deletedBlockTitle: z.string(),
+  remainingBlockCount: z.number().int().nonnegative(),
 });
 
 function truncate(value: string, length = 240) {
@@ -215,7 +251,7 @@ function truncate(value: string, length = 240) {
   return `${normalized.slice(0, Math.max(0, length - 1)).trimEnd()}…`;
 }
 
-function summarizeBlock(block: WorkspaceBlock) {
+export function summarizeBlock(block: WorkspaceBlock) {
   switch (block.type) {
     case "task-list":
       return `${block.tasks.length} tasks, ${block.tasks.filter((task) => task.completed).length} completed`;
@@ -226,7 +262,9 @@ function summarizeBlock(block: WorkspaceBlock) {
     case "tracker":
       return `${block.entries.length} tracker entries`;
     case "ai-prompt":
-      return truncate(block.latestOutput || block.prompt || "No prompt output yet");
+      return truncate(
+        block.latestOutput || block.prompt || "No prompt output yet",
+      );
     case "time-orchestrator":
       return `${block.settings.domains.length} domains across ${block.settings.quadrants.length} quadrants`;
     case "kanban":
@@ -236,14 +274,24 @@ function summarizeBlock(block: WorkspaceBlock) {
     case "scorecard":
       return `${block.metrics.length} metrics`;
     case "custom":
-      return truncate(block.notes || block.latestAiOutput || JSON.stringify(block.values));
+      return truncate(
+        block.notes || block.latestAiOutput || JSON.stringify(block.values),
+      );
     default:
       return "Workspace block";
   }
 }
 
 function getNodeBlockTypes(node: WorkspaceNode) {
-  return [...new Set(node.tabs.flatMap((tab) => tab.blocks.map((block) => block.type)))];
+  return [
+    ...new Set(
+      node.tabs.flatMap((tab) => tab.blocks.map((block) => block.type)),
+    ),
+  ];
+}
+
+function getNodeBlockCount(node: WorkspaceNode) {
+  return node.tabs.reduce((total, tab) => total + tab.blocks.length, 0);
 }
 
 function describeNodeReference(node: WorkspaceNode) {
@@ -259,12 +307,34 @@ function describeTabSummary(tab: WorkspaceNodeTab) {
     id: tab.id,
     title: tab.title,
     blockCount: tab.blocks.length,
-    blocks: tab.blocks.map((block) => ({
-      id: block.id,
-      type: block.type,
-      title: block.title,
-      summary: summarizeBlock(block),
-    })),
+    blocks: tab.blocks.map(describeBlockReference),
+  };
+}
+
+function describeTabReference(tab: WorkspaceNodeTab) {
+  return {
+    id: tab.id,
+    title: tab.title,
+  };
+}
+
+function describeBlockReference(block: WorkspaceBlock) {
+  return {
+    id: block.id,
+    type: block.type,
+    title: block.title,
+    summary: summarizeBlock(block),
+  };
+}
+
+function describeCustomBlockTemplateReference(
+  template: WorkspaceCustomBlockTemplate,
+) {
+  return {
+    id: template.id,
+    name: template.name,
+    fieldCount: template.fields.length,
+    includeNotes: template.includeNotes,
   };
 }
 
@@ -293,10 +363,15 @@ function getBlockTemplateIds(block: WorkspaceBlock) {
 }
 
 function getTabTemplateIds(tab: WorkspaceNodeTab) {
-  return [...new Set(tab.blocks.flatMap((block) => getBlockTemplateIds(block)))];
+  return [
+    ...new Set(tab.blocks.flatMap((block) => getBlockTemplateIds(block))),
+  ];
 }
 
-function getTemplatesByIds(node: WorkspaceNode, ids: string[]): WorkspaceCustomBlockTemplate[] {
+function getTemplatesByIds(
+  node: WorkspaceNode,
+  ids: string[],
+): WorkspaceCustomBlockTemplate[] {
   if (ids.length === 0) {
     return [];
   }
@@ -334,7 +409,9 @@ function findBlock(
       };
     }
 
-    const tabs = args.tabId ? node.tabs.filter((item) => item.id === args.tabId) : node.tabs;
+    const tabs = args.tabId
+      ? node.tabs.filter((item) => item.id === args.tabId)
+      : node.tabs;
 
     for (const tab of tabs) {
       const block = tab.blocks.find((item) => item.id === args.blockId);
@@ -407,7 +484,12 @@ function requireTab(nodes: WorkspaceNode[], nodeId: string, tabId: string) {
   };
 }
 
-function requireBlock(nodes: WorkspaceNode[], nodeId: string, tabId: string, blockId: string) {
+function requireBlock(
+  nodes: WorkspaceNode[],
+  nodeId: string,
+  tabId: string,
+  blockId: string,
+) {
   const { node, tab, block } = findBlock(nodes, {
     nodeId,
     tabId,
@@ -433,19 +515,34 @@ function requireBlock(nodes: WorkspaceNode[], nodeId: string, tabId: string, blo
   };
 }
 
-function getMissingCustomTemplateIds(node: WorkspaceNode, blocks: WorkspaceBlock[]) {
-  const knownTemplateIds = new Set(node.customBlockTemplates.map((template) => template.id));
+function getMissingCustomTemplateIds(
+  node: WorkspaceNode,
+  blocks: WorkspaceBlock[],
+) {
+  const knownTemplateIds = new Set(
+    node.customBlockTemplates.map((template) => template.id),
+  );
 
-  return [...new Set(blocks.flatMap((block) => {
-    if (block.type !== "custom" || knownTemplateIds.has(block.definitionId)) {
-      return [];
-    }
+  return [
+    ...new Set(
+      blocks.flatMap((block) => {
+        if (
+          block.type !== "custom" ||
+          knownTemplateIds.has(block.definitionId)
+        ) {
+          return [];
+        }
 
-    return [block.definitionId];
-  }))];
+        return [block.definitionId];
+      }),
+    ),
+  ];
 }
 
-function assertBlocksUseKnownCustomTemplates(node: WorkspaceNode, blocks: WorkspaceBlock[]) {
+function assertBlocksUseKnownCustomTemplates(
+  node: WorkspaceNode,
+  blocks: WorkspaceBlock[],
+) {
   const missingTemplateIds = getMissingCustomTemplateIds(node, blocks);
 
   if (missingTemplateIds.length === 0) {
@@ -480,12 +577,38 @@ function getSuggestedNodePosition(nodes: WorkspaceNode[]) {
   };
 }
 
-function getCustomBlockTemplateForBlock(node: WorkspaceNode, block: WorkspaceBlock) {
+function getCustomBlockTemplateForBlock(
+  node: WorkspaceNode,
+  block: WorkspaceBlock,
+) {
   if (block.type !== "custom") {
     return null;
   }
 
-  return node.customBlockTemplates.find((template) => template.id === block.definitionId) ?? null;
+  return (
+    node.customBlockTemplates.find(
+      (template) => template.id === block.definitionId,
+    ) ?? null
+  );
+}
+
+function summarizeMarketplaceItemPayload(item: WorkspaceMarketplaceItem) {
+  switch (item.payload.kind) {
+    case "node":
+      return truncate(
+        `${item.payload.node.title}\n${item.payload.node.content || "No description yet"}`,
+      );
+    case "tab":
+      return truncate(
+        `${item.payload.tab.title}\n${item.payload.tab.blocks.map((block) => block.title).join("\n")}`,
+      );
+    case "block":
+      return truncate(
+        `${item.payload.block.title}\n${summarizeBlock(item.payload.block)}`,
+      );
+    default:
+      return "Marketplace item";
+  }
 }
 
 function createBlockByType(args: {
@@ -518,7 +641,9 @@ function createBlockByType(args: {
       return createWorkspaceScorecardBlock(titleInput);
     case "custom": {
       if (!args.customTemplateId) {
-        throw new Error("A customTemplateId is required when creating a custom block.");
+        throw new Error(
+          "A customTemplateId is required when creating a custom block.",
+        );
       }
 
       const template = args.node.customBlockTemplates.find(
@@ -526,7 +651,9 @@ function createBlockByType(args: {
       );
 
       if (!template) {
-        throw new Error(`Custom template "${args.customTemplateId}" was not found.`);
+        throw new Error(
+          `Custom template "${args.customTemplateId}" was not found.`,
+        );
       }
 
       return createWorkspaceCustomBlock(template, titleInput);
@@ -583,7 +710,9 @@ function scoreSearchMatch(query: string, text: string) {
   const startsWithBoost = normalizedText.startsWith(normalizedQuery) ? 2 : 0;
 
   return (
-    exactMatches * 3 + startsWithBoost + Math.max(1, 12 - normalizedText.indexOf(normalizedQuery))
+    exactMatches * 3 +
+    startsWithBoost +
+    Math.max(1, 12 - normalizedText.indexOf(normalizedQuery))
   );
 }
 
@@ -657,7 +786,10 @@ export function buildWorkspaceOverview(nodes: WorkspaceNode[]) {
   return nodes
     .slice(0, 10)
     .map((node, index) => {
-      const blockCount = node.tabs.reduce((total, tab) => total + tab.blocks.length, 0);
+      const blockCount = node.tabs.reduce(
+        (total, tab) => total + tab.blocks.length,
+        0,
+      );
       const blockTypes = getNodeBlockTypes(node).join(", ") || "no blocks";
 
       return `${index + 1}. ${node.title} (${node.tabs.length} tabs, ${blockCount} blocks, ${blockTypes})`;
@@ -690,7 +822,10 @@ export function createDashboardAgentWorkspaceRuntime(args: {
       };
     },
     async applyMutation<TResult>(
-      mutator: (draft: WorkspaceNode[], timestamp: string) => TResult | Promise<TResult>,
+      mutator: (
+        draft: WorkspaceNode[],
+        timestamp: string,
+      ) => TResult | Promise<TResult>,
     ) {
       const draft = cloneWorkspaceNodes(currentNodes);
       const timestamp = new Date().toISOString();
@@ -716,24 +851,34 @@ export type DashboardAgentWorkspaceRuntime = ReturnType<
 export function buildDashboardAgentTools(
   workspace: DashboardAgentWorkspaceRuntime,
   marketplaceItems: WorkspaceMarketplaceItem[] = [],
+  profile: "ask" | "agent" = "ask",
 ) {
+  const profileGuidance =
+    profile === "agent"
+      ? "Start with summary data and request full raw payloads only for mutation prep or exact structural verification."
+      : "Prefer the summary response and avoid full raw payloads unless the answer is blocked or you are preparing a replace mutation.";
+
   return [
     tool({
       name: "list_dashboard_nodes",
-      description: "List the current dashboard nodes with structural summaries.",
+      description:
+        "List the current dashboard nodes with structural summaries.",
       inputSchema: z.object({
-        limit: z.number().int().min(1).max(50).default(20),
+        limit: z.number().int().min(1).max(50).default(10),
       }),
       outputSchema: listDashboardNodesOutputSchema,
       execute: async ({ limit }) => ({
-        nodes: workspace.getNodes().slice(0, limit).map((node) => ({
-          id: node.id,
-          title: node.title,
-          label: node.label ?? null,
-          contentPreview: truncate(node.content || "No description yet"),
-          tabsCount: node.tabs.length,
-          blockTypes: getNodeBlockTypes(node),
-        })),
+        nodes: workspace
+          .getNodes()
+          .slice(0, limit)
+          .map((node) => ({
+            id: node.id,
+            title: node.title,
+            label: node.label ?? null,
+            contentPreview: truncate(node.content || "No description yet"),
+            tabsCount: node.tabs.length,
+            blockTypes: getNodeBlockTypes(node),
+          })),
       }),
     }),
     tool({
@@ -742,7 +887,7 @@ export function buildDashboardAgentTools(
         "Search node titles, descriptions, tabs, and block summaries in the current dashboard.",
       inputSchema: z.object({
         query: z.string().trim().min(1),
-        limit: z.number().int().min(1).max(10).default(5),
+        limit: z.number().int().min(1).max(10).default(3),
       }),
       outputSchema: searchDashboardOutputSchema,
       execute: async ({ query, limit }) => ({
@@ -751,9 +896,10 @@ export function buildDashboardAgentTools(
     }),
     tool({
       name: "list_marketplace_items",
-      description: "List marketplace items available for reuse with their payload kinds.",
+      description:
+        "List marketplace items available for reuse with their payload kinds.",
       inputSchema: z.object({
-        limit: z.number().int().min(1).max(50).default(20),
+        limit: z.number().int().min(1).max(50).default(10),
       }),
       outputSchema: listMarketplaceItemsOutputSchema,
       execute: async ({ limit }) => ({
@@ -769,10 +915,11 @@ export function buildDashboardAgentTools(
     }),
     tool({
       name: "search_marketplace",
-      description: "Search marketplace item titles, summaries, and payload content.",
+      description:
+        "Search marketplace item titles, summaries, and payload content.",
       inputSchema: z.object({
         query: z.string().trim().min(1),
-        limit: z.number().int().min(1).max(10).default(5),
+        limit: z.number().int().min(1).max(10).default(3),
       }),
       outputSchema: searchMarketplaceOutputSchema,
       execute: async ({ query, limit }) => ({
@@ -781,65 +928,75 @@ export function buildDashboardAgentTools(
     }),
     tool({
       name: "get_node_details",
-      description:
-        "Inspect a single dashboard node with its full raw data and a lighter summary for fast review.",
+      description: `Inspect a single dashboard node. ${profileGuidance}`,
       inputSchema: z.object({
         nodeId: z.string().trim().min(1),
+        detailLevel: detailLevelSchema.default("summary"),
       }),
       outputSchema: getNodeDetailsOutputSchema,
-      execute: async ({ nodeId }) => {
+      execute: async ({ nodeId, detailLevel }) => {
         const node = findNode(workspace.getNodes(), nodeId);
 
         return {
-          node,
+          node: detailLevel === "full" ? node : null,
           summary: node ? describeNodeSummary(node) : null,
         };
       },
     }),
     tool({
       name: "get_tab_details",
-      description:
-        "Inspect a single dashboard tab with its full raw block data and related custom templates.",
+      description: `Inspect a single dashboard tab and its related templates. ${profileGuidance}`,
       inputSchema: z.object({
         nodeId: z.string().trim().min(1),
         tabId: z.string().trim().min(1),
+        detailLevel: detailLevelSchema.default("summary"),
       }),
       outputSchema: getTabDetailsOutputSchema,
-      execute: async ({ nodeId, tabId }) => {
+      execute: async ({ nodeId, tabId, detailLevel }) => {
         const { node, tab } = findTab(workspace.getNodes(), nodeId, tabId);
+        const templates =
+          node && tab ? getTemplatesByIds(node, getTabTemplateIds(tab)) : [];
 
         return {
           node: node ? describeNodeReference(node) : null,
-          tab,
-          customBlockTemplates: node && tab ? getTemplatesByIds(node, getTabTemplateIds(tab)) : [],
+          summary: tab ? describeTabSummary(tab) : null,
+          tab: detailLevel === "full" ? tab : null,
+          customBlockTemplates: templates.map(
+            describeCustomBlockTemplateReference,
+          ),
+          rawCustomBlockTemplates: detailLevel === "full" ? templates : [],
         };
       },
     }),
     tool({
       name: "get_block_details",
-      description:
-        "Inspect a single dashboard block with full raw data. Optionally constrain by node or tab when ids are known.",
+      description: `Inspect a single dashboard block. ${profileGuidance}`,
       inputSchema: z.object({
         blockId: z.string().trim().min(1),
         nodeId: z.string().trim().min(1).optional(),
         tabId: z.string().trim().min(1).optional(),
+        detailLevel: detailLevelSchema.default("summary"),
       }),
       outputSchema: getBlockDetailsOutputSchema,
-      execute: async ({ blockId, nodeId, tabId }) => {
-        const { node, tab, block } = findBlock(workspace.getNodes(), { blockId, nodeId, tabId });
+      execute: async ({ blockId, nodeId, tabId, detailLevel }) => {
+        const { node, tab, block } = findBlock(workspace.getNodes(), {
+          blockId,
+          nodeId,
+          tabId,
+        });
         const customBlockTemplate =
           node && block ? getCustomBlockTemplateForBlock(node, block) : null;
 
         return {
           node: node ? describeNodeReference(node) : null,
-          tab: tab
-            ? {
-                id: tab.id,
-                title: tab.title,
-              }
+          tab: tab ? describeTabReference(tab) : null,
+          summary: block ? describeBlockReference(block) : null,
+          block: detailLevel === "full" ? block : null,
+          customBlockTemplate: customBlockTemplate
+            ? describeCustomBlockTemplateReference(customBlockTemplate)
             : null,
-          block,
-          customBlockTemplate,
+          rawCustomBlockTemplate:
+            detailLevel === "full" ? customBlockTemplate : null,
         };
       },
     }),
@@ -858,76 +1015,95 @@ export function buildDashboardAgentTools(
         overviewTabTitle: z.string().trim().min(1).max(80).optional(),
       }),
       outputSchema: nodeMutationOutputSchema,
-      execute: async ({ title, content, x, y, width, height, tint, overviewTabTitle }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation((draft) => {
-          const suggestedPosition = getSuggestedNodePosition(draft);
-          const trimmedContent = content?.trim() ?? "";
-          const node = createWorkspaceNode({
-            title,
-            content: trimmedContent,
-            x: x ?? suggestedPosition.x,
-            y: y ?? suggestedPosition.y,
-            width,
-            height,
-            tabs: overviewTabTitle
-              ? [createDefaultWorkspaceTab(overviewTabTitle, trimmedContent)]
-              : undefined,
-            dashboard: tint
-              ? {
-                  tint,
-                  featuredBlocks: [],
-                }
-              : undefined,
-          });
+      execute: async ({
+        title,
+        content,
+        x,
+        y,
+        width,
+        height,
+        tint,
+        overviewTabTitle,
+      }) => {
+        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
+          (draft) => {
+            const suggestedPosition = getSuggestedNodePosition(draft);
+            const trimmedContent = content?.trim() ?? "";
+            const node = createWorkspaceNode({
+              title,
+              content: trimmedContent,
+              x: x ?? suggestedPosition.x,
+              y: y ?? suggestedPosition.y,
+              width,
+              height,
+              tabs: overviewTabTitle
+                ? [createDefaultWorkspaceTab(overviewTabTitle, trimmedContent)]
+                : undefined,
+              dashboard: tint
+                ? {
+                    tint,
+                    featuredBlocks: [],
+                  }
+                : undefined,
+            });
 
-          draft.push(node);
+            draft.push(node);
 
-          return {
-            nodeId: node.id,
-          };
-        });
+            return {
+              nodeId: node.id,
+            };
+          },
+        );
         const node = requireNode(workspace.getNodes(), result.nodeId);
 
         return {
-          node,
+          node: describeNodeReference(node),
           updatedAt,
           nodeCount,
+          tabsCount: node.tabs.length,
+          blockCount: getNodeBlockCount(node),
         };
       },
     }),
     tool({
       name: "replace_node",
       description:
-        "Replace a node with a full raw node payload. Use get_node_details first, edit the raw node, then call this tool.",
+        'Replace a node with a full raw node payload. Call get_node_details with detailLevel: "full" first, edit the raw node, then call this tool.',
       inputSchema: z.object({
         nodeId: z.string().trim().min(1),
         node: workspaceNodeSchema,
       }),
       outputSchema: nodeMutationOutputSchema,
       execute: async ({ nodeId, node }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation((draft, timestamp) => {
-          const currentNode = requireNode(draft, nodeId);
-          const currentIndex = draft.findIndex((entry) => entry.id === nodeId);
-          const nextNode = createWorkspaceNode({
-            ...node,
-            id: currentNode.id,
-            createdAt: currentNode.createdAt,
-            updatedAt: timestamp,
-          });
+        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
+          (draft, timestamp) => {
+            const currentNode = requireNode(draft, nodeId);
+            const currentIndex = draft.findIndex(
+              (entry) => entry.id === nodeId,
+            );
+            const nextNode = createWorkspaceNode({
+              ...node,
+              id: currentNode.id,
+              createdAt: currentNode.createdAt,
+              updatedAt: timestamp,
+            });
 
-          assertNodeUsesKnownCustomTemplates(nextNode);
-          draft[currentIndex] = nextNode;
+            assertNodeUsesKnownCustomTemplates(nextNode);
+            draft[currentIndex] = nextNode;
 
-          return {
-            nodeId: nextNode.id,
-          };
-        });
+            return {
+              nodeId: nextNode.id,
+            };
+          },
+        );
         const nextNode = requireNode(workspace.getNodes(), result.nodeId);
 
         return {
-          node: nextNode,
+          node: describeNodeReference(nextNode),
           updatedAt,
           nodeCount,
+          tabsCount: nextNode.tabs.length,
+          blockCount: getNodeBlockCount(nextNode),
         };
       },
     }),
@@ -940,17 +1116,21 @@ export function buildDashboardAgentTools(
       outputSchema: deleteNodeOutputSchema,
       execute: async (input) => {
         const { nodeId } = input;
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation((draft) => {
-          const node = requireNode(draft, nodeId);
-          const currentIndex = draft.findIndex((entry) => entry.id === node.id);
+        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
+          (draft) => {
+            const node = requireNode(draft, nodeId);
+            const currentIndex = draft.findIndex(
+              (entry) => entry.id === node.id,
+            );
 
-          draft.splice(currentIndex, 1);
+            draft.splice(currentIndex, 1);
 
-          return {
-            nodeId: node.id,
-            title: node.title,
-          };
-        });
+            return {
+              nodeId: node.id,
+              title: node.title,
+            };
+          },
+        );
 
         return deleteNodeOutputSchema.parse({
           deleted: true,
@@ -971,19 +1151,21 @@ export function buildDashboardAgentTools(
       }),
       outputSchema: tabMutationOutputSchema,
       execute: async ({ nodeId, title }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation((draft, timestamp) => {
-          const node = requireNode(draft, nodeId);
-          const tab = createDefaultWorkspaceTab(title?.trim() || "New tab");
+        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
+          (draft, timestamp) => {
+            const node = requireNode(draft, nodeId);
+            const tab = createDefaultWorkspaceTab(title?.trim() || "New tab");
 
-          node.tabs.push(tab);
-          node.viewState.activeTabId = tab.id;
-          node.updatedAt = timestamp;
+            node.tabs.push(tab);
+            node.viewState.activeTabId = tab.id;
+            node.updatedAt = timestamp;
 
-          return {
-            nodeId: node.id,
-            tabId: tab.id,
-          };
-        });
+            return {
+              nodeId: node.id,
+              tabId: tab.id,
+            };
+          },
+        );
         const { node, tab: nextTab } = requireTab(
           workspace.getNodes(),
           result.nodeId,
@@ -992,16 +1174,17 @@ export function buildDashboardAgentTools(
 
         return {
           node: describeNodeReference(node),
-          tab: nextTab,
+          tab: describeTabReference(nextTab),
           updatedAt,
           nodeCount,
+          blockCount: nextTab.blocks.length,
         };
       },
     }),
     tool({
       name: "replace_tab",
       description:
-        "Replace a tab with a full raw tab payload. Use get_tab_details first, edit the raw tab, then call this tool.",
+        'Replace a tab with a full raw tab payload. Call get_tab_details with detailLevel: "full" first, edit the raw tab, then call this tool.',
       inputSchema: z.object({
         nodeId: z.string().trim().min(1),
         tabId: z.string().trim().min(1),
@@ -1009,25 +1192,29 @@ export function buildDashboardAgentTools(
       }),
       outputSchema: tabMutationOutputSchema,
       execute: async ({ nodeId, tabId, tab }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation((draft, timestamp) => {
-          const { node, tab: currentTab } = requireTab(draft, nodeId, tabId);
-          const currentIndex = node.tabs.findIndex((entry) => entry.id === currentTab.id);
-          const nextTab = workspaceNodeTabSchema.parse({
-            ...tab,
-            id: currentTab.id,
-            createdAt: currentTab.createdAt,
-            updatedAt: timestamp,
-          });
+        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
+          (draft, timestamp) => {
+            const { node, tab: currentTab } = requireTab(draft, nodeId, tabId);
+            const currentIndex = node.tabs.findIndex(
+              (entry) => entry.id === currentTab.id,
+            );
+            const nextTab = workspaceNodeTabSchema.parse({
+              ...tab,
+              id: currentTab.id,
+              createdAt: currentTab.createdAt,
+              updatedAt: timestamp,
+            });
 
-          assertBlocksUseKnownCustomTemplates(node, nextTab.blocks);
-          node.tabs[currentIndex] = nextTab;
-          node.updatedAt = timestamp;
+            assertBlocksUseKnownCustomTemplates(node, nextTab.blocks);
+            node.tabs[currentIndex] = nextTab;
+            node.updatedAt = timestamp;
 
-          return {
-            nodeId: node.id,
-            tabId: nextTab.id,
-          };
-        });
+            return {
+              nodeId: node.id,
+              tabId: nextTab.id,
+            };
+          },
+        );
         const { node, tab: nextTab } = requireTab(
           workspace.getNodes(),
           result.nodeId,
@@ -1036,9 +1223,10 @@ export function buildDashboardAgentTools(
 
         return {
           node: describeNodeReference(node),
-          tab: nextTab,
+          tab: describeTabReference(nextTab),
           updatedAt,
           nodeCount,
+          blockCount: nextTab.blocks.length,
         };
       },
     }),
@@ -1052,42 +1240,58 @@ export function buildDashboardAgentTools(
       }),
       outputSchema: deleteTabOutputSchema,
       execute: async ({ nodeId, tabId }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation((draft, timestamp) => {
-          const { node, tab } = requireTab(draft, nodeId, tabId);
-          const deletedTabTitle = tab.title;
-          const currentIndex = node.tabs.findIndex((entry) => entry.id === tab.id);
+        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
+          (draft, timestamp) => {
+            const { node, tab } = requireTab(draft, nodeId, tabId);
+            const deletedTabTitle = tab.title;
+            const currentIndex = node.tabs.findIndex(
+              (entry) => entry.id === tab.id,
+            );
+            let fallbackTabId: string | null = null;
 
-          node.tabs = node.tabs.filter((entry) => entry.id !== tab.id);
+            node.tabs = node.tabs.filter((entry) => entry.id !== tab.id);
 
-          if (node.tabs.length === 0) {
-            const fallbackTab = createDefaultWorkspaceTab("Overview", node.content);
-            node.tabs = [fallbackTab];
-            node.viewState.activeTabId = fallbackTab.id;
-          } else if (node.viewState.activeTabId === tab.id) {
-            const nextTab =
-              node.tabs[currentIndex] ??
-              node.tabs[Math.max(0, currentIndex - 1)] ??
-              node.tabs[0] ??
-              null;
-            node.viewState.activeTabId = nextTab?.id ?? null;
-          }
+            if (node.tabs.length === 0) {
+              const fallbackTab = createDefaultWorkspaceTab(
+                "Overview",
+                node.content,
+              );
+              node.tabs = [fallbackTab];
+              node.viewState.activeTabId = fallbackTab.id;
+              fallbackTabId = fallbackTab.id;
+            } else if (node.viewState.activeTabId === tab.id) {
+              const nextTab =
+                node.tabs[currentIndex] ??
+                node.tabs[Math.max(0, currentIndex - 1)] ??
+                node.tabs[0] ??
+                null;
+              node.viewState.activeTabId = nextTab?.id ?? null;
+            }
 
-          node.updatedAt = timestamp;
+            node.updatedAt = timestamp;
 
-          return {
-            nodeId: node.id,
-            deletedTabId: tab.id,
-            deletedTabTitle,
-          };
-        });
+            return {
+              nodeId: node.id,
+              deletedTabId: tab.id,
+              deletedTabTitle,
+              fallbackTabId,
+            };
+          },
+        );
         const node = requireNode(workspace.getNodes(), result.nodeId);
+        const fallbackTab = result.fallbackTabId
+          ? (node.tabs.find((tab) => tab.id === result.fallbackTabId) ?? null)
+          : null;
 
         return {
-          node,
+          node: describeNodeReference(node),
           deletedTabId: result.deletedTabId,
           deletedTabTitle: result.deletedTabTitle,
           updatedAt,
           nodeCount,
+          tabsCount: node.tabs.length,
+          activeTabId: node.viewState.activeTabId ?? null,
+          fallbackTab: fallbackTab ? describeTabReference(fallbackTab) : null,
         };
       },
     }),
@@ -1104,26 +1308,32 @@ export function buildDashboardAgentTools(
       }),
       outputSchema: blockMutationOutputSchema,
       execute: async ({ nodeId, tabId, type, title, customTemplateId }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation((draft, timestamp) => {
-          const { node, tab } = requireTab(draft, nodeId, tabId);
-          const block = createBlockByType({
-            node,
-            type,
-            title,
-            customTemplateId,
-          });
+        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
+          (draft, timestamp) => {
+            const { node, tab } = requireTab(draft, nodeId, tabId);
+            const block = createBlockByType({
+              node,
+              type,
+              title,
+              customTemplateId,
+            });
 
-          tab.blocks.push(block);
-          tab.updatedAt = timestamp;
-          node.updatedAt = timestamp;
+            tab.blocks.push(block);
+            tab.updatedAt = timestamp;
+            node.updatedAt = timestamp;
 
-          return {
-            nodeId: node.id,
-            tabId: tab.id,
-            blockId: block.id,
-          };
-        });
-        const { node, tab, block: nextBlock } = requireBlock(
+            return {
+              nodeId: node.id,
+              tabId: tab.id,
+              blockId: block.id,
+            };
+          },
+        );
+        const {
+          node,
+          tab,
+          block: nextBlock,
+        } = requireBlock(
           workspace.getNodes(),
           result.nodeId,
           result.tabId,
@@ -1132,9 +1342,15 @@ export function buildDashboardAgentTools(
 
         return {
           node: describeNodeReference(node),
-          tab,
-          block: nextBlock,
-          customBlockTemplate: getCustomBlockTemplateForBlock(node, nextBlock),
+          tab: describeTabReference(tab),
+          block: describeBlockReference(nextBlock),
+          customBlockTemplate: (() => {
+            const template = getCustomBlockTemplateForBlock(node, nextBlock);
+
+            return template
+              ? describeCustomBlockTemplateReference(template)
+              : null;
+          })(),
           updatedAt,
           nodeCount,
         };
@@ -1143,7 +1359,7 @@ export function buildDashboardAgentTools(
     tool({
       name: "replace_block",
       description:
-        "Replace a block with a full raw block payload. Use get_block_details first, edit the raw block, then call this tool.",
+        'Replace a block with a full raw block payload. Call get_block_details with detailLevel: "full" first, edit the raw block, then call this tool.',
       inputSchema: z.object({
         nodeId: z.string().trim().min(1),
         tabId: z.string().trim().min(1),
@@ -1152,28 +1368,40 @@ export function buildDashboardAgentTools(
       }),
       outputSchema: blockMutationOutputSchema,
       execute: async ({ nodeId, tabId, blockId, block }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation((draft, timestamp) => {
-          const { node, tab, block: currentBlock } = requireBlock(draft, nodeId, tabId, blockId);
-          const currentIndex = tab.blocks.findIndex((entry) => entry.id === currentBlock.id);
-          const nextBlock = workspaceBlockSchema.parse({
-            ...block,
-            id: currentBlock.id,
-            createdAt: currentBlock.createdAt,
-            updatedAt: timestamp,
-          });
+        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
+          (draft, timestamp) => {
+            const {
+              node,
+              tab,
+              block: currentBlock,
+            } = requireBlock(draft, nodeId, tabId, blockId);
+            const currentIndex = tab.blocks.findIndex(
+              (entry) => entry.id === currentBlock.id,
+            );
+            const nextBlock = workspaceBlockSchema.parse({
+              ...block,
+              id: currentBlock.id,
+              createdAt: currentBlock.createdAt,
+              updatedAt: timestamp,
+            });
 
-          assertBlocksUseKnownCustomTemplates(node, [nextBlock]);
-          tab.blocks[currentIndex] = nextBlock;
-          tab.updatedAt = timestamp;
-          node.updatedAt = timestamp;
+            assertBlocksUseKnownCustomTemplates(node, [nextBlock]);
+            tab.blocks[currentIndex] = nextBlock;
+            tab.updatedAt = timestamp;
+            node.updatedAt = timestamp;
 
-          return {
-            nodeId: node.id,
-            tabId: tab.id,
-            blockId: nextBlock.id,
-          };
-        });
-        const { node, tab, block: nextBlock } = requireBlock(
+            return {
+              nodeId: node.id,
+              tabId: tab.id,
+              blockId: nextBlock.id,
+            };
+          },
+        );
+        const {
+          node,
+          tab,
+          block: nextBlock,
+        } = requireBlock(
           workspace.getNodes(),
           result.nodeId,
           result.tabId,
@@ -1182,9 +1410,15 @@ export function buildDashboardAgentTools(
 
         return {
           node: describeNodeReference(node),
-          tab,
-          block: nextBlock,
-          customBlockTemplate: getCustomBlockTemplateForBlock(node, nextBlock),
+          tab: describeTabReference(tab),
+          block: describeBlockReference(nextBlock),
+          customBlockTemplate: (() => {
+            const template = getCustomBlockTemplateForBlock(node, nextBlock);
+
+            return template
+              ? describeCustomBlockTemplateReference(template)
+              : null;
+          })(),
           updatedAt,
           nodeCount,
         };
@@ -1200,48 +1434,77 @@ export function buildDashboardAgentTools(
       }),
       outputSchema: deleteBlockOutputSchema,
       execute: async ({ nodeId, tabId, blockId }) => {
-        const { result, updatedAt, nodeCount } = await workspace.applyMutation((draft, timestamp) => {
-          const { node, tab, block } = requireBlock(draft, nodeId, tabId, blockId);
-          const deletedBlockTitle = block.title;
+        const { result, updatedAt, nodeCount } = await workspace.applyMutation(
+          (draft, timestamp) => {
+            const { node, tab, block } = requireBlock(
+              draft,
+              nodeId,
+              tabId,
+              blockId,
+            );
+            const deletedBlockTitle = block.title;
 
-          tab.blocks = tab.blocks.filter((entry) => entry.id !== block.id);
-          tab.updatedAt = timestamp;
-          node.updatedAt = timestamp;
+            tab.blocks = tab.blocks.filter((entry) => entry.id !== block.id);
+            tab.updatedAt = timestamp;
+            node.updatedAt = timestamp;
 
-          return {
-            nodeId: node.id,
-            tabId: tab.id,
-            deletedBlockId: block.id,
-            deletedBlockTitle,
-          };
-        });
-        const { node, tab } = requireTab(workspace.getNodes(), result.nodeId, result.tabId);
+            return {
+              nodeId: node.id,
+              tabId: tab.id,
+              deletedBlockId: block.id,
+              deletedBlockTitle,
+            };
+          },
+        );
+        const { node, tab } = requireTab(
+          workspace.getNodes(),
+          result.nodeId,
+          result.tabId,
+        );
 
         return {
           node: describeNodeReference(node),
-          tab,
+          tab: describeTabReference(tab),
           deletedBlockId: result.deletedBlockId,
           deletedBlockTitle: result.deletedBlockTitle,
           updatedAt,
           nodeCount,
+          remainingBlockCount: tab.blocks.length,
         };
       },
     }),
     tool({
       name: "get_marketplace_item_details",
-      description:
-        "Inspect a marketplace item with its full raw payload, including full node, tab, or block contents.",
+      description: `Inspect a marketplace item. ${profileGuidance}`,
       inputSchema: z.object({
         itemId: z.string().trim().min(1),
+        detailLevel: detailLevelSchema.default("summary"),
       }),
       outputSchema: getMarketplaceItemDetailsOutputSchema,
-      execute: async ({ itemId }) => ({
-        item: marketplaceItems.find((item) => item.id === itemId) ?? null,
-      }),
+      execute: async ({ itemId, detailLevel }) => {
+        const item =
+          marketplaceItems.find((entry) => entry.id === itemId) ?? null;
+
+        return {
+          summary: item
+            ? {
+                id: item.id,
+                title: item.title,
+                summary: item.summary,
+                kind: item.payload.kind,
+                createdByName: item.createdByName,
+                updatedAt: item.updatedAt,
+                payloadSummary: summarizeMarketplaceItemPayload(item),
+              }
+            : null,
+          item: detailLevel === "full" ? item : null,
+        };
+      },
     }),
     tool({
       name: "get_current_time",
-      description: "Get the current ISO timestamp for time-sensitive planning questions.",
+      description:
+        "Get the current ISO timestamp for time-sensitive planning questions.",
       inputSchema: z.object({}),
       outputSchema: z.object({
         iso: z.string(),

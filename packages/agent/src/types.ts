@@ -12,13 +12,42 @@ export const DASHBOARD_CONVERSATION_HISTORY_LIMIT = 50;
 export const DASHBOARD_CONVERSATION_MESSAGE_WINDOW = 20;
 
 export const agentMessageRoleSchema = z.enum(["user", "assistant", "system"]);
-export const dashboardConversationMessageRoleSchema = z.enum(["user", "assistant"]);
-export const dashboardAgentToolPresetSchema = z.enum([
+export const dashboardConversationMessageRoleSchema = z.enum([
+  "user",
+  "assistant",
+]);
+export const dashboardAgentCanonicalToolPresetSchema = z.enum(["ask", "agent"]);
+export const dashboardAgentLegacyToolPresetSchema = z.enum([
   "auto",
   "direct",
   "workspace-search",
   "deep-inspect",
 ]);
+export const dashboardAgentToolPresetSchema =
+  dashboardAgentCanonicalToolPresetSchema;
+
+export function normalizeDashboardAgentToolPreset(
+  preset?: string | null,
+): z.infer<typeof dashboardAgentCanonicalToolPresetSchema> {
+  switch (preset?.trim()) {
+    case "agent":
+    case "deep-inspect":
+      return "agent";
+    case "ask":
+    case "auto":
+    case "direct":
+    case "workspace-search":
+    default:
+      return "ask";
+  }
+}
+
+export const dashboardAgentToolPresetInputSchema = z
+  .union([
+    dashboardAgentCanonicalToolPresetSchema,
+    dashboardAgentLegacyToolPresetSchema,
+  ])
+  .transform((preset) => normalizeDashboardAgentToolPreset(preset));
 
 export const agentMessageSchema = z.object({
   role: agentMessageRoleSchema,
@@ -55,15 +84,19 @@ export const dashboardConversationMessageSchema = z.object({
   id: z.string().trim().min(1),
   role: dashboardConversationMessageRoleSchema,
   content: z.string().trim().min(1).max(20_000),
-  contextNodeTitles: z.array(z.string().trim().min(1).max(120)).max(24).default([]),
+  contextNodeTitles: z
+    .array(z.string().trim().min(1).max(120))
+    .max(24)
+    .default([]),
   model: z.string().trim().min(1).nullable(),
   toolsCalled: z.array(z.string().trim().min(1).max(120)).max(24).default([]),
   createdAt: z.string().datetime(),
 });
 
-export const dashboardConversationDetailSchema = dashboardConversationSummarySchema.extend({
-  messages: z.array(dashboardConversationMessageSchema).default([]),
-});
+export const dashboardConversationDetailSchema =
+  dashboardConversationSummarySchema.extend({
+    messages: z.array(dashboardConversationMessageSchema).default([]),
+  });
 
 export const dashboardConversationListResponseSchema = z.object({
   conversations: z
@@ -90,9 +123,12 @@ export const agentChatTurnInputSchema = z.object({
   content: z.string().trim().min(1).max(20_000),
   nodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
   scopeNodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
-  contextNodeTitles: z.array(z.string().trim().min(1).max(120)).max(24).optional(),
+  contextNodeTitles: z
+    .array(z.string().trim().min(1).max(120))
+    .max(24)
+    .optional(),
   model: z.string().trim().min(1).optional(),
-  toolPreset: dashboardAgentToolPresetSchema,
+  toolPreset: dashboardAgentToolPresetInputSchema,
 });
 
 export const agentChatTurnResponseSchema = z.object({
@@ -105,10 +141,18 @@ export const agentChatTurnResponseSchema = z.object({
 
 export type AgentMessage = z.infer<typeof agentMessageSchema>;
 export type AgentChatResponse = z.infer<typeof agentChatResponseSchema>;
-export type DashboardAgentToolPreset = z.infer<typeof dashboardAgentToolPresetSchema>;
-export type DashboardConversationSummary = z.infer<typeof dashboardConversationSummarySchema>;
-export type DashboardConversationMessage = z.infer<typeof dashboardConversationMessageSchema>;
-export type DashboardConversationDetail = z.infer<typeof dashboardConversationDetailSchema>;
+export type DashboardAgentToolPreset = z.infer<
+  typeof dashboardAgentToolPresetSchema
+>;
+export type DashboardConversationSummary = z.infer<
+  typeof dashboardConversationSummarySchema
+>;
+export type DashboardConversationMessage = z.infer<
+  typeof dashboardConversationMessageSchema
+>;
+export type DashboardConversationDetail = z.infer<
+  typeof dashboardConversationDetailSchema
+>;
 export type AgentChatTurnInput = z.infer<typeof agentChatTurnInputSchema>;
 export type AgentChatTurnResponse = z.infer<typeof agentChatTurnResponseSchema>;
 

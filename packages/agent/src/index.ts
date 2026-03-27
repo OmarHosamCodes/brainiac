@@ -6,6 +6,7 @@ import {
   buildDashboardAgentTools,
   buildWorkspaceOverview,
   createDashboardAgentWorkspaceRuntime,
+  summarizeBlock,
   type DashboardAgentWorkspaceRuntime,
 } from "./tools";
 import {
@@ -34,10 +35,14 @@ function hasScopedWorkspace(workspace: DashboardAgentWorkspaceContext) {
     return true;
   }
 
-  return workspace.scopeNodes.some((node, index) => node.id !== workspace.nodes[index]?.id);
+  return workspace.scopeNodes.some(
+    (node, index) => node.id !== workspace.nodes[index]?.id,
+  );
 }
 
-function buildFocusedWorkspaceDetails(nodes: ReturnType<typeof getScopedWorkspaceNodes>) {
+function buildFocusedWorkspaceDetails(
+  nodes: ReturnType<typeof getScopedWorkspaceNodes>,
+) {
   if (nodes.length !== 1) {
     return null;
   }
@@ -68,7 +73,7 @@ function buildFocusedWorkspaceDetails(nodes: ReturnType<typeof getScopedWorkspac
     `Tab title: ${tab.title}`,
     `Block type: ${block.type}`,
     `Block title: ${block.title || "Untitled block"}`,
-    `Block data JSON: ${JSON.stringify(block)}`,
+    `Block summary: ${summarizeBlock(block)}`,
   ].join("\n");
 }
 
@@ -104,14 +109,19 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
   ].join("\n");
 }
 
-function buildToolEnabledAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
+function buildToolEnabledAgentInstructions(
+  workspace: DashboardAgentWorkspaceContext,
+) {
   return [
     buildAgentInstructions(workspace),
     "When the user asks you to create, rename, update, or delete nodes, tabs, or blocks, use the workspace mutation tools instead of only describing the change.",
   ].join("\n");
 }
 
-function buildDirectAnswerInstructions(workspace: DashboardAgentWorkspaceContext, note?: string) {
+function buildDirectAnswerInstructions(
+  workspace: DashboardAgentWorkspaceContext,
+  note?: string,
+) {
   return [
     buildAgentInstructions(workspace),
     "Answer directly from the provided workspace context.",
@@ -121,20 +131,20 @@ function buildDirectAnswerInstructions(workspace: DashboardAgentWorkspaceContext
   ].join("\n");
 }
 
-function buildWorkspaceSearchInstructions(
+function buildAskInstructions(
   workspace: DashboardAgentWorkspaceContext,
   toolingUnavailable = false,
 ) {
   return [
     buildToolEnabledAgentInstructions(workspace),
     toolingUnavailable
-      ? "The selected model cannot call tools in this pass, so answer directly and say when deeper workspace inspection would require a tools-capable model."
-      : "When the user asks about the workspace, prefer listing or searching the workspace before synthesizing an answer.",
-    "Ground claims in retrieved workspace details instead of broad summaries when possible.",
+      ? "The selected model cannot call tools in this pass, so answer directly from the provided context and say when deeper inspection would require a tools-capable model."
+      : "Start from the provided workspace context. If you need inspection, prefer one compact list, search, or summary detail tool before answering.",
+    "Avoid full raw node, tab, block, or marketplace payloads unless the answer is blocked or you are preparing a replace mutation.",
   ].join("\n");
 }
 
-function buildDeepInspectInstructions(
+function buildAgentOnlyInstructions(
   workspace: DashboardAgentWorkspaceContext,
   toolingUnavailable = false,
 ) {
@@ -142,7 +152,8 @@ function buildDeepInspectInstructions(
     buildToolEnabledAgentInstructions(workspace),
     toolingUnavailable
       ? "The selected model cannot call tools in this pass, so explain that deep inspection is limited and answer from the provided context only."
-      : "Inspect the workspace before concluding. Use workspace tools to verify specifics, especially for prioritization, gaps, and recommendations.",
+      : "Inspect the workspace before concluding. Start with list, search, or summary detail tools to verify specifics before you answer.",
+    "Escalate to full raw node, tab, block, or marketplace payloads only when mutation prep or exact structural verification requires it.",
     "If tools are available and the workspace has nodes, do at least one inspection step before your final answer.",
   ].join("\n");
 }
@@ -160,37 +171,11 @@ function resolveAgentExecutionConfig(
   supportsTools: boolean,
 ) {
   switch (toolPreset) {
-    case "direct":
-      return {
-        shouldUseTools: false,
-        instructions: buildDirectAnswerInstructions(workspace),
-        fallbackInstructions: buildDirectAnswerInstructions(workspace),
-        maxSteps: 0,
-        maxOutputTokens: undefined,
-        shouldRetryForInspection: false,
-      };
-    case "workspace-search":
+    case "agent":
       return {
         shouldUseTools: supportsTools,
         instructions: supportsTools
-          ? buildWorkspaceSearchInstructions(workspace)
-          : buildDirectAnswerInstructions(
-              workspace,
-              "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
-            ),
-        fallbackInstructions: buildDirectAnswerInstructions(
-          workspace,
-          "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
-        ),
-        maxSteps: 8,
-        maxOutputTokens: undefined,
-        shouldRetryForInspection: false,
-      };
-    case "deep-inspect":
-      return {
-        shouldUseTools: supportsTools,
-        instructions: supportsTools
-          ? buildDeepInspectInstructions(workspace)
+          ? buildAgentOnlyInstructions(workspace)
           : buildDirectAnswerInstructions(
               workspace,
               "Deep inspection is limited because the selected model cannot call tools.",
@@ -199,17 +184,25 @@ function resolveAgentExecutionConfig(
           workspace,
           "Deep inspection is limited because the selected model cannot call tools.",
         ),
-        maxSteps: 12,
+        maxSteps: 10,
         maxOutputTokens: 1_200,
         shouldRetryForInspection: supportsTools && workspace.nodes.length > 0,
       };
-    case "auto":
+    case "ask":
     default:
       return {
         shouldUseTools: supportsTools,
-        instructions: buildToolEnabledAgentInstructions(workspace),
-        fallbackInstructions: buildDirectAnswerInstructions(workspace),
-        maxSteps: 8,
+        instructions: supportsTools
+          ? buildAskInstructions(workspace)
+          : buildDirectAnswerInstructions(
+              workspace,
+              "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
+            ),
+        fallbackInstructions: buildDirectAnswerInstructions(
+          workspace,
+          "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
+        ),
+        maxSteps: 6,
         maxOutputTokens: undefined,
         shouldRetryForInspection: false,
       };
@@ -220,13 +213,18 @@ async function runToolEnabledPass(args: {
   model: string;
   workspace: DashboardAgentWorkspaceContext;
   workspaceRuntime: DashboardAgentWorkspaceRuntime;
+  toolPreset: DashboardAgentToolPreset;
   normalizedMessages: ReturnType<typeof normalizeMessages>;
   instructions: string;
   maxSteps: number;
   temperature?: number;
   maxOutputTokens?: number;
 }) {
-  const tools = buildDashboardAgentTools(args.workspaceRuntime, args.workspace.marketplaceItems ?? []);
+  const tools = buildDashboardAgentTools(
+    args.workspaceRuntime,
+    args.workspace.marketplaceItems ?? [],
+    args.toolPreset,
+  );
   const calledTools = new Set<string>();
   const result = createOpenRouterClient().callModel({
     model: args.model,
@@ -234,8 +232,12 @@ async function runToolEnabledPass(args: {
     input: args.normalizedMessages,
     tools,
     stopWhen: [stepCountIs(args.maxSteps)],
-    ...(args.temperature === undefined ? {} : { temperature: args.temperature }),
-    ...(args.maxOutputTokens === undefined ? {} : { maxOutputTokens: args.maxOutputTokens }),
+    ...(args.temperature === undefined
+      ? {}
+      : { temperature: args.temperature }),
+    ...(args.maxOutputTokens === undefined
+      ? {}
+      : { maxOutputTokens: args.maxOutputTokens }),
   });
 
   const collectToolNames = (async () => {
@@ -246,7 +248,10 @@ async function runToolEnabledPass(args: {
     }
   })();
 
-  const [responseText] = await Promise.all([result.getText(), collectToolNames]);
+  const [responseText] = await Promise.all([
+    result.getText(),
+    collectToolNames,
+  ]);
 
   return {
     responseText: responseText.trim(),
@@ -267,10 +272,15 @@ export async function runDashboardAgent(
     updatedAt: workspace.updatedAt,
   });
   const selectedModel = await resolveOpenRouterFreeModel(config.model);
-  const model = selectedModel?.id ?? config.model?.trim() ?? DEFAULT_AGENT_MODEL;
-  const toolPreset = config.toolPreset ?? "auto";
+  const model =
+    selectedModel?.id ?? config.model?.trim() ?? DEFAULT_AGENT_MODEL;
+  const toolPreset = config.toolPreset ?? "ask";
   const supportsTools = selectedModel?.supportsTools ?? true;
-  const executionConfig = resolveAgentExecutionConfig(workspace, toolPreset, supportsTools);
+  const executionConfig = resolveAgentExecutionConfig(
+    workspace,
+    toolPreset,
+    supportsTools,
+  );
 
   let responseText = "";
 
@@ -280,11 +290,13 @@ export async function runDashboardAgent(
         model,
         workspace,
         workspaceRuntime,
+        toolPreset,
         normalizedMessages,
         instructions: executionConfig.instructions,
         maxSteps: executionConfig.maxSteps,
         temperature: config.temperature,
-        maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
+        maxOutputTokens:
+          executionConfig.maxOutputTokens ?? config.maxOutputTokens,
       });
 
       responseText = initialPass.responseText;
@@ -301,11 +313,13 @@ export async function runDashboardAgent(
           model,
           workspace,
           workspaceRuntime,
+          toolPreset,
           normalizedMessages,
           instructions: `${executionConfig.instructions}\nYou have not inspected the workspace yet. Call a relevant tool before answering.`,
           maxSteps: executionConfig.maxSteps,
           temperature: config.temperature,
-          maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
+          maxOutputTokens:
+            executionConfig.maxOutputTokens ?? config.maxOutputTokens,
         });
 
         if (retryPass.responseText) {
@@ -325,7 +339,8 @@ export async function runDashboardAgent(
   let finalResponse = responseText.trim();
 
   if (!finalResponse) {
-    const fallbackMaxOutputTokens = executionConfig.maxOutputTokens ?? config.maxOutputTokens;
+    const fallbackMaxOutputTokens =
+      executionConfig.maxOutputTokens ?? config.maxOutputTokens;
 
     finalResponse = (
       await client
@@ -333,7 +348,9 @@ export async function runDashboardAgent(
           model,
           instructions: executionConfig.fallbackInstructions,
           input: normalizedMessages,
-          ...(config.temperature === undefined ? {} : { temperature: config.temperature }),
+          ...(config.temperature === undefined
+            ? {}
+            : { temperature: config.temperature }),
           ...(fallbackMaxOutputTokens === undefined
             ? {}
             : { maxOutputTokens: fallbackMaxOutputTokens }),
@@ -348,7 +365,9 @@ export async function runDashboardAgent(
     model,
     toolsCalled: [...calledTools],
     workspaceNodeCount: workspaceRuntime.getNodes().length,
-    workspaceSnapshot: workspaceRuntime.hasChanges() ? workspaceRuntime.toSnapshot() : null,
+    workspaceSnapshot: workspaceRuntime.hasChanges()
+      ? workspaceRuntime.toSnapshot()
+      : null,
   };
 }
 

@@ -18,7 +18,8 @@ import { getErrorDebugDetails } from "~/utils/get-error-debug-details";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const MODEL_CATALOG_STALE_TIME_MS = 10 * 60 * 1000;
-const MODEL_PREFERENCES_STORAGE_KEY = "brainiac.dashboard.agent.model-preferences";
+const MODEL_PREFERENCES_STORAGE_KEY =
+  "brainiac.dashboard.agent.model-preferences";
 const relativeTimeFormatter = new Intl.RelativeTimeFormat("en", {
   numeric: "auto",
 });
@@ -83,15 +84,24 @@ function readModelPreferences(): DashboardAgentModelPreferences {
       };
     }
 
-    const parsedValue = JSON.parse(rawValue) as Partial<DashboardAgentModelPreferences>;
+    const parsedValue = JSON.parse(
+      rawValue,
+    ) as Partial<DashboardAgentModelPreferences>;
 
     return {
       defaultModelId:
-        typeof parsedValue.defaultModelId === "string" && parsedValue.defaultModelId.trim().length > 0
+        typeof parsedValue.defaultModelId === "string" &&
+        parsedValue.defaultModelId.trim().length > 0
           ? parsedValue.defaultModelId
           : undefined,
       favoriteModelIds: Array.isArray(parsedValue.favoriteModelIds)
-        ? [...new Set(parsedValue.favoriteModelIds.filter((value): value is string => typeof value === "string"))]
+        ? [
+            ...new Set(
+              parsedValue.favoriteModelIds.filter(
+                (value): value is string => typeof value === "string",
+              ),
+            ),
+          ]
         : [],
     };
   } catch {
@@ -106,7 +116,10 @@ function writeModelPreferences(preferences: DashboardAgentModelPreferences) {
     return;
   }
 
-  window.localStorage.setItem(MODEL_PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
+  window.localStorage.setItem(
+    MODEL_PREFERENCES_STORAGE_KEY,
+    JSON.stringify(preferences),
+  );
 }
 
 function buildConversationOption(conversation: DashboardConversationSummary) {
@@ -124,15 +137,11 @@ function buildConversationOption(conversation: DashboardConversationSummary) {
 
 function getToolPresetLabel(preset: DashboardAgentToolPreset) {
   switch (preset) {
-    case "direct":
-      return "Direct";
-    case "workspace-search":
-      return "Workspace Search";
-    case "deep-inspect":
-      return "Deep Inspect";
-    case "auto":
+    case "agent":
+      return "Agent";
+    case "ask":
     default:
-      return "Auto";
+      return "Ask";
   }
 }
 
@@ -140,8 +149,12 @@ function upsertConversationSummary(
   list: DashboardConversationSummary[],
   nextConversation: DashboardConversationSummary,
 ) {
-  return [nextConversation, ...list.filter((conversation) => conversation.id !== nextConversation.id)].sort(
-    (left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
+  return [
+    nextConversation,
+    ...list.filter((conversation) => conversation.id !== nextConversation.id),
+  ].sort(
+    (left, right) =>
+      new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime(),
   );
 }
 
@@ -156,7 +169,9 @@ function appendConversationMessages(
   } satisfies DashboardConversationDetail;
 }
 
-function toConversationSummary(detail: DashboardConversationDetail): DashboardConversationSummary {
+function toConversationSummary(
+  detail: DashboardConversationDetail,
+): DashboardConversationSummary {
   return {
     id: detail.id,
     title: detail.title,
@@ -185,11 +200,13 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   const isRenameDialogOpen = ref(false);
   const isDeleteDialogOpen = ref(false);
   const conversationDraftModelId = ref<string>();
-  const conversationDraftToolPreset = ref<DashboardAgentToolPreset>("auto");
+  const conversationDraftToolPreset = ref<DashboardAgentToolPreset>("ask");
   const preferredDefaultModelId = ref<string>();
   const favoriteModelIds = ref<string[]>([]);
   const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
-  const activeMention = computed(() => getActiveDashboardNodeMention(draft.value));
+  const activeMention = computed(() =>
+    getActiveDashboardNodeMention(draft.value),
+  );
   const selectedNodeIdSet = computed(() => new Set(selectedNodeIds.value));
   const favoriteModelIdSet = computed(() => new Set(favoriteModelIds.value));
   const selectedNodes = computed(() =>
@@ -210,7 +227,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     return singleScopeTitle.value ? [singleScopeTitle.value] : [];
   });
 
-  const conversationsListQueryOptions = orpc.agent.conversations.list.queryOptions();
+  const conversationsListQueryOptions =
+    orpc.agent.conversations.list.queryOptions();
   const freeModelsQuery = useQuery({
     ...orpc.agent.freeModels.queryOptions(),
     enabled: authEnabled,
@@ -227,12 +245,18 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         conversationId: activeConversationId.value ?? "",
       },
     }),
-    enabled: Boolean(authSession.value?.data?.user && activeConversationId.value),
+    enabled: Boolean(
+      authSession.value?.data?.user && activeConversationId.value,
+    ),
   }));
 
   const chatTurnMutation = useMutation(orpc.agent.chat.turn.mutationOptions());
-  const renameConversationMutation = useMutation(orpc.agent.conversations.rename.mutationOptions());
-  const deleteConversationMutation = useMutation(orpc.agent.conversations.delete.mutationOptions());
+  const renameConversationMutation = useMutation(
+    orpc.agent.conversations.rename.mutationOptions(),
+  );
+  const deleteConversationMutation = useMutation(
+    orpc.agent.conversations.delete.mutationOptions(),
+  );
 
   const mentionSuggestions = computed(() => {
     if (!activeMention.value) {
@@ -260,40 +284,42 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       ].join(" · "),
     })),
   );
-  const toolPresetOptions = computed(() => [
-    {
-      value: "auto",
-      label: "Auto",
-      description: "Balanced tool use when the model supports it.",
-    },
-    {
-      value: "direct",
-      label: "Direct",
-      description: "Skip tools and answer from current context.",
-    },
-    {
-      value: "workspace-search",
-      label: "Workspace Search",
-      description: "Bias toward listing and searching the workspace first.",
-    },
-    {
-      value: "deep-inspect",
-      label: "Deep Inspect",
-      description: "Inspect before concluding when tools are available.",
-    },
-  ] satisfies Array<{
-    value: DashboardAgentToolPreset;
-    label: string;
-    description: string;
-  }>);
+  const toolPresetOptions = computed(
+    () =>
+      [
+        {
+          value: "ask",
+          label: "Ask",
+          description:
+            "Start from the current context and use compact inspection only when needed.",
+        },
+        {
+          value: "agent",
+          label: "Agent",
+          description:
+            "Inspect before answering and escalate to deeper detail only when necessary.",
+        },
+      ] satisfies Array<{
+        value: DashboardAgentToolPreset;
+        label: string;
+        description: string;
+      }>,
+  );
 
-  const conversationList = computed(() => conversationsQuery.data.value?.conversations ?? []);
-  const conversationOptions = computed(() => conversationList.value.map(buildConversationOption));
-  const activeConversation = computed(() => activeConversationQuery.data.value ?? null);
+  const conversationList = computed(
+    () => conversationsQuery.data.value?.conversations ?? [],
+  );
+  const conversationOptions = computed(() =>
+    conversationList.value.map(buildConversationOption),
+  );
+  const activeConversation = computed(
+    () => activeConversationQuery.data.value ?? null,
+  );
   const activeConversationSummary = computed(
     () =>
-      conversationList.value.find((conversation) => conversation.id === activeConversationId.value)
-      ?? null,
+      conversationList.value.find(
+        (conversation) => conversation.id === activeConversationId.value,
+      ) ?? null,
   );
   const messages = computed(() => [
     ...(activeConversation.value?.messages ?? []),
@@ -321,10 +347,14 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     return [
       "Summarize the main themes in this dashboard.",
       "Which nodes look like the highest leverage items right now?",
-      firstNode ? `What stands out about "${firstNode.title}"?` : "What should I focus on first?",
+      firstNode
+        ? `What stands out about "${firstNode.title}"?`
+        : "What should I focus on first?",
     ];
   });
-  const canSend = computed(() => draft.value.trim().length > 0 && !chatTurnMutation.isPending.value);
+  const canSend = computed(
+    () => draft.value.trim().length > 0 && !chatTurnMutation.isPending.value,
+  );
   const composerPlaceholder = computed(() => {
     if (selectedNodes.value.length === 1) {
       return `Ask about “${selectedNodes.value[0]?.title}”. Type @ to add more nodes.`;
@@ -354,7 +384,10 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     return `All ${nodes.value.length} node${nodes.value.length === 1 ? "" : "s"} in scope`;
   });
   const activeConversationTitle = computed(
-    () => activeConversation.value?.title ?? activeConversationSummary.value?.title ?? "New conversation",
+    () =>
+      activeConversation.value?.title ??
+      activeConversationSummary.value?.title ??
+      "New conversation",
   );
   const activeToolPresetLabel = computed(() =>
     getToolPresetLabel(conversationDraftToolPreset.value),
@@ -372,9 +405,14 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     },
   });
   const effectiveDefaultModelId = computed(() => {
-    const availableModelIds = new Set(modelOptions.value.map((model) => model.id));
+    const availableModelIds = new Set(
+      modelOptions.value.map((model) => model.id),
+    );
 
-    if (preferredDefaultModelId.value && availableModelIds.has(preferredDefaultModelId.value)) {
+    if (
+      preferredDefaultModelId.value &&
+      availableModelIds.has(preferredDefaultModelId.value)
+    ) {
       return preferredDefaultModelId.value;
     }
 
@@ -388,8 +426,12 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   });
   const favoriteModelOptions = computed(() =>
     favoriteModelIds.value
-      .map((favoriteId) => modelOptions.value.find((model) => model.id === favoriteId))
-      .filter((model): model is (typeof modelOptions.value)[number] => Boolean(model)),
+      .map((favoriteId) =>
+        modelOptions.value.find((model) => model.id === favoriteId),
+      )
+      .filter((model): model is (typeof modelOptions.value)[number] =>
+        Boolean(model),
+      ),
   );
   const topModelOptions = computed(() => {
     const orderedIds = [
@@ -399,8 +441,12 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     ].filter((value): value is string => Boolean(value));
 
     return [...new Set(orderedIds)]
-      .map((modelId) => modelOptions.value.find((model) => model.id === modelId))
-      .filter((model): model is (typeof modelOptions.value)[number] => Boolean(model));
+      .map((modelId) =>
+        modelOptions.value.find((model) => model.id === modelId),
+      )
+      .filter((model): model is (typeof modelOptions.value)[number] =>
+        Boolean(model),
+      );
   });
   const otherModelOptions = computed(() => {
     const topModelIds = new Set(topModelOptions.value.map((model) => model.id));
@@ -413,8 +459,9 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   );
   const selectedToolPresetOption = computed(
     () =>
-      toolPresetOptions.value.find((preset) => preset.value === selectedToolPreset.value)
-      ?? toolPresetOptions.value[0],
+      toolPresetOptions.value.find(
+        (preset) => preset.value === selectedToolPreset.value,
+      ) ?? toolPresetOptions.value[0],
   );
   const modelHint = computed(() => {
     const selectedModel = selectedModelOption.value;
@@ -442,17 +489,25 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       : null,
   );
   const modelDebugDetails = computed(() =>
-    freeModelsQuery.isError.value ? getErrorDebugDetails(freeModelsQuery.error.value) : null,
+    freeModelsQuery.isError.value
+      ? getErrorDebugDetails(freeModelsQuery.error.value)
+      : null,
   );
   const hasConversations = computed(() => conversationList.value.length > 0);
-  const canRenameConversation = computed(() => Boolean(activeConversationId.value));
-  const canDeleteConversation = computed(() => Boolean(activeConversationId.value));
+  const canRenameConversation = computed(() =>
+    Boolean(activeConversationId.value),
+  );
+  const canDeleteConversation = computed(() =>
+    Boolean(activeConversationId.value),
+  );
 
   watch(
     nodes,
     (nextNodes) => {
       const availableNodeIds = new Set(nextNodes.map((node) => node.id));
-      selectedNodeIds.value = selectedNodeIds.value.filter((id) => availableNodeIds.has(id));
+      selectedNodeIds.value = selectedNodeIds.value.filter((id) =>
+        availableNodeIds.has(id),
+      );
     },
     { deep: true },
   );
@@ -465,23 +520,29 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       }
 
       const availableIds = new Set(payload.models.map((model) => model.id));
-      favoriteModelIds.value = favoriteModelIds.value.filter((modelId) => availableIds.has(modelId));
-
-      if (preferredDefaultModelId.value && !availableIds.has(preferredDefaultModelId.value)) {
-        preferredDefaultModelId.value = undefined;
-      }
-
-      const nextDefaultModel = (
-        preferredDefaultModelId.value && availableIds.has(preferredDefaultModelId.value)
-          ? preferredDefaultModelId.value
-          : availableIds.has(payload.defaultModel)
-            ? payload.defaultModel
-            : payload.models[0]?.id
+      favoriteModelIds.value = favoriteModelIds.value.filter((modelId) =>
+        availableIds.has(modelId),
       );
 
       if (
-        !activeConversationId.value
-        && (!conversationDraftModelId.value || !availableIds.has(conversationDraftModelId.value))
+        preferredDefaultModelId.value &&
+        !availableIds.has(preferredDefaultModelId.value)
+      ) {
+        preferredDefaultModelId.value = undefined;
+      }
+
+      const nextDefaultModel =
+        preferredDefaultModelId.value &&
+        availableIds.has(preferredDefaultModelId.value)
+          ? preferredDefaultModelId.value
+          : availableIds.has(payload.defaultModel)
+            ? payload.defaultModel
+            : payload.models[0]?.id;
+
+      if (
+        !activeConversationId.value &&
+        (!conversationDraftModelId.value ||
+          !availableIds.has(conversationDraftModelId.value))
       ) {
         conversationDraftModelId.value = nextDefaultModel;
       }
@@ -496,7 +557,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         return;
       }
 
-      conversationDraftModelId.value = conversation.model ?? conversationDraftModelId.value;
+      conversationDraftModelId.value =
+        conversation.model ?? conversationDraftModelId.value;
       conversationDraftToolPreset.value = conversation.toolPreset;
     },
     { immediate: true },
@@ -511,7 +573,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
 
     if (!activeConversationId.value) {
       conversationDraftModelId.value = effectiveDefaultModelId.value;
-      conversationDraftToolPreset.value = "auto";
+      conversationDraftToolPreset.value = "ask";
     }
   });
 
@@ -549,7 +611,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     error.value = null;
     errorDebugDetails.value = null;
     conversationDraftModelId.value = effectiveDefaultModelId.value;
-    conversationDraftToolPreset.value = "auto";
+    conversationDraftToolPreset.value = "ask";
   }
 
   function openRenameDialog() {
@@ -581,7 +643,11 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     const conversationId = activeConversationId.value;
     const title = renameDraft.value.trim();
 
-    if (!conversationId || !title || renameConversationMutation.isPending.value) {
+    if (
+      !conversationId ||
+      !title ||
+      renameConversationMutation.isPending.value
+    ) {
       return;
     }
 
@@ -594,19 +660,32 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         title,
       });
 
-      queryClient.setQueryData(getConversationDetailQueryKey(conversationId), updatedConversation);
-      queryClient.setQueryData(conversationsListQueryOptions.queryKey, (current: {
-        conversations?: DashboardConversationSummary[];
-      } | undefined) => ({
-        conversations: upsertConversationSummary(
-          current?.conversations ?? [],
-          toConversationSummary(updatedConversation),
-        ),
-      }));
+      queryClient.setQueryData(
+        getConversationDetailQueryKey(conversationId),
+        updatedConversation,
+      );
+      queryClient.setQueryData(
+        conversationsListQueryOptions.queryKey,
+        (
+          current:
+            | {
+                conversations?: DashboardConversationSummary[];
+              }
+            | undefined,
+        ) => ({
+          conversations: upsertConversationSummary(
+            current?.conversations ?? [],
+            toConversationSummary(updatedConversation),
+          ),
+        }),
+      );
 
       isRenameDialogOpen.value = false;
     } catch (renameError) {
-      error.value = getErrorMessage(renameError, "Failed to rename the conversation.");
+      error.value = getErrorMessage(
+        renameError,
+        "Failed to rename the conversation.",
+      );
       errorDebugDetails.value = getErrorDebugDetails(renameError);
     }
   }
@@ -629,18 +708,28 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       queryClient.removeQueries({
         queryKey: getConversationDetailQueryKey(conversationId),
       });
-      queryClient.setQueryData(conversationsListQueryOptions.queryKey, (current: {
-        conversations?: DashboardConversationSummary[];
-      } | undefined) => ({
-        conversations: (current?.conversations ?? []).filter(
-          (conversation) => conversation.id !== conversationId,
-        ),
-      }));
+      queryClient.setQueryData(
+        conversationsListQueryOptions.queryKey,
+        (
+          current:
+            | {
+                conversations?: DashboardConversationSummary[];
+              }
+            | undefined,
+        ) => ({
+          conversations: (current?.conversations ?? []).filter(
+            (conversation) => conversation.id !== conversationId,
+          ),
+        }),
+      );
 
       isDeleteDialogOpen.value = false;
       startNewConversation();
     } catch (deleteError) {
-      error.value = getErrorMessage(deleteError, "Failed to delete the conversation.");
+      error.value = getErrorMessage(
+        deleteError,
+        "Failed to delete the conversation.",
+      );
       errorDebugDetails.value = getErrorDebugDetails(deleteError);
     }
   }
@@ -662,7 +751,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       toolsCalled: [],
       createdAt: new Date().toISOString(),
     };
-    const scopedNodes = selectedNodes.value.length > 0 ? selectedNodes.value : nodes.value;
+    const scopedNodes =
+      selectedNodes.value.length > 0 ? selectedNodes.value : nodes.value;
 
     error.value = null;
     errorDebugDetails.value = null;
@@ -686,14 +776,25 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
 
       pendingMessages.value = [];
       activeConversationId.value = result.conversation.id;
-      conversationDraftModelId.value = result.conversation.model ?? conversationDraftModelId.value;
+      conversationDraftModelId.value =
+        result.conversation.model ?? conversationDraftModelId.value;
       conversationDraftToolPreset.value = result.conversation.toolPreset;
 
-      queryClient.setQueryData(conversationsListQueryOptions.queryKey, (current: {
-        conversations?: DashboardConversationSummary[];
-      } | undefined) => ({
-        conversations: upsertConversationSummary(current?.conversations ?? [], result.conversation),
-      }));
+      queryClient.setQueryData(
+        conversationsListQueryOptions.queryKey,
+        (
+          current:
+            | {
+                conversations?: DashboardConversationSummary[];
+              }
+            | undefined,
+        ) => ({
+          conversations: upsertConversationSummary(
+            current?.conversations ?? [],
+            result.conversation,
+          ),
+        }),
+      );
       queryClient.setQueryData(
         getConversationDetailQueryKey(result.conversation.id),
         (current: DashboardConversationDetail | undefined) =>
@@ -712,7 +813,10 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     } catch (mutationError) {
       pendingMessages.value = [];
       draft.value = content;
-      error.value = getErrorMessage(mutationError, "Failed to reach the dashboard agent.");
+      error.value = getErrorMessage(
+        mutationError,
+        "Failed to reach the dashboard agent.",
+      );
       errorDebugDetails.value = getErrorDebugDetails(mutationError);
     }
   }
@@ -740,9 +844,10 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     const currentIndex = toolPresetOptions.value.findIndex(
       (preset) => preset.value === selectedToolPreset.value,
     );
-    const nextIndex = currentIndex >= 0
-      ? (currentIndex + 1) % toolPresetOptions.value.length
-      : 0;
+    const nextIndex =
+      currentIndex >= 0
+        ? (currentIndex + 1) % toolPresetOptions.value.length
+        : 0;
     const nextPreset = toolPresetOptions.value[nextIndex];
 
     if (nextPreset) {
@@ -756,7 +861,9 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
 
   function toggleFavoriteModel(modelId: string) {
     if (favoriteModelIdSet.value.has(modelId)) {
-      favoriteModelIds.value = favoriteModelIds.value.filter((favoriteId) => favoriteId !== modelId);
+      favoriteModelIds.value = favoriteModelIds.value.filter(
+        (favoriteId) => favoriteId !== modelId,
+      );
       return;
     }
 
@@ -764,7 +871,9 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   }
 
   function setPreferredDefaultModel(modelId: string) {
-    const modelExists = modelOptions.value.some((model) => model.id === modelId);
+    const modelExists = modelOptions.value.some(
+      (model) => model.id === modelId,
+    );
 
     if (!modelExists) {
       return;
