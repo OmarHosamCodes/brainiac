@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { WorkspaceNode } from "@brainiac/workspace";
 import { computed, nextTick, toRef, useTemplateRef, watch } from "vue";
+import { renderSimpleMarkdown } from "~/utils/render-simple-markdown";
 
 const props = defineProps<{
     nodes: WorkspaceNode[];
@@ -94,6 +95,10 @@ watch(
         void scrollToBottom();
     },
 );
+
+function renderAssistantMessage(content: string) {
+    return renderSimpleMarkdown(content);
+}
 </script>
 
 <template>
@@ -271,7 +276,17 @@ watch(
                             : 'rounded-[1.5rem] rounded-tl-none border border-neutral-200/50 bg-white text-neutral-800 shadow-xl shadow-black/5 dark:border-neutral-800/50 dark:bg-neutral-900 dark:text-neutral-200',
                     ]"
                 >
-                    <p class="whitespace-pre-wrap">{{ message.content }}</p>
+                    <p
+                        v-if="message.role === 'user'"
+                        class="whitespace-pre-wrap"
+                    >
+                        {{ message.content }}
+                    </p>
+                    <div
+                        v-else
+                        class="prose prose-sm prose-neutral dark:prose-invert max-w-none text-inherit"
+                        v-html="renderAssistantMessage(message.content)"
+                    />
                 </div>
 
                 <div
@@ -487,6 +502,18 @@ watch(
 </template>
 
 <style scoped>
+:deep(.prose) {
+    color: inherit;
+}
+
+:deep(.prose :first-child) {
+    margin-top: 0;
+}
+
+:deep(.prose :last-child) {
+    margin-bottom: 0;
+}
+
 ::-webkit-scrollbar {
     width: 4px;
 }
