@@ -190,6 +190,10 @@ function createSeedNode({
       activeTabId: tabs[0]?.id ?? null,
       notePreviewState: {},
     },
+    dashboard: {
+      tint: "neutral",
+      featuredBlocks: [],
+    },
   });
 }
 
