@@ -6,7 +6,7 @@ import type {
 } from "@brainiac/agent";
 import type { WorkspaceNode } from "@brainiac/workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
-import { computed, ref, watch, type Ref } from "vue";
+import { computed, onMounted, ref, watch, type Ref } from "vue";
 
 import {
   getActiveDashboardNodeMention,
@@ -17,6 +17,7 @@ import { getErrorDebugDetails } from "~/utils/get-error-debug-details";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const MODEL_CATALOG_STALE_TIME_MS = 10 * 60 * 1000;
+const MODEL_PREFERENCES_STORAGE_KEY = "brainiac.dashboard.agent.model-preferences";
 const relativeTimeFormatter = new Intl.RelativeTimeFormat("en", {
   numeric: "auto",
 });
@@ -24,6 +25,11 @@ const contextLengthFormatter = new Intl.NumberFormat("en", {
   notation: "compact",
   maximumFractionDigits: 1,
 });
+
+type DashboardAgentModelPreferences = {
+  defaultModelId?: string;
+  favoriteModelIds: string[];
+};
 
 function formatContextLength(contextLength: number | null) {
   if (!contextLength) {
@@ -58,6 +64,48 @@ function formatRelativeTime(value: string) {
   }
 
   return relativeTimeFormatter.format(days, "day");
+}
+
+function readModelPreferences(): DashboardAgentModelPreferences {
+  if (!import.meta.client) {
+    return {
+      favoriteModelIds: [],
+    };
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(MODEL_PREFERENCES_STORAGE_KEY);
+
+    if (!rawValue) {
+      return {
+        favoriteModelIds: [],
+      };
+    }
+
+    const parsedValue = JSON.parse(rawValue) as Partial<DashboardAgentModelPreferences>;
+
+    return {
+      defaultModelId:
+        typeof parsedValue.defaultModelId === "string" && parsedValue.defaultModelId.trim().length > 0
+          ? parsedValue.defaultModelId
+          : undefined,
+      favoriteModelIds: Array.isArray(parsedValue.favoriteModelIds)
+        ? [...new Set(parsedValue.favoriteModelIds.filter((value): value is string => typeof value === "string"))]
+        : [],
+    };
+  } catch {
+    return {
+      favoriteModelIds: [],
+    };
+  }
+}
+
+function writeModelPreferences(preferences: DashboardAgentModelPreferences) {
+  if (!import.meta.client) {
+    return;
+  }
+
+  window.localStorage.setItem(MODEL_PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
 }
 
 function buildConversationOption(conversation: DashboardConversationSummary) {
@@ -135,9 +183,12 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   const isDeleteDialogOpen = ref(false);
   const conversationDraftModelId = ref<string>();
   const conversationDraftToolPreset = ref<DashboardAgentToolPreset>("auto");
+  const preferredDefaultModelId = ref<string>();
+  const favoriteModelIds = ref<string[]>([]);
   const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
   const activeMention = computed(() => getActiveDashboardNodeMention(draft.value));
   const selectedNodeIdSet = computed(() => new Set(selectedNodeIds.value));
+  const favoriteModelIdSet = computed(() => new Set(favoriteModelIds.value));
   const selectedNodes = computed(() =>
     nodes.value.filter((node) => selectedNodeIdSet.value.has(node.id)),
   );
@@ -182,6 +233,9 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     (freeModelsQuery.data.value?.models ?? []).map((model) => ({
       id: model.id,
       label: model.name,
+      provider: model.provider,
+      supportsTools: model.supportsTools,
+      contextLength: model.contextLength,
       description: [
         formatContextLength(model.contextLength),
         model.supportsTools ? "Tools enabled" : "Direct answers",
@@ -284,9 +338,53 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       conversationDraftToolPreset.value = value;
     },
   });
+  const effectiveDefaultModelId = computed(() => {
+    const availableModelIds = new Set(modelOptions.value.map((model) => model.id));
+
+    if (preferredDefaultModelId.value && availableModelIds.has(preferredDefaultModelId.value)) {
+      return preferredDefaultModelId.value;
+    }
+
+    const serverDefaultModelId = freeModelsQuery.data.value?.defaultModel;
+
+    if (serverDefaultModelId && availableModelIds.has(serverDefaultModelId)) {
+      return serverDefaultModelId;
+    }
+
+    return modelOptions.value[0]?.id;
+  });
+  const favoriteModelOptions = computed(() =>
+    favoriteModelIds.value
+      .map((favoriteId) => modelOptions.value.find((model) => model.id === favoriteId))
+      .filter((model): model is (typeof modelOptions.value)[number] => Boolean(model)),
+  );
+  const topModelOptions = computed(() => {
+    const orderedIds = [
+      ...favoriteModelIds.value,
+      selectedModelId.value,
+      effectiveDefaultModelId.value,
+    ].filter((value): value is string => Boolean(value));
+
+    return [...new Set(orderedIds)]
+      .map((modelId) => modelOptions.value.find((model) => model.id === modelId))
+      .filter((model): model is (typeof modelOptions.value)[number] => Boolean(model));
+  });
+  const otherModelOptions = computed(() => {
+    const topModelIds = new Set(topModelOptions.value.map((model) => model.id));
+
+    return modelOptions.value.filter((model) => !topModelIds.has(model.id));
+  });
   const modelCount = computed(() => modelOptions.value.length);
+  const selectedModelOption = computed(() =>
+    modelOptions.value.find((model) => model.id === selectedModelId.value),
+  );
+  const selectedToolPresetOption = computed(
+    () =>
+      toolPresetOptions.value.find((preset) => preset.value === selectedToolPreset.value)
+      ?? toolPresetOptions.value[0],
+  );
   const modelHint = computed(() => {
-    const selectedModel = modelOptions.value.find((model) => model.id === selectedModelId.value);
+    const selectedModel = selectedModelOption.value;
 
     if (selectedModel) {
       return selectedModel.description;
@@ -334,11 +432,24 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       }
 
       const availableIds = new Set(payload.models.map((model) => model.id));
-      const nextDefaultModel = availableIds.has(payload.defaultModel)
-        ? payload.defaultModel
-        : payload.models[0]?.id;
+      favoriteModelIds.value = favoriteModelIds.value.filter((modelId) => availableIds.has(modelId));
 
-      if (!conversationDraftModelId.value || !availableIds.has(conversationDraftModelId.value)) {
+      if (preferredDefaultModelId.value && !availableIds.has(preferredDefaultModelId.value)) {
+        preferredDefaultModelId.value = undefined;
+      }
+
+      const nextDefaultModel = (
+        preferredDefaultModelId.value && availableIds.has(preferredDefaultModelId.value)
+          ? preferredDefaultModelId.value
+          : availableIds.has(payload.defaultModel)
+            ? payload.defaultModel
+            : payload.models[0]?.id
+      );
+
+      if (
+        !activeConversationId.value
+        && (!conversationDraftModelId.value || !availableIds.has(conversationDraftModelId.value))
+      ) {
         conversationDraftModelId.value = nextDefaultModel;
       }
     },
@@ -364,6 +475,29 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     errorDebugDetails.value = null;
     pendingMessages.value = [];
     selectedNodeIds.value = [];
+
+    if (!activeConversationId.value) {
+      conversationDraftModelId.value = effectiveDefaultModelId.value;
+      conversationDraftToolPreset.value = "auto";
+    }
+  });
+
+  watch(
+    [preferredDefaultModelId, favoriteModelIds],
+    ([nextDefaultModelId, nextFavoriteModelIds]) => {
+      writeModelPreferences({
+        defaultModelId: nextDefaultModelId,
+        favoriteModelIds: nextFavoriteModelIds,
+      });
+    },
+    { deep: true },
+  );
+
+  onMounted(() => {
+    const preferences = readModelPreferences();
+
+    preferredDefaultModelId.value = preferences.defaultModelId;
+    favoriteModelIds.value = preferences.favoriteModelIds;
   });
 
   function getConversationDetailQueryKey(conversationId: string) {
@@ -381,6 +515,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     pendingMessages.value = [];
     error.value = null;
     errorDebugDetails.value = null;
+    conversationDraftModelId.value = effectiveDefaultModelId.value;
+    conversationDraftToolPreset.value = "auto";
   }
 
   function openRenameDialog() {
@@ -559,6 +695,47 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     selectedNodeIds.value = [];
   }
 
+  function cycleToolPreset() {
+    const currentIndex = toolPresetOptions.value.findIndex(
+      (preset) => preset.value === selectedToolPreset.value,
+    );
+    const nextIndex = currentIndex >= 0
+      ? (currentIndex + 1) % toolPresetOptions.value.length
+      : 0;
+    const nextPreset = toolPresetOptions.value[nextIndex];
+
+    if (nextPreset) {
+      selectedToolPreset.value = nextPreset.value;
+    }
+  }
+
+  function isFavoriteModel(modelId: string) {
+    return favoriteModelIdSet.value.has(modelId);
+  }
+
+  function toggleFavoriteModel(modelId: string) {
+    if (favoriteModelIdSet.value.has(modelId)) {
+      favoriteModelIds.value = favoriteModelIds.value.filter((favoriteId) => favoriteId !== modelId);
+      return;
+    }
+
+    favoriteModelIds.value = [...favoriteModelIds.value, modelId];
+  }
+
+  function setPreferredDefaultModel(modelId: string) {
+    const modelExists = modelOptions.value.some((model) => model.id === modelId);
+
+    if (!modelExists) {
+      return;
+    }
+
+    preferredDefaultModelId.value = modelId;
+
+    if (!activeConversationId.value) {
+      conversationDraftModelId.value = modelId;
+    }
+  }
+
   return {
     activeConversation,
     activeConversationId,
@@ -576,13 +753,17 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     confirmDeleteConversation,
     conversationList,
     conversationOptions,
+    currentDefaultModelId: effectiveDefaultModelId,
+    cycleToolPreset,
     deleteDialogOpen: isDeleteDialogOpen,
     draft,
     error,
     errorDebugDetails,
+    favoriteModelOptions,
     hasConversations,
     isDeleteDialogOpen,
     isDeletingConversation: deleteConversationMutation.isPending,
+    isFavoriteModel,
     isLoadingConversation: activeConversationQuery.isLoading,
     isLoadingModels: freeModelsQuery.isLoading,
     isPending: chatTurnMutation.isPending,
@@ -597,16 +778,22 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     modelOptions,
     openDeleteDialog,
     openRenameDialog,
+    otherModelOptions,
     promptSuggestions,
     removeMentionedNode,
     renameDraft,
     scopeLabel,
     selectedModelId,
+    selectedModelOption,
     selectedNodes,
     selectedToolPreset,
+    selectedToolPresetOption,
     sendMessage,
+    setPreferredDefaultModel,
     startNewConversation,
     submitRenameConversation,
+    toggleFavoriteModel,
+    topModelOptions,
     toolPresetOptions,
   };
 }
