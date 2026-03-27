@@ -1,25 +1,25 @@
 import {
-  agentChatResponseSchema,
-  agentMessageSchema,
+  agentChatTurnInputSchema,
+  agentChatTurnResponseSchema,
+  dashboardConversationDeleteInputSchema,
+  dashboardConversationDetailSchema,
+  dashboardConversationGetInputSchema,
+  dashboardConversationListResponseSchema,
+  dashboardConversationRenameInputSchema,
   listOpenRouterFreeModels,
   openRouterFreeModelsResponseSchema,
-  runDashboardAgent,
 } from "@brainiac/agent";
-import {
-  WORKSPACE_NODE_LIMIT,
-  workspaceNodeSchema,
-} from "@brainiac/workspace";
 import { z } from "zod";
 
 import { protectedProcedure } from "../procedures";
 import { toInternalServerError } from "../dev-errors";
-import { getWorkspaceSnapshot } from "./workspace/service";
-
-const agentChatInputSchema = z.object({
-  messages: z.array(agentMessageSchema).min(1).max(24),
-  nodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
-  model: z.string().trim().min(1).optional(),
-});
+import {
+  appendDashboardConversationTurn,
+  deleteDashboardConversation,
+  getDashboardConversation,
+  listDashboardConversations,
+  renameDashboardConversation,
+} from "./agent/service";
 
 export const agentRouter = {
   freeModels: protectedProcedure.handler(async () => {
@@ -31,33 +31,89 @@ export const agentRouter = {
       throw toInternalServerError("agent.freeModels", error);
     }
   }),
-  chat: protectedProcedure
-    .input(agentChatInputSchema)
-    .handler(async ({ input, context }) => {
+  chat: {
+    turn: protectedProcedure
+      .input(agentChatTurnInputSchema)
+      .handler(async ({ input, context }) => {
+        try {
+          return agentChatTurnResponseSchema.parse(
+            await appendDashboardConversationTurn(
+              context.session.user.id,
+              context.session.user.name,
+              input,
+            ),
+          );
+        } catch (error) {
+          throw toInternalServerError("agent.chat.turn", error, {
+            conversationId: input.conversationId ?? null,
+            requestedNodesCount: input.nodes?.length,
+            workspaceSource: input.nodes ? "request" : "database",
+            requestedModel: input.model ?? null,
+            toolPreset: input.toolPreset,
+          });
+        }
+      }),
+  },
+  conversations: {
+    list: protectedProcedure.handler(async ({ context }) => {
       try {
-        const workspaceSnapshot = input.nodes
-          ? {
-              nodes: input.nodes,
-              updatedAt: null,
-            }
-          : await getWorkspaceSnapshot(context.session.user.id);
-
-        const result = await runDashboardAgent(input.messages, {
-          nodes: workspaceSnapshot.nodes,
-          updatedAt: workspaceSnapshot.updatedAt,
-          userName: context.session.user.name,
-        }, {
-          model: input.model,
-        });
-
-        return agentChatResponseSchema.parse(result);
+        return dashboardConversationListResponseSchema.parse(
+          await listDashboardConversations(context.session.user.id),
+        );
       } catch (error) {
-        throw toInternalServerError("agent.chat", error, {
-          inputMessagesCount: input.messages.length,
-          requestedNodesCount: input.nodes?.length,
-          workspaceSource: input.nodes ? "request" : "database",
-          requestedModel: input.model ?? null,
-        });
+        throw toInternalServerError("agent.conversations.list", error);
       }
     }),
+    get: protectedProcedure
+      .input(dashboardConversationGetInputSchema)
+      .handler(async ({ input, context }) => {
+        try {
+          return dashboardConversationDetailSchema.parse(
+            await getDashboardConversation(context.session.user.id, input.conversationId),
+          );
+        } catch (error) {
+          throw toInternalServerError("agent.conversations.get", error, {
+            conversationId: input.conversationId,
+          });
+        }
+      }),
+    rename: protectedProcedure
+      .input(dashboardConversationRenameInputSchema)
+      .handler(async ({ input, context }) => {
+        try {
+          return dashboardConversationDetailSchema.parse(
+            await renameDashboardConversation(
+              context.session.user.id,
+              input.conversationId,
+              input.title,
+            ),
+          );
+        } catch (error) {
+          throw toInternalServerError("agent.conversations.rename", error, {
+            conversationId: input.conversationId,
+          });
+        }
+      }),
+    delete: protectedProcedure
+      .input(dashboardConversationDeleteInputSchema)
+      .handler(async ({ input, context }) => {
+        try {
+          return z
+            .object({
+              deleted: z.boolean(),
+              conversationId: z.string(),
+            })
+            .parse(
+              await deleteDashboardConversation(
+                context.session.user.id,
+                input.conversationId,
+              ),
+            );
+        } catch (error) {
+          throw toInternalServerError("agent.conversations.delete", error, {
+            conversationId: input.conversationId,
+          });
+        }
+      }),
+  },
 };
