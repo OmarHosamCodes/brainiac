@@ -24,6 +24,12 @@ const {
 
 const progress = computed(() => getTaskListProgress(props.block));
 
+const expandedTaskId = ref<string | null>(null);
+
+function toggleTask(taskId: string) {
+    expandedTaskId.value = expandedTaskId.value === taskId ? null : taskId;
+}
+
 function toTaskPriority(value: string): WorkspaceTaskPriority | null {
     return value === "low" || value === "medium" || value === "high"
         ? value
@@ -31,16 +37,8 @@ function toTaskPriority(value: string): WorkspaceTaskPriority | null {
 }
 
 function toTaskDomain(value: string): WorkspaceTaskDomain | null {
-    return value === "strategy" ||
-        value === "people" ||
-        value === "sales" ||
-        value === "content" ||
-        value === "brand" ||
-        value === "finance" ||
-        value === "education" ||
-        value === "orchestrator"
-        ? value
-        : null;
+    const validDomains = ["strategy", "people", "sales", "content", "brand", "finance", "education", "orchestrator"];
+    return validDomains.includes(value) ? (value as WorkspaceTaskDomain) : null;
 }
 
 function clampTenPointScale(value: string) {
@@ -67,230 +65,212 @@ function getSelectValue(event: Event) {
 </script>
 
 <template>
-    <div
-        class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-muted/60 bg-elevated/40 p-4"
-    >
-        <div>
-            <p class="text-sm font-medium text-highlighted">Progress</p>
-            <p class="text-sm text-muted">
-                {{ progress.completed }}/{{ progress.total }} tasks complete
-            </p>
+    <div class="space-y-6">
+        <!-- Progress Header -->
+        <div class="flex items-center gap-6 rounded-3xl bg-elevated/20 p-5">
+            <div class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                <span class="text-lg font-bold">{{ Math.round((progress.completed / Math.max(progress.total, 1)) * 100) }}%</span>
+            </div>
+            
+            <div class="flex-1 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                    <p class="text-sm font-bold text-highlighted">Task Completion</p>
+                    <p class="text-xs font-semibold text-muted">
+                        {{ progress.completed }} of {{ progress.total }} tasks
+                    </p>
+                </div>
+                <UProgress
+                    :model-value="progress.completed"
+                    :max="Math.max(progress.total, 1)"
+                    size="sm"
+                    class="rounded-full"
+                />
+            </div>
         </div>
 
-        <div class="min-w-[220px] flex-1">
-            <UProgress
-                :model-value="progress.completed"
-                :max="Math.max(progress.total, 1)"
-                status
-            />
-        </div>
-    </div>
-
-    <div class="space-y-3">
-        <div
-            v-for="task in block.tasks"
-            :key="task.id"
-            class="space-y-4 rounded-2xl border border-muted/60 bg-default p-4"
-        >
+        <!-- Task List -->
+        <div class="space-y-2">
             <div
-                class="grid gap-3 xl:grid-cols-[auto_minmax(0,1fr)_150px_120px_160px_auto]"
+                v-for="task in block.tasks"
+                :key="task.id"
+                class="group flex flex-col overflow-hidden rounded-2xl border border-muted/20 bg-default/40 transition-all hover:border-primary/20 hover:bg-default/60"
+                :class="{ 'ring-1 ring-primary/30': expandedTaskId === task.id }"
             >
-                <label class="mt-2 flex items-start justify-center">
-                    <input
-                        :checked="task.completed"
-                        type="checkbox"
-                        class="size-4 rounded border border-muted/80 text-primary focus:ring-primary"
-                        @change="
+                <!-- Task Main Row -->
+                <div class="flex items-center gap-3 p-3">
+                    <UCheckbox
+                        :model-value="task.completed"
+                        class="size-5 shrink-0"
+                        @update:model-value="
                             mutateTask(tabId, block.id, task.id, (entry) => {
-                                entry.completed = getCheckedValue($event);
+                                entry.completed = !!$event;
                             })
                         "
                     />
-                </label>
 
-                <UInput
-                    :model-value="task.text"
-                    placeholder="Task description"
-                    @update:model-value="
-                        mutateTask(tabId, block.id, task.id, (entry) => {
-                            entry.text = ($event ?? '').slice(0, 240);
-                        })
-                    "
-                />
+                    <UInput
+                        :model-value="task.text"
+                        variant="none"
+                        placeholder="What needs to be done?"
+                        class="flex-1"
+                        :ui="{
+                            base: 'px-0 font-medium text-highlighted placeholder:text-muted/50 transition-all',
+                        }"
+                        @update:model-value="
+                            mutateTask(tabId, block.id, task.id, (entry) => {
+                                entry.text = ($event ?? '').slice(0, 240);
+                            })
+                        "
+                    />
 
-                <input
-                    :value="task.dueDate ?? ''"
-                    type="date"
-                    class="w-full rounded-xl border border-muted bg-default px-3 py-2 text-sm text-default outline-none ring-inset transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    @change="
-                        mutateTask(tabId, block.id, task.id, (entry) => {
-                            const value = getInputValue($event);
-                            entry.dueDate = value || null;
-                        })
-                    "
-                />
-
-                <select
-                    :value="task.priority ?? ''"
-                    class="w-full rounded-xl border border-muted bg-default px-3 py-2 text-sm text-default outline-none ring-inset transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    @change="
-                        mutateTask(tabId, block.id, task.id, (entry) => {
-                            entry.priority = toTaskPriority(
-                                getSelectValue($event),
-                            );
-                        })
-                    "
-                >
-                    <option
-                        v-for="option in priorityOptions"
-                        :key="option.label"
-                        :value="option.value"
-                    >
-                        {{ option.label }}
-                    </option>
-                </select>
-
-                <select
-                    :value="task.domain ?? ''"
-                    class="w-full rounded-xl border border-muted bg-default px-3 py-2 text-sm text-default outline-none ring-inset transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                    @change="
-                        mutateTask(tabId, block.id, task.id, (entry) => {
-                            entry.domain = toTaskDomain(getSelectValue($event));
-                        })
-                    "
-                >
-                    <option
-                        v-for="option in domainOptions"
-                        :key="option.label"
-                        :value="option.value"
-                    >
-                        {{ option.label }}
-                    </option>
-                </select>
-
-                <UButton
-                    color="neutral"
-                    variant="ghost"
-                    icon="i-lucide-x"
-                    @click="removeTask(tabId, block.id, task.id)"
-                />
-            </div>
-
-            <div class="grid gap-3 md:grid-cols-3">
-                <div
-                    class="rounded-2xl border border-muted/60 bg-elevated/20 p-3"
-                >
-                    <div class="flex items-center justify-between gap-3">
-                        <span
-                            class="text-xs font-medium uppercase tracking-[0.15em] text-muted"
-                            >Urgency</span
+                    <div class="flex items-center gap-1">
+                        <UBadge
+                            v-if="task.priority"
+                            variant="subtle"
+                            :class="getPriorityBadgeClass(task.priority)"
+                            class="rounded-lg text-[10px] uppercase tracking-wider"
                         >
-                        <span class="text-sm font-semibold text-highlighted"
-                            >{{ task.urgency }}/10</span
-                        >
+                            {{ task.priority }}
+                        </UBadge>
+                        
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            :icon="expandedTaskId === task.id ? 'i-lucide-chevron-up' : 'i-lucide-settings-2'"
+                            size="xs"
+                            class="rounded-lg opacity-0 group-hover:opacity-100"
+                            @click="toggleTask(task.id)"
+                        />
+                        
+                        <UButton
+                            color="neutral"
+                            variant="ghost"
+                            icon="i-lucide-trash-2"
+                            size="xs"
+                            class="rounded-lg opacity-0 hover:text-error group-hover:opacity-100"
+                            @click="removeTask(tabId, block.id, task.id)"
+                        />
                     </div>
-                    <input
-                        :value="task.urgency"
-                        type="range"
-                        min="1"
-                        max="10"
-                        class="mt-3 w-full accent-primary"
-                        @input="
-                            mutateTask(tabId, block.id, task.id, (entry) => {
-                                entry.urgency = clampTenPointScale(
-                                    getInputValue($event),
-                                );
-                            })
-                        "
-                    />
                 </div>
 
-                <div
-                    class="rounded-2xl border border-muted/60 bg-elevated/20 p-3"
+                <!-- Task Details Panel -->
+                <div 
+                    v-if="expandedTaskId === task.id"
+                    class="grid gap-4 border-t border-muted/10 bg-elevated/10 p-4 transition-all lg:grid-cols-2"
                 >
-                    <div class="flex items-center justify-between gap-3">
-                        <span
-                            class="text-xs font-medium uppercase tracking-[0.15em] text-muted"
-                            >Importance</span
-                        >
-                        <span class="text-sm font-semibold text-highlighted"
-                            >{{ task.importance }}/10</span
-                        >
-                    </div>
-                    <input
-                        :value="task.importance"
-                        type="range"
-                        min="1"
-                        max="10"
-                        class="mt-3 w-full accent-primary"
-                        @input="
-                            mutateTask(tabId, block.id, task.id, (entry) => {
-                                entry.importance = clampTenPointScale(
-                                    getInputValue($event),
-                                );
-                            })
-                        "
-                    />
-                </div>
+                    <div class="space-y-4">
+                        <UFormField label="Due Date" size="sm">
+                            <UInput
+                                :model-value="task.dueDate ?? ''"
+                                type="date"
+                                icon="i-lucide-calendar"
+                                class="rounded-xl"
+                                @update:model-value="
+                                    mutateTask(tabId, block.id, task.id, (entry) => {
+                                        entry.dueDate = $event || null;
+                                    })
+                                "
+                            />
+                        </UFormField>
 
-                <div
-                    class="rounded-2xl border border-muted/60 bg-elevated/20 p-3"
-                >
-                    <div class="flex items-center justify-between gap-3">
-                        <span
-                            class="text-xs font-medium uppercase tracking-[0.15em] text-muted"
-                            >Estimate</span
-                        >
-                        <span class="text-sm font-semibold text-highlighted"
-                            >{{ task.estimateMinutes }} min</span
-                        >
-                    </div>
-                    <input
-                        :value="task.estimateMinutes"
-                        type="number"
-                        min="0"
-                        max="1440"
-                        step="5"
-                        class="mt-3 w-full rounded-xl border border-muted bg-default px-3 py-2 text-sm text-default outline-none ring-inset transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                        @change="
-                            mutateTask(tabId, block.id, task.id, (entry) => {
-                                entry.estimateMinutes = clampEstimate(
-                                    getInputValue($event),
-                                );
-                            })
-                        "
-                    />
-                </div>
-            </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <UFormField label="Priority" size="sm">
+                                <USelect
+                                    :model-value="task.priority ?? ''"
+                                    :items="priorityOptions"
+                                    class="rounded-xl"
+                                    @update:model-value="
+                                        mutateTask(tabId, block.id, task.id, (entry) => {
+                                            entry.priority = toTaskPriority($event);
+                                        })
+                                    "
+                                />
+                            </UFormField>
 
-            <div class="flex flex-wrap items-center gap-2 text-xs text-muted">
-                <UBadge
-                    color="neutral"
-                    variant="subtle"
-                    :class="getPriorityBadgeClass(task.priority)"
-                >
-                    {{ task.priority || "No priority" }}
-                </UBadge>
-                <UBadge color="neutral" variant="soft">
-                    {{ task.domain || "Unassigned" }}
-                </UBadge>
-                <UBadge color="neutral" variant="soft"
-                    >U{{ task.urgency }}</UBadge
-                >
-                <UBadge color="neutral" variant="soft"
-                    >I{{ task.importance }}</UBadge
-                >
-                <span v-if="task.dueDate">Due {{ task.dueDate }}</span>
+                            <UFormField label="Domain" size="sm">
+                                <USelect
+                                    :model-value="task.domain ?? ''"
+                                    :items="domainOptions"
+                                    class="rounded-xl"
+                                    @update:model-value="
+                                        mutateTask(tabId, block.id, task.id, (entry) => {
+                                            entry.domain = toTaskDomain($event);
+                                        })
+                                    "
+                                />
+                            </UFormField>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-[10px] font-bold uppercase tracking-widest text-muted">Urgency</span>
+                                    <span class="text-xs font-bold text-primary">{{ task.urgency }}</span>
+                                </div>
+                                <input
+                                    :value="task.urgency"
+                                    type="range"
+                                    min="1"
+                                    max="10"
+                                    class="h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+                                    @input="
+                                        mutateTask(tabId, block.id, task.id, (entry) => {
+                                            entry.urgency = clampTenPointScale(getInputValue($event));
+                                        })
+                                    "
+                                />
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between gap-2">
+                                    <span class="text-[10px] font-bold uppercase tracking-widest text-muted">Importance</span>
+                                    <span class="text-xs font-bold text-primary">{{ task.importance }}</span>
+                                </div>
+                                <input
+                                    :value="task.importance"
+                                    type="range"
+                                    min="1"
+                                    max="10"
+                                    class="h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+                                    @input="
+                                        mutateTask(tabId, block.id, task.id, (entry) => {
+                                            entry.importance = clampTenPointScale(getInputValue($event));
+                                        })
+                                    "
+                                />
+                            </div>
+                        </div>
+
+                        <UFormField label="Estimate (minutes)" size="sm">
+                            <UInput
+                                :model-value="String(task.estimateMinutes)"
+                                type="number"
+                                min="0"
+                                step="5"
+                                icon="i-lucide-clock"
+                                class="rounded-xl"
+                                @update:model-value="
+                                    mutateTask(tabId, block.id, task.id, (entry) => {
+                                        entry.estimateMinutes = clampEstimate($event ?? '0');
+                                    })
+                                "
+                            />
+                        </UFormField>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
 
-    <UButton
-        color="neutral"
-        variant="soft"
-        icon="i-lucide-plus"
-        @click="addTask(tabId, block.id)"
-    >
-        Add task
-    </UButton>
+        <UButton
+            color="primary"
+            variant="soft"
+            icon="i-lucide-plus"
+            class="w-full rounded-2xl py-3 text-sm font-bold shadow-sm"
+            @click="addTask(tabId, block.id)"
+        >
+            Create Task
+        </UButton>
+    </div>
 </template>

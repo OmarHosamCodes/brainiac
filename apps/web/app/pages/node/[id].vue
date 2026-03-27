@@ -1439,46 +1439,46 @@ provide(workspaceNodeEditorContextKey, {
 </script>
 
 <template>
-    <div class="h-full overflow-y-auto px-4 py-6 md:px-6 xl:px-10">
-        <UAlert
-            v-if="workspaceQuery.status === 'error'"
-            color="error"
-            icon="i-lucide-alert-circle"
-            title="Workspace unavailable"
-            :description="
-                workspaceQuery.error?.message ||
-                'The user workspace could not be loaded.'
-            "
-        />
+    <div class="h-full w-full overflow-hidden">
+        <div v-if="workspaceQuery.status === 'error'" class="p-6">
+            <UAlert
+                color="error"
+                icon="i-lucide-alert-circle"
+                title="Workspace unavailable"
+                :description="
+                    workspaceQuery.error?.message ||
+                    'The user workspace could not be loaded.'
+                "
+            />
+        </div>
 
-        <div v-else-if="isWorkspaceInitialLoading" class="mx-auto max-w-6xl py-8">
-            <div class="rounded-[2rem] border border-muted/60 bg-default p-6 shadow-sm">
-                <div class="flex items-start justify-between gap-4">
-                    <div class="space-y-3">
-                        <USkeleton class="h-4 w-24" />
-                        <USkeleton class="h-10 w-72 max-w-full" />
-                        <USkeleton class="h-4 w-48" />
+        <div v-else-if="isWorkspaceInitialLoading" class="flex h-full w-full gap-0 overflow-hidden">
+            <!-- Sidebar Skeleton -->
+            <div class="w-80 border-r border-muted/30 bg-default/40 p-6 space-y-8">
+                <div class="space-y-4">
+                    <USkeleton class="h-8 w-24 rounded-lg" />
+                    <div class="space-y-2">
+                        <USkeleton class="h-4 w-16 rounded-full" />
+                        <USkeleton class="h-10 w-48 rounded-xl" />
                     </div>
-                    <USkeleton class="h-9 w-28 rounded-full" />
                 </div>
+                <div class="space-y-3">
+                    <USkeleton class="h-4 w-20 rounded-full" />
+                    <USkeleton class="h-12 w-full rounded-2xl" />
+                    <USkeleton class="h-12 w-full rounded-2xl" />
+                    <USkeleton class="h-12 w-full rounded-2xl" />
+                </div>
+            </div>
 
-                <div class="mt-8 grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
-                    <div class="space-y-3 rounded-[1.5rem] border border-muted/50 p-4">
-                        <USkeleton class="h-4 w-20" />
-                        <USkeleton class="h-10 w-full rounded-xl" />
-                        <USkeleton class="h-10 w-full rounded-xl" />
-                        <USkeleton class="h-10 w-4/5 rounded-xl" />
-                    </div>
-
-                    <div class="space-y-4 rounded-[1.5rem] border border-muted/50 p-4">
-                        <div class="flex items-center justify-between gap-3">
-                            <USkeleton class="h-8 w-48 rounded-full" />
-                            <USkeleton class="h-8 w-32 rounded-full" />
-                        </div>
-                        <USkeleton class="h-40 w-full rounded-2xl" />
-                        <USkeleton class="h-28 w-full rounded-2xl" />
-                        <USkeleton class="h-56 w-full rounded-2xl" />
-                    </div>
+            <!-- Main Area Skeleton -->
+            <div class="flex-1 bg-elevated/5">
+                <div class="h-16 border-b border-muted/20 bg-default/40 flex items-center justify-between px-6">
+                    <USkeleton class="h-8 w-48 rounded-full" />
+                    <USkeleton class="h-10 w-64 rounded-full" />
+                </div>
+                <div class="p-12 space-y-10 max-w-4xl mx-auto">
+                    <USkeleton class="h-64 w-full rounded-[40px]" />
+                    <USkeleton class="h-96 w-full rounded-[40px]" />
                 </div>
             </div>
         </div>
@@ -1495,7 +1495,7 @@ provide(workspaceNodeEditorContextKey, {
 
             <div
                 v-if="isWorkspaceRefreshing"
-                class="pointer-events-none fixed right-6 top-20 z-20"
+                class="pointer-events-none fixed right-6 top-20 z-50"
             >
                 <div
                     class="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-muted/70 bg-default/90 px-3 py-2 text-xs font-medium text-toned shadow-lg shadow-black/5 backdrop-blur-md"
@@ -1509,14 +1509,14 @@ provide(workspaceNodeEditorContextKey, {
             </div>
         </template>
 
-        <div v-else class="mx-auto flex max-w-xl flex-col gap-4 py-16">
+        <div v-else class="mx-auto flex max-w-xl flex-col gap-4 py-16 px-6">
             <UAlert
                 color="warning"
                 icon="i-lucide-search-x"
                 title="Node not found"
                 description="This node is not in your workspace. It may have been removed, or the link is invalid."
             />
-            <UButton to="/dashboard" color="neutral" variant="soft">
+            <UButton to="/dashboard" color="neutral" variant="soft" class="rounded-xl">
                 Return to dashboard
             </UButton>
         </div>

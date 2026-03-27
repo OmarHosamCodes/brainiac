@@ -14,44 +14,72 @@ const {
   toggleNotePreview,
   renderNotesPreview,
 } = useWorkspaceNodeEditorContext();
+
+const isPreview = computed(() => isNotePreviewEnabled(props.block.id));
 </script>
 
 <template>
-  <div class="flex flex-wrap items-center justify-between gap-3">
-    <p class="text-sm text-muted">
-      Autosaves while you type. Simple formatting supports `**bold**`, `*italic*`, and bullet lines starting with `-`.
-    </p>
+  <div class="group relative flex flex-col gap-4">
+    <!-- Toolbar -->
+    <div class="flex items-center justify-between gap-2">
+      <div class="flex items-center gap-1">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          size="xs"
+          :icon="isPreview ? 'i-lucide-edit-3' : 'i-lucide-eye'"
+          class="rounded-lg"
+          @click="toggleNotePreview(block.id)"
+        >
+          {{ isPreview ? 'Edit' : 'Preview' }}
+        </UButton>
+      </div>
+      <p class="text-[10px] font-bold uppercase tracking-widest text-muted/50">
+        Markdown Supported
+      </p>
+    </div>
 
-    <UButton
-      color="neutral"
-      variant="ghost"
-      :icon="isNotePreviewEnabled(block.id) ? 'i-lucide-pencil' : 'i-lucide-eye'"
-      @click="toggleNotePreview(block.id)"
+    <!-- Editor/Preview Area -->
+    <div 
+      class="min-h-[200px] rounded-3xl border border-muted/20 bg-default/40 transition-all focus-within:border-primary/30 focus-within:bg-default/60"
+      :class="{ 'p-6': isPreview }"
     >
-      {{ isNotePreviewEnabled(block.id) ? "Edit" : "Preview" }}
-    </UButton>
+      <UTextarea
+        v-if="!isPreview"
+        :model-value="block.body"
+        variant="none"
+        placeholder="Start writing something brilliant..."
+        autoresize
+        :max-rows="20"
+        class="w-full"
+        :ui="{
+          base: 'p-6 text-base leading-relaxed text-toned placeholder:text-muted/40 font-serif',
+        }"
+        @update:model-value="
+          mutateBlock(tabId, block.id, (entry) => {
+            if (entry.type !== 'notes') {
+              return;
+            }
+
+            entry.body = $event ?? '';
+          })
+        "
+      />
+
+      <div
+        v-else
+        class="prose prose-primary dark:prose-invert max-w-none text-toned"
+        v-html="renderNotesPreview(block.body)"
+      />
+    </div>
   </div>
-
-  <div
-    v-if="isNotePreviewEnabled(block.id)"
-    class="prose prose-sm max-w-none rounded-2xl border border-muted/60 bg-elevated/30 p-4 text-toned"
-    v-html="renderNotesPreview(block.body)"
-  />
-
-  <UTextarea
-    v-else
-    :model-value="block.body"
-    :rows="12"
-    autoresize
-    placeholder="Write notes, meeting context, or working drafts here."
-    @update:model-value="
-      mutateBlock(tabId, block.id, (entry) => {
-        if (entry.type !== 'notes') {
-          return;
-        }
-
-        entry.body = $event ?? '';
-      })
-    "
-  />
 </template>
+
+<style scoped>
+:deep(.prose) {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+:deep(.prose p) {
+  line-height: 1.8;
+}
+</style>

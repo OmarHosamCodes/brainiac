@@ -44,99 +44,153 @@ function getMetricProgress(value: number, target: number) {
 
   return Math.max(0, Math.min(100, Math.round((value / target) * 100)));
 }
+
+function getStatusColor(value: number, target: number) {
+    const progress = getMetricProgress(value, target);
+    if (progress >= 100) return 'text-success';
+    if (progress >= 50) return 'text-warning';
+    return 'text-error';
+}
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="grid gap-4 md:grid-cols-3">
-      <div class="rounded-2xl border border-muted/60 bg-elevated/20 p-4">
-        <p class="text-xs uppercase tracking-[0.2em] text-muted">Metrics</p>
-        <p class="mt-2 text-2xl font-semibold text-highlighted">{{ summary.metricCount }}</p>
-      </div>
-      <div class="rounded-2xl border border-muted/60 bg-elevated/20 p-4">
-        <p class="text-xs uppercase tracking-[0.2em] text-muted">At target</p>
-        <p class="mt-2 text-2xl font-semibold text-highlighted">{{ summary.atTarget }}</p>
-      </div>
-      <div class="rounded-2xl border border-muted/60 bg-elevated/20 p-4">
-        <p class="text-xs uppercase tracking-[0.2em] text-muted">Average progress</p>
-        <p class="mt-2 text-2xl font-semibold text-highlighted">{{ summary.avgProgress }}%</p>
-      </div>
+  <div class="space-y-8">
+    <!-- Enhanced Summary Header -->
+    <div class="grid gap-6 sm:grid-cols-3">
+        <div class="flex flex-col items-center justify-center rounded-[32px] bg-primary/5 p-6 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-primary/60">Total Metrics</p>
+            <p class="mt-1 text-4xl font-black text-primary">{{ summary.metricCount }}</p>
+        </div>
+        <div class="flex flex-col items-center justify-center rounded-[32px] bg-success/5 p-6 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-success/60">At Target</p>
+            <p class="mt-1 text-4xl font-black text-success">{{ summary.atTarget }}</p>
+        </div>
+        <div class="flex flex-col items-center justify-center rounded-[32px] bg-warning/5 p-6 text-center">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-warning/60">Avg Progress</p>
+            <p class="mt-1 text-4xl font-black text-warning">{{ summary.avgProgress }}%</p>
+        </div>
     </div>
 
-    <div class="flex justify-end">
-      <UButton color="primary" variant="soft" size="sm" icon="i-lucide-plus" @click="addScorecardMetric(tabId, block.id)">
-        Add metric
-      </UButton>
-    </div>
-
-    <div class="grid gap-4 xl:grid-cols-2">
-      <article
-        v-for="metric in block.metrics"
-        :key="metric.id"
-        class="rounded-2xl border border-muted/60 bg-default p-4"
-      >
-        <div class="flex items-start justify-between gap-3">
-          <UInput
-            :model-value="metric.label"
-            class="flex-1"
-            variant="none"
-            placeholder="Metric label"
-            :ui="{ base: 'px-0 font-semibold text-highlighted' }"
-            @update:model-value="mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
-              entry.label = ($event ?? '').slice(0, 120);
-            })"
-          />
-          <UButton
-            color="neutral"
-            variant="ghost"
-            size="sm"
-            icon="i-lucide-trash-2"
-            @click="removeScorecardMetric(tabId, block.id, metric.id)"
-          />
+    <!-- Metrics Grid -->
+    <div class="space-y-4">
+        <div class="flex items-center justify-between px-2">
+            <h3 class="text-sm font-bold uppercase tracking-widest text-muted/60">Key Performance Indicators</h3>
+            <UButton 
+                color="primary" 
+                variant="soft" 
+                size="sm" 
+                icon="i-lucide-plus" 
+                class="rounded-full px-4"
+                @click="addScorecardMetric(tabId, block.id)"
+            >
+                Add Metric
+            </UButton>
         </div>
 
-        <div class="mt-4 grid gap-3 md:grid-cols-3">
-          <UInput
-            :model-value="String(metric.value)"
-            type="number"
-            placeholder="Value"
-            @update:model-value="mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
-              entry.value = toNumber($event ?? '0');
-            })"
-          />
-          <UInput
-            :model-value="String(metric.target)"
-            type="number"
-            placeholder="Target"
-            @update:model-value="mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
-              entry.target = toNumber($event ?? '0', 100);
-            })"
-          />
-          <UInput
-            :model-value="metric.unit"
-            placeholder="Unit"
-            @update:model-value="mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
-              entry.unit = ($event ?? '').slice(0, 24);
-            })"
-          />
-        </div>
+        <div class="grid gap-4 md:grid-cols-2">
+            <div
+                v-for="metric in block.metrics"
+                :key="metric.id"
+                class="group relative overflow-hidden rounded-[32px] border border-muted/20 bg-default/40 p-6 transition-all hover:border-primary/20 hover:bg-default/60 hover:shadow-lg hover:shadow-black/5"
+            >
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1 space-y-1">
+                        <UInput
+                            :model-value="metric.label"
+                            variant="none"
+                            placeholder="Metric Title"
+                            class="w-full"
+                            :ui="{ base: 'px-0 text-lg font-bold text-highlighted placeholder:text-muted/40' }"
+                            @update:model-value="mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
+                                entry.label = ($event ?? '').slice(0, 120);
+                            })"
+                        />
+                        <div class="flex items-center gap-2">
+                            <span 
+                                class="text-3xl font-black tracking-tighter"
+                                :class="getStatusColor(metric.value, metric.target)"
+                            >
+                                {{ metric.value }}
+                            </span>
+                            <span class="text-sm font-bold text-muted/60">/ {{ metric.target }} {{ metric.unit }}</span>
+                        </div>
+                    </div>
 
-        <div class="mt-4 rounded-2xl border border-muted/60 bg-elevated/20 p-4">
-          <div class="flex items-center justify-between gap-3">
-            <p class="text-sm font-medium text-highlighted">
-              {{ metric.value }}{{ metric.unit ? ` ${metric.unit}` : '' }} / {{ metric.target }}{{ metric.unit ? ` ${metric.unit}` : '' }}
-            </p>
-            <UBadge color="neutral" variant="soft">
-              {{ getMetricProgress(metric.value, metric.target) }}%
-            </UBadge>
-          </div>
-          <UProgress :model-value="getMetricProgress(metric.value, metric.target)" class="mt-3" />
-        </div>
-      </article>
+                    <UButton
+                        color="neutral"
+                        variant="ghost"
+                        size="xs"
+                        icon="i-lucide-trash-2"
+                        class="rounded-xl opacity-0 transition-opacity group-hover:opacity-100 hover:text-error"
+                        @click="removeScorecardMetric(tabId, block.id, metric.id)"
+                    />
+                </div>
 
-      <div v-if="block.metrics.length === 0" class="rounded-2xl border border-dashed border-muted/70 bg-elevated/20 p-6 text-sm text-muted xl:col-span-2">
-        No metrics yet.
-      </div>
+                <!-- Progress Ring/Bar Area -->
+                <div class="mt-6 space-y-3">
+                    <div class="flex items-center justify-between text-[11px] font-bold uppercase tracking-widest">
+                        <span class="text-muted/60">Progress</span>
+                        <span :class="getStatusColor(metric.value, metric.target)">{{ getMetricProgress(metric.value, metric.target) }}%</span>
+                    </div>
+                    <UProgress 
+                        :model-value="getMetricProgress(metric.value, metric.target)" 
+                        size="sm"
+                        class="rounded-full"
+                    />
+                </div>
+
+                <!-- Inline Editing Controls (Condensed) -->
+                <div class="mt-6 grid grid-cols-3 gap-2 opacity-0 transition-all group-hover:opacity-100">
+                    <div class="space-y-1">
+                        <p class="text-[9px] font-bold uppercase tracking-widest text-muted/60">Current</p>
+                        <UInput
+                            :model-value="String(metric.value)"
+                            type="number"
+                            size="xs"
+                            class="rounded-lg"
+                            @update:model-value="mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
+                                entry.value = toNumber($event ?? '0');
+                            })"
+                        />
+                    </div>
+                    <div class="space-y-1">
+                        <p class="text-[9px] font-bold uppercase tracking-widest text-muted/60">Target</p>
+                        <UInput
+                            :model-value="String(metric.target)"
+                            type="number"
+                            size="xs"
+                            class="rounded-lg"
+                            @update:model-value="mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
+                                entry.target = toNumber($event ?? '0', 100);
+                            })"
+                        />
+                    </div>
+                    <div class="space-y-1">
+                        <p class="text-[9px] font-bold uppercase tracking-widest text-muted/60">Unit</p>
+                        <UInput
+                            :model-value="metric.unit"
+                            size="xs"
+                            placeholder="%"
+                            class="rounded-lg"
+                            @update:model-value="mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
+                                entry.unit = ($event ?? '').slice(0, 24);
+                            })"
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div 
+                v-if="block.metrics.length === 0" 
+                class="flex flex-col items-center justify-center rounded-[32px] border border-dashed border-muted/30 bg-default/20 py-16 text-center md:col-span-2"
+            >
+                <div class="mb-4 rounded-2xl bg-muted/10 p-4 text-muted">
+                    <UIcon name="i-lucide-bar-chart-3" class="size-8" />
+                </div>
+                <p class="text-sm font-bold text-muted/60 uppercase tracking-widest">No metrics defined</p>
+            </div>
+        </div>
     </div>
   </div>
 </template>
