@@ -1,13 +1,17 @@
 import {
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceBusinessModelCanvasBlock,
+  createWorkspaceDelegationMatrixBlock,
   createWorkspaceDecisionBlock,
   createWorkspaceDecisionMatrixBlock,
   createWorkspaceKanbanBlock,
   createWorkspaceNotesBlock,
   createWorkspaceOkrTrackerBlock,
   createWorkspaceScorecardBlock,
+  createWorkspaceSeatPlannerBlock,
+  createWorkspaceSkillsHeatMapBlock,
   createWorkspaceTaskListBlock,
+  createWorkspaceTalentGridBlock,
   createWorkspaceTimelineBlock,
   createWorkspaceTimeOrchestratorBlock,
   createWorkspaceTrackerBlock,
@@ -18,6 +22,7 @@ export type WorkspaceBlockPresetId =
   | "plan-and-ship"
   | "decision-sprint"
   | "ops-cadence"
+  | "people-review"
   | "strategy-room";
 
 export type WorkspaceBlockPreset = {
@@ -63,6 +68,18 @@ export const workspaceBlockPresets: WorkspaceBlockPreset[] = [
       createWorkspaceTaskListBlock({ title: "Current cycle tasks" }),
       createWorkspaceTrackerBlock({ title: "KPI tracker" }),
       createWorkspaceNotesBlock({ title: "Ops notes" }),
+    ],
+  },
+  {
+    id: "people-review",
+    label: "People review",
+    description: "Skills, delegation, talent calibration, and seat coverage in one pack.",
+    icon: "i-lucide-users",
+    createBlocks: () => [
+      createWorkspaceSkillsHeatMapBlock({ title: "Team skill map" }),
+      createWorkspaceDelegationMatrixBlock({ title: "Delegation matrix" }),
+      createWorkspaceTalentGridBlock({ title: "9-box talent grid" }),
+      createWorkspaceSeatPlannerBlock({ title: "Seat ownership planner" }),
     ],
   },
   {

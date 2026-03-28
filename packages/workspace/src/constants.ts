@@ -11,6 +11,10 @@ export const WORKSPACE_OKR_KEY_RESULT_LIMIT = 12;
 export const WORKSPACE_DECISION_MATRIX_CRITERIA_LIMIT = 12;
 export const WORKSPACE_DECISION_MATRIX_OPTION_LIMIT = 8;
 export const WORKSPACE_ASSUMPTION_LIMIT = 30;
+export const WORKSPACE_SKILLS_HEAT_MAP_MEMBER_LIMIT = 24;
+export const WORKSPACE_DELEGATION_ITEM_LIMIT = 40;
+export const WORKSPACE_TALENT_GRID_MEMBER_LIMIT = 24;
+export const WORKSPACE_SEAT_PLANNER_SEAT_LIMIT = 24;
 export const WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT = 20;
 export const WORKSPACE_CUSTOM_BLOCK_FIELD_LIMIT = 12;
 export const WORKSPACE_MARKETPLACE_ITEM_LIMIT = 200;
@@ -38,6 +42,27 @@ export const WORKSPACE_TIMELINE_MILESTONE_STATUSES = [
   "active",
   "done",
   "blocked",
+] as const;
+
+export const WORKSPACE_PEOPLE_SKILL_DIMENSIONS = [
+  "writing",
+  "strategy",
+  "design",
+  "analytics",
+  "leadership",
+] as const;
+
+export const WORKSPACE_DELEGATION_STATUSES = ["stuck", "transitioning", "delegated"] as const;
+
+export const WORKSPACE_SEAT_HEALTH_STATES = ["strong", "fragile", "gap"] as const;
+
+export const WORKSPACE_SEAT_LOAD_LEVELS = ["underloaded", "balanced", "overloaded"] as const;
+
+export const WORKSPACE_SEAT_PLANNER_FILTERS = [
+  "all",
+  "fragile",
+  "overloaded",
+  "uncovered",
 ] as const;
 
 export const WORKSPACE_BUSINESS_MODEL_CANVAS_CELL_KEYS = [

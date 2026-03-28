@@ -41,6 +41,32 @@ export const workspaceAddBlockCategories = [
     ],
   },
   {
+    id: "people",
+    label: "People",
+    items: [
+      {
+        blockType: "skills-heat-map",
+        label: "Skills heat map",
+        icon: "i-lucide-grid-3x3",
+      },
+      {
+        blockType: "delegation-matrix",
+        label: "Delegation matrix",
+        icon: "i-lucide-arrow-right-left",
+      },
+      {
+        blockType: "talent-grid",
+        label: "9-box talent grid",
+        icon: "i-lucide-layout-grid",
+      },
+      {
+        blockType: "seat-planner",
+        label: "Seat ownership planner",
+        icon: "i-lucide-sitemap",
+      },
+    ],
+  },
+  {
     id: "general",
     label: "General",
     items: [

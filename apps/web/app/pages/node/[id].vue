@@ -6,6 +6,7 @@ import {
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceBusinessModelCanvasBlock,
+  createWorkspaceDelegationMatrixBlock,
   createWorkspaceDecisionMatrixBlock,
   createWorkspaceDecisionBlock,
   createWorkspaceId,
@@ -15,9 +16,12 @@ import {
   createWorkspaceNotesBlock,
   createWorkspaceOkrTrackerBlock,
   createWorkspaceScorecardBlock,
+  createWorkspaceSeatPlannerBlock,
+  createWorkspaceSkillsHeatMapBlock,
   createWorkspaceScorecardMetric,
   createWorkspaceTask,
   createWorkspaceTaskListBlock,
+  createWorkspaceTalentGridBlock,
   createWorkspaceTimeOrchestratorBlock,
   createWorkspaceTimelineBlock,
   createWorkspaceTimelineMilestone,
@@ -398,6 +402,18 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
       break;
     case "timeline":
       nextBlock = createWorkspaceTimelineBlock();
+      break;
+    case "skills-heat-map":
+      nextBlock = createWorkspaceSkillsHeatMapBlock();
+      break;
+    case "delegation-matrix":
+      nextBlock = createWorkspaceDelegationMatrixBlock();
+      break;
+    case "talent-grid":
+      nextBlock = createWorkspaceTalentGridBlock();
+      break;
+    case "seat-planner":
+      nextBlock = createWorkspaceSeatPlannerBlock();
       break;
     case "scorecard":
       nextBlock = createWorkspaceScorecardBlock();
@@ -1111,6 +1127,50 @@ function getBlockSearchText(block: WorkspaceBlock) {
         milestone.note,
       ]),
     );
+  } else if (block.type === "skills-heat-map") {
+    fragments.push(
+      ...block.members.flatMap((member) => [
+        member.name,
+        member.role,
+        ...Object.entries(member.scores).flatMap(([dimension, score]) => [
+          dimension,
+          String(score),
+        ]),
+      ]),
+    );
+  } else if (block.type === "delegation-matrix") {
+    fragments.push(
+      String(block.hourlyRate),
+      ...block.items.flatMap((item) => [
+        item.task,
+        item.from,
+        item.to,
+        String(item.hoursPerWeek),
+        item.status,
+      ]),
+    );
+  } else if (block.type === "talent-grid") {
+    fragments.push(
+      ...block.members.flatMap((member) => [
+        member.name,
+        member.role,
+        String(member.performance),
+        String(member.potential),
+      ]),
+    );
+  } else if (block.type === "seat-planner") {
+    fragments.push(
+      block.filter,
+      ...block.seats.flatMap((seat) => [
+        seat.name,
+        seat.owner,
+        seat.function,
+        seat.health,
+        seat.load,
+        seat.backupOwner,
+        seat.notes,
+      ]),
+    );
   } else if (block.type === "scorecard") {
     fragments.push(
       ...block.metrics.flatMap((metric) => [
@@ -1222,6 +1282,45 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
         milestone.note,
       ]),
     );
+  } else if (block.type === "skills-heat-map") {
+    details.push(
+      ...block.members.flatMap((member) => [
+        member.name,
+        member.role,
+        ...Object.entries(member.scores).map(([dimension, score]) => `${dimension} ${score}/10`),
+      ]),
+    );
+  } else if (block.type === "delegation-matrix") {
+    details.push(
+      `${block.hourlyRate} hourly rate`,
+      ...block.items.flatMap((item) => [
+        item.task,
+        `${item.from} to ${item.to || "unassigned"}`,
+        `${item.hoursPerWeek} hours per week`,
+        item.status,
+      ]),
+    );
+  } else if (block.type === "talent-grid") {
+    details.push(
+      ...block.members.flatMap((member) => [
+        member.name,
+        member.role,
+        `${member.performance}/5 performance`,
+        `${member.potential}/5 potential`,
+      ]),
+    );
+  } else if (block.type === "seat-planner") {
+    details.push(
+      ...block.seats.flatMap((seat) => [
+        seat.name,
+        seat.owner,
+        seat.function,
+        seat.health,
+        seat.load,
+        seat.backupOwner,
+        seat.notes,
+      ]),
+    );
   } else if (block.type === "scorecard") {
     details.push(
       ...block.metrics.flatMap((metric) => [
@@ -1234,10 +1333,7 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
     details.push(
       ...block.objectives.flatMap((objective) => [
         objective.title,
-        ...objective.keyResults.flatMap((keyResult) => [
-          keyResult.title,
-          `${keyResult.progress}%`,
-        ]),
+        ...objective.keyResults.flatMap((keyResult) => [keyResult.title, `${keyResult.progress}%`]),
       ]),
     );
   } else if (block.type === "decision-matrix") {
@@ -1485,9 +1581,7 @@ provide(workspaceNodeEditorContextKey, {
         <div
           class="agent-rail hidden shrink-0 overflow-hidden border-l border-neutral-200/60 bg-white/50 transition-[width,opacity] duration-300 dark:border-neutral-800/60 dark:bg-neutral-950/40 lg:block"
           :class="
-            isAgentChatVisible
-              ? 'w-[26rem] opacity-100'
-              : 'pointer-events-none w-0 opacity-0'
+            isAgentChatVisible ? 'w-[26rem] opacity-100' : 'pointer-events-none w-0 opacity-0'
           "
         >
           <div class="agent-rail-aura" aria-hidden="true" />
@@ -1525,7 +1619,10 @@ provide(workspaceNodeEditorContextKey, {
             </div>
 
             <div class="min-h-0 flex-1">
-              <DashboardAgentChatPanel :nodes="agentChatNodes" @close="isAgentChatVisible = false" />
+              <DashboardAgentChatPanel
+                :nodes="agentChatNodes"
+                @close="isAgentChatVisible = false"
+              />
             </div>
           </div>
         </div>

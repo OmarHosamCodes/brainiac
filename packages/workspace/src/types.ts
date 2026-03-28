@@ -12,6 +12,9 @@ import {
   workspaceCustomBlockSchema,
   workspaceCustomBlockTemplateSchema,
   workspaceCustomBlockValueSchema,
+  workspaceDelegationItemSchema,
+  workspaceDelegationMatrixBlockSchema,
+  workspaceDelegationStatusSchema,
   workspaceDecisionMatrixBlockSchema,
   workspaceDecisionMatrixCriterionSchema,
   workspaceDecisionMatrixOptionSchema,
@@ -34,10 +37,19 @@ import {
   workspaceOkrKeyResultSchema,
   workspaceOkrObjectiveSchema,
   workspaceOkrTrackerBlockSchema,
+  workspacePeopleSkillDimensionSchema,
   workspacePromptOutputSchema,
+  workspaceSeatHealthSchema,
+  workspaceSeatLoadLevelSchema,
+  workspaceSeatPlannerBlockSchema,
+  workspaceSeatPlannerFilterSchema,
+  workspaceSeatPlannerSeatSchema,
   workspaceSaveInputSchema,
   workspaceScorecardBlockSchema,
   workspaceScorecardMetricSchema,
+  workspaceSkillsHeatMapBlockSchema,
+  workspaceSkillsHeatMapMemberSchema,
+  workspaceSkillsHeatMapScoresSchema,
   workspaceStrategicAssumptionFilterSchema,
   workspaceStrategicAssumptionLinkTypeSchema,
   workspaceStrategicAssumptionSchema,
@@ -47,6 +59,8 @@ import {
   workspaceTaskPrioritySchema,
   workspaceTaskQuadrantSchema,
   workspaceTaskSchema,
+  workspaceTalentGridBlockSchema,
+  workspaceTalentGridMemberSchema,
   workspaceTimeOrchestratorBlockSchema,
   workspaceTimeOrchestratorSettingsSchema,
   workspaceTimelineBlockSchema,
@@ -63,6 +77,12 @@ export type WorkspaceTask = z.infer<typeof workspaceTaskSchema>;
 export type WorkspacePromptOutput = z.infer<typeof workspacePromptOutputSchema>;
 export type WorkspaceDecisionItem = z.infer<typeof workspaceDecisionItemSchema>;
 export type WorkspaceTrackerEntry = z.infer<typeof workspaceTrackerEntrySchema>;
+export type WorkspacePeopleSkillDimension = z.infer<typeof workspacePeopleSkillDimensionSchema>;
+export type WorkspaceSkillsHeatMapScores = z.infer<typeof workspaceSkillsHeatMapScoresSchema>;
+export type WorkspaceSkillsHeatMapMember = z.infer<typeof workspaceSkillsHeatMapMemberSchema>;
+export type WorkspaceDelegationStatus = z.infer<typeof workspaceDelegationStatusSchema>;
+export type WorkspaceDelegationItem = z.infer<typeof workspaceDelegationItemSchema>;
+export type WorkspaceTalentGridMember = z.infer<typeof workspaceTalentGridMemberSchema>;
 export type WorkspaceTimeOrchestratorSettings = z.infer<
   typeof workspaceTimeOrchestratorSettingsSchema
 >;
@@ -73,6 +93,10 @@ export type WorkspaceTimelineMilestoneStatus = z.infer<
 >;
 export type WorkspaceNodeTint = z.infer<typeof workspaceNodeTintSchema>;
 export type WorkspaceTimelineMilestone = z.infer<typeof workspaceTimelineMilestoneSchema>;
+export type WorkspaceSeatHealth = z.infer<typeof workspaceSeatHealthSchema>;
+export type WorkspaceSeatLoadLevel = z.infer<typeof workspaceSeatLoadLevelSchema>;
+export type WorkspaceSeatPlannerFilter = z.infer<typeof workspaceSeatPlannerFilterSchema>;
+export type WorkspaceSeatPlannerSeat = z.infer<typeof workspaceSeatPlannerSeatSchema>;
 export type WorkspaceScorecardMetric = z.infer<typeof workspaceScorecardMetricSchema>;
 export type WorkspaceOkrKeyResult = z.infer<typeof workspaceOkrKeyResultSchema>;
 export type WorkspaceOkrObjective = z.infer<typeof workspaceOkrObjectiveSchema>;
@@ -108,6 +132,10 @@ export type WorkspaceAiPromptBlock = z.infer<typeof workspaceAiPromptBlockSchema
 export type WorkspaceTimeOrchestratorBlock = z.infer<typeof workspaceTimeOrchestratorBlockSchema>;
 export type WorkspaceKanbanBlock = z.infer<typeof workspaceKanbanBlockSchema>;
 export type WorkspaceTimelineBlock = z.infer<typeof workspaceTimelineBlockSchema>;
+export type WorkspaceSkillsHeatMapBlock = z.infer<typeof workspaceSkillsHeatMapBlockSchema>;
+export type WorkspaceDelegationMatrixBlock = z.infer<typeof workspaceDelegationMatrixBlockSchema>;
+export type WorkspaceTalentGridBlock = z.infer<typeof workspaceTalentGridBlockSchema>;
+export type WorkspaceSeatPlannerBlock = z.infer<typeof workspaceSeatPlannerBlockSchema>;
 export type WorkspaceScorecardBlock = z.infer<typeof workspaceScorecardBlockSchema>;
 export type WorkspaceOkrTrackerBlock = z.infer<typeof workspaceOkrTrackerBlockSchema>;
 export type WorkspaceDecisionMatrixBlock = z.infer<typeof workspaceDecisionMatrixBlockSchema>;
@@ -180,6 +208,55 @@ export type WorkspaceDecisionSummary = {
   consWeight: number;
   totalScore: number;
   signal: "lean-yes" | "lean-no" | "balanced";
+};
+
+export type WorkspaceSkillsHeatMapSummary = {
+  memberCount: number;
+  overallAverage: number;
+  criticalGapCount: number;
+  strongestDimension: WorkspacePeopleSkillDimension | null;
+  weakestDimension: WorkspacePeopleSkillDimension | null;
+  averageByDimension: Record<WorkspacePeopleSkillDimension, number>;
+};
+
+export type WorkspaceDelegationMatrixSummary = {
+  itemCount: number;
+  totalHoursPerWeek: number;
+  pendingHoursPerWeek: number;
+  delegatedHoursPerWeek: number;
+  totalRecoverableValue: number;
+  pendingRecoverableValue: number;
+  stuckCount: number;
+  transitioningCount: number;
+  delegatedCount: number;
+};
+
+export type WorkspaceTalentGridBoxKey =
+  | "risk"
+  | "average-joe"
+  | "specialist"
+  | "under-performer"
+  | "core-player"
+  | "high-performer"
+  | "enigma"
+  | "growth-star"
+  | "superstar";
+
+export type WorkspaceTalentGridSummary = {
+  memberCount: number;
+  superstarCount: number;
+  growthStarCount: number;
+  corePlayerCount: number;
+  riskCount: number;
+  boxCounts: Record<WorkspaceTalentGridBoxKey, number>;
+};
+
+export type WorkspaceSeatPlannerSummary = {
+  seatCount: number;
+  filledSeats: number;
+  fragileSeats: number;
+  overloadedSeats: number;
+  uncoveredSeats: number;
 };
 
 export type WorkspaceOkrHealth = "healthy" | "watch" | "critical";

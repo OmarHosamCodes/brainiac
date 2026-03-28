@@ -21,6 +21,19 @@ import {
   workspaceBusinessModelCanvasCellLabels,
   workspaceStrategicAssumptionStatusLabels,
 } from "./strategy";
+import {
+  getDelegationMatrixSummary,
+  getSeatPlannerSummary,
+  getSkillsHeatMapSummary,
+  getTalentGridBoxKey,
+  getTalentGridSummary,
+  isSeatUncovered,
+  workspaceDelegationStatusLabels,
+  workspacePeopleSkillDimensionLabels,
+  workspaceSeatHealthLabels,
+  workspaceSeatLoadLevelLabels,
+  workspaceTalentGridBoxLabels,
+} from "./people";
 import type {
   WorkspaceBlock,
   WorkspaceCustomBlock,
@@ -32,6 +45,7 @@ import type {
   WorkspaceNode,
   WorkspaceNodeDashboardDetail,
   WorkspaceNodeDashboardSelectableBlock,
+  WorkspacePeopleSkillDimension,
   WorkspaceNodeTab,
   WorkspaceScorecardMetric,
   WorkspaceTask,
@@ -64,6 +78,11 @@ function getTimelineMilestoneSortValue(milestone: WorkspaceTimelineMilestone) {
 
 function isScorecardMetricOnTarget(metric: WorkspaceScorecardMetric) {
   return metric.target >= 0 ? metric.value >= metric.target : metric.value <= metric.target;
+}
+
+function getStrongestSkillDimension(averages: Record<WorkspacePeopleSkillDimension, number>) {
+  const ranked = Object.entries(averages).sort((left, right) => right[1] - left[1]);
+  return (ranked[0]?.[0] as WorkspacePeopleSkillDimension | undefined) ?? null;
 }
 
 function summaryBusinessModelCanvasHasContent(block: WorkspaceBlock) {
@@ -342,6 +361,173 @@ function buildWorkspaceNodeDashboardDetail(
     };
   }
 
+  if (block.type === "skills-heat-map") {
+    const summary = getSkillsHeatMapSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.memberCount > 0
+          ? `${summary.criticalGapCount} critical skill gaps across ${summary.memberCount} team members.`
+          : "No team members mapped yet.",
+      metrics: [
+        {
+          label: "Team",
+          value: String(summary.memberCount),
+        },
+        {
+          label: "Avg score",
+          value: `${summary.overallAverage}/10`,
+        },
+        {
+          label: "Critical",
+          value: String(summary.criticalGapCount),
+        },
+      ],
+      highlights:
+        summary.memberCount > 0
+          ? [
+              ...(summary.strongestDimension
+                ? [
+                    `Strongest: ${workspacePeopleSkillDimensionLabels[summary.strongestDimension]} ${summary.averageByDimension[summary.strongestDimension]}/10`,
+                  ]
+                : []),
+              ...(summary.weakestDimension
+                ? [
+                    `Weakest: ${workspacePeopleSkillDimensionLabels[summary.weakestDimension]} ${summary.averageByDimension[summary.weakestDimension]}/10`,
+                  ]
+                : []),
+            ]
+          : [],
+    };
+  }
+
+  if (block.type === "delegation-matrix") {
+    const summary = getDelegationMatrixSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.itemCount > 0
+          ? `${summary.pendingHoursPerWeek} founder hours are still waiting to be delegated.`
+          : "No delegation targets added yet.",
+      metrics: [
+        {
+          label: "Items",
+          value: String(summary.itemCount),
+        },
+        {
+          label: "Hours",
+          value: `${summary.totalHoursPerWeek}/wk`,
+        },
+        {
+          label: "Stuck",
+          value: String(summary.stuckCount),
+        },
+      ],
+      highlights: block.items
+        .slice()
+        .sort((left, right) => right.hoursPerWeek - left.hoursPerWeek)
+        .slice(0, 2)
+        .map(
+          (item) =>
+            `${item.task} -> ${trimToEmpty(item.to) || "Unassigned"} (${item.hoursPerWeek}h, ${workspaceDelegationStatusLabels[item.status]})`,
+        ),
+    };
+  }
+
+  if (block.type === "talent-grid") {
+    const summary = getTalentGridSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.memberCount > 0
+          ? `${summary.superstarCount} superstars and ${summary.riskCount} risk profiles across the current team.`
+          : "No talent profiles added yet.",
+      metrics: [
+        {
+          label: "Team",
+          value: String(summary.memberCount),
+        },
+        {
+          label: "Stars",
+          value: String(summary.superstarCount + summary.growthStarCount),
+        },
+        {
+          label: "Risk",
+          value: String(summary.riskCount),
+        },
+      ],
+      highlights: block.members
+        .slice(0, 3)
+        .map(
+          (member) =>
+            `${member.name}: ${workspaceTalentGridBoxLabels[getTalentGridBoxKey(member.performance, member.potential)]}`,
+        ),
+    };
+  }
+
+  if (block.type === "seat-planner") {
+    const summary = getSeatPlannerSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.seatCount > 0
+          ? `${summary.uncoveredSeats} seats are uncovered and ${summary.overloadedSeats} are overloaded.`
+          : "No critical seats mapped yet.",
+      metrics: [
+        {
+          label: "Seats",
+          value: String(summary.seatCount),
+        },
+        {
+          label: "Fragile",
+          value: String(summary.fragileSeats),
+        },
+        {
+          label: "Uncovered",
+          value: String(summary.uncoveredSeats),
+        },
+      ],
+      highlights: block.seats
+        .filter(
+          (seat) =>
+            seat.health === "fragile" || seat.load === "overloaded" || isSeatUncovered(seat),
+        )
+        .slice(0, 3)
+        .map((seat) => {
+          const signals = [
+            workspaceSeatHealthLabels[seat.health],
+            workspaceSeatLoadLevelLabels[seat.load],
+          ];
+
+          if (isSeatUncovered(seat)) {
+            signals.push("Uncovered");
+          }
+
+          return `${seat.name}: ${signals.join(", ")}`;
+        }),
+    };
+  }
+
   if (block.type === "scorecard") {
     const onTargetCount = block.metrics.filter((metric) =>
       isScorecardMetricOnTarget(metric),
@@ -606,6 +792,42 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
         );
       }
 
+      if (block.type === "skills-heat-map" && block.members.length > 0) {
+        const summary = getSkillsHeatMapSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.overallAverage}/10 average skill score with ${summary.criticalGapCount} critical gaps.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "delegation-matrix" && block.items.length > 0) {
+        const summary = getDelegationMatrixSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.pendingHoursPerWeek} founder hours still need delegation.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "talent-grid" && block.members.length > 0) {
+        const summary = getTalentGridSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.superstarCount} superstars and ${summary.riskCount} risk profiles identified.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "seat-planner" && block.seats.length > 0) {
+        const summary = getSeatPlannerSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.uncoveredSeats} uncovered seats and ${summary.overloadedSeats} overloaded seats.`,
+          maxLength,
+        );
+      }
+
       if (block.type === "scorecard" && block.metrics.length > 0) {
         return truncateText(
           `${block.title}: ${block.metrics.length} metrics being tracked.`,
@@ -835,6 +1057,51 @@ export function generateWorkspacePromptOutput(node: WorkspaceNode, prompt: strin
     });
 
     return `${intro}\n\nDecision scan:\n- ${recommendations.join("\n- ")}`;
+  }
+
+  if (/people|team|hire|hiring|delegat|skills|talent|seat|org/i.test(normalizedPrompt)) {
+    const peopleLines = node.tabs.flatMap((tab) =>
+      tab.blocks.flatMap((block) => {
+        if (block.type === "skills-heat-map") {
+          const summary = getSkillsHeatMapSummary(block);
+          const strongestDimension = getStrongestSkillDimension(summary.averageByDimension);
+
+          return [
+            `${block.title}: ${summary.overallAverage}/10 average skill score, ${summary.criticalGapCount} critical gaps${strongestDimension ? `, strongest in ${workspacePeopleSkillDimensionLabels[strongestDimension]}` : ""}.`,
+          ];
+        }
+
+        if (block.type === "delegation-matrix") {
+          const summary = getDelegationMatrixSummary(block);
+
+          return [
+            `${block.title}: ${summary.pendingHoursPerWeek} pending founder hours, ${summary.stuckCount} stuck items, weekly misallocation value ${summary.pendingRecoverableValue}.`,
+          ];
+        }
+
+        if (block.type === "talent-grid") {
+          const summary = getTalentGridSummary(block);
+
+          return [
+            `${block.title}: ${summary.superstarCount} superstars, ${summary.growthStarCount} growth stars, ${summary.riskCount} risk profiles.`,
+          ];
+        }
+
+        if (block.type === "seat-planner") {
+          const summary = getSeatPlannerSummary(block);
+
+          return [
+            `${block.title}: ${summary.uncoveredSeats} uncovered seats, ${summary.fragileSeats} fragile seats, ${summary.overloadedSeats} overloaded seats.`,
+          ];
+        }
+
+        return [];
+      }),
+    );
+
+    if (peopleLines.length > 0) {
+      return `${intro}\n\nPeople scan:\n- ${peopleLines.join("\n- ")}`;
+    }
   }
 
   if (/task|priority|next|plan|schedule/i.test(normalizedPrompt)) {

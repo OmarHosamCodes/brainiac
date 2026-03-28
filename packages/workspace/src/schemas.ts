@@ -7,6 +7,8 @@ import {
   WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT,
   WORKSPACE_DECISION_MATRIX_CRITERIA_LIMIT,
   WORKSPACE_DECISION_MATRIX_OPTION_LIMIT,
+  WORKSPACE_DELEGATION_ITEM_LIMIT,
+  WORKSPACE_DELEGATION_STATUSES,
   WORKSPACE_KANBAN_CARD_LIMIT,
   WORKSPACE_KANBAN_COLUMN_LIMIT,
   WORKSPACE_MARKETPLACE_ITEM_LIMIT,
@@ -16,11 +18,18 @@ import {
   WORKSPACE_NODE_TINTS,
   WORKSPACE_OKR_KEY_RESULT_LIMIT,
   WORKSPACE_OKR_OBJECTIVE_LIMIT,
+  WORKSPACE_PEOPLE_SKILL_DIMENSIONS,
   WORKSPACE_SCORECARD_METRIC_LIMIT,
+  WORKSPACE_SEAT_HEALTH_STATES,
+  WORKSPACE_SEAT_LOAD_LEVELS,
+  WORKSPACE_SEAT_PLANNER_FILTERS,
+  WORKSPACE_SEAT_PLANNER_SEAT_LIMIT,
+  WORKSPACE_SKILLS_HEAT_MAP_MEMBER_LIMIT,
   WORKSPACE_STRATEGIC_ASSUMPTION_FILTERS,
   WORKSPACE_STRATEGIC_ASSUMPTION_LINK_TYPES,
   WORKSPACE_STRATEGIC_ASSUMPTION_STATUSES,
   WORKSPACE_TAB_BLOCK_LIMIT,
+  WORKSPACE_TALENT_GRID_MEMBER_LIMIT,
   WORKSPACE_TASK_DOMAINS,
   WORKSPACE_TASK_LIMIT,
   WORKSPACE_TASK_QUADRANTS,
@@ -37,6 +46,11 @@ export const workspaceTaskQuadrantSchema = z.enum(WORKSPACE_TASK_QUADRANTS);
 export const workspaceTimelineMilestoneStatusSchema = z.enum(WORKSPACE_TIMELINE_MILESTONE_STATUSES);
 export const workspaceNodeTintSchema = z.enum(WORKSPACE_NODE_TINTS);
 export const workspaceCustomFieldTypeSchema = z.enum(["text", "number", "checkbox", "textarea"]);
+export const workspacePeopleSkillDimensionSchema = z.enum(WORKSPACE_PEOPLE_SKILL_DIMENSIONS);
+export const workspaceDelegationStatusSchema = z.enum(WORKSPACE_DELEGATION_STATUSES);
+export const workspaceSeatHealthSchema = z.enum(WORKSPACE_SEAT_HEALTH_STATES);
+export const workspaceSeatLoadLevelSchema = z.enum(WORKSPACE_SEAT_LOAD_LEVELS);
+export const workspaceSeatPlannerFilterSchema = z.enum(WORKSPACE_SEAT_PLANNER_FILTERS);
 
 export const workspaceTaskSchema = z.object({
   id: z.string().min(1),
@@ -94,6 +108,49 @@ export const workspaceKanbanCardSchema = z.object({
   columnId: z.string().min(1),
   assignee: z.string().trim().max(120).default(""),
   dueDate: isoDateSchema.nullable().optional(),
+});
+
+export const workspaceSkillsHeatMapScoresSchema = z.object({
+  writing: z.number().int().min(1).max(10).default(5),
+  strategy: z.number().int().min(1).max(10).default(5),
+  design: z.number().int().min(1).max(10).default(5),
+  analytics: z.number().int().min(1).max(10).default(5),
+  leadership: z.number().int().min(1).max(10).default(5),
+});
+
+export const workspaceSkillsHeatMapMemberSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().max(120),
+  role: z.string().trim().max(120).default(""),
+  scores: workspaceSkillsHeatMapScoresSchema,
+});
+
+export const workspaceDelegationItemSchema = z.object({
+  id: z.string().min(1),
+  task: z.string().trim().max(160),
+  from: z.string().trim().max(120).default(""),
+  to: z.string().trim().max(120).default(""),
+  hoursPerWeek: z.number().min(0).max(100).default(0),
+  status: workspaceDelegationStatusSchema.default("stuck"),
+});
+
+export const workspaceTalentGridMemberSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().max(120),
+  role: z.string().trim().max(120).default(""),
+  performance: z.number().int().min(1).max(5).default(3),
+  potential: z.number().int().min(1).max(5).default(3),
+});
+
+export const workspaceSeatPlannerSeatSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().max(120),
+  owner: z.string().trim().max(120).default(""),
+  function: z.string().trim().max(120).default(""),
+  health: workspaceSeatHealthSchema.default("strong"),
+  load: workspaceSeatLoadLevelSchema.default("balanced"),
+  backupOwner: z.string().trim().max(120).default(""),
+  notes: z.string().max(2000).default(""),
 });
 
 export const workspaceTimelineMilestoneSchema = z.object({
@@ -275,6 +332,34 @@ export const workspaceTimelineBlockSchema = workspaceBlockBaseSchema.extend({
     .default([]),
 });
 
+export const workspaceSkillsHeatMapBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("skills-heat-map"),
+  members: z
+    .array(workspaceSkillsHeatMapMemberSchema)
+    .max(WORKSPACE_SKILLS_HEAT_MAP_MEMBER_LIMIT)
+    .default([]),
+});
+
+export const workspaceDelegationMatrixBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("delegation-matrix"),
+  hourlyRate: z.number().min(0).max(100000).default(500),
+  items: z.array(workspaceDelegationItemSchema).max(WORKSPACE_DELEGATION_ITEM_LIMIT).default([]),
+});
+
+export const workspaceTalentGridBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("talent-grid"),
+  members: z
+    .array(workspaceTalentGridMemberSchema)
+    .max(WORKSPACE_TALENT_GRID_MEMBER_LIMIT)
+    .default([]),
+});
+
+export const workspaceSeatPlannerBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("seat-planner"),
+  filter: workspaceSeatPlannerFilterSchema.default("all"),
+  seats: z.array(workspaceSeatPlannerSeatSchema).max(WORKSPACE_SEAT_PLANNER_SEAT_LIMIT).default([]),
+});
+
 export const workspaceScorecardBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("scorecard"),
   metrics: z
@@ -345,6 +430,10 @@ export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceTimeOrchestratorBlockSchema,
   workspaceKanbanBlockSchema,
   workspaceTimelineBlockSchema,
+  workspaceSkillsHeatMapBlockSchema,
+  workspaceDelegationMatrixBlockSchema,
+  workspaceTalentGridBlockSchema,
+  workspaceSeatPlannerBlockSchema,
   workspaceScorecardBlockSchema,
   workspaceOkrTrackerBlockSchema,
   workspaceDecisionMatrixBlockSchema,

@@ -10,6 +10,8 @@ import {
   workspaceBusinessModelCanvasBlockSchema,
   workspaceCustomBlockSchema,
   workspaceCustomBlockTemplateSchema,
+  workspaceDelegationItemSchema,
+  workspaceDelegationMatrixBlockSchema,
   workspaceDecisionMatrixBlockSchema,
   workspaceDecisionMatrixCriterionSchema,
   workspaceDecisionMatrixOptionSchema,
@@ -26,16 +28,23 @@ import {
   workspaceOkrObjectiveSchema,
   workspaceOkrTrackerBlockSchema,
   workspacePromptOutputSchema,
+  workspaceSeatPlannerBlockSchema,
+  workspaceSeatPlannerSeatSchema,
   workspaceScorecardBlockSchema,
   workspaceScorecardMetricSchema,
+  workspaceSkillsHeatMapBlockSchema,
+  workspaceSkillsHeatMapMemberSchema,
   workspaceStrategicAssumptionSchema,
   workspaceTaskListBlockSchema,
   workspaceTaskSchema,
+  workspaceTalentGridBlockSchema,
+  workspaceTalentGridMemberSchema,
   workspaceTimeOrchestratorBlockSchema,
   workspaceTimelineBlockSchema,
   workspaceTimelineMilestoneSchema,
   workspaceTrackerBlockSchema,
 } from "./schemas";
+import { createWorkspaceSkillsScoreMap } from "./people";
 import { getNowIsoString } from "./shared";
 import { createWorkspaceTimeOrchestratorSettings } from "./tasks";
 import type {
@@ -46,6 +55,8 @@ import type {
   WorkspaceCustomBlock,
   WorkspaceCustomBlockField,
   WorkspaceCustomBlockTemplate,
+  WorkspaceDelegationItem,
+  WorkspaceDelegationMatrixBlock,
   WorkspaceDecisionMatrixBlock,
   WorkspaceDecisionMatrixCriterion,
   WorkspaceDecisionMatrixOption,
@@ -59,14 +70,20 @@ import type {
   WorkspaceNodeViewState,
   WorkspaceNotesBlock,
   WorkspacePromptOutput,
+  WorkspaceSeatPlannerBlock,
+  WorkspaceSeatPlannerSeat,
   WorkspaceOkrKeyResult,
   WorkspaceOkrObjective,
   WorkspaceOkrTrackerBlock,
   WorkspaceScorecardBlock,
   WorkspaceScorecardMetric,
+  WorkspaceSkillsHeatMapBlock,
+  WorkspaceSkillsHeatMapMember,
   WorkspaceStrategicAssumption,
   WorkspaceTask,
   WorkspaceTaskListBlock,
+  WorkspaceTalentGridBlock,
+  WorkspaceTalentGridMember,
   WorkspaceTimeOrchestratorBlock,
   WorkspaceTimelineBlock,
   WorkspaceTimelineMilestone,
@@ -75,6 +92,7 @@ import type {
 
 export * from "./constants";
 export * from "./dashboard";
+export * from "./people";
 export * from "./schemas";
 export * from "./strategy";
 export * from "./tasks";
@@ -101,6 +119,57 @@ export function createWorkspaceTask(partial: Partial<WorkspaceTask> = {}): Works
     urgency: partial.urgency ?? 5,
     importance: partial.importance ?? 5,
     estimateMinutes: partial.estimateMinutes ?? 30,
+  });
+}
+
+export function createWorkspaceSkillsHeatMapMember(
+  partial: Partial<WorkspaceSkillsHeatMapMember> = {},
+): WorkspaceSkillsHeatMapMember {
+  return workspaceSkillsHeatMapMemberSchema.parse({
+    id: partial.id ?? createWorkspaceId("person"),
+    name: partial.name ?? "New team member",
+    role: partial.role ?? "",
+    scores: createWorkspaceSkillsScoreMap(partial.scores),
+  });
+}
+
+export function createWorkspaceDelegationItem(
+  partial: Partial<WorkspaceDelegationItem> = {},
+): WorkspaceDelegationItem {
+  return workspaceDelegationItemSchema.parse({
+    id: partial.id ?? createWorkspaceId("delegation"),
+    task: partial.task ?? "Task to delegate",
+    from: partial.from ?? "Ahmed",
+    to: partial.to ?? "",
+    hoursPerWeek: partial.hoursPerWeek ?? 2,
+    status: partial.status ?? "stuck",
+  });
+}
+
+export function createWorkspaceTalentGridMember(
+  partial: Partial<WorkspaceTalentGridMember> = {},
+): WorkspaceTalentGridMember {
+  return workspaceTalentGridMemberSchema.parse({
+    id: partial.id ?? createWorkspaceId("talent"),
+    name: partial.name ?? "New team member",
+    role: partial.role ?? "",
+    performance: partial.performance ?? 3,
+    potential: partial.potential ?? 3,
+  });
+}
+
+export function createWorkspaceSeatPlannerSeat(
+  partial: Partial<WorkspaceSeatPlannerSeat> = {},
+): WorkspaceSeatPlannerSeat {
+  return workspaceSeatPlannerSeatSchema.parse({
+    id: partial.id ?? createWorkspaceId("seat"),
+    name: partial.name ?? "Critical seat",
+    owner: partial.owner ?? "",
+    function: partial.function ?? "",
+    health: partial.health ?? "strong",
+    load: partial.load ?? "balanced",
+    backupOwner: partial.backupOwner ?? "",
+    notes: partial.notes ?? "",
   });
 }
 
@@ -246,6 +315,177 @@ function getBusinessModelCanvasDefaultCells() {
   } satisfies WorkspaceBusinessModelCanvasBlock["cells"];
 }
 
+function getSkillsHeatMapDefaultMembers() {
+  return [
+    createWorkspaceSkillsHeatMapMember({
+      name: "Sarah",
+      role: "Content Strategist",
+      scores: {
+        writing: 9,
+        strategy: 7,
+        design: 5,
+        analytics: 6,
+        leadership: 6,
+      },
+    }),
+    createWorkspaceSkillsHeatMapMember({
+      name: "Omar",
+      role: "Growth Lead",
+      scores: {
+        writing: 7,
+        strategy: 9,
+        design: 4,
+        analytics: 8,
+        leadership: 7,
+      },
+    }),
+    createWorkspaceSkillsHeatMapMember({
+      name: "Nour",
+      role: "Designer",
+      scores: {
+        writing: 5,
+        strategy: 6,
+        design: 9,
+        analytics: 5,
+        leadership: 6,
+      },
+    }),
+    createWorkspaceSkillsHeatMapMember({
+      name: "Karim",
+      role: "Analyst",
+      scores: {
+        writing: 4,
+        strategy: 7,
+        design: 3,
+        analytics: 9,
+        leadership: 5,
+      },
+    }),
+    createWorkspaceSkillsHeatMapMember({
+      name: "Layla",
+      role: "Operations Manager",
+      scores: {
+        writing: 6,
+        strategy: 8,
+        design: 4,
+        analytics: 7,
+        leadership: 9,
+      },
+    }),
+  ];
+}
+
+function getDelegationMatrixDefaultItems() {
+  return [
+    createWorkspaceDelegationItem({
+      task: "Social scheduling",
+      from: "Ahmed",
+      to: "Sarah",
+      hoursPerWeek: 3,
+      status: "stuck",
+    }),
+    createWorkspaceDelegationItem({
+      task: "Client reporting",
+      from: "Ahmed",
+      to: "Karim",
+      hoursPerWeek: 5,
+      status: "stuck",
+    }),
+    createWorkspaceDelegationItem({
+      task: "Content approvals",
+      from: "Ahmed",
+      to: "Layla",
+      hoursPerWeek: 4,
+      status: "transitioning",
+    }),
+  ];
+}
+
+function getTalentGridDefaultMembers() {
+  return [
+    createWorkspaceTalentGridMember({
+      name: "Sarah",
+      role: "Content Strategist",
+      performance: 4,
+      potential: 5,
+    }),
+    createWorkspaceTalentGridMember({
+      name: "Omar",
+      role: "Growth Lead",
+      performance: 5,
+      potential: 4,
+    }),
+    createWorkspaceTalentGridMember({
+      name: "Nour",
+      role: "Designer",
+      performance: 4,
+      potential: 4,
+    }),
+    createWorkspaceTalentGridMember({
+      name: "Karim",
+      role: "Analyst",
+      performance: 3,
+      potential: 5,
+    }),
+    createWorkspaceTalentGridMember({
+      name: "Layla",
+      role: "Operations Manager",
+      performance: 3,
+      potential: 3,
+    }),
+  ];
+}
+
+function getSeatPlannerDefaultSeats() {
+  return [
+    createWorkspaceSeatPlannerSeat({
+      name: "CEO",
+      owner: "Ahmed",
+      function: "Vision, capital allocation, key relationships",
+      health: "strong",
+      load: "overloaded",
+      backupOwner: "Layla",
+      notes: "Founder is still the escalation path for most cross-functional decisions.",
+    }),
+    createWorkspaceSeatPlannerSeat({
+      name: "Sales Lead",
+      owner: "Omar",
+      function: "Pipeline ownership, proposals, weekly forecasting",
+      health: "fragile",
+      load: "balanced",
+      backupOwner: "",
+      notes: "Single-threaded sales knowledge and no clear backup for live deals.",
+    }),
+    createWorkspaceSeatPlannerSeat({
+      name: "Content Lead",
+      owner: "Sarah",
+      function: "Editorial calendar, distribution, case-study production",
+      health: "strong",
+      load: "balanced",
+      backupOwner: "Nour",
+      notes: "Execution is steady and documented.",
+    }),
+    createWorkspaceSeatPlannerSeat({
+      name: "Operations / PMO",
+      owner: "",
+      function: "Delivery system, meeting cadence, cross-team follow-through",
+      health: "gap",
+      load: "balanced",
+      backupOwner: "",
+      notes: "Critical coordination work is spread informally across the founder and ops support.",
+    }),
+    createWorkspaceSeatPlannerSeat({
+      name: "Finance Admin",
+      owner: "Layla",
+      function: "Collections, invoices, cash reporting",
+      health: "strong",
+      load: "balanced",
+      backupOwner: "Karim",
+      notes: "Stable seat with basic redundancy in place.",
+    }),
+  ];
+}
+
 export function createWorkspaceTaskListBlock(
   partial: Partial<WorkspaceTaskListBlock> = {},
 ): WorkspaceTaskListBlock {
@@ -374,6 +614,68 @@ export function createWorkspaceTimelineBlock(
     type: "timeline",
     title: partial.title ?? "Timeline",
     milestones: partial.milestones ?? [],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceSkillsHeatMapBlock(
+  partial: Partial<WorkspaceSkillsHeatMapBlock> = {},
+): WorkspaceSkillsHeatMapBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceSkillsHeatMapBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "skills-heat-map",
+    title: partial.title ?? "Skills heat map",
+    members: partial.members ?? getSkillsHeatMapDefaultMembers(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceDelegationMatrixBlock(
+  partial: Partial<WorkspaceDelegationMatrixBlock> = {},
+): WorkspaceDelegationMatrixBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceDelegationMatrixBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "delegation-matrix",
+    title: partial.title ?? "Delegation matrix",
+    hourlyRate: partial.hourlyRate ?? 500,
+    items: partial.items ?? getDelegationMatrixDefaultItems(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceTalentGridBlock(
+  partial: Partial<WorkspaceTalentGridBlock> = {},
+): WorkspaceTalentGridBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceTalentGridBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "talent-grid",
+    title: partial.title ?? "9-box talent grid",
+    members: partial.members ?? getTalentGridDefaultMembers(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceSeatPlannerBlock(
+  partial: Partial<WorkspaceSeatPlannerBlock> = {},
+): WorkspaceSeatPlannerBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceSeatPlannerBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "seat-planner",
+    title: partial.title ?? "Seat ownership planner",
+    filter: partial.filter ?? "all",
+    seats: partial.seats ?? getSeatPlannerDefaultSeats(),
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
   });
@@ -686,6 +988,53 @@ function normalizeWorkspaceDecisionMatrixBlock(
   });
 }
 
+function normalizeWorkspaceSkillsHeatMapBlock(
+  block:
+    | WorkspaceSkillsHeatMapBlock
+    | (Partial<WorkspaceSkillsHeatMapBlock> & { type: "skills-heat-map" }),
+) {
+  return workspaceSkillsHeatMapBlockSchema.parse({
+    ...block,
+    members: (block.members ?? []).map((member) => ({
+      ...member,
+      scores: createWorkspaceSkillsScoreMap(member.scores),
+    })),
+  });
+}
+
+function normalizeWorkspaceDelegationMatrixBlock(
+  block:
+    | WorkspaceDelegationMatrixBlock
+    | (Partial<WorkspaceDelegationMatrixBlock> & { type: "delegation-matrix" }),
+) {
+  return workspaceDelegationMatrixBlockSchema.parse({
+    ...block,
+    hourlyRate: block.hourlyRate ?? 500,
+    items: block.items ?? [],
+  });
+}
+
+function normalizeWorkspaceTalentGridBlock(
+  block: WorkspaceTalentGridBlock | (Partial<WorkspaceTalentGridBlock> & { type: "talent-grid" }),
+) {
+  return workspaceTalentGridBlockSchema.parse({
+    ...block,
+    members: block.members ?? [],
+  });
+}
+
+function normalizeWorkspaceSeatPlannerBlock(
+  block:
+    | WorkspaceSeatPlannerBlock
+    | (Partial<WorkspaceSeatPlannerBlock> & { type: "seat-planner" }),
+) {
+  return workspaceSeatPlannerBlockSchema.parse({
+    ...block,
+    filter: block.filter ?? "all",
+    seats: block.seats ?? [],
+  });
+}
+
 export function normalizeWorkspaceNodeTab(tab: WorkspaceNodeTab): WorkspaceNodeTab {
   const parsed = workspaceNodeTabSchema.parse({
     ...tab,
@@ -741,6 +1090,14 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         ...block,
         milestones: block.milestones ?? [],
       });
+    case "skills-heat-map":
+      return normalizeWorkspaceSkillsHeatMapBlock(block);
+    case "delegation-matrix":
+      return normalizeWorkspaceDelegationMatrixBlock(block);
+    case "talent-grid":
+      return normalizeWorkspaceTalentGridBlock(block);
+    case "seat-planner":
+      return normalizeWorkspaceSeatPlannerBlock(block);
     case "scorecard":
       return workspaceScorecardBlockSchema.parse({
         ...block,
@@ -989,6 +1346,50 @@ export function cloneWorkspaceBlockForInsertion(
         milestones: block.milestones.map((milestone) => ({
           ...milestone,
           id: createWorkspaceId("milestone"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "skills-heat-map":
+      return workspaceSkillsHeatMapBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        members: block.members.map((member) => ({
+          ...member,
+          id: createWorkspaceId("person"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "delegation-matrix":
+      return workspaceDelegationMatrixBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        items: block.items.map((item) => ({
+          ...item,
+          id: createWorkspaceId("delegation"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "talent-grid":
+      return workspaceTalentGridBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        members: block.members.map((member) => ({
+          ...member,
+          id: createWorkspaceId("talent"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "seat-planner":
+      return workspaceSeatPlannerBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        seats: block.seats.map((seat) => ({
+          ...seat,
+          id: createWorkspaceId("seat"),
         })),
         createdAt: timestamp,
         updatedAt: timestamp,

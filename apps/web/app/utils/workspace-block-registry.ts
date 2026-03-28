@@ -8,9 +8,13 @@ import WorkspaceKanbanBlockEditor from "~/components/workspace/node/blocks/Works
 import WorkspaceCustomBlockEditor from "~/components/workspace/node/blocks/WorkspaceCustomBlockEditor.vue";
 import WorkspaceDecisionMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionMatrixBlockEditor.vue";
 import WorkspaceDecisionBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionBlockEditor.vue";
+import WorkspaceDelegationMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDelegationMatrixBlockEditor.vue";
 import WorkspaceNotesBlockEditor from "~/components/workspace/node/blocks/WorkspaceNotesBlockEditor.vue";
 import WorkspaceOkrTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceOkrTrackerBlockEditor.vue";
 import WorkspaceScorecardBlockEditor from "~/components/workspace/node/blocks/WorkspaceScorecardBlockEditor.vue";
+import WorkspaceSeatPlannerBlockEditor from "~/components/workspace/node/blocks/WorkspaceSeatPlannerBlockEditor.vue";
+import WorkspaceSkillsHeatMapBlockEditor from "~/components/workspace/node/blocks/WorkspaceSkillsHeatMapBlockEditor.vue";
+import WorkspaceTalentGridBlockEditor from "~/components/workspace/node/blocks/WorkspaceTalentGridBlockEditor.vue";
 import WorkspaceTaskListBlockEditor from "~/components/workspace/node/blocks/WorkspaceTaskListBlockEditor.vue";
 import WorkspaceTimeOrchestratorBlockEditor from "~/components/workspace/node/blocks/WorkspaceTimeOrchestratorBlockEditor.vue";
 import WorkspaceTimelineBlockEditor from "~/components/workspace/node/blocks/WorkspaceTimelineBlockEditor.vue";
@@ -70,6 +74,30 @@ export const workspaceBlockRegistry = {
     component: WorkspaceTimelineBlockEditor,
     label: "Timeline",
     icon: "i-lucide-waypoints",
+    addGroup: "secondary",
+  },
+  "skills-heat-map": {
+    component: WorkspaceSkillsHeatMapBlockEditor,
+    label: "Skills heat map",
+    icon: "i-lucide-grid-3x3",
+    addGroup: "secondary",
+  },
+  "delegation-matrix": {
+    component: WorkspaceDelegationMatrixBlockEditor,
+    label: "Delegation matrix",
+    icon: "i-lucide-arrow-right-left",
+    addGroup: "secondary",
+  },
+  "talent-grid": {
+    component: WorkspaceTalentGridBlockEditor,
+    label: "9-box talent grid",
+    icon: "i-lucide-layout-grid",
+    addGroup: "secondary",
+  },
+  "seat-planner": {
+    component: WorkspaceSeatPlannerBlockEditor,
+    label: "Seat ownership planner",
+    icon: "i-lucide-sitemap",
     addGroup: "secondary",
   },
   scorecard: {
