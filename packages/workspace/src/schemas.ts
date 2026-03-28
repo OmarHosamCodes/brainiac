@@ -3,6 +3,12 @@ import { z } from "zod";
 import {
   WORKSPACE_ASSUMPTION_LIMIT,
   WORKSPACE_BUSINESS_MODEL_CANVAS_CELL_KEYS,
+  WORKSPACE_CONTENT_PIPELINE_ITEM_LIMIT,
+  WORKSPACE_CONTENT_PIPELINE_STATUSES,
+  WORKSPACE_CONTENT_PLATFORMS,
+  WORKSPACE_CONTENT_QUALITY_DIMENSIONS,
+  WORKSPACE_CONTENT_ROI_ITEM_LIMIT,
+  WORKSPACE_CONTENT_ROI_SORT_OPTIONS,
   WORKSPACE_CUSTOM_BLOCK_FIELD_LIMIT,
   WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT,
   WORKSPACE_DEAL_SCORING_DEAL_LIMIT,
@@ -58,6 +64,10 @@ export const workspaceDelegationStatusSchema = z.enum(WORKSPACE_DELEGATION_STATU
 export const workspaceSalesPipelineStageSchema = z.enum(WORKSPACE_SALES_PIPELINE_STAGES);
 export const workspaceSalesTemperatureSchema = z.enum(WORKSPACE_SALES_TEMPERATURES);
 export const workspaceSalesForecastBucketSchema = z.enum(WORKSPACE_SALES_FORECAST_BUCKETS);
+export const workspaceContentPlatformSchema = z.enum(WORKSPACE_CONTENT_PLATFORMS);
+export const workspaceContentPipelineStatusSchema = z.enum(WORKSPACE_CONTENT_PIPELINE_STATUSES);
+export const workspaceContentQualityDimensionSchema = z.enum(WORKSPACE_CONTENT_QUALITY_DIMENSIONS);
+export const workspaceContentRoiSortSchema = z.enum(WORKSPACE_CONTENT_ROI_SORT_OPTIONS);
 export const workspaceSeatHealthSchema = z.enum(WORKSPACE_SEAT_HEALTH_STATES);
 export const workspaceSeatLoadLevelSchema = z.enum(WORKSPACE_SEAT_LOAD_LEVELS);
 export const workspaceSeatPlannerFilterSchema = z.enum(WORKSPACE_SEAT_PLANNER_FILTERS);
@@ -172,6 +182,39 @@ export const workspaceForecastConfidenceItemSchema = z.object({
   confidence: z.number().int().min(10).max(100).default(50),
   owner: z.string().trim().max(120).default(""),
   nextAction: z.string().trim().max(240).default(""),
+});
+
+export const workspaceContentPipelineItemSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().max(240),
+  status: workspaceContentPipelineStatusSchema.default("ideas"),
+  platform: workspaceContentPlatformSchema.default("instagram"),
+  assignee: z.string().trim().max(120).default(""),
+});
+
+export const workspaceContentQualityScoresSchema = z.object({
+  hook: z.number().int().min(1).max(10).default(5),
+  value: z.number().int().min(1).max(10).default(5),
+  emotion: z.number().int().min(1).max(10).default(5),
+  cta: z.number().int().min(1).max(10).default(5),
+  platformFit: z.number().int().min(1).max(10).default(5),
+  brand: z.number().int().min(1).max(10).default(5),
+  shareability: z.number().int().min(1).max(10).default(5),
+  scrollStop: z.number().int().min(1).max(10).default(5),
+  authenticity: z.number().int().min(1).max(10).default(5),
+  storytelling: z.number().int().min(1).max(10).default(5),
+});
+
+export const workspaceContentRoiItemSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().max(240),
+  platform: workspaceContentPlatformSchema.default("linkedin"),
+  campaign: z.string().trim().max(120).default(""),
+  goal: z.string().trim().max(160).default(""),
+  reach: z.number().int().min(0).max(10_000_000).default(0),
+  leads: z.number().int().min(0).max(100_000).default(0),
+  conversionInfluence: z.number().int().min(1).max(10).default(5),
+  repurposeValue: z.number().int().min(1).max(10).default(5),
 });
 
 export const workspaceTalentGridMemberSchema = z.object({
@@ -425,6 +468,36 @@ export const workspaceForecastConfidenceBoardBlockSchema = workspaceBlockBaseSch
     .default([]),
 });
 
+export const workspaceContentPipelineBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("content-pipeline"),
+  items: z
+    .array(workspaceContentPipelineItemSchema)
+    .max(WORKSPACE_CONTENT_PIPELINE_ITEM_LIMIT)
+    .default([]),
+});
+
+export const workspaceContentQualityRadarBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("content-quality-radar"),
+  scores: workspaceContentQualityScoresSchema.default({
+    hook: 5,
+    value: 5,
+    emotion: 5,
+    cta: 5,
+    platformFit: 5,
+    brand: 5,
+    shareability: 5,
+    scrollStop: 5,
+    authenticity: 5,
+    storytelling: 5,
+  }),
+});
+
+export const workspaceContentRoiTrackerBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("content-roi-tracker"),
+  sortBy: workspaceContentRoiSortSchema.default("roi"),
+  items: z.array(workspaceContentRoiItemSchema).max(WORKSPACE_CONTENT_ROI_ITEM_LIMIT).default([]),
+});
+
 export const workspaceScorecardBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("scorecard"),
   metrics: z
@@ -502,6 +575,9 @@ export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceDealScoringMatrixBlockSchema,
   workspacePipelineFunnelBlockSchema,
   workspaceForecastConfidenceBoardBlockSchema,
+  workspaceContentPipelineBlockSchema,
+  workspaceContentQualityRadarBlockSchema,
+  workspaceContentRoiTrackerBlockSchema,
   workspaceScorecardBlockSchema,
   workspaceOkrTrackerBlockSchema,
   workspaceDecisionMatrixBlockSchema,

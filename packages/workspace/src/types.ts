@@ -7,6 +7,16 @@ import {
   workspaceBlockSchema,
   workspaceBusinessModelCanvasCellKeySchema,
   workspaceBusinessModelCanvasCellsSchema,
+  workspaceContentPipelineBlockSchema,
+  workspaceContentPipelineItemSchema,
+  workspaceContentPipelineStatusSchema,
+  workspaceContentPlatformSchema,
+  workspaceContentQualityDimensionSchema,
+  workspaceContentQualityRadarBlockSchema,
+  workspaceContentQualityScoresSchema,
+  workspaceContentRoiItemSchema,
+  workspaceContentRoiSortSchema,
+  workspaceContentRoiTrackerBlockSchema,
   workspaceCustomBlockFieldSchema,
   workspaceCustomBlockFormulaSchema,
   workspaceCustomBlockSchema,
@@ -94,9 +104,20 @@ export type WorkspaceDelegationItem = z.infer<typeof workspaceDelegationItemSche
 export type WorkspaceSalesPipelineStage = z.infer<typeof workspaceSalesPipelineStageSchema>;
 export type WorkspaceSalesTemperature = z.infer<typeof workspaceSalesTemperatureSchema>;
 export type WorkspaceSalesForecastBucket = z.infer<typeof workspaceSalesForecastBucketSchema>;
+export type WorkspaceContentPlatform = z.infer<typeof workspaceContentPlatformSchema>;
+export type WorkspaceContentPipelineStatus = z.infer<
+  typeof workspaceContentPipelineStatusSchema
+>;
+export type WorkspaceContentQualityDimension = z.infer<
+  typeof workspaceContentQualityDimensionSchema
+>;
+export type WorkspaceContentRoiSort = z.infer<typeof workspaceContentRoiSortSchema>;
 export type WorkspaceDealScoringDeal = z.infer<typeof workspaceDealScoringDealSchema>;
 export type WorkspacePipelineFunnelDeal = z.infer<typeof workspacePipelineFunnelDealSchema>;
 export type WorkspaceForecastConfidenceItem = z.infer<typeof workspaceForecastConfidenceItemSchema>;
+export type WorkspaceContentPipelineItem = z.infer<typeof workspaceContentPipelineItemSchema>;
+export type WorkspaceContentQualityScores = z.infer<typeof workspaceContentQualityScoresSchema>;
+export type WorkspaceContentRoiItem = z.infer<typeof workspaceContentRoiItemSchema>;
 export type WorkspaceTalentGridMember = z.infer<typeof workspaceTalentGridMemberSchema>;
 export type WorkspaceTimeOrchestratorSettings = z.infer<
   typeof workspaceTimeOrchestratorSettingsSchema
@@ -156,6 +177,11 @@ export type WorkspacePipelineFunnelBlock = z.infer<typeof workspacePipelineFunne
 export type WorkspaceForecastConfidenceBoardBlock = z.infer<
   typeof workspaceForecastConfidenceBoardBlockSchema
 >;
+export type WorkspaceContentPipelineBlock = z.infer<typeof workspaceContentPipelineBlockSchema>;
+export type WorkspaceContentQualityRadarBlock = z.infer<
+  typeof workspaceContentQualityRadarBlockSchema
+>;
+export type WorkspaceContentRoiTrackerBlock = z.infer<typeof workspaceContentRoiTrackerBlockSchema>;
 export type WorkspaceScorecardBlock = z.infer<typeof workspaceScorecardBlockSchema>;
 export type WorkspaceOkrTrackerBlock = z.infer<typeof workspaceOkrTrackerBlockSchema>;
 export type WorkspaceDecisionMatrixBlock = z.infer<typeof workspaceDecisionMatrixBlockSchema>;
@@ -324,6 +350,36 @@ export type WorkspaceForecastConfidenceBoardSummary = {
   coveragePercent: number;
   averageConfidence: number;
   bucketSummaries: WorkspaceForecastConfidenceBucketSummary[];
+};
+
+export type WorkspaceContentPipelineSummary = {
+  totalItems: number;
+  publishedCount: number;
+  reviewCount: number;
+  topPlatform: WorkspaceContentPlatform | null;
+  bottleneckStatus: WorkspaceContentPipelineStatus | null;
+  statusCounts: Record<WorkspaceContentPipelineStatus, number>;
+};
+
+export type WorkspaceContentQualityRadarSummary = {
+  averageScore: number;
+  strongestDimension: WorkspaceContentQualityDimension | null;
+  weakestDimension: WorkspaceContentQualityDimension | null;
+};
+
+export type WorkspaceContentRoiStatus = "high-return" | "promising" | "low-return";
+
+export type WorkspaceContentRoiTrackerSummary = {
+  itemCount: number;
+  totalReach: number;
+  totalLeads: number;
+  totalInfluencedLeads: number;
+  averageScore: number;
+  topPlatform: WorkspaceContentPlatform | null;
+  topCampaign: string | null;
+  highReturnCount: number;
+  promisingCount: number;
+  lowReturnCount: number;
 };
 
 export type WorkspaceOkrHealth = "healthy" | "watch" | "critical";

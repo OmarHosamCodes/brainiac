@@ -18,6 +18,8 @@ export const WORKSPACE_SEAT_PLANNER_SEAT_LIMIT = 24;
 export const WORKSPACE_DEAL_SCORING_DEAL_LIMIT = 40;
 export const WORKSPACE_PIPELINE_FUNNEL_DEAL_LIMIT = 40;
 export const WORKSPACE_FORECAST_CONFIDENCE_ITEM_LIMIT = 40;
+export const WORKSPACE_CONTENT_PIPELINE_ITEM_LIMIT = 80;
+export const WORKSPACE_CONTENT_ROI_ITEM_LIMIT = 40;
 export const WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT = 20;
 export const WORKSPACE_CUSTOM_BLOCK_FIELD_LIMIT = 12;
 export const WORKSPACE_MARKETPLACE_ITEM_LIMIT = 200;
@@ -73,6 +75,36 @@ export const WORKSPACE_SALES_FORECAST_BUCKETS = [
   "upside",
   "at-risk",
 ] as const;
+
+export const WORKSPACE_CONTENT_PLATFORMS = [
+  "instagram",
+  "tiktok",
+  "linkedin",
+  "youtube",
+] as const;
+
+export const WORKSPACE_CONTENT_PIPELINE_STATUSES = [
+  "ideas",
+  "draft",
+  "review",
+  "approved",
+  "published",
+] as const;
+
+export const WORKSPACE_CONTENT_QUALITY_DIMENSIONS = [
+  "hook",
+  "value",
+  "emotion",
+  "cta",
+  "platformFit",
+  "brand",
+  "shareability",
+  "scrollStop",
+  "authenticity",
+  "storytelling",
+] as const;
+
+export const WORKSPACE_CONTENT_ROI_SORT_OPTIONS = ["roi", "reach", "leads"] as const;
 
 export const WORKSPACE_SEAT_HEALTH_STATES = ["strong", "fragile", "gap"] as const;
 

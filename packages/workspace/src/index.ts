@@ -8,6 +8,12 @@ import {
   workspaceAiPromptBlockSchema,
   workspaceAssumptionTrackerBlockSchema,
   workspaceBusinessModelCanvasBlockSchema,
+  workspaceContentPipelineBlockSchema,
+  workspaceContentPipelineItemSchema,
+  workspaceContentQualityRadarBlockSchema,
+  workspaceContentQualityScoresSchema,
+  workspaceContentRoiItemSchema,
+  workspaceContentRoiTrackerBlockSchema,
   workspaceCustomBlockSchema,
   workspaceCustomBlockTemplateSchema,
   workspaceDealScoringDealSchema,
@@ -50,6 +56,7 @@ import {
   workspaceTimelineMilestoneSchema,
   workspaceTrackerBlockSchema,
 } from "./schemas";
+import { createWorkspaceContentQualityScoreMap } from "./content";
 import { createWorkspaceSkillsScoreMap } from "./people";
 import { getNowIsoString } from "./shared";
 import { createWorkspaceTimeOrchestratorSettings } from "./tasks";
@@ -58,6 +65,12 @@ import type {
   WorkspaceAssumptionTrackerBlock,
   WorkspaceBusinessModelCanvasBlock,
   WorkspaceBlock,
+  WorkspaceContentPipelineBlock,
+  WorkspaceContentPipelineItem,
+  WorkspaceContentQualityRadarBlock,
+  WorkspaceContentQualityScores,
+  WorkspaceContentRoiItem,
+  WorkspaceContentRoiTrackerBlock,
   WorkspaceCustomBlock,
   WorkspaceCustomBlockField,
   WorkspaceCustomBlockTemplate,
@@ -103,6 +116,7 @@ import type {
 } from "./types";
 
 export * from "./constants";
+export * from "./content";
 export * from "./dashboard";
 export * from "./people";
 export * from "./sales";
@@ -198,6 +212,42 @@ export function createWorkspaceForecastConfidenceItem(
     confidence: partial.confidence ?? 50,
     owner: partial.owner ?? "",
     nextAction: partial.nextAction ?? "",
+  });
+}
+
+export function createWorkspaceContentPipelineItem(
+  partial: Partial<WorkspaceContentPipelineItem> = {},
+): WorkspaceContentPipelineItem {
+  return workspaceContentPipelineItemSchema.parse({
+    id: partial.id ?? createWorkspaceId("content"),
+    title: partial.title ?? "New content piece",
+    status: partial.status ?? "ideas",
+    platform: partial.platform ?? "instagram",
+    assignee: partial.assignee ?? "",
+  });
+}
+
+export function createWorkspaceContentQualityScores(
+  partial: Partial<WorkspaceContentQualityScores> = {},
+): WorkspaceContentQualityScores {
+  return workspaceContentQualityScoresSchema.parse(
+    createWorkspaceContentQualityScoreMap(partial),
+  );
+}
+
+export function createWorkspaceContentRoiItem(
+  partial: Partial<WorkspaceContentRoiItem> = {},
+): WorkspaceContentRoiItem {
+  return workspaceContentRoiItemSchema.parse({
+    id: partial.id ?? createWorkspaceId("content-roi"),
+    title: partial.title ?? "New content piece",
+    platform: partial.platform ?? "linkedin",
+    campaign: partial.campaign ?? "",
+    goal: partial.goal ?? "",
+    reach: partial.reach ?? 0,
+    leads: partial.leads ?? 0,
+    conversionInfluence: partial.conversionInfluence ?? 5,
+    repurposeValue: partial.repurposeValue ?? 5,
   });
 }
 
@@ -543,6 +593,79 @@ function getForecastConfidenceDefaultItems() {
   ];
 }
 
+function getContentPipelineDefaultItems() {
+  return [
+    createWorkspaceContentPipelineItem({
+      title: "Founder POV on why content calendars stall after week three",
+      status: "review",
+      platform: "linkedin",
+      assignee: "Omar",
+    }),
+    createWorkspaceContentPipelineItem({
+      title: "3 hook variations for the onboarding retention reel",
+      status: "draft",
+      platform: "instagram",
+      assignee: "Nour",
+    }),
+    createWorkspaceContentPipelineItem({
+      title: "Customer win breakdown from the retention audit sprint",
+      status: "published",
+      platform: "tiktok",
+      assignee: "Sarah",
+    }),
+  ];
+}
+
+function getContentQualityRadarDefaultScores() {
+  return createWorkspaceContentQualityScores({
+    hook: 7,
+    value: 8,
+    emotion: 6,
+    cta: 5,
+    platformFit: 6,
+    brand: 8,
+    shareability: 4,
+    scrollStop: 7,
+    authenticity: 9,
+    storytelling: 6,
+  });
+}
+
+function getContentRoiTrackerDefaultItems() {
+  return [
+    createWorkspaceContentRoiItem({
+      title: "LinkedIn authority post on retention diagnostics",
+      platform: "linkedin",
+      campaign: "Q2 Authority Push",
+      goal: "Book founder discovery calls",
+      reach: 2_600,
+      leads: 11,
+      conversionInfluence: 9,
+      repurposeValue: 8,
+    }),
+    createWorkspaceContentRoiItem({
+      title: "TikTok educational video on onboarding teardown mistakes",
+      platform: "tiktok",
+      campaign: "Demand Capture Sprint",
+      goal: "Drive newsletter signups",
+      reach: 18_000,
+      leads: 4,
+      conversionInfluence: 6,
+      repurposeValue: 7,
+    }),
+    createWorkspaceContentRoiItem({
+      title: "Instagram carousel recapping the product launch checklist",
+      platform: "instagram",
+      campaign: "Feature Awareness",
+      goal: "Increase profile visits",
+      reach: 6_200,
+      leads: 1,
+      conversionInfluence: 4,
+      repurposeValue: 4,
+    }),
+  ];
+}
+
 function getTalentGridDefaultMembers() {
   return [
     createWorkspaceTalentGridMember({
@@ -864,6 +987,52 @@ export function createWorkspaceForecastConfidenceBoardBlock(
     title: partial.title ?? "Forecast confidence board",
     targetRevenueEgp: partial.targetRevenueEgp ?? 50_000,
     deals: partial.deals ?? getForecastConfidenceDefaultItems(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceContentPipelineBlock(
+  partial: Partial<WorkspaceContentPipelineBlock> = {},
+): WorkspaceContentPipelineBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceContentPipelineBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "content-pipeline",
+    title: partial.title ?? "Content pipeline",
+    items: partial.items ?? getContentPipelineDefaultItems(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceContentQualityRadarBlock(
+  partial: Partial<WorkspaceContentQualityRadarBlock> = {},
+): WorkspaceContentQualityRadarBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceContentQualityRadarBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "content-quality-radar",
+    title: partial.title ?? "Content quality radar",
+    scores: partial.scores ?? getContentQualityRadarDefaultScores(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceContentRoiTrackerBlock(
+  partial: Partial<WorkspaceContentRoiTrackerBlock> = {},
+): WorkspaceContentRoiTrackerBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceContentRoiTrackerBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "content-roi-tracker",
+    title: partial.title ?? "Content ROI tracker",
+    sortBy: partial.sortBy ?? "roi",
+    items: partial.items ?? getContentRoiTrackerDefaultItems(),
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
   });
@@ -1302,6 +1471,22 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         targetRevenueEgp: block.targetRevenueEgp ?? 50_000,
         deals: block.deals ?? [],
       });
+    case "content-pipeline":
+      return workspaceContentPipelineBlockSchema.parse({
+        ...block,
+        items: block.items ?? [],
+      });
+    case "content-quality-radar":
+      return workspaceContentQualityRadarBlockSchema.parse({
+        ...block,
+        scores: createWorkspaceContentQualityScores(block.scores),
+      });
+    case "content-roi-tracker":
+      return workspaceContentRoiTrackerBlockSchema.parse({
+        ...block,
+        sortBy: block.sortBy ?? "roi",
+        items: block.items ?? [],
+      });
     case "scorecard":
       return workspaceScorecardBlockSchema.parse({
         ...block,
@@ -1627,6 +1812,36 @@ export function cloneWorkspaceBlockForInsertion(
         deals: block.deals.map((deal) => ({
           ...deal,
           id: createWorkspaceId("forecast"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "content-pipeline":
+      return workspaceContentPipelineBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        items: block.items.map((item) => ({
+          ...item,
+          id: createWorkspaceId("content"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "content-quality-radar":
+      return workspaceContentQualityRadarBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        scores: createWorkspaceContentQualityScores(block.scores),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "content-roi-tracker":
+      return workspaceContentRoiTrackerBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        items: block.items.map((item) => ({
+          ...item,
+          id: createWorkspaceId("content-roi"),
         })),
         createdAt: timestamp,
         updatedAt: timestamp,

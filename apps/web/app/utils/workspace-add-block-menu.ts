@@ -88,6 +88,27 @@ export const workspaceAddBlockCategories = [
     ],
   },
   {
+    id: "content",
+    label: "Content",
+    items: [
+      {
+        blockType: "content-pipeline",
+        label: "Content pipeline",
+        icon: "i-lucide-megaphone",
+      },
+      {
+        blockType: "content-quality-radar",
+        label: "Content quality radar",
+        icon: "i-lucide-chart-area",
+      },
+      {
+        blockType: "content-roi-tracker",
+        label: "Content ROI tracker",
+        icon: "i-lucide-chart-column",
+      },
+    ],
+  },
+  {
     id: "general",
     label: "General",
     items: [

@@ -6,6 +6,9 @@ import {
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceBusinessModelCanvasBlock,
+  createWorkspaceContentPipelineBlock,
+  createWorkspaceContentQualityRadarBlock,
+  createWorkspaceContentRoiTrackerBlock,
   createWorkspaceDealScoringMatrixBlock,
   createWorkspaceDelegationMatrixBlock,
   createWorkspaceDecisionMatrixBlock,
@@ -426,6 +429,15 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
       break;
     case "forecast-confidence-board":
       nextBlock = createWorkspaceForecastConfidenceBoardBlock();
+      break;
+    case "content-pipeline":
+      nextBlock = createWorkspaceContentPipelineBlock();
+      break;
+    case "content-quality-radar":
+      nextBlock = createWorkspaceContentQualityRadarBlock();
+      break;
+    case "content-roi-tracker":
+      nextBlock = createWorkspaceContentRoiTrackerBlock();
       break;
     case "scorecard":
       nextBlock = createWorkspaceScorecardBlock();
@@ -1217,6 +1229,28 @@ function getBlockSearchText(block: WorkspaceBlock) {
         deal.nextAction,
       ]),
     );
+  } else if (block.type === "content-pipeline") {
+    fragments.push(
+      ...block.items.flatMap((item) => [item.title, item.status, item.platform, item.assignee]),
+    );
+  } else if (block.type === "content-quality-radar") {
+    fragments.push(
+      ...Object.entries(block.scores).flatMap(([dimension, score]) => [dimension, String(score)]),
+    );
+  } else if (block.type === "content-roi-tracker") {
+    fragments.push(
+      block.sortBy,
+      ...block.items.flatMap((item) => [
+        item.title,
+        item.platform,
+        item.campaign,
+        item.goal,
+        String(item.reach),
+        String(item.leads),
+        String(item.conversionInfluence),
+        String(item.repurposeValue),
+      ]),
+    );
   } else if (block.type === "scorecard") {
     fragments.push(
       ...block.metrics.flatMap((metric) => [
@@ -1399,6 +1433,35 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
         deal.expectedCloseMonth ?? "",
         deal.owner,
         deal.nextAction,
+      ]),
+    );
+  } else if (block.type === "content-pipeline") {
+    details.push(
+      ...block.items.flatMap((item) => [
+        item.title,
+        item.status,
+        item.platform,
+        item.assignee,
+      ]),
+    );
+  } else if (block.type === "content-quality-radar") {
+    details.push(
+      ...Object.entries(block.scores).flatMap(
+        ([dimension, score]) => [`${dimension} ${score}/10`, `${score}`],
+      ),
+    );
+  } else if (block.type === "content-roi-tracker") {
+    details.push(
+      `Sort ${block.sortBy}`,
+      ...block.items.flatMap((item) => [
+        item.title,
+        item.platform,
+        item.campaign,
+        item.goal,
+        `${item.reach} reach`,
+        `${item.leads} leads`,
+        `${item.conversionInfluence}/10 conversion influence`,
+        `${item.repurposeValue}/10 repurpose value`,
       ]),
     );
   } else if (block.type === "scorecard") {

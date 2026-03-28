@@ -4,6 +4,9 @@ import type { Component } from "vue";
 import WorkspaceAiPromptBlockEditor from "~/components/workspace/node/blocks/WorkspaceAiPromptBlockEditor.vue";
 import WorkspaceAssumptionTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAssumptionTrackerBlockEditor.vue";
 import WorkspaceBusinessModelCanvasBlockEditor from "~/components/workspace/node/blocks/WorkspaceBusinessModelCanvasBlockEditor.vue";
+import WorkspaceContentPipelineBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentPipelineBlockEditor.vue";
+import WorkspaceContentQualityRadarBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentQualityRadarBlockEditor.vue";
+import WorkspaceContentRoiTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentRoiTrackerBlockEditor.vue";
 import WorkspaceKanbanBlockEditor from "~/components/workspace/node/blocks/WorkspaceKanbanBlockEditor.vue";
 import WorkspaceCustomBlockEditor from "~/components/workspace/node/blocks/WorkspaceCustomBlockEditor.vue";
 import WorkspaceDecisionMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionMatrixBlockEditor.vue";
@@ -119,6 +122,24 @@ export const workspaceBlockRegistry = {
     component: WorkspaceForecastConfidenceBoardBlockEditor,
     label: "Forecast confidence board",
     icon: "i-lucide-circle-dollar-sign",
+    addGroup: "secondary",
+  },
+  "content-pipeline": {
+    component: WorkspaceContentPipelineBlockEditor,
+    label: "Content pipeline",
+    icon: "i-lucide-megaphone",
+    addGroup: "secondary",
+  },
+  "content-quality-radar": {
+    component: WorkspaceContentQualityRadarBlockEditor,
+    label: "Content quality radar",
+    icon: "i-lucide-chart-area",
+    addGroup: "secondary",
+  },
+  "content-roi-tracker": {
+    component: WorkspaceContentRoiTrackerBlockEditor,
+    label: "Content ROI tracker",
+    icon: "i-lucide-chart-column",
     addGroup: "secondary",
   },
   scorecard: {

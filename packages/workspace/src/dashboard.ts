@@ -7,6 +7,18 @@ import {
   truncateText,
 } from "./shared";
 import {
+  getContentPipelineSummary,
+  getContentQualityRadarSummary,
+  getContentRoiScore,
+  getContentRoiStatus,
+  getContentRoiTrackerSummary,
+  sortContentRoiItems,
+  workspaceContentPipelineStatusLabels,
+  workspaceContentPlatformLabels,
+  workspaceContentQualityDimensionLabels,
+  workspaceContentRoiStatusLabels,
+} from "./content";
+import {
   collectWorkspaceNodeTasks,
   getTimeOrchestratorSummary,
   getWorkspaceTaskDomainLabel,
@@ -690,6 +702,121 @@ function buildWorkspaceNodeDashboardDetail(
     };
   }
 
+  if (block.type === "content-pipeline") {
+    const summary = getContentPipelineSummary(block);
+    const highlightedItems = block.items
+      .slice()
+      .sort((left, right) => left.title.localeCompare(right.title))
+      .slice(0, 2);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.totalItems > 0
+          ? `${summary.reviewCount} pieces are waiting in review and ${summary.publishedCount} are already published.`
+          : "No content pieces tracked yet.",
+      metrics: [
+        {
+          label: "Pieces",
+          value: String(summary.totalItems),
+        },
+        {
+          label: "Published",
+          value: String(summary.publishedCount),
+        },
+        {
+          label: "Bottleneck",
+          value: summary.bottleneckStatus
+            ? workspaceContentPipelineStatusLabels[summary.bottleneckStatus]
+            : "None",
+        },
+      ],
+      highlights: highlightedItems.map(
+        (item) =>
+          `${truncateText(item.title, 72)} (${workspaceContentPlatformLabels[item.platform]}, ${workspaceContentPipelineStatusLabels[item.status]})`,
+      ),
+    };
+  }
+
+  if (block.type === "content-quality-radar") {
+    const summary = getContentQualityRadarSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: `Average quality score is ${summary.averageScore}/10.`,
+      metrics: [
+        {
+          label: "Average",
+          value: `${summary.averageScore}/10`,
+        },
+        {
+          label: "Strongest",
+          value: summary.strongestDimension
+            ? workspaceContentQualityDimensionLabels[summary.strongestDimension]
+            : "None",
+        },
+        {
+          label: "Weakest",
+          value: summary.weakestDimension
+            ? workspaceContentQualityDimensionLabels[summary.weakestDimension]
+            : "None",
+        },
+      ],
+      highlights: Object.entries(block.scores)
+        .sort((left, right) => Number(right[1]) - Number(left[1]))
+        .slice(0, 2)
+        .map(
+          ([dimension, score]) =>
+            `${workspaceContentQualityDimensionLabels[dimension as keyof typeof block.scores]}: ${score}/10`,
+        ),
+    };
+  }
+
+  if (block.type === "content-roi-tracker") {
+    const summary = getContentRoiTrackerSummary(block);
+    const topItems = sortContentRoiItems(block.items, "roi").slice(0, 2);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.itemCount > 0
+          ? `${summary.totalInfluencedLeads} influenced leads tracked across ${summary.itemCount} content pieces.`
+          : "No content ROI data tracked yet.",
+      metrics: [
+        {
+          label: "Avg ROI",
+          value: `${summary.averageScore}`,
+        },
+        {
+          label: "Top Platform",
+          value: summary.topPlatform
+            ? workspaceContentPlatformLabels[summary.topPlatform]
+            : "None",
+        },
+        {
+          label: "Influenced",
+          value: String(summary.totalInfluencedLeads),
+        },
+      ],
+      highlights: topItems.map((item) => {
+        const score = getContentRoiScore(item);
+        return `${truncateText(item.title, 72)} (${workspaceContentRoiStatusLabels[getContentRoiStatus(score)]}, ${score})`;
+      }),
+    };
+  }
+
   if (block.type === "scorecard") {
     const onTargetCount = block.metrics.filter((metric) =>
       isScorecardMetricOnTarget(metric),
@@ -1013,6 +1140,33 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
 
         return truncateText(
           `${block.title}: ${formatEgpValue(summary.weightedForecast)} weighted forecast with ${summary.coveragePercent}% coverage.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "content-pipeline" && block.items.length > 0) {
+        const summary = getContentPipelineSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.publishedCount} published, ${summary.reviewCount} waiting in review.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "content-quality-radar") {
+        const summary = getContentQualityRadarSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.averageScore}/10 average quality score${summary.weakestDimension ? `, weakest in ${workspaceContentQualityDimensionLabels[summary.weakestDimension]}` : ""}.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "content-roi-tracker" && block.items.length > 0) {
+        const summary = getContentRoiTrackerSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.totalInfluencedLeads} influenced leads, ${summary.topPlatform ? `${workspaceContentPlatformLabels[summary.topPlatform]} is leading.` : `${summary.averageScore} average ROI score.`}`,
           maxLength,
         );
       }

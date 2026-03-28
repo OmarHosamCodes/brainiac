@@ -1,71 +1,79 @@
-**SALES**
+**CONTENT**
 
-**Block 1: Deal Scoring Matrix**
+**Block 1: Content Pipeline (Kanban)**
 
-**What it is:** A combined BANT scoring + temperature + pipeline stage tracker that ranks deals by priority.
+**What it is:** A 5-column Kanban board tracking content pieces from idea to publication.
 
-**How it works:**
-
-Deals are sorted by score (highest first) - highest-value deals appear at top
-
-Each deal card shows: client name, deal value (EGP), temperature indicator (hot/warm/cold dot + dropdown), score (0-100), and a stage progress bar
-
-Stage progress: 5 clickable segments (Lead → Consult → Proposal → Negotiate → Closed) - click any to move deal to that stage
-
-Score slider (0-100) with color coding: green (≥75), yellow (≥50), red (<50)
-
-Temperature dropdown: Hot (red dot), Warm (yellow), Cold (gray)
-
-Below each card: Next action text + due date
-
-**Pre-loaded data:** 3 deals: TechCo (15K, stage 2, hot, score 82), FoodBrand (8K, stage 1, warm, score 55), EduStart (22K, stage 3, hot, score 90)
-
-**Block 2: Pipeline Funnel**
-
-**What it is:** A visual sales funnel showing deals organized by stage with value totals.
+Columns: Ideas (gray) → Draft (yellow) → Review (indigo) → Approved (green) → Published (pink)
 
 **How it works:**
 
-5 narrowing rows (100% → 84% → 68% → 52% → 36% width): Lead → Consultation → Proposal → Negotiation → Closed
+Each column shows a header with count and a colored status dot
 
-Each row is color-coded and shows: stage name, deal count, total value
+Content cards show: editable title, platform pill (IG/TikTok/LinkedIn/YT), assignee pill
 
-Below: list of all deals with stage dropdown for quick moves
+Status transition buttons on each card - click to move to any other column instantly
 
-Temperature dots next to each deal name
+"New" button - creates a blank card in Ideas column
 
-**Visual design:** The funnel narrows physically as you go down - making conversion drop-off visible at a glance.
+**Pre-loaded data:** 3 content pieces across different stages and platforms.
 
-**Block 3: Forecast Confidence Board**
+**Use cases:** Weekly content review, managing team output, tracking approval bottlenecks.
 
-**What it is:** A revenue forecasting layer that turns raw pipeline into a confidence-based sales forecast.
+**Block 2: Content Quality Radar (Spider Chart)**
+
+**What it is:** A live SVG spider/radar chart scoring content quality across 10 dimensions.
+
+Dimensions scored (1-10):
+
+Hook, Value, Emotion, CTA, Platform Fit, Brand, Shareability, Scroll-Stop, Authenticity, Storytelling
 
 **How it works:**
 
-Deals are grouped into 4 forecast buckets: Commit, Likely, Upside, At Risk
+SVG radar chart (280×280) with 4 concentric reference polygons (25%, 50%, 75%, 100%)
 
-Each deal card shows: client name, deal value, expected close month, confidence %, owner, and next action
+Filled polygon connects the 10 data points - shape reveals strengths and weaknesses visually
 
-Weighted Forecast is auto-calculated using deal value × confidence %
+Score sliders (1-10) next to the chart for each dimension
 
-Top KPI cards show: Commit Revenue, Weighted Forecast, At-Risk Value, and Coverage vs Target
+Average score displayed as a large number (color-coded: green ≥7, yellow ≥5, red <5)
 
-Bucket totals update in real time as confidence or deal movement changes
+Chart updates in real time as sliders move
+
+**Pre-loaded data:** Realistic scores showing strengths in Authenticity (9) and Brand (8), weaknesses in Shareability (4) and CTA (5).
+
+**Use cases:** Content audit, identifying systematic weaknesses, tracking improvement over time, team feedback framework.
+
+**Block 3: Content ROI Tracker**
+
+**What it is:** A business impact tracker that measures which content pieces create real commercial value, not just output.
+
+**How it works:**
+
+Table layout: Rows = content pieces, Columns = platform, campaign, goal, reach, leads, conversion influence, repurpose value, ROI status
+
+Each content row receives a composite ROI score based on leads generated, sales influence, and repurposing value
+
+ROI Status is color-coded: High Return (green), Promising (yellow), Low Return (red)
+
+A summary bar at the top shows top-performing platform, top-performing campaign, and total influenced leads
 
 **Interactive elements:**
 
-Confidence slider (10-100%) per deal
+Inline editing for title, platform, and campaign
 
-Bucket dropdown - Commit / Likely / Upside / At Risk
+Numeric inputs for reach and leads
 
-Month picker for expected close timing
+Conversion Influence score slider (1-10)
 
-Inline editing for next action and owner
+Repurpose Value score slider (1-10)
 
-"Add Deal to Forecast" button - creates a new forecast item
+"Add Content Piece" button - creates a blank row
+
+Sort toggle - by ROI, reach, or leads
 
 **Pre-loaded data:**
 
-TechCo in Commit (15K, 85%), EduStart in Likely (22K, 70%), FoodBrand in At Risk (8K, 35%)
+3 content pieces: a LinkedIn authority post (high ROI), a TikTok educational video (promising), and an Instagram carousel (low ROI)
 
-**Use cases:** Monthly revenue calls, sales forecasting, identifying forecast gaps early, prioritizing rescue actions on weak deals.
+**Use cases:** Double down on winning formats, cut low-value content, prove content contribution to business growth.

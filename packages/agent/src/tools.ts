@@ -5,6 +5,9 @@ import {
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceBusinessModelCanvasBlock,
+  createWorkspaceContentPipelineBlock,
+  createWorkspaceContentQualityRadarBlock,
+  createWorkspaceContentRoiTrackerBlock,
   createWorkspaceCustomBlock,
   createWorkspaceDealScoringMatrixBlock,
   createWorkspaceDecisionMatrixBlock,
@@ -62,6 +65,9 @@ const workspaceBlockTypeSchema = z.enum([
   "deal-scoring-matrix",
   "pipeline-funnel",
   "forecast-confidence-board",
+  "content-pipeline",
+  "content-quality-radar",
+  "content-roi-tracker",
   "scorecard",
   "okr-tracker",
   "decision-matrix",
@@ -289,6 +295,12 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return `${block.deals.length} funnel deals`;
     case "forecast-confidence-board":
       return `${block.deals.length} forecast deals, target ${block.targetRevenueEgp} EGP`;
+    case "content-pipeline":
+      return `${block.items.length} content pieces across 5 stages`;
+    case "content-quality-radar":
+      return `${Object.values(block.scores).reduce((sum, score) => sum + score, 0) / 10}/10 average quality score`;
+    case "content-roi-tracker":
+      return `${block.items.length} content ROI rows sorted by ${block.sortBy}`;
     case "scorecard":
       return `${block.metrics.length} metrics`;
     case "okr-tracker":
@@ -629,6 +641,12 @@ function createBlockByType(args: {
       return createWorkspacePipelineFunnelBlock(titleInput);
     case "forecast-confidence-board":
       return createWorkspaceForecastConfidenceBoardBlock(titleInput);
+    case "content-pipeline":
+      return createWorkspaceContentPipelineBlock(titleInput);
+    case "content-quality-radar":
+      return createWorkspaceContentQualityRadarBlock(titleInput);
+    case "content-roi-tracker":
+      return createWorkspaceContentRoiTrackerBlock(titleInput);
     case "scorecard":
       return createWorkspaceScorecardBlock(titleInput);
     case "okr-tracker":
