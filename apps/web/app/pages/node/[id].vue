@@ -1483,13 +1483,14 @@ provide(workspaceNodeEditorContextKey, {
         </div>
 
         <div
-          class="hidden shrink-0 overflow-hidden border-l border-neutral-200/60 bg-white/50 transition-[width,opacity] duration-300 dark:border-neutral-800/60 dark:bg-neutral-950/40 lg:block"
+          class="agent-rail hidden shrink-0 overflow-hidden border-l border-neutral-200/60 bg-white/50 transition-[width,opacity] duration-300 dark:border-neutral-800/60 dark:bg-neutral-950/40 lg:block"
           :class="
             isAgentChatVisible
               ? 'w-[26rem] opacity-100'
               : 'pointer-events-none w-0 opacity-0'
           "
         >
+          <div class="agent-rail-aura" aria-hidden="true" />
           <div class="sticky top-0 flex h-full min-h-0 flex-col gap-3 p-3">
             <div
               v-if="agentContextState"
@@ -1607,3 +1608,35 @@ provide(workspaceNodeEditorContextKey, {
     </div>
   </div>
 </template>
+
+<style scoped>
+.agent-rail {
+  position: relative;
+  isolation: isolate;
+}
+
+.agent-rail-aura {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(34rem 26rem at 12% 22%, rgb(59 130 246 / 0.16), transparent 62%),
+    radial-gradient(26rem 20rem at 88% 18%, rgb(16 185 129 / 0.12), transparent 58%),
+    radial-gradient(20rem 18rem at 50% 78%, rgb(99 102 241 / 0.1), transparent 60%);
+  filter: blur(10px);
+  opacity: 0.95;
+}
+
+.agent-rail > .sticky {
+  position: sticky;
+  z-index: 1;
+}
+
+:global(.dark) .agent-rail-aura {
+  background:
+    radial-gradient(34rem 26rem at 12% 22%, rgb(96 165 250 / 0.2), transparent 62%),
+    radial-gradient(26rem 20rem at 88% 18%, rgb(45 212 191 / 0.14), transparent 58%),
+    radial-gradient(20rem 18rem at 50% 78%, rgb(129 140 248 / 0.14), transparent 60%);
+}
+</style>
