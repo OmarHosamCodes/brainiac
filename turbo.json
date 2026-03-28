@@ -27,6 +27,10 @@
       "cache": false,
       "persistent": true
     },
+    "push": {
+      "cache": false,
+      "interactive": true
+    },
     "db:push": {
       "cache": false,
       "interactive": true
