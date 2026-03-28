@@ -4,12 +4,16 @@ import {
   WORKSPACE_TASK_DOMAINS,
   createDefaultWorkspaceTab,
   createWorkspaceAiPromptBlock,
+  createWorkspaceAssumptionTrackerBlock,
+  createWorkspaceBusinessModelCanvasBlock,
+  createWorkspaceDecisionMatrixBlock,
   createWorkspaceDecisionBlock,
   createWorkspaceId,
   createWorkspaceKanbanBlock,
   createWorkspaceKanbanCard,
   createWorkspaceKanbanColumn,
   createWorkspaceNotesBlock,
+  createWorkspaceOkrTrackerBlock,
   createWorkspaceScorecardBlock,
   createWorkspaceScorecardMetric,
   createWorkspaceTask,
@@ -397,6 +401,18 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
       break;
     case "scorecard":
       nextBlock = createWorkspaceScorecardBlock();
+      break;
+    case "okr-tracker":
+      nextBlock = createWorkspaceOkrTrackerBlock();
+      break;
+    case "decision-matrix":
+      nextBlock = createWorkspaceDecisionMatrixBlock();
+      break;
+    case "business-model-canvas":
+      nextBlock = createWorkspaceBusinessModelCanvasBlock();
+      break;
+    case "assumption-tracker":
+      nextBlock = createWorkspaceAssumptionTrackerBlock();
       break;
     case "custom":
       return;
@@ -1104,6 +1120,41 @@ function getBlockSearchText(block: WorkspaceBlock) {
         metric.unit,
       ]),
     );
+  } else if (block.type === "okr-tracker") {
+    fragments.push(
+      ...block.objectives.flatMap((objective) => [
+        objective.title,
+        ...objective.keyResults.flatMap((keyResult) => [
+          keyResult.title,
+          String(keyResult.progress),
+        ]),
+      ]),
+    );
+  } else if (block.type === "decision-matrix") {
+    fragments.push(
+      block.question,
+      ...block.criteria.flatMap((criterion) => [criterion.label, String(criterion.weight)]),
+      ...block.options.flatMap((option) => [
+        option.label,
+        ...Object.values(option.scores).map(String),
+      ]),
+    );
+  } else if (block.type === "business-model-canvas") {
+    fragments.push(block.analysis, ...Object.values(block.cells));
+  } else if (block.type === "assumption-tracker") {
+    fragments.push(
+      block.filter,
+      ...block.assumptions.flatMap((assumption) => [
+        assumption.statement,
+        assumption.owner,
+        assumption.reviewDate ?? "",
+        assumption.status,
+        String(assumption.confidence),
+        assumption.evidenceNotes,
+        assumption.linkType,
+        assumption.linkId ?? "",
+      ]),
+    );
   } else if (block.type === "custom") {
     const templateName = getCustomTemplate(block.definitionId)?.name ?? "";
     fragments.push(templateName, block.notes, ...Object.values(block.values).map(String));
@@ -1177,6 +1228,38 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
         metric.label,
         `${metric.value}/${metric.target}`,
         metric.unit,
+      ]),
+    );
+  } else if (block.type === "okr-tracker") {
+    details.push(
+      ...block.objectives.flatMap((objective) => [
+        objective.title,
+        ...objective.keyResults.flatMap((keyResult) => [
+          keyResult.title,
+          `${keyResult.progress}%`,
+        ]),
+      ]),
+    );
+  } else if (block.type === "decision-matrix") {
+    details.push(
+      block.question,
+      ...block.criteria.flatMap((criterion) => [criterion.label, `Weight ${criterion.weight}`]),
+      ...block.options.flatMap((option) => [
+        option.label,
+        ...Object.values(option.scores).map((score) => `Score ${score}`),
+      ]),
+    );
+  } else if (block.type === "business-model-canvas") {
+    details.push(block.analysis, ...Object.values(block.cells));
+  } else if (block.type === "assumption-tracker") {
+    details.push(
+      ...block.assumptions.flatMap((assumption) => [
+        assumption.statement,
+        assumption.owner,
+        assumption.reviewDate ?? "",
+        assumption.status,
+        `${assumption.confidence}/5 confidence`,
+        assumption.evidenceNotes,
       ]),
     );
   } else if (block.type === "custom") {
@@ -1387,17 +1470,68 @@ provide(workspaceNodeEditorContextKey, {
     </div>
 
     <template v-else-if="node && activeTab">
-      <WorkspaceNodeShell
-        :node="node"
-        :active-tab="activeTab"
-        :active-tab-id="activeTabId"
-        :save-badge="saveBadge"
-        :save-error="saveError"
-        :visible-blocks="visibleBlocks"
-      />
+      <div class="flex h-full min-h-0 w-full overflow-hidden">
+        <div class="min-w-0 flex-1">
+          <WorkspaceNodeShell
+            :node="node"
+            :active-tab="activeTab"
+            :active-tab-id="activeTabId"
+            :save-badge="saveBadge"
+            :save-error="saveError"
+            :visible-blocks="visibleBlocks"
+          />
+        </div>
+
+        <div
+          class="hidden shrink-0 overflow-hidden border-l border-neutral-200/60 bg-white/50 transition-[width,opacity] duration-300 dark:border-neutral-800/60 dark:bg-neutral-950/40 lg:block"
+          :class="
+            isAgentChatVisible
+              ? 'w-[26rem] opacity-100'
+              : 'pointer-events-none w-0 opacity-0'
+          "
+        >
+          <div class="sticky top-0 flex h-full min-h-0 flex-col gap-3 p-3">
+            <div
+              v-if="agentContextState"
+              class="rounded-[1.75rem] border border-neutral-200/70 bg-white/92 px-4 py-3 shadow-xl shadow-black/10 backdrop-blur-xl dark:border-neutral-800/70 dark:bg-neutral-950/92"
+            >
+              <div class="flex items-start gap-3">
+                <div
+                  class="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+                >
+                  <UIcon name="i-lucide-square-dashed-mouse-pointer" class="size-4" />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
+                    Block context
+                  </p>
+                  <p class="truncate text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+                    {{ getDisplayBlockTitle(agentContextState.block) }}
+                  </p>
+                  <p class="truncate text-xs text-neutral-500 dark:text-neutral-400">
+                    {{ node.title }} / {{ getDisplayTabTitle(agentContextState.tab) }}
+                  </p>
+                </div>
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-x"
+                  class="rounded-full"
+                  @click="clearAgentContextBlock"
+                />
+              </div>
+            </div>
+
+            <div class="min-h-0 flex-1">
+              <DashboardAgentChatPanel :nodes="agentChatNodes" @close="isAgentChatVisible = false" />
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div
-        class="pointer-events-none fixed bottom-4 right-3 top-20 z-40 flex w-[min(26rem,calc(100vw-1.5rem))] flex-col gap-3 transition-all duration-300 sm:bottom-6 sm:right-6 sm:top-24"
+        class="pointer-events-none fixed bottom-4 right-3 top-20 z-40 flex w-[min(26rem,calc(100vw-1.5rem))] flex-col gap-3 transition-all duration-300 sm:bottom-6 sm:right-6 sm:top-24 lg:hidden"
         :class="
           isAgentChatVisible
             ? 'translate-x-0 opacity-100'

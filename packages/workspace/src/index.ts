@@ -6,8 +6,13 @@ import {
 } from "./constants";
 import {
   workspaceAiPromptBlockSchema,
+  workspaceAssumptionTrackerBlockSchema,
+  workspaceBusinessModelCanvasBlockSchema,
   workspaceCustomBlockSchema,
   workspaceCustomBlockTemplateSchema,
+  workspaceDecisionMatrixBlockSchema,
+  workspaceDecisionMatrixCriterionSchema,
+  workspaceDecisionMatrixOptionSchema,
   workspaceDecisionBlockSchema,
   workspaceKanbanBlockSchema,
   workspaceKanbanCardSchema,
@@ -17,9 +22,13 @@ import {
   workspaceNodeTabSchema,
   workspaceNodeViewStateSchema,
   workspaceNotesBlockSchema,
+  workspaceOkrKeyResultSchema,
+  workspaceOkrObjectiveSchema,
+  workspaceOkrTrackerBlockSchema,
   workspacePromptOutputSchema,
   workspaceScorecardBlockSchema,
   workspaceScorecardMetricSchema,
+  workspaceStrategicAssumptionSchema,
   workspaceTaskListBlockSchema,
   workspaceTaskSchema,
   workspaceTimeOrchestratorBlockSchema,
@@ -31,10 +40,15 @@ import { getNowIsoString } from "./shared";
 import { createWorkspaceTimeOrchestratorSettings } from "./tasks";
 import type {
   WorkspaceAiPromptBlock,
+  WorkspaceAssumptionTrackerBlock,
+  WorkspaceBusinessModelCanvasBlock,
   WorkspaceBlock,
   WorkspaceCustomBlock,
   WorkspaceCustomBlockField,
   WorkspaceCustomBlockTemplate,
+  WorkspaceDecisionMatrixBlock,
+  WorkspaceDecisionMatrixCriterion,
+  WorkspaceDecisionMatrixOption,
   WorkspaceDecisionBlock,
   WorkspaceKanbanBlock,
   WorkspaceKanbanCard,
@@ -45,8 +59,12 @@ import type {
   WorkspaceNodeViewState,
   WorkspaceNotesBlock,
   WorkspacePromptOutput,
+  WorkspaceOkrKeyResult,
+  WorkspaceOkrObjective,
+  WorkspaceOkrTrackerBlock,
   WorkspaceScorecardBlock,
   WorkspaceScorecardMetric,
+  WorkspaceStrategicAssumption,
   WorkspaceTask,
   WorkspaceTaskListBlock,
   WorkspaceTimeOrchestratorBlock,
@@ -58,6 +76,7 @@ import type {
 export * from "./constants";
 export * from "./dashboard";
 export * from "./schemas";
+export * from "./strategy";
 export * from "./tasks";
 export * from "./types";
 
@@ -129,6 +148,102 @@ export function createWorkspaceScorecardMetric(
     target: partial.target ?? 100,
     unit: partial.unit ?? "",
   });
+}
+
+export function createWorkspaceOkrKeyResult(
+  partial: Partial<WorkspaceOkrKeyResult> = {},
+): WorkspaceOkrKeyResult {
+  return workspaceOkrKeyResultSchema.parse({
+    id: partial.id ?? createWorkspaceId("key-result"),
+    title: partial.title ?? "New key result",
+    progress: partial.progress ?? 0,
+  });
+}
+
+export function createWorkspaceOkrObjective(
+  partial: Partial<WorkspaceOkrObjective> = {},
+): WorkspaceOkrObjective {
+  return workspaceOkrObjectiveSchema.parse({
+    id: partial.id ?? createWorkspaceId("objective"),
+    title: partial.title ?? "New objective",
+    keyResults: partial.keyResults ?? [],
+  });
+}
+
+export function createWorkspaceDecisionMatrixCriterion(
+  partial: Partial<WorkspaceDecisionMatrixCriterion> = {},
+): WorkspaceDecisionMatrixCriterion {
+  return workspaceDecisionMatrixCriterionSchema.parse({
+    id: partial.id ?? createWorkspaceId("criterion"),
+    label: partial.label ?? "New criterion",
+    weight: partial.weight ?? 5,
+  });
+}
+
+export function createWorkspaceDecisionMatrixOption(
+  partial: Partial<WorkspaceDecisionMatrixOption> = {},
+): WorkspaceDecisionMatrixOption {
+  return workspaceDecisionMatrixOptionSchema.parse({
+    id: partial.id ?? createWorkspaceId("option"),
+    label: partial.label ?? "Option",
+    scores: partial.scores ?? {},
+  });
+}
+
+export function createWorkspaceStrategicAssumption(
+  partial: Partial<WorkspaceStrategicAssumption> = {},
+): WorkspaceStrategicAssumption {
+  return workspaceStrategicAssumptionSchema.parse({
+    id: partial.id ?? createWorkspaceId("assumption"),
+    statement: partial.statement ?? "New assumption",
+    linkType: partial.linkType ?? "none",
+    linkId: partial.linkId ?? null,
+    owner: partial.owner ?? "",
+    reviewDate: partial.reviewDate ?? null,
+    confidence: partial.confidence ?? 3,
+    status: partial.status ?? "validating",
+    evidenceNotes: partial.evidenceNotes ?? "",
+  });
+}
+
+function getDecisionMatrixDefaultCriteria() {
+  return [
+    createWorkspaceDecisionMatrixCriterion({
+      label: "Revenue Impact",
+      weight: 5,
+    }),
+    createWorkspaceDecisionMatrixCriterion({
+      label: "Time to Execute",
+      weight: 3,
+    }),
+    createWorkspaceDecisionMatrixCriterion({
+      label: "Risk Level",
+      weight: 4,
+    }),
+  ];
+}
+
+function createDecisionMatrixScoreMap(
+  criteria: WorkspaceDecisionMatrixCriterion[],
+  scores: number[],
+) {
+  return Object.fromEntries(criteria.map((criterion, index) => [criterion.id, scores[index] ?? 5]));
+}
+
+function getBusinessModelCanvasDefaultCells() {
+  return {
+    keyPartners: "",
+    keyActivities:
+      "Deliver cohort-based practical marketing programs\nPublish authority-building content each week\nRun conversion-focused consulting and advisory sessions",
+    keyResources: "",
+    valuePropositions:
+      "Practical senior-level marketing training with real case studies\nClearer execution systems for operators, founders, and teams",
+    customerRelationships: "",
+    channels: "",
+    customerSegments: "",
+    costStructure: "",
+    revenueStreams: "",
+  } satisfies WorkspaceBusinessModelCanvasBlock["cells"];
 }
 
 export function createWorkspaceTaskListBlock(
@@ -279,6 +394,124 @@ export function createWorkspaceScorecardBlock(
   });
 }
 
+export function createWorkspaceOkrTrackerBlock(
+  partial: Partial<WorkspaceOkrTrackerBlock> = {},
+): WorkspaceOkrTrackerBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceOkrTrackerBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "okr-tracker",
+    title: partial.title ?? "OKR tracker",
+    objectives: partial.objectives ?? [
+      createWorkspaceOkrObjective({
+        title: "Scale to 250K EGP/month",
+        keyResults: [
+          createWorkspaceOkrKeyResult({ title: "Close 3 retainers", progress: 33 }),
+          createWorkspaceOkrKeyResult({ title: "Average deal size reaches 18K", progress: 60 }),
+          createWorkspaceOkrKeyResult({ title: "Keep churn below 10%", progress: 80 }),
+        ],
+      }),
+      createWorkspaceOkrObjective({
+        title: "Launch course Q2",
+        keyResults: [
+          createWorkspaceOkrKeyResult({ title: "Finalize curriculum", progress: 70 }),
+          createWorkspaceOkrKeyResult({ title: "Record 6 modules", progress: 33 }),
+          createWorkspaceOkrKeyResult({ title: "Ship sales funnel", progress: 10 }),
+        ],
+      }),
+    ],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceDecisionMatrixBlock(
+  partial: Partial<WorkspaceDecisionMatrixBlock> = {},
+): WorkspaceDecisionMatrixBlock {
+  const timestamp = getNowIsoString();
+  const criteria = partial.criteria ?? getDecisionMatrixDefaultCriteria();
+
+  return workspaceDecisionMatrixBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "decision-matrix",
+    title: partial.title ?? "Decision matrix",
+    question: partial.question ?? "What decision are you making?",
+    criteria,
+    options: partial.options ?? [
+      createWorkspaceDecisionMatrixOption({
+        label: "Option A",
+        scores: createDecisionMatrixScoreMap(criteria, [8, 5, 7]),
+      }),
+      createWorkspaceDecisionMatrixOption({
+        label: "Option B",
+        scores: createDecisionMatrixScoreMap(criteria, [6, 8, 5]),
+      }),
+    ],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceBusinessModelCanvasBlock(
+  partial: Partial<WorkspaceBusinessModelCanvasBlock> = {},
+): WorkspaceBusinessModelCanvasBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceBusinessModelCanvasBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "business-model-canvas",
+    title: partial.title ?? "Business model canvas",
+    cells: partial.cells ?? getBusinessModelCanvasDefaultCells(),
+    analysis: partial.analysis ?? "",
+    analysisUpdatedAt: partial.analysisUpdatedAt ?? null,
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceAssumptionTrackerBlock(
+  partial: Partial<WorkspaceAssumptionTrackerBlock> = {},
+): WorkspaceAssumptionTrackerBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceAssumptionTrackerBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "assumption-tracker",
+    title: partial.title ?? "Assumption tracker",
+    filter: partial.filter ?? "all",
+    assumptions: partial.assumptions ?? [
+      createWorkspaceStrategicAssumption({
+        statement: "Senior marketers will pay premium for practical training",
+        status: "validating",
+        confidence: 4,
+        owner: "Growth lead",
+        reviewDate: "2026-04-12",
+        evidenceNotes: "Discovery calls show demand for practical case-based material.",
+      }),
+      createWorkspaceStrategicAssumption({
+        statement: "Content-led demand can fill the next cohort",
+        status: "at-risk",
+        confidence: 3,
+        owner: "Content lead",
+        reviewDate: "2026-04-05",
+        evidenceNotes: "Organic pipeline is inconsistent and CAC benchmarks are not proven yet.",
+      }),
+      createWorkspaceStrategicAssumption({
+        statement: "Agency case studies will strengthen conversion rate",
+        status: "confirmed",
+        confidence: 5,
+        owner: "Sales lead",
+        reviewDate: "2026-04-20",
+        evidenceNotes:
+          "Recent calls referenced proof and closed faster after seeing outcome stories.",
+      }),
+    ],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
 export function createWorkspaceCustomBlockTemplate(
   partial: Partial<WorkspaceCustomBlockTemplate> & {
     fields: WorkspaceCustomBlockField[];
@@ -418,6 +651,41 @@ function normalizeWorkspaceKanbanBlock(
   });
 }
 
+function normalizeWorkspaceDecisionMatrixBlock(
+  block:
+    | WorkspaceDecisionMatrixBlock
+    | (Partial<WorkspaceDecisionMatrixBlock> & { type: "decision-matrix" }),
+) {
+  const criteria =
+    block.criteria && block.criteria.length > 0
+      ? block.criteria.map((criterion) => workspaceDecisionMatrixCriterionSchema.parse(criterion))
+      : getDecisionMatrixDefaultCriteria();
+  const validCriterionIds = new Set(criteria.map((criterion) => criterion.id));
+  const options =
+    block.options && block.options.length > 0
+      ? block.options.map((option) =>
+          workspaceDecisionMatrixOptionSchema.parse({
+            ...option,
+            scores: Object.fromEntries(
+              criteria.map((criterion) => [criterion.id, option.scores?.[criterion.id] ?? 5]),
+            ),
+          }),
+        )
+      : createWorkspaceDecisionMatrixBlock({ criteria }).options;
+
+  return workspaceDecisionMatrixBlockSchema.parse({
+    ...block,
+    question: block.question ?? "",
+    criteria,
+    options: options.map((option) => ({
+      ...option,
+      scores: Object.fromEntries(
+        Object.entries(option.scores).filter(([criterionId]) => validCriterionIds.has(criterionId)),
+      ),
+    })),
+  });
+}
+
 export function normalizeWorkspaceNodeTab(tab: WorkspaceNodeTab): WorkspaceNodeTab {
   const parsed = workspaceNodeTabSchema.parse({
     ...tab,
@@ -477,6 +745,29 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
       return workspaceScorecardBlockSchema.parse({
         ...block,
         metrics: block.metrics ?? [],
+      });
+    case "okr-tracker":
+      return workspaceOkrTrackerBlockSchema.parse({
+        ...block,
+        objectives: block.objectives ?? [],
+      });
+    case "decision-matrix":
+      return normalizeWorkspaceDecisionMatrixBlock(block);
+    case "business-model-canvas":
+      return workspaceBusinessModelCanvasBlockSchema.parse({
+        ...block,
+        cells: {
+          ...getBusinessModelCanvasDefaultCells(),
+          ...block.cells,
+        },
+        analysis: block.analysis ?? "",
+        analysisUpdatedAt: block.analysisUpdatedAt ?? null,
+      });
+    case "assumption-tracker":
+      return workspaceAssumptionTrackerBlockSchema.parse({
+        ...block,
+        filter: block.filter ?? "all",
+        assumptions: block.assumptions ?? [],
       });
     case "custom":
       return workspaceCustomBlockSchema.parse({
@@ -709,6 +1000,67 @@ export function cloneWorkspaceBlockForInsertion(
         metrics: block.metrics.map((metric) => ({
           ...metric,
           id: createWorkspaceId("metric"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "okr-tracker":
+      return workspaceOkrTrackerBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        objectives: block.objectives.map((objective) => ({
+          ...objective,
+          id: createWorkspaceId("objective"),
+          keyResults: objective.keyResults.map((keyResult) => ({
+            ...keyResult,
+            id: createWorkspaceId("key-result"),
+          })),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "decision-matrix": {
+      const criteria = block.criteria.map((criterion) => {
+        const nextCriterionId = createWorkspaceId("criterion");
+
+        return {
+          ...criterion,
+          id: nextCriterionId,
+        };
+      });
+
+      return workspaceDecisionMatrixBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        criteria,
+        options: block.options.map((option) => ({
+          ...option,
+          id: createWorkspaceId("option"),
+          scores: Object.fromEntries(
+            criteria.map((criterion, index) => [
+              criterion.id,
+              option.scores[block.criteria[index]!.id] ?? 5,
+            ]),
+          ),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    }
+    case "business-model-canvas":
+      return workspaceBusinessModelCanvasBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "assumption-tracker":
+      return workspaceAssumptionTrackerBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        assumptions: block.assumptions.map((assumption) => ({
+          ...assumption,
+          id: createWorkspaceId("assumption"),
         })),
         createdAt: timestamp,
         updatedAt: timestamp,

@@ -2,12 +2,19 @@ import { z } from "zod";
 
 import {
   workspaceAiPromptBlockSchema,
+  workspaceAssumptionTrackerBlockSchema,
+  workspaceBusinessModelCanvasBlockSchema,
   workspaceBlockSchema,
+  workspaceBusinessModelCanvasCellKeySchema,
+  workspaceBusinessModelCanvasCellsSchema,
   workspaceCustomBlockFieldSchema,
   workspaceCustomBlockFormulaSchema,
   workspaceCustomBlockSchema,
   workspaceCustomBlockTemplateSchema,
   workspaceCustomBlockValueSchema,
+  workspaceDecisionMatrixBlockSchema,
+  workspaceDecisionMatrixCriterionSchema,
+  workspaceDecisionMatrixOptionSchema,
   workspaceCustomFieldTypeSchema,
   workspaceDecisionBlockSchema,
   workspaceDecisionItemSchema,
@@ -24,10 +31,17 @@ import {
   workspaceNodeTintSchema,
   workspaceNodeViewStateSchema,
   workspaceNotesBlockSchema,
+  workspaceOkrKeyResultSchema,
+  workspaceOkrObjectiveSchema,
+  workspaceOkrTrackerBlockSchema,
   workspacePromptOutputSchema,
   workspaceSaveInputSchema,
   workspaceScorecardBlockSchema,
   workspaceScorecardMetricSchema,
+  workspaceStrategicAssumptionFilterSchema,
+  workspaceStrategicAssumptionLinkTypeSchema,
+  workspaceStrategicAssumptionSchema,
+  workspaceStrategicAssumptionStatusSchema,
   workspaceTaskDomainSchema,
   workspaceTaskListBlockSchema,
   workspaceTaskPrioritySchema,
@@ -60,6 +74,28 @@ export type WorkspaceTimelineMilestoneStatus = z.infer<
 export type WorkspaceNodeTint = z.infer<typeof workspaceNodeTintSchema>;
 export type WorkspaceTimelineMilestone = z.infer<typeof workspaceTimelineMilestoneSchema>;
 export type WorkspaceScorecardMetric = z.infer<typeof workspaceScorecardMetricSchema>;
+export type WorkspaceOkrKeyResult = z.infer<typeof workspaceOkrKeyResultSchema>;
+export type WorkspaceOkrObjective = z.infer<typeof workspaceOkrObjectiveSchema>;
+export type WorkspaceDecisionMatrixCriterion = z.infer<
+  typeof workspaceDecisionMatrixCriterionSchema
+>;
+export type WorkspaceDecisionMatrixOption = z.infer<typeof workspaceDecisionMatrixOptionSchema>;
+export type WorkspaceBusinessModelCanvasCellKey = z.infer<
+  typeof workspaceBusinessModelCanvasCellKeySchema
+>;
+export type WorkspaceBusinessModelCanvasCells = z.infer<
+  typeof workspaceBusinessModelCanvasCellsSchema
+>;
+export type WorkspaceStrategicAssumptionStatus = z.infer<
+  typeof workspaceStrategicAssumptionStatusSchema
+>;
+export type WorkspaceStrategicAssumptionLinkType = z.infer<
+  typeof workspaceStrategicAssumptionLinkTypeSchema
+>;
+export type WorkspaceStrategicAssumptionFilter = z.infer<
+  typeof workspaceStrategicAssumptionFilterSchema
+>;
+export type WorkspaceStrategicAssumption = z.infer<typeof workspaceStrategicAssumptionSchema>;
 export type WorkspaceCustomFieldType = z.infer<typeof workspaceCustomFieldTypeSchema>;
 export type WorkspaceCustomBlockField = z.infer<typeof workspaceCustomBlockFieldSchema>;
 export type WorkspaceCustomBlockFormula = z.infer<typeof workspaceCustomBlockFormulaSchema>;
@@ -73,6 +109,12 @@ export type WorkspaceTimeOrchestratorBlock = z.infer<typeof workspaceTimeOrchest
 export type WorkspaceKanbanBlock = z.infer<typeof workspaceKanbanBlockSchema>;
 export type WorkspaceTimelineBlock = z.infer<typeof workspaceTimelineBlockSchema>;
 export type WorkspaceScorecardBlock = z.infer<typeof workspaceScorecardBlockSchema>;
+export type WorkspaceOkrTrackerBlock = z.infer<typeof workspaceOkrTrackerBlockSchema>;
+export type WorkspaceDecisionMatrixBlock = z.infer<typeof workspaceDecisionMatrixBlockSchema>;
+export type WorkspaceBusinessModelCanvasBlock = z.infer<
+  typeof workspaceBusinessModelCanvasBlockSchema
+>;
+export type WorkspaceAssumptionTrackerBlock = z.infer<typeof workspaceAssumptionTrackerBlockSchema>;
 export type WorkspaceCustomBlock = z.infer<typeof workspaceCustomBlockSchema>;
 export type WorkspaceBlock = z.infer<typeof workspaceBlockSchema>;
 export type WorkspaceNodeTab = z.infer<typeof workspaceNodeTabSchema>;
@@ -138,6 +180,65 @@ export type WorkspaceDecisionSummary = {
   consWeight: number;
   totalScore: number;
   signal: "lean-yes" | "lean-no" | "balanced";
+};
+
+export type WorkspaceOkrHealth = "healthy" | "watch" | "critical";
+
+export type WorkspaceOkrObjectiveSummary = {
+  objectiveId: string;
+  title: string;
+  progress: number;
+  health: WorkspaceOkrHealth;
+  keyResultCount: number;
+};
+
+export type WorkspaceOkrTrackerSummary = {
+  objectiveCount: number;
+  keyResultCount: number;
+  averageProgress: number;
+  offTrackCount: number;
+  healthyCount: number;
+  objectives: WorkspaceOkrObjectiveSummary[];
+};
+
+export type WorkspaceDecisionMatrixOptionScoreSummary = {
+  optionId: string;
+  label: string;
+  totalScore: number;
+  averageScore: number;
+  progress: number;
+  isWinner: boolean;
+};
+
+export type WorkspaceDecisionMatrixSummary = {
+  criteriaCount: number;
+  optionCount: number;
+  totalWeight: number;
+  leaderScore: number;
+  hasTie: boolean;
+  optionScores: WorkspaceDecisionMatrixOptionScoreSummary[];
+};
+
+export type WorkspaceBusinessModelCanvasSummary = {
+  filledCellCount: number;
+  missingCellCount: number;
+  readiness: "early" | "forming" | "aligned";
+  strongestCells: WorkspaceBusinessModelCanvasCellKey[];
+  missingCells: WorkspaceBusinessModelCanvasCellKey[];
+};
+
+export type WorkspaceBusinessModelCanvasAnalysis = WorkspaceBusinessModelCanvasSummary & {
+  coveragePercent: number;
+  narrative: string;
+};
+
+export type WorkspaceAssumptionTrackerSummary = {
+  total: number;
+  averageConfidence: number;
+  validatingCount: number;
+  confirmedCount: number;
+  atRiskCount: number;
+  falseCount: number;
 };
 
 export type WorkspaceNodeDashboardSelectableBlock = {

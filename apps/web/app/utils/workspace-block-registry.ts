@@ -2,10 +2,14 @@ import type { WorkspaceBlock } from "@brainiac/workspace";
 import type { Component } from "vue";
 
 import WorkspaceAiPromptBlockEditor from "~/components/workspace/node/blocks/WorkspaceAiPromptBlockEditor.vue";
+import WorkspaceAssumptionTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAssumptionTrackerBlockEditor.vue";
+import WorkspaceBusinessModelCanvasBlockEditor from "~/components/workspace/node/blocks/WorkspaceBusinessModelCanvasBlockEditor.vue";
 import WorkspaceKanbanBlockEditor from "~/components/workspace/node/blocks/WorkspaceKanbanBlockEditor.vue";
 import WorkspaceCustomBlockEditor from "~/components/workspace/node/blocks/WorkspaceCustomBlockEditor.vue";
+import WorkspaceDecisionMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionMatrixBlockEditor.vue";
 import WorkspaceDecisionBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionBlockEditor.vue";
 import WorkspaceNotesBlockEditor from "~/components/workspace/node/blocks/WorkspaceNotesBlockEditor.vue";
+import WorkspaceOkrTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceOkrTrackerBlockEditor.vue";
 import WorkspaceScorecardBlockEditor from "~/components/workspace/node/blocks/WorkspaceScorecardBlockEditor.vue";
 import WorkspaceTaskListBlockEditor from "~/components/workspace/node/blocks/WorkspaceTaskListBlockEditor.vue";
 import WorkspaceTimeOrchestratorBlockEditor from "~/components/workspace/node/blocks/WorkspaceTimeOrchestratorBlockEditor.vue";
@@ -72,6 +76,30 @@ export const workspaceBlockRegistry = {
     component: WorkspaceScorecardBlockEditor,
     label: "Scorecard",
     icon: "i-lucide-gauge",
+    addGroup: "secondary",
+  },
+  "okr-tracker": {
+    component: WorkspaceOkrTrackerBlockEditor,
+    label: "OKR tracker",
+    icon: "i-lucide-target",
+    addGroup: "secondary",
+  },
+  "decision-matrix": {
+    component: WorkspaceDecisionMatrixBlockEditor,
+    label: "Decision matrix",
+    icon: "i-lucide-grid-2x2",
+    addGroup: "secondary",
+  },
+  "business-model-canvas": {
+    component: WorkspaceBusinessModelCanvasBlockEditor,
+    label: "Business model canvas",
+    icon: "i-lucide-layout-template",
+    addGroup: "secondary",
+  },
+  "assumption-tracker": {
+    component: WorkspaceAssumptionTrackerBlockEditor,
+    label: "Assumption tracker",
+    icon: "i-lucide-flask-conical",
     addGroup: "secondary",
   },
   custom: {

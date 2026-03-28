@@ -110,7 +110,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
             <UButton
                 type="submit"
-                color="emerald"
+                color="success"
                 size="xl"
                 block
                 class="rounded-xl font-bold tracking-wide"

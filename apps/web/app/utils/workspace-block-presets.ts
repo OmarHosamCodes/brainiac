@@ -1,7 +1,11 @@
 import {
+  createWorkspaceAssumptionTrackerBlock,
+  createWorkspaceBusinessModelCanvasBlock,
   createWorkspaceDecisionBlock,
+  createWorkspaceDecisionMatrixBlock,
   createWorkspaceKanbanBlock,
   createWorkspaceNotesBlock,
+  createWorkspaceOkrTrackerBlock,
   createWorkspaceScorecardBlock,
   createWorkspaceTaskListBlock,
   createWorkspaceTimelineBlock,
@@ -13,7 +17,8 @@ import {
 export type WorkspaceBlockPresetId =
   | "plan-and-ship"
   | "decision-sprint"
-  | "ops-cadence";
+  | "ops-cadence"
+  | "strategy-room";
 
 export type WorkspaceBlockPreset = {
   id: WorkspaceBlockPresetId;
@@ -27,8 +32,7 @@ export const workspaceBlockPresets: WorkspaceBlockPreset[] = [
   {
     id: "plan-and-ship",
     label: "Plan and ship",
-    description:
-      "Task list, delivery board, milestones, and scorecard in one pack.",
+    description: "Task list, delivery board, milestones, and scorecard in one pack.",
     icon: "i-lucide-rocket",
     createBlocks: () => [
       createWorkspaceTaskListBlock({ title: "Action items" }),
@@ -59,6 +63,18 @@ export const workspaceBlockPresets: WorkspaceBlockPreset[] = [
       createWorkspaceTaskListBlock({ title: "Current cycle tasks" }),
       createWorkspaceTrackerBlock({ title: "KPI tracker" }),
       createWorkspaceNotesBlock({ title: "Ops notes" }),
+    ],
+  },
+  {
+    id: "strategy-room",
+    label: "Strategy room",
+    description: "Objectives, weighted decisions, business model design, and assumption tracking.",
+    icon: "i-lucide-target",
+    createBlocks: () => [
+      createWorkspaceOkrTrackerBlock({ title: "Quarter OKRs" }),
+      createWorkspaceDecisionMatrixBlock({ title: "Weighted decision" }),
+      createWorkspaceBusinessModelCanvasBlock({ title: "Business model canvas" }),
+      createWorkspaceAssumptionTrackerBlock({ title: "Strategic assumptions" }),
     ],
   },
 ];

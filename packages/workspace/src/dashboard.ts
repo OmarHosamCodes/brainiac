@@ -11,11 +11,22 @@ import {
   getTimeOrchestratorSummary,
   getWorkspaceTaskDomainLabel,
 } from "./tasks";
+import {
+  getAssumptionTrackerSummary,
+  getBusinessModelCanvasSummary,
+  getDecisionMatrixSummary,
+  getOkrTrackerSummary,
+  resolveStrategicAssumptionLinkLabel,
+  summarizeBusinessModelCanvasForPreview,
+  workspaceBusinessModelCanvasCellLabels,
+  workspaceStrategicAssumptionStatusLabels,
+} from "./strategy";
 import type {
   WorkspaceBlock,
   WorkspaceCustomBlock,
   WorkspaceCustomBlockTemplate,
   WorkspaceCustomBlockValue,
+  WorkspaceDecisionMatrixBlock,
   WorkspaceDecisionBlock,
   WorkspaceDecisionSummary,
   WorkspaceNode,
@@ -53,6 +64,13 @@ function getTimelineMilestoneSortValue(milestone: WorkspaceTimelineMilestone) {
 
 function isScorecardMetricOnTarget(metric: WorkspaceScorecardMetric) {
   return metric.target >= 0 ? metric.value >= metric.target : metric.value <= metric.target;
+}
+
+function summaryBusinessModelCanvasHasContent(block: WorkspaceBlock) {
+  return (
+    block.type === "business-model-canvas" &&
+    Object.values(block.cells).some((value) => trimToEmpty(value).length > 0)
+  );
 }
 
 function buildWorkspaceNodeDashboardDetail(
@@ -358,6 +376,158 @@ function buildWorkspaceNodeDashboardDetail(
     };
   }
 
+  if (block.type === "okr-tracker") {
+    const summary = getOkrTrackerSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.objectiveCount > 0
+          ? `${summary.averageProgress}% average progress across ${summary.objectiveCount} objectives.`
+          : "No objectives added yet.",
+      metrics: [
+        {
+          label: "Objectives",
+          value: String(summary.objectiveCount),
+        },
+        {
+          label: "Avg progress",
+          value: `${summary.averageProgress}%`,
+        },
+        {
+          label: "Off track",
+          value: String(summary.offTrackCount),
+        },
+      ],
+      highlights: summary.objectives
+        .slice()
+        .sort((left, right) => left.progress - right.progress)
+        .slice(0, 2)
+        .map((objective) => `${objective.title}: ${objective.progress}%`),
+    };
+  }
+
+  if (block.type === "decision-matrix") {
+    const summary = getDecisionMatrixSummary(block);
+    const winner = summary.optionScores.find((option) => option.isWinner);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        trimToEmpty(block.question) ||
+        (winner
+          ? `${winner.label} is currently leading with ${winner.totalScore} points.`
+          : "Decision matrix is ready for scoring."),
+      metrics: [
+        {
+          label: "Criteria",
+          value: String(summary.criteriaCount),
+        },
+        {
+          label: "Options",
+          value: String(summary.optionCount),
+        },
+        {
+          label: "Leader",
+          value: winner ? winner.label : "Tie",
+        },
+      ],
+      highlights: summary.optionScores
+        .slice(0, 3)
+        .map((option) => `${option.label}: ${option.totalScore}`),
+    };
+  }
+
+  if (block.type === "business-model-canvas") {
+    const summary = getBusinessModelCanvasSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.filledCellCount > 0
+          ? `${summary.filledCellCount} of 9 canvas cells are filled.`
+          : "Canvas is empty.",
+      metrics: [
+        {
+          label: "Filled",
+          value: `${summary.filledCellCount}/9`,
+        },
+        {
+          label: "Missing",
+          value: String(summary.missingCellCount),
+        },
+        {
+          label: "Readiness",
+          value: summary.readiness,
+        },
+      ],
+      highlights:
+        summary.strongestCells.length > 0
+          ? summary.strongestCells.map(
+              (cellKey) => `Strong: ${workspaceBusinessModelCanvasCellLabels[cellKey]}`,
+            )
+          : summary.missingCells
+              .slice(0, 2)
+              .map((cellKey) => `Missing: ${workspaceBusinessModelCanvasCellLabels[cellKey]}`),
+    };
+  }
+
+  if (block.type === "assumption-tracker") {
+    const summary = getAssumptionTrackerSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.total > 0
+          ? `${summary.atRiskCount} assumptions are currently at risk.`
+          : "No assumptions tracked yet.",
+      metrics: [
+        {
+          label: "Total",
+          value: String(summary.total),
+        },
+        {
+          label: "At risk",
+          value: String(summary.atRiskCount),
+        },
+        {
+          label: "Confidence",
+          value: `${summary.averageConfidence}/5`,
+        },
+      ],
+      highlights: block.assumptions
+        .slice()
+        .sort((left, right) => left.confidence - right.confidence)
+        .slice(0, 2)
+        .map((assumption) => {
+          const linkedLabel = resolveStrategicAssumptionLinkLabel(node, assumption);
+          const fragments = [workspaceStrategicAssumptionStatusLabels[assumption.status]];
+
+          if (linkedLabel) {
+            fragments.push(linkedLabel);
+          }
+
+          return `${truncateText(assumption.statement, 72)} (${fragments.join(", ")})`;
+        }),
+    };
+  }
+
   const template = node.customBlockTemplates.find((entry) => entry.id === block.definitionId);
   const formulaResult = evaluateCustomBlockFormula(template?.formula?.expression, block.values);
   const filledValues = Object.entries(block.values)
@@ -439,6 +609,41 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
       if (block.type === "scorecard" && block.metrics.length > 0) {
         return truncateText(
           `${block.title}: ${block.metrics.length} metrics being tracked.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "okr-tracker" && block.objectives.length > 0) {
+        const summary = getOkrTrackerSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.averageProgress}% average progress across ${summary.objectiveCount} objectives.`,
+          maxLength,
+        );
+      }
+
+      if (
+        block.type === "decision-matrix" &&
+        (trimToEmpty(block.question) || block.options.length > 0)
+      ) {
+        const summary = getDecisionMatrixSummary(block);
+        const winner = summary.optionScores.find((option) => option.isWinner);
+
+        return truncateText(
+          `${block.title}: ${trimToEmpty(block.question) || `${winner?.label || "Leading option"} is ahead with ${winner?.totalScore ?? 0} points.`}`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "business-model-canvas" && summaryBusinessModelCanvasHasContent(block)) {
+        return truncateText(summarizeBusinessModelCanvasForPreview(block), maxLength);
+      }
+
+      if (block.type === "assumption-tracker" && block.assumptions.length > 0) {
+        const summary = getAssumptionTrackerSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.atRiskCount} at-risk assumptions out of ${summary.total}.`,
           maxLength,
         );
       }
@@ -596,7 +801,10 @@ export function generateWorkspacePromptOutput(node: WorkspaceNode, prompt: strin
   const stats = getWorkspaceNodeStats(node);
   const timeSummary = getTimeOrchestratorSummary(node);
   const decisionBlocks = node.tabs.flatMap((tab) =>
-    tab.blocks.filter((block): block is WorkspaceDecisionBlock => block.type === "decision"),
+    tab.blocks.filter(
+      (block): block is WorkspaceDecisionBlock | WorkspaceDecisionMatrixBlock =>
+        block.type === "decision" || block.type === "decision-matrix",
+    ),
   );
 
   const intro = [
@@ -608,6 +816,14 @@ export function generateWorkspacePromptOutput(node: WorkspaceNode, prompt: strin
 
   if (/decision|recommend|choose/i.test(normalizedPrompt) && decisionBlocks.length > 0) {
     const recommendations = decisionBlocks.map((block) => {
+      if (block.type === "decision-matrix") {
+        const summary = getDecisionMatrixSummary(block);
+        const winner = summary.optionScores.find((option) => option.isWinner);
+        const base = `${block.title}: ${winner ? `${winner.label} leads with ${winner.totalScore}` : "matrix is not decided yet"}`;
+
+        return trimToEmpty(block.question) ? `${base}. Question: ${block.question.trim()}` : base;
+      }
+
       const summary = getDecisionSummary(block);
       const base = `${block.title}: score ${summary.totalScore} (${summary.signal})`;
 

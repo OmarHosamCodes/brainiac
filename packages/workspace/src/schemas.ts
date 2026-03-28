@@ -1,8 +1,12 @@
 import { z } from "zod";
 
 import {
+  WORKSPACE_ASSUMPTION_LIMIT,
+  WORKSPACE_BUSINESS_MODEL_CANVAS_CELL_KEYS,
   WORKSPACE_CUSTOM_BLOCK_FIELD_LIMIT,
   WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT,
+  WORKSPACE_DECISION_MATRIX_CRITERIA_LIMIT,
+  WORKSPACE_DECISION_MATRIX_OPTION_LIMIT,
   WORKSPACE_KANBAN_CARD_LIMIT,
   WORKSPACE_KANBAN_COLUMN_LIMIT,
   WORKSPACE_MARKETPLACE_ITEM_LIMIT,
@@ -10,7 +14,12 @@ import {
   WORKSPACE_NODE_LIMIT,
   WORKSPACE_NODE_TAB_LIMIT,
   WORKSPACE_NODE_TINTS,
+  WORKSPACE_OKR_KEY_RESULT_LIMIT,
+  WORKSPACE_OKR_OBJECTIVE_LIMIT,
   WORKSPACE_SCORECARD_METRIC_LIMIT,
+  WORKSPACE_STRATEGIC_ASSUMPTION_FILTERS,
+  WORKSPACE_STRATEGIC_ASSUMPTION_LINK_TYPES,
+  WORKSPACE_STRATEGIC_ASSUMPTION_STATUSES,
   WORKSPACE_TAB_BLOCK_LIMIT,
   WORKSPACE_TASK_DOMAINS,
   WORKSPACE_TASK_LIMIT,
@@ -101,6 +110,70 @@ export const workspaceScorecardMetricSchema = z.object({
   value: z.number().finite().default(0),
   target: z.number().finite().default(100),
   unit: z.string().trim().max(24).default(""),
+});
+
+export const workspaceOkrKeyResultSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().max(160),
+  progress: z.number().int().min(0).max(100).default(0),
+});
+
+export const workspaceOkrObjectiveSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().max(160),
+  keyResults: z.array(workspaceOkrKeyResultSchema).max(WORKSPACE_OKR_KEY_RESULT_LIMIT).default([]),
+});
+
+export const workspaceDecisionMatrixCriterionSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().trim().max(120),
+  weight: z.number().int().min(1).max(10).default(5),
+});
+
+export const workspaceDecisionMatrixOptionSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().trim().max(80),
+  scores: z.record(z.string(), z.number().int().min(0).max(10)).default({}),
+});
+
+export const workspaceBusinessModelCanvasCellKeySchema = z.enum(
+  WORKSPACE_BUSINESS_MODEL_CANVAS_CELL_KEYS,
+);
+
+export const workspaceBusinessModelCanvasCellsSchema = z.object({
+  keyPartners: z.string().max(4000).default(""),
+  keyActivities: z.string().max(4000).default(""),
+  keyResources: z.string().max(4000).default(""),
+  valuePropositions: z.string().max(4000).default(""),
+  customerRelationships: z.string().max(4000).default(""),
+  channels: z.string().max(4000).default(""),
+  customerSegments: z.string().max(4000).default(""),
+  costStructure: z.string().max(4000).default(""),
+  revenueStreams: z.string().max(4000).default(""),
+});
+
+export const workspaceStrategicAssumptionStatusSchema = z.enum(
+  WORKSPACE_STRATEGIC_ASSUMPTION_STATUSES,
+);
+
+export const workspaceStrategicAssumptionLinkTypeSchema = z.enum(
+  WORKSPACE_STRATEGIC_ASSUMPTION_LINK_TYPES,
+);
+
+export const workspaceStrategicAssumptionFilterSchema = z.enum(
+  WORKSPACE_STRATEGIC_ASSUMPTION_FILTERS,
+);
+
+export const workspaceStrategicAssumptionSchema = z.object({
+  id: z.string().min(1),
+  statement: z.string().trim().max(240),
+  linkType: workspaceStrategicAssumptionLinkTypeSchema.default("none"),
+  linkId: z.string().nullable().optional(),
+  owner: z.string().trim().max(120).default(""),
+  reviewDate: isoDateSchema.nullable().optional(),
+  confidence: z.number().int().min(1).max(5).default(3),
+  status: workspaceStrategicAssumptionStatusSchema.default("validating"),
+  evidenceNotes: z.string().max(4000).default(""),
 });
 
 export const workspaceCustomBlockFieldSchema = z.object({
@@ -210,6 +283,50 @@ export const workspaceScorecardBlockSchema = workspaceBlockBaseSchema.extend({
     .default([]),
 });
 
+export const workspaceOkrTrackerBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("okr-tracker"),
+  objectives: z.array(workspaceOkrObjectiveSchema).max(WORKSPACE_OKR_OBJECTIVE_LIMIT).default([]),
+});
+
+export const workspaceDecisionMatrixBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("decision-matrix"),
+  question: z.string().max(240).default(""),
+  criteria: z
+    .array(workspaceDecisionMatrixCriterionSchema)
+    .min(1)
+    .max(WORKSPACE_DECISION_MATRIX_CRITERIA_LIMIT),
+  options: z
+    .array(workspaceDecisionMatrixOptionSchema)
+    .min(1)
+    .max(WORKSPACE_DECISION_MATRIX_OPTION_LIMIT),
+});
+
+export const workspaceBusinessModelCanvasBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("business-model-canvas"),
+  cells: workspaceBusinessModelCanvasCellsSchema.default({
+    keyPartners: "",
+    keyActivities: "",
+    keyResources: "",
+    valuePropositions: "",
+    customerRelationships: "",
+    channels: "",
+    customerSegments: "",
+    costStructure: "",
+    revenueStreams: "",
+  }),
+  analysis: z.string().max(6000).default(""),
+  analysisUpdatedAt: isoTimestampSchema.nullable().optional(),
+});
+
+export const workspaceAssumptionTrackerBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("assumption-tracker"),
+  filter: workspaceStrategicAssumptionFilterSchema.default("all"),
+  assumptions: z
+    .array(workspaceStrategicAssumptionSchema)
+    .max(WORKSPACE_ASSUMPTION_LIMIT)
+    .default([]),
+});
+
 export const workspaceCustomBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("custom"),
   definitionId: z.string().min(1),
@@ -229,6 +346,10 @@ export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceKanbanBlockSchema,
   workspaceTimelineBlockSchema,
   workspaceScorecardBlockSchema,
+  workspaceOkrTrackerBlockSchema,
+  workspaceDecisionMatrixBlockSchema,
+  workspaceBusinessModelCanvasBlockSchema,
+  workspaceAssumptionTrackerBlockSchema,
   workspaceCustomBlockSchema,
 ]);
 

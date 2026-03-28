@@ -6,6 +6,11 @@ export const WORKSPACE_KANBAN_COLUMN_LIMIT = 6;
 export const WORKSPACE_KANBAN_CARD_LIMIT = 120;
 export const WORKSPACE_TIMELINE_MILESTONE_LIMIT = 40;
 export const WORKSPACE_SCORECARD_METRIC_LIMIT = 40;
+export const WORKSPACE_OKR_OBJECTIVE_LIMIT = 16;
+export const WORKSPACE_OKR_KEY_RESULT_LIMIT = 12;
+export const WORKSPACE_DECISION_MATRIX_CRITERIA_LIMIT = 12;
+export const WORKSPACE_DECISION_MATRIX_OPTION_LIMIT = 8;
+export const WORKSPACE_ASSUMPTION_LIMIT = 30;
 export const WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT = 20;
 export const WORKSPACE_CUSTOM_BLOCK_FIELD_LIMIT = 12;
 export const WORKSPACE_MARKETPLACE_ITEM_LIMIT = 200;
@@ -33,6 +38,37 @@ export const WORKSPACE_TIMELINE_MILESTONE_STATUSES = [
   "active",
   "done",
   "blocked",
+] as const;
+
+export const WORKSPACE_BUSINESS_MODEL_CANVAS_CELL_KEYS = [
+  "keyPartners",
+  "keyActivities",
+  "keyResources",
+  "valuePropositions",
+  "customerRelationships",
+  "channels",
+  "customerSegments",
+  "costStructure",
+  "revenueStreams",
+] as const;
+
+export const WORKSPACE_STRATEGIC_ASSUMPTION_STATUSES = [
+  "validating",
+  "confirmed",
+  "at-risk",
+  "false",
+] as const;
+
+export const WORKSPACE_STRATEGIC_ASSUMPTION_LINK_TYPES = [
+  "none",
+  "okr",
+  "decision",
+  "bmc",
+] as const;
+
+export const WORKSPACE_STRATEGIC_ASSUMPTION_FILTERS = [
+  "all",
+  ...WORKSPACE_STRATEGIC_ASSUMPTION_STATUSES,
 ] as const;
 
 export const WORKSPACE_NODE_TINTS = [

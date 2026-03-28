@@ -15,6 +15,32 @@ export type WorkspaceAddBlockCategory = {
 
 export const workspaceAddBlockCategories = [
   {
+    id: "strategy",
+    label: "Strategy",
+    items: [
+      {
+        blockType: "okr-tracker",
+        label: "OKR tracker",
+        icon: "i-lucide-target",
+      },
+      {
+        blockType: "decision-matrix",
+        label: "Decision matrix",
+        icon: "i-lucide-grid-2x2",
+      },
+      {
+        blockType: "business-model-canvas",
+        label: "Business model canvas",
+        icon: "i-lucide-layout-template",
+      },
+      {
+        blockType: "assumption-tracker",
+        label: "Assumption tracker",
+        icon: "i-lucide-flask-conical",
+      },
+    ],
+  },
+  {
     id: "general",
     label: "General",
     items: [

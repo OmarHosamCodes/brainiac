@@ -196,7 +196,7 @@ const isSidebarOpen = ref(true);
 
             <!-- Scrollable Content -->
             <div class="flex-1 overflow-y-auto p-8 lg:p-12">
-                <div class="mx-auto w-full max-w-4xl space-y-8">
+                <div class="mx-auto w-full max-w-7xl space-y-8">
                     <!-- Legacy Alert -->
                     <UAlert
                         v-if="node.customBlockTemplates.length > 0"
