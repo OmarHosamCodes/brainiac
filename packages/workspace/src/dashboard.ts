@@ -34,18 +34,29 @@ import {
   workspaceSeatLoadLevelLabels,
   workspaceTalentGridBoxLabels,
 } from "./people";
+import {
+  getDealScoringMatrixSummary,
+  getForecastConfidenceBoardSummary,
+  getPipelineFunnelSummary,
+  workspaceSalesForecastBucketLabels,
+  workspaceSalesPipelineStageLabels,
+  workspaceSalesTemperatureLabels,
+} from "./sales";
 import type {
   WorkspaceBlock,
   WorkspaceCustomBlock,
+  WorkspaceDealScoringMatrixBlock,
   WorkspaceCustomBlockTemplate,
   WorkspaceCustomBlockValue,
   WorkspaceDecisionMatrixBlock,
   WorkspaceDecisionBlock,
   WorkspaceDecisionSummary,
+  WorkspaceForecastConfidenceBoardBlock,
   WorkspaceNode,
   WorkspaceNodeDashboardDetail,
   WorkspaceNodeDashboardSelectableBlock,
   WorkspacePeopleSkillDimension,
+  WorkspacePipelineFunnelBlock,
   WorkspaceNodeTab,
   WorkspaceScorecardMetric,
   WorkspaceTask,
@@ -72,6 +83,10 @@ function formatDashboardTaskLine(task: WorkspaceTask) {
   return fragments.length > 0 ? `${task.text} (${fragments.join(", ")})` : task.text;
 }
 
+function formatEgpValue(value: number) {
+  return `${Math.round(value).toLocaleString("en-US")} EGP`;
+}
+
 function getTimelineMilestoneSortValue(milestone: WorkspaceTimelineMilestone) {
   return milestone.date ? getDueDateValue(milestone.date) : Number.MAX_SAFE_INTEGER;
 }
@@ -83,6 +98,39 @@ function isScorecardMetricOnTarget(metric: WorkspaceScorecardMetric) {
 function getStrongestSkillDimension(averages: Record<WorkspacePeopleSkillDimension, number>) {
   const ranked = Object.entries(averages).sort((left, right) => right[1] - left[1]);
   return (ranked[0]?.[0] as WorkspacePeopleSkillDimension | undefined) ?? null;
+}
+
+function getTopSalesTemperature(block: WorkspaceDealScoringMatrixBlock | WorkspacePipelineFunnelBlock) {
+  if (block.deals.length === 0) {
+    return null;
+  }
+
+  const counts = {
+    hot: block.deals.filter((deal) => deal.temperature === "hot").length,
+    warm: block.deals.filter((deal) => deal.temperature === "warm").length,
+    cold: block.deals.filter((deal) => deal.temperature === "cold").length,
+  };
+  const ranked = Object.entries(counts).sort((left, right) => right[1] - left[1]);
+  const temperature = ranked[0]?.[0];
+
+  if (temperature === "hot" || temperature === "warm" || temperature === "cold") {
+    return temperature;
+  }
+
+  return null;
+}
+
+function getTopForecastBucket(block: WorkspaceForecastConfidenceBoardBlock) {
+  if (block.deals.length === 0) {
+    return null;
+  }
+
+  const summary = getForecastConfidenceBoardSummary(block);
+  const topBucket = summary.bucketSummaries
+    .slice()
+    .sort((left, right) => right.totalValue - left.totalValue)[0];
+
+  return topBucket?.bucket ?? null;
 }
 
 function summaryBusinessModelCanvasHasContent(block: WorkspaceBlock) {
@@ -528,6 +576,120 @@ function buildWorkspaceNodeDashboardDetail(
     };
   }
 
+  if (block.type === "deal-scoring-matrix") {
+    const summary = getDealScoringMatrixSummary(block);
+    const topDeals = block.deals
+      .slice()
+      .sort((left, right) => right.score - left.score)
+      .slice(0, 2);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.dealCount > 0
+          ? `${summary.averageScore}% average score across ${summary.dealCount} deals.`
+          : "No deals scored yet.",
+      metrics: [
+        {
+          label: "Deals",
+          value: String(summary.dealCount),
+        },
+        {
+          label: "Hot",
+          value: String(summary.hotCount),
+        },
+        {
+          label: "Pipeline",
+          value: formatEgpValue(summary.totalValue),
+        },
+      ],
+      highlights: topDeals.map(
+        (deal) =>
+          `${deal.clientName}: ${deal.score}/100, ${workspaceSalesPipelineStageLabels[deal.stage]}`,
+      ),
+    };
+  }
+
+  if (block.type === "pipeline-funnel") {
+    const summary = getPipelineFunnelSummary(block);
+    const busiestStages = summary.stageSummaries
+      .filter((stage) => stage.dealCount > 0)
+      .sort((left, right) => right.totalValue - left.totalValue)
+      .slice(0, 2);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.dealCount > 0
+          ? `${formatEgpValue(summary.totalValue)} across ${summary.dealCount} pipeline deals.`
+          : "No funnel deals yet.",
+      metrics: [
+        {
+          label: "Open",
+          value: formatEgpValue(summary.openValue),
+        },
+        {
+          label: "Closed",
+          value: formatEgpValue(summary.closedValue),
+        },
+        {
+          label: "Deals",
+          value: String(summary.dealCount),
+        },
+      ],
+      highlights: busiestStages.map(
+        (stage) =>
+          `${stage.label}: ${stage.dealCount} deals, ${formatEgpValue(stage.totalValue)}`,
+      ),
+    };
+  }
+
+  if (block.type === "forecast-confidence-board") {
+    const summary = getForecastConfidenceBoardSummary(block);
+    const weakestDeals = block.deals
+      .slice()
+      .sort((left, right) => left.confidence - right.confidence)
+      .slice(0, 2);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.dealCount > 0
+          ? `${formatEgpValue(summary.weightedForecast)} weighted forecast at ${summary.coveragePercent}% coverage.`
+          : "No forecast deals yet.",
+      metrics: [
+        {
+          label: "Commit",
+          value: formatEgpValue(summary.commitRevenue),
+        },
+        {
+          label: "At risk",
+          value: formatEgpValue(summary.atRiskValue),
+        },
+        {
+          label: "Coverage",
+          value: `${summary.coveragePercent}%`,
+        },
+      ],
+      highlights: weakestDeals.map(
+        (deal) =>
+          `${deal.clientName}: ${deal.confidence}% ${workspaceSalesForecastBucketLabels[deal.bucket]}`,
+      ),
+    };
+  }
+
   if (block.type === "scorecard") {
     const onTargetCount = block.metrics.filter((metric) =>
       isScorecardMetricOnTarget(metric),
@@ -828,6 +990,33 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
         );
       }
 
+      if (block.type === "deal-scoring-matrix" && block.deals.length > 0) {
+        const summary = getDealScoringMatrixSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.averageScore}/100 average score across ${summary.dealCount} deals.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "pipeline-funnel" && block.deals.length > 0) {
+        const summary = getPipelineFunnelSummary(block);
+
+        return truncateText(
+          `${block.title}: ${formatEgpValue(summary.totalValue)} across ${summary.dealCount} pipeline deals.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "forecast-confidence-board" && block.deals.length > 0) {
+        const summary = getForecastConfidenceBoardSummary(block);
+
+        return truncateText(
+          `${block.title}: ${formatEgpValue(summary.weightedForecast)} weighted forecast with ${summary.coveragePercent}% coverage.`,
+          maxLength,
+        );
+      }
+
       if (block.type === "scorecard" && block.metrics.length > 0) {
         return truncateText(
           `${block.title}: ${block.metrics.length} metrics being tracked.`,
@@ -1101,6 +1290,47 @@ export function generateWorkspacePromptOutput(node: WorkspaceNode, prompt: strin
 
     if (peopleLines.length > 0) {
       return `${intro}\n\nPeople scan:\n- ${peopleLines.join("\n- ")}`;
+    }
+  }
+
+  if (/sales|deal|pipeline|forecast|revenue|close/i.test(normalizedPrompt)) {
+    const salesLines = node.tabs.flatMap((tab) =>
+      tab.blocks.flatMap((block) => {
+        if (block.type === "deal-scoring-matrix") {
+          const summary = getDealScoringMatrixSummary(block);
+          const topTemperature = getTopSalesTemperature(block);
+
+          return [
+            `${block.title}: ${summary.dealCount} deals, ${summary.averageScore}/100 average score, ${formatEgpValue(summary.totalValue)} total value${topTemperature ? `, mostly ${workspaceSalesTemperatureLabels[topTemperature].toLowerCase()} deals` : ""}.`,
+          ];
+        }
+
+        if (block.type === "pipeline-funnel") {
+          const summary = getPipelineFunnelSummary(block);
+          const leadingStage = summary.stageSummaries
+            .slice()
+            .sort((left, right) => right.totalValue - left.totalValue)[0];
+
+          return [
+            `${block.title}: ${formatEgpValue(summary.totalValue)} in pipeline, ${formatEgpValue(summary.closedValue)} closed${leadingStage ? `, biggest stage is ${leadingStage.label} at ${formatEgpValue(leadingStage.totalValue)}` : ""}.`,
+          ];
+        }
+
+        if (block.type === "forecast-confidence-board") {
+          const summary = getForecastConfidenceBoardSummary(block);
+          const topBucket = getTopForecastBucket(block);
+
+          return [
+            `${block.title}: ${formatEgpValue(summary.weightedForecast)} weighted forecast, ${formatEgpValue(summary.commitRevenue)} commit, ${formatEgpValue(summary.atRiskValue)} at risk${topBucket ? `, largest bucket is ${workspaceSalesForecastBucketLabels[topBucket]}` : ""}.`,
+          ];
+        }
+
+        return [];
+      }),
+    );
+
+    if (salesLines.length > 0) {
+      return `${intro}\n\nSales scan:\n- ${salesLines.join("\n- ")}`;
     }
   }
 

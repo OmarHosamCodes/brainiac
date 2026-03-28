@@ -6,15 +6,18 @@ import {
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceBusinessModelCanvasBlock,
+  createWorkspaceDealScoringMatrixBlock,
   createWorkspaceDelegationMatrixBlock,
   createWorkspaceDecisionMatrixBlock,
   createWorkspaceDecisionBlock,
+  createWorkspaceForecastConfidenceBoardBlock,
   createWorkspaceId,
   createWorkspaceKanbanBlock,
   createWorkspaceKanbanCard,
   createWorkspaceKanbanColumn,
   createWorkspaceNotesBlock,
   createWorkspaceOkrTrackerBlock,
+  createWorkspacePipelineFunnelBlock,
   createWorkspaceScorecardBlock,
   createWorkspaceSeatPlannerBlock,
   createWorkspaceSkillsHeatMapBlock,
@@ -414,6 +417,15 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
       break;
     case "seat-planner":
       nextBlock = createWorkspaceSeatPlannerBlock();
+      break;
+    case "deal-scoring-matrix":
+      nextBlock = createWorkspaceDealScoringMatrixBlock();
+      break;
+    case "pipeline-funnel":
+      nextBlock = createWorkspacePipelineFunnelBlock();
+      break;
+    case "forecast-confidence-board":
+      nextBlock = createWorkspaceForecastConfidenceBoardBlock();
       break;
     case "scorecard":
       nextBlock = createWorkspaceScorecardBlock();
@@ -1171,6 +1183,40 @@ function getBlockSearchText(block: WorkspaceBlock) {
         seat.notes,
       ]),
     );
+  } else if (block.type === "deal-scoring-matrix") {
+    fragments.push(
+      ...block.deals.flatMap((deal) => [
+        deal.clientName,
+        String(deal.valueEgp),
+        deal.temperature,
+        String(deal.score),
+        deal.stage,
+        deal.nextAction,
+        deal.dueDate ?? "",
+      ]),
+    );
+  } else if (block.type === "pipeline-funnel") {
+    fragments.push(
+      ...block.deals.flatMap((deal) => [
+        deal.clientName,
+        String(deal.valueEgp),
+        deal.temperature,
+        deal.stage,
+      ]),
+    );
+  } else if (block.type === "forecast-confidence-board") {
+    fragments.push(
+      String(block.targetRevenueEgp),
+      ...block.deals.flatMap((deal) => [
+        deal.clientName,
+        String(deal.valueEgp),
+        deal.bucket,
+        deal.expectedCloseMonth ?? "",
+        String(deal.confidence),
+        deal.owner,
+        deal.nextAction,
+      ]),
+    );
   } else if (block.type === "scorecard") {
     fragments.push(
       ...block.metrics.flatMap((metric) => [
@@ -1319,6 +1365,40 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
         seat.load,
         seat.backupOwner,
         seat.notes,
+      ]),
+    );
+  } else if (block.type === "deal-scoring-matrix") {
+    details.push(
+      ...block.deals.flatMap((deal) => [
+        deal.clientName,
+        `${deal.score}/100 score`,
+        `${deal.valueEgp} EGP`,
+        deal.temperature,
+        deal.stage,
+        deal.nextAction,
+        deal.dueDate ?? "",
+      ]),
+    );
+  } else if (block.type === "pipeline-funnel") {
+    details.push(
+      ...block.deals.flatMap((deal) => [
+        deal.clientName,
+        `${deal.valueEgp} EGP`,
+        deal.temperature,
+        deal.stage,
+      ]),
+    );
+  } else if (block.type === "forecast-confidence-board") {
+    details.push(
+      `Target ${block.targetRevenueEgp} EGP`,
+      ...block.deals.flatMap((deal) => [
+        deal.clientName,
+        `${deal.valueEgp} EGP`,
+        deal.bucket,
+        `${deal.confidence}% confidence`,
+        deal.expectedCloseMonth ?? "",
+        deal.owner,
+        deal.nextAction,
       ]),
     );
   } else if (block.type === "scorecard") {

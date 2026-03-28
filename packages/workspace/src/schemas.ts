@@ -5,10 +5,12 @@ import {
   WORKSPACE_BUSINESS_MODEL_CANVAS_CELL_KEYS,
   WORKSPACE_CUSTOM_BLOCK_FIELD_LIMIT,
   WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT,
+  WORKSPACE_DEAL_SCORING_DEAL_LIMIT,
   WORKSPACE_DECISION_MATRIX_CRITERIA_LIMIT,
   WORKSPACE_DECISION_MATRIX_OPTION_LIMIT,
   WORKSPACE_DELEGATION_ITEM_LIMIT,
   WORKSPACE_DELEGATION_STATUSES,
+  WORKSPACE_FORECAST_CONFIDENCE_ITEM_LIMIT,
   WORKSPACE_KANBAN_CARD_LIMIT,
   WORKSPACE_KANBAN_COLUMN_LIMIT,
   WORKSPACE_MARKETPLACE_ITEM_LIMIT,
@@ -19,6 +21,10 @@ import {
   WORKSPACE_OKR_KEY_RESULT_LIMIT,
   WORKSPACE_OKR_OBJECTIVE_LIMIT,
   WORKSPACE_PEOPLE_SKILL_DIMENSIONS,
+  WORKSPACE_PIPELINE_FUNNEL_DEAL_LIMIT,
+  WORKSPACE_SALES_FORECAST_BUCKETS,
+  WORKSPACE_SALES_PIPELINE_STAGES,
+  WORKSPACE_SALES_TEMPERATURES,
   WORKSPACE_SCORECARD_METRIC_LIMIT,
   WORKSPACE_SEAT_HEALTH_STATES,
   WORKSPACE_SEAT_LOAD_LEVELS,
@@ -39,6 +45,7 @@ import {
 
 const isoTimestampSchema = z.string().datetime();
 const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const isoMonthSchema = z.string().regex(/^\d{4}-\d{2}$/);
 
 export const workspaceTaskPrioritySchema = z.enum(["low", "medium", "high"]);
 export const workspaceTaskDomainSchema = z.enum(WORKSPACE_TASK_DOMAINS);
@@ -48,6 +55,9 @@ export const workspaceNodeTintSchema = z.enum(WORKSPACE_NODE_TINTS);
 export const workspaceCustomFieldTypeSchema = z.enum(["text", "number", "checkbox", "textarea"]);
 export const workspacePeopleSkillDimensionSchema = z.enum(WORKSPACE_PEOPLE_SKILL_DIMENSIONS);
 export const workspaceDelegationStatusSchema = z.enum(WORKSPACE_DELEGATION_STATUSES);
+export const workspaceSalesPipelineStageSchema = z.enum(WORKSPACE_SALES_PIPELINE_STAGES);
+export const workspaceSalesTemperatureSchema = z.enum(WORKSPACE_SALES_TEMPERATURES);
+export const workspaceSalesForecastBucketSchema = z.enum(WORKSPACE_SALES_FORECAST_BUCKETS);
 export const workspaceSeatHealthSchema = z.enum(WORKSPACE_SEAT_HEALTH_STATES);
 export const workspaceSeatLoadLevelSchema = z.enum(WORKSPACE_SEAT_LOAD_LEVELS);
 export const workspaceSeatPlannerFilterSchema = z.enum(WORKSPACE_SEAT_PLANNER_FILTERS);
@@ -132,6 +142,36 @@ export const workspaceDelegationItemSchema = z.object({
   to: z.string().trim().max(120).default(""),
   hoursPerWeek: z.number().min(0).max(100).default(0),
   status: workspaceDelegationStatusSchema.default("stuck"),
+});
+
+export const workspaceDealScoringDealSchema = z.object({
+  id: z.string().min(1),
+  clientName: z.string().trim().max(120),
+  valueEgp: z.number().min(0).max(1_000_000_000).default(0),
+  temperature: workspaceSalesTemperatureSchema.default("warm"),
+  score: z.number().int().min(0).max(100).default(50),
+  stage: workspaceSalesPipelineStageSchema.default("lead"),
+  nextAction: z.string().trim().max(240).default(""),
+  dueDate: isoDateSchema.nullable().optional(),
+});
+
+export const workspacePipelineFunnelDealSchema = z.object({
+  id: z.string().min(1),
+  clientName: z.string().trim().max(120),
+  valueEgp: z.number().min(0).max(1_000_000_000).default(0),
+  temperature: workspaceSalesTemperatureSchema.default("warm"),
+  stage: workspaceSalesPipelineStageSchema.default("lead"),
+});
+
+export const workspaceForecastConfidenceItemSchema = z.object({
+  id: z.string().min(1),
+  clientName: z.string().trim().max(120),
+  valueEgp: z.number().min(0).max(1_000_000_000).default(0),
+  bucket: workspaceSalesForecastBucketSchema.default("likely"),
+  expectedCloseMonth: isoMonthSchema.nullable().optional(),
+  confidence: z.number().int().min(10).max(100).default(50),
+  owner: z.string().trim().max(120).default(""),
+  nextAction: z.string().trim().max(240).default(""),
 });
 
 export const workspaceTalentGridMemberSchema = z.object({
@@ -360,6 +400,31 @@ export const workspaceSeatPlannerBlockSchema = workspaceBlockBaseSchema.extend({
   seats: z.array(workspaceSeatPlannerSeatSchema).max(WORKSPACE_SEAT_PLANNER_SEAT_LIMIT).default([]),
 });
 
+export const workspaceDealScoringMatrixBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("deal-scoring-matrix"),
+  deals: z
+    .array(workspaceDealScoringDealSchema)
+    .max(WORKSPACE_DEAL_SCORING_DEAL_LIMIT)
+    .default([]),
+});
+
+export const workspacePipelineFunnelBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("pipeline-funnel"),
+  deals: z
+    .array(workspacePipelineFunnelDealSchema)
+    .max(WORKSPACE_PIPELINE_FUNNEL_DEAL_LIMIT)
+    .default([]),
+});
+
+export const workspaceForecastConfidenceBoardBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("forecast-confidence-board"),
+  targetRevenueEgp: z.number().min(0).max(1_000_000_000).default(50_000),
+  deals: z
+    .array(workspaceForecastConfidenceItemSchema)
+    .max(WORKSPACE_FORECAST_CONFIDENCE_ITEM_LIMIT)
+    .default([]),
+});
+
 export const workspaceScorecardBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("scorecard"),
   metrics: z
@@ -434,6 +499,9 @@ export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceDelegationMatrixBlockSchema,
   workspaceTalentGridBlockSchema,
   workspaceSeatPlannerBlockSchema,
+  workspaceDealScoringMatrixBlockSchema,
+  workspacePipelineFunnelBlockSchema,
+  workspaceForecastConfidenceBoardBlockSchema,
   workspaceScorecardBlockSchema,
   workspaceOkrTrackerBlockSchema,
   workspaceDecisionMatrixBlockSchema,

@@ -1,105 +1,71 @@
-**PEOPLE**
+**SALES**
 
-**Block 1: Skills Heat Map**
+**Block 1: Deal Scoring Matrix**
 
-**What it is:** A color-coded matrix showing every team member's proficiency across 5 key skill dimensions.
-
-**Dimensions tracked:** Writing, Strategy, Design, Analytics, Leadership
+**What it is:** A combined BANT scoring + temperature + pipeline stage tracker that ranks deals by priority.
 
 **How it works:**
 
-Table layout: Rows = team members (name + role), Columns = skills, Final column = average
+Deals are sorted by score (highest first) - highest-value deals appear at top
 
-Each cell displays a score from 1-10 with hue-based coloring: Red (≤3 = critical gap), Orange (4-5), Yellow (6-7), Green (8-10)
+Each deal card shows: client name, deal value (EGP), temperature indicator (hot/warm/cold dot + dropdown), score (0-100), and a stage progress bar
 
-Click any cell to cycle the score up by 1 (wraps from 10 back to 1)
+Stage progress: 5 clickable segments (Lead → Consult → Proposal → Negotiate → Closed) - click any to move deal to that stage
 
-Average column auto-calculates the mean across all 5 skills
+Score slider (0-100) with color coding: green (≥75), yellow (≥50), red (<50)
 
-Color-coded cells make skill gaps visible at a glance without reading numbers
+Temperature dropdown: Hot (red dot), Warm (yellow), Cold (gray)
 
-**Pre-loaded data:** 5 team members (Sarah, Omar, Nour, Karim, Layla) with realistic skill scores.
+Below each card: Next action text + due date
 
-**Use cases:** Identify training needs, plan delegation (match tasks to strongest skill holders), hiring gap analysis.
+**Pre-loaded data:** 3 deals: TechCo (15K, stage 2, hot, score 82), FoodBrand (8K, stage 1, warm, score 55), EduStart (22K, stage 3, hot, score 90)
 
-**Block 2: Delegation Matrix**
+**Block 2: Pipeline Funnel**
 
-**What it is:** A tracker for tasks Ahmed currently does that should be delegated to team members, with transition status tracking.
+**What it is:** A visual sales funnel showing deals organized by stage with value totals.
 
 **How it works:**
 
-Header shows total recoverable hours/week across all items - the headline KPI
+5 narrowing rows (100% → 84% → 68% → 52% → 36% width): Lead → Consultation → Proposal → Negotiation → Closed
 
-Each row is a task card with: editable task name, "From" (Ahmed) → "To" (team member), hours/week saved, status buttons
+Each row is color-coded and shows: stage name, deal count, total value
 
-Status states: Stuck (red), Transitioning (yellow), Delegated (green) - click to toggle
+Below: list of all deals with stage dropdown for quick moves
 
-Left border color reflects status
+Temperature dots next to each deal name
+
+**Visual design:** The funnel narrows physically as you go down - making conversion drop-off visible at a glance.
+
+**Block 3: Forecast Confidence Board**
+
+**What it is:** A revenue forecasting layer that turns raw pipeline into a confidence-based sales forecast.
+
+**How it works:**
+
+Deals are grouped into 4 forecast buckets: Commit, Likely, Upside, At Risk
+
+Each deal card shows: client name, deal value, expected close month, confidence %, owner, and next action
+
+Weighted Forecast is auto-calculated using deal value × confidence %
+
+Top KPI cards show: Commit Revenue, Weighted Forecast, At-Risk Value, and Coverage vs Target
+
+Bucket totals update in real time as confidence or deal movement changes
 
 **Interactive elements:**
 
-Inline editing for task name and delegate-to name
+Confidence slider (10-100%) per deal
 
-Status toggle buttons per row
+Bucket dropdown - Commit / Likely / Upside / At Risk
 
-"Add task I shouldn't be doing" button - adds a new row
+Month picker for expected close timing
 
-**Pre-loaded data:** 3 delegation items: Social scheduling (3h, stuck), Client reporting (5h, stuck), Content approvals (4h, transitioning)
+Inline editing for next action and owner
 
-Strategic purpose: Makes the cost of non-delegation visible. At \$500/hr CEO time, 12 stuck hours = \$6,000/week of misallocated CEO time.
-
-**Block 3: 9-Box Talent Grid**
-
-**What it is:** The classic HR 9-box grid plotting team members on a Performance (x-axis) × Potential (y-axis) matrix.
-
-**Grid labels (3×3):**
-
-Low PerformanceMed PerformanceHigh PerformanceHigh PotentialEnigmaGrowth StarSuperstarMed PotentialUnder-performerCore PlayerHigh PerformerLow PotentialRiskAverage JoeSpecialist
-
-**How it works:**
-
-Each cell is color-coded (red for risk, green for stars)
-
-Team members appear as name badges inside their calculated cell
-
-Below the grid: adjustment sliders for each member (Performance 1-5, Potential 1-5)
-
-Moving sliders repositions the person in the grid in real time
-
-**Pre-loaded data:** 5 team members with varied Performance/Potential scores.
-
-**Use cases:** Succession planning, identifying who to invest in, who needs PIPs, who to promote.
-
-**Block 4: Org Structure / Seat Ownership Planner**
-
-**What it is:** A company seat map showing who owns each critical function, where accountability is unclear, and which seats are overloaded.
-
-**How it works:**
-
-Table layout: Rows = business seats, Columns = current owner, function, seat health, load level, backup owner, notes
-
-Seat Health states: Strong (green), Fragile (yellow), Gap (red)
-
-Load Level states: Underloaded, Balanced, Overloaded
-
-Each row highlights management risk at a glance - especially seats with no clear owner or no backup
-
-A summary KPI row shows filled seats, fragile seats, overloaded seats, and uncovered critical seats
-
-**Interactive elements:**
-
-Inline editing for seat name, owner, and notes
-
-Seat Health dropdown per row
-
-Load Level dropdown per row
-
-"Add Critical Seat" button - adds a new business seat
-
-Filter toggle - show only fragile, overloaded, or uncovered seats
+"Add Deal to Forecast" button - creates a new forecast item
 
 **Pre-loaded data:**
 
-5 seats: CEO (overloaded), Sales Lead (fragile), Content Lead (balanced), Operations / PMO (gap), Finance Admin (balanced)
+TechCo in Commit (15K, 85%), EduStart in Likely (22K, 70%), FoodBrand in At Risk (8K, 35%)
 
-**Use cases:** Clarify accountability, spot organizational bottlenecks, plan hiring and promotions, reduce founder dependency.
+**Use cases:** Monthly revenue calls, sales forecasting, identifying forecast gaps early, prioritizing rescue actions on weak deals.

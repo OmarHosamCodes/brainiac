@@ -15,6 +15,9 @@ export const WORKSPACE_SKILLS_HEAT_MAP_MEMBER_LIMIT = 24;
 export const WORKSPACE_DELEGATION_ITEM_LIMIT = 40;
 export const WORKSPACE_TALENT_GRID_MEMBER_LIMIT = 24;
 export const WORKSPACE_SEAT_PLANNER_SEAT_LIMIT = 24;
+export const WORKSPACE_DEAL_SCORING_DEAL_LIMIT = 40;
+export const WORKSPACE_PIPELINE_FUNNEL_DEAL_LIMIT = 40;
+export const WORKSPACE_FORECAST_CONFIDENCE_ITEM_LIMIT = 40;
 export const WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT = 20;
 export const WORKSPACE_CUSTOM_BLOCK_FIELD_LIMIT = 12;
 export const WORKSPACE_MARKETPLACE_ITEM_LIMIT = 200;
@@ -53,6 +56,23 @@ export const WORKSPACE_PEOPLE_SKILL_DIMENSIONS = [
 ] as const;
 
 export const WORKSPACE_DELEGATION_STATUSES = ["stuck", "transitioning", "delegated"] as const;
+
+export const WORKSPACE_SALES_PIPELINE_STAGES = [
+  "lead",
+  "consultation",
+  "proposal",
+  "negotiation",
+  "closed",
+] as const;
+
+export const WORKSPACE_SALES_TEMPERATURES = ["hot", "warm", "cold"] as const;
+
+export const WORKSPACE_SALES_FORECAST_BUCKETS = [
+  "commit",
+  "likely",
+  "upside",
+  "at-risk",
+] as const;
 
 export const WORKSPACE_SEAT_HEALTH_STATES = ["strong", "fragile", "gap"] as const;
 

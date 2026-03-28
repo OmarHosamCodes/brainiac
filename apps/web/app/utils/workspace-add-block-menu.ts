@@ -41,6 +41,27 @@ export const workspaceAddBlockCategories = [
     ],
   },
   {
+    id: "sales",
+    label: "Sales",
+    items: [
+      {
+        blockType: "deal-scoring-matrix",
+        label: "Deal scoring matrix",
+        icon: "i-lucide-badge-percent",
+      },
+      {
+        blockType: "pipeline-funnel",
+        label: "Pipeline funnel",
+        icon: "i-lucide-funnel",
+      },
+      {
+        blockType: "forecast-confidence-board",
+        label: "Forecast confidence board",
+        icon: "i-lucide-circle-dollar-sign",
+      },
+    ],
+  },
+  {
     id: "people",
     label: "People",
     items: [

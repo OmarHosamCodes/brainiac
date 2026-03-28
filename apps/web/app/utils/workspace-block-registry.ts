@@ -9,8 +9,11 @@ import WorkspaceCustomBlockEditor from "~/components/workspace/node/blocks/Works
 import WorkspaceDecisionMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionMatrixBlockEditor.vue";
 import WorkspaceDecisionBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionBlockEditor.vue";
 import WorkspaceDelegationMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDelegationMatrixBlockEditor.vue";
+import WorkspaceDealScoringMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDealScoringMatrixBlockEditor.vue";
 import WorkspaceNotesBlockEditor from "~/components/workspace/node/blocks/WorkspaceNotesBlockEditor.vue";
+import WorkspaceForecastConfidenceBoardBlockEditor from "~/components/workspace/node/blocks/WorkspaceForecastConfidenceBoardBlockEditor.vue";
 import WorkspaceOkrTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceOkrTrackerBlockEditor.vue";
+import WorkspacePipelineFunnelBlockEditor from "~/components/workspace/node/blocks/WorkspacePipelineFunnelBlockEditor.vue";
 import WorkspaceScorecardBlockEditor from "~/components/workspace/node/blocks/WorkspaceScorecardBlockEditor.vue";
 import WorkspaceSeatPlannerBlockEditor from "~/components/workspace/node/blocks/WorkspaceSeatPlannerBlockEditor.vue";
 import WorkspaceSkillsHeatMapBlockEditor from "~/components/workspace/node/blocks/WorkspaceSkillsHeatMapBlockEditor.vue";
@@ -98,6 +101,24 @@ export const workspaceBlockRegistry = {
     component: WorkspaceSeatPlannerBlockEditor,
     label: "Seat ownership planner",
     icon: "i-lucide-blinds",
+    addGroup: "secondary",
+  },
+  "deal-scoring-matrix": {
+    component: WorkspaceDealScoringMatrixBlockEditor,
+    label: "Deal scoring matrix",
+    icon: "i-lucide-badge-percent",
+    addGroup: "secondary",
+  },
+  "pipeline-funnel": {
+    component: WorkspacePipelineFunnelBlockEditor,
+    label: "Pipeline funnel",
+    icon: "i-lucide-funnel",
+    addGroup: "secondary",
+  },
+  "forecast-confidence-board": {
+    component: WorkspaceForecastConfidenceBoardBlockEditor,
+    label: "Forecast confidence board",
+    icon: "i-lucide-circle-dollar-sign",
     addGroup: "secondary",
   },
   scorecard: {

@@ -12,6 +12,8 @@ import {
   workspaceCustomBlockSchema,
   workspaceCustomBlockTemplateSchema,
   workspaceCustomBlockValueSchema,
+  workspaceDealScoringDealSchema,
+  workspaceDealScoringMatrixBlockSchema,
   workspaceDelegationItemSchema,
   workspaceDelegationMatrixBlockSchema,
   workspaceDelegationStatusSchema,
@@ -21,6 +23,8 @@ import {
   workspaceCustomFieldTypeSchema,
   workspaceDecisionBlockSchema,
   workspaceDecisionItemSchema,
+  workspaceForecastConfidenceBoardBlockSchema,
+  workspaceForecastConfidenceItemSchema,
   workspaceKanbanBlockSchema,
   workspaceKanbanCardSchema,
   workspaceKanbanColumnSchema,
@@ -38,7 +42,12 @@ import {
   workspaceOkrObjectiveSchema,
   workspaceOkrTrackerBlockSchema,
   workspacePeopleSkillDimensionSchema,
+  workspacePipelineFunnelBlockSchema,
+  workspacePipelineFunnelDealSchema,
   workspacePromptOutputSchema,
+  workspaceSalesForecastBucketSchema,
+  workspaceSalesPipelineStageSchema,
+  workspaceSalesTemperatureSchema,
   workspaceSeatHealthSchema,
   workspaceSeatLoadLevelSchema,
   workspaceSeatPlannerBlockSchema,
@@ -82,6 +91,12 @@ export type WorkspaceSkillsHeatMapScores = z.infer<typeof workspaceSkillsHeatMap
 export type WorkspaceSkillsHeatMapMember = z.infer<typeof workspaceSkillsHeatMapMemberSchema>;
 export type WorkspaceDelegationStatus = z.infer<typeof workspaceDelegationStatusSchema>;
 export type WorkspaceDelegationItem = z.infer<typeof workspaceDelegationItemSchema>;
+export type WorkspaceSalesPipelineStage = z.infer<typeof workspaceSalesPipelineStageSchema>;
+export type WorkspaceSalesTemperature = z.infer<typeof workspaceSalesTemperatureSchema>;
+export type WorkspaceSalesForecastBucket = z.infer<typeof workspaceSalesForecastBucketSchema>;
+export type WorkspaceDealScoringDeal = z.infer<typeof workspaceDealScoringDealSchema>;
+export type WorkspacePipelineFunnelDeal = z.infer<typeof workspacePipelineFunnelDealSchema>;
+export type WorkspaceForecastConfidenceItem = z.infer<typeof workspaceForecastConfidenceItemSchema>;
 export type WorkspaceTalentGridMember = z.infer<typeof workspaceTalentGridMemberSchema>;
 export type WorkspaceTimeOrchestratorSettings = z.infer<
   typeof workspaceTimeOrchestratorSettingsSchema
@@ -136,6 +151,11 @@ export type WorkspaceSkillsHeatMapBlock = z.infer<typeof workspaceSkillsHeatMapB
 export type WorkspaceDelegationMatrixBlock = z.infer<typeof workspaceDelegationMatrixBlockSchema>;
 export type WorkspaceTalentGridBlock = z.infer<typeof workspaceTalentGridBlockSchema>;
 export type WorkspaceSeatPlannerBlock = z.infer<typeof workspaceSeatPlannerBlockSchema>;
+export type WorkspaceDealScoringMatrixBlock = z.infer<typeof workspaceDealScoringMatrixBlockSchema>;
+export type WorkspacePipelineFunnelBlock = z.infer<typeof workspacePipelineFunnelBlockSchema>;
+export type WorkspaceForecastConfidenceBoardBlock = z.infer<
+  typeof workspaceForecastConfidenceBoardBlockSchema
+>;
 export type WorkspaceScorecardBlock = z.infer<typeof workspaceScorecardBlockSchema>;
 export type WorkspaceOkrTrackerBlock = z.infer<typeof workspaceOkrTrackerBlockSchema>;
 export type WorkspaceDecisionMatrixBlock = z.infer<typeof workspaceDecisionMatrixBlockSchema>;
@@ -257,6 +277,53 @@ export type WorkspaceSeatPlannerSummary = {
   fragileSeats: number;
   overloadedSeats: number;
   uncoveredSeats: number;
+};
+
+export type WorkspaceDealScoreTone = "strong" | "medium" | "weak";
+
+export type WorkspaceDealScoringMatrixSummary = {
+  dealCount: number;
+  totalValue: number;
+  averageScore: number;
+  hotCount: number;
+  warmCount: number;
+  coldCount: number;
+  stageCounts: Record<WorkspaceSalesPipelineStage, number>;
+};
+
+export type WorkspacePipelineFunnelStageSummary = {
+  stage: WorkspaceSalesPipelineStage;
+  label: string;
+  widthPercent: number;
+  dealCount: number;
+  totalValue: number;
+};
+
+export type WorkspacePipelineFunnelSummary = {
+  dealCount: number;
+  totalValue: number;
+  closedValue: number;
+  openValue: number;
+  stageSummaries: WorkspacePipelineFunnelStageSummary[];
+};
+
+export type WorkspaceForecastConfidenceBucketSummary = {
+  bucket: WorkspaceSalesForecastBucket;
+  label: string;
+  dealCount: number;
+  totalValue: number;
+  weightedValue: number;
+};
+
+export type WorkspaceForecastConfidenceBoardSummary = {
+  dealCount: number;
+  targetRevenueEgp: number;
+  commitRevenue: number;
+  weightedForecast: number;
+  atRiskValue: number;
+  coveragePercent: number;
+  averageConfidence: number;
+  bucketSummaries: WorkspaceForecastConfidenceBucketSummary[];
 };
 
 export type WorkspaceOkrHealth = "healthy" | "watch" | "critical";

@@ -6,12 +6,15 @@ import {
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceBusinessModelCanvasBlock,
   createWorkspaceCustomBlock,
+  createWorkspaceDealScoringMatrixBlock,
   createWorkspaceDecisionMatrixBlock,
   createWorkspaceDecisionBlock,
+  createWorkspaceForecastConfidenceBoardBlock,
   createWorkspaceKanbanBlock,
   createWorkspaceNode,
   createWorkspaceNotesBlock,
   createWorkspaceOkrTrackerBlock,
+  createWorkspacePipelineFunnelBlock,
   createWorkspaceScorecardBlock,
   createWorkspaceTaskListBlock,
   createWorkspaceTimeOrchestratorBlock,
@@ -56,6 +59,9 @@ const workspaceBlockTypeSchema = z.enum([
   "time-orchestrator",
   "kanban",
   "timeline",
+  "deal-scoring-matrix",
+  "pipeline-funnel",
+  "forecast-confidence-board",
   "scorecard",
   "okr-tracker",
   "decision-matrix",
@@ -277,6 +283,12 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return `${block.columns.length} columns, ${block.cards.length} cards`;
     case "timeline":
       return `${block.milestones.length} milestones`;
+    case "deal-scoring-matrix":
+      return `${block.deals.length} scored deals`;
+    case "pipeline-funnel":
+      return `${block.deals.length} funnel deals`;
+    case "forecast-confidence-board":
+      return `${block.deals.length} forecast deals, target ${block.targetRevenueEgp} EGP`;
     case "scorecard":
       return `${block.metrics.length} metrics`;
     case "okr-tracker":
@@ -611,6 +623,12 @@ function createBlockByType(args: {
       return createWorkspaceKanbanBlock(titleInput);
     case "timeline":
       return createWorkspaceTimelineBlock(titleInput);
+    case "deal-scoring-matrix":
+      return createWorkspaceDealScoringMatrixBlock(titleInput);
+    case "pipeline-funnel":
+      return createWorkspacePipelineFunnelBlock(titleInput);
+    case "forecast-confidence-board":
+      return createWorkspaceForecastConfidenceBoardBlock(titleInput);
     case "scorecard":
       return createWorkspaceScorecardBlock(titleInput);
     case "okr-tracker":

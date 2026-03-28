@@ -10,12 +10,16 @@ import {
   workspaceBusinessModelCanvasBlockSchema,
   workspaceCustomBlockSchema,
   workspaceCustomBlockTemplateSchema,
+  workspaceDealScoringDealSchema,
+  workspaceDealScoringMatrixBlockSchema,
   workspaceDelegationItemSchema,
   workspaceDelegationMatrixBlockSchema,
   workspaceDecisionMatrixBlockSchema,
   workspaceDecisionMatrixCriterionSchema,
   workspaceDecisionMatrixOptionSchema,
   workspaceDecisionBlockSchema,
+  workspaceForecastConfidenceBoardBlockSchema,
+  workspaceForecastConfidenceItemSchema,
   workspaceKanbanBlockSchema,
   workspaceKanbanCardSchema,
   workspaceKanbanColumnSchema,
@@ -27,6 +31,8 @@ import {
   workspaceOkrKeyResultSchema,
   workspaceOkrObjectiveSchema,
   workspaceOkrTrackerBlockSchema,
+  workspacePipelineFunnelBlockSchema,
+  workspacePipelineFunnelDealSchema,
   workspacePromptOutputSchema,
   workspaceSeatPlannerBlockSchema,
   workspaceSeatPlannerSeatSchema,
@@ -55,12 +61,16 @@ import type {
   WorkspaceCustomBlock,
   WorkspaceCustomBlockField,
   WorkspaceCustomBlockTemplate,
+  WorkspaceDealScoringDeal,
+  WorkspaceDealScoringMatrixBlock,
   WorkspaceDelegationItem,
   WorkspaceDelegationMatrixBlock,
   WorkspaceDecisionMatrixBlock,
   WorkspaceDecisionMatrixCriterion,
   WorkspaceDecisionMatrixOption,
   WorkspaceDecisionBlock,
+  WorkspaceForecastConfidenceBoardBlock,
+  WorkspaceForecastConfidenceItem,
   WorkspaceKanbanBlock,
   WorkspaceKanbanCard,
   WorkspaceKanbanColumn,
@@ -69,6 +79,8 @@ import type {
   WorkspaceNodeTab,
   WorkspaceNodeViewState,
   WorkspaceNotesBlock,
+  WorkspacePipelineFunnelBlock,
+  WorkspacePipelineFunnelDeal,
   WorkspacePromptOutput,
   WorkspaceSeatPlannerBlock,
   WorkspaceSeatPlannerSeat,
@@ -93,6 +105,7 @@ import type {
 export * from "./constants";
 export * from "./dashboard";
 export * from "./people";
+export * from "./sales";
 export * from "./schemas";
 export * from "./strategy";
 export * from "./tasks";
@@ -143,6 +156,48 @@ export function createWorkspaceDelegationItem(
     to: partial.to ?? "",
     hoursPerWeek: partial.hoursPerWeek ?? 2,
     status: partial.status ?? "stuck",
+  });
+}
+
+export function createWorkspaceDealScoringDeal(
+  partial: Partial<WorkspaceDealScoringDeal> = {},
+): WorkspaceDealScoringDeal {
+  return workspaceDealScoringDealSchema.parse({
+    id: partial.id ?? createWorkspaceId("deal"),
+    clientName: partial.clientName ?? "New deal",
+    valueEgp: partial.valueEgp ?? 0,
+    temperature: partial.temperature ?? "warm",
+    score: partial.score ?? 50,
+    stage: partial.stage ?? "lead",
+    nextAction: partial.nextAction ?? "",
+    dueDate: partial.dueDate ?? null,
+  });
+}
+
+export function createWorkspacePipelineFunnelDeal(
+  partial: Partial<WorkspacePipelineFunnelDeal> = {},
+): WorkspacePipelineFunnelDeal {
+  return workspacePipelineFunnelDealSchema.parse({
+    id: partial.id ?? createWorkspaceId("funnel-deal"),
+    clientName: partial.clientName ?? "New deal",
+    valueEgp: partial.valueEgp ?? 0,
+    temperature: partial.temperature ?? "warm",
+    stage: partial.stage ?? "lead",
+  });
+}
+
+export function createWorkspaceForecastConfidenceItem(
+  partial: Partial<WorkspaceForecastConfidenceItem> = {},
+): WorkspaceForecastConfidenceItem {
+  return workspaceForecastConfidenceItemSchema.parse({
+    id: partial.id ?? createWorkspaceId("forecast"),
+    clientName: partial.clientName ?? "New forecast deal",
+    valueEgp: partial.valueEgp ?? 0,
+    bucket: partial.bucket ?? "likely",
+    expectedCloseMonth: partial.expectedCloseMonth ?? null,
+    confidence: partial.confidence ?? 50,
+    owner: partial.owner ?? "",
+    nextAction: partial.nextAction ?? "",
   });
 }
 
@@ -397,6 +452,93 @@ function getDelegationMatrixDefaultItems() {
       to: "Layla",
       hoursPerWeek: 4,
       status: "transitioning",
+    }),
+  ];
+}
+
+function getDealScoringMatrixDefaultDeals() {
+  return [
+    createWorkspaceDealScoringDeal({
+      clientName: "TechCo",
+      valueEgp: 15_000,
+      temperature: "hot",
+      score: 82,
+      stage: "consultation",
+      nextAction: "Send revised scope after the discovery call.",
+      dueDate: "2026-04-03",
+    }),
+    createWorkspaceDealScoringDeal({
+      clientName: "FoodBrand",
+      valueEgp: 8_000,
+      temperature: "warm",
+      score: 55,
+      stage: "lead",
+      nextAction: "Book intro call with the brand manager.",
+      dueDate: "2026-04-07",
+    }),
+    createWorkspaceDealScoringDeal({
+      clientName: "EduStart",
+      valueEgp: 22_000,
+      temperature: "hot",
+      score: 90,
+      stage: "proposal",
+      nextAction: "Push commercial approval and confirm procurement path.",
+      dueDate: "2026-04-01",
+    }),
+  ];
+}
+
+function getPipelineFunnelDefaultDeals() {
+  return [
+    createWorkspacePipelineFunnelDeal({
+      clientName: "TechCo",
+      valueEgp: 15_000,
+      temperature: "hot",
+      stage: "consultation",
+    }),
+    createWorkspacePipelineFunnelDeal({
+      clientName: "FoodBrand",
+      valueEgp: 8_000,
+      temperature: "warm",
+      stage: "lead",
+    }),
+    createWorkspacePipelineFunnelDeal({
+      clientName: "EduStart",
+      valueEgp: 22_000,
+      temperature: "hot",
+      stage: "proposal",
+    }),
+  ];
+}
+
+function getForecastConfidenceDefaultItems() {
+  return [
+    createWorkspaceForecastConfidenceItem({
+      clientName: "TechCo",
+      valueEgp: 15_000,
+      bucket: "commit",
+      expectedCloseMonth: "2026-04",
+      confidence: 85,
+      owner: "Omar",
+      nextAction: "Finalize legal redlines and sign the MSA.",
+    }),
+    createWorkspaceForecastConfidenceItem({
+      clientName: "EduStart",
+      valueEgp: 22_000,
+      bucket: "likely",
+      expectedCloseMonth: "2026-05",
+      confidence: 70,
+      owner: "Layla",
+      nextAction: "Secure final buyer approval after budget review.",
+    }),
+    createWorkspaceForecastConfidenceItem({
+      clientName: "FoodBrand",
+      valueEgp: 8_000,
+      bucket: "at-risk",
+      expectedCloseMonth: "2026-04",
+      confidence: 35,
+      owner: "Sarah",
+      nextAction: "Recover the stalled thread with a revised proposal.",
     }),
   ];
 }
@@ -676,6 +818,52 @@ export function createWorkspaceSeatPlannerBlock(
     title: partial.title ?? "Seat ownership planner",
     filter: partial.filter ?? "all",
     seats: partial.seats ?? getSeatPlannerDefaultSeats(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceDealScoringMatrixBlock(
+  partial: Partial<WorkspaceDealScoringMatrixBlock> = {},
+): WorkspaceDealScoringMatrixBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceDealScoringMatrixBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "deal-scoring-matrix",
+    title: partial.title ?? "Deal scoring matrix",
+    deals: partial.deals ?? getDealScoringMatrixDefaultDeals(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspacePipelineFunnelBlock(
+  partial: Partial<WorkspacePipelineFunnelBlock> = {},
+): WorkspacePipelineFunnelBlock {
+  const timestamp = getNowIsoString();
+
+  return workspacePipelineFunnelBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "pipeline-funnel",
+    title: partial.title ?? "Pipeline funnel",
+    deals: partial.deals ?? getPipelineFunnelDefaultDeals(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceForecastConfidenceBoardBlock(
+  partial: Partial<WorkspaceForecastConfidenceBoardBlock> = {},
+): WorkspaceForecastConfidenceBoardBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceForecastConfidenceBoardBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "forecast-confidence-board",
+    title: partial.title ?? "Forecast confidence board",
+    targetRevenueEgp: partial.targetRevenueEgp ?? 50_000,
+    deals: partial.deals ?? getForecastConfidenceDefaultItems(),
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
   });
@@ -1098,6 +1286,22 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
       return normalizeWorkspaceTalentGridBlock(block);
     case "seat-planner":
       return normalizeWorkspaceSeatPlannerBlock(block);
+    case "deal-scoring-matrix":
+      return workspaceDealScoringMatrixBlockSchema.parse({
+        ...block,
+        deals: block.deals ?? [],
+      });
+    case "pipeline-funnel":
+      return workspacePipelineFunnelBlockSchema.parse({
+        ...block,
+        deals: block.deals ?? [],
+      });
+    case "forecast-confidence-board":
+      return workspaceForecastConfidenceBoardBlockSchema.parse({
+        ...block,
+        targetRevenueEgp: block.targetRevenueEgp ?? 50_000,
+        deals: block.deals ?? [],
+      });
     case "scorecard":
       return workspaceScorecardBlockSchema.parse({
         ...block,
@@ -1390,6 +1594,39 @@ export function cloneWorkspaceBlockForInsertion(
         seats: block.seats.map((seat) => ({
           ...seat,
           id: createWorkspaceId("seat"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "deal-scoring-matrix":
+      return workspaceDealScoringMatrixBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        deals: block.deals.map((deal) => ({
+          ...deal,
+          id: createWorkspaceId("deal"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "pipeline-funnel":
+      return workspacePipelineFunnelBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        deals: block.deals.map((deal) => ({
+          ...deal,
+          id: createWorkspaceId("funnel-deal"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "forecast-confidence-board":
+      return workspaceForecastConfidenceBoardBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        deals: block.deals.map((deal) => ({
+          ...deal,
+          id: createWorkspaceId("forecast"),
         })),
         createdAt: timestamp,
         updatedAt: timestamp,
