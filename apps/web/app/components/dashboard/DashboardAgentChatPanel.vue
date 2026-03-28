@@ -49,7 +49,6 @@ const {
     modelOptions,
     openDeleteDialog,
     openRenameDialog,
-    otherModelOptions,
     promptSuggestions,
     removeMentionedNode,
     renameDraft,
@@ -827,7 +826,7 @@ function renderAssistantMessage(content: string) {
                             class="max-h-[52vh] space-y-2 overflow-y-auto pr-1"
                         >
                             <div
-                                v-for="model in otherModelOptions"
+                                v-for="model in modelOptions"
                                 :key="model.id"
                                 class="rounded-[1.2rem] border p-3 transition"
                                 :class="

@@ -62,7 +62,7 @@ export const workspaceAddBlockCategories = [
       {
         blockType: "seat-planner",
         label: "Seat ownership planner",
-        icon: "i-lucide-sitemap",
+        icon: "i-lucide-blinds",
       },
     ],
   },
@@ -111,7 +111,8 @@ export function createWorkspaceAddBlockMenuItems(
     {
       label: category.label,
       type: "label",
-      class: "px-2 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.24em] text-muted/70",
+      class:
+        "px-2 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.24em] text-muted/70",
     },
     ...category.items.map(
       (item) =>

@@ -448,11 +448,6 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         Boolean(model),
       );
   });
-  const otherModelOptions = computed(() => {
-    const topModelIds = new Set(topModelOptions.value.map((model) => model.id));
-
-    return modelOptions.value.filter((model) => !topModelIds.has(model.id));
-  });
   const modelCount = computed(() => modelOptions.value.length);
   const selectedModelOption = computed(() =>
     modelOptions.value.find((model) => model.id === selectedModelId.value),
@@ -928,7 +923,6 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     modelOptions,
     openDeleteDialog,
     openRenameDialog,
-    otherModelOptions,
     promptSuggestions,
     removeMentionedNode,
     renameDraft,

@@ -97,7 +97,7 @@ export const workspaceBlockRegistry = {
   "seat-planner": {
     component: WorkspaceSeatPlannerBlockEditor,
     label: "Seat ownership planner",
-    icon: "i-lucide-sitemap",
+    icon: "i-lucide-blinds",
     addGroup: "secondary",
   },
   scorecard: {

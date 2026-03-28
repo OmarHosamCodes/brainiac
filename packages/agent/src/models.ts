@@ -1,5 +1,4 @@
 import type { Model } from "@openrouter/sdk/models";
-import { env } from "@brainiac/env/server";
 import { z } from "zod";
 
 import { createOpenRouterClient } from "./client";
@@ -109,9 +108,7 @@ function getDefaultFreeModelId(models: OpenRouterFreeModel[]) {
 }
 
 async function fetchOpenRouterFreeModels() {
-  const response = await createOpenRouterClient().models.listForUser({
-    bearer: env.OPENROUTER_API_KEY,
-  });
+  const response = await createOpenRouterClient().models.list();
   const models = sortFreeModels(
     response.data
       .map(toFreeModel)
