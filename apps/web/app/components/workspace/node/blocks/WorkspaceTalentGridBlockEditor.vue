@@ -109,38 +109,40 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Team</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-3xl border border-primary/20 bg-primary/5 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">Team</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
           {{ summary.memberCount }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Stars</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+      <div class="rounded-3xl border border-success/20 bg-success/5 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">Stars</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
           {{ summary.superstarCount + summary.growthStarCount }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-elevated/70 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Core Players</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-highlighted">
+      <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Core Players</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ summary.corePlayerCount }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-error/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">Risk</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-error">{{ summary.riskCount }}</p>
+      <div class="rounded-3xl border border-error/20 bg-error/5 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/70">Risk</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-error">
+          {{ summary.riskCount }}
+        </p>
       </div>
     </div>
 
     <div class="flex flex-wrap items-center justify-between gap-3 px-1">
       <div>
         <p class="text-sm font-semibold text-highlighted">9-box grid</p>
-        <p class="text-sm text-muted">
+        <p class="text-xs text-muted">
           Move performance and potential from 1 to 5 and the member repositions instantly.
         </p>
       </div>
@@ -159,21 +161,21 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
     <div class="overflow-x-auto pb-2">
       <div
         class="grid min-w-[860px] gap-3"
-        style="grid-template-columns: 7.5rem repeat(3, minmax(0, 1fr))"
+        style="grid-template-columns: 8rem repeat(3, minmax(0, 1fr))"
       >
         <div />
 
         <div
           v-for="column in performanceColumns"
           :key="column"
-          class="rounded-2xl border border-muted/40 bg-elevated/40 px-4 py-3 text-center text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
+          class="rounded-2xl border border-muted/20 bg-elevated/10 px-4 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
         >
           {{ column }}
         </div>
 
         <template v-for="row in gridRows" :key="row.label">
           <div
-            class="flex items-center rounded-2xl border border-muted/40 bg-elevated/20 px-3 py-4 text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
+            class="flex items-center rounded-2xl border border-muted/20 bg-elevated/5 px-3 py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
           >
             {{ row.label }}
           </div>
@@ -181,15 +183,15 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
           <div
             v-for="cell in row.cells"
             :key="cell"
-            class="min-h-[180px] rounded-[28px] border p-4"
+            class="min-h-[180px] rounded-3xl border p-4"
             :class="getCellClasses(cell)"
           >
             <div class="flex items-start justify-between gap-3">
               <div>
-                <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+                <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
                   {{ workspaceTalentGridBoxLabels[cell] }}
                 </p>
-                <p class="mt-1 text-xs text-muted">
+                <p class="mt-1 text-[10px] font-bold text-muted/40 uppercase tracking-widest">
                   {{ membersByBox.get(cell)?.length ?? 0 }} people
                 </p>
               </div>
@@ -199,7 +201,7 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
               <div
                 v-for="member in membersByBox.get(cell)"
                 :key="member.id"
-                class="rounded-full border border-default/60 bg-default/80 px-3 py-1.5 text-xs font-semibold text-highlighted"
+                class="rounded-full border border-muted/20 bg-default/80 px-3 py-1 text-xs font-semibold text-highlighted"
               >
                 {{ member.name || "Unnamed" }}
               </div>
@@ -211,16 +213,18 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
 
     <div
       v-if="block.members.length === 0"
-      class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center"
+      class="rounded-3xl border border-dashed border-muted/20 bg-elevated/5 py-12 text-center"
     >
-      <p class="text-sm font-semibold text-muted">No talent profiles yet.</p>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+        No talent profiles yet.
+      </p>
     </div>
 
     <div v-else class="space-y-4">
       <article
         v-for="member in block.members"
         :key="member.id"
-        class="rounded-[32px] border border-muted/30 bg-default/60 p-5"
+        class="rounded-3xl border border-muted/20 bg-default/40 p-5"
       >
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div class="min-w-0 flex-1">
@@ -275,12 +279,12 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
         </div>
 
         <div class="mt-5 grid gap-4 md:grid-cols-2">
-          <div class="rounded-2xl border border-muted/40 bg-elevated/30 p-4">
-            <div
-              class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
-            >
-              <span>Performance</span>
-              <span>{{ member.performance }}/5</span>
+          <div class="rounded-2xl border border-muted/20 bg-elevated/10 p-4">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+                >Performance</span
+              >
+              <span class="text-xs font-black text-primary">{{ member.performance }}/5</span>
             </div>
             <input
               :value="member.performance"
@@ -288,7 +292,7 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
               min="1"
               max="5"
               step="1"
-              class="mt-4 w-full accent-primary"
+              class="mt-4 h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
               @input="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'talent-grid') return;
@@ -302,12 +306,12 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
             />
           </div>
 
-          <div class="rounded-2xl border border-muted/40 bg-elevated/30 p-4">
-            <div
-              class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
-            >
-              <span>Potential</span>
-              <span>{{ member.potential }}/5</span>
+          <div class="rounded-2xl border border-muted/20 bg-elevated/10 p-4">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+                >Potential</span
+              >
+              <span class="text-xs font-black text-primary">{{ member.potential }}/5</span>
             </div>
             <input
               :value="member.potential"
@@ -315,7 +319,7 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
               min="1"
               max="5"
               step="1"
-              class="mt-4 w-full accent-primary"
+              class="mt-4 h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
               @input="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'talent-grid') return;

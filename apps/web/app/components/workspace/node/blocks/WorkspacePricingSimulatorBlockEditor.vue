@@ -67,7 +67,7 @@ const controls = [
 
 <template>
   <div class="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-    <section class="space-y-5 rounded-[32px] border border-muted/30 bg-default/60 p-5">
+    <section class="space-y-5 rounded-3xl border border-muted/20 bg-default/40 p-5">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p class="text-sm font-semibold text-highlighted">Pricing simulator</p>
@@ -77,11 +77,11 @@ const controls = [
           </p>
         </div>
 
-        <div class="rounded-[22px] bg-primary/5 px-4 py-3 text-right">
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">
+        <div class="rounded-2xl bg-primary/5 border border-primary/10 px-4 py-3 text-right">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Active Clients
           </p>
-          <p class="mt-1 text-3xl font-black tracking-tight text-primary">
+          <p class="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-primary">
             {{ block.activeClients }}
           </p>
         </div>
@@ -90,7 +90,7 @@ const controls = [
       <div class="grid gap-4 sm:grid-cols-2">
         <button
           type="button"
-          class="rounded-[22px] border border-muted/30 bg-elevated/20 px-4 py-3 text-left transition hover:border-primary/30"
+          class="rounded-2xl border border-muted/20 bg-elevated/10 px-4 py-3 text-left transition hover:border-primary/30"
           @click="
             mutateBlock(tabId, block.id, (entry) => {
               if (entry.type !== 'pricing-simulator') return;
@@ -98,13 +98,13 @@ const controls = [
             })
           "
         >
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Adjust</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Adjust</p>
           <p class="mt-1 text-lg font-bold text-highlighted">-1 Client</p>
         </button>
 
         <button
           type="button"
-          class="rounded-[22px] border border-muted/30 bg-elevated/20 px-4 py-3 text-left transition hover:border-primary/30"
+          class="rounded-2xl border border-muted/20 bg-elevated/10 px-4 py-3 text-left transition hover:border-primary/30"
           @click="
             mutateBlock(tabId, block.id, (entry) => {
               if (entry.type !== 'pricing-simulator') return;
@@ -112,7 +112,7 @@ const controls = [
             })
           "
         >
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Adjust</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Adjust</p>
           <p class="mt-1 text-lg font-bold text-highlighted">+1 Client</p>
         </button>
       </div>
@@ -120,14 +120,14 @@ const controls = [
       <article
         v-for="control in controls"
         :key="control.key"
-        class="rounded-[26px] border border-muted/25 bg-elevated/20 p-4"
+        class="rounded-2xl border border-muted/20 bg-elevated/10 p-4"
       >
         <div class="flex items-center justify-between gap-3">
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
               {{ control.label }}
             </p>
-            <p class="mt-1 text-2xl font-black tracking-tight text-highlighted">
+            <p class="mt-1 text-xl sm:text-2xl font-black tracking-tight text-highlighted">
               {{ block[control.key] }}
               <span class="text-sm font-semibold text-muted">{{ control.suffix }}</span>
             </p>
@@ -169,7 +169,7 @@ const controls = [
           "
         />
 
-        <div class="mt-2 flex items-center justify-between text-xs text-muted">
+        <div class="mt-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
           <span>{{ control.min }}</span>
           <span>{{ control.max }}</span>
         </div>
@@ -178,47 +178,47 @@ const controls = [
 
     <section class="space-y-4">
       <div class="grid gap-4 sm:grid-cols-2">
-        <div class="rounded-[28px] bg-success/5 p-5">
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">
+        <div class="rounded-3xl bg-success/5 p-5 border border-success/10">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Projected Revenue
           </p>
-          <p class="mt-2 text-3xl font-black tracking-tight text-success">
+          <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
             {{ formatCurrency(summary.projectedRevenue) }}
           </p>
         </div>
 
-        <div class="rounded-[28px] bg-primary/5 p-5">
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">
+        <div class="rounded-3xl bg-primary/5 p-5 border border-primary/10">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Min Retainer / Client
           </p>
-          <p class="mt-2 text-3xl font-black tracking-tight text-primary">
+          <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
             {{ formatCurrency(summary.minimumRetainerPerClient) }}
           </p>
         </div>
 
-        <div class="rounded-[28px] bg-secondary/10 p-5">
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-secondary/80">
+        <div class="rounded-3xl bg-secondary/5 p-5 border border-secondary/10">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Projected Profit
           </p>
           <p
-            class="mt-2 text-3xl font-black tracking-tight"
+            class="mt-2 text-2xl sm:text-3xl font-black tracking-tight"
             :class="summary.projectedProfit >= 0 ? 'text-success' : 'text-error'"
           >
             {{ formatCurrency(summary.projectedProfit) }}
           </p>
         </div>
 
-        <div class="rounded-[28px] bg-warning/5 p-5">
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">
+        <div class="rounded-3xl bg-warning/5 p-5 border border-warning/10">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Required Revenue
           </p>
-          <p class="mt-2 text-3xl font-black tracking-tight text-warning">
+          <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-warning">
             {{ formatCurrency(summary.requiredRevenue) }}
           </p>
         </div>
       </div>
 
-      <div class="rounded-[32px] border border-muted/30 bg-default/60 p-5">
+      <div class="rounded-3xl border border-muted/20 bg-default/40 p-5">
         <p class="text-sm font-semibold text-highlighted">Scenario readout</p>
         <div class="mt-4 space-y-3 text-sm text-toned">
           <p>

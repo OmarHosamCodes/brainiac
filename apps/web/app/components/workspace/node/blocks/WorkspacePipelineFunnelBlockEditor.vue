@@ -110,41 +110,41 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-3xl bg-primary/5 p-5 border border-primary/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
           Pipeline Value
         </p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-primary">
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
           {{ formatCurrency(summary.totalValue) }}
         </p>
-        <p class="mt-1 text-sm text-muted">{{ summary.dealCount }} deals in motion</p>
+        <p class="mt-1 text-xs text-muted/60 font-semibold uppercase tracking-wider">{{ summary.dealCount }} deals in motion</p>
       </div>
 
-      <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">Open Value</p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-warning">
+      <div class="rounded-3xl bg-warning/5 p-5 border border-warning/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Open Value</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-warning">
           {{ formatCurrency(summary.openValue) }}
         </p>
-        <p class="mt-1 text-sm text-muted">Still moving through the funnel</p>
+        <p class="mt-1 text-xs text-muted/60 font-semibold uppercase tracking-wider">In progress</p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">
+      <div class="rounded-3xl bg-success/5 p-5 border border-success/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
           Closed Value
         </p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-success">
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
           {{ formatCurrency(summary.closedValue) }}
         </p>
-        <p class="mt-1 text-sm text-muted">Already converted</p>
+        <p class="mt-1 text-xs text-muted/60 font-semibold uppercase tracking-wider">Converted</p>
       </div>
 
-      <div class="rounded-[28px] bg-error/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">Top of Funnel</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-error">
+      <div class="rounded-3xl bg-error/5 p-5 border border-error/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Top of Funnel</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-error">
           {{ summary.stageSummaries[0]?.dealCount ?? 0 }}
         </p>
-        <p class="mt-1 text-sm text-muted">Lead-stage deals waiting to be qualified</p>
+        <p class="mt-1 text-xs text-muted/60 font-semibold uppercase tracking-wider">Leads qualified</p>
       </div>
     </div>
 
@@ -167,17 +167,17 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
       </UButton>
     </div>
 
-    <div class="rounded-[32px] border border-muted/30 bg-default/40 p-5">
+    <div class="rounded-3xl border border-muted/20 bg-default/40 p-5">
       <div class="space-y-3">
         <div v-for="stage in summary.stageSummaries" :key="stage.stage" class="flex justify-center">
           <div
-            class="w-full rounded-[28px] border px-4 py-4 transition-colors"
+            class="w-full rounded-2xl border px-4 py-4 transition-colors"
             :class="getStageRowClasses(stage.stage)"
             :style="{ width: `${stage.widthPercent}%` }"
           >
             <div class="flex items-center justify-between gap-3">
               <div>
-                <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+                <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
                   {{ stage.label }}
                 </p>
                 <p class="mt-1 text-sm font-semibold text-highlighted">
@@ -185,7 +185,7 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
                 </p>
               </div>
 
-              <p class="text-lg font-black tracking-tight text-highlighted">
+              <p class="text-xl font-black tracking-tight text-highlighted">
                 {{ formatCurrency(stage.totalValue) }}
               </p>
             </div>
@@ -202,7 +202,7 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
 
       <div
         v-if="sortedDeals.length === 0"
-        class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center"
+        class="border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
       >
         <p class="text-sm font-semibold text-muted">No deals in the funnel yet.</p>
       </div>
@@ -211,7 +211,7 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
         <article
           v-for="deal in sortedDeals"
           :key="deal.id"
-          class="rounded-[28px] border border-muted/25 bg-default/50 p-4"
+          class="rounded-2xl border border-muted/20 bg-default/40 p-4"
         >
           <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_14rem_15rem_auto]">
             <div class="min-w-0">
@@ -239,16 +239,16 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
                 />
               </div>
 
-              <p class="mt-2 pl-5 text-sm text-muted">
+              <p class="mt-2 pl-5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
                 {{ workspaceSalesTemperatureLabels[deal.temperature] }} temperature
               </p>
             </div>
 
-            <UFormField label="Value (EGP)" size="sm">
+            <UFormField label="Value (EGP)" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1' }">
               <UInput
                 :model-value="String(deal.valueEgp)"
                 type="number"
-                class="rounded-2xl"
+                class="rounded-xl"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== 'pipeline-funnel') return;
@@ -260,11 +260,11 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
               />
             </UFormField>
 
-            <UFormField label="Stage" size="sm">
+            <UFormField label="Stage" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1' }">
               <USelect
                 :model-value="deal.stage"
                 :items="stageOptions"
-                class="rounded-2xl"
+                class="rounded-xl"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== 'pipeline-funnel') return;

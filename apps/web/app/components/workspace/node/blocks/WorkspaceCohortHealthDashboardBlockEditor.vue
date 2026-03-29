@@ -97,35 +97,35 @@ function getHealthClasses(cohortId: string) {
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Seats Sold</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-3xl bg-primary/10 border border-primary/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">Seats Sold</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
           {{ summary.totalSeatsSold }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">
+      <div class="rounded-3xl bg-success/10 border border-success/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">
           Capacity Filled
         </p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
           {{ summary.fillPercent }}%
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-secondary/10 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-secondary/80">
+      <div class="rounded-3xl bg-secondary/10 border border-secondary/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/80">
           Booked Revenue
         </p>
-        <p class="mt-2 text-2xl font-black tracking-tight text-secondary">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-secondary">
           {{ formatCurrency(summary.bookedRevenueEgp) }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-error/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">At Risk</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-error">{{ summary.atRiskCount }}</p>
+      <div class="rounded-3xl bg-error/10 border border-error/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/70">At Risk</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-error">{{ summary.atRiskCount }}</p>
       </div>
     </div>
 
@@ -150,16 +150,16 @@ function getHealthClasses(cohortId: string) {
 
     <div
       v-if="block.cohorts.length === 0"
-      class="rounded-[32px] border border-dashed border-muted/40 bg-elevated/10 py-14 text-center"
+      class="border-dashed border border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
     >
-      <p class="text-sm font-semibold text-muted">No cohorts tracked yet.</p>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">No cohorts tracked yet</p>
     </div>
 
     <div v-else class="grid gap-5">
       <article
         v-for="cohort in block.cohorts"
         :key="cohort.id"
-        class="rounded-[34px] border p-5"
+        class="rounded-3xl border p-5 transition-colors"
         :class="getHealthClasses(cohort.id)"
       >
         <div class="flex flex-wrap items-start justify-between gap-4">
@@ -178,13 +178,13 @@ function getHealthClasses(cohortId: string) {
                 "
               />
 
-              <UBadge :class="getHealthClasses(cohort.id)" variant="subtle" size="sm">
+              <UBadge :class="getHealthClasses(cohort.id)" variant="soft" size="sm" class="rounded-2xl">
                 Health {{ getCohortHealthScore(cohort) }}
               </UBadge>
             </div>
 
             <div
-              class="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted"
+              class="flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
             >
               <span>{{ cohort.seatsSold }}/{{ cohort.capacity }} seats</span>
               <span>{{ getCohortFillPercent(cohort) }}% full</span>
@@ -193,7 +193,7 @@ function getHealthClasses(cohortId: string) {
             </div>
 
             <div class="space-y-2">
-              <div class="flex items-center justify-between gap-3 text-xs text-muted">
+              <div class="flex items-center justify-between gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">
                 <span>Utilization</span>
                 <span>{{ getCohortFillPercent(cohort) }}%</span>
               </div>
@@ -210,14 +210,14 @@ function getHealthClasses(cohortId: string) {
             color="neutral"
             variant="ghost"
             icon="i-lucide-trash-2"
-            class="rounded-xl hover:bg-error/10 hover:text-error"
+            class="rounded-xl hover:text-error"
             @click="removeCohort(cohort.id)"
           />
         </div>
 
-        <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,0.52fr)_minmax(0,0.48fr)]">
+        <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
           <div class="grid gap-4 sm:grid-cols-2">
-            <UFormField label="Seats Sold" size="sm">
+            <UFormField label="Seats Sold" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60' }">
               <UInput
                 :model-value="String(cohort.seatsSold)"
                 type="number"
@@ -233,7 +233,7 @@ function getHealthClasses(cohortId: string) {
               />
             </UFormField>
 
-            <UFormField label="Capacity" size="sm">
+            <UFormField label="Capacity" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60' }">
               <UInput
                 :model-value="String(cohort.capacity)"
                 type="number"
@@ -247,7 +247,7 @@ function getHealthClasses(cohortId: string) {
               />
             </UFormField>
 
-            <UFormField label="Revenue" size="sm">
+            <UFormField label="Revenue" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60' }">
               <UInput
                 :model-value="String(cohort.revenueEgp)"
                 type="number"
@@ -260,7 +260,7 @@ function getHealthClasses(cohortId: string) {
               />
             </UFormField>
 
-            <UFormField label="Start Date" size="sm">
+            <UFormField label="Start Date" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60' }">
               <UInput
                 :model-value="cohort.startDate ?? ''"
                 type="date"
@@ -274,16 +274,16 @@ function getHealthClasses(cohortId: string) {
             </UFormField>
           </div>
 
-          <div class="space-y-4 rounded-[28px] border border-muted/25 bg-default/60 p-4">
+          <div class="space-y-4 rounded-2xl border border-muted/20 bg-default/40 p-4">
             <div>
-              <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Status</p>
+              <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Status</p>
               <div class="mt-2 flex flex-wrap gap-2">
                 <UButton
                   v-for="status in statusOptions"
                   :key="`${cohort.id}-${status}`"
-                  size="sm"
+                  size="xs"
                   :color="cohort.status === status ? 'primary' : 'neutral'"
-                  :variant="cohort.status === status ? 'soft' : 'outline'"
+                  :variant="cohort.status === status ? 'soft' : 'ghost'"
                   class="rounded-full px-4"
                   @click="
                     mutateCohort(cohort.id, (entry) => {
@@ -297,43 +297,45 @@ function getHealthClasses(cohortId: string) {
             </div>
 
             <div class="space-y-3">
-              <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Risk Flags</p>
+              <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Risk Flags</p>
               <div class="grid gap-3 sm:grid-cols-2">
                 <label
-                  class="flex items-center gap-3 rounded-2xl border border-muted/25 bg-elevated/20 px-3 py-3"
+                  class="flex items-center gap-3 rounded-2xl border border-muted/20 bg-elevated/10 px-3 py-3"
                 >
                   <UCheckbox
                     :model-value="cohort.refundRisk"
+                    size="sm"
                     @update:model-value="
                       mutateCohort(cohort.id, (entry) => {
                         entry.refundRisk = !!$event;
                       })
                     "
                   />
-                  <span class="text-sm font-medium text-toned">Refund risk</span>
+                  <span class="text-xs font-bold uppercase tracking-[0.2em] text-muted/80">Refund risk</span>
                 </label>
 
                 <label
-                  class="flex items-center gap-3 rounded-2xl border border-muted/25 bg-elevated/20 px-3 py-3"
+                  class="flex items-center gap-3 rounded-2xl border border-muted/20 bg-elevated/10 px-3 py-3"
                 >
                   <UCheckbox
                     :model-value="cohort.completionRisk"
+                    size="sm"
                     @update:model-value="
                       mutateCohort(cohort.id, (entry) => {
                         entry.completionRisk = !!$event;
                       })
                     "
                   />
-                  <span class="text-sm font-medium text-toned">Completion risk</span>
+                  <span class="text-xs font-bold uppercase tracking-[0.2em] text-muted/80">Completion risk</span>
                 </label>
               </div>
             </div>
 
             <div class="flex flex-wrap gap-2">
-              <UBadge v-if="cohort.refundRisk" color="error" variant="soft" size="sm">
+              <UBadge v-if="cohort.refundRisk" color="error" variant="soft" size="sm" class="rounded-2xl">
                 Refund exposure
               </UBadge>
-              <UBadge v-if="cohort.completionRisk" color="warning" variant="soft" size="sm">
+              <UBadge v-if="cohort.completionRisk" color="warning" variant="soft" size="sm" class="rounded-2xl">
                 Weak completion outlook
               </UBadge>
               <UBadge
@@ -341,6 +343,7 @@ function getHealthClasses(cohortId: string) {
                 color="success"
                 variant="soft"
                 size="sm"
+                class="rounded-2xl"
               >
                 No active risk flags
               </UBadge>

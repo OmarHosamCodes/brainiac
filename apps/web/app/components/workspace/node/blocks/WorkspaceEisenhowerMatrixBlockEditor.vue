@@ -215,66 +215,71 @@ async function prioritizeWithAi() {
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">
+    <!-- Summary Grid -->
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-3xl bg-primary/5 p-5 border border-primary/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
           Total Task Time
         </p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-primary">
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
           {{ formatDuration(summary.totalEstimateMinutes) }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-error/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">Overdue</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-error">{{ summary.overdueCount }}</p>
+      <div class="rounded-3xl bg-error/5 p-5 border border-error/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/60">Overdue</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-error">
+          {{ summary.overdueCount }}
+        </p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Completed</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+      <div class="rounded-3xl bg-success/5 p-5 border border-success/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/60">Completed</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
           {{ summary.completedCount }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-secondary/10 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-secondary/80">
+      <div class="rounded-3xl bg-secondary/5 p-5 border border-secondary/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/60">
           Active Domains
         </p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-secondary">
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-secondary">
           {{ summary.activeDomainCount }}
         </p>
       </div>
     </div>
 
+    <!-- Quadrant Grid -->
     <div class="grid gap-4 xl:grid-cols-2">
       <article
         v-for="quadrant in quadrantMeta"
         :key="quadrant.key"
-        class="rounded-[32px] border p-5"
+        class="rounded-3xl border border-muted/20 p-5"
         :class="quadrant.className"
       >
         <div class="flex items-start justify-between gap-3">
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
               {{ quadrant.label }}
             </p>
-            <p class="mt-1 text-sm text-muted">{{ quadrant.description }}</p>
+            <p class="mt-1 text-xs font-medium text-muted/80">{{ quadrant.description }}</p>
           </div>
 
           <div class="text-right">
             <p class="text-2xl font-black tracking-tight text-highlighted">
               {{ summary.quadrants[quadrant.key].taskCount }}
             </p>
-            <p class="text-xs text-muted">
+            <p class="text-[10px] font-bold uppercase tracking-[0.1em] text-muted/60">
               {{ formatDuration(summary.quadrants[quadrant.key].estimateMinutes) }}
             </p>
           </div>
         </div>
 
+        <!-- Empty State -->
         <div
           v-if="summary.quadrants[quadrant.key].tasks.length === 0"
-          class="mt-4 rounded-[24px] border border-dashed border-muted/40 bg-default/50 px-4 py-8 text-center text-sm font-medium text-muted"
+          class="mt-4 border-dashed border-muted/20 rounded-2xl py-8 text-center bg-elevated/5 text-sm font-medium text-muted/60"
         >
           No tasks in this quadrant.
         </div>
@@ -283,7 +288,7 @@ async function prioritizeWithAi() {
           <article
             v-for="task in summary.quadrants[quadrant.key].tasks"
             :key="task.id"
-            class="rounded-[24px] border border-muted/25 bg-default/70 p-4"
+            class="rounded-2xl border border-muted/20 bg-default/40 p-4"
           >
             <div class="flex items-start gap-3">
               <UCheckbox
@@ -297,15 +302,15 @@ async function prioritizeWithAi() {
               />
 
               <div class="min-w-0 flex-1 space-y-2">
-                <p class="font-semibold text-highlighted">{{ task.text }}</p>
+                <p class="font-semibold text-highlighted text-sm">{{ task.text }}</p>
                 <div class="flex flex-wrap gap-2">
-                  <UBadge :class="getDomainPillClass(task.domain)" variant="subtle" size="sm">
+                  <UBadge :class="getDomainPillClass(task.domain)" variant="subtle" size="sm" class="rounded-lg">
                     {{ getWorkspaceTaskDomainLabel(task.domain) }}
                   </UBadge>
-                  <UBadge color="neutral" variant="soft" size="sm">
+                  <UBadge color="neutral" variant="soft" size="sm" class="rounded-lg">
                     {{ formatDuration(task.estimateMinutes) }}
                   </UBadge>
-                  <UBadge v-if="isOverdue(task)" color="error" variant="soft" size="sm">
+                  <UBadge v-if="isOverdue(task)" color="error" variant="soft" size="sm" class="rounded-lg">
                     Overdue
                   </UBadge>
                 </div>
@@ -316,11 +321,12 @@ async function prioritizeWithAi() {
       </article>
     </div>
 
-    <section class="rounded-[32px] border border-muted/30 bg-default/70 p-5">
+    <!-- Domain Allocation -->
+    <section class="rounded-3xl border border-muted/20 bg-default/40 p-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p class="text-sm font-semibold text-highlighted">Domain time allocation</p>
-          <p class="text-sm text-muted">
+          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">Domain time allocation</h3>
+          <p class="text-xs text-muted mt-1">
             Open task load is grouped by domain so time concentration is visible at a glance.
           </p>
         </div>
@@ -328,28 +334,28 @@ async function prioritizeWithAi() {
 
       <div
         v-if="summary.domainAllocation.length === 0"
-        class="mt-4 rounded-[24px] border border-dashed border-muted/40 bg-elevated/15 px-4 py-8 text-center text-sm font-medium text-muted"
+        class="mt-6 border-dashed border-muted/20 rounded-2xl py-12 text-center bg-elevated/5 text-sm font-medium text-muted/60"
       >
         No open task load yet.
       </div>
 
-      <div v-else class="mt-4 space-y-4">
+      <div v-else class="mt-6 space-y-5">
         <div
           v-for="allocation in summary.domainAllocation"
           :key="allocation.domain ?? 'unassigned'"
         >
           <div class="mb-2 flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-highlighted">{{ allocation.label }}</span>
-              <UBadge :class="getDomainPillClass(allocation.domain)" variant="subtle" size="sm">
+              <span class="text-sm font-bold text-highlighted">{{ allocation.label }}</span>
+              <UBadge :class="getDomainPillClass(allocation.domain)" variant="subtle" size="sm" class="rounded-lg">
                 {{ allocation.taskCount }} tasks
               </UBadge>
             </div>
-            <span class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+            <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
               {{ formatDuration(allocation.estimateMinutes) }}
             </span>
           </div>
-          <div class="h-3 overflow-hidden rounded-full bg-elevated/30">
+          <div class="h-2 overflow-hidden rounded-full bg-elevated/10">
             <div
               class="h-full rounded-full bg-primary transition-all"
               :style="{
@@ -361,11 +367,12 @@ async function prioritizeWithAi() {
       </div>
     </section>
 
-    <section class="rounded-[32px] border border-muted/30 bg-default/70 p-5">
-      <div class="flex flex-wrap items-start justify-between gap-3">
+    <!-- Task Editor -->
+    <section class="rounded-3xl border border-muted/20 bg-default/40 p-6">
+      <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p class="text-sm font-semibold text-highlighted">Task editor</p>
-          <p class="text-sm text-muted">
+          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">Task editor</h3>
+          <p class="text-xs text-muted mt-1">
             Edit the task list directly and the matrix will re-sort itself instantly.
           </p>
         </div>
@@ -373,18 +380,20 @@ async function prioritizeWithAi() {
         <div class="flex flex-wrap gap-2">
           <UButton
             color="neutral"
-            variant="soft"
+            variant="subtle"
             icon="i-lucide-plus"
             class="rounded-full px-4"
+            size="sm"
             @click="addTask"
           >
             Add Task
           </UButton>
           <UButton
             color="primary"
-            variant="soft"
+            variant="subtle"
             icon="i-lucide-sparkles"
             class="rounded-full px-4"
+            size="sm"
             :disabled="block.tasks.length === 0"
             :loading="isPrioritizing"
             @click="prioritizeWithAi"
@@ -396,19 +405,19 @@ async function prioritizeWithAi() {
 
       <div
         v-if="summary.prioritizedTasks.length === 0"
-        class="mt-4 rounded-[24px] border border-dashed border-muted/40 bg-elevated/15 px-4 py-8 text-center text-sm font-medium text-muted"
+        class="mt-6 border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5 text-sm font-medium text-muted/60"
       >
         No tasks to prioritize yet.
       </div>
 
-      <div v-else class="mt-4 space-y-4">
+      <div v-else class="mt-6 space-y-4">
         <article
           v-for="task in summary.prioritizedTasks"
           :key="task.id"
-          class="rounded-[28px] border border-muted/25 bg-elevated/15 p-4"
+          class="rounded-2xl border border-muted/20 bg-elevated/5 p-4"
         >
           <div class="grid gap-4 xl:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,0.7fr)]">
-            <div class="flex items-start pt-1">
+            <div class="flex items-start pt-2">
               <UCheckbox
                 :model-value="task.completed"
                 @update:model-value="
@@ -424,7 +433,8 @@ async function prioritizeWithAi() {
                 <UInput
                   :model-value="task.text"
                   placeholder="Task name"
-                  class="rounded-2xl"
+                  variant="subtle"
+                  class="rounded-xl"
                   @update:model-value="
                     mutateTask(task.id, (entry) => {
                       entry.text = ($event ?? '').slice(0, 240);
@@ -435,7 +445,8 @@ async function prioritizeWithAi() {
                 <USelect
                   :model-value="task.domain ?? ''"
                   :items="domainOptions"
-                  class="rounded-2xl"
+                  variant="subtle"
+                  class="rounded-xl"
                   @update:model-value="
                     mutateTask(task.id, (entry) => {
                       entry.domain = toTaskDomain($event);
@@ -445,12 +456,12 @@ async function prioritizeWithAi() {
               </div>
 
               <div class="grid gap-4 md:grid-cols-2">
-                <div class="space-y-2 rounded-[22px] border border-muted/25 bg-default/70 p-3">
+                <div class="space-y-2 rounded-xl border border-muted/20 bg-default/40 p-3">
                   <div class="flex items-center justify-between gap-2">
-                    <span class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
+                    <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
                       >Urgency</span
                     >
-                    <span class="text-sm font-semibold text-highlighted"
+                    <span class="text-sm font-black text-highlighted"
                       >{{ task.urgency }}/10</span
                     >
                   </div>
@@ -459,7 +470,7 @@ async function prioritizeWithAi() {
                     type="range"
                     min="1"
                     max="10"
-                    class="h-2 w-full appearance-none rounded-full bg-error/20 accent-error"
+                    class="h-1.5 w-full appearance-none rounded-full bg-error/20 accent-error"
                     @input="
                       mutateTask(task.id, (entry) => {
                         entry.urgency = clampTenPointScale(getInputValue($event), entry.urgency);
@@ -468,12 +479,12 @@ async function prioritizeWithAi() {
                   />
                 </div>
 
-                <div class="space-y-2 rounded-[22px] border border-muted/25 bg-default/70 p-3">
+                <div class="space-y-2 rounded-xl border border-muted/20 bg-default/40 p-3">
                   <div class="flex items-center justify-between gap-2">
-                    <span class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
+                    <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
                       >Importance</span
                     >
-                    <span class="text-sm font-semibold text-highlighted"
+                    <span class="text-sm font-black text-highlighted"
                       >{{ task.importance }}/10</span
                     >
                   </div>
@@ -482,7 +493,7 @@ async function prioritizeWithAi() {
                     type="range"
                     min="1"
                     max="10"
-                    class="h-2 w-full appearance-none rounded-full bg-primary/20 accent-primary"
+                    class="h-1.5 w-full appearance-none rounded-full bg-primary/20 accent-primary"
                     @input="
                       mutateTask(task.id, (entry) => {
                         entry.importance = clampTenPointScale(
@@ -499,38 +510,43 @@ async function prioritizeWithAi() {
             <div
               class="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)_auto] xl:grid-cols-1"
             >
-              <UFormField label="Time Estimate" size="sm">
+              <div class="space-y-1">
+                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Time Estimate</label>
                 <UInput
                   :model-value="String(task.estimateMinutes)"
                   type="number"
-                  class="rounded-2xl"
+                  variant="subtle"
+                  class="rounded-xl"
                   @update:model-value="
                     mutateTask(task.id, (entry) => {
                       entry.estimateMinutes = clampEstimate($event, entry.estimateMinutes);
                     })
                   "
                 />
-              </UFormField>
+              </div>
 
-              <UFormField label="Due Date" size="sm">
+              <div class="space-y-1">
+                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Due Date</label>
                 <UInput
                   :model-value="task.dueDate ?? ''"
                   type="date"
-                  class="rounded-2xl"
+                  variant="subtle"
+                  class="rounded-xl"
                   @update:model-value="
                     mutateTask(task.id, (entry) => {
                       entry.dueDate = $event || null;
                     })
                   "
                 />
-              </UFormField>
+              </div>
 
               <div class="flex items-end justify-end">
                 <UButton
                   color="neutral"
                   variant="ghost"
                   icon="i-lucide-trash-2"
-                  class="rounded-xl hover:bg-error/10 hover:text-error"
+                  class="rounded-lg hover:bg-error/10 hover:text-error"
+                  size="sm"
                   @click="removeTask(task.id)"
                 />
               </div>
@@ -540,23 +556,24 @@ async function prioritizeWithAi() {
       </div>
     </section>
 
-    <section class="rounded-[32px] border border-primary/20 bg-primary/5 p-5">
+    <!-- AI Battle Plan -->
+    <section class="rounded-3xl border border-primary/20 bg-primary/5 p-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p class="text-sm font-semibold text-highlighted">AI battle plan</p>
-          <p class="text-sm text-muted">
+          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">AI battle plan</h3>
+          <p class="text-xs text-muted mt-1">
             The Orchestrator agent turns the current matrix into a concrete sequencing
             recommendation.
           </p>
         </div>
 
-        <p v-if="block.battlePlanUpdatedAt" class="text-xs font-medium text-muted">
-          Last run {{ formatDateTime(block.battlePlanUpdatedAt) }}
+        <p v-if="block.battlePlanUpdatedAt" class="text-[10px] font-bold uppercase tracking-widest text-muted/60">
+          Last updated {{ formatDateTime(block.battlePlanUpdatedAt) }}
         </p>
       </div>
 
       <div
-        class="prose prose-sm dark:prose-invert mt-4 max-w-none rounded-[24px] border border-muted/30 bg-default/80 p-5 text-sm leading-7 text-toned"
+        class="prose prose-sm dark:prose-invert mt-6 max-w-none rounded-2xl border border-muted/20 bg-default/60 p-5 text-sm leading-relaxed text-toned shadow-sm"
         v-html="
           renderSimpleMarkdown(
             block.latestBattlePlan ||

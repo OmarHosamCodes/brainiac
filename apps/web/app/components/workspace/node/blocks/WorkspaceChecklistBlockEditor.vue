@@ -29,18 +29,18 @@ function addItem() {
 
 <template>
   <div class="space-y-6">
-    <div class="flex items-center gap-6 rounded-3xl bg-elevated/20 p-5">
+    <div class="flex items-center gap-6 rounded-3xl bg-elevated/10 border border-muted/20 p-5">
       <div
-        class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+        class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20"
       >
-        <span class="text-lg font-bold">{{ progress.percent }}%</span>
+        <span class="text-lg font-black tracking-tight">{{ progress.percent }}%</span>
       </div>
 
       <div class="flex-1 space-y-2">
         <div class="flex items-center justify-between gap-2">
-          <p class="text-sm font-bold text-highlighted">Completion</p>
-          <p class="text-xs font-semibold text-muted">
-            {{ progress.completed }} of {{ progress.total }} complete
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Completion</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">
+            {{ progress.completed }}/{{ progress.total }}
           </p>
         </div>
         <UProgress
@@ -48,6 +48,7 @@ function addItem() {
           :max="Math.max(progress.total, 1)"
           size="sm"
           class="rounded-full"
+          color="primary"
         />
       </div>
 
@@ -55,7 +56,7 @@ function addItem() {
         color="primary"
         variant="soft"
         icon="i-lucide-plus"
-        class="rounded-full"
+        class="rounded-full px-4"
         @click="addItem"
       >
         Add Item
@@ -70,7 +71,8 @@ function addItem() {
       >
         <UCheckbox
           :model-value="item.completed"
-          class="size-5 shrink-0"
+          size="sm"
+          class="shrink-0"
           @update:model-value="
             mutateBlock(tabId, block.id, (entry) => {
               if (entry.type !== 'checklist') {
@@ -94,7 +96,7 @@ function addItem() {
           :ui="{
             base: [
               'px-0 font-medium placeholder:text-muted/50 transition-all',
-              item.completed ? 'text-muted line-through' : 'text-highlighted',
+              item.completed ? 'text-muted/60 line-through' : 'text-highlighted',
             ].join(' '),
           }"
           @update:model-value="
@@ -117,7 +119,7 @@ function addItem() {
           variant="ghost"
           size="xs"
           icon="i-lucide-trash-2"
-          class="rounded-lg opacity-0 group-hover:opacity-100 hover:text-error"
+          class="rounded-lg opacity-0 group-hover:opacity-100 hover:text-error transition-opacity"
           @click="
             mutateBlock(tabId, block.id, (entry) => {
               if (entry.type !== 'checklist') {
@@ -132,9 +134,9 @@ function addItem() {
 
       <div
         v-if="block.items.length === 0"
-        class="flex flex-col items-center justify-center rounded-[32px] border border-dashed border-muted/30 bg-default/20 py-12 text-center"
+        class="border-dashed border border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
       >
-        <p class="text-sm font-bold uppercase tracking-widest text-muted/60">No checklist items</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">No checklist items</p>
       </div>
     </div>
   </div>

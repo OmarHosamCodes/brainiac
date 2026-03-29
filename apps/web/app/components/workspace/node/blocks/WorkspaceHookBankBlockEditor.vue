@@ -166,36 +166,38 @@ async function generateHooks() {
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 md:grid-cols-3">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Hooks</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">{{ summary.hookCount }}</p>
+    <!-- Summary Grid -->
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="rounded-3xl bg-primary/5 p-5 border border-primary/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Hooks</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">{{ summary.hookCount }}</p>
       </div>
 
-      <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">Avg Score</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-warning">
+      <div class="rounded-3xl bg-warning/5 p-5 border border-warning/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/60">Avg Score</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-warning">
           {{ summary.averageScore }}/10
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-secondary/10 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-secondary/80">
+      <div class="rounded-3xl bg-secondary/5 p-5 border border-secondary/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/60">
           Top Category
         </p>
-        <p class="mt-2 text-2xl font-black tracking-tight text-secondary">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-secondary truncate">
           {{ summary.topCategory || "None" }}
         </p>
       </div>
     </div>
 
-    <div class="flex flex-wrap items-start justify-between gap-3 px-1">
+    <!-- Actions Header -->
+    <div class="flex flex-wrap items-start justify-between gap-4 px-1">
       <div>
-        <p class="text-sm font-semibold text-highlighted">Hook bank</p>
-        <p class="text-sm text-muted">
+        <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">Hook bank</h3>
+        <p class="text-xs text-muted mt-1">
           Hooks are sorted by score so the strongest opening angles stay at the top of the stack.
         </p>
-        <p v-if="block.lastGeneratedAt" class="mt-1 text-xs text-muted">
+        <p v-if="block.lastGeneratedAt" class="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted/60">
           Last generated {{ formatDateTime(block.lastGeneratedAt) }}
         </p>
       </div>
@@ -203,18 +205,20 @@ async function generateHooks() {
       <div class="flex flex-wrap gap-2">
         <UButton
           color="neutral"
-          variant="soft"
+          variant="subtle"
           icon="i-lucide-plus"
           class="rounded-full px-4"
+          size="sm"
           @click="addHook"
         >
           Add Hook
         </UButton>
         <UButton
           color="primary"
-          variant="soft"
+          variant="subtle"
           icon="i-lucide-sparkles"
           class="rounded-full px-4"
+          size="sm"
           :loading="isGenerating"
           @click="generateHooks"
         >
@@ -223,70 +227,91 @@ async function generateHooks() {
       </div>
     </div>
 
+    <!-- Empty State -->
     <div
       v-if="sortedHooks.length === 0"
-      class="rounded-[32px] border border-dashed border-muted/40 bg-elevated/10 py-14 text-center"
+      class="border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
     >
-      <p class="text-sm font-semibold text-muted">No hooks stored yet.</p>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">No hooks stored yet</p>
+      <UButton
+        color="neutral"
+        variant="subtle"
+        size="sm"
+        class="mt-4 rounded-full px-4"
+        icon="i-lucide-plus"
+        @click="addHook"
+      >
+        Add First Hook
+      </UButton>
     </div>
 
+    <!-- Hook List -->
     <div v-else class="space-y-4">
       <article
         v-for="hook in sortedHooks"
         :key="hook.id"
-        class="rounded-[30px] border border-muted/30 bg-default/60 p-5 transition-all hover:border-primary/25"
+        class="rounded-3xl border border-muted/20 bg-default/40 p-5 transition-all hover:border-primary/30 group"
       >
         <div class="flex flex-wrap items-start justify-between gap-4">
-          <div class="min-w-0 flex-1 space-y-3">
-            <div class="flex flex-wrap items-center gap-3">
-              <UInput
-                :model-value="hook.category"
-                placeholder="pattern-interrupt"
-                size="sm"
-                class="max-w-48 rounded-full"
-                :ui="{ base: 'rounded-full font-semibold' }"
-                @update:model-value="
-                  mutateHook(hook.id, (entry) => {
-                    entry.category = ($event ?? '').slice(0, 40);
-                  })
-                "
-              />
-
-              <div class="flex items-center gap-1.5">
-                <button
-                  v-for="score in 10"
-                  :key="`${hook.id}-${score}`"
-                  type="button"
-                  class="h-7 w-3 rounded-full transition-all"
-                  :class="score <= hook.score ? 'bg-primary' : 'bg-muted/35 hover:bg-muted/55'"
-                  @click="setHookScore(hook.id, score)"
+          <div class="min-w-0 flex-1 space-y-4">
+            <div class="flex flex-wrap items-center gap-4">
+              <div class="space-y-1">
+                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Category</label>
+                <UInput
+                  :model-value="hook.category"
+                  placeholder="e.g. curiosity"
+                  variant="subtle"
+                  size="sm"
+                  class="w-44 rounded-xl"
+                  :ui="{ base: 'font-bold' }"
+                  @update:model-value="
+                    mutateHook(hook.id, (entry) => {
+                      entry.category = ($event ?? '').slice(0, 40);
+                    })
+                  "
                 />
               </div>
 
-              <span class="text-xs font-bold uppercase tracking-[0.2em] text-muted">
-                {{ hook.score }}/10
-              </span>
+              <div class="space-y-1">
+                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Hook Score ({{ hook.score }}/10)</label>
+                <div class="flex items-center gap-1.5 h-8">
+                  <button
+                    v-for="score in 10"
+                    :key="`${hook.id}-${score}`"
+                    type="button"
+                    class="h-6 w-2 rounded-full transition-all hover:scale-110 active:scale-90"
+                    :class="score <= hook.score ? 'bg-primary' : 'bg-elevated/10 hover:bg-elevated/20'"
+                    @click="setHookScore(hook.id, score)"
+                  />
+                </div>
+              </div>
             </div>
 
-            <UTextarea
-              :model-value="hook.text"
-              autoresize
-              :rows="2"
-              placeholder="Write the hook..."
-              :ui="{ base: 'rounded-[22px] bg-elevated/30' }"
-              @update:model-value="
-                mutateHook(hook.id, (entry) => {
-                  entry.text = ($event ?? '').slice(0, 320);
-                })
-              "
-            />
+            <div class="space-y-1">
+              <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Hook Text</label>
+              <UTextarea
+                :model-value="hook.text"
+                autoresize
+                :rows="2"
+                variant="subtle"
+                placeholder="Write the hook..."
+                class="rounded-2xl"
+                :ui="{ base: 'bg-elevated/5' }"
+                @update:model-value="
+                  mutateHook(hook.id, (entry) => {
+                    entry.text = ($event ?? '').slice(0, 320);
+                  })
+                "
+              />
+            </div>
           </div>
 
           <UButton
             color="neutral"
             variant="ghost"
             icon="i-lucide-trash-2"
-            class="rounded-xl hover:text-error"
+            class="rounded-xl opacity-0 group-hover:opacity-100 transition-opacity hover:text-error/80 mt-6"
+            size="sm"
             @click="removeHook(hook.id)"
           />
         </div>

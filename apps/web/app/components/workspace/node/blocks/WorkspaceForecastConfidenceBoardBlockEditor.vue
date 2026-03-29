@@ -36,11 +36,6 @@ const bucketSummaryById = computed(
   () => new Map(summary.value.bucketSummaries.map((entry) => [entry.bucket, entry])),
 );
 
-const bucketOptions = WORKSPACE_SALES_FORECAST_BUCKETS.map((bucket) => ({
-  label: workspaceSalesForecastBucketLabels[bucket],
-  value: bucket,
-})) satisfies Array<{ label: string; value: WorkspaceSalesForecastBucket }>;
-
 const currencyFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "EGP",
@@ -137,39 +132,38 @@ function toCurrencyValue(value: string, fallback = 0) {
   return Math.max(0, Math.min(1_000_000_000, Math.round(numeric)));
 }
 
-function clampConfidence(value: string) {
-  const numeric = Number(value || 0);
-  return Math.min(100, Math.max(10, Math.round(numeric)));
-}
-
-function getInputValue(event: Event) {
-  return (event.target as HTMLInputElement | null)?.value ?? "50";
-}
-
 function getBucketClasses(bucket: WorkspaceSalesForecastBucket) {
   switch (bucket) {
     case "commit":
-      return "border-success/35 bg-success/5";
+      return {
+        column: "border-success/10 bg-success/5",
+        text: "text-success",
+        icon: "i-lucide-award",
+      };
     case "likely":
-      return "border-primary/35 bg-primary/5";
+      return {
+        column: "border-primary/10 bg-primary/5",
+        text: "text-primary",
+        icon: "i-lucide-trending-up",
+      };
     case "upside":
-      return "border-warning/35 bg-warning/5";
+      return {
+        column: "border-warning/10 bg-warning/5",
+        text: "text-warning",
+        icon: "i-lucide-sparkles",
+      };
     case "at-risk":
-      return "border-error/35 bg-error/5";
+      return {
+        column: "border-error/10 bg-error/5",
+        text: "text-error",
+        icon: "i-lucide-alert-triangle",
+      };
   }
-
-  return "border-muted/30 bg-default/60";
 }
 
 function getCoverageTextClasses(coverage: number) {
-  if (coverage >= 100) {
-    return "text-success";
-  }
-
-  if (coverage >= 70) {
-    return "text-warning";
-  }
-
+  if (coverage >= 100) return "text-success";
+  if (coverage >= 70) return "text-warning";
   return "text-error";
 }
 
@@ -187,62 +181,97 @@ function getBucketSummary(bucket: WorkspaceSalesForecastBucket) {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">
-          Commit Revenue
-        </p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-success">
-          {{ formatCurrency(summary.commitRevenue) }}
-        </p>
+  <div class="space-y-8">
+    <!-- Summary Metrics -->
+    <div class="grid gap-4 grid-cols-2 lg:grid-cols-4">
+      <div class="group relative overflow-hidden rounded-[24px] bg-success/5 p-5 border border-success/10 transition-all hover:bg-success/10">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/60">
+              Commit Revenue
+            </p>
+            <p class="mt-2 text-3xl font-black tracking-tight text-success">
+              {{ formatCurrency(summary.commitRevenue) }}
+            </p>
+          </div>
+          <div class="size-10 rounded-2xl bg-success/10 flex items-center justify-center">
+            <UIcon name="i-lucide-banknote" class="size-5 text-success" />
+          </div>
+        </div>
+        <p class="mt-4 text-xs text-success/60 leading-relaxed">Guaranteed closing value</p>
       </div>
 
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">
-          Weighted Forecast
-        </p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-primary">
-          {{ formatCurrency(summary.weightedForecast) }}
-        </p>
+      <div class="group relative overflow-hidden rounded-[24px] bg-primary/5 p-5 border border-primary/10 transition-all hover:bg-primary/10">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
+              Weighted Forecast
+            </p>
+            <p class="mt-2 text-3xl font-black tracking-tight text-primary">
+              {{ formatCurrency(summary.weightedForecast) }}
+            </p>
+          </div>
+          <div class="size-10 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <UIcon name="i-lucide-calculator" class="size-5 text-primary" />
+          </div>
+        </div>
+        <p class="mt-4 text-xs text-primary/60 leading-relaxed">Adjusted for confidence</p>
       </div>
 
-      <div class="rounded-[28px] bg-error/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">At-Risk Value</p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-error">
-          {{ formatCurrency(summary.atRiskValue) }}
-        </p>
+      <div class="group relative overflow-hidden rounded-[24px] bg-error/5 p-5 border border-error/10 transition-all hover:bg-error/10">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/60">At-Risk Value</p>
+            <p class="mt-2 text-3xl font-black tracking-tight text-error">
+              {{ formatCurrency(summary.atRiskValue) }}
+            </p>
+          </div>
+          <div class="size-10 rounded-2xl bg-error/10 flex items-center justify-center">
+            <UIcon name="i-lucide-shield-alert" class="size-5 text-error" />
+          </div>
+        </div>
+        <p class="mt-4 text-xs text-error/60 leading-relaxed">Low confidence deals</p>
       </div>
 
-      <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">
-          Coverage vs Target
-        </p>
-        <p
-          class="mt-2 text-4xl font-black tracking-tight"
-          :class="getCoverageTextClasses(summary.coveragePercent)"
-        >
-          {{ summary.coveragePercent }}%
-        </p>
-        <p class="mt-1 text-sm text-muted">Average confidence {{ summary.averageConfidence }}%</p>
+      <div class="group relative overflow-hidden rounded-[24px] bg-warning/5 p-5 border border-warning/10 transition-all hover:bg-warning/10">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/60">
+              Coverage vs Target
+            </p>
+            <p
+              class="mt-2 text-3xl font-black tracking-tight"
+              :class="getCoverageTextClasses(summary.coveragePercent)"
+            >
+              {{ summary.coveragePercent }}%
+            </p>
+          </div>
+          <div class="size-10 rounded-2xl bg-warning/10 flex items-center justify-center">
+            <UIcon name="i-lucide-target" class="size-5 text-warning" />
+          </div>
+        </div>
+        <p class="mt-4 text-xs text-warning/60 leading-relaxed">Avg. Confidence {{ summary.averageConfidence }}%</p>
       </div>
     </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-3 px-1">
-      <div>
-        <p class="text-sm font-semibold text-highlighted">Confidence-based forecast</p>
-        <p class="text-sm text-muted">
-          Bucket deals by confidence, then compare the weighted forecast against the target.
+    <!-- Actions Header -->
+    <div class="flex flex-wrap items-center justify-between gap-6 px-1">
+      <div class="max-w-md">
+        <h3 class="text-base font-bold text-highlighted">Forecast Board</h3>
+        <p class="text-xs text-muted mt-1 leading-relaxed">
+          Manage your sales pipeline by deal confidence and track performance against targets.
         </p>
       </div>
 
-      <div class="flex flex-wrap items-center gap-3">
-        <UFormField label="Target Revenue" size="sm">
+      <div class="flex flex-wrap items-center gap-6">
+        <div class="flex items-center gap-3 bg-elevated/5 p-1.5 rounded-2xl border border-muted/10">
+          <label class="ml-3 text-[10px] font-black uppercase tracking-[0.2em] text-muted/40 whitespace-nowrap">Target</label>
           <UInput
             :model-value="String(block.targetRevenueEgp)"
             type="number"
-            icon="i-lucide-target"
-            class="w-40 rounded-2xl"
+            variant="none"
+            class="w-32"
+            :ui="{ base: 'font-bold text-highlighted' }"
             @update:model-value="
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== 'forecast-confidence-board') return;
@@ -250,83 +279,103 @@ function getBucketSummary(bucket: WorkspaceSalesForecastBucket) {
               })
             "
           />
-        </UFormField>
+        </div>
 
         <UButton
           color="primary"
-          variant="soft"
+          variant="solid"
           icon="i-lucide-plus"
-          class="rounded-full px-4"
+          class="rounded-full px-5 py-2.5 font-bold shadow-lg shadow-primary/20"
           @click="addDeal"
         >
-          Add Deal to Forecast
+          Add Deal
         </UButton>
       </div>
     </div>
 
-    <div class="grid gap-4 xl:grid-cols-4">
-      <section
-        v-for="bucket in WORKSPACE_SALES_FORECAST_BUCKETS"
-        :key="bucket"
-        class="rounded-[32px] border p-4 transition-all duration-300"
-        :class="[
-          getBucketClasses(bucket),
-          dragOverBucket === bucket ? 'ring-2 ring-primary/20 brightness-110' : '',
-        ]"
-        @dragover="onBucketDragOver(bucket, $event)"
-        @dragleave="onBucketDragLeave(bucket, $event)"
-        @drop="onBucketDrop(bucket, $event)"
-      >
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
-              {{ workspaceSalesForecastBucketLabels[bucket] }}
-            </p>
-            <p class="mt-2 text-2xl font-black tracking-tight text-highlighted">
-              {{ formatCurrency(getBucketSummary(bucket).totalValue) }}
-            </p>
+    <!-- Board Grid -->
+    <div class="overflow-x-auto pb-6 -mx-1 px-1 scrollbar-thin scrollbar-thumb-muted/20 snap-x snap-mandatory">
+      <div class="flex gap-6">
+        <section
+          v-for="bucket in WORKSPACE_SALES_FORECAST_BUCKETS"
+          :key="bucket"
+          class="flex flex-col flex-shrink-0 w-[320px] snap-start rounded-[32px] border p-4 transition-all duration-300"
+          :class="[
+            getBucketClasses(bucket).column,
+            dragOverBucket === bucket ? 'ring-2 ring-primary/30 brightness-110 shadow-xl' : '',
+          ]"
+          @dragover="onBucketDragOver(bucket, $event)"
+          @dragleave="onBucketDragLeave(bucket, $event)"
+          @drop="onBucketDrop(bucket, $event)"
+        >
+          <!-- Column Header -->
+          <div class="p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="size-8 rounded-xl bg-default/80 flex items-center justify-center border border-muted/10 shadow-sm">
+                  <UIcon :name="getBucketClasses(bucket).icon" class="size-4" :class="getBucketClasses(bucket).text" />
+                </div>
+                <div>
+                  <p class="text-[10px] font-black uppercase tracking-[0.2em] text-muted/50 leading-none">
+                    {{ workspaceSalesForecastBucketLabels[bucket] }}
+                  </p>
+                  <p class="mt-1 text-xs font-bold text-highlighted/60 leading-none">
+                    {{ getBucketSummary(bucket).dealCount }} deals
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-6 flex items-baseline justify-between">
+              <p class="text-2xl font-black tracking-tight text-highlighted">
+                {{ formatCurrency(getBucketSummary(bucket).totalValue) }}
+              </p>
+              <p class="text-[10px] font-bold uppercase tracking-wider text-muted/40">
+                Wgt: {{ formatCurrency(getBucketSummary(bucket).weightedValue) }}
+              </p>
+            </div>
           </div>
 
-          <UBadge variant="soft" size="sm" class="rounded-full">
-            {{ getBucketSummary(bucket).dealCount }} deals
-          </UBadge>
-        </div>
+          <!-- Deals Container -->
+          <div class="flex-1 space-y-3 p-2 min-h-[400px]">
+            <article
+              v-for="deal in dealsByBucket[bucket]"
+              :key="deal.id"
+              class="group relative rounded-[24px] border border-muted/10 bg-default/80 p-5 shadow-sm transition-all hover:border-primary/30 hover:shadow-md hover:bg-default"
+              :class="[
+                draggingDealId === deal.id
+                  ? 'opacity-40 grayscale pointer-events-none scale-95'
+                  : 'cursor-grab active:cursor-grabbing',
+              ]"
+              draggable="true"
+              @dragstart="onDealDragStart(deal.id, $event)"
+              @dragend="clearDragState"
+            >
+              <!-- Card Actions -->
+              <div class="absolute top-4 right-4 z-10">
+                <UDropdownMenu
+                  :items="[[{ label: 'Remove', icon: 'i-lucide-trash', color: 'error', onSelect: () => removeDeal(deal.id) }]]"
+                  :ui="{ content: 'w-32 rounded-xl' }"
+                >
+                  <UButton
+                    color="neutral"
+                    variant="ghost"
+                    icon="i-lucide-more-horizontal"
+                    size="xs"
+                    class="rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                  />
+                </UDropdownMenu>
+              </div>
 
-        <p class="mt-2 text-sm text-muted">
-          Weighted
-          {{ formatCurrency(getBucketSummary(bucket).weightedValue) }}
-        </p>
-
-        <div
-          v-if="dealsByBucket[bucket].length === 0"
-          class="mt-4 rounded-[24px] border border-dashed border-muted/35 bg-default/40 py-10 text-center text-sm text-muted"
-        >
-          No deals in this bucket.
-        </div>
-
-        <div v-else class="mt-4 space-y-3">
-          <article
-            v-for="deal in dealsByBucket[bucket]"
-            :key="deal.id"
-            class="rounded-[24px] border border-muted/25 bg-default/70 p-4 transition-all hover:border-primary/30 hover:shadow-lg hover:shadow-black/5"
-            :class="[
-              draggingDealId === deal.id
-                ? 'opacity-40 grayscale pointer-events-none scale-95'
-                : 'cursor-grab active:cursor-grabbing',
-            ]"
-            draggable="true"
-            @dragstart="onDealDragStart(deal.id, $event)"
-            @dragend="clearDragState"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">
+              <!-- Deal Header -->
+              <div class="pr-8">
                 <UInput
                   :model-value="deal.clientName"
                   variant="none"
-                  placeholder="Client name"
+                  placeholder="Client Name"
                   class="w-full"
                   :ui="{
-                    base: 'px-0 text-base font-bold text-highlighted placeholder:text-muted/60',
+                    base: 'p-0 text-base font-black text-highlighted placeholder:text-muted/30 focus:ring-0',
                   }"
                   @update:model-value="
                     mutateBlock(tabId, block.id, (entry) => {
@@ -337,77 +386,58 @@ function getBucketSummary(bucket: WorkspaceSalesForecastBucket) {
                     })
                   "
                 />
-                <p class="mt-1 text-sm text-muted">
-                  Weighted
-                  {{ formatCurrency(getForecastDealWeightedValue(deal)) }}
+                <p class="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted/40">
+                  Weighted: {{ formatCurrency(getForecastDealWeightedValue(deal)) }}
                 </p>
               </div>
 
-              <UButton
-                color="neutral"
-                variant="ghost"
-                icon="i-lucide-trash-2"
-                size="xs"
-                class="rounded-lg hover:text-error"
-                @click="removeDeal(deal.id)"
-              />
-            </div>
+              <!-- Deal Details Grid -->
+              <div class="mt-6 space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="space-y-1.5">
+                    <label class="text-[9px] font-bold uppercase tracking-widest text-muted/40 ml-1">VALUE (EGP)</label>
+                    <UInput
+                      :model-value="String(deal.valueEgp)"
+                      type="number"
+                      size="xs"
+                      :ui="{ base: 'rounded-xl font-bold bg-elevated/5 border-muted/10' }"
+                      @update:model-value="
+                        mutateBlock(tabId, block.id, (entry) => {
+                          if (entry.type !== 'forecast-confidence-board') return;
+                          const target = entry.deals.find((candidate) => candidate.id === deal.id);
+                          if (!target) return;
+                          target.valueEgp = toCurrencyValue($event ?? '0');
+                        })
+                      "
+                    />
+                  </div>
+                  <div class="space-y-1.5">
+                    <label class="text-[9px] font-bold uppercase tracking-widest text-muted/40 ml-1">CLOSE MONTH</label>
+                    <UInput
+                      :model-value="deal.expectedCloseMonth ?? ''"
+                      type="month"
+                      size="xs"
+                      :ui="{ base: 'rounded-xl bg-elevated/5 border-muted/10' }"
+                      @update:model-value="
+                        mutateBlock(tabId, block.id, (entry) => {
+                          if (entry.type !== 'forecast-confidence-board') return;
+                          const target = entry.deals.find((candidate) => candidate.id === deal.id);
+                          if (!target) return;
+                          target.expectedCloseMonth = $event || null;
+                        })
+                      "
+                    />
+                  </div>
+                </div>
 
-            <div class="mt-4 grid gap-3">
-              <UFormField label="Deal Value (EGP)" size="sm">
-                <UInput
-                  :model-value="String(deal.valueEgp)"
-                  type="number"
-                  class="rounded-2xl"
-                  @update:model-value="
-                    mutateBlock(tabId, block.id, (entry) => {
-                      if (entry.type !== 'forecast-confidence-board') return;
-                      const target = entry.deals.find((candidate) => candidate.id === deal.id);
-                      if (!target) return;
-                      target.valueEgp = toCurrencyValue($event ?? '0');
-                    })
-                  "
-                />
-              </UFormField>
-
-              <UFormField label="Bucket" size="sm">
-                <USelect
-                  :model-value="deal.bucket"
-                  :items="bucketOptions"
-                  class="rounded-2xl"
-                  @update:model-value="
-                    mutateBlock(tabId, block.id, (entry) => {
-                      if (entry.type !== 'forecast-confidence-board') return;
-                      const target = entry.deals.find((candidate) => candidate.id === deal.id);
-                      if (!target) return;
-                      target.bucket = $event ?? 'likely';
-                    })
-                  "
-                />
-              </UFormField>
-
-              <div class="grid gap-3 sm:grid-cols-2">
-                <UFormField label="Close Month" size="sm">
-                  <UInput
-                    :model-value="deal.expectedCloseMonth ?? ''"
-                    type="month"
-                    class="rounded-2xl"
-                    @update:model-value="
-                      mutateBlock(tabId, block.id, (entry) => {
-                        if (entry.type !== 'forecast-confidence-board') return;
-                        const target = entry.deals.find((candidate) => candidate.id === deal.id);
-                        if (!target) return;
-                        target.expectedCloseMonth = $event || null;
-                      })
-                    "
-                  />
-                </UFormField>
-
-                <UFormField label="Owner" size="sm">
+                <div class="space-y-1.5">
+                  <label class="text-[9px] font-bold uppercase tracking-widest text-muted/40 ml-1">OWNER</label>
                   <UInput
                     :model-value="deal.owner"
-                    class="rounded-2xl"
-                    placeholder="Owner"
+                    size="xs"
+                    icon="i-lucide-user"
+                    placeholder="Owner Name"
+                    :ui="{ base: 'rounded-xl bg-elevated/5 border-muted/10' }"
                     @update:model-value="
                       mutateBlock(tabId, block.id, (entry) => {
                         if (entry.type !== 'forecast-confidence-board') return;
@@ -417,56 +447,72 @@ function getBucketSummary(bucket: WorkspaceSalesForecastBucket) {
                       })
                     "
                   />
-                </UFormField>
-              </div>
-
-              <div class="space-y-3">
-                <div
-                  class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
-                >
-                  <span>Confidence</span>
-                  <span class="text-highlighted">{{ deal.confidence }}%</span>
                 </div>
 
-                <UProgress :model-value="deal.confidence" size="sm" class="rounded-full" />
+                <!-- Confidence Slider -->
+                <div class="pt-2">
+                  <div class="flex items-center justify-between mb-2 px-1">
+                    <span class="text-[9px] font-bold uppercase tracking-widest text-muted/40">Confidence</span>
+                    <span class="text-[10px] font-black text-highlighted bg-primary/10 px-1.5 py-0.5 rounded-md">{{ deal.confidence }}%</span>
+                  </div>
+                  <USlider
+                    :model-value="deal.confidence"
+                    :min="10"
+                    :max="100"
+                    :step="1"
+                    size="sm"
+                    @update:model-value="
+                      mutateBlock(tabId, block.id, (entry) => {
+                        if (entry.type !== 'forecast-confidence-board') return;
+                        const target = entry.deals.find((candidate) => candidate.id === deal.id);
+                        if (!target) return;
+                        target.confidence = Math.round($event);
+                      })
+                    "
+                  />
+                </div>
 
-                <input
-                  :value="deal.confidence"
-                  type="range"
-                  min="10"
-                  max="100"
-                  step="1"
-                  class="w-full accent-primary"
-                  @input="
-                    mutateBlock(tabId, block.id, (entry) => {
-                      if (entry.type !== 'forecast-confidence-board') return;
-                      const target = entry.deals.find((candidate) => candidate.id === deal.id);
-                      if (!target) return;
-                      target.confidence = clampConfidence(getInputValue($event));
-                    })
-                  "
-                />
+                <div class="space-y-1.5 bg-elevated/5 p-3 rounded-2xl border border-muted/5">
+                  <label class="text-[9px] font-bold uppercase tracking-widest text-muted/40 flex items-center gap-1.5">
+                    <UIcon name="i-lucide-list-todo" class="size-3" />
+                    Next Action
+                  </label>
+                  <UTextarea
+                    :model-value="deal.nextAction"
+                    placeholder="Define next steps..."
+                    variant="none"
+                    autoresize
+                    :rows="1"
+                    :ui="{ base: 'p-0 text-[11px] leading-relaxed text-highlighted/80 placeholder:text-muted/20' }"
+                    @update:model-value="
+                      mutateBlock(tabId, block.id, (entry) => {
+                        if (entry.type !== 'forecast-confidence-board') return;
+                        const target = entry.deals.find((candidate) => candidate.id === deal.id);
+                        if (!target) return;
+                        target.nextAction = ($event ?? '').slice(0, 240);
+                      })
+                    "
+                  />
+                </div>
               </div>
+            </article>
 
-              <UFormField label="Next Action" size="sm">
-                <UInput
-                  :model-value="deal.nextAction"
-                  class="rounded-2xl"
-                  placeholder="What needs to happen next?"
-                  @update:model-value="
-                    mutateBlock(tabId, block.id, (entry) => {
-                      if (entry.type !== 'forecast-confidence-board') return;
-                      const target = entry.deals.find((candidate) => candidate.id === deal.id);
-                      if (!target) return;
-                      target.nextAction = ($event ?? '').slice(0, 240);
-                    })
-                  "
-                />
-              </UFormField>
+            <!-- Empty State -->
+            <div
+              v-if="dealsByBucket[bucket].length === 0"
+              class="h-full flex flex-col items-center justify-center border-2 border-dashed border-muted/5 rounded-[32px] bg-default/10 p-8 text-center"
+            >
+              <div class="size-12 rounded-full bg-muted/5 flex items-center justify-center mb-3">
+                <UIcon :name="getBucketClasses(bucket).icon" class="size-6 text-muted/20" />
+              </div>
+              <p class="text-[10px] font-bold uppercase tracking-widest text-muted/30">
+                Empty {{ bucket }}
+              </p>
             </div>
-          </article>
-        </div>
-      </section>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 </template>
+

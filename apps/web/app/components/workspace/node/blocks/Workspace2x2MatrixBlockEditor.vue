@@ -39,27 +39,34 @@ const quadrants = [
 <template>
   <div class="space-y-6">
     <div class="grid gap-4 lg:grid-cols-[1fr_auto]">
-      <div class="grid gap-4 sm:grid-cols-3">
-        <div class="rounded-[28px] bg-elevated/20 p-5">
-          <p class="text-[10px] font-bold uppercase tracking-widest text-muted/60">Items</p>
-          <p class="mt-1 text-2xl font-black text-highlighted">{{ summary.itemCount }}</p>
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="rounded-3xl bg-elevated/10 border border-muted/20 p-5">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Items</p>
+          <p class="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
+            {{ summary.itemCount }}
+          </p>
         </div>
-        <div class="rounded-[28px] bg-elevated/20 p-5">
-          <p class="text-[10px] font-bold uppercase tracking-widest text-muted/60">Axis X</p>
-          <p class="mt-1 text-2xl font-black text-highlighted">{{ block.xAxisLabel }}</p>
+        <div class="rounded-3xl bg-elevated/10 border border-muted/20 p-5">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Axis X</p>
+          <p class="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
+            {{ block.xAxisLabel }}
+          </p>
         </div>
-        <div class="rounded-[28px] bg-primary/5 p-5">
-          <p class="text-[10px] font-bold uppercase tracking-widest text-primary/60">Axis Y</p>
-          <p class="mt-1 text-2xl font-black text-primary">{{ block.yAxisLabel }}</p>
+        <div class="rounded-3xl bg-primary/10 border border-primary/20 p-5">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Axis Y</p>
+          <p class="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-primary">
+            {{ block.yAxisLabel }}
+          </p>
         </div>
       </div>
 
       <div
-        class="grid gap-3 rounded-[28px] border border-muted/20 bg-default/30 p-4 sm:grid-cols-2 lg:w-[360px]"
+        class="grid gap-3 rounded-3xl border border-muted/20 bg-default/40 p-4 sm:grid-cols-2 lg:w-[360px]"
       >
         <UInput
           :model-value="block.xAxisLabel"
           placeholder="Horizontal axis"
+          size="sm"
           class="rounded-2xl"
           @update:model-value="
             mutateBlock(tabId, block.id, (entry) => {
@@ -74,6 +81,7 @@ const quadrants = [
         <UInput
           :model-value="block.yAxisLabel"
           placeholder="Vertical axis"
+          size="sm"
           class="rounded-2xl"
           @update:model-value="
             mutateBlock(tabId, block.id, (entry) => {
@@ -88,6 +96,7 @@ const quadrants = [
         <UInput
           :model-value="block.xStartLabel"
           placeholder="X low"
+          size="sm"
           class="rounded-2xl"
           @update:model-value="
             mutateBlock(tabId, block.id, (entry) => {
@@ -102,6 +111,7 @@ const quadrants = [
         <UInput
           :model-value="block.xEndLabel"
           placeholder="X high"
+          size="sm"
           class="rounded-2xl"
           @update:model-value="
             mutateBlock(tabId, block.id, (entry) => {
@@ -116,6 +126,7 @@ const quadrants = [
         <UInput
           :model-value="block.yStartLabel"
           placeholder="Y low"
+          size="sm"
           class="rounded-2xl"
           @update:model-value="
             mutateBlock(tabId, block.id, (entry) => {
@@ -130,6 +141,7 @@ const quadrants = [
         <UInput
           :model-value="block.yEndLabel"
           placeholder="Y high"
+          size="sm"
           class="rounded-2xl"
           @update:model-value="
             mutateBlock(tabId, block.id, (entry) => {
@@ -144,9 +156,9 @@ const quadrants = [
       </div>
     </div>
 
-    <div class="rounded-[36px] border border-muted/20 bg-default/30 p-4">
+    <div class="rounded-3xl border border-muted/20 bg-default/40 p-4">
       <div
-        class="mb-3 flex items-center justify-between px-2 text-xs font-bold uppercase tracking-widest text-muted/60"
+        class="mb-3 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
       >
         <span>{{ block.yEndLabel }}</span>
         <span>{{ block.yAxisLabel }}</span>
@@ -156,7 +168,7 @@ const quadrants = [
         <article
           v-for="quadrant in quadrants"
           :key="quadrant.key"
-          class="rounded-[28px] border p-4"
+          class="rounded-2xl border p-4 transition-colors"
           :class="quadrant.tone"
         >
           <div class="mb-3 flex items-center justify-between gap-3">
@@ -243,18 +255,27 @@ const quadrants = [
                 "
               />
             </div>
+
+            <div
+              v-if="block.quadrants[quadrant.key].items.length === 0"
+              class="border-dashed border border-muted/20 rounded-2xl py-8 text-center bg-elevated/5"
+            >
+              <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">
+                Empty Quadrant
+              </p>
+            </div>
           </div>
         </article>
       </div>
 
       <div
-        class="mt-3 flex items-center justify-between px-2 text-xs font-bold uppercase tracking-widest text-muted/60"
+        class="mt-3 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
       >
         <span>{{ block.xStartLabel }}</span>
         <span>{{ block.xAxisLabel }}</span>
         <span>{{ block.xEndLabel }}</span>
       </div>
-      <div class="mt-1 px-2 text-xs font-bold uppercase tracking-widest text-muted/40">
+      <div class="mt-1 px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">
         {{ block.yStartLabel }}
       </div>
     </div>

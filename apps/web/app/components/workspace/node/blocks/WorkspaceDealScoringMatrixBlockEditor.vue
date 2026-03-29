@@ -116,58 +116,58 @@ function getStageButtonClasses(
   const activeIndex = getSalesPipelineStageIndex(activeStage);
 
   if (stageIndex === activeIndex) {
-    return "border-primary/40 bg-primary/10 text-primary";
+    return "border-primary/20 bg-primary/10 text-primary";
   }
 
   if (stageIndex < activeIndex) {
-    return "border-success/35 bg-success/5 text-success";
+    return "border-success/20 bg-success/5 text-success";
   }
 
-  return "border-muted/35 bg-default/70 text-muted hover:border-primary/20 hover:text-highlighted";
+  return "border-muted/20 bg-default/40 text-muted/60 hover:border-primary/30 hover:text-highlighted";
 }
 
 function getCardClasses(score: number) {
   switch (getDealScoreTone(score)) {
     case "strong":
-      return "border-success/30 bg-success/5";
+      return "border-success/20 bg-success/5";
     case "medium":
-      return "border-warning/30 bg-warning/5";
+      return "border-warning/20 bg-warning/5";
     default:
-      return "border-error/30 bg-error/5";
+      return "border-error/20 bg-error/5";
   }
 }
 </script>
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Pipeline</p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-primary">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Pipeline</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ formatCurrency(summary.totalValue) }}
         </p>
         <p class="mt-1 text-sm text-muted">{{ summary.dealCount }} active deals</p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Avg Score</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Avg Score</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ summary.averageScore }}
         </p>
         <p class="mt-1 text-sm text-muted">Prioritization score out of 100</p>
       </div>
 
-      <div class="rounded-[28px] bg-error/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">Hot Deals</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-error">{{ summary.hotCount }}</p>
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Hot Deals</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">{{ summary.hotCount }}</p>
         <p class="mt-1 text-sm text-muted">Immediate follow-up required</p>
       </div>
 
-      <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
           Advanced Stage
         </p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-warning">
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ advancedStageCount }}
         </p>
         <p class="mt-1 text-sm text-muted">Proposal or later</p>
@@ -195,7 +195,7 @@ function getCardClasses(score: number) {
 
     <div
       v-if="sortedDeals.length === 0"
-      class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center"
+      class="border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
     >
       <p class="text-sm font-semibold text-muted">No scored deals yet.</p>
     </div>
@@ -204,7 +204,7 @@ function getCardClasses(score: number) {
       <article
         v-for="deal in sortedDeals"
         :key="deal.id"
-        class="rounded-[32px] border p-5 transition-colors"
+        class="rounded-3xl border p-5 transition-colors"
         :class="getCardClasses(deal.score)"
       >
         <div class="flex flex-wrap items-start justify-between gap-4">
@@ -239,9 +239,9 @@ function getCardClasses(score: number) {
 
           <div class="flex items-start gap-3">
             <div class="text-right">
-              <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Score</p>
+              <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Score</p>
               <p
-                class="mt-1 text-4xl font-black tracking-tight"
+                class="mt-1 text-2xl sm:text-3xl font-black tracking-tight"
                 :class="getScoreTextClasses(deal.score)"
               >
                 {{ deal.score }}
@@ -252,7 +252,7 @@ function getCardClasses(score: number) {
               color="neutral"
               variant="ghost"
               icon="i-lucide-trash-2"
-              class="rounded-xl hover:text-error"
+              class="rounded-2xl hover:text-error"
               @click="removeDeal(deal.id)"
             />
           </div>
@@ -264,7 +264,8 @@ function getCardClasses(score: number) {
               :model-value="String(deal.valueEgp)"
               type="number"
               icon="i-lucide-badge-dollar-sign"
-              class="rounded-2xl"
+              class="w-full"
+              :ui="{ base: 'rounded-2xl' }"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'deal-scoring-matrix') return;
@@ -280,7 +281,8 @@ function getCardClasses(score: number) {
             <USelect
               :model-value="deal.temperature"
               :items="temperatureOptions"
-              class="rounded-2xl"
+              class="w-full"
+              :ui="{ base: 'rounded-2xl' }"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'deal-scoring-matrix') return;
@@ -295,7 +297,7 @@ function getCardClasses(score: number) {
 
         <div class="mt-5 space-y-3">
           <div
-            class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
+            class="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
           >
             <span>Priority Score</span>
             <span :class="getScoreTextClasses(deal.score)">
@@ -311,7 +313,7 @@ function getCardClasses(score: number) {
             min="0"
             max="100"
             step="1"
-            class="w-full accent-primary"
+            class="w-full h-1.5 appearance-none rounded-full bg-muted/20 accent-primary"
             @input="
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== 'deal-scoring-matrix') return;
@@ -323,13 +325,13 @@ function getCardClasses(score: number) {
           />
         </div>
 
-        <div class="mt-5">
-          <div class="grid gap-2 sm:grid-cols-5">
+        <div class="mt-5 overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div class="grid gap-2 min-w-[600px] sm:min-w-0 sm:grid-cols-5">
             <button
               v-for="stage in WORKSPACE_SALES_PIPELINE_STAGES"
               :key="`${deal.id}-${stage}`"
               type="button"
-              class="rounded-2xl border px-3 py-3 text-center text-xs font-bold uppercase tracking-[0.18em] transition-colors"
+              class="rounded-2xl border px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] transition-colors"
               :class="getStageButtonClasses(stage, deal.stage)"
               @click="
                 mutateBlock(tabId, block.id, (entry) => {
@@ -349,7 +351,8 @@ function getCardClasses(score: number) {
           <UFormField label="Next Action" size="sm">
             <UInput
               :model-value="deal.nextAction"
-              class="rounded-2xl"
+              class="w-full"
+              :ui="{ base: 'rounded-2xl' }"
               placeholder="What needs to happen next?"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
@@ -366,7 +369,8 @@ function getCardClasses(score: number) {
             <UInput
               :model-value="deal.dueDate ?? ''"
               type="date"
-              class="rounded-2xl"
+              class="w-full"
+              :ui="{ base: 'rounded-2xl' }"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'deal-scoring-matrix') return;

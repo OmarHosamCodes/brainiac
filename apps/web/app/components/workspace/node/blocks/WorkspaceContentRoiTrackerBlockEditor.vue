@@ -118,39 +118,40 @@ function getStatusClasses(score: number) {
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
           Top Platform
         </p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-primary">
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ summary.topPlatform ? workspaceContentPlatformLabels[summary.topPlatform] : "None" }}
         </p>
         <p class="mt-1 text-sm text-muted">Highest average ROI across current rows</p>
       </div>
 
-      <div class="rounded-[28px] bg-secondary/10 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-secondary/80">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
           Top Campaign
         </p>
-        <p class="mt-2 text-2xl font-black tracking-tight text-secondary">
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ summary.topCampaign || "No campaign" }}
         </p>
+        <p class="mt-1 text-sm text-muted">Most impactful marketing push</p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
           Influenced Leads
         </p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ summary.totalInfluencedLeads }}
         </p>
         <p class="mt-1 text-sm text-muted">Lead count weighted by conversion influence</p>
       </div>
 
-      <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">Average ROI</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-warning">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Average ROI</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ summary.averageScore }}
         </p>
         <p class="mt-1 text-sm text-muted">
@@ -196,14 +197,14 @@ function getStatusClasses(score: number) {
 
     <div
       v-if="sortedItems.length === 0"
-      class="rounded-[32px] border border-dashed border-muted/45 bg-elevated/10 py-14 text-center"
+      class="border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
     >
       <p class="text-sm font-semibold text-muted">No content ROI rows yet.</p>
     </div>
 
-    <div v-else class="overflow-x-auto pb-2">
+    <div v-else class="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
       <div
-        class="grid min-w-[1520px] gap-px overflow-hidden rounded-[28px] border border-muted/30 bg-muted/30"
+        class="grid min-w-[1520px] gap-px overflow-hidden rounded-3xl border border-muted/20 bg-muted/20"
         :style="rowGridStyle"
       >
         <div
@@ -219,13 +220,13 @@ function getStatusClasses(score: number) {
             'ROI Status',
           ]"
           :key="label"
-          class="bg-elevated/80 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
+          class="bg-elevated/10 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
         >
           {{ label }}
         </div>
 
         <template v-for="item in sortedItems" :key="item.id">
-          <div class="bg-default/80 p-3">
+          <div class="bg-default/40 p-3 flex items-center">
             <UInput
               :model-value="item.title"
               variant="none"
@@ -240,12 +241,12 @@ function getStatusClasses(score: number) {
             />
           </div>
 
-          <div class="bg-default/80 p-3">
+          <div class="bg-default/40 p-3 flex items-center">
             <USelect
               :model-value="item.platform"
               :items="platformOptions"
               size="sm"
-              class="rounded-xl"
+              class="rounded-2xl w-full"
               @update:model-value="
                 mutateItem(item.id, (entry) => {
                   entry.platform = ($event as WorkspaceContentPlatform | undefined) ?? 'linkedin';
@@ -254,12 +255,12 @@ function getStatusClasses(score: number) {
             />
           </div>
 
-          <div class="bg-default/80 p-3">
+          <div class="bg-default/40 p-3 flex items-center">
             <UInput
               :model-value="item.campaign"
               placeholder="Campaign"
               size="sm"
-              class="rounded-xl"
+              class="rounded-2xl w-full"
               @update:model-value="
                 mutateItem(item.id, (entry) => {
                   entry.campaign = ($event ?? '').slice(0, 120);
@@ -268,12 +269,12 @@ function getStatusClasses(score: number) {
             />
           </div>
 
-          <div class="bg-default/80 p-3">
+          <div class="bg-default/40 p-3 flex items-center">
             <UInput
               :model-value="item.goal"
               placeholder="Goal"
               size="sm"
-              class="rounded-xl"
+              class="rounded-2xl w-full"
               @update:model-value="
                 mutateItem(item.id, (entry) => {
                   entry.goal = ($event ?? '').slice(0, 160);
@@ -282,13 +283,13 @@ function getStatusClasses(score: number) {
             />
           </div>
 
-          <div class="bg-default/80 p-3">
+          <div class="bg-default/40 p-3 flex items-center">
             <UInput
               :model-value="String(item.reach)"
               type="number"
               min="0"
               size="sm"
-              class="rounded-xl"
+              class="rounded-2xl w-full"
               @update:model-value="
                 mutateItem(item.id, (entry) => {
                   entry.reach = clampInteger(String($event ?? 0), 0, 10000000);
@@ -297,13 +298,13 @@ function getStatusClasses(score: number) {
             />
           </div>
 
-          <div class="bg-default/80 p-3">
+          <div class="bg-default/40 p-3 flex items-center">
             <UInput
               :model-value="String(item.leads)"
               type="number"
               min="0"
               size="sm"
-              class="rounded-xl"
+              class="rounded-2xl w-full"
               @update:model-value="
                 mutateItem(item.id, (entry) => {
                   entry.leads = clampInteger(String($event ?? 0), 0, 100000);
@@ -312,9 +313,9 @@ function getStatusClasses(score: number) {
             />
           </div>
 
-          <div class="bg-default/80 p-3">
+          <div class="bg-default/40 p-3 flex flex-col justify-center">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-semibold text-muted">Score</span>
+              <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Score</span>
               <span class="text-sm font-black text-primary">{{ item.conversionInfluence }}</span>
             </div>
             <input
@@ -322,7 +323,7 @@ function getStatusClasses(score: number) {
               type="range"
               min="1"
               max="10"
-              class="mt-3 h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+              class="mt-2 h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
               @input="
                 mutateItem(item.id, (entry) => {
                   entry.conversionInfluence = clampInteger(getInputValue($event), 1, 10);
@@ -331,9 +332,9 @@ function getStatusClasses(score: number) {
             />
           </div>
 
-          <div class="bg-default/80 p-3">
+          <div class="bg-default/40 p-3 flex flex-col justify-center">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-semibold text-muted">Score</span>
+              <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Score</span>
               <span class="text-sm font-black text-primary">{{ item.repurposeValue }}</span>
             </div>
             <input
@@ -341,7 +342,7 @@ function getStatusClasses(score: number) {
               type="range"
               min="1"
               max="10"
-              class="mt-3 h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+              class="mt-2 h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
               @input="
                 mutateItem(item.id, (entry) => {
                   entry.repurposeValue = clampInteger(getInputValue($event), 1, 10);
@@ -350,9 +351,9 @@ function getStatusClasses(score: number) {
             />
           </div>
 
-          <div class="bg-default/80 p-3">
+          <div class="bg-default/40 p-3">
             <div
-              class="min-w-0 rounded-[20px] border p-3"
+              class="min-w-0 rounded-2xl border p-3"
               :class="getStatusClasses(getContentRoiScore(item))"
             >
               <div class="flex items-start justify-between gap-4">
@@ -365,7 +366,7 @@ function getStatusClasses(score: number) {
                   <p class="mt-1 text-2xl font-black tracking-tight">
                     {{ getContentRoiScore(item) }}
                   </p>
-                  <p class="mt-1 text-xs leading-relaxed text-muted">
+                  <p class="mt-1 text-xs leading-relaxed opacity-70">
                     {{ item.leads }} leads, sorted by
                     {{ workspaceContentRoiSortLabels[block.sortBy] }}
                   </p>

@@ -68,20 +68,22 @@ function getSelectValue(event: Event) {
 <template>
   <div class="space-y-6">
     <!-- Progress Header -->
-    <div class="flex items-center gap-6 rounded-3xl bg-elevated/20 p-5">
+    <div class="flex items-center gap-6 rounded-3xl border border-muted/20 bg-elevated/10 p-5">
       <div
-        class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+        class="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
       >
-        <span class="text-lg font-bold"
+        <span class="text-xl sm:text-2xl font-black tracking-tight"
           >{{ Math.round((progress.completed / Math.max(progress.total, 1)) * 100) }}%</span
         >
       </div>
 
       <div class="flex-1 space-y-2">
         <div class="flex items-center justify-between gap-2">
-          <p class="text-sm font-bold text-highlighted">Task Completion</p>
-          <p class="text-xs font-semibold text-muted">
-            {{ progress.completed }} of {{ progress.total }} tasks
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+            Task Completion
+          </p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">
+            {{ progress.completed }} / {{ progress.total }}
           </p>
         </div>
         <UProgress
@@ -133,7 +135,7 @@ function getSelectValue(event: Event) {
               v-if="task.priority"
               variant="subtle"
               :class="getPriorityBadgeClass(task.priority)"
-              class="rounded-lg text-[10px] uppercase tracking-wider"
+              class="rounded-lg text-[9px] font-bold uppercase tracking-wider"
             >
               {{ task.priority }}
             </UBadge>
@@ -161,10 +163,15 @@ function getSelectValue(event: Event) {
         <!-- Task Details Panel -->
         <div
           v-if="expandedTaskId === task.id"
-          class="grid gap-4 border-t border-muted/10 bg-elevated/10 p-4 transition-all lg:grid-cols-2"
+          class="grid gap-6 border-t border-muted/10 bg-elevated/5 p-5 transition-all lg:grid-cols-2"
         >
           <div class="space-y-4">
-            <UFormField label="Due Date" size="sm">
+            <UFormField size="sm">
+              <template #label>
+                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+                  >Due Date</span
+                >
+              </template>
               <UInput
                 :model-value="task.dueDate ?? ''"
                 type="date"
@@ -179,7 +186,12 @@ function getSelectValue(event: Event) {
             </UFormField>
 
             <div class="grid grid-cols-2 gap-3">
-              <UFormField label="Priority" size="sm">
+              <UFormField size="sm">
+                <template #label>
+                  <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+                    >Priority</span
+                  >
+                </template>
                 <USelect
                   :model-value="task.priority ?? ''"
                   :items="priorityOptions"
@@ -192,7 +204,12 @@ function getSelectValue(event: Event) {
                 />
               </UFormField>
 
-              <UFormField label="Domain" size="sm">
+              <UFormField size="sm">
+                <template #label>
+                  <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+                    >Domain</span
+                  >
+                </template>
                 <USelect
                   :model-value="task.domain ?? ''"
                   :items="domainOptions"
@@ -207,14 +224,14 @@ function getSelectValue(event: Event) {
             </div>
           </div>
 
-          <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-3">
+          <div class="space-y-5">
+            <div class="grid grid-cols-2 gap-6">
               <div class="space-y-2">
                 <div class="flex items-center justify-between gap-2">
-                  <span class="text-[10px] font-bold uppercase tracking-widest text-muted"
+                  <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
                     >Urgency</span
                   >
-                  <span class="text-xs font-bold text-primary">{{ task.urgency }}</span>
+                  <span class="text-xs font-black text-primary">{{ task.urgency }}</span>
                 </div>
                 <input
                   :value="task.urgency"
@@ -232,10 +249,10 @@ function getSelectValue(event: Event) {
 
               <div class="space-y-2">
                 <div class="flex items-center justify-between gap-2">
-                  <span class="text-[10px] font-bold uppercase tracking-widest text-muted"
+                  <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
                     >Importance</span
                   >
-                  <span class="text-xs font-bold text-primary">{{ task.importance }}</span>
+                  <span class="text-xs font-black text-primary">{{ task.importance }}</span>
                 </div>
                 <input
                   :value="task.importance"
@@ -252,14 +269,19 @@ function getSelectValue(event: Event) {
               </div>
             </div>
 
-            <UFormField label="Estimate (minutes)" size="sm">
+            <UFormField size="sm">
+              <template #label>
+                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+                  >Estimate (min)</span
+                >
+              </template>
               <UInput
                 :model-value="String(task.estimateMinutes)"
                 type="number"
                 min="0"
                 step="5"
                 icon="i-lucide-clock"
-                class="rounded-xl"
+                class="rounded-xl font-mono font-bold"
                 @update:model-value="
                   mutateTask(tabId, block.id, task.id, (entry) => {
                     entry.estimateMinutes = clampEstimate($event ?? '0');
@@ -269,6 +291,15 @@ function getSelectValue(event: Event) {
             </UFormField>
           </div>
         </div>
+      </div>
+
+      <div
+        v-if="block.tasks.length === 0"
+        class="rounded-3xl border border-dashed border-muted/20 bg-elevated/5 py-12 text-center"
+      >
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+          No tasks added yet
+        </p>
       </div>
     </div>
 

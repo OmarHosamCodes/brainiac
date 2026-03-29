@@ -79,23 +79,29 @@ function removeRow(rowId: string) {
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-elevated/20 p-5">
-      <div class="grid gap-4 sm:grid-cols-3">
-        <div>
-          <p class="text-[10px] font-bold uppercase tracking-widest text-muted/60">Columns</p>
-          <p class="mt-1 text-2xl font-black text-highlighted">{{ summary.columnCount }}</p>
+    <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-6">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div class="space-y-1">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Columns</p>
+          <p class="text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
+            {{ summary.columnCount }}
+          </p>
         </div>
-        <div>
-          <p class="text-[10px] font-bold uppercase tracking-widest text-muted/60">Rows</p>
-          <p class="mt-1 text-2xl font-black text-highlighted">{{ summary.rowCount }}</p>
+        <div class="space-y-1">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Rows</p>
+          <p class="text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
+            {{ summary.rowCount }}
+          </p>
         </div>
-        <div>
-          <p class="text-[10px] font-bold uppercase tracking-widest text-muted/60">Filled Cells</p>
-          <p class="mt-1 text-2xl font-black text-primary">{{ summary.filledCellCount }}</p>
+        <div class="space-y-1">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Filled Cells</p>
+          <p class="text-2xl sm:text-3xl font-black tracking-tight text-primary">
+            {{ summary.filledCellCount }}
+          </p>
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="mt-6 flex flex-wrap items-center gap-2 border-t border-muted/10 pt-6">
         <UButton
           color="neutral"
           variant="soft"
@@ -117,19 +123,19 @@ function removeRow(rowId: string) {
       </div>
     </div>
 
-    <div class="overflow-x-auto rounded-[32px] border border-muted/20 bg-default/30 p-4">
+    <div class="overflow-x-auto rounded-3xl border border-muted/20 bg-default/40 p-4">
       <table class="min-w-full border-separate border-spacing-y-3">
         <thead>
           <tr>
             <th
-              class="w-12 px-2 text-left text-[10px] font-bold uppercase tracking-widest text-muted/50"
+              class="w-12 px-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
             >
               #
             </th>
             <th
               v-for="column in block.columns"
               :key="column.id"
-              class="min-w-[180px] px-2 text-left"
+              class="min-w-[200px] px-2 text-left"
             >
               <div class="flex items-center gap-2">
                 <UInput
@@ -207,9 +213,11 @@ function removeRow(rowId: string) {
 
       <div
         v-if="block.rows.length === 0"
-        class="flex flex-col items-center justify-center rounded-[28px] border border-dashed border-muted/30 bg-default/20 py-12 text-center"
+        class="rounded-3xl border border-dashed border-muted/20 bg-elevated/5 py-12 text-center"
       >
-        <p class="text-sm font-bold uppercase tracking-widest text-muted/60">No rows added yet</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+          No rows added yet
+        </p>
       </div>
     </div>
   </div>

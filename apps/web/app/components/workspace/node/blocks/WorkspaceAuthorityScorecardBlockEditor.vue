@@ -72,26 +72,26 @@ function incrementMetric(metricKey: WorkspaceAuthorityScoreMetricKey) {
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 md:grid-cols-3">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">On Target</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="rounded-3xl bg-primary/10 border border-primary/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">On Target</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
           {{ summary.atTargetCount }}/{{ summary.metricCount }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-secondary/10 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-secondary/80">
+      <div class="rounded-3xl bg-secondary/10 border border-secondary/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/80">
           Avg Progress
         </p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-secondary">
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-secondary">
           {{ summary.averageProgress }}%
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Strongest</p>
-        <p class="mt-2 text-2xl font-black tracking-tight text-success">
+      <div class="rounded-3xl bg-success/10 border border-success/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">Strongest</p>
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-success">
           {{
             summary.strongestMetric
               ? workspaceAuthorityScoreMetricLabels[summary.strongestMetric]
@@ -116,24 +116,24 @@ function incrementMetric(metricKey: WorkspaceAuthorityScoreMetricKey) {
         v-for="metricKey in metricKeys"
         :key="metricKey"
         type="button"
-        class="rounded-[30px] border p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5"
+        class="rounded-3xl border p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/5"
         :class="getProgressTone(summary.metrics[metricKey].progress).surface"
         @click="incrementMetric(metricKey)"
       >
         <div class="flex items-start justify-between gap-4">
           <div class="flex items-center gap-3">
             <div
-              class="flex size-11 items-center justify-center rounded-2xl border border-white/60 bg-default/80 text-toned"
+              class="flex size-11 items-center justify-center rounded-2xl border border-muted/20 bg-default/80 text-toned"
             >
               <UIcon :name="workspaceAuthorityScoreMetricIcons[metricKey]" class="size-5" />
             </div>
 
             <div>
-              <p class="text-xs font-bold uppercase tracking-[0.22em] text-muted">
+              <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
                 {{ workspaceAuthorityScoreMetricLabels[metricKey] }}
               </p>
               <p
-                class="mt-2 text-4xl font-black tracking-tight"
+                class="mt-1 text-2xl sm:text-3xl font-black tracking-tight"
                 :class="getProgressTone(summary.metrics[metricKey].progress).badge"
               >
                 {{ formatValue(block.metrics[metricKey].value) }}
@@ -145,7 +145,7 @@ function incrementMetric(metricKey: WorkspaceAuthorityScoreMetricKey) {
             :color="getProgressTone(summary.metrics[metricKey].progress).progress"
             variant="soft"
             size="sm"
-            class="rounded-full px-3"
+            class="rounded-2xl px-3"
           >
             {{ summary.metrics[metricKey].progress }}%
           </UBadge>
@@ -153,7 +153,7 @@ function incrementMetric(metricKey: WorkspaceAuthorityScoreMetricKey) {
 
         <div class="mt-5 space-y-2">
           <div
-            class="flex items-center justify-between text-[11px] font-bold uppercase tracking-[0.2em] text-muted"
+            class="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
           >
             <span>Progress</span>
             <span>Target {{ formatValue(block.metrics[metricKey].target) }}</span>
@@ -168,12 +168,12 @@ function incrementMetric(metricKey: WorkspaceAuthorityScoreMetricKey) {
 
         <div class="mt-5 grid grid-cols-2 gap-3" @click.stop>
           <div>
-            <p class="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Current</p>
+            <p class="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Current</p>
             <UInput
               :model-value="String(block.metrics[metricKey].value)"
               type="number"
               size="sm"
-              class="rounded-xl"
+              class="rounded-2xl"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'authority-scorecard') return;
@@ -187,12 +187,12 @@ function incrementMetric(metricKey: WorkspaceAuthorityScoreMetricKey) {
           </div>
 
           <div>
-            <p class="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Target</p>
+            <p class="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Target</p>
             <UInput
               :model-value="String(block.metrics[metricKey].target)"
               type="number"
               size="sm"
-              class="rounded-xl"
+              class="rounded-2xl"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'authority-scorecard') return;

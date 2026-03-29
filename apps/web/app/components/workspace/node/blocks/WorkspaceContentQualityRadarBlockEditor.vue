@@ -120,40 +120,42 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 md:grid-cols-3">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Average</p>
-        <p class="mt-2 text-4xl font-black tracking-tight" :class="getAverageToneClasses()">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Average</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight" :class="getAverageToneClasses()">
           {{ summary.averageScore }}
         </p>
         <p class="mt-1 text-sm text-muted">Live average across all 10 quality dimensions</p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Strongest</p>
-        <p class="mt-2 text-2xl font-black tracking-tight text-success">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Strongest</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
           {{
             summary.strongestDimension
               ? workspaceContentQualityDimensionLabels[summary.strongestDimension]
               : "None"
           }}
         </p>
+        <p class="mt-1 text-sm text-muted">The highest-performing quality pillar</p>
       </div>
 
-      <div class="rounded-[28px] bg-error/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">Weakest</p>
-        <p class="mt-2 text-2xl font-black tracking-tight text-error">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Weakest</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-error">
           {{
             summary.weakestDimension
               ? workspaceContentQualityDimensionLabels[summary.weakestDimension]
               : "None"
           }}
         </p>
+        <p class="mt-1 text-sm text-muted">Dimension requiring the most attention</p>
       </div>
     </div>
 
     <div class="grid gap-6 xl:grid-cols-[20rem_minmax(0,1fr)]">
-      <section class="rounded-[32px] border border-primary/20 bg-primary/5 p-5">
+      <section class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
         <div class="flex items-start justify-between gap-4">
           <div>
             <p class="text-sm font-semibold text-highlighted">Radar view</p>
@@ -164,8 +166,8 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
           </div>
 
           <div class="text-right">
-            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Score</p>
-            <p class="text-4xl font-black tracking-tight" :class="getAverageToneClasses()">
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Score</p>
+            <p class="text-2xl sm:text-3xl font-black tracking-tight" :class="getAverageToneClasses()">
               {{ summary.averageScore }}
             </p>
           </div>
@@ -216,7 +218,7 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
               :x="axis.labelX"
               :y="axis.labelY"
               :text-anchor="getLabelAnchor(axis.labelX)"
-              class="fill-muted text-[8px] font-bold uppercase tracking-[0.2em]"
+              class="fill-muted/60 text-[8px] font-bold uppercase tracking-[0.2em]"
             >
               {{ shortLabels[axis.dimension] }}
             </text>
@@ -224,7 +226,7 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
         </div>
       </section>
 
-      <section class="rounded-[32px] border border-muted/30 bg-default/40 p-5">
+      <section class="rounded-3xl border border-muted/20 bg-default/40 p-5">
         <div class="mb-5">
           <p class="text-sm font-semibold text-highlighted">Dimension controls</p>
           <p class="text-sm text-muted">
@@ -236,7 +238,7 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
           <article
             v-for="dimension in WORKSPACE_CONTENT_QUALITY_DIMENSIONS"
             :key="dimension"
-            class="rounded-[24px] border border-muted/25 bg-elevated/40 p-4"
+            class="rounded-2xl border border-muted/20 bg-elevated/10 p-4"
           >
             <div class="flex items-center justify-between gap-3">
               <p class="text-sm font-semibold text-highlighted">
@@ -254,7 +256,7 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
               @input="updateScore(dimension, getInputValue($event))"
             />
 
-            <div class="mt-3 flex items-center justify-between text-xs text-muted">
+            <div class="mt-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
               <span>1</span>
               <span>10</span>
             </div>

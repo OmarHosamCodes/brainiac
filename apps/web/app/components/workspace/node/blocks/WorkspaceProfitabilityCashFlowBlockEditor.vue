@@ -113,36 +113,36 @@ function getProfitTone(value: number) {
   <div class="space-y-12 overflow-x-hidden">
     <!-- Top Summary Cards -->
     <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="group relative overflow-hidden rounded-[32px] bg-success/5 p-6 border border-success/10 transition-all hover:bg-success/10">
+      <div class="group relative overflow-hidden rounded-3xl bg-success/5 p-6 border border-success/10 transition-all hover:bg-success/10">
         <div class="flex items-center gap-3">
           <div class="flex size-8 items-center justify-center rounded-xl bg-success/10 text-success">
             <UIcon name="i-lucide-trending-up" size="18" />
           </div>
-          <p class="text-[10px] font-black uppercase tracking-[0.25em] text-success/60">Revenue</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Revenue</p>
         </div>
         <p class="mt-4 text-2xl sm:text-3xl font-black tracking-tight text-success truncate font-mono">
           {{ formatCurrency(summary.totalRevenue) }}
         </p>
       </div>
 
-      <div class="group relative overflow-hidden rounded-[32px] bg-error/5 p-6 border border-error/10 transition-all hover:bg-error/10">
+      <div class="group relative overflow-hidden rounded-3xl bg-error/5 p-6 border border-error/10 transition-all hover:bg-error/10">
         <div class="flex items-center gap-3">
           <div class="flex size-8 items-center justify-center rounded-xl bg-error/10 text-error">
             <UIcon name="i-lucide-trending-down" size="18" />
           </div>
-          <p class="text-[10px] font-black uppercase tracking-[0.25em] text-error/60">Expenses</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Expenses</p>
         </div>
         <p class="mt-4 text-2xl sm:text-3xl font-black tracking-tight text-error truncate font-mono">
           {{ formatCurrency(summary.totalExpenses) }}
         </p>
       </div>
 
-      <div class="group relative overflow-hidden rounded-[32px] bg-secondary/5 p-6 border border-secondary/10 transition-all hover:bg-secondary/10">
+      <div class="group relative overflow-hidden rounded-3xl bg-secondary/5 p-6 border border-secondary/10 transition-all hover:bg-secondary/10">
         <div class="flex items-center gap-3">
           <div class="flex size-8 items-center justify-center rounded-xl bg-secondary/10 text-secondary">
             <UIcon name="i-lucide-wallet" size="18" />
           </div>
-          <p class="text-[10px] font-black uppercase tracking-[0.25em] text-secondary/60">Profit</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Profit</p>
         </div>
         <p
           class="mt-4 text-2xl sm:text-3xl font-black tracking-tight truncate font-mono"
@@ -152,12 +152,12 @@ function getProfitTone(value: number) {
         </p>
       </div>
 
-      <div class="group relative overflow-hidden rounded-[32px] bg-primary/5 p-6 border border-primary/10 transition-all hover:bg-primary/10">
+      <div class="group relative overflow-hidden rounded-3xl bg-primary/5 p-6 border border-primary/10 transition-all hover:bg-primary/10">
         <div class="flex items-center gap-3">
           <div class="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
             <UIcon name="i-lucide-pie-chart" size="18" />
           </div>
-          <p class="text-[10px] font-black uppercase tracking-[0.25em] text-primary/60">Margin</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Margin</p>
         </div>
         <p
           class="mt-4 text-2xl sm:text-3xl font-black tracking-tight truncate"
@@ -183,7 +183,7 @@ function getProfitTone(value: number) {
             color="primary"
             variant="soft"
             icon="i-lucide-plus"
-            class="px-6 py-2.5 shadow-sm"
+            class="px-6 py-2.5 shadow-sm rounded-full"
             @click="addClient"
           >
             Add New Client
@@ -192,9 +192,9 @@ function getProfitTone(value: number) {
 
         <div
           v-if="block.clients.length === 0"
-          class="flex min-h-[350px] flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-muted/20 bg-elevated/5 py-16 text-center"
+          class="border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5 flex flex-col items-center justify-center min-h-[350px]"
         >
-          <div class="flex size-20 items-center justify-center rounded-[32px] bg-muted/10 text-muted/30">
+          <div class="flex size-20 items-center justify-center rounded-2xl bg-muted/10 text-muted/30">
             <UIcon name="i-lucide-users-2" size="40" />
           </div>
           <p class="mt-6 text-base font-bold text-muted">No clients added yet.</p>
@@ -213,18 +213,18 @@ function getProfitTone(value: number) {
           <article
             v-for="client in block.clients"
             :key="client.id"
-            class="group relative rounded-[40px] border border-muted/20 bg-default/40 p-8 sm:p-10 transition-all hover:border-primary/40 hover:bg-default/70 hover:shadow-2xl hover:shadow-primary/5"
+            class="group relative rounded-3xl border border-muted/20 bg-default/40 p-8 sm:p-10 transition-all hover:border-primary/40 hover:bg-default/50"
           >
             <!-- Card Header: Title + Action + Margin -->
             <div class="flex items-start justify-between gap-6 mb-10 pb-8 border-b border-muted/10">
               <div class="flex-1 min-w-0">
-                <p class="text-[10px] font-black uppercase tracking-[0.25em] text-muted mb-2">Client Identity</p>
+                <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-2">Client Identity</p>
                 <UInput
                   :model-value="client.name"
                   placeholder="Enter client name..."
                   variant="none"
                   size="xl"
-                  :ui="{ base: 'px-0 text-highlighted placeholder:text-muted/30 text-2xl sm:text-3xl' }"
+                  :ui="{ base: 'px-0 text-highlighted placeholder:text-muted/30 text-2xl sm:text-3xl font-black tracking-tight' }"
                   @update:model-value="
                     mutateBlock(tabId, block.id, (entry) => {
                       if (entry.type !== 'profitability-cash-flow') return;
@@ -238,9 +238,9 @@ function getProfitTone(value: number) {
 
               <div class="flex items-center gap-6">
                 <div class="text-right">
-                  <p class="text-[9px] font-black uppercase tracking-[0.2em] text-muted mb-1">Current Margin</p>
+                  <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1">Current Margin</p>
                   <p
-                    class="text-3xl font-black"
+                    class="text-2xl sm:text-3xl font-black tracking-tight"
                     :class="getMarginTone(getProfitabilityClientMarginPercent(client))"
                   >
                     {{ getProfitabilityClientMarginPercent(client) }}%
@@ -251,7 +251,7 @@ function getProfitTone(value: number) {
                   variant="ghost"
                   icon="i-lucide-trash-2"
                   size="lg"
-                  class="bg-error/5 hover:bg-error/15 text-error"
+                  class="bg-error/5 hover:bg-error/15 text-error rounded-xl"
                   @click="removeClient(client.id)"
                 />
               </div>
@@ -261,12 +261,12 @@ function getProfitTone(value: number) {
             <div class="flex flex-wrap items-end gap-x-12 gap-y-10">
               <!-- Group 1: Collection Status -->
               <div class="w-full sm:w-[220px]">
-                <UFormField label="Collection Status" size="sm" :ui="{ label: 'text-[10px] font-black uppercase tracking-[0.2em] text-muted/80 mb-2' }">
+                <UFormField label="Collection Status" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-2' }">
                   <USelect
                     :model-value="client.paymentStatus"
                     :items="paymentStatusOptions"
                     variant="subtle"
-                    class="h-11"
+                    class="h-11 rounded-xl"
                     @update:model-value="
                       mutateBlock(tabId, block.id, (entry) => {
                         if (entry.type !== 'profitability-cash-flow') return;
@@ -282,13 +282,13 @@ function getProfitTone(value: number) {
 
               <!-- Group 2: Financial Inputs -->
               <div class="flex flex-wrap items-end gap-8">
-                <UFormField label="Revenue" size="sm" :ui="{ label: 'text-[10px] font-black uppercase tracking-[0.2em] text-muted/80 mb-2' }">
+                <UFormField label="Revenue" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-2' }">
                   <UInput
                     :model-value="String(client.revenueEgp)"
                     type="number"
                     variant="subtle"
                     class="w-36"
-                    :ui="{ base: 'h-11 text-success font-mono' }"
+                    :ui="{ base: 'h-11 text-success font-mono rounded-xl' }"
                     @update:model-value="
                       mutateBlock(tabId, block.id, (entry) => {
                         if (entry.type !== 'profitability-cash-flow') return;
@@ -300,13 +300,13 @@ function getProfitTone(value: number) {
                   />
                 </UFormField>
 
-                <UFormField label="Direct Cost" size="sm" :ui="{ label: 'text-[10px] font-black uppercase tracking-[0.2em] text-muted/80 mb-2' }">
+                <UFormField label="Direct Cost" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-2' }">
                   <UInput
                     :model-value="String(client.costEgp)"
                     type="number"
                     variant="subtle"
                     class="w-36"
-                    :ui="{ base: 'h-11 text-error font-mono' }"
+                    :ui="{ base: 'h-11 text-error font-mono rounded-xl' }"
                     @update:model-value="
                       mutateBlock(tabId, block.id, (entry) => {
                         if (entry.type !== 'profitability-cash-flow') return;
@@ -320,9 +320,9 @@ function getProfitTone(value: number) {
               </div>
 
               <!-- Group 3: Health Score -->
-              <div class="flex-1 min-w-[200px] space-y-4 rounded-3xl bg-elevated/20 p-5 border border-muted/5 shadow-inner">
+              <div class="flex-1 min-w-[200px] space-y-4 rounded-2xl bg-elevated/10 p-5 border border-muted/10">
                 <div class="flex items-center justify-between">
-                  <p class="text-[9px] font-black uppercase tracking-[0.2em] text-muted">Relationship Health</p>
+                  <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Relationship Health</p>
                   <div class="flex items-center gap-2">
                     <UInput
                       :model-value="String(client.healthPercent)"
@@ -330,7 +330,7 @@ function getProfitTone(value: number) {
                       size="xs"
                       variant="none"
                       class="w-12"
-                      :ui="{ base: 'text-right p-0 h-auto text-primary font-mono' }"
+                      :ui="{ base: 'text-right p-0 h-auto text-primary font-mono font-bold' }"
                       @update:model-value="
                         mutateBlock(tabId, block.id, (entry) => {
                           if (entry.type !== 'profitability-cash-flow') return;
@@ -351,7 +351,7 @@ function getProfitTone(value: number) {
       </section>
 
       <!-- Expense Breakdown Section -->
-      <section class="flex flex-col gap-8 rounded-[48px] border border-muted/20 bg-elevated/5 p-8 lg:sticky lg:top-8 lg:h-fit shadow-xl shadow-muted/5">
+      <section class="flex flex-col gap-8 rounded-3xl border border-muted/20 bg-elevated/5 p-8 lg:sticky lg:top-8 lg:h-fit">
         <div class="flex items-center justify-between gap-4">
           <div>
             <h3 class="text-xl font-black text-highlighted tracking-tight">Overhead</h3>
@@ -363,7 +363,7 @@ function getProfitTone(value: number) {
             variant="soft"
             icon="i-lucide-plus"
             size="md"
-            class="px-5 shadow-sm"
+            class="px-5 rounded-full"
             @click="addExpense"
           >
             Add
@@ -372,7 +372,7 @@ function getProfitTone(value: number) {
 
         <div
           v-if="block.expenses.length === 0"
-          class="flex flex-col items-center justify-center rounded-[36px] border-2 border-dashed border-muted/20 bg-default/40 py-12 text-center"
+          class="border-dashed border-muted/20 rounded-2xl py-12 text-center bg-elevated/5 flex flex-col items-center justify-center"
         >
           <UIcon name="i-lucide-receipt" size="32" class="text-muted/30" />
           <p class="mt-4 text-sm font-bold text-muted">No overhead listed.</p>
@@ -382,7 +382,7 @@ function getProfitTone(value: number) {
           <article
             v-for="expense in block.expenses"
             :key="expense.id"
-            class="relative rounded-[32px] border border-muted/10 bg-default/70 p-6 transition-all hover:bg-default hover:border-primary/20 hover:shadow-md"
+            class="relative rounded-2xl border border-muted/10 bg-default/40 p-6 transition-all hover:bg-default/60"
           >
             <div class="flex items-start justify-between gap-4">
               <div class="flex-1">
@@ -391,7 +391,7 @@ function getProfitTone(value: number) {
                   placeholder="Expense category..."
                   variant="none"
                   size="md"
-                  :ui="{ base: 'px-0 text-highlighted placeholder:text-muted/30 text-lg' }"
+                  :ui="{ base: 'px-0 text-highlighted placeholder:text-muted/30 text-lg font-bold' }"
                   @update:model-value="
                     mutateBlock(tabId, block.id, (entry) => {
                       if (entry.type !== 'profitability-cash-flow') return;
@@ -408,14 +408,14 @@ function getProfitTone(value: number) {
                 variant="ghost"
                 icon="i-lucide-trash-2"
                 size="sm"
-                class="hover:text-error hover:bg-error/10 transition-colors"
+                class="hover:text-error hover:bg-error/10 transition-colors rounded-lg"
                 @click="removeExpense(expense.id)"
               />
             </div>
 
             <div class="mt-6">
               <div class="mb-2.5 flex items-center justify-between px-1">
-                <span class="text-[10px] font-black text-muted/60 uppercase tracking-widest">Share of Overhead</span>
+                <span class="text-[10px] font-bold text-muted/60 uppercase tracking-[0.2em]">Share of Overhead</span>
                 <span class="text-xs font-black text-primary">{{ getExpenseSharePercent(expense, totalExpenseBreakdown) }}%</span>
               </div>
               <UProgress
@@ -427,13 +427,13 @@ function getProfitTone(value: number) {
 
             <div class="mt-8 pt-6 border-t border-muted/5 flex items-end justify-between gap-6">
               <div class="flex-1">
-                <p class="mb-2 text-[9px] font-black uppercase tracking-widest text-muted/80">Monthly Amount</p>
+                <p class="mb-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Monthly Amount</p>
                 <UInput
                   :model-value="String(expense.amountEgp)"
                   type="number"
                   variant="subtle"
                   size="md"
-                  class="h-11"
+                  class="h-11 rounded-xl"
                   :ui="{ base: 'font-mono' }"
                   @update:model-value="
                     mutateBlock(tabId, block.id, (entry) => {
@@ -453,14 +453,14 @@ function getProfitTone(value: number) {
             </div>
           </article>
 
-          <div class="mt-6 flex items-center justify-between rounded-[36px] bg-primary/10 p-7 border border-primary/20 shadow-inner">
+          <div class="mt-6 flex items-center justify-between rounded-2xl bg-primary/5 p-7 border border-primary/10">
             <div>
-              <p class="text-[10px] font-black text-primary/60 uppercase tracking-[0.25em]">Total Overhead</p>
+              <p class="text-[10px] font-bold text-muted/60 uppercase tracking-[0.2em]">Total Overhead</p>
               <p class="text-2xl font-black text-primary mt-1.5 tracking-tight font-mono">
                 {{ formatCurrency(totalExpenseBreakdown) }}
               </p>
             </div>
-            <div class="size-14 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-sm border border-primary/10">
+            <div class="size-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
               <UIcon name="i-lucide-calculator" size="28" />
             </div>
           </div>

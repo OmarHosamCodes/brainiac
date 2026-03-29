@@ -76,30 +76,30 @@ function getScoreClasses(score: number) {
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Team</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-3xl bg-primary/5 p-5 border border-primary/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Team</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
           {{ summary.memberCount }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Avg Score</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+      <div class="rounded-3xl bg-success/5 p-5 border border-success/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Avg Score</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
           {{ summary.overallAverage }}/10
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-error/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">Critical Gaps</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-error">
+      <div class="rounded-3xl bg-error/5 p-5 border border-error/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Critical Gaps</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-error">
           {{ summary.criticalGapCount }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-elevated/70 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Strongest</p>
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Strongest</p>
         <p class="mt-2 text-lg font-black tracking-tight text-highlighted">
           {{
             summary.strongestDimension
@@ -107,7 +107,7 @@ function getScoreClasses(score: number) {
               : "Unclear"
           }}
         </p>
-        <p class="mt-1 text-sm text-muted">
+        <p class="mt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted/60">
           {{
             summary.strongestDimension
               ? `${summary.averageByDimension[summary.strongestDimension]}/10 team average`
@@ -136,165 +136,174 @@ function getScoreClasses(score: number) {
       </UButton>
     </div>
 
-    <div class="flex flex-wrap gap-2">
-      <div
-        class="rounded-full border border-error/30 bg-error/10 px-3 py-1 text-xs font-semibold text-error"
-      >
-        1-3 Critical gap
-      </div>
-      <div
-        class="rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-xs font-semibold text-warning"
-      >
-        4-5 Needs support
-      </div>
-      <div
-        class="rounded-full border border-warning/20 bg-warning/5 px-3 py-1 text-xs font-semibold text-highlighted"
-      >
-        6-7 Reliable
-      </div>
-      <div
-        class="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-xs font-semibold text-success"
-      >
-        8-10 Strength
-      </div>
+    <div
+      v-if="block.members.length === 0"
+      class="border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
+    >
+      <p class="text-sm font-semibold text-muted">No team members added yet.</p>
     </div>
 
-    <div class="overflow-x-auto pb-2">
-      <table class="min-w-[880px] w-full border-separate border-spacing-y-3">
-        <thead>
-          <tr>
-            <th
-              class="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
-            >
-              Team Member
-            </th>
-            <th
-              v-for="dimension in WORKSPACE_PEOPLE_SKILL_DIMENSIONS"
-              :key="dimension"
-              class="px-3 pb-1 text-center text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
-            >
-              {{ workspacePeopleSkillDimensionLabels[dimension] }}
-            </th>
-            <th
-              class="px-3 pb-1 text-center text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
-            >
-              Average
-            </th>
-            <th
-              class="px-3 pb-1 text-right text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
-            >
-              Actions
-            </th>
-          </tr>
-        </thead>
+    <template v-else>
+      <div class="flex flex-wrap gap-2">
+        <div
+          class="rounded-full border border-error/30 bg-error/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-error"
+        >
+          1-3 Critical gap
+        </div>
+        <div
+          class="rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-warning"
+        >
+          4-5 Needs support
+        </div>
+        <div
+          class="rounded-full border border-warning/20 bg-warning/5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-highlighted"
+        >
+          6-7 Reliable
+        </div>
+        <div
+          class="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-success"
+        >
+          8-10 Strength
+        </div>
+      </div>
 
-        <tbody>
-          <tr
-            v-for="member in block.members"
-            :key="member.id"
-            class="rounded-[28px] border border-muted/30 bg-default/70"
-          >
-            <td
-              class="rounded-l-[28px] border-y border-l border-muted/30 bg-default/70 px-4 py-4 align-top"
-            >
-              <UInput
-                :model-value="member.name"
-                variant="none"
-                placeholder="Name"
-                :ui="{
-                  base: 'px-0 text-sm font-semibold text-highlighted placeholder:text-muted/60',
-                }"
-                @update:model-value="
-                  mutateBlock(tabId, block.id, (entry) => {
-                    if (entry.type !== 'skills-heat-map') return;
-                    const target = entry.members.find((candidate) => candidate.id === member.id);
-                    if (!target) return;
-                    target.name = ($event ?? '').slice(0, 120);
-                  })
-                "
-              />
-              <UInput
-                :model-value="member.role"
-                variant="none"
-                placeholder="Role"
-                class="mt-1"
-                :ui="{ base: 'px-0 text-xs text-muted placeholder:text-muted/60' }"
-                @update:model-value="
-                  mutateBlock(tabId, block.id, (entry) => {
-                    if (entry.type !== 'skills-heat-map') return;
-                    const target = entry.members.find((candidate) => candidate.id === member.id);
-                    if (!target) return;
-                    target.role = ($event ?? '').slice(0, 120);
-                  })
-                "
-              />
-            </td>
-
-            <td
-              v-for="dimension in WORKSPACE_PEOPLE_SKILL_DIMENSIONS"
-              :key="`${member.id}-${dimension}`"
-              class="border-y border-muted/30 bg-default/70 px-3 py-4 text-center"
-            >
-              <button
-                type="button"
-                class="w-full rounded-2xl border px-3 py-4 text-lg font-black tracking-tight transition hover:scale-[1.02]"
-                :class="getScoreClasses(member.scores[dimension])"
-                @click="cycleScore(member.id, dimension)"
+      <div class="overflow-x-auto pb-2">
+        <table class="min-w-[880px] w-full border-separate border-spacing-y-3">
+          <thead>
+            <tr>
+              <th
+                class="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
               >
-                {{ member.scores[dimension] }}
-              </button>
-            </td>
-
-            <td class="border-y border-muted/30 bg-default/70 px-3 py-4 text-center">
-              <div
-                class="rounded-2xl border px-3 py-4 text-lg font-black tracking-tight"
-                :class="getScoreClasses(getSkillsHeatMapMemberAverage(member.scores))"
+                Team Member
+              </th>
+              <th
+                v-for="dimension in WORKSPACE_PEOPLE_SKILL_DIMENSIONS"
+                :key="dimension"
+                class="px-3 pb-1 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
               >
-                {{ getSkillsHeatMapMemberAverage(member.scores) }}
-              </div>
-            </td>
+                {{ workspacePeopleSkillDimensionLabels[dimension] }}
+              </th>
+              <th
+                class="px-3 pb-1 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+              >
+                Average
+              </th>
+              <th
+                class="px-3 pb-1 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+              >
+                Actions
+              </th>
+            </tr>
+          </thead>
 
-            <td
-              class="rounded-r-[28px] border-y border-r border-muted/30 bg-default/70 px-3 py-4 text-right"
+          <tbody>
+            <tr
+              v-for="member in block.members"
+              :key="member.id"
+              class="rounded-2xl border border-muted/20 bg-default/40"
             >
-              <UButton
-                color="neutral"
-                variant="ghost"
-                icon="i-lucide-trash-2"
-                class="rounded-xl hover:text-error"
-                @click="removeMember(member.id)"
-              />
-            </td>
-          </tr>
-        </tbody>
+              <td
+                class="rounded-l-2xl border-y border-l border-muted/20 bg-default/40 px-4 py-4 align-top"
+              >
+                <UInput
+                  :model-value="member.name"
+                  variant="none"
+                  placeholder="Name"
+                  :ui="{
+                    base: 'px-0 text-sm font-semibold text-highlighted placeholder:text-muted/60',
+                  }"
+                  @update:model-value="
+                    mutateBlock(tabId, block.id, (entry) => {
+                      if (entry.type !== 'skills-heat-map') return;
+                      const target = entry.members.find((candidate) => candidate.id === member.id);
+                      if (!target) return;
+                      target.name = ($event ?? '').slice(0, 120);
+                    })
+                  "
+                />
+                <UInput
+                  :model-value="member.role"
+                  variant="none"
+                  placeholder="Role"
+                  class="mt-1"
+                  :ui="{ base: 'px-0 text-xs text-muted/70 font-medium placeholder:text-muted/60' }"
+                  @update:model-value="
+                    mutateBlock(tabId, block.id, (entry) => {
+                      if (entry.type !== 'skills-heat-map') return;
+                      const target = entry.members.find((candidate) => candidate.id === member.id);
+                      if (!target) return;
+                      target.role = ($event ?? '').slice(0, 120);
+                    })
+                  "
+                />
+              </td>
 
-        <tfoot>
-          <tr>
-            <td class="px-3 pt-2 text-left text-xs font-semibold text-muted">Team Average</td>
-            <td
-              v-for="dimension in WORKSPACE_PEOPLE_SKILL_DIMENSIONS"
-              :key="`avg-${dimension}`"
-              class="px-3 pt-2 text-center"
-            >
-              <div
-                class="rounded-2xl border px-3 py-3 text-sm font-bold"
-                :class="getScoreClasses(summary.averageByDimension[dimension])"
+              <td
+                v-for="dimension in WORKSPACE_PEOPLE_SKILL_DIMENSIONS"
+                :key="`${member.id}-${dimension}`"
+                class="border-y border-muted/20 bg-default/40 px-3 py-4 text-center"
               >
-                {{ summary.averageByDimension[dimension] }}
-              </div>
-            </td>
-            <td class="px-3 pt-2 text-center">
-              <div
-                class="rounded-2xl border px-3 py-3 text-sm font-bold"
-                :class="getScoreClasses(summary.overallAverage)"
+                <button
+                  type="button"
+                  class="w-full rounded-2xl border px-3 py-4 text-lg font-black tracking-tight transition hover:scale-[1.02]"
+                  :class="getScoreClasses(member.scores[dimension])"
+                  @click="cycleScore(member.id, dimension)"
+                >
+                  {{ member.scores[dimension] }}
+                </button>
+              </td>
+
+              <td class="border-y border-muted/20 bg-default/40 px-3 py-4 text-center">
+                <div
+                  class="rounded-2xl border px-3 py-4 text-lg font-black tracking-tight"
+                  :class="getScoreClasses(getSkillsHeatMapMemberAverage(member.scores))"
+                >
+                  {{ getSkillsHeatMapMemberAverage(member.scores) }}
+                </div>
+              </td>
+
+              <td
+                class="rounded-r-2xl border-y border-r border-muted/20 bg-default/40 px-3 py-4 text-right"
               >
-                {{ summary.overallAverage }}
-              </div>
-            </td>
-            <td />
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  icon="i-lucide-trash-2"
+                  class="rounded-xl hover:text-error"
+                  @click="removeMember(member.id)"
+                />
+              </td>
+            </tr>
+          </tbody>
+
+          <tfoot>
+            <tr>
+              <td class="px-3 pt-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Team Average</td>
+              <td
+                v-for="dimension in WORKSPACE_PEOPLE_SKILL_DIMENSIONS"
+                :key="`avg-${dimension}`"
+                class="px-3 pt-2 text-center"
+              >
+                <div
+                  class="rounded-2xl border px-3 py-3 text-sm font-bold"
+                  :class="getScoreClasses(summary.averageByDimension[dimension])"
+                >
+                  {{ summary.averageByDimension[dimension] }}
+                </div>
+              </td>
+              <td class="px-3 pt-2 text-center">
+                <div
+                  class="rounded-2xl border px-3 py-3 text-sm font-bold"
+                  :class="getScoreClasses(summary.overallAverage)"
+                >
+                  {{ summary.overallAverage }}
+                </div>
+              </td>
+              <td />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </template>
   </div>
 </template>

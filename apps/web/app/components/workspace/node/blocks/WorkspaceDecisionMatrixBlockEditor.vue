@@ -103,8 +103,8 @@ function getOptionSummary(optionId: string) {
 
 <template>
   <div class="space-y-6">
-    <div class="rounded-[32px] border border-primary/20 bg-primary/5 p-5">
-      <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">
+    <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
         Decision Prompt
       </p>
       <UInput
@@ -113,7 +113,7 @@ function getOptionSummary(optionId: string) {
         placeholder="What decision are you making?"
         class="mt-2 w-full"
         :ui="{
-          base: 'px-0 text-xl font-bold tracking-tight text-highlighted placeholder:text-muted/60',
+          base: 'px-0 text-xl font-bold tracking-tight text-highlighted placeholder:text-muted/40',
         }"
         @update:model-value="
           mutateBlock(tabId, block.id, (entry) => {
@@ -124,11 +124,11 @@ function getOptionSummary(optionId: string) {
       />
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       <article
         v-for="option in block.options"
         :key="option.id"
-        class="rounded-[28px] border border-muted/30 bg-default/50 p-5"
+        class="rounded-3xl border border-muted/20 bg-default/40 p-5"
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0 flex-1">
@@ -147,7 +147,7 @@ function getOptionSummary(optionId: string) {
                 })
               "
             />
-            <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+            <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
               {{ getOptionSummary(option.id)?.totalScore ?? 0 }}
             </p>
           </div>
@@ -168,7 +168,7 @@ function getOptionSummary(optionId: string) {
               variant="ghost"
               icon="i-lucide-trash-2"
               size="xs"
-              class="rounded-lg hover:text-error"
+              class="rounded-2xl hover:text-error"
               :disabled="block.options.length <= 1"
               @click="removeOption(option.id)"
             />
@@ -177,7 +177,7 @@ function getOptionSummary(optionId: string) {
 
         <div class="mt-4 space-y-2">
           <div
-            class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
+            class="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
           >
             <span>Relative Score</span>
             <span>{{ getOptionSummary(option.id)?.progress ?? 0 }}%</span>
@@ -187,7 +187,7 @@ function getOptionSummary(optionId: string) {
             size="sm"
             class="rounded-full"
           />
-          <p class="text-sm text-muted">
+          <p class="text-xs text-muted/60 mt-2 font-medium">
             Average weighted score: {{ getOptionSummary(option.id)?.averageScore ?? 0 }}
           </p>
         </div>
@@ -224,33 +224,33 @@ function getOptionSummary(optionId: string) {
       </div>
     </div>
 
-    <div class="overflow-x-auto pb-2">
+    <div class="overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
       <div
-        class="grid min-w-[760px] gap-px overflow-hidden rounded-[28px] border border-muted/30 bg-muted/30"
+        class="grid min-w-[760px] gap-px overflow-hidden rounded-3xl border border-muted/20 bg-muted/20"
         :style="matrixGridStyle"
       >
-        <div class="bg-elevated/80 p-4">
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Criteria</p>
-          <p class="mt-2 text-sm text-toned">
-            {{ summary.criteriaCount }} criteria with {{ summary.totalWeight }} total weight points
+        <div class="bg-elevated/10 p-4 flex flex-col justify-center">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Criteria</p>
+          <p class="mt-1 text-xs font-medium text-toned/70">
+            {{ summary.criteriaCount }} criteria, {{ summary.totalWeight }} weight pts
           </p>
         </div>
 
         <div
           v-for="option in block.options"
           :key="`${option.id}-header`"
-          class="bg-elevated/80 p-4"
+          class="bg-elevated/10 p-4 flex flex-col justify-center"
         >
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 truncate">
             {{ option.label || "Option" }}
           </p>
-          <p class="mt-2 text-lg font-black text-highlighted">
+          <p class="mt-1 text-lg font-black text-highlighted">
             {{ getOptionSummary(option.id)?.totalScore ?? 0 }}
           </p>
         </div>
 
         <template v-for="criterion in block.criteria" :key="criterion.id">
-          <div class="space-y-3 bg-default/80 p-4">
+          <div class="space-y-3 bg-default/40 p-4 flex flex-col justify-center">
             <div class="flex items-start justify-between gap-3">
               <UInput
                 :model-value="criterion.label"
@@ -258,7 +258,7 @@ function getOptionSummary(optionId: string) {
                 placeholder="Criterion name"
                 class="flex-1"
                 :ui="{
-                  base: 'px-0 text-sm font-semibold text-highlighted placeholder:text-muted/60',
+                  base: 'px-0 text-sm font-semibold text-highlighted placeholder:text-muted/40',
                 }"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
@@ -283,9 +283,9 @@ function getOptionSummary(optionId: string) {
               />
             </div>
 
-            <div class="space-y-2">
+            <div class="space-y-1.5">
               <div
-                class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
+                class="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
               >
                 <span>Weight</span>
                 <span>{{ criterion.weight }}/10</span>
@@ -295,7 +295,7 @@ function getOptionSummary(optionId: string) {
                 type="range"
                 min="1"
                 max="10"
-                class="h-2 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+                class="h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
                 @input="
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== 'decision-matrix') return;
@@ -313,10 +313,10 @@ function getOptionSummary(optionId: string) {
           <div
             v-for="option in block.options"
             :key="`${criterion.id}-${option.id}`"
-            class="bg-default/80 p-4"
+            class="bg-default/40 p-4 flex flex-col justify-center"
           >
             <div
-              class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
+              class="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
             >
               <span>Score</span>
               <span>{{ option.scores[criterion.id] ?? 0 }}/10</span>
@@ -327,7 +327,7 @@ function getOptionSummary(optionId: string) {
               type="range"
               min="0"
               max="10"
-              class="mt-3 h-2 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+              class="mt-2 h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
               @input="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'decision-matrix') return;
@@ -338,9 +338,9 @@ function getOptionSummary(optionId: string) {
               "
             />
 
-            <div class="mt-3 flex justify-between text-sm text-toned">
+            <div class="mt-3 flex justify-between text-xs font-medium text-toned/70">
               <span>Weighted</span>
-              <span class="font-semibold text-highlighted">
+              <span class="font-black text-highlighted">
                 {{ (option.scores[criterion.id] ?? 0) * criterion.weight }}
               </span>
             </div>

@@ -39,13 +39,13 @@ const quadrants = [
 <template>
   <div class="space-y-6">
     <div class="grid gap-4 sm:grid-cols-2">
-      <div class="rounded-[28px] bg-elevated/20 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-muted/60">Filled</p>
-        <p class="mt-2 text-3xl font-black text-highlighted">{{ summary.filledCellCount }}/4</p>
+      <div class="rounded-3xl border border-muted/20 bg-default/40 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Filled</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">{{ summary.filledCellCount }}/4</p>
       </div>
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-primary/60">Coverage</p>
-        <p class="mt-2 text-3xl font-black text-primary">
+      <div class="rounded-3xl border border-primary/10 bg-primary/5 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Coverage</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
           {{ 100 - summary.emptyCellCount * 25 }}%
         </p>
       </div>
@@ -55,12 +55,12 @@ const quadrants = [
       <article
         v-for="quadrant in quadrants"
         :key="quadrant.key"
-        class="rounded-[30px] border p-5"
+        class="rounded-3xl border p-5"
         :class="quadrant.className"
       >
         <div class="mb-3 flex items-center justify-between gap-3">
-          <h3 class="text-sm font-black uppercase tracking-widest">{{ quadrant.label }}</h3>
-          <span class="text-[10px] font-bold uppercase tracking-widest opacity-60">
+          <h3 class="text-[10px] font-bold uppercase tracking-[0.2em]">{{ quadrant.label }}</h3>
+          <span class="text-[10px] font-bold uppercase tracking-[0.2em] opacity-60">
             {{ (block.cells[quadrant.key] || "").trim() ? "Filled" : "Empty" }}
           </span>
         </div>
@@ -72,7 +72,7 @@ const quadrants = [
           variant="none"
           class="w-full"
           :ui="{
-            base: 'min-h-[140px] p-0 text-sm leading-relaxed text-toned placeholder:text-muted/40',
+            base: 'min-h-[140px] p-0 text-sm leading-relaxed text-toned placeholder:text-muted/40 font-medium',
           }"
           :placeholder="`Capture ${quadrant.label.toLowerCase()} here...`"
           @update:model-value="

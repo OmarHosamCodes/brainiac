@@ -30,11 +30,11 @@ function addStep() {
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-elevated/20 p-5">
+    <div class="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-muted/20 bg-default/40 p-5">
       <div class="space-y-2">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-muted/60">Complete</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Complete</p>
         <div class="flex items-center gap-3">
-          <p class="text-3xl font-black text-highlighted">
+          <p class="text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
             {{ summary.completedSteps }}/{{ summary.totalSteps }}
           </p>
           <UBadge color="primary" variant="subtle" class="rounded-lg">
@@ -55,7 +55,7 @@ function addStep() {
         color="primary"
         variant="soft"
         icon="i-lucide-plus"
-        class="rounded-full"
+        class="rounded-full px-4"
         @click="addStep"
       >
         Add Step
@@ -187,9 +187,9 @@ function addStep() {
 
       <div
         v-if="block.steps.length === 0"
-        class="flex flex-col items-center justify-center rounded-[32px] border border-dashed border-muted/30 bg-default/20 py-12 text-center"
+        class="border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
       >
-        <p class="text-sm font-bold uppercase tracking-widest text-muted/60">No process steps</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">No process steps</p>
       </div>
     </div>
   </div>

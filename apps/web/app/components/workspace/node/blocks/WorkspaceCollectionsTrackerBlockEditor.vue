@@ -97,35 +97,35 @@ function setFilter(filter: WorkspaceReceivableFilter) {
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Outstanding</p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-primary">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-3xl bg-primary/10 border border-primary/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">Outstanding</p>
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-primary">
           {{ formatCurrency(summary.totalOutstanding) }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-error/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">Overdue</p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-error">
+      <div class="rounded-3xl bg-error/10 border border-error/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/70">Overdue</p>
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-error">
           {{ formatCurrency(summary.overdueAmount) }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">
+      <div class="rounded-3xl bg-warning/10 border border-warning/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">
           Due This Week
         </p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-warning">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-warning">
           {{ formatCurrency(summary.dueThisWeekAmount) }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">
+      <div class="rounded-3xl bg-success/10 border border-success/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">
           Collected This Month
         </p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-success">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-success">
           {{ formatCurrency(summary.collectedThisMonth) }}
         </p>
       </div>
@@ -145,7 +145,8 @@ function setFilter(filter: WorkspaceReceivableFilter) {
           v-for="filter in WORKSPACE_RECEIVABLE_FILTERS"
           :key="filter"
           color="neutral"
-          :variant="block.filter === filter ? 'solid' : 'soft'"
+          size="sm"
+          :variant="block.filter === filter ? 'soft' : 'ghost'"
           class="rounded-full px-4"
           @click="setFilter(filter)"
         >
@@ -155,6 +156,7 @@ function setFilter(filter: WorkspaceReceivableFilter) {
         <UButton
           color="primary"
           variant="soft"
+          size="sm"
           icon="i-lucide-plus"
           class="rounded-full px-4"
           @click="addInvoice"
@@ -166,14 +168,14 @@ function setFilter(filter: WorkspaceReceivableFilter) {
 
     <div
       v-if="filteredInvoices.length === 0"
-      class="rounded-[32px] border border-dashed border-muted/40 bg-elevated/10 py-14 text-center"
+      class="border-dashed border border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
     >
-      <p class="text-sm font-semibold text-muted">No invoices match the current filter.</p>
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">No invoices match the current filter</p>
     </div>
 
-    <div v-else class="overflow-x-auto pb-2">
+    <div v-else class="overflow-x-auto pb-4">
       <div
-        class="grid min-w-[1560px] gap-px overflow-hidden rounded-[28px] border border-muted/30 bg-muted/30"
+        class="grid min-w-[1560px] gap-px overflow-hidden rounded-3xl border border-muted/20 bg-muted/20"
         :style="rowGridStyle"
       >
         <div
@@ -190,17 +192,18 @@ function setFilter(filter: WorkspaceReceivableFilter) {
             '',
           ]"
           :key="label"
-          class="bg-elevated/80 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
+          class="bg-elevated/10 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
         >
           {{ label }}
         </div>
 
         <template v-for="invoice in filteredInvoices" :key="invoice.id">
-          <div class="bg-default/85 p-3">
+          <div class="bg-default/40 p-3">
             <UInput
               :model-value="invoice.clientName"
               variant="none"
               placeholder="Client"
+              size="sm"
               :ui="{ base: 'px-0 font-semibold text-highlighted placeholder:text-muted/60' }"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
@@ -213,10 +216,12 @@ function setFilter(filter: WorkspaceReceivableFilter) {
             />
           </div>
 
-          <div class="bg-default/85 p-3">
+          <div class="bg-default/40 p-3">
             <UInput
               :model-value="String(invoice.amountEgp)"
               type="number"
+              size="sm"
+              class="rounded-2xl"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'collections-tracker') return;
@@ -228,10 +233,12 @@ function setFilter(filter: WorkspaceReceivableFilter) {
             />
           </div>
 
-          <div class="bg-default/85 p-3">
+          <div class="bg-default/40 p-3">
             <UInput
               :model-value="invoice.dueDate ?? ''"
               type="date"
+              size="sm"
+              class="rounded-2xl"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'collections-tracker') return;
@@ -243,27 +250,29 @@ function setFilter(filter: WorkspaceReceivableFilter) {
             />
           </div>
 
-          <div class="bg-default/85 p-3">
+          <div class="bg-default/40 p-3">
             <p
-              class="rounded-full px-3 py-2 text-center text-sm font-bold"
+              class="rounded-2xl px-3 py-2 text-center text-[10px] font-bold uppercase tracking-[0.1em]"
               :class="
                 getReceivableDaysOverdue(invoice) > 0
-                  ? 'bg-error/10 text-error'
-                  : 'bg-elevated/40 text-toned'
+                  ? 'bg-error/10 text-error border border-error/20'
+                  : 'bg-elevated/10 text-toned/60 border border-muted/20'
               "
             >
               {{
                 getReceivableDaysOverdue(invoice) > 0
                   ? `${getReceivableDaysOverdue(invoice)}d`
-                  : "0d"
+                  : '0d'
               }}
             </p>
           </div>
 
-          <div class="bg-default/85 p-3">
+          <div class="bg-default/40 p-3">
             <UInput
               :model-value="invoice.owner"
               placeholder="Owner"
+              size="sm"
+              class="rounded-2xl"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'collections-tracker') return;
@@ -275,10 +284,12 @@ function setFilter(filter: WorkspaceReceivableFilter) {
             />
           </div>
 
-          <div class="bg-default/85 p-3">
+          <div class="bg-default/40 p-3">
             <UInput
               :model-value="invoice.nextFollowUpDate ?? ''"
               type="date"
+              size="sm"
+              class="rounded-2xl"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'collections-tracker') return;
@@ -290,10 +301,12 @@ function setFilter(filter: WorkspaceReceivableFilter) {
             />
           </div>
 
-          <div class="bg-default/85 p-3">
+          <div class="bg-default/40 p-3">
             <USelect
               :model-value="invoice.status"
               :items="statusOptions"
+              size="sm"
+              class="rounded-2xl"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'collections-tracker') return;
@@ -308,12 +321,12 @@ function setFilter(filter: WorkspaceReceivableFilter) {
             />
           </div>
 
-          <div class="bg-default/85 p-3">
+          <div class="bg-default/40 p-3">
             <UBadge
               :color="getRiskTone(getReceivableRiskLevel(invoice))"
               variant="soft"
               size="sm"
-              class="rounded-full px-3"
+              class="rounded-2xl px-3"
             >
               {{ workspaceReceivableRiskLevelLabels[getReceivableRiskLevel(invoice)] }}
             </UBadge>
@@ -322,7 +335,7 @@ function setFilter(filter: WorkspaceReceivableFilter) {
               :model-value="invoice.paidAt ?? ''"
               type="date"
               size="sm"
-              class="mt-2"
+              class="mt-2 rounded-2xl"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'collections-tracker') return;
@@ -334,12 +347,12 @@ function setFilter(filter: WorkspaceReceivableFilter) {
             />
           </div>
 
-          <div class="bg-default/85 p-3">
+          <div class="bg-default/40 p-3">
             <UTextarea
               :model-value="invoice.notes"
               autoresize
-              :rows="2"
-              :ui="{ base: 'rounded-[18px] bg-elevated/20 text-sm' }"
+              :rows="1"
+              :ui="{ base: 'rounded-2xl bg-elevated/10 text-sm' }"
               placeholder="Follow-up notes"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
@@ -352,12 +365,12 @@ function setFilter(filter: WorkspaceReceivableFilter) {
             />
           </div>
 
-          <div class="bg-default/85 p-3">
+          <div class="bg-default/40 p-3">
             <UButton
               color="neutral"
               variant="ghost"
               icon="i-lucide-trash-2"
-              class="rounded-xl hover:text-error"
+              class="rounded-xl hover:text-error transition-colors"
               @click="removeInvoice(invoice.id)"
             />
           </div>

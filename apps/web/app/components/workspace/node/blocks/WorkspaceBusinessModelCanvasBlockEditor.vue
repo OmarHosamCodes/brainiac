@@ -97,24 +97,24 @@ function runAnalysis() {
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 md:grid-cols-3">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Coverage</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="rounded-3xl bg-primary/10 border border-primary/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">Coverage</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
           {{ summary.filledCellCount }}/9
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">Missing</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-warning">
+      <div class="rounded-3xl bg-warning/10 border border-warning/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">Missing</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-warning">
           {{ summary.missingCellCount }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Readiness</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+      <div class="rounded-3xl bg-success/10 border border-success/20 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">Readiness</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
           {{ getReadinessLabel() }}
         </p>
       </div>
@@ -144,17 +144,18 @@ function runAnalysis() {
         <article
           v-for="cell in canvasCells"
           :key="cell.key"
-          class="rounded-[28px] border border-muted/30 bg-default/50 p-4"
+          class="rounded-3xl border border-muted/20 bg-default/40 p-4"
           :class="`bmc-${cell.area}`"
         >
           <div class="mb-3 flex items-center justify-between gap-3">
-            <p class="text-xs font-bold uppercase tracking-[0.24em] text-muted">
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
               {{ workspaceBusinessModelCanvasCellLabels[cell.key] }}
             </p>
             <UBadge
               :color="block.cells[cell.key].trim() ? 'primary' : 'neutral'"
-              variant="subtle"
+              variant="soft"
               size="sm"
+              class="rounded-2xl"
             >
               {{ block.cells[cell.key].trim() ? "Filled" : "Open" }}
             </UBadge>
@@ -162,11 +163,11 @@ function runAnalysis() {
 
           <UTextarea
             :model-value="block.cells[cell.key]"
-            :rows="cell.key === 'costStructure' || cell.key === 'revenueStreams' ? 5 : 8"
+            :rows="cell.key === 'costStructure' || cell.key === 'revenueStreams' ? 4 : 6"
             autoresize
             :placeholder="cell.placeholder"
             class="w-full"
-            :ui="{ base: 'min-h-32 rounded-2xl bg-elevated/20' }"
+            :ui="{ base: 'min-h-32 rounded-2xl bg-elevated/10' }"
             @update:model-value="
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== 'business-model-canvas') return;
@@ -178,7 +179,7 @@ function runAnalysis() {
       </div>
     </div>
 
-    <section class="rounded-[32px] border border-primary/20 bg-primary/5 p-5">
+    <section class="rounded-3xl border border-primary/20 bg-primary/10 p-5">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p class="text-sm font-semibold text-highlighted">Analysis output</p>
@@ -187,13 +188,13 @@ function runAnalysis() {
           </p>
         </div>
 
-        <p v-if="block.analysisUpdatedAt" class="text-xs font-medium text-muted">
+        <p v-if="block.analysisUpdatedAt" class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
           Last analyzed {{ formatDateTime(block.analysisUpdatedAt) }}
         </p>
       </div>
 
       <div
-        class="mt-4 rounded-[24px] border border-muted/30 bg-default/70 p-4 text-sm leading-7 text-toned whitespace-pre-line"
+        class="mt-4 rounded-2xl border border-muted/20 bg-default/60 p-4 text-sm leading-relaxed text-toned whitespace-pre-line"
       >
         {{ block.analysis || "Run AI Analyze to generate a gap analysis of the current canvas." }}
       </div>

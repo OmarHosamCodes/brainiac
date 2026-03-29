@@ -110,26 +110,26 @@ function getHealthTextClasses(health: WorkspaceOkrHealth) {
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 sm:grid-cols-3">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="rounded-3xl bg-primary/5 p-5 border border-primary/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
           Average Progress
         </p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
           {{ summary.averageProgress }}%
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">Off Track</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-warning">
+      <div class="rounded-3xl bg-warning/5 p-5 border border-warning/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Off Track</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-warning">
           {{ summary.offTrackCount }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Healthy</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+      <div class="rounded-3xl bg-success/5 p-5 border border-success/10">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Healthy</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
           {{ summary.healthyCount }}
         </p>
       </div>
@@ -156,7 +156,7 @@ function getHealthTextClasses(health: WorkspaceOkrHealth) {
 
     <div
       v-if="block.objectives.length === 0"
-      class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center"
+      class="border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
     >
       <p class="text-sm font-semibold text-muted">No objectives added yet.</p>
     </div>
@@ -165,7 +165,7 @@ function getHealthTextClasses(health: WorkspaceOkrHealth) {
       <article
         v-for="objective in block.objectives"
         :key="objective.id"
-        class="overflow-hidden rounded-[32px] border-l-4 border border-muted/30 bg-default/50 p-5 transition-colors"
+        class="overflow-hidden rounded-3xl border-l-4 border border-muted/20 bg-default/40 p-5 transition-colors"
         :class="getHealthClasses(getOkrHealth(getOkrObjectiveProgress(objective)))"
       >
         <div class="flex flex-wrap items-start justify-between gap-4">
@@ -187,18 +187,18 @@ function getHealthTextClasses(health: WorkspaceOkrHealth) {
                 })
               "
             />
-            <p class="mt-2 text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+            <p class="mt-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
               {{ objective.keyResults.length }} key results
             </p>
           </div>
 
           <div class="flex items-start gap-3">
             <div class="text-right">
-              <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+              <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
                 Objective Progress
               </p>
               <p
-                class="mt-1 text-4xl font-black tracking-tight"
+                class="mt-1 text-2xl sm:text-3xl font-black tracking-tight"
                 :class="getHealthTextClasses(getOkrHealth(getOkrObjectiveProgress(objective)))"
               >
                 {{ getOkrObjectiveProgress(objective) }}%
@@ -219,7 +219,7 @@ function getHealthTextClasses(health: WorkspaceOkrHealth) {
           <div
             v-for="keyResult in objective.keyResults"
             :key="keyResult.id"
-            class="rounded-[24px] border border-muted/30 bg-default/70 p-4"
+            class="rounded-2xl border border-muted/20 bg-default/60 p-4"
           >
             <div class="flex items-center gap-3">
               <UInput

@@ -40,17 +40,18 @@ async function handleRun() {
         class="absolute -inset-1 rounded-[32px] bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20 opacity-30 blur-xl transition-all group-focus-within:opacity-60"
       />
       <div
-        class="relative rounded-[28px] border border-primary/20 bg-default/80 p-5 backdrop-blur-sm"
+        class="relative rounded-3xl border border-primary/20 bg-default/80 p-5 backdrop-blur-sm"
       >
         <div class="mb-4 flex flex-wrap items-start justify-between gap-3 px-1">
           <div class="space-y-2">
             <div class="flex items-center gap-2 text-primary">
               <UIcon name="i-lucide-sparkles" class="size-5" />
-              <h3 class="text-xs font-bold uppercase tracking-widest">AI Strategist</h3>
+              <h3 class="text-[10px] font-bold uppercase tracking-[0.2em]">AI Strategist</h3>
             </div>
-            <label class="flex items-center gap-2 text-xs text-toned">
+            <label class="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
               <UCheckbox
                 :model-value="block.includeContext"
+                size="sm"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== 'ai-prompt') {
@@ -114,16 +115,16 @@ async function handleRun() {
       <div class="flex items-center justify-between gap-3 px-2">
         <div class="flex items-center gap-2">
           <UIcon name="i-lucide-terminal" class="size-4 text-muted/60" />
-          <h4 class="text-[10px] font-bold uppercase tracking-widest text-muted/60">
+          <h4 class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Latest Result
           </h4>
         </div>
-        <UBadge variant="subtle" class="rounded-lg">
+        <UBadge variant="subtle" class="rounded-2xl">
           {{ block.includeContext ? "Context aware" : "Standalone" }}
         </UBadge>
       </div>
 
-      <div class="rounded-3xl border border-muted/20 bg-elevated/20 p-6 shadow-sm">
+      <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-6 shadow-sm">
         <div class="prose prose-sm max-w-none whitespace-pre-wrap text-toned leading-relaxed">
           {{ block.latestOutput }}
         </div>
@@ -134,11 +135,11 @@ async function handleRun() {
       <div class="flex items-center justify-between px-2">
         <div class="flex items-center gap-2">
           <UIcon name="i-lucide-history" class="size-4 text-muted/60" />
-          <h4 class="text-[10px] font-bold uppercase tracking-widest text-muted/60">
+          <h4 class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Prompt History
           </h4>
         </div>
-        <span class="text-[10px] font-bold uppercase tracking-widest text-muted/40">
+        <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">
           {{ block.outputHistory.length }} entries
         </span>
       </div>
@@ -150,7 +151,7 @@ async function handleRun() {
           class="rounded-2xl border border-muted/20 bg-default/40 p-4"
         >
           <div class="mb-2 flex items-center justify-between gap-3">
-            <span class="text-[10px] font-bold uppercase tracking-widest text-muted/60">
+            <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
               {{ formatDateTime(entry.createdAt) }}
             </span>
           </div>

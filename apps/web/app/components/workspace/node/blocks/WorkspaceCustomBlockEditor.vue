@@ -27,7 +27,7 @@ function getCheckedValue(event: Event) {
 <template>
   <div
     v-if="!template"
-    class="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning"
+    class="rounded-3xl border border-warning/20 bg-warning/5 p-4 text-sm text-warning"
   >
     This block's template was removed. Delete the block or recreate the template.
   </div>
@@ -38,7 +38,7 @@ function getCheckedValue(event: Event) {
       <UBadge color="neutral" variant="soft">{{ template.name }}</UBadge>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-2">
+    <div class="grid gap-4 sm:grid-cols-2">
       <template v-for="field in template.fields" :key="field.id">
         <UFormField :label="field.label">
           <template v-if="field.type === 'textarea'">
@@ -46,6 +46,8 @@ function getCheckedValue(event: Event) {
               :model-value="String(block.values[field.key] ?? '')"
               :rows="4"
               autoresize
+              class="w-full"
+              :ui="{ base: 'rounded-2xl' }"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'custom') {
@@ -60,12 +62,12 @@ function getCheckedValue(event: Event) {
 
           <template v-else-if="field.type === 'checkbox'">
             <label
-              class="flex items-center gap-3 rounded-2xl border border-muted/60 bg-elevated/30 px-4 py-3"
+              class="flex items-center gap-3 rounded-2xl border border-muted/20 bg-elevated/10 px-4 py-3"
             >
               <input
                 :checked="Boolean(block.values[field.key])"
                 type="checkbox"
-                class="size-4 rounded border border-muted/80 text-primary focus:ring-primary"
+                class="size-4 rounded border border-muted/20 text-primary focus:ring-primary"
                 @change="
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== 'custom') {
@@ -84,6 +86,8 @@ function getCheckedValue(event: Event) {
             <UInput
               :model-value="String(block.values[field.key] ?? '')"
               :type="field.type === 'number' ? 'number' : 'text'"
+              class="w-full"
+              :ui="{ base: 'rounded-2xl' }"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'custom') {
@@ -100,11 +104,11 @@ function getCheckedValue(event: Event) {
       </template>
     </div>
 
-    <div v-if="template.formula" class="rounded-2xl border border-muted/60 bg-elevated/30 p-4">
-      <p class="text-xs uppercase tracking-[0.2em] text-muted">
+    <div v-if="template.formula" class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
+      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
         {{ template.formula.label }}
       </p>
-      <p class="mt-2 text-2xl font-semibold text-highlighted">
+      <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
         {{ formatFormulaResult(getCustomFormulaResult(block)) }}
       </p>
     </div>
@@ -114,6 +118,8 @@ function getCheckedValue(event: Event) {
         :model-value="block.notes"
         :rows="4"
         autoresize
+        class="w-full"
+        :ui="{ base: 'rounded-2xl' }"
         @update:model-value="
           mutateBlock(tabId, block.id, (entry) => {
             if (entry.type !== 'custom') {
@@ -128,26 +134,29 @@ function getCheckedValue(event: Event) {
 
     <div
       v-if="template.aiPromptTemplate"
-      class="space-y-3 rounded-2xl border border-muted/60 bg-default p-4"
+      class="space-y-4 rounded-3xl border border-muted/20 bg-default/40 p-5"
     >
-      <p class="text-sm font-medium text-highlighted">AI Prompt Template</p>
-      <p class="text-sm text-muted">
-        {{ getCustomPromptPreview(block) }}
-      </p>
+      <div class="flex items-center justify-between gap-4">
+        <div>
+          <p class="text-sm font-semibold text-highlighted">AI Prompt Template</p>
+          <p class="mt-1 text-sm text-muted">
+            {{ getCustomPromptPreview(block) }}
+          </p>
+        </div>
 
-      <div class="flex justify-end">
         <UButton
           color="primary"
           variant="soft"
           icon="i-lucide-play"
+          class="rounded-full px-4"
           @click="runCustomPrompt(tabId, block.id)"
         >
-          Run template
+          Run
         </UButton>
       </div>
 
-      <div class="rounded-2xl border border-muted/60 bg-elevated/30 p-4">
-        <p class="text-xs uppercase tracking-[0.2em] text-muted">Latest Output</p>
+      <div class="rounded-2xl border border-muted/20 bg-elevated/10 p-4">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Latest Output</p>
         <p class="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-toned">
           {{ block.latestAiOutput || "Run the template to capture output." }}
         </p>

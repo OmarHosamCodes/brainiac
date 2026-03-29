@@ -77,27 +77,29 @@ function formatStatValue(value: number | null | undefined) {
 
 <template>
   <div class="space-y-8">
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-primary/60">Latest</p>
-        <p class="mt-2 text-3xl font-black text-primary">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-3xl border border-primary/20 bg-primary/5 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Latest</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
           {{ latestEntry ? formatStatValue(latestEntry.value) : "0" }}
         </p>
-        <p class="mt-1 text-xs text-muted/60">
+        <p class="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted/40">
           {{ latestEntry?.label || "No entries yet" }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-elevated/20 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-muted/60">Average</p>
-        <p class="mt-2 text-3xl font-black text-highlighted">
+      <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Average</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ formatStatValue(averageValue) }}
         </p>
-        <p class="mt-1 text-xs text-muted/60">{{ block.entries.length }} data points</p>
+        <p class="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted/40">
+          {{ block.entries.length }} data points
+        </p>
       </div>
 
-      <div class="rounded-[28px] bg-elevated/20 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-widest text-muted/60">Trend</p>
+      <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Trend</p>
         <div class="mt-2 flex items-center gap-2">
           <UIcon
             :name="
@@ -116,18 +118,18 @@ function formatStatValue(value: number | null | undefined) {
                   : 'text-muted'
             "
           />
-          <p class="text-3xl font-black text-highlighted">
+          <p class="text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
             {{ trend.delta > 0 ? "+" : "" }}{{ formatStatValue(trend.delta) }}
           </p>
         </div>
-        <p class="mt-1 text-xs text-muted/60">
+        <p class="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted/40">
           {{ trend.percentChange === null ? "No baseline yet" : `${trend.percentChange}% change` }}
         </p>
       </div>
 
-      <div class="rounded-[28px] bg-warning/5 p-5">
+      <div class="rounded-3xl border border-warning/20 bg-warning/5 p-5">
         <div class="flex items-center justify-between gap-3">
-          <p class="text-[10px] font-bold uppercase tracking-widest text-warning/70">Goal</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">Goal</p>
           <UButton
             v-if="block.goal !== null"
             color="warning"
@@ -150,7 +152,7 @@ function formatStatValue(value: number | null | undefined) {
           :model-value="block.goal === null || block.goal === undefined ? '' : String(block.goal)"
           type="number"
           size="sm"
-          class="mt-3 rounded-2xl"
+          class="mt-3 rounded-2xl font-mono font-bold"
           placeholder="Set target"
           @update:model-value="
             mutateBlock(tabId, block.id, (entry) => {
@@ -167,14 +169,14 @@ function formatStatValue(value: number | null | undefined) {
 
     <div
       v-if="chartHeights.length > 0"
-      class="relative overflow-hidden rounded-[40px] border border-muted/20 bg-default/40 p-8 shadow-inner"
+      class="relative overflow-hidden rounded-3xl border border-muted/20 bg-default/40 p-8 shadow-inner"
     >
       <div class="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent opacity-50" />
       <div class="relative flex h-36 items-end gap-2 lg:gap-3">
         <div
           v-for="(point, index) in chartHeights"
           :key="`${block.id}-chart-${index}`"
-          class="group relative flex-1 min-w-[6px] rounded-t-full bg-primary/20 transition-all hover:bg-primary/60"
+          class="group relative flex-1 min-w-[8px] rounded-t-full bg-primary/20 transition-all hover:bg-primary/60"
           :style="{ height: `${point}%` }"
         >
           <div
@@ -192,7 +194,7 @@ function formatStatValue(value: number | null | undefined) {
       >
         <div class="flex items-center gap-2">
           <span
-            class="rounded-full bg-warning px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white"
+            class="rounded-full bg-warning px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white"
           >
             Goal {{ formatStatValue(block.goal) }}
           </span>
@@ -201,7 +203,7 @@ function formatStatValue(value: number | null | undefined) {
       </div>
 
       <div
-        class="mt-4 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-widest text-muted/40"
+        class="mt-6 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40"
       >
         <span>Start</span>
         <span>{{ latestEntry?.label || "Current" }}</span>
@@ -210,7 +212,7 @@ function formatStatValue(value: number | null | undefined) {
 
     <div class="space-y-4">
       <div class="flex items-center justify-between px-2">
-        <h3 class="text-sm font-bold uppercase tracking-widest text-muted/60">Data Log</h3>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Data Log</p>
         <UButton
           color="primary"
           variant="soft"
@@ -276,9 +278,11 @@ function formatStatValue(value: number | null | undefined) {
 
         <div
           v-if="block.entries.length === 0"
-          class="flex flex-col items-center justify-center rounded-[32px] border border-dashed border-muted/30 bg-default/20 py-12 text-center"
+          class="rounded-3xl border border-dashed border-muted/20 bg-elevated/5 py-12 text-center"
         >
-          <p class="text-sm font-bold uppercase tracking-widest text-muted/60">No data entries</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+            No data entries
+          </p>
         </div>
       </div>
     </div>

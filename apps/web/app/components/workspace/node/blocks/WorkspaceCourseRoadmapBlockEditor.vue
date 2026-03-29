@@ -109,40 +109,44 @@ function removeOutcome(courseId: string, outcomeId: string) {
 
 function getCourseClasses(status: WorkspaceCourseStatus) {
   return status === "in-progress"
-    ? "border-primary/25 bg-primary/5"
-    : "border-muted/40 bg-elevated/20";
+    ? "border-primary/20 bg-primary/5"
+    : "border-muted/20 bg-elevated/10";
 }
 </script>
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Courses</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Courses</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ summary.courseCount }}
         </p>
+        <p class="mt-1 text-sm text-muted">Total curriculum units</p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Recorded</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Recorded</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ summary.recordedLessons }}/{{ summary.lessonCount }}
         </p>
+        <p class="mt-1 text-sm text-muted">Production progress</p>
       </div>
 
-      <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">Average</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-warning">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Average</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ summary.averageCompletionPercent }}%
         </p>
+        <p class="mt-1 text-sm text-muted">Overall completion rate</p>
       </div>
 
-      <div class="rounded-[28px] bg-secondary/10 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-secondary/80">Active</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-secondary">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Active</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ summary.inProgressCount }}
         </p>
+        <p class="mt-1 text-sm text-muted">Courses currently in progress</p>
       </div>
     </div>
 
@@ -167,7 +171,7 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
 
     <div
       v-if="block.courses.length === 0"
-      class="rounded-[32px] border border-dashed border-muted/40 bg-elevated/10 py-14 text-center"
+      class="border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
     >
       <p class="text-sm font-semibold text-muted">No courses mapped yet.</p>
     </div>
@@ -176,7 +180,7 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
       <article
         v-for="course in block.courses"
         :key="course.id"
-        class="rounded-[34px] border p-5"
+        class="rounded-3xl border p-5"
         :class="getCourseClasses(course.status)"
       >
         <div class="flex flex-wrap items-start justify-between gap-4">
@@ -215,7 +219,7 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
             </div>
 
             <div
-              class="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted"
+              class="flex flex-wrap items-center gap-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
             >
               <span
                 >{{ getCourseRoadmapCourseProgress(course).recordedLessons }}/{{
@@ -238,14 +242,14 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
             color="neutral"
             variant="ghost"
             icon="i-lucide-trash-2"
-            class="rounded-xl hover:bg-error/10 hover:text-error"
+            class="rounded-2xl hover:bg-error/10 hover:text-error"
             @click="removeCourse(course.id)"
           />
         </div>
 
         <div class="mt-5 space-y-3">
           <div class="flex items-center justify-between gap-3">
-            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Lesson Flow</p>
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Lesson Flow</p>
             <UButton
               color="neutral"
               variant="soft"
@@ -258,16 +262,16 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
             </UButton>
           </div>
 
-          <div class="flex gap-2 overflow-x-auto pb-1">
+          <div class="flex gap-2 overflow-x-auto pb-4 -mx-4 px-4 sm:mx-0 sm:px-0">
             <button
               v-for="(lesson, lessonIndex) in course.lessons"
               :key="lesson.id"
               type="button"
-              class="flex min-w-[9rem] items-center gap-2 rounded-2xl border px-3 py-2 text-left transition"
+              class="flex min-w-[10rem] items-center gap-2 rounded-2xl border px-3 py-2 text-left transition"
               :class="
                 lesson.recorded
-                  ? 'border-success/35 bg-success/10 text-success'
-                  : 'border-muted/35 bg-default/70 text-muted hover:border-primary/20 hover:text-highlighted'
+                  ? 'border-success/20 bg-success/10 text-success'
+                  : 'border-muted/20 bg-default/40 text-muted/60 hover:border-primary/30 hover:text-highlighted'
               "
               @click="toggleLesson(course.id, lesson.id)"
             >
@@ -275,8 +279,8 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
                 class="flex size-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold"
                 :class="
                   lesson.recorded
-                    ? 'border-success/40 bg-success/15'
-                    : 'border-muted/40 bg-elevated/40'
+                    ? 'border-success/20 bg-success/10'
+                    : 'border-muted/20 bg-elevated/10'
                 "
               >
                 <UIcon v-if="lesson.recorded" name="i-lucide-check" class="size-3.5" />
@@ -292,7 +296,7 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
             <div
               v-for="(lesson, lessonIndex) in course.lessons"
               :key="`${course.id}-${lesson.id}-editor`"
-              class="flex items-center gap-3 rounded-2xl border border-muted/25 bg-default/65 px-3 py-3"
+              class="flex items-center gap-3 rounded-2xl border border-muted/20 bg-default/40 px-3 py-3"
             >
               <UButton
                 :color="lesson.recorded ? 'success' : 'neutral'"
@@ -307,7 +311,8 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
               <UInput
                 :model-value="lesson.title"
                 placeholder="Lesson title"
-                class="flex-1 rounded-2xl"
+                class="flex-1"
+                :ui="{ base: 'rounded-2xl' }"
                 @update:model-value="
                   mutateCourse(course.id, (entry) => {
                     const target = entry.lessons.find((candidate) => candidate.id === lesson.id);
@@ -317,7 +322,7 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
                 "
               />
 
-              <span class="text-xs font-bold uppercase tracking-[0.18em] text-muted">
+              <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
                 {{ lessonIndex + 1 }}
               </span>
 
@@ -335,7 +340,7 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
 
         <div class="mt-6 space-y-3">
           <div class="flex items-center justify-between gap-3">
-            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
               Learning Outcomes
             </p>
             <UButton
@@ -354,7 +359,7 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
             <div
               v-for="outcome in course.outcomes"
               :key="outcome.id"
-              class="flex items-start gap-3 rounded-2xl border border-muted/25 bg-default/65 px-3 py-3"
+              class="flex items-start gap-3 rounded-2xl border border-muted/20 bg-default/40 px-3 py-3"
             >
               <div
                 class="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-success/10 text-success"
@@ -365,7 +370,8 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
               <UInput
                 :model-value="outcome.text"
                 placeholder="Expected learning outcome"
-                class="flex-1 rounded-2xl"
+                class="flex-1"
+                :ui="{ base: 'rounded-2xl' }"
                 @update:model-value="
                   mutateCourse(course.id, (entry) => {
                     const target = entry.outcomes.find((candidate) => candidate.id === outcome.id);

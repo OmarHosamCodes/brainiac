@@ -69,8 +69,12 @@ function toggleMilestone(id: string) {
     <!-- Timeline Header -->
     <div class="flex items-center justify-between px-2">
       <div class="space-y-1">
-        <h3 class="text-sm font-bold uppercase tracking-widest text-muted/60">Milestone Journey</h3>
-        <p class="text-xs text-muted/40">Chronological project roadmap</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+          Milestone Journey
+        </p>
+        <p class="text-[10px] font-bold uppercase tracking-widest text-muted/40">
+          Chronological project roadmap
+        </p>
       </div>
       <UButton
         color="primary"
@@ -117,7 +121,7 @@ function toggleMilestone(id: string) {
           <div class="flex items-start justify-between gap-4">
             <div class="flex-1 min-w-0" @click="toggleMilestone(milestone.id)">
               <div class="flex flex-wrap items-center gap-2 mb-1">
-                <span class="text-[10px] font-black uppercase tracking-widest opacity-60">
+                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-muted/60">
                   {{ milestone.date || "No Date Set" }}
                 </span>
                 <UBadge
@@ -214,10 +218,15 @@ function toggleMilestone(id: string) {
           <!-- Expanded Details -->
           <div
             v-if="expandedMilestoneId === milestone.id"
-            class="mt-6 space-y-4 border-t border-muted/10 pt-6"
+            class="mt-6 space-y-6 border-t border-muted/10 pt-6"
           >
             <div class="grid grid-cols-2 gap-4">
-              <UFormField label="Milestone Date" size="sm">
+              <UFormField size="sm">
+                <template #label>
+                  <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+                    >Milestone Date</span
+                  >
+                </template>
                 <UInput
                   :model-value="milestone.date ?? ''"
                   type="date"
@@ -234,7 +243,12 @@ function toggleMilestone(id: string) {
                 />
               </UFormField>
 
-              <UFormField label="Status" size="sm">
+              <UFormField size="sm">
+                <template #label>
+                  <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+                    >Status</span
+                  >
+                </template>
                 <USelect
                   :model-value="milestone.status"
                   :items="
@@ -256,7 +270,12 @@ function toggleMilestone(id: string) {
               </UFormField>
             </div>
 
-            <UFormField label="Supporting Note" size="sm">
+            <UFormField size="sm">
+              <template #label>
+                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+                  >Supporting Note</span
+                >
+              </template>
               <UTextarea
                 :model-value="milestone.note"
                 variant="soft"
@@ -284,10 +303,10 @@ function toggleMilestone(id: string) {
       <!-- Empty State -->
       <div
         v-if="block.milestones.length === 0"
-        class="flex flex-col items-center justify-center rounded-[32px] border border-dashed border-muted/30 bg-default/20 py-20 text-center"
+        class="rounded-3xl border border-dashed border-muted/20 bg-elevated/5 py-12 text-center"
       >
-        <UIcon name="i-lucide-milestone" class="size-10 text-muted/40 mb-4" />
-        <p class="text-sm font-bold text-muted/60 uppercase tracking-widest">
+        <UIcon name="i-lucide-milestone" class="size-8 text-muted/20 mb-3" />
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
           No milestones defined
         </p>
         <UButton

@@ -198,15 +198,14 @@ async function runAnalysis() {
 
 <template>
   <div class="space-y-6">
+    <!-- Analysis Config Section -->
     <section
-      class="rounded-[34px] border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-default p-6"
+      class="rounded-3xl border border-primary/20 bg-primary/5 p-6"
     >
-      <div class="flex flex-wrap items-start justify-between gap-3">
+      <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">
-            Education Agent
-          </p>
-          <p class="mt-2 text-sm text-muted">
+          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">Education Agent</h3>
+          <p class="text-xs text-muted mt-1">
             Pick a course, tune the analysis request, and generate a full outcomes matrix from the
             current roadmap context.
           </p>
@@ -215,53 +214,54 @@ async function runAnalysis() {
         <div class="flex flex-wrap gap-2">
           <UButton
             color="neutral"
-            variant="soft"
+            variant="subtle"
             icon="i-lucide-refresh-ccw"
             class="rounded-full px-4"
+            size="sm"
             :disabled="!selectedCourseOption"
             @click="applySuggestedPrompt"
           >
-            Use Suggested Prompt
+            Suggested
           </UButton>
           <UButton
             color="primary"
-            variant="soft"
+            variant="subtle"
             icon="i-lucide-sparkles"
             class="rounded-full px-4"
+            size="sm"
             :disabled="!selectedCourseOption || !block.prompt.trim()"
             :loading="isRunning"
             @click="runAnalysis"
           >
-            Run AI Analysis
+            Run AI
           </UButton>
         </div>
       </div>
 
-      <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,0.35fr)_minmax(0,0.65fr)]">
-        <UFormField
-          label="Course"
-          description="The selected roadmap course is passed to the Education agent with lesson and outcome context."
-        >
+      <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,0.35fr)_minmax(0,0.65fr)]">
+        <div class="space-y-2">
+          <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Selected Course</label>
           <USelect
             :model-value="selectedCourseOption?.value ?? ''"
             :items="availableCourses"
-            class="rounded-2xl"
+            variant="subtle"
+            class="rounded-xl"
             :disabled="availableCourses.length === 0"
             @update:model-value="updateSelectedCourse($event)"
           />
-        </UFormField>
+          <p class="text-[10px] text-muted/40 leading-relaxed px-1">Lessons and outcome context are passed automatically.</p>
+        </div>
 
-        <UFormField
-          label="Prompt"
-          description="This is the visible request. The full course structure is appended automatically."
-        >
+        <div class="space-y-2">
+          <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Analysis Prompt</label>
           <UTextarea
             :model-value="block.prompt"
             autoresize
+            variant="subtle"
             :rows="4"
-            class="rounded-[26px]"
-            :ui="{ base: 'rounded-[26px] bg-default/85 leading-7' }"
-            placeholder="Design a learning outcomes matrix for my Content Marketing Mastery course..."
+            class="rounded-2xl"
+            :ui="{ base: 'bg-default/60 leading-relaxed' }"
+            placeholder="Design a learning outcomes matrix..."
             @update:model-value="
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== 'learning-outcomes-matrix') return;
@@ -269,69 +269,71 @@ async function runAnalysis() {
               })
             "
           />
-        </UFormField>
+        </div>
       </div>
 
       <UAlert
         v-if="availableCourses.length === 0"
-        class="mt-4"
+        class="mt-6 rounded-2xl"
         color="warning"
-        variant="soft"
+        variant="subtle"
         icon="i-lucide-book-open"
         title="No course context found"
-        description="Add a Course Roadmap block to this node to make a course selectable for AI analysis."
+        description="Add a Course Roadmap block to this node to enable AI analysis."
       />
     </section>
 
-    <section class="rounded-[32px] border border-muted/30 bg-default/70 p-5">
+    <!-- Latest Output -->
+    <section class="rounded-3xl border border-muted/20 bg-default/40 p-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p class="text-sm font-semibold text-highlighted">Analysis output</p>
-          <p class="text-sm text-muted">
-            The Education agent returns a structured matrix that maps modules to capabilities and
-            behaviors.
+          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">Analysis output</h3>
+          <p class="text-xs text-muted mt-1">
+            The Education agent returns a structured matrix mapping modules to capabilities and behaviors.
           </p>
         </div>
 
-        <p v-if="block.outputHistory[0]?.createdAt" class="text-xs font-medium text-muted">
-          Last run {{ formatDateTime(block.outputHistory[0].createdAt) }}
+        <p v-if="block.outputHistory[0]?.createdAt" class="text-[10px] font-bold uppercase tracking-widest text-muted/60">
+          Last updated {{ formatDateTime(block.outputHistory[0].createdAt) }}
         </p>
       </div>
 
       <div
-        class="prose prose-sm dark:prose-invert mt-4 max-w-none rounded-[24px] border border-muted/30 bg-elevated/20 p-5 text-sm leading-7 text-toned"
+        class="prose prose-sm dark:prose-invert mt-6 max-w-none rounded-2xl border border-muted/20 bg-elevated/5 p-5 text-sm leading-relaxed text-toned shadow-sm"
         v-html="renderedLatestOutput"
       />
     </section>
 
-    <div v-if="block.outputHistory.length > 0" class="space-y-3">
+    <!-- History -->
+    <div v-if="block.outputHistory.length > 1" class="space-y-4">
       <div class="flex items-center justify-between px-1">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Previous Runs</p>
-        <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">
-          {{ block.outputHistory.length }} saved
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Previous Iterations</p>
+        <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-muted/40">
+          {{ block.outputHistory.length - 1 }} saved
         </span>
       </div>
 
-      <div class="grid gap-3">
-        <article
-          v-for="entry in block.outputHistory"
-          :key="entry.id"
-          class="rounded-[24px] border border-muted/25 bg-default/60 p-4"
-        >
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <p class="text-xs font-semibold text-highlighted">
-              {{ entry.prompt }}
-            </p>
-            <span class="text-[10px] font-bold uppercase tracking-[0.18em] text-muted">
-              {{ formatDateTime(entry.createdAt) }}
-            </span>
-          </div>
+      <div class="grid gap-4">
+        <template v-for="(entry, index) in block.outputHistory" :key="entry.id">
+          <article
+            v-if="index > 0"
+            class="rounded-2xl border border-muted/20 bg-default/40 p-4"
+          >
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <p class="text-xs font-bold text-highlighted uppercase tracking-wider">
+                {{ entry.prompt }}
+              </p>
+              <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-muted/60">
+                {{ formatDateTime(entry.createdAt) }}
+              </span>
+            </div>
 
-          <div
-            class="prose prose-sm dark:prose-invert mt-3 max-w-none text-sm leading-7 text-toned"
-            v-html="renderSimpleMarkdown(entry.output)"
-          />
-        </article>
+            <div
+              class="prose prose-sm dark:prose-invert mt-4 max-w-none text-xs leading-relaxed text-toned opacity-80"
+              v-html="renderSimpleMarkdown(entry.output)"
+            />
+          </article>
+        </template>
       </div>
     </div>
   </div>

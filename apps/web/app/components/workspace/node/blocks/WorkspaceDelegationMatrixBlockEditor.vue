@@ -81,11 +81,11 @@ function toHourlyRate(value: string) {
 function getStatusCardClasses(status: WorkspaceDelegationStatus) {
   switch (status) {
     case "delegated":
-      return "border-success/35 bg-success/5";
+      return "border-success/20 bg-success/5";
     case "transitioning":
-      return "border-warning/35 bg-warning/5";
+      return "border-warning/20 bg-warning/5";
     default:
-      return "border-error/35 bg-error/5";
+      return "border-error/20 bg-error/5";
   }
 }
 
@@ -106,50 +106,50 @@ function getStatusButtonClasses(
 ) {
   if (status === activeStatus) {
     if (status === "delegated") {
-      return "border-success/40 bg-success/10 text-success";
+      return "border-success/20 bg-success/10 text-success";
     }
 
     if (status === "transitioning") {
-      return "border-warning/40 bg-warning/10 text-warning";
+      return "border-warning/20 bg-warning/10 text-warning";
     }
 
-    return "border-error/40 bg-error/10 text-error";
+    return "border-error/20 bg-error/10 text-error";
   }
 
-  return "border-muted/40 bg-default/60 text-muted hover:border-muted hover:text-highlighted";
+  return "border-muted/20 bg-default/40 text-muted/60 hover:border-muted/30 hover:text-highlighted";
 }
 </script>
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Recoverable</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Recoverable</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ summary.totalHoursPerWeek }}h
         </p>
         <p class="mt-1 text-sm text-muted">Total hours listed per week</p>
       </div>
 
-      <div class="rounded-[28px] bg-error/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">Still Trapped</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-error">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Still Trapped</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ summary.pendingHoursPerWeek }}h
         </p>
         <p class="mt-1 text-sm text-muted">Founder time not delegated yet</p>
       </div>
 
-      <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">Weekly Cost</p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-warning">
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Weekly Cost</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
           {{ formatCurrency(summary.pendingRecoverableValue) }}
         </p>
         <p class="mt-1 text-sm text-muted">Based on the current hourly rate</p>
       </div>
 
-      <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Delegated</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">{{ delegatedCoverage }}%</p>
+      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Delegated</p>
+        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">{{ delegatedCoverage }}%</p>
         <p class="mt-1 text-sm text-muted">{{ summary.delegatedCount }} items already handed off</p>
       </div>
     </div>
@@ -163,12 +163,13 @@ function getStatusButtonClasses(
       </div>
 
       <div class="flex flex-wrap items-center gap-3">
-        <UFormField label="Hourly rate" size="sm">
+        <UFormField label="Hourly rate" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60' }">
           <UInput
             :model-value="String(block.hourlyRate)"
             type="number"
             icon="i-lucide-badge-dollar-sign"
-            class="w-32 rounded-2xl"
+            class="w-32"
+            :ui="{ base: 'rounded-2xl' }"
             @update:model-value="
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== 'delegation-matrix') return;
@@ -185,14 +186,14 @@ function getStatusButtonClasses(
           class="rounded-full px-4"
           @click="addItem"
         >
-          Add Task I Shouldn't Be Doing
+          Add Task
         </UButton>
       </div>
     </div>
 
     <div
       v-if="block.items.length === 0"
-      class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center"
+      class="border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
     >
       <p class="text-sm font-semibold text-muted">No delegation items yet.</p>
     </div>
@@ -201,7 +202,7 @@ function getStatusButtonClasses(
       <article
         v-for="item in block.items"
         :key="item.id"
-        class="relative overflow-hidden rounded-[32px] border p-5"
+        class="relative overflow-hidden rounded-3xl border p-5"
         :class="getStatusCardClasses(item.status)"
       >
         <div class="absolute inset-y-0 left-0 w-1.5" :class="getStatusAccentClasses(item.status)" />
@@ -230,24 +231,25 @@ function getStatusButtonClasses(
           </div>
 
           <div class="flex items-center gap-2">
-            <UBadge variant="soft" size="sm" class="rounded-full">
+            <UBadge variant="soft" size="sm" class="rounded-full px-3">
               {{ workspaceDelegationStatusLabels[item.status] }}
             </UBadge>
             <UButton
               color="neutral"
               variant="ghost"
               icon="i-lucide-trash-2"
-              class="rounded-xl hover:text-error"
+              class="rounded-2xl hover:text-error"
               @click="removeItem(item.id)"
             />
           </div>
         </div>
 
         <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_14rem]">
-          <UFormField label="From" size="sm">
+          <UFormField label="From" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60' }">
             <UInput
               :model-value="item.from"
-              class="rounded-2xl"
+              class="w-full"
+              :ui="{ base: 'rounded-2xl' }"
               placeholder="Ahmed"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
@@ -264,10 +266,11 @@ function getStatusButtonClasses(
             <UIcon name="i-lucide-arrow-right" class="size-5" />
           </div>
 
-          <UFormField label="To" size="sm">
+          <UFormField label="To" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60' }">
             <UInput
               :model-value="item.to"
-              class="rounded-2xl"
+              class="w-full"
+              :ui="{ base: 'rounded-2xl' }"
               placeholder="Delegate owner"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
@@ -280,12 +283,13 @@ function getStatusButtonClasses(
             />
           </UFormField>
 
-          <UFormField label="Hours / week" size="sm">
+          <UFormField label="Hours / week" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60' }">
             <UInput
               :model-value="String(item.hoursPerWeek)"
               type="number"
               step="0.5"
-              class="rounded-2xl"
+              class="w-full"
+              :ui="{ base: 'rounded-2xl' }"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'delegation-matrix') return;
@@ -303,7 +307,7 @@ function getStatusButtonClasses(
             v-for="status in statusOptions"
             :key="status"
             type="button"
-            class="rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] transition"
+            class="rounded-full border px-4 py-2 text-[10px] font-bold uppercase tracking-[0.2em] transition"
             :class="getStatusButtonClasses(status, item.status)"
             @click="
               mutateBlock(tabId, block.id, (entry) => {

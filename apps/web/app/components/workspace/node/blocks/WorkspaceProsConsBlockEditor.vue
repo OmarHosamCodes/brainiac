@@ -51,15 +51,15 @@ function addItem(list: "pros" | "cons") {
 
 <template>
   <div class="space-y-8">
-    <div class="rounded-3xl border p-6" :class="verdictClass">
+    <div class="rounded-3xl border border-muted/20 p-6 transition-colors" :class="verdictClass">
       <div class="mb-4 flex items-center justify-between gap-4">
         <div>
-          <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Verdict</p>
-          <p class="mt-1 text-3xl font-black tracking-tight">{{ verdictLabel }}</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Verdict</p>
+          <p class="mt-1 text-2xl sm:text-3xl font-black tracking-tight">{{ verdictLabel }}</p>
         </div>
         <div class="text-right">
-          <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Score Delta</p>
-          <p class="mt-1 text-3xl font-black">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Score Delta</p>
+          <p class="mt-1 text-2xl sm:text-3xl font-black tracking-tight">
             {{ summary.totalScore > 0 ? "+" : "" }}{{ summary.totalScore }}
           </p>
         </div>
@@ -67,12 +67,12 @@ function addItem(list: "pros" | "cons") {
 
       <div class="grid gap-4 sm:grid-cols-2">
         <div>
-          <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Pro score</p>
-          <p class="mt-1 text-2xl font-black">{{ summary.prosWeight }}</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Pro score</p>
+          <p class="mt-1 text-xl sm:text-2xl font-black tracking-tight">{{ summary.prosWeight }}</p>
         </div>
         <div>
-          <p class="text-[10px] font-bold uppercase tracking-widest opacity-70">Con score</p>
-          <p class="mt-1 text-2xl font-black">{{ summary.consWeight }}</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] opacity-70">Con score</p>
+          <p class="mt-1 text-xl sm:text-2xl font-black tracking-tight">{{ summary.consWeight }}</p>
         </div>
       </div>
     </div>
@@ -82,14 +82,14 @@ function addItem(list: "pros" | "cons") {
         <div class="flex items-center justify-between px-2">
           <div class="flex items-center gap-2 text-success">
             <UIcon name="i-lucide-plus-circle" class="size-5" />
-            <h3 class="font-bold uppercase tracking-wider">Pros</h3>
+            <h3 class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Pros</h3>
           </div>
           <UButton
             color="success"
             variant="soft"
             icon="i-lucide-plus"
             size="xs"
-            class="rounded-full"
+            class="rounded-full px-4"
             @click="addItem('pros')"
           >
             Add Point
@@ -99,14 +99,14 @@ function addItem(list: "pros" | "cons") {
         <div
           v-for="item in block.pros"
           :key="item.id"
-          class="group flex items-center gap-3 rounded-2xl border border-success/10 bg-default/40 p-3 transition-all hover:bg-default/60"
+          class="group flex items-center gap-3 rounded-2xl border border-muted/20 bg-default/40 p-3 transition-all hover:bg-default/60"
         >
           <UInput
             :model-value="item.text"
             variant="none"
             placeholder="Add a reason in favor..."
             class="flex-1"
-            :ui="{ base: 'px-0 text-sm text-highlighted' }"
+            :ui="{ base: 'px-0 text-sm text-highlighted font-semibold' }"
             @update:model-value="
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== 'pros-cons') {
@@ -168,14 +168,14 @@ function addItem(list: "pros" | "cons") {
         <div class="flex items-center justify-between px-2">
           <div class="flex items-center gap-2 text-error">
             <UIcon name="i-lucide-minus-circle" class="size-5" />
-            <h3 class="font-bold uppercase tracking-wider">Cons</h3>
+            <h3 class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Cons</h3>
           </div>
           <UButton
             color="error"
             variant="soft"
             icon="i-lucide-plus"
             size="xs"
-            class="rounded-full"
+            class="rounded-full px-4"
             @click="addItem('cons')"
           >
             Add Point
@@ -185,14 +185,14 @@ function addItem(list: "pros" | "cons") {
         <div
           v-for="item in block.cons"
           :key="item.id"
-          class="group flex items-center gap-3 rounded-2xl border border-error/10 bg-default/40 p-3 transition-all hover:bg-default/60"
+          class="group flex items-center gap-3 rounded-2xl border border-muted/20 bg-default/40 p-3 transition-all hover:bg-default/60"
         >
           <UInput
             :model-value="item.text"
             variant="none"
             placeholder="Add a risk or downside..."
             class="flex-1"
-            :ui="{ base: 'px-0 text-sm text-highlighted' }"
+            :ui="{ base: 'px-0 text-sm text-highlighted font-semibold' }"
             @update:model-value="
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== 'pros-cons') {
