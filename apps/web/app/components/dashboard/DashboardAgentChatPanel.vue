@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DashboardConversationMessage } from "@brainiac/agent";
+import type { DashboardAgentToolPreset, DashboardConversationMessage } from "@brainiac/agent";
 import type { WorkspaceNode } from "@brainiac/workspace";
 import { computed, ref, toRef } from "vue";
 
@@ -27,6 +27,7 @@ const {
   accountStatusError,
   accountUsageLabel,
   activeConversationId,
+  activeConversationToolPresetOption,
   activeConversationTitle,
   activeConversationUsageLabel,
   activeConversationUsageRatio,
@@ -47,7 +48,6 @@ const {
   conversationOptions,
   creatorFilterOptions,
   currentDefaultModelId,
-  cycleToolPreset,
   draft,
   error,
   favoriteModelOptions,
@@ -55,6 +55,7 @@ const {
   filteredModelCount,
   filteredModelOptions,
   hasConversations,
+  hasPendingToolPresetChange,
   isDeleteDialogOpen,
   isDeletingConversation,
   isFavoriteModel,
@@ -84,14 +85,18 @@ const {
   selectedModelId,
   selectedModelOption,
   selectedNodes,
+  selectedToolPresetDescription,
   selectedToolPresetOption,
   sendMessage,
+  selectToolPreset,
   setPreferredDefaultModel,
   startNewConversation,
   submitRenameConversation,
   toggleCreatorFilter,
   toggleFavoriteModel,
   topModelOptions,
+  toolPresetOptions,
+  toolPresetStatusLabel,
   toolsOnly,
 } = useDashboardAgentChat(toRef(props, "nodes"));
 
@@ -260,6 +265,10 @@ function selectModel(modelId: string) {
   }
 
   selectedModelId.value = modelId;
+}
+
+function getToolPresetIcon(preset: DashboardAgentToolPreset) {
+  return preset === "agent" ? "i-lucide-bot" : "i-lucide-message-square-more";
 }
 
 function renderAssistantMessage(content: string) {
@@ -761,17 +770,110 @@ function closeToolResponsePreview() {
                 </template>
               </UPopover>
 
-              <UButton
-                color="neutral"
-                variant="soft"
-                size="sm"
-                class="rounded-xl"
-                type="button"
-                @click="cycleToolPreset"
-              >
-                <UIcon name="i-lucide-sliders-horizontal" class="size-3.5" />
-                {{ selectedToolPresetOption?.label }}
-              </UButton>
+              <UPopover :ui="{ content: 'w-80 rounded-[1.5rem] p-4' }">
+                <UButton color="neutral" variant="soft" size="sm" class="rounded-xl" type="button">
+                  <UIcon
+                    :name="getToolPresetIcon(selectedToolPresetOption?.value ?? 'ask')"
+                    class="size-3.5"
+                  />
+                  {{ selectedToolPresetOption?.label }}
+                  <UBadge
+                    v-if="hasPendingToolPresetChange"
+                    color="neutral"
+                    variant="subtle"
+                    size="sm"
+                    class="rounded-full px-2 py-0.5 text-[10px]"
+                  >
+                    Next
+                  </UBadge>
+                </UButton>
+
+                <template #content>
+                  <div class="space-y-3">
+                    <div class="space-y-1">
+                      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400">
+                        Turn mode
+                      </p>
+                      <p class="text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+                        Switch between ask and agent mid-thread. The next reply uses the selected
+                        mode.
+                      </p>
+                    </div>
+
+                    <div class="space-y-1">
+                      <button
+                        v-for="preset in toolPresetOptions"
+                        :key="preset.value"
+                        type="button"
+                        class="flex w-full items-start justify-between gap-3 rounded-xl px-3 py-2 text-left transition"
+                        :class="
+                          selectedToolPresetOption?.value === preset.value
+                            ? 'bg-neutral-100 dark:bg-neutral-800'
+                            : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/60'
+                        "
+                        @click="selectToolPreset(preset.value)"
+                      >
+                        <div class="min-w-0">
+                          <div class="flex items-center gap-2">
+                            <UIcon
+                              :name="getToolPresetIcon(preset.value)"
+                              class="size-3.5 text-neutral-500 dark:text-neutral-400"
+                            />
+                            <p class="text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+                              {{ preset.label }}
+                            </p>
+                          </div>
+                          <p class="mt-1 text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">
+                            {{ preset.description }}
+                          </p>
+                        </div>
+
+                        <div class="flex shrink-0 items-center gap-1.5">
+                          <UBadge
+                            v-if="
+                              activeConversationId &&
+                              activeConversationToolPresetOption?.value === preset.value
+                            "
+                            color="neutral"
+                            variant="soft"
+                            size="sm"
+                            class="rounded-full px-2 py-0.5 text-[10px]"
+                          >
+                            Thread
+                          </UBadge>
+                          <UBadge
+                            v-if="
+                              selectedToolPresetOption?.value === preset.value &&
+                              hasPendingToolPresetChange
+                            "
+                            color="neutral"
+                            variant="subtle"
+                            size="sm"
+                            class="rounded-full px-2 py-0.5 text-[10px]"
+                          >
+                            Next
+                          </UBadge>
+                          <UBadge
+                            v-else-if="selectedToolPresetOption?.value === preset.value"
+                            color="neutral"
+                            variant="subtle"
+                            size="sm"
+                            class="rounded-full px-2 py-0.5 text-[10px]"
+                          >
+                            Selected
+                          </UBadge>
+                        </div>
+                      </button>
+                    </div>
+
+                    <div
+                      class="rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 text-[11px] leading-relaxed text-neutral-500 dark:border-neutral-800/80 dark:bg-neutral-900/70 dark:text-neutral-400"
+                    >
+                      {{ toolPresetStatusLabel }}
+                    </div>
+                  </div>
+                </template>
+              </UPopover>
 
               <UPopover :ui="{ content: 'w-64 rounded-[1.5rem] p-4' }">
                 <UButton color="neutral" variant="soft" size="sm" class="rounded-xl" type="button">
@@ -849,16 +951,20 @@ function closeToolResponsePreview() {
             </div>
 
             <div class="flex items-end justify-between gap-3">
-              <p
-                class="min-w-0 text-[11px] leading-5"
-                :class="
-                  hasComposerSupportError
-                    ? 'text-red-600 dark:text-red-400'
-                    : 'text-neutral-500 dark:text-neutral-400'
-                "
-              >
-                {{ composerSupportText }}
-              </p>
+              <div class="min-w-0 space-y-1">
+                <p class="text-[11px] font-medium leading-5 text-neutral-700 dark:text-neutral-300">
+                  {{ toolPresetStatusLabel }}
+                </p>
+                <p class="min-w-0 text-[11px] leading-5 text-neutral-500 dark:text-neutral-400">
+                  <span>{{ selectedToolPresetDescription }}</span>
+                  <span
+                    v-if="composerSupportText"
+                    :class="hasComposerSupportError ? 'text-red-600 dark:text-red-400' : ''"
+                  >
+                    {{ hasComposerSupportError ? ` ${composerSupportText}` : ` · ${composerSupportText}` }}
+                  </span>
+                </p>
+              </div>
 
               <UChatPromptSubmit
                 :disabled="!canSend"

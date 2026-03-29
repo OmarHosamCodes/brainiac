@@ -294,6 +294,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   const isDeleteDialogOpen = ref(false);
   const conversationDraftModelId = ref<string>();
   const conversationDraftToolPreset = ref<DashboardAgentToolPreset>("ask");
+  const syncedConversationId = ref<string | null>(null);
+  const syncedConversationToolPreset = ref<DashboardAgentToolPreset | null>(null);
   const preferredDefaultModelId = ref<string>();
   const favoriteModelIds = ref<string[]>([]);
   const modelSearch = ref("");
@@ -445,7 +447,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
           value: "agent",
           label: "Agent",
           description:
-            "Inspect before answering and escalate to deeper detail only when necessary.",
+            "Inspect before answering and make workspace changes when the user asks for them.",
         },
       ] satisfies Array<{
         value: DashboardAgentToolPreset;
@@ -517,19 +519,26 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     () => draft.value.trim().length > 0 && !chatTurnMutation.isPending.value,
   );
   const composerPlaceholder = computed(() => {
+    const modePrefix =
+      selectedToolPreset.value === "agent"
+        ? "Tell the agent what to inspect or change in"
+        : "Ask about";
+
     if (selectedNodes.value.length === 1) {
-      return `Ask about “${selectedNodes.value[0]?.title}”. Type @ to add more nodes.`;
+      return `${modePrefix} “${selectedNodes.value[0]?.title}”. Type @ to add more nodes.`;
     }
 
     if (selectedNodes.value.length > 1) {
-      return `Ask about these ${selectedNodes.value.length} selected nodes. Type @ to refine the scope.`;
+      return `${modePrefix} these ${selectedNodes.value.length} selected nodes. Type @ to refine the scope.`;
     }
 
     if (singleScopeTitle.value) {
-      return `Ask about "${singleScopeTitle.value}". Type @ to refine the scope.`;
+      return `${modePrefix} "${singleScopeTitle.value}". Type @ to refine the scope.`;
     }
 
-    return "Ask the agent about this dashboard. Type @ to narrow the turn to a node.";
+    return selectedToolPreset.value === "agent"
+      ? "Tell the agent what to inspect or change in this dashboard. Type @ to narrow the turn to a node."
+      : "Ask the agent about this dashboard. Type @ to narrow the turn to a node.";
   });
   const scopeLabel = computed(() => {
     if (selectedNodes.value.length > 0) {
@@ -549,6 +558,9 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       activeConversation.value?.title ??
       activeConversationSummary.value?.title ??
       "New conversation",
+  );
+  const activeConversationToolPreset = computed<DashboardAgentToolPreset>(
+    () => activeConversation.value?.toolPreset ?? activeConversationSummary.value?.toolPreset ?? "ask",
   );
   const selectedModelId = computed({
     get: () => conversationDraftModelId.value,
@@ -603,6 +615,34 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       toolPresetOptions.value.find((preset) => preset.value === selectedToolPreset.value) ??
       toolPresetOptions.value[0],
   );
+  const activeConversationToolPresetOption = computed(
+    () =>
+      toolPresetOptions.value.find((preset) => preset.value === activeConversationToolPreset.value) ??
+      toolPresetOptions.value[0],
+  );
+  const hasPendingToolPresetChange = computed(
+    () =>
+      Boolean(activeConversationId.value) &&
+      selectedToolPreset.value !== activeConversationToolPreset.value,
+  );
+  const selectedToolPresetDescription = computed(
+    () => selectedToolPresetOption.value?.description ?? "",
+  );
+  const toolPresetStatusLabel = computed(() => {
+    const selectedPresetLabel = selectedToolPresetOption.value?.label ?? "Ask";
+
+    if (!activeConversationId.value) {
+      return `${selectedPresetLabel} mode will be used for this new conversation.`;
+    }
+
+    if (hasPendingToolPresetChange.value) {
+      const activePresetLabel = activeConversationToolPresetOption.value?.label ?? "Ask";
+
+      return `Next reply switches this thread from ${activePresetLabel} to ${selectedPresetLabel}.`;
+    }
+
+    return `${selectedPresetLabel} mode is active for this thread.`;
+  });
   const availableCredits = computed(() => accountStatusQuery.data.value?.availableCredits ?? 0);
   const accountBalanceLabel = computed(() => {
     if (accountStatusQuery.isLoading.value) {
@@ -703,11 +743,25 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     () => activeConversation.value,
     (conversation) => {
       if (!conversation) {
+        syncedConversationId.value = null;
+        syncedConversationToolPreset.value = null;
         return;
       }
 
+      const isNewConversation = syncedConversationId.value !== conversation.id;
+      const hasLocalToolPresetOverride =
+        !isNewConversation &&
+        syncedConversationToolPreset.value !== null &&
+        conversationDraftToolPreset.value !== syncedConversationToolPreset.value;
+
       conversationDraftModelId.value = conversation.model ?? conversationDraftModelId.value;
-      conversationDraftToolPreset.value = conversation.toolPreset;
+
+      if (isNewConversation || !hasLocalToolPresetOverride) {
+        conversationDraftToolPreset.value = conversation.toolPreset;
+      }
+
+      syncedConversationId.value = conversation.id;
+      syncedConversationToolPreset.value = conversation.toolPreset;
     },
     { immediate: true },
   );
@@ -720,6 +774,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     selectedNodeIds.value = [];
 
     if (!activeConversationId.value) {
+      syncedConversationId.value = null;
+      syncedConversationToolPreset.value = null;
       conversationDraftModelId.value = effectiveDefaultModelId.value;
       conversationDraftToolPreset.value = "ask";
     }
@@ -766,6 +822,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     pendingMessages.value = [];
     error.value = null;
     errorDebugDetails.value = null;
+    syncedConversationId.value = null;
+    syncedConversationToolPreset.value = null;
     conversationDraftModelId.value = effectiveDefaultModelId.value;
     conversationDraftToolPreset.value = "ask";
   }
@@ -918,6 +976,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       activeConversationId.value = result.conversation.id;
       conversationDraftModelId.value = result.conversation.model ?? conversationDraftModelId.value;
       conversationDraftToolPreset.value = result.conversation.toolPreset;
+      syncedConversationId.value = result.conversation.id;
+      syncedConversationToolPreset.value = result.conversation.toolPreset;
 
       queryClient.setQueryData(
         conversationsListQueryOptions.queryKey,
@@ -989,6 +1049,10 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     if (nextPreset) {
       selectedToolPreset.value = nextPreset.value;
     }
+  }
+
+  function selectToolPreset(value: DashboardAgentToolPreset) {
+    selectedToolPreset.value = value;
   }
 
   function isFavoriteModel(modelId: string) {
@@ -1065,6 +1129,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     accountUsageLabel,
     activeConversation,
     activeConversationId,
+    activeConversationToolPreset,
+    activeConversationToolPresetOption,
     activeConversationTitle,
     activeConversationUsageLabel,
     activeConversationUsageRatio,
@@ -1097,6 +1163,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     formatUsageProgress,
     formatUsageSummaryTokens,
     hasConversations,
+    hasPendingToolPresetChange,
     isDeleteDialogOpen,
     isDeletingConversation: deleteConversationMutation.isPending,
     isFavoriteModel,
@@ -1128,8 +1195,10 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     selectedModelOption,
     selectedNodes,
     selectedToolPreset,
+    selectedToolPresetDescription,
     selectedToolPresetOption,
     sendMessage,
+    selectToolPreset,
     setPreferredDefaultModel,
     startNewConversation,
     submitRenameConversation,
@@ -1137,6 +1206,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     toggleFavoriteModel,
     topModelOptions,
     toolPresetOptions,
+    toolPresetStatusLabel,
     toolsOnly,
   };
 }
