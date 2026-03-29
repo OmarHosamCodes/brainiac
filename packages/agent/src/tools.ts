@@ -8,17 +8,23 @@ import {
   createWorkspaceAuthorityScorecardBlock,
   createWorkspaceBusinessModelCanvasBlock,
   createWorkspaceChecklistBlock,
+  createWorkspaceCohortHealthDashboardBlock,
   createWorkspaceCollectionsTrackerBlock,
   createWorkspaceContentPipelineBlock,
   createWorkspaceContentQualityRadarBlock,
   createWorkspaceContentRoiTrackerBlock,
+  createWorkspaceCourseRoadmapBlock,
   createWorkspaceCustomBlock,
   createWorkspaceDealScoringMatrixBlock,
+  createWorkspaceDelegationMatrixBlock,
   createWorkspaceDecisionMatrixBlock,
   createWorkspaceDecisionBlock,
+  createWorkspaceEisenhowerMatrixBlock,
   createWorkspaceForecastConfidenceBoardBlock,
   createWorkspaceHookBankBlock,
   createWorkspaceKanbanBlock,
+  createWorkspaceLeadershipRhythmPlannerBlock,
+  createWorkspaceLearningOutcomesMatrixBlock,
   createWorkspaceMessageHouseBlock,
   createWorkspaceNode,
   createWorkspaceNotesBlock,
@@ -29,9 +35,12 @@ import {
   createWorkspaceProfitabilityCashFlowBlock,
   createWorkspaceProsConsBlock,
   createWorkspaceScorecardBlock,
+  createWorkspaceSeatPlannerBlock,
+  createWorkspaceSkillsHeatMapBlock,
   createWorkspaceSwotBlock,
   createWorkspaceTaskListBlock,
   createWorkspaceTableBlock,
+  createWorkspaceTalentGridBlock,
   createWorkspaceTimeOrchestratorBlock,
   createWorkspaceTimelineBlock,
   createWorkspaceTrackerBlock,
@@ -71,7 +80,7 @@ type MarketplaceSearchMatch = {
   score: number;
 };
 
-const workspaceBlockTypeSchema = z.enum([
+const WORKSPACE_AGENT_BLOCK_TYPES = [
   "task-list",
   "notes",
   "table",
@@ -84,9 +93,18 @@ const workspaceBlockTypeSchema = z.enum([
   "habit-grid",
   "process",
   "2x2-matrix",
+  "course-roadmap",
+  "learning-outcomes-matrix",
   "time-orchestrator",
+  "cohort-health-dashboard",
+  "eisenhower-matrix",
+  "leadership-rhythm-planner",
   "kanban",
   "timeline",
+  "skills-heat-map",
+  "delegation-matrix",
+  "talent-grid",
+  "seat-planner",
   "deal-scoring-matrix",
   "pipeline-funnel",
   "forecast-confidence-board",
@@ -105,7 +123,9 @@ const workspaceBlockTypeSchema = z.enum([
   "pricing-simulator",
   "collections-tracker",
   "custom",
-]);
+] as const;
+
+const workspaceBlockTypeSchema = z.enum(WORKSPACE_AGENT_BLOCK_TYPES);
 
 const detailLevelSchema = z.enum(["summary", "full"]);
 
@@ -243,11 +263,20 @@ const getTabDetailsOutputSchema = z.object({
   rawCustomBlockTemplates: z.array(workspaceCustomBlockTemplateSchema),
 });
 
+const blockEditGuideSchema = z.object({
+  blockType: z.string(),
+  editableFieldPaths: z.array(z.string()),
+  referenceFieldPaths: z.array(z.string()),
+  immutableFieldPaths: z.array(z.string()),
+  notes: z.array(z.string()),
+});
+
 const getBlockDetailsOutputSchema = z.object({
   node: nodeReferenceSchema.nullable(),
   tab: tabReferenceSchema.nullable(),
   summary: blockReferenceSchema.nullable(),
   block: workspaceBlockSchema.nullable(),
+  editGuide: blockEditGuideSchema.nullable(),
   customBlockTemplate: customBlockTemplateReferenceSchema.nullable(),
   rawCustomBlockTemplate: workspaceCustomBlockTemplateSchema.nullable(),
 });
@@ -291,6 +320,46 @@ const blockMutationOutputSchema = mutationMetaSchema.extend({
   customBlockTemplate: customBlockTemplateReferenceSchema.nullable(),
 });
 
+const jsonValueSchema: z.ZodType<
+  string | number | boolean | null | Record<string, unknown> | unknown[]
+> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number().finite(),
+    z.boolean(),
+    z.null(),
+    z.record(z.string(), jsonValueSchema),
+    z.array(jsonValueSchema),
+  ]),
+);
+
+const blockPatchOperationSchema = z.discriminatedUnion("op", [
+  z.object({
+    op: z.literal("set"),
+    path: z.string().trim().min(1),
+    value: jsonValueSchema,
+  }),
+  z.object({
+    op: z.literal("merge"),
+    path: z.string().trim().min(1),
+    value: z.record(z.string(), jsonValueSchema),
+  }),
+  z.object({
+    op: z.literal("append"),
+    path: z.string().trim().min(1),
+    value: jsonValueSchema,
+  }),
+  z.object({
+    op: z.literal("remove"),
+    path: z.string().trim().min(1),
+  }),
+]);
+
+const patchBlockOutputSchema = blockMutationOutputSchema.extend({
+  operationsApplied: z.number().int().nonnegative(),
+  matchCount: z.number().int().nonnegative(),
+});
+
 const deleteBlockOutputSchema = mutationMetaSchema.extend({
   node: nodeReferenceSchema,
   tab: tabReferenceSchema,
@@ -315,9 +384,342 @@ function assertNever(value: never): never {
   throw new Error(`Unhandled workspace block type: ${JSON.stringify(value)}`);
 }
 
-function normalizeSearchFragments(
-  fragments: Array<string | number | boolean | null | undefined>,
-) {
+type BlockPatchOperation = z.infer<typeof blockPatchOperationSchema>;
+type BlockPatchTarget = {
+  parent: Record<string, unknown> | unknown[];
+  key: string | number;
+  value: unknown;
+};
+type BlockPatchPathSelector =
+  | {
+      kind: "all";
+    }
+  | {
+      kind: "index";
+      index: number;
+    }
+  | {
+      kind: "field";
+      field: string;
+      value: string | number | boolean | null;
+    };
+type BlockPatchPathSegment = {
+  key: string;
+  selector: BlockPatchPathSelector | null;
+};
+
+function cloneStructuredValue<T>(value: T): T {
+  if (typeof globalThis.structuredClone === "function") {
+    return globalThis.structuredClone(value);
+  }
+
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parsePatchComparableValue(rawValue: string) {
+  const trimmedValue = rawValue.trim();
+
+  if (
+    (trimmedValue.startsWith('"') && trimmedValue.endsWith('"')) ||
+    (trimmedValue.startsWith("'") && trimmedValue.endsWith("'"))
+  ) {
+    return trimmedValue.slice(1, -1);
+  }
+
+  if (trimmedValue === "true") {
+    return true;
+  }
+
+  if (trimmedValue === "false") {
+    return false;
+  }
+
+  if (trimmedValue === "null") {
+    return null;
+  }
+
+  if (/^-?\d+(?:\.\d+)?$/.test(trimmedValue)) {
+    return Number(trimmedValue);
+  }
+
+  return trimmedValue;
+}
+
+function parseBlockPatchPath(path: string): BlockPatchPathSegment[] {
+  return path.split(".").map((segment) => {
+    const trimmedSegment = segment.trim();
+    const match = /^([^[\]]+)(?:\[(.*?)\])?$/.exec(trimmedSegment);
+
+    if (!match) {
+      throw new Error(`Invalid block patch path segment "${segment}".`);
+    }
+
+    const key = match[1]?.trim();
+    const rawSelector = match[2];
+
+    if (!key) {
+      throw new Error(`Invalid block patch path segment "${segment}".`);
+    }
+
+    if (rawSelector === undefined) {
+      return {
+        key,
+        selector: null,
+      };
+    }
+
+    const selectorText = rawSelector.trim();
+
+    if (selectorText.length === 0) {
+      return {
+        key,
+        selector: {
+          kind: "all",
+        },
+      };
+    }
+
+    if (/^\d+$/.test(selectorText)) {
+      return {
+        key,
+        selector: {
+          kind: "index",
+          index: Number(selectorText),
+        },
+      };
+    }
+
+    const selectorMatch = /^([^=]+)=(.+)$/.exec(selectorText);
+
+    if (!selectorMatch) {
+      throw new Error(`Invalid block patch selector "${selectorText}" in path "${path}".`);
+    }
+
+    const [, rawField = "", rawValue = ""] = selectorMatch;
+
+    return {
+      key,
+      selector: {
+        kind: "field",
+        field: rawField.trim(),
+        value: parsePatchComparableValue(rawValue),
+      },
+    };
+  });
+}
+
+function getPatchTargetValue(target: BlockPatchTarget) {
+  return Array.isArray(target.parent)
+    ? target.parent[target.key as number]
+    : target.parent[target.key as string];
+}
+
+function setPatchTargetValue(target: BlockPatchTarget, value: unknown) {
+  if (Array.isArray(target.parent)) {
+    target.parent[target.key as number] = value;
+  } else {
+    target.parent[target.key as string] = value;
+  }
+
+  target.value = value;
+}
+
+function resolveBlockPatchTargets(block: WorkspaceBlock, path: string): BlockPatchTarget[] {
+  const segments = parseBlockPatchPath(path);
+  let targets: BlockPatchTarget[] = [
+    {
+      parent: {
+        root: block,
+      },
+      key: "root",
+      value: block,
+    },
+  ];
+
+  for (const [segmentIndex, segment] of segments.entries()) {
+    const isLastSegment = segmentIndex === segments.length - 1;
+    const nextTargets: BlockPatchTarget[] = [];
+
+    for (const target of targets) {
+      const container = target.value;
+
+      if (!isPlainObject(container)) {
+        throw new Error(`Cannot traverse "${segment.key}" in path "${path}".`);
+      }
+
+      if (!segment.selector) {
+        if (isLastSegment) {
+          nextTargets.push({
+            parent: container,
+            key: segment.key,
+            value: container[segment.key],
+          });
+          continue;
+        }
+
+        const child = container[segment.key];
+
+        if (child === undefined) {
+          continue;
+        }
+
+        nextTargets.push({
+          parent: container,
+          key: segment.key,
+          value: child,
+        });
+        continue;
+      }
+
+      const collection = container[segment.key];
+
+      if (collection === undefined) {
+        continue;
+      }
+
+      if (!Array.isArray(collection)) {
+        throw new Error(`Path "${path}" expects "${segment.key}" to be an array.`);
+      }
+
+      switch (segment.selector.kind) {
+        case "all":
+          collection.forEach((entry, index) => {
+            nextTargets.push({
+              parent: collection,
+              key: index,
+              value: entry,
+            });
+          });
+          break;
+        case "index": {
+          const selector = segment.selector;
+
+          if (selector.index < collection.length) {
+            nextTargets.push({
+              parent: collection,
+              key: selector.index,
+              value: collection[selector.index],
+            });
+          }
+          break;
+        }
+        case "field": {
+          const selector = segment.selector;
+
+          collection.forEach((entry, index) => {
+            if (isPlainObject(entry) && entry[selector.field] === selector.value) {
+              nextTargets.push({
+                parent: collection,
+                key: index,
+                value: entry,
+              });
+            }
+          });
+          break;
+        }
+        default:
+          assertNever(segment.selector);
+      }
+    }
+
+    targets = nextTargets;
+  }
+
+  return targets;
+}
+
+function applyBlockPatchOperation(block: WorkspaceBlock, operation: BlockPatchOperation) {
+  const targets = resolveBlockPatchTargets(block, operation.path);
+
+  if (targets.length === 0) {
+    throw new Error(`Block patch path "${operation.path}" did not match any values.`);
+  }
+
+  switch (operation.op) {
+    case "set":
+      for (const target of targets) {
+        setPatchTargetValue(target, cloneStructuredValue(operation.value));
+      }
+      break;
+    case "merge":
+      for (const target of targets) {
+        const currentValue = getPatchTargetValue(target);
+
+        if (currentValue === undefined) {
+          setPatchTargetValue(target, {});
+        } else if (!isPlainObject(currentValue)) {
+          throw new Error(`Cannot merge into non-object path "${operation.path}".`);
+        }
+
+        const nextValue = getPatchTargetValue(target);
+
+        if (!isPlainObject(nextValue)) {
+          throw new Error(`Cannot merge into non-object path "${operation.path}".`);
+        }
+
+        Object.assign(nextValue, cloneStructuredValue(operation.value));
+      }
+      break;
+    case "append":
+      for (const target of targets) {
+        const currentValue = getPatchTargetValue(target);
+
+        if (currentValue === undefined) {
+          setPatchTargetValue(target, []);
+        } else if (!Array.isArray(currentValue)) {
+          throw new Error(`Cannot append to non-array path "${operation.path}".`);
+        }
+
+        const nextValue = getPatchTargetValue(target);
+
+        if (!Array.isArray(nextValue)) {
+          throw new Error(`Cannot append to non-array path "${operation.path}".`);
+        }
+
+        const entries = Array.isArray(operation.value) ? operation.value : [operation.value];
+
+        nextValue.push(...entries.map((entry) => cloneStructuredValue(entry)));
+      }
+      break;
+    case "remove": {
+      const arrayRemovals = new Map<unknown[], number[]>();
+
+      for (const target of targets) {
+        if (Array.isArray(target.parent) && typeof target.key === "number") {
+          const indexes = arrayRemovals.get(target.parent) ?? [];
+          indexes.push(target.key);
+          arrayRemovals.set(target.parent, indexes);
+          continue;
+        }
+
+        if (Array.isArray(target.parent)) {
+          throw new Error(`Cannot remove non-indexed target for path "${operation.path}".`);
+        }
+
+        delete target.parent[target.key as string];
+      }
+
+      for (const [collection, indexes] of arrayRemovals.entries()) {
+        indexes
+          .sort((left, right) => right - left)
+          .forEach((index) => {
+            collection.splice(index, 1);
+          });
+      }
+      break;
+    }
+    default:
+      assertNever(operation);
+  }
+
+  return targets.length;
+}
+
+function normalizeSearchFragments(fragments: Array<string | number | boolean | null | undefined>) {
   return fragments
     .map((fragment) => {
       if (fragment === null || fragment === undefined) {
@@ -351,6 +753,583 @@ function getBlockContentPreview(
   const previewText = collectBlockSearchDetails(block, customTemplates).join("\n");
 
   return truncate(previewText || summarizeBlock(block), BLOCK_CONTENT_PREVIEW_LENGTH);
+}
+
+const defaultImmutableBlockFieldPaths = ["id", "type", "createdAt", "updatedAt"];
+const defaultBlockEditNotes = [
+  "Preserve id, type, createdAt, and existing nested item ids. The mutation tool will set updatedAt for you.",
+  "Prefer minimal edits: change only the fields the user asked for and keep unrelated content intact.",
+  "Use these field paths with patch_block. Path syntax supports dot paths, [] wildcards, numeric indexes, and [id=...] selectors.",
+];
+const taskLeafPaths = [
+  "text",
+  "completed",
+  "dueDate",
+  "priority",
+  "domain",
+  "urgency",
+  "importance",
+  "estimateMinutes",
+];
+const promptOutputLeafPaths = ["prompt", "output"];
+const decisionItemLeafPaths = ["text", "weight"];
+const trackerEntryLeafPaths = ["label", "value"];
+const meetingLeafPaths = [
+  "name",
+  "rhythm",
+  "owner",
+  "participants",
+  "purpose",
+  "durationMinutes",
+  "nextDate",
+  "status",
+];
+
+function prefixPaths(prefix: string, leafPaths: string[]) {
+  return leafPaths.map((path) => `${prefix}.${path}`);
+}
+
+function createBlockEditGuide(args: {
+  blockType: WorkspaceBlock["type"];
+  editableFieldPaths: string[];
+  referenceFieldPaths?: string[];
+  notes?: string[];
+}) {
+  return {
+    blockType: args.blockType,
+    editableFieldPaths: args.editableFieldPaths,
+    referenceFieldPaths: args.referenceFieldPaths ?? [],
+    immutableFieldPaths: defaultImmutableBlockFieldPaths,
+    notes: [...defaultBlockEditNotes, ...(args.notes ?? [])],
+  };
+}
+
+function describeBlockEditGuide(
+  block: WorkspaceBlock,
+  customTemplate?: WorkspaceCustomBlockTemplate | null,
+) {
+  switch (block.type) {
+    case "task-list":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: ["title", ...prefixPaths("tasks[]", taskLeafPaths)],
+      });
+    case "notes":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: ["title", "body"],
+      });
+    case "table":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: ["title", "columns[].label", "rows[].cells.<columnId>"],
+        notes: ["Keep each rows[].cells key aligned with an existing column id."],
+      });
+    case "checklist":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: ["title", "items[].text", "items[].completed"],
+      });
+    case "decision":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "recommendation",
+          ...prefixPaths("pros[]", decisionItemLeafPaths),
+          ...prefixPaths("cons[]", decisionItemLeafPaths),
+        ],
+      });
+    case "pros-cons":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          ...prefixPaths("pros[]", decisionItemLeafPaths),
+          ...prefixPaths("cons[]", decisionItemLeafPaths),
+        ],
+      });
+    case "swot":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "cells.strengths",
+          "cells.weaknesses",
+          "cells.opportunities",
+          "cells.threats",
+        ],
+      });
+    case "tracker":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: ["title", "goal", ...prefixPaths("entries[]", trackerEntryLeafPaths)],
+      });
+    case "ai-prompt":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "includeContext",
+          "prompt",
+          "latestOutput",
+          ...prefixPaths("outputHistory[]", promptOutputLeafPaths),
+        ],
+        notes: [
+          "Only edit latestOutput or outputHistory when the user explicitly wants generated output changed.",
+        ],
+      });
+    case "habit-grid":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "habits[].name",
+          "habits[].days.mon",
+          "habits[].days.tue",
+          "habits[].days.wed",
+          "habits[].days.thu",
+          "habits[].days.fri",
+          "habits[].days.sat",
+          "habits[].days.sun",
+        ],
+      });
+    case "process":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: ["title", "steps[].title", "steps[].completed", "steps[].note"],
+      });
+    case "2x2-matrix":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "xAxisLabel",
+          "xStartLabel",
+          "xEndLabel",
+          "yAxisLabel",
+          "yStartLabel",
+          "yEndLabel",
+          "quadrants.topLeft.name",
+          "quadrants.topLeft.items[].text",
+          "quadrants.topRight.name",
+          "quadrants.topRight.items[].text",
+          "quadrants.bottomLeft.name",
+          "quadrants.bottomLeft.items[].text",
+          "quadrants.bottomRight.name",
+          "quadrants.bottomRight.items[].text",
+        ],
+      });
+    case "course-roadmap":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "courses[].name",
+          "courses[].status",
+          "courses[].lessons[].title",
+          "courses[].lessons[].recorded",
+          "courses[].outcomes[].text",
+        ],
+      });
+    case "learning-outcomes-matrix":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "courseBlockId",
+          "courseId",
+          "prompt",
+          "latestOutput",
+          ...prefixPaths("outputHistory[]", promptOutputLeafPaths),
+        ],
+        referenceFieldPaths: ["courseBlockId", "courseId"],
+        notes: [
+          "If both courseBlockId and courseId are set, make sure they point to a real course roadmap block and course.",
+        ],
+      });
+    case "time-orchestrator":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "settings.domains[]",
+          "settings.includeUnassigned",
+          "settings.quadrants[]",
+        ],
+      });
+    case "cohort-health-dashboard":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "cohorts[].name",
+          "cohorts[].seatsSold",
+          "cohorts[].capacity",
+          "cohorts[].revenueEgp",
+          "cohorts[].startDate",
+          "cohorts[].status",
+          "cohorts[].refundRisk",
+          "cohorts[].completionRisk",
+        ],
+      });
+    case "eisenhower-matrix":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: ["title", "latestBattlePlan", ...prefixPaths("tasks[]", taskLeafPaths)],
+        notes: ["Only change latestBattlePlan when the user wants the synthesized plan updated."],
+      });
+    case "leadership-rhythm-planner":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: ["title", "filter", ...prefixPaths("meetings[]", meetingLeafPaths)],
+      });
+    case "kanban":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "columns[].title",
+          "cards[].title",
+          "cards[].description",
+          "cards[].columnId",
+          "cards[].assignee",
+          "cards[].dueDate",
+        ],
+        referenceFieldPaths: ["cards[].columnId"],
+        notes: ["Each cards[].columnId must match one of the current column ids."],
+      });
+    case "timeline":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "milestones[].title",
+          "milestones[].date",
+          "milestones[].status",
+          "milestones[].note",
+        ],
+      });
+    case "skills-heat-map":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "members[].name",
+          "members[].role",
+          "members[].scores.writing",
+          "members[].scores.strategy",
+          "members[].scores.design",
+          "members[].scores.analytics",
+          "members[].scores.leadership",
+        ],
+      });
+    case "delegation-matrix":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "hourlyRate",
+          "items[].task",
+          "items[].from",
+          "items[].to",
+          "items[].hoursPerWeek",
+          "items[].status",
+        ],
+      });
+    case "talent-grid":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "members[].name",
+          "members[].role",
+          "members[].performance",
+          "members[].potential",
+        ],
+      });
+    case "seat-planner":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "filter",
+          "seats[].name",
+          "seats[].owner",
+          "seats[].function",
+          "seats[].health",
+          "seats[].load",
+          "seats[].backupOwner",
+          "seats[].notes",
+        ],
+      });
+    case "deal-scoring-matrix":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "deals[].clientName",
+          "deals[].valueEgp",
+          "deals[].temperature",
+          "deals[].score",
+          "deals[].stage",
+          "deals[].nextAction",
+          "deals[].dueDate",
+        ],
+      });
+    case "pipeline-funnel":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "deals[].clientName",
+          "deals[].valueEgp",
+          "deals[].temperature",
+          "deals[].stage",
+        ],
+      });
+    case "forecast-confidence-board":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "targetRevenueEgp",
+          "deals[].clientName",
+          "deals[].valueEgp",
+          "deals[].bucket",
+          "deals[].expectedCloseMonth",
+          "deals[].confidence",
+          "deals[].owner",
+          "deals[].nextAction",
+        ],
+      });
+    case "content-pipeline":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "items[].title",
+          "items[].status",
+          "items[].platform",
+          "items[].assignee",
+        ],
+      });
+    case "content-quality-radar":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "scores.hook",
+          "scores.value",
+          "scores.emotion",
+          "scores.cta",
+          "scores.platformFit",
+          "scores.brand",
+          "scores.shareability",
+          "scores.scrollStop",
+          "scores.authenticity",
+          "scores.storytelling",
+        ],
+      });
+    case "content-roi-tracker":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "sortBy",
+          "items[].title",
+          "items[].platform",
+          "items[].campaign",
+          "items[].goal",
+          "items[].reach",
+          "items[].leads",
+          "items[].conversionInfluence",
+          "items[].repurposeValue",
+        ],
+      });
+    case "authority-scorecard":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "metrics.posts.value",
+          "metrics.posts.target",
+          "metrics.videos.value",
+          "metrics.videos.target",
+          "metrics.speakingGigs.value",
+          "metrics.speakingGigs.target",
+          "metrics.podcastAppearances.value",
+          "metrics.podcastAppearances.target",
+          "metrics.mediaFeatures.value",
+          "metrics.mediaFeatures.target",
+          "metrics.followers.value",
+          "metrics.followers.target",
+        ],
+      });
+    case "hook-bank":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "hooks[].category",
+          "hooks[].text",
+          "hooks[].score",
+          "lastGeneratedAt",
+        ],
+        notes: [
+          "Prefer leaving lastGeneratedAt unchanged unless the user explicitly wants generation metadata adjusted.",
+        ],
+      });
+    case "message-house":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "brandPromise",
+          "pillars[].title",
+          "pillars[].body",
+          "audiencePains",
+          "proofPoints",
+          "voicePrinciples",
+          "latestStressTest",
+        ],
+        notes: [
+          "The message house is designed around exactly three pillars; preserve that structure unless the user clearly wants it changed.",
+        ],
+      });
+    case "scorecard":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "metrics[].label",
+          "metrics[].value",
+          "metrics[].target",
+          "metrics[].unit",
+        ],
+      });
+    case "okr-tracker":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "objectives[].title",
+          "objectives[].keyResults[].title",
+          "objectives[].keyResults[].progress",
+        ],
+      });
+    case "decision-matrix":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "question",
+          "criteria[].label",
+          "criteria[].weight",
+          "options[].label",
+          "options[].scores.<criterionId>",
+        ],
+        notes: ["Keep every options[].scores key aligned with an existing criterion id."],
+      });
+    case "business-model-canvas":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "cells.keyPartners",
+          "cells.keyActivities",
+          "cells.keyResources",
+          "cells.valuePropositions",
+          "cells.customerRelationships",
+          "cells.channels",
+          "cells.customerSegments",
+          "cells.costStructure",
+          "cells.revenueStreams",
+          "analysis",
+        ],
+      });
+    case "assumption-tracker":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "filter",
+          "assumptions[].statement",
+          "assumptions[].linkType",
+          "assumptions[].linkId",
+          "assumptions[].owner",
+          "assumptions[].reviewDate",
+          "assumptions[].confidence",
+          "assumptions[].status",
+          "assumptions[].evidenceNotes",
+        ],
+        referenceFieldPaths: ["assumptions[].linkId"],
+      });
+    case "profitability-cash-flow":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "clients[].name",
+          "clients[].paymentStatus",
+          "clients[].healthPercent",
+          "clients[].revenueEgp",
+          "clients[].costEgp",
+          "expenses[].category",
+          "expenses[].amountEgp",
+        ],
+      });
+    case "pricing-simulator":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "activeClients",
+          "hoursPerClientPerMonth",
+          "hourlyRateEgp",
+          "monthlyOverheadEgp",
+          "targetMarginPercent",
+        ],
+      });
+    case "collections-tracker":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "filter",
+          "invoices[].clientName",
+          "invoices[].amountEgp",
+          "invoices[].dueDate",
+          "invoices[].owner",
+          "invoices[].nextFollowUpDate",
+          "invoices[].status",
+          "invoices[].notes",
+          "invoices[].paidAt",
+        ],
+      });
+    case "custom":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "definitionId",
+          ...(customTemplate?.fields.map((field) => `values.${field.key}`) ?? [
+            "values.<fieldKey>",
+          ]),
+          "notes",
+          "latestAiOutput",
+          ...prefixPaths("outputHistory[]", promptOutputLeafPaths),
+        ],
+        referenceFieldPaths: ["definitionId"],
+        notes: [
+          customTemplate
+            ? `Use the "${customTemplate.name}" template fields and keep definitionId aligned with that template.`
+            : "Keep definitionId aligned with a real custom block template on the node.",
+        ],
+      });
+  }
+
+  return assertNever(block);
 }
 
 function collectPromptOutputFragments(outputs: { prompt: string; output: string }[]) {
@@ -428,7 +1407,11 @@ function collectBlockSearchDetails(
       );
     case "process":
       return normalizeSearchFragments(
-        block.steps.flatMap((step) => [step.title, step.note, step.completed ? "completed" : "open"]),
+        block.steps.flatMap((step) => [
+          step.title,
+          step.note,
+          step.completed ? "completed" : "open",
+        ]),
       );
     case "2x2-matrix":
       return normalizeSearchFragments([
@@ -666,10 +1649,7 @@ function collectBlockSearchDetails(
       return normalizeSearchFragments([
         block.question,
         ...block.criteria.flatMap((criterion) => [criterion.label, criterion.weight]),
-        ...block.options.flatMap((option) => [
-          option.label,
-          ...Object.values(option.scores),
-        ]),
+        ...block.options.flatMap((option) => [option.label, ...Object.values(option.scores)]),
       ]);
     case "business-model-canvas":
       return normalizeSearchFragments([block.analysis, ...Object.values(block.cells)]);
@@ -803,12 +1783,39 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return `${block.steps.filter((step) => step.completed).length}/${block.steps.length} process steps completed`;
     case "2x2-matrix":
       return `${Object.values(block.quadrants).reduce((sum, quadrant) => sum + quadrant.items.length, 0)} mapped items`;
+    case "course-roadmap": {
+      const lessonCount = block.courses.reduce((sum, course) => sum + course.lessons.length, 0);
+      const recordedLessonCount = block.courses.reduce(
+        (sum, course) => sum + course.lessons.filter((lesson) => lesson.recorded).length,
+        0,
+      );
+      return `${block.courses.length} courses, ${recordedLessonCount}/${lessonCount} lessons recorded`;
+    }
+    case "learning-outcomes-matrix":
+      return truncate(block.latestOutput || block.prompt || "No outcomes matrix yet");
     case "time-orchestrator":
       return `${block.settings.domains.length} domains across ${block.settings.quadrants.length} quadrants`;
+    case "cohort-health-dashboard": {
+      const seatsSold = block.cohorts.reduce((sum, cohort) => sum + cohort.seatsSold, 0);
+      const totalCapacity = block.cohorts.reduce((sum, cohort) => sum + cohort.capacity, 0);
+      return `${block.cohorts.length} cohorts, ${seatsSold}/${totalCapacity} seats sold`;
+    }
+    case "eisenhower-matrix":
+      return `${block.tasks.filter((task) => task.completed).length}/${block.tasks.length} tasks completed`;
+    case "leadership-rhythm-planner":
+      return `${block.meetings.length} meetings with ${block.filter} filter`;
     case "kanban":
       return `${block.columns.length} columns, ${block.cards.length} cards`;
     case "timeline":
       return `${block.milestones.length} milestones`;
+    case "skills-heat-map":
+      return `${block.members.length} team members across 5 skill dimensions`;
+    case "delegation-matrix":
+      return `${block.items.length} delegation items at ${block.hourlyRate} EGP/hour`;
+    case "talent-grid":
+      return `${block.members.length} team members mapped on the 9-box grid`;
+    case "seat-planner":
+      return `${block.seats.length} seats with ${block.filter} filter`;
     case "deal-scoring-matrix":
       return `${block.deals.length} scored deals`;
     case "pipeline-funnel":
@@ -853,9 +1860,9 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return `${block.invoices.length} receivables with filter ${block.filter}`;
     case "custom":
       return truncate(block.notes || block.latestAiOutput || JSON.stringify(block.values));
-    default:
-      return "Workspace block";
   }
+
+  return assertNever(block);
 }
 
 function getNodeBlockTypes(node: WorkspaceNode) {
@@ -1190,12 +2197,30 @@ function createBlockByType(args: {
       return createWorkspaceProcessBlock(titleInput);
     case "2x2-matrix":
       return createWorkspace2x2MatrixBlock(titleInput);
+    case "course-roadmap":
+      return createWorkspaceCourseRoadmapBlock(titleInput);
+    case "learning-outcomes-matrix":
+      return createWorkspaceLearningOutcomesMatrixBlock(titleInput);
     case "time-orchestrator":
       return createWorkspaceTimeOrchestratorBlock(titleInput);
+    case "cohort-health-dashboard":
+      return createWorkspaceCohortHealthDashboardBlock(titleInput);
+    case "eisenhower-matrix":
+      return createWorkspaceEisenhowerMatrixBlock(titleInput);
+    case "leadership-rhythm-planner":
+      return createWorkspaceLeadershipRhythmPlannerBlock(titleInput);
     case "kanban":
       return createWorkspaceKanbanBlock(titleInput);
     case "timeline":
       return createWorkspaceTimelineBlock(titleInput);
+    case "skills-heat-map":
+      return createWorkspaceSkillsHeatMapBlock(titleInput);
+    case "delegation-matrix":
+      return createWorkspaceDelegationMatrixBlock(titleInput);
+    case "talent-grid":
+      return createWorkspaceTalentGridBlock(titleInput);
+    case "seat-planner":
+      return createWorkspaceSeatPlannerBlock(titleInput);
     case "deal-scoring-matrix":
       return createWorkspaceDealScoringMatrixBlock(titleInput);
     case "pipeline-funnel":
@@ -1245,9 +2270,9 @@ function createBlockByType(args: {
 
       return createWorkspaceCustomBlock(template, titleInput);
     }
-    default:
-      throw new Error(`Unsupported block type "${args.type}".`);
   }
+
+  return assertNever(args.type);
 }
 
 type DashboardSearchEntry = Omit<DashboardSearchMatch, "excerpt" | "score"> & {
@@ -1493,7 +2518,7 @@ export function buildDashboardAgentTools(
     tool({
       name: "search_dashboard",
       description:
-        "Search node titles, descriptions, tabs, and full block content in the current dashboard. Returns exact ids you can use with get_block_details and replace_block.",
+        "Search node titles, descriptions, tabs, and full block content in the current dashboard. Returns exact ids you can use with get_block_details. For edits, inspect the matched block first, use its editGuide, then prefer patch_block or fall back to replace_block.",
       inputSchema: z.object({
         query: z.string().trim().min(1),
         limit: z.number().int().min(1).max(10).default(3),
@@ -1574,7 +2599,7 @@ export function buildDashboardAgentTools(
     }),
     tool({
       name: "get_block_details",
-      description: `Inspect a single dashboard block. Use the summary preview to identify the right block, then request detailLevel: "full" before editing with replace_block. ${profileGuidance}`,
+      description: `Inspect a single dashboard block. The response includes an editGuide with the exact field paths, references, and preservation rules for that block type. For most edits, use those paths with patch_block. Request detailLevel: "full" only when you need ids, selectors, or a full replace_block payload. ${profileGuidance}`,
       inputSchema: z.object({
         blockId: z.string().trim().min(1),
         nodeId: z.string().trim().min(1).optional(),
@@ -1594,9 +2619,9 @@ export function buildDashboardAgentTools(
         return {
           node: node ? describeNodeReference(node) : null,
           tab: tab ? describeTabReference(tab) : null,
-          summary:
-            node && block ? describeBlockReference(block, node.customBlockTemplates) : null,
+          summary: node && block ? describeBlockReference(block, node.customBlockTemplates) : null,
           block: detailLevel === "full" ? block : null,
+          editGuide: block ? describeBlockEditGuide(block, customBlockTemplate) : null,
           customBlockTemplate: customBlockTemplate
             ? describeCustomBlockTemplateReference(customBlockTemplate)
             : null,
@@ -1880,7 +2905,7 @@ export function buildDashboardAgentTools(
           tool({
             name: "create_block",
             description:
-              "Create a new block inside an existing tab. Use customTemplateId when creating a custom block.",
+              "Create a new block inside an existing tab. Supports the full workspace block catalog. Use customTemplateId when creating a custom block.",
             inputSchema: z.object({
               nodeId: z.string().trim().min(1),
               tabId: z.string().trim().min(1),
@@ -1932,9 +2957,81 @@ export function buildDashboardAgentTools(
             },
           }),
           tool({
+            name: "patch_block",
+            description:
+              "Patch a block with targeted nested operations instead of replacing the whole payload. Supports dot paths, [] wildcards, numeric indexes like courses[0], and selectors like lessons[id=lesson-123]. Prefer this for most edits, including bulk updates such as setting courses[].lessons[].recorded to true.",
+            inputSchema: z.object({
+              nodeId: z.string().trim().min(1),
+              tabId: z.string().trim().min(1),
+              blockId: z.string().trim().min(1),
+              operations: z.array(blockPatchOperationSchema).min(1).max(50),
+            }),
+            outputSchema: patchBlockOutputSchema,
+            execute: async ({ nodeId, tabId, blockId, operations }) => {
+              const { result, updatedAt, nodeCount } = await workspace.applyMutation(
+                (draft, timestamp) => {
+                  const {
+                    node,
+                    tab,
+                    block: currentBlock,
+                  } = requireBlock(draft, nodeId, tabId, blockId);
+                  const currentIndex = tab.blocks.findIndex(
+                    (entry) => entry.id === currentBlock.id,
+                  );
+                  const draftBlock = cloneStructuredValue(currentBlock);
+                  let matchCount = 0;
+
+                  for (const operation of operations) {
+                    matchCount += applyBlockPatchOperation(draftBlock, operation);
+                  }
+
+                  const nextBlock = workspaceBlockSchema.parse({
+                    ...draftBlock,
+                    id: currentBlock.id,
+                    createdAt: currentBlock.createdAt,
+                    updatedAt: timestamp,
+                  });
+
+                  assertBlocksUseKnownCustomTemplates(node, [nextBlock]);
+                  tab.blocks[currentIndex] = nextBlock;
+                  tab.updatedAt = timestamp;
+                  node.updatedAt = timestamp;
+
+                  return {
+                    nodeId: node.id,
+                    tabId: tab.id,
+                    blockId: nextBlock.id,
+                    operationsApplied: operations.length,
+                    matchCount,
+                  };
+                },
+              );
+              const {
+                node,
+                tab,
+                block: nextBlock,
+              } = requireBlock(workspace.getNodes(), result.nodeId, result.tabId, result.blockId);
+
+              return {
+                node: describeNodeReference(node),
+                tab: describeTabReference(tab),
+                block: describeBlockReference(nextBlock, node.customBlockTemplates),
+                customBlockTemplate: (() => {
+                  const template = getCustomBlockTemplateForBlock(node, nextBlock);
+
+                  return template ? describeCustomBlockTemplateReference(template) : null;
+                })(),
+                operationsApplied: result.operationsApplied,
+                matchCount: result.matchCount,
+                updatedAt,
+                nodeCount,
+              };
+            },
+          }),
+          tool({
             name: "replace_block",
             description:
-              'Replace a block with a full raw block payload. Call get_block_details with detailLevel: "full" first, edit the raw block, then call this tool.',
+              'Update any supported block by sending the full raw block payload. Use this when patch_block cannot express the change cleanly. Call get_block_details with detailLevel: "full" first, follow its editGuide, preserve ids and references unless the user explicitly wants them changed, edit only the requested fields, then call this tool.',
             inputSchema: z.object({
               nodeId: z.string().trim().min(1),
               tabId: z.string().trim().min(1),

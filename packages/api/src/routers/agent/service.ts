@@ -335,7 +335,10 @@ export async function appendDashboardConversationTurn(
       toolPreset: input.toolPreset,
     },
   );
-  const nextUsageSummary = buildNextConversationUsageSummary(conversation.usageSummary, result.usage);
+  const nextUsageSummary = buildNextConversationUsageSummary(
+    conversation.usageSummary,
+    result.usage,
+  );
   const workspaceSnapshot = result.workspaceSnapshot
     ? {
         nodes: result.workspaceSnapshot.nodes,

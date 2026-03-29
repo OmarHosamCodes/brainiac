@@ -29,8 +29,55 @@ type ToolFunction = {
   execute: (input: unknown) => Promise<unknown>;
 };
 
+const allSupportedBlockTypes = [
+  "task-list",
+  "notes",
+  "table",
+  "checklist",
+  "decision",
+  "pros-cons",
+  "swot",
+  "tracker",
+  "ai-prompt",
+  "habit-grid",
+  "process",
+  "2x2-matrix",
+  "course-roadmap",
+  "learning-outcomes-matrix",
+  "time-orchestrator",
+  "cohort-health-dashboard",
+  "eisenhower-matrix",
+  "leadership-rhythm-planner",
+  "kanban",
+  "timeline",
+  "skills-heat-map",
+  "delegation-matrix",
+  "talent-grid",
+  "seat-planner",
+  "deal-scoring-matrix",
+  "pipeline-funnel",
+  "forecast-confidence-board",
+  "content-pipeline",
+  "content-quality-radar",
+  "content-roi-tracker",
+  "authority-scorecard",
+  "hook-bank",
+  "message-house",
+  "scorecard",
+  "okr-tracker",
+  "decision-matrix",
+  "business-model-canvas",
+  "assumption-tracker",
+  "profitability-cash-flow",
+  "pricing-simulator",
+  "collections-tracker",
+  "custom",
+] as const;
+
 function getTool(tools: ReturnType<typeof buildDashboardAgentTools>, name: string): ToolFunction {
-  const toolEntry = tools.find((entry) => entry.type === "function" && entry.function.name === name);
+  const toolEntry = tools.find(
+    (entry) => entry.type === "function" && entry.function.name === name,
+  );
 
   if (!toolEntry) {
     throw new Error(`Tool "${name}" was not found.`);
@@ -305,8 +352,7 @@ describe("buildDashboardAgentTools", () => {
       limit: 10,
     });
     const initialMatch = initialSearch.matches.find(
-      (entry: any) =>
-        entry.matchType === "block" && entry.blockId === fixture.blocks.notesBlock.id,
+      (entry: any) => entry.matchType === "block" && entry.blockId === fixture.blocks.notesBlock.id,
     );
 
     expect(initialMatch).toBeDefined();
@@ -351,5 +397,118 @@ describe("buildDashboardAgentTools", () => {
           entry.matchType === "block" && entry.blockId === fixture.blocks.notesBlock.id,
       ),
     ).toBeFalse();
+  });
+
+  test("patch_block bulk updates nested course roadmap lessons from editGuide paths", async () => {
+    const fixture = createFixture();
+    const details = await callTool(fixture.tools, "get_block_details", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.courseRoadmapBlock.id,
+      detailLevel: "summary",
+    });
+
+    expect(details.editGuide?.editableFieldPaths).toContain("courses[].lessons[].recorded");
+
+    const patched = await callTool(fixture.tools, "patch_block", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.courseRoadmapBlock.id,
+      operations: [
+        {
+          op: "set",
+          path: "courses[].lessons[].recorded",
+          value: true,
+        },
+      ],
+    });
+    const updated = await callTool(fixture.tools, "get_block_details", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.courseRoadmapBlock.id,
+      detailLevel: "full",
+    });
+
+    expect(patched.operationsApplied).toBe(1);
+    expect(patched.matchCount).toBeGreaterThan(0);
+    expect(
+      updated.block?.type === "course-roadmap" &&
+        updated.block.courses.every((course: any) =>
+          course.lessons.every((lesson: any) => lesson.recorded),
+        ),
+    ).toBeTrue();
+  });
+
+  test("patch_block can target nested array items by id selector", async () => {
+    const fixture = createFixture();
+    const cardId = fixture.blocks.kanbanBlock.cards[0]?.id;
+    const nextDescription = "patched kanban description unique";
+
+    expect(cardId).toBeTruthy();
+
+    const patched = await callTool(fixture.tools, "patch_block", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.kanbanBlock.id,
+      operations: [
+        {
+          op: "set",
+          path: `cards[id=${cardId}].description`,
+          value: nextDescription,
+        },
+      ],
+    });
+    const updated = await callTool(fixture.tools, "get_block_details", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.kanbanBlock.id,
+      detailLevel: "full",
+    });
+
+    expect(patched.matchCount).toBe(1);
+    expect(
+      updated.block?.type === "kanban" &&
+        updated.block.cards.find((card: any) => card.id === cardId)?.description ===
+          nextDescription,
+    ).toBeTrue();
+  });
+
+  test("create_block supports the full workspace block catalog", async () => {
+    for (const type of allSupportedBlockTypes) {
+      const fixture = createFixture();
+      const customTemplateId = fixture.node.customBlockTemplates[0]?.id;
+      const result = await callTool(fixture.tools, "create_block", {
+        nodeId: fixture.node.id,
+        tabId: fixture.tab.id,
+        type,
+        ...(type === "custom" ? { customTemplateId } : {}),
+      });
+
+      expect(result.block.type).toBe(type);
+    }
+  });
+
+  test("get_block_details returns edit guidance for specialized and custom blocks", async () => {
+    const fixture = createFixture();
+    const courseRoadmapDetails = await callTool(fixture.tools, "get_block_details", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.courseRoadmapBlock.id,
+      detailLevel: "summary",
+    });
+    const customBlockDetails = await callTool(fixture.tools, "get_block_details", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.customBlock.id,
+      detailLevel: "full",
+    });
+
+    expect(courseRoadmapDetails.summary?.summary).toContain("courses");
+    expect(courseRoadmapDetails.editGuide?.editableFieldPaths).toContain(
+      "courses[].lessons[].title",
+    );
+    expect(customBlockDetails.editGuide?.referenceFieldPaths).toContain("definitionId");
+    expect(customBlockDetails.editGuide?.editableFieldPaths).toContain("values.angle");
+    expect(customBlockDetails.customBlockTemplate?.name).toBe("Campaign brief");
   });
 });

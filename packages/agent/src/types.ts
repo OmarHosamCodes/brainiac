@@ -172,8 +172,12 @@ export const agentChatTurnResponseSchema = z.object({
 export type AgentMessage = z.infer<typeof agentMessageSchema>;
 export type AgentChatResponse = z.infer<typeof agentChatResponseSchema>;
 export type DashboardAgentToolPreset = z.infer<typeof dashboardAgentToolPresetSchema>;
-export type DashboardConversationUsageLatest = z.infer<typeof dashboardConversationUsageLatestSchema>;
-export type DashboardConversationUsageTotals = z.infer<typeof dashboardConversationUsageTotalsSchema>;
+export type DashboardConversationUsageLatest = z.infer<
+  typeof dashboardConversationUsageLatestSchema
+>;
+export type DashboardConversationUsageTotals = z.infer<
+  typeof dashboardConversationUsageTotalsSchema
+>;
 export type DashboardConversationUsageSummary = z.infer<
   typeof dashboardConversationUsageSummarySchema
 >;

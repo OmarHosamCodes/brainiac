@@ -3,12 +3,18 @@ import {
   useWorkspaceNodeEditorContext,
   type WorkspaceSaveBadge,
 } from "~/components/workspace/node/context";
-import { workspaceAddBlockCategories, type WorkspaceAddBlockCategory } from "~/utils/workspace-add-block-menu";
+import {
+  workspaceAddBlockCategories,
+  type WorkspaceAddBlockCategory,
+} from "~/utils/workspace-add-block-menu";
 import {
   getWorkspaceBlockRegistryEntry,
   workspacePrimaryBlockTypes,
 } from "~/utils/workspace-block-registry";
-import { workspaceBlockPresets, type WorkspaceBlockPresetId } from "~/utils/workspace-block-presets";
+import {
+  workspaceBlockPresets,
+  type WorkspaceBlockPresetId,
+} from "~/utils/workspace-block-presets";
 import type { WorkspaceBlock, WorkspaceNode, WorkspaceNodeTab } from "@brainiac/workspace";
 
 const props = defineProps<{

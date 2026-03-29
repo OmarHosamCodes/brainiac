@@ -378,7 +378,9 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         model.supportsTools ? "Tools enabled" : "Direct answers",
         formatModelPricing(model),
       ].join(" · "),
-      searchableText: [model.name, model.id, model.creatorLabel, model.creatorId].join(" ").toLowerCase(),
+      searchableText: [model.name, model.id, model.creatorLabel, model.creatorId]
+        .join(" ")
+        .toLowerCase(),
     })),
   );
   const creatorFilterOptions = computed(() => {
@@ -416,7 +418,10 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         return false;
       }
 
-      if (selectedCreatorIds.value.length > 0 && !selectedCreatorIds.value.includes(model.creatorId)) {
+      if (
+        selectedCreatorIds.value.length > 0 &&
+        !selectedCreatorIds.value.includes(model.creatorId)
+      ) {
         return false;
       }
 
@@ -459,7 +464,10 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       ) ?? null,
   );
   const activeConversationUsageSummary = computed(
-    () => activeConversation.value?.usageSummary ?? activeConversationSummary.value?.usageSummary ?? null,
+    () =>
+      activeConversation.value?.usageSummary ??
+      activeConversationSummary.value?.usageSummary ??
+      null,
   );
   const activeConversationUsageRatio = computed(() =>
     getUsageRatio(activeConversationUsageSummary.value),
@@ -631,7 +639,10 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   });
   const modelError = computed(() =>
     modelCatalogQuery.isError.value
-      ? getErrorMessage(modelCatalogQuery.error.value, "Unable to load the OpenRouter model catalog.")
+      ? getErrorMessage(
+          modelCatalogQuery.error.value,
+          "Unable to load the OpenRouter model catalog.",
+        )
       : null,
   );
   const modelDebugDetails = computed(() =>
@@ -663,7 +674,9 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       }
 
       const availableIds = new Set(payload.models.map((model) => model.id));
-      favoriteModelIds.value = favoriteModelIds.value.filter((modelId) => availableIds.has(modelId));
+      favoriteModelIds.value = favoriteModelIds.value.filter((modelId) =>
+        availableIds.has(modelId),
+      );
 
       if (preferredDefaultModelId.value && !availableIds.has(preferredDefaultModelId.value)) {
         preferredDefaultModelId.value = undefined;

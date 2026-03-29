@@ -207,12 +207,13 @@ async function fetchOpenRouterAccountStatus() {
     client.apiKeys.getCurrentKeyMetadata(),
     client.credits.getCredits().catch(() => null),
   ]);
-  const totalCredits = credits?.data.totalCredits ?? keyMetadata.data.limit ?? keyMetadata.data.usage;
+  const totalCredits =
+    credits?.data.totalCredits ?? keyMetadata.data.limit ?? keyMetadata.data.usage;
   const totalUsage = credits?.data.totalUsage ?? keyMetadata.data.usage;
   const availableCredits =
     credits?.data.totalCredits !== undefined && credits?.data.totalUsage !== undefined
       ? credits.data.totalCredits - credits.data.totalUsage
-      : keyMetadata.data.limitRemaining ?? Math.max(totalCredits - totalUsage, 0);
+      : (keyMetadata.data.limitRemaining ?? Math.max(totalCredits - totalUsage, 0));
 
   return openRouterAccountStatusSchema.parse({
     totalCredits,
