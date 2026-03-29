@@ -1,24 +1,52 @@
 import { auth } from "@brainiac/auth";
 import { db } from "@brainiac/db";
-import {
-  dashboardWorkspace,
-  user,
-  workspaceMarketplaceItem,
-} from "@brainiac/db/schema";
+import { dashboardWorkspace, user, workspaceMarketplaceItem } from "@brainiac/db/schema";
 import { env } from "@brainiac/env/server";
 import {
   cloneWorkspaceNodes,
+  createWorkspace2x2MatrixBlock,
   createWorkspaceAiPromptBlock,
+  createWorkspaceAssumptionTrackerBlock,
+  createWorkspaceAuthorityScorecardBlock,
+  createWorkspaceBusinessModelCanvasBlock,
+  createWorkspaceChecklistBlock,
+  createWorkspaceCohortHealthDashboardBlock,
+  createWorkspaceCollectionsTrackerBlock,
+  createWorkspaceContentPipelineBlock,
+  createWorkspaceContentQualityRadarBlock,
+  createWorkspaceContentRoiTrackerBlock,
+  createWorkspaceCourseRoadmapBlock,
   createWorkspaceCustomBlock,
   createWorkspaceCustomBlockTemplate,
   createWorkspaceDecisionBlock,
+  createWorkspaceDecisionMatrixBlock,
+  createWorkspaceDelegationMatrixBlock,
+  createWorkspaceDealScoringMatrixBlock,
+  createWorkspaceEisenhowerMatrixBlock,
+  createWorkspaceForecastConfidenceBoardBlock,
+  createWorkspaceHabitGridBlock,
+  createWorkspaceHookBankBlock,
   createWorkspaceKanbanBlock,
   createWorkspaceKanbanCard,
   createWorkspaceKanbanColumn,
+  createWorkspaceLeadershipRhythmPlannerBlock,
+  createWorkspaceLearningOutcomesMatrixBlock,
+  createWorkspaceMessageHouseBlock,
   createWorkspaceNodeTab,
   createWorkspaceNotesBlock,
+  createWorkspaceOkrTrackerBlock,
+  createWorkspacePipelineFunnelBlock,
+  createWorkspacePricingSimulatorBlock,
+  createWorkspaceProcessBlock,
+  createWorkspaceProfitabilityCashFlowBlock,
+  createWorkspaceProsConsBlock,
   createWorkspaceScorecardBlock,
   createWorkspaceScorecardMetric,
+  createWorkspaceSeatPlannerBlock,
+  createWorkspaceSkillsHeatMapBlock,
+  createWorkspaceSwotBlock,
+  createWorkspaceTableBlock,
+  createWorkspaceTalentGridBlock,
   createWorkspaceTask,
   createWorkspaceTaskListBlock,
   createWorkspaceTimelineBlock,
@@ -26,7 +54,9 @@ import {
   createWorkspaceTimeOrchestratorBlock,
   createWorkspaceTrackerBlock,
   normalizeWorkspaceNode,
+  workspaceBlockCategories,
   workspaceMarketplaceItemSchema,
+  type WorkspaceBlockCategoryBlockType,
   type WorkspaceCustomBlock,
   type WorkspaceCustomBlockTemplate,
   type WorkspaceKanbanBlock,
@@ -64,6 +94,9 @@ type SeedCliOptions = {
 };
 
 type SeedContent = {
+  shared: {
+    blockCatalogNode: WorkspaceNode;
+  };
   founder: {
     nodes: WorkspaceNode[];
     launchNode: WorkspaceNode;
@@ -106,6 +139,52 @@ const GRID_START_Y = 32;
 const GRID_COLUMN_GAP = 56;
 const GRID_ROW_GAP = 72;
 
+type SeedCatalogBlock = WorkspaceNodeTab["blocks"][number];
+
+const categorizedBlockFactories: Record<
+  WorkspaceBlockCategoryBlockType,
+  (partial: { id: string; title: string; createdAt: string; updatedAt: string }) => SeedCatalogBlock
+> = {
+  "2x2-matrix": createWorkspace2x2MatrixBlock,
+  "ai-prompt": createWorkspaceAiPromptBlock,
+  "assumption-tracker": createWorkspaceAssumptionTrackerBlock,
+  "authority-scorecard": createWorkspaceAuthorityScorecardBlock,
+  "business-model-canvas": createWorkspaceBusinessModelCanvasBlock,
+  checklist: createWorkspaceChecklistBlock,
+  "cohort-health-dashboard": createWorkspaceCohortHealthDashboardBlock,
+  "collections-tracker": createWorkspaceCollectionsTrackerBlock,
+  "content-pipeline": createWorkspaceContentPipelineBlock,
+  "content-quality-radar": createWorkspaceContentQualityRadarBlock,
+  "content-roi-tracker": createWorkspaceContentRoiTrackerBlock,
+  "course-roadmap": createWorkspaceCourseRoadmapBlock,
+  "deal-scoring-matrix": createWorkspaceDealScoringMatrixBlock,
+  "decision-matrix": createWorkspaceDecisionMatrixBlock,
+  "delegation-matrix": createWorkspaceDelegationMatrixBlock,
+  "eisenhower-matrix": createWorkspaceEisenhowerMatrixBlock,
+  "forecast-confidence-board": createWorkspaceForecastConfidenceBoardBlock,
+  "habit-grid": createWorkspaceHabitGridBlock,
+  "hook-bank": createWorkspaceHookBankBlock,
+  kanban: createWorkspaceKanbanBlock,
+  "leadership-rhythm-planner": createWorkspaceLeadershipRhythmPlannerBlock,
+  "learning-outcomes-matrix": createWorkspaceLearningOutcomesMatrixBlock,
+  "message-house": createWorkspaceMessageHouseBlock,
+  "okr-tracker": createWorkspaceOkrTrackerBlock,
+  "pipeline-funnel": createWorkspacePipelineFunnelBlock,
+  "pricing-simulator": createWorkspacePricingSimulatorBlock,
+  process: createWorkspaceProcessBlock,
+  "profitability-cash-flow": createWorkspaceProfitabilityCashFlowBlock,
+  "pros-cons": createWorkspaceProsConsBlock,
+  scorecard: createWorkspaceScorecardBlock,
+  "seat-planner": createWorkspaceSeatPlannerBlock,
+  "skills-heat-map": createWorkspaceSkillsHeatMapBlock,
+  swot: createWorkspaceSwotBlock,
+  table: createWorkspaceTableBlock,
+  "talent-grid": createWorkspaceTalentGridBlock,
+  "time-orchestrator": createWorkspaceTimeOrchestratorBlock,
+  timeline: createWorkspaceTimelineBlock,
+  tracker: createWorkspaceTrackerBlock,
+};
+
 function seedId(...parts: string[]) {
   return `seed-${parts.join("-")}`;
 }
@@ -120,10 +199,7 @@ function shiftDate(
 ) {
   const { days = 0, hours = 0, minutes = 0 } = options;
   return new Date(
-    date.getTime() +
-      days * 24 * 60 * 60 * 1000 +
-      hours * 60 * 60 * 1000 +
-      minutes * 60 * 1000,
+    date.getTime() + days * 24 * 60 * 60 * 1000 + hours * 60 * 60 * 1000 + minutes * 60 * 1000,
   );
 }
 
@@ -197,6 +273,39 @@ function createSeedNode({
   });
 }
 
+function createBlockCatalogNode(now: Date) {
+  const tabs = workspaceBlockCategories.map((category, categoryIndex) =>
+    createWorkspaceNodeTab({
+      id: seedId("catalog", "tab", category.id),
+      title: category.label,
+      createdAt: isoTimestampFromNow(now, { days: -1 }),
+      updatedAt: isoTimestampFromNow(now, { hours: -(categoryIndex + 1) }),
+      blocks: category.items.map((item, itemIndex) =>
+        categorizedBlockFactories[item.blockType]({
+          id: seedId("catalog", "block", category.id, item.blockType),
+          title: item.label,
+          createdAt: isoTimestampFromNow(now, { days: -1 }),
+          updatedAt: isoTimestampFromNow(now, {
+            hours: -(categoryIndex + itemIndex + 1),
+          }),
+        }),
+      ),
+    }),
+  );
+
+  return createSeedNode({
+    id: seedId("node", "block-catalog"),
+    title: "Block Catalog",
+    x: 40,
+    y: 380,
+    width: 400,
+    height: 260,
+    createdAt: isoTimestampFromNow(now, { days: -1 }),
+    updatedAt: isoTimestampFromNow(now, { hours: -1 }),
+    tabs,
+  });
+}
+
 function parseCliArgs(argv: string[]): SeedCliOptions {
   let email: string | null = null;
   let help = false;
@@ -264,6 +373,7 @@ function printUsage() {
 }
 
 function buildSeedContent(now: Date): SeedContent {
+  const blockCatalogNode = createBlockCatalogNode(now);
   const launchOverviewTab = createWorkspaceNodeTab({
     id: seedId("launch", "tab", "overview"),
     title: "Overview",
@@ -273,8 +383,7 @@ function buildSeedContent(now: Date): SeedContent {
       createWorkspaceNotesBlock({
         id: seedId("launch", "block", "notes"),
         title: "Narrative",
-        body:
-          "Ship the Q2 launch without losing trust. The goal is a sharp story, fast handoff to sales, and zero ambiguity on who owns the final stretch.",
+        body: "Ship the Q2 launch without losing trust. The goal is a sharp story, fast handoff to sales, and zero ambiguity on who owns the final stretch.",
         createdAt: isoTimestampFromNow(now, { days: -8 }),
         updatedAt: isoTimestampFromNow(now, { hours: -5 }),
       }),
@@ -494,8 +603,7 @@ function buildSeedContent(now: Date): SeedContent {
         outputHistory: [
           {
             id: seedId("launch", "output", "risk"),
-            prompt:
-              "What is most likely to break this launch if we keep current momentum?",
+            prompt: "What is most likely to break this launch if we keep current momentum?",
             output:
               "Misalignment between the campaign promise and frontline objection handling. The story is strong, but support and sales need the exact same pricing language.",
             createdAt: isoTimestampFromNow(now, { days: -2, hours: -4 }),
@@ -535,8 +643,7 @@ function buildSeedContent(now: Date): SeedContent {
       createWorkspaceNotesBlock({
         id: seedId("decision", "block", "notes"),
         title: "Context",
-        body:
-          "The team can either keep the launch self-serve only for another month or open the enterprise motion now and accept more sales coordination work.",
+        body: "The team can either keep the launch self-serve only for another month or open the enterprise motion now and accept more sales coordination work.",
         createdAt: isoTimestampFromNow(now, { days: -6 }),
         updatedAt: isoTimestampFromNow(now, { hours: -6 }),
       }),
@@ -750,8 +857,7 @@ function buildSeedContent(now: Date): SeedContent {
       createWorkspaceNotesBlock({
         id: seedId("experiment", "block", "notes"),
         title: "Readout",
-        body:
-          "Activation is trending up, but the main ambiguity is whether copy alone can drive second-node creation. Hold product changes until the message test lands.",
+        body: "Activation is trending up, but the main ambiguity is whether copy alone can drive second-node creation. Hold product changes until the message test lands.",
         createdAt: isoTimestampFromNow(now, { days: -4 }),
         updatedAt: isoTimestampFromNow(now, { hours: -6 }),
       }),
@@ -818,8 +924,7 @@ function buildSeedContent(now: Date): SeedContent {
           createWorkspaceNotesBlock({
             id: seedId("ops-review", "block", "notes"),
             title: "Operating cadence",
-            body:
-              "Keep support backlog under control, hold CSAT above 94%, and ship automation without breaking response quality.",
+            body: "Keep support backlog under control, hold CSAT above 94%, and ship automation without breaking response quality.",
             createdAt: isoTimestampFromNow(now, { days: -5 }),
             updatedAt: isoTimestampFromNow(now, { hours: -3 }),
           }),
@@ -1024,8 +1129,7 @@ function buildSeedContent(now: Date): SeedContent {
           createWorkspaceNotesBlock({
             id: seedId("research", "block", "notes"),
             title: "What changed",
-            body:
-              "Users are getting to their first useful dashboard state faster, but collaboration behavior is still shallow. Most teams create a node, then stall without a second artifact.",
+            body: "Users are getting to their first useful dashboard state faster, but collaboration behavior is still shallow. Most teams create a node, then stall without a second artifact.",
             createdAt: isoTimestampFromNow(now, { days: -2 }),
             updatedAt: isoTimestampFromNow(now, { hours: -2 }),
           }),
@@ -1063,6 +1167,9 @@ function buildSeedContent(now: Date): SeedContent {
   });
 
   return {
+    shared: {
+      blockCatalogNode,
+    },
     founder: {
       nodes: [launchNode, decisionNode, experimentNode],
       launchNode,
@@ -1082,10 +1189,7 @@ function buildSeedContent(now: Date): SeedContent {
   };
 }
 
-function requireSeedUser(
-  users: Map<SeedUserKey, SeedActor>,
-  key: SeedUserKey,
-) {
+function requireSeedUser(users: Map<SeedUserKey, SeedActor>, key: SeedUserKey) {
   const seedUser = users.get(key);
 
   if (!seedUser) {
@@ -1096,9 +1200,7 @@ function requireSeedUser(
 }
 
 function buildSeedActorAliases(targetUser: SeedActor) {
-  return new Map<SeedUserKey, SeedActor>(
-    SEED_USERS.map((seedUser) => [seedUser.key, targetUser]),
-  );
+  return new Map<SeedUserKey, SeedActor>(SEED_USERS.map((seedUser) => [seedUser.key, targetUser]));
 }
 
 async function recreateSeedUsers(password: string) {
@@ -1110,9 +1212,12 @@ async function recreateSeedUsers(password: string) {
     requestHeaders.set("origin", env.CORS_ORIGIN);
   }
 
-  await db
-    .delete(user)
-    .where(inArray(user.email, SEED_USERS.map((seedUser) => seedUser.email)));
+  await db.delete(user).where(
+    inArray(
+      user.email,
+      SEED_USERS.map((seedUser) => seedUser.email),
+    ),
+  );
 
   const createdUsers = new Map<SeedUserKey, SeedUserRecord>();
 
@@ -1161,21 +1266,14 @@ async function findUserByEmail(email: string) {
 }
 
 function buildExistingUserWorkspace(content: SeedContent) {
-  const nodes = cloneWorkspaceNodes([
-    ...content.founder.nodes,
-    ...content.ops.nodes,
-    ...content.analyst.nodes,
-  ]);
+  const nodes = cloneWorkspaceNodes([content.shared.blockCatalogNode]);
 
   let currentX = GRID_START_X;
   let currentY = GRID_START_Y;
   let currentRowHeight = 0;
 
   return nodes.map((node) => {
-    if (
-      currentX > GRID_START_X &&
-      currentX + node.width > GRID_START_X + GRID_MAX_WIDTH
-    ) {
+    if (currentX > GRID_START_X && currentX + node.width > GRID_START_X + GRID_MAX_WIDTH) {
       currentX = GRID_START_X;
       currentY += currentRowHeight + GRID_ROW_GAP;
       currentRowHeight = 0;
@@ -1268,8 +1366,7 @@ function buildMarketplaceItems(
     createSeedMarketplaceItem({
       id: seedId("marketplace", "decision-sprint-tab"),
       title: "Decision Sprint Tab",
-      summary:
-        "Context, tradeoffs, execution tasks, and checkpoints in a single tab.",
+      summary: "Context, tradeoffs, execution tasks, and checkpoints in a single tab.",
       createdBy: founder,
       payload: {
         kind: "tab",
@@ -1295,8 +1392,7 @@ function buildMarketplaceItems(
     createSeedMarketplaceItem({
       id: seedId("marketplace", "support-queue-board"),
       title: "Support Queue Board",
-      summary:
-        "A kanban block for triage, investigation, and resolution work.",
+      summary: "A kanban block for triage, investigation, and resolution work.",
       createdBy: ops,
       payload: {
         kind: "block",
@@ -1309,8 +1405,7 @@ function buildMarketplaceItems(
     createSeedMarketplaceItem({
       id: seedId("marketplace", "experiment-brief"),
       title: "Experiment Brief Block",
-      summary:
-        "A custom experiment brief with notes and AI output history for growth testing.",
+      summary: "A custom experiment brief with notes and AI output history for growth testing.",
       createdBy: analyst,
       payload: {
         kind: "block",
@@ -1323,8 +1418,7 @@ function buildMarketplaceItems(
     createSeedMarketplaceItem({
       id: seedId("marketplace", "executive-scorecard"),
       title: "Executive KPI Scorecard",
-      summary:
-        "A clean scorecard block for top-line product and growth review.",
+      summary: "A clean scorecard block for top-line product and growth review.",
       createdBy: analyst,
       payload: {
         kind: "block",
@@ -1344,9 +1438,7 @@ async function replaceMarketplaceItems(items: WorkspaceMarketplaceItem[]) {
 
   const itemIds = items.map((item) => item.id);
 
-  await db
-    .delete(workspaceMarketplaceItem)
-    .where(inArray(workspaceMarketplaceItem.id, itemIds));
+  await db.delete(workspaceMarketplaceItem).where(inArray(workspaceMarketplaceItem.id, itemIds));
 
   await db.insert(workspaceMarketplaceItem).values(
     items.map((item) => ({
@@ -1366,11 +1458,7 @@ async function replaceMarketplaceItems(items: WorkspaceMarketplaceItem[]) {
 async function seedExistingUser(email: string, content: SeedContent, now: Date) {
   const targetUser = await findUserByEmail(email);
   const targetNodes = buildExistingUserWorkspace(content);
-  const marketplaceItems = buildMarketplaceItems(
-    content,
-    buildSeedActorAliases(targetUser),
-    now,
-  );
+  const marketplaceItems = buildMarketplaceItems(content, buildSeedActorAliases(targetUser), now);
 
   console.log(`Seeding testing workspace into existing user: ${targetUser.email}`);
 
@@ -1381,9 +1469,7 @@ async function seedExistingUser(email: string, content: SeedContent, now: Date) 
   console.log("Seed complete.");
   console.log("");
   console.log(`Target user: ${targetUser.email} (${targetUser.name})`);
-  console.log(
-    `Workspace: ${targetNodes.length} nodes were written to this account.`,
-  );
+  console.log(`Workspace: ${targetNodes.length} nodes were written to this account.`);
   console.log(`Marketplace: ${marketplaceItems.length} curated items.`);
   console.log(
     "This mode does not recreate users. It replaces the target user's workspace snapshot and refreshes only the reserved seed marketplace records.",
@@ -1391,23 +1477,16 @@ async function seedExistingUser(email: string, content: SeedContent, now: Date) 
 }
 
 async function seedDemoUsers(content: SeedContent, now: Date) {
-  const password =
-    process.env.BRAINIAC_SEED_PASSWORD?.trim() || DEFAULT_SEED_PASSWORD;
+  const password = process.env.BRAINIAC_SEED_PASSWORD?.trim() || DEFAULT_SEED_PASSWORD;
 
   console.log("Rebuilding reserved Brainiac demo accounts and seed data...");
 
   const users = await recreateSeedUsers(password);
 
   await Promise.all([
-    saveWorkspaceSnapshot(
-      requireSeedUser(users, "founder").id,
-      content.founder.nodes,
-    ),
-    saveWorkspaceSnapshot(requireSeedUser(users, "ops").id, content.ops.nodes),
-    saveWorkspaceSnapshot(
-      requireSeedUser(users, "analyst").id,
-      content.analyst.nodes,
-    ),
+    saveWorkspaceSnapshot(requireSeedUser(users, "founder").id, [content.shared.blockCatalogNode]),
+    saveWorkspaceSnapshot(requireSeedUser(users, "ops").id, [content.shared.blockCatalogNode]),
+    saveWorkspaceSnapshot(requireSeedUser(users, "analyst").id, [content.shared.blockCatalogNode]),
   ]);
 
   const marketplaceItems = buildMarketplaceItems(content, users, now);
@@ -1424,7 +1503,7 @@ async function seedDemoUsers(content: SeedContent, now: Date) {
 
   console.log("");
   console.log(
-    `Workspaces: ${content.founder.nodes.length + content.ops.nodes.length + content.analyst.nodes.length} nodes across ${SEED_USERS.length} demo users.`,
+    `Workspaces: ${SEED_USERS.length} nodes across ${SEED_USERS.length} demo users.`,
   );
   console.log(`Marketplace: ${marketplaceItems.length} curated items.`);
   console.log(

@@ -197,6 +197,7 @@ import type {
 } from "./types";
 
 export * from "./constants";
+export * from "./block-categories";
 export * from "./brand";
 export * from "./content";
 export * from "./dashboard";
@@ -397,8 +398,9 @@ export function createWorkspaceCourseRoadmapCourse(
     name: partial.name ?? "New course",
     status: partial.status ?? "planning",
     lessons: partial.lessons ?? [createWorkspaceCourseRoadmapLesson({ title: "Lesson 1" })],
-    outcomes:
-      partial.outcomes ?? [createWorkspaceCourseRoadmapOutcome({ text: "Primary learning outcome" })],
+    outcomes: partial.outcomes ?? [
+      createWorkspaceCourseRoadmapOutcome({ text: "Primary learning outcome" }),
+    ],
   });
 }
 
