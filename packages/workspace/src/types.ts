@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import {
+  workspaceAuthorityScoreMetricKeySchema,
+  workspaceAuthorityScoreMetricValueSchema,
+  workspaceAuthorityScoreMetricsSchema,
+  workspaceAuthorityScorecardBlockSchema,
   workspaceAiPromptBlockSchema,
   workspaceAssumptionTrackerBlockSchema,
   workspaceBusinessModelCanvasBlockSchema,
@@ -33,14 +37,20 @@ import {
   workspaceCustomFieldTypeSchema,
   workspaceDecisionBlockSchema,
   workspaceDecisionItemSchema,
+  workspaceExpenseItemSchema,
+  workspaceFinancePaymentStatusSchema,
   workspaceForecastConfidenceBoardBlockSchema,
   workspaceForecastConfidenceItemSchema,
+  workspaceHookBankBlockSchema,
+  workspaceHookBankItemSchema,
   workspaceKanbanBlockSchema,
   workspaceKanbanCardSchema,
   workspaceKanbanColumnSchema,
   workspaceMarketplaceItemSchema,
   workspaceMarketplacePayloadSchema,
   workspaceMarketplaceSaveInputSchema,
+  workspaceMessageHouseBlockSchema,
+  workspaceMessageHousePillarSchema,
   workspaceNodeDashboardFeaturedBlockSchema,
   workspaceNodeDashboardSchema,
   workspaceNodeSchema,
@@ -54,7 +64,14 @@ import {
   workspacePeopleSkillDimensionSchema,
   workspacePipelineFunnelBlockSchema,
   workspacePipelineFunnelDealSchema,
+  workspacePricingSimulatorBlockSchema,
+  workspaceProfitabilityCashFlowBlockSchema,
+  workspaceProfitabilityClientSchema,
   workspacePromptOutputSchema,
+  workspaceReceivableFilterSchema,
+  workspaceReceivableInvoiceSchema,
+  workspaceReceivableStatusSchema,
+  workspaceCollectionsTrackerBlockSchema,
   workspaceSalesForecastBucketSchema,
   workspaceSalesPipelineStageSchema,
   workspaceSalesTemperatureSchema,
@@ -105,9 +122,7 @@ export type WorkspaceSalesPipelineStage = z.infer<typeof workspaceSalesPipelineS
 export type WorkspaceSalesTemperature = z.infer<typeof workspaceSalesTemperatureSchema>;
 export type WorkspaceSalesForecastBucket = z.infer<typeof workspaceSalesForecastBucketSchema>;
 export type WorkspaceContentPlatform = z.infer<typeof workspaceContentPlatformSchema>;
-export type WorkspaceContentPipelineStatus = z.infer<
-  typeof workspaceContentPipelineStatusSchema
->;
+export type WorkspaceContentPipelineStatus = z.infer<typeof workspaceContentPipelineStatusSchema>;
 export type WorkspaceContentQualityDimension = z.infer<
   typeof workspaceContentQualityDimensionSchema
 >;
@@ -134,6 +149,21 @@ export type WorkspaceSeatLoadLevel = z.infer<typeof workspaceSeatLoadLevelSchema
 export type WorkspaceSeatPlannerFilter = z.infer<typeof workspaceSeatPlannerFilterSchema>;
 export type WorkspaceSeatPlannerSeat = z.infer<typeof workspaceSeatPlannerSeatSchema>;
 export type WorkspaceScorecardMetric = z.infer<typeof workspaceScorecardMetricSchema>;
+export type WorkspaceAuthorityScoreMetricKey = z.infer<
+  typeof workspaceAuthorityScoreMetricKeySchema
+>;
+export type WorkspaceAuthorityScoreMetricValue = z.infer<
+  typeof workspaceAuthorityScoreMetricValueSchema
+>;
+export type WorkspaceAuthorityScoreMetrics = z.infer<typeof workspaceAuthorityScoreMetricsSchema>;
+export type WorkspaceHookBankItem = z.infer<typeof workspaceHookBankItemSchema>;
+export type WorkspaceMessageHousePillar = z.infer<typeof workspaceMessageHousePillarSchema>;
+export type WorkspaceFinancePaymentStatus = z.infer<typeof workspaceFinancePaymentStatusSchema>;
+export type WorkspaceProfitabilityClient = z.infer<typeof workspaceProfitabilityClientSchema>;
+export type WorkspaceExpenseItem = z.infer<typeof workspaceExpenseItemSchema>;
+export type WorkspaceReceivableStatus = z.infer<typeof workspaceReceivableStatusSchema>;
+export type WorkspaceReceivableFilter = z.infer<typeof workspaceReceivableFilterSchema>;
+export type WorkspaceReceivableInvoice = z.infer<typeof workspaceReceivableInvoiceSchema>;
 export type WorkspaceOkrKeyResult = z.infer<typeof workspaceOkrKeyResultSchema>;
 export type WorkspaceOkrObjective = z.infer<typeof workspaceOkrObjectiveSchema>;
 export type WorkspaceDecisionMatrixCriterion = z.infer<
@@ -182,6 +212,11 @@ export type WorkspaceContentQualityRadarBlock = z.infer<
   typeof workspaceContentQualityRadarBlockSchema
 >;
 export type WorkspaceContentRoiTrackerBlock = z.infer<typeof workspaceContentRoiTrackerBlockSchema>;
+export type WorkspaceAuthorityScorecardBlock = z.infer<
+  typeof workspaceAuthorityScorecardBlockSchema
+>;
+export type WorkspaceHookBankBlock = z.infer<typeof workspaceHookBankBlockSchema>;
+export type WorkspaceMessageHouseBlock = z.infer<typeof workspaceMessageHouseBlockSchema>;
 export type WorkspaceScorecardBlock = z.infer<typeof workspaceScorecardBlockSchema>;
 export type WorkspaceOkrTrackerBlock = z.infer<typeof workspaceOkrTrackerBlockSchema>;
 export type WorkspaceDecisionMatrixBlock = z.infer<typeof workspaceDecisionMatrixBlockSchema>;
@@ -189,6 +224,13 @@ export type WorkspaceBusinessModelCanvasBlock = z.infer<
   typeof workspaceBusinessModelCanvasBlockSchema
 >;
 export type WorkspaceAssumptionTrackerBlock = z.infer<typeof workspaceAssumptionTrackerBlockSchema>;
+export type WorkspaceProfitabilityCashFlowBlock = z.infer<
+  typeof workspaceProfitabilityCashFlowBlockSchema
+>;
+export type WorkspacePricingSimulatorBlock = z.infer<typeof workspacePricingSimulatorBlockSchema>;
+export type WorkspaceCollectionsTrackerBlock = z.infer<
+  typeof workspaceCollectionsTrackerBlockSchema
+>;
 export type WorkspaceCustomBlock = z.infer<typeof workspaceCustomBlockSchema>;
 export type WorkspaceBlock = z.infer<typeof workspaceBlockSchema>;
 export type WorkspaceNodeTab = z.infer<typeof workspaceNodeTabSchema>;
@@ -382,6 +424,36 @@ export type WorkspaceContentRoiTrackerSummary = {
   lowReturnCount: number;
 };
 
+export type WorkspaceAuthorityScorecardMetricSummary = {
+  key: WorkspaceAuthorityScoreMetricKey;
+  value: number;
+  target: number;
+  progress: number;
+};
+
+export type WorkspaceAuthorityScorecardSummary = {
+  metricCount: number;
+  atTargetCount: number;
+  averageProgress: number;
+  strongestMetric: WorkspaceAuthorityScoreMetricKey | null;
+  weakestMetric: WorkspaceAuthorityScoreMetricKey | null;
+  metrics: Record<WorkspaceAuthorityScoreMetricKey, WorkspaceAuthorityScorecardMetricSummary>;
+};
+
+export type WorkspaceHookBankSummary = {
+  hookCount: number;
+  averageScore: number;
+  topCategory: string | null;
+  topScore: number;
+};
+
+export type WorkspaceMessageHouseSummary = {
+  filledSectionCount: number;
+  emptySectionCount: number;
+  pillarCount: number;
+  latestStressTestAvailable: boolean;
+};
+
 export type WorkspaceOkrHealth = "healthy" | "watch" | "critical";
 
 export type WorkspaceOkrObjectiveSummary = {
@@ -439,6 +511,39 @@ export type WorkspaceAssumptionTrackerSummary = {
   confirmedCount: number;
   atRiskCount: number;
   falseCount: number;
+};
+
+export type WorkspaceProfitabilityCashFlowSummary = {
+  clientCount: number;
+  totalRevenue: number;
+  totalExpenses: number;
+  totalProfit: number;
+  marginPercent: number;
+  paidClients: number;
+  partialClients: number;
+  overdueClients: number;
+  topExpenseCategory: string | null;
+};
+
+export type WorkspacePricingSimulatorSummary = {
+  activeClients: number;
+  monthlyClientHours: number;
+  projectedRevenue: number;
+  requiredRevenue: number;
+  minimumRetainerPerClient: number;
+  projectedProfit: number;
+};
+
+export type WorkspaceReceivableRiskLevel = "low" | "medium" | "high";
+
+export type WorkspaceCollectionsTrackerSummary = {
+  invoiceCount: number;
+  totalOutstanding: number;
+  overdueAmount: number;
+  dueThisWeekAmount: number;
+  collectedThisMonth: number;
+  highRiskCount: number;
+  overdueCount: number;
 };
 
 export type WorkspaceNodeDashboardSelectableBlock = {

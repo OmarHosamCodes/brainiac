@@ -3,20 +3,26 @@ import type { Component } from "vue";
 
 import WorkspaceAiPromptBlockEditor from "~/components/workspace/node/blocks/WorkspaceAiPromptBlockEditor.vue";
 import WorkspaceAssumptionTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAssumptionTrackerBlockEditor.vue";
+import WorkspaceAuthorityScorecardBlockEditor from "~/components/workspace/node/blocks/WorkspaceAuthorityScorecardBlockEditor.vue";
 import WorkspaceBusinessModelCanvasBlockEditor from "~/components/workspace/node/blocks/WorkspaceBusinessModelCanvasBlockEditor.vue";
+import WorkspaceCollectionsTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceCollectionsTrackerBlockEditor.vue";
 import WorkspaceContentPipelineBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentPipelineBlockEditor.vue";
 import WorkspaceContentQualityRadarBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentQualityRadarBlockEditor.vue";
 import WorkspaceContentRoiTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentRoiTrackerBlockEditor.vue";
+import WorkspaceHookBankBlockEditor from "~/components/workspace/node/blocks/WorkspaceHookBankBlockEditor.vue";
 import WorkspaceKanbanBlockEditor from "~/components/workspace/node/blocks/WorkspaceKanbanBlockEditor.vue";
 import WorkspaceCustomBlockEditor from "~/components/workspace/node/blocks/WorkspaceCustomBlockEditor.vue";
 import WorkspaceDecisionMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionMatrixBlockEditor.vue";
 import WorkspaceDecisionBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionBlockEditor.vue";
 import WorkspaceDelegationMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDelegationMatrixBlockEditor.vue";
 import WorkspaceDealScoringMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDealScoringMatrixBlockEditor.vue";
+import WorkspaceMessageHouseBlockEditor from "~/components/workspace/node/blocks/WorkspaceMessageHouseBlockEditor.vue";
 import WorkspaceNotesBlockEditor from "~/components/workspace/node/blocks/WorkspaceNotesBlockEditor.vue";
 import WorkspaceForecastConfidenceBoardBlockEditor from "~/components/workspace/node/blocks/WorkspaceForecastConfidenceBoardBlockEditor.vue";
 import WorkspaceOkrTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceOkrTrackerBlockEditor.vue";
 import WorkspacePipelineFunnelBlockEditor from "~/components/workspace/node/blocks/WorkspacePipelineFunnelBlockEditor.vue";
+import WorkspacePricingSimulatorBlockEditor from "~/components/workspace/node/blocks/WorkspacePricingSimulatorBlockEditor.vue";
+import WorkspaceProfitabilityCashFlowBlockEditor from "~/components/workspace/node/blocks/WorkspaceProfitabilityCashFlowBlockEditor.vue";
 import WorkspaceScorecardBlockEditor from "~/components/workspace/node/blocks/WorkspaceScorecardBlockEditor.vue";
 import WorkspaceSeatPlannerBlockEditor from "~/components/workspace/node/blocks/WorkspaceSeatPlannerBlockEditor.vue";
 import WorkspaceSkillsHeatMapBlockEditor from "~/components/workspace/node/blocks/WorkspaceSkillsHeatMapBlockEditor.vue";
@@ -142,6 +148,24 @@ export const workspaceBlockRegistry = {
     icon: "i-lucide-chart-column",
     addGroup: "secondary",
   },
+  "authority-scorecard": {
+    component: WorkspaceAuthorityScorecardBlockEditor,
+    label: "Authority scorecard",
+    icon: "i-lucide-badge-check",
+    addGroup: "secondary",
+  },
+  "hook-bank": {
+    component: WorkspaceHookBankBlockEditor,
+    label: "Hook bank",
+    icon: "i-lucide-quote",
+    addGroup: "secondary",
+  },
+  "message-house": {
+    component: WorkspaceMessageHouseBlockEditor,
+    label: "Message house",
+    icon: "i-lucide-house",
+    addGroup: "secondary",
+  },
   scorecard: {
     component: WorkspaceScorecardBlockEditor,
     label: "Scorecard",
@@ -170,6 +194,24 @@ export const workspaceBlockRegistry = {
     component: WorkspaceAssumptionTrackerBlockEditor,
     label: "Assumption tracker",
     icon: "i-lucide-flask-conical",
+    addGroup: "secondary",
+  },
+  "profitability-cash-flow": {
+    component: WorkspaceProfitabilityCashFlowBlockEditor,
+    label: "Profitability & cash flow",
+    icon: "i-lucide-wallet",
+    addGroup: "secondary",
+  },
+  "pricing-simulator": {
+    component: WorkspacePricingSimulatorBlockEditor,
+    label: "Pricing simulator",
+    icon: "i-lucide-sliders-horizontal",
+    addGroup: "secondary",
+  },
+  "collections-tracker": {
+    component: WorkspaceCollectionsTrackerBlockEditor,
+    label: "Collections tracker",
+    icon: "i-lucide-receipt-text",
     addGroup: "secondary",
   },
   custom: {

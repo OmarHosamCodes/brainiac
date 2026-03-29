@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import {
+  WORKSPACE_AUTHORITY_SCORECARD_METRICS,
   WORKSPACE_ASSUMPTION_LIMIT,
   WORKSPACE_BUSINESS_MODEL_CANVAS_CELL_KEYS,
   WORKSPACE_CONTENT_PIPELINE_ITEM_LIMIT,
@@ -16,7 +17,10 @@ import {
   WORKSPACE_DECISION_MATRIX_OPTION_LIMIT,
   WORKSPACE_DELEGATION_ITEM_LIMIT,
   WORKSPACE_DELEGATION_STATUSES,
+  WORKSPACE_EXPENSE_ITEM_LIMIT,
+  WORKSPACE_FINANCE_PAYMENT_STATUSES,
   WORKSPACE_FORECAST_CONFIDENCE_ITEM_LIMIT,
+  WORKSPACE_HOOK_BANK_ITEM_LIMIT,
   WORKSPACE_KANBAN_CARD_LIMIT,
   WORKSPACE_KANBAN_COLUMN_LIMIT,
   WORKSPACE_MARKETPLACE_ITEM_LIMIT,
@@ -36,6 +40,10 @@ import {
   WORKSPACE_SEAT_LOAD_LEVELS,
   WORKSPACE_SEAT_PLANNER_FILTERS,
   WORKSPACE_SEAT_PLANNER_SEAT_LIMIT,
+  WORKSPACE_RECEIVABLE_FILTERS,
+  WORKSPACE_RECEIVABLE_INVOICE_LIMIT,
+  WORKSPACE_RECEIVABLE_STATUSES,
+  WORKSPACE_PROFITABILITY_CLIENT_LIMIT,
   WORKSPACE_SKILLS_HEAT_MAP_MEMBER_LIMIT,
   WORKSPACE_STRATEGIC_ASSUMPTION_FILTERS,
   WORKSPACE_STRATEGIC_ASSUMPTION_LINK_TYPES,
@@ -71,6 +79,10 @@ export const workspaceContentRoiSortSchema = z.enum(WORKSPACE_CONTENT_ROI_SORT_O
 export const workspaceSeatHealthSchema = z.enum(WORKSPACE_SEAT_HEALTH_STATES);
 export const workspaceSeatLoadLevelSchema = z.enum(WORKSPACE_SEAT_LOAD_LEVELS);
 export const workspaceSeatPlannerFilterSchema = z.enum(WORKSPACE_SEAT_PLANNER_FILTERS);
+export const workspaceAuthorityScoreMetricKeySchema = z.enum(WORKSPACE_AUTHORITY_SCORECARD_METRICS);
+export const workspaceFinancePaymentStatusSchema = z.enum(WORKSPACE_FINANCE_PAYMENT_STATUSES);
+export const workspaceReceivableStatusSchema = z.enum(WORKSPACE_RECEIVABLE_STATUSES);
+export const workspaceReceivableFilterSchema = z.enum(WORKSPACE_RECEIVABLE_FILTERS);
 
 export const workspaceTaskSchema = z.object({
   id: z.string().min(1),
@@ -250,6 +262,78 @@ export const workspaceScorecardMetricSchema = z.object({
   value: z.number().finite().default(0),
   target: z.number().finite().default(100),
   unit: z.string().trim().max(24).default(""),
+});
+
+export const workspaceAuthorityScoreMetricValueSchema = z.object({
+  value: z.number().int().min(0).max(1_000_000_000).default(0),
+  target: z.number().int().min(1).max(1_000_000_000).default(1),
+});
+
+export const workspaceAuthorityScoreMetricsSchema = z.object({
+  posts: workspaceAuthorityScoreMetricValueSchema.default({
+    value: 0,
+    target: 20,
+  }),
+  videos: workspaceAuthorityScoreMetricValueSchema.default({
+    value: 0,
+    target: 8,
+  }),
+  speakingGigs: workspaceAuthorityScoreMetricValueSchema.default({
+    value: 0,
+    target: 2,
+  }),
+  podcastAppearances: workspaceAuthorityScoreMetricValueSchema.default({
+    value: 0,
+    target: 2,
+  }),
+  mediaFeatures: workspaceAuthorityScoreMetricValueSchema.default({
+    value: 0,
+    target: 4,
+  }),
+  followers: workspaceAuthorityScoreMetricValueSchema.default({
+    value: 0,
+    target: 10_000,
+  }),
+});
+
+export const workspaceHookBankItemSchema = z.object({
+  id: z.string().min(1),
+  category: z.string().trim().max(40).default(""),
+  text: z.string().max(320).default(""),
+  score: z.number().int().min(1).max(10).default(5),
+});
+
+export const workspaceMessageHousePillarSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().max(80),
+  body: z.string().max(2000).default(""),
+});
+
+export const workspaceProfitabilityClientSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().max(120),
+  paymentStatus: workspaceFinancePaymentStatusSchema.default("paid"),
+  healthPercent: z.number().int().min(0).max(100).default(50),
+  revenueEgp: z.number().min(0).max(1_000_000_000).default(0),
+  costEgp: z.number().min(0).max(1_000_000_000).default(0),
+});
+
+export const workspaceExpenseItemSchema = z.object({
+  id: z.string().min(1),
+  category: z.string().trim().max(120),
+  amountEgp: z.number().min(0).max(1_000_000_000).default(0),
+});
+
+export const workspaceReceivableInvoiceSchema = z.object({
+  id: z.string().min(1),
+  clientName: z.string().trim().max(120),
+  amountEgp: z.number().min(0).max(1_000_000_000).default(0),
+  dueDate: isoDateSchema.nullable().optional(),
+  owner: z.string().trim().max(120).default(""),
+  nextFollowUpDate: isoDateSchema.nullable().optional(),
+  status: workspaceReceivableStatusSchema.default("due-soon"),
+  notes: z.string().max(2000).default(""),
+  paidAt: isoDateSchema.nullable().optional(),
 });
 
 export const workspaceOkrKeyResultSchema = z.object({
@@ -445,10 +529,7 @@ export const workspaceSeatPlannerBlockSchema = workspaceBlockBaseSchema.extend({
 
 export const workspaceDealScoringMatrixBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("deal-scoring-matrix"),
-  deals: z
-    .array(workspaceDealScoringDealSchema)
-    .max(WORKSPACE_DEAL_SCORING_DEAL_LIMIT)
-    .default([]),
+  deals: z.array(workspaceDealScoringDealSchema).max(WORKSPACE_DEAL_SCORING_DEAL_LIMIT).default([]),
 });
 
 export const workspacePipelineFunnelBlockSchema = workspaceBlockBaseSchema.extend({
@@ -496,6 +577,53 @@ export const workspaceContentRoiTrackerBlockSchema = workspaceBlockBaseSchema.ex
   type: z.literal("content-roi-tracker"),
   sortBy: workspaceContentRoiSortSchema.default("roi"),
   items: z.array(workspaceContentRoiItemSchema).max(WORKSPACE_CONTENT_ROI_ITEM_LIMIT).default([]),
+});
+
+export const workspaceAuthorityScorecardBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("authority-scorecard"),
+  metrics: workspaceAuthorityScoreMetricsSchema.default({
+    posts: {
+      value: 0,
+      target: 20,
+    },
+    videos: {
+      value: 0,
+      target: 8,
+    },
+    speakingGigs: {
+      value: 0,
+      target: 2,
+    },
+    podcastAppearances: {
+      value: 0,
+      target: 2,
+    },
+    mediaFeatures: {
+      value: 0,
+      target: 4,
+    },
+    followers: {
+      value: 0,
+      target: 10_000,
+    },
+  }),
+});
+
+export const workspaceHookBankBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("hook-bank"),
+  hooks: z.array(workspaceHookBankItemSchema).max(WORKSPACE_HOOK_BANK_ITEM_LIMIT).default([]),
+  lastGeneratedAt: isoTimestampSchema.nullable().optional(),
+});
+
+export const workspaceMessageHouseBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("message-house"),
+  brandPromise: z.string().max(4000).default(""),
+  pillars: z.array(workspaceMessageHousePillarSchema).length(3),
+  audiencePains: z.string().max(4000).default(""),
+  proofPoints: z.string().max(4000).default(""),
+  voicePrinciples: z.string().max(4000).default(""),
+  latestStressTest: z.string().max(12000).default(""),
+  stressTestUpdatedAt: isoTimestampSchema.nullable().optional(),
 });
 
 export const workspaceScorecardBlockSchema = workspaceBlockBaseSchema.extend({
@@ -550,6 +678,33 @@ export const workspaceAssumptionTrackerBlockSchema = workspaceBlockBaseSchema.ex
     .default([]),
 });
 
+export const workspaceProfitabilityCashFlowBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("profitability-cash-flow"),
+  clients: z
+    .array(workspaceProfitabilityClientSchema)
+    .max(WORKSPACE_PROFITABILITY_CLIENT_LIMIT)
+    .default([]),
+  expenses: z.array(workspaceExpenseItemSchema).max(WORKSPACE_EXPENSE_ITEM_LIMIT).default([]),
+});
+
+export const workspacePricingSimulatorBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("pricing-simulator"),
+  activeClients: z.number().int().min(1).max(50).default(4),
+  hoursPerClientPerMonth: z.number().int().min(5).max(100).default(24),
+  hourlyRateEgp: z.number().int().min(100).max(2_000).default(650),
+  monthlyOverheadEgp: z.number().int().min(10_000).max(200_000).default(85_000),
+  targetMarginPercent: z.number().int().min(10).max(80).default(35),
+});
+
+export const workspaceCollectionsTrackerBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("collections-tracker"),
+  filter: workspaceReceivableFilterSchema.default("all"),
+  invoices: z
+    .array(workspaceReceivableInvoiceSchema)
+    .max(WORKSPACE_RECEIVABLE_INVOICE_LIMIT)
+    .default([]),
+});
+
 export const workspaceCustomBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("custom"),
   definitionId: z.string().min(1),
@@ -578,11 +733,17 @@ export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceContentPipelineBlockSchema,
   workspaceContentQualityRadarBlockSchema,
   workspaceContentRoiTrackerBlockSchema,
+  workspaceAuthorityScorecardBlockSchema,
+  workspaceHookBankBlockSchema,
+  workspaceMessageHouseBlockSchema,
   workspaceScorecardBlockSchema,
   workspaceOkrTrackerBlockSchema,
   workspaceDecisionMatrixBlockSchema,
   workspaceBusinessModelCanvasBlockSchema,
   workspaceAssumptionTrackerBlockSchema,
+  workspaceProfitabilityCashFlowBlockSchema,
+  workspacePricingSimulatorBlockSchema,
+  workspaceCollectionsTrackerBlockSchema,
   workspaceCustomBlockSchema,
 ]);
 

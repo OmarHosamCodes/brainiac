@@ -5,9 +5,12 @@ import {
   DEFAULT_WORKSPACE_NODE_WIDTH,
 } from "./constants";
 import {
+  workspaceAuthorityScoreMetricsSchema,
+  workspaceAuthorityScorecardBlockSchema,
   workspaceAiPromptBlockSchema,
   workspaceAssumptionTrackerBlockSchema,
   workspaceBusinessModelCanvasBlockSchema,
+  workspaceCollectionsTrackerBlockSchema,
   workspaceContentPipelineBlockSchema,
   workspaceContentPipelineItemSchema,
   workspaceContentQualityRadarBlockSchema,
@@ -24,11 +27,16 @@ import {
   workspaceDecisionMatrixCriterionSchema,
   workspaceDecisionMatrixOptionSchema,
   workspaceDecisionBlockSchema,
+  workspaceExpenseItemSchema,
   workspaceForecastConfidenceBoardBlockSchema,
   workspaceForecastConfidenceItemSchema,
+  workspaceHookBankBlockSchema,
+  workspaceHookBankItemSchema,
   workspaceKanbanBlockSchema,
   workspaceKanbanCardSchema,
   workspaceKanbanColumnSchema,
+  workspaceMessageHouseBlockSchema,
+  workspaceMessageHousePillarSchema,
   workspaceNodeDashboardSchema,
   workspaceNodeSchema,
   workspaceNodeTabSchema,
@@ -39,7 +47,11 @@ import {
   workspaceOkrTrackerBlockSchema,
   workspacePipelineFunnelBlockSchema,
   workspacePipelineFunnelDealSchema,
+  workspacePricingSimulatorBlockSchema,
+  workspaceProfitabilityCashFlowBlockSchema,
+  workspaceProfitabilityClientSchema,
   workspacePromptOutputSchema,
+  workspaceReceivableInvoiceSchema,
   workspaceSeatPlannerBlockSchema,
   workspaceSeatPlannerSeatSchema,
   workspaceScorecardBlockSchema,
@@ -61,10 +73,13 @@ import { createWorkspaceSkillsScoreMap } from "./people";
 import { getNowIsoString } from "./shared";
 import { createWorkspaceTimeOrchestratorSettings } from "./tasks";
 import type {
+  WorkspaceAuthorityScoreMetrics,
+  WorkspaceAuthorityScorecardBlock,
   WorkspaceAiPromptBlock,
   WorkspaceAssumptionTrackerBlock,
   WorkspaceBusinessModelCanvasBlock,
   WorkspaceBlock,
+  WorkspaceCollectionsTrackerBlock,
   WorkspaceContentPipelineBlock,
   WorkspaceContentPipelineItem,
   WorkspaceContentQualityRadarBlock,
@@ -82,11 +97,16 @@ import type {
   WorkspaceDecisionMatrixCriterion,
   WorkspaceDecisionMatrixOption,
   WorkspaceDecisionBlock,
+  WorkspaceExpenseItem,
   WorkspaceForecastConfidenceBoardBlock,
   WorkspaceForecastConfidenceItem,
+  WorkspaceHookBankBlock,
+  WorkspaceHookBankItem,
   WorkspaceKanbanBlock,
   WorkspaceKanbanCard,
   WorkspaceKanbanColumn,
+  WorkspaceMessageHouseBlock,
+  WorkspaceMessageHousePillar,
   WorkspaceNode,
   WorkspaceNodeDashboard,
   WorkspaceNodeTab,
@@ -94,7 +114,11 @@ import type {
   WorkspaceNotesBlock,
   WorkspacePipelineFunnelBlock,
   WorkspacePipelineFunnelDeal,
+  WorkspacePricingSimulatorBlock,
   WorkspacePromptOutput,
+  WorkspaceProfitabilityCashFlowBlock,
+  WorkspaceProfitabilityClient,
+  WorkspaceReceivableInvoice,
   WorkspaceSeatPlannerBlock,
   WorkspaceSeatPlannerSeat,
   WorkspaceOkrKeyResult,
@@ -116,8 +140,10 @@ import type {
 } from "./types";
 
 export * from "./constants";
+export * from "./brand";
 export * from "./content";
 export * from "./dashboard";
+export * from "./finance";
 export * from "./people";
 export * from "./sales";
 export * from "./schemas";
@@ -230,9 +256,7 @@ export function createWorkspaceContentPipelineItem(
 export function createWorkspaceContentQualityScores(
   partial: Partial<WorkspaceContentQualityScores> = {},
 ): WorkspaceContentQualityScores {
-  return workspaceContentQualityScoresSchema.parse(
-    createWorkspaceContentQualityScoreMap(partial),
-  );
+  return workspaceContentQualityScoresSchema.parse(createWorkspaceContentQualityScoreMap(partial));
 }
 
 export function createWorkspaceContentRoiItem(
@@ -248,6 +272,66 @@ export function createWorkspaceContentRoiItem(
     leads: partial.leads ?? 0,
     conversionInfluence: partial.conversionInfluence ?? 5,
     repurposeValue: partial.repurposeValue ?? 5,
+  });
+}
+
+export function createWorkspaceHookBankItem(
+  partial: Partial<WorkspaceHookBankItem> = {},
+): WorkspaceHookBankItem {
+  return workspaceHookBankItemSchema.parse({
+    id: partial.id ?? createWorkspaceId("hook"),
+    category: partial.category ?? "",
+    text: partial.text ?? "",
+    score: partial.score ?? 5,
+  });
+}
+
+export function createWorkspaceMessageHousePillar(
+  partial: Partial<WorkspaceMessageHousePillar> = {},
+): WorkspaceMessageHousePillar {
+  return workspaceMessageHousePillarSchema.parse({
+    id: partial.id ?? createWorkspaceId("pillar"),
+    title: partial.title ?? "Pillar",
+    body: partial.body ?? "",
+  });
+}
+
+export function createWorkspaceProfitabilityClient(
+  partial: Partial<WorkspaceProfitabilityClient> = {},
+): WorkspaceProfitabilityClient {
+  return workspaceProfitabilityClientSchema.parse({
+    id: partial.id ?? createWorkspaceId("client"),
+    name: partial.name ?? "Client",
+    paymentStatus: partial.paymentStatus ?? "paid",
+    healthPercent: partial.healthPercent ?? 65,
+    revenueEgp: partial.revenueEgp ?? 0,
+    costEgp: partial.costEgp ?? 0,
+  });
+}
+
+export function createWorkspaceExpenseItem(
+  partial: Partial<WorkspaceExpenseItem> = {},
+): WorkspaceExpenseItem {
+  return workspaceExpenseItemSchema.parse({
+    id: partial.id ?? createWorkspaceId("expense"),
+    category: partial.category ?? "Expense",
+    amountEgp: partial.amountEgp ?? 0,
+  });
+}
+
+export function createWorkspaceReceivableInvoice(
+  partial: Partial<WorkspaceReceivableInvoice> = {},
+): WorkspaceReceivableInvoice {
+  return workspaceReceivableInvoiceSchema.parse({
+    id: partial.id ?? createWorkspaceId("invoice"),
+    clientName: partial.clientName ?? "Client",
+    amountEgp: partial.amountEgp ?? 0,
+    dueDate: partial.dueDate ?? null,
+    owner: partial.owner ?? "",
+    nextFollowUpDate: partial.nextFollowUpDate ?? null,
+    status: partial.status ?? "due-soon",
+    notes: partial.notes ?? "",
+    paidAt: partial.paidAt ?? null,
   });
 }
 
@@ -666,6 +750,183 @@ function getContentRoiTrackerDefaultItems() {
   ];
 }
 
+function getAuthorityScorecardDefaultMetrics(): WorkspaceAuthorityScoreMetrics {
+  return workspaceAuthorityScoreMetricsSchema.parse({
+    posts: {
+      value: 12,
+      target: 20,
+    },
+    videos: {
+      value: 4,
+      target: 8,
+    },
+    speakingGigs: {
+      value: 1,
+      target: 2,
+    },
+    podcastAppearances: {
+      value: 0,
+      target: 2,
+    },
+    mediaFeatures: {
+      value: 2,
+      target: 4,
+    },
+    followers: {
+      value: 5_400,
+      target: 10_000,
+    },
+  });
+}
+
+function getHookBankDefaultItems() {
+  return [
+    createWorkspaceHookBankItem({
+      category: "pattern-interrupt",
+      text: "The reason your content is underperforming is probably the metric you're celebrating.",
+      score: 9,
+    }),
+    createWorkspaceHookBankItem({
+      category: "mistake",
+      text: "Most founders don't have a content problem. They have a message discipline problem.",
+      score: 9,
+    }),
+    createWorkspaceHookBankItem({
+      category: "insider",
+      text: "Behind every strong authority brand is a boring message system nobody sees.",
+      score: 8,
+    }),
+    createWorkspaceHookBankItem({
+      category: "investment",
+      text: "If you can't explain the ROI of a post before publishing it, you're not building an asset.",
+      score: 8,
+    }),
+    createWorkspaceHookBankItem({
+      category: "contrarian",
+      text: "More content is rarely the answer. Better hooks and tighter proof usually are.",
+      score: 7,
+    }),
+    createWorkspaceHookBankItem({
+      category: "proof",
+      text: "The fastest way to sound premium is to replace opinions with receipts.",
+      score: 8,
+    }),
+  ];
+}
+
+function getMessageHouseDefaultPillars() {
+  return [
+    createWorkspaceMessageHousePillar({
+      title: "Practical Depth",
+      body: "School of Marketing teaches execution-ready marketing systems, not recycled theory.",
+    }),
+    createWorkspaceMessageHousePillar({
+      title: "Operator Credibility",
+      body: "Every lesson is grounded in real client delivery, campaign mistakes, and commercial tradeoffs.",
+    }),
+    createWorkspaceMessageHousePillar({
+      title: "Clearer Growth Decisions",
+      body: "The brand helps founders and marketers prioritize what moves revenue instead of busywork.",
+    }),
+  ];
+}
+
+function getProfitabilityCashFlowDefaultClients() {
+  return [
+    createWorkspaceProfitabilityClient({
+      name: "TechCo",
+      paymentStatus: "paid",
+      healthPercent: 88,
+      revenueEgp: 90_000,
+      costEgp: 32_000,
+    }),
+    createWorkspaceProfitabilityClient({
+      name: "FoodBrand",
+      paymentStatus: "partial",
+      healthPercent: 64,
+      revenueEgp: 58_000,
+      costEgp: 29_000,
+    }),
+    createWorkspaceProfitabilityClient({
+      name: "EduStart",
+      paymentStatus: "paid",
+      healthPercent: 79,
+      revenueEgp: 72_000,
+      costEgp: 24_000,
+    }),
+    createWorkspaceProfitabilityClient({
+      name: "ClinicOne",
+      paymentStatus: "overdue",
+      healthPercent: 46,
+      revenueEgp: 44_000,
+      costEgp: 23_000,
+    }),
+  ];
+}
+
+function getProfitabilityCashFlowDefaultExpenses() {
+  return [
+    createWorkspaceExpenseItem({
+      category: "Salaries",
+      amountEgp: 62_000,
+    }),
+    createWorkspaceExpenseItem({
+      category: "Tools",
+      amountEgp: 11_500,
+    }),
+    createWorkspaceExpenseItem({
+      category: "Office",
+      amountEgp: 7_000,
+    }),
+    createWorkspaceExpenseItem({
+      category: "Marketing",
+      amountEgp: 16_000,
+    }),
+  ];
+}
+
+function getCollectionsTrackerDefaultInvoices() {
+  return [
+    createWorkspaceReceivableInvoice({
+      clientName: "TechCo",
+      amountEgp: 28_000,
+      dueDate: "2026-03-18",
+      owner: "Layla",
+      nextFollowUpDate: "2026-03-20",
+      status: "paid",
+      notes: "Collected after contract milestone signoff.",
+      paidAt: "2026-03-19",
+    }),
+    createWorkspaceReceivableInvoice({
+      clientName: "EduStart",
+      amountEgp: 36_000,
+      dueDate: "2026-04-01",
+      owner: "Karim",
+      nextFollowUpDate: "2026-03-31",
+      status: "due-soon",
+      notes: "Invoice sent and procurement requested purchase order copy.",
+    }),
+    createWorkspaceReceivableInvoice({
+      clientName: "FoodBrand",
+      amountEgp: 22_000,
+      dueDate: "2026-03-24",
+      owner: "Layla",
+      nextFollowUpDate: "2026-03-30",
+      status: "partial",
+      notes: "Half collected. Waiting on the remaining balance after final asset delivery.",
+    }),
+    createWorkspaceReceivableInvoice({
+      clientName: "ClinicOne",
+      amountEgp: 41_000,
+      dueDate: "2026-03-11",
+      owner: "Omar",
+      nextFollowUpDate: "2026-03-30",
+      status: "overdue",
+      notes: "Escalate to founder if payment remains open after the next follow-up.",
+    }),
+  ];
+}
+
 function getTalentGridDefaultMembers() {
   return [
     createWorkspaceTalentGridMember({
@@ -749,6 +1010,35 @@ function getSeatPlannerDefaultSeats() {
       notes: "Stable seat with basic redundancy in place.",
     }),
   ];
+}
+
+function getMessageHouseDefaultBrandPromise() {
+  return "School of Marketing helps serious operators turn scattered marketing effort into practical systems that compound authority and revenue.";
+}
+
+function normalizeMessageHousePillars(pillars: WorkspaceMessageHousePillar[] | undefined) {
+  const defaults = getMessageHouseDefaultPillars();
+  const source = pillars && pillars.length > 0 ? pillars.slice(0, 3) : defaults;
+
+  return Array.from({ length: 3 }, (_, index) => {
+    const fallback = defaults[index]!;
+    const current = source[index];
+
+    return createWorkspaceMessageHousePillar({
+      id: current?.id ?? fallback.id,
+      title: current?.title ?? fallback.title,
+      body: current?.body ?? fallback.body,
+    });
+  });
+}
+
+function normalizeAuthorityScoreMetrics(
+  metrics: Partial<WorkspaceAuthorityScoreMetrics> | undefined,
+) {
+  return workspaceAuthorityScoreMetricsSchema.parse({
+    ...getAuthorityScorecardDefaultMetrics(),
+    ...metrics,
+  });
 }
 
 export function createWorkspaceTaskListBlock(
@@ -1038,6 +1328,58 @@ export function createWorkspaceContentRoiTrackerBlock(
   });
 }
 
+export function createWorkspaceAuthorityScorecardBlock(
+  partial: Partial<WorkspaceAuthorityScorecardBlock> = {},
+): WorkspaceAuthorityScorecardBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceAuthorityScorecardBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "authority-scorecard",
+    title: partial.title ?? "Authority scorecard",
+    metrics: normalizeAuthorityScoreMetrics(partial.metrics),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceHookBankBlock(
+  partial: Partial<WorkspaceHookBankBlock> = {},
+): WorkspaceHookBankBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceHookBankBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "hook-bank",
+    title: partial.title ?? "Hook bank",
+    hooks: partial.hooks ?? getHookBankDefaultItems(),
+    lastGeneratedAt: partial.lastGeneratedAt ?? null,
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceMessageHouseBlock(
+  partial: Partial<WorkspaceMessageHouseBlock> = {},
+): WorkspaceMessageHouseBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceMessageHouseBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "message-house",
+    title: partial.title ?? "Message house",
+    brandPromise: partial.brandPromise ?? getMessageHouseDefaultBrandPromise(),
+    pillars: normalizeMessageHousePillars(partial.pillars),
+    audiencePains: partial.audiencePains ?? "",
+    proofPoints: partial.proofPoints ?? "",
+    voicePrinciples: partial.voicePrinciples ?? "",
+    latestStressTest: partial.latestStressTest ?? "",
+    stressTestUpdatedAt: partial.stressTestUpdatedAt ?? null,
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
 export function createWorkspaceScorecardBlock(
   partial: Partial<WorkspaceScorecardBlock> = {},
 ): WorkspaceScorecardBlock {
@@ -1166,6 +1508,57 @@ export function createWorkspaceAssumptionTrackerBlock(
           "Recent calls referenced proof and closed faster after seeing outcome stories.",
       }),
     ],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceProfitabilityCashFlowBlock(
+  partial: Partial<WorkspaceProfitabilityCashFlowBlock> = {},
+): WorkspaceProfitabilityCashFlowBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceProfitabilityCashFlowBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "profitability-cash-flow",
+    title: partial.title ?? "Profitability & cash flow",
+    clients: partial.clients ?? getProfitabilityCashFlowDefaultClients(),
+    expenses: partial.expenses ?? getProfitabilityCashFlowDefaultExpenses(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspacePricingSimulatorBlock(
+  partial: Partial<WorkspacePricingSimulatorBlock> = {},
+): WorkspacePricingSimulatorBlock {
+  const timestamp = getNowIsoString();
+
+  return workspacePricingSimulatorBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "pricing-simulator",
+    title: partial.title ?? "Pricing simulator",
+    activeClients: partial.activeClients ?? 4,
+    hoursPerClientPerMonth: partial.hoursPerClientPerMonth ?? 24,
+    hourlyRateEgp: partial.hourlyRateEgp ?? 650,
+    monthlyOverheadEgp: partial.monthlyOverheadEgp ?? 85_000,
+    targetMarginPercent: partial.targetMarginPercent ?? 35,
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceCollectionsTrackerBlock(
+  partial: Partial<WorkspaceCollectionsTrackerBlock> = {},
+): WorkspaceCollectionsTrackerBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceCollectionsTrackerBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "collections-tracker",
+    title: partial.title ?? "Collections & receivables tracker",
+    filter: partial.filter ?? "all",
+    invoices: partial.invoices ?? getCollectionsTrackerDefaultInvoices(),
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
   });
@@ -1487,6 +1880,28 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         sortBy: block.sortBy ?? "roi",
         items: block.items ?? [],
       });
+    case "authority-scorecard":
+      return workspaceAuthorityScorecardBlockSchema.parse({
+        ...block,
+        metrics: normalizeAuthorityScoreMetrics(block.metrics),
+      });
+    case "hook-bank":
+      return workspaceHookBankBlockSchema.parse({
+        ...block,
+        hooks: block.hooks ?? [],
+        lastGeneratedAt: block.lastGeneratedAt ?? null,
+      });
+    case "message-house":
+      return workspaceMessageHouseBlockSchema.parse({
+        ...block,
+        brandPromise: block.brandPromise ?? "",
+        pillars: normalizeMessageHousePillars(block.pillars),
+        audiencePains: block.audiencePains ?? "",
+        proofPoints: block.proofPoints ?? "",
+        voicePrinciples: block.voicePrinciples ?? "",
+        latestStressTest: block.latestStressTest ?? "",
+        stressTestUpdatedAt: block.stressTestUpdatedAt ?? null,
+      });
     case "scorecard":
       return workspaceScorecardBlockSchema.parse({
         ...block,
@@ -1514,6 +1929,27 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         ...block,
         filter: block.filter ?? "all",
         assumptions: block.assumptions ?? [],
+      });
+    case "profitability-cash-flow":
+      return workspaceProfitabilityCashFlowBlockSchema.parse({
+        ...block,
+        clients: block.clients ?? [],
+        expenses: block.expenses ?? [],
+      });
+    case "pricing-simulator":
+      return workspacePricingSimulatorBlockSchema.parse({
+        ...block,
+        activeClients: block.activeClients ?? 4,
+        hoursPerClientPerMonth: block.hoursPerClientPerMonth ?? 24,
+        hourlyRateEgp: block.hourlyRateEgp ?? 650,
+        monthlyOverheadEgp: block.monthlyOverheadEgp ?? 85_000,
+        targetMarginPercent: block.targetMarginPercent ?? 35,
+      });
+    case "collections-tracker":
+      return workspaceCollectionsTrackerBlockSchema.parse({
+        ...block,
+        filter: block.filter ?? "all",
+        invoices: block.invoices ?? [],
       });
     case "custom":
       return workspaceCustomBlockSchema.parse({
@@ -1846,6 +2282,36 @@ export function cloneWorkspaceBlockForInsertion(
         createdAt: timestamp,
         updatedAt: timestamp,
       });
+    case "authority-scorecard":
+      return workspaceAuthorityScorecardBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        metrics: normalizeAuthorityScoreMetrics(block.metrics),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "hook-bank":
+      return workspaceHookBankBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        hooks: block.hooks.map((hook) => ({
+          ...hook,
+          id: createWorkspaceId("hook"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "message-house":
+      return workspaceMessageHouseBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        pillars: block.pillars.map((pillar) => ({
+          ...pillar,
+          id: createWorkspaceId("pillar"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
     case "scorecard":
       return workspaceScorecardBlockSchema.parse({
         ...block,
@@ -1914,6 +2380,39 @@ export function cloneWorkspaceBlockForInsertion(
         assumptions: block.assumptions.map((assumption) => ({
           ...assumption,
           id: createWorkspaceId("assumption"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "profitability-cash-flow":
+      return workspaceProfitabilityCashFlowBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        clients: block.clients.map((client) => ({
+          ...client,
+          id: createWorkspaceId("client"),
+        })),
+        expenses: block.expenses.map((expense) => ({
+          ...expense,
+          id: createWorkspaceId("expense"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "pricing-simulator":
+      return workspacePricingSimulatorBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "collections-tracker":
+      return workspaceCollectionsTrackerBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        invoices: block.invoices.map((invoice) => ({
+          ...invoice,
+          id: createWorkspaceId("invoice"),
         })),
         createdAt: timestamp,
         updatedAt: timestamp,

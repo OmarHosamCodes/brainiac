@@ -4,7 +4,9 @@ import {
   createDefaultWorkspaceTab,
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
+  createWorkspaceAuthorityScorecardBlock,
   createWorkspaceBusinessModelCanvasBlock,
+  createWorkspaceCollectionsTrackerBlock,
   createWorkspaceContentPipelineBlock,
   createWorkspaceContentQualityRadarBlock,
   createWorkspaceContentRoiTrackerBlock,
@@ -13,11 +15,15 @@ import {
   createWorkspaceDecisionMatrixBlock,
   createWorkspaceDecisionBlock,
   createWorkspaceForecastConfidenceBoardBlock,
+  createWorkspaceHookBankBlock,
   createWorkspaceKanbanBlock,
+  createWorkspaceMessageHouseBlock,
   createWorkspaceNode,
   createWorkspaceNotesBlock,
   createWorkspaceOkrTrackerBlock,
   createWorkspacePipelineFunnelBlock,
+  createWorkspacePricingSimulatorBlock,
+  createWorkspaceProfitabilityCashFlowBlock,
   createWorkspaceScorecardBlock,
   createWorkspaceTaskListBlock,
   createWorkspaceTimeOrchestratorBlock,
@@ -68,11 +74,17 @@ const workspaceBlockTypeSchema = z.enum([
   "content-pipeline",
   "content-quality-radar",
   "content-roi-tracker",
+  "authority-scorecard",
+  "hook-bank",
+  "message-house",
   "scorecard",
   "okr-tracker",
   "decision-matrix",
   "business-model-canvas",
   "assumption-tracker",
+  "profitability-cash-flow",
+  "pricing-simulator",
+  "collections-tracker",
   "custom",
 ]);
 
@@ -301,6 +313,20 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return `${Object.values(block.scores).reduce((sum, score) => sum + score, 0) / 10}/10 average quality score`;
     case "content-roi-tracker":
       return `${block.items.length} content ROI rows sorted by ${block.sortBy}`;
+    case "authority-scorecard":
+      return `${Object.values(block.metrics).filter((metric) => metric.value >= metric.target).length}/6 metrics on target`;
+    case "hook-bank":
+      return `${block.hooks.length} hooks scored up to ${Math.max(0, ...block.hooks.map((hook) => hook.score))}/10`;
+    case "message-house":
+      return `${
+        [
+          block.brandPromise,
+          ...block.pillars.map((pillar) => pillar.body),
+          block.audiencePains,
+          block.proofPoints,
+          block.voicePrinciples,
+        ].filter((value) => value.trim()).length
+      }/7 sections filled`;
     case "scorecard":
       return `${block.metrics.length} metrics`;
     case "okr-tracker":
@@ -311,6 +337,12 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return `${Object.values(block.cells).filter((value) => value.trim()).length}/9 canvas cells filled`;
     case "assumption-tracker":
       return `${block.assumptions.length} assumptions tracked`;
+    case "profitability-cash-flow":
+      return `${block.clients.length} clients and ${block.expenses.length} expense categories`;
+    case "pricing-simulator":
+      return `${block.activeClients} active clients at ${block.hourlyRateEgp} EGP/hour`;
+    case "collections-tracker":
+      return `${block.invoices.length} receivables with filter ${block.filter}`;
     case "custom":
       return truncate(block.notes || block.latestAiOutput || JSON.stringify(block.values));
     default:
@@ -647,6 +679,12 @@ function createBlockByType(args: {
       return createWorkspaceContentQualityRadarBlock(titleInput);
     case "content-roi-tracker":
       return createWorkspaceContentRoiTrackerBlock(titleInput);
+    case "authority-scorecard":
+      return createWorkspaceAuthorityScorecardBlock(titleInput);
+    case "hook-bank":
+      return createWorkspaceHookBankBlock(titleInput);
+    case "message-house":
+      return createWorkspaceMessageHouseBlock(titleInput);
     case "scorecard":
       return createWorkspaceScorecardBlock(titleInput);
     case "okr-tracker":
@@ -657,6 +695,12 @@ function createBlockByType(args: {
       return createWorkspaceBusinessModelCanvasBlock(titleInput);
     case "assumption-tracker":
       return createWorkspaceAssumptionTrackerBlock(titleInput);
+    case "profitability-cash-flow":
+      return createWorkspaceProfitabilityCashFlowBlock(titleInput);
+    case "pricing-simulator":
+      return createWorkspacePricingSimulatorBlock(titleInput);
+    case "collections-tracker":
+      return createWorkspaceCollectionsTrackerBlock(titleInput);
     case "custom": {
       if (!args.customTemplateId) {
         throw new Error("A customTemplateId is required when creating a custom block.");

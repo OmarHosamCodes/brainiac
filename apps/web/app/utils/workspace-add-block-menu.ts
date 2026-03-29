@@ -109,6 +109,48 @@ export const workspaceAddBlockCategories = [
     ],
   },
   {
+    id: "brand",
+    label: "Brand",
+    items: [
+      {
+        blockType: "authority-scorecard",
+        label: "Authority scorecard",
+        icon: "i-lucide-badge-check",
+      },
+      {
+        blockType: "hook-bank",
+        label: "Hook bank",
+        icon: "i-lucide-quote",
+      },
+      {
+        blockType: "message-house",
+        label: "Message house",
+        icon: "i-lucide-house",
+      },
+    ],
+  },
+  {
+    id: "finance",
+    label: "Finance",
+    items: [
+      {
+        blockType: "profitability-cash-flow",
+        label: "Profitability & cash flow",
+        icon: "i-lucide-wallet",
+      },
+      {
+        blockType: "pricing-simulator",
+        label: "Pricing simulator",
+        icon: "i-lucide-sliders-horizontal",
+      },
+      {
+        blockType: "collections-tracker",
+        label: "Collections tracker",
+        icon: "i-lucide-receipt-text",
+      },
+    ],
+  },
+  {
     id: "general",
     label: "General",
     items: [
@@ -153,8 +195,7 @@ export function createWorkspaceAddBlockMenuItems(
     {
       label: category.label,
       type: "label",
-      class:
-        "px-2 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.24em] text-muted/70",
+      class: "px-2 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.24em] text-muted/70",
     },
     ...category.items.map(
       (item) =>

@@ -11,6 +11,10 @@ export const WORKSPACE_OKR_KEY_RESULT_LIMIT = 12;
 export const WORKSPACE_DECISION_MATRIX_CRITERIA_LIMIT = 12;
 export const WORKSPACE_DECISION_MATRIX_OPTION_LIMIT = 8;
 export const WORKSPACE_ASSUMPTION_LIMIT = 30;
+export const WORKSPACE_HOOK_BANK_ITEM_LIMIT = 60;
+export const WORKSPACE_PROFITABILITY_CLIENT_LIMIT = 24;
+export const WORKSPACE_EXPENSE_ITEM_LIMIT = 16;
+export const WORKSPACE_RECEIVABLE_INVOICE_LIMIT = 40;
 export const WORKSPACE_SKILLS_HEAT_MAP_MEMBER_LIMIT = 24;
 export const WORKSPACE_DELEGATION_ITEM_LIMIT = 40;
 export const WORKSPACE_TALENT_GRID_MEMBER_LIMIT = 24;
@@ -69,19 +73,9 @@ export const WORKSPACE_SALES_PIPELINE_STAGES = [
 
 export const WORKSPACE_SALES_TEMPERATURES = ["hot", "warm", "cold"] as const;
 
-export const WORKSPACE_SALES_FORECAST_BUCKETS = [
-  "commit",
-  "likely",
-  "upside",
-  "at-risk",
-] as const;
+export const WORKSPACE_SALES_FORECAST_BUCKETS = ["commit", "likely", "upside", "at-risk"] as const;
 
-export const WORKSPACE_CONTENT_PLATFORMS = [
-  "instagram",
-  "tiktok",
-  "linkedin",
-  "youtube",
-] as const;
+export const WORKSPACE_CONTENT_PLATFORMS = ["instagram", "tiktok", "linkedin", "youtube"] as const;
 
 export const WORKSPACE_CONTENT_PIPELINE_STATUSES = [
   "ideas",
@@ -146,6 +140,26 @@ export const WORKSPACE_STRATEGIC_ASSUMPTION_LINK_TYPES = [
 export const WORKSPACE_STRATEGIC_ASSUMPTION_FILTERS = [
   "all",
   ...WORKSPACE_STRATEGIC_ASSUMPTION_STATUSES,
+] as const;
+
+export const WORKSPACE_AUTHORITY_SCORECARD_METRICS = [
+  "posts",
+  "videos",
+  "speakingGigs",
+  "podcastAppearances",
+  "mediaFeatures",
+  "followers",
+] as const;
+
+export const WORKSPACE_FINANCE_PAYMENT_STATUSES = ["paid", "partial", "overdue"] as const;
+
+export const WORKSPACE_RECEIVABLE_STATUSES = ["paid", "due-soon", "partial", "overdue"] as const;
+
+export const WORKSPACE_RECEIVABLE_FILTERS = [
+  "all",
+  "overdue",
+  "high-risk",
+  "due-this-week",
 ] as const;
 
 export const WORKSPACE_NODE_TINTS = [

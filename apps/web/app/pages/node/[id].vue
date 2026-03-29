@@ -5,7 +5,9 @@ import {
   createDefaultWorkspaceTab,
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
+  createWorkspaceAuthorityScorecardBlock,
   createWorkspaceBusinessModelCanvasBlock,
+  createWorkspaceCollectionsTrackerBlock,
   createWorkspaceContentPipelineBlock,
   createWorkspaceContentQualityRadarBlock,
   createWorkspaceContentRoiTrackerBlock,
@@ -14,13 +16,17 @@ import {
   createWorkspaceDecisionMatrixBlock,
   createWorkspaceDecisionBlock,
   createWorkspaceForecastConfidenceBoardBlock,
+  createWorkspaceHookBankBlock,
   createWorkspaceId,
   createWorkspaceKanbanBlock,
   createWorkspaceKanbanCard,
   createWorkspaceKanbanColumn,
+  createWorkspaceMessageHouseBlock,
   createWorkspaceNotesBlock,
   createWorkspaceOkrTrackerBlock,
   createWorkspacePipelineFunnelBlock,
+  createWorkspacePricingSimulatorBlock,
+  createWorkspaceProfitabilityCashFlowBlock,
   createWorkspaceScorecardBlock,
   createWorkspaceSeatPlannerBlock,
   createWorkspaceSkillsHeatMapBlock,
@@ -89,6 +95,7 @@ const {
 const workspaceQuery = workspaceStore.workspaceQuery;
 
 const saveMarketplaceItem = useMutation(orpc.workspace.marketplace.save.mutationOptions());
+const blockAgentPromptMutation = useMutation(orpc.agent.chat.turn.mutationOptions());
 
 const nodeId = computed(() => String(route.params.id ?? ""));
 const emptyDropdownItems: DropdownMenuItem[][] = [];
@@ -439,6 +446,15 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
     case "content-roi-tracker":
       nextBlock = createWorkspaceContentRoiTrackerBlock();
       break;
+    case "authority-scorecard":
+      nextBlock = createWorkspaceAuthorityScorecardBlock();
+      break;
+    case "hook-bank":
+      nextBlock = createWorkspaceHookBankBlock();
+      break;
+    case "message-house":
+      nextBlock = createWorkspaceMessageHouseBlock();
+      break;
     case "scorecard":
       nextBlock = createWorkspaceScorecardBlock();
       break;
@@ -453,6 +469,15 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
       break;
     case "assumption-tracker":
       nextBlock = createWorkspaceAssumptionTrackerBlock();
+      break;
+    case "profitability-cash-flow":
+      nextBlock = createWorkspaceProfitabilityCashFlowBlock();
+      break;
+    case "pricing-simulator":
+      nextBlock = createWorkspacePricingSimulatorBlock();
+      break;
+    case "collections-tracker":
+      nextBlock = createWorkspaceCollectionsTrackerBlock();
       break;
     case "custom":
       return;
@@ -955,6 +980,37 @@ function runCustomPrompt(tabId: string, blockId: string) {
   });
 }
 
+async function runBlockAgentPrompt(tabId: string, blockId: string, prompt: string) {
+  if (!node.value) {
+    throw new Error("Node is unavailable.");
+  }
+
+  const tab = node.value.tabs.find((entry) => entry.id === tabId);
+  const block = tab?.blocks.find((entry) => entry.id === blockId);
+
+  if (!tab || !block) {
+    throw new Error("Block context is unavailable.");
+  }
+
+  const scopedNode = createAgentContextNode(node.value, tab, block);
+  const response = await blockAgentPromptMutation.mutateAsync({
+    content: prompt,
+    nodes: draftNodes.value,
+    scopeNodes: [scopedNode],
+    contextNodeTitles: [scopedNode.title],
+    toolPreset: "ask",
+  });
+
+  if (response.workspaceSnapshot) {
+    workspaceStore.applyWorkspaceSnapshot(
+      response.workspaceSnapshot.nodes,
+      response.workspaceSnapshot.updatedAt ?? null,
+    );
+  }
+
+  return response.assistantMessage.content;
+}
+
 function toggleNotePreview(blockId: string) {
   mutateCurrentNode((entry) => {
     entry.viewState.notePreviewState = {
@@ -1251,6 +1307,27 @@ function getBlockSearchText(block: WorkspaceBlock) {
         String(item.repurposeValue),
       ]),
     );
+  } else if (block.type === "authority-scorecard") {
+    fragments.push(
+      ...Object.entries(block.metrics).flatMap(([metric, entry]) => [
+        metric,
+        String(entry.value),
+        String(entry.target),
+      ]),
+    );
+  } else if (block.type === "hook-bank") {
+    fragments.push(
+      ...block.hooks.flatMap((hook) => [hook.category, hook.text, String(hook.score)]),
+    );
+  } else if (block.type === "message-house") {
+    fragments.push(
+      block.brandPromise,
+      ...block.pillars.flatMap((pillar) => [pillar.title, pillar.body]),
+      block.audiencePains,
+      block.proofPoints,
+      block.voicePrinciples,
+      block.latestStressTest,
+    );
   } else if (block.type === "scorecard") {
     fragments.push(
       ...block.metrics.flatMap((metric) => [
@@ -1293,6 +1370,39 @@ function getBlockSearchText(block: WorkspaceBlock) {
         assumption.evidenceNotes,
         assumption.linkType,
         assumption.linkId ?? "",
+      ]),
+    );
+  } else if (block.type === "profitability-cash-flow") {
+    fragments.push(
+      ...block.clients.flatMap((client) => [
+        client.name,
+        client.paymentStatus,
+        String(client.healthPercent),
+        String(client.revenueEgp),
+        String(client.costEgp),
+      ]),
+      ...block.expenses.flatMap((expense) => [expense.category, String(expense.amountEgp)]),
+    );
+  } else if (block.type === "pricing-simulator") {
+    fragments.push(
+      String(block.activeClients),
+      String(block.hoursPerClientPerMonth),
+      String(block.hourlyRateEgp),
+      String(block.monthlyOverheadEgp),
+      String(block.targetMarginPercent),
+    );
+  } else if (block.type === "collections-tracker") {
+    fragments.push(
+      block.filter,
+      ...block.invoices.flatMap((invoice) => [
+        invoice.clientName,
+        String(invoice.amountEgp),
+        invoice.dueDate ?? "",
+        invoice.owner,
+        invoice.nextFollowUpDate ?? "",
+        invoice.status,
+        invoice.notes,
+        invoice.paidAt ?? "",
       ]),
     );
   } else if (block.type === "custom") {
@@ -1437,18 +1547,14 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
     );
   } else if (block.type === "content-pipeline") {
     details.push(
-      ...block.items.flatMap((item) => [
-        item.title,
-        item.status,
-        item.platform,
-        item.assignee,
-      ]),
+      ...block.items.flatMap((item) => [item.title, item.status, item.platform, item.assignee]),
     );
   } else if (block.type === "content-quality-radar") {
     details.push(
-      ...Object.entries(block.scores).flatMap(
-        ([dimension, score]) => [`${dimension} ${score}/10`, `${score}`],
-      ),
+      ...Object.entries(block.scores).flatMap(([dimension, score]) => [
+        `${dimension} ${score}/10`,
+        `${score}`,
+      ]),
     );
   } else if (block.type === "content-roi-tracker") {
     details.push(
@@ -1463,6 +1569,26 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
         `${item.conversionInfluence}/10 conversion influence`,
         `${item.repurposeValue}/10 repurpose value`,
       ]),
+    );
+  } else if (block.type === "authority-scorecard") {
+    details.push(
+      ...Object.entries(block.metrics).flatMap(([metric, entry]) => [
+        metric,
+        `${entry.value}/${entry.target}`,
+      ]),
+    );
+  } else if (block.type === "hook-bank") {
+    details.push(
+      ...block.hooks.flatMap((hook) => [hook.category, hook.text, `${hook.score}/10 score`]),
+    );
+  } else if (block.type === "message-house") {
+    details.push(
+      block.brandPromise,
+      ...block.pillars.flatMap((pillar) => [pillar.title, pillar.body]),
+      block.audiencePains,
+      block.proofPoints,
+      block.voicePrinciples,
+      block.latestStressTest,
     );
   } else if (block.type === "scorecard") {
     details.push(
@@ -1499,6 +1625,39 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
         assumption.status,
         `${assumption.confidence}/5 confidence`,
         assumption.evidenceNotes,
+      ]),
+    );
+  } else if (block.type === "profitability-cash-flow") {
+    details.push(
+      ...block.clients.flatMap((client) => [
+        client.name,
+        client.paymentStatus,
+        `${client.healthPercent}% health`,
+        `${client.revenueEgp} revenue`,
+        `${client.costEgp} cost`,
+      ]),
+      ...block.expenses.flatMap((expense) => [expense.category, `${expense.amountEgp} expense`]),
+    );
+  } else if (block.type === "pricing-simulator") {
+    details.push(
+      `${block.activeClients} clients`,
+      `${block.hoursPerClientPerMonth} hours per client per month`,
+      `${block.hourlyRateEgp} EGP hourly rate`,
+      `${block.monthlyOverheadEgp} EGP monthly overhead`,
+      `${block.targetMarginPercent}% target margin`,
+    );
+  } else if (block.type === "collections-tracker") {
+    details.push(
+      `Filter ${block.filter}`,
+      ...block.invoices.flatMap((invoice) => [
+        invoice.clientName,
+        `${invoice.amountEgp} EGP`,
+        invoice.dueDate ?? "",
+        invoice.owner,
+        invoice.nextFollowUpDate ?? "",
+        invoice.status,
+        invoice.notes,
+        invoice.paidAt ?? "",
       ]),
     );
   } else if (block.type === "custom") {
@@ -1648,6 +1807,7 @@ provide(workspaceNodeEditorContextKey, {
   removeScorecardMetric,
   runPromptBlock,
   runCustomPrompt,
+  runBlockAgentPrompt,
   toggleNotePreview,
   isNotePreviewEnabled,
   getDisplayTabTitle,

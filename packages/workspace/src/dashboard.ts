@@ -7,6 +7,13 @@ import {
   truncateText,
 } from "./shared";
 import {
+  getAuthorityScorecardSummary,
+  getHookBankSummary,
+  getMessageHouseSummary,
+  sortHookBankItems,
+  workspaceAuthorityScoreMetricLabels,
+} from "./brand";
+import {
   getContentPipelineSummary,
   getContentQualityRadarSummary,
   getContentRoiScore,
@@ -54,6 +61,18 @@ import {
   workspaceSalesPipelineStageLabels,
   workspaceSalesTemperatureLabels,
 } from "./sales";
+import {
+  getCollectionsTrackerSummary,
+  getPricingSimulatorSummary,
+  getProfitabilityCashFlowSummary,
+  getProfitabilityClientMarginPercent,
+  getReceivableDaysOverdue,
+  getReceivableRiskLevel,
+  sortReceivableInvoices,
+  workspaceFinancePaymentStatusLabels,
+  workspaceReceivableRiskLevelLabels,
+  workspaceReceivableStatusLabels,
+} from "./finance";
 import type {
   WorkspaceBlock,
   WorkspaceCustomBlock,
@@ -112,7 +131,9 @@ function getStrongestSkillDimension(averages: Record<WorkspacePeopleSkillDimensi
   return (ranked[0]?.[0] as WorkspacePeopleSkillDimension | undefined) ?? null;
 }
 
-function getTopSalesTemperature(block: WorkspaceDealScoringMatrixBlock | WorkspacePipelineFunnelBlock) {
+function getTopSalesTemperature(
+  block: WorkspaceDealScoringMatrixBlock | WorkspacePipelineFunnelBlock,
+) {
   if (block.deals.length === 0) {
     return null;
   }
@@ -658,8 +679,7 @@ function buildWorkspaceNodeDashboardDetail(
         },
       ],
       highlights: busiestStages.map(
-        (stage) =>
-          `${stage.label}: ${stage.dealCount} deals, ${formatEgpValue(stage.totalValue)}`,
+        (stage) => `${stage.label}: ${stage.dealCount} deals, ${formatEgpValue(stage.totalValue)}`,
       ),
     };
   }
@@ -801,9 +821,7 @@ function buildWorkspaceNodeDashboardDetail(
         },
         {
           label: "Top Platform",
-          value: summary.topPlatform
-            ? workspaceContentPlatformLabels[summary.topPlatform]
-            : "None",
+          value: summary.topPlatform ? workspaceContentPlatformLabels[summary.topPlatform] : "None",
         },
         {
           label: "Influenced",
@@ -814,6 +832,112 @@ function buildWorkspaceNodeDashboardDetail(
         const score = getContentRoiScore(item);
         return `${truncateText(item.title, 72)} (${workspaceContentRoiStatusLabels[getContentRoiStatus(score)]}, ${score})`;
       }),
+    };
+  }
+
+  if (block.type === "authority-scorecard") {
+    const summary = getAuthorityScorecardSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: `${summary.atTargetCount} of ${summary.metricCount} authority metrics are on target.`,
+      metrics: [
+        {
+          label: "Avg progress",
+          value: `${summary.averageProgress}%`,
+        },
+        {
+          label: "On target",
+          value: String(summary.atTargetCount),
+        },
+      ],
+      highlights: [
+        ...(summary.strongestMetric
+          ? [
+              `Strongest: ${workspaceAuthorityScoreMetricLabels[summary.strongestMetric]} ${summary.metrics[summary.strongestMetric].value}/${summary.metrics[summary.strongestMetric].target}`,
+            ]
+          : []),
+        ...(summary.weakestMetric
+          ? [
+              `Weakest: ${workspaceAuthorityScoreMetricLabels[summary.weakestMetric]} ${summary.metrics[summary.weakestMetric].value}/${summary.metrics[summary.weakestMetric].target}`,
+            ]
+          : []),
+      ],
+    };
+  }
+
+  if (block.type === "hook-bank") {
+    const summary = getHookBankSummary(block);
+    const topHooks = sortHookBankItems(block.hooks).slice(0, 2);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.hookCount > 0
+          ? `${summary.hookCount} hooks tracked with a ${summary.averageScore}/10 average score.`
+          : "No hooks stored yet.",
+      metrics: [
+        {
+          label: "Hooks",
+          value: String(summary.hookCount),
+        },
+        {
+          label: "Avg score",
+          value: `${summary.averageScore}/10`,
+        },
+        {
+          label: "Top category",
+          value: summary.topCategory || "None",
+        },
+      ],
+      highlights: topHooks.map(
+        (hook) =>
+          `[${trimToEmpty(hook.category) || "uncategorized"}] ${truncateText(hook.text, 72)} (${hook.score}/10)`,
+      ),
+    };
+  }
+
+  if (block.type === "message-house") {
+    const summary = getMessageHouseSummary(block);
+    const leadPillar = block.pillars.find((pillar) => trimToEmpty(pillar.body));
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: `${summary.filledSectionCount} of 7 message-house sections are filled.`,
+      metrics: [
+        {
+          label: "Filled",
+          value: `${summary.filledSectionCount}/7`,
+        },
+        {
+          label: "Pillars",
+          value: String(summary.pillarCount),
+        },
+        {
+          label: "Stress test",
+          value: summary.latestStressTestAvailable ? "Saved" : "Not run",
+        },
+      ],
+      highlights: [
+        ...(trimToEmpty(block.brandPromise)
+          ? [`Promise: ${truncateText(block.brandPromise, 90)}`]
+          : []),
+        ...(leadPillar
+          ? [`${trimToEmpty(leadPillar.title) || "Pillar"}: ${truncateText(leadPillar.body, 90)}`]
+          : []),
+      ],
     };
   }
 
@@ -1003,6 +1127,114 @@ function buildWorkspaceNodeDashboardDetail(
     };
   }
 
+  if (block.type === "profitability-cash-flow") {
+    const summary = getProfitabilityCashFlowSummary(block);
+    const riskiestClients = block.clients
+      .slice()
+      .sort((left, right) => left.healthPercent - right.healthPercent)
+      .slice(0, 2);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.clientCount > 0
+          ? `${formatEgpValue(summary.totalProfit)} profit at ${summary.marginPercent}% margin.`
+          : "No client economics tracked yet.",
+      metrics: [
+        {
+          label: "Revenue",
+          value: formatEgpValue(summary.totalRevenue),
+        },
+        {
+          label: "Expenses",
+          value: formatEgpValue(summary.totalExpenses),
+        },
+        {
+          label: "Margin",
+          value: `${summary.marginPercent}%`,
+        },
+      ],
+      highlights: [
+        ...riskiestClients.map(
+          (client) =>
+            `${client.name}: ${workspaceFinancePaymentStatusLabels[client.paymentStatus]}, ${getProfitabilityClientMarginPercent(client)}% margin`,
+        ),
+        ...(summary.topExpenseCategory ? [`Top expense: ${summary.topExpenseCategory}`] : []),
+      ].slice(0, 3),
+    };
+  }
+
+  if (block.type === "pricing-simulator") {
+    const summary = getPricingSimulatorSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: `${formatEgpValue(summary.projectedRevenue)} projected revenue and ${formatEgpValue(summary.projectedProfit)} projected profit.`,
+      metrics: [
+        {
+          label: "Clients",
+          value: String(summary.activeClients),
+        },
+        {
+          label: "Retainer / client",
+          value: formatEgpValue(summary.minimumRetainerPerClient),
+        },
+        {
+          label: "Required revenue",
+          value: formatEgpValue(summary.requiredRevenue),
+        },
+      ],
+      highlights: [
+        `${summary.monthlyClientHours} total delivery hours at ${block.hourlyRateEgp} EGP/hour`,
+        `Target margin: ${block.targetMarginPercent}%`,
+      ],
+    };
+  }
+
+  if (block.type === "collections-tracker") {
+    const summary = getCollectionsTrackerSummary(block);
+    const riskyInvoices = sortReceivableInvoices(block.invoices).slice(0, 2);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.invoiceCount > 0
+          ? `${formatEgpValue(summary.totalOutstanding)} outstanding across ${summary.invoiceCount} invoices.`
+          : "No receivables tracked yet.",
+      metrics: [
+        {
+          label: "Outstanding",
+          value: formatEgpValue(summary.totalOutstanding),
+        },
+        {
+          label: "Overdue",
+          value: formatEgpValue(summary.overdueAmount),
+        },
+        {
+          label: "Collected",
+          value: formatEgpValue(summary.collectedThisMonth),
+        },
+      ],
+      highlights: riskyInvoices.map((invoice) => {
+        const risk = getReceivableRiskLevel(invoice);
+        const overdue = getReceivableDaysOverdue(invoice);
+        return `${invoice.clientName}: ${workspaceReceivableStatusLabels[invoice.status]}, ${workspaceReceivableRiskLevelLabels[risk]}${overdue > 0 ? `, ${overdue}d overdue` : ""}`;
+      }),
+    };
+  }
+
   const template = node.customBlockTemplates.find((entry) => entry.id === block.definitionId);
   const formulaResult = evaluateCustomBlockFormula(template?.formula?.expression, block.values);
   const filledValues = Object.entries(block.values)
@@ -1171,6 +1403,33 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
         );
       }
 
+      if (block.type === "authority-scorecard") {
+        const summary = getAuthorityScorecardSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.atTargetCount}/${summary.metricCount} metrics on target with ${summary.averageProgress}% average progress.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "hook-bank" && block.hooks.length > 0) {
+        const summary = getHookBankSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.hookCount} hooks with ${summary.averageScore}/10 average score${summary.topCategory ? `, strongest in ${summary.topCategory}.` : "."}`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "message-house") {
+        const summary = getMessageHouseSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.filledSectionCount}/7 sections filled${summary.latestStressTestAvailable ? ", stress test saved." : "."}`,
+          maxLength,
+        );
+      }
+
       if (block.type === "scorecard" && block.metrics.length > 0) {
         return truncateText(
           `${block.title}: ${block.metrics.length} metrics being tracked.`,
@@ -1209,6 +1468,33 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
 
         return truncateText(
           `${block.title}: ${summary.atRiskCount} at-risk assumptions out of ${summary.total}.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "profitability-cash-flow" && block.clients.length > 0) {
+        const summary = getProfitabilityCashFlowSummary(block);
+
+        return truncateText(
+          `${block.title}: ${formatEgpValue(summary.totalProfit)} profit at ${summary.marginPercent}% margin.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "pricing-simulator") {
+        const summary = getPricingSimulatorSummary(block);
+
+        return truncateText(
+          `${block.title}: ${formatEgpValue(summary.projectedRevenue)} projected revenue and ${formatEgpValue(summary.minimumRetainerPerClient)} minimum retainer per client.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "collections-tracker" && block.invoices.length > 0) {
+        const summary = getCollectionsTrackerSummary(block);
+
+        return truncateText(
+          `${block.title}: ${formatEgpValue(summary.totalOutstanding)} outstanding with ${summary.highRiskCount} high-risk invoices.`,
           maxLength,
         );
       }
@@ -1485,6 +1771,78 @@ export function generateWorkspacePromptOutput(node: WorkspaceNode, prompt: strin
 
     if (salesLines.length > 0) {
       return `${intro}\n\nSales scan:\n- ${salesLines.join("\n- ")}`;
+    }
+  }
+
+  if (/brand|message|hook|authority|voice|position/i.test(normalizedPrompt)) {
+    const brandLines = node.tabs.flatMap((tab) =>
+      tab.blocks.flatMap((block) => {
+        if (block.type === "authority-scorecard") {
+          const summary = getAuthorityScorecardSummary(block);
+
+          return [
+            `${block.title}: ${summary.atTargetCount}/${summary.metricCount} metrics on target, ${summary.averageProgress}% average progress.`,
+          ];
+        }
+
+        if (block.type === "hook-bank") {
+          const summary = getHookBankSummary(block);
+
+          return [
+            `${block.title}: ${summary.hookCount} hooks, ${summary.averageScore}/10 average score${summary.topCategory ? `, strongest category is ${summary.topCategory}` : ""}.`,
+          ];
+        }
+
+        if (block.type === "message-house") {
+          const summary = getMessageHouseSummary(block);
+
+          return [
+            `${block.title}: ${summary.filledSectionCount}/7 sections filled${summary.latestStressTestAvailable ? ", stress test already saved." : ", no stress test saved yet."}`,
+          ];
+        }
+
+        return [];
+      }),
+    );
+
+    if (brandLines.length > 0) {
+      return `${intro}\n\nBrand scan:\n- ${brandLines.join("\n- ")}`;
+    }
+  }
+
+  if (/finance|cash|margin|pricing|invoice|collections|receivables/i.test(normalizedPrompt)) {
+    const financeLines = node.tabs.flatMap((tab) =>
+      tab.blocks.flatMap((block) => {
+        if (block.type === "profitability-cash-flow") {
+          const summary = getProfitabilityCashFlowSummary(block);
+
+          return [
+            `${block.title}: ${formatEgpValue(summary.totalRevenue)} revenue, ${formatEgpValue(summary.totalProfit)} profit, ${summary.marginPercent}% margin.`,
+          ];
+        }
+
+        if (block.type === "pricing-simulator") {
+          const summary = getPricingSimulatorSummary(block);
+
+          return [
+            `${block.title}: ${formatEgpValue(summary.projectedRevenue)} projected revenue, ${formatEgpValue(summary.minimumRetainerPerClient)} minimum retainer per client, ${formatEgpValue(summary.projectedProfit)} projected profit.`,
+          ];
+        }
+
+        if (block.type === "collections-tracker") {
+          const summary = getCollectionsTrackerSummary(block);
+
+          return [
+            `${block.title}: ${formatEgpValue(summary.totalOutstanding)} outstanding, ${formatEgpValue(summary.overdueAmount)} overdue, ${summary.highRiskCount} high-risk invoices.`,
+          ];
+        }
+
+        return [];
+      }),
+    );
+
+    if (financeLines.length > 0) {
+      return `${intro}\n\nFinance scan:\n- ${financeLines.join("\n- ")}`;
     }
   }
 
