@@ -46,7 +46,7 @@ const kindColor = computed(() => {
     class="flex flex-col h-full transition-all hover:ring-2 hover:ring-primary/30 group"
     :ui="{
       body: 'flex-1 flex flex-col gap-4',
-      footer: 'pt-0 border-none'
+      footer: 'pt-0 border-none',
     }"
   >
     <template #header>
@@ -57,7 +57,7 @@ const kindColor = computed(() => {
             :class="[
               item.payload.kind === 'node' && 'bg-primary text-primary',
               item.payload.kind === 'tab' && 'bg-success text-success',
-              item.payload.kind === 'block' && 'bg-warning text-warning'
+              item.payload.kind === 'block' && 'bg-warning text-warning',
             ]"
           >
             <UIcon :name="kindIcon" class="size-5" />
@@ -85,17 +85,16 @@ const kindColor = computed(() => {
 
     <div class="flex items-center justify-between gap-3 pt-2">
       <div class="flex items-center gap-2 min-w-0">
-        <UAvatar
-          :alt="item.createdByName"
-          size="xs"
-          class="shrink-0 ring-1 ring-muted/30"
-        />
+        <UAvatar :alt="item.createdByName" size="xs" class="shrink-0 ring-1 ring-muted/30" />
         <span class="text-xs text-muted truncate font-medium">
           {{ item.createdByName }}
         </span>
       </div>
-      
-      <time :datetime="item.createdAt" class="text-[10px] text-muted/60 whitespace-nowrap uppercase tracking-tighter">
+
+      <time
+        :datetime="item.createdAt"
+        class="text-[10px] text-muted/60 whitespace-nowrap uppercase tracking-tighter"
+      >
         {{ formatDateTime(item.createdAt) }}
       </time>
     </div>

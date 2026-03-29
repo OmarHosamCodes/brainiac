@@ -122,9 +122,7 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
       </div>
 
       <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">
-          Open Value
-        </p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">Open Value</p>
         <p class="mt-2 text-3xl font-black tracking-tight text-warning">
           {{ formatCurrency(summary.openValue) }}
         </p>
@@ -142,9 +140,7 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
       </div>
 
       <div class="rounded-[28px] bg-error/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">
-          Top of Funnel
-        </p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">Top of Funnel</p>
         <p class="mt-2 text-4xl font-black tracking-tight text-error">
           {{ summary.stageSummaries[0]?.dealCount ?? 0 }}
         </p>
@@ -201,9 +197,7 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
     <div>
       <div class="mb-3 px-1">
         <p class="text-sm font-semibold text-highlighted">Quick stage moves</p>
-        <p class="text-sm text-muted">
-          Update stage ownership directly from the deal list below.
-        </p>
+        <p class="text-sm text-muted">Update stage ownership directly from the deal list below.</p>
       </div>
 
       <div
@@ -222,13 +216,18 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
           <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_14rem_15rem_auto]">
             <div class="min-w-0">
               <div class="flex items-center gap-3">
-                <span class="size-2.5 shrink-0 rounded-full" :class="getTemperatureDotClasses(deal.temperature)" />
+                <span
+                  class="size-2.5 shrink-0 rounded-full"
+                  :class="getTemperatureDotClasses(deal.temperature)"
+                />
                 <UInput
                   :model-value="deal.clientName"
                   variant="none"
                   placeholder="Client name"
                   class="w-full"
-                  :ui="{ base: 'px-0 text-base font-bold text-highlighted placeholder:text-muted/60' }"
+                  :ui="{
+                    base: 'px-0 text-base font-bold text-highlighted placeholder:text-muted/60',
+                  }"
                   @update:model-value="
                     mutateBlock(tabId, block.id, (entry) => {
                       if (entry.type !== 'pipeline-funnel') return;
@@ -271,7 +270,7 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
                     if (entry.type !== 'pipeline-funnel') return;
                     const target = entry.deals.find((candidate) => candidate.id === deal.id);
                     if (!target) return;
-                    target.stage = ($event ?? 'lead');
+                    target.stage = $event ?? 'lead';
                   })
                 "
               />

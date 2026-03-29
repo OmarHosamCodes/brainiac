@@ -63,7 +63,9 @@ function addStep() {
     </div>
 
     <div class="relative space-y-5 pl-8">
-      <div class="absolute bottom-2 left-[15px] top-2 w-0.5 bg-gradient-to-b from-primary/30 via-muted/20 to-transparent" />
+      <div
+        class="absolute bottom-2 left-[15px] top-2 w-0.5 bg-gradient-to-b from-primary/30 via-muted/20 to-transparent"
+      />
 
       <article v-for="(step, index) in block.steps" :key="step.id" class="relative">
         <button
@@ -91,7 +93,9 @@ function addStep() {
           {{ index + 1 }}
         </button>
 
-        <div class="rounded-3xl border border-muted/20 bg-default/40 p-5 transition-all hover:border-primary/20 hover:bg-default/60">
+        <div
+          class="rounded-3xl border border-muted/20 bg-default/40 p-5 transition-all hover:border-primary/20 hover:bg-default/60"
+        >
           <div class="flex items-start justify-between gap-4">
             <div class="min-w-0 flex-1">
               <UInput
@@ -119,7 +123,10 @@ function addStep() {
                   })
                 "
               />
-              <p v-if="step.note && expandedStepId !== step.id" class="mt-2 line-clamp-2 text-sm text-toned">
+              <p
+                v-if="step.note && expandedStepId !== step.id"
+                class="mt-2 line-clamp-2 text-sm text-toned"
+              >
                 {{ step.note }}
               </p>
             </div>

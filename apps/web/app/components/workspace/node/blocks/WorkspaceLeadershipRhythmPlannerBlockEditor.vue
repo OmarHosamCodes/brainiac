@@ -122,13 +122,19 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
   <div class="space-y-6">
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Cadence Health</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">{{ summary.cadenceHealthPercent }}%</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">
+          Cadence Health
+        </p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+          {{ summary.cadenceHealthPercent }}%
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-success/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Upcoming</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">{{ summary.upcomingCount }}</p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+          {{ summary.upcomingCount }}
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-error/5 p-5">
@@ -138,7 +144,9 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
 
       <div class="rounded-[28px] bg-secondary/10 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-secondary/80">Meetings</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-secondary">{{ summary.totalMeetings }}</p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-secondary">
+          {{ summary.totalMeetings }}
+        </p>
       </div>
     </div>
 
@@ -164,12 +172,19 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
 
       <div class="mt-4 space-y-3">
         <div class="flex items-center justify-between gap-3">
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Cadence coverage</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+            Cadence coverage
+          </p>
           <span class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
             {{ summary.cadenceHealthPercent }}% on track
           </span>
         </div>
-        <UProgress :model-value="summary.cadenceHealthPercent" :max="100" color="primary" class="rounded-full" />
+        <UProgress
+          :model-value="summary.cadenceHealthPercent"
+          :max="100"
+          color="primary"
+          class="rounded-full"
+        />
       </div>
     </section>
 
@@ -222,7 +237,13 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
               />
 
               <UBadge
-                :color="isLeadershipMeetingMissed(meeting) ? 'error' : meeting.status === 'done' ? 'success' : 'primary'"
+                :color="
+                  isLeadershipMeetingMissed(meeting)
+                    ? 'error'
+                    : meeting.status === 'done'
+                      ? 'success'
+                      : 'primary'
+                "
                 variant="soft"
                 size="sm"
               >
@@ -333,18 +354,33 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
                 class="rounded-2xl"
                 @update:model-value="
                   mutateMeeting(meeting.id, (entry) => {
-                    entry.durationMinutes = Math.min(480, Math.max(15, Math.round(Number($event || entry.durationMinutes))));
+                    entry.durationMinutes = Math.min(
+                      480,
+                      Math.max(15, Math.round(Number($event || entry.durationMinutes))),
+                    );
                   })
                 "
               />
             </UFormField>
 
             <div class="flex items-end">
-              <div class="w-full rounded-[22px] border border-muted/25 bg-elevated/20 px-4 py-3 text-sm text-toned">
-                <span class="font-semibold text-highlighted">{{ workspaceLeadershipRhythmLabels[meeting.rhythm] }}</span>
+              <div
+                class="w-full rounded-[22px] border border-muted/25 bg-elevated/20 px-4 py-3 text-sm text-toned"
+              >
+                <span class="font-semibold text-highlighted">{{
+                  workspaceLeadershipRhythmLabels[meeting.rhythm]
+                }}</span>
                 <span class="text-muted"> cadence</span>
-                <span v-if="isLeadershipMeetingUpcoming(meeting)" class="block text-xs font-semibold uppercase tracking-[0.18em] text-primary">Upcoming</span>
-                <span v-else-if="isLeadershipMeetingMissed(meeting)" class="block text-xs font-semibold uppercase tracking-[0.18em] text-error">Needs attention</span>
+                <span
+                  v-if="isLeadershipMeetingUpcoming(meeting)"
+                  class="block text-xs font-semibold uppercase tracking-[0.18em] text-primary"
+                  >Upcoming</span
+                >
+                <span
+                  v-else-if="isLeadershipMeetingMissed(meeting)"
+                  class="block text-xs font-semibold uppercase tracking-[0.18em] text-error"
+                  >Needs attention</span
+                >
               </div>
             </div>
           </div>

@@ -16,11 +16,9 @@ export const workspaceRouter = {
   get: protectedProcedure.handler(async ({ context }) => {
     return getWorkspaceSnapshot(context.session.user.id);
   }),
-  save: protectedProcedure
-    .input(workspaceSaveInputSchema)
-    .handler(async ({ input, context }) => {
-      return saveWorkspaceNodes(context.session.user.id, input.nodes);
-    }),
+  save: protectedProcedure.input(workspaceSaveInputSchema).handler(async ({ input, context }) => {
+    return saveWorkspaceNodes(context.session.user.id, input.nodes);
+  }),
   marketplace: {
     list: protectedProcedure.handler(async () => {
       return workspaceMarketplaceListSchema.parse({

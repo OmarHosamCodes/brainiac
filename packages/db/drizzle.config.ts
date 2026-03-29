@@ -15,10 +15,7 @@ for (const envPath of [
 }
 
 const databaseUrl =
-  process.env.DATABASE_URL ||
-  process.env.DATABASE_PRIVATE_URL ||
-  process.env.POSTGRES_URL ||
-  "";
+  process.env.DATABASE_URL || process.env.DATABASE_PRIVATE_URL || process.env.POSTGRES_URL || "";
 
 export default defineConfig({
   schema: "./src/schema",

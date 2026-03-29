@@ -210,7 +210,10 @@ function getCardClasses(score: number) {
         <div class="flex flex-wrap items-start justify-between gap-4">
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-3">
-              <span class="size-2.5 shrink-0 rounded-full" :class="getTemperatureDotClasses(deal.temperature)" />
+              <span
+                class="size-2.5 shrink-0 rounded-full"
+                :class="getTemperatureDotClasses(deal.temperature)"
+              />
               <UInput
                 :model-value="deal.clientName"
                 variant="none"
@@ -237,7 +240,10 @@ function getCardClasses(score: number) {
           <div class="flex items-start gap-3">
             <div class="text-right">
               <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Score</p>
-              <p class="mt-1 text-4xl font-black tracking-tight" :class="getScoreTextClasses(deal.score)">
+              <p
+                class="mt-1 text-4xl font-black tracking-tight"
+                :class="getScoreTextClasses(deal.score)"
+              >
                 {{ deal.score }}
               </p>
             </div>
@@ -280,7 +286,7 @@ function getCardClasses(score: number) {
                   if (entry.type !== 'deal-scoring-matrix') return;
                   const target = entry.deals.find((candidate) => candidate.id === deal.id);
                   if (!target) return;
-                  target.temperature = ($event ?? 'warm');
+                  target.temperature = $event ?? 'warm';
                 })
               "
             />
@@ -288,7 +294,9 @@ function getCardClasses(score: number) {
         </div>
 
         <div class="mt-5 space-y-3">
-          <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+          <div
+            class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
+          >
             <span>Priority Score</span>
             <span :class="getScoreTextClasses(deal.score)">
               {{ deal.score >= 75 ? "Strong" : deal.score >= 50 ? "Watch" : "Weak" }}

@@ -40,9 +40,7 @@ const marketplaceQuery = useQuery({
 });
 
 const marketplaceSearch = ref("");
-const normalizedMarketplaceSearch = computed(() =>
-  marketplaceSearch.value.trim().toLowerCase(),
-);
+const normalizedMarketplaceSearch = computed(() => marketplaceSearch.value.trim().toLowerCase());
 const marketplaceItems = computed(() => marketplaceQuery.data.value?.items ?? []);
 
 const tabs = [
@@ -53,9 +51,7 @@ const tabs = [
 ];
 
 const selectedTab = ref(0);
-const activeKind = computed(
-  () => tabs[selectedTab.value]?.kind ?? "all",
-);
+const activeKind = computed(() => tabs[selectedTab.value]?.kind ?? "all");
 
 const importTarget = reactive<{
   open: boolean;
@@ -205,9 +201,7 @@ function openImportTargetDialog(item: WorkspaceMarketplaceItem) {
   }
 
   const preferredNodeId =
-    selectedNodeIds.value.find((nodeId) =>
-      nodes.value.some((node) => node.id === nodeId),
-    ) ??
+    selectedNodeIds.value.find((nodeId) => nodes.value.some((node) => node.id === nodeId)) ??
     nodes.value[0]?.id ??
     "";
 
@@ -260,11 +254,7 @@ function insertMarketplaceTab(item: WorkspaceMarketplaceItem, nodeId: string) {
   return true;
 }
 
-function insertMarketplaceBlock(
-  item: WorkspaceMarketplaceItem,
-  nodeId: string,
-  tabId: string,
-) {
+function insertMarketplaceBlock(item: WorkspaceMarketplaceItem, nodeId: string, tabId: string) {
   const imported = cloneMarketplaceBlockPayload(item.payload);
 
   if (!imported) {
@@ -324,11 +314,7 @@ function submitImportTargetDialog() {
   if (importTarget.item.payload.kind === "tab") {
     inserted = insertMarketplaceTab(importTarget.item, importTarget.nodeId);
   } else if (importTarget.item.payload.kind === "block") {
-    inserted = insertMarketplaceBlock(
-      importTarget.item,
-      importTarget.nodeId,
-      importTarget.tabId,
-    );
+    inserted = insertMarketplaceBlock(importTarget.item, importTarget.nodeId, importTarget.tabId);
   }
 
   if (inserted) {
@@ -355,27 +341,23 @@ watch(
         >
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="space-y-2">
-              <p class="text-xs font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400">
+              <p
+                class="text-xs font-bold uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400"
+              >
                 Team Marketplace
               </p>
               <h1 class="text-3xl font-semibold tracking-tight text-highlighted">
                 Discover shared nodes, tabs, and blocks
               </h1>
               <p class="max-w-2xl text-sm text-muted">
-                Add full nodes directly, or send imported tabs and blocks into the exact destination you want.
+                Add full nodes directly, or send imported tabs and blocks into the exact destination
+                you want.
               </p>
             </div>
 
             <div class="flex flex-wrap items-center gap-2">
-              <UBadge color="neutral" variant="soft">
-                {{ marketplaceItems.length }} items
-              </UBadge>
-              <UBadge
-                v-if="isWorkspaceRefreshing"
-                color="primary"
-                variant="soft"
-                class="gap-1.5"
-              >
+              <UBadge color="neutral" variant="soft"> {{ marketplaceItems.length }} items </UBadge>
+              <UBadge v-if="isWorkspaceRefreshing" color="primary" variant="soft" class="gap-1.5">
                 <UIcon name="i-lucide-loader-2" class="size-3 animate-spin" />
                 Syncing
               </UBadge>
@@ -408,9 +390,7 @@ watch(
           color="error"
           icon="i-lucide-alert-circle"
           title="Workspace unavailable"
-          :description="
-            workspaceQuery.error?.message || 'The user workspace could not be loaded.'
-          "
+          :description="workspaceQuery.error?.message || 'The user workspace could not be loaded.'"
         />
 
         <UAlert
@@ -467,41 +447,29 @@ watch(
     >
       <template #body>
         <div class="rounded-2xl border border-muted/30 bg-elevated/20 p-4">
-          <p class="text-xs font-bold uppercase tracking-[0.18em] text-muted">
-            Importing
-          </p>
+          <p class="text-xs font-bold uppercase tracking-[0.18em] text-muted">Importing</p>
           <p class="mt-2 font-semibold text-highlighted">
             {{ importTarget.item?.title }}
           </p>
           <p class="mt-1 text-sm text-muted">
-            {{ importTarget.item?.summary || (importTarget.item && getMarketplacePayloadSummary(importTarget.item.payload)) }}
+            {{
+              importTarget.item?.summary ||
+              (importTarget.item && getMarketplacePayloadSummary(importTarget.item.payload))
+            }}
           </p>
         </div>
 
         <UFormField label="Node">
-          <USelect
-            v-model="importTarget.nodeId"
-            :items="nodeOptions"
-            class="w-full"
-          />
+          <USelect v-model="importTarget.nodeId" :items="nodeOptions" class="w-full" />
         </UFormField>
 
-        <UFormField
-          v-if="importTarget.item?.payload.kind === 'block'"
-          label="Tab"
-        >
-          <USelect
-            v-model="importTarget.tabId"
-            :items="tabOptions"
-            class="w-full"
-          />
+        <UFormField v-if="importTarget.item?.payload.kind === 'block'" label="Tab">
+          <USelect v-model="importTarget.tabId" :items="tabOptions" class="w-full" />
         </UFormField>
       </template>
 
       <template #footer>
-        <UButton color="neutral" variant="ghost" @click="resetImportTargetDialog">
-          Cancel
-        </UButton>
+        <UButton color="neutral" variant="ghost" @click="resetImportTargetDialog"> Cancel </UButton>
         <UButton
           color="primary"
           icon="i-lucide-download"

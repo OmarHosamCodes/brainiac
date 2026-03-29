@@ -69,7 +69,9 @@ const baseLinkOptions = computed(() => {
     }
   }
 
-  for (const key of Object.keys(workspaceBusinessModelCanvasCellLabels) as WorkspaceBusinessModelCanvasCellKey[]) {
+  for (const key of Object.keys(
+    workspaceBusinessModelCanvasCellLabels,
+  ) as WorkspaceBusinessModelCanvasCellKey[]) {
     options.push({
       label: `BMC: ${workspaceBusinessModelCanvasCellLabels[key]}`,
       value: `bmc:${key}`,
@@ -154,10 +156,7 @@ function parseLinkValue(value: string): {
 
   const [rawLinkType, rawLinkId] = value.split(":");
 
-  if (
-    (rawLinkType === "okr" || rawLinkType === "decision" || rawLinkType === "bmc") &&
-    rawLinkId
-  ) {
+  if ((rawLinkType === "okr" || rawLinkType === "decision" || rawLinkType === "bmc") && rawLinkId) {
     return {
       linkType: rawLinkType,
       linkId: rawLinkId,
@@ -249,7 +248,10 @@ function removeAssumption(assumptionId: string) {
       </UButton>
     </div>
 
-    <div v-if="visibleAssumptions.length === 0" class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center">
+    <div
+      v-if="visibleAssumptions.length === 0"
+      class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center"
+    >
       <p class="text-sm font-semibold text-muted">No assumptions in this filter.</p>
     </div>
 
@@ -271,7 +273,9 @@ function removeAssumption(assumptionId: string) {
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'assumption-tracker') return;
-                  const target = entry.assumptions.find((candidate) => candidate.id === assumption.id);
+                  const target = entry.assumptions.find(
+                    (candidate) => candidate.id === assumption.id,
+                  );
                   if (!target) return;
                   target.statement = ($event ?? '').slice(0, 240);
                 })
@@ -279,7 +283,12 @@ function removeAssumption(assumptionId: string) {
             />
 
             <p class="mt-2 text-sm text-muted">
-              {{ currentNode ? resolveStrategicAssumptionLinkLabel(currentNode, assumption) || "No linked strategic area." : "No linked strategic area." }}
+              {{
+                currentNode
+                  ? resolveStrategicAssumptionLinkLabel(currentNode, assumption) ||
+                    "No linked strategic area."
+                  : "No linked strategic area."
+              }}
             </p>
           </div>
 
@@ -306,7 +315,9 @@ function removeAssumption(assumptionId: string) {
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'assumption-tracker') return;
-                  const target = entry.assumptions.find((candidate) => candidate.id === assumption.id);
+                  const target = entry.assumptions.find(
+                    (candidate) => candidate.id === assumption.id,
+                  );
                   if (!target) return;
                   const nextLink = parseLinkValue($event ?? 'none');
                   target.linkType = nextLink.linkType;
@@ -324,7 +335,9 @@ function removeAssumption(assumptionId: string) {
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'assumption-tracker') return;
-                  const target = entry.assumptions.find((candidate) => candidate.id === assumption.id);
+                  const target = entry.assumptions.find(
+                    (candidate) => candidate.id === assumption.id,
+                  );
                   if (!target) return;
                   target.owner = ($event ?? '').slice(0, 120);
                 })
@@ -340,7 +353,9 @@ function removeAssumption(assumptionId: string) {
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'assumption-tracker') return;
-                  const target = entry.assumptions.find((candidate) => candidate.id === assumption.id);
+                  const target = entry.assumptions.find(
+                    (candidate) => candidate.id === assumption.id,
+                  );
                   if (!target) return;
                   target.reviewDate = $event || null;
                 })
@@ -352,7 +367,9 @@ function removeAssumption(assumptionId: string) {
         <div class="mt-5 grid gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
           <div class="space-y-4 rounded-[24px] border border-muted/30 bg-default/50 p-4">
             <div class="space-y-2">
-              <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+              <div
+                class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
+              >
                 <span>Confidence</span>
                 <span>{{ assumption.confidence }}/5</span>
               </div>
@@ -365,7 +382,9 @@ function removeAssumption(assumptionId: string) {
                 @input="
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== 'assumption-tracker') return;
-                    const target = entry.assumptions.find((candidate) => candidate.id === assumption.id);
+                    const target = entry.assumptions.find(
+                      (candidate) => candidate.id === assumption.id,
+                    );
                     if (!target) return;
                     target.confidence = clampConfidence(getInputValue($event));
                   })
@@ -385,7 +404,9 @@ function removeAssumption(assumptionId: string) {
                   @click="
                     mutateBlock(tabId, block.id, (entry) => {
                       if (entry.type !== 'assumption-tracker') return;
-                      const target = entry.assumptions.find((candidate) => candidate.id === assumption.id);
+                      const target = entry.assumptions.find(
+                        (candidate) => candidate.id === assumption.id,
+                      );
                       if (!target) return;
                       target.status = status;
                     })
@@ -408,7 +429,9 @@ function removeAssumption(assumptionId: string) {
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'assumption-tracker') return;
-                  const target = entry.assumptions.find((candidate) => candidate.id === assumption.id);
+                  const target = entry.assumptions.find(
+                    (candidate) => candidate.id === assumption.id,
+                  );
                   if (!target) return;
                   target.evidenceNotes = ($event ?? '').slice(0, 4000);
                 })

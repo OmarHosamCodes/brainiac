@@ -1,7 +1,4 @@
-import {
-  WORKSPACE_SALES_FORECAST_BUCKETS,
-  WORKSPACE_SALES_PIPELINE_STAGES,
-} from "./constants";
+import { WORKSPACE_SALES_FORECAST_BUCKETS, WORKSPACE_SALES_PIPELINE_STAGES } from "./constants";
 import type {
   WorkspaceDealScoreTone,
   WorkspaceDealScoringDeal,
@@ -27,16 +24,14 @@ export const workspaceSalesPipelineStageLabels: Record<WorkspaceSalesPipelineSta
   closed: "Closed",
 };
 
-export const workspaceSalesPipelineStageCompactLabels: Record<
-  WorkspaceSalesPipelineStage,
-  string
-> = {
-  lead: "Lead",
-  consultation: "Consult",
-  proposal: "Proposal",
-  negotiation: "Negotiate",
-  closed: "Closed",
-};
+export const workspaceSalesPipelineStageCompactLabels: Record<WorkspaceSalesPipelineStage, string> =
+  {
+    lead: "Lead",
+    consultation: "Consult",
+    proposal: "Proposal",
+    negotiation: "Negotiate",
+    closed: "Closed",
+  };
 
 export const workspaceSalesTemperatureLabels: Record<WorkspaceSalesTemperature, string> = {
   hot: "Hot",
@@ -164,7 +159,9 @@ export function getForecastConfidenceBoardSummary(
         : 0,
     averageConfidence:
       block.deals.length > 0
-        ? Math.round(block.deals.reduce((sum, deal) => sum + deal.confidence, 0) / block.deals.length)
+        ? Math.round(
+            block.deals.reduce((sum, deal) => sum + deal.confidence, 0) / block.deals.length,
+          )
         : 0,
     bucketSummaries,
   };

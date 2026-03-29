@@ -100,7 +100,10 @@ function getStatusAccentClasses(status: WorkspaceDelegationStatus) {
   }
 }
 
-function getStatusButtonClasses(status: WorkspaceDelegationStatus, activeStatus: WorkspaceDelegationStatus) {
+function getStatusButtonClasses(
+  status: WorkspaceDelegationStatus,
+  activeStatus: WorkspaceDelegationStatus,
+) {
   if (status === activeStatus) {
     if (status === "delegated") {
       return "border-success/40 bg-success/10 text-success";
@@ -122,13 +125,17 @@ function getStatusButtonClasses(status: WorkspaceDelegationStatus, activeStatus:
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div class="rounded-[28px] bg-primary/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Recoverable</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">{{ summary.totalHoursPerWeek }}h</p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+          {{ summary.totalHoursPerWeek }}h
+        </p>
         <p class="mt-1 text-sm text-muted">Total hours listed per week</p>
       </div>
 
       <div class="rounded-[28px] bg-error/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">Still Trapped</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-error">{{ summary.pendingHoursPerWeek }}h</p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-error">
+          {{ summary.pendingHoursPerWeek }}h
+        </p>
         <p class="mt-1 text-sm text-muted">Founder time not delegated yet</p>
       </div>
 
@@ -183,7 +190,10 @@ function getStatusButtonClasses(status: WorkspaceDelegationStatus, activeStatus:
       </div>
     </div>
 
-    <div v-if="block.items.length === 0" class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center">
+    <div
+      v-if="block.items.length === 0"
+      class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center"
+    >
       <p class="text-sm font-semibold text-muted">No delegation items yet.</p>
     </div>
 
@@ -214,7 +224,8 @@ function getStatusButtonClasses(status: WorkspaceDelegationStatus, activeStatus:
               "
             />
             <p class="mt-2 text-sm text-muted">
-              {{ item.hoursPerWeek }}h/week · {{ formatCurrency(item.hoursPerWeek * block.hourlyRate) }} of founder time
+              {{ item.hoursPerWeek }}h/week ·
+              {{ formatCurrency(item.hoursPerWeek * block.hourlyRate) }} of founder time
             </p>
           </div>
 

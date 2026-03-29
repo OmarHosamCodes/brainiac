@@ -35,14 +35,10 @@ function hasScopedWorkspace(workspace: DashboardAgentWorkspaceContext) {
     return true;
   }
 
-  return workspace.scopeNodes.some(
-    (node, index) => node.id !== workspace.nodes[index]?.id,
-  );
+  return workspace.scopeNodes.some((node, index) => node.id !== workspace.nodes[index]?.id);
 }
 
-function buildFocusedWorkspaceDetails(
-  nodes: ReturnType<typeof getScopedWorkspaceNodes>,
-) {
+function buildFocusedWorkspaceDetails(nodes: ReturnType<typeof getScopedWorkspaceNodes>) {
   if (nodes.length !== 1) {
     return null;
   }
@@ -109,16 +105,11 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
   ].join("\n");
 }
 
-function buildToolEnabledAgentInstructions(
-  workspace: DashboardAgentWorkspaceContext,
-) {
+function buildToolEnabledAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
   return [buildAgentInstructions(workspace)].join("\n");
 }
 
-function buildDirectAnswerInstructions(
-  workspace: DashboardAgentWorkspaceContext,
-  note?: string,
-) {
+function buildDirectAnswerInstructions(workspace: DashboardAgentWorkspaceContext, note?: string) {
   return [
     buildAgentInstructions(workspace),
     "Answer directly from the provided workspace context.",
@@ -231,12 +222,8 @@ async function runToolEnabledPass(args: {
     input: args.normalizedMessages,
     tools,
     stopWhen: [stepCountIs(args.maxSteps)],
-    ...(args.temperature === undefined
-      ? {}
-      : { temperature: args.temperature }),
-    ...(args.maxOutputTokens === undefined
-      ? {}
-      : { maxOutputTokens: args.maxOutputTokens }),
+    ...(args.temperature === undefined ? {} : { temperature: args.temperature }),
+    ...(args.maxOutputTokens === undefined ? {} : { maxOutputTokens: args.maxOutputTokens }),
   });
 
   const collectToolNames = (async () => {
@@ -247,10 +234,7 @@ async function runToolEnabledPass(args: {
     }
   })();
 
-  const [responseText] = await Promise.all([
-    result.getText(),
-    collectToolNames,
-  ]);
+  const [responseText] = await Promise.all([result.getText(), collectToolNames]);
 
   return {
     responseText: responseText.trim(),
@@ -271,15 +255,10 @@ export async function runDashboardAgent(
     updatedAt: workspace.updatedAt,
   });
   const selectedModel = await resolveOpenRouterFreeModel(config.model);
-  const model =
-    selectedModel?.id ?? config.model?.trim() ?? DEFAULT_AGENT_MODEL;
+  const model = selectedModel?.id ?? config.model?.trim() ?? DEFAULT_AGENT_MODEL;
   const toolPreset = config.toolPreset ?? "ask";
   const supportsTools = selectedModel?.supportsTools ?? true;
-  const executionConfig = resolveAgentExecutionConfig(
-    workspace,
-    toolPreset,
-    supportsTools,
-  );
+  const executionConfig = resolveAgentExecutionConfig(workspace, toolPreset, supportsTools);
 
   let responseText = "";
 
@@ -294,8 +273,7 @@ export async function runDashboardAgent(
         instructions: executionConfig.instructions,
         maxSteps: executionConfig.maxSteps,
         temperature: config.temperature,
-        maxOutputTokens:
-          executionConfig.maxOutputTokens ?? config.maxOutputTokens,
+        maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
       });
 
       responseText = initialPass.responseText;
@@ -317,8 +295,7 @@ export async function runDashboardAgent(
           instructions: `${executionConfig.instructions}\nYou have not inspected the workspace yet. Call a relevant tool before answering.`,
           maxSteps: executionConfig.maxSteps,
           temperature: config.temperature,
-          maxOutputTokens:
-            executionConfig.maxOutputTokens ?? config.maxOutputTokens,
+          maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
         });
 
         if (retryPass.responseText) {
@@ -338,8 +315,7 @@ export async function runDashboardAgent(
   let finalResponse = responseText.trim();
 
   if (!finalResponse) {
-    const fallbackMaxOutputTokens =
-      executionConfig.maxOutputTokens ?? config.maxOutputTokens;
+    const fallbackMaxOutputTokens = executionConfig.maxOutputTokens ?? config.maxOutputTokens;
 
     finalResponse = (
       await client
@@ -347,9 +323,7 @@ export async function runDashboardAgent(
           model,
           instructions: executionConfig.fallbackInstructions,
           input: normalizedMessages,
-          ...(config.temperature === undefined
-            ? {}
-            : { temperature: config.temperature }),
+          ...(config.temperature === undefined ? {} : { temperature: config.temperature }),
           ...(fallbackMaxOutputTokens === undefined
             ? {}
             : { maxOutputTokens: fallbackMaxOutputTokens }),
@@ -364,9 +338,7 @@ export async function runDashboardAgent(
     model,
     toolsCalled: [...calledTools],
     workspaceNodeCount: workspaceRuntime.getNodes().length,
-    workspaceSnapshot: workspaceRuntime.hasChanges()
-      ? workspaceRuntime.toSnapshot()
-      : null,
+    workspaceSnapshot: workspaceRuntime.hasChanges() ? workspaceRuntime.toSnapshot() : null,
   };
 }
 

@@ -102,17 +102,17 @@ function sortFreeModels(models: OpenRouterFreeModel[]) {
 }
 
 function getDefaultFreeModelId(models: OpenRouterFreeModel[]) {
-  return models.find((model) => model.id === DEFAULT_AGENT_MODEL)?.id
-    ?? models[0]?.id
-    ?? DEFAULT_AGENT_MODEL;
+  return (
+    models.find((model) => model.id === DEFAULT_AGENT_MODEL)?.id ??
+    models[0]?.id ??
+    DEFAULT_AGENT_MODEL
+  );
 }
 
 async function fetchOpenRouterFreeModels() {
   const response = await createOpenRouterClient().models.list();
   const models = sortFreeModels(
-    response.data
-      .map(toFreeModel)
-      .filter((model): model is OpenRouterFreeModel => model !== null),
+    response.data.map(toFreeModel).filter((model): model is OpenRouterFreeModel => model !== null),
   );
 
   return openRouterFreeModelsResponseSchema.parse({
@@ -180,9 +180,9 @@ export async function resolveOpenRouterFreeModel(modelId?: string | null) {
       return selectedModel;
     }
 
-    return catalog.models.find((model) => model.id === catalog.defaultModel)
-      ?? catalog.models[0]
-      ?? null;
+    return (
+      catalog.models.find((model) => model.id === catalog.defaultModel) ?? catalog.models[0] ?? null
+    );
   } catch {
     return null;
   }

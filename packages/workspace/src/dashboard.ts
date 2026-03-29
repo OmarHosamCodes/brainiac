@@ -409,8 +409,12 @@ function buildWorkspaceNodeDashboardDetail(
   if (block.type === "swot") {
     const summary = getSwotSummary(block);
     const highlights = [
-      trimToEmpty(block.cells.strengths) ? `Strengths: ${truncateText(block.cells.strengths, 90)}` : "",
-      trimToEmpty(block.cells.weaknesses) ? `Weaknesses: ${truncateText(block.cells.weaknesses, 90)}` : "",
+      trimToEmpty(block.cells.strengths)
+        ? `Strengths: ${truncateText(block.cells.strengths, 90)}`
+        : "",
+      trimToEmpty(block.cells.weaknesses)
+        ? `Weaknesses: ${truncateText(block.cells.weaknesses, 90)}`
+        : "",
       trimToEmpty(block.cells.opportunities)
         ? `Opportunities: ${truncateText(block.cells.opportunities, 90)}`
         : "",

@@ -45,7 +45,9 @@ const quadrants = [
       </div>
       <div class="rounded-[28px] bg-primary/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-widest text-primary/60">Coverage</p>
-        <p class="mt-2 text-3xl font-black text-primary">{{ 100 - summary.emptyCellCount * 25 }}%</p>
+        <p class="mt-2 text-3xl font-black text-primary">
+          {{ 100 - summary.emptyCellCount * 25 }}%
+        </p>
       </div>
     </div>
 
@@ -59,7 +61,7 @@ const quadrants = [
         <div class="mb-3 flex items-center justify-between gap-3">
           <h3 class="text-sm font-black uppercase tracking-widest">{{ quadrant.label }}</h3>
           <span class="text-[10px] font-bold uppercase tracking-widest opacity-60">
-            {{ (block.cells[quadrant.key] || '').trim() ? 'Filled' : 'Empty' }}
+            {{ (block.cells[quadrant.key] || "").trim() ? "Filled" : "Empty" }}
           </span>
         </div>
 
@@ -69,7 +71,9 @@ const quadrants = [
           :max-rows="10"
           variant="none"
           class="w-full"
-          :ui="{ base: 'min-h-[140px] p-0 text-sm leading-relaxed text-toned placeholder:text-muted/40' }"
+          :ui="{
+            base: 'min-h-[140px] p-0 text-sm leading-relaxed text-toned placeholder:text-muted/40',
+          }"
           :placeholder="`Capture ${quadrant.label.toLowerCase()} here...`"
           @update:model-value="
             mutateBlock(tabId, block.id, (entry) => {

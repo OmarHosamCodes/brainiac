@@ -54,7 +54,9 @@ const quadrants = [
         </div>
       </div>
 
-      <div class="grid gap-3 rounded-[28px] border border-muted/20 bg-default/30 p-4 sm:grid-cols-2 lg:w-[360px]">
+      <div
+        class="grid gap-3 rounded-[28px] border border-muted/20 bg-default/30 p-4 sm:grid-cols-2 lg:w-[360px]"
+      >
         <UInput
           :model-value="block.xAxisLabel"
           placeholder="Horizontal axis"
@@ -143,7 +145,9 @@ const quadrants = [
     </div>
 
     <div class="rounded-[36px] border border-muted/20 bg-default/30 p-4">
-      <div class="mb-3 flex items-center justify-between px-2 text-xs font-bold uppercase tracking-widest text-muted/60">
+      <div
+        class="mb-3 flex items-center justify-between px-2 text-xs font-bold uppercase tracking-widest text-muted/60"
+      >
         <span>{{ block.yEndLabel }}</span>
         <span>{{ block.yAxisLabel }}</span>
       </div>
@@ -232,9 +236,9 @@ const quadrants = [
                       return;
                     }
 
-                    entry.quadrants[quadrant.key].items = entry.quadrants[quadrant.key].items.filter(
-                      (candidate) => candidate.id !== item.id,
-                    );
+                    entry.quadrants[quadrant.key].items = entry.quadrants[
+                      quadrant.key
+                    ].items.filter((candidate) => candidate.id !== item.id);
                   })
                 "
               />
@@ -243,7 +247,9 @@ const quadrants = [
         </article>
       </div>
 
-      <div class="mt-3 flex items-center justify-between px-2 text-xs font-bold uppercase tracking-widest text-muted/60">
+      <div
+        class="mt-3 flex items-center justify-between px-2 text-xs font-bold uppercase tracking-widest text-muted/60"
+      >
         <span>{{ block.xStartLabel }}</span>
         <span>{{ block.xAxisLabel }}</span>
         <span>{{ block.xEndLabel }}</span>

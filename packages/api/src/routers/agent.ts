@@ -24,35 +24,31 @@ import {
 export const agentRouter = {
   freeModels: protectedProcedure.handler(async () => {
     try {
-      return openRouterFreeModelsResponseSchema.parse(
-        await listOpenRouterFreeModels(),
-      );
+      return openRouterFreeModelsResponseSchema.parse(await listOpenRouterFreeModels());
     } catch (error) {
       throw toInternalServerError("agent.freeModels", error);
     }
   }),
   chat: {
-    turn: protectedProcedure
-      .input(agentChatTurnInputSchema)
-      .handler(async ({ input, context }) => {
-        try {
-          return agentChatTurnResponseSchema.parse(
-            await appendDashboardConversationTurn(
-              context.session.user.id,
-              context.session.user.name,
-              input,
-            ),
-          );
-        } catch (error) {
-          throw toInternalServerError("agent.chat.turn", error, {
-            conversationId: input.conversationId ?? null,
-            requestedNodesCount: input.nodes?.length,
-            workspaceSource: input.nodes ? "request" : "database",
-            requestedModel: input.model ?? null,
-            toolPreset: input.toolPreset,
-          });
-        }
-      }),
+    turn: protectedProcedure.input(agentChatTurnInputSchema).handler(async ({ input, context }) => {
+      try {
+        return agentChatTurnResponseSchema.parse(
+          await appendDashboardConversationTurn(
+            context.session.user.id,
+            context.session.user.name,
+            input,
+          ),
+        );
+      } catch (error) {
+        throw toInternalServerError("agent.chat.turn", error, {
+          conversationId: input.conversationId ?? null,
+          requestedNodesCount: input.nodes?.length,
+          workspaceSource: input.nodes ? "request" : "database",
+          requestedModel: input.model ?? null,
+          toolPreset: input.toolPreset,
+        });
+      }
+    }),
   },
   conversations: {
     list: protectedProcedure.handler(async ({ context }) => {
@@ -104,10 +100,7 @@ export const agentRouter = {
               conversationId: z.string(),
             })
             .parse(
-              await deleteDashboardConversation(
-                context.session.user.id,
-                input.conversationId,
-              ),
+              await deleteDashboardConversation(context.session.user.id, input.conversationId),
             );
         } catch (error) {
           throw toInternalServerError("agent.conversations.delete", error, {

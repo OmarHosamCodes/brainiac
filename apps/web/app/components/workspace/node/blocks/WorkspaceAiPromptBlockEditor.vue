@@ -36,8 +36,12 @@ async function handleRun() {
 <template>
   <div class="space-y-6">
     <div class="relative group">
-      <div class="absolute -inset-1 rounded-[32px] bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20 opacity-30 blur-xl transition-all group-focus-within:opacity-60" />
-      <div class="relative rounded-[28px] border border-primary/20 bg-default/80 p-5 backdrop-blur-sm">
+      <div
+        class="absolute -inset-1 rounded-[32px] bg-gradient-to-r from-primary/20 via-primary/5 to-primary/20 opacity-30 blur-xl transition-all group-focus-within:opacity-60"
+      />
+      <div
+        class="relative rounded-[28px] border border-primary/20 bg-default/80 p-5 backdrop-blur-sm"
+      >
         <div class="mb-4 flex flex-wrap items-start justify-between gap-3 px-1">
           <div class="space-y-2">
             <div class="flex items-center gap-2 text-primary">
@@ -81,7 +85,9 @@ async function handleRun() {
           autoresize
           :max-rows="10"
           class="w-full"
-          :ui="{ base: 'p-0 text-base text-toned font-medium leading-relaxed placeholder:text-muted/40' }"
+          :ui="{
+            base: 'p-0 text-base text-toned font-medium leading-relaxed placeholder:text-muted/40',
+          }"
           @update:model-value="
             mutateBlock(tabId, block.id, (entry) => {
               if (entry.type !== 'ai-prompt') {

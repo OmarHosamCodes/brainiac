@@ -1278,12 +1278,19 @@ function getBlockSearchText(block: WorkspaceBlock) {
       ...block.entries.flatMap((entry) => [entry.label, String(entry.value)]),
     );
   } else if (block.type === "ai-prompt") {
-    fragments.push(block.includeContext ? "with context" : "without context", block.prompt, block.latestOutput);
+    fragments.push(
+      block.includeContext ? "with context" : "without context",
+      block.prompt,
+      block.latestOutput,
+    );
   } else if (block.type === "habit-grid") {
     fragments.push(
       ...block.habits.flatMap((habit) => [
         habit.name,
-        ...Object.entries(habit.days).flatMap(([day, completed]) => [day, completed ? "done" : "open"]),
+        ...Object.entries(habit.days).flatMap(([day, completed]) => [
+          day,
+          completed ? "done" : "open",
+        ]),
       ]),
     );
   } else if (block.type === "process") {
@@ -1324,7 +1331,12 @@ function getBlockSearchText(block: WorkspaceBlock) {
       ]),
     );
   } else if (block.type === "learning-outcomes-matrix") {
-    fragments.push(block.prompt, block.latestOutput, block.courseBlockId ?? "", block.courseId ?? "");
+    fragments.push(
+      block.prompt,
+      block.latestOutput,
+      block.courseBlockId ?? "",
+      block.courseId ?? "",
+    );
   } else if (block.type === "time-orchestrator") {
     fragments.push(
       ...block.settings.domains,
@@ -1631,10 +1643,7 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
     );
   } else if (block.type === "checklist") {
     details.push(
-      ...block.items.flatMap((item) => [
-        item.text,
-        item.completed ? "Completed" : "Open",
-      ]),
+      ...block.items.flatMap((item) => [item.text, item.completed ? "Completed" : "Open"]),
     );
   } else if (block.type === "decision") {
     details.push(
@@ -1669,8 +1678,8 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
     details.push(
       ...block.habits.flatMap((habit) => [
         habit.name,
-        ...Object.entries(habit.days).map(([day, completed]) =>
-          `${day} ${completed ? "done" : "open"}`,
+        ...Object.entries(habit.days).map(
+          ([day, completed]) => `${day} ${completed ? "done" : "open"}`,
         ),
       ]),
     );

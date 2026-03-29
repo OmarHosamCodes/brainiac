@@ -79,17 +79,23 @@ function getScoreClasses(score: number) {
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div class="rounded-[28px] bg-primary/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Team</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">{{ summary.memberCount }}</p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+          {{ summary.memberCount }}
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-success/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Avg Score</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">{{ summary.overallAverage }}/10</p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+          {{ summary.overallAverage }}/10
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-error/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-error/70">Critical Gaps</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-error">{{ summary.criticalGapCount }}</p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-error">
+          {{ summary.criticalGapCount }}
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-elevated/70 p-5">
@@ -131,16 +137,24 @@ function getScoreClasses(score: number) {
     </div>
 
     <div class="flex flex-wrap gap-2">
-      <div class="rounded-full border border-error/30 bg-error/10 px-3 py-1 text-xs font-semibold text-error">
+      <div
+        class="rounded-full border border-error/30 bg-error/10 px-3 py-1 text-xs font-semibold text-error"
+      >
         1-3 Critical gap
       </div>
-      <div class="rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-xs font-semibold text-warning">
+      <div
+        class="rounded-full border border-warning/30 bg-warning/10 px-3 py-1 text-xs font-semibold text-warning"
+      >
         4-5 Needs support
       </div>
-      <div class="rounded-full border border-warning/20 bg-warning/5 px-3 py-1 text-xs font-semibold text-highlighted">
+      <div
+        class="rounded-full border border-warning/20 bg-warning/5 px-3 py-1 text-xs font-semibold text-highlighted"
+      >
         6-7 Reliable
       </div>
-      <div class="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-xs font-semibold text-success">
+      <div
+        class="rounded-full border border-success/30 bg-success/10 px-3 py-1 text-xs font-semibold text-success"
+      >
         8-10 Strength
       </div>
     </div>
@@ -149,7 +163,9 @@ function getScoreClasses(score: number) {
       <table class="min-w-[880px] w-full border-separate border-spacing-y-3">
         <thead>
           <tr>
-            <th class="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+            <th
+              class="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
+            >
               Team Member
             </th>
             <th
@@ -159,10 +175,14 @@ function getScoreClasses(score: number) {
             >
               {{ workspacePeopleSkillDimensionLabels[dimension] }}
             </th>
-            <th class="px-3 pb-1 text-center text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+            <th
+              class="px-3 pb-1 text-center text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
+            >
               Average
             </th>
-            <th class="px-3 pb-1 text-right text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+            <th
+              class="px-3 pb-1 text-right text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
+            >
               Actions
             </th>
           </tr>
@@ -174,12 +194,16 @@ function getScoreClasses(score: number) {
             :key="member.id"
             class="rounded-[28px] border border-muted/30 bg-default/70"
           >
-            <td class="rounded-l-[28px] border-y border-l border-muted/30 bg-default/70 px-4 py-4 align-top">
+            <td
+              class="rounded-l-[28px] border-y border-l border-muted/30 bg-default/70 px-4 py-4 align-top"
+            >
               <UInput
                 :model-value="member.name"
                 variant="none"
                 placeholder="Name"
-                :ui="{ base: 'px-0 text-sm font-semibold text-highlighted placeholder:text-muted/60' }"
+                :ui="{
+                  base: 'px-0 text-sm font-semibold text-highlighted placeholder:text-muted/60',
+                }"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== 'skills-heat-map') return;
@@ -230,7 +254,9 @@ function getScoreClasses(score: number) {
               </div>
             </td>
 
-            <td class="rounded-r-[28px] border-y border-r border-muted/30 bg-default/70 px-3 py-4 text-right">
+            <td
+              class="rounded-r-[28px] border-y border-r border-muted/30 bg-default/70 px-3 py-4 text-right"
+            >
               <UButton
                 color="neutral"
                 variant="ghost"

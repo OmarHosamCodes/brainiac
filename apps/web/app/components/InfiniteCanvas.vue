@@ -648,8 +648,7 @@ const minimapViewfinderStyle = computed<CSSProperties>(() => ({
   width: `${minimapViewfinder.value.width}px`,
   height: `${minimapViewfinder.value.height}px`,
   borderColor: "rgb(255 255 255 / 0.92)",
-  background:
-    "linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02))",
+  background: "linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.02))",
 }));
 
 const viewportClasses = computed(() => ({
@@ -792,10 +791,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div
-    ref="shellRef"
-    class="workspace-shell relative h-full w-full overflow-hidden"
-  >
+  <div ref="shellRef" class="workspace-shell relative h-full w-full overflow-hidden">
     <UContextMenu :items="contextMenuItems" :modal="false">
       <div
         ref="viewportRef"
@@ -828,7 +824,8 @@ onBeforeUnmount(() => {
               :class="{
                 'is-dragging':
                   activeInteraction?.mode === 'drag' && activeInteraction.nodeId === node.id,
-                'ring-2 ring-primary-500/50 dark:ring-primary-400/50 shadow-primary-500/10': selectedNodeIdSet.has(node.id),
+                'ring-2 ring-primary-500/50 dark:ring-primary-400/50 shadow-primary-500/10':
+                  selectedNodeIdSet.has(node.id),
               }"
               :style="getNodeTintStyle(node)"
               @pointerdown="onNodeShellPointerDown($event, node)"
@@ -837,7 +834,9 @@ onBeforeUnmount(() => {
               <div
                 class="canvas-node-toolbar flex shrink-0 items-center justify-between gap-3 border-b border-neutral-200/30 dark:border-neutral-800/30 px-5 py-4"
               >
-                <h3 class="min-w-0 flex-1 truncate text-[13px] font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-widest">
+                <h3
+                  class="min-w-0 flex-1 truncate text-[13px] font-bold text-neutral-900 dark:text-neutral-100 uppercase tracking-widest"
+                >
                   {{ getNodeHeading(node) }}
                 </h3>
 
@@ -875,10 +874,12 @@ onBeforeUnmount(() => {
       v-if="props.loading"
       class="pointer-events-none absolute inset-0 flex items-center justify-center px-6 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-sm z-50"
     >
-        <div class="flex flex-col items-center gap-4">
-            <UIcon name="i-lucide-loader-2" class="size-8 animate-spin text-primary-500" />
-            <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-500">Loading Workspace</p>
-        </div>
+      <div class="flex flex-col items-center gap-4">
+        <UIcon name="i-lucide-loader-2" class="size-8 animate-spin text-primary-500" />
+        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-500">
+          Loading Workspace
+        </p>
+      </div>
     </div>
 
     <div
@@ -893,7 +894,9 @@ onBeforeUnmount(() => {
         >
           <UIcon name="i-lucide-plus" class="size-8" />
         </div>
-        <h3 class="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">Empty Canvas</h3>
+        <h3 class="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+          Empty Canvas
+        </h3>
         <p class="mt-4 text-sm leading-relaxed text-neutral-500 max-w-xs mx-auto">
           Right-click anywhere to begin. Your nodes will appear here in your infinite workspace.
         </p>
@@ -935,17 +938,22 @@ onBeforeUnmount(() => {
     <div
       class="pointer-events-none absolute top-24 right-6 overflow-hidden rounded-3xl border border-neutral-200/50 dark:border-neutral-800/50 bg-white/55 dark:bg-neutral-950/60 backdrop-blur-xl transition-all duration-300 hover:opacity-100 opacity-75 group/minimap"
     >
-      <div class="minimap-surface relative overflow-hidden" :style="minimapSceneStyle" @pointerdown="onMinimapPointerDown" @pointermove="onMinimapPointerMove" @pointerup="releaseMinimapPointer" @pointercancel="releaseMinimapPointer" @lostpointercapture="releaseMinimapPointer">
+      <div
+        class="minimap-surface relative overflow-hidden"
+        :style="minimapSceneStyle"
+        @pointerdown="onMinimapPointerDown"
+        @pointermove="onMinimapPointerMove"
+        @pointerup="releaseMinimapPointer"
+        @pointercancel="releaseMinimapPointer"
+        @lostpointercapture="releaseMinimapPointer"
+      >
         <div
           v-for="node in minimapNodeRects"
           :key="node.key"
           class="absolute rounded-[5px] border transition-all duration-200"
           :style="getMinimapNodeStyle(node)"
         />
-        <div
-          class="absolute rounded-[7px] border-2"
-          :style="minimapViewfinderStyle"
-        />
+        <div class="absolute rounded-[7px] border-2" :style="minimapViewfinderStyle" />
       </div>
     </div>
   </div>
@@ -961,8 +969,7 @@ onBeforeUnmount(() => {
   touch-action: none;
   user-select: none;
   background-color: color-mix(in srgb, var(--ui-bg) 95%, black 5%);
-  background-image: 
-    radial-gradient(circle at 2px 2px, var(--ui-border) 1px, transparent 0);
+  background-image: radial-gradient(circle at 2px 2px, var(--ui-border) 1px, transparent 0);
   background-size: 24px 24px;
 }
 
@@ -978,7 +985,9 @@ onBeforeUnmount(() => {
 }
 
 .canvas-node-shell {
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), shadow 0.2s ease;
+  transition:
+    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    shadow 0.2s ease;
 }
 
 .canvas-node.is-selected .canvas-node-shell {
@@ -997,7 +1006,6 @@ onBeforeUnmount(() => {
 .minimap-surface {
   cursor: crosshair;
   background-color: color-mix(in srgb, var(--ui-bg) 95%, black 5%);
-  background-image:
-    radial-gradient(circle at 2px 2px, var(--ui-border) 1px, transparent 0);
+  background-image: radial-gradient(circle at 2px 2px, var(--ui-border) 1px, transparent 0);
 }
 </style>

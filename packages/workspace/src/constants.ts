@@ -58,15 +58,7 @@ export const WORKSPACE_TASK_DOMAINS = [
 
 export const WORKSPACE_TASK_QUADRANTS = ["do", "schedule", "delegate", "eliminate"] as const;
 
-export const WORKSPACE_HABIT_GRID_DAYS = [
-  "mon",
-  "tue",
-  "wed",
-  "thu",
-  "fri",
-  "sat",
-  "sun",
-] as const;
+export const WORKSPACE_HABIT_GRID_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
 export const WORKSPACE_TIMELINE_MILESTONE_STATUSES = [
   "planned",
@@ -186,12 +178,7 @@ export const WORKSPACE_RECEIVABLE_FILTERS = [
 
 export const WORKSPACE_COURSE_STATUSES = ["planning", "in-progress"] as const;
 
-export const WORKSPACE_COHORT_STATUSES = [
-  "planning",
-  "selling",
-  "running",
-  "completed",
-] as const;
+export const WORKSPACE_COHORT_STATUSES = ["planning", "selling", "running", "completed"] as const;
 
 export const WORKSPACE_LEADERSHIP_RHYTHMS = ["weekly", "monthly", "quarterly"] as const;
 

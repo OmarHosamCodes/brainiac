@@ -217,8 +217,12 @@ async function prioritizeWithAi() {
   <div class="space-y-6">
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div class="rounded-[28px] bg-primary/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Total Task Time</p>
-        <p class="mt-2 text-3xl font-black tracking-tight text-primary">{{ formatDuration(summary.totalEstimateMinutes) }}</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">
+          Total Task Time
+        </p>
+        <p class="mt-2 text-3xl font-black tracking-tight text-primary">
+          {{ formatDuration(summary.totalEstimateMinutes) }}
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-error/5 p-5">
@@ -228,12 +232,18 @@ async function prioritizeWithAi() {
 
       <div class="rounded-[28px] bg-success/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Completed</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">{{ summary.completedCount }}</p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+          {{ summary.completedCount }}
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-secondary/10 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-secondary/80">Active Domains</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-secondary">{{ summary.activeDomainCount }}</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-secondary/80">
+          Active Domains
+        </p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-secondary">
+          {{ summary.activeDomainCount }}
+        </p>
       </div>
     </div>
 
@@ -246,13 +256,19 @@ async function prioritizeWithAi() {
       >
         <div class="flex items-start justify-between gap-3">
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">{{ quadrant.label }}</p>
+            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+              {{ quadrant.label }}
+            </p>
             <p class="mt-1 text-sm text-muted">{{ quadrant.description }}</p>
           </div>
 
           <div class="text-right">
-            <p class="text-2xl font-black tracking-tight text-highlighted">{{ summary.quadrants[quadrant.key].taskCount }}</p>
-            <p class="text-xs text-muted">{{ formatDuration(summary.quadrants[quadrant.key].estimateMinutes) }}</p>
+            <p class="text-2xl font-black tracking-tight text-highlighted">
+              {{ summary.quadrants[quadrant.key].taskCount }}
+            </p>
+            <p class="text-xs text-muted">
+              {{ formatDuration(summary.quadrants[quadrant.key].estimateMinutes) }}
+            </p>
           </div>
         </div>
 
@@ -318,7 +334,10 @@ async function prioritizeWithAi() {
       </div>
 
       <div v-else class="mt-4 space-y-4">
-        <div v-for="allocation in summary.domainAllocation" :key="allocation.domain ?? 'unassigned'">
+        <div
+          v-for="allocation in summary.domainAllocation"
+          :key="allocation.domain ?? 'unassigned'"
+        >
           <div class="mb-2 flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
               <span class="text-sm font-semibold text-highlighted">{{ allocation.label }}</span>
@@ -333,7 +352,9 @@ async function prioritizeWithAi() {
           <div class="h-3 overflow-hidden rounded-full bg-elevated/30">
             <div
               class="h-full rounded-full bg-primary transition-all"
-              :style="{ width: `${Math.max((allocation.estimateMinutes / Math.max(summary.totalEstimateMinutes, 1)) * 100, 4)}%` }"
+              :style="{
+                width: `${Math.max((allocation.estimateMinutes / Math.max(summary.totalEstimateMinutes, 1)) * 100, 4)}%`,
+              }"
             />
           </div>
         </div>
@@ -426,8 +447,12 @@ async function prioritizeWithAi() {
               <div class="grid gap-4 md:grid-cols-2">
                 <div class="space-y-2 rounded-[22px] border border-muted/25 bg-default/70 p-3">
                   <div class="flex items-center justify-between gap-2">
-                    <span class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Urgency</span>
-                    <span class="text-sm font-semibold text-highlighted">{{ task.urgency }}/10</span>
+                    <span class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
+                      >Urgency</span
+                    >
+                    <span class="text-sm font-semibold text-highlighted"
+                      >{{ task.urgency }}/10</span
+                    >
                   </div>
                   <input
                     :value="task.urgency"
@@ -445,8 +470,12 @@ async function prioritizeWithAi() {
 
                 <div class="space-y-2 rounded-[22px] border border-muted/25 bg-default/70 p-3">
                   <div class="flex items-center justify-between gap-2">
-                    <span class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Importance</span>
-                    <span class="text-sm font-semibold text-highlighted">{{ task.importance }}/10</span>
+                    <span class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
+                      >Importance</span
+                    >
+                    <span class="text-sm font-semibold text-highlighted"
+                      >{{ task.importance }}/10</span
+                    >
                   </div>
                   <input
                     :value="task.importance"
@@ -456,7 +485,10 @@ async function prioritizeWithAi() {
                     class="h-2 w-full appearance-none rounded-full bg-primary/20 accent-primary"
                     @input="
                       mutateTask(task.id, (entry) => {
-                        entry.importance = clampTenPointScale(getInputValue($event), entry.importance);
+                        entry.importance = clampTenPointScale(
+                          getInputValue($event),
+                          entry.importance,
+                        );
                       })
                     "
                   />
@@ -464,7 +496,9 @@ async function prioritizeWithAi() {
               </div>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)_auto] xl:grid-cols-1">
+            <div
+              class="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)_auto] xl:grid-cols-1"
+            >
               <UFormField label="Time Estimate" size="sm">
                 <UInput
                   :model-value="String(task.estimateMinutes)"
@@ -511,7 +545,8 @@ async function prioritizeWithAi() {
         <div>
           <p class="text-sm font-semibold text-highlighted">AI battle plan</p>
           <p class="text-sm text-muted">
-            The Orchestrator agent turns the current matrix into a concrete sequencing recommendation.
+            The Orchestrator agent turns the current matrix into a concrete sequencing
+            recommendation.
           </p>
         </div>
 
@@ -522,7 +557,12 @@ async function prioritizeWithAi() {
 
       <div
         class="prose prose-sm dark:prose-invert mt-4 max-w-none rounded-[24px] border border-muted/30 bg-default/80 p-5 text-sm leading-7 text-toned"
-        v-html="renderSimpleMarkdown(block.latestBattlePlan || 'Run AI Prioritize to generate a battle plan from the current matrix.')"
+        v-html="
+          renderSimpleMarkdown(
+            block.latestBattlePlan ||
+              'Run AI Prioritize to generate a battle plan from the current matrix.',
+          )
+        "
       />
     </section>
   </div>

@@ -121,7 +121,9 @@ function removeRow(rowId: string) {
       <table class="min-w-full border-separate border-spacing-y-3">
         <thead>
           <tr>
-            <th class="w-12 px-2 text-left text-[10px] font-bold uppercase tracking-widest text-muted/50">
+            <th
+              class="w-12 px-2 text-left text-[10px] font-bold uppercase tracking-widest text-muted/50"
+            >
               #
             </th>
             <th

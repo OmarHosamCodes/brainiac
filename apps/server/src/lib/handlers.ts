@@ -15,10 +15,7 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
 
 export const rpcHandler = new RPCHandler(appRouter);
 
-export async function handleAppRouterRequest(
-  request: Request,
-  context: Context,
-) {
+export async function handleAppRouterRequest(request: Request, context: Context) {
   try {
     const rpcResult = await rpcHandler.handle(request, {
       prefix: "/rpc",

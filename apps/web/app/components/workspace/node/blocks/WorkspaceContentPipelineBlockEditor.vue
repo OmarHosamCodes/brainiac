@@ -215,9 +215,7 @@ function getTopPlatformLabel() {
       </div>
 
       <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">
-          Published
-        </p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Published</p>
         <p class="mt-2 text-4xl font-black tracking-tight text-success">
           {{ summary.publishedCount }}
         </p>
@@ -239,7 +237,8 @@ function getTopPlatformLabel() {
       <div>
         <p class="text-sm font-semibold text-highlighted">Five-stage publishing flow</p>
         <p class="text-sm text-muted">
-          Drag pieces between stages, keep platform ownership visible, and surface review bottlenecks.
+          Drag pieces between stages, keep platform ownership visible, and surface review
+          bottlenecks.
         </p>
       </div>
 
@@ -311,7 +310,9 @@ function getTopPlatformLabel() {
                   variant="none"
                   placeholder="Untitled content piece"
                   class="w-full"
-                  :ui="{ base: 'px-0 text-sm font-bold text-highlighted placeholder:text-muted/60' }"
+                  :ui="{
+                    base: 'px-0 text-sm font-bold text-highlighted placeholder:text-muted/60',
+                  }"
                   @update:model-value="
                     mutateItem(item.id, (entry) => {
                       entry.title = ($event ?? '').slice(0, 240);
@@ -338,7 +339,8 @@ function getTopPlatformLabel() {
                 class="min-w-[6.5rem] rounded-full"
                 @update:model-value="
                   mutateItem(item.id, (entry) => {
-                    entry.platform = ($event as WorkspaceContentPlatform | undefined) ?? 'instagram';
+                    entry.platform =
+                      ($event as WorkspaceContentPlatform | undefined) ?? 'instagram';
                   })
                 "
               />

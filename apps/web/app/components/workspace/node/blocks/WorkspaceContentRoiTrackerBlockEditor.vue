@@ -124,9 +124,7 @@ function getStatusClasses(score: number) {
           Top Platform
         </p>
         <p class="mt-2 text-3xl font-black tracking-tight text-primary">
-          {{
-            summary.topPlatform ? workspaceContentPlatformLabels[summary.topPlatform] : "None"
-          }}
+          {{ summary.topPlatform ? workspaceContentPlatformLabels[summary.topPlatform] : "None" }}
         </p>
         <p class="mt-1 text-sm text-muted">Highest average ROI across current rows</p>
       </div>
@@ -151,9 +149,7 @@ function getStatusClasses(score: number) {
       </div>
 
       <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">
-          Average ROI
-        </p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">Average ROI</p>
         <p class="mt-2 text-4xl font-black tracking-tight text-warning">
           {{ summary.averageScore }}
         </p>
@@ -167,7 +163,8 @@ function getStatusClasses(score: number) {
       <div>
         <p class="text-sm font-semibold text-highlighted">Commercial impact tracker</p>
         <p class="text-sm text-muted">
-          Track which pieces actually create leads, influence conversions, and keep paying back through repurposing.
+          Track which pieces actually create leads, influence conversions, and keep paying back
+          through repurposing.
         </p>
       </div>
 
@@ -210,7 +207,17 @@ function getStatusClasses(score: number) {
         :style="rowGridStyle"
       >
         <div
-          v-for="label in ['Content', 'Platform', 'Campaign', 'Goal', 'Reach', 'Leads', 'Conversion Influence', 'Repurpose Value', 'ROI Status']"
+          v-for="label in [
+            'Content',
+            'Platform',
+            'Campaign',
+            'Goal',
+            'Reach',
+            'Leads',
+            'Conversion Influence',
+            'Repurpose Value',
+            'ROI Status',
+          ]"
           :key="label"
           class="bg-elevated/80 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
         >
@@ -351,13 +358,16 @@ function getStatusClasses(score: number) {
               <div class="flex items-start justify-between gap-4">
                 <div class="min-w-0 flex-1">
                   <p class="text-[10px] font-bold uppercase tracking-[0.18em]">
-                    {{ workspaceContentRoiStatusLabels[getContentRoiStatus(getContentRoiScore(item))] }}
+                    {{
+                      workspaceContentRoiStatusLabels[getContentRoiStatus(getContentRoiScore(item))]
+                    }}
                   </p>
                   <p class="mt-1 text-2xl font-black tracking-tight">
                     {{ getContentRoiScore(item) }}
                   </p>
                   <p class="mt-1 text-xs leading-relaxed text-muted">
-                    {{ item.leads }} leads, sorted by {{ workspaceContentRoiSortLabels[block.sortBy] }}
+                    {{ item.leads }} leads, sorted by
+                    {{ workspaceContentRoiSortLabels[block.sortBy] }}
                   </p>
                 </div>
 

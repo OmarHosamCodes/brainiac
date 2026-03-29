@@ -23,9 +23,7 @@ export function getErrorMessage(error: unknown, fallback = "An unexpected error 
   }
 
   if (typeof error === "object" && error !== null) {
-    const knownError = error as ErrorWithMessage &
-      ErrorWithNestedMessage &
-      ErrorWithDataMessage;
+    const knownError = error as ErrorWithMessage & ErrorWithNestedMessage & ErrorWithDataMessage;
 
     if (knownError.error?.data?.message) {
       return knownError.error.data.message;

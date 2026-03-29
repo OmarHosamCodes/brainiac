@@ -36,12 +36,12 @@ const isHovered = ref(false);
     <!-- Block Header -->
     <div class="flex items-center justify-between gap-4">
       <div class="flex min-w-0 flex-1 items-center gap-3">
-        <div 
+        <div
           class="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-muted/60 bg-elevated/50 text-toned transition-colors group-hover:border-primary/40 group-hover:text-primary"
         >
           <UIcon :name="registryEntry.icon" class="size-5" />
         </div>
-        
+
         <div class="min-w-0 flex-1">
           <UInput
             :model-value="block.title"
@@ -59,7 +59,7 @@ const isHovered = ref(false);
         </div>
       </div>
 
-      <div 
+      <div
         class="flex items-center gap-1 transition-opacity duration-200"
         :class="isHovered || isContextBlock ? 'opacity-100' : 'pointer-events-none opacity-0'"
       >

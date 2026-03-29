@@ -1,7 +1,4 @@
-import {
-  WORKSPACE_TASK_DOMAINS,
-  WORKSPACE_TASK_QUADRANTS,
-} from "./constants";
+import { WORKSPACE_TASK_DOMAINS, WORKSPACE_TASK_QUADRANTS } from "./constants";
 import {
   workspaceLeadershipRhythmFilterSchema,
   workspaceTimeOrchestratorSettingsSchema,
@@ -369,8 +366,7 @@ export function sortEisenhowerTasks(tasks: WorkspaceTask[], now = new Date()) {
       return Number(left.completed) - Number(right.completed);
     }
 
-    const scoreDelta =
-      getTaskUrgencyScore(right, now) - getTaskUrgencyScore(left, now);
+    const scoreDelta = getTaskUrgencyScore(right, now) - getTaskUrgencyScore(left, now);
 
     if (scoreDelta !== 0) {
       return scoreDelta;
@@ -467,7 +463,9 @@ export function buildEisenhowerBattlePlanPrompt(block: WorkspaceEisenhowerMatrix
     block.tasks.length > 0
       ? sortEisenhowerTasks(block.tasks).map((task, index) => {
           const meta = [
-            task.domain ? `domain ${getWorkspaceTaskDomainLabel(task.domain)}` : "domain unassigned",
+            task.domain
+              ? `domain ${getWorkspaceTaskDomainLabel(task.domain)}`
+              : "domain unassigned",
             `urgency ${task.urgency}/10`,
             `importance ${task.importance}/10`,
             `${task.estimateMinutes} minutes`,
@@ -544,9 +542,7 @@ export function matchesLeadershipRhythmFilter(
   }
 }
 
-export function sortLeadershipRhythmMeetings(
-  meetings: WorkspaceLeadershipRhythmMeeting[],
-) {
+export function sortLeadershipRhythmMeetings(meetings: WorkspaceLeadershipRhythmMeeting[]) {
   return [...meetings].sort((left, right) => {
     const leftDate = left.nextDate ? getDueDateValue(left.nextDate) : Number.MAX_SAFE_INTEGER;
     const rightDate = right.nextDate ? getDueDateValue(right.nextDate) : Number.MAX_SAFE_INTEGER;
@@ -576,8 +572,9 @@ export function getLeadershipRhythmPlannerSummary(
   now = new Date(),
 ): WorkspaceLeadershipRhythmSummary {
   const scheduledCount = block.meetings.filter((meeting) => meeting.status === "scheduled").length;
-  const missedCount = block.meetings.filter((meeting) => isLeadershipMeetingMissed(meeting, now))
-    .length;
+  const missedCount = block.meetings.filter((meeting) =>
+    isLeadershipMeetingMissed(meeting, now),
+  ).length;
   const doneCount = block.meetings.filter((meeting) => meeting.status === "done").length;
   const needsRescheduleCount = block.meetings.filter(
     (meeting) => meeting.status === "needs-reschedule",

@@ -119,7 +119,9 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div class="rounded-[28px] bg-primary/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Courses</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">{{ summary.courseCount }}</p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+          {{ summary.courseCount }}
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-success/5 p-5">
@@ -212,8 +214,15 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
               </div>
             </div>
 
-            <div class="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted">
-              <span>{{ getCourseRoadmapCourseProgress(course).recordedLessons }}/{{ getCourseRoadmapCourseProgress(course).lessonCount }} recorded</span>
+            <div
+              class="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted"
+            >
+              <span
+                >{{ getCourseRoadmapCourseProgress(course).recordedLessons }}/{{
+                  getCourseRoadmapCourseProgress(course).lessonCount
+                }}
+                recorded</span
+              >
               <span>{{ getCourseRoadmapCourseProgress(course).completionPercent }}% complete</span>
             </div>
 
@@ -264,7 +273,11 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
             >
               <span
                 class="flex size-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold"
-                :class="lesson.recorded ? 'border-success/40 bg-success/15' : 'border-muted/40 bg-elevated/40'"
+                :class="
+                  lesson.recorded
+                    ? 'border-success/40 bg-success/15'
+                    : 'border-muted/40 bg-elevated/40'
+                "
               >
                 <UIcon v-if="lesson.recorded" name="i-lucide-check" class="size-3.5" />
                 <span v-else>{{ lessonIndex + 1 }}</span>
@@ -322,7 +335,9 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
 
         <div class="mt-6 space-y-3">
           <div class="flex items-center justify-between gap-3">
-            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Learning Outcomes</p>
+            <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+              Learning Outcomes
+            </p>
             <UButton
               color="neutral"
               variant="soft"
@@ -341,7 +356,9 @@ function getCourseClasses(status: WorkspaceCourseStatus) {
               :key="outcome.id"
               class="flex items-start gap-3 rounded-2xl border border-muted/25 bg-default/65 px-3 py-3"
             >
-              <div class="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-success/10 text-success">
+              <div
+                class="mt-1 flex size-7 shrink-0 items-center justify-center rounded-full bg-success/10 text-success"
+              >
                 <UIcon name="i-lucide-check" class="size-4" />
               </div>
 

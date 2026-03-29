@@ -8,12 +8,8 @@ const props = defineProps<{
   tabId: string;
 }>();
 
-const {
-  mutateBlock,
-  isNotePreviewEnabled,
-  toggleNotePreview,
-  renderNotesPreview,
-} = useWorkspaceNodeEditorContext();
+const { mutateBlock, isNotePreviewEnabled, toggleNotePreview, renderNotesPreview } =
+  useWorkspaceNodeEditorContext();
 
 const isPreview = computed(() => isNotePreviewEnabled(props.block.id));
 </script>
@@ -31,7 +27,7 @@ const isPreview = computed(() => isNotePreviewEnabled(props.block.id));
           class="rounded-lg"
           @click="toggleNotePreview(block.id)"
         >
-          {{ isPreview ? 'Edit' : 'Preview' }}
+          {{ isPreview ? "Edit" : "Preview" }}
         </UButton>
       </div>
       <p class="text-[10px] font-bold uppercase tracking-widest text-muted/50">
@@ -40,7 +36,7 @@ const isPreview = computed(() => isNotePreviewEnabled(props.block.id));
     </div>
 
     <!-- Editor/Preview Area -->
-    <div 
+    <div
       class="min-h-[200px] rounded-3xl border border-muted/20 bg-default/40 transition-all focus-within:border-primary/30 focus-within:bg-default/60"
       :class="{ 'p-6': isPreview }"
     >

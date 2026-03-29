@@ -26,16 +26,14 @@ export const workspaceContentPlatformLabels: Record<WorkspaceContentPlatform, st
   youtube: "YT",
 };
 
-export const workspaceContentPipelineStatusLabels: Record<
-  WorkspaceContentPipelineStatus,
-  string
-> = {
-  ideas: "Ideas",
-  draft: "Draft",
-  review: "Review",
-  approved: "Approved",
-  published: "Published",
-};
+export const workspaceContentPipelineStatusLabels: Record<WorkspaceContentPipelineStatus, string> =
+  {
+    ideas: "Ideas",
+    draft: "Draft",
+    review: "Review",
+    approved: "Approved",
+    published: "Published",
+  };
 
 export const workspaceContentQualityDimensionLabels: Record<
   WorkspaceContentQualityDimension,
@@ -65,10 +63,7 @@ export const workspaceContentRoiStatusLabels: Record<WorkspaceContentRoiStatus, 
   "low-return": "Low Return",
 };
 
-export function clampContentTenPointScore(
-  value: number | null | undefined,
-  fallback = 5,
-) {
+export function clampContentTenPointScore(value: number | null | undefined, fallback = 5) {
   const numeric = Number.isFinite(value) ? Number(value) : fallback;
   return Math.min(10, Math.max(1, Math.round(numeric)));
 }
@@ -237,9 +232,9 @@ export function getContentRoiTrackerSummary(
     averageScore:
       scoredItems.length > 0
         ? Number(
-            (
-              scoredItems.reduce((sum, entry) => sum + entry.score, 0) / scoredItems.length
-            ).toFixed(1),
+            (scoredItems.reduce((sum, entry) => sum + entry.score, 0) / scoredItems.length).toFixed(
+              1,
+            ),
           )
         : 0,
     topPlatform: platformScores[0]?.key ?? null,
@@ -256,13 +251,11 @@ function aggregateContentRoiScores<TKey extends string>(
     score: number;
     influencedLeads: number;
   }>,
-  getKey: (
-    entry: {
-      item: WorkspaceContentRoiItem;
-      score: number;
-      influencedLeads: number;
-    },
-  ) => TKey,
+  getKey: (entry: {
+    item: WorkspaceContentRoiItem;
+    score: number;
+    influencedLeads: number;
+  }) => TKey,
 ) {
   const record = new Map<
     TKey,

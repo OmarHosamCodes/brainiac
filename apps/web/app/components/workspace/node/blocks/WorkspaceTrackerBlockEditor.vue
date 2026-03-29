@@ -13,9 +13,7 @@ const { addTrackerEntry, mutateBlock, mutateTrackerEntry, removeTrackerEntry } =
   useWorkspaceNodeEditorContext();
 
 const trend = computed(() => getTrackerTrend(props.block));
-const latestEntry = computed(
-  () => props.block.entries[props.block.entries.length - 1] ?? null,
-);
+const latestEntry = computed(() => props.block.entries[props.block.entries.length - 1] ?? null);
 const averageValue = computed(() => {
   if (props.block.entries.length === 0) {
     return 0;
@@ -23,8 +21,7 @@ const averageValue = computed(() => {
 
   return Number(
     (
-      props.block.entries.reduce((sum, entry) => sum + entry.value, 0) /
-      props.block.entries.length
+      props.block.entries.reduce((sum, entry) => sum + entry.value, 0) / props.block.entries.length
     ).toFixed(1),
   );
 });
@@ -45,7 +42,11 @@ const chartHeights = computed(() => {
   return values.map((value) => Math.max(8, Math.round(((value - min) / (max - min)) * 100)));
 });
 const goalPosition = computed(() => {
-  if (props.block.goal === null || props.block.goal === undefined || props.block.entries.length === 0) {
+  if (
+    props.block.goal === null ||
+    props.block.goal === undefined ||
+    props.block.entries.length === 0
+  ) {
     return null;
   }
 
@@ -176,7 +177,9 @@ function formatStatValue(value: number | null | undefined) {
           class="group relative flex-1 min-w-[6px] rounded-t-full bg-primary/20 transition-all hover:bg-primary/60"
           :style="{ height: `${point}%` }"
         >
-          <div class="absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100">
+          <div
+            class="absolute -top-8 left-1/2 -translate-x-1/2 rounded bg-primary px-1.5 py-0.5 text-[10px] font-bold text-white opacity-0 transition-opacity group-hover:opacity-100"
+          >
             {{ block.entries[index]?.value }}
           </div>
         </div>
@@ -188,14 +191,18 @@ function formatStatValue(value: number | null | undefined) {
         :style="{ bottom: `calc(2rem + ${goalPosition}%)` }"
       >
         <div class="flex items-center gap-2">
-          <span class="rounded-full bg-warning px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white">
+          <span
+            class="rounded-full bg-warning px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-white"
+          >
             Goal {{ formatStatValue(block.goal) }}
           </span>
           <div class="h-px flex-1 border-t border-dashed border-warning/70" />
         </div>
       </div>
 
-      <div class="mt-4 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-widest text-muted/40">
+      <div
+        class="mt-4 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-widest text-muted/40"
+      >
         <span>Start</span>
         <span>{{ latestEntry?.label || "Current" }}</span>
       </div>

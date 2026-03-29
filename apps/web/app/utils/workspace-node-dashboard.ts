@@ -49,9 +49,7 @@ export const workspaceNodeTintOptions: WorkspaceNodeTintOption[] = [
 
 const defaultWorkspaceNodeTintOption = workspaceNodeTintOptions[0]!;
 
-export function getWorkspaceNodeTintOption(
-  tint: WorkspaceNodeTint | null | undefined,
-) {
+export function getWorkspaceNodeTintOption(tint: WorkspaceNodeTint | null | undefined) {
   return (
     workspaceNodeTintOptions.find((option) => option.value === tint) ??
     defaultWorkspaceNodeTintOption

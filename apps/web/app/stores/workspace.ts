@@ -75,9 +75,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
 
   const workspaceReadyForEdits = computed(
     () =>
-      Boolean(authSession.value?.data?.user) &&
-      loadApplied.value &&
-      !isHydratingWorkspace.value,
+      Boolean(authSession.value?.data?.user) && loadApplied.value && !isHydratingWorkspace.value,
   );
   const isWorkspaceInitialLoading = computed(
     () =>
@@ -88,9 +86,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
         isPreloadingWorkspace.value),
   );
   const isWorkspaceRefreshing = computed(
-    () =>
-      loadApplied.value &&
-      (workspaceQuery.isRefetching.value || isPreloadingWorkspace.value),
+    () => loadApplied.value && (workspaceQuery.isRefetching.value || isPreloadingWorkspace.value),
   );
   const isDraftValid = computed(() => nodeDraft.title.trim().length > 0);
   const editorBlockOptions = computed<WorkspaceNodeDashboardSelectableBlock[]>(() => {
@@ -197,8 +193,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
         ...workspaceGetQueryOptions,
         staleTime: 1_500,
       });
-    } catch {}
-    finally {
+    } catch {
+    } finally {
       isPreloadingWorkspace.value = false;
     }
   }
@@ -291,10 +287,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   }
 
   function createNodeId() {
-    if (
-      typeof crypto !== "undefined" &&
-      typeof crypto.randomUUID === "function"
-    ) {
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
       return crypto.randomUUID();
     }
 
@@ -353,9 +346,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     }
 
     nodes.value = nodes.value.filter((node) => node.id !== payload.nodeId);
-    selectedNodeIds.value = selectedNodeIds.value.filter(
-      (nodeId) => nodeId !== payload.nodeId,
-    );
+    selectedNodeIds.value = selectedNodeIds.value.filter((nodeId) => nodeId !== payload.nodeId);
   }
 
   function submitNodeEditor() {

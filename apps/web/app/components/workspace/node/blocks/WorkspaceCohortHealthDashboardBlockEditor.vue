@@ -100,17 +100,27 @@ function getHealthClasses(cohortId: string) {
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div class="rounded-[28px] bg-primary/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Seats Sold</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">{{ summary.totalSeatsSold }}</p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+          {{ summary.totalSeatsSold }}
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Capacity Filled</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-success">{{ summary.fillPercent }}%</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">
+          Capacity Filled
+        </p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-success">
+          {{ summary.fillPercent }}%
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-secondary/10 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-secondary/80">Booked Revenue</p>
-        <p class="mt-2 text-2xl font-black tracking-tight text-secondary">{{ formatCurrency(summary.bookedRevenueEgp) }}</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-secondary/80">
+          Booked Revenue
+        </p>
+        <p class="mt-2 text-2xl font-black tracking-tight text-secondary">
+          {{ formatCurrency(summary.bookedRevenueEgp) }}
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-error/5 p-5">
@@ -173,7 +183,9 @@ function getHealthClasses(cohortId: string) {
               </UBadge>
             </div>
 
-            <div class="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted">
+            <div
+              class="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted"
+            >
               <span>{{ cohort.seatsSold }}/{{ cohort.capacity }} seats</span>
               <span>{{ getCohortFillPercent(cohort) }}% full</span>
               <span>{{ formatCurrency(cohort.revenueEgp) }}</span>
@@ -287,7 +299,9 @@ function getHealthClasses(cohortId: string) {
             <div class="space-y-3">
               <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Risk Flags</p>
               <div class="grid gap-3 sm:grid-cols-2">
-                <label class="flex items-center gap-3 rounded-2xl border border-muted/25 bg-elevated/20 px-3 py-3">
+                <label
+                  class="flex items-center gap-3 rounded-2xl border border-muted/25 bg-elevated/20 px-3 py-3"
+                >
                   <UCheckbox
                     :model-value="cohort.refundRisk"
                     @update:model-value="
@@ -299,7 +313,9 @@ function getHealthClasses(cohortId: string) {
                   <span class="text-sm font-medium text-toned">Refund risk</span>
                 </label>
 
-                <label class="flex items-center gap-3 rounded-2xl border border-muted/25 bg-elevated/20 px-3 py-3">
+                <label
+                  class="flex items-center gap-3 rounded-2xl border border-muted/25 bg-elevated/20 px-3 py-3"
+                >
                   <UCheckbox
                     :model-value="cohort.completionRisk"
                     @update:model-value="
@@ -314,20 +330,10 @@ function getHealthClasses(cohortId: string) {
             </div>
 
             <div class="flex flex-wrap gap-2">
-              <UBadge
-                v-if="cohort.refundRisk"
-                color="error"
-                variant="soft"
-                size="sm"
-              >
+              <UBadge v-if="cohort.refundRisk" color="error" variant="soft" size="sm">
                 Refund exposure
               </UBadge>
-              <UBadge
-                v-if="cohort.completionRisk"
-                color="warning"
-                variant="soft"
-                size="sm"
-              >
+              <UBadge v-if="cohort.completionRisk" color="warning" variant="soft" size="sm">
                 Weak completion outlook
               </UBadge>
               <UBadge

@@ -105,9 +105,7 @@ export const workspaceReceivableFilterSchema = z.enum(WORKSPACE_RECEIVABLE_FILTE
 export const workspaceCourseStatusSchema = z.enum(WORKSPACE_COURSE_STATUSES);
 export const workspaceCohortStatusSchema = z.enum(WORKSPACE_COHORT_STATUSES);
 export const workspaceLeadershipRhythmSchema = z.enum(WORKSPACE_LEADERSHIP_RHYTHMS);
-export const workspaceLeadershipMeetingStatusSchema = z.enum(
-  WORKSPACE_LEADERSHIP_MEETING_STATUSES,
-);
+export const workspaceLeadershipMeetingStatusSchema = z.enum(WORKSPACE_LEADERSHIP_MEETING_STATUSES);
 export const workspaceLeadershipRhythmFilterSchema = z.enum(WORKSPACE_LEADERSHIP_FILTERS);
 
 export const workspaceTaskSchema = z.object({
@@ -645,10 +643,7 @@ export const workspaceAiPromptBlockSchema = workspaceBlockBaseSchema.extend({
 
 export const workspaceHabitGridBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("habit-grid"),
-  habits: z
-    .array(workspaceHabitGridHabitSchema)
-    .max(WORKSPACE_HABIT_GRID_HABIT_LIMIT)
-    .default([]),
+  habits: z.array(workspaceHabitGridHabitSchema).max(WORKSPACE_HABIT_GRID_HABIT_LIMIT).default([]),
 });
 
 export const workspaceProcessBlockSchema = workspaceBlockBaseSchema.extend({

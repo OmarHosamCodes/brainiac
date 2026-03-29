@@ -183,7 +183,10 @@ async function runAnalysis() {
   } catch (error) {
     toast.add({
       title: "Analysis failed",
-      description: getErrorMessage(error, "The Education agent could not generate the outcomes matrix."),
+      description: getErrorMessage(
+        error,
+        "The Education agent could not generate the outcomes matrix.",
+      ),
       color: "error",
       icon: "i-lucide-alert-circle",
     });
@@ -195,12 +198,17 @@ async function runAnalysis() {
 
 <template>
   <div class="space-y-6">
-    <section class="rounded-[34px] border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-default p-6">
+    <section
+      class="rounded-[34px] border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-default p-6"
+    >
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Education Agent</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">
+            Education Agent
+          </p>
           <p class="mt-2 text-sm text-muted">
-            Pick a course, tune the analysis request, and generate a full outcomes matrix from the current roadmap context.
+            Pick a course, tune the analysis request, and generate a full outcomes matrix from the
+            current roadmap context.
           </p>
         </div>
 
@@ -280,7 +288,8 @@ async function runAnalysis() {
         <div>
           <p class="text-sm font-semibold text-highlighted">Analysis output</p>
           <p class="text-sm text-muted">
-            The Education agent returns a structured matrix that maps modules to capabilities and behaviors.
+            The Education agent returns a structured matrix that maps modules to capabilities and
+            behaviors.
           </p>
         </div>
 

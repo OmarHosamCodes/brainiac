@@ -39,11 +39,7 @@ function getErrorCause(error: unknown) {
   return undefined;
 }
 
-function getDebugPayload(
-  procedure: string,
-  error: unknown,
-  context: DevErrorContext,
-) {
+function getDebugPayload(procedure: string, error: unknown, context: DevErrorContext) {
   return {
     procedure,
     errorName: error instanceof Error ? error.name : typeof error,
@@ -62,20 +58,22 @@ function getDebugPayload(
 }
 
 function isOpenRouterHttpError(error: unknown): error is OpenRouterHttpError {
-  return error instanceof Error
-    && typeof Reflect.get(error, "statusCode") === "number"
-    && typeof Reflect.get(error, "body") === "string"
-    && typeof Reflect.get(error, "contentType") === "string"
-    && Reflect.get(error, "rawResponse") instanceof Response;
+  return (
+    error instanceof Error &&
+    typeof Reflect.get(error, "statusCode") === "number" &&
+    typeof Reflect.get(error, "body") === "string" &&
+    typeof Reflect.get(error, "contentType") === "string" &&
+    Reflect.get(error, "rawResponse") instanceof Response
+  );
 }
 
 function getOpenRouterErrorCode(error: OpenRouterHttpError) {
   const message = getErrorMessage(error).toLowerCase();
 
   if (
-    message.includes("guardrail restrictions")
-    || message.includes("data policy")
-    || message.includes("settings/privacy")
+    message.includes("guardrail restrictions") ||
+    message.includes("data policy") ||
+    message.includes("settings/privacy")
   ) {
     return "FORBIDDEN" as const;
   }
@@ -102,9 +100,7 @@ function getOpenRouterErrorCode(error: OpenRouterHttpError) {
     case 504:
       return "GATEWAY_TIMEOUT" as const;
     default:
-      return error.statusCode >= 500
-        ? "BAD_GATEWAY" as const
-        : "BAD_REQUEST" as const;
+      return error.statusCode >= 500 ? ("BAD_GATEWAY" as const) : ("BAD_REQUEST" as const);
   }
 }
 
@@ -119,20 +115,17 @@ function toOpenRouterProcedureError(
 
   return new ORPCError(code, {
     message,
-    data: env.NODE_ENV === "development"
-      ? {
-          debug: JSON.stringify(debug, null, 2),
-        }
-      : undefined,
+    data:
+      env.NODE_ENV === "development"
+        ? {
+            debug: JSON.stringify(debug, null, 2),
+          }
+        : undefined,
     cause: error,
   });
 }
 
-export function toProcedureError(
-  procedure: string,
-  error: unknown,
-  context: DevErrorContext = {},
-) {
+export function toProcedureError(procedure: string, error: unknown, context: DevErrorContext = {}) {
   if (error instanceof ORPCError) {
     return error;
   }

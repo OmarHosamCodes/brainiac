@@ -1502,9 +1502,7 @@ async function seedDemoUsers(content: SeedContent, now: Date) {
   }
 
   console.log("");
-  console.log(
-    `Workspaces: ${SEED_USERS.length} nodes across ${SEED_USERS.length} demo users.`,
-  );
+  console.log(`Workspaces: ${SEED_USERS.length} nodes across ${SEED_USERS.length} demo users.`);
   console.log(`Marketplace: ${marketplaceItems.length} curated items.`);
   console.log(
     "Rerunning this script resets only the reserved *.brainiac.test demo accounts and these seed marketplace records.",

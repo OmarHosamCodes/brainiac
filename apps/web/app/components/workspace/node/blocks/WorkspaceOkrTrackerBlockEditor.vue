@@ -121,18 +121,14 @@ function getHealthTextClasses(health: WorkspaceOkrHealth) {
       </div>
 
       <div class="rounded-[28px] bg-warning/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">
-          Off Track
-        </p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-warning/70">Off Track</p>
         <p class="mt-2 text-4xl font-black tracking-tight text-warning">
           {{ summary.offTrackCount }}
         </p>
       </div>
 
       <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">
-          Healthy
-        </p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Healthy</p>
         <p class="mt-2 text-4xl font-black tracking-tight text-success">
           {{ summary.healthyCount }}
         </p>
@@ -158,7 +154,10 @@ function getHealthTextClasses(health: WorkspaceOkrHealth) {
       </UButton>
     </div>
 
-    <div v-if="block.objectives.length === 0" class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center">
+    <div
+      v-if="block.objectives.length === 0"
+      class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center"
+    >
       <p class="text-sm font-semibold text-muted">No objectives added yet.</p>
     </div>
 
@@ -180,7 +179,9 @@ function getHealthTextClasses(health: WorkspaceOkrHealth) {
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'okr-tracker') return;
-                  const target = entry.objectives.find((candidate) => candidate.id === objective.id);
+                  const target = entry.objectives.find(
+                    (candidate) => candidate.id === objective.id,
+                  );
                   if (!target) return;
                   target.title = ($event ?? '').slice(0, 160);
                 })
@@ -226,12 +227,18 @@ function getHealthTextClasses(health: WorkspaceOkrHealth) {
                 variant="none"
                 placeholder="Key result"
                 class="flex-1"
-                :ui="{ base: 'px-0 text-sm font-semibold text-highlighted placeholder:text-muted/60' }"
+                :ui="{
+                  base: 'px-0 text-sm font-semibold text-highlighted placeholder:text-muted/60',
+                }"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== 'okr-tracker') return;
-                    const targetObjective = entry.objectives.find((candidate) => candidate.id === objective.id);
-                    const targetKeyResult = targetObjective?.keyResults.find((candidate) => candidate.id === keyResult.id);
+                    const targetObjective = entry.objectives.find(
+                      (candidate) => candidate.id === objective.id,
+                    );
+                    const targetKeyResult = targetObjective?.keyResults.find(
+                      (candidate) => candidate.id === keyResult.id,
+                    );
                     if (!targetKeyResult) return;
                     targetKeyResult.title = ($event ?? '').slice(0, 160);
                   })
@@ -263,8 +270,12 @@ function getHealthTextClasses(health: WorkspaceOkrHealth) {
                 @input="
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== 'okr-tracker') return;
-                    const targetObjective = entry.objectives.find((candidate) => candidate.id === objective.id);
-                    const targetKeyResult = targetObjective?.keyResults.find((candidate) => candidate.id === keyResult.id);
+                    const targetObjective = entry.objectives.find(
+                      (candidate) => candidate.id === objective.id,
+                    );
+                    const targetKeyResult = targetObjective?.keyResults.find(
+                      (candidate) => candidate.id === keyResult.id,
+                    );
                     if (!targetKeyResult) return;
                     targetKeyResult.progress = clampProgress(getInputValue($event));
                   })

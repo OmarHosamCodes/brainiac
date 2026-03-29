@@ -104,7 +104,9 @@ function getHabitPercent(days: WorkspaceHabitGridBlock["habits"][number]["days"]
       <table class="min-w-full border-separate border-spacing-y-3">
         <thead>
           <tr>
-            <th class="min-w-[220px] px-2 text-left text-[10px] font-bold uppercase tracking-widest text-muted/50">
+            <th
+              class="min-w-[220px] px-2 text-left text-[10px] font-bold uppercase tracking-widest text-muted/50"
+            >
               Habit
             </th>
             <th
@@ -114,7 +116,9 @@ function getHabitPercent(days: WorkspaceHabitGridBlock["habits"][number]["days"]
             >
               {{ dayLabels[day] }}
             </th>
-            <th class="w-20 px-2 text-center text-[10px] font-bold uppercase tracking-widest text-muted/50">
+            <th
+              class="w-20 px-2 text-center text-[10px] font-bold uppercase tracking-widest text-muted/50"
+            >
               %
             </th>
             <th class="w-12" />
@@ -170,11 +174,16 @@ function getHabitPercent(days: WorkspaceHabitGridBlock["habits"][number]["days"]
                   })
                 "
               >
-                <UIcon :name="habit.days[day] ? 'i-lucide-check' : 'i-lucide-minus'" class="size-4" />
+                <UIcon
+                  :name="habit.days[day] ? 'i-lucide-check' : 'i-lucide-minus'"
+                  class="size-4"
+                />
               </button>
             </td>
             <td class="px-2 text-center">
-              <span class="text-sm font-black text-highlighted">{{ getHabitPercent(habit.days) }}%</span>
+              <span class="text-sm font-black text-highlighted"
+                >{{ getHabitPercent(habit.days) }}%</span
+              >
             </td>
             <td class="px-2 text-center">
               <UButton

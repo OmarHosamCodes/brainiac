@@ -112,7 +112,9 @@ function getOptionSummary(optionId: string) {
         variant="none"
         placeholder="What decision are you making?"
         class="mt-2 w-full"
-        :ui="{ base: 'px-0 text-xl font-bold tracking-tight text-highlighted placeholder:text-muted/60' }"
+        :ui="{
+          base: 'px-0 text-xl font-bold tracking-tight text-highlighted placeholder:text-muted/60',
+        }"
         @update:model-value="
           mutateBlock(tabId, block.id, (entry) => {
             if (entry.type !== 'decision-matrix') return;
@@ -174,11 +176,17 @@ function getOptionSummary(optionId: string) {
         </div>
 
         <div class="mt-4 space-y-2">
-          <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+          <div
+            class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
+          >
             <span>Relative Score</span>
             <span>{{ getOptionSummary(option.id)?.progress ?? 0 }}%</span>
           </div>
-          <UProgress :model-value="getOptionSummary(option.id)?.progress ?? 0" size="sm" class="rounded-full" />
+          <UProgress
+            :model-value="getOptionSummary(option.id)?.progress ?? 0"
+            size="sm"
+            class="rounded-full"
+          />
           <p class="text-sm text-muted">
             Average weighted score: {{ getOptionSummary(option.id)?.averageScore ?? 0 }}
           </p>
@@ -217,11 +225,12 @@ function getOptionSummary(optionId: string) {
     </div>
 
     <div class="overflow-x-auto pb-2">
-      <div class="grid min-w-[760px] gap-px overflow-hidden rounded-[28px] border border-muted/30 bg-muted/30" :style="matrixGridStyle">
+      <div
+        class="grid min-w-[760px] gap-px overflow-hidden rounded-[28px] border border-muted/30 bg-muted/30"
+        :style="matrixGridStyle"
+      >
         <div class="bg-elevated/80 p-4">
-          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
-            Criteria
-          </p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Criteria</p>
           <p class="mt-2 text-sm text-toned">
             {{ summary.criteriaCount }} criteria with {{ summary.totalWeight }} total weight points
           </p>
@@ -248,11 +257,15 @@ function getOptionSummary(optionId: string) {
                 variant="none"
                 placeholder="Criterion name"
                 class="flex-1"
-                :ui="{ base: 'px-0 text-sm font-semibold text-highlighted placeholder:text-muted/60' }"
+                :ui="{
+                  base: 'px-0 text-sm font-semibold text-highlighted placeholder:text-muted/60',
+                }"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== 'decision-matrix') return;
-                    const target = entry.criteria.find((candidate) => candidate.id === criterion.id);
+                    const target = entry.criteria.find(
+                      (candidate) => candidate.id === criterion.id,
+                    );
                     if (!target) return;
                     target.label = ($event ?? '').slice(0, 120);
                   })
@@ -271,7 +284,9 @@ function getOptionSummary(optionId: string) {
             </div>
 
             <div class="space-y-2">
-              <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+              <div
+                class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
+              >
                 <span>Weight</span>
                 <span>{{ criterion.weight }}/10</span>
               </div>
@@ -284,7 +299,9 @@ function getOptionSummary(optionId: string) {
                 @input="
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== 'decision-matrix') return;
-                    const target = entry.criteria.find((candidate) => candidate.id === criterion.id);
+                    const target = entry.criteria.find(
+                      (candidate) => candidate.id === criterion.id,
+                    );
                     if (!target) return;
                     target.weight = clampWeight(getInputValue($event));
                   })
@@ -298,7 +315,9 @@ function getOptionSummary(optionId: string) {
             :key="`${criterion.id}-${option.id}`"
             class="bg-default/80 p-4"
           >
-            <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+            <div
+              class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
+            >
               <span>Score</span>
               <span>{{ option.scores[criterion.id] ?? 0 }}/10</span>
             </div>

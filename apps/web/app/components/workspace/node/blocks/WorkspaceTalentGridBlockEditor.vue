@@ -112,7 +112,9 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div class="rounded-[28px] bg-primary/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-primary/70">Team</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-primary">{{ summary.memberCount }}</p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-primary">
+          {{ summary.memberCount }}
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-success/5 p-5">
@@ -124,7 +126,9 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
 
       <div class="rounded-[28px] bg-elevated/70 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-muted">Core Players</p>
-        <p class="mt-2 text-4xl font-black tracking-tight text-highlighted">{{ summary.corePlayerCount }}</p>
+        <p class="mt-2 text-4xl font-black tracking-tight text-highlighted">
+          {{ summary.corePlayerCount }}
+        </p>
       </div>
 
       <div class="rounded-[28px] bg-error/5 p-5">
@@ -153,7 +157,10 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
     </div>
 
     <div class="overflow-x-auto pb-2">
-      <div class="grid min-w-[860px] gap-3" style="grid-template-columns: 7.5rem repeat(3, minmax(0, 1fr));">
+      <div
+        class="grid min-w-[860px] gap-3"
+        style="grid-template-columns: 7.5rem repeat(3, minmax(0, 1fr))"
+      >
         <div />
 
         <div
@@ -165,7 +172,9 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
         </div>
 
         <template v-for="row in gridRows" :key="row.label">
-          <div class="flex items-center rounded-2xl border border-muted/40 bg-elevated/20 px-3 py-4 text-[10px] font-bold uppercase tracking-[0.24em] text-muted">
+          <div
+            class="flex items-center rounded-2xl border border-muted/40 bg-elevated/20 px-3 py-4 text-[10px] font-bold uppercase tracking-[0.24em] text-muted"
+          >
             {{ row.label }}
           </div>
 
@@ -200,7 +209,10 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
       </div>
     </div>
 
-    <div v-if="block.members.length === 0" class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center">
+    <div
+      v-if="block.members.length === 0"
+      class="rounded-[32px] border border-dashed border-muted/50 bg-elevated/10 py-14 text-center"
+    >
       <p class="text-sm font-semibold text-muted">No talent profiles yet.</p>
     </div>
 
@@ -246,7 +258,11 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
 
           <div class="flex items-center gap-2">
             <UBadge variant="soft" size="sm" class="rounded-full">
-              {{ workspaceTalentGridBoxLabels[getTalentGridBoxKey(member.performance, member.potential)] }}
+              {{
+                workspaceTalentGridBoxLabels[
+                  getTalentGridBoxKey(member.performance, member.potential)
+                ]
+              }}
             </UBadge>
             <UButton
               color="neutral"
@@ -260,7 +276,9 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
 
         <div class="mt-5 grid gap-4 md:grid-cols-2">
           <div class="rounded-2xl border border-muted/40 bg-elevated/30 p-4">
-            <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+            <div
+              class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
+            >
               <span>Performance</span>
               <span>{{ member.performance }}/5</span>
             </div>
@@ -276,14 +294,18 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
                   if (entry.type !== 'talent-grid') return;
                   const target = entry.members.find((candidate) => candidate.id === member.id);
                   if (!target) return;
-                  target.performance = clampGridScore(($event.target as HTMLInputElement | null)?.value ?? '3');
+                  target.performance = clampGridScore(
+                    ($event.target as HTMLInputElement | null)?.value ?? '3',
+                  );
                 })
               "
             />
           </div>
 
           <div class="rounded-2xl border border-muted/40 bg-elevated/30 p-4">
-            <div class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+            <div
+              class="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.18em] text-muted"
+            >
               <span>Potential</span>
               <span>{{ member.potential }}/5</span>
             </div>
@@ -299,7 +321,9 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
                   if (entry.type !== 'talent-grid') return;
                   const target = entry.members.find((candidate) => candidate.id === member.id);
                   if (!target) return;
-                  target.potential = clampGridScore(($event.target as HTMLInputElement | null)?.value ?? '3');
+                  target.potential = clampGridScore(
+                    ($event.target as HTMLInputElement | null)?.value ?? '3',
+                  );
                 })
               "
             />

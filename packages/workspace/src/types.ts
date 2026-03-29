@@ -218,9 +218,7 @@ export type WorkspaceLeadershipRhythm = z.infer<typeof workspaceLeadershipRhythm
 export type WorkspaceLeadershipMeetingStatus = z.infer<
   typeof workspaceLeadershipMeetingStatusSchema
 >;
-export type WorkspaceLeadershipRhythmFilter = z.infer<
-  typeof workspaceLeadershipRhythmFilterSchema
->;
+export type WorkspaceLeadershipRhythmFilter = z.infer<typeof workspaceLeadershipRhythmFilterSchema>;
 export type WorkspaceLeadershipRhythmMeeting = z.infer<
   typeof workspaceLeadershipRhythmMeetingSchema
 >;

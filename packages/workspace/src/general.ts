@@ -13,8 +13,7 @@ import type {
 export function getTableSummary(block: WorkspaceTableBlock) {
   const filledCellCount = block.rows.reduce(
     (sum, row) =>
-      sum +
-      block.columns.filter((column) => trimToEmpty(row.cells[column.id]).length > 0).length,
+      sum + block.columns.filter((column) => trimToEmpty(row.cells[column.id]).length > 0).length,
     0,
   );
 
@@ -65,11 +64,11 @@ export function getHabitGridSummary(block: WorkspaceHabitGridBlock) {
   const totalHabits = block.habits.length;
   const possibleChecks = totalHabits * WORKSPACE_HABIT_GRID_DAYS.length;
   const completedChecks = block.habits.reduce(
-    (sum, habit) =>
-      sum + WORKSPACE_HABIT_GRID_DAYS.filter((day) => habit.days[day]).length,
+    (sum, habit) => sum + WORKSPACE_HABIT_GRID_DAYS.filter((day) => habit.days[day]).length,
     0,
   );
-  const overallPercent = possibleChecks > 0 ? Math.round((completedChecks / possibleChecks) * 100) : 0;
+  const overallPercent =
+    possibleChecks > 0 ? Math.round((completedChecks / possibleChecks) * 100) : 0;
 
   return {
     totalHabits,

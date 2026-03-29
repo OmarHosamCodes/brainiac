@@ -19,12 +19,8 @@ const props = defineProps<{
   tabId: string;
 }>();
 
-const {
-  currentNode,
-  mutateBlock,
-  getTimeOrchestratorSummaryForBlock,
-  formatRelativeTaskMeta,
-} = useWorkspaceNodeEditorContext();
+const { currentNode, mutateBlock, getTimeOrchestratorSummaryForBlock, formatRelativeTaskMeta } =
+  useWorkspaceNodeEditorContext();
 
 const summary = computed(() => getTimeOrchestratorSummaryForBlock(props.block));
 
@@ -126,14 +122,10 @@ const visibleQuadrants = computed(() => {
     return [];
   }
 
-  return props.block.settings.quadrants.map(
-    (quadrant) => currentSummary.quadrants[quadrant],
-  );
+  return props.block.settings.quadrants.map((quadrant) => currentSummary.quadrants[quadrant]);
 });
 
-function updateSettings(
-  mutator: (settings: WorkspaceTimeOrchestratorBlock["settings"]) => void,
-) {
+function updateSettings(mutator: (settings: WorkspaceTimeOrchestratorBlock["settings"]) => void) {
   mutateBlock(props.tabId, props.block.id, (entry) => {
     if (entry.type !== "time-orchestrator") {
       return;
@@ -187,7 +179,13 @@ function resetFilters() {
           </p>
         </div>
 
-        <UButton color="neutral" variant="soft" size="sm" icon="i-lucide-rotate-ccw" @click="resetFilters">
+        <UButton
+          color="neutral"
+          variant="soft"
+          size="sm"
+          icon="i-lucide-rotate-ccw"
+          @click="resetFilters"
+        >
           Reset
         </UButton>
       </div>
@@ -279,9 +277,7 @@ function resetFilters() {
           >
             <div class="flex flex-wrap items-center justify-between gap-3">
               <p class="font-medium text-highlighted">{{ item.task.text || "Untitled task" }}</p>
-              <UBadge color="neutral" variant="soft">
-                {{ item.task.estimateMinutes }} min
-              </UBadge>
+              <UBadge color="neutral" variant="soft"> {{ item.task.estimateMinutes }} min </UBadge>
             </div>
             <p class="mt-1 text-sm text-muted">{{ formatRelativeTaskMeta(item) }}</p>
           </div>
@@ -305,7 +301,9 @@ function resetFilters() {
                 <p class="font-medium text-highlighted">{{ domain.label }}</p>
                 <UBadge color="neutral" variant="soft">{{ domain.estimateMinutes }} min</UBadge>
               </div>
-              <p class="mt-1 text-sm text-muted">{{ domain.count }} open task{{ domain.count === 1 ? '' : 's' }}</p>
+              <p class="mt-1 text-sm text-muted">
+                {{ domain.count }} open task{{ domain.count === 1 ? "" : "s" }}
+              </p>
             </div>
             <p v-if="(summary?.domainBreakdown.length ?? 0) === 0" class="text-sm text-muted">
               No domain data for the active filters.
@@ -352,7 +350,10 @@ function resetFilters() {
       </div>
     </div>
 
-    <div class="grid gap-4" :class="visibleQuadrants.length > 1 ? 'xl:grid-cols-2 2xl:grid-cols-4' : ''">
+    <div
+      class="grid gap-4"
+      :class="visibleQuadrants.length > 1 ? 'xl:grid-cols-2 2xl:grid-cols-4' : ''"
+    >
       <div
         v-for="quadrant in visibleQuadrants"
         :key="quadrant.key"

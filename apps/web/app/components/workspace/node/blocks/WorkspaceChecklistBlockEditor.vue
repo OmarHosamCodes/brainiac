@@ -30,7 +30,9 @@ function addItem() {
 <template>
   <div class="space-y-6">
     <div class="flex items-center gap-6 rounded-3xl bg-elevated/20 p-5">
-      <div class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+      <div
+        class="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+      >
         <span class="text-lg font-bold">{{ progress.percent }}%</span>
       </div>
 

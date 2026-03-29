@@ -36,7 +36,8 @@ const shortLabels: Record<WorkspaceContentQualityDimension, string> = {
 
 const axes = computed(() =>
   WORKSPACE_CONTENT_QUALITY_DIMENSIONS.map((dimension, index) => {
-    const angle = (-90 + (360 / WORKSPACE_CONTENT_QUALITY_DIMENSIONS.length) * index) * (Math.PI / 180);
+    const angle =
+      (-90 + (360 / WORKSPACE_CONTENT_QUALITY_DIMENSIONS.length) * index) * (Math.PI / 180);
     const outerX = center + Math.cos(angle) * radius;
     const outerY = center + Math.sin(angle) * radius;
     const pointRadius = radius * (props.block.scores[dimension] / 10);
@@ -60,7 +61,8 @@ const axes = computed(() =>
 const ringPolygons = computed(() =>
   [0.25, 0.5, 0.75, 1].map((scale) =>
     WORKSPACE_CONTENT_QUALITY_DIMENSIONS.map((_, index) => {
-      const angle = (-90 + (360 / WORKSPACE_CONTENT_QUALITY_DIMENSIONS.length) * index) * (Math.PI / 180);
+      const angle =
+        (-90 + (360 / WORKSPACE_CONTENT_QUALITY_DIMENSIONS.length) * index) * (Math.PI / 180);
       const x = center + Math.cos(angle) * radius * scale;
       const y = center + Math.sin(angle) * radius * scale;
       return `${x},${y}`;
@@ -128,9 +130,7 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
       </div>
 
       <div class="rounded-[28px] bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">
-          Strongest
-        </p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-success/70">Strongest</p>
         <p class="mt-2 text-2xl font-black tracking-tight text-success">
           {{
             summary.strongestDimension
@@ -158,7 +158,8 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
           <div>
             <p class="text-sm font-semibold text-highlighted">Radar view</p>
             <p class="text-sm text-muted">
-              The filled shape expands where the content is strong and collapses where quality is weak.
+              The filled shape expands where the content is strong and collapses where quality is
+              weak.
             </p>
           </div>
 
