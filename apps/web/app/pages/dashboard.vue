@@ -54,17 +54,19 @@ const isChatVisible = ref(true);
 
         <!-- Floating Agent Chat Panel -->
         <div
-            class="fixed right-6 0 bottom-0 z-40 transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-            :class="[
+            class="pointer-events-none fixed bottom-4 right-3 top-24 z-40 flex w-[min(26rem,calc(100vw-1.5rem))] flex-col transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] sm:bottom-6 sm:right-6"
+            :class="
                 isChatVisible
-                    ? 'w-96 translate-x-0 opacity-100'
-                    : 'w-0 translate-x-12 opacity-0 pointer-events-none',
-            ]"
+                    ? 'translate-x-0 opacity-100'
+                    : 'pointer-events-none translate-x-12 opacity-0'
+            "
         >
-            <DashboardAgentChatPanel
-                :nodes="nodes"
-                @close="isChatVisible = false"
-            />
+            <div class="pointer-events-auto min-h-0 flex-1">
+                <DashboardAgentChatPanel
+                    :nodes="nodes"
+                    @close="isChatVisible = false"
+                />
+            </div>
         </div>
 
         <!-- Chat Toggle Button -->
