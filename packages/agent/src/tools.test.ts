@@ -1,0 +1,355 @@
+import { describe, expect, test } from "bun:test";
+import {
+  createWorkspaceCourseRoadmapBlock,
+  createWorkspaceCourseRoadmapCourse,
+  createWorkspaceCourseRoadmapLesson,
+  createWorkspaceCourseRoadmapOutcome,
+  createWorkspaceCustomBlock,
+  createWorkspaceCustomBlockTemplate,
+  createWorkspaceKanbanBlock,
+  createWorkspaceKanbanCard,
+  createWorkspaceKanbanColumn,
+  createWorkspaceMessageHouseBlock,
+  createWorkspaceMessageHousePillar,
+  createWorkspaceNode,
+  createWorkspaceNodeTab,
+  createWorkspaceNotesBlock,
+  createWorkspaceTableBlock,
+  createWorkspaceTableColumn,
+  createWorkspaceTableRow,
+} from "@brainiac/workspace";
+import { z } from "zod";
+
+import { buildDashboardAgentTools, createDashboardAgentWorkspaceRuntime } from "./tools";
+
+type ToolFunction = {
+  name: string;
+  inputSchema: z.ZodTypeAny;
+  outputSchema: z.ZodTypeAny;
+  execute: (input: unknown) => Promise<unknown>;
+};
+
+function getTool(tools: ReturnType<typeof buildDashboardAgentTools>, name: string): ToolFunction {
+  const toolEntry = tools.find((entry) => entry.type === "function" && entry.function.name === name);
+
+  if (!toolEntry) {
+    throw new Error(`Tool "${name}" was not found.`);
+  }
+
+  return toolEntry.function as ToolFunction;
+}
+
+async function callTool(
+  tools: ReturnType<typeof buildDashboardAgentTools>,
+  name: string,
+  input: unknown,
+): Promise<any> {
+  const tool = getTool(tools, name);
+  const parsedInput = tool.inputSchema.parse(input);
+  const output = await tool.execute(parsedInput);
+
+  return tool.outputSchema.parse(output) as any;
+}
+
+function createFixture() {
+  const tableTopicColumn = createWorkspaceTableColumn({ label: "Topic" });
+  const tableInsightColumn = createWorkspaceTableColumn({ label: "Insight" });
+  const kanbanBacklogColumn = createWorkspaceKanbanColumn({ title: "Backlog" });
+  const kanbanDoneColumn = createWorkspaceKanbanColumn({ title: "Done" });
+  const customTemplate = createWorkspaceCustomBlockTemplate({
+    name: "Campaign brief",
+    fields: [
+      {
+        id: "field-angle",
+        key: "angle",
+        label: "Angle",
+        type: "text",
+      },
+      {
+        id: "field-proof",
+        key: "proof",
+        label: "Proof",
+        type: "textarea",
+      },
+    ],
+    includeNotes: true,
+  });
+
+  const notesBlock = createWorkspaceNotesBlock({
+    title: "Research notes",
+    body: "alpha deep insight and ranking needle live inside this note block",
+  });
+  const tableBlock = createWorkspaceTableBlock({
+    title: "Message map",
+    columns: [tableTopicColumn, tableInsightColumn],
+    rows: [
+      createWorkspaceTableRow(
+        {
+          cells: {
+            [tableTopicColumn.id]: "Hooks",
+            [tableInsightColumn.id]: "beta table cell unique",
+          },
+        },
+        [tableTopicColumn, tableInsightColumn],
+      ),
+    ],
+  });
+  const kanbanBlock = createWorkspaceKanbanBlock({
+    title: "Content pipeline",
+    columns: [kanbanBacklogColumn, kanbanDoneColumn],
+    cards: [
+      createWorkspaceKanbanCard({
+        columnId: kanbanBacklogColumn.id,
+        title: "Draft carousel",
+        description: "gamma kanban description unique",
+      }),
+    ],
+  });
+  const messageHouseBlock = createWorkspaceMessageHouseBlock({
+    title: "Message architecture",
+    brandPromise: "Own the market conversation",
+    pillars: [
+      createWorkspaceMessageHousePillar({
+        title: "Speed",
+        body: "delta message pillar unique",
+      }),
+      createWorkspaceMessageHousePillar({
+        title: "Clarity",
+        body: "Sharp positioning beats generic advice",
+      }),
+      createWorkspaceMessageHousePillar({
+        title: "Proof",
+        body: "Every claim needs evidence",
+      }),
+    ],
+  });
+  const customBlock = createWorkspaceCustomBlock(customTemplate, {
+    title: "Campaign brief",
+    values: {
+      angle: "zeta custom value unique",
+      proof: "Customer stories from enterprise launches",
+    },
+    notes: "epsilon custom notes unique",
+  });
+  const courseRoadmapBlock = createWorkspaceCourseRoadmapBlock({
+    title: "Curriculum roadmap",
+    courses: [
+      createWorkspaceCourseRoadmapCourse({
+        name: "Creator sprint",
+        lessons: [
+          createWorkspaceCourseRoadmapLesson({
+            title: "Theta lesson unique",
+          }),
+        ],
+        outcomes: [
+          createWorkspaceCourseRoadmapOutcome({
+            text: "eta roadmap outcome unique",
+          }),
+        ],
+      }),
+    ],
+  });
+
+  const tab = createWorkspaceNodeTab({
+    title: "Content Atlas",
+    blocks: [
+      notesBlock,
+      tableBlock,
+      kanbanBlock,
+      messageHouseBlock,
+      customBlock,
+      courseRoadmapBlock,
+    ],
+  });
+  const node = createWorkspaceNode({
+    title: "Launch Board",
+    content: "ranking needle appears in node context for ordering tests",
+    tabs: [tab],
+    customBlockTemplates: [customTemplate],
+  });
+  const runtime = createDashboardAgentWorkspaceRuntime({
+    nodes: [node],
+  });
+  const tools = buildDashboardAgentTools(runtime, [], "agent");
+
+  return {
+    tools,
+    node,
+    tab,
+    blocks: {
+      notesBlock,
+      tableBlock,
+      kanbanBlock,
+      messageHouseBlock,
+      customBlock,
+      courseRoadmapBlock,
+    },
+  };
+}
+
+describe("buildDashboardAgentTools", () => {
+  test("search_dashboard finds nested content across representative block types", async () => {
+    const fixture = createFixture();
+    const cases = [
+      {
+        query: "alpha deep insight",
+        blockId: fixture.blocks.notesBlock.id,
+      },
+      {
+        query: "beta table cell unique",
+        blockId: fixture.blocks.tableBlock.id,
+      },
+      {
+        query: "gamma kanban description unique",
+        blockId: fixture.blocks.kanbanBlock.id,
+      },
+      {
+        query: "delta message pillar unique",
+        blockId: fixture.blocks.messageHouseBlock.id,
+      },
+      {
+        query: "epsilon custom notes unique",
+        blockId: fixture.blocks.customBlock.id,
+      },
+      {
+        query: "zeta custom value unique",
+        blockId: fixture.blocks.customBlock.id,
+      },
+      {
+        query: "eta roadmap outcome unique",
+        blockId: fixture.blocks.courseRoadmapBlock.id,
+      },
+    ];
+
+    for (const testCase of cases) {
+      const result = await callTool(fixture.tools, "search_dashboard", {
+        query: testCase.query,
+        limit: 10,
+      });
+
+      expect(
+        result.matches.some(
+          (match: any) =>
+            match.matchType === "block" &&
+            match.blockId === testCase.blockId &&
+            match.tabId === fixture.tab.id,
+        ),
+      ).toBeTrue();
+    }
+  });
+
+  test("search_dashboard ranks block hits above tab and node hits for the same query", async () => {
+    const fixture = createFixture();
+    const result = await callTool(fixture.tools, "search_dashboard", {
+      query: "ranking needle",
+      limit: 10,
+    });
+
+    expect(result.matches.slice(0, 3).map((match: any) => match.matchType)).toEqual([
+      "block",
+      "tab",
+      "node",
+    ]);
+    expect(result.matches[0]?.blockId).toBe(fixture.blocks.notesBlock.id);
+    expect(result.matches[1]?.tabId).toBe(fixture.tab.id);
+    expect(result.matches[2]?.nodeId).toBe(fixture.node.id);
+  });
+
+  test("summary detail tools expose content previews", async () => {
+    const fixture = createFixture();
+    const nodeDetails = await callTool(fixture.tools, "get_node_details", {
+      nodeId: fixture.node.id,
+      detailLevel: "summary",
+    });
+    const blockSummary = nodeDetails.summary?.tabs[0]?.blocks.find(
+      (block: any) => block.id === fixture.blocks.messageHouseBlock.id,
+    );
+    const customBlockDetails = await callTool(fixture.tools, "get_block_details", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.customBlock.id,
+      detailLevel: "summary",
+    });
+
+    expect(blockSummary?.contentPreview.toLowerCase()).toContain("delta message pillar unique");
+    expect(customBlockDetails.summary?.contentPreview.toLowerCase()).toContain(
+      "epsilon custom notes unique",
+    );
+    expect(customBlockDetails.summary?.contentPreview.toLowerCase()).toContain(
+      "zeta custom value unique",
+    );
+  });
+
+  test("search_dashboard excerpts include the matched content", async () => {
+    const fixture = createFixture();
+    const query = "gamma kanban description unique";
+    const result = await callTool(fixture.tools, "search_dashboard", {
+      query,
+      limit: 10,
+    });
+    const match = result.matches.find(
+      (entry: any) =>
+        entry.matchType === "block" && entry.blockId === fixture.blocks.kanbanBlock.id,
+    );
+
+    expect(match).toBeDefined();
+    expect(match?.excerpt.toLowerCase()).toContain(query);
+  });
+
+  test("replace_block updates searchability through the full edit flow", async () => {
+    const fixture = createFixture();
+    const originalQuery = "alpha deep insight";
+    const updatedQuery = "omega updated note body unique";
+    const initialSearch = await callTool(fixture.tools, "search_dashboard", {
+      query: originalQuery,
+      limit: 10,
+    });
+    const initialMatch = initialSearch.matches.find(
+      (entry: any) =>
+        entry.matchType === "block" && entry.blockId === fixture.blocks.notesBlock.id,
+    );
+
+    expect(initialMatch).toBeDefined();
+
+    const details = await callTool(fixture.tools, "get_block_details", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.notesBlock.id,
+      detailLevel: "full",
+    });
+
+    expect(details.block?.type).toBe("notes");
+
+    const replacement = await callTool(fixture.tools, "replace_block", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.notesBlock.id,
+      block: {
+        ...details.block,
+        body: updatedQuery,
+      },
+    });
+    const updatedSearch = await callTool(fixture.tools, "search_dashboard", {
+      query: updatedQuery,
+      limit: 10,
+    });
+    const staleSearch = await callTool(fixture.tools, "search_dashboard", {
+      query: originalQuery,
+      limit: 10,
+    });
+
+    expect(replacement.block.contentPreview.toLowerCase()).toContain(updatedQuery);
+    expect(
+      updatedSearch.matches.some(
+        (entry: any) =>
+          entry.matchType === "block" && entry.blockId === fixture.blocks.notesBlock.id,
+      ),
+    ).toBeTrue();
+    expect(
+      staleSearch.matches.some(
+        (entry: any) =>
+          entry.matchType === "block" && entry.blockId === fixture.blocks.notesBlock.id,
+      ),
+    ).toBeFalse();
+  });
+});

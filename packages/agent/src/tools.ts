@@ -51,8 +51,13 @@ import {
 import { z } from "zod";
 
 type DashboardSearchMatch = {
+  matchType: "node" | "tab" | "block";
   nodeId: string;
   nodeTitle: string;
+  tabId: string | null;
+  tabTitle: string | null;
+  blockId: string | null;
+  blockTitle: string | null;
   source: string;
   excerpt: string;
   score: number;
@@ -127,6 +132,7 @@ const blockReferenceSchema = z.object({
   type: z.string(),
   title: z.string(),
   summary: z.string(),
+  contentPreview: z.string(),
 });
 
 const nodeSummarySchema = nodeReferenceSchema.extend({
@@ -185,8 +191,13 @@ const listDashboardNodesOutputSchema = z.object({
 const searchDashboardOutputSchema = z.object({
   matches: z.array(
     z.object({
+      matchType: z.enum(["node", "tab", "block"]),
       nodeId: z.string(),
       nodeTitle: z.string(),
+      tabId: z.string().nullable(),
+      tabTitle: z.string().nullable(),
+      blockId: z.string().nullable(),
+      blockTitle: z.string().nullable(),
       source: z.string(),
       excerpt: z.string(),
       score: z.number(),
@@ -297,6 +308,470 @@ function truncate(value: string, length = 240) {
   return `${normalized.slice(0, Math.max(0, length - 1)).trimEnd()}…`;
 }
 
+const BLOCK_CONTENT_PREVIEW_LENGTH = 180;
+const SEARCH_EXCERPT_LENGTH = 260;
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled workspace block type: ${JSON.stringify(value)}`);
+}
+
+function normalizeSearchFragments(
+  fragments: Array<string | number | boolean | null | undefined>,
+) {
+  return fragments
+    .map((fragment) => {
+      if (fragment === null || fragment === undefined) {
+        return "";
+      }
+
+      return String(fragment).trim();
+    })
+    .filter(Boolean);
+}
+
+function getDisplayTabTitle(tab: WorkspaceNodeTab) {
+  return tab.title.trim() || "Untitled tab";
+}
+
+function getDisplayBlockTitle(block: WorkspaceBlock) {
+  return block.title.trim() || "Untitled block";
+}
+
+function getCustomBlockTemplate(
+  customTemplates: WorkspaceCustomBlockTemplate[] | undefined,
+  definitionId: string,
+) {
+  return customTemplates?.find((template) => template.id === definitionId) ?? null;
+}
+
+function getBlockContentPreview(
+  block: WorkspaceBlock,
+  customTemplates?: WorkspaceCustomBlockTemplate[],
+) {
+  const previewText = collectBlockSearchDetails(block, customTemplates).join("\n");
+
+  return truncate(previewText || summarizeBlock(block), BLOCK_CONTENT_PREVIEW_LENGTH);
+}
+
+function collectPromptOutputFragments(outputs: { prompt: string; output: string }[]) {
+  return outputs.flatMap((entry) => [entry.prompt, entry.output]);
+}
+
+function collectBlockSearchDetails(
+  block: WorkspaceBlock,
+  customTemplates?: WorkspaceCustomBlockTemplate[],
+): string[] {
+  switch (block.type) {
+    case "task-list":
+      return normalizeSearchFragments(
+        block.tasks.flatMap((task) => [
+          task.text,
+          task.completed ? "completed" : "open",
+          task.dueDate ?? "",
+          task.priority ?? "",
+          task.domain ?? "",
+          task.urgency,
+          task.importance,
+          task.estimateMinutes,
+        ]),
+      );
+    case "notes":
+      return normalizeSearchFragments([block.body]);
+    case "table":
+      return normalizeSearchFragments([
+        ...block.columns.map((column) => column.label),
+        ...block.rows.flatMap((row) => block.columns.map((column) => row.cells[column.id] ?? "")),
+      ]);
+    case "checklist":
+      return normalizeSearchFragments(
+        block.items.flatMap((item) => [item.text, item.completed ? "completed" : "open"]),
+      );
+    case "decision":
+      return normalizeSearchFragments([
+        block.recommendation,
+        ...block.pros.flatMap((item) => [item.text, item.weight]),
+        ...block.cons.flatMap((item) => [item.text, item.weight]),
+      ]);
+    case "pros-cons":
+      return normalizeSearchFragments([
+        ...block.pros.flatMap((item) => [item.text, item.weight, "pro"]),
+        ...block.cons.flatMap((item) => [item.text, item.weight, "con"]),
+      ]);
+    case "swot":
+      return normalizeSearchFragments([
+        block.cells.strengths,
+        block.cells.weaknesses,
+        block.cells.opportunities,
+        block.cells.threats,
+      ]);
+    case "tracker":
+      return normalizeSearchFragments([
+        block.goal ?? "",
+        ...block.entries.flatMap((entry) => [entry.label, entry.value]),
+      ]);
+    case "ai-prompt":
+      return normalizeSearchFragments([
+        block.includeContext ? "with context" : "without context",
+        block.prompt,
+        block.latestOutput,
+        ...collectPromptOutputFragments(block.outputHistory),
+      ]);
+    case "habit-grid":
+      return normalizeSearchFragments(
+        block.habits.flatMap((habit) => [
+          habit.name,
+          ...Object.entries(habit.days).flatMap(([day, completed]) => [
+            day,
+            completed ? "done" : "open",
+          ]),
+        ]),
+      );
+    case "process":
+      return normalizeSearchFragments(
+        block.steps.flatMap((step) => [step.title, step.note, step.completed ? "completed" : "open"]),
+      );
+    case "2x2-matrix":
+      return normalizeSearchFragments([
+        block.xAxisLabel,
+        block.xStartLabel,
+        block.xEndLabel,
+        block.yAxisLabel,
+        block.yStartLabel,
+        block.yEndLabel,
+        block.quadrants.topLeft.name,
+        ...block.quadrants.topLeft.items.map((item) => item.text),
+        block.quadrants.topRight.name,
+        ...block.quadrants.topRight.items.map((item) => item.text),
+        block.quadrants.bottomLeft.name,
+        ...block.quadrants.bottomLeft.items.map((item) => item.text),
+        block.quadrants.bottomRight.name,
+        ...block.quadrants.bottomRight.items.map((item) => item.text),
+      ]);
+    case "course-roadmap":
+      return normalizeSearchFragments(
+        block.courses.flatMap((course) => [
+          course.name,
+          course.status,
+          ...course.lessons.flatMap((lesson) => [
+            lesson.title,
+            lesson.recorded ? "recorded" : "pending",
+          ]),
+          ...course.outcomes.map((outcome) => outcome.text),
+        ]),
+      );
+    case "learning-outcomes-matrix":
+      return normalizeSearchFragments([
+        block.prompt,
+        block.latestOutput,
+        block.courseBlockId ?? "",
+        block.courseId ?? "",
+        ...collectPromptOutputFragments(block.outputHistory),
+      ]);
+    case "time-orchestrator":
+      return normalizeSearchFragments([
+        ...block.settings.domains,
+        ...block.settings.quadrants,
+        block.settings.includeUnassigned ? "unassigned" : "",
+      ]);
+    case "cohort-health-dashboard":
+      return normalizeSearchFragments(
+        block.cohorts.flatMap((cohort) => [
+          cohort.name,
+          cohort.seatsSold,
+          cohort.capacity,
+          cohort.revenueEgp,
+          cohort.startDate ?? "",
+          cohort.status,
+          cohort.refundRisk ? "refund risk" : "",
+          cohort.completionRisk ? "completion risk" : "",
+        ]),
+      );
+    case "eisenhower-matrix":
+      return normalizeSearchFragments([
+        block.latestBattlePlan,
+        ...block.tasks.flatMap((task) => [
+          task.text,
+          task.domain ?? "",
+          task.priority ?? "",
+          task.dueDate ?? "",
+          task.urgency,
+          task.importance,
+          task.estimateMinutes,
+          task.completed ? "completed" : "open",
+        ]),
+      ]);
+    case "leadership-rhythm-planner":
+      return normalizeSearchFragments([
+        block.filter,
+        ...block.meetings.flatMap((meeting) => [
+          meeting.name,
+          meeting.rhythm,
+          meeting.owner,
+          meeting.participants,
+          meeting.purpose,
+          meeting.durationMinutes,
+          meeting.nextDate ?? "",
+          meeting.status,
+        ]),
+      ]);
+    case "kanban":
+      return normalizeSearchFragments([
+        ...block.columns.map((column) => column.title),
+        ...block.cards.flatMap((card) => [
+          card.title,
+          card.description,
+          card.assignee,
+          card.dueDate ?? "",
+        ]),
+      ]);
+    case "timeline":
+      return normalizeSearchFragments(
+        block.milestones.flatMap((milestone) => [
+          milestone.title,
+          milestone.date ?? "",
+          milestone.status,
+          milestone.note,
+        ]),
+      );
+    case "skills-heat-map":
+      return normalizeSearchFragments(
+        block.members.flatMap((member) => [
+          member.name,
+          member.role,
+          ...Object.entries(member.scores).flatMap(([dimension, score]) => [dimension, score]),
+        ]),
+      );
+    case "delegation-matrix":
+      return normalizeSearchFragments([
+        block.hourlyRate,
+        ...block.items.flatMap((item) => [
+          item.task,
+          item.from,
+          item.to,
+          item.hoursPerWeek,
+          item.status,
+        ]),
+      ]);
+    case "talent-grid":
+      return normalizeSearchFragments(
+        block.members.flatMap((member) => [
+          member.name,
+          member.role,
+          member.performance,
+          member.potential,
+        ]),
+      );
+    case "seat-planner":
+      return normalizeSearchFragments([
+        block.filter,
+        ...block.seats.flatMap((seat) => [
+          seat.name,
+          seat.owner,
+          seat.function,
+          seat.health,
+          seat.load,
+          seat.backupOwner,
+          seat.notes,
+        ]),
+      ]);
+    case "deal-scoring-matrix":
+      return normalizeSearchFragments(
+        block.deals.flatMap((deal) => [
+          deal.clientName,
+          deal.valueEgp,
+          deal.temperature,
+          deal.score,
+          deal.stage,
+          deal.nextAction,
+          deal.dueDate ?? "",
+        ]),
+      );
+    case "pipeline-funnel":
+      return normalizeSearchFragments(
+        block.deals.flatMap((deal) => [
+          deal.clientName,
+          deal.valueEgp,
+          deal.temperature,
+          deal.stage,
+        ]),
+      );
+    case "forecast-confidence-board":
+      return normalizeSearchFragments([
+        block.targetRevenueEgp,
+        ...block.deals.flatMap((deal) => [
+          deal.clientName,
+          deal.valueEgp,
+          deal.bucket,
+          deal.expectedCloseMonth ?? "",
+          deal.confidence,
+          deal.owner,
+          deal.nextAction,
+        ]),
+      ]);
+    case "content-pipeline":
+      return normalizeSearchFragments(
+        block.items.flatMap((item) => [item.title, item.status, item.platform, item.assignee]),
+      );
+    case "content-quality-radar":
+      return normalizeSearchFragments(
+        Object.entries(block.scores).flatMap(([dimension, score]) => [dimension, score]),
+      );
+    case "content-roi-tracker":
+      return normalizeSearchFragments([
+        block.sortBy,
+        ...block.items.flatMap((item) => [
+          item.title,
+          item.platform,
+          item.campaign,
+          item.goal,
+          item.reach,
+          item.leads,
+          item.conversionInfluence,
+          item.repurposeValue,
+        ]),
+      ]);
+    case "authority-scorecard":
+      return normalizeSearchFragments(
+        Object.entries(block.metrics).flatMap(([metric, entry]) => [
+          metric,
+          entry.value,
+          entry.target,
+        ]),
+      );
+    case "hook-bank":
+      return normalizeSearchFragments(
+        block.hooks.flatMap((hook) => [hook.category, hook.text, hook.score]),
+      );
+    case "message-house":
+      return normalizeSearchFragments([
+        block.brandPromise,
+        ...block.pillars.flatMap((pillar) => [pillar.title, pillar.body]),
+        block.audiencePains,
+        block.proofPoints,
+        block.voicePrinciples,
+        block.latestStressTest,
+      ]);
+    case "scorecard":
+      return normalizeSearchFragments(
+        block.metrics.flatMap((metric) => [metric.label, metric.value, metric.target, metric.unit]),
+      );
+    case "okr-tracker":
+      return normalizeSearchFragments(
+        block.objectives.flatMap((objective) => [
+          objective.title,
+          ...objective.keyResults.flatMap((keyResult) => [keyResult.title, keyResult.progress]),
+        ]),
+      );
+    case "decision-matrix":
+      return normalizeSearchFragments([
+        block.question,
+        ...block.criteria.flatMap((criterion) => [criterion.label, criterion.weight]),
+        ...block.options.flatMap((option) => [
+          option.label,
+          ...Object.values(option.scores),
+        ]),
+      ]);
+    case "business-model-canvas":
+      return normalizeSearchFragments([block.analysis, ...Object.values(block.cells)]);
+    case "assumption-tracker":
+      return normalizeSearchFragments([
+        block.filter,
+        ...block.assumptions.flatMap((assumption) => [
+          assumption.statement,
+          assumption.owner,
+          assumption.reviewDate ?? "",
+          assumption.status,
+          assumption.confidence,
+          assumption.evidenceNotes,
+          assumption.linkType,
+          assumption.linkId ?? "",
+        ]),
+      ]);
+    case "profitability-cash-flow":
+      return normalizeSearchFragments([
+        ...block.clients.flatMap((client) => [
+          client.name,
+          client.paymentStatus,
+          client.healthPercent,
+          client.revenueEgp,
+          client.costEgp,
+        ]),
+        ...block.expenses.flatMap((expense) => [expense.category, expense.amountEgp]),
+      ]);
+    case "pricing-simulator":
+      return normalizeSearchFragments([
+        block.activeClients,
+        block.hoursPerClientPerMonth,
+        block.hourlyRateEgp,
+        block.monthlyOverheadEgp,
+        block.targetMarginPercent,
+      ]);
+    case "collections-tracker":
+      return normalizeSearchFragments([
+        block.filter,
+        ...block.invoices.flatMap((invoice) => [
+          invoice.clientName,
+          invoice.amountEgp,
+          invoice.dueDate ?? "",
+          invoice.owner,
+          invoice.nextFollowUpDate ?? "",
+          invoice.status,
+          invoice.notes,
+          invoice.paidAt ?? "",
+        ]),
+      ]);
+    case "custom": {
+      const template = getCustomBlockTemplate(customTemplates, block.definitionId);
+
+      return normalizeSearchFragments([
+        template?.name ?? "",
+        ...(template?.fields.map((field) => field.label) ?? []),
+        template?.aiPromptTemplate ?? "",
+        block.notes,
+        block.latestAiOutput,
+        ...Object.values(block.values),
+        ...collectPromptOutputFragments(block.outputHistory),
+      ]);
+    }
+  }
+
+  return assertNever(block);
+}
+
+function buildBlockSearchText(
+  block: WorkspaceBlock,
+  customTemplates?: WorkspaceCustomBlockTemplate[],
+) {
+  const content = collectBlockSearchDetails(block, customTemplates).join("\n");
+  return `${getDisplayBlockTitle(block)}\n${content}`;
+}
+
+function buildSearchExcerpt(text: string, query: string, maxLength = SEARCH_EXCERPT_LENGTH) {
+  const normalizedText = text.replace(/\s+/g, " ").trim();
+  const normalizedQuery = query.trim().toLowerCase();
+
+  if (!normalizedText) {
+    return "";
+  }
+
+  if (!normalizedQuery) {
+    return truncate(normalizedText, maxLength);
+  }
+
+  const matchIndex = normalizedText.toLowerCase().indexOf(normalizedQuery);
+
+  if (matchIndex === -1) {
+    return truncate(normalizedText, maxLength);
+  }
+
+  const rawStart = Math.max(0, matchIndex - Math.floor((maxLength - normalizedQuery.length) / 2));
+  const start = Math.min(rawStart, Math.max(0, normalizedText.length - maxLength));
+  const end = Math.min(normalizedText.length, start + maxLength);
+  const excerpt = normalizedText.slice(start, end).trim();
+
+  return `${start > 0 ? "…" : ""}${excerpt}${end < normalizedText.length ? "…" : ""}`;
+}
+
 export function summarizeBlock(block: WorkspaceBlock) {
   switch (block.type) {
     case "task-list":
@@ -399,12 +874,15 @@ function describeNodeReference(node: WorkspaceNode) {
   };
 }
 
-function describeTabSummary(tab: WorkspaceNodeTab) {
+function describeTabSummary(
+  tab: WorkspaceNodeTab,
+  customTemplates: WorkspaceCustomBlockTemplate[] = [],
+) {
   return {
     id: tab.id,
     title: tab.title,
     blockCount: tab.blocks.length,
-    blocks: tab.blocks.map(describeBlockReference),
+    blocks: tab.blocks.map((block) => describeBlockReference(block, customTemplates)),
   };
 }
 
@@ -415,12 +893,16 @@ function describeTabReference(tab: WorkspaceNodeTab) {
   };
 }
 
-function describeBlockReference(block: WorkspaceBlock) {
+function describeBlockReference(
+  block: WorkspaceBlock,
+  customTemplates: WorkspaceCustomBlockTemplate[] = [],
+) {
   return {
     id: block.id,
     type: block.type,
     title: block.title,
     summary: summarizeBlock(block),
+    contentPreview: getBlockContentPreview(block, customTemplates),
   };
 }
 
@@ -445,7 +927,7 @@ function describeNodeSummary(node: WorkspaceNode) {
       width: node.width,
       height: node.height,
     },
-    tabs: node.tabs.map(describeTabSummary),
+    tabs: node.tabs.map((tab) => describeTabSummary(tab, node.customBlockTemplates)),
   };
 }
 
@@ -768,33 +1250,56 @@ function createBlockByType(args: {
   }
 }
 
+type DashboardSearchEntry = Omit<DashboardSearchMatch, "excerpt" | "score"> & {
+  text: string;
+  specificityBoost: number;
+};
+
 function createSearchEntries(nodes: WorkspaceNode[]) {
   return nodes.flatMap((node) => {
-    const entries = [
+    const entries: DashboardSearchEntry[] = [
       {
+        matchType: "node",
         nodeId: node.id,
         nodeTitle: node.title,
+        tabId: null,
+        tabTitle: null,
+        blockId: null,
+        blockTitle: null,
         source: "node",
         text: `${node.title}\n${node.label ?? ""}\n${node.content}`,
+        specificityBoost: 0,
       },
     ];
 
     for (const tab of node.tabs) {
       entries.push({
+        matchType: "tab",
         nodeId: node.id,
         nodeTitle: node.title,
-        source: `tab:${tab.title}`,
-        text: `${tab.title}\n${tab.blocks
-          .map((block) => `${block.title}\n${summarizeBlock(block)}`)
+        tabId: tab.id,
+        tabTitle: getDisplayTabTitle(tab),
+        blockId: null,
+        blockTitle: null,
+        source: `tab:${getDisplayTabTitle(tab)}`,
+        text: `${getDisplayTabTitle(tab)}\n${tab.blocks
+          .map((block) => buildBlockSearchText(block, node.customBlockTemplates))
           .join("\n")}`,
+        specificityBoost: 4,
       });
 
       for (const block of tab.blocks) {
         entries.push({
+          matchType: "block",
           nodeId: node.id,
           nodeTitle: node.title,
-          source: `block:${block.title}`,
-          text: `${block.title}\n${summarizeBlock(block)}`,
+          tabId: tab.id,
+          tabTitle: getDisplayTabTitle(tab),
+          blockId: block.id,
+          blockTitle: getDisplayBlockTitle(block),
+          source: `block:${getDisplayBlockTitle(block)}`,
+          text: buildBlockSearchText(block, node.customBlockTemplates),
+          specificityBoost: 8,
         });
       }
     }
@@ -803,7 +1308,7 @@ function createSearchEntries(nodes: WorkspaceNode[]) {
   });
 }
 
-function scoreSearchMatch(query: string, text: string) {
+function scoreSearchMatch(query: string, text: string, specificityBoost = 0) {
   const normalizedQuery = query.trim().toLowerCase();
   const normalizedText = text.toLowerCase();
 
@@ -815,7 +1320,10 @@ function scoreSearchMatch(query: string, text: string) {
   const startsWithBoost = normalizedText.startsWith(normalizedQuery) ? 2 : 0;
 
   return (
-    exactMatches * 3 + startsWithBoost + Math.max(1, 12 - normalizedText.indexOf(normalizedQuery))
+    exactMatches * 3 +
+    startsWithBoost +
+    Math.max(1, 12 - normalizedText.indexOf(normalizedQuery)) +
+    specificityBoost
   );
 }
 
@@ -826,13 +1334,18 @@ function searchWorkspace(
 ): DashboardSearchMatch[] {
   return createSearchEntries(nodes)
     .map((entry) => {
-      const score = scoreSearchMatch(query, entry.text);
+      const score = scoreSearchMatch(query, entry.text, entry.specificityBoost);
 
       return {
+        matchType: entry.matchType,
         nodeId: entry.nodeId,
         nodeTitle: entry.nodeTitle,
+        tabId: entry.tabId,
+        tabTitle: entry.tabTitle,
+        blockId: entry.blockId,
+        blockTitle: entry.blockTitle,
         source: entry.source,
-        excerpt: truncate(entry.text, 260),
+        excerpt: buildSearchExcerpt(entry.text, query),
         score,
       };
     })
@@ -980,7 +1493,7 @@ export function buildDashboardAgentTools(
     tool({
       name: "search_dashboard",
       description:
-        "Search node titles, descriptions, tabs, and block summaries in the current dashboard.",
+        "Search node titles, descriptions, tabs, and full block content in the current dashboard. Returns exact ids you can use with get_block_details and replace_block.",
       inputSchema: z.object({
         query: z.string().trim().min(1),
         limit: z.number().int().min(1).max(10).default(3),
@@ -1052,7 +1565,7 @@ export function buildDashboardAgentTools(
 
         return {
           node: node ? describeNodeReference(node) : null,
-          summary: tab ? describeTabSummary(tab) : null,
+          summary: node && tab ? describeTabSummary(tab, node.customBlockTemplates) : null,
           tab: detailLevel === "full" ? tab : null,
           customBlockTemplates: templates.map(describeCustomBlockTemplateReference),
           rawCustomBlockTemplates: detailLevel === "full" ? templates : [],
@@ -1061,7 +1574,7 @@ export function buildDashboardAgentTools(
     }),
     tool({
       name: "get_block_details",
-      description: `Inspect a single dashboard block. ${profileGuidance}`,
+      description: `Inspect a single dashboard block. Use the summary preview to identify the right block, then request detailLevel: "full" before editing with replace_block. ${profileGuidance}`,
       inputSchema: z.object({
         blockId: z.string().trim().min(1),
         nodeId: z.string().trim().min(1).optional(),
@@ -1081,7 +1594,8 @@ export function buildDashboardAgentTools(
         return {
           node: node ? describeNodeReference(node) : null,
           tab: tab ? describeTabReference(tab) : null,
-          summary: block ? describeBlockReference(block) : null,
+          summary:
+            node && block ? describeBlockReference(block, node.customBlockTemplates) : null,
           block: detailLevel === "full" ? block : null,
           customBlockTemplate: customBlockTemplate
             ? describeCustomBlockTemplateReference(customBlockTemplate)
@@ -1406,7 +1920,7 @@ export function buildDashboardAgentTools(
               return {
                 node: describeNodeReference(node),
                 tab: describeTabReference(tab),
-                block: describeBlockReference(nextBlock),
+                block: describeBlockReference(nextBlock, node.customBlockTemplates),
                 customBlockTemplate: (() => {
                   const template = getCustomBlockTemplateForBlock(node, nextBlock);
 
@@ -1467,7 +1981,7 @@ export function buildDashboardAgentTools(
               return {
                 node: describeNodeReference(node),
                 tab: describeTabReference(tab),
-                block: describeBlockReference(nextBlock),
+                block: describeBlockReference(nextBlock, node.customBlockTemplates),
                 customBlockTemplate: (() => {
                   const template = getCustomBlockTemplateForBlock(node, nextBlock);
 
