@@ -6,6 +6,7 @@ import {
   trimToEmpty,
   truncateText,
 } from "./shared";
+import { WORKSPACE_HABIT_GRID_DAYS } from "./constants";
 import {
   getAuthorityScorecardSummary,
   getHookBankSummary,
@@ -89,6 +90,15 @@ import {
   workspaceReceivableRiskLevelLabels,
   workspaceReceivableStatusLabels,
 } from "./finance";
+import {
+  get2x2MatrixSummary,
+  getChecklistProgress,
+  getHabitGridSummary,
+  getProcessSummary,
+  getProsConsSummary,
+  getSwotSummary,
+  getTableSummary,
+} from "./general";
 import type {
   WorkspaceBlock,
   WorkspaceCustomBlock,
@@ -256,6 +266,79 @@ function buildWorkspaceNodeDashboardDetail(
     };
   }
 
+  if (block.type === "table") {
+    const summary = getTableSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.rowCount > 0
+          ? `${summary.filledCellCount} filled cells across ${summary.rowCount} rows and ${summary.columnCount} columns.`
+          : "No table rows added yet.",
+      metrics: [
+        {
+          label: "Rows",
+          value: String(summary.rowCount),
+        },
+        {
+          label: "Cols",
+          value: String(summary.columnCount),
+        },
+        {
+          label: "Filled",
+          value: String(summary.filledCellCount),
+        },
+      ],
+      highlights: block.rows.slice(0, 2).map((row, index) => {
+        const rowSummary = block.columns
+          .map((column) => trimToEmpty(row.cells[column.id]))
+          .filter(Boolean)
+          .slice(0, 3)
+          .join(" | ");
+
+        return rowSummary || `Row ${index + 1}`;
+      }),
+    };
+  }
+
+  if (block.type === "checklist") {
+    const progress = getChecklistProgress(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        progress.total > 0
+          ? `${progress.completed}/${progress.total} items completed.`
+          : "No checklist items added yet.",
+      metrics: [
+        {
+          label: "Done",
+          value: `${progress.completed}/${progress.total}`,
+        },
+        {
+          label: "Left",
+          value: String(progress.remaining),
+        },
+        {
+          label: "Progress",
+          value: `${progress.percent}%`,
+        },
+      ],
+      highlights: block.items
+        .filter((item) => !item.completed)
+        .slice(0, 2)
+        .map((item) => truncateText(item.text, 90)),
+    };
+  }
+
   if (block.type === "decision") {
     const summary = getDecisionSummary(block);
     const recommendation = trimToEmpty(block.recommendation);
@@ -287,6 +370,71 @@ function buildWorkspaceNodeDashboardDetail(
         ...block.pros.slice(0, 1).map((item) => `Upside: ${truncateText(item.text, 90)}`),
         ...block.cons.slice(0, 1).map((item) => `Risk: ${truncateText(item.text, 90)}`),
       ],
+    };
+  }
+
+  if (block.type === "pros-cons") {
+    const summary = getProsConsSummary(block);
+    const verdictLabel =
+      summary.verdict === "do-it" ? "DO IT" : summary.verdict === "dont" ? "DON'T" : "TIE";
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: `${verdictLabel} with ${summary.prosWeight} pro points vs ${summary.consWeight} con points.`,
+      metrics: [
+        {
+          label: "Pros",
+          value: String(summary.prosWeight),
+        },
+        {
+          label: "Cons",
+          value: String(summary.consWeight),
+        },
+        {
+          label: "Verdict",
+          value: verdictLabel,
+        },
+      ],
+      highlights: [
+        ...block.pros.slice(0, 1).map((item) => `Pro: ${truncateText(item.text, 90)}`),
+        ...block.cons.slice(0, 1).map((item) => `Con: ${truncateText(item.text, 90)}`),
+      ],
+    };
+  }
+
+  if (block.type === "swot") {
+    const summary = getSwotSummary(block);
+    const highlights = [
+      trimToEmpty(block.cells.strengths) ? `Strengths: ${truncateText(block.cells.strengths, 90)}` : "",
+      trimToEmpty(block.cells.weaknesses) ? `Weaknesses: ${truncateText(block.cells.weaknesses, 90)}` : "",
+      trimToEmpty(block.cells.opportunities)
+        ? `Opportunities: ${truncateText(block.cells.opportunities, 90)}`
+        : "",
+      trimToEmpty(block.cells.threats) ? `Threats: ${truncateText(block.cells.threats, 90)}` : "",
+    ].filter(Boolean);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: `${summary.filledCellCount}/4 SWOT quadrants filled.`,
+      metrics: [
+        {
+          label: "Filled",
+          value: `${summary.filledCellCount}/4`,
+        },
+        {
+          label: "Empty",
+          value: String(summary.emptyCellCount),
+        },
+      ],
+      highlights: highlights.slice(0, 2),
     };
   }
 
@@ -323,6 +471,116 @@ function buildWorkspaceNodeDashboardDetail(
         .slice(-2)
         .reverse()
         .map((entry) => `${entry.label || "Entry"}: ${entry.value}`),
+    };
+  }
+
+  if (block.type === "habit-grid") {
+    const summary = getHabitGridSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.totalHabits > 0
+          ? `${summary.overallPercent}% overall consistency across ${summary.totalHabits} habits.`
+          : "No habits added yet.",
+      metrics: [
+        {
+          label: "Habits",
+          value: String(summary.totalHabits),
+        },
+        {
+          label: "Checks",
+          value: `${summary.completedChecks}/${summary.possibleChecks}`,
+        },
+        {
+          label: "Overall",
+          value: `${summary.overallPercent}%`,
+        },
+      ],
+      highlights: block.habits
+        .slice()
+        .sort(
+          (left, right) =>
+            WORKSPACE_HABIT_GRID_DAYS.filter((day) => right.days[day]).length -
+            WORKSPACE_HABIT_GRID_DAYS.filter((day) => left.days[day]).length,
+        )
+        .slice(0, 2)
+        .map((habit) => {
+          const checked = WORKSPACE_HABIT_GRID_DAYS.filter((day) => habit.days[day]).length;
+          const percent = Math.round((checked / WORKSPACE_HABIT_GRID_DAYS.length) * 100);
+          return `${habit.name}: ${checked}/7 days (${percent}%)`;
+        }),
+    };
+  }
+
+  if (block.type === "process") {
+    const summary = getProcessSummary(block);
+    const nextOpenStep = block.steps.find((step) => !step.completed);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: nextOpenStep
+        ? `Next step is ${nextOpenStep.title}.`
+        : summary.totalSteps > 0
+          ? "All process steps are complete."
+          : "No process steps added yet.",
+      metrics: [
+        {
+          label: "Steps",
+          value: String(summary.totalSteps),
+        },
+        {
+          label: "Done",
+          value: String(summary.completedSteps),
+        },
+        {
+          label: "Progress",
+          value: `${summary.percent}%`,
+        },
+      ],
+      highlights: block.steps.slice(0, 2).map((step, index) => `${index + 1}. ${step.title}`),
+    };
+  }
+
+  if (block.type === "2x2-matrix") {
+    const summary = get2x2MatrixSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.itemCount > 0
+          ? `${summary.itemCount} items mapped across four quadrants.`
+          : "No matrix items added yet.",
+      metrics: [
+        {
+          label: "Items",
+          value: String(summary.itemCount),
+        },
+        {
+          label: "Axis X",
+          value: block.xAxisLabel,
+        },
+        {
+          label: "Axis Y",
+          value: block.yAxisLabel,
+        },
+      ],
+      highlights: [
+        `${block.quadrants.topLeft.name}: ${block.quadrants.topLeft.items.length}`,
+        `${block.quadrants.topRight.name}: ${block.quadrants.topRight.items.length}`,
+      ],
     };
   }
 
@@ -1486,8 +1744,48 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
         );
       }
 
+      if (block.type === "table" && block.rows.length > 0) {
+        const summary = getTableSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.rowCount} rows, ${summary.columnCount} columns, ${summary.filledCellCount} filled cells.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "checklist" && block.items.length > 0) {
+        const progress = getChecklistProgress(block);
+
+        return truncateText(
+          `${block.title}: ${progress.completed}/${progress.total} completed (${progress.percent}%).`,
+          maxLength,
+        );
+      }
+
       if (block.type === "decision" && trimToEmpty(block.recommendation)) {
         return truncateText(block.recommendation, maxLength);
+      }
+
+      if (block.type === "pros-cons" && (block.pros.length > 0 || block.cons.length > 0)) {
+        const summary = getProsConsSummary(block);
+        const verdict =
+          summary.verdict === "do-it" ? "DO IT" : summary.verdict === "dont" ? "DON'T" : "TIE";
+
+        return truncateText(
+          `${block.title}: ${verdict} with ${summary.prosWeight} pros vs ${summary.consWeight} cons.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "swot") {
+        const summary = getSwotSummary(block);
+
+        if (summary.filledCellCount > 0) {
+          return truncateText(
+            `${block.title}: ${summary.filledCellCount}/4 SWOT quadrants filled.`,
+            maxLength,
+          );
+        }
       }
 
       if (block.type === "course-roadmap" && block.courses.length > 0) {
@@ -1540,6 +1838,35 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
           `${block.title}: ${block.milestones.length} milestones tracked.`,
           maxLength,
         );
+      }
+
+      if (block.type === "habit-grid" && block.habits.length > 0) {
+        const summary = getHabitGridSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.overallPercent}% overall consistency across ${summary.totalHabits} habits.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "process" && block.steps.length > 0) {
+        const summary = getProcessSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.completedSteps}/${summary.totalSteps} steps complete (${summary.percent}%).`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "2x2-matrix") {
+        const summary = get2x2MatrixSummary(block);
+
+        if (summary.itemCount > 0) {
+          return truncateText(
+            `${block.title}: ${summary.itemCount} items mapped across four quadrants.`,
+            maxLength,
+          );
+        }
       }
 
       if (block.type === "skills-heat-map" && block.members.length > 0) {

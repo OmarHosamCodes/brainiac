@@ -2,11 +2,13 @@
 import type { DropdownMenuItem } from "@nuxt/ui";
 import {
   WORKSPACE_TASK_DOMAINS,
+  createWorkspace2x2MatrixBlock,
   createDefaultWorkspaceTab,
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceAuthorityScorecardBlock,
   createWorkspaceBusinessModelCanvasBlock,
+  createWorkspaceChecklistBlock,
   createWorkspaceCohortHealthDashboardBlock,
   createWorkspaceCollectionsTrackerBlock,
   createWorkspaceContentPipelineBlock,
@@ -20,6 +22,7 @@ import {
   createWorkspaceEisenhowerMatrixBlock,
   createWorkspaceForecastConfidenceBoardBlock,
   createWorkspaceHookBankBlock,
+  createWorkspaceHabitGridBlock,
   createWorkspaceId,
   createWorkspaceKanbanBlock,
   createWorkspaceKanbanCard,
@@ -31,13 +34,17 @@ import {
   createWorkspaceOkrTrackerBlock,
   createWorkspacePipelineFunnelBlock,
   createWorkspacePricingSimulatorBlock,
+  createWorkspaceProcessBlock,
   createWorkspaceProfitabilityCashFlowBlock,
+  createWorkspaceProsConsBlock,
   createWorkspaceScorecardBlock,
   createWorkspaceSeatPlannerBlock,
   createWorkspaceSkillsHeatMapBlock,
   createWorkspaceScorecardMetric,
+  createWorkspaceSwotBlock,
   createWorkspaceTask,
   createWorkspaceTaskListBlock,
+  createWorkspaceTableBlock,
   createWorkspaceTalentGridBlock,
   createWorkspaceTimeOrchestratorBlock,
   createWorkspaceTimelineBlock,
@@ -403,14 +410,35 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
     case "notes":
       nextBlock = createWorkspaceNotesBlock();
       break;
+    case "table":
+      nextBlock = createWorkspaceTableBlock();
+      break;
+    case "checklist":
+      nextBlock = createWorkspaceChecklistBlock();
+      break;
     case "decision":
       nextBlock = createWorkspaceDecisionBlock();
+      break;
+    case "pros-cons":
+      nextBlock = createWorkspaceProsConsBlock();
+      break;
+    case "swot":
+      nextBlock = createWorkspaceSwotBlock();
       break;
     case "tracker":
       nextBlock = createWorkspaceTrackerBlock();
       break;
     case "ai-prompt":
       nextBlock = createWorkspaceAiPromptBlock();
+      break;
+    case "habit-grid":
+      nextBlock = createWorkspaceHabitGridBlock();
+      break;
+    case "process":
+      nextBlock = createWorkspaceProcessBlock();
+      break;
+    case "2x2-matrix":
+      nextBlock = createWorkspace2x2MatrixBlock();
       break;
     case "course-roadmap":
       nextBlock = createWorkspaceCourseRoadmapBlock();
@@ -924,7 +952,7 @@ function removeScorecardMetric(tabId: string, blockId: string, metricId: string)
   });
 }
 
-function runPromptBlock(tabId: string, blockId: string) {
+async function runPromptBlock(tabId: string, blockId: string) {
   if (!node.value) {
     return;
   }
@@ -938,7 +966,32 @@ function runPromptBlock(tabId: string, blockId: string) {
     return;
   }
 
-  const output = generateWorkspacePromptOutput(node.value, block.prompt);
+  const prompt = block.prompt.trim();
+  const scopedNodes = block.includeContext ? cloneWorkspaceNodes([node.value]) : undefined;
+  const content = block.includeContext
+    ? prompt
+    : [
+        "Answer the user's request without using any workspace or dashboard context.",
+        "Treat this as a standalone prompt.",
+        "",
+        prompt,
+      ].join("\n");
+  const response = await blockAgentPromptMutation.mutateAsync({
+    content,
+    nodes: draftNodes.value,
+    scopeNodes: scopedNodes,
+    contextNodeTitles: block.includeContext ? [node.value.title] : [],
+    toolPreset: "ask",
+  });
+
+  if (response.workspaceSnapshot) {
+    workspaceStore.applyWorkspaceSnapshot(
+      response.workspaceSnapshot.nodes,
+      response.workspaceSnapshot.updatedAt ?? null,
+    );
+  }
+
+  const output = response.assistantMessage.content;
 
   mutateBlock(tabId, blockId, (entry, _tab, _node, timestamp) => {
     if (entry.type !== "ai-prompt") {
@@ -948,7 +1001,7 @@ function runPromptBlock(tabId: string, blockId: string) {
     entry.latestOutput = output;
     entry.outputHistory.unshift({
       id: createWorkspaceId("output"),
-      prompt: entry.prompt,
+      prompt,
       output,
       createdAt: timestamp,
     });
@@ -1192,16 +1245,72 @@ function getBlockSearchText(block: WorkspaceBlock) {
     );
   } else if (block.type === "notes") {
     fragments.push(block.body);
+  } else if (block.type === "table") {
+    fragments.push(
+      ...block.columns.map((column) => column.label),
+      ...block.rows.flatMap((row) => block.columns.map((column) => row.cells[column.id] ?? "")),
+    );
+  } else if (block.type === "checklist") {
+    fragments.push(
+      ...block.items.flatMap((item) => [item.text, item.completed ? "completed" : "open"]),
+    );
   } else if (block.type === "decision") {
     fragments.push(
       block.recommendation,
       ...block.pros.flatMap((item) => [item.text, String(item.weight)]),
       ...block.cons.flatMap((item) => [item.text, String(item.weight)]),
     );
+  } else if (block.type === "pros-cons") {
+    fragments.push(
+      ...block.pros.flatMap((item) => [item.text, String(item.weight), "pro"]),
+      ...block.cons.flatMap((item) => [item.text, String(item.weight), "con"]),
+    );
+  } else if (block.type === "swot") {
+    fragments.push(
+      block.cells.strengths,
+      block.cells.weaknesses,
+      block.cells.opportunities,
+      block.cells.threats,
+    );
   } else if (block.type === "tracker") {
-    fragments.push(...block.entries.flatMap((entry) => [entry.label, String(entry.value)]));
+    fragments.push(
+      String(block.goal ?? ""),
+      ...block.entries.flatMap((entry) => [entry.label, String(entry.value)]),
+    );
   } else if (block.type === "ai-prompt") {
-    fragments.push(block.prompt, block.latestOutput);
+    fragments.push(block.includeContext ? "with context" : "without context", block.prompt, block.latestOutput);
+  } else if (block.type === "habit-grid") {
+    fragments.push(
+      ...block.habits.flatMap((habit) => [
+        habit.name,
+        ...Object.entries(habit.days).flatMap(([day, completed]) => [day, completed ? "done" : "open"]),
+      ]),
+    );
+  } else if (block.type === "process") {
+    fragments.push(
+      ...block.steps.flatMap((step) => [
+        step.title,
+        step.note,
+        step.completed ? "completed" : "open",
+      ]),
+    );
+  } else if (block.type === "2x2-matrix") {
+    fragments.push(
+      block.xAxisLabel,
+      block.xStartLabel,
+      block.xEndLabel,
+      block.yAxisLabel,
+      block.yStartLabel,
+      block.yEndLabel,
+      block.quadrants.topLeft.name,
+      ...block.quadrants.topLeft.items.map((item) => item.text),
+      block.quadrants.topRight.name,
+      ...block.quadrants.topRight.items.map((item) => item.text),
+      block.quadrants.bottomLeft.name,
+      ...block.quadrants.bottomLeft.items.map((item) => item.text),
+      block.quadrants.bottomRight.name,
+      ...block.quadrants.bottomRight.items.map((item) => item.text),
+    );
   } else if (block.type === "course-roadmap") {
     fragments.push(
       ...block.courses.flatMap((course) => [
@@ -1512,16 +1621,76 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
     );
   } else if (block.type === "notes") {
     details.push(...block.body.split("\n"));
+  } else if (block.type === "table") {
+    details.push(
+      ...block.columns.map((column) => column.label),
+      ...block.rows.flatMap((row, index) => [
+        `Row ${index + 1}`,
+        ...block.columns.map((column) => row.cells[column.id] ?? ""),
+      ]),
+    );
+  } else if (block.type === "checklist") {
+    details.push(
+      ...block.items.flatMap((item) => [
+        item.text,
+        item.completed ? "Completed" : "Open",
+      ]),
+    );
   } else if (block.type === "decision") {
     details.push(
       block.recommendation,
       ...block.pros.map((item) => item.text),
       ...block.cons.map((item) => item.text),
     );
+  } else if (block.type === "pros-cons") {
+    details.push(
+      ...block.pros.flatMap((item) => [item.text, `Pro weight ${item.weight}`]),
+      ...block.cons.flatMap((item) => [item.text, `Con weight ${item.weight}`]),
+    );
+  } else if (block.type === "swot") {
+    details.push(
+      `Strengths ${block.cells.strengths}`,
+      `Weaknesses ${block.cells.weaknesses}`,
+      `Opportunities ${block.cells.opportunities}`,
+      `Threats ${block.cells.threats}`,
+    );
   } else if (block.type === "tracker") {
-    details.push(...block.entries.map((entry) => entry.label));
+    details.push(
+      ...(block.goal !== null && block.goal !== undefined ? [`Goal ${block.goal}`] : []),
+      ...block.entries.map((entry) => entry.label),
+    );
   } else if (block.type === "ai-prompt") {
-    details.push(block.prompt, block.latestOutput);
+    details.push(
+      block.includeContext ? "Includes node context" : "Standalone prompt mode",
+      block.prompt,
+      block.latestOutput,
+    );
+  } else if (block.type === "habit-grid") {
+    details.push(
+      ...block.habits.flatMap((habit) => [
+        habit.name,
+        ...Object.entries(habit.days).map(([day, completed]) =>
+          `${day} ${completed ? "done" : "open"}`,
+        ),
+      ]),
+    );
+  } else if (block.type === "process") {
+    details.push(
+      ...block.steps.flatMap((step, index) => [
+        `Step ${index + 1}: ${step.title}`,
+        step.note,
+        step.completed ? "Completed" : "Open",
+      ]),
+    );
+  } else if (block.type === "2x2-matrix") {
+    details.push(
+      `X axis ${block.xAxisLabel} from ${block.xStartLabel} to ${block.xEndLabel}`,
+      `Y axis ${block.yAxisLabel} from ${block.yStartLabel} to ${block.yEndLabel}`,
+      `${block.quadrants.topLeft.name} ${block.quadrants.topLeft.items.map((item) => item.text).join(", ")}`,
+      `${block.quadrants.topRight.name} ${block.quadrants.topRight.items.map((item) => item.text).join(", ")}`,
+      `${block.quadrants.bottomLeft.name} ${block.quadrants.bottomLeft.items.map((item) => item.text).join(", ")}`,
+      `${block.quadrants.bottomRight.name} ${block.quadrants.bottomRight.items.map((item) => item.text).join(", ")}`,
+    );
   } else if (block.type === "course-roadmap") {
     details.push(
       ...block.courses.flatMap((course) => [

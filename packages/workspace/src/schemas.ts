@@ -3,6 +3,8 @@ import { z } from "zod";
 import {
   WORKSPACE_AUTHORITY_SCORECARD_METRICS,
   WORKSPACE_ASSUMPTION_LIMIT,
+  WORKSPACE_CHECKLIST_ITEM_LIMIT,
+  WORKSPACE_2X2_MATRIX_ITEM_LIMIT,
   WORKSPACE_BUSINESS_MODEL_CANVAS_CELL_KEYS,
   WORKSPACE_CONTENT_PIPELINE_ITEM_LIMIT,
   WORKSPACE_CONTENT_PIPELINE_STATUSES,
@@ -26,6 +28,8 @@ import {
   WORKSPACE_EXPENSE_ITEM_LIMIT,
   WORKSPACE_FINANCE_PAYMENT_STATUSES,
   WORKSPACE_FORECAST_CONFIDENCE_ITEM_LIMIT,
+  WORKSPACE_HABIT_GRID_DAYS,
+  WORKSPACE_HABIT_GRID_HABIT_LIMIT,
   WORKSPACE_HOOK_BANK_ITEM_LIMIT,
   WORKSPACE_KANBAN_CARD_LIMIT,
   WORKSPACE_KANBAN_COLUMN_LIMIT,
@@ -42,6 +46,8 @@ import {
   WORKSPACE_OKR_OBJECTIVE_LIMIT,
   WORKSPACE_PEOPLE_SKILL_DIMENSIONS,
   WORKSPACE_PIPELINE_FUNNEL_DEAL_LIMIT,
+  WORKSPACE_PROCESS_STEP_LIMIT,
+  WORKSPACE_PROS_CONS_ITEM_LIMIT,
   WORKSPACE_SALES_FORECAST_BUCKETS,
   WORKSPACE_SALES_PIPELINE_STAGES,
   WORKSPACE_SALES_TEMPERATURES,
@@ -59,6 +65,8 @@ import {
   WORKSPACE_STRATEGIC_ASSUMPTION_LINK_TYPES,
   WORKSPACE_STRATEGIC_ASSUMPTION_STATUSES,
   WORKSPACE_TAB_BLOCK_LIMIT,
+  WORKSPACE_TABLE_COLUMN_LIMIT,
+  WORKSPACE_TABLE_ROW_LIMIT,
   WORKSPACE_TALENT_GRID_MEMBER_LIMIT,
   WORKSPACE_TASK_DOMAINS,
   WORKSPACE_TASK_LIMIT,
@@ -74,6 +82,7 @@ const isoMonthSchema = z.string().regex(/^\d{4}-\d{2}$/);
 export const workspaceTaskPrioritySchema = z.enum(["low", "medium", "high"]);
 export const workspaceTaskDomainSchema = z.enum(WORKSPACE_TASK_DOMAINS);
 export const workspaceTaskQuadrantSchema = z.enum(WORKSPACE_TASK_QUADRANTS);
+export const workspaceHabitGridDaySchema = z.enum(WORKSPACE_HABIT_GRID_DAYS);
 export const workspaceTimelineMilestoneStatusSchema = z.enum(WORKSPACE_TIMELINE_MILESTONE_STATUSES);
 export const workspaceNodeTintSchema = z.enum(WORKSPACE_NODE_TINTS);
 export const workspaceCustomFieldTypeSchema = z.enum(["text", "number", "checkbox", "textarea"]);
@@ -151,11 +160,74 @@ export const workspaceDecisionItemSchema = z.object({
   weight: z.number().int().min(1).max(5).default(3),
 });
 
+export const workspaceChecklistItemSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().trim().max(240),
+  completed: z.boolean().default(false),
+});
+
 export const workspaceTrackerEntrySchema = z.object({
   id: z.string().min(1),
   label: z.string().max(120).default(""),
   value: z.number().finite(),
   createdAt: isoTimestampSchema,
+});
+
+export const workspaceTableColumnSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().trim().max(80),
+});
+
+export const workspaceTableRowSchema = z.object({
+  id: z.string().min(1),
+  cells: z.record(z.string(), z.string().max(4000)).default({}),
+});
+
+export const workspaceSwotCellsSchema = z.object({
+  strengths: z.string().max(4000).default(""),
+  weaknesses: z.string().max(4000).default(""),
+  opportunities: z.string().max(4000).default(""),
+  threats: z.string().max(4000).default(""),
+});
+
+export const workspaceHabitGridDaysSchema = z.object({
+  mon: z.boolean().default(false),
+  tue: z.boolean().default(false),
+  wed: z.boolean().default(false),
+  thu: z.boolean().default(false),
+  fri: z.boolean().default(false),
+  sat: z.boolean().default(false),
+  sun: z.boolean().default(false),
+});
+
+export const workspaceHabitGridHabitSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().max(120),
+  days: workspaceHabitGridDaysSchema,
+});
+
+export const workspaceProcessStepSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().max(160),
+  completed: z.boolean().default(false),
+  note: z.string().max(2000).default(""),
+});
+
+export const workspace2x2MatrixItemSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().trim().max(200),
+});
+
+export const workspace2x2MatrixQuadrantSchema = z.object({
+  name: z.string().trim().max(80),
+  items: z.array(workspace2x2MatrixItemSchema).max(WORKSPACE_2X2_MATRIX_ITEM_LIMIT).default([]),
+});
+
+export const workspace2x2MatrixQuadrantsSchema = z.object({
+  topLeft: workspace2x2MatrixQuadrantSchema,
+  topRight: workspace2x2MatrixQuadrantSchema,
+  bottomLeft: workspace2x2MatrixQuadrantSchema,
+  bottomRight: workspace2x2MatrixQuadrantSchema,
 });
 
 export const workspaceTimeOrchestratorSettingsSchema = z.object({
@@ -523,6 +595,17 @@ export const workspaceNotesBlockSchema = workspaceBlockBaseSchema.extend({
   body: z.string().max(20000).default(""),
 });
 
+export const workspaceTableBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("table"),
+  columns: z.array(workspaceTableColumnSchema).min(1).max(WORKSPACE_TABLE_COLUMN_LIMIT),
+  rows: z.array(workspaceTableRowSchema).max(WORKSPACE_TABLE_ROW_LIMIT).default([]),
+});
+
+export const workspaceChecklistBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("checklist"),
+  items: z.array(workspaceChecklistItemSchema).max(WORKSPACE_CHECKLIST_ITEM_LIMIT).default([]),
+});
+
 export const workspaceDecisionBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("decision"),
   pros: z.array(workspaceDecisionItemSchema).max(30).default([]),
@@ -530,16 +613,75 @@ export const workspaceDecisionBlockSchema = workspaceBlockBaseSchema.extend({
   recommendation: z.string().max(4000).default(""),
 });
 
+export const workspaceProsConsBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("pros-cons"),
+  pros: z.array(workspaceDecisionItemSchema).max(WORKSPACE_PROS_CONS_ITEM_LIMIT).default([]),
+  cons: z.array(workspaceDecisionItemSchema).max(WORKSPACE_PROS_CONS_ITEM_LIMIT).default([]),
+});
+
+export const workspaceSwotBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("swot"),
+  cells: workspaceSwotCellsSchema.default({
+    strengths: "",
+    weaknesses: "",
+    opportunities: "",
+    threats: "",
+  }),
+});
+
 export const workspaceTrackerBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("tracker"),
+  goal: z.number().finite().nullable().optional(),
   entries: z.array(workspaceTrackerEntrySchema).max(60).default([]),
 });
 
 export const workspaceAiPromptBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("ai-prompt"),
+  includeContext: z.boolean().default(true),
   prompt: z.string().max(4000).default(""),
   latestOutput: z.string().max(12000).default(""),
   outputHistory: z.array(workspacePromptOutputSchema).max(20).default([]),
+});
+
+export const workspaceHabitGridBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("habit-grid"),
+  habits: z
+    .array(workspaceHabitGridHabitSchema)
+    .max(WORKSPACE_HABIT_GRID_HABIT_LIMIT)
+    .default([]),
+});
+
+export const workspaceProcessBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("process"),
+  steps: z.array(workspaceProcessStepSchema).max(WORKSPACE_PROCESS_STEP_LIMIT).default([]),
+});
+
+export const workspace2x2MatrixBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("2x2-matrix"),
+  xAxisLabel: z.string().trim().max(80).default("Effort"),
+  xStartLabel: z.string().trim().max(60).default("Low"),
+  xEndLabel: z.string().trim().max(60).default("High"),
+  yAxisLabel: z.string().trim().max(80).default("Impact"),
+  yStartLabel: z.string().trim().max(60).default("Low"),
+  yEndLabel: z.string().trim().max(60).default("High"),
+  quadrants: workspace2x2MatrixQuadrantsSchema.default({
+    topLeft: {
+      name: "Quick wins",
+      items: [],
+    },
+    topRight: {
+      name: "Major bets",
+      items: [],
+    },
+    bottomLeft: {
+      name: "Fill-ins",
+      items: [],
+    },
+    bottomRight: {
+      name: "Avoid",
+      items: [],
+    },
+  }),
 });
 
 export const workspaceCourseRoadmapBlockSchema = workspaceBlockBaseSchema.extend({
@@ -821,9 +963,16 @@ export const workspaceCustomBlockSchema = workspaceBlockBaseSchema.extend({
 export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceTaskListBlockSchema,
   workspaceNotesBlockSchema,
+  workspaceTableBlockSchema,
+  workspaceChecklistBlockSchema,
   workspaceDecisionBlockSchema,
+  workspaceProsConsBlockSchema,
+  workspaceSwotBlockSchema,
   workspaceTrackerBlockSchema,
   workspaceAiPromptBlockSchema,
+  workspaceHabitGridBlockSchema,
+  workspaceProcessBlockSchema,
+  workspace2x2MatrixBlockSchema,
   workspaceCourseRoadmapBlockSchema,
   workspaceLearningOutcomesMatrixBlockSchema,
   workspaceTimeOrchestratorBlockSchema,

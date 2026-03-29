@@ -145,7 +145,7 @@ export type WorkspaceNodeEditorContext = {
     mutator: (metric: WorkspaceScorecardBlock["metrics"][number]) => void,
   ): void;
   removeScorecardMetric(tabId: string, blockId: string, metricId: string): void;
-  runPromptBlock(tabId: string, blockId: string): void;
+  runPromptBlock(tabId: string, blockId: string): MaybePromise;
   runCustomPrompt(tabId: string, blockId: string): void;
   runBlockAgentPrompt(tabId: string, blockId: string, prompt: string): Promise<string>;
   toggleNotePreview(blockId: string): void;

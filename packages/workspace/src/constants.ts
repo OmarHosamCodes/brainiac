@@ -2,10 +2,17 @@ export const WORKSPACE_NODE_LIMIT = 200;
 export const WORKSPACE_NODE_TAB_LIMIT = 12;
 export const WORKSPACE_TAB_BLOCK_LIMIT = 24;
 export const WORKSPACE_TASK_LIMIT = 100;
+export const WORKSPACE_TABLE_COLUMN_LIMIT = 8;
+export const WORKSPACE_TABLE_ROW_LIMIT = 60;
+export const WORKSPACE_CHECKLIST_ITEM_LIMIT = 100;
 export const WORKSPACE_KANBAN_COLUMN_LIMIT = 6;
 export const WORKSPACE_KANBAN_CARD_LIMIT = 120;
 export const WORKSPACE_TIMELINE_MILESTONE_LIMIT = 40;
 export const WORKSPACE_SCORECARD_METRIC_LIMIT = 40;
+export const WORKSPACE_PROS_CONS_ITEM_LIMIT = 40;
+export const WORKSPACE_HABIT_GRID_HABIT_LIMIT = 24;
+export const WORKSPACE_PROCESS_STEP_LIMIT = 24;
+export const WORKSPACE_2X2_MATRIX_ITEM_LIMIT = 32;
 export const WORKSPACE_OKR_OBJECTIVE_LIMIT = 16;
 export const WORKSPACE_OKR_KEY_RESULT_LIMIT = 12;
 export const WORKSPACE_DECISION_MATRIX_CRITERIA_LIMIT = 12;
@@ -50,6 +57,16 @@ export const WORKSPACE_TASK_DOMAINS = [
 ] as const;
 
 export const WORKSPACE_TASK_QUADRANTS = ["do", "schedule", "delegate", "eliminate"] as const;
+
+export const WORKSPACE_HABIT_GRID_DAYS = [
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat",
+  "sun",
+] as const;
 
 export const WORKSPACE_TIMELINE_MILESTONE_STATUSES = [
   "planned",

@@ -3,8 +3,8 @@ interface LegalSection {
     id: string;
     title: string;
     intro?: string;
-    paragraphs?: string[];
-    bullets?: string[];
+    paragraphs?: readonly string[];
+    bullets?: readonly string[];
 }
 
 const props = defineProps<{
@@ -12,7 +12,7 @@ const props = defineProps<{
     summary: string;
     effectiveDate: string;
     lastUpdated: string;
-    sections: LegalSection[];
+    sections: readonly LegalSection[];
 }>();
 
 const sectionLinks = computed(() =>

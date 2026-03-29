@@ -33,6 +33,12 @@ const statusIcons: Record<WorkspaceTimelineMilestoneStatus, string> = {
     blocked: "i-lucide-alert-circle",
 };
 
+function getNextStatus(status: WorkspaceTimelineMilestoneStatus): WorkspaceTimelineMilestoneStatus {
+    const currentIndex = WORKSPACE_TIMELINE_MILESTONE_STATUSES.indexOf(status);
+    const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % WORKSPACE_TIMELINE_MILESTONE_STATUSES.length;
+    return WORKSPACE_TIMELINE_MILESTONE_STATUSES[nextIndex] ?? "planned";
+}
+
 function toTimelineStatus(value: string): WorkspaceTimelineMilestoneStatus {
     return value === "active" || value === "done" || value === "blocked"
         ? value
@@ -130,9 +136,18 @@ function toggleMilestone(id: string) {
                                 <UBadge
                                     variant="subtle"
                                     size="xs"
-                                    class="rounded-lg text-[9px] uppercase font-bold"
+                                    class="cursor-pointer rounded-lg text-[9px] uppercase font-bold"
                                     :class="getStatusColor(milestone.status)"
+                                    @click.stop="
+                                        mutateTimelineMilestone(
+                                            tabId,
+                                            block.id,
+                                            milestone.id,
+                                            (entry) => (entry.status = getNextStatus(entry.status)),
+                                        )
+                                    "
                                 >
+                                    <UIcon :name="statusIcons[milestone.status]" class="mr-1 size-3" />
                                     {{ statusLabels[milestone.status] }}
                                 </UBadge>
                             </div>

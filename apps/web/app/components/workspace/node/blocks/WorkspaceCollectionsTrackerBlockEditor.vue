@@ -32,7 +32,7 @@ const filteredInvoices = computed(() =>
 );
 const statusOptions = Object.entries(workspaceReceivableStatusLabels).map(([value, label]) => ({
   label,
-  value,
+  value: value as WorkspaceReceivableStatus,
 })) satisfies Array<{ label: string; value: WorkspaceReceivableStatus }>;
 const rowGridStyle = {
   gridTemplateColumns:

@@ -5,11 +5,17 @@ import {
   DEFAULT_WORKSPACE_NODE_WIDTH,
 } from "./constants";
 import {
+  workspace2x2MatrixBlockSchema,
+  workspace2x2MatrixItemSchema,
+  workspace2x2MatrixQuadrantSchema,
+  workspace2x2MatrixQuadrantsSchema,
   workspaceAuthorityScoreMetricsSchema,
   workspaceAuthorityScorecardBlockSchema,
   workspaceAiPromptBlockSchema,
   workspaceAssumptionTrackerBlockSchema,
   workspaceBusinessModelCanvasBlockSchema,
+  workspaceChecklistBlockSchema,
+  workspaceChecklistItemSchema,
   workspaceCohortHealthCohortSchema,
   workspaceCohortHealthDashboardBlockSchema,
   workspaceCollectionsTrackerBlockSchema,
@@ -33,12 +39,16 @@ import {
   workspaceDecisionMatrixCriterionSchema,
   workspaceDecisionMatrixOptionSchema,
   workspaceDecisionBlockSchema,
+  workspaceDecisionItemSchema,
   workspaceEisenhowerMatrixBlockSchema,
   workspaceExpenseItemSchema,
   workspaceForecastConfidenceBoardBlockSchema,
   workspaceForecastConfidenceItemSchema,
   workspaceHookBankBlockSchema,
   workspaceHookBankItemSchema,
+  workspaceHabitGridBlockSchema,
+  workspaceHabitGridDaysSchema,
+  workspaceHabitGridHabitSchema,
   workspaceKanbanBlockSchema,
   workspaceKanbanCardSchema,
   workspaceKanbanColumnSchema,
@@ -58,8 +68,11 @@ import {
   workspacePipelineFunnelBlockSchema,
   workspacePipelineFunnelDealSchema,
   workspacePricingSimulatorBlockSchema,
+  workspaceProcessBlockSchema,
+  workspaceProcessStepSchema,
   workspaceProfitabilityCashFlowBlockSchema,
   workspaceProfitabilityClientSchema,
+  workspaceProsConsBlockSchema,
   workspacePromptOutputSchema,
   workspaceReceivableInvoiceSchema,
   workspaceSeatPlannerBlockSchema,
@@ -69,8 +82,13 @@ import {
   workspaceSkillsHeatMapBlockSchema,
   workspaceSkillsHeatMapMemberSchema,
   workspaceStrategicAssumptionSchema,
+  workspaceSwotBlockSchema,
+  workspaceSwotCellsSchema,
   workspaceTaskListBlockSchema,
   workspaceTaskSchema,
+  workspaceTableBlockSchema,
+  workspaceTableColumnSchema,
+  workspaceTableRowSchema,
   workspaceTalentGridBlockSchema,
   workspaceTalentGridMemberSchema,
   workspaceTimeOrchestratorBlockSchema,
@@ -84,12 +102,18 @@ import { createWorkspaceSkillsScoreMap } from "./people";
 import { getNowIsoString } from "./shared";
 import { createWorkspaceTimeOrchestratorSettings } from "./tasks";
 import type {
+  Workspace2x2MatrixBlock,
+  Workspace2x2MatrixItem,
+  Workspace2x2MatrixQuadrant,
+  Workspace2x2MatrixQuadrants,
   WorkspaceAuthorityScoreMetrics,
   WorkspaceAuthorityScorecardBlock,
   WorkspaceAiPromptBlock,
   WorkspaceAssumptionTrackerBlock,
   WorkspaceBusinessModelCanvasBlock,
   WorkspaceBlock,
+  WorkspaceChecklistBlock,
+  WorkspaceChecklistItem,
   WorkspaceCohortHealthCohort,
   WorkspaceCohortHealthDashboardBlock,
   WorkspaceCollectionsTrackerBlock,
@@ -110,6 +134,7 @@ import type {
   WorkspaceDealScoringMatrixBlock,
   WorkspaceDelegationItem,
   WorkspaceDelegationMatrixBlock,
+  WorkspaceDecisionItem,
   WorkspaceDecisionMatrixBlock,
   WorkspaceDecisionMatrixCriterion,
   WorkspaceDecisionMatrixOption,
@@ -120,6 +145,9 @@ import type {
   WorkspaceForecastConfidenceItem,
   WorkspaceHookBankBlock,
   WorkspaceHookBankItem,
+  WorkspaceHabitGridBlock,
+  WorkspaceHabitGridDays,
+  WorkspaceHabitGridHabit,
   WorkspaceKanbanBlock,
   WorkspaceKanbanCard,
   WorkspaceKanbanColumn,
@@ -136,9 +164,12 @@ import type {
   WorkspacePipelineFunnelBlock,
   WorkspacePipelineFunnelDeal,
   WorkspacePricingSimulatorBlock,
+  WorkspaceProcessBlock,
+  WorkspaceProcessStep,
   WorkspacePromptOutput,
   WorkspaceProfitabilityCashFlowBlock,
   WorkspaceProfitabilityClient,
+  WorkspaceProsConsBlock,
   WorkspaceReceivableInvoice,
   WorkspaceSeatPlannerBlock,
   WorkspaceSeatPlannerSeat,
@@ -150,8 +181,13 @@ import type {
   WorkspaceSkillsHeatMapBlock,
   WorkspaceSkillsHeatMapMember,
   WorkspaceStrategicAssumption,
+  WorkspaceSwotBlock,
+  WorkspaceSwotCells,
   WorkspaceTask,
   WorkspaceTaskListBlock,
+  WorkspaceTableBlock,
+  WorkspaceTableColumn,
+  WorkspaceTableRow,
   WorkspaceTalentGridBlock,
   WorkspaceTalentGridMember,
   WorkspaceTimeOrchestratorBlock,
@@ -166,6 +202,7 @@ export * from "./content";
 export * from "./dashboard";
 export * from "./education";
 export * from "./finance";
+export * from "./general";
 export * from "./people";
 export * from "./sales";
 export * from "./schemas";
@@ -194,6 +231,142 @@ export function createWorkspaceTask(partial: Partial<WorkspaceTask> = {}): Works
     urgency: partial.urgency ?? 5,
     importance: partial.importance ?? 5,
     estimateMinutes: partial.estimateMinutes ?? 30,
+  });
+}
+
+export function createWorkspaceChecklistItem(
+  partial: Partial<WorkspaceChecklistItem> = {},
+): WorkspaceChecklistItem {
+  return workspaceChecklistItemSchema.parse({
+    id: partial.id ?? createWorkspaceId("checklist"),
+    text: partial.text ?? "Checklist item",
+    completed: partial.completed ?? false,
+  });
+}
+
+export function createWorkspaceTableColumn(
+  partial: Partial<WorkspaceTableColumn> = {},
+): WorkspaceTableColumn {
+  return workspaceTableColumnSchema.parse({
+    id: partial.id ?? createWorkspaceId("column"),
+    label: partial.label ?? "Column",
+  });
+}
+
+function createWorkspaceTableCellMap(
+  columns: Array<Pick<WorkspaceTableColumn, "id"> | string>,
+  cells: Record<string, string> | undefined,
+) {
+  return Object.fromEntries(
+    columns.map((column) => {
+      const columnId = typeof column === "string" ? column : column.id;
+      return [columnId, cells?.[columnId] ?? ""];
+    }),
+  );
+}
+
+export function createWorkspaceTableRow(
+  partial: Partial<WorkspaceTableRow> = {},
+  columns: Array<Pick<WorkspaceTableColumn, "id"> | string> = [],
+): WorkspaceTableRow {
+  return workspaceTableRowSchema.parse({
+    id: partial.id ?? createWorkspaceId("row"),
+    cells: createWorkspaceTableCellMap(columns, partial.cells),
+  });
+}
+
+function createWorkspaceSwotCells(partial: Partial<WorkspaceSwotCells> = {}): WorkspaceSwotCells {
+  return workspaceSwotCellsSchema.parse({
+    strengths: partial.strengths ?? "",
+    weaknesses: partial.weaknesses ?? "",
+    opportunities: partial.opportunities ?? "",
+    threats: partial.threats ?? "",
+  });
+}
+
+export function createWorkspaceProsConsItem(
+  partial: Partial<WorkspaceDecisionItem> = {},
+): WorkspaceDecisionItem {
+  return workspaceDecisionItemSchema.parse({
+    id: partial.id ?? createWorkspaceId("pros-cons"),
+    text: partial.text ?? "Point",
+    weight: partial.weight ?? 3,
+  });
+}
+
+export function createWorkspaceHabitGridDays(
+  partial: Partial<WorkspaceHabitGridDays> = {},
+): WorkspaceHabitGridDays {
+  return workspaceHabitGridDaysSchema.parse({
+    mon: partial.mon ?? false,
+    tue: partial.tue ?? false,
+    wed: partial.wed ?? false,
+    thu: partial.thu ?? false,
+    fri: partial.fri ?? false,
+    sat: partial.sat ?? false,
+    sun: partial.sun ?? false,
+  });
+}
+
+export function createWorkspaceHabitGridHabit(
+  partial: Partial<WorkspaceHabitGridHabit> = {},
+): WorkspaceHabitGridHabit {
+  return workspaceHabitGridHabitSchema.parse({
+    id: partial.id ?? createWorkspaceId("habit"),
+    name: partial.name ?? "Habit",
+    days: createWorkspaceHabitGridDays(partial.days),
+  });
+}
+
+export function createWorkspaceProcessStep(
+  partial: Partial<WorkspaceProcessStep> = {},
+): WorkspaceProcessStep {
+  return workspaceProcessStepSchema.parse({
+    id: partial.id ?? createWorkspaceId("step"),
+    title: partial.title ?? "Step",
+    completed: partial.completed ?? false,
+    note: partial.note ?? "",
+  });
+}
+
+export function createWorkspace2x2MatrixItem(
+  partial: Partial<Workspace2x2MatrixItem> = {},
+): Workspace2x2MatrixItem {
+  return workspace2x2MatrixItemSchema.parse({
+    id: partial.id ?? createWorkspaceId("matrix-item"),
+    text: partial.text ?? "Item",
+  });
+}
+
+export function createWorkspace2x2MatrixQuadrant(
+  partial: Partial<Workspace2x2MatrixQuadrant> = {},
+): Workspace2x2MatrixQuadrant {
+  return workspace2x2MatrixQuadrantSchema.parse({
+    name: partial.name ?? "Quadrant",
+    items: partial.items ?? [],
+  });
+}
+
+function createWorkspace2x2MatrixQuadrants(
+  partial: Partial<Workspace2x2MatrixQuadrants> = {},
+): Workspace2x2MatrixQuadrants {
+  return workspace2x2MatrixQuadrantsSchema.parse({
+    topLeft: createWorkspace2x2MatrixQuadrant({
+      name: partial.topLeft?.name ?? "Quick wins",
+      items: partial.topLeft?.items ?? [],
+    }),
+    topRight: createWorkspace2x2MatrixQuadrant({
+      name: partial.topRight?.name ?? "Major bets",
+      items: partial.topRight?.items ?? [],
+    }),
+    bottomLeft: createWorkspace2x2MatrixQuadrant({
+      name: partial.bottomLeft?.name ?? "Fill-ins",
+      items: partial.bottomLeft?.items ?? [],
+    }),
+    bottomRight: createWorkspace2x2MatrixQuadrant({
+      name: partial.bottomRight?.name ?? "Avoid",
+      items: partial.bottomRight?.items ?? [],
+    }),
   });
 }
 
@@ -1340,6 +1513,22 @@ function normalizeAuthorityScoreMetrics(
   });
 }
 
+function getTableDefaultColumns() {
+  return [
+    createWorkspaceTableColumn({ label: "Item" }),
+    createWorkspaceTableColumn({ label: "Owner" }),
+    createWorkspaceTableColumn({ label: "Notes" }),
+  ];
+}
+
+function getProcessDefaultSteps() {
+  return [
+    createWorkspaceProcessStep({ title: "Define" }),
+    createWorkspaceProcessStep({ title: "Execute" }),
+    createWorkspaceProcessStep({ title: "Review" }),
+  ];
+}
+
 export function createWorkspaceTaskListBlock(
   partial: Partial<WorkspaceTaskListBlock> = {},
 ): WorkspaceTaskListBlock {
@@ -1370,6 +1559,38 @@ export function createWorkspaceNotesBlock(
   });
 }
 
+export function createWorkspaceTableBlock(
+  partial: Partial<WorkspaceTableBlock> = {},
+): WorkspaceTableBlock {
+  const timestamp = getNowIsoString();
+  const columns = partial.columns?.length ? partial.columns : getTableDefaultColumns();
+
+  return workspaceTableBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "table",
+    title: partial.title ?? "Table",
+    columns,
+    rows: partial.rows ?? [],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceChecklistBlock(
+  partial: Partial<WorkspaceChecklistBlock> = {},
+): WorkspaceChecklistBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceChecklistBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "checklist",
+    title: partial.title ?? "Checklist",
+    items: partial.items ?? [],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
 export function createWorkspaceDecisionBlock(
   partial: Partial<WorkspaceDecisionBlock> = {},
 ): WorkspaceDecisionBlock {
@@ -1387,6 +1608,37 @@ export function createWorkspaceDecisionBlock(
   });
 }
 
+export function createWorkspaceProsConsBlock(
+  partial: Partial<WorkspaceProsConsBlock> = {},
+): WorkspaceProsConsBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceProsConsBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "pros-cons",
+    title: partial.title ?? "Pros & cons",
+    pros: partial.pros ?? [],
+    cons: partial.cons ?? [],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceSwotBlock(
+  partial: Partial<WorkspaceSwotBlock> = {},
+): WorkspaceSwotBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceSwotBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "swot",
+    title: partial.title ?? "SWOT analysis",
+    cells: createWorkspaceSwotCells(partial.cells),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
 export function createWorkspaceTrackerBlock(
   partial: Partial<WorkspaceTrackerBlock> = {},
 ): WorkspaceTrackerBlock {
@@ -1396,6 +1648,7 @@ export function createWorkspaceTrackerBlock(
     id: partial.id ?? createWorkspaceId("block"),
     type: "tracker",
     title: partial.title ?? "Tracker",
+    goal: partial.goal ?? null,
     entries: partial.entries ?? [],
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
@@ -1411,9 +1664,61 @@ export function createWorkspaceAiPromptBlock(
     id: partial.id ?? createWorkspaceId("block"),
     type: "ai-prompt",
     title: partial.title ?? "Prompt",
+    includeContext: partial.includeContext ?? true,
     prompt: partial.prompt ?? "",
     latestOutput: partial.latestOutput ?? "",
     outputHistory: partial.outputHistory ?? [],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceHabitGridBlock(
+  partial: Partial<WorkspaceHabitGridBlock> = {},
+): WorkspaceHabitGridBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceHabitGridBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "habit-grid",
+    title: partial.title ?? "Habit grid",
+    habits: partial.habits ?? [],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceProcessBlock(
+  partial: Partial<WorkspaceProcessBlock> = {},
+): WorkspaceProcessBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceProcessBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "process",
+    title: partial.title ?? "Process",
+    steps: partial.steps ?? getProcessDefaultSteps(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspace2x2MatrixBlock(
+  partial: Partial<Workspace2x2MatrixBlock> = {},
+): Workspace2x2MatrixBlock {
+  const timestamp = getNowIsoString();
+
+  return workspace2x2MatrixBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "2x2-matrix",
+    title: partial.title ?? "2x2 matrix",
+    xAxisLabel: partial.xAxisLabel ?? "Effort",
+    xStartLabel: partial.xStartLabel ?? "Low",
+    xEndLabel: partial.xEndLabel ?? "High",
+    yAxisLabel: partial.yAxisLabel ?? "Impact",
+    yStartLabel: partial.yStartLabel ?? "Low",
+    yEndLabel: partial.yEndLabel ?? "High",
+    quadrants: createWorkspace2x2MatrixQuadrants(partial.quadrants),
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
   });
@@ -2066,6 +2371,41 @@ export function createDefaultWorkspaceTab(title = "Overview", body = "") {
   });
 }
 
+function normalizeWorkspaceTableBlock(
+  block: WorkspaceTableBlock | (Partial<WorkspaceTableBlock> & { type: "table" }),
+) {
+  const columns =
+    block.columns && block.columns.length > 0
+      ? block.columns.map((column) => workspaceTableColumnSchema.parse(column))
+      : createWorkspaceTableBlock().columns;
+
+  return workspaceTableBlockSchema.parse({
+    ...block,
+    columns,
+    rows: (block.rows ?? []).map((row) =>
+      workspaceTableRowSchema.parse({
+        ...row,
+        cells: createWorkspaceTableCellMap(columns, row.cells),
+      }),
+    ),
+  });
+}
+
+function normalizeWorkspace2x2MatrixBlock(
+  block: Workspace2x2MatrixBlock | (Partial<Workspace2x2MatrixBlock> & { type: "2x2-matrix" }),
+) {
+  return workspace2x2MatrixBlockSchema.parse({
+    ...block,
+    xAxisLabel: block.xAxisLabel ?? "Effort",
+    xStartLabel: block.xStartLabel ?? "Low",
+    xEndLabel: block.xEndLabel ?? "High",
+    yAxisLabel: block.yAxisLabel ?? "Impact",
+    yStartLabel: block.yStartLabel ?? "Low",
+    yEndLabel: block.yEndLabel ?? "High",
+    quadrants: createWorkspace2x2MatrixQuadrants(block.quadrants),
+  });
+}
+
 function normalizeWorkspaceKanbanBlock(
   block: WorkspaceKanbanBlock | (Partial<WorkspaceKanbanBlock> & { type: "kanban" }),
 ) {
@@ -2192,6 +2532,13 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         ...block,
         body: block.body ?? "",
       });
+    case "table":
+      return normalizeWorkspaceTableBlock(block);
+    case "checklist":
+      return workspaceChecklistBlockSchema.parse({
+        ...block,
+        items: block.items ?? [],
+      });
     case "decision":
       return workspaceDecisionBlockSchema.parse({
         ...block,
@@ -2199,18 +2546,46 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         cons: block.cons ?? [],
         recommendation: block.recommendation ?? "",
       });
+    case "pros-cons":
+      return workspaceProsConsBlockSchema.parse({
+        ...block,
+        pros: block.pros ?? [],
+        cons: block.cons ?? [],
+      });
+    case "swot":
+      return workspaceSwotBlockSchema.parse({
+        ...block,
+        cells: createWorkspaceSwotCells(block.cells),
+      });
     case "tracker":
       return workspaceTrackerBlockSchema.parse({
         ...block,
+        goal: block.goal ?? null,
         entries: block.entries ?? [],
       });
     case "ai-prompt":
       return workspaceAiPromptBlockSchema.parse({
         ...block,
+        includeContext: block.includeContext ?? true,
         prompt: block.prompt ?? "",
         latestOutput: block.latestOutput ?? "",
         outputHistory: block.outputHistory ?? [],
       });
+    case "habit-grid":
+      return workspaceHabitGridBlockSchema.parse({
+        ...block,
+        habits: (block.habits ?? []).map((habit) => ({
+          ...habit,
+          days: createWorkspaceHabitGridDays(habit.days),
+        })),
+      });
+    case "process":
+      return workspaceProcessBlockSchema.parse({
+        ...block,
+        steps: block.steps ?? [],
+      });
+    case "2x2-matrix":
+      return normalizeWorkspace2x2MatrixBlock(block);
     case "course-roadmap":
       return workspaceCourseRoadmapBlockSchema.parse({
         ...block,
@@ -2511,6 +2886,49 @@ export function cloneWorkspaceBlockForInsertion(
         createdAt: timestamp,
         updatedAt: timestamp,
       });
+    case "table": {
+      const columnIdMap = new Map<string, string>();
+      const columns = block.columns.map((column) => {
+        const nextColumnId = createWorkspaceId("column");
+        columnIdMap.set(column.id, nextColumnId);
+
+        return workspaceTableColumnSchema.parse({
+          ...column,
+          id: nextColumnId,
+        });
+      });
+
+      return workspaceTableBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        columns,
+        rows: block.rows.map((row) =>
+          workspaceTableRowSchema.parse({
+            ...row,
+            id: createWorkspaceId("row"),
+            cells: Object.fromEntries(
+              columns.map((column, index) => [
+                column.id,
+                row.cells[block.columns[index]!.id] ?? "",
+              ]),
+            ),
+          }),
+        ),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    }
+    case "checklist":
+      return workspaceChecklistBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        items: block.items.map((item) => ({
+          ...item,
+          id: createWorkspaceId("checklist"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
     case "decision":
       return workspaceDecisionBlockSchema.parse({
         ...block,
@@ -2526,10 +2944,33 @@ export function cloneWorkspaceBlockForInsertion(
         createdAt: timestamp,
         updatedAt: timestamp,
       });
+    case "pros-cons":
+      return workspaceProsConsBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        pros: block.pros.map((item) => ({
+          ...item,
+          id: createWorkspaceId("pros-cons"),
+        })),
+        cons: block.cons.map((item) => ({
+          ...item,
+          id: createWorkspaceId("pros-cons"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "swot":
+      return workspaceSwotBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
     case "tracker":
       return workspaceTrackerBlockSchema.parse({
         ...block,
         id: createWorkspaceId("block"),
+        goal: block.goal ?? null,
         entries: block.entries.map((entry) => ({
           ...entry,
           id: createWorkspaceId("entry"),
@@ -2541,7 +2982,68 @@ export function cloneWorkspaceBlockForInsertion(
       return workspaceAiPromptBlockSchema.parse({
         ...block,
         id: createWorkspaceId("block"),
+        includeContext: block.includeContext ?? true,
         outputHistory: clonePromptOutputsForInsertion(block.outputHistory),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "habit-grid":
+      return workspaceHabitGridBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        habits: block.habits.map((habit) => ({
+          ...habit,
+          id: createWorkspaceId("habit"),
+          days: createWorkspaceHabitGridDays(habit.days),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "process":
+      return workspaceProcessBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        steps: block.steps.map((step) => ({
+          ...step,
+          id: createWorkspaceId("step"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "2x2-matrix":
+      return workspace2x2MatrixBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        quadrants: workspace2x2MatrixQuadrantsSchema.parse({
+          topLeft: {
+            ...block.quadrants.topLeft,
+            items: block.quadrants.topLeft.items.map((item) => ({
+              ...item,
+              id: createWorkspaceId("matrix-item"),
+            })),
+          },
+          topRight: {
+            ...block.quadrants.topRight,
+            items: block.quadrants.topRight.items.map((item) => ({
+              ...item,
+              id: createWorkspaceId("matrix-item"),
+            })),
+          },
+          bottomLeft: {
+            ...block.quadrants.bottomLeft,
+            items: block.quadrants.bottomLeft.items.map((item) => ({
+              ...item,
+              id: createWorkspaceId("matrix-item"),
+            })),
+          },
+          bottomRight: {
+            ...block.quadrants.bottomRight,
+            items: block.quadrants.bottomRight.items.map((item) => ({
+              ...item,
+              id: createWorkspaceId("matrix-item"),
+            })),
+          },
+        }),
         createdAt: timestamp,
         updatedAt: timestamp,
       });

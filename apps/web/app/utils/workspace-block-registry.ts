@@ -1,10 +1,12 @@
 import type { WorkspaceBlock } from "@brainiac/workspace";
 import type { Component } from "vue";
 
+import Workspace2x2MatrixBlockEditor from "~/components/workspace/node/blocks/Workspace2x2MatrixBlockEditor.vue";
 import WorkspaceAiPromptBlockEditor from "~/components/workspace/node/blocks/WorkspaceAiPromptBlockEditor.vue";
 import WorkspaceAssumptionTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAssumptionTrackerBlockEditor.vue";
 import WorkspaceAuthorityScorecardBlockEditor from "~/components/workspace/node/blocks/WorkspaceAuthorityScorecardBlockEditor.vue";
 import WorkspaceBusinessModelCanvasBlockEditor from "~/components/workspace/node/blocks/WorkspaceBusinessModelCanvasBlockEditor.vue";
+import WorkspaceChecklistBlockEditor from "~/components/workspace/node/blocks/WorkspaceChecklistBlockEditor.vue";
 import WorkspaceCohortHealthDashboardBlockEditor from "~/components/workspace/node/blocks/WorkspaceCohortHealthDashboardBlockEditor.vue";
 import WorkspaceCollectionsTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceCollectionsTrackerBlockEditor.vue";
 import WorkspaceContentPipelineBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentPipelineBlockEditor.vue";
@@ -12,6 +14,7 @@ import WorkspaceContentQualityRadarBlockEditor from "~/components/workspace/node
 import WorkspaceContentRoiTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentRoiTrackerBlockEditor.vue";
 import WorkspaceCourseRoadmapBlockEditor from "~/components/workspace/node/blocks/WorkspaceCourseRoadmapBlockEditor.vue";
 import WorkspaceHookBankBlockEditor from "~/components/workspace/node/blocks/WorkspaceHookBankBlockEditor.vue";
+import WorkspaceHabitGridBlockEditor from "~/components/workspace/node/blocks/WorkspaceHabitGridBlockEditor.vue";
 import WorkspaceKanbanBlockEditor from "~/components/workspace/node/blocks/WorkspaceKanbanBlockEditor.vue";
 import WorkspaceCustomBlockEditor from "~/components/workspace/node/blocks/WorkspaceCustomBlockEditor.vue";
 import WorkspaceDecisionMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionMatrixBlockEditor.vue";
@@ -27,10 +30,14 @@ import WorkspaceForecastConfidenceBoardBlockEditor from "~/components/workspace/
 import WorkspaceOkrTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceOkrTrackerBlockEditor.vue";
 import WorkspacePipelineFunnelBlockEditor from "~/components/workspace/node/blocks/WorkspacePipelineFunnelBlockEditor.vue";
 import WorkspacePricingSimulatorBlockEditor from "~/components/workspace/node/blocks/WorkspacePricingSimulatorBlockEditor.vue";
+import WorkspaceProcessBlockEditor from "~/components/workspace/node/blocks/WorkspaceProcessBlockEditor.vue";
 import WorkspaceProfitabilityCashFlowBlockEditor from "~/components/workspace/node/blocks/WorkspaceProfitabilityCashFlowBlockEditor.vue";
+import WorkspaceProsConsBlockEditor from "~/components/workspace/node/blocks/WorkspaceProsConsBlockEditor.vue";
 import WorkspaceScorecardBlockEditor from "~/components/workspace/node/blocks/WorkspaceScorecardBlockEditor.vue";
 import WorkspaceSeatPlannerBlockEditor from "~/components/workspace/node/blocks/WorkspaceSeatPlannerBlockEditor.vue";
 import WorkspaceSkillsHeatMapBlockEditor from "~/components/workspace/node/blocks/WorkspaceSkillsHeatMapBlockEditor.vue";
+import WorkspaceSwotBlockEditor from "~/components/workspace/node/blocks/WorkspaceSwotBlockEditor.vue";
+import WorkspaceTableBlockEditor from "~/components/workspace/node/blocks/WorkspaceTableBlockEditor.vue";
 import WorkspaceTalentGridBlockEditor from "~/components/workspace/node/blocks/WorkspaceTalentGridBlockEditor.vue";
 import WorkspaceTaskListBlockEditor from "~/components/workspace/node/blocks/WorkspaceTaskListBlockEditor.vue";
 import WorkspaceTimeOrchestratorBlockEditor from "~/components/workspace/node/blocks/WorkspaceTimeOrchestratorBlockEditor.vue";
@@ -57,11 +64,35 @@ export const workspaceBlockRegistry = {
     icon: "i-lucide-notebook-tabs",
     addGroup: "primary",
   },
+  table: {
+    component: WorkspaceTableBlockEditor,
+    label: "Table",
+    icon: "i-lucide-table",
+    addGroup: "secondary",
+  },
+  checklist: {
+    component: WorkspaceChecklistBlockEditor,
+    label: "Checklist",
+    icon: "i-lucide-list-checks",
+    addGroup: "secondary",
+  },
   decision: {
     component: WorkspaceDecisionBlockEditor,
     label: "Decision",
     icon: "i-lucide-scale",
     addGroup: "primary",
+  },
+  "pros-cons": {
+    component: WorkspaceProsConsBlockEditor,
+    label: "Pros & cons",
+    icon: "i-lucide-scale",
+    addGroup: "secondary",
+  },
+  swot: {
+    component: WorkspaceSwotBlockEditor,
+    label: "SWOT",
+    icon: "i-lucide-layout-grid",
+    addGroup: "secondary",
   },
   tracker: {
     component: WorkspaceTrackerBlockEditor,
@@ -73,6 +104,24 @@ export const workspaceBlockRegistry = {
     component: WorkspaceAiPromptBlockEditor,
     label: "AI prompt",
     icon: "i-lucide-sparkles",
+    addGroup: "secondary",
+  },
+  "habit-grid": {
+    component: WorkspaceHabitGridBlockEditor,
+    label: "Habit grid",
+    icon: "i-lucide-calendar-days",
+    addGroup: "secondary",
+  },
+  process: {
+    component: WorkspaceProcessBlockEditor,
+    label: "Process",
+    icon: "i-lucide-list-ordered",
+    addGroup: "secondary",
+  },
+  "2x2-matrix": {
+    component: Workspace2x2MatrixBlockEditor,
+    label: "2x2 matrix",
+    icon: "i-lucide-grid-2x2",
     addGroup: "secondary",
   },
   "course-roadmap": {

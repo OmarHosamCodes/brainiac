@@ -1,11 +1,13 @@
 import { tool } from "@openrouter/sdk";
 import {
   cloneWorkspaceNodes,
+  createWorkspace2x2MatrixBlock,
   createDefaultWorkspaceTab,
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceAuthorityScorecardBlock,
   createWorkspaceBusinessModelCanvasBlock,
+  createWorkspaceChecklistBlock,
   createWorkspaceCollectionsTrackerBlock,
   createWorkspaceContentPipelineBlock,
   createWorkspaceContentQualityRadarBlock,
@@ -23,12 +25,17 @@ import {
   createWorkspaceOkrTrackerBlock,
   createWorkspacePipelineFunnelBlock,
   createWorkspacePricingSimulatorBlock,
+  createWorkspaceProcessBlock,
   createWorkspaceProfitabilityCashFlowBlock,
+  createWorkspaceProsConsBlock,
   createWorkspaceScorecardBlock,
+  createWorkspaceSwotBlock,
   createWorkspaceTaskListBlock,
+  createWorkspaceTableBlock,
   createWorkspaceTimeOrchestratorBlock,
   createWorkspaceTimelineBlock,
   createWorkspaceTrackerBlock,
+  createWorkspaceHabitGridBlock,
   workspaceBlockSchema,
   workspaceCustomBlockTemplateSchema,
   workspaceMarketplaceItemSchema,
@@ -62,9 +69,16 @@ type MarketplaceSearchMatch = {
 const workspaceBlockTypeSchema = z.enum([
   "task-list",
   "notes",
+  "table",
+  "checklist",
   "decision",
+  "pros-cons",
+  "swot",
   "tracker",
   "ai-prompt",
+  "habit-grid",
+  "process",
+  "2x2-matrix",
   "time-orchestrator",
   "kanban",
   "timeline",
@@ -289,12 +303,31 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return `${block.tasks.length} tasks, ${block.tasks.filter((task) => task.completed).length} completed`;
     case "notes":
       return truncate(block.body || "Empty notes block");
+    case "table":
+      return `${block.rows.length} rows, ${block.columns.length} columns`;
+    case "checklist":
+      return `${block.items.filter((item) => item.completed).length}/${block.items.length} checklist items completed`;
     case "decision":
       return `${block.pros.length} pros, ${block.cons.length} cons`;
+    case "pros-cons":
+      return `${block.pros.length} pros vs ${block.cons.length} cons`;
+    case "swot":
+      return `${Object.values(block.cells).filter((value) => value.trim()).length}/4 SWOT quadrants filled`;
     case "tracker":
-      return `${block.entries.length} tracker entries`;
+      return `${block.entries.length} tracker entries${block.goal !== null && block.goal !== undefined ? `, goal ${block.goal}` : ""}`;
     case "ai-prompt":
       return truncate(block.latestOutput || block.prompt || "No prompt output yet");
+    case "habit-grid": {
+      const completedChecks = block.habits.reduce(
+        (sum, habit) => sum + Object.values(habit.days).filter(Boolean).length,
+        0,
+      );
+      return `${block.habits.length} habits and ${completedChecks} weekly check-ins`;
+    }
+    case "process":
+      return `${block.steps.filter((step) => step.completed).length}/${block.steps.length} process steps completed`;
+    case "2x2-matrix":
+      return `${Object.values(block.quadrants).reduce((sum, quadrant) => sum + quadrant.items.length, 0)} mapped items`;
     case "time-orchestrator":
       return `${block.settings.domains.length} domains across ${block.settings.quadrants.length} quadrants`;
     case "kanban":
@@ -655,12 +688,26 @@ function createBlockByType(args: {
       return createWorkspaceTaskListBlock(titleInput);
     case "notes":
       return createWorkspaceNotesBlock(titleInput);
+    case "table":
+      return createWorkspaceTableBlock(titleInput);
+    case "checklist":
+      return createWorkspaceChecklistBlock(titleInput);
     case "decision":
       return createWorkspaceDecisionBlock(titleInput);
+    case "pros-cons":
+      return createWorkspaceProsConsBlock(titleInput);
+    case "swot":
+      return createWorkspaceSwotBlock(titleInput);
     case "tracker":
       return createWorkspaceTrackerBlock(titleInput);
     case "ai-prompt":
       return createWorkspaceAiPromptBlock(titleInput);
+    case "habit-grid":
+      return createWorkspaceHabitGridBlock(titleInput);
+    case "process":
+      return createWorkspaceProcessBlock(titleInput);
+    case "2x2-matrix":
+      return createWorkspace2x2MatrixBlock(titleInput);
     case "time-orchestrator":
       return createWorkspaceTimeOrchestratorBlock(titleInput);
     case "kanban":

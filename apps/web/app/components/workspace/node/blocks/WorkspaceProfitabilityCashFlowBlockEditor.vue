@@ -23,7 +23,7 @@ const summary = computed(() => getProfitabilityCashFlowSummary(props.block));
 const paymentStatusOptions = Object.entries(workspaceFinancePaymentStatusLabels).map(
   ([value, label]) => ({
     label,
-    value,
+    value: value as WorkspaceFinancePaymentStatus,
   }),
 ) satisfies Array<{ label: string; value: WorkspaceFinancePaymentStatus }>;
 const totalExpenseBreakdown = computed(() =>

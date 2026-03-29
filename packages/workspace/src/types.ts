@@ -4,6 +4,10 @@ import {
   workspaceAuthorityScoreMetricKeySchema,
   workspaceAuthorityScoreMetricValueSchema,
   workspaceAuthorityScoreMetricsSchema,
+  workspace2x2MatrixBlockSchema,
+  workspace2x2MatrixItemSchema,
+  workspace2x2MatrixQuadrantSchema,
+  workspace2x2MatrixQuadrantsSchema,
   workspaceAuthorityScorecardBlockSchema,
   workspaceAiPromptBlockSchema,
   workspaceAssumptionTrackerBlockSchema,
@@ -11,6 +15,8 @@ import {
   workspaceBlockSchema,
   workspaceBusinessModelCanvasCellKeySchema,
   workspaceBusinessModelCanvasCellsSchema,
+  workspaceChecklistBlockSchema,
+  workspaceChecklistItemSchema,
   workspaceCohortHealthCohortSchema,
   workspaceCohortHealthDashboardBlockSchema,
   workspaceCohortStatusSchema,
@@ -52,6 +58,10 @@ import {
   workspaceForecastConfidenceItemSchema,
   workspaceHookBankBlockSchema,
   workspaceHookBankItemSchema,
+  workspaceHabitGridBlockSchema,
+  workspaceHabitGridDaysSchema,
+  workspaceHabitGridDaySchema,
+  workspaceHabitGridHabitSchema,
   workspaceKanbanBlockSchema,
   workspaceKanbanCardSchema,
   workspaceKanbanColumnSchema,
@@ -80,8 +90,11 @@ import {
   workspacePipelineFunnelBlockSchema,
   workspacePipelineFunnelDealSchema,
   workspacePricingSimulatorBlockSchema,
+  workspaceProcessBlockSchema,
+  workspaceProcessStepSchema,
   workspaceProfitabilityCashFlowBlockSchema,
   workspaceProfitabilityClientSchema,
+  workspaceProsConsBlockSchema,
   workspacePromptOutputSchema,
   workspaceReceivableFilterSchema,
   workspaceReceivableInvoiceSchema,
@@ -105,11 +118,16 @@ import {
   workspaceStrategicAssumptionLinkTypeSchema,
   workspaceStrategicAssumptionSchema,
   workspaceStrategicAssumptionStatusSchema,
+  workspaceSwotBlockSchema,
+  workspaceSwotCellsSchema,
   workspaceTaskDomainSchema,
   workspaceTaskListBlockSchema,
   workspaceTaskPrioritySchema,
   workspaceTaskQuadrantSchema,
   workspaceTaskSchema,
+  workspaceTableBlockSchema,
+  workspaceTableColumnSchema,
+  workspaceTableRowSchema,
   workspaceTalentGridBlockSchema,
   workspaceTalentGridMemberSchema,
   workspaceTimeOrchestratorBlockSchema,
@@ -131,7 +149,18 @@ export type WorkspaceCourseRoadmapLesson = z.infer<typeof workspaceCourseRoadmap
 export type WorkspaceCourseRoadmapOutcome = z.infer<typeof workspaceCourseRoadmapOutcomeSchema>;
 export type WorkspaceCourseRoadmapCourse = z.infer<typeof workspaceCourseRoadmapCourseSchema>;
 export type WorkspaceDecisionItem = z.infer<typeof workspaceDecisionItemSchema>;
+export type WorkspaceChecklistItem = z.infer<typeof workspaceChecklistItemSchema>;
 export type WorkspaceTrackerEntry = z.infer<typeof workspaceTrackerEntrySchema>;
+export type WorkspaceTableColumn = z.infer<typeof workspaceTableColumnSchema>;
+export type WorkspaceTableRow = z.infer<typeof workspaceTableRowSchema>;
+export type WorkspaceSwotCells = z.infer<typeof workspaceSwotCellsSchema>;
+export type WorkspaceHabitGridDay = z.infer<typeof workspaceHabitGridDaySchema>;
+export type WorkspaceHabitGridDays = z.infer<typeof workspaceHabitGridDaysSchema>;
+export type WorkspaceHabitGridHabit = z.infer<typeof workspaceHabitGridHabitSchema>;
+export type WorkspaceProcessStep = z.infer<typeof workspaceProcessStepSchema>;
+export type Workspace2x2MatrixItem = z.infer<typeof workspace2x2MatrixItemSchema>;
+export type Workspace2x2MatrixQuadrant = z.infer<typeof workspace2x2MatrixQuadrantSchema>;
+export type Workspace2x2MatrixQuadrants = z.infer<typeof workspace2x2MatrixQuadrantsSchema>;
 export type WorkspacePeopleSkillDimension = z.infer<typeof workspacePeopleSkillDimensionSchema>;
 export type WorkspaceSkillsHeatMapScores = z.infer<typeof workspaceSkillsHeatMapScoresSchema>;
 export type WorkspaceSkillsHeatMapMember = z.infer<typeof workspaceSkillsHeatMapMemberSchema>;
@@ -223,9 +252,16 @@ export type WorkspaceCustomBlockFormula = z.infer<typeof workspaceCustomBlockFor
 export type WorkspaceCustomBlockTemplate = z.infer<typeof workspaceCustomBlockTemplateSchema>;
 export type WorkspaceTaskListBlock = z.infer<typeof workspaceTaskListBlockSchema>;
 export type WorkspaceNotesBlock = z.infer<typeof workspaceNotesBlockSchema>;
+export type WorkspaceTableBlock = z.infer<typeof workspaceTableBlockSchema>;
+export type WorkspaceChecklistBlock = z.infer<typeof workspaceChecklistBlockSchema>;
 export type WorkspaceDecisionBlock = z.infer<typeof workspaceDecisionBlockSchema>;
+export type WorkspaceProsConsBlock = z.infer<typeof workspaceProsConsBlockSchema>;
+export type WorkspaceSwotBlock = z.infer<typeof workspaceSwotBlockSchema>;
 export type WorkspaceTrackerBlock = z.infer<typeof workspaceTrackerBlockSchema>;
 export type WorkspaceAiPromptBlock = z.infer<typeof workspaceAiPromptBlockSchema>;
+export type WorkspaceHabitGridBlock = z.infer<typeof workspaceHabitGridBlockSchema>;
+export type WorkspaceProcessBlock = z.infer<typeof workspaceProcessBlockSchema>;
+export type Workspace2x2MatrixBlock = z.infer<typeof workspace2x2MatrixBlockSchema>;
 export type WorkspaceCourseRoadmapBlock = z.infer<typeof workspaceCourseRoadmapBlockSchema>;
 export type WorkspaceLearningOutcomesMatrixBlock = z.infer<
   typeof workspaceLearningOutcomesMatrixBlockSchema

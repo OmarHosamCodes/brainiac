@@ -197,19 +197,14 @@ export const workspaceAddBlockCategories = [
     label: "General",
     items: [
       {
-        blockType: "tracker",
-        label: "Tracker",
-        icon: "i-lucide-chart-column",
+        blockType: "table",
+        label: "Table",
+        icon: "i-lucide-table",
       },
       {
-        blockType: "scorecard",
-        label: "Scorecard",
-        icon: "i-lucide-gauge",
-      },
-      {
-        blockType: "ai-prompt",
-        label: "AI prompt",
-        icon: "i-lucide-sparkles",
+        blockType: "checklist",
+        label: "Checklist",
+        icon: "i-lucide-list-checks",
       },
       {
         blockType: "kanban",
@@ -217,9 +212,49 @@ export const workspaceAddBlockCategories = [
         icon: "i-lucide-columns-3",
       },
       {
+        blockType: "scorecard",
+        label: "Scorecard",
+        icon: "i-lucide-gauge",
+      },
+      {
+        blockType: "swot",
+        label: "SWOT",
+        icon: "i-lucide-layout-grid",
+      },
+      {
+        blockType: "tracker",
+        label: "Tracker",
+        icon: "i-lucide-chart-column",
+      },
+      {
+        blockType: "pros-cons",
+        label: "Pros & cons",
+        icon: "i-lucide-scale",
+      },
+      {
+        blockType: "habit-grid",
+        label: "Habit grid",
+        icon: "i-lucide-calendar-days",
+      },
+      {
+        blockType: "process",
+        label: "Process",
+        icon: "i-lucide-list-ordered",
+      },
+      {
+        blockType: "2x2-matrix",
+        label: "2x2 matrix",
+        icon: "i-lucide-grid-2x2",
+      },
+      {
         blockType: "timeline",
         label: "Timeline",
         icon: "i-lucide-waypoints",
+      },
+      {
+        blockType: "ai-prompt",
+        label: "AI prompt",
+        icon: "i-lucide-sparkles",
       },
     ],
   },
