@@ -111,6 +111,10 @@ const blockAgentPromptMutation = useMutation(orpc.agent.chat.turn.mutationOption
 
 const nodeId = computed(() => String(route.params.id ?? ""));
 const emptyDropdownItems: DropdownMenuItem[][] = [];
+type AgentContextTarget = {
+  tabId: string;
+  blockId: string;
+};
 
 const tabEditor = reactive({
   open: false,
@@ -124,7 +128,7 @@ const node = computed(() => {
 
 const activeTabId = computed(() => node.value?.viewState.activeTabId ?? "");
 const isAgentChatVisible = ref(true);
-const agentContextTarget = ref<{ tabId: string; blockId: string } | null>(null);
+const agentContextTargets = ref<AgentContextTarget[]>([]);
 
 const activeTab = computed(() => {
   if (!node.value) {
@@ -152,27 +156,46 @@ const visibleBlocks = computed(() => {
   );
 });
 
-const agentContextState = computed(() => {
-  if (!node.value || !agentContextTarget.value) {
-    return null;
+const agentContextStates = computed(() => {
+  const currentNode = node.value;
+
+  if (!currentNode || agentContextTargets.value.length === 0) {
+    return [];
   }
 
-  const tab = node.value.tabs.find((entry) => entry.id === agentContextTarget.value?.tabId);
+  return agentContextTargets.value.flatMap((target) => {
+    const tab = currentNode.tabs.find((entry) => entry.id === target.tabId);
+    const block = tab?.blocks.find((entry) => entry.id === target.blockId);
 
-  if (!tab) {
-    return null;
+    if (!tab || !block) {
+      return [];
+    }
+
+    return [
+      {
+        tab,
+        block,
+        target,
+        targetKey: getAgentContextTargetKey(target),
+        scopedNode: createAgentContextNode(currentNode, tab, block),
+      },
+    ];
+  });
+});
+const agentContextBadgeItems = computed(() => {
+  const currentNode = node.value;
+
+  if (!currentNode) {
+    return [];
   }
 
-  const block = tab.blocks.find((entry) => entry.id === agentContextTarget.value?.blockId);
-
-  if (!block) {
-    return null;
-  }
-
-  return {
-    tab,
-    block,
-  };
+  return agentContextStates.value.map(({ tab, block, targetKey }) => ({
+    id: targetKey,
+    label: getDisplayBlockTitle(block),
+    title: `${currentNode.title || "Untitled node"} / ${getDisplayTabTitle(tab)}`,
+    tabId: tab.id,
+    blockId: block.id,
+  }));
 });
 
 const agentChatNodes = computed(() => {
@@ -180,19 +203,22 @@ const agentChatNodes = computed(() => {
     return [];
   }
 
-  if (!agentContextState.value) {
+  if (agentContextStates.value.length === 0) {
     return [node.value];
   }
 
-  return [
-    createAgentContextNode(node.value, agentContextState.value.tab, agentContextState.value.block),
-  ];
+  return agentContextStates.value.map((entry) => entry.scopedNode);
 });
 
-watch(agentContextState, (value) => {
-  if (!value && agentContextTarget.value) {
-    agentContextTarget.value = null;
+watch(agentContextStates, (value) => {
+  if (value.length === agentContextTargets.value.length) {
+    return;
   }
+
+  const validKeys = new Set(value.map((entry) => entry.targetKey));
+  agentContextTargets.value = agentContextTargets.value.filter((target) =>
+    validKeys.has(getAgentContextTargetKey(target)),
+  );
 });
 
 const addBlockMenuItems = computed<DropdownMenuItem[][]>(() => {
@@ -554,7 +580,7 @@ function addBlockPresetToActiveTab(presetId: WorkspaceBlockPresetId) {
 
 function removeBlock(tabId: string, blockId: string) {
   if (isAgentContextBlock(tabId, blockId)) {
-    clearAgentContextBlock();
+    removeAgentContextBlock(tabId, blockId);
   }
 
   mutateTab(tabId, (tab) => {
@@ -1206,14 +1232,27 @@ function createAgentContextNode(
   return clonedNode;
 }
 
+function getAgentContextTargetKey(target: AgentContextTarget) {
+  return `${target.tabId}::${target.blockId}`;
+}
+
+function removeAgentContextBlock(tabId: string, blockId: string) {
+  agentContextTargets.value = agentContextTargets.value.filter(
+    (target) => target.tabId !== tabId || target.blockId !== blockId,
+  );
+}
+
 function setAgentContextBlock(tabId: string, blockId: string) {
-  agentContextTarget.value = { tabId, blockId };
+  if (!isAgentContextBlock(tabId, blockId)) {
+    agentContextTargets.value = [...agentContextTargets.value, { tabId, blockId }];
+  }
+
   isAgentChatVisible.value = true;
 }
 
 function toggleAgentContextBlock(tabId: string, blockId: string) {
   if (isAgentContextBlock(tabId, blockId)) {
-    clearAgentContextBlock();
+    removeAgentContextBlock(tabId, blockId);
     return;
   }
 
@@ -1221,11 +1260,13 @@ function toggleAgentContextBlock(tabId: string, blockId: string) {
 }
 
 function clearAgentContextBlock() {
-  agentContextTarget.value = null;
+  agentContextTargets.value = [];
 }
 
 function isAgentContextBlock(tabId: string, blockId: string) {
-  return agentContextTarget.value?.tabId === tabId && agentContextTarget.value?.blockId === blockId;
+  return agentContextTargets.value.some(
+    (target) => target.tabId === tabId && target.blockId === blockId,
+  );
 }
 
 function getBlockSearchText(block: WorkspaceBlock) {
@@ -2195,43 +2236,53 @@ provide(workspaceNodeEditorContextKey, {
         >
           <div class="agent-rail-aura" aria-hidden="true" />
           <div class="sticky top-0 flex h-full min-h-0 flex-col gap-3 p-3">
-            <div
-              v-if="agentContextState"
-              class="rounded-[1.75rem] border border-neutral-200/70 bg-white/92 px-4 py-3 shadow-xl shadow-black/10 backdrop-blur-xl dark:border-neutral-800/70 dark:bg-neutral-950/92"
-            >
-              <div class="flex items-start gap-3">
-                <div
-                  class="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
-                >
-                  <UIcon name="i-lucide-square-dashed-mouse-pointer" class="size-4" />
-                </div>
-                <div class="min-w-0 flex-1">
-                  <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
-                    Block context
-                  </p>
-                  <p class="truncate text-sm font-semibold text-neutral-950 dark:text-neutral-50">
-                    {{ getDisplayBlockTitle(agentContextState.block) }}
-                  </p>
-                  <p class="truncate text-xs text-neutral-500 dark:text-neutral-400">
-                    {{ node.title }} / {{ getDisplayTabTitle(agentContextState.tab) }}
-                  </p>
-                </div>
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  icon="i-lucide-x"
-                  class="rounded-full"
-                  @click="clearAgentContextBlock"
-                />
-              </div>
-            </div>
-
             <div class="min-h-0 flex-1">
               <DashboardAgentChatPanel
                 :nodes="agentChatNodes"
+                scope-kind="blocks"
                 @close="isAgentChatVisible = false"
-              />
+              >
+                <template #scope-badges>
+                  <div
+                    v-if="agentContextBadgeItems.length > 0"
+                    class="flex items-start justify-between gap-2"
+                  >
+                    <div class="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <UBadge
+                        v-for="item in agentContextBadgeItems"
+                        :key="item.id"
+                        :title="item.title"
+                        color="neutral"
+                        variant="soft"
+                        size="sm"
+                        class="group rounded-full pl-2.5 pr-1.5"
+                      >
+                        <span class="max-w-[10rem] truncate text-[11px] font-medium">
+                          {{ item.label }}
+                        </span>
+                        <UButton
+                          color="neutral"
+                          variant="ghost"
+                          size="xs"
+                          icon="i-lucide-x"
+                          class="ml-1 size-4 rounded-full p-0 opacity-0 transition pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                          @click="toggleAgentContextBlock(item.tabId, item.blockId)"
+                        />
+                      </UBadge>
+                    </div>
+
+                    <UButton
+                      v-if="agentContextBadgeItems.length > 1"
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      icon="i-lucide-eraser"
+                      class="shrink-0 rounded-full"
+                      @click="clearAgentContextBlock"
+                    />
+                  </div>
+                </template>
+              </DashboardAgentChatPanel>
             </div>
           </div>
         </div>
@@ -2245,40 +2296,53 @@ provide(workspaceNodeEditorContextKey, {
             : 'pointer-events-none translate-x-8 opacity-0'
         "
       >
-        <div
-          v-if="agentContextState"
-          class="pointer-events-auto rounded-[1.75rem] border border-neutral-200/70 bg-white/92 px-4 py-3 shadow-xl shadow-black/10 backdrop-blur-xl dark:border-neutral-800/70 dark:bg-neutral-950/92"
-        >
-          <div class="flex items-start gap-3">
-            <div
-              class="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
-            >
-              <UIcon name="i-lucide-square-dashed-mouse-pointer" class="size-4" />
-            </div>
-            <div class="min-w-0 flex-1">
-              <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
-                Block context
-              </p>
-              <p class="truncate text-sm font-semibold text-neutral-950 dark:text-neutral-50">
-                {{ getDisplayBlockTitle(agentContextState.block) }}
-              </p>
-              <p class="truncate text-xs text-neutral-500 dark:text-neutral-400">
-                {{ node.title }} / {{ getDisplayTabTitle(agentContextState.tab) }}
-              </p>
-            </div>
-            <UButton
-              color="neutral"
-              variant="ghost"
-              size="xs"
-              icon="i-lucide-x"
-              class="rounded-full"
-              @click="clearAgentContextBlock"
-            />
-          </div>
-        </div>
-
         <div class="pointer-events-auto min-h-0 flex-1">
-          <DashboardAgentChatPanel :nodes="agentChatNodes" @close="isAgentChatVisible = false" />
+          <DashboardAgentChatPanel
+            :nodes="agentChatNodes"
+            scope-kind="blocks"
+            @close="isAgentChatVisible = false"
+          >
+            <template #scope-badges>
+              <div
+                v-if="agentContextBadgeItems.length > 0"
+                class="flex items-start justify-between gap-2"
+              >
+                <div class="flex min-w-0 flex-wrap items-center gap-1.5">
+                  <UBadge
+                    v-for="item in agentContextBadgeItems"
+                    :key="item.id"
+                    :title="item.title"
+                    color="neutral"
+                    variant="soft"
+                    size="sm"
+                    class="group rounded-full pl-2.5 pr-1.5"
+                  >
+                    <span class="max-w-[10rem] truncate text-[11px] font-medium">
+                      {{ item.label }}
+                    </span>
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      icon="i-lucide-x"
+                      class="ml-1 size-4 rounded-full p-0 opacity-0 transition pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                      @click="toggleAgentContextBlock(item.tabId, item.blockId)"
+                    />
+                  </UBadge>
+                </div>
+
+                <UButton
+                  v-if="agentContextBadgeItems.length > 1"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-eraser"
+                  class="shrink-0 rounded-full"
+                  @click="clearAgentContextBlock"
+                />
+              </div>
+            </template>
+          </DashboardAgentChatPanel>
         </div>
       </div>
 
