@@ -26,9 +26,25 @@ import {
   workspaceContentRoiStatusLabels,
 } from "./content";
 import {
+  getCohortFillPercent,
+  getCohortHealth,
+  getCohortHealthScore,
+  getCohortHealthSummary,
+  getCourseRoadmapCourseProgress,
+  getCourseRoadmapSummary,
+  summarizeCourseRoadmapForPreview,
+  workspaceCohortStatusLabels,
+  workspaceCourseStatusLabels,
+} from "./education";
+import {
   collectWorkspaceNodeTasks,
+  getEisenhowerMatrixSummary,
+  getLeadershipRhythmPlannerSummary,
   getTimeOrchestratorSummary,
   getWorkspaceTaskDomainLabel,
+  isLeadershipMeetingMissed,
+  sortLeadershipRhythmMeetings,
+  workspaceLeadershipMeetingStatusLabels,
 } from "./tasks";
 import {
   getAssumptionTrackerSummary,
@@ -334,6 +350,72 @@ function buildWorkspaceNodeDashboardDetail(
     };
   }
 
+  if (block.type === "course-roadmap") {
+    const summary = getCourseRoadmapSummary(block);
+    const highlightedCourses = block.courses
+      .slice()
+      .sort(
+        (left, right) =>
+          getCourseRoadmapCourseProgress(right).completionPercent -
+          getCourseRoadmapCourseProgress(left).completionPercent,
+      )
+      .slice(0, 2);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.courseCount > 0
+          ? `${summary.recordedLessons}/${summary.lessonCount} lessons recorded across ${summary.courseCount} courses.`
+          : "No courses mapped yet.",
+      metrics: [
+        {
+          label: "Courses",
+          value: String(summary.courseCount),
+        },
+        {
+          label: "Recorded",
+          value: `${summary.recordedLessons}/${summary.lessonCount}`,
+        },
+        {
+          label: "Avg progress",
+          value: `${summary.averageCompletionPercent}%`,
+        },
+      ],
+      highlights: highlightedCourses.map((course) => {
+        const progress = getCourseRoadmapCourseProgress(course);
+        return `${course.name}: ${progress.recordedLessons}/${progress.lessonCount}, ${workspaceCourseStatusLabels[course.status]}`;
+      }),
+    };
+  }
+
+  if (block.type === "learning-outcomes-matrix") {
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: trimToEmpty(block.prompt)
+        ? truncateText(block.prompt, 110)
+        : "Outcomes analysis prompt not configured yet.",
+      metrics: [
+        {
+          label: "Runs",
+          value: String(block.outputHistory.length),
+        },
+        {
+          label: "Output",
+          value: trimToEmpty(block.latestOutput) ? "Saved" : "Empty",
+        },
+      ],
+      highlights: trimToEmpty(block.latestOutput) ? [truncateText(block.latestOutput, 110)] : [],
+    };
+  }
+
   if (block.type === "time-orchestrator") {
     const orchestration = getTimeOrchestratorSummary(node, block.settings);
     const estimateHours = Number((orchestration.totalEstimateMinutes / 60).toFixed(1));
@@ -365,6 +447,115 @@ function buildWorkspaceNodeDashboardDetail(
       highlights: orchestration.suggestedNextActions
         .slice(0, 2)
         .map(({ task }) => formatDashboardTaskLine(task)),
+    };
+  }
+
+  if (block.type === "cohort-health-dashboard") {
+    const summary = getCohortHealthSummary(block);
+    const prioritizedCohorts = block.cohorts
+      .slice()
+      .sort((left, right) => getCohortHealthScore(left) - getCohortHealthScore(right))
+      .slice(0, 2);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.cohortCount > 0
+          ? `${summary.atRiskCount} at-risk cohorts with ${summary.fillPercent}% capacity filled overall.`
+          : "No cohorts tracked yet.",
+      metrics: [
+        {
+          label: "Seats sold",
+          value: `${summary.totalSeatsSold}/${summary.totalCapacity}`,
+        },
+        {
+          label: "Fill",
+          value: `${summary.fillPercent}%`,
+        },
+        {
+          label: "Revenue",
+          value: formatEgpValue(summary.bookedRevenueEgp),
+        },
+      ],
+      highlights: prioritizedCohorts.map(
+        (cohort) =>
+          `${cohort.name}: ${getCohortFillPercent(cohort)}% full, ${workspaceCohortStatusLabels[cohort.status]}, ${getCohortHealth(cohort)}`,
+      ),
+    };
+  }
+
+  if (block.type === "eisenhower-matrix") {
+    const summary = getEisenhowerMatrixSummary(block);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.totalTaskCount > 0
+          ? `${summary.prioritizedTasks.filter((task) => !task.completed).length} open tasks sorted across four priority quadrants.`
+          : "No tasks added yet.",
+      metrics: [
+        {
+          label: "Load",
+          value: `${Number((summary.totalEstimateMinutes / 60).toFixed(1))}h`,
+        },
+        {
+          label: "Overdue",
+          value: String(summary.overdueCount),
+        },
+        {
+          label: "Done",
+          value: String(summary.completedCount),
+        },
+      ],
+      highlights: summary.prioritizedTasks
+        .filter((task) => !task.completed)
+        .slice(0, 2)
+        .map((task) => formatDashboardTaskLine(task)),
+    };
+  }
+
+  if (block.type === "leadership-rhythm-planner") {
+    const summary = getLeadershipRhythmPlannerSummary(block);
+    const highlightedMeetings = sortLeadershipRhythmMeetings(block.meetings)
+      .filter((meeting) => isLeadershipMeetingMissed(meeting) || meeting.status === "scheduled")
+      .slice(0, 2);
+
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary:
+        summary.totalMeetings > 0
+          ? `${summary.cadenceHealthPercent}% cadence health with ${summary.upcomingCount} meetings upcoming.`
+          : "No recurring meetings planned yet.",
+      metrics: [
+        {
+          label: "Upcoming",
+          value: String(summary.upcomingCount),
+        },
+        {
+          label: "Missed",
+          value: String(summary.missedCount),
+        },
+        {
+          label: "Health",
+          value: `${summary.cadenceHealthPercent}%`,
+        },
+      ],
+      highlights: highlightedMeetings.map(
+        (meeting) =>
+          `${meeting.name}: ${workspaceLeadershipMeetingStatusLabels[meeting.status]}${meeting.nextDate ? ` (${meeting.nextDate})` : ""}`,
+      ),
     };
   }
 
@@ -1297,6 +1488,44 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
 
       if (block.type === "decision" && trimToEmpty(block.recommendation)) {
         return truncateText(block.recommendation, maxLength);
+      }
+
+      if (block.type === "course-roadmap" && block.courses.length > 0) {
+        return truncateText(summarizeCourseRoadmapForPreview(block), maxLength);
+      }
+
+      if (block.type === "learning-outcomes-matrix" && trimToEmpty(block.prompt)) {
+        return truncateText(
+          `${block.title}: ${trimToEmpty(block.latestOutput) ? "analysis saved" : trimToEmpty(block.prompt)}`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "cohort-health-dashboard" && block.cohorts.length > 0) {
+        const summary = getCohortHealthSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.totalSeatsSold}/${summary.totalCapacity} seats sold, ${summary.fillPercent}% filled, ${summary.atRiskCount} at-risk cohorts.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "eisenhower-matrix" && block.tasks.length > 0) {
+        const summary = getEisenhowerMatrixSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.prioritizedTasks.filter((task) => !task.completed).length} open tasks, ${summary.overdueCount} overdue, ${summary.completedCount} completed.`,
+          maxLength,
+        );
+      }
+
+      if (block.type === "leadership-rhythm-planner" && block.meetings.length > 0) {
+        const summary = getLeadershipRhythmPlannerSummary(block);
+
+        return truncateText(
+          `${block.title}: ${summary.cadenceHealthPercent}% cadence health with ${summary.upcomingCount} upcoming and ${summary.missedCount} missed meetings.`,
+          maxLength,
+        );
       }
 
       if (block.type === "kanban" && block.cards.length > 0) {

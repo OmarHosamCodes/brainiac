@@ -10,6 +10,8 @@ import {
   workspaceAiPromptBlockSchema,
   workspaceAssumptionTrackerBlockSchema,
   workspaceBusinessModelCanvasBlockSchema,
+  workspaceCohortHealthCohortSchema,
+  workspaceCohortHealthDashboardBlockSchema,
   workspaceCollectionsTrackerBlockSchema,
   workspaceContentPipelineBlockSchema,
   workspaceContentPipelineItemSchema,
@@ -17,6 +19,10 @@ import {
   workspaceContentQualityScoresSchema,
   workspaceContentRoiItemSchema,
   workspaceContentRoiTrackerBlockSchema,
+  workspaceCourseRoadmapBlockSchema,
+  workspaceCourseRoadmapCourseSchema,
+  workspaceCourseRoadmapLessonSchema,
+  workspaceCourseRoadmapOutcomeSchema,
   workspaceCustomBlockSchema,
   workspaceCustomBlockTemplateSchema,
   workspaceDealScoringDealSchema,
@@ -27,6 +33,7 @@ import {
   workspaceDecisionMatrixCriterionSchema,
   workspaceDecisionMatrixOptionSchema,
   workspaceDecisionBlockSchema,
+  workspaceEisenhowerMatrixBlockSchema,
   workspaceExpenseItemSchema,
   workspaceForecastConfidenceBoardBlockSchema,
   workspaceForecastConfidenceItemSchema,
@@ -35,6 +42,9 @@ import {
   workspaceKanbanBlockSchema,
   workspaceKanbanCardSchema,
   workspaceKanbanColumnSchema,
+  workspaceLeadershipRhythmMeetingSchema,
+  workspaceLeadershipRhythmPlannerBlockSchema,
+  workspaceLearningOutcomesMatrixBlockSchema,
   workspaceMessageHouseBlockSchema,
   workspaceMessageHousePillarSchema,
   workspaceNodeDashboardSchema,
@@ -69,6 +79,7 @@ import {
   workspaceTrackerBlockSchema,
 } from "./schemas";
 import { createWorkspaceContentQualityScoreMap } from "./content";
+import { createWorkspaceLeadershipRhythmFilter } from "./tasks";
 import { createWorkspaceSkillsScoreMap } from "./people";
 import { getNowIsoString } from "./shared";
 import { createWorkspaceTimeOrchestratorSettings } from "./tasks";
@@ -79,6 +90,8 @@ import type {
   WorkspaceAssumptionTrackerBlock,
   WorkspaceBusinessModelCanvasBlock,
   WorkspaceBlock,
+  WorkspaceCohortHealthCohort,
+  WorkspaceCohortHealthDashboardBlock,
   WorkspaceCollectionsTrackerBlock,
   WorkspaceContentPipelineBlock,
   WorkspaceContentPipelineItem,
@@ -86,6 +99,10 @@ import type {
   WorkspaceContentQualityScores,
   WorkspaceContentRoiItem,
   WorkspaceContentRoiTrackerBlock,
+  WorkspaceCourseRoadmapBlock,
+  WorkspaceCourseRoadmapCourse,
+  WorkspaceCourseRoadmapLesson,
+  WorkspaceCourseRoadmapOutcome,
   WorkspaceCustomBlock,
   WorkspaceCustomBlockField,
   WorkspaceCustomBlockTemplate,
@@ -97,6 +114,7 @@ import type {
   WorkspaceDecisionMatrixCriterion,
   WorkspaceDecisionMatrixOption,
   WorkspaceDecisionBlock,
+  WorkspaceEisenhowerMatrixBlock,
   WorkspaceExpenseItem,
   WorkspaceForecastConfidenceBoardBlock,
   WorkspaceForecastConfidenceItem,
@@ -105,6 +123,9 @@ import type {
   WorkspaceKanbanBlock,
   WorkspaceKanbanCard,
   WorkspaceKanbanColumn,
+  WorkspaceLeadershipRhythmMeeting,
+  WorkspaceLeadershipRhythmPlannerBlock,
+  WorkspaceLearningOutcomesMatrixBlock,
   WorkspaceMessageHouseBlock,
   WorkspaceMessageHousePillar,
   WorkspaceNode,
@@ -143,6 +164,7 @@ export * from "./constants";
 export * from "./brand";
 export * from "./content";
 export * from "./dashboard";
+export * from "./education";
 export * from "./finance";
 export * from "./people";
 export * from "./sales";
@@ -172,6 +194,38 @@ export function createWorkspaceTask(partial: Partial<WorkspaceTask> = {}): Works
     urgency: partial.urgency ?? 5,
     importance: partial.importance ?? 5,
     estimateMinutes: partial.estimateMinutes ?? 30,
+  });
+}
+
+export function createWorkspaceCourseRoadmapLesson(
+  partial: Partial<WorkspaceCourseRoadmapLesson> = {},
+): WorkspaceCourseRoadmapLesson {
+  return workspaceCourseRoadmapLessonSchema.parse({
+    id: partial.id ?? createWorkspaceId("lesson"),
+    title: partial.title ?? "New lesson",
+    recorded: partial.recorded ?? false,
+  });
+}
+
+export function createWorkspaceCourseRoadmapOutcome(
+  partial: Partial<WorkspaceCourseRoadmapOutcome> = {},
+): WorkspaceCourseRoadmapOutcome {
+  return workspaceCourseRoadmapOutcomeSchema.parse({
+    id: partial.id ?? createWorkspaceId("outcome"),
+    text: partial.text ?? "Outcome",
+  });
+}
+
+export function createWorkspaceCourseRoadmapCourse(
+  partial: Partial<WorkspaceCourseRoadmapCourse> = {},
+): WorkspaceCourseRoadmapCourse {
+  return workspaceCourseRoadmapCourseSchema.parse({
+    id: partial.id ?? createWorkspaceId("course"),
+    name: partial.name ?? "New course",
+    status: partial.status ?? "planning",
+    lessons: partial.lessons ?? [createWorkspaceCourseRoadmapLesson({ title: "Lesson 1" })],
+    outcomes:
+      partial.outcomes ?? [createWorkspaceCourseRoadmapOutcome({ text: "Primary learning outcome" })],
   });
 }
 
@@ -332,6 +386,38 @@ export function createWorkspaceReceivableInvoice(
     status: partial.status ?? "due-soon",
     notes: partial.notes ?? "",
     paidAt: partial.paidAt ?? null,
+  });
+}
+
+export function createWorkspaceCohortHealthCohort(
+  partial: Partial<WorkspaceCohortHealthCohort> = {},
+): WorkspaceCohortHealthCohort {
+  return workspaceCohortHealthCohortSchema.parse({
+    id: partial.id ?? createWorkspaceId("cohort"),
+    name: partial.name ?? "New cohort",
+    seatsSold: partial.seatsSold ?? 0,
+    capacity: partial.capacity ?? 20,
+    revenueEgp: partial.revenueEgp ?? 0,
+    startDate: partial.startDate ?? null,
+    status: partial.status ?? "planning",
+    refundRisk: partial.refundRisk ?? false,
+    completionRisk: partial.completionRisk ?? false,
+  });
+}
+
+export function createWorkspaceLeadershipRhythmMeeting(
+  partial: Partial<WorkspaceLeadershipRhythmMeeting> = {},
+): WorkspaceLeadershipRhythmMeeting {
+  return workspaceLeadershipRhythmMeetingSchema.parse({
+    id: partial.id ?? createWorkspaceId("meeting"),
+    name: partial.name ?? "Leadership meeting",
+    rhythm: partial.rhythm ?? "weekly",
+    owner: partial.owner ?? "",
+    participants: partial.participants ?? "",
+    purpose: partial.purpose ?? "",
+    durationMinutes: partial.durationMinutes ?? 60,
+    nextDate: partial.nextDate ?? null,
+    status: partial.status ?? "scheduled",
   });
 }
 
@@ -927,6 +1013,219 @@ function getCollectionsTrackerDefaultInvoices() {
   ];
 }
 
+function getCourseRoadmapDefaultCourses() {
+  return [
+    createWorkspaceCourseRoadmapCourse({
+      name: "Content Marketing Mastery",
+      status: "in-progress",
+      lessons: [
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 1: Market Positioning Foundations",
+          recorded: true,
+        }),
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 2: Audience Research and Insight Mining",
+          recorded: true,
+        }),
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 3: Offer-Messaging Alignment",
+        }),
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 4: Content Systems and Editorial Planning",
+        }),
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 5: Distribution and Repurposing",
+        }),
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 6: Measurement and Optimization",
+        }),
+      ],
+      outcomes: [
+        createWorkspaceCourseRoadmapOutcome({
+          text: "Build a content strategy linked to a commercial goal.",
+        }),
+        createWorkspaceCourseRoadmapOutcome({
+          text: "Translate audience insight into stronger content angles and offers.",
+        }),
+        createWorkspaceCourseRoadmapOutcome({
+          text: "Run a repeatable system for planning, publishing, and reviewing content.",
+        }),
+      ],
+    }),
+    createWorkspaceCourseRoadmapCourse({
+      name: "Agency Growth Blueprint",
+      status: "planning",
+      lessons: [
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 1: Agency Positioning and Offer Clarity",
+        }),
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 2: Productized Services",
+        }),
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 3: Lead Generation Systems",
+        }),
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 4: Sales Calls and Qualification",
+        }),
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 5: Delivery Capacity and Team Design",
+        }),
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 6: Pricing and Margin Discipline",
+        }),
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 7: Retention and Expansion",
+        }),
+        createWorkspaceCourseRoadmapLesson({
+          title: "Module 8: Operating Rhythm and Reporting",
+        }),
+      ],
+      outcomes: [
+        createWorkspaceCourseRoadmapOutcome({
+          text: "Package agency services around measurable outcomes instead of custom chaos.",
+        }),
+        createWorkspaceCourseRoadmapOutcome({
+          text: "Install a sales and delivery rhythm that supports profitable growth.",
+        }),
+        createWorkspaceCourseRoadmapOutcome({
+          text: "Spot capacity and pricing problems before they damage cash flow.",
+        }),
+      ],
+    }),
+  ];
+}
+
+function getCohortHealthDefaultCohorts() {
+  return [
+    createWorkspaceCohortHealthCohort({
+      name: "Content Marketing Mastery Q2",
+      seatsSold: 18,
+      capacity: 25,
+      revenueEgp: 270_000,
+      startDate: "2026-04-21",
+      status: "selling",
+      refundRisk: false,
+      completionRisk: false,
+    }),
+    createWorkspaceCohortHealthCohort({
+      name: "Agency Growth Blueprint Q2",
+      seatsSold: 6,
+      capacity: 20,
+      revenueEgp: 90_000,
+      startDate: "2026-05-12",
+      status: "selling",
+      refundRisk: true,
+      completionRisk: true,
+    }),
+  ];
+}
+
+function getEisenhowerMatrixDefaultTasks() {
+  return [
+    createWorkspaceTask({
+      text: "Approve EduStart proposal revisions",
+      domain: "sales",
+      urgency: 9,
+      importance: 9,
+      estimateMinutes: 45,
+      dueDate: "2026-03-30",
+      priority: "high",
+    }),
+    createWorkspaceTask({
+      text: "Finalize Content Marketing Mastery module 3 recording brief",
+      domain: "education",
+      urgency: 8,
+      importance: 8,
+      estimateMinutes: 90,
+      dueDate: "2026-03-31",
+      priority: "high",
+    }),
+    createWorkspaceTask({
+      text: "Review Q2 hiring scorecards for growth operator candidates",
+      domain: "people",
+      urgency: 5,
+      importance: 8,
+      estimateMinutes: 60,
+      dueDate: "2026-04-02",
+      priority: "medium",
+    }),
+    createWorkspaceTask({
+      text: "Draft April authority content themes",
+      domain: "content",
+      urgency: 6,
+      importance: 7,
+      estimateMinutes: 120,
+      dueDate: "2026-04-03",
+      priority: "medium",
+    }),
+    createWorkspaceTask({
+      text: "Clean up low-value finance reporting requests",
+      domain: "finance",
+      urgency: 7,
+      importance: 3,
+      estimateMinutes: 40,
+      dueDate: "2026-03-29",
+      priority: "low",
+    }),
+  ];
+}
+
+function getLeadershipRhythmDefaultMeetings() {
+  return [
+    createWorkspaceLeadershipRhythmMeeting({
+      name: "Weekly Leadership Meeting",
+      rhythm: "weekly",
+      owner: "Omar",
+      participants: "Leadership team",
+      purpose: "Review priorities, blockers, and execution commitments for the week.",
+      durationMinutes: 60,
+      nextDate: "2026-03-30",
+      status: "scheduled",
+    }),
+    createWorkspaceLeadershipRhythmMeeting({
+      name: "Sales Forecast Review",
+      rhythm: "weekly",
+      owner: "Omar",
+      participants: "Sales lead, finance lead",
+      purpose: "Stress-test the forecast, next closes, and blocked deals.",
+      durationMinutes: 45,
+      nextDate: "2026-04-01",
+      status: "scheduled",
+    }),
+    createWorkspaceLeadershipRhythmMeeting({
+      name: "Finance Review",
+      rhythm: "monthly",
+      owner: "Karim",
+      participants: "Founder, finance lead",
+      purpose: "Review margin, collections, and budget pressure points.",
+      durationMinutes: 60,
+      nextDate: "2026-03-25",
+      status: "missed",
+    }),
+    createWorkspaceLeadershipRhythmMeeting({
+      name: "Hiring Review",
+      rhythm: "monthly",
+      owner: "Layla",
+      participants: "Founder, people lead",
+      purpose: "Decide on open roles, candidate flow, and seat coverage risks.",
+      durationMinutes: 50,
+      nextDate: "2026-04-08",
+      status: "scheduled",
+    }),
+    createWorkspaceLeadershipRhythmMeeting({
+      name: "Strategic Review",
+      rhythm: "quarterly",
+      owner: "Omar",
+      participants: "Leadership team",
+      purpose: "Revisit strategic bets, operating assumptions, and quarter-level shifts.",
+      durationMinutes: 120,
+      nextDate: "2026-04-15",
+      status: "needs-reschedule",
+    }),
+  ];
+}
+
 function getTalentGridDefaultMembers() {
   return [
     createWorkspaceTalentGridMember({
@@ -1120,6 +1419,42 @@ export function createWorkspaceAiPromptBlock(
   });
 }
 
+export function createWorkspaceCourseRoadmapBlock(
+  partial: Partial<WorkspaceCourseRoadmapBlock> = {},
+): WorkspaceCourseRoadmapBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceCourseRoadmapBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "course-roadmap",
+    title: partial.title ?? "Course roadmap",
+    courses: partial.courses ?? getCourseRoadmapDefaultCourses(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceLearningOutcomesMatrixBlock(
+  partial: Partial<WorkspaceLearningOutcomesMatrixBlock> = {},
+): WorkspaceLearningOutcomesMatrixBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceLearningOutcomesMatrixBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "learning-outcomes-matrix",
+    title: partial.title ?? "Outcomes matrix",
+    courseBlockId: partial.courseBlockId ?? null,
+    courseId: partial.courseId ?? null,
+    prompt:
+      partial.prompt ??
+      "Design a learning outcomes matrix for my Content Marketing Mastery course.",
+    latestOutput: partial.latestOutput ?? "",
+    outputHistory: partial.outputHistory ?? [],
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
 export function createWorkspaceTimeOrchestratorBlock(
   partial: Partial<WorkspaceTimeOrchestratorBlock> = {},
 ): WorkspaceTimeOrchestratorBlock {
@@ -1130,6 +1465,54 @@ export function createWorkspaceTimeOrchestratorBlock(
     type: "time-orchestrator",
     title: partial.title ?? "Time orchestrator",
     settings: createWorkspaceTimeOrchestratorSettings(partial.settings),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceCohortHealthDashboardBlock(
+  partial: Partial<WorkspaceCohortHealthDashboardBlock> = {},
+): WorkspaceCohortHealthDashboardBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceCohortHealthDashboardBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "cohort-health-dashboard",
+    title: partial.title ?? "Cohort health dashboard",
+    cohorts: partial.cohorts ?? getCohortHealthDefaultCohorts(),
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceEisenhowerMatrixBlock(
+  partial: Partial<WorkspaceEisenhowerMatrixBlock> = {},
+): WorkspaceEisenhowerMatrixBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceEisenhowerMatrixBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "eisenhower-matrix",
+    title: partial.title ?? "Eisenhower matrix",
+    tasks: partial.tasks ?? getEisenhowerMatrixDefaultTasks(),
+    latestBattlePlan: partial.latestBattlePlan ?? "",
+    battlePlanUpdatedAt: partial.battlePlanUpdatedAt ?? null,
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createWorkspaceLeadershipRhythmPlannerBlock(
+  partial: Partial<WorkspaceLeadershipRhythmPlannerBlock> = {},
+): WorkspaceLeadershipRhythmPlannerBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceLeadershipRhythmPlannerBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "leadership-rhythm-planner",
+    title: partial.title ?? "Leadership rhythm planner",
+    filter: partial.filter ?? createWorkspaceLeadershipRhythmFilter(undefined),
+    meetings: partial.meetings ?? getLeadershipRhythmDefaultMeetings(),
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
   });
@@ -1828,10 +2211,42 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         latestOutput: block.latestOutput ?? "",
         outputHistory: block.outputHistory ?? [],
       });
+    case "course-roadmap":
+      return workspaceCourseRoadmapBlockSchema.parse({
+        ...block,
+        courses: block.courses ?? [],
+      });
+    case "learning-outcomes-matrix":
+      return workspaceLearningOutcomesMatrixBlockSchema.parse({
+        ...block,
+        courseBlockId: block.courseBlockId ?? null,
+        courseId: block.courseId ?? null,
+        prompt: block.prompt ?? "",
+        latestOutput: block.latestOutput ?? "",
+        outputHistory: block.outputHistory ?? [],
+      });
     case "time-orchestrator":
       return workspaceTimeOrchestratorBlockSchema.parse({
         ...block,
         settings: createWorkspaceTimeOrchestratorSettings(block.settings),
+      });
+    case "cohort-health-dashboard":
+      return workspaceCohortHealthDashboardBlockSchema.parse({
+        ...block,
+        cohorts: block.cohorts ?? [],
+      });
+    case "eisenhower-matrix":
+      return workspaceEisenhowerMatrixBlockSchema.parse({
+        ...block,
+        tasks: block.tasks ?? [],
+        latestBattlePlan: block.latestBattlePlan ?? "",
+        battlePlanUpdatedAt: block.battlePlanUpdatedAt ?? null,
+      });
+    case "leadership-rhythm-planner":
+      return workspaceLeadershipRhythmPlannerBlockSchema.parse({
+        ...block,
+        filter: createWorkspaceLeadershipRhythmFilter(block.filter),
+        meetings: block.meetings ?? [],
       });
     case "kanban":
       return normalizeWorkspaceKanbanBlock(block);
@@ -2130,11 +2545,73 @@ export function cloneWorkspaceBlockForInsertion(
         createdAt: timestamp,
         updatedAt: timestamp,
       });
+    case "course-roadmap":
+      return workspaceCourseRoadmapBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        courses: block.courses.map((course) => ({
+          ...course,
+          id: createWorkspaceId("course"),
+          lessons: course.lessons.map((lesson) => ({
+            ...lesson,
+            id: createWorkspaceId("lesson"),
+          })),
+          outcomes: course.outcomes.map((outcome) => ({
+            ...outcome,
+            id: createWorkspaceId("outcome"),
+          })),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "learning-outcomes-matrix":
+      return workspaceLearningOutcomesMatrixBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        courseBlockId: null,
+        courseId: null,
+        outputHistory: clonePromptOutputsForInsertion(block.outputHistory),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
     case "time-orchestrator":
       return workspaceTimeOrchestratorBlockSchema.parse({
         ...block,
         id: createWorkspaceId("block"),
         settings: createWorkspaceTimeOrchestratorSettings(block.settings),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "cohort-health-dashboard":
+      return workspaceCohortHealthDashboardBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        cohorts: block.cohorts.map((cohort) => ({
+          ...cohort,
+          id: createWorkspaceId("cohort"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "eisenhower-matrix":
+      return workspaceEisenhowerMatrixBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        tasks: block.tasks.map((task) => ({
+          ...task,
+          id: createWorkspaceId("task"),
+        })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "leadership-rhythm-planner":
+      return workspaceLeadershipRhythmPlannerBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        meetings: block.meetings.map((meeting) => ({
+          ...meeting,
+          id: createWorkspaceId("meeting"),
+        })),
         createdAt: timestamp,
         updatedAt: timestamp,
       });

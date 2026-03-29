@@ -151,6 +151,48 @@ export const workspaceAddBlockCategories = [
     ],
   },
   {
+    id: "education",
+    label: "Education",
+    items: [
+      {
+        blockType: "course-roadmap",
+        label: "Course roadmap",
+        icon: "i-lucide-book-open",
+      },
+      {
+        blockType: "learning-outcomes-matrix",
+        label: "Learning outcomes matrix",
+        icon: "i-lucide-graduation-cap",
+      },
+      {
+        blockType: "cohort-health-dashboard",
+        label: "Cohort health dashboard",
+        icon: "i-lucide-users",
+      },
+    ],
+  },
+  {
+    id: "time-orchestrator",
+    label: "Time Orchestrator",
+    items: [
+      {
+        blockType: "time-orchestrator",
+        label: "Time orchestrator",
+        icon: "i-lucide-calendar-range",
+      },
+      {
+        blockType: "eisenhower-matrix",
+        label: "Eisenhower matrix",
+        icon: "i-lucide-layout-grid",
+      },
+      {
+        blockType: "leadership-rhythm-planner",
+        label: "Leadership rhythm planner",
+        icon: "i-lucide-repeat",
+      },
+    ],
+  },
+  {
     id: "general",
     label: "General",
     items: [
@@ -168,11 +210,6 @@ export const workspaceAddBlockCategories = [
         blockType: "ai-prompt",
         label: "AI prompt",
         icon: "i-lucide-sparkles",
-      },
-      {
-        blockType: "time-orchestrator",
-        label: "Time orchestrator",
-        icon: "i-lucide-calendar-range",
       },
       {
         blockType: "kanban",

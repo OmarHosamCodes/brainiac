@@ -1,153 +1,149 @@
-**BRAND**
+**EDUCATION**
 
-**Block 1: Authority Scorecard**
+**Block 1: Course Roadmap**
 
-**What it is:** A 6-metric dashboard tracking Ahmed's thought leadership presence with targets.
-
-**Metrics tracked (each with a target):**
-
-Posts/Month (target: 20)
-
-Videos/Month (target: 8)
-
-Speaking Gigs (target: 2)
-
-Podcast Appearances (target: 2)
-
-Media Features (target: 4)
-
-Followers (target: 10,000)
+**What it is:** A visual progress tracker for courses with clickable lesson completion.
 
 **How it works:**
 
-6 cards in a 3×2 grid, each showing: icon, current value (large number), metric label, progress bar (% of target), target text
+Each course is a card showing: name, recorded/total count, completion %, status pill (in-progress/planning), and a progress bar
 
-Click any card to increment the value by 1
+Lesson flow: Horizontal pill buttons for each lesson (numbered), color-coded: green with checkmark (recorded) vs gray (pending)
 
-Progress bars color-coded: green (≥75% of target), yellow (≥40%), red (<40%)
+Click any lesson to toggle its recorded status - progress bar and percentage update instantly
 
-**Pre-loaded data:** Posts: 12, Videos: 4, Speaking: 1, Podcasts: 0, Features: 2, Followers: 5,400
-
-**Block 2: Hook Bank**
-
-**What it is:** A scored, categorized library of content hook templates.
-
-**How it works:**
-
-Hooks sorted by score (highest first)
-
-Each hook shows: category pill (pattern-interrupt, investment, mistake, insider, etc.), hook text, and a 10-bar visual score indicator
-
-Click the score bars to set the score (1-10) - visual bars fill accordingly
-
-"Add Hook" button - creates a blank hook entry
-
-"AI Generate" button - sends a prompt to the Brand agent to generate 5 new hooks
-
-**Pre-loaded data:** 6 hooks across categories with scores 7-9.
-
-**Block 3: Message House**
-
-**What it is:** A core brand messaging framework that locks the brand promise, key pillars, proof points, and voice rules in one place.
-
-**Layout:**
-
-Top: Brand Promise (full-width hero statement)
-
-Middle row: Pillar 1 | Pillar 2 | Pillar 3
-
-Bottom row: Audience Pains | Proof Points | Voice Principles
-
-**How it works:**
-
-Each section is an editable text block with placeholder guidance
-
-The three pillars define the main repeatable messages the brand should stand on
-
-Proof Points capture evidence that supports the promise
-
-Voice Principles keep scripts, posts, and brand assets consistent across the team
-
-An "AI Stress-Test" button sends the full message house to the Brand agent to find gaps, contradictions, or weak proof
+Learning outcomes listed below (checkmarks)
 
 **Pre-loaded data:**
 
-Brand Promise and 3 messaging pillars are pre-filled with School of Marketing positioning defaults.
+"Content Marketing Mastery" - 6 modules, 2 recorded (33%), with outcomes
 
-**FINANCE**
+"Agency Growth Blueprint" - 8 modules, 0 recorded (0%), with outcomes
 
-**Block 1: Profitability & Cash Flow**
+**Block 2: Outcomes Matrix (AI-Powered)**
 
-**What it is:** A financial overview showing revenue, expenses, profit, margins, and per-client profitability.
-
-**Top section - 4 KPI cards:**
-
-Revenue (green), Expenses (red), Profit (color-coded), Margin %
-
-**Client breakdown:**
-
-Each client row shows: name, payment status pill (paid/overdue/partial), health percentage bar, revenue, cost, and calculated margin percentage
-
-Margin color-coded: green (>40%), yellow (>20%), red (≤20%)
-
-**Expense breakdown:**
-
-Category list (Salaries, Tools, Office, Marketing) with proportional bars showing % of total expenses
-
-**Pre-loaded data:** 4 clients with revenue, costs, and payment statuses. 4 expense categories.
-
-**Block 2: Pricing Simulator**
-
-**What it is:** An interactive financial model with 4 adjustable variables that calculates pricing scenarios in real time.
-
-**Input sliders:**
-
-Hours/Client/Month (5-100)
-
-Hourly Rate in EGP (100-2,000)
-
-Monthly Overhead in EGP (10K-200K)
-
-Target Margin % (10-80%)
-
-**Output cards (auto-calculated):**
-
-Projected Revenue = Rate × Hours × 4 weeks × Clients
-
-Minimum Retainer/Client = Overhead ÷ (1 - Margin%) ÷ Clients ÷ 4
-
-Projected Profit = Revenue - Overhead
-
-**Use cases:** "What if I raise rates by 20%?", "Can I afford to hire?", "What's the minimum retainer I should accept?"
-
-**Block 3: Collections & Receivables Tracker**
-
-**What it is:** A cash collection tracker for outstanding invoices, follow-ups, and overdue risk.
+**What it is:** An AI-generated learning outcomes analysis. One-click triggers the Education agent to design a detailed outcomes matrix mapping modules to skills, knowledge, and behaviors.
 
 **How it works:**
 
-Top KPI cards show: Total Outstanding, Overdue Amount, Due This Week, and Collected This Month
+Shows the prompt: "Design a learning outcomes matrix for my Content Marketing Mastery course..."
 
-Each invoice row shows: client name, invoice amount, due date, days overdue, collection owner, next follow-up date, and payment status pill
+"Run AI Analysis" button sends the prompt to the Education agent with full course context
 
-Payment status states: Paid (green), Due Soon (yellow), Partial (indigo), Overdue (red)
+Response renders as a formatted text block
 
-Risk level is auto-highlighted based on amount and delay length so finance can focus where cash is most exposed
+**Block 3: Cohort / Enrollment Health Dashboard**
+
+**What it is:** A dashboard showing the commercial and operational health of each training cohort or program intake.
+
+**How it works:**
+
+Each cohort card shows: cohort name, seats sold / total capacity, revenue, start date, status pill, and overall health score
+
+Risk indicators flag low fill rate, high refund exposure, and weak completion outlook
+
+A utilization bar visualizes how full each cohort is
+
+Top KPI cards show: Total Seats Sold, Capacity Filled %, Booked Revenue, and At-Risk Cohorts
 
 **Interactive elements:**
 
-Inline editing for client, owner, and follow-up notes
+Inline editing for cohort name and revenue
 
-Date picker for due date and next follow-up
+Seat counters update sold / capacity numbers
 
-Status dropdown per invoice
+Status pill toggle - Planning / Selling / Running / Completed
 
-"Add Invoice" button - creates a new receivable row
+Risk flag toggle for refund risk and completion risk
 
-Quick filter - show only overdue, high-risk, or due-this-week invoices
+"Add Cohort" button - creates a new cohort card
 
 **Pre-loaded data:**
 
-4 invoices: one paid, one due soon, one partial, and one overdue by 18 days
+2 cohorts: Content Marketing Mastery Q2 (18/25 seats sold, healthy) and Agency Growth Blueprint Q2 (6/20 seats sold, at risk)
 
-**Use cases:** Improve cash discipline, reduce aging receivables, make follow-up ownership visible.
+**Use cases:** Monitor enrollment performance, decide when to push marketing harder, detect weak cohorts early.
+
+**TIME ORCHESTRATOR**
+
+**Block 1: Eisenhower Matrix**
+
+**What it is:** A complete time management system that auto-sorts tasks from ALL domains into a 4-quadrant priority matrix with KPIs and time allocation analysis.
+
+**Top KPI bar (4 cards):**
+
+Total Task Time (hours + minutes)
+
+Overdue count (red)
+
+Completed count (green)
+
+Active domains count
+
+**Eisenhower 2×2 Grid:**
+
+DO NOW (urgent + important, red): Tasks with urgency ≥7 AND importance ≥7
+
+SCHEDULE (not urgent + important, indigo): Urgency <7, Importance ≥7
+
+DELEGATE (urgent + not important, yellow): Urgency ≥7, Importance <7
+
+ELIMINATE (not urgent + not important, gray): Both <7
+
+Each task shows: checkbox (mark done), task name, domain pill (color-coded to that domain), time estimate pill, OVERDUE badge if past due.
+
+**Domain Time Allocation:**
+
+Horizontal bar chart showing how many hours are allocated to each domain
+
+Bars colored to match each domain's theme color
+
+Sorted by time descending
+
+**Task Editor (below matrix):**
+
+Full task list sorted by urgency×importance score (highest first)
+
+Each task row has: completion checkbox, editable name, domain dropdown, urgency slider (1-10, red), importance slider (1-10, indigo), time estimate (minutes input), delete button
+
+"Add Task" button - creates new task
+
+"AI Prioritize" button - sends entire task list to Orchestrator agent for a battle plan
+
+**Pre-loaded data:** 5 tasks across sales, content, education, people, and finance domains with varied urgency/importance scores and due dates.
+
+**Block 2: Leadership Rhythm Planner**
+
+**What it is:** A recurring management cadence planner for the CEO and leadership team.
+
+**How it works:**
+
+Meetings are grouped by rhythm: Weekly, Monthly, Quarterly
+
+Each meeting row shows: meeting name, owner, participants, purpose, duration, next date, and status
+
+Status states: Scheduled, Missed, Done, Needs Reschedule
+
+A cadence health bar shows how much of the core management rhythm is currently scheduled and on track
+
+The planner makes invisible management work visible - especially reviews that are slipping or missing entirely
+
+**Interactive elements:**
+
+"Add Recurring Meeting" button - creates a new meeting row
+
+Frequency dropdown - Weekly / Monthly / Quarterly
+
+Date picker for next occurrence
+
+Status toggle buttons per row
+
+Inline editing for owner, participants, and purpose
+
+Filter toggle - show only missed or upcoming meetings
+
+**Pre-loaded data:**
+
+5 recurring meetings: Weekly Leadership Meeting, Sales Forecast Review, Finance Review, Hiring Review, and Strategic Review
+
+**Use cases:** Build a reliable executive cadence, prevent important reviews from disappearing, improve management discipline across domains.

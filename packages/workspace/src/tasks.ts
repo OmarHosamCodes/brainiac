@@ -1,14 +1,31 @@
-import { WORKSPACE_TASK_DOMAINS, WORKSPACE_TASK_QUADRANTS } from "./constants";
-import { workspaceTimeOrchestratorSettingsSchema } from "./schemas";
+import {
+  WORKSPACE_TASK_DOMAINS,
+  WORKSPACE_TASK_QUADRANTS,
+} from "./constants";
+import {
+  workspaceLeadershipRhythmFilterSchema,
+  workspaceTimeOrchestratorSettingsSchema,
+} from "./schemas";
 import {
   getDueDateValue,
   getDisplayBlockTitle,
   getDisplayTabTitle,
   getTodayValue,
   normalizeSelection,
+  trimToEmpty,
 } from "./shared";
 import type {
   WorkspaceCollectedTask,
+  WorkspaceEisenhowerDomainAllocation,
+  WorkspaceEisenhowerMatrixBlock,
+  WorkspaceEisenhowerMatrixSummary,
+  WorkspaceEisenhowerQuadrantSummary,
+  WorkspaceLeadershipMeetingStatus,
+  WorkspaceLeadershipRhythm,
+  WorkspaceLeadershipRhythmFilter,
+  WorkspaceLeadershipRhythmMeeting,
+  WorkspaceLeadershipRhythmPlannerBlock,
+  WorkspaceLeadershipRhythmSummary,
   WorkspaceNode,
   WorkspaceTask,
   WorkspaceTaskDomain,
@@ -49,7 +66,7 @@ export function getTaskListProgress(block: WorkspaceTaskListBlock) {
 export function collectWorkspaceNodeTasks(node: WorkspaceNode) {
   return node.tabs.flatMap((tab) =>
     tab.blocks.flatMap((block) => {
-      if (block.type !== "task-list") {
+      if (block.type !== "task-list" && block.type !== "eisenhower-matrix") {
         return [];
       }
 
@@ -115,6 +132,31 @@ export function getWorkspaceTaskQuadrantLabel(quadrant: WorkspaceTaskQuadrant) {
       return "Eliminate";
   }
 }
+
+export const workspaceLeadershipRhythmLabels: Record<WorkspaceLeadershipRhythm, string> = {
+  weekly: "Weekly",
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+};
+
+export const workspaceLeadershipMeetingStatusLabels: Record<
+  WorkspaceLeadershipMeetingStatus,
+  string
+> = {
+  scheduled: "Scheduled",
+  missed: "Missed",
+  done: "Done",
+  "needs-reschedule": "Needs Reschedule",
+};
+
+export const workspaceLeadershipRhythmFilterLabels: Record<
+  WorkspaceLeadershipRhythmFilter,
+  string
+> = {
+  all: "All",
+  missed: "Missed",
+  upcoming: "Upcoming",
+};
 
 export function getWorkspaceTaskQuadrant(task: WorkspaceTask): WorkspaceTaskQuadrant {
   const highUrgency = task.urgency >= 7;
@@ -318,5 +360,243 @@ export function getTimeOrchestratorSummary(
     averageImportance,
     domainBreakdown,
     quadrants,
+  };
+}
+
+export function sortEisenhowerTasks(tasks: WorkspaceTask[], now = new Date()) {
+  return [...tasks].sort((left, right) => {
+    if (left.completed !== right.completed) {
+      return Number(left.completed) - Number(right.completed);
+    }
+
+    const scoreDelta =
+      getTaskUrgencyScore(right, now) - getTaskUrgencyScore(left, now);
+
+    if (scoreDelta !== 0) {
+      return scoreDelta;
+    }
+
+    return trimToEmpty(left.text).localeCompare(trimToEmpty(right.text));
+  });
+}
+
+export function getEisenhowerMatrixSummary(
+  block: WorkspaceEisenhowerMatrixBlock,
+  now = new Date(),
+): WorkspaceEisenhowerMatrixSummary {
+  const openTasks = block.tasks.filter((task) => !task.completed);
+  const totalEstimateMinutes = block.tasks.reduce((sum, task) => sum + task.estimateMinutes, 0);
+  const domainMap = new Map<WorkspaceTaskDomain | null, WorkspaceEisenhowerDomainAllocation>();
+  const quadrants = {
+    do: {
+      key: "do",
+      label: getWorkspaceTaskQuadrantLabel("do"),
+      taskCount: 0,
+      estimateMinutes: 0,
+      tasks: [] as WorkspaceTask[],
+    },
+    schedule: {
+      key: "schedule",
+      label: getWorkspaceTaskQuadrantLabel("schedule"),
+      taskCount: 0,
+      estimateMinutes: 0,
+      tasks: [] as WorkspaceTask[],
+    },
+    delegate: {
+      key: "delegate",
+      label: getWorkspaceTaskQuadrantLabel("delegate"),
+      taskCount: 0,
+      estimateMinutes: 0,
+      tasks: [] as WorkspaceTask[],
+    },
+    eliminate: {
+      key: "eliminate",
+      label: getWorkspaceTaskQuadrantLabel("eliminate"),
+      taskCount: 0,
+      estimateMinutes: 0,
+      tasks: [] as WorkspaceTask[],
+    },
+  } satisfies Record<WorkspaceTaskQuadrant, WorkspaceEisenhowerQuadrantSummary>;
+
+  for (const task of openTasks) {
+    const quadrant = quadrants[getWorkspaceTaskQuadrant(task)];
+    quadrant.taskCount += 1;
+    quadrant.estimateMinutes += task.estimateMinutes;
+    quadrant.tasks.push(task);
+
+    const key = task.domain ?? null;
+    const existing = domainMap.get(key);
+
+    if (existing) {
+      existing.taskCount += 1;
+      existing.estimateMinutes += task.estimateMinutes;
+      continue;
+    }
+
+    domainMap.set(key, {
+      domain: key,
+      label: getWorkspaceTaskDomainLabel(key),
+      taskCount: 1,
+      estimateMinutes: task.estimateMinutes,
+    });
+  }
+
+  for (const quadrant of Object.values(quadrants)) {
+    quadrant.tasks = sortEisenhowerTasks(quadrant.tasks, now);
+  }
+
+  return {
+    totalTaskCount: block.tasks.length,
+    totalEstimateMinutes,
+    overdueCount: openTasks.filter(
+      (task) => task.dueDate && getDueDateValue(task.dueDate) < getTodayValue(now),
+    ).length,
+    completedCount: block.tasks.filter((task) => task.completed).length,
+    activeDomainCount: new Set(block.tasks.map((task) => task.domain).filter(Boolean)).size,
+    domainAllocation: [...domainMap.values()].sort(
+      (left, right) =>
+        right.estimateMinutes - left.estimateMinutes || right.taskCount - left.taskCount,
+    ),
+    quadrants,
+    prioritizedTasks: sortEisenhowerTasks(block.tasks, now),
+  };
+}
+
+export function buildEisenhowerBattlePlanPrompt(block: WorkspaceEisenhowerMatrixBlock) {
+  const taskLines =
+    block.tasks.length > 0
+      ? sortEisenhowerTasks(block.tasks).map((task, index) => {
+          const meta = [
+            task.domain ? `domain ${getWorkspaceTaskDomainLabel(task.domain)}` : "domain unassigned",
+            `urgency ${task.urgency}/10`,
+            `importance ${task.importance}/10`,
+            `${task.estimateMinutes} minutes`,
+            `quadrant ${getWorkspaceTaskQuadrantLabel(getWorkspaceTaskQuadrant(task))}`,
+            task.completed ? "completed" : "open",
+            task.dueDate ? `due ${task.dueDate}` : "",
+          ]
+            .filter(Boolean)
+            .join(", ");
+
+          return `${index + 1}. ${task.text} (${meta})`;
+        })
+      : ["No tasks recorded."];
+
+  return [
+    "You are the Orchestrator agent for a CEO operating system.",
+    "Review the Eisenhower matrix task list below and produce a battle plan in markdown.",
+    "",
+    "Output requirements:",
+    "- Start with a one-paragraph read on the current load.",
+    "- Then give the top 5 priorities in rank order with rationale.",
+    "- Then give what to schedule, delegate, and eliminate this week.",
+    "- End with a 3-day execution sequence.",
+    "",
+    "Tasks:",
+    ...taskLines.map((line) => `- ${line}`),
+  ].join("\n");
+}
+
+export function createWorkspaceLeadershipRhythmFilter(
+  value: WorkspaceLeadershipRhythmFilter | null | undefined,
+) {
+  return workspaceLeadershipRhythmFilterSchema.parse(value ?? "all");
+}
+
+export function isLeadershipMeetingUpcoming(
+  meeting: WorkspaceLeadershipRhythmMeeting,
+  now = new Date(),
+) {
+  if (meeting.status !== "scheduled" || !meeting.nextDate) {
+    return false;
+  }
+
+  return getDueDateValue(meeting.nextDate) >= getTodayValue(now);
+}
+
+export function isLeadershipMeetingMissed(
+  meeting: WorkspaceLeadershipRhythmMeeting,
+  now = new Date(),
+) {
+  if (meeting.status === "missed") {
+    return true;
+  }
+
+  return (
+    meeting.status === "scheduled" &&
+    Boolean(meeting.nextDate) &&
+    getDueDateValue(meeting.nextDate!) < getTodayValue(now)
+  );
+}
+
+export function matchesLeadershipRhythmFilter(
+  meeting: WorkspaceLeadershipRhythmMeeting,
+  filter: WorkspaceLeadershipRhythmFilter,
+  now = new Date(),
+) {
+  switch (filter) {
+    case "missed":
+      return isLeadershipMeetingMissed(meeting, now);
+    case "upcoming":
+      return isLeadershipMeetingUpcoming(meeting, now);
+    default:
+      return true;
+  }
+}
+
+export function sortLeadershipRhythmMeetings(
+  meetings: WorkspaceLeadershipRhythmMeeting[],
+) {
+  return [...meetings].sort((left, right) => {
+    const leftDate = left.nextDate ? getDueDateValue(left.nextDate) : Number.MAX_SAFE_INTEGER;
+    const rightDate = right.nextDate ? getDueDateValue(right.nextDate) : Number.MAX_SAFE_INTEGER;
+
+    if (leftDate !== rightDate) {
+      return leftDate - rightDate;
+    }
+
+    const rhythmOrder = {
+      weekly: 0,
+      monthly: 1,
+      quarterly: 2,
+    } satisfies Record<WorkspaceLeadershipRhythm, number>;
+
+    const rhythmDelta = rhythmOrder[left.rhythm] - rhythmOrder[right.rhythm];
+
+    if (rhythmDelta !== 0) {
+      return rhythmDelta;
+    }
+
+    return trimToEmpty(left.name).localeCompare(trimToEmpty(right.name));
+  });
+}
+
+export function getLeadershipRhythmPlannerSummary(
+  block: WorkspaceLeadershipRhythmPlannerBlock,
+  now = new Date(),
+): WorkspaceLeadershipRhythmSummary {
+  const scheduledCount = block.meetings.filter((meeting) => meeting.status === "scheduled").length;
+  const missedCount = block.meetings.filter((meeting) => isLeadershipMeetingMissed(meeting, now))
+    .length;
+  const doneCount = block.meetings.filter((meeting) => meeting.status === "done").length;
+  const needsRescheduleCount = block.meetings.filter(
+    (meeting) => meeting.status === "needs-reschedule",
+  ).length;
+  const upcomingCount = block.meetings.filter((meeting) =>
+    isLeadershipMeetingUpcoming(meeting, now),
+  ).length;
+  const onTrackCount = block.meetings.filter(
+    (meeting) => meeting.status === "done" || isLeadershipMeetingUpcoming(meeting, now),
+  ).length;
+
+  return {
+    totalMeetings: block.meetings.length,
+    scheduledCount,
+    missedCount,
+    doneCount,
+    needsRescheduleCount,
+    upcomingCount,
+    cadenceHealthPercent:
+      block.meetings.length > 0 ? Math.round((onTrackCount / block.meetings.length) * 100) : 0,
   };
 }

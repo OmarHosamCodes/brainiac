@@ -11,6 +11,9 @@ import {
   workspaceBlockSchema,
   workspaceBusinessModelCanvasCellKeySchema,
   workspaceBusinessModelCanvasCellsSchema,
+  workspaceCohortHealthCohortSchema,
+  workspaceCohortHealthDashboardBlockSchema,
+  workspaceCohortStatusSchema,
   workspaceContentPipelineBlockSchema,
   workspaceContentPipelineItemSchema,
   workspaceContentPipelineStatusSchema,
@@ -21,6 +24,11 @@ import {
   workspaceContentRoiItemSchema,
   workspaceContentRoiSortSchema,
   workspaceContentRoiTrackerBlockSchema,
+  workspaceCourseRoadmapBlockSchema,
+  workspaceCourseRoadmapCourseSchema,
+  workspaceCourseRoadmapLessonSchema,
+  workspaceCourseRoadmapOutcomeSchema,
+  workspaceCourseStatusSchema,
   workspaceCustomBlockFieldSchema,
   workspaceCustomBlockFormulaSchema,
   workspaceCustomBlockSchema,
@@ -37,6 +45,7 @@ import {
   workspaceCustomFieldTypeSchema,
   workspaceDecisionBlockSchema,
   workspaceDecisionItemSchema,
+  workspaceEisenhowerMatrixBlockSchema,
   workspaceExpenseItemSchema,
   workspaceFinancePaymentStatusSchema,
   workspaceForecastConfidenceBoardBlockSchema,
@@ -46,6 +55,12 @@ import {
   workspaceKanbanBlockSchema,
   workspaceKanbanCardSchema,
   workspaceKanbanColumnSchema,
+  workspaceLeadershipMeetingStatusSchema,
+  workspaceLeadershipRhythmFilterSchema,
+  workspaceLeadershipRhythmMeetingSchema,
+  workspaceLeadershipRhythmPlannerBlockSchema,
+  workspaceLeadershipRhythmSchema,
+  workspaceLearningOutcomesMatrixBlockSchema,
   workspaceMarketplaceItemSchema,
   workspaceMarketplacePayloadSchema,
   workspaceMarketplaceSaveInputSchema,
@@ -111,6 +126,10 @@ export type WorkspaceTaskDomain = z.infer<typeof workspaceTaskDomainSchema>;
 export type WorkspaceTaskQuadrant = z.infer<typeof workspaceTaskQuadrantSchema>;
 export type WorkspaceTask = z.infer<typeof workspaceTaskSchema>;
 export type WorkspacePromptOutput = z.infer<typeof workspacePromptOutputSchema>;
+export type WorkspaceCourseStatus = z.infer<typeof workspaceCourseStatusSchema>;
+export type WorkspaceCourseRoadmapLesson = z.infer<typeof workspaceCourseRoadmapLessonSchema>;
+export type WorkspaceCourseRoadmapOutcome = z.infer<typeof workspaceCourseRoadmapOutcomeSchema>;
+export type WorkspaceCourseRoadmapCourse = z.infer<typeof workspaceCourseRoadmapCourseSchema>;
 export type WorkspaceDecisionItem = z.infer<typeof workspaceDecisionItemSchema>;
 export type WorkspaceTrackerEntry = z.infer<typeof workspaceTrackerEntrySchema>;
 export type WorkspacePeopleSkillDimension = z.infer<typeof workspacePeopleSkillDimensionSchema>;
@@ -164,6 +183,18 @@ export type WorkspaceExpenseItem = z.infer<typeof workspaceExpenseItemSchema>;
 export type WorkspaceReceivableStatus = z.infer<typeof workspaceReceivableStatusSchema>;
 export type WorkspaceReceivableFilter = z.infer<typeof workspaceReceivableFilterSchema>;
 export type WorkspaceReceivableInvoice = z.infer<typeof workspaceReceivableInvoiceSchema>;
+export type WorkspaceCohortStatus = z.infer<typeof workspaceCohortStatusSchema>;
+export type WorkspaceCohortHealthCohort = z.infer<typeof workspaceCohortHealthCohortSchema>;
+export type WorkspaceLeadershipRhythm = z.infer<typeof workspaceLeadershipRhythmSchema>;
+export type WorkspaceLeadershipMeetingStatus = z.infer<
+  typeof workspaceLeadershipMeetingStatusSchema
+>;
+export type WorkspaceLeadershipRhythmFilter = z.infer<
+  typeof workspaceLeadershipRhythmFilterSchema
+>;
+export type WorkspaceLeadershipRhythmMeeting = z.infer<
+  typeof workspaceLeadershipRhythmMeetingSchema
+>;
 export type WorkspaceOkrKeyResult = z.infer<typeof workspaceOkrKeyResultSchema>;
 export type WorkspaceOkrObjective = z.infer<typeof workspaceOkrObjectiveSchema>;
 export type WorkspaceDecisionMatrixCriterion = z.infer<
@@ -195,7 +226,18 @@ export type WorkspaceNotesBlock = z.infer<typeof workspaceNotesBlockSchema>;
 export type WorkspaceDecisionBlock = z.infer<typeof workspaceDecisionBlockSchema>;
 export type WorkspaceTrackerBlock = z.infer<typeof workspaceTrackerBlockSchema>;
 export type WorkspaceAiPromptBlock = z.infer<typeof workspaceAiPromptBlockSchema>;
+export type WorkspaceCourseRoadmapBlock = z.infer<typeof workspaceCourseRoadmapBlockSchema>;
+export type WorkspaceLearningOutcomesMatrixBlock = z.infer<
+  typeof workspaceLearningOutcomesMatrixBlockSchema
+>;
 export type WorkspaceTimeOrchestratorBlock = z.infer<typeof workspaceTimeOrchestratorBlockSchema>;
+export type WorkspaceCohortHealthDashboardBlock = z.infer<
+  typeof workspaceCohortHealthDashboardBlockSchema
+>;
+export type WorkspaceEisenhowerMatrixBlock = z.infer<typeof workspaceEisenhowerMatrixBlockSchema>;
+export type WorkspaceLeadershipRhythmPlannerBlock = z.infer<
+  typeof workspaceLeadershipRhythmPlannerBlockSchema
+>;
 export type WorkspaceKanbanBlock = z.infer<typeof workspaceKanbanBlockSchema>;
 export type WorkspaceTimelineBlock = z.infer<typeof workspaceTimelineBlockSchema>;
 export type WorkspaceSkillsHeatMapBlock = z.infer<typeof workspaceSkillsHeatMapBlockSchema>;
@@ -282,6 +324,21 @@ export type WorkspaceTimeOrchestratorSummary = {
   averageImportance: number;
   domainBreakdown: WorkspaceTimeOrchestratorDomainSummary[];
   quadrants: Record<WorkspaceTaskQuadrant, WorkspaceTimeOrchestratorQuadrantSummary>;
+};
+
+export type WorkspaceCourseRoadmapCourseProgress = {
+  lessonCount: number;
+  recordedLessons: number;
+  completionPercent: number;
+};
+
+export type WorkspaceCourseRoadmapSummary = {
+  courseCount: number;
+  lessonCount: number;
+  recordedLessons: number;
+  averageCompletionPercent: number;
+  inProgressCount: number;
+  planningCount: number;
 };
 
 export type WorkspaceTrackerTrend = {
@@ -544,6 +601,54 @@ export type WorkspaceCollectionsTrackerSummary = {
   collectedThisMonth: number;
   highRiskCount: number;
   overdueCount: number;
+};
+
+export type WorkspaceCohortHealth = "healthy" | "watch" | "at-risk";
+
+export type WorkspaceCohortHealthSummary = {
+  cohortCount: number;
+  totalSeatsSold: number;
+  totalCapacity: number;
+  fillPercent: number;
+  bookedRevenueEgp: number;
+  atRiskCount: number;
+  runningCount: number;
+};
+
+export type WorkspaceEisenhowerDomainAllocation = {
+  domain: WorkspaceTaskDomain | null;
+  label: string;
+  taskCount: number;
+  estimateMinutes: number;
+};
+
+export type WorkspaceEisenhowerQuadrantSummary = {
+  key: WorkspaceTaskQuadrant;
+  label: string;
+  taskCount: number;
+  estimateMinutes: number;
+  tasks: WorkspaceTask[];
+};
+
+export type WorkspaceEisenhowerMatrixSummary = {
+  totalTaskCount: number;
+  totalEstimateMinutes: number;
+  overdueCount: number;
+  completedCount: number;
+  activeDomainCount: number;
+  domainAllocation: WorkspaceEisenhowerDomainAllocation[];
+  quadrants: Record<WorkspaceTaskQuadrant, WorkspaceEisenhowerQuadrantSummary>;
+  prioritizedTasks: WorkspaceTask[];
+};
+
+export type WorkspaceLeadershipRhythmSummary = {
+  totalMeetings: number;
+  scheduledCount: number;
+  missedCount: number;
+  doneCount: number;
+  needsRescheduleCount: number;
+  upcomingCount: number;
+  cadenceHealthPercent: number;
 };
 
 export type WorkspaceNodeDashboardSelectableBlock = {

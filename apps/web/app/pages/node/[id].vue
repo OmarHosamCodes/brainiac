@@ -7,20 +7,25 @@ import {
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceAuthorityScorecardBlock,
   createWorkspaceBusinessModelCanvasBlock,
+  createWorkspaceCohortHealthDashboardBlock,
   createWorkspaceCollectionsTrackerBlock,
   createWorkspaceContentPipelineBlock,
   createWorkspaceContentQualityRadarBlock,
   createWorkspaceContentRoiTrackerBlock,
+  createWorkspaceCourseRoadmapBlock,
   createWorkspaceDealScoringMatrixBlock,
   createWorkspaceDelegationMatrixBlock,
   createWorkspaceDecisionMatrixBlock,
   createWorkspaceDecisionBlock,
+  createWorkspaceEisenhowerMatrixBlock,
   createWorkspaceForecastConfidenceBoardBlock,
   createWorkspaceHookBankBlock,
   createWorkspaceId,
   createWorkspaceKanbanBlock,
   createWorkspaceKanbanCard,
   createWorkspaceKanbanColumn,
+  createWorkspaceLeadershipRhythmPlannerBlock,
+  createWorkspaceLearningOutcomesMatrixBlock,
   createWorkspaceMessageHouseBlock,
   createWorkspaceNotesBlock,
   createWorkspaceOkrTrackerBlock,
@@ -407,8 +412,23 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
     case "ai-prompt":
       nextBlock = createWorkspaceAiPromptBlock();
       break;
+    case "course-roadmap":
+      nextBlock = createWorkspaceCourseRoadmapBlock();
+      break;
+    case "learning-outcomes-matrix":
+      nextBlock = createWorkspaceLearningOutcomesMatrixBlock();
+      break;
     case "time-orchestrator":
       nextBlock = createWorkspaceTimeOrchestratorBlock();
+      break;
+    case "cohort-health-dashboard":
+      nextBlock = createWorkspaceCohortHealthDashboardBlock();
+      break;
+    case "eisenhower-matrix":
+      nextBlock = createWorkspaceEisenhowerMatrixBlock();
+      break;
+    case "leadership-rhythm-planner":
+      nextBlock = createWorkspaceLeadershipRhythmPlannerBlock();
       break;
     case "kanban":
       nextBlock = createWorkspaceKanbanBlock();
@@ -1182,11 +1202,66 @@ function getBlockSearchText(block: WorkspaceBlock) {
     fragments.push(...block.entries.flatMap((entry) => [entry.label, String(entry.value)]));
   } else if (block.type === "ai-prompt") {
     fragments.push(block.prompt, block.latestOutput);
+  } else if (block.type === "course-roadmap") {
+    fragments.push(
+      ...block.courses.flatMap((course) => [
+        course.name,
+        course.status,
+        ...course.lessons.flatMap((lesson) => [
+          lesson.title,
+          lesson.recorded ? "recorded" : "pending",
+        ]),
+        ...course.outcomes.map((outcome) => outcome.text),
+      ]),
+    );
+  } else if (block.type === "learning-outcomes-matrix") {
+    fragments.push(block.prompt, block.latestOutput, block.courseBlockId ?? "", block.courseId ?? "");
   } else if (block.type === "time-orchestrator") {
     fragments.push(
       ...block.settings.domains,
       ...block.settings.quadrants,
       block.settings.includeUnassigned ? "unassigned" : "",
+    );
+  } else if (block.type === "cohort-health-dashboard") {
+    fragments.push(
+      ...block.cohorts.flatMap((cohort) => [
+        cohort.name,
+        String(cohort.seatsSold),
+        String(cohort.capacity),
+        String(cohort.revenueEgp),
+        cohort.startDate ?? "",
+        cohort.status,
+        cohort.refundRisk ? "refund risk" : "",
+        cohort.completionRisk ? "completion risk" : "",
+      ]),
+    );
+  } else if (block.type === "eisenhower-matrix") {
+    fragments.push(
+      block.latestBattlePlan,
+      ...block.tasks.flatMap((task) => [
+        task.text,
+        task.domain ?? "",
+        task.priority ?? "",
+        task.dueDate ?? "",
+        String(task.urgency),
+        String(task.importance),
+        String(task.estimateMinutes),
+        task.completed ? "completed" : "open",
+      ]),
+    );
+  } else if (block.type === "leadership-rhythm-planner") {
+    fragments.push(
+      block.filter,
+      ...block.meetings.flatMap((meeting) => [
+        meeting.name,
+        meeting.rhythm,
+        meeting.owner,
+        meeting.participants,
+        meeting.purpose,
+        String(meeting.durationMinutes),
+        meeting.nextDate ?? "",
+        meeting.status,
+      ]),
     );
   } else if (block.type === "kanban") {
     fragments.push(
@@ -1447,11 +1522,64 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
     details.push(...block.entries.map((entry) => entry.label));
   } else if (block.type === "ai-prompt") {
     details.push(block.prompt, block.latestOutput);
+  } else if (block.type === "course-roadmap") {
+    details.push(
+      ...block.courses.flatMap((course) => [
+        course.name,
+        course.status,
+        ...course.lessons.map(
+          (lesson, index) =>
+            `Lesson ${index + 1}: ${lesson.title} (${lesson.recorded ? "recorded" : "pending"})`,
+        ),
+        ...course.outcomes.map((outcome) => outcome.text),
+      ]),
+    );
+  } else if (block.type === "learning-outcomes-matrix") {
+    details.push(block.prompt, block.latestOutput);
   } else if (block.type === "time-orchestrator") {
     details.push(
       ...block.settings.domains.map(getWorkspaceTaskDomainLabel),
       ...block.settings.quadrants,
       block.settings.includeUnassigned ? "Unassigned" : "",
+    );
+  } else if (block.type === "cohort-health-dashboard") {
+    details.push(
+      ...block.cohorts.flatMap((cohort) => [
+        cohort.name,
+        `${cohort.seatsSold}/${cohort.capacity} seats`,
+        `${cohort.revenueEgp} EGP`,
+        cohort.startDate ?? "",
+        cohort.status,
+        cohort.refundRisk ? "Refund risk" : "",
+        cohort.completionRisk ? "Completion risk" : "",
+      ]),
+    );
+  } else if (block.type === "eisenhower-matrix") {
+    details.push(
+      block.latestBattlePlan,
+      ...block.tasks.flatMap((task) => [
+        task.text,
+        task.domain ? getWorkspaceTaskDomainLabel(task.domain) : "Unassigned",
+        task.dueDate ?? "",
+        `${task.urgency}/10 urgency`,
+        `${task.importance}/10 importance`,
+        `${task.estimateMinutes} minutes`,
+        task.completed ? "Completed" : "Open",
+      ]),
+    );
+  } else if (block.type === "leadership-rhythm-planner") {
+    details.push(
+      block.filter,
+      ...block.meetings.flatMap((meeting) => [
+        meeting.name,
+        meeting.rhythm,
+        meeting.owner,
+        meeting.participants,
+        meeting.purpose,
+        `${meeting.durationMinutes} minutes`,
+        meeting.nextDate ?? "",
+        meeting.status,
+      ]),
     );
   } else if (block.type === "kanban") {
     details.push(

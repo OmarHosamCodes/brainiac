@@ -26,6 +26,11 @@ export const WORKSPACE_CONTENT_PIPELINE_ITEM_LIMIT = 80;
 export const WORKSPACE_CONTENT_ROI_ITEM_LIMIT = 40;
 export const WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT = 20;
 export const WORKSPACE_CUSTOM_BLOCK_FIELD_LIMIT = 12;
+export const WORKSPACE_COURSE_ROADMAP_COURSE_LIMIT = 12;
+export const WORKSPACE_COURSE_ROADMAP_LESSON_LIMIT = 24;
+export const WORKSPACE_COURSE_OUTCOME_LIMIT = 16;
+export const WORKSPACE_COHORT_LIMIT = 20;
+export const WORKSPACE_LEADERSHIP_MEETING_LIMIT = 24;
 export const WORKSPACE_MARKETPLACE_ITEM_LIMIT = 200;
 export const WORKSPACE_NODE_DASHBOARD_DETAIL_LIMIT = 4;
 export const DEFAULT_WORKSPACE_NODE_WIDTH = 320;
@@ -161,6 +166,26 @@ export const WORKSPACE_RECEIVABLE_FILTERS = [
   "high-risk",
   "due-this-week",
 ] as const;
+
+export const WORKSPACE_COURSE_STATUSES = ["planning", "in-progress"] as const;
+
+export const WORKSPACE_COHORT_STATUSES = [
+  "planning",
+  "selling",
+  "running",
+  "completed",
+] as const;
+
+export const WORKSPACE_LEADERSHIP_RHYTHMS = ["weekly", "monthly", "quarterly"] as const;
+
+export const WORKSPACE_LEADERSHIP_MEETING_STATUSES = [
+  "scheduled",
+  "missed",
+  "done",
+  "needs-reschedule",
+] as const;
+
+export const WORKSPACE_LEADERSHIP_FILTERS = ["all", "missed", "upcoming"] as const;
 
 export const WORKSPACE_NODE_TINTS = [
   "neutral",

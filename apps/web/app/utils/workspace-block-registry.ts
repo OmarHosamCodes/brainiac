@@ -5,10 +5,12 @@ import WorkspaceAiPromptBlockEditor from "~/components/workspace/node/blocks/Wor
 import WorkspaceAssumptionTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAssumptionTrackerBlockEditor.vue";
 import WorkspaceAuthorityScorecardBlockEditor from "~/components/workspace/node/blocks/WorkspaceAuthorityScorecardBlockEditor.vue";
 import WorkspaceBusinessModelCanvasBlockEditor from "~/components/workspace/node/blocks/WorkspaceBusinessModelCanvasBlockEditor.vue";
+import WorkspaceCohortHealthDashboardBlockEditor from "~/components/workspace/node/blocks/WorkspaceCohortHealthDashboardBlockEditor.vue";
 import WorkspaceCollectionsTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceCollectionsTrackerBlockEditor.vue";
 import WorkspaceContentPipelineBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentPipelineBlockEditor.vue";
 import WorkspaceContentQualityRadarBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentQualityRadarBlockEditor.vue";
 import WorkspaceContentRoiTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentRoiTrackerBlockEditor.vue";
+import WorkspaceCourseRoadmapBlockEditor from "~/components/workspace/node/blocks/WorkspaceCourseRoadmapBlockEditor.vue";
 import WorkspaceHookBankBlockEditor from "~/components/workspace/node/blocks/WorkspaceHookBankBlockEditor.vue";
 import WorkspaceKanbanBlockEditor from "~/components/workspace/node/blocks/WorkspaceKanbanBlockEditor.vue";
 import WorkspaceCustomBlockEditor from "~/components/workspace/node/blocks/WorkspaceCustomBlockEditor.vue";
@@ -16,6 +18,9 @@ import WorkspaceDecisionMatrixBlockEditor from "~/components/workspace/node/bloc
 import WorkspaceDecisionBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionBlockEditor.vue";
 import WorkspaceDelegationMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDelegationMatrixBlockEditor.vue";
 import WorkspaceDealScoringMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDealScoringMatrixBlockEditor.vue";
+import WorkspaceEisenhowerMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceEisenhowerMatrixBlockEditor.vue";
+import WorkspaceLeadershipRhythmPlannerBlockEditor from "~/components/workspace/node/blocks/WorkspaceLeadershipRhythmPlannerBlockEditor.vue";
+import WorkspaceLearningOutcomesMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceLearningOutcomesMatrixBlockEditor.vue";
 import WorkspaceMessageHouseBlockEditor from "~/components/workspace/node/blocks/WorkspaceMessageHouseBlockEditor.vue";
 import WorkspaceNotesBlockEditor from "~/components/workspace/node/blocks/WorkspaceNotesBlockEditor.vue";
 import WorkspaceForecastConfidenceBoardBlockEditor from "~/components/workspace/node/blocks/WorkspaceForecastConfidenceBoardBlockEditor.vue";
@@ -70,10 +75,40 @@ export const workspaceBlockRegistry = {
     icon: "i-lucide-sparkles",
     addGroup: "secondary",
   },
+  "course-roadmap": {
+    component: WorkspaceCourseRoadmapBlockEditor,
+    label: "Course roadmap",
+    icon: "i-lucide-book-open",
+    addGroup: "secondary",
+  },
+  "learning-outcomes-matrix": {
+    component: WorkspaceLearningOutcomesMatrixBlockEditor,
+    label: "Learning outcomes matrix",
+    icon: "i-lucide-graduation-cap",
+    addGroup: "secondary",
+  },
   "time-orchestrator": {
     component: WorkspaceTimeOrchestratorBlockEditor,
     label: "Time orchestrator",
     icon: "i-lucide-calendar-range",
+    addGroup: "secondary",
+  },
+  "cohort-health-dashboard": {
+    component: WorkspaceCohortHealthDashboardBlockEditor,
+    label: "Cohort health dashboard",
+    icon: "i-lucide-users",
+    addGroup: "secondary",
+  },
+  "eisenhower-matrix": {
+    component: WorkspaceEisenhowerMatrixBlockEditor,
+    label: "Eisenhower matrix",
+    icon: "i-lucide-layout-grid",
+    addGroup: "secondary",
+  },
+  "leadership-rhythm-planner": {
+    component: WorkspaceLeadershipRhythmPlannerBlockEditor,
+    label: "Leadership rhythm planner",
+    icon: "i-lucide-repeat",
     addGroup: "secondary",
   },
   kanban: {

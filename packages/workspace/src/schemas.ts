@@ -10,6 +10,12 @@ import {
   WORKSPACE_CONTENT_QUALITY_DIMENSIONS,
   WORKSPACE_CONTENT_ROI_ITEM_LIMIT,
   WORKSPACE_CONTENT_ROI_SORT_OPTIONS,
+  WORKSPACE_COURSE_OUTCOME_LIMIT,
+  WORKSPACE_COURSE_ROADMAP_COURSE_LIMIT,
+  WORKSPACE_COURSE_ROADMAP_LESSON_LIMIT,
+  WORKSPACE_COURSE_STATUSES,
+  WORKSPACE_COHORT_LIMIT,
+  WORKSPACE_COHORT_STATUSES,
   WORKSPACE_CUSTOM_BLOCK_FIELD_LIMIT,
   WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT,
   WORKSPACE_DEAL_SCORING_DEAL_LIMIT,
@@ -23,6 +29,10 @@ import {
   WORKSPACE_HOOK_BANK_ITEM_LIMIT,
   WORKSPACE_KANBAN_CARD_LIMIT,
   WORKSPACE_KANBAN_COLUMN_LIMIT,
+  WORKSPACE_LEADERSHIP_FILTERS,
+  WORKSPACE_LEADERSHIP_MEETING_LIMIT,
+  WORKSPACE_LEADERSHIP_MEETING_STATUSES,
+  WORKSPACE_LEADERSHIP_RHYTHMS,
   WORKSPACE_MARKETPLACE_ITEM_LIMIT,
   WORKSPACE_NODE_DASHBOARD_DETAIL_LIMIT,
   WORKSPACE_NODE_LIMIT,
@@ -83,6 +93,13 @@ export const workspaceAuthorityScoreMetricKeySchema = z.enum(WORKSPACE_AUTHORITY
 export const workspaceFinancePaymentStatusSchema = z.enum(WORKSPACE_FINANCE_PAYMENT_STATUSES);
 export const workspaceReceivableStatusSchema = z.enum(WORKSPACE_RECEIVABLE_STATUSES);
 export const workspaceReceivableFilterSchema = z.enum(WORKSPACE_RECEIVABLE_FILTERS);
+export const workspaceCourseStatusSchema = z.enum(WORKSPACE_COURSE_STATUSES);
+export const workspaceCohortStatusSchema = z.enum(WORKSPACE_COHORT_STATUSES);
+export const workspaceLeadershipRhythmSchema = z.enum(WORKSPACE_LEADERSHIP_RHYTHMS);
+export const workspaceLeadershipMeetingStatusSchema = z.enum(
+  WORKSPACE_LEADERSHIP_MEETING_STATUSES,
+);
+export const workspaceLeadershipRhythmFilterSchema = z.enum(WORKSPACE_LEADERSHIP_FILTERS);
 
 export const workspaceTaskSchema = z.object({
   id: z.string().min(1),
@@ -101,6 +118,31 @@ export const workspacePromptOutputSchema = z.object({
   prompt: z.string().max(4000),
   output: z.string().max(12000),
   createdAt: isoTimestampSchema,
+});
+
+export const workspaceCourseRoadmapLessonSchema = z.object({
+  id: z.string().min(1),
+  title: z.string().trim().max(120),
+  recorded: z.boolean().default(false),
+});
+
+export const workspaceCourseRoadmapOutcomeSchema = z.object({
+  id: z.string().min(1),
+  text: z.string().trim().max(200),
+});
+
+export const workspaceCourseRoadmapCourseSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().max(120),
+  status: workspaceCourseStatusSchema.default("planning"),
+  lessons: z
+    .array(workspaceCourseRoadmapLessonSchema)
+    .max(WORKSPACE_COURSE_ROADMAP_LESSON_LIMIT)
+    .default([]),
+  outcomes: z
+    .array(workspaceCourseRoadmapOutcomeSchema)
+    .max(WORKSPACE_COURSE_OUTCOME_LIMIT)
+    .default([]),
 });
 
 export const workspaceDecisionItemSchema = z.object({
@@ -336,6 +378,30 @@ export const workspaceReceivableInvoiceSchema = z.object({
   paidAt: isoDateSchema.nullable().optional(),
 });
 
+export const workspaceCohortHealthCohortSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().max(120),
+  seatsSold: z.number().int().min(0).max(10_000).default(0),
+  capacity: z.number().int().min(1).max(10_000).default(25),
+  revenueEgp: z.number().min(0).max(1_000_000_000).default(0),
+  startDate: isoDateSchema.nullable().optional(),
+  status: workspaceCohortStatusSchema.default("planning"),
+  refundRisk: z.boolean().default(false),
+  completionRisk: z.boolean().default(false),
+});
+
+export const workspaceLeadershipRhythmMeetingSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().max(120),
+  rhythm: workspaceLeadershipRhythmSchema.default("weekly"),
+  owner: z.string().trim().max(120).default(""),
+  participants: z.string().trim().max(240).default(""),
+  purpose: z.string().max(4000).default(""),
+  durationMinutes: z.number().int().min(15).max(480).default(60),
+  nextDate: isoDateSchema.nullable().optional(),
+  status: workspaceLeadershipMeetingStatusSchema.default("scheduled"),
+});
+
 export const workspaceOkrKeyResultSchema = z.object({
   id: z.string().min(1),
   title: z.string().trim().max(160),
@@ -476,6 +542,23 @@ export const workspaceAiPromptBlockSchema = workspaceBlockBaseSchema.extend({
   outputHistory: z.array(workspacePromptOutputSchema).max(20).default([]),
 });
 
+export const workspaceCourseRoadmapBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("course-roadmap"),
+  courses: z
+    .array(workspaceCourseRoadmapCourseSchema)
+    .max(WORKSPACE_COURSE_ROADMAP_COURSE_LIMIT)
+    .default([]),
+});
+
+export const workspaceLearningOutcomesMatrixBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("learning-outcomes-matrix"),
+  courseBlockId: z.string().nullable().optional(),
+  courseId: z.string().nullable().optional(),
+  prompt: z.string().max(4000).default(""),
+  latestOutput: z.string().max(12000).default(""),
+  outputHistory: z.array(workspacePromptOutputSchema).max(20).default([]),
+});
+
 export const workspaceTimeOrchestratorBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("time-orchestrator"),
   settings: workspaceTimeOrchestratorSettingsSchema.default({
@@ -483,6 +566,27 @@ export const workspaceTimeOrchestratorBlockSchema = workspaceBlockBaseSchema.ext
     includeUnassigned: true,
     quadrants: [...WORKSPACE_TASK_QUADRANTS],
   }),
+});
+
+export const workspaceCohortHealthDashboardBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("cohort-health-dashboard"),
+  cohorts: z.array(workspaceCohortHealthCohortSchema).max(WORKSPACE_COHORT_LIMIT).default([]),
+});
+
+export const workspaceEisenhowerMatrixBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("eisenhower-matrix"),
+  tasks: z.array(workspaceTaskSchema).max(WORKSPACE_TASK_LIMIT).default([]),
+  latestBattlePlan: z.string().max(12000).default(""),
+  battlePlanUpdatedAt: isoTimestampSchema.nullable().optional(),
+});
+
+export const workspaceLeadershipRhythmPlannerBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("leadership-rhythm-planner"),
+  filter: workspaceLeadershipRhythmFilterSchema.default("all"),
+  meetings: z
+    .array(workspaceLeadershipRhythmMeetingSchema)
+    .max(WORKSPACE_LEADERSHIP_MEETING_LIMIT)
+    .default([]),
 });
 
 export const workspaceKanbanBlockSchema = workspaceBlockBaseSchema.extend({
@@ -720,7 +824,12 @@ export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceDecisionBlockSchema,
   workspaceTrackerBlockSchema,
   workspaceAiPromptBlockSchema,
+  workspaceCourseRoadmapBlockSchema,
+  workspaceLearningOutcomesMatrixBlockSchema,
   workspaceTimeOrchestratorBlockSchema,
+  workspaceCohortHealthDashboardBlockSchema,
+  workspaceEisenhowerMatrixBlockSchema,
+  workspaceLeadershipRhythmPlannerBlockSchema,
   workspaceKanbanBlockSchema,
   workspaceTimelineBlockSchema,
   workspaceSkillsHeatMapBlockSchema,
