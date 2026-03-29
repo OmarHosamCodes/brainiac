@@ -6,7 +6,11 @@ import {
   dashboardConversationGetInputSchema,
   dashboardConversationListResponseSchema,
   dashboardConversationRenameInputSchema,
+  getOpenRouterAccountStatus,
+  listOpenRouterModels,
   listOpenRouterFreeModels,
+  openRouterAccountStatusSchema,
+  openRouterModelCatalogResponseSchema,
   openRouterFreeModelsResponseSchema,
 } from "@brainiac/agent";
 import { z } from "zod";
@@ -27,6 +31,20 @@ export const agentRouter = {
       return openRouterFreeModelsResponseSchema.parse(await listOpenRouterFreeModels());
     } catch (error) {
       throw toInternalServerError("agent.freeModels", error);
+    }
+  }),
+  modelCatalog: protectedProcedure.handler(async () => {
+    try {
+      return openRouterModelCatalogResponseSchema.parse(await listOpenRouterModels());
+    } catch (error) {
+      throw toInternalServerError("agent.modelCatalog", error);
+    }
+  }),
+  accountStatus: protectedProcedure.handler(async () => {
+    try {
+      return openRouterAccountStatusSchema.parse(await getOpenRouterAccountStatus());
+    } catch (error) {
+      throw toInternalServerError("agent.accountStatus", error);
     }
   }),
   chat: {

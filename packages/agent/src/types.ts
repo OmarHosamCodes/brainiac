@@ -11,6 +11,38 @@ export const DASHBOARD_CONVERSATION_TITLE_LIMIT = 80;
 export const DASHBOARD_CONVERSATION_HISTORY_LIMIT = 50;
 export const DASHBOARD_CONVERSATION_MESSAGE_WINDOW = 20;
 
+export const dashboardConversationUsageLatestSchema = z.object({
+  modelId: z.string().trim().min(1),
+  contextLength: z.number().int().positive().nullable(),
+  inputTokens: z.number().int().nonnegative(),
+  cachedTokens: z.number().int().nonnegative(),
+  outputTokens: z.number().int().nonnegative(),
+  reasoningTokens: z.number().int().nonnegative(),
+  totalTokens: z.number().int().nonnegative(),
+  costUsd: z.number().nonnegative().nullable(),
+});
+
+export const dashboardConversationUsageTotalsSchema = z.object({
+  inputTokens: z.number().int().nonnegative(),
+  cachedTokens: z.number().int().nonnegative(),
+  outputTokens: z.number().int().nonnegative(),
+  reasoningTokens: z.number().int().nonnegative(),
+  totalTokens: z.number().int().nonnegative(),
+  costUsd: z.number().nonnegative(),
+});
+
+export const dashboardConversationUsageSummarySchema = z.object({
+  latest: dashboardConversationUsageLatestSchema.nullable().default(null),
+  totals: dashboardConversationUsageTotalsSchema.default({
+    inputTokens: 0,
+    cachedTokens: 0,
+    outputTokens: 0,
+    reasoningTokens: 0,
+    totalTokens: 0,
+    costUsd: 0,
+  }),
+});
+
 export const agentMessageRoleSchema = z.enum(["user", "assistant", "system"]);
 export const dashboardConversationMessageRoleSchema = z.enum(["user", "assistant"]);
 export const dashboardAgentCanonicalToolPresetSchema = z.enum(["ask", "agent"]);
@@ -53,6 +85,7 @@ export const agentChatResponseSchema = z.object({
   model: z.string(),
   toolsCalled: z.array(z.string()),
   workspaceNodeCount: z.number().int().nonnegative(),
+  usage: dashboardConversationUsageLatestSchema.nullable().default(null),
   workspaceSnapshot: z
     .object({
       nodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT),
@@ -67,6 +100,17 @@ export const dashboardConversationSummarySchema = z.object({
   title: z.string().trim().min(1).max(DASHBOARD_CONVERSATION_TITLE_LIMIT),
   model: z.string().trim().min(1).nullable(),
   toolPreset: dashboardAgentToolPresetSchema,
+  usageSummary: dashboardConversationUsageSummarySchema.default({
+    latest: null,
+    totals: {
+      inputTokens: 0,
+      cachedTokens: 0,
+      outputTokens: 0,
+      reasoningTokens: 0,
+      totalTokens: 0,
+      costUsd: 0,
+    },
+  }),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
   lastMessageAt: z.string().datetime(),
@@ -128,6 +172,11 @@ export const agentChatTurnResponseSchema = z.object({
 export type AgentMessage = z.infer<typeof agentMessageSchema>;
 export type AgentChatResponse = z.infer<typeof agentChatResponseSchema>;
 export type DashboardAgentToolPreset = z.infer<typeof dashboardAgentToolPresetSchema>;
+export type DashboardConversationUsageLatest = z.infer<typeof dashboardConversationUsageLatestSchema>;
+export type DashboardConversationUsageTotals = z.infer<typeof dashboardConversationUsageTotalsSchema>;
+export type DashboardConversationUsageSummary = z.infer<
+  typeof dashboardConversationUsageSummarySchema
+>;
 export type DashboardConversationSummary = z.infer<typeof dashboardConversationSummarySchema>;
 export type DashboardConversationMessage = z.infer<typeof dashboardConversationMessageSchema>;
 export type DashboardConversationDetail = z.infer<typeof dashboardConversationDetailSchema>;

@@ -7,10 +7,13 @@ import {
   dashboardConversationListResponseSchema,
   dashboardConversationMessageSchema,
   dashboardConversationSummarySchema,
+  dashboardConversationUsageSummarySchema,
   normalizeDashboardAgentToolPreset,
   runDashboardAgent,
   type AgentChatTurnInput,
   type DashboardConversationSummary,
+  type DashboardConversationUsageLatest,
+  type DashboardConversationUsageSummary,
 } from "@brainiac/agent";
 import { db } from "@brainiac/db";
 import {
@@ -18,6 +21,7 @@ import {
   dashboardConversationMessage,
   type DashboardConversationMessageContextNodeTitlesRecord,
   type DashboardConversationMessageToolsCalledRecord,
+  type DashboardConversationUsageSummaryRecord,
 } from "@brainiac/db/schema";
 import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
@@ -43,6 +47,47 @@ function buildMessagePreview(content: string) {
   return normalized.slice(0, 280);
 }
 
+function normalizeConversationUsageSummary(
+  usageSummary: DashboardConversationUsageSummaryRecord | null | undefined,
+) {
+  return dashboardConversationUsageSummarySchema.parse(
+    usageSummary ?? {
+      latest: null,
+      totals: {
+        inputTokens: 0,
+        cachedTokens: 0,
+        outputTokens: 0,
+        reasoningTokens: 0,
+        totalTokens: 0,
+        costUsd: 0,
+      },
+    },
+  );
+}
+
+function buildNextConversationUsageSummary(
+  currentUsageSummary: DashboardConversationUsageSummaryRecord | null | undefined,
+  latestUsage: DashboardConversationUsageLatest | null,
+): DashboardConversationUsageSummary {
+  const current = normalizeConversationUsageSummary(currentUsageSummary);
+
+  if (!latestUsage) {
+    return current;
+  }
+
+  return dashboardConversationUsageSummarySchema.parse({
+    latest: latestUsage,
+    totals: {
+      inputTokens: current.totals.inputTokens + latestUsage.inputTokens,
+      cachedTokens: current.totals.cachedTokens + latestUsage.cachedTokens,
+      outputTokens: current.totals.outputTokens + latestUsage.outputTokens,
+      reasoningTokens: current.totals.reasoningTokens + latestUsage.reasoningTokens,
+      totalTokens: current.totals.totalTokens + latestUsage.totalTokens,
+      costUsd: current.totals.costUsd + (latestUsage.costUsd ?? 0),
+    },
+  });
+}
+
 function mapConversationSummary(args: {
   row: typeof dashboardConversation.$inferSelect;
   lastMessagePreview: string | null;
@@ -52,6 +97,9 @@ function mapConversationSummary(args: {
     title: args.row.title,
     model: args.row.model,
     toolPreset: normalizeDashboardAgentToolPreset(args.row.toolPreset),
+    usageSummary: normalizeConversationUsageSummary(
+      args.row.usageSummary as DashboardConversationUsageSummaryRecord | null,
+    ),
     createdAt: args.row.createdAt.toISOString(),
     updatedAt: args.row.updatedAt.toISOString(),
     lastMessageAt: args.row.lastMessageAt.toISOString(),
@@ -179,6 +227,7 @@ export async function createDashboardConversation(
     title: buildConversationTitle(initialSettings.content),
     model: initialSettings.model?.trim() || null,
     toolPreset: initialSettings.toolPreset,
+    usageSummary: normalizeConversationUsageSummary(null),
     createdAt: now,
     updatedAt: now,
     lastMessageAt: now,
@@ -249,23 +298,6 @@ export async function appendDashboardConversationTurn(
       });
   const createdConversation = !input.conversationId;
 
-  if (!createdConversation) {
-    await db
-      .update(dashboardConversation)
-      .set({
-        model: input.model?.trim() || null,
-        toolPreset: input.toolPreset,
-        updatedAt: now,
-        lastMessageAt: now,
-      })
-      .where(
-        and(
-          eq(dashboardConversation.id, conversation.id),
-          eq(dashboardConversation.userId, userId),
-        ),
-      );
-  }
-
   const recentMessagesDesc = await db
     .select()
     .from(dashboardConversationMessage)
@@ -303,6 +335,7 @@ export async function appendDashboardConversationTurn(
       toolPreset: input.toolPreset,
     },
   );
+  const nextUsageSummary = buildNextConversationUsageSummary(conversation.usageSummary, result.usage);
   const workspaceSnapshot = result.workspaceSnapshot
     ? {
         nodes: result.workspaceSnapshot.nodes,
@@ -341,6 +374,7 @@ export async function appendDashboardConversationTurn(
     .set({
       model: input.model?.trim() || null,
       toolPreset: input.toolPreset,
+      usageSummary: nextUsageSummary,
       updatedAt: assistantCreatedAt,
       lastMessageAt: assistantCreatedAt,
     })
@@ -353,6 +387,7 @@ export async function appendDashboardConversationTurn(
       ...conversation,
       model: input.model?.trim() || null,
       toolPreset: input.toolPreset,
+      usageSummary: nextUsageSummary,
       updatedAt: assistantCreatedAt,
       lastMessageAt: assistantCreatedAt,
     },

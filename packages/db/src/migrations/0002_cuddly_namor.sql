@@ -1,0 +1,1 @@
+ALTER TABLE "dashboard_conversation" ADD COLUMN "usage_summary" jsonb DEFAULT '{"latest":null,"totals":{"inputTokens":0,"cachedTokens":0,"outputTokens":0,"reasoningTokens":0,"totalTokens":0,"costUsd":0}}'::jsonb NOT NULL;

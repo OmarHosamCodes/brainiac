@@ -1,7 +1,8 @@
 import { stepCountIs } from "@openrouter/sdk";
+import type { OpenResponsesUsage } from "@openrouter/sdk/models";
 
 import { createOpenRouterClient } from "./client";
-import { resolveOpenRouterFreeModel } from "./models";
+import { resolveOpenRouterModel } from "./models";
 import {
   buildDashboardAgentTools,
   buildWorkspaceOverview,
@@ -15,6 +16,7 @@ import {
   type AgentMessage,
   type DashboardAgentToolPreset,
   type DashboardAgentConfig,
+  type DashboardConversationUsageLatest,
   type DashboardAgentWorkspaceContext,
 } from "./types";
 
@@ -209,6 +211,7 @@ async function runToolEnabledPass(args: {
   maxSteps: number;
   temperature?: number;
   maxOutputTokens?: number;
+  contextLength: number | null;
 }) {
   const tools = buildDashboardAgentTools(
     args.workspaceRuntime,
@@ -234,11 +237,37 @@ async function runToolEnabledPass(args: {
     }
   })();
 
-  const [responseText] = await Promise.all([result.getText(), collectToolNames]);
+  const [responseText, response] = await Promise.all([
+    result.getText(),
+    result.getResponse(),
+    collectToolNames,
+  ]);
 
   return {
     responseText: responseText.trim(),
     calledTools: [...calledTools],
+    usage: normalizeUsage(response.usage, args.model, args.contextLength),
+  };
+}
+
+function normalizeUsage(
+  usage: OpenResponsesUsage | null | undefined,
+  modelId: string,
+  contextLength: number | null,
+): DashboardConversationUsageLatest | null {
+  if (!usage) {
+    return null;
+  }
+
+  return {
+    modelId,
+    contextLength,
+    inputTokens: usage.inputTokens,
+    cachedTokens: usage.inputTokensDetails.cachedTokens ?? 0,
+    outputTokens: usage.outputTokens,
+    reasoningTokens: usage.outputTokensDetails.reasoningTokens ?? 0,
+    totalTokens: usage.totalTokens,
+    costUsd: usage.cost ?? null,
   };
 }
 
@@ -254,11 +283,12 @@ export async function runDashboardAgent(
     nodes: workspace.nodes,
     updatedAt: workspace.updatedAt,
   });
-  const selectedModel = await resolveOpenRouterFreeModel(config.model);
+  const selectedModel = await resolveOpenRouterModel(config.model);
   const model = selectedModel?.id ?? config.model?.trim() ?? DEFAULT_AGENT_MODEL;
   const toolPreset = config.toolPreset ?? "ask";
   const supportsTools = selectedModel?.supportsTools ?? true;
   const executionConfig = resolveAgentExecutionConfig(workspace, toolPreset, supportsTools);
+  let usage: DashboardConversationUsageLatest | null = null;
 
   let responseText = "";
 
@@ -274,9 +304,11 @@ export async function runDashboardAgent(
         maxSteps: executionConfig.maxSteps,
         temperature: config.temperature,
         maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
+        contextLength: selectedModel?.contextLength ?? null,
       });
 
       responseText = initialPass.responseText;
+      usage = initialPass.usage;
       for (const toolName of initialPass.calledTools) {
         calledTools.add(toolName);
       }
@@ -296,10 +328,15 @@ export async function runDashboardAgent(
           maxSteps: executionConfig.maxSteps,
           temperature: config.temperature,
           maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
+          contextLength: selectedModel?.contextLength ?? null,
         });
 
         if (retryPass.responseText) {
           responseText = retryPass.responseText;
+        }
+
+        if (retryPass.usage) {
+          usage = retryPass.usage;
         }
 
         for (const toolName of retryPass.calledTools) {
@@ -316,20 +353,20 @@ export async function runDashboardAgent(
 
   if (!finalResponse) {
     const fallbackMaxOutputTokens = executionConfig.maxOutputTokens ?? config.maxOutputTokens;
+    const fallbackResult = client.callModel({
+      model,
+      instructions: executionConfig.fallbackInstructions,
+      input: normalizedMessages,
+      ...(config.temperature === undefined ? {} : { temperature: config.temperature }),
+      ...(fallbackMaxOutputTokens === undefined ? {} : { maxOutputTokens: fallbackMaxOutputTokens }),
+    });
+    const [fallbackText, fallbackResponse] = await Promise.all([
+      fallbackResult.getText(),
+      fallbackResult.getResponse(),
+    ]);
 
-    finalResponse = (
-      await client
-        .callModel({
-          model,
-          instructions: executionConfig.fallbackInstructions,
-          input: normalizedMessages,
-          ...(config.temperature === undefined ? {} : { temperature: config.temperature }),
-          ...(fallbackMaxOutputTokens === undefined
-            ? {}
-            : { maxOutputTokens: fallbackMaxOutputTokens }),
-        })
-        .getText()
-    ).trim();
+    finalResponse = fallbackText.trim();
+    usage = normalizeUsage(fallbackResponse.usage, model, selectedModel?.contextLength ?? null);
   }
 
   return {
@@ -338,6 +375,7 @@ export async function runDashboardAgent(
     model,
     toolsCalled: [...calledTools],
     workspaceNodeCount: workspaceRuntime.getNodes().length,
+    usage,
     workspaceSnapshot: workspaceRuntime.hasChanges() ? workspaceRuntime.toSnapshot() : null,
   };
 }

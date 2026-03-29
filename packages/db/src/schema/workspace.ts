@@ -7,6 +7,40 @@ export type WorkspaceNodeRecord = WorkspaceNode;
 export type WorkspaceMarketplacePayloadRecord = WorkspaceMarketplacePayload;
 export type DashboardConversationMessageContextNodeTitlesRecord = string[];
 export type DashboardConversationMessageToolsCalledRecord = string[];
+export type DashboardConversationUsageLatestRecord = {
+  modelId: string;
+  contextLength: number | null;
+  inputTokens: number;
+  cachedTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  totalTokens: number;
+  costUsd: number | null;
+};
+export type DashboardConversationUsageTotalsRecord = {
+  inputTokens: number;
+  cachedTokens: number;
+  outputTokens: number;
+  reasoningTokens: number;
+  totalTokens: number;
+  costUsd: number;
+};
+export type DashboardConversationUsageSummaryRecord = {
+  latest: DashboardConversationUsageLatestRecord | null;
+  totals: DashboardConversationUsageTotalsRecord;
+};
+
+const EMPTY_DASHBOARD_CONVERSATION_USAGE_SUMMARY_RECORD: DashboardConversationUsageSummaryRecord = {
+  latest: null,
+  totals: {
+    inputTokens: 0,
+    cachedTokens: 0,
+    outputTokens: 0,
+    reasoningTokens: 0,
+    totalTokens: 0,
+    costUsd: 0,
+  },
+};
 
 export const dashboardWorkspace = pgTable("dashboard_workspace", {
   userId: text("user_id")
@@ -54,6 +88,10 @@ export const dashboardConversation = pgTable(
     title: text("title").notNull(),
     model: text("model"),
     toolPreset: text("tool_preset").notNull(),
+    usageSummary: jsonb("usage_summary")
+      .$type<DashboardConversationUsageSummaryRecord>()
+      .notNull()
+      .default(EMPTY_DASHBOARD_CONVERSATION_USAGE_SUMMARY_RECORD),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()

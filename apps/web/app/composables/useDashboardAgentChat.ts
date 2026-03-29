@@ -3,6 +3,8 @@ import type {
   DashboardConversationDetail,
   DashboardConversationMessage,
   DashboardConversationSummary,
+  DashboardConversationUsageSummary,
+  OpenRouterCatalogModel,
 } from "@brainiac/agent";
 import type { WorkspaceNode } from "@brainiac/workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
@@ -18,13 +20,20 @@ import { getErrorDebugDetails } from "~/utils/get-error-debug-details";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const MODEL_CATALOG_STALE_TIME_MS = 10 * 60 * 1000;
+const ACCOUNT_STATUS_STALE_TIME_MS = 60 * 1000;
 const MODEL_PREFERENCES_STORAGE_KEY = "brainiac.dashboard.agent.model-preferences";
 const relativeTimeFormatter = new Intl.RelativeTimeFormat("en", {
   numeric: "auto",
 });
-const contextLengthFormatter = new Intl.NumberFormat("en", {
+const compactNumberFormatter = new Intl.NumberFormat("en", {
   notation: "compact",
   maximumFractionDigits: 1,
+});
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
 
 type DashboardAgentModelPreferences = {
@@ -32,12 +41,34 @@ type DashboardAgentModelPreferences = {
   favoriteModelIds: string[];
 };
 
+type DashboardAgentModelAccessFilter = "all" | "free" | "paid";
+
+type DashboardAgentModelOption = OpenRouterCatalogModel & {
+  label: string;
+  description: string;
+  pricingLabel: string;
+  compactPricingLabel: string;
+  searchableText: string;
+};
+
+function formatCompactNumber(value: number | null | undefined) {
+  if (!value) {
+    return "0";
+  }
+
+  return compactNumberFormatter.format(value);
+}
+
 function formatContextLength(contextLength: number | null) {
   if (!contextLength) {
     return "Context unknown";
   }
 
-  return `${contextLengthFormatter.format(contextLength)} ctx`;
+  return `${formatCompactNumber(contextLength)} ctx`;
+}
+
+function formatUsd(value: number | null | undefined) {
+  return usdFormatter.format(value ?? 0);
 }
 
 function formatRelativeTime(value: string) {
@@ -65,6 +96,75 @@ function formatRelativeTime(value: string) {
   }
 
   return relativeTimeFormatter.format(days, "day");
+}
+
+function formatUsdPerMillion(value?: string) {
+  const numericValue = Number(value ?? "0");
+
+  if (!Number.isFinite(numericValue) || numericValue <= 0) {
+    return null;
+  }
+
+  return formatUsd(numericValue * 1_000_000);
+}
+
+function formatModelPricing(model: OpenRouterCatalogModel) {
+  if (model.isFree) {
+    return "Free";
+  }
+
+  const promptPrice = formatUsdPerMillion(model.pricing.prompt);
+  const completionPrice = formatUsdPerMillion(model.pricing.completion);
+
+  if (promptPrice && completionPrice) {
+    return `${promptPrice} in · ${completionPrice} out / 1M`;
+  }
+
+  return "Paid";
+}
+
+function formatModelPricingCompact(model: OpenRouterCatalogModel) {
+  if (model.isFree) {
+    return "Free";
+  }
+
+  const promptPrice = formatUsdPerMillion(model.pricing.prompt);
+
+  return promptPrice ? `${promptPrice} / 1M in` : "Paid";
+}
+
+function formatUsageSummaryTokens(summary: DashboardConversationUsageSummary | null | undefined) {
+  if (!summary) {
+    return null;
+  }
+
+  return `${formatCompactNumber(summary.totals.totalTokens)} total`;
+}
+
+function getUsageRatio(summary: DashboardConversationUsageSummary | null | undefined) {
+  const latest = summary?.latest;
+
+  if (!latest?.contextLength) {
+    return null;
+  }
+
+  return Math.min(latest.inputTokens / latest.contextLength, 1);
+}
+
+function formatUsageProgress(summary: DashboardConversationUsageSummary | null | undefined) {
+  const latest = summary?.latest;
+
+  if (!latest?.contextLength) {
+    return "Usage appears after the first response";
+  }
+
+  const ratio = getUsageRatio(summary);
+
+  if (ratio === null) {
+    return "Usage appears after the first response";
+  }
+
+  return `${Math.round(ratio * 100)}% ctx · ${formatCompactNumber(latest.inputTokens)} / ${formatCompactNumber(latest.contextLength)}`;
 }
 
 function readModelPreferences(): DashboardAgentModelPreferences {
@@ -126,6 +226,9 @@ function buildConversationOption(conversation: DashboardConversationSummary) {
     label: conversation.title,
     preview,
     meta: [presetLabel, updatedLabel].filter(Boolean).join(" · "),
+    usageSummary: conversation.usageSummary,
+    usageLabel: formatUsageSummaryTokens(conversation.usageSummary),
+    usageProgressLabel: formatUsageProgress(conversation.usageSummary),
   };
 }
 
@@ -166,6 +269,7 @@ function toConversationSummary(detail: DashboardConversationDetail): DashboardCo
     title: detail.title,
     model: detail.model,
     toolPreset: detail.toolPreset,
+    usageSummary: detail.usageSummary,
     createdAt: detail.createdAt,
     updatedAt: detail.updatedAt,
     lastMessageAt: detail.lastMessageAt,
@@ -192,6 +296,11 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   const conversationDraftToolPreset = ref<DashboardAgentToolPreset>("ask");
   const preferredDefaultModelId = ref<string>();
   const favoriteModelIds = ref<string[]>([]);
+  const modelSearch = ref("");
+  const favoritesOnly = ref(false);
+  const accessFilter = ref<DashboardAgentModelAccessFilter>("all");
+  const toolsOnly = ref(false);
+  const selectedCreatorIds = ref<string[]>([]);
   const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
   const activeMention = computed(() => getActiveDashboardNodeMention(draft.value));
   const selectedNodeIdSet = computed(() => new Set(selectedNodeIds.value));
@@ -215,11 +324,18 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   });
 
   const conversationsListQueryOptions = orpc.agent.conversations.list.queryOptions();
-  const freeModelsQuery = useQuery({
-    ...orpc.agent.freeModels.queryOptions(),
+  const accountStatusQueryOptions = orpc.agent.accountStatus.queryOptions();
+  const modelCatalogQuery = useQuery({
+    ...orpc.agent.modelCatalog.queryOptions(),
     enabled: authEnabled,
     staleTime: MODEL_CATALOG_STALE_TIME_MS,
     gcTime: MODEL_CATALOG_STALE_TIME_MS * 3,
+  });
+  const accountStatusQuery = useQuery({
+    ...accountStatusQueryOptions,
+    enabled: authEnabled,
+    staleTime: ACCOUNT_STATUS_STALE_TIME_MS,
+    gcTime: ACCOUNT_STATUS_STALE_TIME_MS * 3,
   });
   const conversationsQuery = useQuery({
     ...conversationsListQueryOptions,
@@ -250,19 +366,66 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     );
   });
 
-  const modelOptions = computed(() =>
-    (freeModelsQuery.data.value?.models ?? []).map((model) => ({
-      id: model.id,
+  const modelOptions = computed<DashboardAgentModelOption[]>(() =>
+    (modelCatalogQuery.data.value?.models ?? []).map((model) => ({
+      ...model,
       label: model.name,
-      provider: model.provider,
-      supportsTools: model.supportsTools,
-      contextLength: model.contextLength,
+      pricingLabel: formatModelPricing(model),
+      compactPricingLabel: formatModelPricingCompact(model),
       description: [
+        model.creatorLabel,
         formatContextLength(model.contextLength),
         model.supportsTools ? "Tools enabled" : "Direct answers",
-        model.id,
+        formatModelPricing(model),
       ].join(" · "),
+      searchableText: [model.name, model.id, model.creatorLabel, model.creatorId].join(" ").toLowerCase(),
     })),
+  );
+  const creatorFilterOptions = computed(() => {
+    const counts = new Map<string, { creatorId: string; creatorLabel: string; count: number }>();
+
+    for (const model of modelOptions.value) {
+      const current = counts.get(model.creatorId);
+
+      counts.set(model.creatorId, {
+        creatorId: model.creatorId,
+        creatorLabel: model.creatorLabel,
+        count: (current?.count ?? 0) + 1,
+      });
+    }
+
+    return [...counts.values()].sort((left, right) =>
+      left.creatorLabel.localeCompare(right.creatorLabel),
+    );
+  });
+  const filteredModelOptions = computed(() =>
+    modelOptions.value.filter((model) => {
+      if (favoritesOnly.value && !favoriteModelIdSet.value.has(model.id)) {
+        return false;
+      }
+
+      if (accessFilter.value === "free" && !model.isFree) {
+        return false;
+      }
+
+      if (accessFilter.value === "paid" && model.isFree) {
+        return false;
+      }
+
+      if (toolsOnly.value && !model.supportsTools) {
+        return false;
+      }
+
+      if (selectedCreatorIds.value.length > 0 && !selectedCreatorIds.value.includes(model.creatorId)) {
+        return false;
+      }
+
+      if (!modelSearch.value.trim()) {
+        return true;
+      }
+
+      return model.searchableText.includes(modelSearch.value.trim().toLowerCase());
+    }),
   );
   const toolPresetOptions = computed(
     () =>
@@ -295,6 +458,24 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         (conversation) => conversation.id === activeConversationId.value,
       ) ?? null,
   );
+  const activeConversationUsageSummary = computed(
+    () => activeConversation.value?.usageSummary ?? activeConversationSummary.value?.usageSummary ?? null,
+  );
+  const activeConversationUsageRatio = computed(() =>
+    getUsageRatio(activeConversationUsageSummary.value),
+  );
+  const activeConversationUsageLabel = computed(() =>
+    formatUsageProgress(activeConversationUsageSummary.value),
+  );
+  const activeConversationUsageTotalsLabel = computed(() => {
+    const summary = activeConversationUsageSummary.value;
+
+    if (!summary?.latest) {
+      return "Usage appears after the first response";
+    }
+
+    return `${formatCompactNumber(summary.totals.totalTokens)} total · ${formatUsd(summary.totals.costUsd)}`;
+  });
   const messages = computed(() => [
     ...(activeConversation.value?.messages ?? []),
     ...pendingMessages.value,
@@ -361,9 +542,6 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       activeConversationSummary.value?.title ??
       "New conversation",
   );
-  const activeToolPresetLabel = computed(() =>
-    getToolPresetLabel(conversationDraftToolPreset.value),
-  );
   const selectedModelId = computed({
     get: () => conversationDraftModelId.value,
     set: (value: string | undefined) => {
@@ -383,7 +561,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       return preferredDefaultModelId.value;
     }
 
-    const serverDefaultModelId = freeModelsQuery.data.value?.defaultModel;
+    const serverDefaultModelId = modelCatalogQuery.data.value?.defaultModel;
 
     if (serverDefaultModelId && availableModelIds.has(serverDefaultModelId)) {
       return serverDefaultModelId;
@@ -394,7 +572,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   const favoriteModelOptions = computed(() =>
     favoriteModelIds.value
       .map((favoriteId) => modelOptions.value.find((model) => model.id === favoriteId))
-      .filter((model): model is (typeof modelOptions.value)[number] => Boolean(model)),
+      .filter((model): model is DashboardAgentModelOption => Boolean(model)),
   );
   const topModelOptions = computed(() => {
     const orderedIds = [
@@ -405,9 +583,10 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
 
     return [...new Set(orderedIds)]
       .map((modelId) => modelOptions.value.find((model) => model.id === modelId))
-      .filter((model): model is (typeof modelOptions.value)[number] => Boolean(model));
+      .filter((model): model is DashboardAgentModelOption => Boolean(model));
   });
   const modelCount = computed(() => modelOptions.value.length);
+  const filteredModelCount = computed(() => filteredModelOptions.value.length);
   const selectedModelOption = computed(() =>
     modelOptions.value.find((model) => model.id === selectedModelId.value),
   );
@@ -416,6 +595,23 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       toolPresetOptions.value.find((preset) => preset.value === selectedToolPreset.value) ??
       toolPresetOptions.value[0],
   );
+  const availableCredits = computed(() => accountStatusQuery.data.value?.availableCredits ?? 0);
+  const accountBalanceLabel = computed(() => {
+    if (accountStatusQuery.isLoading.value) {
+      return "Loading balance";
+    }
+
+    return formatUsd(accountStatusQuery.data.value?.availableCredits);
+  });
+  const accountUsageLabel = computed(() => {
+    const data = accountStatusQuery.data.value;
+
+    if (!data) {
+      return "Account usage unavailable";
+    }
+
+    return `${formatUsd(data.usageDaily)} today · ${formatUsd(data.usageMonthly)} month`;
+  });
   const modelHint = computed(() => {
     const selectedModel = selectedModelOption.value;
 
@@ -423,26 +619,28 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
       return selectedModel.description;
     }
 
-    if (freeModelsQuery.isError.value) {
+    if (modelCatalogQuery.isError.value) {
       return "Using the server default model until the OpenRouter catalog is available.";
     }
 
-    if (freeModelsQuery.isLoading.value) {
-      return "Loading the current OpenRouter free-model catalog.";
+    if (modelCatalogQuery.isLoading.value) {
+      return "Loading the OpenRouter model catalog.";
     }
 
-    return "Choose from the current OpenRouter free-model catalog.";
+    return "Choose from the current OpenRouter model catalog.";
   });
   const modelError = computed(() =>
-    freeModelsQuery.isError.value
-      ? getErrorMessage(
-          freeModelsQuery.error.value,
-          "Unable to load the OpenRouter free-model catalog.",
-        )
+    modelCatalogQuery.isError.value
+      ? getErrorMessage(modelCatalogQuery.error.value, "Unable to load the OpenRouter model catalog.")
       : null,
   );
   const modelDebugDetails = computed(() =>
-    freeModelsQuery.isError.value ? getErrorDebugDetails(freeModelsQuery.error.value) : null,
+    modelCatalogQuery.isError.value ? getErrorDebugDetails(modelCatalogQuery.error.value) : null,
+  );
+  const accountStatusError = computed(() =>
+    accountStatusQuery.isError.value
+      ? getErrorMessage(accountStatusQuery.error.value, "Unable to load OpenRouter account status.")
+      : null,
   );
   const hasConversations = computed(() => conversationList.value.length > 0);
   const canRenameConversation = computed(() => Boolean(activeConversationId.value));
@@ -458,16 +656,14 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   );
 
   watch(
-    () => freeModelsQuery.data.value,
+    () => modelCatalogQuery.data.value,
     (payload) => {
       if (!payload) {
         return;
       }
 
       const availableIds = new Set(payload.models.map((model) => model.id));
-      favoriteModelIds.value = favoriteModelIds.value.filter((modelId) =>
-        availableIds.has(modelId),
-      );
+      favoriteModelIds.value = favoriteModelIds.value.filter((modelId) => availableIds.has(modelId));
 
       if (preferredDefaultModelId.value && !availableIds.has(preferredDefaultModelId.value)) {
         preferredDefaultModelId.value = undefined;
@@ -540,6 +736,14 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         conversationId,
       },
     }).queryKey;
+  }
+
+  function resetModelFilters() {
+    modelSearch.value = "";
+    favoritesOnly.value = false;
+    accessFilter.value = "all";
+    toolsOnly.value = false;
+    selectedCreatorIds.value = [];
   }
 
   function startNewConversation() {
@@ -725,6 +929,9 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
             result.assistantMessage,
           ]),
       );
+      void queryClient.invalidateQueries({
+        queryKey: accountStatusQueryOptions.queryKey,
+      });
 
       if (result.workspaceSnapshot) {
         workspaceStore.applyWorkspaceSnapshot(
@@ -786,6 +993,43 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     favoriteModelIds.value = [...favoriteModelIds.value, modelId];
   }
 
+  function moveFavoriteModel(modelId: string, direction: -1 | 1) {
+    const currentIndex = favoriteModelIds.value.findIndex((favoriteId) => favoriteId === modelId);
+
+    if (currentIndex < 0) {
+      return;
+    }
+
+    const nextIndex = currentIndex + direction;
+
+    if (nextIndex < 0 || nextIndex >= favoriteModelIds.value.length) {
+      return;
+    }
+
+    const nextFavoriteModelIds = [...favoriteModelIds.value];
+    const [moved] = nextFavoriteModelIds.splice(currentIndex, 1);
+
+    if (!moved) {
+      return;
+    }
+
+    nextFavoriteModelIds.splice(nextIndex, 0, moved);
+    favoriteModelIds.value = nextFavoriteModelIds;
+  }
+
+  function toggleCreatorFilter(creatorId: string) {
+    if (selectedCreatorIds.value.includes(creatorId)) {
+      selectedCreatorIds.value = selectedCreatorIds.value.filter((value) => value !== creatorId);
+      return;
+    }
+
+    selectedCreatorIds.value = [...selectedCreatorIds.value, creatorId];
+  }
+
+  function isModelSelectable(model: DashboardAgentModelOption) {
+    return model.isFree || availableCredits.value > 0;
+  }
+
   function setPreferredDefaultModel(modelId: string) {
     const modelExists = modelOptions.value.some((model) => model.id === modelId);
 
@@ -801,12 +1045,21 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   }
 
   return {
+    accessFilter,
+    accountBalanceLabel,
+    accountStatus: accountStatusQuery.data,
+    accountStatusError,
+    accountUsageLabel,
     activeConversation,
     activeConversationId,
     activeConversationTitle,
+    activeConversationUsageLabel,
+    activeConversationUsageRatio,
+    activeConversationUsageSummary,
+    activeConversationUsageTotalsLabel,
     activeMention,
-    activeToolPresetLabel,
     addMentionedNode,
+    availableCredits,
     canDeleteConversation,
     canRenameConversation,
     canSend,
@@ -817,6 +1070,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     confirmDeleteConversation,
     conversationList,
     conversationOptions,
+    creatorFilterOptions,
     currentDefaultModelId: effectiveDefaultModelId,
     cycleToolPreset,
     deleteDialogOpen: isDeleteDialogOpen,
@@ -824,12 +1078,19 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     error,
     errorDebugDetails,
     favoriteModelOptions,
+    favoritesOnly,
+    filteredModelCount,
+    filteredModelOptions,
+    formatUsageProgress,
+    formatUsageSummaryTokens,
     hasConversations,
     isDeleteDialogOpen,
     isDeletingConversation: deleteConversationMutation.isPending,
     isFavoriteModel,
+    isLoadingAccountStatus: accountStatusQuery.isLoading,
     isLoadingConversation: activeConversationQuery.isLoading,
-    isLoadingModels: freeModelsQuery.isLoading,
+    isLoadingModels: modelCatalogQuery.isLoading,
+    isModelSelectable,
     isPending: chatTurnMutation.isPending,
     isRenameDialogOpen,
     isRenamingConversation: renameConversationMutation.isPending,
@@ -840,12 +1101,16 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     modelError,
     modelHint,
     modelOptions,
+    modelSearch,
+    moveFavoriteModel,
     openDeleteDialog,
     openRenameDialog,
     promptSuggestions,
     removeMentionedNode,
     renameDraft,
+    resetModelFilters,
     scopeLabel,
+    selectedCreatorIds,
     selectedModelId,
     selectedModelOption,
     selectedNodes,
@@ -855,8 +1120,10 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
     setPreferredDefaultModel,
     startNewConversation,
     submitRenameConversation,
+    toggleCreatorFilter,
     toggleFavoriteModel,
     topModelOptions,
     toolPresetOptions,
+    toolsOnly,
   };
 }

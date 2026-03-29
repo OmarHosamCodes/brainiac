@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import type { DashboardConversationUsageSummary } from "@brainiac/agent";
 import type { WorkspaceNode } from "@brainiac/workspace";
 import { computed, nextTick, ref, toRef, useTemplateRef, watch } from "vue";
+
 import { renderSimpleMarkdown } from "~/utils/render-simple-markdown";
 
 const props = defineProps<{
@@ -13,10 +15,19 @@ const chatViewport = useTemplateRef<HTMLDivElement>("chatViewport");
 const activePane = ref<"chat" | "history">("chat");
 const isModelLibraryOpen = ref(false);
 const {
+  accessFilter,
+  accountBalanceLabel,
+  accountStatusError,
+  accountUsageLabel,
   activeConversationId,
   activeConversationTitle,
+  activeConversationUsageLabel,
+  activeConversationUsageRatio,
+  activeConversationUsageSummary,
+  activeConversationUsageTotalsLabel,
   activeMention,
   addMentionedNode,
+  availableCredits,
   canDeleteConversation,
   canRenameConversation,
   canSend,
@@ -27,17 +38,23 @@ const {
   confirmDeleteConversation,
   conversationList,
   conversationOptions,
+  creatorFilterOptions,
   currentDefaultModelId,
   cycleToolPreset,
   draft,
   error,
   favoriteModelOptions,
+  favoritesOnly,
+  filteredModelCount,
+  filteredModelOptions,
   hasConversations,
   isDeleteDialogOpen,
   isDeletingConversation,
   isFavoriteModel,
+  isLoadingAccountStatus,
   isLoadingConversation,
   isLoadingModels,
+  isModelSelectable,
   isPending,
   isRenameDialogOpen,
   isRenamingConversation,
@@ -47,12 +64,16 @@ const {
   modelError,
   modelHint,
   modelOptions,
+  modelSearch,
+  moveFavoriteModel,
   openDeleteDialog,
   openRenameDialog,
   promptSuggestions,
   removeMentionedNode,
   renameDraft,
+  resetModelFilters,
   scopeLabel,
+  selectedCreatorIds,
   selectedModelId,
   selectedModelOption,
   selectedNodes,
@@ -61,8 +82,10 @@ const {
   setPreferredDefaultModel,
   startNewConversation,
   submitRenameConversation,
+  toggleCreatorFilter,
   toggleFavoriteModel,
   topModelOptions,
+  toolsOnly,
 } = useDashboardAgentChat(toRef(props, "nodes"));
 
 const activeConversationMeta = computed(
@@ -74,6 +97,23 @@ const visibleHistory = computed(() => conversationOptions.value);
 const emptyMentionResults = computed(
   () => activeMention.value && mentionSuggestions.value.length === 0,
 );
+
+function formatTokenCount(value: number) {
+  return new Intl.NumberFormat("en", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
+function getUsageWidth(summary: DashboardConversationUsageSummary | null | undefined) {
+  const latest = summary?.latest;
+
+  if (!latest?.contextLength) {
+    return 0;
+  }
+
+  return Math.min((latest.inputTokens / latest.contextLength) * 100, 100);
+}
 
 async function scrollToBottom() {
   await nextTick();
@@ -132,11 +172,18 @@ function toggleHistoryPane() {
   activePane.value = activePane.value === "history" ? "chat" : "history";
 }
 
-function toggleModelLibrary() {
+function openModelLibrary() {
+  resetModelFilters();
   isModelLibraryOpen.value = true;
 }
 
 function selectModel(modelId: string) {
+  const model = modelOptions.value.find((entry) => entry.id === modelId);
+
+  if (!model || !isModelSelectable(model)) {
+    return;
+  }
+
   selectedModelId.value = modelId;
 }
 
@@ -249,8 +296,7 @@ function renderAssistantMessage(content: string) {
             Pick up where you left off
           </p>
           <p class="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-            History stays inside the panel now, so switching conversations never changes the canvas
-            layout.
+            History now tracks context pressure and total usage for each conversation.
           </p>
         </div>
       </div>
@@ -319,6 +365,23 @@ function renderAssistantMessage(content: string) {
                 class="mt-0.5 size-4 shrink-0"
               />
             </div>
+
+            <div
+              v-if="conversation.usageSummary.latest"
+              class="mt-3 rounded-[1rem] border border-white/10 bg-black/5 px-3 py-2 dark:border-black/5 dark:bg-white/5"
+            >
+              <div class="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.14em]">
+                <span>{{ conversation.usageProgressLabel }}</span>
+                <span>{{ conversation.usageLabel }}</span>
+              </div>
+              <div class="mt-2 h-1.5 rounded-full bg-white/10 dark:bg-black/10">
+                <div
+                  class="h-full rounded-full bg-current transition-all"
+                  :style="{ width: `${getUsageWidth(conversation.usageSummary)}%` }"
+                />
+              </div>
+            </div>
+
             <p
               class="mt-3 text-[10px] font-semibold uppercase tracking-[0.2em]"
               :class="
@@ -424,6 +487,44 @@ function renderAssistantMessage(content: string) {
       <div
         class="border-t border-neutral-200/50 bg-[linear-gradient(180deg,rgba(250,250,249,0.72),rgba(244,244,243,0.95))] p-5 dark:border-neutral-800/50 dark:bg-[linear-gradient(180deg,rgba(18,18,18,0.7),rgba(12,12,12,0.96))]"
       >
+        <div
+          class="mb-3 rounded-[1.5rem] border border-neutral-200/80 bg-white/88 p-4 shadow-sm dark:border-neutral-800/80 dark:bg-neutral-900/88"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">
+                Conversation usage
+              </p>
+              <p class="mt-1 text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+                {{ activeConversationUsageLabel }}
+              </p>
+              <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                {{ activeConversationUsageTotalsLabel }}
+              </p>
+            </div>
+            <UBadge color="neutral" variant="soft" size="sm">
+              {{ selectedModelOption?.compactPricingLabel || "Default model" }}
+            </UBadge>
+          </div>
+
+          <div class="mt-3 h-2 rounded-full bg-neutral-200/80 dark:bg-neutral-800/80">
+            <div
+              class="h-full rounded-full bg-neutral-900 transition-all dark:bg-white"
+              :style="{ width: `${(activeConversationUsageRatio ?? 0) * 100}%` }"
+            />
+          </div>
+
+          <div
+            v-if="activeConversationUsageSummary?.latest"
+            class="mt-3 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400"
+          >
+            <span>{{ formatTokenCount(activeConversationUsageSummary.latest.inputTokens) }} input</span>
+            <span>{{ formatTokenCount(activeConversationUsageSummary.latest.outputTokens) }} output</span>
+            <span>{{ formatTokenCount(activeConversationUsageSummary.latest.cachedTokens) }} cached</span>
+            <span>{{ formatTokenCount(activeConversationUsageSummary.latest.reasoningTokens) }} reasoning</span>
+          </div>
+        </div>
+
         <div v-if="selectedNodes.length > 0" class="mb-3 flex flex-wrap items-center gap-2">
           <button
             v-for="node in selectedNodes"
@@ -538,7 +639,7 @@ function renderAssistantMessage(content: string) {
           <button
             type="button"
             class="inline-flex min-w-0 flex-1 items-center gap-2 rounded-full border border-neutral-200/80 bg-white/90 px-3 py-2 text-left shadow-sm transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:hover:border-neutral-700"
-            @click="toggleModelLibrary"
+            @click="openModelLibrary"
           >
             <UIcon
               name="i-lucide-cpu"
@@ -558,6 +659,20 @@ function renderAssistantMessage(content: string) {
               {{ modelCount }}
             </span>
           </button>
+
+          <button
+            type="button"
+            class="inline-flex items-center gap-2 rounded-full border border-neutral-200/80 bg-white/90 px-3 py-2 text-left shadow-sm transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:hover:border-neutral-700"
+            @click="openModelLibrary"
+          >
+            <UIcon name="i-lucide-wallet" class="size-3.5 text-neutral-500 dark:text-neutral-400" />
+            <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
+              Balance
+            </span>
+            <span class="text-xs font-semibold text-neutral-950 dark:text-neutral-50">
+              {{ accountBalanceLabel }}
+            </span>
+          </button>
         </div>
 
         <div v-if="topModelOptions.length > 0" class="mt-2">
@@ -571,9 +686,9 @@ function renderAssistantMessage(content: string) {
               <button
                 type="button"
                 class="rounded-full border border-neutral-200/80 bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500 transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:text-neutral-400 dark:hover:border-neutral-700"
-                @click="toggleModelLibrary"
+                @click="openModelLibrary"
               >
-                Browse
+                Customize
               </button>
             </div>
 
@@ -581,7 +696,7 @@ function renderAssistantMessage(content: string) {
               <div
                 v-for="model in topModelOptions"
                 :key="model.id"
-                class="relative min-w-[10.5rem] shrink-0 rounded-[1rem] border px-3 py-2.5 text-left shadow-sm transition"
+                class="relative min-w-[11rem] shrink-0 rounded-[1rem] border px-3 py-2.5 text-left shadow-sm transition"
                 :class="
                   selectedModelId === model.id
                     ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
@@ -589,9 +704,14 @@ function renderAssistantMessage(content: string) {
                 "
               >
                 <button type="button" class="w-full text-left" @click="selectModel(model.id)">
-                  <p class="truncate pr-6 text-xs font-semibold">
-                    {{ model.label }}
-                  </p>
+                  <div class="flex items-center gap-2 pr-7">
+                    <p class="truncate text-xs font-semibold">
+                      {{ model.label }}
+                    </p>
+                    <UBadge color="neutral" variant="soft" size="sm">
+                      {{ model.isFree ? "Free" : "Paid" }}
+                    </UBadge>
+                  </div>
                   <p
                     class="mt-1 truncate text-[10px]"
                     :class="
@@ -600,7 +720,7 @@ function renderAssistantMessage(content: string) {
                         : 'text-neutral-500 dark:text-neutral-400'
                     "
                   >
-                    {{ model.description }}
+                    {{ model.creatorLabel }} · {{ model.compactPricingLabel }}
                   </p>
                 </button>
                 <button
@@ -635,160 +755,40 @@ function renderAssistantMessage(content: string) {
       </div>
     </template>
 
-    <UModal
+    <DashboardAgentModelLibrary
       :open="isModelLibraryOpen"
-      title="Model library"
-      description="Pick a model, set your new default, and star the ones you want pinned."
-      :ui="{
-        content: 'sm:max-w-3xl overflow-hidden rounded-[28px]',
-        body: 'space-y-4 p-4 sm:p-5',
-      }"
-      @update:open="(value) => (isModelLibraryOpen = value)"
-    >
-      <template #body>
-        <div
-          v-if="isLoadingModels"
-          class="px-2 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400"
-        >
-          Loading models...
-        </div>
-
-        <div v-else class="space-y-4">
-          <div v-if="favoriteModelOptions.length > 0" class="space-y-2">
-            <p class="px-1 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
-              Starred
-            </p>
-            <div class="space-y-2">
-              <div
-                v-for="model in favoriteModelOptions"
-                :key="model.id"
-                class="rounded-[1.2rem] border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <button
-                    type="button"
-                    class="min-w-0 flex-1 text-left"
-                    @click="selectModel(model.id)"
-                  >
-                    <p class="truncate text-sm font-semibold text-neutral-950 dark:text-neutral-50">
-                      {{ model.label }}
-                    </p>
-                    <p class="mt-1 truncate text-xs text-neutral-500 dark:text-neutral-400">
-                      {{ model.description }}
-                    </p>
-                  </button>
-                  <div class="flex items-center gap-1">
-                    <UButton
-                      color="neutral"
-                      variant="ghost"
-                      size="xs"
-                      :icon="
-                        currentDefaultModelId === model.id
-                          ? 'i-lucide-badge-check'
-                          : 'i-lucide-circle'
-                      "
-                      class="rounded-full"
-                      @click="setPreferredDefaultModel(model.id)"
-                    />
-                    <UButton
-                      color="neutral"
-                      variant="ghost"
-                      size="xs"
-                      :icon="isFavoriteModel(model.id) ? 'i-lucide-star' : 'i-lucide-star-off'"
-                      class="rounded-full"
-                      @click="toggleFavoriteModel(model.id)"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="space-y-2">
-            <p class="px-1 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
-              All models
-            </p>
-            <div class="max-h-[52vh] space-y-2 overflow-y-auto pr-1">
-              <div
-                v-for="model in modelOptions"
-                :key="model.id"
-                class="rounded-[1.2rem] border p-3 transition"
-                :class="
-                  selectedModelId === model.id
-                    ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
-                    : 'border-neutral-200/80 bg-neutral-50/80 dark:border-neutral-800/80 dark:bg-neutral-900/70'
-                "
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <button
-                    type="button"
-                    class="min-w-0 flex-1 text-left"
-                    @click="selectModel(model.id)"
-                  >
-                    <div class="flex flex-wrap items-center gap-2">
-                      <p class="truncate text-sm font-semibold">
-                        {{ model.label }}
-                      </p>
-                      <UBadge
-                        v-if="currentDefaultModelId === model.id"
-                        color="neutral"
-                        variant="soft"
-                        size="sm"
-                      >
-                        Default
-                      </UBadge>
-                    </div>
-                    <p
-                      class="mt-1 truncate text-xs"
-                      :class="
-                        selectedModelId === model.id
-                          ? 'text-white/70 dark:text-neutral-500'
-                          : 'text-neutral-500 dark:text-neutral-400'
-                      "
-                    >
-                      {{ model.description }}
-                    </p>
-                  </button>
-
-                  <div class="flex items-center gap-1">
-                    <UButton
-                      color="neutral"
-                      :variant="selectedModelId === model.id ? 'outline' : 'ghost'"
-                      size="xs"
-                      :icon="
-                        currentDefaultModelId === model.id
-                          ? 'i-lucide-badge-check'
-                          : 'i-lucide-circle'
-                      "
-                      class="rounded-full"
-                      @click="setPreferredDefaultModel(model.id)"
-                    />
-                    <UButton
-                      color="neutral"
-                      :variant="selectedModelId === model.id ? 'outline' : 'ghost'"
-                      size="xs"
-                      :icon="isFavoriteModel(model.id) ? 'i-lucide-star' : 'i-lucide-star-off'"
-                      class="rounded-full"
-                      @click="toggleFavoriteModel(model.id)"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <UAlert
-          v-if="modelError"
-          class="mt-1 rounded-2xl"
-          color="error"
-          variant="soft"
-          icon="i-lucide-alert-circle"
-          title="Model catalog error"
-          :description="modelError"
-        />
-      </template>
-    </UModal>
+      :is-loading-models="isLoadingModels"
+      :is-loading-account-status="isLoadingAccountStatus"
+      :model-error="modelError"
+      :account-status-error="accountStatusError"
+      :account-balance-label="accountBalanceLabel"
+      :account-usage-label="accountUsageLabel"
+      :available-credits="availableCredits"
+      :current-default-model-id="currentDefaultModelId"
+      :selected-model-id="selectedModelId"
+      :model-search="modelSearch"
+      :favorites-only="favoritesOnly"
+      :access-filter="accessFilter"
+      :tools-only="toolsOnly"
+      :selected-creator-ids="selectedCreatorIds"
+      :creator-filter-options="creatorFilterOptions"
+      :filtered-model-count="filteredModelCount"
+      :filtered-model-options="filteredModelOptions"
+      :favorite-model-options="favoriteModelOptions"
+      :is-favorite-model="isFavoriteModel"
+      :is-model-selectable="isModelSelectable"
+      @update:open="isModelLibraryOpen = $event"
+      @update:model-search="modelSearch = $event"
+      @update:favorites-only="favoritesOnly = $event"
+      @update:access-filter="accessFilter = $event"
+      @update:tools-only="toolsOnly = $event"
+      @toggle-creator="toggleCreatorFilter"
+      @reset-filters="resetModelFilters"
+      @select-model="selectModel"
+      @toggle-favorite="toggleFavoriteModel"
+      @set-default="setPreferredDefaultModel"
+      @move-favorite="moveFavoriteModel($event.modelId, $event.direction)"
+    />
 
     <UModal
       :open="isRenameDialogOpen"
