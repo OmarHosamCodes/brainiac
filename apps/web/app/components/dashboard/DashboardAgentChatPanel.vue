@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { DashboardConversationUsageSummary } from "@brainiac/agent";
 import type { WorkspaceNode } from "@brainiac/workspace";
 import { computed, nextTick, ref, toRef, useTemplateRef, watch } from "vue";
 
@@ -7,6 +6,7 @@ import { renderSimpleMarkdown } from "~/utils/render-simple-markdown";
 
 const props = defineProps<{
   nodes: WorkspaceNode[];
+  compact?: boolean;
 }>();
 
 defineEmits(["close"]);
@@ -105,7 +105,7 @@ function formatTokenCount(value: number) {
   }).format(value);
 }
 
-function getUsageWidth(summary: DashboardConversationUsageSummary | null | undefined) {
+function getUsageWidth(summary: any | null | undefined) {
   const latest = summary?.latest;
 
   if (!latest?.contextLength) {
@@ -201,41 +201,33 @@ function renderAssistantMessage(content: string) {
 
 <template>
   <section
-    class="flex h-full min-h-0 flex-col overflow-hidden rounded-[2rem] border border-neutral-200/60 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,246,245,0.96))] shadow-[0_28px_80px_rgba(15,23,42,0.14)] ring-1 ring-black/[0.04] backdrop-blur-2xl dark:border-neutral-800/60 dark:bg-[linear-gradient(180deg,rgba(10,10,10,0.98),rgba(20,20,20,0.96))] dark:ring-white/[0.04]"
+    class="flex h-screen max-h-screen flex-col overflow-hidden border-l border-neutral-200/60 bg-white/90 shadow-2xl backdrop-blur-3xl dark:border-neutral-800/60 dark:bg-neutral-900/95"
+    :class="compact ? 'w-80' : 'w-full max-w-[420px]'"
   >
-    <header class="border-b border-neutral-200/50 px-5 py-5 dark:border-neutral-800/50">
-      <div class="flex items-start justify-between gap-4">
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-3">
-            <div
-              class="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-neutral-900 text-white shadow-lg shadow-black/10 dark:bg-white dark:text-neutral-900"
-            >
-              <UIcon name="i-lucide-sparkles" class="size-4" />
-            </div>
-
-            <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-neutral-400">
-                Dashboard agent
-              </p>
-              <h2 class="truncate text-base font-semibold text-neutral-950 dark:text-neutral-50">
-                {{ activePane === "history" ? "Conversation history" : activeConversationTitle }}
-              </h2>
-              <p class="truncate text-xs text-neutral-500 dark:text-neutral-400">
-                {{
-                  activePane === "history"
-                    ? `${conversationList.length} saved conversation${conversationList.length === 1 ? "" : "s"}`
-                    : activeConversationMeta
-                }}
-              </p>
-            </div>
+    <header class="shrink-0 border-b border-neutral-200/50 dark:border-neutral-800/50">
+      <UDashboardNavbar
+        :title="activePane === 'history' ? 'History' : activeConversationTitle"
+        :description="activePane === 'history' ? `${conversationList.length} threads` : activeConversationMeta"
+        :ui="{ 
+          left: compact ? 'gap-2' : 'gap-3', 
+          right: compact ? 'gap-0.5' : 'gap-1',
+          root: 'px-4 py-3'
+        }"
+      >
+        <template #leading>
+          <div
+            class="flex shrink-0 items-center justify-center rounded-xl bg-neutral-950 text-white shadow-md dark:bg-white dark:text-neutral-950"
+            :class="compact ? 'size-7' : 'size-9'"
+          >
+            <UIcon name="i-lucide-sparkles" :class="compact ? 'size-3.5' : 'size-4'" />
           </div>
-        </div>
+        </template>
 
-        <div class="flex items-center gap-1">
+        <template #trailing>
           <UButton
             color="neutral"
             :variant="activePane === 'history' ? 'soft' : 'ghost'"
-            size="xs"
+            :size="compact ? 'xs' : 'sm'"
             icon="i-lucide-history"
             class="rounded-full"
             @click="toggleHistoryPane"
@@ -243,7 +235,7 @@ function renderAssistantMessage(content: string) {
           <UButton
             color="neutral"
             variant="ghost"
-            size="xs"
+            :size="compact ? 'xs' : 'sm'"
             icon="i-lucide-square-pen"
             class="rounded-full"
             @click="handleStartNewConversation"
@@ -252,16 +244,17 @@ function renderAssistantMessage(content: string) {
             :items="[
               [
                 {
-                  label: 'Rename conversation',
+                  label: 'Rename',
                   icon: 'i-lucide-pencil-line',
                   disabled: !canRenameConversation,
                   onSelect: openRenameDialog,
                 },
                 {
-                  label: 'Delete conversation',
+                  label: 'Delete',
                   icon: 'i-lucide-trash-2',
                   disabled: !canDeleteConversation,
                   onSelect: openDeleteDialog,
+                  color: 'error' as const,
                 },
               ],
             ]"
@@ -269,7 +262,7 @@ function renderAssistantMessage(content: string) {
             <UButton
               color="neutral"
               variant="ghost"
-              size="xs"
+              :size="compact ? 'xs' : 'sm'"
               icon="i-lucide-ellipsis"
               class="rounded-full"
               :disabled="!canRenameConversation && !canDeleteConversation"
@@ -278,482 +271,339 @@ function renderAssistantMessage(content: string) {
           <UButton
             color="neutral"
             variant="ghost"
-            size="xs"
+            :size="compact ? 'xs' : 'sm'"
             icon="i-lucide-x"
             class="rounded-full"
             @click="$emit('close')"
           />
-        </div>
-      </div>
+        </template>
+      </UDashboardNavbar>
     </header>
 
-    <div v-if="activePane === 'history'" class="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div class="border-b border-neutral-200/40 px-5 py-4 dark:border-neutral-800/40">
-        <div
-          class="rounded-[1.75rem] border border-neutral-200/70 bg-white/80 p-4 shadow-sm dark:border-neutral-800/70 dark:bg-neutral-900/70"
-        >
-          <p class="text-sm font-semibold text-neutral-950 dark:text-neutral-50">
-            Pick up where you left off
-          </p>
-          <p class="mt-1 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
-            History now tracks context pressure and total usage for each conversation.
-          </p>
-        </div>
-      </div>
-
-      <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-        <div
-          v-if="!hasConversations"
-          class="flex h-full flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-neutral-300/80 bg-white/60 px-6 py-10 text-center dark:border-neutral-700/80 dark:bg-neutral-900/50"
-        >
+    <main class="min-h-0 flex-1 overflow-hidden relative">
+      <div v-if="activePane === 'history'" class="absolute inset-0 flex flex-col overflow-hidden">
+        <div class="px-5 py-3 shrink-0">
           <div
-            class="flex size-12 items-center justify-center rounded-2xl bg-neutral-900 text-white dark:bg-white dark:text-neutral-900"
+            class="rounded-2xl border border-neutral-200/50 bg-neutral-50/40 p-3 dark:border-neutral-800/50 dark:bg-neutral-800/10"
           >
-            <UIcon name="i-lucide-message-square-dashed" class="size-5" />
+            <p class="text-xs font-semibold text-neutral-950 dark:text-neutral-50">
+              Past threads
+            </p>
           </div>
-          <p class="mt-4 text-sm font-semibold text-neutral-950 dark:text-neutral-50">
-            No saved conversations yet
-          </p>
-          <p
-            class="mt-1 max-w-[22rem] text-xs leading-relaxed text-neutral-500 dark:text-neutral-400"
-          >
-            Start a new thread from this panel and it will appear here automatically.
-          </p>
-          <UButton
-            color="neutral"
-            variant="soft"
-            class="mt-4 rounded-full"
-            icon="i-lucide-square-pen"
-            @click="handleStartNewConversation"
-          >
-            Start new conversation
-          </UButton>
         </div>
 
-        <div v-else class="space-y-3">
-          <button
-            v-for="conversation in visibleHistory"
-            :key="conversation.id"
-            type="button"
-            class="w-full rounded-[1.5rem] border px-4 py-4 text-left transition-all duration-200"
-            :class="
-              conversation.id === activeConversationId
-                ? 'border-neutral-900 bg-neutral-900 text-white shadow-lg shadow-black/10 dark:border-white dark:bg-white dark:text-neutral-900'
-                : 'border-neutral-200/80 bg-white/85 hover:border-neutral-300 hover:bg-white dark:border-neutral-800/80 dark:bg-neutral-900/80 dark:hover:border-neutral-700 dark:hover:bg-neutral-900'
-            "
-            @click="handleSelectConversation(conversation.id)"
+        <div class="min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+          <div
+            v-if="!hasConversations"
+            class="flex h-full flex-col items-center justify-center rounded-3xl border border-dashed border-neutral-300/60 py-10 text-center dark:border-neutral-700/60"
           >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0 flex-1">
-                <p class="truncate text-sm font-semibold">
-                  {{ conversation.label }}
-                </p>
-                <p
-                  class="mt-1 line-clamp-2 text-xs leading-relaxed"
-                  :class="
-                    conversation.id === activeConversationId
-                      ? 'text-white/75 dark:text-neutral-600'
-                      : 'text-neutral-500 dark:text-neutral-400'
-                  "
-                >
-                  {{ conversation.preview }}
-                </p>
-              </div>
-              <UIcon
-                v-if="conversation.id === activeConversationId"
-                name="i-lucide-check"
-                class="mt-0.5 size-4 shrink-0"
-              />
-            </div>
+            <UIcon name="i-lucide-message-square-dashed" class="size-8 text-neutral-400 opacity-50" />
+            <p class="mt-4 text-xs font-semibold text-neutral-500">No history yet</p>
+          </div>
 
-            <div
-              v-if="conversation.usageSummary.latest"
-              class="mt-3 rounded-[1rem] border border-white/10 bg-black/5 px-3 py-2 dark:border-black/5 dark:bg-white/5"
-            >
-              <div class="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.14em]">
-                <span>{{ conversation.usageProgressLabel }}</span>
-                <span>{{ conversation.usageLabel }}</span>
-              </div>
-              <div class="mt-2 h-1.5 rounded-full bg-white/10 dark:bg-black/10">
-                <div
-                  class="h-full rounded-full bg-current transition-all"
-                  :style="{ width: `${getUsageWidth(conversation.usageSummary)}%` }"
-                />
-              </div>
-            </div>
-
-            <p
-              class="mt-3 text-[10px] font-semibold uppercase tracking-[0.2em]"
+          <div v-else class="space-y-2">
+            <button
+              v-for="conversation in visibleHistory"
+              :key="conversation.id"
+              type="button"
+              class="w-full rounded-xl border p-3 text-left transition-all"
               :class="
                 conversation.id === activeConversationId
-                  ? 'text-white/60 dark:text-neutral-500'
-                  : 'text-neutral-400'
+                  ? 'border-neutral-950 bg-neutral-950 text-white shadow-lg dark:border-white dark:bg-white dark:text-neutral-950'
+                  : 'border-neutral-200/50 bg-white hover:border-neutral-300 dark:border-neutral-800/50 dark:bg-neutral-900/40 dark:hover:border-neutral-700'
               "
+              @click="handleSelectConversation(conversation.id)"
             >
-              {{ conversation.meta }}
-            </p>
-          </button>
-        </div>
-      </div>
-    </div>
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-xs font-semibold">{{ conversation.label }}</p>
+                  <p
+                    class="mt-0.5 line-clamp-1 text-[11px] opacity-70"
+                  >
+                    {{ conversation.preview }}
+                  </p>
+                </div>
+                <UIcon
+                  v-if="conversation.id === activeConversationId"
+                  name="i-lucide-check"
+                  class="mt-0.5 size-3.5 shrink-0"
+                />
+              </div>
 
-    <template v-else>
-      <div
-        ref="chatViewport"
-        class="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 py-5 scroll-smooth"
-      >
-        <template v-if="messages.length === 0 && !isLoadingConversation">
-          <div class="space-y-3">
-            <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
-              Suggested starts
-            </p>
-            <div class="grid gap-2">
-              <button
-                v-for="prompt in promptSuggestions"
-                :key="prompt"
-                type="button"
-                class="rounded-[1.5rem] border border-neutral-200/80 bg-white/85 px-4 py-3 text-left text-sm font-medium text-neutral-700 transition hover:border-neutral-300 hover:bg-white dark:border-neutral-800/80 dark:bg-neutral-900/80 dark:text-neutral-300 dark:hover:border-neutral-700 dark:hover:bg-neutral-900"
-                @click="handlePromptClick(prompt)"
-              >
-                {{ prompt }}
-              </button>
-            </div>
-          </div>
-        </template>
-
-        <div
-          v-for="message in messages"
-          :key="message.id"
-          class="flex flex-col gap-2"
-          :class="message.role === 'user' ? 'items-end' : 'items-start'"
-        >
-          <div
-            class="max-w-[88%] px-5 py-4 text-sm leading-relaxed"
-            :class="[
-              message.role === 'user'
-                ? 'rounded-[1.6rem] rounded-br-md bg-neutral-900 text-neutral-100 shadow-lg shadow-black/10 dark:bg-white dark:text-neutral-900'
-                : 'rounded-[1.6rem] rounded-bl-md border border-neutral-200/70 bg-white/90 text-neutral-800 shadow-lg shadow-black/5 dark:border-neutral-800/70 dark:bg-neutral-900/90 dark:text-neutral-200',
-            ]"
-          >
-            <p v-if="message.role === 'user'" class="whitespace-pre-wrap">
-              {{ message.content }}
-            </p>
-            <div
-              v-else
-              class="prose prose-sm max-w-none text-inherit prose-headings:text-inherit prose-p:text-inherit prose-strong:text-inherit dark:prose-invert"
-              v-html="renderAssistantMessage(message.content)"
-            />
-          </div>
-
-          <div v-if="message.contextNodeTitles?.length" class="flex flex-wrap gap-2 px-1">
-            <span
-              v-for="title in message.contextNodeTitles"
-              :key="title"
-              class="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-semibold text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
-            >
-              {{ title }}
-            </span>
-          </div>
-
-          <div
-            v-if="message.role === 'assistant' && (message.model || message.toolsCalled.length > 0)"
-            class="flex flex-wrap gap-2 px-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400"
-          >
-            <span v-if="message.model">{{ message.model }}</span>
-            <span v-for="toolName in message.toolsCalled" :key="toolName">
-              {{ toolName }}
-            </span>
-          </div>
-        </div>
-
-        <div v-if="isLoadingConversation" class="flex justify-start">
-          <div
-            class="rounded-full border border-neutral-200/70 bg-white/85 px-4 py-2 text-xs text-neutral-500 dark:border-neutral-800/70 dark:bg-neutral-900/85"
-          >
-            Loading conversation...
-          </div>
-        </div>
-
-        <div v-if="isPending" class="flex justify-start">
-          <div
-            class="flex items-center gap-2 rounded-full border border-neutral-200/70 bg-white/85 px-4 py-2 text-xs text-neutral-500 dark:border-neutral-800/70 dark:bg-neutral-900/85"
-          >
-            <UIcon name="i-lucide-loader-2" class="size-3 animate-spin text-primary-500" />
-            Thinking...
+              <div v-if="conversation.usageSummary.latest" class="mt-2.5 space-y-1.5">
+                <div class="flex items-center justify-between text-[9px] font-bold uppercase tracking-wider opacity-60">
+                  <span>{{ conversation.usageLabel }}</span>
+                  <span>{{ Math.round(getUsageWidth(conversation.usageSummary)) }}%</span>
+                </div>
+                <div class="h-1 rounded-full bg-current/10">
+                  <div
+                    class="h-full rounded-full bg-current transition-all"
+                    :style="{ width: `${getUsageWidth(conversation.usageSummary)}%` }"
+                  />
+                </div>
+              </div>
+            </button>
           </div>
         </div>
       </div>
 
-      <div
-        class="border-t border-neutral-200/50 bg-[linear-gradient(180deg,rgba(250,250,249,0.72),rgba(244,244,243,0.95))] p-5 dark:border-neutral-800/50 dark:bg-[linear-gradient(180deg,rgba(18,18,18,0.7),rgba(12,12,12,0.96))]"
-      >
-        <div
-          class="mb-3 rounded-[1.5rem] border border-neutral-200/80 bg-white/88 p-4 shadow-sm dark:border-neutral-800/80 dark:bg-neutral-900/88"
+      <template v-else>
+        <UChatMessages
+          ref="chatViewport"
+          :messages="messages"
+          :status="isPending ? 'streaming' : (isLoadingConversation ? 'submitted' : 'ready')"
+          class="absolute inset-0 px-5 py-6 overflow-y-auto"
         >
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400">
-                Conversation usage
-              </p>
-              <p class="mt-1 text-sm font-semibold text-neutral-950 dark:text-neutral-50">
-                {{ activeConversationUsageLabel }}
-              </p>
-              <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                {{ activeConversationUsageTotalsLabel }}
-              </p>
+          <template #content="{ message }">
+            <UChatMessage
+              :message="message"
+              :side="message.role === 'user' ? 'right' : 'left'"
+            >
+              <template #content>
+                <div v-if="message.role === 'user'" class="whitespace-pre-wrap text-sm leading-relaxed">
+                  {{ message.content }}
+                </div>
+                <div
+                  v-else
+                  class="prose prose-sm max-w-none prose-neutral dark:prose-invert prose-p:leading-relaxed"
+                  v-html="renderAssistantMessage(message.content)"
+                />
+
+                <div v-if="message.toolsCalled?.length" class="mt-3 flex flex-wrap gap-2">
+                  <UChatTool
+                    v-for="tool in message.toolsCalled"
+                    :key="tool"
+                    :text="tool"
+                    variant="card"
+                    size="sm"
+                    icon="i-lucide-wrench"
+                  />
+                </div>
+
+                <div v-if="message.contextNodeTitles?.length" class="mt-3 flex flex-wrap gap-1">
+                  <span
+                    v-for="title in message.contextNodeTitles"
+                    :key="title"
+                    class="rounded-full bg-neutral-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
+                  >
+                    {{ title }}
+                  </span>
+                </div>
+              </template>
+
+              <template #footer>
+                <div v-if="message.role === 'assistant' && message.model" class="mt-1 text-[9px] font-bold uppercase tracking-widest text-neutral-400">
+                  {{ message.model }}
+                </div>
+              </template>
+            </UChatMessage>
+          </template>
+
+          <template v-if="messages.length === 0 && !isLoadingConversation" #default>
+            <div class="flex h-full flex-col items-center justify-center px-6 py-8">
+              <div class="max-w-md w-full space-y-4 text-center">
+                <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400">
+                  Quick starts
+                </p>
+                <div class="grid gap-1.5">
+                  <button
+                    v-for="prompt in promptSuggestions"
+                    :key="prompt"
+                    type="button"
+                    class="rounded-xl border border-neutral-200/50 bg-white px-4 py-2.5 text-left text-xs font-medium text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-800/50 dark:bg-neutral-900/40 dark:text-neutral-300 dark:hover:border-neutral-700"
+                    @click="handlePromptClick(prompt)"
+                  >
+                    {{ prompt }}
+                  </button>
+                </div>
+              </div>
             </div>
-            <UBadge color="neutral" variant="soft" size="sm">
-              {{ selectedModelOption?.compactPricingLabel || "Default model" }}
-            </UBadge>
-          </div>
+          </template>
+        </UChatMessages>
+      </template>
+    </main>
 
-          <div class="mt-3 h-2 rounded-full bg-neutral-200/80 dark:bg-neutral-800/80">
-            <div
-              class="h-full rounded-full bg-neutral-900 transition-all dark:bg-white"
-              :style="{ width: `${(activeConversationUsageRatio ?? 0) * 100}%` }"
-            />
-          </div>
-
-          <div
-            v-if="activeConversationUsageSummary?.latest"
-            class="mt-3 flex flex-wrap gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400"
-          >
-            <span>{{ formatTokenCount(activeConversationUsageSummary.latest.inputTokens) }} input</span>
-            <span>{{ formatTokenCount(activeConversationUsageSummary.latest.outputTokens) }} output</span>
-            <span>{{ formatTokenCount(activeConversationUsageSummary.latest.cachedTokens) }} cached</span>
-            <span>{{ formatTokenCount(activeConversationUsageSummary.latest.reasoningTokens) }} reasoning</span>
-          </div>
-        </div>
-
-        <div v-if="selectedNodes.length > 0" class="mb-3 flex flex-wrap items-center gap-2">
-          <button
-            v-for="node in selectedNodes"
-            :key="node.id"
-            type="button"
-            class="inline-flex items-center gap-2 rounded-full border border-neutral-200/80 bg-white/90 px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-sm transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:text-neutral-300 dark:hover:border-neutral-700"
-            @click="removeMentionedNode(node.id)"
-          >
-            <span class="truncate max-w-[10rem]">{{ node.title }}</span>
-            <UIcon name="i-lucide-x" class="size-3.5" />
-          </button>
+    <footer v-if="activePane === 'chat'" class="shrink-0 border-t border-neutral-200/50 bg-neutral-50/10 p-4 dark:border-neutral-800/50">
+      <div v-if="selectedNodes.length > 0" class="mb-2 flex flex-wrap items-center gap-1.5 px-1">
+        <UBadge
+          v-for="node in selectedNodes"
+          :key="node.id"
+          color="neutral"
+          variant="soft"
+          size="sm"
+          class="rounded-full pl-2 pr-1"
+        >
+          <span class="max-w-[8rem] truncate text-[10px] font-medium">{{ node.title }}</span>
           <UButton
             color="neutral"
             variant="ghost"
             size="xs"
-            class="rounded-full"
-            @click="clearMentionedNodes"
-          >
-            Clear scope
-          </UButton>
-        </div>
-
-        <div class="relative">
-          <div
-            v-if="activeMention && mentionSuggestions.length > 0"
-            class="absolute bottom-[calc(100%+0.75rem)] left-0 right-0 z-20 rounded-[1.5rem] border border-neutral-200/80 bg-white/95 p-2 shadow-2xl shadow-black/10 backdrop-blur-xl dark:border-neutral-800/80 dark:bg-neutral-950/95"
-          >
-            <p
-              class="px-3 pb-2 pt-1 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400"
-            >
-              Mention a node
-            </p>
-            <button
-              v-for="node in mentionSuggestions"
-              :key="node.id"
-              type="button"
-              class="flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left transition hover:bg-neutral-100 dark:hover:bg-neutral-900"
-              @mousedown.prevent="handleMentionPick(node)"
-            >
-              <span class="min-w-0">
-                <span
-                  class="block truncate text-sm font-medium text-neutral-900 dark:text-neutral-100"
-                >
-                  {{ node.title }}
-                </span>
-                <span class="block truncate text-xs text-neutral-500 dark:text-neutral-400">
-                  {{ node.label || node.id }}
-                </span>
-              </span>
-              <UIcon name="i-lucide-corner-down-left" class="size-4 shrink-0 text-neutral-400" />
-            </button>
-          </div>
-
-          <div
-            v-else-if="emptyMentionResults"
-            class="absolute bottom-[calc(100%+0.75rem)] left-0 right-0 z-20 rounded-[1.5rem] border border-neutral-200/80 bg-white/95 px-4 py-3 text-xs text-neutral-500 shadow-2xl shadow-black/10 backdrop-blur-xl dark:border-neutral-800/80 dark:bg-neutral-950/95 dark:text-neutral-400"
-          >
-            No nodes match that mention.
-          </div>
-
-          <UTextarea
-            v-model="draft"
-            :rows="2"
-            autoresize
-            :placeholder="composerPlaceholder"
-            variant="none"
-            class="w-full rounded-[1.75rem] border border-neutral-200/80 bg-white/90 px-5 py-4 pr-14 text-sm shadow-sm transition focus:ring-2 focus:ring-primary-500/15 dark:border-neutral-800/80 dark:bg-neutral-900/90"
-            @keydown.enter.exact="handleEnterKeydown"
+            icon="i-lucide-x"
+            class="ml-1 size-3.5 rounded-full p-0"
+            @click="removeMentionedNode(node.id)"
           />
-
-          <UButton
-            size="sm"
-            icon="i-lucide-arrow-up"
-            color="neutral"
-            class="absolute bottom-2.5 right-2.5 flex size-10 items-center justify-center rounded-2xl border border-neutral-200/80 bg-neutral-900 p-0 text-white shadow-lg shadow-black/10 dark:border-neutral-700/80 dark:bg-white dark:text-neutral-900"
-            :loading="isPending"
-            :disabled="!canSend"
-            @click="handleSubmit"
-          />
-        </div>
-
-        <div class="mt-2 flex items-center justify-between gap-3">
-          <p class="min-w-0 truncate text-[11px] text-neutral-500 dark:text-neutral-400">
-            {{ selectedModelOption?.description || modelHint }}
-          </p>
-          <span
-            class="shrink-0 rounded-full border border-neutral-200/80 bg-white/90 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-500 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:text-neutral-400"
-          >
-            {{ scopeLabel }}
-          </span>
-        </div>
-
-        <div class="mt-2 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            class="inline-flex min-w-0 items-center gap-2 rounded-full border border-neutral-200/80 bg-white/90 px-3 py-2 text-left shadow-sm transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:hover:border-neutral-700"
-            :title="selectedToolPresetOption?.description"
-            @click="cycleToolPreset"
-          >
-            <UIcon
-              name="i-lucide-sliders-horizontal"
-              class="size-3.5 shrink-0 text-neutral-500 dark:text-neutral-400"
-            />
-            <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
-              Mode
-            </span>
-            <span class="truncate text-xs font-semibold text-neutral-950 dark:text-neutral-50">
-              {{ selectedToolPresetOption?.label }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            class="inline-flex min-w-0 flex-1 items-center gap-2 rounded-full border border-neutral-200/80 bg-white/90 px-3 py-2 text-left shadow-sm transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:hover:border-neutral-700"
-            @click="openModelLibrary"
-          >
-            <UIcon
-              name="i-lucide-cpu"
-              class="size-3.5 shrink-0 text-neutral-500 dark:text-neutral-400"
-            />
-            <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
-              Model
-            </span>
-            <span
-              class="min-w-0 flex-1 truncate text-xs font-semibold text-neutral-950 dark:text-neutral-50"
-            >
-              {{ selectedModelOption?.label || "Default model" }}
-            </span>
-            <span
-              class="rounded-full border border-neutral-200/80 bg-neutral-50/90 px-2 py-0.5 text-[10px] font-semibold text-neutral-500 dark:border-neutral-800/80 dark:bg-neutral-800/80 dark:text-neutral-400"
-            >
-              {{ modelCount }}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            class="inline-flex items-center gap-2 rounded-full border border-neutral-200/80 bg-white/90 px-3 py-2 text-left shadow-sm transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:hover:border-neutral-700"
-            @click="openModelLibrary"
-          >
-            <UIcon name="i-lucide-wallet" class="size-3.5 text-neutral-500 dark:text-neutral-400" />
-            <span class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
-              Balance
-            </span>
-            <span class="text-xs font-semibold text-neutral-950 dark:text-neutral-50">
-              {{ accountBalanceLabel }}
-            </span>
-          </button>
-        </div>
-
-        <div v-if="topModelOptions.length > 0" class="mt-2">
-          <div
-            class="rounded-[1.2rem] border border-neutral-200/80 bg-white/85 p-2 shadow-sm dark:border-neutral-800/80 dark:bg-neutral-900/80"
-          >
-            <div class="mb-1.5 flex items-center justify-between gap-2 px-1">
-              <p class="text-[10px] font-bold uppercase tracking-[0.16em] text-neutral-400">
-                Quick models
-              </p>
-              <button
-                type="button"
-                class="rounded-full border border-neutral-200/80 bg-white/90 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500 transition hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/90 dark:text-neutral-400 dark:hover:border-neutral-700"
-                @click="openModelLibrary"
-              >
-                Customize
-              </button>
-            </div>
-
-            <div class="-mx-0.5 flex gap-2 overflow-x-auto px-0.5 pb-0.5">
-              <div
-                v-for="model in topModelOptions"
-                :key="model.id"
-                class="relative min-w-[11rem] shrink-0 rounded-[1rem] border px-3 py-2.5 text-left shadow-sm transition"
-                :class="
-                  selectedModelId === model.id
-                    ? 'border-neutral-900 bg-neutral-900 text-white dark:border-white dark:bg-white dark:text-neutral-900'
-                    : 'border-neutral-200/80 bg-white/95 text-neutral-700 hover:border-neutral-300 dark:border-neutral-800/80 dark:bg-neutral-900/95 dark:text-neutral-300 dark:hover:border-neutral-700'
-                "
-              >
-                <button type="button" class="w-full text-left" @click="selectModel(model.id)">
-                  <div class="flex items-center gap-2 pr-7">
-                    <p class="truncate text-xs font-semibold">
-                      {{ model.label }}
-                    </p>
-                    <UBadge color="neutral" variant="soft" size="sm">
-                      {{ model.isFree ? "Free" : "Paid" }}
-                    </UBadge>
-                  </div>
-                  <p
-                    class="mt-1 truncate text-[10px]"
-                    :class="
-                      selectedModelId === model.id
-                        ? 'text-white/70 dark:text-neutral-500'
-                        : 'text-neutral-500 dark:text-neutral-400'
-                    "
-                  >
-                    {{ model.creatorLabel }} · {{ model.compactPricingLabel }}
-                  </p>
-                </button>
-                <button
-                  type="button"
-                  class="absolute right-2 top-2 rounded-full p-1 transition"
-                  :class="
-                    selectedModelId === model.id
-                      ? 'hover:bg-white/10 dark:hover:bg-neutral-200/70'
-                      : 'hover:bg-neutral-200 dark:hover:bg-neutral-800'
-                  "
-                  @click.stop="toggleFavoriteModel(model.id)"
-                >
-                  <UIcon
-                    :name="isFavoriteModel(model.id) ? 'i-lucide-star' : 'i-lucide-star-off'"
-                    class="size-3.5"
-                  />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <UAlert
-          v-if="error"
-          class="mt-4 rounded-2xl"
-          color="error"
-          variant="soft"
-          icon="i-lucide-alert-circle"
-          title="Copilot error"
-          :description="error"
-        />
+        </UBadge>
       </div>
-    </template>
+
+      <UChatPrompt
+        v-model="draft"
+        :placeholder="composerPlaceholder"
+        :rows="1"
+        autoresize
+        class="rounded-2xl border border-neutral-200/80 bg-white shadow-sm ring-primary-500/10 focus-within:ring-4 dark:border-neutral-800/80 dark:bg-neutral-950"
+        @keydown.enter.exact="handleEnterKeydown"
+      >
+        <template #footer>
+          <div class="flex flex-1 items-center justify-between gap-1 px-0.5">
+            <div class="flex items-center gap-0.5">
+              <UPopover :ui="{ content: 'w-64 p-4 rounded-2xl' }">
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  class="rounded-xl px-1.5 text-[10px] font-bold uppercase tracking-wider text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+                >
+                  <UIcon name="i-lucide-cpu" class="size-3.5" />
+                  <span class="truncate max-w-[70px]">{{ selectedModelOption?.label || "Model" }}</span>
+                </UButton>
+
+                <template #content>
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Selector</span>
+                      <UButton color="neutral" variant="link" size="xs" @click="openModelLibrary">Library</UButton>
+                    </div>
+                    
+                    <div class="space-y-1">
+                      <button
+                        v-for="model in topModelOptions"
+                        :key="model.id"
+                        type="button"
+                        class="flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs transition"
+                        :class="selectedModelId === model.id ? 'bg-neutral-100 dark:bg-neutral-800 font-semibold' : 'hover:bg-neutral-50 dark:hover:bg-neutral-800/50'"
+                        @click="selectModel(model.id)"
+                      >
+                        <span class="truncate">{{ model.label }}</span>
+                        <UIcon v-if="selectedModelId === model.id" name="i-lucide-check" class="size-3.5" />
+                      </button>
+                    </div>
+
+                    <div v-if="selectedModelOption" class="border-t border-neutral-100 dark:border-neutral-800 pt-2.5">
+                      <p class="text-[10px] leading-relaxed text-neutral-500">
+                        {{ selectedModelOption.description }}
+                      </p>
+                    </div>
+                  </div>
+                </template>
+              </UPopover>
+
+              <UButton
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                class="rounded-xl px-1.5 text-[10px] font-bold uppercase tracking-wider text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+                @click="cycleToolPreset"
+              >
+                <UIcon name="i-lucide-sliders-horizontal" class="size-3.5" />
+                {{ selectedToolPresetOption?.label }}
+              </UButton>
+
+              <UPopover :ui="{ content: 'w-64 p-4 rounded-2xl' }">
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  class="rounded-xl px-1.5 text-[10px] font-bold uppercase tracking-wider text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+                >
+                  <UIcon name="i-lucide-wallet" class="size-3.5" />
+                  {{ accountBalanceLabel }}
+                </UButton>
+
+                <template #content>
+                  <div class="space-y-2">
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Credits</span>
+                    <p class="text-sm font-semibold">{{ accountBalanceLabel }}</p>
+                    <p class="text-xs text-neutral-500">{{ accountUsageLabel }}</p>
+                  </div>
+                </template>
+              </UPopover>
+            </div>
+
+            <div class="flex items-center gap-1.5">
+              <UPopover v-if="activeConversationUsageSummary" :ui="{ content: 'w-72 p-4 rounded-2xl' }">
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  class="rounded-full size-8 p-0 text-neutral-400 hover:text-neutral-950 dark:hover:text-white"
+                  icon="i-lucide-activity"
+                />
+
+                <template #content>
+                  <div class="space-y-4">
+                    <div class="space-y-1">
+                      <p class="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Context</p>
+                      <div class="flex items-center justify-between text-xs font-semibold">
+                        <span>{{ activeConversationUsageLabel }}</span>
+                      </div>
+                      <div class="h-1.5 rounded-full bg-neutral-100 dark:bg-neutral-800">
+                        <div
+                          class="h-full rounded-full bg-neutral-950 transition-all dark:bg-white"
+                          :style="{ width: `${(activeConversationUsageRatio ?? 0) * 100}%` }"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+                      <div v-if="activeConversationUsageSummary.latest" class="space-y-0.5">
+                        <p class="opacity-60">In</p>
+                        <p class="text-neutral-950 dark:text-white">{{ formatTokenCount(activeConversationUsageSummary.latest.inputTokens) }}</p>
+                      </div>
+                      <div v-if="activeConversationUsageSummary.latest" class="space-y-0.5">
+                        <p class="opacity-60">Out</p>
+                        <p class="text-neutral-950 dark:text-white">{{ formatTokenCount(activeConversationUsageSummary.latest.outputTokens) }}</p>
+                      </div>
+                    </div>
+                    <p class="text-[10px] text-neutral-400 border-t border-neutral-100 dark:border-neutral-800 pt-2">
+                      {{ activeConversationUsageTotalsLabel.split(' · ')[1] }} cost
+                    </p>
+                  </div>
+                </template>
+              </UPopover>
+
+              <UChatPromptSubmit
+                :disabled="!canSend"
+                :loading="isPending"
+                color="neutral"
+                class="rounded-xl size-8 p-0 bg-neutral-950 text-white dark:bg-white dark:text-neutral-950"
+                icon="i-lucide-arrow-up"
+                @click="handleSubmit"
+              />
+            </div>
+          </div>
+        </template>
+      </UChatPrompt>
+
+      <div v-if="activeMention" class="mt-2">
+         <div
+          v-if="mentionSuggestions.length > 0"
+          class="rounded-xl border border-neutral-200/60 bg-white/90 p-1 shadow-lg backdrop-blur-md dark:border-neutral-800/60 dark:bg-neutral-950/90"
+        >
+          <button
+            v-for="node in mentionSuggestions.slice(0, 3)"
+            :key="node.id"
+            type="button"
+            class="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left transition hover:bg-neutral-100 dark:hover:bg-neutral-900"
+            @mousedown.prevent="handleMentionPick(node)"
+          >
+            <div class="min-w-0">
+              <p class="truncate text-[11px] font-semibold">{{ node.title }}</p>
+            </div>
+            <UIcon name="i-lucide-corner-down-left" class="size-3 text-neutral-400" />
+          </button>
+        </div>
+      </div>
+    </footer>
 
     <DashboardAgentModelLibrary
       :open="isModelLibraryOpen"
@@ -792,67 +642,46 @@ function renderAssistantMessage(content: string) {
 
     <UModal
       :open="isRenameDialogOpen"
-      title="Rename conversation"
-      description="Update the title shown in your conversation history."
-      :ui="{
-        content: 'sm:max-w-md overflow-hidden rounded-[28px]',
-        body: 'space-y-4 p-6',
-        footer: 'flex items-center justify-end gap-3 border-t border-muted/20 bg-elevated/20 p-5',
-      }"
+      title="Rename"
+      :ui="{ content: 'sm:max-w-xs rounded-3xl' }"
       @update:open="(value) => !value && closeRenameDialog()"
     >
       <template #body>
-        <UFormField label="Title">
-          <UInput
-            v-model="renameDraft"
-            class="w-full"
-            maxlength="80"
-            placeholder="Conversation title"
-          />
-        </UFormField>
+        <UInput
+          v-model="renameDraft"
+          class="w-full"
+          maxlength="80"
+          placeholder="New title..."
+          autofocus
+        />
       </template>
-
       <template #footer>
-        <UButton color="neutral" variant="ghost" @click="closeRenameDialog"> Cancel </UButton>
+        <UButton color="neutral" variant="ghost" size="sm" @click="closeRenameDialog">Cancel</UButton>
         <UButton
           color="primary"
-          icon="i-lucide-check"
+          size="sm"
           :loading="isRenamingConversation"
-          :disabled="renameDraft.trim().length === 0"
           @click="submitRenameConversation"
         >
-          Save
+          Update
         </UButton>
       </template>
     </UModal>
 
     <UModal
       :open="isDeleteDialogOpen"
-      title="Delete conversation"
-      description="This permanently removes the conversation and all of its messages."
-      :ui="{
-        content: 'sm:max-w-md overflow-hidden rounded-[28px]',
-        body: 'space-y-4 p-6',
-        footer: 'flex items-center justify-end gap-3 border-t border-muted/20 bg-elevated/20 p-5',
-      }"
+      title="Delete thread"
+      :ui="{ content: 'sm:max-w-xs rounded-3xl' }"
       @update:open="(value) => !value && closeDeleteDialog()"
     >
       <template #body>
-        <div
-          class="rounded-2xl border border-red-500/20 bg-red-500/5 p-4 text-sm text-neutral-600 dark:text-neutral-300"
-        >
-          <p class="font-semibold text-neutral-900 dark:text-neutral-100">
-            {{ activeConversationTitle }}
-          </p>
-          <p class="mt-1">This action cannot be undone.</p>
-        </div>
+        <p class="text-xs text-neutral-500">Permanently remove this thread? This cannot be undone.</p>
       </template>
-
       <template #footer>
-        <UButton color="neutral" variant="ghost" @click="closeDeleteDialog"> Cancel </UButton>
+        <UButton color="neutral" variant="ghost" size="sm" @click="closeDeleteDialog">Cancel</UButton>
         <UButton
           color="error"
-          icon="i-lucide-trash-2"
+          size="sm"
           :loading="isDeletingConversation"
           @click="confirmDeleteConversation"
         >
@@ -866,6 +695,12 @@ function renderAssistantMessage(content: string) {
 <style scoped>
 :deep(.prose) {
   color: inherit;
+  font-size: 0.875rem;
+}
+
+:deep(.prose p) {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
 }
 
 :deep(.prose :first-child) {
@@ -876,20 +711,13 @@ function renderAssistantMessage(content: string) {
   margin-bottom: 0;
 }
 
-::-webkit-scrollbar {
-  width: 5px;
+/* Custom scrollbar for message list */
+:deep(.overflow-y-auto) {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.05) transparent;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(24, 24, 27, 0.14);
-}
-
-.dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.14);
+.dark :deep(.overflow-y-auto) {
+  scrollbar-color: rgba(255, 255, 255, 0.05) transparent;
 }
 </style>
