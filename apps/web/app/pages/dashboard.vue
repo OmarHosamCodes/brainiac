@@ -31,6 +31,7 @@ const orpc = useOrpc();
 const toast = useToast();
 
 const isChatVisible = ref(true);
+const isTeamAsideCompact = ref(true);
 const newTeamName = ref("");
 const selectedTeamId = ref("");
 const teamNameDraft = ref("");
@@ -332,14 +333,37 @@ async function unshareSelectedNode() {
     </main>
 
     <aside
-      class="fixed left-6 top-24 z-40 max-h-[calc(100vh-7rem)] w-[24rem] overflow-y-auto rounded-2xl border border-neutral-200/60 bg-white/85 p-4 shadow-xl backdrop-blur-xl dark:border-neutral-800/60 dark:bg-neutral-950/85"
+      class="fixed left-6 top-24 z-40 max-h-[calc(100vh-7rem)] rounded-2xl border border-neutral-200/60 bg-white/85 shadow-xl backdrop-blur-xl transition-all duration-300 dark:border-neutral-800/60 dark:bg-neutral-950/85"
+      :class="isTeamAsideCompact ? 'w-14 p-2' : 'w-[24rem] overflow-y-auto p-4'"
     >
-      <div class="flex items-center justify-between gap-3">
-        <h2 class="text-xs font-bold uppercase tracking-[0.22em] text-neutral-500">Teams</h2>
-        <span class="text-[11px] font-medium text-neutral-500">{{ teams.length }} total</span>
+      <div v-if="isTeamAsideCompact" class="flex items-center justify-center">
+        <button
+          type="button"
+          class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+          aria-label="Expand team panel"
+          @click="isTeamAsideCompact = false"
+        >
+          <UIcon name="i-lucide-users" class="size-4" />
+        </button>
       </div>
 
-      <div class="mt-3 flex items-center gap-2">
+      <template v-else>
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-xs font-bold uppercase tracking-[0.22em] text-neutral-500">Teams</h2>
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-medium text-neutral-500">{{ teams.length }} total</span>
+            <button
+              type="button"
+              class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              aria-label="Compact team panel"
+              @click="isTeamAsideCompact = true"
+            >
+              <UIcon name="i-lucide-users" class="size-4" />
+            </button>
+          </div>
+        </div>
+
+        <div class="mt-3 flex items-center gap-2">
         <input
           v-model="newTeamName"
           type="text"
@@ -355,24 +379,24 @@ async function unshareSelectedNode() {
         >
           Create
         </button>
-      </div>
+        </div>
 
-      <div class="mt-4">
-        <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.15em] text-neutral-500">
-          Share Target
-        </label>
-        <select
-          v-model="selectedTeamId"
-          class="h-9 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-        >
-          <option value="" disabled>Select a team</option>
-          <option v-for="team in teams" :key="team.id" :value="team.id">
-            {{ team.name }} ({{ team.role }})
-          </option>
-        </select>
-      </div>
+        <div class="mt-4">
+          <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.15em] text-neutral-500">
+            Share Target
+          </label>
+          <select
+            v-model="selectedTeamId"
+            class="h-9 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+          >
+            <option value="" disabled>Select a team</option>
+            <option v-for="team in teams" :key="team.id" :value="team.id">
+              {{ team.name }} ({{ team.role }})
+            </option>
+          </select>
+        </div>
 
-      <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
+        <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
         <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
           Team Details
         </p>
@@ -416,9 +440,9 @@ async function unshareSelectedNode() {
         <p v-else class="mt-2 text-xs text-neutral-500">
           Select a team to manage members and permissions.
         </p>
-      </div>
+        </div>
 
-      <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
+        <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
         <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
           Members
         </p>
@@ -498,9 +522,9 @@ async function unshareSelectedNode() {
         <p v-else class="mt-2 text-xs text-neutral-500">
           Add a team first to invite members.
         </p>
-      </div>
+        </div>
 
-      <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
+        <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
         <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
           Selected Node
         </p>
@@ -516,9 +540,9 @@ async function unshareSelectedNode() {
               : 'Click a node on canvas to share it.'
           }}
         </p>
-      </div>
+        </div>
 
-      <div class="mt-3 flex items-center gap-2">
+        <div class="mt-3 flex items-center gap-2">
         <button
           type="button"
           class="inline-flex h-9 flex-1 items-center justify-center rounded-xl bg-primary-600 px-3 text-xs font-semibold text-white transition hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
@@ -540,7 +564,8 @@ async function unshareSelectedNode() {
         >
           Unshare
         </button>
-      </div>
+        </div>
+      </template>
     </aside>
 
     <!-- Floating Agent Chat Panel -->

@@ -15,7 +15,18 @@ import {
   workspaceBlockPresets,
   type WorkspaceBlockPresetId,
 } from "~/utils/workspace-block-presets";
-import type { WorkspaceBlock, WorkspaceNode, WorkspaceNodeTab } from "@brainiac/workspace";
+import type {
+  WorkspaceBlock,
+  WorkspaceNode,
+  WorkspaceNodeTab,
+  WorkspaceTeamRole,
+} from "@brainiac/workspace";
+
+type WorkspaceTeamSummary = {
+  id: string;
+  name: string;
+  role: WorkspaceTeamRole;
+};
 
 const props = defineProps<{
   node: WorkspaceNode;
@@ -24,6 +35,21 @@ const props = defineProps<{
   saveBadge: WorkspaceSaveBadge;
   saveError: string | null;
   visibleBlocks: WorkspaceBlock[];
+  nodeVisibilityLabel: string;
+  nodeVisibilityBadgeClass: string;
+  nodeOwnerLabel: string;
+  nodeTeamName: string | null;
+  teams: WorkspaceTeamSummary[];
+  nodeShareTeamId: string;
+  canManageNodeSharing: boolean;
+  sharePending: boolean;
+  unsharePending: boolean;
+}>();
+
+const emit = defineEmits<{
+  (event: "update:nodeShareTeamId", value: string): void;
+  (event: "shareNode"): void;
+  (event: "unshareNode"): void;
 }>();
 
 const {
@@ -41,6 +67,13 @@ const {
 } = useWorkspaceNodeEditorContext();
 
 const primaryBlockTypes = workspacePrimaryBlockTypes;
+
+const nodeShareTeamIdModel = computed({
+  get: () => props.nodeShareTeamId,
+  set: (value: string) => {
+    emit("update:nodeShareTeamId", value);
+  },
+});
 
 const isSidebarOpen = ref(true);
 
@@ -244,6 +277,77 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
             <h1 class="text-2xl font-bold tracking-tight text-highlighted">
               {{ node.title }}
             </h1>
+          </div>
+
+          <div class="rounded-2xl border border-muted/40 bg-default/70 p-3 backdrop-blur-sm">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                  Node Access
+                </p>
+                <div class="mt-1 flex flex-wrap items-center gap-2">
+                  <span
+                    class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                    :class="nodeVisibilityBadgeClass"
+                  >
+                    {{ nodeVisibilityLabel }}
+                  </span>
+                  <span class="text-[11px] text-muted">Owner: {{ nodeOwnerLabel }}</span>
+                  <span v-if="nodeTeamName" class="truncate text-[11px] text-muted">
+                    Team: {{ nodeTeamName }}
+                  </span>
+                </div>
+              </div>
+              <UIcon name="i-lucide-shield-check" class="mt-0.5 size-4 text-muted" />
+            </div>
+
+            <div class="mt-2.5 flex items-center gap-2">
+              <select
+                v-model="nodeShareTeamIdModel"
+                class="h-8 w-full rounded-xl border border-muted/40 bg-default px-2.5 text-xs text-highlighted focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                :disabled="!canManageNodeSharing || teams.length === 0"
+              >
+                <option value="" disabled>Select team</option>
+                <option v-for="team in teams" :key="team.id" :value="team.id">
+                  {{ team.name }} ({{ team.role }})
+                </option>
+              </select>
+              <UButton
+                size="xs"
+                color="primary"
+                class="rounded-lg"
+                :loading="sharePending"
+                :disabled="
+                  !canManageNodeSharing ||
+                  !nodeShareTeamId ||
+                  sharePending ||
+                  unsharePending
+                "
+                @click="emit('shareNode')"
+              >
+                Share
+              </UButton>
+              <UButton
+                size="xs"
+                color="neutral"
+                variant="soft"
+                class="rounded-lg"
+                :loading="unsharePending"
+                :disabled="
+                  !canManageNodeSharing ||
+                  node.visibility !== 'team' ||
+                  sharePending ||
+                  unsharePending
+                "
+                @click="emit('unshareNode')"
+              >
+                Unshare
+              </UButton>
+            </div>
+
+            <p v-if="!canManageNodeSharing" class="mt-2 text-[11px] leading-relaxed text-muted">
+              Shared by a teammate. Editing is allowed, sharing controls are role-restricted.
+            </p>
           </div>
         </div>
 

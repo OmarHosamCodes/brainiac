@@ -66,7 +66,7 @@ import {
   type WorkspaceTaskPriority,
   type WorkspaceTimeOrchestratorBlock,
 } from "@brainiac/workspace";
-import { useMutation } from "@tanstack/vue-query";
+import { useMutation, useQuery } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
 import {
@@ -96,6 +96,7 @@ definePageMeta({
 const route = useRoute();
 const toast = useToast();
 const orpc = useOrpc();
+const authSession = useAuthSession();
 const workspaceStore = useWorkspaceStore();
 const {
   isWorkspaceInitialLoading,
@@ -108,6 +109,9 @@ const workspaceQuery = workspaceStore.workspaceQuery;
 
 const saveMarketplaceItem = useMutation(orpc.workspace.marketplace.save.mutationOptions());
 const blockAgentPromptMutation = useMutation(orpc.agent.chat.turn.mutationOptions());
+const teamListQuery = useQuery(orpc.team.list.queryOptions());
+const shareNodeMutation = useMutation(orpc.workspace.shareNode.mutationOptions());
+const unshareNodeMutation = useMutation(orpc.workspace.unshareNode.mutationOptions());
 
 const nodeId = computed(() => String(route.params.id ?? ""));
 const emptyDropdownItems: DropdownMenuItem[][] = [];
@@ -129,6 +133,79 @@ const node = computed(() => {
 const activeTabId = computed(() => node.value?.viewState.activeTabId ?? "");
 const isAgentChatVisible = ref(true);
 const agentContextTargets = ref<AgentContextTarget[]>([]);
+const nodeShareTeamId = ref("");
+
+const teams = computed(() => teamListQuery.data.value?.items ?? []);
+const currentUserId = computed(() => authSession.value?.data?.user?.id ?? "");
+const activeTeamMembership = computed(() => {
+  const currentNode = node.value;
+
+  if (!currentNode?.teamId) {
+    return null;
+  }
+
+  return teams.value.find((team) => team.id === currentNode.teamId) ?? null;
+});
+const canManageNodeSharing = computed(() => {
+  const currentNode = node.value;
+
+  if (!currentNode) {
+    return false;
+  }
+
+  if (!currentNode.ownerUserId || currentNode.ownerUserId === currentUserId.value) {
+    return true;
+  }
+
+  if (currentNode.visibility !== "team" || !currentNode.teamId) {
+    return false;
+  }
+
+  return activeTeamMembership.value?.role === "owner" || activeTeamMembership.value?.role === "editor";
+});
+const nodeVisibilityLabel = computed(() => {
+  const currentNode = node.value;
+
+  if (!currentNode) {
+    return "Unknown";
+  }
+
+  if (currentNode.visibility !== "team") {
+    return "Private";
+  }
+
+  if (!currentNode.ownerUserId || currentNode.ownerUserId === currentUserId.value) {
+    return "Team Shared";
+  }
+
+  return "Shared With You";
+});
+const nodeVisibilityBadgeClass = computed(() => {
+  const currentNode = node.value;
+
+  if (!currentNode || currentNode.visibility !== "team") {
+    return "border-neutral-300/70 bg-neutral-100 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300";
+  }
+
+  if (!currentNode.ownerUserId || currentNode.ownerUserId === currentUserId.value) {
+    return "border-primary-300/60 bg-primary-100/80 text-primary-700 dark:border-primary-800/70 dark:bg-primary-950/50 dark:text-primary-300";
+  }
+
+  return "border-emerald-300/60 bg-emerald-100/80 text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-950/50 dark:text-emerald-300";
+});
+const nodeOwnerLabel = computed(() => {
+  const ownerUserId = node.value?.ownerUserId;
+
+  if (!ownerUserId) {
+    return "You";
+  }
+
+  if (ownerUserId === currentUserId.value) {
+    return "You";
+  }
+
+  return "Teammate";
+});
 
 const activeTab = computed(() => {
   if (!node.value) {
@@ -220,6 +297,77 @@ watch(agentContextStates, (value) => {
     validKeys.has(getAgentContextTargetKey(target)),
   );
 });
+
+watch(
+  [node, teams],
+  ([currentNode, currentTeams]) => {
+    if (!currentNode) {
+      nodeShareTeamId.value = "";
+      return;
+    }
+
+    if (currentNode.teamId && currentTeams.some((team) => team.id === currentNode.teamId)) {
+      nodeShareTeamId.value = currentNode.teamId;
+      return;
+    }
+
+    if (nodeShareTeamId.value && currentTeams.some((team) => team.id === nodeShareTeamId.value)) {
+      return;
+    }
+
+    nodeShareTeamId.value = currentTeams[0]?.id ?? "";
+  },
+  { immediate: true },
+);
+
+async function shareCurrentNodeToTeam() {
+  if (!node.value || !nodeShareTeamId.value) {
+    return;
+  }
+
+  try {
+    await shareNodeMutation.mutateAsync({
+      nodeId: node.value.id,
+      teamId: nodeShareTeamId.value,
+    });
+    await workspaceQuery.refetch();
+    toast.add({
+      title: "Node shared",
+      description: `${node.value.title} is now shared with the selected team.`,
+      color: "success",
+    });
+  } catch (error) {
+    toast.add({
+      title: "Share failed",
+      description: getErrorMessage(error, "Could not share this node."),
+      color: "error",
+    });
+  }
+}
+
+async function unshareCurrentNodeFromTeam() {
+  if (!node.value) {
+    return;
+  }
+
+  try {
+    await unshareNodeMutation.mutateAsync({
+      nodeId: node.value.id,
+    });
+    await workspaceQuery.refetch();
+    toast.add({
+      title: "Node unshared",
+      description: `${node.value.title} is private again.`,
+      color: "success",
+    });
+  } catch (error) {
+    toast.add({
+      title: "Unshare failed",
+      description: getErrorMessage(error, "Could not unshare this node."),
+      color: "error",
+    });
+  }
+}
 
 const addBlockMenuItems = computed<DropdownMenuItem[][]>(() => {
   if (!activeTab.value || !node.value) {
@@ -2172,7 +2320,7 @@ provide(workspaceNodeEditorContextKey, {
 </script>
 
 <template>
-  <div class="h-full w-full overflow-hidden">
+  <div class="relative h-full w-full overflow-hidden">
     <div v-if="workspaceQuery.status === 'error'" class="p-6">
       <UAlert
         color="error"
@@ -2225,6 +2373,18 @@ provide(workspaceNodeEditorContextKey, {
             :save-badge="saveBadge"
             :save-error="saveError"
             :visible-blocks="visibleBlocks"
+            :node-visibility-label="nodeVisibilityLabel"
+            :node-visibility-badge-class="nodeVisibilityBadgeClass"
+            :node-owner-label="nodeOwnerLabel"
+            :node-team-name="activeTeamMembership?.name ?? node.teamId ?? null"
+            :teams="teams"
+            :node-share-team-id="nodeShareTeamId"
+            :can-manage-node-sharing="canManageNodeSharing"
+            :share-pending="shareNodeMutation.isPending.value"
+            :unshare-pending="unshareNodeMutation.isPending.value"
+            @update:node-share-team-id="nodeShareTeamId = $event"
+            @share-node="shareCurrentNodeToTeam"
+            @unshare-node="unshareCurrentNodeFromTeam"
           />
         </div>
 
