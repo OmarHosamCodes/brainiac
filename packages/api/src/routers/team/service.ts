@@ -1,9 +1,14 @@
 import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 
-import { createWorkspaceId, type WorkspaceTeamRole } from "@brainiac/workspace";
+import {
+  createWorkspaceId,
+  normalizeWorkspaceNode,
+  type WorkspaceNode,
+  type WorkspaceTeamRole,
+} from "@brainiac/workspace";
 import { db } from "@brainiac/db";
-import { user, workspaceTeam, workspaceTeamMember } from "@brainiac/db/schema";
+import { dashboardWorkspace, user, workspaceTeam, workspaceTeamMember } from "@brainiac/db/schema";
 
 const TEAM_ROLE_WEIGHT: Record<WorkspaceTeamRole, number> = {
   viewer: 1,
@@ -15,6 +20,37 @@ function assertRoleAtLeast(role: WorkspaceTeamRole, required: WorkspaceTeamRole)
   if (TEAM_ROLE_WEIGHT[role] < TEAM_ROLE_WEIGHT[required]) {
     throw new ORPCError("UNAUTHORIZED");
   }
+}
+
+async function requireActorMembership(
+  actorUserId: string,
+  teamId: string,
+  requiredRole?: WorkspaceTeamRole,
+) {
+  const [actorMembership] = await db
+    .select({ role: workspaceTeamMember.role })
+    .from(workspaceTeamMember)
+    .where(and(eq(workspaceTeamMember.teamId, teamId), eq(workspaceTeamMember.userId, actorUserId)))
+    .limit(1);
+
+  if (!actorMembership) {
+    throw new ORPCError("UNAUTHORIZED");
+  }
+
+  if (requiredRole) {
+    assertRoleAtLeast(actorMembership.role, requiredRole);
+  }
+
+  return actorMembership;
+}
+
+async function touchTeam(teamId: string, now: Date) {
+  await db
+    .update(workspaceTeam)
+    .set({
+      updatedAt: now,
+    })
+    .where(eq(workspaceTeam.id, teamId));
 }
 
 export async function listUserTeams(userId: string) {
@@ -37,6 +73,35 @@ export async function listUserTeams(userId: string) {
     createdByUserId: membership.createdByUserId,
     updatedAt: membership.updatedAt.toISOString(),
   }));
+}
+
+export async function getTeam(userId: string, teamId: string) {
+  const [membership] = await db
+    .select({
+      role: workspaceTeamMember.role,
+      teamName: workspaceTeam.name,
+      createdByUserId: workspaceTeam.createdByUserId,
+      updatedAt: workspaceTeam.updatedAt,
+    })
+    .from(workspaceTeamMember)
+    .innerJoin(workspaceTeam, eq(workspaceTeam.id, workspaceTeamMember.teamId))
+    .where(and(eq(workspaceTeamMember.userId, userId), eq(workspaceTeamMember.teamId, teamId)))
+    .limit(1);
+
+  if (!membership) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  const members = await listTeamMembers(userId, teamId);
+
+  return {
+    id: teamId,
+    name: membership.teamName,
+    role: membership.role,
+    createdByUserId: membership.createdByUserId,
+    updatedAt: membership.updatedAt.toISOString(),
+    members,
+  };
 }
 
 export async function createTeam(userId: string, name: string) {
@@ -71,6 +136,140 @@ export async function createTeam(userId: string, name: string) {
   };
 }
 
+export async function updateTeam(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    name: string;
+  },
+) {
+  await requireActorMembership(actorUserId, input.teamId, "owner");
+
+  const now = new Date();
+  const [updated] = await db
+    .update(workspaceTeam)
+    .set({
+      name: input.name,
+      updatedAt: now,
+    })
+    .where(eq(workspaceTeam.id, input.teamId))
+    .returning({
+      id: workspaceTeam.id,
+      name: workspaceTeam.name,
+      createdByUserId: workspaceTeam.createdByUserId,
+      updatedAt: workspaceTeam.updatedAt,
+    });
+
+  if (!updated) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  return {
+    id: updated.id,
+    name: updated.name,
+    createdByUserId: updated.createdByUserId,
+    updatedAt: updated.updatedAt.toISOString(),
+  };
+}
+
+async function cleanupSharedNodesForDeletedTeam(teamId: string, now: Date) {
+  const workspaces = await db
+    .select({
+      userId: dashboardWorkspace.userId,
+      nodes: dashboardWorkspace.nodes,
+    })
+    .from(dashboardWorkspace);
+
+  for (const workspace of workspaces) {
+    const normalized = (workspace.nodes ?? []).map((node) =>
+      normalizeWorkspaceNode({
+        ...(node as WorkspaceNode),
+        ownerUserId: (node as WorkspaceNode).ownerUserId ?? workspace.userId,
+      }),
+    );
+
+    let didChange = false;
+    const cleaned = normalized.map((node) => {
+      if (node.teamId !== teamId) {
+        return node;
+      }
+
+      didChange = true;
+
+      return normalizeWorkspaceNode({
+        ...node,
+        visibility: "private",
+        teamId: null,
+        updatedAt: now.toISOString(),
+      });
+    });
+
+    if (!didChange) {
+      continue;
+    }
+
+    await db
+      .update(dashboardWorkspace)
+      .set({
+        nodes: cleaned,
+        updatedAt: now,
+      })
+      .where(eq(dashboardWorkspace.userId, workspace.userId));
+  }
+}
+
+export async function deleteTeam(actorUserId: string, input: { teamId: string }) {
+  await requireActorMembership(actorUserId, input.teamId, "owner");
+
+  const now = new Date();
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(workspaceTeam)
+      .where(eq(workspaceTeam.id, input.teamId))
+      .returning({ id: workspaceTeam.id })
+      .then((rows) => {
+        if (rows.length === 0) {
+          throw new ORPCError("NOT_FOUND");
+        }
+      });
+  });
+
+  await cleanupSharedNodesForDeletedTeam(input.teamId, now);
+
+  return {
+    teamId: input.teamId,
+    deleted: true,
+  };
+}
+
+export async function listTeamMembers(actorUserId: string, teamId: string) {
+  await requireActorMembership(actorUserId, teamId);
+
+  const members = await db
+    .select({
+      userId: workspaceTeamMember.userId,
+      role: workspaceTeamMember.role,
+      userName: user.name,
+      userEmail: user.email,
+      joinedAt: workspaceTeamMember.createdAt,
+      updatedAt: workspaceTeamMember.updatedAt,
+    })
+    .from(workspaceTeamMember)
+    .innerJoin(user, eq(user.id, workspaceTeamMember.userId))
+    .where(eq(workspaceTeamMember.teamId, teamId));
+
+  return members.map((member) => ({
+    teamId,
+    userId: member.userId,
+    userName: member.userName,
+    userEmail: member.userEmail,
+    role: member.role,
+    joinedAt: member.joinedAt.toISOString(),
+    updatedAt: member.updatedAt.toISOString(),
+  }));
+}
+
 export async function addTeamMember(
   actorUserId: string,
   input: {
@@ -79,19 +278,7 @@ export async function addTeamMember(
     role: WorkspaceTeamRole;
   },
 ) {
-  const [actorMembership] = await db
-    .select({ role: workspaceTeamMember.role })
-    .from(workspaceTeamMember)
-    .where(
-      and(eq(workspaceTeamMember.teamId, input.teamId), eq(workspaceTeamMember.userId, actorUserId)),
-    )
-    .limit(1);
-
-  if (!actorMembership) {
-    throw new ORPCError("UNAUTHORIZED");
-  }
-
-  assertRoleAtLeast(actorMembership.role, "owner");
+  await requireActorMembership(actorUserId, input.teamId, "owner");
 
   const [targetUser] = await db
     .select({ id: user.id, name: user.name, email: user.email })
@@ -123,6 +310,8 @@ export async function addTeamMember(
       },
     });
 
+  await touchTeam(input.teamId, now);
+
   return {
     teamId: input.teamId,
     userId: targetUser.id,
@@ -140,19 +329,7 @@ export async function updateTeamMemberRole(
     role: WorkspaceTeamRole;
   },
 ) {
-  const [actorMembership] = await db
-    .select({ role: workspaceTeamMember.role })
-    .from(workspaceTeamMember)
-    .where(
-      and(eq(workspaceTeamMember.teamId, input.teamId), eq(workspaceTeamMember.userId, actorUserId)),
-    )
-    .limit(1);
-
-  if (!actorMembership) {
-    throw new ORPCError("UNAUTHORIZED");
-  }
-
-  assertRoleAtLeast(actorMembership.role, "owner");
+  await requireActorMembership(actorUserId, input.teamId, "owner");
 
   if (input.userId === actorUserId && input.role !== "owner") {
     const ownerCountRows = await db
@@ -183,6 +360,8 @@ export async function updateTeamMemberRole(
     throw new ORPCError("NOT_FOUND");
   }
 
+  await touchTeam(input.teamId, now);
+
   return updated;
 }
 
@@ -193,19 +372,7 @@ export async function removeTeamMember(
     userId: string;
   },
 ) {
-  const [actorMembership] = await db
-    .select({ role: workspaceTeamMember.role })
-    .from(workspaceTeamMember)
-    .where(
-      and(eq(workspaceTeamMember.teamId, input.teamId), eq(workspaceTeamMember.userId, actorUserId)),
-    )
-    .limit(1);
-
-  if (!actorMembership) {
-    throw new ORPCError("UNAUTHORIZED");
-  }
-
-  assertRoleAtLeast(actorMembership.role, "owner");
+  await requireActorMembership(actorUserId, input.teamId, "owner");
 
   if (input.userId === actorUserId) {
     const ownerCountRows = await db
@@ -229,6 +396,9 @@ export async function removeTeamMember(
   if (!removed) {
     throw new ORPCError("NOT_FOUND");
   }
+
+  const now = new Date();
+  await touchTeam(input.teamId, now);
 
   return {
     ...removed,
