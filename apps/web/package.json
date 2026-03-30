@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "nuxt build",
+    "build": "NODE_OPTIONS=--max-old-space-size=4096 nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -13,23 +13,19 @@
   "dependencies": {
     "@brainiac/agent": "workspace:*",
     "@brainiac/api": "workspace:*",
-    "@brainiac/auth": "workspace:*",
     "@brainiac/env": "workspace:*",
     "@brainiac/workspace": "workspace:*",
     "@nuxt/ui": "^4.5.1",
     "@orpc/client": "catalog:",
-    "@orpc/server": "catalog:",
     "@orpc/tanstack-query": "^1.13.6",
     "@pinia/nuxt": "^0.11.3",
     "@tanstack/vue-query": "^5.92.9",
     "better-auth": "catalog:",
-    "dotenv": "catalog:",
     "nuxt": "^4.4.2",
     "pinia": "^3.0.4",
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@brainiac/config": "workspace:*",
     "@iconify-json/lucide": "^1.2.96",
     "@iconify-json/simple-icons": "^1.2.75",
     "@tanstack/vue-query-devtools": "^6.1.5",

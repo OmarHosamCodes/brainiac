@@ -1,0 +1,89 @@
+{
+  "ignoreIssues": {
+    "apps/web/app/components/workspace/node/context.ts": ["exports", "types"]
+  },
+  "workspaces": {
+    "apps/web": {
+      "entry": [
+        "nuxt.config.ts",
+        "app/app.vue",
+        "app/pages/**/*.vue",
+        "app/layouts/**/*.vue",
+        "app/plugins/**/*.ts",
+        "app/middleware/**/*.ts",
+        "app/components/**/*.vue",
+        "app/composables/**/*.ts",
+        "app/utils/**/*.ts"
+      ],
+      "project": [
+        "app/**/*.{ts,vue}"
+      ],
+      "ignoreDependencies": [
+        "@iconify-json/lucide",
+        "@iconify-json/simple-icons"
+      ]
+    },
+    "apps/server": {
+      "entry": [
+        "src/index.ts",
+        "src/seed.ts",
+        "tsdown.config.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "packages/agent": {
+      "entry": [
+        "src/index.ts",
+        "src/tools.test.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "packages/api": {
+      "entry": [
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "packages/auth": {
+      "entry": [
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "packages/db": {
+      "entry": [
+        "src/index.ts",
+        "drizzle.config.ts"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "drizzle.config.ts"
+      ]
+    },
+    "packages/env": {
+      "entry": [
+        "src/server.ts",
+        "src/web.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
+    },
+    "packages/workspace": {
+      "entry": [
+        "src/index.ts"
+      ],
+      "project": [
+        "src/**/*.ts"
+      ]
+    }
+  }
+}

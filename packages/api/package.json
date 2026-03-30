@@ -18,12 +18,8 @@
     "@brainiac/db": "workspace:*",
     "@brainiac/env": "workspace:*",
     "@brainiac/workspace": "workspace:*",
-    "@orpc/client": "catalog:",
-    "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
-    "@orpc/zod": "catalog:",
     "@types/pg": "catalog:",
-    "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "zod": "catalog:"
   },

@@ -5,7 +5,7 @@ import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
 import { RPCHandler } from "@orpc/server/fetch";
 import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 
-export const apiHandler = new OpenAPIHandler(appRouter, {
+const apiHandler = new OpenAPIHandler(appRouter, {
   plugins: [
     new OpenAPIReferencePlugin({
       schemaConverters: [new ZodToJsonSchemaConverter()],
@@ -13,7 +13,7 @@ export const apiHandler = new OpenAPIHandler(appRouter, {
   ],
 });
 
-export const rpcHandler = new RPCHandler(appRouter);
+const rpcHandler = new RPCHandler(appRouter);
 
 export async function handleAppRouterRequest(request: Request, context: Context) {
   try {

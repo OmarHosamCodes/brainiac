@@ -41,7 +41,7 @@ function getRpcDebugResponse(error: unknown, path: string) {
   );
 }
 
-export function createApp() {
+function createApp() {
   const app = new Hono();
 
   app.onError((error, context) => {
