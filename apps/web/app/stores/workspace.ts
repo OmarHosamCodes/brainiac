@@ -69,6 +69,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     }),
   );
   const saveWorkspace = useMutation(orpc.workspace.save.mutationOptions());
+  const deleteWorkspaceNode = useMutation(orpc.workspace.deleteNode.mutationOptions());
 
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -345,8 +346,26 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       return;
     }
 
+    const node = findNode(payload.nodeId);
+
+    if (!node) {
+      return;
+    }
+
     nodes.value = nodes.value.filter((node) => node.id !== payload.nodeId);
     selectedNodeIds.value = selectedNodeIds.value.filter((nodeId) => nodeId !== payload.nodeId);
+
+    deleteWorkspaceNode.mutate(
+      {
+        nodeId: payload.nodeId,
+        ownerUserId: node.ownerUserId ?? undefined,
+      },
+      {
+        onError: () => {
+          void workspaceQuery.refetch();
+        },
+      },
+    );
   }
 
   function submitNodeEditor() {

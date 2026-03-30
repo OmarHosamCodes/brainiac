@@ -78,6 +78,7 @@ import {
   workspaceMessageHousePillarSchema,
   workspaceNodeDashboardFeaturedBlockSchema,
   workspaceNodeDashboardSchema,
+  workspaceNodeVisibilitySchema,
   workspaceNodeSchema,
   workspaceNodeTabSchema,
   workspaceNodeTintSchema,
@@ -126,6 +127,7 @@ import {
   workspaceTaskPrioritySchema,
   workspaceTaskQuadrantSchema,
   workspaceTaskSchema,
+  workspaceTeamRoleSchema,
   workspaceTableBlockSchema,
   workspaceTableColumnSchema,
   workspaceTableRowSchema,
@@ -195,6 +197,8 @@ export type WorkspaceTimelineMilestoneStatus = z.infer<
   typeof workspaceTimelineMilestoneStatusSchema
 >;
 export type WorkspaceNodeTint = z.infer<typeof workspaceNodeTintSchema>;
+export type WorkspaceNodeVisibility = z.infer<typeof workspaceNodeVisibilitySchema>;
+export type WorkspaceTeamRole = z.infer<typeof workspaceTeamRoleSchema>;
 export type WorkspaceTimelineMilestone = z.infer<typeof workspaceTimelineMilestoneSchema>;
 export type WorkspaceSeatHealth = z.infer<typeof workspaceSeatHealthSchema>;
 export type WorkspaceSeatLoadLevel = z.infer<typeof workspaceSeatLoadLevelSchema>;
