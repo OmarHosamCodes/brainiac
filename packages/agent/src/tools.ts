@@ -1015,13 +1015,10 @@ function describeBlockEditGuide(
         blockType: block.type,
         editableFieldPaths: [
           "title",
+          "dimensions[].label",
           "members[].name",
           "members[].role",
-          "members[].scores.writing",
-          "members[].scores.strategy",
-          "members[].scores.design",
-          "members[].scores.analytics",
-          "members[].scores.leadership",
+          "members[].scores",
         ],
       });
     case "delegation-matrix":
@@ -1809,7 +1806,7 @@ export function summarizeBlock(block: WorkspaceBlock) {
     case "timeline":
       return `${block.milestones.length} milestones`;
     case "skills-heat-map":
-      return `${block.members.length} team members across 5 skill dimensions`;
+      return `${block.members.length} team members across ${block.dimensions.length} skill dimensions`;
     case "delegation-matrix":
       return `${block.items.length} delegation items at ${block.hourlyRate} EGP/hour`;
     case "talent-grid":

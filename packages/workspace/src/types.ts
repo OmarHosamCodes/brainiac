@@ -112,6 +112,7 @@ import {
   workspaceScorecardBlockSchema,
   workspaceScorecardMetricSchema,
   workspaceSkillsHeatMapBlockSchema,
+  workspaceSkillsHeatMapDimensionSchema,
   workspaceSkillsHeatMapMemberSchema,
   workspaceSkillsHeatMapScoresSchema,
   workspaceStrategicAssumptionFilterSchema,
@@ -161,6 +162,9 @@ export type WorkspaceProcessStep = z.infer<typeof workspaceProcessStepSchema>;
 export type Workspace2x2MatrixItem = z.infer<typeof workspace2x2MatrixItemSchema>;
 export type Workspace2x2MatrixQuadrant = z.infer<typeof workspace2x2MatrixQuadrantSchema>;
 export type Workspace2x2MatrixQuadrants = z.infer<typeof workspace2x2MatrixQuadrantsSchema>;
+export type WorkspaceSkillsHeatMapDimension = z.infer<
+  typeof workspaceSkillsHeatMapDimensionSchema
+>;
 export type WorkspacePeopleSkillDimension = z.infer<typeof workspacePeopleSkillDimensionSchema>;
 export type WorkspaceSkillsHeatMapScores = z.infer<typeof workspaceSkillsHeatMapScoresSchema>;
 export type WorkspaceSkillsHeatMapMember = z.infer<typeof workspaceSkillsHeatMapMemberSchema>;

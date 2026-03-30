@@ -1,4 +1,3 @@
-import { WORKSPACE_PEOPLE_SKILL_DIMENSIONS } from "./constants";
 import { trimToEmpty } from "./shared";
 import type {
   WorkspaceDelegationMatrixBlock,
@@ -12,6 +11,7 @@ import type {
   WorkspaceSeatPlannerSeat,
   WorkspaceSeatPlannerSummary,
   WorkspaceSkillsHeatMapBlock,
+  WorkspaceSkillsHeatMapDimension,
   WorkspaceSkillsHeatMapScores,
   WorkspaceSkillsHeatMapSummary,
   WorkspaceTalentGridBlock,
@@ -19,14 +19,6 @@ import type {
   WorkspaceTalentGridMember,
   WorkspaceTalentGridSummary,
 } from "./types";
-
-export const workspacePeopleSkillDimensionLabels: Record<WorkspacePeopleSkillDimension, string> = {
-  writing: "Writing",
-  strategy: "Strategy",
-  design: "Design",
-  analytics: "Analytics",
-  leadership: "Leadership",
-};
 
 export const workspaceDelegationStatusLabels: Record<WorkspaceDelegationStatus, string> = {
   stuck: "Stuck",
@@ -65,16 +57,22 @@ export const workspaceTalentGridBoxLabels: Record<WorkspaceTalentGridBoxKey, str
   superstar: "Superstar",
 };
 
+export function createWorkspaceSkillsHeatMapDimension(
+  partial: Partial<WorkspaceSkillsHeatMapDimension> = {},
+): WorkspaceSkillsHeatMapDimension {
+  return {
+    id: partial.id ?? "dimension-id",
+    label: partial.label ?? "New Dimension",
+  };
+}
+
 export function createWorkspaceSkillsScoreMap(
+  dimensions: WorkspaceSkillsHeatMapDimension[],
   partial: Partial<WorkspaceSkillsHeatMapScores> = {},
 ): WorkspaceSkillsHeatMapScores {
-  return {
-    writing: clampSkillScore(partial.writing),
-    strategy: clampSkillScore(partial.strategy),
-    design: clampSkillScore(partial.design),
-    analytics: clampSkillScore(partial.analytics),
-    leadership: clampSkillScore(partial.leadership),
-  };
+  return Object.fromEntries(
+    dimensions.map((dimension) => [dimension.id, clampSkillScore(partial[dimension.id])]),
+  );
 }
 
 export function clampSkillScore(value: number | null | undefined, fallback = 5) {
@@ -87,34 +85,40 @@ export function clampTalentGridScore(value: number | null | undefined, fallback 
   return Math.min(5, Math.max(1, Math.round(numeric)));
 }
 
-export function getSkillsHeatMapMemberAverage(scores: WorkspaceSkillsHeatMapScores) {
-  const total = WORKSPACE_PEOPLE_SKILL_DIMENSIONS.reduce(
-    (sum, dimension) => sum + scores[dimension],
-    0,
-  );
-  return Number((total / WORKSPACE_PEOPLE_SKILL_DIMENSIONS.length).toFixed(1));
+export function getSkillsHeatMapMemberAverage(
+  scores: WorkspaceSkillsHeatMapScores,
+  dimensionIds?: string[],
+) {
+  const ids = dimensionIds ?? Object.keys(scores);
+  if (ids.length === 0) return 0;
+
+  const total = ids.reduce((sum, dimensionId) => sum + (scores[dimensionId] ?? 0), 0);
+  return Number((total / ids.length).toFixed(1));
 }
 
 export function getSkillsHeatMapSummary(
   block: WorkspaceSkillsHeatMapBlock,
 ): WorkspaceSkillsHeatMapSummary {
+  const dimensionIds = block.dimensions.map((d) => d.id);
   const averageByDimension = Object.fromEntries(
-    WORKSPACE_PEOPLE_SKILL_DIMENSIONS.map((dimension) => {
-      const total = block.members.reduce((sum, member) => sum + member.scores[dimension], 0);
+    dimensionIds.map((dimensionId) => {
+      const total = block.members.reduce((sum, member) => sum + (member.scores[dimensionId] ?? 0), 0);
       const average =
         block.members.length > 0 ? Number((total / block.members.length).toFixed(1)) : 0;
-      return [dimension, average];
+      return [dimensionId, average];
     }),
   ) as Record<WorkspacePeopleSkillDimension, number>;
-  const rankedDimensions = [...WORKSPACE_PEOPLE_SKILL_DIMENSIONS].sort(
-    (left, right) => averageByDimension[right] - averageByDimension[left],
+
+  const rankedDimensions = [...dimensionIds].sort(
+    (left, right) => (averageByDimension[right] ?? 0) - (averageByDimension[left] ?? 0),
   );
+
   const overallAverage =
     block.members.length > 0
       ? Number(
           (
             block.members.reduce(
-              (sum, member) => sum + getSkillsHeatMapMemberAverage(member.scores),
+              (sum, member) => sum + getSkillsHeatMapMemberAverage(member.scores, dimensionIds),
               0,
             ) / block.members.length
           ).toFixed(1),
@@ -126,9 +130,7 @@ export function getSkillsHeatMapSummary(
     overallAverage,
     criticalGapCount: block.members.reduce(
       (sum, member) =>
-        sum +
-        WORKSPACE_PEOPLE_SKILL_DIMENSIONS.filter((dimension) => member.scores[dimension] <= 3)
-          .length,
+        sum + dimensionIds.filter((dimensionId) => (member.scores[dimensionId] ?? 0) <= 3).length,
       0,
     ),
     strongestDimension: rankedDimensions[0] ?? null,

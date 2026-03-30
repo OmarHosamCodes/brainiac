@@ -44,7 +44,6 @@ import {
   WORKSPACE_NODE_TINTS,
   WORKSPACE_OKR_KEY_RESULT_LIMIT,
   WORKSPACE_OKR_OBJECTIVE_LIMIT,
-  WORKSPACE_PEOPLE_SKILL_DIMENSIONS,
   WORKSPACE_PIPELINE_FUNNEL_DEAL_LIMIT,
   WORKSPACE_PROCESS_STEP_LIMIT,
   WORKSPACE_PROS_CONS_ITEM_LIMIT,
@@ -61,6 +60,7 @@ import {
   WORKSPACE_RECEIVABLE_STATUSES,
   WORKSPACE_PROFITABILITY_CLIENT_LIMIT,
   WORKSPACE_SKILLS_HEAT_MAP_MEMBER_LIMIT,
+  WORKSPACE_SKILLS_HEAT_MAP_DIMENSIONS_LIMIT,
   WORKSPACE_STRATEGIC_ASSUMPTION_FILTERS,
   WORKSPACE_STRATEGIC_ASSUMPTION_LINK_TYPES,
   WORKSPACE_STRATEGIC_ASSUMPTION_STATUSES,
@@ -86,7 +86,7 @@ export const workspaceHabitGridDaySchema = z.enum(WORKSPACE_HABIT_GRID_DAYS);
 export const workspaceTimelineMilestoneStatusSchema = z.enum(WORKSPACE_TIMELINE_MILESTONE_STATUSES);
 export const workspaceNodeTintSchema = z.enum(WORKSPACE_NODE_TINTS);
 export const workspaceCustomFieldTypeSchema = z.enum(["text", "number", "checkbox", "textarea"]);
-export const workspacePeopleSkillDimensionSchema = z.enum(WORKSPACE_PEOPLE_SKILL_DIMENSIONS);
+export const workspacePeopleSkillDimensionSchema = z.string();
 export const workspaceDelegationStatusSchema = z.enum(WORKSPACE_DELEGATION_STATUSES);
 export const workspaceSalesPipelineStageSchema = z.enum(WORKSPACE_SALES_PIPELINE_STAGES);
 export const workspaceSalesTemperatureSchema = z.enum(WORKSPACE_SALES_TEMPERATURES);
@@ -254,13 +254,14 @@ export const workspaceKanbanCardSchema = z.object({
   dueDate: isoDateSchema.nullable().optional(),
 });
 
-export const workspaceSkillsHeatMapScoresSchema = z.object({
-  writing: z.number().int().min(1).max(10).default(5),
-  strategy: z.number().int().min(1).max(10).default(5),
-  design: z.number().int().min(1).max(10).default(5),
-  analytics: z.number().int().min(1).max(10).default(5),
-  leadership: z.number().int().min(1).max(10).default(5),
+export const workspaceSkillsHeatMapDimensionSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().trim().max(80),
 });
+
+export const workspaceSkillsHeatMapScoresSchema = z
+  .record(z.string(), z.number().int().min(1).max(10).default(5))
+  .default({});
 
 export const workspaceSkillsHeatMapMemberSchema = z.object({
   id: z.string().min(1),
@@ -742,6 +743,10 @@ export const workspaceTimelineBlockSchema = workspaceBlockBaseSchema.extend({
 
 export const workspaceSkillsHeatMapBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("skills-heat-map"),
+  dimensions: z
+    .array(workspaceSkillsHeatMapDimensionSchema)
+    .max(WORKSPACE_SKILLS_HEAT_MAP_DIMENSIONS_LIMIT)
+    .default([]),
   members: z
     .array(workspaceSkillsHeatMapMemberSchema)
     .max(WORKSPACE_SKILLS_HEAT_MAP_MEMBER_LIMIT)

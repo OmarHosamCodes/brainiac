@@ -80,6 +80,7 @@ import {
   workspaceScorecardBlockSchema,
   workspaceScorecardMetricSchema,
   workspaceSkillsHeatMapBlockSchema,
+  workspaceSkillsHeatMapDimensionSchema,
   workspaceSkillsHeatMapMemberSchema,
   workspaceStrategicAssumptionSchema,
   workspaceSwotBlockSchema,
@@ -179,6 +180,7 @@ import type {
   WorkspaceScorecardBlock,
   WorkspaceScorecardMetric,
   WorkspaceSkillsHeatMapBlock,
+  WorkspaceSkillsHeatMapDimension,
   WorkspaceSkillsHeatMapMember,
   WorkspaceStrategicAssumption,
   WorkspaceSwotBlock,
@@ -405,13 +407,14 @@ export function createWorkspaceCourseRoadmapCourse(
 }
 
 export function createWorkspaceSkillsHeatMapMember(
+  dimensions: WorkspaceSkillsHeatMapDimension[],
   partial: Partial<WorkspaceSkillsHeatMapMember> = {},
 ): WorkspaceSkillsHeatMapMember {
   return workspaceSkillsHeatMapMemberSchema.parse({
     id: partial.id ?? createWorkspaceId("person"),
     name: partial.name ?? "New team member",
     role: partial.role ?? "",
-    scores: createWorkspaceSkillsScoreMap(partial.scores),
+    scores: createWorkspaceSkillsScoreMap(dimensions, partial.scores),
   });
 }
 
@@ -765,9 +768,19 @@ function getBusinessModelCanvasDefaultCells() {
   } satisfies WorkspaceBusinessModelCanvasBlock["cells"];
 }
 
-function getSkillsHeatMapDefaultMembers() {
+function getSkillsHeatMapDefaultDimensions(): WorkspaceSkillsHeatMapDimension[] {
   return [
-    createWorkspaceSkillsHeatMapMember({
+    { id: "writing", label: "Writing" },
+    { id: "strategy", label: "Strategy" },
+    { id: "design", label: "Design" },
+    { id: "analytics", label: "Analytics" },
+    { id: "leadership", label: "Leadership" },
+  ];
+}
+
+function getSkillsHeatMapDefaultMembers(dimensions: WorkspaceSkillsHeatMapDimension[]) {
+  return [
+    createWorkspaceSkillsHeatMapMember(dimensions, {
       name: "Sarah",
       role: "Content Strategist",
       scores: {
@@ -778,7 +791,7 @@ function getSkillsHeatMapDefaultMembers() {
         leadership: 6,
       },
     }),
-    createWorkspaceSkillsHeatMapMember({
+    createWorkspaceSkillsHeatMapMember(dimensions, {
       name: "Omar",
       role: "Growth Lead",
       scores: {
@@ -789,7 +802,7 @@ function getSkillsHeatMapDefaultMembers() {
         leadership: 7,
       },
     }),
-    createWorkspaceSkillsHeatMapMember({
+    createWorkspaceSkillsHeatMapMember(dimensions, {
       name: "Nour",
       role: "Designer",
       scores: {
@@ -800,7 +813,7 @@ function getSkillsHeatMapDefaultMembers() {
         leadership: 6,
       },
     }),
-    createWorkspaceSkillsHeatMapMember({
+    createWorkspaceSkillsHeatMapMember(dimensions, {
       name: "Karim",
       role: "Analyst",
       scores: {
@@ -811,7 +824,7 @@ function getSkillsHeatMapDefaultMembers() {
         leadership: 5,
       },
     }),
-    createWorkspaceSkillsHeatMapMember({
+    createWorkspaceSkillsHeatMapMember(dimensions, {
       name: "Layla",
       role: "Operations Manager",
       scores: {
@@ -1868,12 +1881,14 @@ export function createWorkspaceSkillsHeatMapBlock(
   partial: Partial<WorkspaceSkillsHeatMapBlock> = {},
 ): WorkspaceSkillsHeatMapBlock {
   const timestamp = getNowIsoString();
+  const dimensions = partial.dimensions ?? getSkillsHeatMapDefaultDimensions();
 
   return workspaceSkillsHeatMapBlockSchema.parse({
     id: partial.id ?? createWorkspaceId("block"),
     type: "skills-heat-map",
     title: partial.title ?? "Skills heat map",
-    members: partial.members ?? getSkillsHeatMapDefaultMembers(),
+    dimensions,
+    members: partial.members ?? getSkillsHeatMapDefaultMembers(dimensions),
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
   });
@@ -2468,11 +2483,17 @@ function normalizeWorkspaceSkillsHeatMapBlock(
     | WorkspaceSkillsHeatMapBlock
     | (Partial<WorkspaceSkillsHeatMapBlock> & { type: "skills-heat-map" }),
 ) {
+  const dimensions =
+    block.dimensions && block.dimensions.length > 0
+      ? block.dimensions.map((dimension) => workspaceSkillsHeatMapDimensionSchema.parse(dimension))
+      : getSkillsHeatMapDefaultDimensions();
+
   return workspaceSkillsHeatMapBlockSchema.parse({
     ...block,
+    dimensions,
     members: (block.members ?? []).map((member) => ({
       ...member,
-      scores: createWorkspaceSkillsScoreMap(member.scores),
+      scores: createWorkspaceSkillsScoreMap(dimensions, member.scores),
     })),
   });
 }
@@ -3156,17 +3177,36 @@ export function cloneWorkspaceBlockForInsertion(
         createdAt: timestamp,
         updatedAt: timestamp,
       });
-    case "skills-heat-map":
+    case "skills-heat-map": {
+      const dimensionIdMap = new Map<string, string>();
+      const dimensions = block.dimensions.map((dimension) => {
+        const nextDimensionId = createWorkspaceId("dimension");
+        dimensionIdMap.set(dimension.id, nextDimensionId);
+
+        return {
+          ...dimension,
+          id: nextDimensionId,
+        };
+      });
+
       return workspaceSkillsHeatMapBlockSchema.parse({
         ...block,
         id: createWorkspaceId("block"),
+        dimensions,
         members: block.members.map((member) => ({
           ...member,
           id: createWorkspaceId("person"),
+          scores: Object.fromEntries(
+            dimensions.map((dimension, index) => [
+              dimension.id,
+              member.scores[block.dimensions[index]!.id] ?? 5,
+            ]),
+          ),
         })),
         createdAt: timestamp,
         updatedAt: timestamp,
       });
+    }
     case "delegation-matrix":
       return workspaceDelegationMatrixBlockSchema.parse({
         ...block,

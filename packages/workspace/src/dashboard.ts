@@ -65,7 +65,6 @@ import {
   getTalentGridSummary,
   isSeatUncovered,
   workspaceDelegationStatusLabels,
-  workspacePeopleSkillDimensionLabels,
   workspaceSeatHealthLabels,
   workspaceSeatLoadLevelLabels,
   workspaceTalentGridBoxLabels,
@@ -116,6 +115,7 @@ import type {
   WorkspacePipelineFunnelBlock,
   WorkspaceNodeTab,
   WorkspaceScorecardMetric,
+  WorkspaceSkillsHeatMapBlock,
   WorkspaceTask,
   WorkspaceTimelineMilestone,
   WorkspaceTrackerBlock,
@@ -155,6 +155,10 @@ function isScorecardMetricOnTarget(metric: WorkspaceScorecardMetric) {
 function getStrongestSkillDimension(averages: Record<WorkspacePeopleSkillDimension, number>) {
   const ranked = Object.entries(averages).sort((left, right) => right[1] - left[1]);
   return (ranked[0]?.[0] as WorkspacePeopleSkillDimension | undefined) ?? null;
+}
+
+function getSkillsHeatMapDimensionLabel(block: WorkspaceSkillsHeatMapBlock, dimensionId: string) {
+  return block.dimensions.find((d) => d.id === dimensionId)?.label ?? "Skill";
 }
 
 function getTopSalesTemperature(
@@ -927,12 +931,12 @@ function buildWorkspaceNodeDashboardDetail(
           ? [
               ...(summary.strongestDimension
                 ? [
-                    `Strongest: ${workspacePeopleSkillDimensionLabels[summary.strongestDimension]} ${summary.averageByDimension[summary.strongestDimension]}/10`,
+                    `Strongest: ${getSkillsHeatMapDimensionLabel(block, summary.strongestDimension)} ${summary.averageByDimension[summary.strongestDimension]}/10`,
                   ]
                 : []),
               ...(summary.weakestDimension
                 ? [
-                    `Weakest: ${workspacePeopleSkillDimensionLabels[summary.weakestDimension]} ${summary.averageByDimension[summary.weakestDimension]}/10`,
+                    `Weakest: ${getSkillsHeatMapDimensionLabel(block, summary.weakestDimension)} ${summary.averageByDimension[summary.weakestDimension]}/10`,
                   ]
                 : []),
             ]
@@ -2256,7 +2260,7 @@ export function generateWorkspacePromptOutput(node: WorkspaceNode, prompt: strin
           const strongestDimension = getStrongestSkillDimension(summary.averageByDimension);
 
           return [
-            `${block.title}: ${summary.overallAverage}/10 average skill score, ${summary.criticalGapCount} critical gaps${strongestDimension ? `, strongest in ${workspacePeopleSkillDimensionLabels[strongestDimension]}` : ""}.`,
+            `${block.title}: ${summary.overallAverage}/10 average skill score, ${summary.criticalGapCount} critical gaps${strongestDimension ? `, strongest in ${getSkillsHeatMapDimensionLabel(block, strongestDimension)}` : ""}.`,
           ];
         }
 
