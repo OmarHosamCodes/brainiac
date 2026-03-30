@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import { useMutation, useQuery } from "@tanstack/vue-query";
-import { ref } from "vue";
-
 definePageMeta({
   middleware: ["auth", "workspace"],
 });
@@ -27,287 +24,57 @@ const {
   submitNodeEditor,
   workspaceQuery,
 } = useWorkspaceBoard();
-const orpc = useOrpc();
-const toast = useToast();
 
-const isChatVisible = ref(true);
-const isTeamAsideCompact = ref(true);
-const newTeamName = ref("");
-const selectedTeamId = ref("");
-const teamNameDraft = ref("");
-const memberEmail = ref("");
-const memberRole = ref<"owner" | "editor" | "viewer">("viewer");
+const { isChatVisible, isTeamAsideCompact } = useDashboardLayout();
 
-const teamListQuery = useQuery(orpc.team.list.queryOptions());
-const teamDetailQuery = useQuery(
-  computed(() => ({
-    ...orpc.team.get.queryOptions({ input: { teamId: selectedTeamId.value } }),
-    enabled: Boolean(selectedTeamId.value),
-  })),
-);
-const createTeamMutation = useMutation(orpc.team.create.mutationOptions());
-const updateTeamMutation = useMutation(orpc.team.update.mutationOptions());
-const deleteTeamMutation = useMutation(orpc.team.delete.mutationOptions());
-const addTeamMemberMutation = useMutation(orpc.team.members.add.mutationOptions());
-const updateTeamMemberRoleMutation = useMutation(orpc.team.members.updateRole.mutationOptions());
-const removeTeamMemberMutation = useMutation(orpc.team.members.remove.mutationOptions());
-const shareNodeMutation = useMutation(orpc.workspace.shareNode.mutationOptions());
-const unshareNodeMutation = useMutation(orpc.workspace.unshareNode.mutationOptions());
-
-const teams = computed(() => teamListQuery.data.value?.items ?? []);
-const selectedTeam = computed(() => teamDetailQuery.data.value ?? null);
-const selectedTeamMembers = computed(() => selectedTeam.value?.members ?? []);
-const canManageSelectedTeam = computed(() => selectedTeam.value?.role === "owner");
-const currentUserId = computed(() => authSession.value?.data?.user?.id ?? "");
-const selectedNode = computed(() => {
-  const nodeId = selectedNodeIds.value[0];
-
-  if (!nodeId) {
-    return null;
-  }
-
-  return nodes.value.find((node) => node.id === nodeId) ?? null;
-});
-
-watch(
-  teams,
-  (nextTeams) => {
-    if (selectedTeamId.value && nextTeams.some((team) => team.id === selectedTeamId.value)) {
-      return;
-    }
-
-    selectedTeamId.value = nextTeams[0]?.id ?? "";
-  },
-  { immediate: true },
-);
-
-watch(
+const teamSelection = useTeamSelection();
+const {
+  newTeamName,
   selectedTeam,
-  (team) => {
-    teamNameDraft.value = team?.name ?? "";
+  selectedTeamId,
+  teamListQuery,
+  teamNameDraft,
+  teams,
+} = teamSelection;
+
+const teamManagement = useTeamManagement({
+  teamSelection,
+  workspaceQuery,
+});
+const {
+  addTeamMember,
+  addTeamMemberMutation,
+  canManageSelectedTeam,
+  createTeam,
+  createTeamMutation,
+  currentUserId,
+  deleteSelectedTeam,
+  deleteTeamMutation,
+  memberEmail,
+  memberRole,
+  onMemberRoleChange,
+  removeMember,
+  removeTeamMemberMutation,
+  saveTeamName,
+  selectedTeamMembers,
+  updateTeamMemberRoleMutation,
+  updateTeamMutation,
+} = teamManagement;
+
+const {
+  selectedNode,
+  shareNodeMutation,
+  shareSelectedNode,
+  unshareNodeMutation,
+  unshareSelectedNode,
+} = useNodeSharing({
+  teamSelection,
+  workspaceBoard: {
+    nodes,
+    selectedNodeIds,
+    workspaceQuery,
   },
-  { immediate: true },
-);
-
-async function createTeam() {
-  const teamName = newTeamName.value.trim();
-
-  if (!teamName) {
-    return;
-  }
-
-  try {
-    await createTeamMutation.mutateAsync({ name: teamName });
-    newTeamName.value = "";
-    await teamListQuery.refetch();
-    toast.add({
-      title: "Team created",
-      description: `Created ${teamName}.`,
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Failed to create team",
-      description: error instanceof Error ? error.message : "Please try again.",
-      color: "error",
-    });
-  }
-}
-
-async function refreshTeamData() {
-  await Promise.all([teamListQuery.refetch(), teamDetailQuery.refetch()]);
-}
-
-async function saveTeamName() {
-  const teamId = selectedTeamId.value;
-  const name = teamNameDraft.value.trim();
-
-  if (!teamId || !name) {
-    return;
-  }
-
-  try {
-    await updateTeamMutation.mutateAsync({ teamId, name });
-    await refreshTeamData();
-    toast.add({
-      title: "Team updated",
-      description: "Team name saved.",
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Failed to update team",
-      description: error instanceof Error ? error.message : "Please try again.",
-      color: "error",
-    });
-  }
-}
-
-async function deleteSelectedTeam() {
-  const teamId = selectedTeamId.value;
-
-  if (!teamId) {
-    return;
-  }
-
-  try {
-    await deleteTeamMutation.mutateAsync({ teamId });
-    await Promise.all([teamListQuery.refetch(), workspaceQuery.refetch()]);
-    toast.add({
-      title: "Team deleted",
-      description: "Shared nodes were detached from this team.",
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Failed to delete team",
-      description: error instanceof Error ? error.message : "Please try again.",
-      color: "error",
-    });
-  }
-}
-
-async function addTeamMember() {
-  const teamId = selectedTeamId.value;
-  const userEmail = memberEmail.value.trim();
-
-  if (!teamId || !userEmail) {
-    return;
-  }
-
-  try {
-    await addTeamMemberMutation.mutateAsync({
-      teamId,
-      userEmail,
-      role: memberRole.value,
-    });
-    memberEmail.value = "";
-    memberRole.value = "viewer";
-    await refreshTeamData();
-    toast.add({
-      title: "Member added",
-      description: `${userEmail} has been added to the team.`,
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Failed to add member",
-      description: error instanceof Error ? error.message : "Please try again.",
-      color: "error",
-    });
-  }
-}
-
-async function updateMemberRole(userId: string, role: "owner" | "editor" | "viewer") {
-  const teamId = selectedTeamId.value;
-
-  if (!teamId) {
-    return;
-  }
-
-  try {
-    await updateTeamMemberRoleMutation.mutateAsync({ teamId, userId, role });
-    await refreshTeamData();
-    toast.add({
-      title: "Role updated",
-      description: "Member role has been updated.",
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Failed to update role",
-      description: error instanceof Error ? error.message : "Please try again.",
-      color: "error",
-    });
-  }
-}
-
-async function removeMember(userId: string) {
-  const teamId = selectedTeamId.value;
-
-  if (!teamId) {
-    return;
-  }
-
-  try {
-    await removeTeamMemberMutation.mutateAsync({ teamId, userId });
-    await Promise.all([refreshTeamData(), workspaceQuery.refetch()]);
-    toast.add({
-      title: "Member removed",
-      description: "Member access has been revoked.",
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Failed to remove member",
-      description: error instanceof Error ? error.message : "Please try again.",
-      color: "error",
-    });
-  }
-}
-
-function onMemberRoleChange(userId: string, event: Event) {
-  const target = event.target as HTMLSelectElement | null;
-
-  if (!target) {
-    return;
-  }
-
-  const role = target.value;
-
-  if (role !== "owner" && role !== "editor" && role !== "viewer") {
-    return;
-  }
-
-  void updateMemberRole(userId, role);
-}
-
-async function shareSelectedNode() {
-  if (!selectedNode.value || !selectedTeamId.value) {
-    return;
-  }
-
-  try {
-    await shareNodeMutation.mutateAsync({
-      nodeId: selectedNode.value.id,
-      teamId: selectedTeamId.value,
-    });
-    await workspaceQuery.refetch();
-    toast.add({
-      title: "Node shared",
-      description: `${selectedNode.value.title} is now visible to team members.`,
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Failed to share node",
-      description: error instanceof Error ? error.message : "Please try again.",
-      color: "error",
-    });
-  }
-}
-
-async function unshareSelectedNode() {
-  if (!selectedNode.value) {
-    return;
-  }
-
-  try {
-    await unshareNodeMutation.mutateAsync({ nodeId: selectedNode.value.id });
-    await workspaceQuery.refetch();
-    toast.add({
-      title: "Node unshared",
-      description: `${selectedNode.value.title} is private again.`,
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Failed to unshare node",
-      description: error instanceof Error ? error.message : "Please try again.",
-      color: "error",
-    });
-  }
-}
+});
 </script>
 
 <template>
