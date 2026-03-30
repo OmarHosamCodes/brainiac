@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DropdownMenuItem } from "@nuxt/ui";
 import {
-  WORKSPACE_TASK_DOMAINS,
   createWorkspace2x2MatrixBlock,
   createDefaultWorkspaceTab,
   createWorkspaceAiPromptBlock,
@@ -58,12 +57,10 @@ import {
   getWorkspaceTaskDomainLabel,
   normalizeWorkspaceNode,
   type WorkspaceBlock,
-  type WorkspaceCollectedTask,
   type WorkspaceCustomBlock,
   type WorkspaceKanbanCard,
   type WorkspaceNode,
   type WorkspaceNodeTab,
-  type WorkspaceTaskPriority,
   type WorkspaceTimeOrchestratorBlock,
 } from "@brainiac/workspace";
 import { useMutation, useQuery } from "@tanstack/vue-query";
@@ -71,13 +68,21 @@ import { storeToRefs } from "pinia";
 
 import {
   workspaceNodeEditorContextKey,
-  type WorkspaceNodeDomainOption,
-  type WorkspaceNodePriorityOption,
   type WorkspaceTabEditorMode,
 } from "~/components/workspace/node/context";
+import {
+  workspaceNodeDomainOptions,
+  workspaceNodePriorityOptions,
+} from "~/constants/workspace-node-options";
+import { useWorkspaceNodeSharing } from "~/composables/workspace-node/useWorkspaceNodeSharing";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { renderSimpleMarkdown } from "~/utils/render-simple-markdown";
 import { createWorkspaceAddBlockMenuItems } from "~/utils/workspace-add-block-menu";
+import {
+  formatWorkspaceFormulaResult,
+  formatWorkspaceRelativeTaskMeta,
+  getWorkspaceTaskPriorityBadgeClass,
+} from "~/utils/workspace-node-formatters";
 import {
   createBlockMarketplacePayload,
   createNodeMarketplacePayload,
@@ -96,7 +101,6 @@ definePageMeta({
 const route = useRoute();
 const toast = useToast();
 const orpc = useOrpc();
-const authSession = useAuthSession();
 const workspaceStore = useWorkspaceStore();
 const {
   isWorkspaceInitialLoading,
@@ -109,9 +113,6 @@ const workspaceQuery = workspaceStore.workspaceQuery;
 
 const saveMarketplaceItem = useMutation(orpc.workspace.marketplace.save.mutationOptions());
 const blockAgentPromptMutation = useMutation(orpc.agent.chat.turn.mutationOptions());
-const teamListQuery = useQuery(orpc.team.list.queryOptions());
-const shareNodeMutation = useMutation(orpc.workspace.shareNode.mutationOptions());
-const unshareNodeMutation = useMutation(orpc.workspace.unshareNode.mutationOptions());
 
 const nodeId = computed(() => String(route.params.id ?? ""));
 const emptyDropdownItems: DropdownMenuItem[][] = [];
@@ -133,78 +134,21 @@ const node = computed(() => {
 const activeTabId = computed(() => node.value?.viewState.activeTabId ?? "");
 const isAgentChatVisible = ref(true);
 const agentContextTargets = ref<AgentContextTarget[]>([]);
-const nodeShareTeamId = ref("");
-
-const teams = computed(() => teamListQuery.data.value?.items ?? []);
-const currentUserId = computed(() => authSession.value?.data?.user?.id ?? "");
-const activeTeamMembership = computed(() => {
-  const currentNode = node.value;
-
-  if (!currentNode?.teamId) {
-    return null;
-  }
-
-  return teams.value.find((team) => team.id === currentNode.teamId) ?? null;
-});
-const canManageNodeSharing = computed(() => {
-  const currentNode = node.value;
-
-  if (!currentNode) {
-    return false;
-  }
-
-  if (!currentNode.ownerUserId || currentNode.ownerUserId === currentUserId.value) {
-    return true;
-  }
-
-  if (currentNode.visibility !== "team" || !currentNode.teamId) {
-    return false;
-  }
-
-  return activeTeamMembership.value?.role === "owner" || activeTeamMembership.value?.role === "editor";
-});
-const nodeVisibilityLabel = computed(() => {
-  const currentNode = node.value;
-
-  if (!currentNode) {
-    return "Unknown";
-  }
-
-  if (currentNode.visibility !== "team") {
-    return "Private";
-  }
-
-  if (!currentNode.ownerUserId || currentNode.ownerUserId === currentUserId.value) {
-    return "Team Shared";
-  }
-
-  return "Shared With You";
-});
-const nodeVisibilityBadgeClass = computed(() => {
-  const currentNode = node.value;
-
-  if (!currentNode || currentNode.visibility !== "team") {
-    return "border-neutral-300/70 bg-neutral-100 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300";
-  }
-
-  if (!currentNode.ownerUserId || currentNode.ownerUserId === currentUserId.value) {
-    return "border-primary-300/60 bg-primary-100/80 text-primary-700 dark:border-primary-800/70 dark:bg-primary-950/50 dark:text-primary-300";
-  }
-
-  return "border-emerald-300/60 bg-emerald-100/80 text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-950/50 dark:text-emerald-300";
-});
-const nodeOwnerLabel = computed(() => {
-  const ownerUserId = node.value?.ownerUserId;
-
-  if (!ownerUserId) {
-    return "You";
-  }
-
-  if (ownerUserId === currentUserId.value) {
-    return "You";
-  }
-
-  return "Teammate";
+const {
+  canManageNodeSharing,
+  nodeOwnerLabel,
+  nodeShareTeamId,
+  nodeVisibilityBadgeClass,
+  nodeVisibilityLabel,
+  shareCurrentNodeToTeam,
+  shareNodeMutation,
+  teamListQuery,
+  teams,
+  unshareCurrentNodeFromTeam,
+  unshareNodeMutation,
+} = useWorkspaceNodeSharing({
+  node,
+  workspaceQuery,
 });
 
 const activeTab = computed(() => {
@@ -259,6 +203,7 @@ const agentContextStates = computed(() => {
     ];
   });
 });
+
 const agentContextBadgeItems = computed(() => {
   const currentNode = node.value;
 
@@ -287,6 +232,7 @@ const agentChatNodes = computed(() => {
   return agentContextStates.value.map((entry) => entry.scopedNode);
 });
 
+
 watch(agentContextStates, (value) => {
   if (value.length === agentContextTargets.value.length) {
     return;
@@ -297,77 +243,6 @@ watch(agentContextStates, (value) => {
     validKeys.has(getAgentContextTargetKey(target)),
   );
 });
-
-watch(
-  [node, teams],
-  ([currentNode, currentTeams]) => {
-    if (!currentNode) {
-      nodeShareTeamId.value = "";
-      return;
-    }
-
-    if (currentNode.teamId && currentTeams.some((team) => team.id === currentNode.teamId)) {
-      nodeShareTeamId.value = currentNode.teamId;
-      return;
-    }
-
-    if (nodeShareTeamId.value && currentTeams.some((team) => team.id === nodeShareTeamId.value)) {
-      return;
-    }
-
-    nodeShareTeamId.value = currentTeams[0]?.id ?? "";
-  },
-  { immediate: true },
-);
-
-async function shareCurrentNodeToTeam() {
-  if (!node.value || !nodeShareTeamId.value) {
-    return;
-  }
-
-  try {
-    await shareNodeMutation.mutateAsync({
-      nodeId: node.value.id,
-      teamId: nodeShareTeamId.value,
-    });
-    await workspaceQuery.refetch();
-    toast.add({
-      title: "Node shared",
-      description: `${node.value.title} is now shared with the selected team.`,
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Share failed",
-      description: getErrorMessage(error, "Could not share this node."),
-      color: "error",
-    });
-  }
-}
-
-async function unshareCurrentNodeFromTeam() {
-  if (!node.value) {
-    return;
-  }
-
-  try {
-    await unshareNodeMutation.mutateAsync({
-      nodeId: node.value.id,
-    });
-    await workspaceQuery.refetch();
-    toast.add({
-      title: "Node unshared",
-      description: `${node.value.title} is private again.`,
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Unshare failed",
-      description: getErrorMessage(error, "Could not unshare this node."),
-      color: "error",
-    });
-  }
-}
 
 const addBlockMenuItems = computed<DropdownMenuItem[][]>(() => {
   if (!activeTab.value || !node.value) {
@@ -393,20 +268,9 @@ const blockPresetMenuItems = computed(() => {
   ];
 });
 
-const priorityOptions = [
-  { label: "None", value: "" },
-  { label: "Low", value: "low" },
-  { label: "Medium", value: "medium" },
-  { label: "High", value: "high" },
-] satisfies WorkspaceNodePriorityOption[];
+const priorityOptions = workspaceNodePriorityOptions;
 
-const domainOptions = [
-  { label: "Unassigned", value: "" },
-  ...WORKSPACE_TASK_DOMAINS.map((domain) => ({
-    label: getWorkspaceTaskDomainLabel(domain),
-    value: domain,
-  })),
-] satisfies WorkspaceNodeDomainOption[];
+const domainOptions = workspaceNodeDomainOptions;
 
 watch(
   () => node.value?.tabs.map((tab) => tab.id).join(","),
@@ -2203,51 +2067,11 @@ function getCustomPromptPreview(block: WorkspaceCustomBlock) {
   return template ? fillCustomBlockPromptTemplate(template, block) : "";
 }
 
-function getPriorityBadgeClass(priority: WorkspaceTaskPriority | null | undefined) {
-  switch (priority) {
-    case "high":
-      return "border-error/40 bg-error/10 text-error";
-    case "medium":
-      return "border-warning/40 bg-warning/10 text-warning";
-    case "low":
-      return "border-success/40 bg-success/10 text-success";
-    default:
-      return "border-muted/60 bg-elevated/80 text-muted";
-  }
-}
+const getPriorityBadgeClass = getWorkspaceTaskPriorityBadgeClass;
 
-function formatRelativeTaskMeta(item: WorkspaceCollectedTask) {
-  const fragments = [`${item.tabTitle} / ${item.blockTitle}`];
+const formatRelativeTaskMeta = formatWorkspaceRelativeTaskMeta;
 
-  if (item.task.domain) {
-    fragments.push(getWorkspaceTaskDomainLabel(item.task.domain));
-  }
-
-  if (item.task.dueDate) {
-    fragments.push(`Due ${item.task.dueDate}`);
-  }
-
-  if (item.task.priority) {
-    fragments.push(`${item.task.priority} priority`);
-  }
-
-  fragments.push(`U${item.task.urgency}`);
-  fragments.push(`I${item.task.importance}`);
-
-  if (item.task.estimateMinutes > 0) {
-    fragments.push(`${item.task.estimateMinutes} min`);
-  }
-
-  return fragments.join(" • ");
-}
-
-function formatFormulaResult(value: number | null) {
-  if (value === null) {
-    return "Invalid formula";
-  }
-
-  return Number.isInteger(value) ? String(value) : value.toFixed(2);
-}
+const formatFormulaResult = formatWorkspaceFormulaResult;
 
 const renderNotesPreview = renderSimpleMarkdown;
 
