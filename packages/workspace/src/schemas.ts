@@ -107,6 +107,8 @@ export const workspaceCohortStatusSchema = z.enum(WORKSPACE_COHORT_STATUSES);
 export const workspaceLeadershipRhythmSchema = z.enum(WORKSPACE_LEADERSHIP_RHYTHMS);
 export const workspaceLeadershipMeetingStatusSchema = z.enum(WORKSPACE_LEADERSHIP_MEETING_STATUSES);
 export const workspaceLeadershipRhythmFilterSchema = z.enum(WORKSPACE_LEADERSHIP_FILTERS);
+export const workspaceTeamRoleSchema = z.enum(["owner", "editor", "viewer"]);
+export const workspaceNodeVisibilitySchema = z.enum(["private", "team"]);
 
 export const workspaceTaskSchema = z.object({
   id: z.string().min(1),
@@ -1035,6 +1037,9 @@ export const workspaceNodeSchema = z.object({
   id: z.string().min(1),
   title: z.string().trim().min(1).max(120),
   content: z.string().max(4000).default(""),
+  ownerUserId: z.string().min(1).nullable().optional(),
+  visibility: workspaceNodeVisibilitySchema.default("private"),
+  teamId: z.string().min(1).nullable().optional(),
   x: z.number().finite(),
   y: z.number().finite(),
   width: z.number().positive(),
