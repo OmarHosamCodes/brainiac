@@ -1,4 +1,3 @@
-import { describe, expect, test } from "bun:test";
 import {
   createWorkspaceCourseRoadmapBlock,
   createWorkspaceCourseRoadmapCourse,
@@ -18,6 +17,7 @@ import {
   createWorkspaceTableColumn,
   createWorkspaceTableRow,
 } from "@brainiac/workspace";
+import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 
 import { buildDashboardAgentTools, createDashboardAgentWorkspaceRuntime } from "./tools";
@@ -71,6 +71,7 @@ const allSupportedBlockTypes = [
   "profitability-cash-flow",
   "pricing-simulator",
   "collections-tracker",
+  "workforce-management",
   "custom",
 ] as const;
 
@@ -433,9 +434,9 @@ describe("buildDashboardAgentTools", () => {
     expect(patched.matchCount).toBeGreaterThan(0);
     expect(
       updated.block?.type === "course-roadmap" &&
-        updated.block.courses.every((course: any) =>
-          course.lessons.every((lesson: any) => lesson.recorded),
-        ),
+      updated.block.courses.every((course: any) =>
+        course.lessons.every((lesson: any) => lesson.recorded),
+      ),
     ).toBeTrue();
   });
 
@@ -468,8 +469,8 @@ describe("buildDashboardAgentTools", () => {
     expect(patched.matchCount).toBe(1);
     expect(
       updated.block?.type === "kanban" &&
-        updated.block.cards.find((card: any) => card.id === cardId)?.description ===
-          nextDescription,
+      updated.block.cards.find((card: any) => card.id === cardId)?.description ===
+      nextDescription,
     ).toBeTrue();
   });
 

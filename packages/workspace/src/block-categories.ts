@@ -9,6 +9,7 @@ export type WorkspaceBlockCategoryItem = {
   blockType: WorkspaceBlockCategoryBlockType;
   label: string;
   icon: string;
+  teamOnly?: boolean;
 };
 
 export type WorkspaceBlockCategory = {
@@ -18,6 +19,18 @@ export type WorkspaceBlockCategory = {
 };
 
 export const workspaceBlockCategories = [
+  {
+    id: "workforce-management",
+    label: "Workforce Management",
+    items: [
+      {
+        blockType: "workforce-management",
+        label: "Workforce management",
+        icon: "i-lucide-users-round",
+        teamOnly: true,
+      },
+    ],
+  },
   {
     id: "strategy",
     label: "Strategy",
@@ -263,3 +276,13 @@ export const workspaceBlockCategories = [
     ],
   },
 ] as const satisfies readonly WorkspaceBlockCategory[];
+
+const workspaceTeamOnlyBlockTypeSet = new Set(
+  workspaceBlockCategories.flatMap((category) =>
+    category.items.filter((item) => "teamOnly" in item && item.teamOnly).map((item) => item.blockType),
+  ),
+);
+
+export function isWorkspaceTeamOnlyBlockType(type: WorkspaceBlock["type"]) {
+  return workspaceTeamOnlyBlockTypeSet.has(type as WorkspaceBlockCategoryBlockType);
+}

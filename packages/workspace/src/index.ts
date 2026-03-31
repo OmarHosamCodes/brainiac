@@ -4,15 +4,17 @@ import {
   DEFAULT_WORKSPACE_NODE_MIN_WIDTH,
   DEFAULT_WORKSPACE_NODE_WIDTH,
 } from "./constants";
+import { createWorkspaceContentQualityScoreMap } from "./content";
+import { createWorkspaceSkillsScoreMap } from "./people";
 import {
   workspace2x2MatrixBlockSchema,
   workspace2x2MatrixItemSchema,
   workspace2x2MatrixQuadrantSchema,
   workspace2x2MatrixQuadrantsSchema,
-  workspaceAuthorityScoreMetricsSchema,
-  workspaceAuthorityScorecardBlockSchema,
   workspaceAiPromptBlockSchema,
   workspaceAssumptionTrackerBlockSchema,
+  workspaceAuthorityScoreMetricsSchema,
+  workspaceAuthorityScorecardBlockSchema,
   workspaceBusinessModelCanvasBlockSchema,
   workspaceChecklistBlockSchema,
   workspaceChecklistItemSchema,
@@ -33,22 +35,22 @@ import {
   workspaceCustomBlockTemplateSchema,
   workspaceDealScoringDealSchema,
   workspaceDealScoringMatrixBlockSchema,
-  workspaceDelegationItemSchema,
-  workspaceDelegationMatrixBlockSchema,
+  workspaceDecisionBlockSchema,
+  workspaceDecisionItemSchema,
   workspaceDecisionMatrixBlockSchema,
   workspaceDecisionMatrixCriterionSchema,
   workspaceDecisionMatrixOptionSchema,
-  workspaceDecisionBlockSchema,
-  workspaceDecisionItemSchema,
+  workspaceDelegationItemSchema,
+  workspaceDelegationMatrixBlockSchema,
   workspaceEisenhowerMatrixBlockSchema,
   workspaceExpenseItemSchema,
   workspaceForecastConfidenceBoardBlockSchema,
   workspaceForecastConfidenceItemSchema,
-  workspaceHookBankBlockSchema,
-  workspaceHookBankItemSchema,
   workspaceHabitGridBlockSchema,
   workspaceHabitGridDaysSchema,
   workspaceHabitGridHabitSchema,
+  workspaceHookBankBlockSchema,
+  workspaceHookBankItemSchema,
   workspaceKanbanBlockSchema,
   workspaceKanbanCardSchema,
   workspaceKanbanColumnSchema,
@@ -72,47 +74,45 @@ import {
   workspaceProcessStepSchema,
   workspaceProfitabilityCashFlowBlockSchema,
   workspaceProfitabilityClientSchema,
-  workspaceProsConsBlockSchema,
   workspacePromptOutputSchema,
+  workspaceProsConsBlockSchema,
   workspaceReceivableInvoiceSchema,
-  workspaceSeatPlannerBlockSchema,
-  workspaceSeatPlannerSeatSchema,
   workspaceScorecardBlockSchema,
   workspaceScorecardMetricSchema,
+  workspaceSeatPlannerBlockSchema,
+  workspaceSeatPlannerSeatSchema,
   workspaceSkillsHeatMapBlockSchema,
   workspaceSkillsHeatMapDimensionSchema,
   workspaceSkillsHeatMapMemberSchema,
   workspaceStrategicAssumptionSchema,
   workspaceSwotBlockSchema,
   workspaceSwotCellsSchema,
-  workspaceTaskListBlockSchema,
-  workspaceTaskSchema,
   workspaceTableBlockSchema,
   workspaceTableColumnSchema,
   workspaceTableRowSchema,
   workspaceTalentGridBlockSchema,
   workspaceTalentGridMemberSchema,
+  workspaceTaskListBlockSchema,
+  workspaceTaskSchema,
   workspaceTimeOrchestratorBlockSchema,
   workspaceTimelineBlockSchema,
   workspaceTimelineMilestoneSchema,
   workspaceTrackerBlockSchema,
+  workspaceWorkforceManagementBlockSchema,
 } from "./schemas";
-import { createWorkspaceContentQualityScoreMap } from "./content";
-import { createWorkspaceLeadershipRhythmFilter } from "./tasks";
-import { createWorkspaceSkillsScoreMap } from "./people";
 import { getNowIsoString } from "./shared";
-import { createWorkspaceTimeOrchestratorSettings } from "./tasks";
+import { createWorkspaceLeadershipRhythmFilter, createWorkspaceTimeOrchestratorSettings } from "./tasks";
 import type {
   Workspace2x2MatrixBlock,
   Workspace2x2MatrixItem,
   Workspace2x2MatrixQuadrant,
   Workspace2x2MatrixQuadrants,
-  WorkspaceAuthorityScoreMetrics,
-  WorkspaceAuthorityScorecardBlock,
   WorkspaceAiPromptBlock,
   WorkspaceAssumptionTrackerBlock,
-  WorkspaceBusinessModelCanvasBlock,
+  WorkspaceAuthorityScoreMetrics,
+  WorkspaceAuthorityScorecardBlock,
   WorkspaceBlock,
+  WorkspaceBusinessModelCanvasBlock,
   WorkspaceChecklistBlock,
   WorkspaceChecklistItem,
   WorkspaceCohortHealthCohort,
@@ -133,22 +133,22 @@ import type {
   WorkspaceCustomBlockTemplate,
   WorkspaceDealScoringDeal,
   WorkspaceDealScoringMatrixBlock,
-  WorkspaceDelegationItem,
-  WorkspaceDelegationMatrixBlock,
+  WorkspaceDecisionBlock,
   WorkspaceDecisionItem,
   WorkspaceDecisionMatrixBlock,
   WorkspaceDecisionMatrixCriterion,
   WorkspaceDecisionMatrixOption,
-  WorkspaceDecisionBlock,
+  WorkspaceDelegationItem,
+  WorkspaceDelegationMatrixBlock,
   WorkspaceEisenhowerMatrixBlock,
   WorkspaceExpenseItem,
   WorkspaceForecastConfidenceBoardBlock,
   WorkspaceForecastConfidenceItem,
-  WorkspaceHookBankBlock,
-  WorkspaceHookBankItem,
   WorkspaceHabitGridBlock,
   WorkspaceHabitGridDays,
   WorkspaceHabitGridHabit,
+  WorkspaceHookBankBlock,
+  WorkspaceHookBankItem,
   WorkspaceKanbanBlock,
   WorkspaceKanbanCard,
   WorkspaceKanbanColumn,
@@ -162,45 +162,46 @@ import type {
   WorkspaceNodeTab,
   WorkspaceNodeViewState,
   WorkspaceNotesBlock,
+  WorkspaceOkrKeyResult,
+  WorkspaceOkrObjective,
+  WorkspaceOkrTrackerBlock,
   WorkspacePipelineFunnelBlock,
   WorkspacePipelineFunnelDeal,
   WorkspacePricingSimulatorBlock,
   WorkspaceProcessBlock,
   WorkspaceProcessStep,
-  WorkspacePromptOutput,
   WorkspaceProfitabilityCashFlowBlock,
   WorkspaceProfitabilityClient,
+  WorkspacePromptOutput,
   WorkspaceProsConsBlock,
   WorkspaceReceivableInvoice,
-  WorkspaceSeatPlannerBlock,
-  WorkspaceSeatPlannerSeat,
-  WorkspaceOkrKeyResult,
-  WorkspaceOkrObjective,
-  WorkspaceOkrTrackerBlock,
   WorkspaceScorecardBlock,
   WorkspaceScorecardMetric,
+  WorkspaceSeatPlannerBlock,
+  WorkspaceSeatPlannerSeat,
   WorkspaceSkillsHeatMapBlock,
   WorkspaceSkillsHeatMapDimension,
   WorkspaceSkillsHeatMapMember,
   WorkspaceStrategicAssumption,
   WorkspaceSwotBlock,
   WorkspaceSwotCells,
-  WorkspaceTask,
-  WorkspaceTaskListBlock,
   WorkspaceTableBlock,
   WorkspaceTableColumn,
   WorkspaceTableRow,
   WorkspaceTalentGridBlock,
   WorkspaceTalentGridMember,
+  WorkspaceTask,
+  WorkspaceTaskListBlock,
   WorkspaceTimeOrchestratorBlock,
   WorkspaceTimelineBlock,
   WorkspaceTimelineMilestone,
   WorkspaceTrackerBlock,
+  WorkspaceWorkforceManagementBlock,
 } from "./types";
 
-export * from "./constants";
 export * from "./block-categories";
 export * from "./brand";
+export * from "./constants";
 export * from "./content";
 export * from "./dashboard";
 export * from "./education";
@@ -1846,10 +1847,10 @@ export function createWorkspaceKanbanBlock(
     partial.columns && partial.columns.length > 0
       ? partial.columns
       : [
-          createWorkspaceKanbanColumn({ title: "Backlog" }),
-          createWorkspaceKanbanColumn({ title: "In progress" }),
-          createWorkspaceKanbanColumn({ title: "Done" }),
-        ];
+        createWorkspaceKanbanColumn({ title: "Backlog" }),
+        createWorkspaceKanbanColumn({ title: "In progress" }),
+        createWorkspaceKanbanColumn({ title: "Done" }),
+      ];
 
   return workspaceKanbanBlockSchema.parse({
     id: partial.id ?? createWorkspaceId("block"),
@@ -2269,6 +2270,20 @@ export function createWorkspaceCollectionsTrackerBlock(
   });
 }
 
+export function createWorkspaceWorkforceManagementBlock(
+  partial: Partial<WorkspaceWorkforceManagementBlock> = {},
+): WorkspaceWorkforceManagementBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceWorkforceManagementBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "workforce-management",
+    title: partial.title ?? "Workforce management",
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
 export function createWorkspaceCustomBlockTemplate(
   partial: Partial<WorkspaceCustomBlockTemplate> & {
     fields: WorkspaceCustomBlockField[];
@@ -2459,13 +2474,13 @@ function normalizeWorkspaceDecisionMatrixBlock(
   const options =
     block.options && block.options.length > 0
       ? block.options.map((option) =>
-          workspaceDecisionMatrixOptionSchema.parse({
-            ...option,
-            scores: Object.fromEntries(
-              criteria.map((criterion) => [criterion.id, option.scores?.[criterion.id] ?? 5]),
-            ),
-          }),
-        )
+        workspaceDecisionMatrixOptionSchema.parse({
+          ...option,
+          scores: Object.fromEntries(
+            criteria.map((criterion) => [criterion.id, option.scores?.[criterion.id] ?? 5]),
+          ),
+        }),
+      )
       : createWorkspaceDecisionMatrixBlock({ criteria }).options;
 
   return workspaceDecisionMatrixBlockSchema.parse({
@@ -2767,6 +2782,8 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         filter: block.filter ?? "all",
         invoices: block.invoices ?? [],
       });
+    case "workforce-management":
+      return workspaceWorkforceManagementBlockSchema.parse(block);
     case "custom":
       return workspaceCustomBlockSchema.parse({
         ...block,
@@ -3441,6 +3458,13 @@ export function cloneWorkspaceBlockForInsertion(
           ...invoice,
           id: createWorkspaceId("invoice"),
         })),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "workforce-management":
+      return workspaceWorkforceManagementBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
         createdAt: timestamp,
         updatedAt: timestamp,
       });

@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from "@nuxt/ui";
 import {
-  createWorkspace2x2MatrixBlock,
+  cloneWorkspaceNodes,
   createDefaultWorkspaceTab,
+  createWorkspace2x2MatrixBlock,
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceAuthorityScorecardBlock,
@@ -15,13 +15,13 @@ import {
   createWorkspaceContentRoiTrackerBlock,
   createWorkspaceCourseRoadmapBlock,
   createWorkspaceDealScoringMatrixBlock,
-  createWorkspaceDelegationMatrixBlock,
-  createWorkspaceDecisionMatrixBlock,
   createWorkspaceDecisionBlock,
+  createWorkspaceDecisionMatrixBlock,
+  createWorkspaceDelegationMatrixBlock,
   createWorkspaceEisenhowerMatrixBlock,
   createWorkspaceForecastConfidenceBoardBlock,
-  createWorkspaceHookBankBlock,
   createWorkspaceHabitGridBlock,
+  createWorkspaceHookBankBlock,
   createWorkspaceId,
   createWorkspaceKanbanBlock,
   createWorkspaceKanbanCard,
@@ -37,24 +37,25 @@ import {
   createWorkspaceProfitabilityCashFlowBlock,
   createWorkspaceProsConsBlock,
   createWorkspaceScorecardBlock,
+  createWorkspaceScorecardMetric,
   createWorkspaceSeatPlannerBlock,
   createWorkspaceSkillsHeatMapBlock,
-  createWorkspaceScorecardMetric,
   createWorkspaceSwotBlock,
-  createWorkspaceTask,
-  createWorkspaceTaskListBlock,
   createWorkspaceTableBlock,
   createWorkspaceTalentGridBlock,
+  createWorkspaceTask,
+  createWorkspaceTaskListBlock,
   createWorkspaceTimeOrchestratorBlock,
   createWorkspaceTimelineBlock,
   createWorkspaceTimelineMilestone,
   createWorkspaceTrackerBlock,
-  cloneWorkspaceNodes,
+  createWorkspaceWorkforceManagementBlock,
   evaluateCustomBlockFormula,
   fillCustomBlockPromptTemplate,
   generateWorkspacePromptOutput,
   getTimeOrchestratorSummary,
   getWorkspaceTaskDomainLabel,
+  isWorkspaceTeamOnlyBlockType,
   normalizeWorkspaceNode,
   type WorkspaceBlock,
   type WorkspaceCustomBlock,
@@ -63,36 +64,37 @@ import {
   type WorkspaceNodeTab,
   type WorkspaceTimeOrchestratorBlock,
 } from "@brainiac/workspace";
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import type { DropdownMenuItem } from "@nuxt/ui";
+import { useMutation } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
 import {
   workspaceNodeEditorContextKey,
   type WorkspaceTabEditorMode,
 } from "~/components/workspace/node/context";
+import { useWorkspaceNodeSharing } from "~/composables/workspace-node/useWorkspaceNodeSharing";
 import {
   workspaceNodeDomainOptions,
   workspaceNodePriorityOptions,
 } from "~/constants/workspace-node-options";
-import { useWorkspaceNodeSharing } from "~/composables/workspace-node/useWorkspaceNodeSharing";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { renderSimpleMarkdown } from "~/utils/render-simple-markdown";
 import { createWorkspaceAddBlockMenuItems } from "~/utils/workspace-add-block-menu";
 import {
-  formatWorkspaceFormulaResult,
-  formatWorkspaceRelativeTaskMeta,
-  getWorkspaceTaskPriorityBadgeClass,
-} from "~/utils/workspace-node-formatters";
+  getWorkspaceBlockPreset,
+  workspaceBlockPresets,
+  type WorkspaceBlockPresetId,
+} from "~/utils/workspace-block-presets";
 import {
   createBlockMarketplacePayload,
   createNodeMarketplacePayload,
   createTabMarketplacePayload,
 } from "~/utils/workspace-marketplace";
 import {
-  getWorkspaceBlockPreset,
-  workspaceBlockPresets,
-  type WorkspaceBlockPresetId,
-} from "~/utils/workspace-block-presets";
+  formatWorkspaceFormulaResult,
+  formatWorkspaceRelativeTaskMeta,
+  getWorkspaceTaskPriorityBadgeClass,
+} from "~/utils/workspace-node-formatters";
 
 definePageMeta({
   middleware: ["auth", "workspace"],
@@ -249,7 +251,7 @@ const addBlockMenuItems = computed<DropdownMenuItem[][]>(() => {
     return emptyDropdownItems;
   }
 
-  return createWorkspaceAddBlockMenuItems(addBlockToActiveTab);
+  return createWorkspaceAddBlockMenuItems(addBlockToActiveTab, node.value);
 });
 
 const blockPresetMenuItems = computed(() => {
@@ -435,7 +437,18 @@ function deleteActiveTab() {
 }
 
 function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
-  if (!activeTab.value) {
+  if (!activeTab.value || !node.value) {
+    return;
+  }
+
+  const isTeamSharedNode = node.value.visibility === "team" && Boolean(node.value.teamId);
+
+  if (isWorkspaceTeamOnlyBlockType(type) && !isTeamSharedNode) {
+    toast.add({
+      title: "Team-shared node required",
+      description: "Share this node with a team before adding Workforce Management blocks.",
+      color: "warning",
+    });
     return;
   }
 
@@ -564,6 +577,9 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
       break;
     case "collections-tracker":
       nextBlock = createWorkspaceCollectionsTrackerBlock();
+      break;
+    case "workforce-management":
+      nextBlock = createWorkspaceWorkforceManagementBlock();
       break;
     case "custom":
       return;

@@ -7,14 +7,15 @@ import {
 import {
   WORKSPACE_MARKETPLACE_ITEM_LIMIT,
   createWorkspaceId,
+  isWorkspaceTeamOnlyBlockType,
   normalizeWorkspaceNode,
-  workspaceNodeVisibilitySchema,
-  type WorkspaceNodeVisibility,
   workspaceMarketplaceItemSchema,
-  type WorkspaceTeamRole,
+  workspaceNodeVisibilitySchema,
   type WorkspaceMarketplaceItem,
   type WorkspaceMarketplaceSaveInput,
   type WorkspaceNode,
+  type WorkspaceNodeVisibility,
+  type WorkspaceTeamRole,
 } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
 import { desc, eq, inArray } from "drizzle-orm";
@@ -106,6 +107,22 @@ function getLatestUpdatedAtIso(rows: Array<{ updatedAt: Date }>) {
     .toISOString();
 }
 
+function validateTeamOnlyBlockPlacement(node: WorkspaceNode) {
+  const hasTeamOnlyBlock = node.tabs.some((tab) =>
+    tab.blocks.some((block) => isWorkspaceTeamOnlyBlockType(block.type)),
+  );
+
+  if (!hasTeamOnlyBlock) {
+    return;
+  }
+
+  if (node.visibility !== "team" || !node.teamId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Team-only blocks can only be saved on team-shared nodes.",
+    });
+  }
+}
+
 export async function getWorkspaceSnapshot(userId: string) {
   const [workspace] = await db
     .select({
@@ -121,9 +138,9 @@ export async function getWorkspaceSnapshot(userId: string) {
   const memberRows =
     teamIds.length > 0
       ? await db
-          .select({ userId: workspaceTeamMember.userId })
-          .from(workspaceTeamMember)
-          .where(inArray(workspaceTeamMember.teamId, teamIds))
+        .select({ userId: workspaceTeamMember.userId })
+        .from(workspaceTeamMember)
+        .where(inArray(workspaceTeamMember.teamId, teamIds))
       : [];
   const relatedUserIds = [...new Set(memberRows.map((row) => row.userId).filter((id) => id !== userId))];
   const relatedWorkspaces = await getWorkspaceRowsByUserIds(relatedUserIds);
@@ -200,6 +217,12 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
         ),
       );
 
+      const savedNode = ownedNodes[ownedNodes.length - 1];
+
+      if (savedNode) {
+        validateTeamOnlyBlockPlacement(savedNode);
+      }
+
       continue;
     }
 
@@ -227,6 +250,12 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
         ownerUserId,
       ),
     );
+    const savedNode = ownerNodes[ownerNodes.length - 1];
+
+    if (savedNode) {
+      validateTeamOnlyBlockPlacement(savedNode);
+    }
+
     sharedNodesByOwner.set(ownerUserId, ownerNodes);
   }
 
