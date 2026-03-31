@@ -18,10 +18,10 @@ import {
   createWorkspaceCourseRoadmapBlock,
   createWorkspaceCustomBlock,
   createWorkspaceCustomBlockTemplate,
+  createWorkspaceDealScoringMatrixBlock,
   createWorkspaceDecisionBlock,
   createWorkspaceDecisionMatrixBlock,
   createWorkspaceDelegationMatrixBlock,
-  createWorkspaceDealScoringMatrixBlock,
   createWorkspaceEisenhowerMatrixBlock,
   createWorkspaceForecastConfidenceBoardBlock,
   createWorkspaceHabitGridBlock,
@@ -53,6 +53,7 @@ import {
   createWorkspaceTimelineMilestone,
   createWorkspaceTimeOrchestratorBlock,
   createWorkspaceTrackerBlock,
+  createWorkspaceWorkforceManagementBlock,
   normalizeWorkspaceNode,
   workspaceBlockCategories,
   workspaceMarketplaceItemSchema,
@@ -183,6 +184,7 @@ const categorizedBlockFactories: Record<
   "time-orchestrator": createWorkspaceTimeOrchestratorBlock,
   timeline: createWorkspaceTimelineBlock,
   tracker: createWorkspaceTrackerBlock,
+  "workforce-management": createWorkspaceWorkforceManagementBlock,
 };
 
 function seedId(...parts: string[]) {
@@ -253,6 +255,9 @@ function createSeedNode({
     id,
     title,
     content: "",
+    visibility: "private",
+    ownerUserId: null,
+    teamId: null,
     label: title,
     x,
     y,

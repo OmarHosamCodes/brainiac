@@ -13,20 +13,20 @@ import WorkspaceContentPipelineBlockEditor from "~/components/workspace/node/blo
 import WorkspaceContentQualityRadarBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentQualityRadarBlockEditor.vue";
 import WorkspaceContentRoiTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceContentRoiTrackerBlockEditor.vue";
 import WorkspaceCourseRoadmapBlockEditor from "~/components/workspace/node/blocks/WorkspaceCourseRoadmapBlockEditor.vue";
-import WorkspaceHookBankBlockEditor from "~/components/workspace/node/blocks/WorkspaceHookBankBlockEditor.vue";
-import WorkspaceHabitGridBlockEditor from "~/components/workspace/node/blocks/WorkspaceHabitGridBlockEditor.vue";
-import WorkspaceKanbanBlockEditor from "~/components/workspace/node/blocks/WorkspaceKanbanBlockEditor.vue";
 import WorkspaceCustomBlockEditor from "~/components/workspace/node/blocks/WorkspaceCustomBlockEditor.vue";
-import WorkspaceDecisionMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionMatrixBlockEditor.vue";
-import WorkspaceDecisionBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionBlockEditor.vue";
-import WorkspaceDelegationMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDelegationMatrixBlockEditor.vue";
 import WorkspaceDealScoringMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDealScoringMatrixBlockEditor.vue";
+import WorkspaceDecisionBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionBlockEditor.vue";
+import WorkspaceDecisionMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDecisionMatrixBlockEditor.vue";
+import WorkspaceDelegationMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceDelegationMatrixBlockEditor.vue";
 import WorkspaceEisenhowerMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceEisenhowerMatrixBlockEditor.vue";
+import WorkspaceForecastConfidenceBoardBlockEditor from "~/components/workspace/node/blocks/WorkspaceForecastConfidenceBoardBlockEditor.vue";
+import WorkspaceHabitGridBlockEditor from "~/components/workspace/node/blocks/WorkspaceHabitGridBlockEditor.vue";
+import WorkspaceHookBankBlockEditor from "~/components/workspace/node/blocks/WorkspaceHookBankBlockEditor.vue";
+import WorkspaceKanbanBlockEditor from "~/components/workspace/node/blocks/WorkspaceKanbanBlockEditor.vue";
 import WorkspaceLeadershipRhythmPlannerBlockEditor from "~/components/workspace/node/blocks/WorkspaceLeadershipRhythmPlannerBlockEditor.vue";
 import WorkspaceLearningOutcomesMatrixBlockEditor from "~/components/workspace/node/blocks/WorkspaceLearningOutcomesMatrixBlockEditor.vue";
 import WorkspaceMessageHouseBlockEditor from "~/components/workspace/node/blocks/WorkspaceMessageHouseBlockEditor.vue";
 import WorkspaceNotesBlockEditor from "~/components/workspace/node/blocks/WorkspaceNotesBlockEditor.vue";
-import WorkspaceForecastConfidenceBoardBlockEditor from "~/components/workspace/node/blocks/WorkspaceForecastConfidenceBoardBlockEditor.vue";
 import WorkspaceOkrTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceOkrTrackerBlockEditor.vue";
 import WorkspacePipelineFunnelBlockEditor from "~/components/workspace/node/blocks/WorkspacePipelineFunnelBlockEditor.vue";
 import WorkspacePricingSimulatorBlockEditor from "~/components/workspace/node/blocks/WorkspacePricingSimulatorBlockEditor.vue";
@@ -43,6 +43,7 @@ import WorkspaceTaskListBlockEditor from "~/components/workspace/node/blocks/Wor
 import WorkspaceTimeOrchestratorBlockEditor from "~/components/workspace/node/blocks/WorkspaceTimeOrchestratorBlockEditor.vue";
 import WorkspaceTimelineBlockEditor from "~/components/workspace/node/blocks/WorkspaceTimelineBlockEditor.vue";
 import WorkspaceTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceTrackerBlockEditor.vue";
+import WorkspaceWorkforceManagementBlockEditor from "~/components/workspace/node/blocks/WorkspaceWorkforceManagementBlockEditor.vue";
 
 export type WorkspaceBlockRegistryEntry = {
   component: Component;
@@ -298,6 +299,12 @@ export const workspaceBlockRegistry = {
     icon: "i-lucide-receipt-text",
     addGroup: "secondary",
   },
+  "workforce-management": {
+    component: WorkspaceWorkforceManagementBlockEditor,
+    label: "Workforce management",
+    icon: "i-lucide-users-round",
+    addGroup: "secondary",
+  },
   custom: {
     component: WorkspaceCustomBlockEditor,
     label: "Legacy custom",
@@ -309,8 +316,8 @@ export const workspaceBlockRegistry = {
 export const workspacePrimaryBlockTypes = Object.entries(workspaceBlockRegistry)
   .filter(([, entry]) => entry.addGroup === "primary")
   .map(([type]) => type) as Array<
-  Extract<WorkspaceBlock["type"], "task-list" | "notes" | "decision">
->;
+    Extract<WorkspaceBlock["type"], "task-list" | "notes" | "decision">
+  >;
 
 export function getWorkspaceBlockRegistryEntry(type: WorkspaceBlock["type"]) {
   return workspaceBlockRegistry[type];

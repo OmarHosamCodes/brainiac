@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import type {
+  WorkspaceBlock,
+  WorkspaceNode,
+  WorkspaceNodeTab,
+  WorkspaceTeamRole,
+} from "@brainiac/workspace";
 import {
   useWorkspaceNodeEditorContext,
   type WorkspaceSaveBadge,
@@ -8,19 +14,13 @@ import {
   type WorkspaceAddBlockCategory,
 } from "~/utils/workspace-add-block-menu";
 import {
-  getWorkspaceBlockRegistryEntry,
-  workspacePrimaryBlockTypes,
-} from "~/utils/workspace-block-registry";
-import {
   workspaceBlockPresets,
   type WorkspaceBlockPresetId,
 } from "~/utils/workspace-block-presets";
-import type {
-  WorkspaceBlock,
-  WorkspaceNode,
-  WorkspaceNodeTab,
-  WorkspaceTeamRole,
-} from "@brainiac/workspace";
+import {
+  getWorkspaceBlockRegistryEntry,
+  workspacePrimaryBlockTypes,
+} from "~/utils/workspace-block-registry";
 
 type WorkspaceTeamSummary = {
   id: string;
@@ -86,6 +86,7 @@ type WorkspaceBlockLauncherItem = {
   icon: string;
   label: string;
   searchText: string;
+  teamOnly: boolean;
 };
 type WorkspaceBlockLauncherCategory = {
   id: Exclude<WorkspaceBlockLauncherCategoryId, "all">;
@@ -134,6 +135,7 @@ const blockLauncherCategories: WorkspaceBlockLauncherCategory[] = [
         icon: entry.icon,
         label: entry.label,
         searchText: `${entry.label} ${type} core`.toLowerCase(),
+        teamOnly: false,
       };
     }),
   },
@@ -147,6 +149,7 @@ const blockLauncherCategories: WorkspaceBlockLauncherCategory[] = [
       icon: item.icon,
       label: item.label,
       searchText: `${item.label} ${item.blockType} ${category.label}`.toLowerCase(),
+      teamOnly: "teamOnly" in item && Boolean(item.teamOnly),
     })),
   })),
 ];
@@ -235,8 +238,29 @@ function formatLauncherCount(count: number, singular: string) {
 }
 
 function handleAddBlockSelection(blockType: WorkspaceBlock["type"]) {
+  const selected = blockLauncherItems.find((item) => item.blockType === blockType);
+  const isTeamSharedNode = props.node.visibility === "team" && Boolean(props.node.teamId);
+
+  if (selected?.teamOnly && !isTeamSharedNode) {
+    return;
+  }
+
   addBlockToActiveTab(blockType);
   addBlockLauncherOpen.value = false;
+}
+
+function isBlockLauncherItemDisabled(item: WorkspaceBlockLauncherItem) {
+  const isTeamSharedNode = props.node.visibility === "team" && Boolean(props.node.teamId);
+
+  return item.teamOnly && !isTeamSharedNode;
+}
+
+function getBlockLauncherItemReason(item: WorkspaceBlockLauncherItem) {
+  if (!isBlockLauncherItemDisabled(item)) {
+    return null;
+  }
+
+  return "Requires a team-shared node";
 }
 
 function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
@@ -555,7 +579,9 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
                           v-for="item in addBlockQuickItems"
                           :key="item.blockType"
                           type="button"
-                          class="group flex items-center justify-between gap-3 rounded-2xl border border-muted/60 bg-default/80 px-4 py-3 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/10"
+                          class="group flex items-center justify-between gap-3 rounded-2xl border border-muted/60 bg-default/80 px-4 py-3 text-left transition enabled:hover:-translate-y-0.5 enabled:hover:border-primary/30 enabled:hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+                          :disabled="isBlockLauncherItemDisabled(item)"
+                          :title="getBlockLauncherItemReason(item) ?? undefined"
                           @click="handleAddBlockSelection(item.blockType)"
                         >
                           <div class="flex min-w-0 items-center gap-3">
@@ -570,6 +596,12 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
                                 {{ item.label }}
                               </p>
                               <p class="text-xs text-muted">{{ item.categoryLabel }}</p>
+                              <p
+                                v-if="getBlockLauncherItemReason(item)"
+                                class="text-[11px] text-warning"
+                              >
+                                {{ getBlockLauncherItemReason(item) }}
+                              </p>
                             </div>
                           </div>
 
@@ -634,7 +666,9 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
                           v-for="item in filteredBlockLauncherItems"
                           :key="item.blockType"
                           type="button"
-                          class="group flex items-start justify-between gap-3 rounded-[24px] border border-muted/60 bg-elevated/15 p-4 text-left transition hover:-translate-y-0.5 hover:border-primary/30 hover:bg-default"
+                          class="group flex items-start justify-between gap-3 rounded-[24px] border border-muted/60 bg-elevated/15 p-4 text-left transition enabled:hover:-translate-y-0.5 enabled:hover:border-primary/30 enabled:hover:bg-default disabled:cursor-not-allowed disabled:opacity-50"
+                          :disabled="isBlockLauncherItemDisabled(item)"
+                          :title="getBlockLauncherItemReason(item) ?? undefined"
                           @click="handleAddBlockSelection(item.blockType)"
                         >
                           <div class="flex min-w-0 items-start gap-3">
@@ -652,6 +686,12 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
                                 class="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted"
                               >
                                 {{ item.categoryLabel }}
+                              </p>
+                              <p
+                                v-if="getBlockLauncherItemReason(item)"
+                                class="mt-1 text-[11px] text-warning"
+                              >
+                                {{ getBlockLauncherItemReason(item) }}
                               </p>
                             </div>
                           </div>

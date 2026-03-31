@@ -1,19 +1,11 @@
 import {
-  getDisplayBlockTitle,
-  getDisplayTabTitle,
-  getDueDateValue,
-  getTodayValue,
-  trimToEmpty,
-  truncateText,
-} from "./shared";
-import { WORKSPACE_HABIT_GRID_DAYS } from "./constants";
-import {
   getAuthorityScorecardSummary,
   getHookBankSummary,
   getMessageHouseSummary,
   sortHookBankItems,
   workspaceAuthorityScoreMetricLabels,
 } from "./brand";
+import { WORKSPACE_HABIT_GRID_DAYS } from "./constants";
 import {
   getContentPipelineSummary,
   getContentQualityRadarSummary,
@@ -38,25 +30,26 @@ import {
   workspaceCourseStatusLabels,
 } from "./education";
 import {
-  collectWorkspaceNodeTasks,
-  getEisenhowerMatrixSummary,
-  getLeadershipRhythmPlannerSummary,
-  getTimeOrchestratorSummary,
-  getWorkspaceTaskDomainLabel,
-  isLeadershipMeetingMissed,
-  sortLeadershipRhythmMeetings,
-  workspaceLeadershipMeetingStatusLabels,
-} from "./tasks";
+  getCollectionsTrackerSummary,
+  getPricingSimulatorSummary,
+  getProfitabilityCashFlowSummary,
+  getProfitabilityClientMarginPercent,
+  getReceivableDaysOverdue,
+  getReceivableRiskLevel,
+  sortReceivableInvoices,
+  workspaceFinancePaymentStatusLabels,
+  workspaceReceivableRiskLevelLabels,
+  workspaceReceivableStatusLabels,
+} from "./finance";
 import {
-  getAssumptionTrackerSummary,
-  getBusinessModelCanvasSummary,
-  getDecisionMatrixSummary,
-  getOkrTrackerSummary,
-  resolveStrategicAssumptionLinkLabel,
-  summarizeBusinessModelCanvasForPreview,
-  workspaceBusinessModelCanvasCellLabels,
-  workspaceStrategicAssumptionStatusLabels,
-} from "./strategy";
+  get2x2MatrixSummary,
+  getChecklistProgress,
+  getHabitGridSummary,
+  getProcessSummary,
+  getProsConsSummary,
+  getSwotSummary,
+  getTableSummary,
+} from "./general";
 import {
   getDelegationMatrixSummary,
   getSeatPlannerSummary,
@@ -78,42 +71,49 @@ import {
   workspaceSalesTemperatureLabels,
 } from "./sales";
 import {
-  getCollectionsTrackerSummary,
-  getPricingSimulatorSummary,
-  getProfitabilityCashFlowSummary,
-  getProfitabilityClientMarginPercent,
-  getReceivableDaysOverdue,
-  getReceivableRiskLevel,
-  sortReceivableInvoices,
-  workspaceFinancePaymentStatusLabels,
-  workspaceReceivableRiskLevelLabels,
-  workspaceReceivableStatusLabels,
-} from "./finance";
+  getDisplayBlockTitle,
+  getDisplayTabTitle,
+  getDueDateValue,
+  getTodayValue,
+  trimToEmpty,
+  truncateText,
+} from "./shared";
 import {
-  get2x2MatrixSummary,
-  getChecklistProgress,
-  getHabitGridSummary,
-  getProcessSummary,
-  getProsConsSummary,
-  getSwotSummary,
-  getTableSummary,
-} from "./general";
+  getAssumptionTrackerSummary,
+  getBusinessModelCanvasSummary,
+  getDecisionMatrixSummary,
+  getOkrTrackerSummary,
+  resolveStrategicAssumptionLinkLabel,
+  summarizeBusinessModelCanvasForPreview,
+  workspaceBusinessModelCanvasCellLabels,
+  workspaceStrategicAssumptionStatusLabels,
+} from "./strategy";
+import {
+  collectWorkspaceNodeTasks,
+  getEisenhowerMatrixSummary,
+  getLeadershipRhythmPlannerSummary,
+  getTimeOrchestratorSummary,
+  getWorkspaceTaskDomainLabel,
+  isLeadershipMeetingMissed,
+  sortLeadershipRhythmMeetings,
+  workspaceLeadershipMeetingStatusLabels,
+} from "./tasks";
 import type {
   WorkspaceBlock,
   WorkspaceCustomBlock,
-  WorkspaceDealScoringMatrixBlock,
   WorkspaceCustomBlockTemplate,
   WorkspaceCustomBlockValue,
-  WorkspaceDecisionMatrixBlock,
+  WorkspaceDealScoringMatrixBlock,
   WorkspaceDecisionBlock,
+  WorkspaceDecisionMatrixBlock,
   WorkspaceDecisionSummary,
   WorkspaceForecastConfidenceBoardBlock,
   WorkspaceNode,
   WorkspaceNodeDashboardDetail,
   WorkspaceNodeDashboardSelectableBlock,
+  WorkspaceNodeTab,
   WorkspacePeopleSkillDimension,
   WorkspacePipelineFunnelBlock,
-  WorkspaceNodeTab,
   WorkspaceScorecardMetric,
   WorkspaceSkillsHeatMapBlock,
   WorkspaceTask,
@@ -236,11 +236,11 @@ function buildWorkspaceNodeDashboardDetail(
         },
         ...(overdueTasks > 0
           ? [
-              {
-                label: "Overdue",
-                value: String(overdueTasks),
-              },
-            ]
+            {
+              label: "Overdue",
+              value: String(overdueTasks),
+            },
+          ]
           : []),
       ],
       highlights: openTasks.slice(0, 2).map((task) => formatDashboardTaskLine(task)),
@@ -468,11 +468,11 @@ function buildWorkspaceNodeDashboardDetail(
         },
         ...(latestEntry
           ? [
-              {
-                label: "Trend",
-                value: trendLabel,
-              },
-            ]
+            {
+              label: "Trend",
+              value: trendLabel,
+            },
+          ]
           : []),
       ],
       highlights: block.entries
@@ -929,17 +929,17 @@ function buildWorkspaceNodeDashboardDetail(
       highlights:
         summary.memberCount > 0
           ? [
-              ...(summary.strongestDimension
-                ? [
-                    `Strongest: ${getSkillsHeatMapDimensionLabel(block, summary.strongestDimension)} ${summary.averageByDimension[summary.strongestDimension]}/10`,
-                  ]
-                : []),
-              ...(summary.weakestDimension
-                ? [
-                    `Weakest: ${getSkillsHeatMapDimensionLabel(block, summary.weakestDimension)} ${summary.averageByDimension[summary.weakestDimension]}/10`,
-                  ]
-                : []),
-            ]
+            ...(summary.strongestDimension
+              ? [
+                `Strongest: ${getSkillsHeatMapDimensionLabel(block, summary.strongestDimension)} ${summary.averageByDimension[summary.strongestDimension]}/10`,
+              ]
+              : []),
+            ...(summary.weakestDimension
+              ? [
+                `Weakest: ${getSkillsHeatMapDimensionLabel(block, summary.weakestDimension)} ${summary.averageByDimension[summary.weakestDimension]}/10`,
+              ]
+              : []),
+          ]
           : [],
     };
   }
@@ -1315,13 +1315,13 @@ function buildWorkspaceNodeDashboardDetail(
       highlights: [
         ...(summary.strongestMetric
           ? [
-              `Strongest: ${workspaceAuthorityScoreMetricLabels[summary.strongestMetric]} ${summary.metrics[summary.strongestMetric].value}/${summary.metrics[summary.strongestMetric].target}`,
-            ]
+            `Strongest: ${workspaceAuthorityScoreMetricLabels[summary.strongestMetric]} ${summary.metrics[summary.strongestMetric].value}/${summary.metrics[summary.strongestMetric].target}`,
+          ]
           : []),
         ...(summary.weakestMetric
           ? [
-              `Weakest: ${workspaceAuthorityScoreMetricLabels[summary.weakestMetric]} ${summary.metrics[summary.weakestMetric].value}/${summary.metrics[summary.weakestMetric].target}`,
-            ]
+            `Weakest: ${workspaceAuthorityScoreMetricLabels[summary.weakestMetric]} ${summary.metrics[summary.weakestMetric].value}/${summary.metrics[summary.weakestMetric].target}`,
+          ]
           : []),
       ],
     };
@@ -1532,11 +1532,11 @@ function buildWorkspaceNodeDashboardDetail(
       highlights:
         summary.strongestCells.length > 0
           ? summary.strongestCells.map(
-              (cellKey) => `Strong: ${workspaceBusinessModelCanvasCellLabels[cellKey]}`,
-            )
+            (cellKey) => `Strong: ${workspaceBusinessModelCanvasCellLabels[cellKey]}`,
+          )
           : summary.missingCells
-              .slice(0, 2)
-              .map((cellKey) => `Missing: ${workspaceBusinessModelCanvasCellLabels[cellKey]}`),
+            .slice(0, 2)
+            .map((cellKey) => `Missing: ${workspaceBusinessModelCanvasCellLabels[cellKey]}`),
     };
   }
 
@@ -1689,6 +1689,19 @@ function buildWorkspaceNodeDashboardDetail(
         const overdue = getReceivableDaysOverdue(invoice);
         return `${invoice.clientName}: ${workspaceReceivableStatusLabels[invoice.status]}, ${workspaceReceivableRiskLevelLabels[risk]}${overdue > 0 ? `, ${overdue}d overdue` : ""}`;
       }),
+    };
+  }
+
+  if (block.type === "workforce-management") {
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: "Team-only workforce management placeholder block.",
+      metrics: [],
+      highlights: ["This placeholder block can only be added to team-shared nodes."],
     };
   }
 
@@ -2414,9 +2427,9 @@ export function generateWorkspacePromptOutput(node: WorkspaceNode, prompt: strin
     const lines =
       timeSummary.suggestedNextActions.length > 0
         ? timeSummary.suggestedNextActions.map(
-            ({ task, tabTitle, blockTitle }) =>
-              `${task.text} [${tabTitle} / ${blockTitle}]${task.domain ? `, ${getWorkspaceTaskDomainLabel(task.domain)}` : ""}${task.dueDate ? ` due ${task.dueDate}` : ""}${task.priority ? `, ${task.priority} priority` : ""}, urgency ${task.urgency}/10, importance ${task.importance}/10${task.estimateMinutes ? `, ${task.estimateMinutes}m` : ""}`,
-          )
+          ({ task, tabTitle, blockTitle }) =>
+            `${task.text} [${tabTitle} / ${blockTitle}]${task.domain ? `, ${getWorkspaceTaskDomainLabel(task.domain)}` : ""}${task.dueDate ? ` due ${task.dueDate}` : ""}${task.priority ? `, ${task.priority} priority` : ""}, urgency ${task.urgency}/10, importance ${task.importance}/10${task.estimateMinutes ? `, ${task.estimateMinutes}m` : ""}`,
+        )
         : ["No outstanding tasks found."];
 
     return `${intro}\n\nSuggested next actions:\n- ${lines.join("\n- ")}`;
