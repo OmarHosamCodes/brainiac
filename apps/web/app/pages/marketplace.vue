@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import {
     WORKSPACE_NODE_LIMIT,
-    isWorkspaceTeamOnlyBlockType,
     normalizeWorkspaceNode,
-    type WorkspaceBlock,
     type WorkspaceMarketplaceItem,
     type WorkspaceNode,
-    type WorkspaceNodeTab,
 } from "@brainiac/workspace";
 import { useQuery } from "@tanstack/vue-query";
 import {
@@ -126,22 +123,6 @@ const filteredMarketplaceItems = computed(() => {
   );
 });
 
-function isTeamSharedNode(node: WorkspaceNode) {
-  return node.visibility === "team" && Boolean(node.teamId);
-}
-
-function hasTeamOnlyBlocks(blocks: WorkspaceBlock[]) {
-  return blocks.some((block) => isWorkspaceTeamOnlyBlockType(block.type));
-}
-
-function hasTeamOnlyBlocksInTab(tab: WorkspaceNodeTab) {
-  return hasTeamOnlyBlocks(tab.blocks);
-}
-
-function hasTeamOnlyBlocksInNode(node: WorkspaceNode) {
-  return node.tabs.some((tab) => hasTeamOnlyBlocksInTab(tab));
-}
-
 function insertMarketplaceItem(item: WorkspaceMarketplaceItem) {
   if (item.payload.kind === "tab" || item.payload.kind === "block") {
     openImportTargetDialog(item);
@@ -154,17 +135,6 @@ function insertMarketplaceItem(item: WorkspaceMarketplaceItem) {
       description: `A workspace can store up to ${WORKSPACE_NODE_LIMIT} nodes.`,
       color: "warning",
       icon: "i-lucide-alert-triangle",
-    });
-    return;
-  }
-
-  if (item.payload.kind === "node" && hasTeamOnlyBlocksInNode(item.payload.node)) {
-    toast.add({
-      title: "Team-shared node required",
-      description:
-        "This node contains team-only blocks. Import it into a team-shared destination as tabs/blocks instead.",
-      color: "warning",
-      icon: "i-lucide-users-round",
     });
     return;
   }
@@ -260,16 +230,6 @@ function insertMarketplaceTab(item: WorkspaceMarketplaceItem, nodeId: string) {
     const timestamp = new Date().toISOString();
     const targetNode = draftNodes[nodeIndex]!;
 
-    if (hasTeamOnlyBlocksInTab(imported.tab) && !isTeamSharedNode(targetNode)) {
-      toast.add({
-        title: "Team-shared node required",
-        description: "This tab contains team-only blocks and can only be imported into a team-shared node.",
-        color: "warning",
-        icon: "i-lucide-users-round",
-      });
-      return;
-    }
-
     targetNode.tabs.push(imported.tab);
     targetNode.customBlockTemplates.push(...imported.templates);
     targetNodeTitle = getDisplayNodeTitle(targetNode);
@@ -314,16 +274,6 @@ function insertMarketplaceBlock(item: WorkspaceMarketplaceItem, nodeId: string, 
     const timestamp = new Date().toISOString();
     const targetNode = draftNodes[nodeIndex]!;
     const targetTab = targetNode.tabs.find((tab) => tab.id === tabId);
-
-    if (isWorkspaceTeamOnlyBlockType(imported.block.type) && !isTeamSharedNode(targetNode)) {
-      toast.add({
-        title: "Team-shared node required",
-        description: "This block is team-only and can only be imported into a team-shared node.",
-        color: "warning",
-        icon: "i-lucide-users-round",
-      });
-      return;
-    }
 
     if (!targetTab) {
       return;

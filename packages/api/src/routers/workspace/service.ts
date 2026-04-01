@@ -7,7 +7,6 @@ import {
 import {
   WORKSPACE_MARKETPLACE_ITEM_LIMIT,
   createWorkspaceId,
-  isWorkspaceTeamOnlyBlockType,
   normalizeWorkspaceNode,
   workspaceMarketplaceItemSchema,
   workspaceNodeVisibilitySchema,
@@ -107,22 +106,6 @@ function getLatestUpdatedAtIso(rows: Array<{ updatedAt: Date }>) {
     .toISOString();
 }
 
-function validateTeamOnlyBlockPlacement(node: WorkspaceNode) {
-  const hasTeamOnlyBlock = node.tabs.some((tab) =>
-    tab.blocks.some((block) => isWorkspaceTeamOnlyBlockType(block.type)),
-  );
-
-  if (!hasTeamOnlyBlock) {
-    return;
-  }
-
-  if (node.visibility !== "team" || !node.teamId) {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Team-only blocks can only be saved on team-shared nodes.",
-    });
-  }
-}
-
 export async function getWorkspaceSnapshot(userId: string) {
   const [workspace] = await db
     .select({
@@ -217,12 +200,6 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
         ),
       );
 
-      const savedNode = ownedNodes[ownedNodes.length - 1];
-
-      if (savedNode) {
-        validateTeamOnlyBlockPlacement(savedNode);
-      }
-
       continue;
     }
 
@@ -250,11 +227,6 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
         ownerUserId,
       ),
     );
-    const savedNode = ownerNodes[ownerNodes.length - 1];
-
-    if (savedNode) {
-      validateTeamOnlyBlockPlacement(savedNode);
-    }
 
     sharedNodesByOwner.set(ownerUserId, ownerNodes);
   }
