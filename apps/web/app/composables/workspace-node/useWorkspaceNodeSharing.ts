@@ -1,6 +1,6 @@
+import type { WorkspaceNode } from "@brainiac/workspace";
 import { useMutation, useQuery } from "@tanstack/vue-query";
 import { computed, ref, watch, type ComputedRef } from "vue";
-import type { WorkspaceNode } from "@brainiac/workspace";
 
 import { getErrorMessage } from "~/utils/get-error-message";
 
@@ -35,14 +35,27 @@ export function useWorkspaceNodeSharing(options: UseWorkspaceNodeSharingOptions)
     return teams.value.find((team) => team.id === currentNode.teamId) ?? null;
   });
 
-  const canManageNodeSharing = computed(() => {
+  const selectedShareTeamMembership = computed(() => {
+    if (!nodeShareTeamId.value) {
+      return null;
+    }
+
+    return teams.value.find((team) => team.id === nodeShareTeamId.value) ?? null;
+  });
+
+  const activeTeamRole = computed(() => activeTeamMembership.value?.role ?? null);
+  const selectedShareTeamRole = computed(() => selectedShareTeamMembership.value?.role ?? null);
+
+  const canEditNodeContent = computed(() => {
     const currentNode = node.value;
 
     if (!currentNode) {
       return false;
     }
 
-    if (!currentNode.ownerUserId || currentNode.ownerUserId === currentUserId.value) {
+    const isNodeOwner = !currentNode.ownerUserId || currentNode.ownerUserId === currentUserId.value;
+
+    if (isNodeOwner) {
       return true;
     }
 
@@ -50,10 +63,27 @@ export function useWorkspaceNodeSharing(options: UseWorkspaceNodeSharingOptions)
       return false;
     }
 
-    return (
-      activeTeamMembership.value?.role === "owner" ||
-      activeTeamMembership.value?.role === "editor"
-    );
+    return activeTeamRole.value === "owner" || activeTeamRole.value === "editor";
+  });
+
+  const canManageNodeSharing = computed(() => {
+    const currentNode = node.value;
+
+    if (!currentNode) {
+      return false;
+    }
+
+    const isNodeOwner = !currentNode.ownerUserId || currentNode.ownerUserId === currentUserId.value;
+
+    if (!isNodeOwner) {
+      return false;
+    }
+
+    if (currentNode.visibility === "team" && currentNode.teamId) {
+      return activeTeamRole.value === "owner";
+    }
+
+    return selectedShareTeamRole.value === "owner";
   });
 
   const nodeVisibilityLabel = computed(() => {
@@ -128,7 +158,15 @@ export function useWorkspaceNodeSharing(options: UseWorkspaceNodeSharingOptions)
   );
 
   async function shareCurrentNodeToTeam() {
-    if (!node.value || !nodeShareTeamId.value) {
+    if (!node.value || !nodeShareTeamId.value || !canManageNodeSharing.value) {
+      if (node.value && !canManageNodeSharing.value) {
+        toast.add({
+          title: "Owner role required",
+          description: "Only team owners can share nodes.",
+          color: "warning",
+        });
+      }
+
       return;
     }
 
@@ -153,7 +191,15 @@ export function useWorkspaceNodeSharing(options: UseWorkspaceNodeSharingOptions)
   }
 
   async function unshareCurrentNodeFromTeam() {
-    if (!node.value) {
+    if (!node.value || !canManageNodeSharing.value) {
+      if (node.value && !canManageNodeSharing.value) {
+        toast.add({
+          title: "Owner role required",
+          description: "Only team owners can unshare nodes.",
+          color: "warning",
+        });
+      }
+
       return;
     }
 
@@ -179,6 +225,10 @@ export function useWorkspaceNodeSharing(options: UseWorkspaceNodeSharingOptions)
   return {
     teamListQuery,
     teams,
+    activeTeamMembership,
+    activeTeamRole,
+    selectedShareTeamRole,
+    canEditNodeContent,
     nodeShareTeamId,
     canManageNodeSharing,
     nodeVisibilityLabel,

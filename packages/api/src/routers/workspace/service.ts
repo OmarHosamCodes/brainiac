@@ -297,7 +297,7 @@ export async function shareWorkspaceNode(userId: string, input: { nodeId: string
   const membershipMap = await getMembershipMapByUser(userId);
   const role = membershipMap.get(input.teamId);
 
-  if (!role || !hasRoleAtLeast(role, "editor")) {
+  if (!role || !hasRoleAtLeast(role, "owner")) {
     throw new ORPCError("UNAUTHORIZED");
   }
 
@@ -342,6 +342,8 @@ export async function shareWorkspaceNode(userId: string, input: { nodeId: string
 }
 
 export async function unshareWorkspaceNode(userId: string, input: { nodeId: string }) {
+  const membershipMap = await getMembershipMapByUser(userId);
+
   const [workspace] = await db
     .select({ nodes: dashboardWorkspace.nodes })
     .from(dashboardWorkspace)
@@ -353,6 +355,14 @@ export async function unshareWorkspaceNode(userId: string, input: { nodeId: stri
 
   if (!targetNode) {
     throw new ORPCError("NOT_FOUND");
+  }
+
+  if (targetNode.visibility === "team" && targetNode.teamId) {
+    const role = membershipMap.get(targetNode.teamId);
+
+    if (!role || !hasRoleAtLeast(role, "owner")) {
+      throw new ORPCError("UNAUTHORIZED");
+    }
   }
 
   const now = new Date();

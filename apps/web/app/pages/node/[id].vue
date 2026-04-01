@@ -137,6 +137,9 @@ const activeTabId = computed(() => node.value?.viewState.activeTabId ?? "");
 const isAgentChatVisible = ref(true);
 const agentContextTargets = ref<AgentContextTarget[]>([]);
 const {
+  activeTeamMembership,
+  activeTeamRole,
+  canEditNodeContent,
   canManageNodeSharing,
   nodeOwnerLabel,
   nodeShareTeamId,
@@ -367,6 +370,17 @@ function mutateBlock(
       return;
     }
 
+    const isTeamSharedNode = entry.visibility === "team" && Boolean(entry.teamId);
+
+    if (isWorkspaceTeamOnlyBlockType(block.type) && !isTeamSharedNode) {
+      toast.add({
+        title: "Team-shared node required",
+        description: "Team-only blocks can only be used inside team-shared nodes.",
+        color: "warning",
+      });
+      return;
+    }
+
     mutator(block, tab, entry, timestamp);
     block.updatedAt = timestamp;
     tab.updatedAt = timestamp;
@@ -438,6 +452,15 @@ function deleteActiveTab() {
 
 function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
   if (!activeTab.value || !node.value) {
+    return;
+  }
+
+  if (!canEditNodeContent.value) {
+    toast.add({
+      title: "Read-only role",
+      description: "Your role can view this shared node but cannot add blocks.",
+      color: "warning",
+    });
     return;
   }
 
@@ -592,6 +615,15 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
 
 function addBlockPresetToActiveTab(presetId: WorkspaceBlockPresetId) {
   if (!activeTab.value) {
+    return;
+  }
+
+  if (!canEditNodeContent.value) {
+    toast.add({
+      title: "Read-only role",
+      description: "Your role can view this shared node but cannot add blocks.",
+      color: "warning",
+    });
     return;
   }
 
@@ -2216,7 +2248,9 @@ provide(workspaceNodeEditorContextKey, {
             :node-visibility-label="nodeVisibilityLabel"
             :node-visibility-badge-class="nodeVisibilityBadgeClass"
             :node-owner-label="nodeOwnerLabel"
-            :node-team-name="activeTeamMembership?.name ?? node.teamId ?? null"
+            :node-team-name="canManageNodeSharing ? activeTeamMembership?.name ?? node.teamId ?? null : null"
+            :active-team-role="activeTeamRole"
+            :can-edit-node-content="canEditNodeContent"
             :teams="teams"
             :node-share-team-id="nodeShareTeamId"
             :can-manage-node-sharing="canManageNodeSharing"
@@ -2231,7 +2265,7 @@ provide(workspaceNodeEditorContextKey, {
         <div
           class="agent-rail hidden shrink-0 overflow-hidden border-l border-neutral-200/60 bg-white/50 transition-[width,opacity] duration-300 dark:border-neutral-800/60 dark:bg-neutral-950/40 lg:block"
           :class="
-            isAgentChatVisible ? 'w-[26rem] opacity-100' : 'pointer-events-none w-0 opacity-0'
+            isAgentChatVisible ? 'w-104 opacity-100' : 'pointer-events-none w-0 opacity-0'
           "
         >
           <div class="agent-rail-aura" aria-hidden="true" />
@@ -2257,7 +2291,7 @@ provide(workspaceNodeEditorContextKey, {
                         size="sm"
                         class="group rounded-full pl-2.5 pr-1.5"
                       >
-                        <span class="max-w-[10rem] truncate text-[11px] font-medium">
+                        <span class="max-w-40 truncate text-[11px] font-medium">
                           {{ item.label }}
                         </span>
                         <UButton
@@ -2317,7 +2351,7 @@ provide(workspaceNodeEditorContextKey, {
                     size="sm"
                     class="group rounded-full pl-2.5 pr-1.5"
                   >
-                    <span class="max-w-[10rem] truncate text-[11px] font-medium">
+                    <span class="max-w-40 truncate text-[11px] font-medium">
                       {{ item.label }}
                     </span>
                     <UButton

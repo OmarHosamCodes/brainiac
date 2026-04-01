@@ -236,6 +236,28 @@ describe("useTeamManagement", () => {
         expect(management.canRemoveMembers.value).toBeFalse();
     });
 
+    test("returns false management RBAC flags for editor role", async () => {
+        const useTeamManagement = await getUseTeamManagement();
+        const runtime = getRuntime();
+        runtime.mutationHandlers = createMutationHandlers();
+
+        const teamSelection = createTeamSelection("editor");
+        setTeamDetail(teamSelection.selectedTeam.value as TeamDetail);
+        setTeamList([teamSelection.selectedTeam.value as TeamDetail]);
+
+        const management = useTeamManagement({
+            teamSelection: teamSelection as any,
+            workspaceQuery: {
+                refetch: async () => undefined,
+            },
+        });
+
+        expect(management.canInvite.value).toBeFalse();
+        expect(management.canDeleteTeam.value).toBeFalse();
+        expect(management.canModifyRoles.value).toBeFalse();
+        expect(management.canRemoveMembers.value).toBeFalse();
+    });
+
     test("exposes queryClient for optimistic cache updates", async () => {
         const useTeamManagement = await getUseTeamManagement();
         const runtime = getRuntime();
