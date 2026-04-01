@@ -286,13 +286,6 @@ function handleAddBlockSelection(blockType: WorkspaceBlock["type"]) {
     return;
   }
 
-  const selected = blockLauncherItems.find((item) => item.blockType === blockType);
-  const isTeamSharedNode = props.node.visibility === "team" && Boolean(props.node.teamId);
-
-  if (selected?.teamOnly && !isTeamSharedNode) {
-    return;
-  }
-
   addBlockToActiveTab(blockType);
   addBlockLauncherOpen.value = false;
 }
@@ -302,21 +295,17 @@ function isBlockLauncherItemDisabled(item: WorkspaceBlockLauncherItem) {
     return true;
   }
 
-  const isTeamSharedNode = props.node.visibility === "team" && Boolean(props.node.teamId);
-
-  return item.teamOnly && !isTeamSharedNode;
+  return false;
 }
 
 function getBlockLauncherItemReason(item: WorkspaceBlockLauncherItem) {
+  void item;
+
   if (!props.canEditNodeContent) {
     return "Viewer role is read-only";
   }
 
-  if (!isBlockLauncherItemDisabled(item)) {
-    return null;
-  }
-
-  return "Requires a team-shared node";
+  return null;
 }
 
 function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {

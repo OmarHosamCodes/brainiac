@@ -1829,7 +1829,7 @@ function buildWorkspaceNodeDashboardDetail(
       blockType: block.type,
       summary: "Team-only workforce management placeholder block.",
       metrics: [],
-      highlights: ["This placeholder block can only be added to team-shared nodes."],
+      highlights: ["This placeholder block will be replaced with the full experience soon."],
     };
   }
 

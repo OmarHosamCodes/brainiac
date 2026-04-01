@@ -60,7 +60,6 @@ import {
   generateWorkspacePromptOutput,
   getTimeOrchestratorSummary,
   getWorkspaceTaskDomainLabel,
-  isWorkspaceTeamOnlyBlockType,
   normalizeWorkspaceNode,
   type WorkspaceBlock,
   type WorkspaceCustomBlock,
@@ -383,17 +382,6 @@ function mutateBlock(
       return;
     }
 
-    const isTeamSharedNode = entry.visibility === "team" && Boolean(entry.teamId);
-
-    if (isWorkspaceTeamOnlyBlockType(block.type) && !isTeamSharedNode) {
-      toast.add({
-        title: "Team-shared node required",
-        description: "Team-only blocks can only be used inside team-shared nodes.",
-        color: "warning",
-      });
-      return;
-    }
-
     mutator(block, tab, entry, timestamp);
     block.updatedAt = timestamp;
     tab.updatedAt = timestamp;
@@ -472,17 +460,6 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
     toast.add({
       title: "Read-only role",
       description: "Your role can view this shared node but cannot add blocks.",
-      color: "warning",
-    });
-    return;
-  }
-
-  const isTeamSharedNode = node.value.visibility === "team" && Boolean(node.value.teamId);
-
-  if (isWorkspaceTeamOnlyBlockType(type) && !isTeamSharedNode) {
-    toast.add({
-      title: "Team-shared node required",
-      description: "Share this node with a team before adding Workforce Management blocks.",
       color: "warning",
     });
     return;
