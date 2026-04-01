@@ -44,7 +44,10 @@ const teamManagement = useTeamManagement({
 const {
   addTeamMember,
   addTeamMemberMutation,
-  canManageSelectedTeam,
+  canDeleteTeam,
+  canInvite,
+  canModifyRoles,
+  canRemoveMembers,
   createTeam,
   createTeamMutation,
   currentUserId,
@@ -52,14 +55,15 @@ const {
   deleteTeamMutation,
   memberEmail,
   memberRole,
-  onMemberRoleChange,
   removeMember,
   removeTeamMemberMutation,
   saveTeamName,
-  selectedTeamMembers,
+  updateMemberRole,
   updateTeamMemberRoleMutation,
   updateTeamMutation,
 } = teamManagement;
+
+const isTeamSettingsModalOpen = ref(false);
 
 const {
   selectedNode,
@@ -75,6 +79,34 @@ const {
     workspaceQuery,
   },
 });
+
+const isSelectedNodeShared = computed(() => selectedNode.value?.visibility === "team");
+const isNodeShareActionPending = computed(
+  () => shareNodeMutation.isPending.value || unshareNodeMutation.isPending.value,
+);
+const nodeShareActionLabel = computed(() =>
+  isSelectedNodeShared.value ? "Unshare Node" : "Share Node",
+);
+const nodeShareActionDisabled = computed(() => {
+  if (!selectedNode.value || isNodeShareActionPending.value) {
+    return true;
+  }
+
+  if (isSelectedNodeShared.value) {
+    return false;
+  }
+
+  return !selectedTeamId.value || teamListQuery.isLoading.value;
+});
+
+function toggleSelectedNodeSharing() {
+  if (isSelectedNodeShared.value) {
+    unshareSelectedNode();
+    return;
+  }
+
+  shareSelectedNode();
+}
 </script>
 
 <template>
@@ -165,130 +197,26 @@ const {
 
         <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
         <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
-          Team Details
+          Team Management
         </p>
 
-        <div v-if="selectedTeam" class="mt-2 space-y-3">
-          <div class="flex items-center gap-2">
-            <input
-              v-model="teamNameDraft"
-              type="text"
-              class="h-9 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-              :disabled="!canManageSelectedTeam"
-            />
-            <button
-              type="button"
-              class="inline-flex h-9 shrink-0 items-center justify-center rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-              :disabled="
-                !canManageSelectedTeam ||
-                updateTeamMutation.isPending.value ||
-                !teamNameDraft.trim() ||
-                teamNameDraft.trim() === selectedTeam.name
-              "
-              @click="saveTeamName"
-            >
-              Save
-            </button>
-          </div>
+        <p class="mt-2 text-xs text-neutral-500">
+          Open the dedicated team settings modal to manage members and access rules.
+        </p>
 
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-[11px] text-neutral-500">Role: {{ selectedTeam.role }}</span>
-            <button
-              type="button"
-              class="inline-flex h-8 items-center justify-center rounded-lg border border-red-200 bg-red-50 px-2.5 text-[11px] font-semibold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-300 dark:hover:bg-red-950/60"
-              :disabled="!canManageSelectedTeam || deleteTeamMutation.isPending.value"
-              @click="deleteSelectedTeam"
-            >
-              Delete Team
-            </button>
-          </div>
+        <button
+          type="button"
+          class="mt-3 inline-flex h-9 w-full items-center justify-center rounded-xl bg-primary-600 px-3 text-xs font-semibold text-white transition hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+          :disabled="!selectedTeam"
+          @click="isTeamSettingsModalOpen = true"
+        >
+          Manage Team
+        </button>
+
+        <div v-if="selectedTeam && !canInvite" class="mt-3 flex items-center gap-2">
+          <UBadge color="neutral" variant="subtle" size="sm">Requires Owner</UBadge>
+          <p class="text-xs text-neutral-500">Owner role is required for member and role changes.</p>
         </div>
-
-        <p v-else class="mt-2 text-xs text-neutral-500">
-          Select a team to manage members and permissions.
-        </p>
-        </div>
-
-        <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
-          Members
-        </p>
-
-        <div v-if="selectedTeam" class="mt-2 space-y-3">
-          <div class="flex items-center gap-2">
-            <input
-              v-model="memberEmail"
-              type="email"
-              placeholder="teammate@example.com"
-              class="h-9 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-              :disabled="!canManageSelectedTeam"
-              @keydown.enter.prevent="addTeamMember"
-            />
-            <select
-              v-model="memberRole"
-              class="h-9 rounded-xl border border-neutral-200 bg-white px-2 text-xs text-neutral-900 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-              :disabled="!canManageSelectedTeam"
-            >
-              <option value="owner">Owner</option>
-              <option value="editor">Editor</option>
-              <option value="viewer">Viewer</option>
-            </select>
-            <button
-              type="button"
-              class="inline-flex h-9 shrink-0 items-center justify-center rounded-xl bg-primary-600 px-2.5 text-xs font-semibold text-white transition hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
-              :disabled="
-                !canManageSelectedTeam ||
-                addTeamMemberMutation.isPending.value ||
-                !memberEmail.trim()
-              "
-              @click="addTeamMember"
-            >
-              Add
-            </button>
-          </div>
-
-          <div class="space-y-2">
-            <div
-              v-for="member in selectedTeamMembers"
-              :key="member.userId"
-              class="flex items-center gap-2 rounded-lg border border-neutral-200/80 bg-white/80 p-2 dark:border-neutral-700/80 dark:bg-neutral-950/80"
-            >
-              <div class="min-w-0 flex-1">
-                <p class="truncate text-xs font-semibold text-neutral-900 dark:text-neutral-100">
-                  {{ member.userName }}
-                  <span v-if="member.userId === currentUserId" class="text-neutral-500">(You)</span>
-                </p>
-                <p class="truncate text-[11px] text-neutral-500">{{ member.userEmail }}</p>
-              </div>
-              <select
-                :value="member.role"
-                class="h-8 rounded-lg border border-neutral-200 bg-white px-2 text-[11px] text-neutral-900 focus:border-primary-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-                :disabled="!canManageSelectedTeam || updateTeamMemberRoleMutation.isPending.value"
-                @change="onMemberRoleChange(member.userId, $event)"
-              >
-                <option value="owner">Owner</option>
-                <option value="editor">Editor</option>
-                <option value="viewer">Viewer</option>
-              </select>
-              <button
-                type="button"
-                class="inline-flex h-8 items-center justify-center rounded-lg border border-neutral-200 bg-white px-2 text-[11px] font-semibold text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
-                :disabled="!canManageSelectedTeam || removeTeamMemberMutation.isPending.value"
-                @click="removeMember(member.userId)"
-              >
-                Remove
-              </button>
-            </div>
-
-            <p v-if="selectedTeamMembers.length === 0" class="text-xs text-neutral-500">
-              No members yet.
-            </p>
-          </div>
-        </div>
-
-        <p v-else class="mt-2 text-xs text-neutral-500">
-          Add a team first to invite members.
-        </p>
         </div>
 
         <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
@@ -309,31 +237,50 @@ const {
         </p>
         </div>
 
-        <div class="mt-3 flex items-center gap-2">
+        <div class="mt-3">
         <button
           type="button"
-          class="inline-flex h-9 flex-1 items-center justify-center rounded-xl bg-primary-600 px-3 text-xs font-semibold text-white transition hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
-          :disabled="
-            !selectedNode ||
-            !selectedTeamId ||
-            shareNodeMutation.isPending.value ||
-            teamListQuery.isLoading.value
+          class="inline-flex h-9 w-full items-center justify-center rounded-xl px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
+          :class="
+            isSelectedNodeShared
+              ? 'border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800'
+              : 'bg-primary-600 text-white hover:bg-primary-500'
           "
-          @click="shareSelectedNode"
+          :disabled="nodeShareActionDisabled"
+          @click="toggleSelectedNodeSharing"
         >
-          Share Node
-        </button>
-        <button
-          type="button"
-          class="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-neutral-200 bg-white px-3 text-xs font-semibold text-neutral-700 transition hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800"
-          :disabled="!selectedNode || selectedNode.visibility !== 'team' || unshareNodeMutation.isPending.value"
-          @click="unshareSelectedNode"
-        >
-          Unshare
+          {{ nodeShareActionLabel }}
         </button>
         </div>
       </template>
     </aside>
+
+    <TeamSettingsModal
+      :open="isTeamSettingsModalOpen"
+      :selected-team="selectedTeam"
+      :team-name-draft="teamNameDraft"
+      :member-email="memberEmail"
+      :member-role="memberRole"
+      :can-invite="canInvite"
+      :can-delete-team="canDeleteTeam"
+      :can-modify-roles="canModifyRoles"
+      :can-remove-members="canRemoveMembers"
+      :add-member-pending="addTeamMemberMutation.isPending.value"
+      :update-team-pending="updateTeamMutation.isPending.value"
+      :delete-team-pending="deleteTeamMutation.isPending.value"
+      :update-role-pending="updateTeamMemberRoleMutation.isPending.value"
+      :remove-member-pending="removeTeamMemberMutation.isPending.value"
+      :current-user-id="currentUserId"
+      @update:open="isTeamSettingsModalOpen = $event"
+      @update:team-name-draft="teamNameDraft = $event"
+      @update:member-email="memberEmail = $event"
+      @update:member-role="memberRole = $event"
+      @save-team-name="saveTeamName"
+      @delete-team="deleteSelectedTeam"
+      @add-member="addTeamMember"
+      @role-change="updateMemberRole($event.userId, $event.role)"
+      @remove-member="removeMember"
+    />
 
     <!-- Floating Agent Chat Panel -->
     <div

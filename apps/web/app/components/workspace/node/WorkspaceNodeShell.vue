@@ -1,25 +1,25 @@
 <script setup lang="ts">
 import type {
-  WorkspaceBlock,
-  WorkspaceNode,
-  WorkspaceNodeTab,
-  WorkspaceTeamRole,
+    WorkspaceBlock,
+    WorkspaceNode,
+    WorkspaceNodeTab,
+    WorkspaceTeamRole,
 } from "@brainiac/workspace";
 import {
-  useWorkspaceNodeEditorContext,
-  type WorkspaceSaveBadge,
+    useWorkspaceNodeEditorContext,
+    type WorkspaceSaveBadge,
 } from "~/components/workspace/node/context";
 import {
-  workspaceAddBlockCategories,
-  type WorkspaceAddBlockCategory,
+    workspaceAddBlockCategories,
+    type WorkspaceAddBlockCategory,
 } from "~/utils/workspace-add-block-menu";
 import {
-  workspaceBlockPresets,
-  type WorkspaceBlockPresetId,
+    workspaceBlockPresets,
+    type WorkspaceBlockPresetId,
 } from "~/utils/workspace-block-presets";
 import {
-  getWorkspaceBlockRegistryEntry,
-  workspacePrimaryBlockTypes,
+    getWorkspaceBlockRegistryEntry,
+    workspacePrimaryBlockTypes,
 } from "~/utils/workspace-block-registry";
 
 type WorkspaceTeamSummary = {
@@ -74,6 +74,32 @@ const nodeShareTeamIdModel = computed({
     emit("update:nodeShareTeamId", value);
   },
 });
+
+const isNodeSharedWithTeam = computed(() => props.node.visibility === "team");
+const isShareTogglePending = computed(() => props.sharePending || props.unsharePending);
+const shareToggleLabel = computed(() => (isNodeSharedWithTeam.value ? "Unshare" : "Share"));
+const shareToggleColor = computed(() => (isNodeSharedWithTeam.value ? "neutral" : "primary"));
+const shareToggleVariant = computed(() => (isNodeSharedWithTeam.value ? "soft" : "solid"));
+const isShareToggleDisabled = computed(() => {
+  if (!props.canManageNodeSharing || isShareTogglePending.value) {
+    return true;
+  }
+
+  if (isNodeSharedWithTeam.value) {
+    return false;
+  }
+
+  return !props.nodeShareTeamId;
+});
+
+function toggleNodeSharing() {
+  if (isNodeSharedWithTeam.value) {
+    emit("unshareNode");
+    return;
+  }
+
+  emit("shareNode");
+}
 
 const isSidebarOpen = ref(true);
 
@@ -338,34 +364,14 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
               </select>
               <UButton
                 size="xs"
-                color="primary"
+                :color="shareToggleColor"
+                :variant="shareToggleVariant"
                 class="rounded-lg"
-                :loading="sharePending"
-                :disabled="
-                  !canManageNodeSharing ||
-                  !nodeShareTeamId ||
-                  sharePending ||
-                  unsharePending
-                "
-                @click="emit('shareNode')"
+                :loading="isShareTogglePending"
+                :disabled="isShareToggleDisabled"
+                @click="toggleNodeSharing"
               >
-                Share
-              </UButton>
-              <UButton
-                size="xs"
-                color="neutral"
-                variant="soft"
-                class="rounded-lg"
-                :loading="unsharePending"
-                :disabled="
-                  !canManageNodeSharing ||
-                  node.visibility !== 'team' ||
-                  sharePending ||
-                  unsharePending
-                "
-                @click="emit('unshareNode')"
-              >
-                Unshare
+                {{ shareToggleLabel }}
               </UButton>
             </div>
 
