@@ -3,6 +3,11 @@ import {
   cloneWorkspaceNodes,
   createDefaultWorkspaceTab,
   createWorkspace2x2MatrixBlock,
+  createWorkspaceAgencyProjectManagerBlock,
+  createWorkspaceAgencySprintBoardBlock,
+  createWorkspaceAgencyTimeEntriesLogBlock,
+  createWorkspaceAgencyTimeReportsBlock,
+  createWorkspaceAgencyTimeTrackerBlock,
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceAuthorityScorecardBlock,
@@ -277,6 +282,14 @@ const priorityOptions = workspaceNodePriorityOptions;
 
 const domainOptions = workspaceNodeDomainOptions;
 
+const agencyOperationsBlockTypeSet = new Set<WorkspaceBlock["type"]>([
+  "agency-project-manager",
+  "agency-time-tracker",
+  "agency-time-entries-log",
+  "agency-sprint-board",
+  "agency-time-reports",
+]);
+
 watch(
   () => node.value?.tabs.map((tab) => tab.id).join(","),
   () => {
@@ -475,6 +488,44 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
     return;
   }
 
+  const isAgencyOperationsBlock = agencyOperationsBlockTypeSet.has(type);
+  let preferredAgencyTeamId =
+    node.value.teamId ?? activeTeamMembership.value?.id ?? nodeShareTeamId.value ?? teams.value[0]?.id ?? null;
+
+  if (
+    isAgencyOperationsBlock &&
+    node.value.visibility !== "team" &&
+    !node.value.teamId &&
+    teams.value.length > 1
+  ) {
+    const teamChoices = teams.value
+      .map((team, index) => `${index + 1}. ${team.name}`)
+      .join("\n");
+    const selection = window.prompt(
+      `Select a team for this Agency Operations block:\n${teamChoices}`,
+      "1",
+    );
+
+    if (selection === null) {
+      return;
+    }
+
+    const selectedIndex = Number(selection) - 1;
+
+    if (Number.isInteger(selectedIndex) && selectedIndex >= 0 && selectedIndex < teams.value.length) {
+      preferredAgencyTeamId = teams.value[selectedIndex]?.id ?? preferredAgencyTeamId;
+    }
+  }
+
+  if (isAgencyOperationsBlock && !preferredAgencyTeamId) {
+    toast.add({
+      title: "Team required",
+      description: "Create or join a team before adding Agency Operations blocks.",
+      color: "warning",
+    });
+    return;
+  }
+
   let nextBlock: WorkspaceBlock;
 
   switch (type) {
@@ -600,6 +651,31 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
       break;
     case "collections-tracker":
       nextBlock = createWorkspaceCollectionsTrackerBlock();
+      break;
+    case "agency-project-manager":
+      nextBlock = createWorkspaceAgencyProjectManagerBlock({
+        teamId: preferredAgencyTeamId,
+      });
+      break;
+    case "agency-time-tracker":
+      nextBlock = createWorkspaceAgencyTimeTrackerBlock({
+        teamId: preferredAgencyTeamId,
+      });
+      break;
+    case "agency-time-entries-log":
+      nextBlock = createWorkspaceAgencyTimeEntriesLogBlock({
+        teamId: preferredAgencyTeamId,
+      });
+      break;
+    case "agency-sprint-board":
+      nextBlock = createWorkspaceAgencySprintBoardBlock({
+        teamId: preferredAgencyTeamId,
+      });
+      break;
+    case "agency-time-reports":
+      nextBlock = createWorkspaceAgencyTimeReportsBlock({
+        teamId: preferredAgencyTeamId,
+      });
       break;
     case "workforce-management":
       nextBlock = createWorkspaceWorkforceManagementBlock();

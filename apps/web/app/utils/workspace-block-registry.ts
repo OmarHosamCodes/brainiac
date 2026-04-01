@@ -2,6 +2,11 @@ import type { WorkspaceBlock } from "@brainiac/workspace";
 import type { Component } from "vue";
 
 import Workspace2x2MatrixBlockEditor from "~/components/workspace/node/blocks/Workspace2x2MatrixBlockEditor.vue";
+import WorkspaceAgencyProjectManagerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyProjectManagerBlockEditor.vue";
+import WorkspaceAgencySprintBoardBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencySprintBoardBlockEditor.vue";
+import WorkspaceAgencyTimeEntriesLogBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeEntriesLogBlockEditor.vue";
+import WorkspaceAgencyTimeReportsBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeReportsBlockEditor.vue";
+import WorkspaceAgencyTimeTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeTrackerBlockEditor.vue";
 import WorkspaceAiPromptBlockEditor from "~/components/workspace/node/blocks/WorkspaceAiPromptBlockEditor.vue";
 import WorkspaceAssumptionTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAssumptionTrackerBlockEditor.vue";
 import WorkspaceAuthorityScorecardBlockEditor from "~/components/workspace/node/blocks/WorkspaceAuthorityScorecardBlockEditor.vue";
@@ -297,6 +302,36 @@ export const workspaceBlockRegistry = {
     component: WorkspaceCollectionsTrackerBlockEditor,
     label: "Collections tracker",
     icon: "i-lucide-receipt-text",
+    addGroup: "secondary",
+  },
+  "agency-project-manager": {
+    component: WorkspaceAgencyProjectManagerBlockEditor,
+    label: "Agency project manager",
+    icon: "i-lucide-briefcase-business",
+    addGroup: "secondary",
+  },
+  "agency-time-tracker": {
+    component: WorkspaceAgencyTimeTrackerBlockEditor,
+    label: "Agency time tracker",
+    icon: "i-lucide-timer",
+    addGroup: "secondary",
+  },
+  "agency-time-entries-log": {
+    component: WorkspaceAgencyTimeEntriesLogBlockEditor,
+    label: "Agency time entries log",
+    icon: "i-lucide-logs",
+    addGroup: "secondary",
+  },
+  "agency-sprint-board": {
+    component: WorkspaceAgencySprintBoardBlockEditor,
+    label: "Agency sprint board",
+    icon: "i-lucide-layout-panel-top",
+    addGroup: "secondary",
+  },
+  "agency-time-reports": {
+    component: WorkspaceAgencyTimeReportsBlockEditor,
+    label: "Agency time reports",
+    icon: "i-lucide-chart-pie",
     addGroup: "secondary",
   },
   "workforce-management": {

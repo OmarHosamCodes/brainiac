@@ -2,6 +2,11 @@ import {
   cloneWorkspaceNodes,
   createDefaultWorkspaceTab,
   createWorkspace2x2MatrixBlock,
+  createWorkspaceAgencyProjectManagerBlock,
+  createWorkspaceAgencySprintBoardBlock,
+  createWorkspaceAgencyTimeEntriesLogBlock,
+  createWorkspaceAgencyTimeReportsBlock,
+  createWorkspaceAgencyTimeTrackerBlock,
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceAuthorityScorecardBlock,
@@ -123,6 +128,11 @@ const WORKSPACE_AGENT_BLOCK_TYPES = [
   "profitability-cash-flow",
   "pricing-simulator",
   "collections-tracker",
+  "agency-project-manager",
+  "agency-time-tracker",
+  "agency-time-entries-log",
+  "agency-sprint-board",
+  "agency-time-reports",
   "workforce-management",
   "custom",
 ] as const;
@@ -1306,6 +1316,56 @@ function describeBlockEditGuide(
           "invoices[].paidAt",
         ],
       });
+    case "agency-project-manager":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "teamId",
+          "selectedClientId",
+          "showArchivedClients",
+          "showArchivedProjects",
+        ],
+        referenceFieldPaths: ["teamId", "selectedClientId"],
+      });
+    case "agency-time-tracker":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: ["title", "teamId", "showRecentEntries"],
+        referenceFieldPaths: ["teamId"],
+      });
+    case "agency-time-entries-log":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: ["title", "teamId", "pageSize"],
+        referenceFieldPaths: ["teamId"],
+      });
+    case "agency-sprint-board":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: ["title", "teamId", "activeSprintId", "showCompletedItems"],
+        referenceFieldPaths: ["teamId", "activeSprintId"],
+      });
+    case "agency-time-reports":
+      return createBlockEditGuide({
+        blockType: block.type,
+        editableFieldPaths: [
+          "title",
+          "teamId",
+          "datePreset",
+          "fromDate",
+          "toDate",
+          "selectedClientId",
+          "selectedProjectId",
+          "selectedMemberUserId",
+        ],
+        referenceFieldPaths: [
+          "teamId",
+          "selectedClientId",
+          "selectedProjectId",
+          "selectedMemberUserId",
+        ],
+      });
     case "workforce-management":
       return createBlockEditGuide({
         blockType: block.type,
@@ -1704,6 +1764,36 @@ function collectBlockSearchDetails(
           invoice.paidAt ?? "",
         ]),
       ]);
+    case "agency-project-manager":
+      return normalizeSearchFragments([
+        block.teamId ?? "",
+        block.selectedClientId ?? "",
+        block.showArchivedClients ? "archived clients visible" : "active clients",
+        block.showArchivedProjects ? "archived projects visible" : "active projects",
+      ]);
+    case "agency-time-tracker":
+      return normalizeSearchFragments([
+        block.teamId ?? "",
+        block.showRecentEntries ? "recent entries enabled" : "recent entries hidden",
+      ]);
+    case "agency-time-entries-log":
+      return normalizeSearchFragments([block.teamId ?? "", block.pageSize]);
+    case "agency-sprint-board":
+      return normalizeSearchFragments([
+        block.teamId ?? "",
+        block.activeSprintId ?? "",
+        block.showCompletedItems ? "completed visible" : "completed hidden",
+      ]);
+    case "agency-time-reports":
+      return normalizeSearchFragments([
+        block.teamId ?? "",
+        block.datePreset,
+        block.fromDate ?? "",
+        block.toDate ?? "",
+        block.selectedClientId ?? "",
+        block.selectedProjectId ?? "",
+        block.selectedMemberUserId ?? "",
+      ]);
     case "workforce-management":
       return normalizeSearchFragments([
         block.title,
@@ -1846,12 +1936,12 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return `${block.hooks.length} hooks scored up to ${Math.max(0, ...block.hooks.map((hook) => hook.score))}/10`;
     case "message-house":
       return `${[
-          block.brandPromise,
-          ...block.pillars.map((pillar) => pillar.body),
-          block.audiencePains,
-          block.proofPoints,
-          block.voicePrinciples,
-        ].filter((value) => value.trim()).length
+        block.brandPromise,
+        ...block.pillars.map((pillar) => pillar.body),
+        block.audiencePains,
+        block.proofPoints,
+        block.voicePrinciples,
+      ].filter((value) => value.trim()).length
         }/7 sections filled`;
     case "scorecard":
       return `${block.metrics.length} metrics`;
@@ -1869,6 +1959,24 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return `${block.activeClients} active clients at ${block.hourlyRateEgp} EGP/hour`;
     case "collections-tracker":
       return `${block.invoices.length} receivables with filter ${block.filter}`;
+    case "agency-project-manager":
+      return block.teamId
+        ? `Team-linked project manager (${block.showArchivedProjects ? "with" : "without"} archived projects)`
+        : "Agency project manager awaiting team link";
+    case "agency-time-tracker":
+      return block.teamId ? "Live team time tracker" : "Agency time tracker awaiting team link";
+    case "agency-time-entries-log":
+      return block.teamId
+        ? `Personal entries log (${block.pageSize} rows per page)`
+        : "Agency time entries log awaiting team link";
+    case "agency-sprint-board":
+      return block.teamId
+        ? `Sprint board${block.activeSprintId ? " with active sprint" : ""}`
+        : "Agency sprint board awaiting team link";
+    case "agency-time-reports":
+      return block.teamId
+        ? `Team reports (${block.datePreset})`
+        : "Agency time reports awaiting team link";
     case "workforce-management":
       return "Team-only workforce management placeholder";
     case "custom":
@@ -2268,6 +2376,16 @@ function createBlockByType(args: {
       return createWorkspacePricingSimulatorBlock(titleInput);
     case "collections-tracker":
       return createWorkspaceCollectionsTrackerBlock(titleInput);
+    case "agency-project-manager":
+      return createWorkspaceAgencyProjectManagerBlock(titleInput);
+    case "agency-time-tracker":
+      return createWorkspaceAgencyTimeTrackerBlock(titleInput);
+    case "agency-time-entries-log":
+      return createWorkspaceAgencyTimeEntriesLogBlock(titleInput);
+    case "agency-sprint-board":
+      return createWorkspaceAgencySprintBoardBlock(titleInput);
+    case "agency-time-reports":
+      return createWorkspaceAgencyTimeReportsBlock(titleInput);
     case "workforce-management":
       return createWorkspaceWorkforceManagementBlock(titleInput);
     case "custom": {
