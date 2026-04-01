@@ -10,6 +10,7 @@ build
 
 # Environment variables
 .env
+.env*
 .env*.local
 
 # IDEs and editors
@@ -23,6 +24,8 @@ build
 *.swo
 *~
 .DS_Store
+Thumbs.db
+*.tmp
 
 # Logs
 logs
