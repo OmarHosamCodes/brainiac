@@ -1,10 +1,10 @@
-import { useMutation } from "@tanstack/vue-query";
-import { computed } from "vue";
-import type { Ref } from "vue";
 import type { WorkspaceNode } from "@brainiac/workspace";
+import { useMutation } from "@tanstack/vue-query";
+import type { Ref } from "vue";
+import { computed } from "vue";
 
-import { getErrorMessage } from "~/utils/get-error-message";
 import type { useTeamSelection } from "~/composables/useTeamSelection";
+import { getErrorMessage } from "~/utils/get-error-message";
 
 type TeamSelectionState = ReturnType<typeof useTeamSelection>;
 
@@ -39,8 +39,39 @@ export function useNodeSharing(options: NodeSharingOptions) {
     return workspaceBoard.nodes.value.find((node) => node.id === nodeId) ?? null;
   });
 
+  const selectedNodeTeamRole = computed(() => {
+    const currentNode = selectedNode.value;
+
+    if (!currentNode) {
+      return null;
+    }
+
+    if (currentNode.visibility === "team" && currentNode.teamId) {
+      return teamSelection.teams.value.find((team) => team.id === currentNode.teamId)?.role ?? null;
+    }
+
+    if (!teamSelection.selectedTeamId.value) {
+      return null;
+    }
+
+    return (
+      teamSelection.teams.value.find((team) => team.id === teamSelection.selectedTeamId.value)?.role ??
+      null
+    );
+  });
+
+  const canManageSelectedNodeSharing = computed(() => selectedNodeTeamRole.value === "owner");
+
   async function shareSelectedNode() {
-    if (!selectedNode.value || !teamSelection.selectedTeamId.value) {
+    if (!selectedNode.value || !teamSelection.selectedTeamId.value || !canManageSelectedNodeSharing.value) {
+      if (selectedNode.value && !canManageSelectedNodeSharing.value) {
+        toast.add({
+          title: "Owner role required",
+          description: "Only team owners can share nodes.",
+          color: "warning",
+        });
+      }
+
       return;
     }
 
@@ -65,7 +96,15 @@ export function useNodeSharing(options: NodeSharingOptions) {
   }
 
   async function unshareSelectedNode() {
-    if (!selectedNode.value) {
+    if (!selectedNode.value || !canManageSelectedNodeSharing.value) {
+      if (selectedNode.value && !canManageSelectedNodeSharing.value) {
+        toast.add({
+          title: "Owner role required",
+          description: "Only team owners can unshare nodes.",
+          color: "warning",
+        });
+      }
+
       return;
     }
 
@@ -90,6 +129,8 @@ export function useNodeSharing(options: NodeSharingOptions) {
     shareNodeMutation,
     unshareNodeMutation,
     selectedNode,
+    selectedNodeTeamRole,
+    canManageSelectedNodeSharing,
     shareSelectedNode,
     unshareSelectedNode,
   };

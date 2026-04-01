@@ -66,7 +66,9 @@ const {
 const isTeamSettingsModalOpen = ref(false);
 
 const {
+  canManageSelectedNodeSharing,
   selectedNode,
+  selectedNodeTeamRole,
   shareNodeMutation,
   shareSelectedNode,
   unshareNodeMutation,
@@ -88,7 +90,7 @@ const nodeShareActionLabel = computed(() =>
   isSelectedNodeShared.value ? "Unshare Node" : "Share Node",
 );
 const nodeShareActionDisabled = computed(() => {
-  if (!selectedNode.value || isNodeShareActionPending.value) {
+  if (!selectedNode.value || isNodeShareActionPending.value || !canManageSelectedNodeSharing.value) {
     return true;
   }
 
@@ -230,14 +232,22 @@ function toggleSelectedNodeSharing() {
           {{
             selectedNode
               ? selectedNode.visibility === 'team'
-                ? `Shared to ${selectedNode.teamId}`
+                ? canManageSelectedNodeSharing
+                  ? `Shared to ${selectedNode.teamId}`
+                  : 'Team-shared node'
                 : 'Private node'
               : 'Click a node on canvas to share it.'
           }}
         </p>
+        <p
+          v-if="selectedNode && !canManageSelectedNodeSharing"
+          class="mt-1 text-xs text-neutral-500"
+        >
+          Role {{ selectedNodeTeamRole ?? 'viewer' }} can edit content, but only owners can access sharing actions and team IDs.
+        </p>
         </div>
 
-        <div class="mt-3">
+        <div v-if="canManageSelectedNodeSharing" class="mt-3">
         <button
           type="button"
           class="inline-flex h-9 w-full items-center justify-center rounded-xl px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"

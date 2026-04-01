@@ -1,25 +1,25 @@
 <script setup lang="ts">
 import type {
-    WorkspaceBlock,
-    WorkspaceNode,
-    WorkspaceNodeTab,
-    WorkspaceTeamRole,
+  WorkspaceBlock,
+  WorkspaceNode,
+  WorkspaceNodeTab,
+  WorkspaceTeamRole,
 } from "@brainiac/workspace";
 import {
-    useWorkspaceNodeEditorContext,
-    type WorkspaceSaveBadge,
+  useWorkspaceNodeEditorContext,
+  type WorkspaceSaveBadge,
 } from "~/components/workspace/node/context";
 import {
-    workspaceAddBlockCategories,
-    type WorkspaceAddBlockCategory,
+  workspaceAddBlockCategories,
+  type WorkspaceAddBlockCategory,
 } from "~/utils/workspace-add-block-menu";
 import {
-    workspaceBlockPresets,
-    type WorkspaceBlockPresetId,
+  workspaceBlockPresets,
+  type WorkspaceBlockPresetId,
 } from "~/utils/workspace-block-presets";
 import {
-    getWorkspaceBlockRegistryEntry,
-    workspacePrimaryBlockTypes,
+  getWorkspaceBlockRegistryEntry,
+  workspacePrimaryBlockTypes,
 } from "~/utils/workspace-block-registry";
 
 type WorkspaceTeamSummary = {
@@ -39,6 +39,8 @@ const props = defineProps<{
   nodeVisibilityBadgeClass: string;
   nodeOwnerLabel: string;
   nodeTeamName: string | null;
+  activeTeamRole: WorkspaceTeamRole | null;
+  canEditNodeContent: boolean;
   teams: WorkspaceTeamSummary[];
   nodeShareTeamId: string;
   canManageNodeSharing: boolean;
@@ -90,6 +92,22 @@ const isShareToggleDisabled = computed(() => {
   }
 
   return !props.nodeShareTeamId;
+});
+
+const activeTeamRoleLabel = computed(() => {
+  if (!props.activeTeamRole) {
+    return null;
+  }
+
+  if (props.activeTeamRole === "owner") {
+    return "Owner";
+  }
+
+  if (props.activeTeamRole === "editor") {
+    return "Editor";
+  }
+
+  return "Viewer";
 });
 
 function toggleNodeSharing() {
@@ -264,6 +282,10 @@ function formatLauncherCount(count: number, singular: string) {
 }
 
 function handleAddBlockSelection(blockType: WorkspaceBlock["type"]) {
+  if (!props.canEditNodeContent) {
+    return;
+  }
+
   const selected = blockLauncherItems.find((item) => item.blockType === blockType);
   const isTeamSharedNode = props.node.visibility === "team" && Boolean(props.node.teamId);
 
@@ -276,12 +298,20 @@ function handleAddBlockSelection(blockType: WorkspaceBlock["type"]) {
 }
 
 function isBlockLauncherItemDisabled(item: WorkspaceBlockLauncherItem) {
+  if (!props.canEditNodeContent) {
+    return true;
+  }
+
   const isTeamSharedNode = props.node.visibility === "team" && Boolean(props.node.teamId);
 
   return item.teamOnly && !isTeamSharedNode;
 }
 
 function getBlockLauncherItemReason(item: WorkspaceBlockLauncherItem) {
+  if (!props.canEditNodeContent) {
+    return "Viewer role is read-only";
+  }
+
   if (!isBlockLauncherItemDisabled(item)) {
     return null;
   }
@@ -343,7 +373,13 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
                     {{ nodeVisibilityLabel }}
                   </span>
                   <span class="text-[11px] text-muted">Owner: {{ nodeOwnerLabel }}</span>
-                  <span v-if="nodeTeamName" class="truncate text-[11px] text-muted">
+                  <span
+                    v-if="activeTeamRoleLabel"
+                    class="inline-flex items-center rounded-full border border-muted/40 bg-default px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted"
+                  >
+                    Role: {{ activeTeamRoleLabel }}
+                  </span>
+                  <span v-if="canManageNodeSharing && nodeTeamName" class="truncate text-[11px] text-muted">
                     Team: {{ nodeTeamName }}
                   </span>
                 </div>
@@ -351,7 +387,7 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
               <UIcon name="i-lucide-shield-check" class="mt-0.5 size-4 text-muted" />
             </div>
 
-            <div class="mt-2.5 flex items-center gap-2">
+            <div v-if="canManageNodeSharing" class="mt-2.5 flex items-center gap-2">
               <select
                 v-model="nodeShareTeamIdModel"
                 class="h-8 w-full rounded-xl border border-muted/40 bg-default px-2.5 text-xs text-highlighted focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
@@ -375,8 +411,8 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
               </UButton>
             </div>
 
-            <p v-if="!canManageNodeSharing" class="mt-2 text-[11px] leading-relaxed text-muted">
-              Shared by a teammate. Editing is allowed, sharing controls are role-restricted.
+            <p v-else class="mt-2 text-[11px] leading-relaxed text-muted">
+              Editing is allowed for your role. Only team owners can access sharing controls and team identifiers.
             </p>
           </div>
         </div>
@@ -486,6 +522,7 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
           </div>
 
           <UPopover
+            v-if="canEditNodeContent"
             v-model:open="addBlockLauncherOpen"
             :content="{ align: 'end', side: 'bottom', sideOffset: 12 }"
             :ui="{
@@ -812,6 +849,18 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
               </div>
             </template>
           </UPopover>
+
+          <div v-else class="flex flex-col items-end gap-1">
+            <UButton
+              color="neutral"
+              icon="i-lucide-lock"
+              class="h-11 justify-center rounded-full px-5"
+              disabled
+            >
+              Add Block
+            </UButton>
+            <p class="text-[11px] text-muted">Viewer role is read-only for this node.</p>
+          </div>
         </div>
       </header>
 
@@ -846,7 +895,7 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
               Add your first block to start organizing your thoughts and tasks.
             </p>
 
-            <div class="flex flex-wrap justify-center gap-3">
+            <div v-if="canEditNodeContent" class="flex flex-wrap justify-center gap-3">
               <UButton
                 v-for="type in primaryBlockTypes"
                 :key="type"
@@ -869,6 +918,10 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
                 Browse all blocks
               </UButton>
             </div>
+
+            <p v-else class="max-w-xs text-sm text-muted">
+              Your role can view this shared node but cannot add blocks.
+            </p>
           </div>
 
           <!-- Filtered Empty State -->

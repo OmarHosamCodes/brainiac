@@ -58,6 +58,22 @@ const canSaveTeamName = computed(() => {
   return props.teamNameDraft.trim().length > 0 && props.teamNameDraft.trim() !== props.selectedTeam.name;
 });
 
+const selectedRoleDescription = computed(() => {
+  if (!props.selectedTeam) {
+    return "";
+  }
+
+  if (props.selectedTeam.role === "owner") {
+    return "Owners can manage members, roles, and sharing controls.";
+  }
+
+  if (props.selectedTeam.role === "editor") {
+    return "Editors can collaborate on shared nodes but cannot manage team permissions.";
+  }
+
+  return "Viewers can access shared nodes with restricted team management actions.";
+});
+
 function handleMemberRoleChange(event: Event) {
   const target = event.target as HTMLSelectElement | null;
 
@@ -102,6 +118,7 @@ function handleMemberRoleChange(event: Event) {
           <div>
             <p class="text-xs font-bold uppercase tracking-[0.16em] text-muted">Current Team</p>
             <h3 class="mt-1 text-lg font-semibold text-highlighted">{{ props.selectedTeam.name }}</h3>
+            <p class="mt-1 text-xs text-muted">{{ selectedRoleDescription }}</p>
           </div>
           <UBadge color="neutral" variant="soft" size="sm">
             Role: {{ props.selectedTeam.role }}

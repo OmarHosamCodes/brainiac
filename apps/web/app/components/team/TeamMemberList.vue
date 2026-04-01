@@ -59,6 +59,18 @@ function handleRoleChange(userId: string, event: Event) {
 
   emit("role-change", { userId, role });
 }
+
+function getRoleBadgeColor(role: TeamRole) {
+  if (role === "owner") {
+    return "primary" as const;
+  }
+
+  if (role === "editor") {
+    return "success" as const;
+  }
+
+  return "neutral" as const;
+}
 </script>
 
 <template>
@@ -101,6 +113,9 @@ function handleRoleChange(userId: string, event: Event) {
 
       <template #role-cell="{ row }">
         <div class="flex flex-wrap items-center gap-2">
+          <UBadge :color="getRoleBadgeColor(row.original.role)" variant="soft" size="sm">
+            {{ row.original.role }}
+          </UBadge>
           <select
             :value="row.original.role"
             class="h-8 min-w-24 rounded-lg border border-muted bg-default px-2 text-xs text-highlighted focus:border-primary focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
