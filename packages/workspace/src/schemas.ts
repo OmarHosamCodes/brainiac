@@ -953,6 +953,44 @@ export const workspaceCollectionsTrackerBlockSchema = workspaceBlockBaseSchema.e
     .default([]),
 });
 
+export const workspaceAgencyProjectManagerBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("agency-project-manager"),
+  teamId: z.string().min(1).nullable().optional(),
+  selectedClientId: z.string().min(1).nullable().optional(),
+  showArchivedClients: z.boolean().default(false),
+  showArchivedProjects: z.boolean().default(false),
+});
+
+export const workspaceAgencyTimeTrackerBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("agency-time-tracker"),
+  teamId: z.string().min(1).nullable().optional(),
+  showRecentEntries: z.boolean().default(true),
+});
+
+export const workspaceAgencyTimeEntriesLogBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("agency-time-entries-log"),
+  teamId: z.string().min(1).nullable().optional(),
+  pageSize: z.number().int().min(5).max(100).default(25),
+});
+
+export const workspaceAgencySprintBoardBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("agency-sprint-board"),
+  teamId: z.string().min(1).nullable().optional(),
+  activeSprintId: z.string().min(1).nullable().optional(),
+  showCompletedItems: z.boolean().default(true),
+});
+
+export const workspaceAgencyTimeReportsBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("agency-time-reports"),
+  teamId: z.string().min(1).nullable().optional(),
+  datePreset: z.enum(["this-week", "last-month", "year-to-date", "custom"]).default("this-week"),
+  fromDate: isoDateSchema.nullable().optional(),
+  toDate: isoDateSchema.nullable().optional(),
+  selectedClientId: z.string().min(1).nullable().optional(),
+  selectedProjectId: z.string().min(1).nullable().optional(),
+  selectedMemberUserId: z.string().min(1).nullable().optional(),
+});
+
 export const workspaceWorkforceManagementBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("workforce-management"),
 });
@@ -1008,6 +1046,11 @@ export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceProfitabilityCashFlowBlockSchema,
   workspacePricingSimulatorBlockSchema,
   workspaceCollectionsTrackerBlockSchema,
+  workspaceAgencyProjectManagerBlockSchema,
+  workspaceAgencyTimeTrackerBlockSchema,
+  workspaceAgencyTimeEntriesLogBlockSchema,
+  workspaceAgencySprintBoardBlockSchema,
+  workspaceAgencyTimeReportsBlockSchema,
   workspaceWorkforceManagementBlockSchema,
   workspaceCustomBlockSchema,
 ]);

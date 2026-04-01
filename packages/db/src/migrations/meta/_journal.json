@@ -8,6 +8,13 @@
       "when": 1774911341283,
       "tag": "0000_perpetual_mephisto",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1775009703449,
+      "tag": "0001_bright_stellaris",
+      "breakpoints": true
     }
   ]
 }

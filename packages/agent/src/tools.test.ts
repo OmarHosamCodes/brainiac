@@ -71,6 +71,11 @@ const allSupportedBlockTypes = [
   "profitability-cash-flow",
   "pricing-simulator",
   "collections-tracker",
+  "agency-project-manager",
+  "agency-time-tracker",
+  "agency-time-entries-log",
+  "agency-sprint-board",
+  "agency-time-reports",
   "workforce-management",
   "custom",
 ] as const;

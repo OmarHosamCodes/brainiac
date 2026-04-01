@@ -32,6 +32,37 @@ export const workspaceBlockCategories = [
     ],
   },
   {
+    id: "agency-operations",
+    label: "Agency Operations",
+    items: [
+      {
+        blockType: "agency-project-manager",
+        label: "Agency project manager",
+        icon: "i-lucide-briefcase-business",
+      },
+      {
+        blockType: "agency-time-tracker",
+        label: "Agency time tracker",
+        icon: "i-lucide-timer",
+      },
+      {
+        blockType: "agency-time-entries-log",
+        label: "Agency time entries log",
+        icon: "i-lucide-logs",
+      },
+      {
+        blockType: "agency-sprint-board",
+        label: "Agency sprint board",
+        icon: "i-lucide-layout-panel-top",
+      },
+      {
+        blockType: "agency-time-reports",
+        label: "Agency time reports",
+        icon: "i-lucide-chart-pie",
+      },
+    ],
+  },
+  {
     id: "strategy",
     label: "Strategy",
     items: [

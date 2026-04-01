@@ -12,10 +12,9 @@ import {
   normalizeWorkspaceNode,
   workspaceMarketplacePayloadSchema,
   type WorkspaceBlock,
-  type WorkspaceCustomBlockTemplate,
   type WorkspaceMarketplacePayload,
   type WorkspaceNode,
-  type WorkspaceNodeTab,
+  type WorkspaceNodeTab
 } from "@brainiac/workspace";
 
 function cloneForTransport<T>(value: T): T {
@@ -80,7 +79,14 @@ export function createBlockMarketplacePayload(
 
 export function cloneMarketplaceNodePayloadAsNode(payload: WorkspaceMarketplacePayload) {
   if (payload.kind === "node") {
-    return cloneWorkspaceNodeForInsertion(payload.node);
+    const clonedNode = cloneWorkspaceNodeForInsertion(payload.node);
+
+    return normalizeWorkspaceNode({
+      ...clonedNode,
+      ownerUserId: null,
+      visibility: "private",
+      teamId: null,
+    });
   }
 
   if (payload.kind === "tab") {

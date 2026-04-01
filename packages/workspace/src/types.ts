@@ -5,6 +5,11 @@ import {
   workspace2x2MatrixItemSchema,
   workspace2x2MatrixQuadrantSchema,
   workspace2x2MatrixQuadrantsSchema,
+  workspaceAgencyProjectManagerBlockSchema,
+  workspaceAgencySprintBoardBlockSchema,
+  workspaceAgencyTimeEntriesLogBlockSchema,
+  workspaceAgencyTimeReportsBlockSchema,
+  workspaceAgencyTimeTrackerBlockSchema,
   workspaceAiPromptBlockSchema,
   workspaceAssumptionTrackerBlockSchema,
   workspaceAuthorityScoreMetricKeySchema,
@@ -269,6 +274,15 @@ export type WorkspaceAiPromptBlock = z.infer<typeof workspaceAiPromptBlockSchema
 export type WorkspaceHabitGridBlock = z.infer<typeof workspaceHabitGridBlockSchema>;
 export type WorkspaceProcessBlock = z.infer<typeof workspaceProcessBlockSchema>;
 export type Workspace2x2MatrixBlock = z.infer<typeof workspace2x2MatrixBlockSchema>;
+export type WorkspaceAgencyProjectManagerBlock = z.infer<
+  typeof workspaceAgencyProjectManagerBlockSchema
+>;
+export type WorkspaceAgencyTimeTrackerBlock = z.infer<typeof workspaceAgencyTimeTrackerBlockSchema>;
+export type WorkspaceAgencyTimeEntriesLogBlock = z.infer<
+  typeof workspaceAgencyTimeEntriesLogBlockSchema
+>;
+export type WorkspaceAgencySprintBoardBlock = z.infer<typeof workspaceAgencySprintBoardBlockSchema>;
+export type WorkspaceAgencyTimeReportsBlock = z.infer<typeof workspaceAgencyTimeReportsBlockSchema>;
 export type WorkspaceCourseRoadmapBlock = z.infer<typeof workspaceCourseRoadmapBlockSchema>;
 export type WorkspaceLearningOutcomesMatrixBlock = z.infer<
   typeof workspaceLearningOutcomesMatrixBlockSchema
