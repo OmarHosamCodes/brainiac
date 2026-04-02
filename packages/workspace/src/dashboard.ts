@@ -1820,19 +1820,6 @@ function buildWorkspaceNodeDashboardDetail(
     };
   }
 
-  if (block.type === "workforce-management") {
-    return {
-      tabId: tab.id,
-      tabTitle: getDisplayTabTitle(tab),
-      blockId: block.id,
-      blockTitle: getDisplayBlockTitle(block),
-      blockType: block.type,
-      summary: "Team-only workforce management placeholder block.",
-      metrics: [],
-      highlights: ["This placeholder block will be replaced with the full experience soon."],
-    };
-  }
-
   const template = node.customBlockTemplates.find((entry) => entry.id === block.definitionId);
   const formulaResult = evaluateCustomBlockFormula(template?.formula?.expression, block.values);
   const filledValues = Object.entries(block.values)

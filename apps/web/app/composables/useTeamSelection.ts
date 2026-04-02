@@ -2,17 +2,24 @@ import { useQuery } from "@tanstack/vue-query";
 import { computed, ref, watch } from "vue";
 
 export function useTeamSelection() {
+  const authSession = useAuthSession();
   const orpc = useOrpc();
+  const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
 
   const selectedTeamId = ref("");
   const newTeamName = ref("");
   const teamNameDraft = ref("");
 
-  const teamListQuery = useQuery(orpc.team.list.queryOptions());
+  const teamListQuery = useQuery(
+    computed(() => ({
+      ...orpc.team.list.queryOptions(),
+      enabled: authEnabled.value,
+    })),
+  );
   const teamDetailQuery = useQuery(
     computed(() => ({
       ...orpc.team.get.queryOptions({ input: { teamId: selectedTeamId.value } }),
-      enabled: Boolean(selectedTeamId.value),
+      enabled: Boolean(authEnabled.value && selectedTeamId.value),
     })),
   );
 

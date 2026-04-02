@@ -48,7 +48,7 @@ import WorkspaceTaskListBlockEditor from "~/components/workspace/node/blocks/Wor
 import WorkspaceTimeOrchestratorBlockEditor from "~/components/workspace/node/blocks/WorkspaceTimeOrchestratorBlockEditor.vue";
 import WorkspaceTimelineBlockEditor from "~/components/workspace/node/blocks/WorkspaceTimelineBlockEditor.vue";
 import WorkspaceTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceTrackerBlockEditor.vue";
-import WorkspaceWorkforceManagementBlockEditor from "~/components/workspace/node/blocks/WorkspaceWorkforceManagementBlockEditor.vue";
+
 
 export type WorkspaceBlockRegistryEntry = {
   component: Component;
@@ -332,12 +332,6 @@ export const workspaceBlockRegistry = {
     component: WorkspaceAgencyTimeReportsBlockEditor,
     label: "Agency time reports",
     icon: "i-lucide-chart-pie",
-    addGroup: "secondary",
-  },
-  "workforce-management": {
-    component: WorkspaceWorkforceManagementBlockEditor,
-    label: "Workforce management",
-    icon: "i-lucide-users-round",
     addGroup: "secondary",
   },
   custom: {

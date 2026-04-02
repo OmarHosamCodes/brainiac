@@ -13,8 +13,15 @@ const props = defineProps<{
 const { currentNode, mutateBlock } = useWorkspaceNodeEditorContext();
 const orpc = useOrpc();
 const toast = useToast();
+const authSession = useAuthSession();
+const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
 
-const teamsQuery = useQuery(orpc.team.list.queryOptions());
+const teamsQuery = useQuery(
+  computed(() => ({
+    ...orpc.team.list.queryOptions(),
+    enabled: authEnabled.value,
+  })),
+);
 const teams = computed(() => teamsQuery.data.value?.items ?? []);
 const teamsById = computed(() => new Map(teams.value.map((team) => [team.id, team])));
 const preferredTeamId = computed(() => props.block.teamId ?? currentNode.value?.teamId ?? "");

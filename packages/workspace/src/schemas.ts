@@ -991,10 +991,6 @@ export const workspaceAgencyTimeReportsBlockSchema = workspaceBlockBaseSchema.ex
   selectedMemberUserId: z.string().min(1).nullable().optional(),
 });
 
-export const workspaceWorkforceManagementBlockSchema = workspaceBlockBaseSchema.extend({
-  type: z.literal("workforce-management"),
-});
-
 export const workspaceCustomBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("custom"),
   definitionId: z.string().min(1),
@@ -1051,7 +1047,6 @@ export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceAgencyTimeEntriesLogBlockSchema,
   workspaceAgencySprintBoardBlockSchema,
   workspaceAgencyTimeReportsBlockSchema,
-  workspaceWorkforceManagementBlockSchema,
   workspaceCustomBlockSchema,
 ]);
 
