@@ -1,0 +1,21 @@
+info:
+  name: Sign Out Founder
+  type: http
+  seq: 6
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/auth/sign-out"
+  headers:
+    - name: origin
+      value: "{{baseUrl}}"
+  body:
+    type: none
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Founder sign out succeeds", function() {
+          expect([200, 204]).to.include(res.status);
+        });

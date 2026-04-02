@@ -1,0 +1,31 @@
+info:
+  name: Delete Team
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/team/delete"
+  headers:
+    - name: content-type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "json": {
+          "teamId": "{{teamId}}"
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Cleanup deletes test team", function() {
+          expect([200, 404]).to.include(res.status);
+
+          if (res.status === 200) {
+            expect(res.body.json.deleted).to.equal(true);
+          }
+        });

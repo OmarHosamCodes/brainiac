@@ -1,0 +1,30 @@
+info:
+  name: List Projects Include Archived
+  type: http
+  seq: 11
+
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/agencyOps/projects/list"
+  headers:
+    - name: content-type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "json": {
+          "teamId": "{{teamId}}",
+          "includeArchived": true
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Archived project visible when requested", function() {
+          expect(res.status).to.equal(200);
+          const found = res.body.json.items.find((item) => item.id === bru.getVar("projectId"));
+          expect(found).to.be.an("object");
+        });

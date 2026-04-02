@@ -1,0 +1,26 @@
+info:
+  name: Editor Sees Team Shared Node
+  type: http
+  seq: 9
+
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/workspace/get"
+  body:
+    type: none
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Editor can see team shared node from owner workspace", function() {
+          expect(res.status).to.equal(200);
+
+          const sharedNodeId = bru.getVar("founderSharedNodeId");
+          const ownerUserId = bru.getVar("ownerUserId");
+          const found = res.body.json.nodes.find((node) => node.id === sharedNodeId && node.ownerUserId === ownerUserId);
+
+          expect(found).to.be.an("object");
+          expect(found.visibility).to.equal("team");
+          expect(found.teamId).to.equal(bru.getVar("teamId"));
+        });

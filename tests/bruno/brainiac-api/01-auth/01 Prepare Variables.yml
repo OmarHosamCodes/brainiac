@@ -1,0 +1,44 @@
+info:
+  name: Prepare Variables
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/"
+  body:
+    type: none
+
+runtime:
+  scripts:
+    - type: before-request
+      code: |-
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const runId = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+
+        bru.setVar("reportFrom", thirtyDaysAgo.toISOString());
+        bru.setVar("reportTo", now.toISOString());
+        bru.setVar("testRunId", runId);
+        bru.setVar("randomSignupEmail", `bruno+${Date.now()}@brainiac.test`);
+        bru.setVar("ownerEmail", `bruno.owner.${runId}@brainiac.test`);
+        bru.setVar("editorEmail", `bruno.editor.${runId}@brainiac.test`);
+        bru.setVar("viewerEmail", `bruno.viewer.${runId}@brainiac.test`);
+        bru.setVar("ownerUserId", "");
+        bru.setVar("editorUserId", "");
+        bru.setVar("viewerUserId", "");
+        bru.setVar("teamId", "");
+        bru.setVar("clientId", "");
+        bru.setVar("projectId", "");
+        bru.setVar("sprintId", "");
+        bru.setVar("sprintItemId", "");
+        bru.setVar("manualEntryId", "");
+        bru.setVar("founderPrivateNodeId", `node-private-${runId}`);
+        bru.setVar("founderSharedNodeId", `node-shared-${runId}`);
+        bru.setVar("opsSharedNodeId", `node-ops-shared-${runId}`);
+    - type: tests
+      code: |-
+        test("Root health returns OK", function() {
+          expect(res.status).to.equal(200);
+          expect(res.body).to.equal("OK");
+        });

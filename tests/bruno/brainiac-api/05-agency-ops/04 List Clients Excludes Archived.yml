@@ -1,0 +1,30 @@
+info:
+  name: List Clients Excludes Archived
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/agencyOps/clients/list"
+  headers:
+    - name: content-type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "json": {
+          "teamId": "{{teamId}}",
+          "includeArchived": false
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Archived client is hidden by default", function() {
+          expect(res.status).to.equal(200);
+          const found = res.body.json.items.find((item) => item.id === bru.getVar("clientId"));
+          expect(found).to.equal(undefined);
+        });

@@ -1,0 +1,118 @@
+info:
+  name: Workspace Save Owner Nodes
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/workspace/save"
+  headers:
+    - name: content-type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "json": {
+          "nodes": [
+            {
+              "id": "{{founderPrivateNodeId}}",
+              "title": "Bruno Private Node {{testRunId}}",
+              "content": "",
+              "ownerUserId": "{{ownerUserId}}",
+              "visibility": "private",
+              "teamId": null,
+              "x": 10,
+              "y": 20,
+              "width": 520,
+              "height": 360,
+              "label": "Private",
+              "minWidth": 280,
+              "minHeight": 200,
+              "createdAt": "2026-01-01T00:00:00.000Z",
+              "updatedAt": "2026-01-01T00:00:00.000Z",
+              "tabs": [
+                {
+                  "id": "tab-private-{{testRunId}}",
+                  "title": "Overview",
+                  "blocks": [
+                    {
+                      "id": "block-private-{{testRunId}}",
+                      "type": "notes",
+                      "title": "Notes",
+                      "body": "Private owner note",
+                      "createdAt": "2026-01-01T00:00:00.000Z",
+                      "updatedAt": "2026-01-01T00:00:00.000Z"
+                    }
+                  ],
+                  "createdAt": "2026-01-01T00:00:00.000Z",
+                  "updatedAt": "2026-01-01T00:00:00.000Z"
+                }
+              ],
+              "customBlockTemplates": [],
+              "viewState": {
+                "activeTabId": "tab-private-{{testRunId}}",
+                "notePreviewState": {}
+              },
+              "dashboard": {
+                "tint": "neutral",
+                "featuredBlocks": []
+              }
+            },
+            {
+              "id": "{{founderSharedNodeId}}",
+              "title": "Bruno Shared Node {{testRunId}}",
+              "content": "",
+              "ownerUserId": "{{ownerUserId}}",
+              "visibility": "team",
+              "teamId": "{{teamId}}",
+              "x": 600,
+              "y": 20,
+              "width": 520,
+              "height": 360,
+              "label": "Shared",
+              "minWidth": 280,
+              "minHeight": 200,
+              "createdAt": "2026-01-01T00:00:00.000Z",
+              "updatedAt": "2026-01-01T00:00:00.000Z",
+              "tabs": [
+                {
+                  "id": "tab-shared-{{testRunId}}",
+                  "title": "Overview",
+                  "blocks": [
+                    {
+                      "id": "block-shared-{{testRunId}}",
+                      "type": "notes",
+                      "title": "Notes",
+                      "body": "Shared owner note",
+                      "createdAt": "2026-01-01T00:00:00.000Z",
+                      "updatedAt": "2026-01-01T00:00:00.000Z"
+                    }
+                  ],
+                  "createdAt": "2026-01-01T00:00:00.000Z",
+                  "updatedAt": "2026-01-01T00:00:00.000Z"
+                }
+              ],
+              "customBlockTemplates": [],
+              "viewState": {
+                "activeTabId": "tab-shared-{{testRunId}}",
+                "notePreviewState": {}
+              },
+              "dashboard": {
+                "tint": "neutral",
+                "featuredBlocks": []
+              }
+            }
+          ]
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Owner can save workspace nodes", function() {
+          expect(res.status).to.equal(200);
+          expect(res.body.json.nodeCount).to.equal(2);
+          expect(res.body.json.savedAt).to.be.a("string");
+        });

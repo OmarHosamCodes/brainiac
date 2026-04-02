@@ -1,0 +1,27 @@
+info:
+  name: Sign In Owner After User Seed
+  type: http
+  seq: 9
+http:
+  method: POST
+  url: "{{baseUrl}}/api/auth/sign-in/email"
+  headers:
+    - name: content-type
+      value: application/json
+    - name: origin
+      value: "{{baseUrl}}"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{ownerEmail}}",
+        "password": "{{seedPassword}}"
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Owner signs back in after user setup", function() {
+          expect(res.status).to.equal(200);
+        });

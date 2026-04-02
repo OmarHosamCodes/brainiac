@@ -1,0 +1,31 @@
+info:
+  name: List Clients Include Archived
+  type: http
+  seq: 5
+
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/agencyOps/clients/list"
+  headers:
+    - name: content-type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "json": {
+          "teamId": "{{teamId}}",
+          "includeArchived": true
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Archived client appears when requested", function() {
+          expect(res.status).to.equal(200);
+          const found = res.body.json.items.find((item) => item.id === bru.getVar("clientId"));
+          expect(found).to.be.an("object");
+          expect(found.status).to.equal("archived");
+        });

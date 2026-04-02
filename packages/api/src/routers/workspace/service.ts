@@ -211,8 +211,12 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
 
     const memberRole = membershipMap.get(teamId);
 
-    if (!memberRole || !hasRoleAtLeast(memberRole, "editor")) {
-      throw new ORPCError("UNAUTHORIZED");
+    if (!memberRole) {
+      continue;
+    }
+
+    if (!hasRoleAtLeast(memberRole, "editor")) {
+      continue;
     }
 
     const ownerNodes = sharedNodesByOwner.get(ownerUserId) ?? [];

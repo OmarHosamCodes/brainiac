@@ -11,7 +11,7 @@ import {
 } from "@brainiac/db/schema";
 import { createWorkspaceId, type WorkspaceTeamRole } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
-import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 
 const TEAM_ROLE_WEIGHT: Record<WorkspaceTeamRole, number> = {
     viewer: 1,
@@ -850,7 +850,7 @@ export async function listAgencyProjects(
                 input.clientId ? eq(agencyOpsProject.clientId, input.clientId) : undefined,
                 input.includeArchived ? undefined : isNull(agencyOpsProject.archivedAt),
                 input.statuses && input.statuses.length > 0
-                    ? sql`${agencyOpsProject.status} = ANY(${input.statuses})`
+                    ? inArray(agencyOpsProject.status, input.statuses)
                     : undefined,
             ),
         )
@@ -1011,7 +1011,7 @@ export async function listAgencySprints(
                 eq(agencyOpsSprint.teamId, input.teamId),
                 input.projectId ? eq(agencyOpsSprint.projectId, input.projectId) : undefined,
                 input.statuses && input.statuses.length > 0
-                    ? sql`${agencyOpsSprint.status} = ANY(${input.statuses})`
+                    ? inArray(agencyOpsSprint.status, input.statuses)
                     : undefined,
             ),
         )
@@ -1696,13 +1696,18 @@ export async function listMyAgencyTimeEntries(
         dailyTotals.set(key, (dailyTotals.get(key) ?? 0) + entry.durationSeconds);
     }
 
-    const weekTotalSeconds = weekEntries.reduce((sum, entry) => sum + entry.durationSeconds, 0);
+    const weekTotalSeconds = weekEntries.reduce(
+        (sum, entry) => sum + Number(entry.durationSeconds),
+        0,
+    );
+    const parsedTotal = Number(countRow?.count ?? 0);
+    const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
 
     return {
         items: rows.map(mapTimeEntryRow),
         page,
         pageSize,
-        total: countRow?.count ?? 0,
+        total,
         weekSummary: {
             startDate: weekStart.toISOString(),
             endDate: weekEnd.toISOString(),

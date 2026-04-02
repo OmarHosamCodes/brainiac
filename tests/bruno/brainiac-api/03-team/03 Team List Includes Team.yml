@@ -1,0 +1,24 @@
+info:
+  name: Team List Includes Team
+  type: http
+  seq: 4
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/team/list"
+  body:
+    type: none
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Owner sees created team in list", function() {
+          expect(res.status).to.equal(200);
+          expect(res.body.json.items).to.be.an("array");
+
+          const teamId = bru.getVar("teamId");
+          const found = res.body.json.items.find((item) => item.id === teamId);
+
+          expect(found).to.be.an("object");
+          expect(found.role).to.equal("owner");
+        });
