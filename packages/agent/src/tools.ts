@@ -61,7 +61,7 @@ import {
   type WorkspaceNode,
   type WorkspaceNodeTab,
 } from "@brainiac/workspace";
-import { tool } from "@openrouter/sdk";
+import { tool } from "@openrouter/sdk/lib/tool";
 import { z } from "zod";
 
 type DashboardSearchMatch = {
