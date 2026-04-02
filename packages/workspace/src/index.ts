@@ -20,6 +20,7 @@ import {
   workspaceAssumptionTrackerBlockSchema,
   workspaceAuthorityScoreMetricsSchema,
   workspaceAuthorityScorecardBlockSchema,
+  workspaceBlockSchema,
   workspaceBusinessModelCanvasBlockSchema,
   workspaceChecklistBlockSchema,
   workspaceChecklistItemSchema,
@@ -103,7 +104,6 @@ import {
   workspaceTimelineBlockSchema,
   workspaceTimelineMilestoneSchema,
   workspaceTrackerBlockSchema,
-  workspaceWorkforceManagementBlockSchema,
 } from "./schemas";
 import { getNowIsoString } from "./shared";
 import { createWorkspaceLeadershipRhythmFilter, createWorkspaceTimeOrchestratorSettings } from "./tasks";
@@ -206,7 +206,6 @@ import type {
   WorkspaceTimelineBlock,
   WorkspaceTimelineMilestone,
   WorkspaceTrackerBlock,
-  WorkspaceWorkforceManagementBlock,
 } from "./types";
 
 export * from "./block-categories";
@@ -2368,20 +2367,6 @@ export function createWorkspaceAgencyTimeReportsBlock(
   });
 }
 
-export function createWorkspaceWorkforceManagementBlock(
-  partial: Partial<WorkspaceWorkforceManagementBlock> = {},
-): WorkspaceWorkforceManagementBlock {
-  const timestamp = getNowIsoString();
-
-  return workspaceWorkforceManagementBlockSchema.parse({
-    id: partial.id ?? createWorkspaceId("block"),
-    type: "workforce-management",
-    title: partial.title ?? "Workforce management",
-    createdAt: partial.createdAt ?? timestamp,
-    updatedAt: partial.updatedAt ?? timestamp,
-  });
-}
-
 export function createWorkspaceCustomBlockTemplate(
   partial: Partial<WorkspaceCustomBlockTemplate> & {
     fields: WorkspaceCustomBlockField[];
@@ -2655,7 +2640,16 @@ export function normalizeWorkspaceNodeTab(tab: WorkspaceNodeTab): WorkspaceNodeT
 
   return {
     ...parsed,
-    blocks: parsed.blocks.map((block) => normalizeWorkspaceBlock(block)),
+    blocks: parsed.blocks
+      .map((block) => {
+        try {
+          return normalizeWorkspaceBlock(block);
+        } catch {
+          // Filter out blocks with unknown/unsupported types
+          return null;
+        }
+      })
+      .filter((block): block is WorkspaceBlock => block !== null),
   };
 }
 
@@ -2918,8 +2912,6 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         selectedProjectId: block.selectedProjectId ?? null,
         selectedMemberUserId: block.selectedMemberUserId ?? null,
       });
-    case "workforce-management":
-      return workspaceWorkforceManagementBlockSchema.parse(block);
     case "custom":
       return workspaceCustomBlockSchema.parse({
         ...block,
@@ -2928,17 +2920,33 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         latestAiOutput: block.latestAiOutput ?? "",
         outputHistory: block.outputHistory ?? [],
       });
+    default:
+      throw new Error(`Unknown block type: ${(block as any).type}`);
   }
 }
 
 export function normalizeWorkspaceNode(node: WorkspaceNode): WorkspaceNode {
+  const sanitizedTabs = Array.isArray((node as Record<string, unknown>).tabs)
+    ? (node as Record<string, unknown>).tabs.map((tab) => {
+      const tabRecord = tab as Record<string, unknown>;
+      const tabBlocks = Array.isArray(tabRecord.blocks)
+        ? tabRecord.blocks.filter((block) => workspaceBlockSchema.safeParse(block).success)
+        : [];
+
+      return {
+        ...tabRecord,
+        blocks: tabBlocks,
+      };
+    })
+    : [];
+
   const parsed = workspaceNodeSchema.parse({
     ...node,
     content: node.content ?? "",
     ownerUserId: node.ownerUserId ?? null,
     visibility: node.visibility ?? "private",
     teamId: node.teamId ?? null,
-    tabs: node.tabs ?? [],
+    tabs: sanitizedTabs,
     customBlockTemplates: node.customBlockTemplates ?? [],
     viewState: node.viewState ?? {},
     dashboard: node.dashboard ?? {},
@@ -3632,13 +3640,6 @@ export function cloneWorkspaceBlockForInsertion(
         createdAt: timestamp,
         updatedAt: timestamp,
       });
-    case "workforce-management":
-      return workspaceWorkforceManagementBlockSchema.parse({
-        ...block,
-        id: createWorkspaceId("block"),
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      });
     case "custom":
       return workspaceCustomBlockSchema.parse({
         ...block,
@@ -3648,6 +3649,8 @@ export function cloneWorkspaceBlockForInsertion(
         createdAt: timestamp,
         updatedAt: timestamp,
       });
+    default:
+      throw new Error(`Unknown block type: ${(block as any).type}`);
   }
 }
 
@@ -3659,9 +3662,16 @@ export function cloneWorkspaceTabForInsertion(
   return workspaceNodeTabSchema.parse({
     ...tab,
     id: createWorkspaceId("tab"),
-    blocks: tab.blocks.map((block) =>
-      cloneWorkspaceBlockForInsertion(block, templateIdMap, timestamp),
-    ),
+    blocks: tab.blocks
+      .map((block) => {
+        try {
+          return cloneWorkspaceBlockForInsertion(block, templateIdMap, timestamp);
+        } catch {
+          // Filter out blocks with unknown/unsupported types
+          return null;
+        }
+      })
+      .filter((block): block is WorkspaceBlock => block !== null),
     createdAt: timestamp,
     updatedAt: timestamp,
   });

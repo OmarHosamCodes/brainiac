@@ -5,6 +5,11 @@ import { env } from "@brainiac/env/server";
 import {
   cloneWorkspaceNodes,
   createWorkspace2x2MatrixBlock,
+  createWorkspaceAgencyProjectManagerBlock,
+  createWorkspaceAgencySprintBoardBlock,
+  createWorkspaceAgencyTimeEntriesLogBlock,
+  createWorkspaceAgencyTimeReportsBlock,
+  createWorkspaceAgencyTimeTrackerBlock,
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceAuthorityScorecardBlock,
@@ -53,7 +58,6 @@ import {
   createWorkspaceTimelineMilestone,
   createWorkspaceTimeOrchestratorBlock,
   createWorkspaceTrackerBlock,
-  createWorkspaceWorkforceManagementBlock,
   normalizeWorkspaceNode,
   workspaceBlockCategories,
   workspaceMarketplaceItemSchema,
@@ -148,6 +152,11 @@ const categorizedBlockFactories: Record<
 > = {
   "2x2-matrix": createWorkspace2x2MatrixBlock,
   "ai-prompt": createWorkspaceAiPromptBlock,
+  "agency-project-manager": createWorkspaceAgencyProjectManagerBlock,
+  "agency-sprint-board": createWorkspaceAgencySprintBoardBlock,
+  "agency-time-entries-log": createWorkspaceAgencyTimeEntriesLogBlock,
+  "agency-time-reports": createWorkspaceAgencyTimeReportsBlock,
+  "agency-time-tracker": createWorkspaceAgencyTimeTrackerBlock,
   "assumption-tracker": createWorkspaceAssumptionTrackerBlock,
   "authority-scorecard": createWorkspaceAuthorityScorecardBlock,
   "business-model-canvas": createWorkspaceBusinessModelCanvasBlock,
@@ -184,7 +193,6 @@ const categorizedBlockFactories: Record<
   "time-orchestrator": createWorkspaceTimeOrchestratorBlock,
   timeline: createWorkspaceTimelineBlock,
   tracker: createWorkspaceTrackerBlock,
-  "workforce-management": createWorkspaceWorkforceManagementBlock,
 };
 
 function seedId(...parts: string[]) {

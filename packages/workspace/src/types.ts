@@ -145,7 +145,6 @@ import {
   workspaceTimelineMilestoneStatusSchema,
   workspaceTrackerBlockSchema,
   workspaceTrackerEntrySchema,
-  workspaceWorkforceManagementBlockSchema,
 } from "./schemas";
 
 export type WorkspaceTaskPriority = z.infer<typeof workspaceTaskPrioritySchema>;
@@ -329,9 +328,6 @@ export type WorkspaceProfitabilityCashFlowBlock = z.infer<
 export type WorkspacePricingSimulatorBlock = z.infer<typeof workspacePricingSimulatorBlockSchema>;
 export type WorkspaceCollectionsTrackerBlock = z.infer<
   typeof workspaceCollectionsTrackerBlockSchema
->;
-export type WorkspaceWorkforceManagementBlock = z.infer<
-  typeof workspaceWorkforceManagementBlockSchema
 >;
 export type WorkspaceCustomBlock = z.infer<typeof workspaceCustomBlockSchema>;
 export type WorkspaceBlock = z.infer<typeof workspaceBlockSchema>;

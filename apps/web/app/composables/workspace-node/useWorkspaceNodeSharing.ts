@@ -16,8 +16,14 @@ export function useWorkspaceNodeSharing(options: UseWorkspaceNodeSharingOptions)
   const authSession = useAuthSession();
   const orpc = useOrpc();
   const toast = useToast();
+  const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
 
-  const teamListQuery = useQuery(orpc.team.list.queryOptions());
+  const teamListQuery = useQuery(
+    computed(() => ({
+      ...orpc.team.list.queryOptions(),
+      enabled: authEnabled.value,
+    })),
+  );
   const shareNodeMutation = useMutation(orpc.workspace.shareNode.mutationOptions());
   const unshareNodeMutation = useMutation(orpc.workspace.unshareNode.mutationOptions());
 

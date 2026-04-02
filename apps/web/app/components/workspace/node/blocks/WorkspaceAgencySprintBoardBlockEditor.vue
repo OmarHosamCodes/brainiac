@@ -13,6 +13,8 @@ const props = defineProps<{
 const { currentNode, mutateBlock } = useWorkspaceNodeEditorContext();
 const orpc = useOrpc();
 const toast = useToast();
+const authSession = useAuthSession();
+const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
 
 const statusLabelMap = {
   todo: "To do",
@@ -26,7 +28,12 @@ const sprintBoardColumns = [
   { key: "done", label: statusLabelMap.done },
 ] as const;
 
-const teamsQuery = useQuery(orpc.team.list.queryOptions());
+const teamsQuery = useQuery(
+  computed(() => ({
+    ...orpc.team.list.queryOptions(),
+    enabled: authEnabled.value,
+  })),
+);
 const teams = computed(() => teamsQuery.data.value?.items ?? []);
 const teamIds = computed(() => new Set(teams.value.map((team) => team.id)));
 const preferredTeamId = computed(() => props.block.teamId ?? currentNode.value?.teamId ?? "");

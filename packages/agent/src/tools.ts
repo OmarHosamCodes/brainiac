@@ -49,7 +49,6 @@ import {
   createWorkspaceTimeOrchestratorBlock,
   createWorkspaceTimelineBlock,
   createWorkspaceTrackerBlock,
-  createWorkspaceWorkforceManagementBlock,
   workspaceBlockSchema,
   workspaceCustomBlockTemplateSchema,
   workspaceMarketplaceItemSchema,
@@ -133,7 +132,6 @@ const WORKSPACE_AGENT_BLOCK_TYPES = [
   "agency-time-entries-log",
   "agency-sprint-board",
   "agency-time-reports",
-  "workforce-management",
   "custom",
 ] as const;
 
@@ -1366,11 +1364,6 @@ function describeBlockEditGuide(
           "selectedMemberUserId",
         ],
       });
-    case "workforce-management":
-      return createBlockEditGuide({
-        blockType: block.type,
-        editableFieldPaths: ["title"],
-      });
     case "custom":
       return createBlockEditGuide({
         blockType: block.type,
@@ -1794,14 +1787,6 @@ function collectBlockSearchDetails(
         block.selectedProjectId ?? "",
         block.selectedMemberUserId ?? "",
       ]);
-    case "workforce-management":
-      return normalizeSearchFragments([
-        block.title,
-        "team",
-        "workforce",
-        "management",
-        "placeholder",
-      ]);
     case "custom": {
       const template = getCustomBlockTemplate(customTemplates, block.definitionId);
 
@@ -1977,8 +1962,6 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return block.teamId
         ? `Team reports (${block.datePreset})`
         : "Agency time reports awaiting team link";
-    case "workforce-management":
-      return "Team-only workforce management placeholder";
     case "custom":
       return truncate(block.notes || block.latestAiOutput || JSON.stringify(block.values));
   }
@@ -2386,8 +2369,6 @@ function createBlockByType(args: {
       return createWorkspaceAgencySprintBoardBlock(titleInput);
     case "agency-time-reports":
       return createWorkspaceAgencyTimeReportsBlock(titleInput);
-    case "workforce-management":
-      return createWorkspaceWorkforceManagementBlock(titleInput);
     case "custom": {
       if (!args.customTemplateId) {
         throw new Error("A customTemplateId is required when creating a custom block.");

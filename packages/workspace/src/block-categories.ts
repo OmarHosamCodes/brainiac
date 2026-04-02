@@ -20,18 +20,6 @@ export type WorkspaceBlockCategory = {
 
 export const workspaceBlockCategories = [
   {
-    id: "workforce-management",
-    label: "Workforce Management",
-    items: [
-      {
-        blockType: "workforce-management",
-        label: "Workforce management",
-        icon: "i-lucide-users-round",
-        teamOnly: true,
-      },
-    ],
-  },
-  {
     id: "agency-operations",
     label: "Agency Operations",
     items: [
