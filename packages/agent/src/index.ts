@@ -1,4 +1,4 @@
-import { stepCountIs } from "@openrouter/sdk";
+import { stepCountIs } from "@openrouter/sdk/lib/stop-conditions";
 import type { OpenResponsesUsage } from "@openrouter/sdk/models";
 
 import { createOpenRouterClient } from "./client";
@@ -14,10 +14,10 @@ import {
   DEFAULT_AGENT_MODEL,
   type AgentChatResponse,
   type AgentMessage,
-  type DashboardAgentToolPreset,
   type DashboardAgentConfig,
-  type DashboardConversationUsageLatest,
+  type DashboardAgentToolPreset,
   type DashboardAgentWorkspaceContext,
+  type DashboardConversationUsageLatest,
 } from "./types";
 
 function getScopedWorkspaceNodes(workspace: DashboardAgentWorkspaceContext) {
@@ -97,8 +97,8 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
     `The dashboard currently has ${workspace.nodes.length} nodes.`,
     ...(scopedWorkspace
       ? [
-          `The current turn is scoped to ${scopedNodes.length} node${scopedNodes.length === 1 ? "" : "s"}. Prioritize those unless the user asks you to work elsewhere.`,
-        ]
+        `The current turn is scoped to ${scopedNodes.length} node${scopedNodes.length === 1 ? "" : "s"}. Prioritize those unless the user asks you to work elsewhere.`,
+      ]
       : []),
     `The marketplace currently has ${marketplaceCount} items.`,
     scopedWorkspace ? "Scoped dashboard overview:" : "Dashboard overview:",
@@ -172,9 +172,9 @@ function resolveAgentExecutionConfig(
         instructions: supportsTools
           ? buildAgentOnlyInstructions(workspace)
           : buildDirectAnswerInstructions(
-              workspace,
-              "Deep inspection is limited because the selected model cannot call tools.",
-            ),
+            workspace,
+            "Deep inspection is limited because the selected model cannot call tools.",
+          ),
         fallbackInstructions: buildDirectAnswerInstructions(
           workspace,
           "Deep inspection is limited because the selected model cannot call tools.",
@@ -190,9 +190,9 @@ function resolveAgentExecutionConfig(
         instructions: supportsTools
           ? buildAskInstructions(workspace)
           : buildDirectAnswerInstructions(
-              workspace,
-              "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
-            ),
+            workspace,
+            "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
+          ),
         fallbackInstructions: buildDirectAnswerInstructions(
           workspace,
           "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
@@ -387,3 +387,4 @@ export async function runDashboardAgent(
 
 export * from "./models";
 export * from "./types";
+
