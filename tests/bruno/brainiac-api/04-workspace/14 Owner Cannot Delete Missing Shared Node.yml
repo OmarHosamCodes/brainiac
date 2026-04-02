@@ -1,0 +1,27 @@
+info:
+  name: Owner Cannot Delete Missing Shared Node
+  type: http
+  seq: 14
+
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/workspace/deleteNode"
+  headers:
+    - name: content-type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "json": {
+          "nodeId": "{{founderSharedNodeId}}"
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Deleting already removed node returns not found", function() {
+          expect([404, 400]).to.include(res.status);
+        });

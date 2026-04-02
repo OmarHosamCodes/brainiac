@@ -1,0 +1,20 @@
+info:
+  name: Workspace Get Baseline
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/workspace/get"
+  body:
+    type: none
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Workspace snapshot loads", function() {
+          expect(res.status).to.equal(200);
+          expect(res.body.json).to.be.an("object");
+          expect(res.body.json.nodes).to.be.an("array");
+        });

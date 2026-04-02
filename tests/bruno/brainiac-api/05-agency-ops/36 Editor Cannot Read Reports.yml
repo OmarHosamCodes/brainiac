@@ -1,0 +1,29 @@
+info:
+  name: Editor Cannot Read Reports
+  type: http
+  seq: 36
+
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/agencyOps/reports/summary"
+  headers:
+    - name: content-type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "json": {
+          "teamId": "{{teamId}}",
+          "from": "{{reportFrom}}",
+          "to": "{{reportTo}}"
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Editor is blocked from reports", function() {
+          expect([401, 403]).to.include(res.status);
+        });

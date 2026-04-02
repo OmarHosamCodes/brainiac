@@ -1,0 +1,28 @@
+info:
+  name: Sign In Editor
+  type: http
+  seq: 31
+
+http:
+  method: POST
+  url: "{{baseUrl}}/api/auth/sign-in/email"
+  headers:
+    - name: content-type
+      value: application/json
+    - name: origin
+      value: "{{baseUrl}}"
+  body:
+    type: json
+    data: |-
+      {
+        "email": "{{editorEmail}}",
+        "password": "{{seedPassword}}"
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Editor sign in succeeds", function() {
+          expect(res.status).to.equal(200);
+        });

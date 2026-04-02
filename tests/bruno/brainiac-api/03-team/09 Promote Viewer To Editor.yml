@@ -1,0 +1,30 @@
+info:
+  name: Promote Viewer To Editor
+  type: http
+  seq: 13
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/team/members/updateRole"
+  headers:
+    - name: content-type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "json": {
+          "teamId": "{{teamId}}",
+          "userId": "{{viewerUserId}}",
+          "role": "editor"
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Owner can update member role", function() {
+          expect(res.status).to.equal(200);
+          expect(res.body.json.userId).to.equal(bru.getVar("viewerUserId"));
+          expect(res.body.json.role).to.equal("editor");
+        });

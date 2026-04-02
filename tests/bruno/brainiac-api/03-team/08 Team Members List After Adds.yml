@@ -1,0 +1,38 @@
+info:
+  name: Team Members List After Adds
+  type: http
+  seq: 12
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/team/members/list"
+  headers:
+    - name: content-type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "json": {
+          "teamId": "{{teamId}}"
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Members list includes owner editor viewer", function() {
+          expect(res.status).to.equal(200);
+          const members = res.body.json.items;
+
+          expect(members).to.be.an("array");
+          expect(members.length).to.be.at.least(3);
+
+          const owner = members.find((member) => member.userId === bru.getVar("ownerUserId"));
+          const editor = members.find((member) => member.userId === bru.getVar("editorUserId"));
+          const viewer = members.find((member) => member.userId === bru.getVar("viewerUserId"));
+
+          expect(owner.role).to.equal("owner");
+          expect(editor.role).to.equal("editor");
+          expect(viewer.role).to.equal("viewer");
+        });

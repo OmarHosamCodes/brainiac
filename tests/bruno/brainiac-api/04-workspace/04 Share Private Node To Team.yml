@@ -1,0 +1,31 @@
+info:
+  name: Share Private Node To Team
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/workspace/shareNode"
+  headers:
+    - name: content-type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "json": {
+          "nodeId": "{{founderPrivateNodeId}}",
+          "teamId": "{{teamId}}"
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Owner can share private node", function() {
+          expect(res.status).to.equal(200);
+          expect(res.body.json.nodeId).to.equal(bru.getVar("founderPrivateNodeId"));
+          expect(res.body.json.teamId).to.equal(bru.getVar("teamId"));
+          expect(res.body.json.visibility).to.equal("team");
+        });

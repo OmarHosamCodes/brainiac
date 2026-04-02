@@ -1,0 +1,30 @@
+info:
+  name: Activate Sprint
+  type: http
+  seq: 15
+
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/agencyOps/sprints/update"
+  headers:
+    - name: content-type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "json": {
+          "teamId": "{{teamId}}",
+          "sprintId": "{{sprintId}}",
+          "status": "active"
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Owner updates sprint status", function() {
+          expect(res.status).to.equal(200);
+          expect(res.body.json.status).to.equal("active");
+        });

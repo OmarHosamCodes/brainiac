@@ -1,0 +1,20 @@
+info:
+  name: Sign Out Owner
+  type: http
+  seq: 16
+http:
+  method: POST
+  url: "{{baseUrl}}/api/auth/sign-out"
+  headers:
+    - name: origin
+      value: "{{baseUrl}}"
+  body:
+    type: none
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Owner sign out succeeds", function() {
+          expect([200, 204]).to.include(res.status);
+        });

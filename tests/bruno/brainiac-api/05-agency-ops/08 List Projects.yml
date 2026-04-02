@@ -1,0 +1,32 @@
+info:
+  name: List Projects
+  type: http
+  seq: 8
+
+http:
+  method: POST
+  url: "{{rpcBaseUrl}}/agencyOps/projects/list"
+  headers:
+    - name: content-type
+      value: application/json
+  body:
+    type: json
+    data: |-
+      {
+        "json": {
+          "teamId": "{{teamId}}",
+          "clientId": "{{clientId}}"
+        }
+      }
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        test("Project list includes created project", function() {
+          expect(res.status).to.equal(200);
+          const found = res.body.json.items.find((item) => item.id === bru.getVar("projectId"));
+
+          expect(found).to.be.an("object");
+          expect(found.clientId).to.equal(bru.getVar("clientId"));
+        });
