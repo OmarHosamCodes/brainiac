@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import {
-  WORKSPACE_TASK_DOMAINS,
-  WORKSPACE_TASK_QUADRANTS,
-  collectWorkspaceNodeTasks,
-  createWorkspaceTimeOrchestratorSettings,
-  getWorkspaceTaskDomainLabel,
-  getWorkspaceTaskQuadrant,
-  getWorkspaceTaskQuadrantLabel,
-  type WorkspaceTaskDomain,
-  type WorkspaceTaskQuadrant,
-  type WorkspaceTimeOrchestratorBlock,
+    WORKSPACE_TASK_DOMAINS,
+    WORKSPACE_TASK_QUADRANTS,
+    collectWorkspaceNodeTasks,
+    createWorkspaceTimeOrchestratorSettings,
+    getWorkspaceTaskDomainLabel,
+    getWorkspaceTaskQuadrant,
+    getWorkspaceTaskQuadrantLabel,
+    type WorkspaceCollectedTask,
+    type WorkspaceTaskDomain,
+    type WorkspaceTaskQuadrant,
+    type WorkspaceTimeOrchestratorBlock,
 } from "@brainiac/workspace";
 
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
@@ -19,8 +20,13 @@ const props = defineProps<{
   tabId: string;
 }>();
 
-const { currentNode, mutateBlock, getTimeOrchestratorSummaryForBlock, formatRelativeTaskMeta } =
-  useWorkspaceNodeEditorContext();
+const {
+  currentNode,
+  mutateBlock,
+  mutateCollectedTask,
+  getTimeOrchestratorSummaryForBlock,
+  formatRelativeTaskMeta,
+} = useWorkspaceNodeEditorContext();
 
 const summary = computed(() => getTimeOrchestratorSummaryForBlock(props.block));
 
@@ -166,6 +172,12 @@ function resetFilters() {
     settings.quadrants = [...WORKSPACE_TASK_QUADRANTS];
   });
 }
+
+function toggleTaskCompletion(item: WorkspaceCollectedTask) {
+  mutateCollectedTask(item, (task) => {
+    task.completed = !task.completed;
+  });
+}
 </script>
 
 <template>
@@ -290,10 +302,24 @@ function resetFilters() {
               <p class="font-bold text-highlighted leading-tight">
                 {{ item.task.text || "Untitled task" }}
               </p>
-              <UBadge color="neutral" variant="soft" size="sm" class="rounded-lg">
-                {{ item.task.estimateMinutes }} min
-              </UBadge>
+              <div class="flex items-center gap-2">
+                <UBadge color="neutral" variant="soft" size="sm" class="rounded-lg">
+                  {{ item.task.estimateMinutes }} min
+                </UBadge>
+                <UButton
+                  size="xs"
+                  :color="item.task.completed ? 'neutral' : 'primary'"
+                  variant="soft"
+                  class="rounded-lg"
+                  @click="toggleTaskCompletion(item)"
+                >
+                  {{ item.task.completed ? "Reopen" : "Complete" }}
+                </UButton>
+              </div>
             </div>
+            <p class="mt-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted/60">
+              {{ item.sourceNodeTitle }}
+            </p>
             <p class="mt-2 text-[10px] font-bold uppercase tracking-widest text-muted/40">
               {{ formatRelativeTaskMeta(item) }}
             </p>
@@ -342,6 +368,7 @@ function resetFilters() {
                   class="text-xs text-toned"
                 >
                   <span class="font-bold">{{ item.task.text || "Untitled task" }}</span> ·
+                  {{ item.sourceNodeTitle }} ·
                   {{ formatRelativeTaskMeta(item) }}
                 </p>
                 <p v-if="(summary?.overdue.length ?? 0) === 0" class="text-xs text-muted">
@@ -359,6 +386,7 @@ function resetFilters() {
                   class="text-xs text-toned"
                 >
                   <span class="font-bold">{{ item.task.text || "Untitled task" }}</span> ·
+                  {{ item.sourceNodeTitle }} ·
                   {{ formatRelativeTaskMeta(item) }}
                 </p>
                 <p v-if="(summary?.upcoming.length ?? 0) === 0" class="text-xs text-muted">

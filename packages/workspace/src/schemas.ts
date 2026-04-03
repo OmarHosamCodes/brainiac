@@ -38,10 +38,12 @@ import {
   WORKSPACE_LEADERSHIP_MEETING_STATUSES,
   WORKSPACE_LEADERSHIP_RHYTHMS,
   WORKSPACE_MARKETPLACE_ITEM_LIMIT,
+  WORKSPACE_NODE_CONNECTION_LIMIT,
   WORKSPACE_NODE_DASHBOARD_DETAIL_LIMIT,
   WORKSPACE_NODE_LIMIT,
   WORKSPACE_NODE_TAB_LIMIT,
   WORKSPACE_NODE_TINTS,
+  WORKSPACE_NODE_TYPES,
   WORKSPACE_OKR_KEY_RESULT_LIMIT,
   WORKSPACE_OKR_OBJECTIVE_LIMIT,
   WORKSPACE_PIPELINE_FUNNEL_DEAL_LIMIT,
@@ -109,6 +111,7 @@ export const workspaceLeadershipMeetingStatusSchema = z.enum(WORKSPACE_LEADERSHI
 export const workspaceLeadershipRhythmFilterSchema = z.enum(WORKSPACE_LEADERSHIP_FILTERS);
 export const workspaceTeamRoleSchema = z.enum(["owner", "editor", "viewer"]);
 export const workspaceNodeVisibilitySchema = z.enum(["private", "team"]);
+export const workspaceNodeTypeSchema = z.enum(WORKSPACE_NODE_TYPES);
 
 export const workspaceTaskSchema = z.object({
   id: z.string().min(1),
@@ -1063,6 +1066,10 @@ export const workspaceNodeViewStateSchema = z.object({
   notePreviewState: z.record(z.string(), z.boolean()).default({}),
 });
 
+export const workspaceNodeConnectionSchema = z.object({
+  targetNodeId: z.string().min(1),
+});
+
 export const workspaceNodeDashboardFeaturedBlockSchema = z.object({
   tabId: z.string().min(1),
   blockId: z.string().min(1),
@@ -1080,6 +1087,7 @@ export const workspaceNodeSchema = z.object({
   id: z.string().min(1),
   title: z.string().trim().min(1).max(120),
   content: z.string().max(4000).default(""),
+  nodeType: workspaceNodeTypeSchema.default("standard"),
   ownerUserId: z.string().min(1).nullable().optional(),
   visibility: workspaceNodeVisibilitySchema.default("private"),
   teamId: z.string().min(1).nullable().optional(),
@@ -1096,6 +1104,10 @@ export const workspaceNodeSchema = z.object({
   customBlockTemplates: z
     .array(workspaceCustomBlockTemplateSchema)
     .max(WORKSPACE_CUSTOM_BLOCK_TEMPLATE_LIMIT)
+    .default([]),
+  connections: z
+    .array(workspaceNodeConnectionSchema)
+    .max(WORKSPACE_NODE_CONNECTION_LIMIT)
     .default([]),
   viewState: workspaceNodeViewStateSchema.default({
     activeTabId: null,

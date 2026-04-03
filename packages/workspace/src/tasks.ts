@@ -4,15 +4,16 @@ import {
   workspaceTimeOrchestratorSettingsSchema,
 } from "./schemas";
 import {
-  getDueDateValue,
   getDisplayBlockTitle,
   getDisplayTabTitle,
+  getDueDateValue,
   getTodayValue,
   normalizeSelection,
   trimToEmpty,
 } from "./shared";
 import type {
   WorkspaceCollectedTask,
+  WorkspaceContentPipelineStatus,
   WorkspaceEisenhowerDomainAllocation,
   WorkspaceEisenhowerMatrixBlock,
   WorkspaceEisenhowerMatrixSummary,
@@ -60,9 +61,78 @@ export function getTaskListProgress(block: WorkspaceTaskListBlock) {
   };
 }
 
-export function collectWorkspaceNodeTasks(node: WorkspaceNode) {
-  return node.tabs.flatMap((tab) =>
+function mapContentPipelineStatusToTaskPriority(status: WorkspaceContentPipelineStatus) {
+  switch (status) {
+    case "review":
+    case "approved":
+      return "high" as const;
+    case "draft":
+      return "medium" as const;
+    case "ideas":
+    case "published":
+      return "low" as const;
+  }
+}
+
+function mapContentPipelineStatusToTaskUrgency(status: WorkspaceContentPipelineStatus) {
+  switch (status) {
+    case "review":
+      return 8;
+    case "approved":
+      return 7;
+    case "draft":
+      return 6;
+    case "ideas":
+      return 4;
+    case "published":
+      return 1;
+  }
+}
+
+function mapContentPipelineStatusToTaskImportance(status: WorkspaceContentPipelineStatus) {
+  switch (status) {
+    case "approved":
+      return 8;
+    case "review":
+      return 7;
+    case "draft":
+      return 6;
+    case "ideas":
+      return 5;
+    case "published":
+      return 1;
+  }
+}
+
+function collectTasksFromSourceNode(sourceNode: WorkspaceNode) {
+  return sourceNode.tabs.flatMap((tab) =>
     tab.blocks.flatMap((block) => {
+      if (block.type === "content-pipeline") {
+        return block.items.map(
+          (item) =>
+            ({
+              sourceNodeId: sourceNode.id,
+              sourceNodeTitle:
+                trimToEmpty(sourceNode.title) || trimToEmpty(sourceNode.label) || "Untitled node",
+              blockId: block.id,
+              blockTitle: getDisplayBlockTitle(block),
+              tabId: tab.id,
+              tabTitle: getDisplayTabTitle(tab),
+              task: {
+                id: item.id,
+                text: item.title,
+                completed: item.status === "published",
+                dueDate: null,
+                priority: mapContentPipelineStatusToTaskPriority(item.status),
+                domain: "content",
+                urgency: mapContentPipelineStatusToTaskUrgency(item.status),
+                importance: mapContentPipelineStatusToTaskImportance(item.status),
+                estimateMinutes: 30,
+              },
+            }) satisfies WorkspaceCollectedTask,
+        );
+      }
+
       if (block.type !== "task-list" && block.type !== "eisenhower-matrix") {
         return [];
       }
@@ -70,6 +140,8 @@ export function collectWorkspaceNodeTasks(node: WorkspaceNode) {
       return block.tasks.map(
         (task) =>
           ({
+            sourceNodeId: sourceNode.id,
+            sourceNodeTitle: trimToEmpty(sourceNode.title) || trimToEmpty(sourceNode.label) || "Untitled node",
             blockId: block.id,
             blockTitle: getDisplayBlockTitle(block),
             tabId: tab.id,
@@ -78,6 +150,33 @@ export function collectWorkspaceNodeTasks(node: WorkspaceNode) {
           }) satisfies WorkspaceCollectedTask,
       );
     }),
+  );
+}
+
+function resolveTaskScopeNodes(node: WorkspaceNode, allNodes?: WorkspaceNode[]) {
+  if (node.nodeType !== "orchestrator" || !allNodes || allNodes.length === 0) {
+    return [node];
+  }
+
+  const nodeById = new Map(allNodes.map((entry) => [entry.id, entry]));
+  const scopedNodes: WorkspaceNode[] = [node];
+
+  for (const connection of node.connections) {
+    const target = nodeById.get(connection.targetNodeId);
+
+    if (!target || target.id === node.id || target.nodeType === "orchestrator") {
+      continue;
+    }
+
+    scopedNodes.push(target);
+  }
+
+  return scopedNodes;
+}
+
+export function collectWorkspaceNodeTasks(node: WorkspaceNode, allNodes?: WorkspaceNode[]) {
+  return resolveTaskScopeNodes(node, allNodes).flatMap((scopedNode) =>
+    collectTasksFromSourceNode(scopedNode),
   );
 }
 
@@ -220,9 +319,10 @@ export function getTimeOrchestratorSummary(
   node: WorkspaceNode,
   settings: Partial<WorkspaceTimeOrchestratorSettings> = {},
   now = new Date(),
+  allNodes?: WorkspaceNode[],
 ): WorkspaceTimeOrchestratorSummary {
   const resolvedSettings = createWorkspaceTimeOrchestratorSettings(settings);
-  const tasks = collectWorkspaceNodeTasks(node).filter(({ task }) => {
+  const tasks = collectWorkspaceNodeTasks(node, allNodes).filter(({ task }) => {
     if (task.completed) {
       return false;
     }
@@ -244,8 +344,8 @@ export function getTimeOrchestratorSummary(
     tasks.length === 0
       ? 0
       : Number(
-          (tasks.reduce((sum, { task }) => sum + task.importance, 0) / tasks.length).toFixed(1),
-        );
+        (tasks.reduce((sum, { task }) => sum + task.importance, 0) / tasks.length).toFixed(1),
+      );
 
   const overdue = tasks
     .filter(({ task }) => task.dueDate && getDueDateValue(task.dueDate) < todayValue)
@@ -462,22 +562,22 @@ export function buildEisenhowerBattlePlanPrompt(block: WorkspaceEisenhowerMatrix
   const taskLines =
     block.tasks.length > 0
       ? sortEisenhowerTasks(block.tasks).map((task, index) => {
-          const meta = [
-            task.domain
-              ? `domain ${getWorkspaceTaskDomainLabel(task.domain)}`
-              : "domain unassigned",
-            `urgency ${task.urgency}/10`,
-            `importance ${task.importance}/10`,
-            `${task.estimateMinutes} minutes`,
-            `quadrant ${getWorkspaceTaskQuadrantLabel(getWorkspaceTaskQuadrant(task))}`,
-            task.completed ? "completed" : "open",
-            task.dueDate ? `due ${task.dueDate}` : "",
-          ]
-            .filter(Boolean)
-            .join(", ");
+        const meta = [
+          task.domain
+            ? `domain ${getWorkspaceTaskDomainLabel(task.domain)}`
+            : "domain unassigned",
+          `urgency ${task.urgency}/10`,
+          `importance ${task.importance}/10`,
+          `${task.estimateMinutes} minutes`,
+          `quadrant ${getWorkspaceTaskQuadrantLabel(getWorkspaceTaskQuadrant(task))}`,
+          task.completed ? "completed" : "open",
+          task.dueDate ? `due ${task.dueDate}` : "",
+        ]
+          .filter(Boolean)
+          .join(", ");
 
-          return `${index + 1}. ${task.text} (${meta})`;
-        })
+        return `${index + 1}. ${task.text} (${meta})`;
+      })
       : ["No tasks recorded."];
 
   return [

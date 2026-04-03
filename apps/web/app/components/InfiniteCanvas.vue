@@ -241,6 +241,10 @@ function fitAllNodes() {
   resetView();
 }
 
+defineExpose({
+  fitAllNodes,
+});
+
 function getNodeStyle(node: CanvasNodeModel): CSSProperties {
   return {
     left: `${node.x}px`,
@@ -851,7 +855,12 @@ onBeforeUnmount(() => {
               </div>
 
               <div class="canvas-node-content min-h-0 flex-1 overflow-hidden">
-                <slot name="node" :node="node" :selected="selectedNodeIdSet.has(node.id)" />
+                <slot
+                  name="node"
+                  :node="node"
+                  :selected="selectedNodeIdSet.has(node.id)"
+                  :all-nodes="props.nodes"
+                />
               </div>
 
               <button

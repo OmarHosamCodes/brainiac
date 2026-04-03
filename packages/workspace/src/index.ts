@@ -65,6 +65,7 @@ import {
   workspaceLearningOutcomesMatrixBlockSchema,
   workspaceMessageHouseBlockSchema,
   workspaceMessageHousePillarSchema,
+  workspaceNodeConnectionSchema,
   workspaceNodeDashboardSchema,
   workspaceNodeSchema,
   workspaceNodeTabSchema,
@@ -168,6 +169,7 @@ import type {
   WorkspaceMessageHouseBlock,
   WorkspaceMessageHousePillar,
   WorkspaceNode,
+  WorkspaceNodeConnection,
   WorkspaceNodeDashboard,
   WorkspaceNodeTab,
   WorkspaceNodeViewState,
@@ -2445,6 +2447,27 @@ export function createWorkspaceNodeDashboard(
   });
 }
 
+function normalizeWorkspaceNodeConnections(
+  nodeId: string,
+  connections: WorkspaceNodeConnection[],
+): WorkspaceNodeConnection[] {
+  const seenTargetIds = new Set<string>();
+  const nextConnections: WorkspaceNodeConnection[] = [];
+
+  for (const connection of connections) {
+    const parsed = workspaceNodeConnectionSchema.parse(connection);
+
+    if (parsed.targetNodeId === nodeId || seenTargetIds.has(parsed.targetNodeId)) {
+      continue;
+    }
+
+    seenTargetIds.add(parsed.targetNodeId);
+    nextConnections.push(parsed);
+  }
+
+  return nextConnections;
+}
+
 export function createWorkspaceNode(
   partial: Partial<WorkspaceNode> & {
     title: string;
@@ -2452,11 +2475,13 @@ export function createWorkspaceNode(
 ): WorkspaceNode {
   const timestamp = getNowIsoString();
   const content = partial.content ?? "";
+  const nodeId = partial.id ?? createWorkspaceId("node");
 
   return normalizeWorkspaceNode({
-    id: partial.id ?? createWorkspaceId("node"),
+    id: nodeId,
     title: partial.title,
     content,
+    nodeType: partial.nodeType ?? "standard",
     ownerUserId: partial.ownerUserId ?? null,
     visibility: partial.visibility ?? "private",
     teamId: partial.teamId ?? null,
@@ -2471,6 +2496,7 @@ export function createWorkspaceNode(
     updatedAt: partial.updatedAt ?? timestamp,
     tabs: partial.tabs ?? [createDefaultWorkspaceTab("Overview", content)],
     customBlockTemplates: partial.customBlockTemplates ?? [],
+    connections: normalizeWorkspaceNodeConnections(nodeId, partial.connections ?? []),
     viewState: partial.viewState ?? {
       activeTabId: partial.tabs?.[0]?.id ?? null,
       notePreviewState: {},
@@ -2926,28 +2952,32 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
 }
 
 export function normalizeWorkspaceNode(node: WorkspaceNode): WorkspaceNode {
-  const sanitizedTabs = Array.isArray((node as Record<string, unknown>).tabs)
-    ? (node as Record<string, unknown>).tabs.map((tab) => {
-      const tabRecord = tab as Record<string, unknown>;
-      const tabBlocks = Array.isArray(tabRecord.blocks)
-        ? tabRecord.blocks.filter((block) => workspaceBlockSchema.safeParse(block).success)
-        : [];
+  const nodeRecord = node as Record<string, unknown>;
+  const rawTabs = Array.isArray(nodeRecord.tabs) ? (nodeRecord.tabs as unknown[]) : [];
+  const sanitizedTabs = rawTabs.map((tab: unknown) => {
+    const tabRecord = tab as Record<string, unknown>;
+    const tabBlocks = Array.isArray(tabRecord.blocks)
+      ? (tabRecord.blocks as unknown[]).filter((block: unknown) =>
+        workspaceBlockSchema.safeParse(block).success,
+      )
+      : [];
 
-      return {
-        ...tabRecord,
-        blocks: tabBlocks,
-      };
-    })
-    : [];
+    return {
+      ...tabRecord,
+      blocks: tabBlocks,
+    };
+  });
 
   const parsed = workspaceNodeSchema.parse({
     ...node,
     content: node.content ?? "",
+    nodeType: node.nodeType ?? "standard",
     ownerUserId: node.ownerUserId ?? null,
     visibility: node.visibility ?? "private",
     teamId: node.teamId ?? null,
     tabs: sanitizedTabs,
     customBlockTemplates: node.customBlockTemplates ?? [],
+    connections: node.connections ?? [],
     viewState: node.viewState ?? {},
     dashboard: node.dashboard ?? {},
   });
@@ -2974,6 +3004,10 @@ export function normalizeWorkspaceNode(node: WorkspaceNode): WorkspaceNode {
   const featuredBlocks = parsed.dashboard.featuredBlocks.filter(({ tabId, blockId }) =>
     tabs.some((tab) => tab.id === tabId && tab.blocks.some((block) => block.id === blockId)),
   );
+  const connections =
+    parsed.nodeType === "orchestrator"
+      ? normalizeWorkspaceNodeConnections(parsed.id, parsed.connections)
+      : [];
 
   return {
     ...parsed,
@@ -2997,6 +3031,7 @@ export function normalizeWorkspaceNode(node: WorkspaceNode): WorkspaceNode {
       tint: parsed.dashboard.tint,
       featuredBlocks,
     }),
+    connections,
   };
 }
 
