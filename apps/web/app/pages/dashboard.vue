@@ -25,6 +25,27 @@ const {
   workspaceQuery,
 } = useWorkspaceBoard();
 
+const canvasRef = ref<{ fitAllNodes: () => void } | null>(null);
+const hasAutoFitTriggered = ref(false);
+
+watch(
+  () => [isWorkspaceInitialLoading.value, canvasRef.value] as const,
+  ([isLoading, canvas]) => {
+    if (isLoading || !canvas || hasAutoFitTriggered.value) {
+      return;
+    }
+
+    hasAutoFitTriggered.value = true;
+    void nextTick(() => {
+      canvas.fitAllNodes();
+    });
+  },
+  {
+    immediate: true,
+    flush: "post",
+  },
+);
+
 const { isChatVisible, isTeamAsideCompact } = useDashboardLayout({
   chatVisibleByDefault: false,
 });
@@ -121,6 +142,7 @@ function toggleSelectedNodeSharing() {
 
     <main class="h-full w-full">
       <InfiniteCanvas
+        ref="canvasRef"
         v-model:nodes="nodes"
         v-model:selected-node-ids="selectedNodeIds"
         :loading="isWorkspaceInitialLoading"
@@ -129,8 +151,8 @@ function toggleSelectedNodeSharing() {
         @remove-node="removeNode"
         @open-node="openNodePage"
       >
-        <template #node="{ node, selected }">
-          <WorkspaceNodeCard :node="node" :selected="selected" />
+        <template #node="{ node, selected, allNodes }">
+          <WorkspaceNodeCard :node="node" :selected="selected" :all-nodes="allNodes" />
         </template>
       </InfiniteCanvas>
     </main>
@@ -358,6 +380,7 @@ function toggleSelectedNodeSharing() {
     <WorkspaceEditorModal
       :content="nodeDraft.content"
       :mode="editorMode"
+      :node-type="nodeDraft.nodeType"
       :open="editorOpen"
       :title="nodeDraft.title"
       :tint="nodeDraft.tint"
@@ -368,6 +391,7 @@ function toggleSelectedNodeSharing() {
       @submit="submitNodeEditor"
       @update:content="nodeDraft.content = $event"
       @update:featured-blocks="nodeDraft.featuredBlocks = $event"
+      @update:node-type="nodeDraft.nodeType = $event"
       @update:tint="nodeDraft.tint = $event"
       @update:title="nodeDraft.title = $event"
     />

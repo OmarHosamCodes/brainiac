@@ -20,7 +20,7 @@ export function getWorkspaceTaskPriorityBadgeClass(
 }
 
 export function formatWorkspaceRelativeTaskMeta(item: WorkspaceCollectedTask) {
-  const fragments = [`${item.tabTitle} / ${item.blockTitle}`];
+  const fragments = [`${item.sourceNodeTitle} / ${item.tabTitle} / ${item.blockTitle}`];
 
   if (item.task.domain) {
     fragments.push(getWorkspaceTaskDomainLabel(item.task.domain));

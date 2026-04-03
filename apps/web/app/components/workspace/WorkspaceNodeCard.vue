@@ -2,30 +2,34 @@
 import type { CanvasNodeModel } from "~/composables/useCanvas";
 
 import {
-  getWorkspaceNodeDashboardDetails,
-  getWorkspaceNodePreview,
-  getWorkspaceNodeStats,
-  type WorkspaceBlock,
-  type WorkspaceNode,
+    getWorkspaceNodeDashboardDetails,
+    getWorkspaceNodePreview,
+    getWorkspaceNodeStats,
+    type WorkspaceBlock,
+    type WorkspaceNode,
 } from "@brainiac/workspace";
 
 import { getWorkspaceBlockRegistryEntry } from "~/utils/workspace-block-registry";
 import {
-  getWorkspaceNodeTintOption,
-  getWorkspaceNodeTintStyle,
+    getWorkspaceNodeTintOption,
+    getWorkspaceNodeTintStyle,
 } from "~/utils/workspace-node-dashboard";
 
 const props = defineProps<{
   node: CanvasNodeModel;
   selected: boolean;
+  allNodes?: CanvasNodeModel[];
 }>();
 
 const workspaceNode = computed(() => props.node as WorkspaceNode);
-const featuredDetails = computed(() => getWorkspaceNodeDashboardDetails(workspaceNode.value));
+const allWorkspaceNodes = computed(() => (props.allNodes ?? []) as WorkspaceNode[]);
+const featuredDetails = computed(() =>
+  getWorkspaceNodeDashboardDetails(workspaceNode.value, allWorkspaceNodes.value),
+);
 const preview = computed(() =>
   getWorkspaceNodePreview(workspaceNode.value, featuredDetails.value.length > 0 ? 120 : 180),
 );
-const stats = computed(() => getWorkspaceNodeStats(workspaceNode.value));
+const stats = computed(() => getWorkspaceNodeStats(workspaceNode.value, allWorkspaceNodes.value));
 const tintOption = computed(() => getWorkspaceNodeTintOption(workspaceNode.value.dashboard.tint));
 const tintStyle = computed(() => getWorkspaceNodeTintStyle(workspaceNode.value.dashboard.tint));
 
@@ -67,6 +71,11 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
       </div>
 
       <div class="flex items-center gap-1.5">
+        <div
+          class="px-2 py-0.5 rounded-md bg-[rgb(var(--workspace-node-rgb)/0.1)] text-[9px] font-bold text-[rgb(var(--workspace-node-rgb))] uppercase tracking-wider"
+        >
+          {{ workspaceNode.nodeType === "orchestrator" ? "orch" : "std" }}
+        </div>
         <div
           class="px-2 py-0.5 rounded-md bg-[rgb(var(--workspace-node-rgb)/0.1)] text-[9px] font-bold text-[rgb(var(--workspace-node-rgb))] uppercase tracking-wider"
         >

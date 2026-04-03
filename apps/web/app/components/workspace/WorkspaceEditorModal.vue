@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import {
-  WORKSPACE_NODE_DASHBOARD_DETAIL_LIMIT,
-  type WorkspaceNodeDashboardFeaturedBlock,
-  type WorkspaceNodeDashboardSelectableBlock,
-  type WorkspaceNodeTint,
+    WORKSPACE_NODE_DASHBOARD_DETAIL_LIMIT,
+    type WorkspaceNodeDashboardFeaturedBlock,
+    type WorkspaceNodeDashboardSelectableBlock,
+    type WorkspaceNodeTint,
+    type WorkspaceNodeType,
 } from "@brainiac/workspace";
 
 import { getWorkspaceBlockRegistryEntry } from "~/utils/workspace-block-registry";
 import {
-  getWorkspaceNodeTintStyle,
-  workspaceNodeTintOptions,
+    getWorkspaceNodeTintStyle,
+    workspaceNodeTintOptions,
 } from "~/utils/workspace-node-dashboard";
 
 const props = defineProps<{
@@ -17,6 +18,7 @@ const props = defineProps<{
   content: string;
   featuredBlocks: WorkspaceNodeDashboardFeaturedBlock[];
   mode: "create" | "edit";
+  nodeType: WorkspaceNodeType;
   open: boolean;
   tint: WorkspaceNodeTint;
   title: string;
@@ -28,6 +30,7 @@ const emit = defineEmits<{
   submit: [];
   "update:featured-blocks": [value: WorkspaceNodeDashboardFeaturedBlock[]];
   "update:content": [value: string];
+  "update:node-type": [value: WorkspaceNodeType];
   "update:tint": [value: WorkspaceNodeTint];
   "update:title": [value: string];
 }>();
@@ -151,6 +154,47 @@ function getTintOptionStyle(value: WorkspaceNodeTint) {
 
           <div class="space-y-3">
             <div>
+              <p class="text-sm font-medium text-highlighted">Node type</p>
+              <p class="mt-1 text-sm text-muted">
+                Orchestrator nodes can connect to standard nodes and coordinate task load.
+              </p>
+            </div>
+
+            <div class="grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                class="rounded-2xl border p-3 text-left transition"
+                :class="
+                  nodeType === 'standard'
+                    ? 'border-primary/40 bg-default'
+                    : 'border-muted/60 bg-elevated/40 hover:border-muted hover:bg-elevated/70'
+                "
+                @click="emit('update:node-type', 'standard')"
+              >
+                <p class="text-sm font-medium text-highlighted">Standard</p>
+                <p class="mt-1 text-xs text-muted">Regular workspace node with no graph links.</p>
+              </button>
+
+              <button
+                type="button"
+                class="rounded-2xl border p-3 text-left transition"
+                :class="
+                  nodeType === 'orchestrator'
+                    ? 'border-primary/40 bg-default'
+                    : 'border-muted/60 bg-elevated/40 hover:border-muted hover:bg-elevated/70'
+                "
+                @click="emit('update:node-type', 'orchestrator')"
+              >
+                <p class="text-sm font-medium text-highlighted">Orchestrator</p>
+                <p class="mt-1 text-xs text-muted">
+                  Can connect to standard nodes and aggregate cross-node tasks.
+                </p>
+              </button>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div>
               <p class="text-sm font-medium text-highlighted">Node tint</p>
               <p class="mt-1 text-sm text-muted">
                 Give the node a visual identity on the canvas without changing its structure.
@@ -224,7 +268,7 @@ function getTintOptionStyle(value: WorkspaceNodeTint) {
               description="Task lists show progress, kanban boards show card counts, scorecards show target coverage, and other block types are summarized automatically."
             />
 
-            <div class="max-h-[25rem] space-y-4 overflow-y-auto pr-1">
+            <div class="max-h-100 space-y-4 overflow-y-auto pr-1">
               <section
                 v-for="group in groupedBlockOptions"
                 :key="group.tabId"

@@ -1,25 +1,25 @@
 <script setup lang="ts">
 import type {
-  WorkspaceBlock,
-  WorkspaceNode,
-  WorkspaceNodeTab,
-  WorkspaceTeamRole,
+    WorkspaceBlock,
+    WorkspaceNode,
+    WorkspaceNodeTab,
+    WorkspaceTeamRole,
 } from "@brainiac/workspace";
 import {
-  useWorkspaceNodeEditorContext,
-  type WorkspaceSaveBadge,
+    useWorkspaceNodeEditorContext,
+    type WorkspaceSaveBadge,
 } from "~/components/workspace/node/context";
 import {
-  workspaceAddBlockCategories,
-  type WorkspaceAddBlockCategory,
+    workspaceAddBlockCategories,
+    type WorkspaceAddBlockCategory,
 } from "~/utils/workspace-add-block-menu";
 import {
-  workspaceBlockPresets,
-  type WorkspaceBlockPresetId,
+    workspaceBlockPresets,
+    type WorkspaceBlockPresetId,
 } from "~/utils/workspace-block-presets";
 import {
-  getWorkspaceBlockRegistryEntry,
-  workspacePrimaryBlockTypes,
+    getWorkspaceBlockRegistryEntry,
+    workspacePrimaryBlockTypes,
 } from "~/utils/workspace-block-registry";
 
 type WorkspaceTeamSummary = {
@@ -362,6 +362,11 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
                     {{ nodeVisibilityLabel }}
                   </span>
                   <span class="text-[11px] text-muted">Owner: {{ nodeOwnerLabel }}</span>
+                  <span
+                    class="inline-flex items-center rounded-full border border-muted/40 bg-default px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted"
+                  >
+                    Type: {{ node.nodeType }}
+                  </span>
                   <span
                     v-if="activeTeamRoleLabel"
                     class="inline-flex items-center rounded-full border border-muted/40 bg-default px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted"

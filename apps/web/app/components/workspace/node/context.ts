@@ -1,4 +1,3 @@
-import type { DropdownMenuItem } from "@nuxt/ui";
 import type {
   WorkspaceBlock,
   WorkspaceCollectedTask,
@@ -15,6 +14,7 @@ import type {
   WorkspaceTimeOrchestratorSummary,
   WorkspaceTimelineBlock,
 } from "@brainiac/workspace";
+import type { DropdownMenuItem } from "@nuxt/ui";
 import type { ComputedRef, InjectionKey, Ref } from "vue";
 import { inject } from "vue";
 import type { WorkspaceBlockPresetId } from "~/utils/workspace-block-presets";
@@ -88,6 +88,7 @@ export type WorkspaceNodeEditorContext = {
     taskId: string,
     mutator: (task: WorkspaceTask) => void,
   ): void;
+  mutateCollectedTask(item: WorkspaceCollectedTask, mutator: (task: WorkspaceTask) => void): void;
   removeTask(tabId: string, blockId: string, taskId: string): void;
   addDecisionItem(tabId: string, blockId: string, list: "pros" | "cons"): void;
   mutateDecisionItem(

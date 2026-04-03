@@ -207,6 +207,7 @@ function buildWorkspaceNodeDashboardDetail(
   node: WorkspaceNode,
   tab: WorkspaceNodeTab,
   block: WorkspaceBlock,
+  allNodes?: WorkspaceNode[],
 ): WorkspaceNodeDashboardDetail {
   if (block.type === "task-list") {
     const completedTasks = block.tasks.filter((task) => task.completed).length;
@@ -683,7 +684,7 @@ function buildWorkspaceNodeDashboardDetail(
   }
 
   if (block.type === "time-orchestrator") {
-    const orchestration = getTimeOrchestratorSummary(node, block.settings);
+    const orchestration = getTimeOrchestratorSummary(node, block.settings, new Date(), allNodes);
     const estimateHours = Number((orchestration.totalEstimateMinutes / 60).toFixed(1));
 
     return {
@@ -2196,12 +2197,12 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
   return "Open the node to add tabs, blocks, and working context.";
 }
 
-export function getWorkspaceNodeStats(node: WorkspaceNode) {
+export function getWorkspaceNodeStats(node: WorkspaceNode, allNodes?: WorkspaceNode[]) {
   const tabsCount = node.tabs.length;
   const blocksCount = node.tabs.reduce((count, tab) => count + tab.blocks.length, 0);
-  const tasks = collectWorkspaceNodeTasks(node);
+  const tasks = collectWorkspaceNodeTasks(node, allNodes);
   const completedTasks = tasks.filter(({ task }) => task.completed).length;
-  const overdueTasks = getTimeOrchestratorSummary(node).overdue.length;
+  const overdueTasks = getTimeOrchestratorSummary(node, {}, new Date(), allNodes).overdue.length;
 
   return {
     tabsCount,
@@ -2228,6 +2229,7 @@ export function getWorkspaceNodeDashboardSelectableBlocks(
 
 export function getWorkspaceNodeDashboardDetails(
   node: WorkspaceNode,
+  allNodes?: WorkspaceNode[],
 ): WorkspaceNodeDashboardDetail[] {
   return node.dashboard.featuredBlocks.flatMap((selection) => {
     const tab = node.tabs.find((entry) => entry.id === selection.tabId);
@@ -2237,7 +2239,7 @@ export function getWorkspaceNodeDashboardDetails(
       return [];
     }
 
-    return [buildWorkspaceNodeDashboardDetail(node, tab, block)];
+    return [buildWorkspaceNodeDashboardDetail(node, tab, block, allNodes)];
   });
 }
 

@@ -82,11 +82,13 @@ import {
   workspaceMarketplaceSaveInputSchema,
   workspaceMessageHouseBlockSchema,
   workspaceMessageHousePillarSchema,
+  workspaceNodeConnectionSchema,
   workspaceNodeDashboardFeaturedBlockSchema,
   workspaceNodeDashboardSchema,
   workspaceNodeSchema,
   workspaceNodeTabSchema,
   workspaceNodeTintSchema,
+  workspaceNodeTypeSchema,
   workspaceNodeViewStateSchema,
   workspaceNodeVisibilitySchema,
   workspaceNotesBlockSchema,
@@ -202,6 +204,7 @@ export type WorkspaceTimelineMilestoneStatus = z.infer<
   typeof workspaceTimelineMilestoneStatusSchema
 >;
 export type WorkspaceNodeTint = z.infer<typeof workspaceNodeTintSchema>;
+export type WorkspaceNodeType = z.infer<typeof workspaceNodeTypeSchema>;
 export type WorkspaceNodeVisibility = z.infer<typeof workspaceNodeVisibilitySchema>;
 export type WorkspaceTeamRole = z.infer<typeof workspaceTeamRoleSchema>;
 export type WorkspaceTimelineMilestone = z.infer<typeof workspaceTimelineMilestoneSchema>;
@@ -337,6 +340,7 @@ export type WorkspaceNodeDashboardFeaturedBlock = z.infer<
   typeof workspaceNodeDashboardFeaturedBlockSchema
 >;
 export type WorkspaceNodeDashboard = z.infer<typeof workspaceNodeDashboardSchema>;
+export type WorkspaceNodeConnection = z.infer<typeof workspaceNodeConnectionSchema>;
 export type WorkspaceNode = z.infer<typeof workspaceNodeSchema>;
 export type WorkspaceSaveInput = z.infer<typeof workspaceSaveInputSchema>;
 export type WorkspaceMarketplacePayload = z.infer<typeof workspaceMarketplacePayloadSchema>;
@@ -346,6 +350,8 @@ export type WorkspaceCustomBlockValue = z.infer<typeof workspaceCustomBlockValue
 export type WorkspaceNodeRecord = WorkspaceNode;
 
 export type WorkspaceCollectedTask = {
+  sourceNodeId: string;
+  sourceNodeTitle: string;
   blockId: string;
   blockTitle: string;
   tabId: string;

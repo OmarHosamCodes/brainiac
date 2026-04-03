@@ -7,10 +7,11 @@ import {
   DEFAULT_WORKSPACE_NODE_WIDTH,
   getWorkspaceNodeDashboardSelectableBlocks,
   normalizeWorkspaceNode,
+  type WorkspaceNode,
   type WorkspaceNodeDashboardFeaturedBlock,
   type WorkspaceNodeDashboardSelectableBlock,
-  type WorkspaceNode,
   type WorkspaceNodeTint,
+  type WorkspaceNodeType,
 } from "@brainiac/workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { defineStore, skipHydrate } from "pinia";
@@ -48,11 +49,13 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   const nodeDraft = reactive<{
     title: string;
     content: string;
+    nodeType: WorkspaceNodeType;
     tint: WorkspaceNodeTint;
     featuredBlocks: WorkspaceNodeDashboardFeaturedBlock[];
   }>({
     title: "",
     content: "",
+    nodeType: "standard",
     tint: "neutral",
     featuredBlocks: [],
   });
@@ -151,6 +154,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   function resetDraft() {
     nodeDraft.title = "";
     nodeDraft.content = "";
+    nodeDraft.nodeType = "standard";
     nodeDraft.tint = "neutral";
     nodeDraft.featuredBlocks = [];
   }
@@ -336,6 +340,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     pendingNodePosition.value = null;
     nodeDraft.title = node.title;
     nodeDraft.content = node.content;
+    nodeDraft.nodeType = node.nodeType;
     nodeDraft.tint = node.dashboard.tint;
     nodeDraft.featuredBlocks = [...node.dashboard.featuredBlocks];
     editorOpen.value = true;
@@ -386,16 +391,18 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       nodes.value = nodes.value.map((node) =>
         node.id === activeNodeId.value
           ? normalizeWorkspaceNode({
-              ...node,
-              title,
-              content,
-              label: title,
-              dashboard: {
-                tint: nodeDraft.tint,
-                featuredBlocks: [...nodeDraft.featuredBlocks],
-              },
-              updatedAt: timestamp,
-            })
+            ...node,
+            title,
+            content,
+            nodeType: nodeDraft.nodeType,
+            connections: nodeDraft.nodeType === "orchestrator" ? node.connections : [],
+            label: title,
+            dashboard: {
+              tint: nodeDraft.tint,
+              featuredBlocks: [...nodeDraft.featuredBlocks],
+            },
+            updatedAt: timestamp,
+          })
           : node,
       );
 
@@ -408,6 +415,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       id: createNodeId(),
       title,
       content,
+      nodeType: nodeDraft.nodeType,
+      connections: [],
       label: title,
       x: position.x - 160,
       y: position.y - 110,

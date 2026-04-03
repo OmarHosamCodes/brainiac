@@ -48,6 +48,29 @@ function withOwnerDefaults(node: WorkspaceNode, ownerUserId: string): WorkspaceN
   });
 }
 
+function assertValidNodeConnections(
+  persistedNodes: WorkspaceNode[],
+  accessibleNodesById: Map<string, WorkspaceNode>,
+) {
+  for (const node of persistedNodes) {
+    if (node.nodeType !== "orchestrator") {
+      if (node.connections.length > 0) {
+        throw new ORPCError("BAD_REQUEST");
+      }
+
+      continue;
+    }
+
+    for (const connection of node.connections) {
+      const targetNode = accessibleNodesById.get(connection.targetNodeId);
+
+      if (!targetNode || targetNode.id === node.id || targetNode.nodeType === "orchestrator") {
+        throw new ORPCError("BAD_REQUEST");
+      }
+    }
+  }
+}
+
 async function getMembershipMapByUser(userId: string) {
   const memberships = await db
     .select({
@@ -167,10 +190,20 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
   const membershipMap = await getMembershipMapByUser(userId);
   const ownedNodes: WorkspaceNode[] = [];
   const sharedNodesByOwner = new Map<string, WorkspaceNode[]>();
+  const accessibleNodesById = new Map<string, WorkspaceNode>();
 
   for (const nodeInput of nodes) {
     const node = normalizeWorkspaceNode(nodeInput);
     const ownerUserId = node.ownerUserId ?? userId;
+    const normalizedNode = withOwnerDefaults(
+      {
+        ...node,
+        ownerUserId,
+      },
+      ownerUserId,
+    );
+
+    accessibleNodesById.set(normalizedNode.id, normalizedNode);
 
     if (ownerUserId === userId) {
       const teamId = node.teamId ?? null;
@@ -234,6 +267,13 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
 
     sharedNodesByOwner.set(ownerUserId, ownerNodes);
   }
+
+  const persistedNodes = [
+    ...ownedNodes,
+    ...[...sharedNodesByOwner.values()].flatMap((ownerNodes) => ownerNodes),
+  ];
+
+  assertValidNodeConnections(persistedNodes, accessibleNodesById);
 
   await upsertWorkspaceNodes(userId, ownedNodes, now);
 
