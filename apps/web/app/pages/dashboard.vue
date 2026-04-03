@@ -25,7 +25,9 @@ const {
   workspaceQuery,
 } = useWorkspaceBoard();
 
-const { isChatVisible, isTeamAsideCompact } = useDashboardLayout();
+const { isChatVisible, isTeamAsideCompact } = useDashboardLayout({
+  chatVisibleByDefault: false,
+});
 
 const teamSelection = useTeamSelection();
 const {
