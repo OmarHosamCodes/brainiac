@@ -16,6 +16,34 @@ function createComputed<T>(getter: () => T): Ref<T> {
     } as Ref<T>;
 }
 
+function createReactive<T extends object>(value: T): T {
+    return value;
+}
+
+function resolveWatchSource<T>(source: Ref<T> | (() => T)): T {
+    return typeof source === "function" ? source() : source.value;
+}
+
+function createWatch<T>(
+    source: Ref<T> | (() => T),
+    callback: (value: T, previousValue: T | undefined) => void,
+    options?: { immediate?: boolean },
+) {
+    if (options?.immediate) {
+        callback(resolveWatchSource(source), undefined);
+    }
+
+    return () => undefined;
+}
+
+function createNextTick(callback?: () => void | Promise<void>) {
+    return Promise.resolve().then(async () => {
+        if (callback) {
+            await callback();
+        }
+    });
+}
+
 type TeamRole = "owner" | "editor" | "viewer";
 
 type TeamSummary = {
@@ -41,11 +69,21 @@ type TeamDetail = TeamSummary & {
 };
 
 type MutationHandler = (input: unknown) => Promise<unknown>;
+type QueryResult = {
+    data: Ref<unknown>;
+    error: Ref<unknown>;
+    isFetching: Ref<boolean>;
+    isLoading: Ref<boolean>;
+    isRefetching: Ref<boolean>;
+    refetch: () => Promise<unknown>;
+    status: Ref<string>;
+};
 
 type TeamManagementTestRuntime = {
     authSession: Ref<{ data: { user: { id: string } } | null }>;
     mutationHandlers: MutationHandler[];
     mutationIndex: number;
+    queryResult: QueryResult | null;
     queryCache: Map<string, unknown>;
     toastEvents: Array<{
         title?: string;
@@ -106,14 +144,19 @@ const runtime: TeamManagementTestRuntime = {
     }),
     mutationHandlers: [],
     mutationIndex: 0,
+    queryResult: null,
     queryCache: new Map(),
     toastEvents: [],
     orpc: createOrpcMock(),
 };
 
 mock.module("vue", () => ({
-    ref: createRef,
     computed: createComputed,
+    nextTick: createNextTick,
+    onScopeDispose: () => undefined,
+    reactive: createReactive,
+    ref: createRef,
+    watch: createWatch,
 }));
 
 const queryClient = {
@@ -155,9 +198,26 @@ mock.module("@tanstack/vue-query", () => ({
 
         return {
             mutateAsync: (input: unknown) => handler(input),
+            mutate: async (input: unknown, options?: { onError?: () => void }) => {
+                try {
+                    await handler(input);
+                } catch {
+                    options?.onError?.();
+                }
+            },
             isPending: createRef(false),
         };
     },
+    useQuery: () =>
+        runtime.queryResult ?? {
+            data: createRef(undefined),
+            error: createRef(null),
+            isFetching: createRef(false),
+            isLoading: createRef(false),
+            isRefetching: createRef(false),
+            refetch: async () => undefined,
+            status: createRef("success"),
+        },
     useQueryClient: () => queryClient,
 }));
 
@@ -173,6 +233,7 @@ mock.module("@tanstack/vue-query", () => ({
 beforeEach(() => {
     runtime.mutationHandlers = [];
     runtime.mutationIndex = 0;
+    runtime.queryResult = null;
     runtime.queryCache.clear();
     runtime.toastEvents = [];
     runtime.authSession.value = {
@@ -185,5 +246,4 @@ beforeEach(() => {
     runtime.orpc = createOrpcMock();
 });
 
-export type { TeamDetail, TeamManagementTestRuntime, TeamMember, TeamRole, TeamSummary };
-
+export type { QueryResult, TeamDetail, TeamManagementTestRuntime, TeamMember, TeamRole, TeamSummary };

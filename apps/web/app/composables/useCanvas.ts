@@ -1,4 +1,8 @@
-import type { WorkspaceNodeTint } from "@brainiac/workspace";
+import type {
+  WorkspaceNodeConnection,
+  WorkspaceNodeTint,
+  WorkspaceNodeType,
+} from "@brainiac/workspace";
 import {
   computed,
   onBeforeUnmount,
@@ -21,6 +25,8 @@ export interface CanvasNodeModel extends CanvasRect {
   label?: string;
   title?: string;
   content?: string;
+  nodeType?: WorkspaceNodeType;
+  connections?: WorkspaceNodeConnection[];
   minWidth?: number;
   minHeight?: number;
   dashboard?: {
