@@ -19,6 +19,10 @@ import {
   getWorkspaceNodeTintOption,
   getWorkspaceNodeTintStyle,
 } from "~/utils/workspace-node-dashboard";
+import {
+  getCanonicalConnectionPair,
+  getEligibleConnectionTargetIds,
+} from "~/utils/workspace-node-connections";
 
 type ResizeHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -50,10 +54,54 @@ type CreateNodePayload = {
 };
 
 type ContextTarget = {
-  nodeId: string | null;
+  kind: "canvas";
   worldX: number;
   worldY: number;
 };
+type NodeContextTarget = {
+  kind: "node";
+  nodeId: string;
+  worldX: number;
+  worldY: number;
+};
+type ConnectionContextTarget = {
+  kind: "connection";
+  orchestratorNodeId: string;
+  standardNodeId: string;
+  worldX: number;
+  worldY: number;
+};
+type CanvasContextTarget = ContextTarget | NodeContextTarget | ConnectionContextTarget;
+type CanvasPoint = {
+  x: number;
+  y: number;
+};
+type CanvasConnectionEdge = {
+  key: string;
+  orchestratorNodeId: string;
+  standardNodeId: string;
+  colorRgb: string;
+  path: string;
+  hitPath: string;
+};
+type ConnectState =
+  | {
+      mode: "idle";
+    }
+  | {
+      mode: "armed";
+      sourceNodeId: string;
+      eligibleTargetIds: string[];
+    }
+  | {
+      mode: "dragging";
+      sourceNodeId: string;
+      eligibleTargetIds: string[];
+      pointerId: number;
+      pointerWorldX: number;
+      pointerWorldY: number;
+      hoveredTargetId: string | null;
+    };
 
 const MINIMAP_WIDTH = 224;
 const MINIMAP_HEIGHT = 160;
@@ -82,6 +130,8 @@ const emit = defineEmits<{
   "update:selectedNodeIds": [selectedNodeIds: string[]];
   "create-node": [payload: CreateNodePayload];
   "edit-node": [payload: { nodeId: string }];
+  "connect-node-pair": [payload: { orchestratorNodeId: string; standardNodeId: string }];
+  "disconnect-node-pair": [payload: { orchestratorNodeId: string; standardNodeId: string }];
   "remove-node": [payload: { nodeId: string }];
   "open-node": [payload: { nodeId: string }];
 }>();
@@ -118,17 +168,47 @@ const minimapPointerId = ref<number | null>(null);
 /** Frozen during minimap drag so bounds/scale do not shift with the camera. */
 const minimapSnapshotScene = ref<CanvasRect | null>(null);
 const minimapSnapshotScale = ref<number | null>(null);
-const contextTarget = ref<ContextTarget>({
-  nodeId: null,
+const contextTarget = ref<CanvasContextTarget>({
+  kind: "canvas",
   worldX: 0,
   worldY: 0,
+});
+const connectState = ref<ConnectState>({
+  mode: "idle",
 });
 let handleWindowBlur: (() => void) | null = null;
 
 const selectedNodeIdSet = computed(() => new Set(props.selectedNodeIds));
-const selectedNodes = computed(() =>
-  props.nodes.filter((node) => selectedNodeIdSet.value.has(node.id)),
+const nodeById = computed(() => new Map(props.nodes.map((node) => [node.id, node])));
+const isConnectModeActive = computed(() => connectState.value.mode !== "idle");
+const connectSourceNodeId = computed(() =>
+  connectState.value.mode === "idle" ? null : connectState.value.sourceNodeId,
 );
+const connectModeTargetIdSet = computed(
+  () =>
+    new Set(connectState.value.mode === "idle" ? [] : connectState.value.eligibleTargetIds),
+);
+const hoveredConnectTargetId = computed(() =>
+  connectState.value.mode === "dragging" ? connectState.value.hoveredTargetId : null,
+);
+const connectSourceNode = computed(() =>
+  connectSourceNodeId.value ? nodeById.value.get(connectSourceNodeId.value) ?? null : null,
+);
+const connectModeInstruction = computed(() => {
+  const sourceNode = connectSourceNode.value;
+
+  if (!sourceNode || connectState.value.mode === "idle") {
+    return "";
+  }
+
+  const targetLabel = sourceNode.nodeType === "orchestrator" ? "standard" : "orchestrator";
+
+  if (connectState.value.mode === "dragging") {
+    return `Release over a highlighted ${targetLabel} node to connect`;
+  }
+
+  return `Click a highlighted ${targetLabel} node or drag from ${getNodeHeading(sourceNode)}`;
+});
 
 const resizeHandles = [
   {
@@ -222,14 +302,6 @@ function createRectUnion(rects: CanvasRect[]) {
   } satisfies CanvasRect;
 }
 
-function frameSelection() {
-  const bounds = createRectUnion(selectedNodes.value);
-
-  if (bounds) {
-    fitToRect(bounds, FIT_PADDING);
-  }
-}
-
 function fitAllNodes() {
   const bounds = createRectUnion(props.nodes);
 
@@ -245,6 +317,257 @@ defineExpose({
   fitAllNodes,
 });
 
+function getNodeCenter(node: CanvasNodeModel): CanvasPoint {
+  return {
+    x: node.x + node.width / 2,
+    y: node.y + node.height / 2,
+  };
+}
+
+function getNodeAnchorTowardsPoint(node: CanvasNodeModel, point: CanvasPoint): CanvasPoint {
+  const center = getNodeCenter(node);
+  const deltaX = point.x - center.x;
+  const deltaY = point.y - center.y;
+
+  if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+    return {
+      x: deltaX >= 0 ? node.x + node.width : node.x,
+      y: center.y,
+    };
+  }
+
+  return {
+    x: center.x,
+    y: deltaY >= 0 ? node.y + node.height : node.y,
+  };
+}
+
+function toSvgPoint(point: CanvasPoint, bounds: CanvasRect): CanvasPoint {
+  return {
+    x: point.x - bounds.x,
+    y: point.y - bounds.y,
+  };
+}
+
+function buildConnectionPath(startPoint: CanvasPoint, endPoint: CanvasPoint, bounds: CanvasRect) {
+  const start = toSvgPoint(startPoint, bounds);
+  const end = toSvgPoint(endPoint, bounds);
+  const deltaX = end.x - start.x;
+  const deltaY = end.y - start.y;
+  const controlOffsetX = Math.max(72, Math.min(220, Math.abs(deltaX) * 0.48));
+  const controlOffsetY = Math.min(96, Math.abs(deltaY) * 0.2);
+  const directionX = deltaX >= 0 ? 1 : -1;
+  const directionY = deltaY >= 0 ? 1 : -1;
+
+  return [
+    `M ${start.x} ${start.y}`,
+    `C ${start.x + controlOffsetX * directionX} ${start.y + controlOffsetY * directionY}`,
+    `${end.x - controlOffsetX * directionX} ${end.y - controlOffsetY * directionY}`,
+    `${end.x} ${end.y}`,
+  ].join(" ");
+}
+
+function getConnectionKey(orchestratorNodeId: string, standardNodeId: string) {
+  return `${orchestratorNodeId}:${standardNodeId}`;
+}
+
+function findHoveredConnectTargetId(point: CanvasPoint, eligibleTargetIds: string[]) {
+  for (const nodeId of eligibleTargetIds) {
+    const node = nodeById.value.get(nodeId);
+
+    if (
+      node &&
+      point.x >= node.x &&
+      point.x <= node.x + node.width &&
+      point.y >= node.y &&
+      point.y <= node.y + node.height
+    ) {
+      return node.id;
+    }
+  }
+
+  return null;
+}
+
+function cancelConnectMode() {
+  connectState.value = {
+    mode: "idle",
+  };
+}
+
+function armConnectMode(sourceNodeId: string) {
+  const eligibleTargetIds = getEligibleConnectionTargetIds(props.nodes, sourceNodeId);
+
+  if (eligibleTargetIds.length === 0) {
+    cancelConnectMode();
+    return;
+  }
+
+  selectNode(sourceNodeId);
+  connectState.value = {
+    mode: "armed",
+    sourceNodeId,
+    eligibleTargetIds,
+  };
+}
+
+function restoreConnectMode(sourceNodeId: string, eligibleTargetIds: string[]) {
+  if (eligibleTargetIds.length === 0) {
+    cancelConnectMode();
+    return;
+  }
+
+  connectState.value = {
+    mode: "armed",
+    sourceNodeId,
+    eligibleTargetIds,
+  };
+}
+
+function refreshConnectMode() {
+  if (connectState.value.mode === "idle") {
+    return;
+  }
+
+  const sourceNodeId = connectState.value.sourceNodeId;
+  const sourceNode = nodeById.value.get(sourceNodeId);
+
+  if (!sourceNode) {
+    cancelConnectMode();
+    return;
+  }
+
+  const eligibleTargetIds = getEligibleConnectionTargetIds(props.nodes, sourceNodeId);
+
+  if (eligibleTargetIds.length === 0) {
+    cancelConnectMode();
+    return;
+  }
+
+  if (connectState.value.mode === "dragging") {
+    connectState.value = {
+      ...connectState.value,
+      eligibleTargetIds,
+      hoveredTargetId: findHoveredConnectTargetId(
+        {
+          x: connectState.value.pointerWorldX,
+          y: connectState.value.pointerWorldY,
+        },
+        eligibleTargetIds,
+      ),
+    };
+    return;
+  }
+
+  restoreConnectMode(sourceNodeId, eligibleTargetIds);
+}
+
+function startConnectionDrag(event: PointerEvent, node: CanvasNodeModel) {
+  const worldPoint = screenToWorld(event.clientX, event.clientY);
+
+  if (!worldPoint || connectState.value.mode !== "armed" || connectState.value.sourceNodeId !== node.id) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  selectNode(node.id);
+  connectState.value = {
+    mode: "dragging",
+    sourceNodeId: node.id,
+    eligibleTargetIds: connectState.value.eligibleTargetIds,
+    pointerId: event.pointerId,
+    pointerWorldX: worldPoint.x,
+    pointerWorldY: worldPoint.y,
+    hoveredTargetId: findHoveredConnectTargetId(worldPoint, connectState.value.eligibleTargetIds),
+  };
+}
+
+const previewWorldPoint = computed<CanvasPoint | null>(() =>
+  connectState.value.mode === "dragging"
+    ? {
+        x: connectState.value.pointerWorldX,
+        y: connectState.value.pointerWorldY,
+      }
+    : null,
+);
+
+const canvasSvgBounds = computed(() => {
+  const previewRect = previewWorldPoint.value
+    ? [
+        {
+          x: previewWorldPoint.value.x,
+          y: previewWorldPoint.value.y,
+          width: 1,
+          height: 1,
+        } satisfies CanvasRect,
+      ]
+    : [];
+
+  return (
+    createRectUnion([...props.nodes, visibleWorldRect.value, ...previewRect]) ?? {
+      x: 0,
+      y: 0,
+      width: 1,
+      height: 1,
+    }
+  );
+});
+
+const canvasSvgStyle = computed<CSSProperties>(() => ({
+  left: `${canvasSvgBounds.value.x}px`,
+  top: `${canvasSvgBounds.value.y}px`,
+  width: `${canvasSvgBounds.value.width}px`,
+  height: `${canvasSvgBounds.value.height}px`,
+}));
+
+const canvasConnectionEdges = computed<CanvasConnectionEdge[]>(() =>
+  props.nodes.flatMap((orchestratorNode) => {
+    if (orchestratorNode.nodeType !== "orchestrator") {
+      return [];
+    }
+
+    return (orchestratorNode.connections ?? []).flatMap((connection) => {
+      const standardNode = nodeById.value.get(connection.targetNodeId);
+
+      if (!standardNode || standardNode.nodeType !== "standard") {
+        return [];
+      }
+
+      const startPoint = getNodeAnchorTowardsPoint(standardNode, getNodeCenter(orchestratorNode));
+      const endPoint = getNodeAnchorTowardsPoint(orchestratorNode, getNodeCenter(standardNode));
+
+      return [
+        {
+          key: getConnectionKey(orchestratorNode.id, standardNode.id),
+          orchestratorNodeId: orchestratorNode.id,
+          standardNodeId: standardNode.id,
+          colorRgb: getWorkspaceNodeTintOption(orchestratorNode.dashboard?.tint).rgb,
+          path: buildConnectionPath(startPoint, endPoint, canvasSvgBounds.value),
+          hitPath: buildConnectionPath(startPoint, endPoint, canvasSvgBounds.value),
+        },
+      ];
+    });
+  }),
+);
+
+const previewConnectionPath = computed(() => {
+  if (connectState.value.mode !== "dragging") {
+    return null;
+  }
+
+  const sourceNode = nodeById.value.get(connectState.value.sourceNodeId);
+  const previewPoint = previewWorldPoint.value;
+
+  if (!sourceNode || !previewPoint) {
+    return null;
+  }
+
+  const startPoint = getNodeAnchorTowardsPoint(sourceNode, previewPoint);
+
+  return buildConnectionPath(startPoint, previewPoint, canvasSvgBounds.value);
+});
+
 function getNodeStyle(node: CanvasNodeModel): CSSProperties {
   return {
     left: `${node.x}px`,
@@ -256,6 +579,31 @@ function getNodeStyle(node: CanvasNodeModel): CSSProperties {
 
 function getNodeTintStyle(node: CanvasNodeModel): CSSProperties {
   return getWorkspaceNodeTintStyle(node.dashboard?.tint);
+}
+
+function isConnectSourceNode(nodeId: string) {
+  return connectSourceNodeId.value === nodeId;
+}
+
+function isEligibleConnectTarget(nodeId: string) {
+  return connectModeTargetIdSet.value.has(nodeId);
+}
+
+function isDimmedByConnectMode(nodeId: string) {
+  return isConnectModeActive.value && !isConnectSourceNode(nodeId) && !isEligibleConnectTarget(nodeId);
+}
+
+function getNodeShellClasses(node: CanvasNodeModel) {
+  return {
+    "is-dragging": activeInteraction.value?.mode === "drag" && activeInteraction.value.nodeId === node.id,
+    "is-source": isConnectSourceNode(node.id),
+    "is-target": isEligibleConnectTarget(node.id),
+    "is-hovered-target": hoveredConnectTargetId.value === node.id,
+    "is-dimmed": isDimmedByConnectMode(node.id),
+    "is-orchestrator": node.nodeType === "orchestrator",
+    "ring-2 ring-primary-500/50 dark:ring-primary-400/50 shadow-primary-500/10":
+      selectedNodeIdSet.value.has(node.id),
+  };
 }
 
 function updateNodes(nextNodes: CanvasNodeModel[]) {
@@ -280,6 +628,39 @@ function onNodeShellPointerDown(event: PointerEvent, node: CanvasNodeModel) {
     return;
   }
 
+  if (connectState.value.mode === "armed") {
+    const sourceNode = nodeById.value.get(connectState.value.sourceNodeId) ?? null;
+
+    if (connectState.value.sourceNodeId === node.id) {
+      startConnectionDrag(event, node);
+      return;
+    }
+
+    if (connectState.value.eligibleTargetIds.includes(node.id)) {
+      const pair = getCanonicalConnectionPair(sourceNode, node);
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (pair) {
+        emit("connect-node-pair", pair);
+        cancelConnectMode();
+      }
+
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+
+  if (connectState.value.mode === "dragging") {
+    event.preventDefault();
+    event.stopPropagation();
+    return;
+  }
+
   event.preventDefault();
   event.stopPropagation();
 
@@ -298,13 +679,17 @@ function onNodeShellPointerDown(event: PointerEvent, node: CanvasNodeModel) {
 }
 
 function onNodeShellDblClick(event: MouseEvent, node: CanvasNodeModel) {
+  if (isConnectModeActive.value) {
+    return;
+  }
+
   event.preventDefault();
   event.stopPropagation();
   emit("open-node", { nodeId: node.id });
 }
 
 function beginResize(event: PointerEvent, node: CanvasNodeModel, handle: ResizeHandle) {
-  if (event.button !== 0 || isSpacePressed.value) {
+  if (event.button !== 0 || isSpacePressed.value || isConnectModeActive.value) {
     return;
   }
 
@@ -368,6 +753,22 @@ function resizeNodeRect(
 }
 
 function onWindowPointerMove(event: PointerEvent) {
+  if (connectState.value.mode === "dragging" && connectState.value.pointerId === event.pointerId) {
+    const worldPoint = screenToWorld(event.clientX, event.clientY);
+
+    if (!worldPoint) {
+      return;
+    }
+
+    connectState.value = {
+      ...connectState.value,
+      pointerWorldX: worldPoint.x,
+      pointerWorldY: worldPoint.y,
+      hoveredTargetId: findHoveredConnectTargetId(worldPoint, connectState.value.eligibleTargetIds),
+    };
+    return;
+  }
+
   const pending = pendingNodeDrag.value;
 
   if (pending && pending.pointerId === event.pointerId && !activeInteraction.value) {
@@ -444,6 +845,28 @@ function endInteraction(pointerId?: number | null) {
 }
 
 function onWindowPointerUp(event: PointerEvent) {
+  if (connectState.value.mode === "dragging" && connectState.value.pointerId === event.pointerId) {
+    if (event.type === "pointercancel") {
+      restoreConnectMode(connectState.value.sourceNodeId, connectState.value.eligibleTargetIds);
+      return;
+    }
+
+    const sourceNode = nodeById.value.get(connectState.value.sourceNodeId);
+    const targetNode = connectState.value.hoveredTargetId
+      ? nodeById.value.get(connectState.value.hoveredTargetId) ?? null
+      : null;
+    const pair = getCanonicalConnectionPair(sourceNode, targetNode);
+
+    if (pair) {
+      emit("connect-node-pair", pair);
+      cancelConnectMode();
+      return;
+    }
+
+    restoreConnectMode(connectState.value.sourceNodeId, connectState.value.eligibleTargetIds);
+    return;
+  }
+
   const pending = pendingNodeDrag.value;
 
   if (pending && pending.pointerId === event.pointerId) {
@@ -465,7 +888,8 @@ function onWindowPointerUp(event: PointerEvent) {
 function onViewportMouseDown(event: MouseEvent) {
   const target = event.target as HTMLElement | null;
   const onNode = Boolean(target?.closest("[data-canvas-node]"));
-  const allowPrimaryPan = event.button === 0 && !isSpacePressed.value && !onNode;
+  const onConnection = Boolean(target?.closest("[data-canvas-connection]"));
+  const allowPrimaryPan = event.button === 0 && !isSpacePressed.value && !onNode && !onConnection;
 
   onMouseDown(event, allowPrimaryPan ? { allowPrimaryPan: true } : undefined);
 }
@@ -473,13 +897,18 @@ function onViewportMouseDown(event: MouseEvent) {
 function onViewportPointerDown(event: PointerEvent) {
   const target = event.target as HTMLElement | null;
   const onNode = Boolean(target?.closest("[data-canvas-node]"));
-  const allowPrimaryPan = event.button === 0 && !isSpacePressed.value && !onNode;
+  const onConnection = Boolean(target?.closest("[data-canvas-connection]"));
+  const allowPrimaryPan = event.button === 0 && !isSpacePressed.value && !onNode && !onConnection;
 
-  if (event.button === 0 && !isSpacePressed.value && !onNode) {
+  if (event.button === 0 && !isSpacePressed.value && !onNode && !onConnection) {
+    if (connectState.value.mode === "armed") {
+      cancelConnectMode();
+    }
+
     clearSelection();
   }
 
-  if (activeInteraction.value) {
+  if (activeInteraction.value || connectState.value.mode === "dragging") {
     return;
   }
 
@@ -508,21 +937,44 @@ function captureContextMenu(event: MouseEvent) {
     return;
   }
 
+  const connectionElement = (event.target as HTMLElement | null)?.closest<HTMLElement>(
+    "[data-canvas-connection]",
+  );
+  const orchestratorNodeId = connectionElement?.dataset.canvasConnectionOrchestratorId;
+  const standardNodeId = connectionElement?.dataset.canvasConnectionStandardId;
+
+  if (orchestratorNodeId && standardNodeId) {
+    contextTarget.value = {
+      kind: "connection",
+      orchestratorNodeId,
+      standardNodeId,
+      worldX: worldPoint.x,
+      worldY: worldPoint.y,
+    };
+    return;
+  }
+
   const nodeElement = (event.target as HTMLElement | null)?.closest<HTMLElement>(
     "[data-canvas-node-id]",
   );
-  const nodeId = nodeElement?.dataset.canvasNodeId ?? null;
-
-  contextTarget.value = {
-    nodeId,
-    worldX: worldPoint.x,
-    worldY: worldPoint.y,
-  };
+  const nodeId = nodeElement?.dataset.canvasNodeId;
 
   if (nodeId) {
+    contextTarget.value = {
+      kind: "node",
+      nodeId,
+      worldX: worldPoint.x,
+      worldY: worldPoint.y,
+    };
     selectNode(nodeId);
     return;
   }
+
+  contextTarget.value = {
+    kind: "canvas",
+    worldX: worldPoint.x,
+    worldY: worldPoint.y,
+  };
 
   if (!isSpacePressed.value) {
     clearSelection();
@@ -530,38 +982,99 @@ function captureContextMenu(event: MouseEvent) {
 }
 
 const contextMenuItems = computed<ContextMenuItem[][]>(() => {
-  const items: ContextMenuItem[][] = [
-    [
+  const items: ContextMenuItem[][] = [];
+
+  if (contextTarget.value.kind === "canvas") {
+    const { worldX, worldY } = contextTarget.value;
+
+    items.push([
       {
         label: "Add node here",
         icon: "i-lucide-plus",
         onSelect: () => {
           emit("create-node", {
-            x: contextTarget.value.worldX,
-            y: contextTarget.value.worldY,
+            x: worldX,
+            y: worldY,
           });
         },
       },
-    ],
-  ];
+    ]);
+  }
 
-  if (contextTarget.value.nodeId) {
+  if (contextTarget.value.kind === "node") {
+    const nodeId = contextTarget.value.nodeId;
+    const eligibleTargetIds = getEligibleConnectionTargetIds(props.nodes, nodeId);
+    const isConnectSource = connectSourceNodeId.value === nodeId;
+
     items.push([
       {
         label: "Edit node",
         icon: "i-lucide-pencil",
         onSelect: () => {
-          emit("edit-node", { nodeId: contextTarget.value.nodeId! });
+          emit("edit-node", { nodeId });
         },
       },
+      ...(eligibleTargetIds.length > 0
+        ? [
+            {
+              label: isConnectSource && isConnectModeActive.value ? "Cancel connect" : "Connect",
+              icon: isConnectSource && isConnectModeActive.value ? "i-lucide-x" : "i-lucide-waypoints",
+              onSelect: () => {
+                if (isConnectSource && isConnectModeActive.value) {
+                  cancelConnectMode();
+                  return;
+                }
+
+                armConnectMode(nodeId);
+              },
+            } satisfies ContextMenuItem,
+          ]
+        : []),
       {
         label: "Remove node",
         icon: "i-lucide-trash-2",
         color: "error",
         onSelect: () => {
           emit("remove-node", {
-            nodeId: contextTarget.value.nodeId!,
+            nodeId,
           });
+        },
+      },
+    ]);
+  }
+
+  if (contextTarget.value.kind === "connection") {
+    const { orchestratorNodeId, standardNodeId } = contextTarget.value;
+
+    items.push([
+      {
+        label: "Disconnect",
+        icon: "i-lucide-unlink",
+        color: "error",
+        onSelect: () => {
+          emit("disconnect-node-pair", {
+            orchestratorNodeId,
+            standardNodeId,
+          });
+          cancelConnectMode();
+        },
+      },
+    ]);
+  }
+
+  if (
+    isConnectModeActive.value &&
+    !(
+      contextTarget.value.kind === "node" &&
+      connectSourceNodeId.value === contextTarget.value.nodeId
+    )
+  ) {
+    items.push([
+      {
+        label: "Cancel connect",
+        icon: "i-lucide-x",
+        onSelect: () => {
+          cancelConnectMode();
         },
       },
     ]);
@@ -663,8 +1176,6 @@ const viewportClasses = computed(() => ({
 const controlButtonClass =
   "inline-flex size-10 items-center justify-center rounded-2xl border border-muted/70 bg-elevated/90 text-highlighted transition hover:border-primary/60 hover:bg-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50";
 
-const canFrameSelection = computed(() => selectedNodes.value.length > 0);
-
 function focusNode(nodeId: string) {
   const node = props.nodes.find((item) => item.id === nodeId);
 
@@ -759,6 +1270,15 @@ function syncFullscreenState() {
   isFullscreen.value = document.fullscreenElement === shellRef.value;
 }
 
+function onWindowKeyDown(event: KeyboardEvent) {
+  if (event.key !== "Escape" || !isConnectModeActive.value) {
+    return;
+  }
+
+  event.preventDefault();
+  cancelConnectMode();
+}
+
 watch(
   () => props.nodes.map((node) => node.id),
   (nodeIds) => {
@@ -770,13 +1290,30 @@ watch(
   },
 );
 
+watch(
+  () =>
+    props.nodes.map((node) =>
+      [
+        node.id,
+        node.nodeType ?? "standard",
+        (node.connections ?? []).map((connection) => connection.targetNodeId).join(","),
+      ].join(":"),
+    ),
+  () => {
+    refreshConnectMode();
+  },
+  { deep: true },
+);
+
 onMounted(() => {
   document.addEventListener("fullscreenchange", syncFullscreenState);
+  window.addEventListener("keydown", onWindowKeyDown);
   window.addEventListener("pointermove", onWindowPointerMove);
   window.addEventListener("pointerup", onWindowPointerUp);
   window.addEventListener("pointercancel", onWindowPointerUp);
   handleWindowBlur = () => {
     pendingNodeDrag.value = null;
+    cancelConnectMode();
     endInteraction();
   };
   window.addEventListener("blur", handleWindowBlur);
@@ -785,6 +1322,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", syncFullscreenState);
+  window.removeEventListener("keydown", onWindowKeyDown);
   window.removeEventListener("pointermove", onWindowPointerMove);
   window.removeEventListener("pointerup", onWindowPointerUp);
   window.removeEventListener("pointercancel", onWindowPointerUp);
@@ -812,6 +1350,51 @@ onBeforeUnmount(() => {
         @wheel="onWheel"
       >
         <div class="canvas-plane" :style="canvasStyle">
+          <svg class="canvas-connections absolute overflow-visible" :style="canvasSvgStyle">
+            <defs>
+              <marker
+                v-for="edge in canvasConnectionEdges"
+                :id="`canvas-connection-arrow-${edge.key}`"
+                :key="`marker-${edge.key}`"
+                markerWidth="12"
+                markerHeight="12"
+                refX="10"
+                refY="6"
+                orient="auto"
+                markerUnits="userSpaceOnUse"
+              >
+                <path :fill="`rgb(${edge.colorRgb})`" d="M 0 0 L 12 6 L 0 12 z" />
+              </marker>
+            </defs>
+
+            <g
+              v-for="edge in canvasConnectionEdges"
+              :key="edge.key"
+              class="canvas-connection"
+              data-canvas-connection
+              :data-canvas-connection-orchestrator-id="edge.orchestratorNodeId"
+              :data-canvas-connection-standard-id="edge.standardNodeId"
+            >
+              <path
+                class="canvas-connection-path"
+                :d="edge.path"
+                :marker-end="`url(#canvas-connection-arrow-${edge.key})`"
+                :stroke="`rgb(${edge.colorRgb})`"
+              />
+              <path
+                class="canvas-connection-hit"
+                :d="edge.hitPath"
+                stroke="transparent"
+              />
+            </g>
+
+            <path
+              v-if="previewConnectionPath"
+              class="canvas-connection-preview"
+              :d="previewConnectionPath"
+            />
+          </svg>
+
           <article
             v-for="node in props.nodes"
             :key="node.id"
@@ -825,16 +1408,16 @@ onBeforeUnmount(() => {
           >
             <div
               class="canvas-node-shell group relative flex h-full cursor-grab flex-col rounded-[2rem] border border-neutral-200/50 dark:border-neutral-800/50 bg-white/80 dark:bg-neutral-950/80 shadow-2xl shadow-black/5 backdrop-blur-xl active:cursor-grabbing transition-shadow duration-300"
-              :class="{
-                'is-dragging':
-                  activeInteraction?.mode === 'drag' && activeInteraction.nodeId === node.id,
-                'ring-2 ring-primary-500/50 dark:ring-primary-400/50 shadow-primary-500/10':
-                  selectedNodeIdSet.has(node.id),
-              }"
+              :class="getNodeShellClasses(node)"
               :style="getNodeTintStyle(node)"
               @pointerdown="onNodeShellPointerDown($event, node)"
               @dblclick="onNodeShellDblClick($event, node)"
             >
+              <div
+                v-if="node.nodeType === 'orchestrator'"
+                class="pointer-events-none absolute inset-[10px] rounded-[1.6rem] border border-[rgb(var(--workspace-node-rgb)/0.28)] bg-[radial-gradient(circle_at_top,rgb(var(--workspace-node-rgb)/0.18),transparent_55%),linear-gradient(135deg,rgb(var(--workspace-node-rgb)/0.08),transparent_62%)] shadow-[inset_0_0_0_1px_rgb(var(--workspace-node-rgb)/0.18)]"
+              />
+
               <div
                 class="canvas-node-toolbar flex shrink-0 items-center justify-between gap-3 border-b border-neutral-200/30 dark:border-neutral-800/30 px-5 py-4"
               >
@@ -865,7 +1448,7 @@ onBeforeUnmount(() => {
 
               <button
                 v-for="handle in resizeHandles"
-                v-show="selectedNodeIdSet.has(node.id)"
+                v-show="selectedNodeIdSet.has(node.id) && !isConnectModeActive"
                 :key="`${node.id}-${handle.edge}`"
                 type="button"
                 class="resize-handle absolute z-20 size-4 rounded-full border-2 border-white dark:border-neutral-900 bg-primary-500 shadow-lg transition-transform hover:scale-125"
@@ -892,7 +1475,20 @@ onBeforeUnmount(() => {
     </div>
 
     <div
-      v-else-if="!props.nodes.length"
+      v-if="isConnectModeActive && connectSourceNode"
+      class="pointer-events-none absolute left-1/2 top-6 z-40 -translate-x-1/2 px-4"
+    >
+      <div class="flex items-center gap-3 rounded-full border border-neutral-200/70 bg-white/88 px-4 py-2 text-xs font-medium text-neutral-700 shadow-xl backdrop-blur-xl dark:border-neutral-800/70 dark:bg-neutral-950/88 dark:text-neutral-200">
+        <span class="inline-flex size-2.5 rounded-full bg-primary-500 shadow-[0_0_14px_rgba(59,130,246,0.55)]" />
+        <span>{{ connectModeInstruction }}</span>
+        <span class="rounded-full border border-neutral-200/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400 dark:border-neutral-800/80">
+          Esc
+        </span>
+      </div>
+    </div>
+
+    <div
+      v-if="!props.loading && !props.nodes.length"
       class="pointer-events-none absolute inset-0 flex items-center justify-center px-6"
     >
       <div
@@ -989,6 +1585,28 @@ onBeforeUnmount(() => {
   height: 0;
 }
 
+.canvas-connection-path {
+  fill: none;
+  stroke-width: 2.5px;
+  opacity: 0.82;
+  pointer-events: none;
+}
+
+.canvas-connection-hit {
+  fill: none;
+  stroke-width: 18px;
+  pointer-events: stroke;
+}
+
+.canvas-connection-preview {
+  fill: none;
+  stroke: rgb(59 130 246 / 0.9);
+  stroke-width: 2.5px;
+  stroke-dasharray: 8 8;
+  stroke-linecap: round;
+  opacity: 0.95;
+}
+
 .canvas-node {
   will-change: transform, width, height;
 }
@@ -996,11 +1614,49 @@ onBeforeUnmount(() => {
 .canvas-node-shell {
   transition:
     transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-    shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    opacity 0.2s ease,
+    filter 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .canvas-node.is-selected .canvas-node-shell {
   transform: scale(1.02);
+}
+
+.canvas-node-shell.is-orchestrator {
+  border-color: rgb(var(--workspace-node-rgb) / 0.28);
+  box-shadow:
+    0 26px 60px rgb(15 23 42 / 0.12),
+    0 0 0 1px rgb(var(--workspace-node-rgb) / 0.18);
+}
+
+.canvas-node-shell.is-source {
+  opacity: 1;
+  filter: saturate(1.06);
+  box-shadow:
+    0 28px 70px rgb(var(--workspace-node-rgb) / 0.18),
+    0 0 0 2px rgb(var(--workspace-node-rgb) / 0.3);
+}
+
+.canvas-node-shell.is-target {
+  opacity: 1;
+  filter: saturate(1.08);
+  box-shadow:
+    0 24px 60px rgb(var(--workspace-node-rgb) / 0.14),
+    0 0 0 2px rgb(var(--workspace-node-rgb) / 0.28);
+}
+
+.canvas-node-shell.is-hovered-target {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow:
+    0 32px 72px rgb(var(--workspace-node-rgb) / 0.2),
+    0 0 0 3px rgb(var(--workspace-node-rgb) / 0.38);
+}
+
+.canvas-node-shell.is-dimmed {
+  opacity: 0.24;
+  filter: grayscale(0.92) saturate(0.45);
 }
 
 .resize-handle {

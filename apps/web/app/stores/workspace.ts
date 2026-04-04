@@ -18,12 +18,17 @@ import { defineStore, skipHydrate } from "pinia";
 import { computed, nextTick, onScopeDispose, reactive, ref, watch } from "vue";
 
 import { getErrorMessage } from "~/utils/get-error-message";
+import { sanitizeConnections } from "~/utils/workspace-node-connections";
 
 type EditorMode = "create" | "edit";
 type SaveState = "idle" | "saving" | "saved" | "error";
 type NodePosition = {
   x: number;
   y: number;
+};
+type WorkspaceConnectionPair = {
+  orchestratorNodeId: string;
+  standardNodeId: string;
 };
 
 export const useWorkspaceStore = defineStore("workspace", () => {
@@ -299,6 +304,47 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     return `node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   }
 
+  function haveSameConnections(
+    leftConnections: WorkspaceNode["connections"],
+    rightConnections: WorkspaceNode["connections"],
+  ) {
+    if (leftConnections.length !== rightConnections.length) {
+      return false;
+    }
+
+    return leftConnections.every(
+      (connection, index) => connection.targetNodeId === rightConnections[index]?.targetNodeId,
+    );
+  }
+
+  function normalizeTrackedNode(node: WorkspaceNode, timestamp: string) {
+    return normalizeWorkspaceNode({
+      ...node,
+      label: node.title,
+      updatedAt: timestamp,
+    });
+  }
+
+  function applyConnectionSanitization(draftNodes: WorkspaceNode[], timestamp: string) {
+    const sanitizedNodes = sanitizeConnections(draftNodes);
+
+    sanitizedNodes.forEach((sanitizedNode, index) => {
+      const currentNode = draftNodes[index];
+
+      if (!currentNode || haveSameConnections(currentNode.connections, sanitizedNode.connections)) {
+        return;
+      }
+
+      draftNodes[index] = normalizeTrackedNode(
+        {
+          ...currentNode,
+          connections: sanitizedNode.connections,
+        },
+        timestamp,
+      );
+    });
+  }
+
   function updateNodes(mutator: (draft: WorkspaceNode[]) => void) {
     if (!workspaceReadyForEdits.value) {
       return;
@@ -357,8 +403,13 @@ export const useWorkspaceStore = defineStore("workspace", () => {
       return;
     }
 
-    nodes.value = nodes.value.filter((node) => node.id !== payload.nodeId);
-    selectedNodeIds.value = selectedNodeIds.value.filter((nodeId) => nodeId !== payload.nodeId);
+    updateNodes((draftNodes) => {
+      const timestamp = new Date().toISOString();
+      const nextNodes = draftNodes.filter((entry) => entry.id !== payload.nodeId);
+
+      applyConnectionSanitization(nextNodes, timestamp);
+      draftNodes.splice(0, draftNodes.length, ...nextNodes);
+    });
 
     deleteWorkspaceNode.mutate(
       {
@@ -371,6 +422,74 @@ export const useWorkspaceStore = defineStore("workspace", () => {
         },
       },
     );
+  }
+
+  function connectNodePair(payload: WorkspaceConnectionPair) {
+    updateNodes((draftNodes) => {
+      const orchestratorIndex = draftNodes.findIndex(
+        (node) => node.id === payload.orchestratorNodeId,
+      );
+      const standardNode = draftNodes.find((node) => node.id === payload.standardNodeId);
+
+      if (orchestratorIndex < 0 || !standardNode) {
+        return;
+      }
+
+      const orchestratorNode = draftNodes[orchestratorIndex];
+
+      if (
+        !orchestratorNode ||
+        orchestratorNode.nodeType !== "orchestrator" ||
+        standardNode.nodeType !== "standard" ||
+        orchestratorNode.connections.some(
+          (connection) => connection.targetNodeId === payload.standardNodeId,
+        )
+      ) {
+        return;
+      }
+
+      const timestamp = new Date().toISOString();
+
+      orchestratorNode.connections.push({
+        targetNodeId: payload.standardNodeId,
+      });
+      draftNodes[orchestratorIndex] = normalizeTrackedNode(orchestratorNode, timestamp);
+      applyConnectionSanitization(draftNodes, timestamp);
+    });
+  }
+
+  function disconnectNodePair(payload: WorkspaceConnectionPair) {
+    updateNodes((draftNodes) => {
+      const orchestratorIndex = draftNodes.findIndex(
+        (node) => node.id === payload.orchestratorNodeId,
+      );
+
+      if (orchestratorIndex < 0) {
+        return;
+      }
+
+      const orchestratorNode = draftNodes[orchestratorIndex];
+
+      if (!orchestratorNode || orchestratorNode.nodeType !== "orchestrator") {
+        return;
+      }
+
+      if (
+        !orchestratorNode.connections.some(
+          (connection) => connection.targetNodeId === payload.standardNodeId,
+        )
+      ) {
+        return;
+      }
+
+      const timestamp = new Date().toISOString();
+
+      orchestratorNode.connections = orchestratorNode.connections.filter(
+        (connection) => connection.targetNodeId !== payload.standardNodeId,
+      );
+      draftNodes[orchestratorIndex] = normalizeTrackedNode(orchestratorNode, timestamp);
+      applyConnectionSanitization(draftNodes, timestamp);
+    });
   }
 
   function submitNodeEditor() {
@@ -388,23 +507,34 @@ export const useWorkspaceStore = defineStore("workspace", () => {
         return;
       }
 
-      nodes.value = nodes.value.map((node) =>
-        node.id === activeNodeId.value
-          ? normalizeWorkspaceNode({
-            ...node,
-            title,
-            content,
-            nodeType: nodeDraft.nodeType,
-            connections: nodeDraft.nodeType === "orchestrator" ? node.connections : [],
-            label: title,
-            dashboard: {
-              tint: nodeDraft.tint,
-              featuredBlocks: [...nodeDraft.featuredBlocks],
-            },
-            updatedAt: timestamp,
-          })
-          : node,
-      );
+      updateNodes((draftNodes) => {
+        const nodeIndex = draftNodes.findIndex((node) => node.id === activeNodeId.value);
+
+        if (nodeIndex < 0) {
+          return;
+        }
+
+        const currentNode = draftNodes[nodeIndex];
+
+        if (!currentNode) {
+          return;
+        }
+
+        draftNodes[nodeIndex] = normalizeWorkspaceNode({
+          ...currentNode,
+          title,
+          content,
+          nodeType: nodeDraft.nodeType,
+          connections: nodeDraft.nodeType === "orchestrator" ? currentNode.connections : [],
+          label: title,
+          dashboard: {
+            tint: nodeDraft.tint,
+            featuredBlocks: [...nodeDraft.featuredBlocks],
+          },
+          updatedAt: timestamp,
+        });
+        applyConnectionSanitization(draftNodes, timestamp);
+      });
 
       closeEditor();
       return;
@@ -519,6 +649,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     closeEditor,
     openCreateNode,
     openEditNode,
+    connectNodePair,
+    disconnectNodePair,
     removeNode,
     submitNodeEditor,
     applyWorkspaceSnapshot,

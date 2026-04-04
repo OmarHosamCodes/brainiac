@@ -43,6 +43,8 @@ export function useWorkspaceBoard() {
     openCreateNode: workspaceStore.openCreateNode,
     openEditNode: workspaceStore.openEditNode,
     openNodePage,
+    connectNodePair: workspaceStore.connectNodePair,
+    disconnectNodePair: workspaceStore.disconnectNodePair,
     removeNode: workspaceStore.removeNode,
     submitNodeEditor: workspaceStore.submitNodeEditor,
   };

@@ -6,6 +6,8 @@ definePageMeta({
 const {
   authSession,
   closeEditor,
+  connectNodePair,
+  disconnectNodePair,
   editorMode,
   editorOpen,
   editorBlockOptions,
@@ -148,6 +150,8 @@ function toggleSelectedNodeSharing() {
         :loading="isWorkspaceInitialLoading"
         @create-node="openCreateNode"
         @edit-node="openEditNode"
+        @connect-node-pair="connectNodePair"
+        @disconnect-node-pair="disconnectNodePair"
         @remove-node="removeNode"
         @open-node="openNodePage"
       >

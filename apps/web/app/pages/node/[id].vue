@@ -169,46 +169,6 @@ const activeTab = computed(() => {
   return node.value.tabs.find((tab) => tab.id === activeTabId.value) ?? node.value.tabs[0] ?? null;
 });
 
-const pendingConnectionNodeId = ref<string>("");
-
-const connectedNodeIdSet = computed(
-  () => new Set(node.value?.connections.map((connection) => connection.targetNodeId) ?? []),
-);
-
-const connectedNodes = computed(() => {
-  if (!node.value || node.value.nodeType !== "orchestrator") {
-    return [];
-  }
-
-  const nodeIds = connectedNodeIdSet.value;
-
-  return draftNodes.value.filter((entry) => nodeIds.has(entry.id));
-});
-
-const availableOrchestratorTargets = computed(() => {
-  if (!node.value || node.value.nodeType !== "orchestrator") {
-    return [];
-  }
-
-  return draftNodes.value.filter(
-    (entry) =>
-      entry.id !== node.value!.id &&
-      entry.nodeType !== "orchestrator" &&
-      !connectedNodeIdSet.value.has(entry.id),
-  );
-});
-
-watch(availableOrchestratorTargets, (targets) => {
-  if (targets.length === 0) {
-    pendingConnectionNodeId.value = "";
-    return;
-  }
-
-  if (!targets.some((target) => target.id === pendingConnectionNodeId.value)) {
-    pendingConnectionNodeId.value = targets[0]!.id;
-  }
-});
-
 const blockSearch = ref("");
 
 const normalizedBlockSearch = computed(() => blockSearch.value.trim().toLowerCase());
@@ -846,48 +806,6 @@ function mutateCollectedTask(
     sourceNode.label = sourceNode.title;
 
     nodes[sourceNodeIndex] = normalizeWorkspaceNode(sourceNode);
-  });
-}
-
-function connectNodeToOrchestrator() {
-  if (!node.value || node.value.nodeType !== "orchestrator" || !pendingConnectionNodeId.value) {
-    return;
-  }
-
-  const targetNode = draftNodes.value.find((entry) => entry.id === pendingConnectionNodeId.value);
-
-  if (!targetNode || targetNode.nodeType === "orchestrator") {
-    return;
-  }
-
-  mutateCurrentNode((entry) => {
-    if (entry.nodeType !== "orchestrator") {
-      return;
-    }
-
-    if (entry.connections.some((connection) => connection.targetNodeId === targetNode.id)) {
-      return;
-    }
-
-    entry.connections.push({
-      targetNodeId: targetNode.id,
-    });
-  });
-}
-
-function disconnectOrchestratorNode(targetNodeId: string) {
-  if (!node.value || node.value.nodeType !== "orchestrator") {
-    return;
-  }
-
-  mutateCurrentNode((entry) => {
-    if (entry.nodeType !== "orchestrator") {
-      return;
-    }
-
-    entry.connections = entry.connections.filter(
-      (connection) => connection.targetNodeId !== targetNodeId,
-    );
   });
 }
 
@@ -2447,74 +2365,6 @@ provide(workspaceNodeEditorContextKey, {
     <template v-else-if="node && activeTab">
       <div class="flex h-full min-h-0 w-full overflow-hidden">
         <div class="min-w-0 flex flex-1 flex-col">
-          <div
-            v-if="node.nodeType === 'orchestrator'"
-            class="border-b border-muted/20 bg-default/70 px-6 py-4"
-          >
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p class="text-xs font-bold uppercase tracking-[0.2em] text-muted/60">
-                  Orchestrator Connections
-                </p>
-                <p class="mt-1 text-xs text-muted">
-                  Connect this node to standard nodes to aggregate their task lists.
-                </p>
-              </div>
-              <UBadge color="primary" variant="soft" size="sm" class="rounded-lg">
-                {{ connectedNodes.length }} connected
-              </UBadge>
-            </div>
-
-            <div class="mt-3 flex flex-wrap items-center gap-2">
-              <select
-                v-model="pendingConnectionNodeId"
-                class="h-9 min-w-56 rounded-xl border border-muted/40 bg-default px-3 text-xs text-highlighted focus:border-primary focus:outline-none"
-                :disabled="availableOrchestratorTargets.length === 0"
-              >
-                <option value="" disabled>
-                  {{ availableOrchestratorTargets.length === 0 ? 'No available nodes' : 'Select node' }}
-                </option>
-                <option v-for="target in availableOrchestratorTargets" :key="target.id" :value="target.id">
-                  {{ target.title }}
-                </option>
-              </select>
-              <UButton
-                size="sm"
-                color="primary"
-                variant="soft"
-                class="rounded-xl"
-                :disabled="!pendingConnectionNodeId"
-                @click="connectNodeToOrchestrator"
-              >
-                Connect node
-              </UButton>
-            </div>
-
-            <div class="mt-3 flex flex-wrap gap-2">
-              <UBadge
-                v-for="connectedNode in connectedNodes"
-                :key="connectedNode.id"
-                color="neutral"
-                variant="soft"
-                size="sm"
-                class="group rounded-full pl-2.5 pr-1.5"
-              >
-                <span class="max-w-48 truncate">{{ connectedNode.title }}</span>
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  icon="i-lucide-unlink"
-                  class="ml-1 size-4 rounded-full p-0"
-                  @click="disconnectOrchestratorNode(connectedNode.id)"
-                />
-              </UBadge>
-              <p v-if="connectedNodes.length === 0" class="text-xs text-muted">
-                No connected nodes yet.
-              </p>
-            </div>
-          </div>
-
           <div class="min-h-0 flex-1">
             <WorkspaceNodeShell
               :node="node"
