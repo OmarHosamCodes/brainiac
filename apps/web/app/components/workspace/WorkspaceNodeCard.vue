@@ -73,7 +73,7 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
 
 <template>
   <div
-    class="node-card group relative flex h-full flex-col p-5 transition-all duration-300 rounded-[2rem]"
+    class="node-card group relative flex h-full flex-col p-6 transition-all duration-300 rounded-[2rem]"
     :style="tintStyle"
   >
     <!-- Tinted Background Layer -->
@@ -96,8 +96,8 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
       class="absolute -inset-[2px] rounded-[2.1rem] bg-primary-500/50 -z-10 opacity-50 blur-[2px]"
     />
 
-    <div class="mb-5 flex items-start justify-between gap-3">
-      <div class="flex min-w-0 items-start gap-3">
+    <div class="mb-4 flex items-start justify-between gap-2.5">
+      <div class="flex min-w-0 items-start gap-2.5">
         <div
           class="inline-flex size-11 shrink-0 items-center justify-center rounded-2xl border"
           :class="nodeTypeMeta.accentClass"
@@ -139,21 +139,21 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
       </div>
     </div>
 
-    <div class="flex-1 min-h-0 space-y-4 overflow-y-auto pr-1 custom-scrollbar">
+    <div class="flex-1 min-h-0 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
       <p
         class="text-sm font-medium leading-relaxed text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap"
       >
         {{ preview }}
       </p>
 
-      <div v-if="featuredDetails.length > 0" class="space-y-3 pt-2">
+      <div v-if="featuredDetails.length > 0" class="space-y-2.5">
         <div
           v-for="detail in featuredDetails"
           :key="`${detail.tabId}-${detail.blockId}`"
-          class="relative p-3.5 rounded-2xl bg-white/40 dark:bg-neutral-900/40 border border-neutral-200/30 dark:border-neutral-800/30 group/detail hover:border-primary-500/30 transition-colors"
+          class="relative border-l-2 border-primary-500/20 pl-3 py-1.5"
         >
-          <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-2">
+          <div class="flex items-center justify-between mb-1">
+            <div class="flex items-center gap-1.5">
               <UIcon
                 :name="getDetailEntry(detail.blockType).icon"
                 class="size-3 text-primary-500"
@@ -179,7 +179,7 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
     </div>
 
     <div
-      class="mt-5 pt-4 border-t border-neutral-200/30 dark:border-neutral-800/30 flex items-center justify-between"
+      class="mt-6 pt-3 border-t border-neutral-200/30 dark:border-neutral-800/30 flex items-center justify-between"
     >
       <div class="flex items-center gap-2">
         <div class="w-12 h-1 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden">

@@ -28,24 +28,15 @@ const {
 } = useWorkspaceBoard();
 
 const canvasRef = ref<{ fitAllNodes: () => void } | null>(null);
-const hasAutoFitTriggered = ref(false);
 
-watch(
+const stopAutoFit = watch(
   () => [isWorkspaceInitialLoading.value, canvasRef.value] as const,
   ([isLoading, canvas]) => {
-    if (isLoading || !canvas || hasAutoFitTriggered.value) {
-      return;
-    }
-
-    hasAutoFitTriggered.value = true;
-    void nextTick(() => {
-      canvas.fitAllNodes();
-    });
+    if (isLoading || !canvas) return;
+    nextTick(() => canvas.fitAllNodes());
+    stopAutoFit();
   },
-  {
-    immediate: true,
-    flush: "post",
-  },
+  { immediate: true, flush: "post" },
 );
 
 const { isChatVisible, isTeamAsideCompact } = useDashboardLayout({
@@ -107,6 +98,13 @@ const {
   },
 });
 
+const teamItems = computed(() =>
+  teams.value.map(team => ({
+    label: `${team.name} (${team.role})`,
+    value: team.id,
+  })),
+);
+
 const isSelectedNodeShared = computed(() => selectedNode.value?.visibility === "team");
 const isNodeShareActionPending = computed(
   () => shareNodeMutation.isPending.value || unshareNodeMutation.isPending.value,
@@ -166,14 +164,15 @@ function toggleSelectedNodeSharing() {
       :class="isTeamAsideCompact ? 'w-14 p-2' : 'w-[24rem] overflow-y-auto p-4'"
     >
       <div v-if="isTeamAsideCompact" class="flex items-center justify-center">
-        <button
-          type="button"
-          class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+        <UButton
+          icon="i-lucide-users"
+          variant="outline"
+          color="neutral"
+          size="md"
+          square
           aria-label="Expand team panel"
           @click="isTeamAsideCompact = false"
-        >
-          <UIcon name="i-lucide-users" class="size-4" />
-        </button>
+        />
       </div>
 
       <template v-else>
@@ -181,119 +180,119 @@ function toggleSelectedNodeSharing() {
           <h2 class="text-xs font-bold uppercase tracking-[0.22em] text-neutral-500">Teams</h2>
           <div class="flex items-center gap-2">
             <span class="text-[11px] font-medium text-neutral-500">{{ teams.length }} total</span>
-            <button
-              type="button"
-              class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            <UButton
+              icon="i-lucide-users"
+              variant="outline"
+              color="neutral"
+              size="md"
+              square
               aria-label="Compact team panel"
               @click="isTeamAsideCompact = true"
-            >
-              <UIcon name="i-lucide-users" class="size-4" />
-            </button>
+            />
           </div>
         </div>
 
         <div class="mt-3 flex items-center gap-2">
-        <input
-          v-model="newTeamName"
-          type="text"
-          placeholder="New team name"
-          class="h-9 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-          @keydown.enter.prevent="createTeam"
-        />
-        <button
-          type="button"
-          class="inline-flex h-9 shrink-0 items-center justify-center rounded-xl bg-neutral-900 px-3 text-xs font-semibold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-          :disabled="createTeamMutation.isPending.value || !newTeamName.trim()"
-          @click="createTeam"
-        >
-          Create
-        </button>
+          <UInput
+            v-model="newTeamName"
+            type="text"
+            placeholder="New team name"
+            size="sm"
+            class="flex-1"
+            @keydown.enter.prevent="createTeam"
+          />
+          <UButton
+            label="Create"
+            color="neutral"
+            variant="solid"
+            size="sm"
+            :loading="createTeamMutation.isPending.value"
+            :disabled="!newTeamName.trim()"
+            @click="createTeam"
+          />
         </div>
 
         <div class="mt-4">
           <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.15em] text-neutral-500">
             Share Target
           </label>
-          <select
+          <USelect
             v-model="selectedTeamId"
-            class="h-9 w-full rounded-xl border border-neutral-200 bg-white px-3 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+            :items="teamItems"
+            placeholder="Select a team"
+            size="sm"
+            class="w-full"
+          />
+        </div>
+
+        <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+            Team Management
+          </p>
+
+          <p class="mt-2 text-xs text-neutral-500">
+            Open the dedicated team settings modal to manage members and access rules.
+          </p>
+
+          <UButton
+            label="Manage Team"
+            color="primary"
+            variant="solid"
+            block
+            size="sm"
+            class="mt-3"
+            :disabled="!selectedTeam"
+            @click="isTeamSettingsModalOpen = true"
+          />
+
+          <div v-if="selectedTeam && !canInvite" class="mt-3 flex items-center gap-2">
+            <UBadge color="neutral" variant="subtle" size="sm">Requires Owner</UBadge>
+            <p class="text-xs text-neutral-500">Owner role is required for member and role changes.</p>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
+          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+            Selected Node
+          </p>
+          <p class="mt-1 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+            {{ selectedNode?.title ?? 'No node selected' }}
+          </p>
+          <p class="mt-1 text-xs text-neutral-500">
+            {{
+              selectedNode
+                ? selectedNode.visibility === 'team'
+                  ? canManageSelectedNodeSharing
+                    ? `Shared to ${selectedNode.teamId}`
+                    : 'Team-shared node'
+                  : 'Private node'
+                : 'Click a node on canvas to share it.'
+            }}
+          </p>
+          <p
+            v-if="selectedNode && !canManageSelectedNodeSharing"
+            class="mt-1 text-xs text-neutral-500"
           >
-            <option value="" disabled>Select a team</option>
-            <option v-for="team in teams" :key="team.id" :value="team.id">
-              {{ team.name }} ({{ team.role }})
-            </option>
-          </select>
-        </div>
-
-        <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
-          Team Management
-        </p>
-
-        <p class="mt-2 text-xs text-neutral-500">
-          Open the dedicated team settings modal to manage members and access rules.
-        </p>
-
-        <button
-          type="button"
-          class="mt-3 inline-flex h-9 w-full items-center justify-center rounded-xl bg-primary-600 px-3 text-xs font-semibold text-white transition hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
-          :disabled="!selectedTeam"
-          @click="isTeamSettingsModalOpen = true"
-        >
-          Manage Team
-        </button>
-
-        <div v-if="selectedTeam && !canInvite" class="mt-3 flex items-center gap-2">
-          <UBadge color="neutral" variant="subtle" size="sm">Requires Owner</UBadge>
-          <p class="text-xs text-neutral-500">Owner role is required for member and role changes.</p>
-        </div>
-        </div>
-
-        <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
-        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
-          Selected Node
-        </p>
-        <p class="mt-1 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-          {{ selectedNode?.title ?? 'No node selected' }}
-        </p>
-        <p class="mt-1 text-xs text-neutral-500">
-          {{
-            selectedNode
-              ? selectedNode.visibility === 'team'
-                ? canManageSelectedNodeSharing
-                  ? `Shared to ${selectedNode.teamId}`
-                  : 'Team-shared node'
-                : 'Private node'
-              : 'Click a node on canvas to share it.'
-          }}
-        </p>
-        <p
-          v-if="selectedNode && !canManageSelectedNodeSharing"
-          class="mt-1 text-xs text-neutral-500"
-        >
-          Role {{ selectedNodeTeamRole ?? 'viewer' }} can edit content, but only owners can access sharing actions and team IDs.
-        </p>
+            Role {{ selectedNodeTeamRole ?? 'viewer' }} can edit content, but only owners can access sharing actions and team IDs.
+          </p>
         </div>
 
         <div v-if="canManageSelectedNodeSharing" class="mt-3">
-        <button
-          type="button"
-          class="inline-flex h-9 w-full items-center justify-center rounded-xl px-3 text-xs font-semibold transition disabled:cursor-not-allowed disabled:opacity-50"
-          :class="
-            isSelectedNodeShared
-              ? 'border border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:bg-neutral-800'
-              : 'bg-primary-600 text-white hover:bg-primary-500'
-          "
-          :disabled="nodeShareActionDisabled"
-          @click="toggleSelectedNodeSharing"
-        >
-          {{ nodeShareActionLabel }}
-        </button>
+          <UButton
+            :label="nodeShareActionLabel"
+            block
+            size="sm"
+            :color="isSelectedNodeShared ? 'neutral' : 'primary'"
+            :variant="isSelectedNodeShared ? 'outline' : 'solid'"
+            :loading="isNodeShareActionPending"
+            :disabled="nodeShareActionDisabled"
+            @click="toggleSelectedNodeSharing"
+          />
         </div>
       </template>
     </aside>
 
-    <TeamSettingsModal
+    <LazyTeamSettingsModal
       :open="isTeamSettingsModalOpen"
       :selected-team="selectedTeam"
       :team-name-draft="teamNameDraft"
@@ -320,29 +319,30 @@ function toggleSelectedNodeSharing() {
       @remove-member="removeMember"
     />
 
-    <!-- Floating Agent Chat Panel -->
     <div
-      class="pointer-events-none fixed bottom-4 right-3 top-24 z-40 flex w-[min(26rem,calc(100vw-1.5rem))] flex-col transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] sm:bottom-6 sm:right-6"
-      :class="
-        isChatVisible ? 'translate-x-0 opacity-100' : 'pointer-events-none translate-x-12 opacity-0'
-      "
+      class="pointer-events-none fixed bottom-4 right-3 top-24 z-40 flex w-[min(26rem,calc(100vw-1.5rem))] flex-col sm:bottom-6 sm:right-6"
     >
-      <div class="pointer-events-auto min-h-0 flex-1">
-        <DashboardAgentChatPanel :nodes="nodes" @close="isChatVisible = false" />
-      </div>
+      <Transition
+        enter-active-class="transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+        enter-from-class="translate-x-12 opacity-0"
+        leave-active-class="transition-all duration-300 ease-in"
+        leave-to-class="translate-x-12 opacity-0"
+      >
+        <div v-if="isChatVisible" class="pointer-events-auto min-h-0 flex-1">
+          <LazyDashboardAgentChatPanel :nodes="nodes" @close="isChatVisible = false" />
+        </div>
+      </Transition>
     </div>
 
-    <!-- Chat Toggle Button -->
     <button
       v-if="!isChatVisible"
       type="button"
-      class="fixed bottom-8 right-8 z-50 flex size-14 items-center justify-center rounded-2xl bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 shadow-2xl shadow-black/20 hover:scale-110 active:scale-95 transition-all duration-300 ring-1 ring-white/10"
+      class="fixed bottom-8 right-8 z-50 flex size-14 items-center justify-center rounded-2xl bg-neutral-900 text-white shadow-2xl shadow-black/20 ring-1 ring-white/10 transition-all duration-300 hover:scale-110 active:scale-95 dark:bg-neutral-100 dark:text-neutral-900"
       @click="isChatVisible = true"
     >
       <UIcon name="i-lucide-sparkles" class="size-6" />
     </button>
 
-    <!-- Overlay Notifications -->
     <div class="fixed left-6 bottom-6 z-50 flex flex-col gap-3">
       <WorkspaceBoardStatus
         v-if="!isWorkspaceInitialLoading"
@@ -381,7 +381,7 @@ function toggleSelectedNodeSharing() {
       </div>
     </div>
 
-    <WorkspaceEditorModal
+    <LazyWorkspaceEditorModal
       :content="nodeDraft.content"
       :mode="editorMode"
       :node-type="nodeDraft.nodeType"
@@ -403,7 +403,6 @@ function toggleSelectedNodeSharing() {
 </template>
 
 <style scoped>
-/* Smooth entrance for elements */
 main,
 aside {
   animation: fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1);
@@ -417,6 +416,13 @@ aside {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main,
+  aside {
+    animation: none;
   }
 }
 </style>
