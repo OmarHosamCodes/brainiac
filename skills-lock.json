@@ -21,6 +21,11 @@
       "sourceType": "github",
       "computedHash": "0cb0e2f07f6b42fb8974c2ee89ca3ba3a103dfe565f12bc7ca9f41945fc7227a"
     },
+    "polar-better-auth": {
+      "source": "tuzzy08/skills",
+      "sourceType": "github",
+      "computedHash": "0261f7f592b6a15f01d8f7d7d6053bb6ecb14bc0c4f1ae1ca50474f1f0ebdf3f"
+    },
     "vue-pinia-best-practices": {
       "source": "vuejs-ai/skills",
       "sourceType": "github",
