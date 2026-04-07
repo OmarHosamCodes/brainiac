@@ -8,13 +8,58 @@ Optimize every workspace block editor in Brainiac Studio using the combined lens
 - `@.agents/skills/clarify`
 - `@.agents/skills/polish`
 
-This document is the **pre-execution plan**. No code changes are included here. It defines:
+This document is the execution plan and progress tracker for the block optimization effort. It defines:
 
 - the audit framework
 - the quality rating for each block
 - the implementation priority
 - the intended changes for each block
 - the recommended execution order
+- the current execution progress
+
+### Execution Progress Snapshot
+
+Current status of implementation work:
+
+- **Wave A foundations — in progress**
+  - shared typed mutation helpers introduced in the workspace node editor context
+  - shared block operation state helpers introduced for pending/running UI feedback
+  - accessibility and action-visibility patterns started across refactored blocks
+  - copy and scanability improvements started across refactored blocks
+
+- **Blocks completed in the current pass**
+  - `WorkspaceAiPromptBlockEditor`
+  - `WorkspaceNotesBlockEditor`
+  - `WorkspaceTaskListBlockEditor`
+  - `WorkspaceKanbanBlockEditor`
+  - `WorkspaceTimelineBlockEditor`
+  - `WorkspaceCourseRoadmapBlockEditor`
+  - `WorkspaceChecklistBlockEditor`
+  - `WorkspaceDecisionBlockEditor`
+  - `WorkspaceTrackerBlockEditor`
+  - `WorkspaceTableBlockEditor`
+  - `WorkspaceProsConsBlockEditor`
+  - `Workspace2x2MatrixBlockEditor`
+  - `WorkspaceHabitGridBlockEditor`
+
+- **What was improved in completed blocks**
+  - reduced inline mutation noise through extracted helpers or typed mutation usage
+  - reduced hover-only dependence for important actions
+  - improved executive scanability with clearer summaries, badges, and headers
+  - improved accessibility with better labels and more explicit controls
+  - standardized async state presentation where applicable
+
+- **Validation status**
+  - targeted inspection of the completed block editors is in good shape
+  - full app type validation is currently blocked by unrelated existing issues elsewhere in the repo
+  - current blockers are outside the completed block editors listed above
+
+- **Next recommended implementation batch**
+  - continue Wave A and adjacent cleanup with:
+    - `WorkspaceChecklistBlockEditor`
+    - `WorkspaceDecisionBlockEditor`
+    - `WorkspaceTrackerBlockEditor`
+    - `WorkspaceTableBlockEditor`
 
 ---
 
@@ -303,6 +348,31 @@ Apply global system changes first:
 - action visibility rules
 - layout density rules
 
+**Current Wave A status:** in progress
+
+Completed Wave A foundation work so far:
+
+- `mutateTypedBlock(...)` introduced and applied in multiple editors
+- `getBlockOperationState(...)` and pending-state UI introduced
+- action visibility and keyboard/focus accessibility improved in completed editors
+- scanability and summary surfaces improved in completed editors
+
+Foundation-aligned blocks completed so far:
+
+- AI Prompt
+- Notes
+- Task List
+- Kanban
+- Timeline
+- Course Roadmap
+- Checklist
+- Decision
+- Tracker
+- Table
+- Pros & Cons
+- 2x2 Matrix
+- Habit Grid
+
 ### Wave B — P0 redesigns
 
 1. Custom
@@ -317,14 +387,27 @@ Suggested first group:
 
 1. Agency Project Manager
 2. Content ROI Tracker
-3. Kanban
+3. Kanban ✅ completed
 4. Time Orchestrator
 5. Decision Matrix
 6. Deal Scoring Matrix
 7. Collections Tracker
 8. Skills Heat Map
-9. Timeline
-10. Task List
+9. Timeline ✅ completed
+10. Task List ✅ completed
+
+Also completed from adjacent Wave A / supporting cleanup work:
+
+- AI Prompt
+- Notes
+- Course Roadmap
+- Checklist
+- Decision
+- Tracker
+- Table
+- Pros & Cons
+- 2x2 Matrix
+- Habit Grid
 
 ### Wave D — remaining P1
 
