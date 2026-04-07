@@ -41,6 +41,10 @@ Current status of implementation work:
   - `WorkspaceProsConsBlockEditor`
   - `Workspace2x2MatrixBlockEditor`
   - `WorkspaceHabitGridBlockEditor`
+  - `WorkspaceDecisionMatrixBlockEditor`
+  - `WorkspaceScorecardBlockEditor`
+  - `WorkspaceSkillsHeatMapBlockEditor`
+  - `WorkspaceTimeOrchestratorBlockEditor`
 
 - **What was improved in completed blocks**
   - reduced inline mutation noise through extracted helpers or typed mutation usage
@@ -51,15 +55,16 @@ Current status of implementation work:
 
 - **Validation status**
   - targeted inspection of the completed block editors is in good shape
+  - targeted workspace validation remains blocked by an unrelated existing type issue in `@brainiac/agent`
   - full app type validation is currently blocked by unrelated existing issues elsewhere in the repo
   - current blockers are outside the completed block editors listed above
 
 - **Next recommended implementation batch**
   - continue Wave A and adjacent cleanup with:
-    - `WorkspaceChecklistBlockEditor`
-    - `WorkspaceDecisionBlockEditor`
-    - `WorkspaceTrackerBlockEditor`
-    - `WorkspaceTableBlockEditor`
+    - `WorkspaceAgencyTimeTrackerBlockEditor`
+    - `WorkspaceContentPipelineBlockEditor`
+    - `WorkspaceForecastConfidenceBoardBlockEditor`
+    - `WorkspaceDealScoringMatrixBlockEditor`
 
 ---
 
