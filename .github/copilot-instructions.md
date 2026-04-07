@@ -1,0 +1,40 @@
+# Copilot Instructions
+
+## Design Context
+
+### Users
+
+CEOs, project managers, and team leaders who need to organize complex information, manage team collaboration, and make strategic decisions. They open Brainiac Studio during focused work sessions — planning projects, reviewing team progress, mapping knowledge, or collaborating with AI agents. They value clarity and speed over flashy interactions. They're power users who appreciate precision but don't want to feel like they're using an enterprise tool.
+
+### Brand Personality
+
+**Intelligent, Focused, Collaborative**
+
+The interface should feel like a sharp, trusted co-pilot — smart without being showy, calm without being sterile. Every element earns its place. The brand speaks in a clear, confident voice — never corporate, never playful. It respects the user's attention and cognitive load.
+
+### Aesthetic Direction
+
+**Visual Tone**: A spatial, glass-morphism workspace that feels alive but never distracting. Think Figma's infinite canvas precision meets Miro's collaborative warmth. Dark mode is first-class. The emerald primary color signals intelligence and growth; zinc neutrals keep things grounded.
+
+**References**: Figma (spatial precision, floating panels), Miro/FigJam (infinite canvas, collaborative feel), Linear (calm focus, refined details)
+
+**Anti-References**: No corporate density (Salesforce, Oracle). No toyish playfulness (excessive emojis, cartoon UI). No terminal aesthetics (matrix data dumps, IDE chrome). No sterile minimalism that strips warmth and personality.
+
+**Design Tokens**:
+- Colors: Primary = emerald, Neutral = zinc
+- Typography: Public Sans (sans), JetBrains Mono (mono), bold weights emphasized
+- Shape language: Highly rounded — full-pill buttons/badges, 32px-radius cards, 2xl inputs
+- Effects: Glass morphism, backdrop blur, subtle entrance animations
+- Mode: Full dark/light support
+
+### Design Principles
+
+1. **Spatial Clarity** — The infinite canvas is the hero. Every UI element floats respectfully over the workspace. Panels, modals, and overlays should feel lightweight and unobtrusive, never blocking the user's spatial thinking.
+
+2. **Calm Capability** — The interface should feel like it's working *for* you, not demanding your attention. Use restraint in animation, color, and decoration. Confidence comes from precision, not spectacle.
+
+3. **Warm Intelligence** — Emerald accents and rounded shapes keep the tool feeling human and approachable despite its technical power. Avoid cold sterility; favor subtle warmth in spacing, rounded corners, and glass effects.
+
+4. **Collaborative Transparency** — Team roles, permissions, and sharing states should be visible at a glance. RBAC feedback is always clear. The interface makes collaboration feel natural, not bureaucratic.
+
+5. **Accessible by Default** — WCAG 2.1 AA compliance throughout. Good contrast in both themes, keyboard navigation, screen reader support. Color is never the only way meaning is conveyed. Reduced motion is respected.
