@@ -35,6 +35,8 @@ Current status of implementation work:
   - `WorkspaceKanbanBlockEditor`
   - `WorkspaceTimelineBlockEditor`
   - `WorkspaceCourseRoadmapBlockEditor`
+  - `WorkspaceCustomBlockEditor`
+  - `WorkspaceEisenhowerMatrixBlockEditor`
   - `WorkspaceChecklistBlockEditor`
   - `WorkspaceDecisionBlockEditor`
   - `WorkspaceTrackerBlockEditor`
@@ -80,8 +82,6 @@ Current status of implementation work:
 
 - **Next recommended implementation batch**
   - continue with remaining P0 redesign surfaces:
-    - `WorkspaceCustomBlockEditor`
-    - `WorkspaceEisenhowerMatrixBlockEditor`
     - `WorkspaceProfitabilityCashFlowBlockEditor`
     - `WorkspaceTalentGridBlockEditor`
     - `WorkspaceAuthorityScorecardBlockEditor`
@@ -391,6 +391,8 @@ Foundation-aligned blocks completed so far:
 - Kanban
 - Timeline
 - Course Roadmap
+- Custom
+- Eisenhower Matrix
 - Checklist
 - Decision
 - Tracker
@@ -409,8 +411,8 @@ Foundation-aligned blocks completed so far:
 
 ### Wave B — P0 redesigns
 
-1. Custom
-2. Eisenhower Matrix
+1. Custom ✅ completed
+2. Eisenhower Matrix ✅ completed
 3. Profitability & Cash Flow
 4. 9-box Talent Grid
 5. Authority Scorecard
