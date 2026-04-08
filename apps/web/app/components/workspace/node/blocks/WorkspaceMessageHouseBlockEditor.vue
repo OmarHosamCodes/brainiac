@@ -81,49 +81,47 @@ const bottomSections = [
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Summary Grid -->
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div class="rounded-3xl bg-primary/5 p-5 border border-primary/10">
+  <div class="space-y-5">
+    <!-- Summary Stats -->
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="rounded-2xl bg-primary/5 p-4 border border-primary/10">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Filled</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-primary">
           {{ summary.filledSectionCount }}/7
         </p>
       </div>
 
-      <div class="rounded-3xl bg-secondary/5 p-5 border border-secondary/10">
+      <div class="rounded-2xl bg-secondary/5 p-4 border border-secondary/10">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/60">Pillars</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-secondary">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-secondary">
           {{ summary.pillarCount }}
         </p>
       </div>
 
-      <div class="rounded-3xl bg-warning/5 p-5 border border-warning/10">
+      <div class="rounded-2xl bg-warning/5 p-4 border border-warning/10">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/60">Stress Test</p>
-        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-warning">
+        <p class="mt-2 text-lg sm:text-xl font-black tracking-tight text-warning">
           {{ summary.latestStressTestAvailable ? "Saved" : "Pending" }}
         </p>
       </div>
     </div>
 
     <!-- Brand Promise Section -->
-    <section
-      class="rounded-3xl border border-primary/20 bg-primary/5 p-6"
-    >
-      <div class="flex flex-wrap items-start justify-between gap-4">
+    <section class="rounded-2xl border border-primary/20 bg-primary/5 p-5">
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
-          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">Brand Promise</h3>
-          <p class="text-xs text-muted mt-1">
-            The promise should read like the line the whole team can repeat without improvising.
+          <h2 class="text-sm font-black text-highlighted tracking-tight">Brand Promise</h2>
+          <p class="text-xs text-muted mt-0.5">
+            The line the whole team can repeat without improvising.
           </p>
         </div>
 
         <UButton
           color="primary"
-          variant="subtle"
+          variant="soft"
           icon="i-lucide-sparkles"
-          class="rounded-full px-4"
           size="sm"
+          class="rounded-full"
           :loading="isStressTesting"
           @click="runStressTest"
         >
@@ -135,9 +133,9 @@ const bottomSections = [
         :model-value="block.brandPromise"
         autoresize
         variant="subtle"
-        :rows="4"
-        class="mt-6 rounded-2xl"
-        :ui="{ base: 'bg-default/60 text-lg font-bold tracking-tight leading-relaxed placeholder:text-muted/30' }"
+        :rows="3"
+        class="rounded-2xl"
+        :ui="{ base: 'bg-default/60 text-lg font-black tracking-tight leading-relaxed placeholder:text-muted/30' }"
         placeholder="What is the single promise this brand owns?"
         @update:model-value="
           mutateBlock(tabId, block.id, (entry) => {
@@ -149,20 +147,24 @@ const bottomSections = [
     </section>
 
     <!-- Pillars Grid -->
-    <div class="grid gap-4 xl:grid-cols-3">
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <article
         v-for="pillar in block.pillars"
         :key="pillar.id"
-        class="rounded-3xl border border-muted/20 bg-default/40 p-5 group transition-all hover:border-primary/20"
+        class="rounded-2xl border border-muted/20 bg-default/40 p-4 transition-colors hover:border-muted/30"
       >
-        <div class="space-y-1 px-1">
-          <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Messaging Pillar</label>
+        <div class="mb-3">
+          <label :for="'pillar-title-' + pillar.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+            Pillar
+          </label>
           <UInput
+            :id="'pillar-title-' + pillar.id"
             :model-value="pillar.title"
             variant="none"
             placeholder="Pillar title"
+            size="lg"
             class="w-full"
-            :ui="{ base: 'px-0 text-base font-bold text-highlighted placeholder:text-muted/30 uppercase tracking-tight' }"
+            :ui="{ base: 'px-0 text-base font-black text-highlighted placeholder:text-muted/40 uppercase tracking-tight' }"
             @update:model-value="
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== 'message-house') return;
@@ -174,12 +176,16 @@ const bottomSections = [
           />
         </div>
 
+        <label :for="'pillar-body-' + pillar.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+          Message
+        </label>
         <UTextarea
+          :id="'pillar-body-' + pillar.id"
           :model-value="pillar.body"
           autoresize
           variant="subtle"
-          :rows="6"
-          class="mt-4 rounded-2xl"
+          :rows="5"
+          class="rounded-xl"
           :ui="{ base: 'bg-elevated/5 leading-relaxed text-sm' }"
           placeholder="What repeatable message should this pillar carry?"
           @update:model-value="
@@ -194,20 +200,23 @@ const bottomSections = [
       </article>
     </div>
 
-    <!-- Additional Sections Grid -->
-    <div class="grid gap-4 xl:grid-cols-3">
+    <!-- Supporting Sections Grid -->
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <article
         v-for="section in bottomSections"
         :key="section.key"
-        class="rounded-3xl border border-muted/20 bg-default/40 p-5 transition-all hover:border-muted/30"
+        class="rounded-2xl border border-muted/20 bg-default/40 p-4 transition-colors hover:border-muted/30"
       >
-        <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">{{ section.label }}</label>
+        <label :for="section.key" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+          {{ section.label }}
+        </label>
         <UTextarea
+          :id="section.key"
           :model-value="block[section.key]"
           autoresize
           variant="subtle"
-          :rows="7"
-          class="mt-4 rounded-2xl"
+          :rows="5"
+          class="rounded-xl"
           :ui="{ base: 'bg-elevated/5 leading-relaxed text-sm' }"
           :placeholder="section.placeholder"
           @update:model-value="
@@ -221,12 +230,12 @@ const bottomSections = [
     </div>
 
     <!-- Stress Test Output -->
-    <section class="rounded-3xl border border-warning/20 bg-warning/5 p-6">
-      <div class="flex flex-wrap items-start justify-between gap-3">
+    <section class="rounded-2xl border border-warning/20 bg-warning/5 p-4">
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
-          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">Stress-test output</h3>
-          <p class="text-xs text-muted mt-1">
-            Finds gaps, contradictions, and weak proof before the brand message is repeated.
+          <h2 class="text-sm font-black text-highlighted tracking-tight">Stress-Test Output</h2>
+          <p class="text-xs text-muted mt-0.5">
+            Finds gaps, contradictions, and weak proof.
           </p>
         </div>
 
@@ -236,9 +245,9 @@ const bottomSections = [
       </div>
 
       <div
-        class="mt-6 rounded-2xl border border-muted/20 bg-default/60 p-5 text-sm leading-relaxed text-toned shadow-sm min-h-[100px] flex items-center justify-center text-center"
+        class="rounded-xl border border-muted/20 bg-default/60 p-4 text-sm leading-relaxed text-toned min-h-[80px]"
       >
-        <p v-if="block.latestStressTest" class="whitespace-pre-wrap text-left w-full">{{ block.latestStressTest }}</p>
+        <p v-if="block.latestStressTest" class="whitespace-pre-wrap">{{ block.latestStressTest }}</p>
         <p v-else class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">Run AI Stress-Test to get a critique of the messaging</p>
       </div>
     </section>

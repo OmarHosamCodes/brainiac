@@ -96,58 +96,65 @@ function runAnalysis() {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div class="rounded-3xl bg-primary/10 border border-primary/20 p-5">
+  <div class="space-y-5">
+    <!-- Summary Stats -->
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="rounded-2xl bg-primary/10 border border-primary/20 p-4">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">Coverage</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-primary">
           {{ summary.filledCellCount }}/9
         </p>
       </div>
 
-      <div class="rounded-3xl bg-warning/10 border border-warning/20 p-5">
+      <div class="rounded-2xl bg-warning/10 border border-warning/20 p-4">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">Missing</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-warning">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-warning">
           {{ summary.missingCellCount }}
         </p>
       </div>
 
-      <div class="rounded-3xl bg-success/10 border border-success/20 p-5">
+      <div class="rounded-2xl bg-success/10 border border-success/20 p-4">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">Readiness</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-success">
           {{ getReadinessLabel() }}
         </p>
       </div>
     </div>
 
+    <!-- Header -->
     <div class="flex flex-wrap items-center justify-between gap-3 px-1">
       <div>
-        <p class="text-sm font-semibold text-highlighted">Business model canvas</p>
-        <p class="text-sm text-muted">
-          Fill the nine cells to pressure-test how the model creates, delivers, and captures value.
-        </p>
+        <h2 class="text-sm font-black text-highlighted tracking-tight">Business Model Canvas</h2>
+        <p class="text-xs text-muted">Pressure-test how the model creates, delivers, and captures value.</p>
       </div>
 
       <UButton
         color="primary"
         variant="soft"
         icon="i-lucide-sparkles"
-        class="rounded-full px-4"
+        size="sm"
+        class="rounded-full"
         @click="runAnalysis"
       >
         AI Analyze
       </UButton>
     </div>
 
+    <!-- Canvas Grid -->
     <div class="overflow-x-auto pb-2">
-      <div class="bmc-grid grid gap-4 lg:min-w-[1080px]">
+      <div class="bmc-grid grid gap-3 lg:min-w-[1000px]">
         <article
           v-for="cell in canvasCells"
           :key="cell.key"
-          class="rounded-3xl border border-muted/20 bg-default/40 p-4"
-          :class="`bmc-${cell.area}`"
+          class="rounded-2xl border p-4 transition-colors"
+          :class="[
+            `bmc-${cell.area}`,
+            block.cells[cell.key].trim()
+              ? 'border-muted/20 bg-default/40'
+              : 'border-warning/30 bg-warning/5'
+          ]"
         >
-          <div class="mb-3 flex items-center justify-between gap-3">
+          <div class="mb-3 flex items-center justify-between gap-2">
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
               {{ workspaceBusinessModelCanvasCellLabels[cell.key] }}
             </p>
@@ -155,19 +162,19 @@ function runAnalysis() {
               :color="block.cells[cell.key].trim() ? 'primary' : 'neutral'"
               variant="soft"
               size="sm"
-              class="rounded-2xl"
+              class="rounded-lg px-2"
             >
-              {{ block.cells[cell.key].trim() ? "Filled" : "Open" }}
+              {{ block.cells[cell.key].trim() ? "Filled" : "Empty" }}
             </UBadge>
           </div>
 
           <UTextarea
             :model-value="block.cells[cell.key]"
-            :rows="cell.key === 'costStructure' || cell.key === 'revenueStreams' ? 4 : 6"
+            :rows="cell.key === 'costStructure' || cell.key === 'revenueStreams' ? 3 : 5"
             autoresize
-            :placeholder="cell.placeholder"
+            :placeholder="block.cells[cell.key].trim() ? '' : cell.placeholder"
             class="w-full"
-            :ui="{ base: 'min-h-32 rounded-2xl bg-elevated/10' }"
+            :ui="{ base: 'min-h-24 rounded-xl bg-elevated/10' }"
             @update:model-value="
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== 'business-model-canvas') return;
@@ -179,12 +186,31 @@ function runAnalysis() {
       </div>
     </div>
 
-    <section class="rounded-3xl border border-primary/20 bg-primary/10 p-5">
+    <!-- Missing Cells Guidance -->
+    <div
+      v-if="summary.missingCellCount > 0"
+      class="rounded-2xl border border-warning/20 bg-warning/5 p-4"
+    >
+      <div class="flex items-start gap-3">
+        <div class="flex size-8 items-center justify-center rounded-lg bg-warning/10 text-warning shrink-0">
+          <UIcon name="i-lucide-alert-triangle" size="16" />
+        </div>
+        <div class="flex-1">
+          <p class="text-sm font-bold text-warning">Incomplete canvas</p>
+          <p class="text-xs text-muted mt-1">
+            {{ summary.missingCellCount }} cell{{ summary.missingCellCount !== 1 ? 's' : '' }} need{{ summary.missingCellCount === 1 ? 's' : '' }} attention. Fill all cells for a complete model analysis.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analysis Output -->
+    <section class="rounded-2xl border border-primary/20 bg-primary/10 p-4">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p class="text-sm font-semibold text-highlighted">Analysis output</p>
-          <p class="text-sm text-muted">
-            Identifies strengths, missing pieces, and the next strategic questions to answer.
+          <h3 class="text-sm font-black text-highlighted tracking-tight">Analysis Output</h3>
+          <p class="text-xs text-muted mt-0.5">
+            Identifies strengths, gaps, and strategic questions.
           </p>
         </div>
 
@@ -194,7 +220,7 @@ function runAnalysis() {
       </div>
 
       <div
-        class="mt-4 rounded-2xl border border-muted/20 bg-default/60 p-4 text-sm leading-relaxed text-toned whitespace-pre-line"
+        class="mt-3 rounded-xl border border-muted/20 bg-default/60 p-4 text-sm leading-relaxed text-toned whitespace-pre-line"
       >
         {{ block.analysis || "Run AI Analyze to generate a gap analysis of the current canvas." }}
       </div>

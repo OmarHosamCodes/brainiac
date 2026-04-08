@@ -119,74 +119,72 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Summary Grid -->
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="rounded-3xl bg-primary/5 p-5 border border-primary/10">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
-          Cadence Health
-        </p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
-          {{ summary.cadenceHealthPercent }}%
-        </p>
-      </div>
-
-      <div class="rounded-3xl bg-success/5 p-5 border border-success/10">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/60">Upcoming</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
-          {{ summary.upcomingCount }}
-        </p>
-      </div>
-
-      <div class="rounded-3xl bg-error/5 p-5 border border-error/10">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/60">Missed</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-error">{{ summary.missedCount }}</p>
-      </div>
-
-      <div class="rounded-3xl bg-secondary/5 p-5 border border-secondary/10">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/60">Meetings</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-secondary">
-          {{ summary.totalMeetings }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Actions Header -->
-    <section class="rounded-3xl border border-muted/20 bg-default/40 p-6">
-      <div class="flex flex-wrap items-start justify-between gap-4">
+  <div class="space-y-5">
+    <!-- Executive Summary -->
+    <section class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
-          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">Leadership rhythm planner</h3>
-          <p class="text-xs text-muted mt-1">
-            Keep the recurring management cadence visible so reviews do not silently disappear.
-          </p>
+          <h2 class="text-sm font-black text-highlighted tracking-tight">Leadership Rhythm Planner</h2>
+          <p class="text-xs text-muted">Track recurring meetings to prevent cadence gaps.</p>
         </div>
-
         <UButton
           color="primary"
-          variant="subtle"
+          variant="soft"
           icon="i-lucide-plus"
-          class="rounded-full px-4"
           size="sm"
+          class="rounded-full"
           @click="addMeeting"
         >
           Add Meeting
         </UButton>
       </div>
 
-      <div class="mt-6 space-y-2">
-        <div class="flex items-center justify-between gap-3 px-1">
+      <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="rounded-2xl bg-primary/5 p-4 border border-primary/10">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
+            Cadence Health
+          </p>
+          <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-primary">
+            {{ summary.cadenceHealthPercent }}%
+          </p>
+        </div>
+
+        <div class="rounded-2xl bg-success/5 p-4 border border-success/10">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/60">Upcoming</p>
+          <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-success">
+            {{ summary.upcomingCount }}
+          </p>
+        </div>
+
+        <div class="rounded-2xl bg-error/5 p-4 border border-error/10">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/60">Missed</p>
+          <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-error">{{ summary.missedCount }}</p>
+        </div>
+
+        <div class="rounded-2xl bg-secondary/5 p-4 border border-secondary/10">
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/60">Total</p>
+          <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-secondary">
+            {{ summary.totalMeetings }}
+          </p>
+        </div>
+      </div>
+
+      <div class="rounded-2xl border border-muted/20 bg-default/40 p-4">
+        <div class="flex items-center justify-between gap-3">
           <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Cadence coverage
           </p>
-          <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-primary/60">
-            {{ summary.cadenceHealthPercent }}% on track
-          </span>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-primary/60">
+              {{ summary.cadenceHealthPercent }}% on track
+            </span>
+          </div>
         </div>
         <UProgress
           :model-value="summary.cadenceHealthPercent"
           :max="100"
-          size="xs"
-          class="rounded-full"
+          size="sm"
+          class="mt-2 rounded-full"
         />
       </div>
     </section>
@@ -198,7 +196,7 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
         :key="filter"
         :color="block.filter === filter ? 'primary' : 'neutral'"
         :variant="block.filter === filter ? 'subtle' : 'ghost'"
-        class="rounded-full px-4"
+        class="rounded-full px-3"
         size="sm"
         @click="
           mutateBlock(tabId, block.id, (entry) => {
@@ -214,87 +212,97 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
     <!-- Empty State -->
     <div
       v-if="visibleMeetings.length === 0"
-      class="border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
+      class="border-dashed border-muted/20 rounded-2xl py-10 text-center bg-elevated/5"
     >
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">No meetings match this filter</p>
+      <div class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto">
+        <UIcon name="i-lucide-calendar" size="24" />
+      </div>
+      <p class="mt-3 text-xs font-bold text-muted">No meetings match this filter</p>
     </div>
 
     <!-- Meeting Cards -->
-    <div v-else class="space-y-4">
+    <div v-else class="space-y-3">
       <article
         v-for="meeting in visibleMeetings"
         :key="meeting.id"
-        class="rounded-3xl border border-muted/20 p-6 group transition-all hover:border-primary/20"
+        class="rounded-2xl border border-muted/20 p-4 transition-all"
         :class="getMeetingClasses(meeting)"
       >
-        <div class="flex flex-wrap items-start justify-between gap-4">
-          <div class="min-w-0 flex-1 space-y-4">
-            <div class="flex flex-wrap items-center gap-3">
-              <UInput
-                :model-value="meeting.name"
-                variant="none"
-                placeholder="Meeting name"
-                class="min-w-[14rem] flex-1"
-                :ui="{ base: 'px-0 text-lg font-black text-highlighted placeholder:text-muted/30 uppercase tracking-tight' }"
-                @update:model-value="
-                  mutateMeeting(meeting.id, (entry) => {
-                    entry.name = ($event ?? '').slice(0, 120);
-                  })
-                "
-              />
-
-              <UBadge
-                :color="
-                  isLeadershipMeetingMissed(meeting)
-                    ? 'error'
-                    : meeting.status === 'done'
-                      ? 'success'
-                      : 'primary'
-                "
-                variant="subtle"
-                size="sm"
-                class="rounded-lg"
-              >
-                {{ workspaceLeadershipMeetingStatusLabels[meeting.status] }}
-              </UBadge>
-            </div>
-
-            <div class="flex flex-wrap gap-2">
-              <UButton
-                v-for="status in statusOptions"
-                :key="`${meeting.id}-${status}`"
-                size="xs"
-                :color="meeting.status === status ? 'primary' : 'neutral'"
-                :variant="meeting.status === status ? 'subtle' : 'ghost'"
-                class="rounded-full px-4"
-                @click="
-                  mutateMeeting(meeting.id, (entry) => {
-                    entry.status = status;
-                  })
-                "
-              >
-                {{ workspaceLeadershipMeetingStatusLabels[status] }}
-              </UButton>
-            </div>
+        <!-- Header: Name + Status + Delete -->
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div class="min-w-0 flex-1">
+            <UInput
+              :model-value="meeting.name"
+              variant="none"
+              placeholder="Meeting name"
+              class="w-full"
+              :ui="{ base: 'px-0 text-base font-black text-highlighted placeholder:text-muted/30 uppercase tracking-tight' }"
+              @update:model-value="
+                mutateMeeting(meeting.id, (entry) => {
+                  entry.name = ($event ?? '').slice(0, 120);
+                })
+              "
+            />
           </div>
 
-          <UButton
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-trash-2"
-            class="rounded-xl opacity-0 group-hover:opacity-100 transition-opacity hover:text-error/80"
-            size="sm"
-            @click="removeMeeting(meeting.id)"
-          />
+          <div class="flex items-center gap-2 shrink-0">
+            <UBadge
+              :color="
+                isLeadershipMeetingMissed(meeting)
+                  ? 'error'
+                  : meeting.status === 'done'
+                    ? 'success'
+                    : 'primary'
+              "
+              variant="soft"
+              size="md"
+              class="rounded-lg px-3"
+            >
+              {{ workspaceLeadershipMeetingStatusLabels[meeting.status] }}
+            </UBadge>
+            <UButton
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-trash-2"
+              size="sm"
+              class="rounded-lg hover:text-error hover:bg-error/10"
+              aria-label="Remove meeting"
+              @click="removeMeeting(meeting.id)"
+            />
+          </div>
         </div>
 
-        <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_1.2fr]">
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div class="space-y-1">
-              <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Owner</label>
+        <!-- Status Quick Actions -->
+        <div class="flex flex-wrap gap-1.5 mb-4">
+          <UButton
+            v-for="status in statusOptions"
+            :key="`${meeting.id}-${status}`"
+            size="xs"
+            :color="meeting.status === status ? 'primary' : 'neutral'"
+            :variant="meeting.status === status ? 'subtle' : 'ghost'"
+            class="rounded-full px-3"
+            @click="
+              mutateMeeting(meeting.id, (entry) => {
+                entry.status = status;
+              })
+            "
+          >
+            {{ workspaceLeadershipMeetingStatusLabels[status] }}
+          </UButton>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="grid gap-3 lg:grid-cols-[1.2fr_1fr]">
+          <!-- Left: Basic Info -->
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+                Owner
+              </label>
               <UInput
                 :model-value="meeting.owner"
                 variant="subtle"
+                size="sm"
                 class="rounded-xl"
                 @update:model-value="
                   mutateMeeting(meeting.id, (entry) => {
@@ -304,11 +312,14 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
               />
             </div>
 
-            <div class="space-y-1">
-              <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Participants</label>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+                Participants
+              </label>
               <UInput
                 :model-value="meeting.participants"
                 variant="subtle"
+                size="sm"
                 class="rounded-xl"
                 @update:model-value="
                   mutateMeeting(meeting.id, (entry) => {
@@ -318,12 +329,15 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
               />
             </div>
 
-            <div class="space-y-1">
-              <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Frequency</label>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+                Frequency
+              </label>
               <USelect
                 :model-value="meeting.rhythm"
                 :items="rhythmOptions"
                 variant="subtle"
+                size="sm"
                 class="rounded-xl"
                 @update:model-value="
                   mutateMeeting(meeting.id, (entry) => {
@@ -333,12 +347,15 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
               />
             </div>
 
-            <div class="space-y-1">
-              <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Next Date</label>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+                Next Date
+              </label>
               <UInput
                 :model-value="meeting.nextDate ?? ''"
                 type="date"
                 variant="subtle"
+                size="sm"
                 class="rounded-xl"
                 @update:model-value="
                   mutateMeeting(meeting.id, (entry) => {
@@ -349,14 +366,17 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
             </div>
           </div>
 
-          <div class="grid gap-4 sm:grid-cols-[1fr_auto]">
-            <div class="space-y-1">
-              <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Purpose & Agenda</label>
+          <!-- Right: Purpose + Status Summary -->
+          <div class="grid gap-3 sm:grid-cols-[1fr_auto]">
+            <div class="sm:col-span-2">
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+                Purpose & Agenda
+              </label>
               <UTextarea
                 :model-value="meeting.purpose"
                 variant="subtle"
                 autoresize
-                :rows="4"
+                :rows="3"
                 class="rounded-2xl"
                 :ui="{ base: 'bg-elevated/5' }"
                 @update:model-value="
@@ -367,43 +387,44 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
               />
             </div>
 
-            <div class="flex flex-col gap-4">
-              <div class="space-y-1">
-                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Duration</label>
-                <UInput
-                  :model-value="String(meeting.durationMinutes)"
-                  type="number"
-                  variant="subtle"
-                  class="w-24 rounded-xl"
-                  @update:model-value="
-                    mutateMeeting(meeting.id, (entry) => {
-                      entry.durationMinutes = Math.min(
-                        480,
-                        Math.max(15, Math.round(Number($event || entry.durationMinutes))),
-                      );
-                    })
-                  "
-                />
-              </div>
+            <div>
+              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+                Duration (min)
+              </label>
+              <UInput
+                :model-value="String(meeting.durationMinutes)"
+                type="number"
+                variant="subtle"
+                size="sm"
+                class="w-20 rounded-xl"
+                @update:model-value="
+                  mutateMeeting(meeting.id, (entry) => {
+                    entry.durationMinutes = Math.min(
+                      480,
+                      Math.max(15, Math.round(Number($event || entry.durationMinutes))),
+                    );
+                  })
+                "
+              />
+            </div>
 
-              <div
-                class="flex-1 flex flex-col justify-center rounded-2xl border border-muted/20 bg-default/60 px-4 py-3 min-w-[140px]"
+            <div
+              class="flex flex-col justify-center rounded-xl border border-muted/20 bg-default/60 px-3 py-2.5 min-w-[120px]"
+            >
+              <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">{{
+                workspaceLeadershipRhythmLabels[meeting.rhythm]
+              }}</span>
+              <span
+                v-if="isLeadershipMeetingUpcoming(meeting)"
+                class="mt-1 text-sm font-black text-primary tracking-tight"
+              >Upcoming</span
               >
-                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">{{
-                  workspaceLeadershipRhythmLabels[meeting.rhythm]
-                }}</span>
-                <span
-                  v-if="isLeadershipMeetingUpcoming(meeting)"
-                  class="mt-1 block text-sm font-black text-primary tracking-tight"
-                  >Upcoming</span
-                >
-                <span
-                  v-else-if="isLeadershipMeetingMissed(meeting)"
-                  class="mt-1 block text-sm font-black text-error tracking-tight"
-                  >Attention</span
-                >
-                <span v-else class="mt-1 block text-sm font-black text-highlighted tracking-tight">On track</span>
-              </div>
+              <span
+                v-else-if="isLeadershipMeetingMissed(meeting)"
+                class="mt-1 text-sm font-black text-error tracking-tight"
+              >Attention</span
+              >
+              <span v-else class="mt-1 text-sm font-black text-highlighted tracking-tight">On track</span>
             </div>
           </div>
         </div>

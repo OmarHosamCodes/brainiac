@@ -191,56 +191,59 @@ function removeAssumption(assumptionId: string) {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div class="rounded-3xl bg-primary/10 border border-primary/20 p-5">
+  <div class="space-y-5">
+    <!-- Summary Stats -->
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div class="rounded-2xl bg-primary/10 border border-primary/20 p-4">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">Tracked</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-primary">
           {{ summary.total }}
         </p>
       </div>
 
-      <div class="rounded-3xl bg-error/10 border border-error/20 p-5">
+      <div class="rounded-2xl bg-error/10 border border-error/20 p-4">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/70">At Risk</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-error">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-error">
           {{ summary.atRiskCount }}
         </p>
       </div>
 
-      <div class="rounded-3xl bg-warning/10 border border-warning/20 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">Confidence</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-warning">
+      <div class="rounded-2xl bg-warning/10 border border-warning/20 p-4">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">Avg Confidence</p>
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-warning">
           {{ summary.averageConfidence }}/5
         </p>
       </div>
     </div>
 
+    <!-- Header -->
     <div class="flex flex-wrap items-center justify-between gap-3 px-1">
       <div>
-        <p class="text-sm font-semibold text-highlighted">Strategic assumptions</p>
-        <p class="text-sm text-muted">
-          Track the bets behind the strategy and surface the ones most likely to break execution.
-        </p>
+        <h2 class="text-sm font-black text-highlighted tracking-tight">Strategic Assumptions</h2>
+        <p class="text-xs text-muted">Track bets behind the strategy and surface risks.</p>
       </div>
 
       <UButton
         color="primary"
         variant="soft"
         icon="i-lucide-plus"
-        class="rounded-full px-4"
+        size="sm"
+        class="rounded-full"
         @click="addAssumption"
       >
         New Assumption
       </UButton>
     </div>
 
+    <!-- Filters -->
     <div class="flex flex-wrap gap-2">
       <UButton
         v-for="filter in filterOptions"
         :key="filter.value"
         :color="block.filter === filter.value ? 'primary' : 'neutral'"
         :variant="block.filter === filter.value ? 'soft' : 'ghost'"
-        class="rounded-full px-4"
+        size="sm"
+        class="rounded-full px-3"
         @click="
           mutateBlock(tabId, block.id, (entry) => {
             if (entry.type !== 'assumption-tracker') return;
@@ -252,30 +255,33 @@ function removeAssumption(assumptionId: string) {
       </UButton>
     </div>
 
+    <!-- Empty State -->
     <div
       v-if="visibleAssumptions.length === 0"
-      class="border-dashed border border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
+      class="border-dashed border border-muted/20 rounded-2xl py-10 text-center bg-elevated/5"
     >
-      <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">
-        No assumptions in this filter
-      </p>
+      <div class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto">
+        <UIcon name="i-lucide-activity" size="24" />
+      </div>
+      <p class="mt-3 text-xs font-bold text-muted">No assumptions in this filter</p>
     </div>
 
-    <div v-else class="space-y-4">
+    <!-- Assumption Cards -->
+    <div v-else class="space-y-3">
       <article
         v-for="assumption in visibleAssumptions"
         :key="assumption.id"
-        class="rounded-3xl border p-5 transition-colors"
+        class="rounded-2xl border p-4 transition-colors"
         :class="getStatusClasses(assumption.status)"
       >
-        <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
           <div class="min-w-0 flex-1">
             <UInput
               :model-value="assumption.statement"
               variant="none"
               placeholder="Assumption statement"
               class="w-full"
-              :ui="{ base: 'px-0 text-lg font-bold text-highlighted placeholder:text-muted/60' }"
+              :ui="{ base: 'px-0 text-base font-black text-highlighted placeholder:text-muted/40' }"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'assumption-tracker') return;
@@ -288,7 +294,7 @@ function removeAssumption(assumptionId: string) {
               "
             />
 
-            <p class="mt-2 text-xs text-muted/80">
+            <p class="mt-1.5 text-xs text-muted/80">
               {{
                 currentNode
                   ? resolveStrategicAssumptionLinkLabel(currentNode, assumption) ||
@@ -298,26 +304,39 @@ function removeAssumption(assumptionId: string) {
             </p>
           </div>
 
-          <div class="flex items-center gap-2">
-            <UBadge variant="soft" size="sm" class="rounded-2xl">
+          <div class="flex items-center gap-2 shrink-0">
+            <UBadge
+              :color="assumption.status === 'confirmed' ? 'success' : assumption.status === 'at-risk' ? 'error' : assumption.status === 'false' ? 'neutral' : 'warning'"
+              variant="soft"
+              size="md"
+              class="rounded-lg px-3"
+            >
               {{ workspaceStrategicAssumptionStatusLabels[assumption.status] }}
             </UBadge>
             <UButton
               color="neutral"
               variant="ghost"
               icon="i-lucide-trash-2"
-              class="rounded-xl hover:text-error"
+              size="sm"
+              class="rounded-lg hover:text-error hover:bg-error/10"
+              aria-label="Remove assumption"
               @click="removeAssumption(assumption.id)"
             />
           </div>
         </div>
 
-        <div class="mt-5 grid gap-4 lg:grid-cols-3">
-          <UFormField label="Link" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60' }">
+        <!-- Quick Fields -->
+        <div class="grid gap-3 sm:grid-cols-3 mb-4">
+          <div>
+            <label :for="'link-' + assumption.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              Link
+            </label>
             <USelect
+              :id="'link-' + assumption.id"
               :model-value="getAssumptionLinkValue(assumption)"
               :items="getLinkOptions(assumption)"
-              class="rounded-2xl"
+              size="sm"
+              class="rounded-xl"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'assumption-tracker') return;
@@ -331,13 +350,18 @@ function removeAssumption(assumptionId: string) {
                 })
               "
             />
-          </UFormField>
+          </div>
 
-          <UFormField label="Owner" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60' }">
+          <div>
+            <label :for="'owner-' + assumption.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              Owner
+            </label>
             <UInput
+              :id="'owner-' + assumption.id"
               :model-value="assumption.owner"
               placeholder="Owner"
-              class="rounded-2xl"
+              size="sm"
+              class="rounded-xl"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'assumption-tracker') return;
@@ -349,13 +373,18 @@ function removeAssumption(assumptionId: string) {
                 })
               "
             />
-          </UFormField>
+          </div>
 
-          <UFormField label="Review Date" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60' }">
+          <div>
+            <label :for="'review-' + assumption.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              Review Date
+            </label>
             <UInput
+              :id="'review-' + assumption.id"
               :model-value="assumption.reviewDate ?? ''"
               type="date"
-              class="rounded-2xl"
+              size="sm"
+              class="rounded-xl"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'assumption-tracker') return;
@@ -367,24 +396,26 @@ function removeAssumption(assumptionId: string) {
                 })
               "
             />
-          </UFormField>
+          </div>
         </div>
 
-        <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
-          <div class="space-y-4 rounded-2xl border border-muted/20 bg-default/40 p-4">
-            <div class="space-y-2">
+        <!-- Confidence, Status, Evidence -->
+        <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]">
+          <div class="space-y-3 rounded-xl border border-muted/20 bg-default/40 p-3">
+            <div class="space-y-1.5">
               <div
                 class="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
               >
-                <span>Confidence</span>
+                <label :for="'confidence-' + assumption.id">Confidence</label>
                 <span>{{ assumption.confidence }}/5</span>
               </div>
               <input
+                :id="'confidence-' + assumption.id"
                 :value="assumption.confidence"
                 type="range"
                 min="1"
                 max="5"
-                class="h-2 w-full appearance-none rounded-full bg-muted/20 accent-primary"
+                class="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted/20 accent-primary"
                 @input="
                   mutateBlock(tabId, block.id, (entry) => {
                     if (entry.type !== 'assumption-tracker') return;
@@ -398,16 +429,16 @@ function removeAssumption(assumptionId: string) {
               />
             </div>
 
-            <div class="space-y-2">
+            <div class="space-y-1.5">
               <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Status</p>
-              <div class="flex flex-wrap gap-2">
+              <div class="flex flex-wrap gap-1.5">
                 <UButton
                   v-for="status in statusOptions"
                   :key="status"
+                  size="xs"
                   :color="assumption.status === status ? 'primary' : 'neutral'"
                   :variant="assumption.status === status ? 'soft' : 'ghost'"
-                  size="xs"
-                  class="rounded-full"
+                  class="rounded-full px-3"
                   @click="
                     mutateBlock(tabId, block.id, (entry) => {
                       if (entry.type !== 'assumption-tracker') return;
@@ -425,14 +456,18 @@ function removeAssumption(assumptionId: string) {
             </div>
           </div>
 
-          <UFormField label="Evidence Notes" size="sm" :ui="{ label: 'text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60' }">
+          <div>
+            <label :for="'evidence-' + assumption.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              Evidence Notes
+            </label>
             <UTextarea
+              :id="'evidence-' + assumption.id"
               :model-value="assumption.evidenceNotes"
-              :rows="4"
+              :rows="3"
               autoresize
               placeholder="What customer input, market signal, or operational evidence supports this?"
               class="w-full"
-              :ui="{ base: 'rounded-2xl bg-default/40' }"
+              :ui="{ base: 'rounded-xl bg-default/40' }"
               @update:model-value="
                 mutateBlock(tabId, block.id, (entry) => {
                   if (entry.type !== 'assumption-tracker') return;
@@ -444,7 +479,7 @@ function removeAssumption(assumptionId: string) {
                 })
               "
             />
-          </UFormField>
+          </div>
         </div>
       </article>
     </div>
