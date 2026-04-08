@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import {
-  buildEisenhowerBattlePlanPrompt,
-  createWorkspaceTask,
-  getEisenhowerMatrixSummary,
-  getWorkspaceTaskDomainLabel,
-  type WorkspaceTask,
-  type WorkspaceTaskDomain,
-  type WorkspaceTaskQuadrant,
-  type WorkspaceEisenhowerMatrixBlock,
+    buildEisenhowerBattlePlanPrompt,
+    createWorkspaceTask,
+    getEisenhowerMatrixSummary,
+    getWorkspaceTaskDomainLabel,
+    type WorkspaceEisenhowerMatrixBlock,
+    type WorkspaceTask,
+    type WorkspaceTaskDomain,
+    type WorkspaceTaskQuadrant,
 } from "@brainiac/workspace";
 
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
@@ -21,10 +21,55 @@ const props = defineProps<{
 }>();
 
 const toast = useToast();
-const { domainOptions, mutateBlock, runBlockAgentPrompt } = useWorkspaceNodeEditorContext();
+const {
+  domainOptions,
+  mutateTypedBlock,
+  runBlockAgentPrompt,
+  getBlockOperationState,
+} = useWorkspaceNodeEditorContext();
 
 const summary = computed(() => getEisenhowerMatrixSummary(props.block));
-const isPrioritizing = ref(false);
+const operationState = computed(() => getBlockOperationState(props.tabId, props.block.id));
+
+const matrixStatus = computed(() => {
+  if (operationState.value.pending) {
+    return {
+      label: operationState.value.label || "Running analysis",
+      tone: "primary" as const,
+      description: "The Orchestrator is generating a battle plan from the current matrix.",
+    };
+  }
+
+  if (summary.value.prioritizedTasks.length === 0) {
+    return {
+      label: "No tasks yet",
+      tone: "warning" as const,
+      description: "Add tasks so urgency and importance can map your priorities.",
+    };
+  }
+
+  if (summary.value.overdueCount > 0) {
+    return {
+      label: "Overdue focus needed",
+      tone: "warning" as const,
+      description: `${summary.value.overdueCount} overdue task${summary.value.overdueCount === 1 ? "" : "s"} need immediate attention.`,
+    };
+  }
+
+  if (summary.value.quadrants.do.taskCount === 0) {
+    return {
+      label: "No do-now tasks",
+      tone: "primary" as const,
+      description: "Nothing is currently in the urgent + important quadrant.",
+    };
+  }
+
+  return {
+    label: "Matrix ready",
+    tone: "success" as const,
+    description: "Priorities are distributed and ready for execution.",
+  };
+});
 
 const quadrantMeta: Array<{
   key: WorkspaceTaskQuadrant;
@@ -87,7 +132,7 @@ function getInputValue(event: Event) {
   return (event.target as HTMLInputElement | null)?.value ?? "";
 }
 
-function toTaskDomain(value: string) {
+function toTaskDomain(value: string | null | undefined) {
   return value === "strategy" ||
     value === "people" ||
     value === "sales" ||
@@ -127,12 +172,21 @@ function getDomainPillClass(domain: WorkspaceTaskDomain | null | undefined) {
   }
 }
 
-function mutateTask(taskId: string, mutator: (task: WorkspaceTask) => void) {
-  mutateBlock(props.tabId, props.block.id, (block) => {
-    if (block.type !== "eisenhower-matrix") {
-      return;
-    }
+function mutateEisenhowerBlock(
+  mutator: (block: WorkspaceEisenhowerMatrixBlock, timestamp: string) => void,
+) {
+  mutateTypedBlock(
+    props.tabId,
+    props.block.id,
+    "eisenhower-matrix",
+    (block, _tab, _node, timestamp) => {
+      mutator(block, timestamp);
+    },
+  );
+}
 
+function mutateTask(taskId: string, mutator: (task: WorkspaceTask) => void) {
+  mutateEisenhowerBlock((block) => {
     const task = block.tasks.find((entry) => entry.id === taskId);
 
     if (!task) {
@@ -144,11 +198,7 @@ function mutateTask(taskId: string, mutator: (task: WorkspaceTask) => void) {
 }
 
 function addTask() {
-  mutateBlock(props.tabId, props.block.id, (block) => {
-    if (block.type !== "eisenhower-matrix") {
-      return;
-    }
-
+  mutateEisenhowerBlock((block) => {
     block.tasks.unshift(
       createWorkspaceTask({
         text: "New task",
@@ -162,21 +212,57 @@ function addTask() {
 }
 
 function removeTask(taskId: string) {
-  mutateBlock(props.tabId, props.block.id, (block) => {
-    if (block.type !== "eisenhower-matrix") {
-      return;
-    }
-
+  mutateEisenhowerBlock((block) => {
     block.tasks = block.tasks.filter((task) => task.id !== taskId);
   });
 }
 
+function toggleTaskCompleted(taskId: string, value: boolean | string | undefined) {
+  mutateTask(taskId, (entry) => {
+    entry.completed = Boolean(value);
+  });
+}
+
+function updateTaskText(taskId: string, value: string | number | undefined) {
+  mutateTask(taskId, (entry) => {
+    entry.text = String(value ?? "").slice(0, 240);
+  });
+}
+
+function updateTaskDomain(taskId: string, value: string | undefined) {
+  mutateTask(taskId, (entry) => {
+    entry.domain = toTaskDomain(value);
+  });
+}
+
+function updateTaskUrgency(taskId: string, value: string | number | null | undefined) {
+  mutateTask(taskId, (entry) => {
+    entry.urgency = clampTenPointScale(value, entry.urgency);
+  });
+}
+
+function updateTaskImportance(taskId: string, value: string | number | null | undefined) {
+  mutateTask(taskId, (entry) => {
+    entry.importance = clampTenPointScale(value, entry.importance);
+  });
+}
+
+function updateTaskEstimate(taskId: string, value: string | number | null | undefined) {
+  mutateTask(taskId, (entry) => {
+    entry.estimateMinutes = clampEstimate(value, entry.estimateMinutes);
+  });
+}
+
+function updateTaskDueDate(taskId: string, value: string | undefined) {
+  mutateTask(taskId, (entry) => {
+    entry.dueDate = value || null;
+  });
+}
+
 async function prioritizeWithAi() {
-  if (props.block.tasks.length === 0) {
+  if (props.block.tasks.length === 0 || operationState.value.pending) {
     return;
   }
-
-  isPrioritizing.value = true;
 
   try {
     const response = await runBlockAgentPrompt(
@@ -185,11 +271,7 @@ async function prioritizeWithAi() {
       buildEisenhowerBattlePlanPrompt(props.block),
     );
 
-    mutateBlock(props.tabId, props.block.id, (block, _tab, _node, timestamp) => {
-      if (block.type !== "eisenhower-matrix") {
-        return;
-      }
-
+    mutateEisenhowerBlock((block, timestamp) => {
       block.latestBattlePlan = response;
       block.battlePlanUpdatedAt = timestamp;
     });
@@ -207,14 +289,38 @@ async function prioritizeWithAi() {
       color: "error",
       icon: "i-lucide-alert-circle",
     });
-  } finally {
-    isPrioritizing.value = false;
   }
 }
 </script>
 
 <template>
   <div class="space-y-6">
+    <section class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h3 class="text-sm font-semibold text-highlighted">Priority matrix</h3>
+          <p class="mt-1 text-sm text-muted">{{ matrixStatus.description }}</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <UBadge :color="matrixStatus.tone" variant="soft" class="rounded-full">
+            {{ matrixStatus.label }}
+          </UBadge>
+          <UBadge
+            v-if="operationState.pending"
+            color="neutral"
+            variant="soft"
+            class="rounded-full"
+          >
+            <span class="inline-flex items-center gap-1.5">
+              <UIcon name="i-lucide-loader-2" class="size-3.5 animate-spin" />
+              Syncing
+            </span>
+          </UBadge>
+        </div>
+      </div>
+    </section>
+
     <!-- Summary Grid -->
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-3xl bg-primary/5 p-5 border border-primary/10">
@@ -270,7 +376,7 @@ async function prioritizeWithAi() {
             <p class="text-2xl font-black tracking-tight text-highlighted">
               {{ summary.quadrants[quadrant.key].taskCount }}
             </p>
-            <p class="text-[10px] font-bold uppercase tracking-[0.1em] text-muted/60">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-muted/60">
               {{ formatDuration(summary.quadrants[quadrant.key].estimateMinutes) }}
             </p>
           </div>
@@ -294,11 +400,7 @@ async function prioritizeWithAi() {
               <UCheckbox
                 :model-value="task.completed"
                 class="mt-1"
-                @update:model-value="
-                  mutateTask(task.id, (entry) => {
-                    entry.completed = !!$event;
-                  })
-                "
+                @update:model-value="toggleTaskCompleted(task.id, $event as boolean | string | undefined)"
               />
 
               <div class="min-w-0 flex-1 space-y-2">
@@ -394,11 +496,11 @@ async function prioritizeWithAi() {
             icon="i-lucide-sparkles"
             class="rounded-full px-4"
             size="sm"
-            :disabled="block.tasks.length === 0"
-            :loading="isPrioritizing"
+            :disabled="block.tasks.length === 0 || operationState.pending"
+            :loading="operationState.pending"
             @click="prioritizeWithAi"
           >
-            AI Prioritize
+            {{ operationState.pending ? (operationState.label || "Running analysis") : "AI Prioritize" }}
           </UButton>
         </div>
       </div>
@@ -420,11 +522,7 @@ async function prioritizeWithAi() {
             <div class="flex items-start pt-2">
               <UCheckbox
                 :model-value="task.completed"
-                @update:model-value="
-                  mutateTask(task.id, (entry) => {
-                    entry.completed = !!$event;
-                  })
-                "
+                @update:model-value="toggleTaskCompleted(task.id, $event as boolean | string | undefined)"
               />
             </div>
 
@@ -435,11 +533,7 @@ async function prioritizeWithAi() {
                   placeholder="Task name"
                   variant="subtle"
                   class="rounded-xl"
-                  @update:model-value="
-                    mutateTask(task.id, (entry) => {
-                      entry.text = ($event ?? '').slice(0, 240);
-                    })
-                  "
+                  @update:model-value="updateTaskText(task.id, $event as string | number | undefined)"
                 />
 
                 <USelect
@@ -447,11 +541,7 @@ async function prioritizeWithAi() {
                   :items="domainOptions"
                   variant="subtle"
                   class="rounded-xl"
-                  @update:model-value="
-                    mutateTask(task.id, (entry) => {
-                      entry.domain = toTaskDomain($event);
-                    })
-                  "
+                  @update:model-value="updateTaskDomain(task.id, $event as string | undefined)"
                 />
               </div>
 
@@ -471,11 +561,7 @@ async function prioritizeWithAi() {
                     min="1"
                     max="10"
                     class="h-1.5 w-full appearance-none rounded-full bg-error/20 accent-error"
-                    @input="
-                      mutateTask(task.id, (entry) => {
-                        entry.urgency = clampTenPointScale(getInputValue($event), entry.urgency);
-                      })
-                    "
+                    @input="updateTaskUrgency(task.id, getInputValue($event))"
                   />
                 </div>
 
@@ -494,14 +580,7 @@ async function prioritizeWithAi() {
                     min="1"
                     max="10"
                     class="h-1.5 w-full appearance-none rounded-full bg-primary/20 accent-primary"
-                    @input="
-                      mutateTask(task.id, (entry) => {
-                        entry.importance = clampTenPointScale(
-                          getInputValue($event),
-                          entry.importance,
-                        );
-                      })
-                    "
+                    @input="updateTaskImportance(task.id, getInputValue($event))"
                   />
                 </div>
               </div>
@@ -517,11 +596,7 @@ async function prioritizeWithAi() {
                   type="number"
                   variant="subtle"
                   class="rounded-xl"
-                  @update:model-value="
-                    mutateTask(task.id, (entry) => {
-                      entry.estimateMinutes = clampEstimate($event, entry.estimateMinutes);
-                    })
-                  "
+                  @update:model-value="updateTaskEstimate(task.id, $event as string | number | null | undefined)"
                 />
               </div>
 
@@ -532,11 +607,7 @@ async function prioritizeWithAi() {
                   type="date"
                   variant="subtle"
                   class="rounded-xl"
-                  @update:model-value="
-                    mutateTask(task.id, (entry) => {
-                      entry.dueDate = $event || null;
-                    })
-                  "
+                  @update:model-value="updateTaskDueDate(task.id, $event as string | undefined)"
                 />
               </div>
 
