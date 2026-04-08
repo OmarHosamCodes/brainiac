@@ -54,6 +54,10 @@ Current status of implementation work:
   - `WorkspaceContentRoiTrackerBlockEditor`
   - `WorkspaceCollectionsTrackerBlockEditor`
   - `WorkspaceAgencyTimeReportsBlockEditor`
+  - `WorkspaceAgencySprintBoardBlockEditor`
+  - `WorkspaceAgencyTimeEntriesLogBlockEditor`
+  - `WorkspaceContentQualityRadarBlockEditor`
+  - `WorkspaceDelegationMatrixBlockEditor`
 
 - **What was improved in completed blocks**
   - reduced inline mutation noise through extracted helpers or typed mutation usage
@@ -62,20 +66,25 @@ Current status of implementation work:
   - improved accessibility with better labels and more explicit controls
   - standardized async state presentation where applicable
   - strengthened report-state and manager-state visibility in API-backed agency blocks
+  - improved domain-specific guidance and interpretation in analytics-facing scoring blocks
+  - strengthened validation and guardrails for manual time logging and handoff ownership
 
 - **Validation status**
   - targeted inspection of the completed block editors is in good shape
   - the latest batch was checked for concrete block-level regressions and real type mismatches were corrected
+  - edited block files currently report no direct file-level errors
   - targeted workspace validation remains blocked by an unrelated existing type issue in `@brainiac/agent`
+  - current blocker remains: `@openrouter/sdk/models` no longer exports `OpenResponsesUsage` used by `@brainiac/agent`
   - full app type validation is currently blocked by unrelated existing issues elsewhere in the repo
   - current blockers are outside the completed block editors listed above
 
 - **Next recommended implementation batch**
-  - continue Wave A and adjacent cleanup with:
-    - `WorkspaceAgencySprintBoardBlockEditor`
-    - `WorkspaceAgencyTimeEntriesLogBlockEditor`
-    - `WorkspaceContentQualityRadarBlockEditor`
-    - `WorkspaceDelegationMatrixBlockEditor`
+  - continue with remaining P0 redesign surfaces:
+    - `WorkspaceCustomBlockEditor`
+    - `WorkspaceEisenhowerMatrixBlockEditor`
+    - `WorkspaceProfitabilityCashFlowBlockEditor`
+    - `WorkspaceTalentGridBlockEditor`
+    - `WorkspaceAuthorityScorecardBlockEditor`
 
 ---
 
@@ -393,6 +402,10 @@ Foundation-aligned blocks completed so far:
 - Content ROI Tracker
 - Collections Tracker
 - Agency Time Reports
+- Agency Sprint Board
+- Agency Time Entries Log
+- Content Quality Radar
+- Delegation Matrix
 
 ### Wave B — P0 redesigns
 
@@ -437,7 +450,7 @@ Also completed from adjacent Wave A / supporting cleanup work:
 
 ### Wave D — remaining P1
 
-Execute the rest of the P1 group once the highest-value usability improvements are in place. Immediate adjacent follow-up should prioritize `AgencySprintBoard` and `AgencyTimeEntriesLog`, then continue through the remaining untouched P1 surfaces.
+Execute the rest of the P1 group once the highest-value usability improvements are in place. With `AgencySprintBoard`, `AgencyTimeEntriesLog`, and `ContentQualityRadar` now completed, adjacent follow-up should prioritize remaining untouched P1 surfaces such as `LeadershipRhythmPlanner` and `HookBank` before the final P2 sweep.
 
 ### Wave E — P2 refinement pass
 
