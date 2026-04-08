@@ -26,6 +26,7 @@ Current status of implementation work:
   - shared block operation state helpers introduced for pending/running UI feedback
   - accessibility and action-visibility patterns started across refactored blocks
   - copy and scanability improvements started across refactored blocks
+  - foundation patterns expanded into more complex agency and analytics-oriented editors
 
 - **Blocks completed in the current pass**
   - `WorkspaceAiPromptBlockEditor`
@@ -49,6 +50,10 @@ Current status of implementation work:
   - `WorkspaceContentPipelineBlockEditor`
   - `WorkspaceForecastConfidenceBoardBlockEditor`
   - `WorkspaceDealScoringMatrixBlockEditor`
+  - `WorkspaceAgencyProjectManagerBlockEditor`
+  - `WorkspaceContentRoiTrackerBlockEditor`
+  - `WorkspaceCollectionsTrackerBlockEditor`
+  - `WorkspaceAgencyTimeReportsBlockEditor`
 
 - **What was improved in completed blocks**
   - reduced inline mutation noise through extracted helpers or typed mutation usage
@@ -56,19 +61,21 @@ Current status of implementation work:
   - improved executive scanability with clearer summaries, badges, and headers
   - improved accessibility with better labels and more explicit controls
   - standardized async state presentation where applicable
+  - strengthened report-state and manager-state visibility in API-backed agency blocks
 
 - **Validation status**
   - targeted inspection of the completed block editors is in good shape
+  - the latest batch was checked for concrete block-level regressions and real type mismatches were corrected
   - targeted workspace validation remains blocked by an unrelated existing type issue in `@brainiac/agent`
   - full app type validation is currently blocked by unrelated existing issues elsewhere in the repo
   - current blockers are outside the completed block editors listed above
 
 - **Next recommended implementation batch**
   - continue Wave A and adjacent cleanup with:
-    - `WorkspaceAgencyProjectManagerBlockEditor`
-    - `WorkspaceContentRoiTrackerBlockEditor`
-    - `WorkspaceCollectionsTrackerBlockEditor`
-    - `WorkspaceAgencyTimeReportsBlockEditor`
+    - `WorkspaceAgencySprintBoardBlockEditor`
+    - `WorkspaceAgencyTimeEntriesLogBlockEditor`
+    - `WorkspaceContentQualityRadarBlockEditor`
+    - `WorkspaceDelegationMatrixBlockEditor`
 
 ---
 
@@ -365,6 +372,7 @@ Completed Wave A foundation work so far:
 - `getBlockOperationState(...)` and pending-state UI introduced
 - action visibility and keyboard/focus accessibility improved in completed editors
 - scanability and summary surfaces improved in completed editors
+- typed mutation + clearer status models extended into more complex agency/reporting editors
 
 Foundation-aligned blocks completed so far:
 
@@ -381,6 +389,10 @@ Foundation-aligned blocks completed so far:
 - Pros & Cons
 - 2x2 Matrix
 - Habit Grid
+- Agency Project Manager
+- Content ROI Tracker
+- Collections Tracker
+- Agency Time Reports
 
 ### Wave B — P0 redesigns
 
@@ -394,13 +406,13 @@ Foundation-aligned blocks completed so far:
 
 Suggested first group:
 
-1. Agency Project Manager
-2. Content ROI Tracker
+1. Agency Project Manager ✅ completed
+2. Content ROI Tracker ✅ completed
 3. Kanban ✅ completed
 4. Time Orchestrator
 5. Decision Matrix
-6. Deal Scoring Matrix
-7. Collections Tracker
+6. Deal Scoring Matrix ✅ completed
+7. Collections Tracker ✅ completed
 8. Skills Heat Map
 9. Timeline ✅ completed
 10. Task List ✅ completed
@@ -417,10 +429,15 @@ Also completed from adjacent Wave A / supporting cleanup work:
 - Pros & Cons
 - 2x2 Matrix
 - Habit Grid
+- Agency Time Tracker
+- Agency Time Reports
+- Content Pipeline
+- Forecast Confidence Board
+- Scorecard
 
 ### Wave D — remaining P1
 
-Execute the rest of the P1 group once the highest-value usability improvements are in place.
+Execute the rest of the P1 group once the highest-value usability improvements are in place. Immediate adjacent follow-up should prioritize `AgencySprintBoard` and `AgencyTimeEntriesLog`, then continue through the remaining untouched P1 surfaces.
 
 ### Wave E — P2 refinement pass
 
