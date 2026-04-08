@@ -45,6 +45,10 @@ Current status of implementation work:
   - `WorkspaceScorecardBlockEditor`
   - `WorkspaceSkillsHeatMapBlockEditor`
   - `WorkspaceTimeOrchestratorBlockEditor`
+  - `WorkspaceAgencyTimeTrackerBlockEditor`
+  - `WorkspaceContentPipelineBlockEditor`
+  - `WorkspaceForecastConfidenceBoardBlockEditor`
+  - `WorkspaceDealScoringMatrixBlockEditor`
 
 - **What was improved in completed blocks**
   - reduced inline mutation noise through extracted helpers or typed mutation usage
@@ -61,10 +65,10 @@ Current status of implementation work:
 
 - **Next recommended implementation batch**
   - continue Wave A and adjacent cleanup with:
-    - `WorkspaceAgencyTimeTrackerBlockEditor`
-    - `WorkspaceContentPipelineBlockEditor`
-    - `WorkspaceForecastConfidenceBoardBlockEditor`
-    - `WorkspaceDealScoringMatrixBlockEditor`
+    - `WorkspaceAgencyProjectManagerBlockEditor`
+    - `WorkspaceContentRoiTrackerBlockEditor`
+    - `WorkspaceCollectionsTrackerBlockEditor`
+    - `WorkspaceAgencyTimeReportsBlockEditor`
 
 ---
 
