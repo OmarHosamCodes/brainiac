@@ -88,66 +88,68 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="rounded-3xl bg-primary/5 p-5 border border-primary/10">
+  <div class="space-y-5">
+    <!-- Summary Stats -->
+    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-2xl bg-primary/5 p-4 border border-primary/10">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
           Filled Seats
         </p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-primary">
           {{ summary.filledSeats }}
         </p>
       </div>
 
-      <div class="rounded-3xl bg-warning/5 p-5 border border-warning/10">
+      <div class="rounded-2xl bg-warning/5 p-4 border border-warning/10">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Fragile</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-warning">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-warning">
           {{ summary.fragileSeats }}
         </p>
       </div>
 
-      <div class="rounded-3xl bg-error/5 p-5 border border-error/10">
+      <div class="rounded-2xl bg-error/5 p-4 border border-error/10">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Uncovered</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-error">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-error">
           {{ summary.uncoveredSeats }}
         </p>
       </div>
 
-      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+      <div class="rounded-2xl bg-elevated/10 p-4 border border-muted/20">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Overloaded</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-highlighted">
           {{ summary.overloadedSeats }}
         </p>
       </div>
     </div>
 
+    <!-- Header -->
     <div class="flex flex-wrap items-center justify-between gap-3 px-1">
       <div>
-        <p class="text-sm font-semibold text-highlighted">Seat ownership planner</p>
-        <p class="text-sm text-muted">
-          Clarify who owns each critical function, which seats are fragile, and where coverage is
-          missing.
-        </p>
+        <h2 class="text-sm font-black text-highlighted tracking-tight">Seat Ownership Planner</h2>
+        <p class="text-xs text-muted">Clarify critical functions, fragile seats, and coverage gaps.</p>
       </div>
 
       <UButton
         color="primary"
         variant="soft"
         icon="i-lucide-plus"
-        class="rounded-full px-4"
+        size="sm"
+        class="rounded-full"
         @click="addSeat"
       >
-        Add Critical Seat
+        Add Seat
       </UButton>
     </div>
 
+    <!-- Filters -->
     <div class="flex flex-wrap gap-2">
       <UButton
         v-for="filter in filterOptions"
         :key="filter.value"
         :color="block.filter === filter.value ? 'primary' : 'neutral'"
         :variant="block.filter === filter.value ? 'soft' : 'ghost'"
-        class="rounded-full px-4"
+        size="sm"
+        class="rounded-full px-3"
         @click="
           mutateBlock(tabId, block.id, (entry) => {
             if (entry.type !== 'seat-planner') return;
@@ -159,54 +161,54 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
       </UButton>
     </div>
 
+    <!-- Empty State -->
     <div
       v-if="visibleSeats.length === 0"
-      class="border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5"
+      class="border-dashed border-muted/20 rounded-2xl py-10 text-center bg-elevated/5"
     >
-      <p class="text-sm font-semibold text-muted">No seats match this filter.</p>
+      <div class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto">
+        <UIcon name="i-lucide-users" size="24" />
+      </div>
+      <p class="mt-3 text-xs font-bold text-muted">No seats match this filter</p>
     </div>
 
+    <!-- Seat Table -->
     <div v-else class="overflow-x-auto pb-2">
-      <table class="min-w-[1200px] w-full border-separate border-spacing-y-3">
+      <table class="min-w-[1100px] w-full border-separate border-spacing-y-2">
         <thead>
           <tr>
             <th
-              class="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+              class="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
             >
               Seat
             </th>
             <th
-              class="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+              class="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
             >
               Owner
             </th>
             <th
-              class="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+              class="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
             >
               Function
             </th>
             <th
-              class="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+              class="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
             >
               Health
             </th>
             <th
-              class="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+              class="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
             >
               Load
             </th>
             <th
-              class="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+              class="px-3 pb-2 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
             >
               Backup
             </th>
             <th
-              class="px-3 pb-1 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
-            >
-              Notes
-            </th>
-            <th
-              class="px-3 pb-1 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+              class="px-3 pb-2 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
             >
               Actions
             </th>
@@ -216,15 +218,16 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
         <tbody>
           <tr v-for="seat in visibleSeats" :key="seat.id">
             <td
-              class="rounded-l-2xl border-y border-l px-3 py-4 align-top"
+              class="rounded-l-xl border-y border-l px-3 py-3 align-top"
               :class="getSeatClasses(seat)"
             >
               <UInput
                 :model-value="seat.name"
                 variant="none"
                 placeholder="Seat name"
+                size="sm"
                 :ui="{
-                  base: 'px-0 text-sm font-semibold text-highlighted placeholder:text-muted/60',
+                  base: 'px-0 text-sm font-bold text-highlighted placeholder:text-muted/40',
                 }"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
@@ -237,10 +240,11 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
               />
             </td>
 
-            <td class="border-y px-3 py-4 align-top" :class="getSeatClasses(seat)">
+            <td class="border-y px-3 py-3 align-top" :class="getSeatClasses(seat)">
               <UInput
                 :model-value="seat.owner"
-                placeholder="Current owner"
+                placeholder="Owner"
+                size="sm"
                 class="rounded-xl"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
@@ -253,10 +257,11 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
               />
             </td>
 
-            <td class="border-y px-3 py-4 align-top" :class="getSeatClasses(seat)">
+            <td class="border-y px-3 py-3 align-top" :class="getSeatClasses(seat)">
               <UInput
                 :model-value="seat.function"
-                placeholder="Primary function"
+                placeholder="Function"
+                size="sm"
                 class="rounded-xl"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
@@ -269,10 +274,11 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
               />
             </td>
 
-            <td class="border-y px-3 py-4 align-top" :class="getSeatClasses(seat)">
+            <td class="border-y px-3 py-3 align-top" :class="getSeatClasses(seat)">
               <USelect
                 :model-value="seat.health"
                 :items="healthOptions"
+                size="sm"
                 class="rounded-xl"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
@@ -285,10 +291,11 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
               />
             </td>
 
-            <td class="border-y px-3 py-4 align-top" :class="getSeatClasses(seat)">
+            <td class="border-y px-3 py-3 align-top" :class="getSeatClasses(seat)">
               <USelect
                 :model-value="seat.load"
                 :items="loadOptions"
+                size="sm"
                 class="rounded-xl"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
@@ -301,10 +308,11 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
               />
             </td>
 
-            <td class="border-y px-3 py-4 align-top" :class="getSeatClasses(seat)">
+            <td class="border-y px-3 py-3 align-top" :class="getSeatClasses(seat)">
               <UInput
                 :model-value="seat.backupOwner"
-                placeholder="Backup owner"
+                placeholder="Backup"
+                size="sm"
                 class="rounded-xl"
                 @update:model-value="
                   mutateBlock(tabId, block.id, (entry) => {
@@ -317,36 +325,17 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
               />
             </td>
 
-            <td class="border-y px-3 py-4 align-top" :class="getSeatClasses(seat)">
-              <UTextarea
-                :model-value="seat.notes"
-                autoresize
-                :rows="2"
-                :max-rows="6"
-                class="rounded-xl"
-                placeholder="Risk, context, or hiring note"
-                @update:model-value="
-                  mutateBlock(tabId, block.id, (entry) => {
-                    if (entry.type !== 'seat-planner') return;
-                    const target = entry.seats.find((candidate) => candidate.id === seat.id);
-                    if (!target) return;
-                    target.notes = ($event ?? '').slice(0, 2000);
-                  })
-                "
-              />
-            </td>
-
             <td
-              class="rounded-r-2xl border-y border-r px-3 py-4 text-right align-top"
+              class="rounded-r-xl border-y border-r px-3 py-3 text-right align-top"
               :class="getSeatClasses(seat)"
             >
-              <div class="flex justify-end gap-2">
+              <div class="flex justify-end items-center gap-2">
                 <UBadge
                   v-if="isSeatUncovered(seat)"
                   color="error"
                   variant="soft"
-                  size="sm"
-                  class="rounded-full"
+                  size="md"
+                  class="rounded-full px-2.5 py-0.5"
                 >
                   Uncovered
                 </UBadge>
@@ -354,7 +343,9 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
                   color="neutral"
                   variant="ghost"
                   icon="i-lucide-trash-2"
-                  class="rounded-xl hover:text-error"
+                  size="sm"
+                  class="rounded-lg hover:text-error hover:bg-error/10"
+                  aria-label="Remove seat"
                   @click="removeSeat(seat.id)"
                 />
               </div>
@@ -364,40 +355,42 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
       </table>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-3">
-      <div class="rounded-2xl border border-muted/20 bg-default/40 p-4">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Seat Health</p>
-        <div class="mt-3 flex flex-wrap gap-2">
+    <!-- Legend -->
+    <div class="grid gap-3 md:grid-cols-3">
+      <div class="rounded-xl border border-muted/20 bg-default/40 p-3">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Health</p>
+        <div class="mt-2.5 flex flex-wrap gap-1.5">
           <UBadge
             v-for="option in healthOptions"
             :key="option.value"
             variant="soft"
-            class="rounded-full"
+            size="sm"
+            class="rounded-full px-2"
           >
             {{ workspaceSeatHealthLabels[option.value] }}
           </UBadge>
         </div>
       </div>
 
-      <div class="rounded-2xl border border-muted/20 bg-default/40 p-4">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Load Level</p>
-        <div class="mt-3 flex flex-wrap gap-2">
+      <div class="rounded-xl border border-muted/20 bg-default/40 p-3">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Load</p>
+        <div class="mt-2.5 flex flex-wrap gap-1.5">
           <UBadge
             v-for="option in loadOptions"
             :key="option.value"
             variant="soft"
-            class="rounded-full"
+            size="sm"
+            class="rounded-full px-2"
           >
             {{ workspaceSeatLoadLevelLabels[option.value] }}
           </UBadge>
         </div>
       </div>
 
-      <div class="rounded-2xl border border-muted/20 bg-default/40 p-4">
+      <div class="rounded-xl border border-muted/20 bg-default/40 p-3">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Coverage Rule</p>
-        <p class="mt-3 text-sm text-muted">
-          Seats count as uncovered when ownership is missing, backup is missing, or the seat is
-          explicitly marked as a gap.
+        <p class="mt-2.5 text-xs text-muted">
+          Uncovered when owner missing, backup missing, or marked as gap.
         </p>
       </div>
     </div>

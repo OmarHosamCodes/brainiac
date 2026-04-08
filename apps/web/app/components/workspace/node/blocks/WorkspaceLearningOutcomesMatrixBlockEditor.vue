@@ -197,27 +197,24 @@ async function runAnalysis() {
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="space-y-5">
     <!-- Analysis Config Section -->
-    <section
-      class="rounded-3xl border border-primary/20 bg-primary/5 p-6"
-    >
-      <div class="flex flex-wrap items-start justify-between gap-4">
+    <section class="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
-          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">Education Agent</h3>
-          <p class="text-xs text-muted mt-1">
-            Pick a course, tune the analysis request, and generate a full outcomes matrix from the
-            current roadmap context.
+          <h2 class="text-sm font-black text-highlighted tracking-tight">Education Agent</h2>
+          <p class="text-xs text-muted mt-0.5">
+            Generate outcomes matrix from course roadmap context.
           </p>
         </div>
 
         <div class="flex flex-wrap gap-2">
           <UButton
             color="neutral"
-            variant="subtle"
+            variant="soft"
             icon="i-lucide-refresh-ccw"
-            class="rounded-full px-4"
             size="sm"
+            class="rounded-full"
             :disabled="!selectedCourseOption"
             @click="applySuggestedPrompt"
           >
@@ -225,10 +222,10 @@ async function runAnalysis() {
           </UButton>
           <UButton
             color="primary"
-            variant="subtle"
+            variant="soft"
             icon="i-lucide-sparkles"
-            class="rounded-full px-4"
             size="sm"
+            class="rounded-full"
             :disabled="!selectedCourseOption || !block.prompt.trim()"
             :loading="isRunning"
             @click="runAnalysis"
@@ -238,28 +235,35 @@ async function runAnalysis() {
         </div>
       </div>
 
-      <div class="mt-6 grid gap-6 xl:grid-cols-[minmax(0,0.35fr)_minmax(0,0.65fr)]">
-        <div class="space-y-2">
-          <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Selected Course</label>
+      <div class="grid gap-4 sm:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)]">
+        <div class="space-y-1.5">
+          <label :for="'course-select'" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+            Selected Course
+          </label>
           <USelect
+            id="course-select"
             :model-value="selectedCourseOption?.value ?? ''"
             :items="availableCourses"
             variant="subtle"
+            size="sm"
             class="rounded-xl"
             :disabled="availableCourses.length === 0"
             @update:model-value="updateSelectedCourse($event)"
           />
-          <p class="text-[10px] text-muted/40 leading-relaxed px-1">Lessons and outcome context are passed automatically.</p>
+          <p class="text-[10px] text-muted/50 leading-relaxed">Lessons and outcomes passed automatically.</p>
         </div>
 
-        <div class="space-y-2">
-          <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Analysis Prompt</label>
+        <div class="space-y-1.5">
+          <label :for="'analysis-prompt'" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+            Analysis Prompt
+          </label>
           <UTextarea
+            id="analysis-prompt"
             :model-value="block.prompt"
             autoresize
             variant="subtle"
-            :rows="4"
-            class="rounded-2xl"
+            :rows="3"
+            class="rounded-xl"
             :ui="{ base: 'bg-default/60 leading-relaxed' }"
             placeholder="Design a learning outcomes matrix..."
             @update:model-value="
@@ -274,7 +278,7 @@ async function runAnalysis() {
 
       <UAlert
         v-if="availableCourses.length === 0"
-        class="mt-6 rounded-2xl"
+        class="mt-4 rounded-xl"
         color="warning"
         variant="subtle"
         icon="i-lucide-book-open"
@@ -284,42 +288,42 @@ async function runAnalysis() {
     </section>
 
     <!-- Latest Output -->
-    <section class="rounded-3xl border border-muted/20 bg-default/40 p-6">
-      <div class="flex flex-wrap items-start justify-between gap-3">
+    <section class="rounded-2xl border border-muted/20 bg-default/40 p-4">
+      <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
-          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">Analysis output</h3>
-          <p class="text-xs text-muted mt-1">
-            The Education agent returns a structured matrix mapping modules to capabilities and behaviors.
+          <h2 class="text-sm font-black text-highlighted tracking-tight">Analysis Output</h2>
+          <p class="text-xs text-muted mt-0.5">
+            Structured matrix mapping modules to capabilities and behaviors.
           </p>
         </div>
 
         <p v-if="block.outputHistory[0]?.createdAt" class="text-[10px] font-bold uppercase tracking-widest text-muted/60">
-          Last updated {{ formatDateTime(block.outputHistory[0].createdAt) }}
+          Updated {{ formatDateTime(block.outputHistory[0].createdAt) }}
         </p>
       </div>
 
       <div
-        class="prose prose-sm dark:prose-invert mt-6 max-w-none rounded-2xl border border-muted/20 bg-elevated/5 p-5 text-sm leading-relaxed text-toned shadow-sm"
+        class="prose prose-sm dark:prose-invert max-w-none rounded-xl border border-muted/20 bg-elevated/5 p-4 text-sm leading-relaxed text-toned"
         v-html="renderedLatestOutput"
       />
     </section>
 
     <!-- History -->
-    <div v-if="block.outputHistory.length > 1" class="space-y-4">
+    <div v-if="block.outputHistory.length > 1" class="space-y-3">
       <div class="flex items-center justify-between px-1">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Previous Iterations</p>
+        <h3 class="text-sm font-black text-highlighted tracking-tight">Previous Iterations</h3>
         <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-muted/40">
           {{ block.outputHistory.length - 1 }} saved
         </span>
       </div>
 
-      <div class="grid gap-4">
+      <div class="grid gap-3">
         <template v-for="(entry, index) in block.outputHistory" :key="entry.id">
           <article
             v-if="index > 0"
-            class="rounded-2xl border border-muted/20 bg-default/40 p-4"
+            class="rounded-xl border border-muted/20 bg-default/40 p-3"
           >
-            <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
               <p class="text-xs font-bold text-highlighted uppercase tracking-wider">
                 {{ entry.prompt }}
               </p>
@@ -329,7 +333,7 @@ async function runAnalysis() {
             </div>
 
             <div
-              class="prose prose-sm dark:prose-invert mt-4 max-w-none text-xs leading-relaxed text-toned opacity-80"
+              class="prose prose-sm dark:prose-invert mt-3 max-w-none text-xs leading-relaxed text-toned opacity-80"
               v-html="renderSimpleMarkdown(entry.output)"
             />
           </article>

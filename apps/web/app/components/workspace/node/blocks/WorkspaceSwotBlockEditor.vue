@@ -37,32 +37,39 @@ const quadrants = [
 </script>
 
 <template>
-  <div class="space-y-6">
-    <div class="grid gap-4 sm:grid-cols-2">
-      <div class="rounded-3xl border border-muted/20 bg-default/40 p-5">
+  <div class="space-y-5">
+    <!-- Summary Stats -->
+    <div class="grid gap-3 sm:grid-cols-2">
+      <div class="rounded-2xl border border-muted/20 bg-default/40 p-4">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Filled</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-highlighted">{{ summary.filledCellCount }}/4</p>
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-highlighted">{{ summary.filledCellCount }}/4</p>
       </div>
-      <div class="rounded-3xl border border-primary/10 bg-primary/5 p-5">
+      <div class="rounded-2xl border border-primary/10 bg-primary/5 p-4">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Coverage</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-primary">
           {{ 100 - summary.emptyCellCount * 25 }}%
         </p>
       </div>
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-2">
+    <!-- SWOT Quadrants Grid -->
+    <div class="grid gap-3 lg:grid-cols-2">
       <article
         v-for="quadrant in quadrants"
         :key="quadrant.key"
-        class="rounded-3xl border p-5"
+        class="rounded-2xl border p-4 transition-colors hover:border-opacity-50"
         :class="quadrant.className"
       >
-        <div class="mb-3 flex items-center justify-between gap-3">
+        <div class="mb-3 flex items-center justify-between gap-2">
           <h3 class="text-[10px] font-bold uppercase tracking-[0.2em]">{{ quadrant.label }}</h3>
-          <span class="text-[10px] font-bold uppercase tracking-[0.2em] opacity-60">
+          <UBadge
+            :color="(block.cells[quadrant.key] || '').trim() ? 'success' : 'neutral'"
+            variant="soft"
+            size="sm"
+            class="rounded-lg px-2 py-0.5"
+          >
             {{ (block.cells[quadrant.key] || "").trim() ? "Filled" : "Empty" }}
-          </span>
+          </UBadge>
         </div>
 
         <UTextarea
@@ -72,7 +79,7 @@ const quadrants = [
           variant="none"
           class="w-full"
           :ui="{
-            base: 'min-h-[140px] p-0 text-sm leading-relaxed text-toned placeholder:text-muted/40 font-medium',
+            base: 'min-h-[120px] p-0 text-sm leading-relaxed text-toned placeholder:text-muted/40 font-medium',
           }"
           :placeholder="`Capture ${quadrant.label.toLowerCase()} here...`"
           @update:model-value="

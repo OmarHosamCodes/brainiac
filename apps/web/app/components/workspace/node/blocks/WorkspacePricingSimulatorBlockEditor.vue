@@ -66,31 +66,30 @@ const controls = [
 </script>
 
 <template>
-  <div class="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-    <section class="space-y-5 rounded-3xl border border-muted/20 bg-default/40 p-5">
+  <div class="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+    <!-- Controls Section -->
+    <section class="space-y-4 rounded-2xl border border-muted/20 bg-default/40 p-4">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p class="text-sm font-semibold text-highlighted">Pricing simulator</p>
-          <p class="text-sm text-muted">
-            This model is monthly. Active clients stay editable because the retainer math depends on
-            them.
-          </p>
+          <h2 class="text-sm font-black text-highlighted tracking-tight">Pricing Simulator</h2>
+          <p class="text-xs text-muted">Monthly retainer model for executive decisions.</p>
         </div>
 
-        <div class="rounded-2xl bg-primary/5 border border-primary/10 px-4 py-3 text-right">
+        <div class="rounded-xl bg-primary/5 border border-primary/10 px-4 py-2.5 text-right">
           <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Active Clients
           </p>
-          <p class="mt-1 text-2xl sm:text-3xl font-black tracking-tight text-primary">
+          <p class="mt-1 text-xl sm:text-2xl font-black tracking-tight text-primary">
             {{ block.activeClients }}
           </p>
         </div>
       </div>
 
-      <div class="grid gap-4 sm:grid-cols-2">
+      <!-- Client Adjust -->
+      <div class="grid gap-3 sm:grid-cols-2">
         <button
           type="button"
-          class="rounded-2xl border border-muted/20 bg-elevated/10 px-4 py-3 text-left transition hover:border-primary/30"
+          class="rounded-xl border border-muted/20 bg-elevated/10 px-4 py-2.5 text-left transition hover:border-primary/30"
           @click="
             mutateBlock(tabId, block.id, (entry) => {
               if (entry.type !== 'pricing-simulator') return;
@@ -99,12 +98,12 @@ const controls = [
           "
         >
           <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Adjust</p>
-          <p class="mt-1 text-lg font-bold text-highlighted">-1 Client</p>
+          <p class="mt-1 text-base font-bold text-highlighted">-1 Client</p>
         </button>
 
         <button
           type="button"
-          class="rounded-2xl border border-muted/20 bg-elevated/10 px-4 py-3 text-left transition hover:border-primary/30"
+          class="rounded-xl border border-muted/20 bg-elevated/10 px-4 py-2.5 text-left transition hover:border-primary/30"
           @click="
             mutateBlock(tabId, block.id, (entry) => {
               if (entry.type !== 'pricing-simulator') return;
@@ -113,30 +112,51 @@ const controls = [
           "
         >
           <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Adjust</p>
-          <p class="mt-1 text-lg font-bold text-highlighted">+1 Client</p>
+          <p class="mt-1 text-base font-bold text-highlighted">+1 Client</p>
         </button>
       </div>
 
+      <!-- Variable Controls -->
       <article
         v-for="control in controls"
         :key="control.key"
-        class="rounded-2xl border border-muted/20 bg-elevated/10 p-4"
+        class="rounded-xl border border-muted/20 bg-elevated/10 p-3"
       >
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
-              {{ control.label }}
-            </p>
-            <p class="mt-1 text-xl sm:text-2xl font-black tracking-tight text-highlighted">
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <label :for="control.key" class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+            {{ control.label }}
+          </label>
+          <div class="flex items-center gap-1.5">
+            <span class="text-lg sm:text-xl font-black tracking-tight text-highlighted">
               {{ block[control.key] }}
-              <span class="text-sm font-semibold text-muted">{{ control.suffix }}</span>
-            </p>
+            </span>
+            <span class="text-xs font-semibold text-muted">{{ control.suffix }}</span>
           </div>
+        </div>
 
+        <div class="flex items-center gap-3">
+          <input
+            :id="control.key"
+            :value="block[control.key]"
+            :min="control.min"
+            :max="control.max"
+            type="range"
+            class="flex-1 h-1.5 cursor-pointer appearance-none rounded-full bg-muted/35 accent-primary"
+            @input="
+              mutateBlock(tabId, block.id, (entry) => {
+                if (entry.type !== 'pricing-simulator') return;
+                entry[control.key] = Math.min(
+                  control.max,
+                  Math.max(control.min, toInteger(getInputValue($event), entry[control.key])),
+                );
+              })
+            "
+          />
           <UInput
             :model-value="String(block[control.key])"
             type="number"
-            class="w-32"
+            size="sm"
+            class="w-20 rounded-xl"
             @update:model-value="
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== 'pricing-simulator') return;
@@ -152,77 +172,62 @@ const controls = [
           />
         </div>
 
-        <input
-          :value="block[control.key]"
-          :min="control.min"
-          :max="control.max"
-          type="range"
-          class="mt-4 h-2 w-full cursor-pointer appearance-none rounded-full bg-muted/35 accent-primary"
-          @input="
-            mutateBlock(tabId, block.id, (entry) => {
-              if (entry.type !== 'pricing-simulator') return;
-              entry[control.key] = Math.min(
-                control.max,
-                Math.max(control.min, toInteger(getInputValue($event), entry[control.key])),
-              );
-            })
-          "
-        />
-
-        <div class="mt-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+        <div class="mt-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/50">
           <span>{{ control.min }}</span>
           <span>{{ control.max }}</span>
         </div>
       </article>
     </section>
 
+    <!-- Results Section -->
     <section class="space-y-4">
-      <div class="grid gap-4 sm:grid-cols-2">
-        <div class="rounded-3xl bg-success/5 p-5 border border-success/10">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="rounded-2xl bg-success/5 p-4 border border-success/10">
           <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Projected Revenue
           </p>
-          <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
+          <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-success font-mono">
             {{ formatCurrency(summary.projectedRevenue) }}
           </p>
         </div>
 
-        <div class="rounded-3xl bg-primary/5 p-5 border border-primary/10">
+        <div class="rounded-2xl bg-primary/5 p-4 border border-primary/10">
           <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Min Retainer / Client
           </p>
-          <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
+          <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-primary font-mono">
             {{ formatCurrency(summary.minimumRetainerPerClient) }}
           </p>
         </div>
 
-        <div class="rounded-3xl bg-secondary/5 p-5 border border-secondary/10">
+        <div class="rounded-2xl bg-secondary/5 p-4 border border-secondary/10">
           <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Projected Profit
           </p>
           <p
-            class="mt-2 text-2xl sm:text-3xl font-black tracking-tight"
+            class="mt-2 text-xl sm:text-2xl font-black tracking-tight font-mono"
             :class="summary.projectedProfit >= 0 ? 'text-success' : 'text-error'"
           >
             {{ formatCurrency(summary.projectedProfit) }}
           </p>
         </div>
 
-        <div class="rounded-3xl bg-warning/5 p-5 border border-warning/10">
+        <div class="rounded-2xl bg-warning/5 p-4 border border-warning/10">
           <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
             Required Revenue
           </p>
-          <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-warning">
+          <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-warning font-mono">
             {{ formatCurrency(summary.requiredRevenue) }}
           </p>
         </div>
       </div>
 
-      <div class="rounded-3xl border border-muted/20 bg-default/40 p-5">
-        <p class="text-sm font-semibold text-highlighted">Scenario readout</p>
-        <div class="mt-4 space-y-3 text-sm text-toned">
+      <!-- Scenario Readout -->
+      <div class="rounded-2xl border border-muted/20 bg-default/40 p-4">
+        <h3 class="text-sm font-black text-highlighted tracking-tight">Scenario Readout</h3>
+        <div class="mt-3 space-y-2 text-sm text-toned">
           <p>
-            At <strong>{{ block.activeClients }}</strong> active clients, the team is carrying
+            At <strong>{{ block.activeClients }}</strong> active clients, the team carries
             <strong>{{ summary.monthlyClientHours }}</strong> monthly delivery hours.
           </p>
           <p>
@@ -230,9 +235,8 @@ const controls = [
             each client should clear at least
             <strong>{{ formatCurrency(summary.minimumRetainerPerClient) }}</strong> per month.
           </p>
-          <p>
-            Use this to pressure-test rate increases, hiring decisions, and the minimum retainer you
-            should accept.
+          <p class="text-xs text-muted">
+            Use this to pressure-test rate increases, hiring decisions, and minimum retainers.
           </p>
         </div>
       </div>
