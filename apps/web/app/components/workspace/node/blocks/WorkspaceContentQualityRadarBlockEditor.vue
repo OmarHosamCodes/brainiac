@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import {
-  WORKSPACE_CONTENT_QUALITY_DIMENSIONS,
-  getContentQualityRadarSummary,
-  workspaceContentQualityDimensionLabels,
-  type WorkspaceContentQualityDimension,
-  type WorkspaceContentQualityRadarBlock,
+    WORKSPACE_CONTENT_QUALITY_DIMENSIONS,
+    getContentQualityRadarSummary,
+    workspaceContentQualityDimensionLabels,
+    type WorkspaceContentQualityDimension,
+    type WorkspaceContentQualityRadarBlock,
 } from "@brainiac/workspace";
 
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
@@ -14,7 +14,7 @@ const props = defineProps<{
   tabId: string;
 }>();
 
-const { mutateBlock } = useWorkspaceNodeEditorContext();
+const { mutateTypedBlock } = useWorkspaceNodeEditorContext();
 
 const summary = computed(() => getContentQualityRadarSummary(props.block));
 const chartSize = 280;
@@ -32,6 +32,19 @@ const shortLabels: Record<WorkspaceContentQualityDimension, string> = {
   scrollStop: "Stop",
   authenticity: "Real",
   storytelling: "Story",
+};
+
+const dimensionPlaybook: Record<WorkspaceContentQualityDimension, string> = {
+  hook: "Lead with a clear outcome in the first line to stop the scroll.",
+  value: "State the concrete takeaway in plain language within the first 15 seconds.",
+  emotion: "Anchor the message to one emotion that matches the audience moment.",
+  cta: "End with one direct next step and remove optional or conflicting asks.",
+  platformFit: "Match format, cadence, and length to the channel where this will publish.",
+  brand: "Reinforce the same voice and positioning used across your core messaging.",
+  shareability: "Package the insight so someone can quote or forward it immediately.",
+  scrollStop: "Use a stronger opening visual and bolder first sentence framing.",
+  authenticity: "Replace generic claims with specific stories, proof, or concrete detail.",
+  storytelling: "Move through setup, tension, and payoff in a tighter sequence.",
 };
 
 const axes = computed(() =>
@@ -70,9 +83,51 @@ const ringPolygons = computed(() =>
   ),
 );
 
-const radarPolygonPoints = computed(() =>
-  axes.value.map((axis) => `${axis.valueX},${axis.valueY}`).join(" "),
+const radarPolygonPoints = computed(() => axes.value.map((axis) => `${axis.valueX},${axis.valueY}`).join(" "));
+
+const rankedDimensions = computed(() =>
+  [...WORKSPACE_CONTENT_QUALITY_DIMENSIONS].sort(
+    (left, right) => props.block.scores[right] - props.block.scores[left],
+  ),
 );
+
+const focusDimensions = computed(() => rankedDimensions.value.slice(-3).reverse());
+
+const qualityBand = computed(() => {
+  if (summary.value.averageScore >= 8) {
+    return {
+      label: "Execution-ready",
+      tone: "success" as const,
+      interpretation: "Quality is strong enough to scale confidently across channels.",
+    };
+  }
+
+  if (summary.value.averageScore >= 6.5) {
+    return {
+      label: "Solid baseline",
+      tone: "primary" as const,
+      interpretation: "Core quality is stable, with a few areas still limiting conversion.",
+    };
+  }
+
+  if (summary.value.averageScore >= 5) {
+    return {
+      label: "Needs tightening",
+      tone: "warning" as const,
+      interpretation: "Content has potential but weak dimensions are reducing impact.",
+    };
+  }
+
+  return {
+    label: "High risk",
+    tone: "error" as const,
+    interpretation: "Quality is too inconsistent; improve weakest dimensions before scaling.",
+  };
+});
+
+function mutateRadarBlock(mutator: (block: WorkspaceContentQualityRadarBlock) => void) {
+  mutateTypedBlock(props.tabId, props.block.id, "content-quality-radar", mutator);
+}
 
 function getAverageToneClasses() {
   if (summary.value.averageScore >= 7) {
@@ -98,40 +153,56 @@ function getLabelAnchor(x: number) {
   return "middle";
 }
 
-function getInputValue(event: Event) {
-  return (event.target as HTMLInputElement | null)?.value ?? "5";
-}
-
-function clampScore(value: string) {
+function clampScore(value: string | number | undefined) {
   const numeric = Number(value || 5);
   return Math.min(10, Math.max(1, Math.round(numeric)));
 }
 
-function updateScore(dimension: WorkspaceContentQualityDimension, value: string) {
-  mutateBlock(props.tabId, props.block.id, (block) => {
-    if (block.type !== "content-quality-radar") {
-      return;
-    }
-
+function updateScore(dimension: WorkspaceContentQualityDimension, value: string | number | undefined) {
+  mutateRadarBlock((block) => {
     block.scores[dimension] = clampScore(value);
   });
+}
+
+function getScoreToneClasses(score: number) {
+  if (score >= 8) {
+    return "text-success";
+  }
+
+  if (score >= 6) {
+    return "text-primary";
+  }
+
+  if (score >= 4) {
+    return "text-warning";
+  }
+
+  return "text-error";
 }
 </script>
 
 <template>
   <div class="space-y-6">
-    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+    <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Average</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight" :class="getAverageToneClasses()">
+        <p class="mt-2 text-2xl font-black tracking-tight sm:text-3xl" :class="getAverageToneClasses()">
           {{ summary.averageScore }}
         </p>
         <p class="mt-1 text-sm text-muted">Live average across all 10 quality dimensions</p>
       </div>
 
-      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+      <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Quality band</p>
+        <p class="mt-2 text-2xl font-black tracking-tight sm:text-3xl" :class="getAverageToneClasses()">
+          {{ qualityBand.label }}
+        </p>
+        <p class="mt-1 text-sm text-muted">{{ qualityBand.interpretation }}</p>
+      </div>
+
+      <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Strongest</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
+        <p class="mt-2 text-2xl font-black tracking-tight text-success sm:text-3xl">
           {{
             summary.strongestDimension
               ? workspaceContentQualityDimensionLabels[summary.strongestDimension]
@@ -141,16 +212,16 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
         <p class="mt-1 text-sm text-muted">The highest-performing quality pillar</p>
       </div>
 
-      <div class="rounded-3xl bg-elevated/10 p-5 border border-muted/20">
+      <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Weakest</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-error">
+        <p class="mt-2 text-2xl font-black tracking-tight text-error sm:text-3xl">
           {{
             summary.weakestDimension
               ? workspaceContentQualityDimensionLabels[summary.weakestDimension]
               : "None"
           }}
         </p>
-        <p class="mt-1 text-sm text-muted">Dimension requiring the most attention</p>
+        <p class="mt-1 text-sm text-muted">Priority area for the next content iteration</p>
       </div>
     </div>
 
@@ -160,21 +231,20 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
           <div>
             <p class="text-sm font-semibold text-highlighted">Radar view</p>
             <p class="text-sm text-muted">
-              The filled shape expands where the content is strong and collapses where quality is
-              weak.
+              The filled shape expands where content quality is strong and collapses where execution needs work.
             </p>
           </div>
 
           <div class="text-right">
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Score</p>
-            <p class="text-2xl sm:text-3xl font-black tracking-tight" :class="getAverageToneClasses()">
+            <p class="text-2xl font-black tracking-tight sm:text-3xl" :class="getAverageToneClasses()">
               {{ summary.averageScore }}
             </p>
           </div>
         </div>
 
         <div class="mt-5 flex justify-center">
-          <svg :viewBox="`0 0 ${chartSize} ${chartSize}`" class="size-[280px] overflow-visible">
+          <svg :viewBox="`0 0 ${chartSize} ${chartSize}`" class="size-70 overflow-visible">
             <polygon
               v-for="(points, index) in ringPolygons"
               :key="`ring-${index}`"
@@ -224,13 +294,34 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
             </text>
           </svg>
         </div>
+
+        <div class="mt-4 rounded-2xl border border-muted/20 bg-default/50 p-4">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted/70">Focus next</p>
+          <div class="mt-3 space-y-2">
+            <article
+              v-for="dimension in focusDimensions"
+              :key="dimension"
+              class="rounded-xl border border-muted/20 bg-default/70 p-3"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <p class="text-xs font-semibold text-highlighted">
+                  {{ workspaceContentQualityDimensionLabels[dimension] }}
+                </p>
+                <span class="text-xs font-black" :class="getScoreToneClasses(block.scores[dimension])">
+                  {{ block.scores[dimension] }}/10
+                </span>
+              </div>
+              <p class="mt-1 text-xs text-muted">{{ dimensionPlaybook[dimension] }}</p>
+            </article>
+          </div>
+        </div>
       </section>
 
       <section class="rounded-3xl border border-muted/20 bg-default/40 p-5">
         <div class="mb-5">
           <p class="text-sm font-semibold text-highlighted">Dimension controls</p>
           <p class="text-sm text-muted">
-            Use the sliders to score the content from 1 to 10. The chart updates immediately.
+            Score each pillar from 1 to 10. Use the benchmark note to decide what to improve before publishing.
           </p>
         </div>
 
@@ -244,7 +335,9 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
               <p class="text-sm font-semibold text-highlighted">
                 {{ workspaceContentQualityDimensionLabels[dimension] }}
               </p>
-              <span class="text-sm font-black text-primary">{{ block.scores[dimension] }}</span>
+              <span class="text-sm font-black" :class="getScoreToneClasses(block.scores[dimension])">
+                {{ block.scores[dimension] }}
+              </span>
             </div>
 
             <input
@@ -253,13 +346,27 @@ function updateScore(dimension: WorkspaceContentQualityDimension, value: string)
               min="1"
               max="10"
               class="mt-4 h-1.5 w-full appearance-none rounded-full bg-muted/20 accent-primary"
-              @input="updateScore(dimension, getInputValue($event))"
+              :aria-label="`Score for ${workspaceContentQualityDimensionLabels[dimension]}`"
+              @input="updateScore(dimension, ($event.target as HTMLInputElement).value)"
             />
 
-            <div class="mt-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
-              <span>1</span>
-              <span>10</span>
+            <div class="mt-3 flex items-center justify-between gap-2">
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">1</div>
+              <UInput
+                :model-value="String(block.scores[dimension])"
+                type="number"
+                min="1"
+                max="10"
+                step="1"
+                size="xs"
+                class="w-20"
+                :aria-label="`Numeric score for ${workspaceContentQualityDimensionLabels[dimension]}`"
+                @update:model-value="updateScore(dimension, $event as string | number | undefined)"
+              />
+              <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">10</div>
             </div>
+
+            <p class="mt-3 text-xs text-muted">{{ dimensionPlaybook[dimension] }}</p>
           </article>
         </div>
       </section>
