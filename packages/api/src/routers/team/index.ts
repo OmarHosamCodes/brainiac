@@ -1,6 +1,7 @@
 import { workspaceTeamRoleSchema } from "@brainiac/workspace";
 import { z } from "zod";
 
+import { getBillingStateForUser } from "../../billing-guard";
 import { protectedProcedure } from "../../procedures";
 import {
   addTeamMember,
@@ -80,6 +81,17 @@ export const teamRouter = {
     return teamDetailSchema.parse(await getTeam(context.session.user.id, input.teamId));
   }),
   create: protectedProcedure.input(teamCreateInputSchema).handler(async ({ context, input }) => {
+    const billing = await getBillingStateForUser(context.session.user.id);
+    const existing = await listUserTeams(context.session.user.id);
+
+    if (existing.length >= billing.limits.teams) {
+      const { ORPCError } = await import("@orpc/server");
+      throw new ORPCError("FORBIDDEN", {
+        message: `Your ${billing.tier} plan allows up to ${billing.limits.teams} team(s)`,
+        data: { limit: billing.limits.teams, current: existing.length },
+      });
+    }
+
     return teamSummarySchema.parse(await createTeam(context.session.user.id, input.name.trim()));
   }),
   update: protectedProcedure.input(teamUpdateInputSchema).handler(async ({ context, input }) => {

@@ -13,6 +13,7 @@ import {
     type WorkspaceTimeOrchestratorBlock,
 } from "@brainiac/workspace";
 
+import WorkspaceOrchestratorSourcesModal from "~/components/workspace/node/blocks/WorkspaceOrchestratorSourcesModal.vue";
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
 
 const props = defineProps<{
@@ -22,11 +23,19 @@ const props = defineProps<{
 
 const {
     currentNode,
+    allNodes,
     mutateTypedBlock,
     mutateCollectedTask,
+    connectSource,
+    disconnectSource,
+    removeCollectedTask,
+    addTaskToSource,
+    navigateToSource,
     getTimeOrchestratorSummaryForBlock,
     formatRelativeTaskMeta,
 } = useWorkspaceNodeEditorContext();
+
+const sourcesModalOpen = ref(false);
 
 const summary = computed(() => getTimeOrchestratorSummaryForBlock(props.block));
 
@@ -249,6 +258,13 @@ function getTaskActionLabel(item: WorkspaceCollectedTask) {
         ? `Reopen ${taskLabel}`
         : `Complete ${taskLabel}`;
 }
+
+function handleMutateTask(
+    item: WorkspaceCollectedTask,
+    mutator: (task: WorkspaceCollectedTask["task"]) => void,
+) {
+    mutateCollectedTask(item, mutator);
+}
 </script>
 
 <template>
@@ -277,17 +293,31 @@ function getTaskActionLabel(item: WorkspaceCollectedTask) {
                     </p>
                 </div>
 
-                <UButton
-                    color="neutral"
-                    variant="soft"
-                    size="sm"
-                    icon="i-lucide-rotate-ccw"
-                    class="rounded-full px-4"
-                    aria-label="Reset time orchestrator filters"
-                    @click="resetFilters"
-                >
-                    Reset Filters
-                </UButton>
+                <div class="flex items-center gap-2">
+                    <UButton
+                        color="primary"
+                        variant="soft"
+                        size="sm"
+                        icon="i-lucide-plug-2"
+                        class="rounded-full px-4"
+                        aria-label="Manage connected sources"
+                        @click="sourcesModalOpen = true"
+                    >
+                        Manage Sources
+                    </UButton>
+
+                    <UButton
+                        color="neutral"
+                        variant="soft"
+                        size="sm"
+                        icon="i-lucide-rotate-ccw"
+                        class="rounded-full px-4"
+                        aria-label="Reset time orchestrator filters"
+                        @click="resetFilters"
+                    >
+                        Reset Filters
+                    </UButton>
+                </div>
             </div>
 
             <div class="mt-6 grid gap-6 lg:grid-cols-2">
@@ -709,5 +739,19 @@ function getTaskActionLabel(item: WorkspaceCollectedTask) {
                 </p>
             </section>
         </div>
+
+        <WorkspaceOrchestratorSourcesModal
+            v-if="currentNode"
+            :open="sourcesModalOpen"
+            :orchestrator-node="currentNode"
+            :all-nodes="allNodes"
+            @update:open="sourcesModalOpen = $event"
+            @connect="connectSource"
+            @disconnect="disconnectSource"
+            @mutate-task="handleMutateTask"
+            @remove-task="removeCollectedTask"
+            @add-task="addTaskToSource"
+            @navigate-to-source="navigateToSource"
+        />
     </div>
 </template>

@@ -65,6 +65,15 @@ onServerPrefetch(async () => {
         >
           Marketplace
         </UButton>
+        <UButton
+          to="/pricing"
+          size="xl"
+          variant="ghost"
+          color="neutral"
+          class="rounded-2xl px-8 h-14 font-bold border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+        >
+          Pricing
+        </UButton>
       </div>
     </div>
 

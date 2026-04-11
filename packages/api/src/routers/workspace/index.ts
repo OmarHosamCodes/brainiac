@@ -6,7 +6,8 @@ import {
 } from "@brainiac/workspace";
 import { z } from "zod";
 
-import { protectedProcedure } from "../../procedures";
+import { getBillingStateForUser } from "../../billing-guard";
+import { protectedProcedure, protectedProProcedure } from "../../procedures";
 import {
   getWorkspaceSnapshot,
   getWorkspaceMarketplaceItems,
@@ -36,6 +37,16 @@ export const workspaceRouter = {
     return getWorkspaceSnapshot(context.session.user.id);
   }),
   save: protectedProcedure.input(workspaceSaveInputSchema).handler(async ({ input, context }) => {
+    const billing = await getBillingStateForUser(context.session.user.id);
+
+    if (input.nodes.length > billing.limits.workspaceNodes) {
+      const { ORPCError } = await import("@orpc/server");
+      throw new ORPCError("FORBIDDEN", {
+        message: `Your ${billing.tier} plan allows up to ${billing.limits.workspaceNodes} workspace nodes`,
+        data: { limit: billing.limits.workspaceNodes, current: input.nodes.length },
+      });
+    }
+
     return saveWorkspaceNodes(context.session.user.id, input.nodes);
   }),
   shareNode: protectedProcedure
@@ -76,7 +87,7 @@ export const workspaceRouter = {
         items: await getWorkspaceMarketplaceItems(),
       });
     }),
-    save: protectedProcedure
+    save: protectedProProcedure
       .input(workspaceMarketplaceSaveInputSchema)
       .handler(async ({ input, context }) => {
         return saveWorkspaceMarketplaceItem(

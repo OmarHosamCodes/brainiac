@@ -899,6 +899,105 @@ function removeTask(tabId: string, blockId: string, taskId: string) {
     });
 }
 
+const allNodes = computed(() => draftNodes.value);
+
+function connectSource(standardNodeId: string) {
+    if (!node.value) return;
+    workspaceStore.connectNodePair({
+        orchestratorNodeId: node.value.id,
+        standardNodeId,
+    });
+}
+
+function disconnectSource(standardNodeId: string) {
+    if (!node.value) return;
+    workspaceStore.disconnectNodePair({
+        orchestratorNodeId: node.value.id,
+        standardNodeId,
+    });
+}
+
+function removeCollectedTask(item: WorkspaceCollectedTask) {
+    updateDraftNodes((nodes) => {
+        const sourceNode = nodes.find(
+            (entry) => entry.id === item.sourceNodeId,
+        );
+        if (!sourceNode) return;
+
+        const tab = sourceNode.tabs.find(
+            (entry) => entry.id === item.tabId,
+        );
+        if (!tab) return;
+
+        const block = tab.blocks.find(
+            (entry) => entry.id === item.blockId,
+        );
+        if (!block) return;
+
+        const timestamp = new Date().toISOString();
+
+        if (block.type === "content-pipeline") {
+            block.items = block.items.filter(
+                (entry) => entry.id !== item.task.id,
+            );
+        } else if (
+            block.type === "task-list" ||
+            block.type === "eisenhower-matrix"
+        ) {
+            block.tasks = block.tasks.filter(
+                (entry) => entry.id !== item.task.id,
+            );
+        } else {
+            return;
+        }
+
+        block.updatedAt = timestamp;
+        tab.updatedAt = timestamp;
+        sourceNode.updatedAt = timestamp;
+        sourceNode.label = sourceNode.title;
+        const idx = nodes.indexOf(sourceNode);
+        if (idx >= 0) nodes[idx] = normalizeWorkspaceNode(sourceNode);
+    });
+}
+
+function addTaskToSource(sourceNodeId: string) {
+    updateDraftNodes((nodes) => {
+        const sourceNode = nodes.find(
+            (entry) => entry.id === sourceNodeId,
+        );
+        if (!sourceNode) return;
+
+        let targetBlock: { tasks: WorkspaceTask[] } | null = null;
+
+        for (const tab of sourceNode.tabs) {
+            for (const block of tab.blocks) {
+                if (
+                    block.type === "task-list" ||
+                    block.type === "eisenhower-matrix"
+                ) {
+                    targetBlock = block;
+                    break;
+                }
+            }
+            if (targetBlock) break;
+        }
+
+        if (!targetBlock) return;
+
+        targetBlock.tasks.push(createWorkspaceTask());
+
+        const timestamp = new Date().toISOString();
+        sourceNode.updatedAt = timestamp;
+        sourceNode.label = sourceNode.title;
+        const idx = nodes.indexOf(sourceNode);
+        if (idx >= 0) nodes[idx] = normalizeWorkspaceNode(sourceNode);
+    });
+}
+
+async function navigateToSource(sourceNodeId: string) {
+    await navigateTo(`/node/${sourceNodeId}`);
+}
+
 function addDecisionItem(
     tabId: string,
     blockId: string,
@@ -2635,6 +2734,12 @@ provide(workspaceNodeEditorContextKey, {
     formatRelativeTaskMeta,
     formatFormulaResult,
     renderNotesPreview,
+    allNodes,
+    connectSource,
+    disconnectSource,
+    removeCollectedTask,
+    addTaskToSource,
+    navigateToSource,
 });
 </script>
 

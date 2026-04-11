@@ -67,6 +67,12 @@ function createApp() {
 
   app.on(["GET", "POST"], "/api/auth/*", (context) => auth.handler(context.req.raw));
 
+  app.get("/billing/success", (context) => {
+    const url = new URL("/billing/success", env.CORS_ORIGIN);
+    url.search = new URL(context.req.url).search;
+    return context.redirect(url.toString(), 302);
+  });
+
   app.use("/*", async (context, next) => {
     const requestContext = await createContext({ context });
     const response = await handleAppRouterRequest(context.req.raw, requestContext);
