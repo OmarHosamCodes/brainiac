@@ -61,6 +61,11 @@
       "sourceType": "github",
       "computedHash": "33a8b5195481719e954b71762de56faaabc68c479602673894e0d0e47336756b"
     },
+    "shape": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "computedHash": "8edad33758f2461f51afdb51741bfcc4cc57d84ea42e2751a84be2c6a2d48f69"
+    },
     "teach-impeccable": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",

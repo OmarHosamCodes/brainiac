@@ -14,15 +14,16 @@ import type {
   WorkspaceTimeOrchestratorSummary,
   WorkspaceTimelineBlock,
 } from "@brainiac/workspace";
+import type { DropdownMenuItem } from "@nuxt/ui";
+import type { ComputedRef, InjectionKey, Ref } from "vue";
+import { inject } from "vue";
+import type { WorkspaceBlockPresetId } from "~/utils/workspace-block-presets";
+
 
 export type WorkspaceBlockOperationState = {
   pending: boolean;
   label: string | null;
 };
-import type { DropdownMenuItem } from "@nuxt/ui";
-import type { ComputedRef, InjectionKey, Ref } from "vue";
-import { inject } from "vue";
-import type { WorkspaceBlockPresetId } from "~/utils/workspace-block-presets";
 
 export type WorkspaceNodePriorityOption = {
   label: string;
@@ -211,6 +212,12 @@ export type WorkspaceNodeEditorContext = {
   formatRelativeTaskMeta(item: WorkspaceCollectedTask): string;
   formatFormulaResult(value: number | null): string;
   renderNotesPreview(input: string): string;
+  allNodes: ComputedRef<WorkspaceNode[]>;
+  connectSource(standardNodeId: string): void;
+  disconnectSource(standardNodeId: string): void;
+  removeCollectedTask(item: WorkspaceCollectedTask): void;
+  addTaskToSource(sourceNodeId: string): void;
+  navigateToSource(sourceNodeId: string): void;
 };
 
 export const workspaceNodeEditorContextKey = Symbol(

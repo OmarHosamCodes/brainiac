@@ -1,3 +1,4 @@
+import { polarClient } from "@polar-sh/better-auth";
 import { createAuthClient } from "better-auth/vue";
 
 export default defineNuxtPlugin(() => {
@@ -5,6 +6,7 @@ export default defineNuxtPlugin(() => {
 
   const authClient = createAuthClient({
     baseURL: config.public.serverUrl,
+    plugins: [polarClient()],
   });
 
   return {

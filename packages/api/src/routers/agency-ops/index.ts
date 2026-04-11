@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { protectedProcedure } from "../../procedures";
+import { protectedProProcedure } from "../../procedures";
 import {
     createAgencyClient,
     createAgencyProject,
@@ -185,14 +185,14 @@ const reportsInputSchema = teamScopedInputSchema.extend({
 
 export const agencyOpsRouter = {
     clients: {
-        list: protectedProcedure
+        list: protectedProProcedure
             .input(teamScopedInputSchema.extend({ includeArchived: z.boolean().optional() }))
             .handler(async ({ context, input }) => {
                 return z
                     .object({ items: z.array(agencyClientSchema) })
                     .parse(await listAgencyClients(context.session.user.id, input));
             }),
-        create: protectedProcedure
+        create: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     name: z.string().trim().min(1).max(120),
@@ -202,7 +202,7 @@ export const agencyOpsRouter = {
             .handler(async ({ context, input }) => {
                 return agencyClientSchema.parse(await createAgencyClient(context.session.user.id, input));
             }),
-        update: protectedProcedure
+        update: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     clientId: z.string().min(1),
@@ -216,7 +216,7 @@ export const agencyOpsRouter = {
             }),
     },
     projects: {
-        list: protectedProcedure
+        list: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     clientId: z.string().min(1).optional(),
@@ -229,7 +229,7 @@ export const agencyOpsRouter = {
                     .object({ items: z.array(agencyProjectSchema) })
                     .parse(await listAgencyProjects(context.session.user.id, input));
             }),
-        create: protectedProcedure
+        create: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     clientId: z.string().min(1),
@@ -242,7 +242,7 @@ export const agencyOpsRouter = {
             .handler(async ({ context, input }) => {
                 return agencyProjectSchema.parse(await createAgencyProject(context.session.user.id, input));
             }),
-        update: protectedProcedure
+        update: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     projectId: z.string().min(1),
@@ -259,7 +259,7 @@ export const agencyOpsRouter = {
             }),
     },
     sprints: {
-        list: protectedProcedure
+        list: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     projectId: z.string().min(1).optional(),
@@ -271,7 +271,7 @@ export const agencyOpsRouter = {
                     .object({ items: z.array(agencySprintSchema) })
                     .parse(await listAgencySprints(context.session.user.id, input));
             }),
-        create: protectedProcedure
+        create: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     projectId: z.string().min(1),
@@ -284,7 +284,7 @@ export const agencyOpsRouter = {
             .handler(async ({ context, input }) => {
                 return agencySprintSchema.parse(await createAgencySprint(context.session.user.id, input));
             }),
-        update: protectedProcedure
+        update: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     sprintId: z.string().min(1),
@@ -299,14 +299,14 @@ export const agencyOpsRouter = {
             }),
     },
     sprintItems: {
-        list: protectedProcedure
+        list: protectedProProcedure
             .input(teamScopedInputSchema.extend({ sprintId: z.string().min(1) }))
             .handler(async ({ context, input }) => {
                 return z
                     .object({ items: z.array(agencySprintItemSchema) })
                     .parse(await listAgencySprintItems(context.session.user.id, input));
             }),
-        create: protectedProcedure
+        create: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     sprintId: z.string().min(1),
@@ -325,7 +325,7 @@ export const agencyOpsRouter = {
                     await createAgencySprintItem(context.session.user.id, input),
                 );
             }),
-        update: protectedProcedure
+        update: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     sprintItemId: z.string().min(1),
@@ -346,14 +346,14 @@ export const agencyOpsRouter = {
             }),
     },
     timer: {
-        getActive: protectedProcedure
+        getActive: protectedProProcedure
             .input(z.object({ teamId: z.string().min(1).optional() }))
             .handler(async ({ context, input }) => {
                 return z
                     .object({ timer: agencyActiveTimerSchema.nullable() })
                     .parse(await getAgencyActiveTimer(context.session.user.id, input));
             }),
-        start: protectedProcedure
+        start: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     sprintItemId: z.string().min(1),
@@ -365,7 +365,7 @@ export const agencyOpsRouter = {
                     .object({ timer: agencyActiveTimerSchema.nullable() })
                     .parse(await startAgencyTimer(context.session.user.id, input));
             }),
-        stop: protectedProcedure
+        stop: protectedProProcedure
             .input(
                 z.object({
                     teamId: z.string().min(1).optional(),
@@ -382,7 +382,7 @@ export const agencyOpsRouter = {
             }),
     },
     timeEntries: {
-        listMine: protectedProcedure
+        listMine: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     page: z.number().int().min(1).optional(),
@@ -411,7 +411,7 @@ export const agencyOpsRouter = {
                     })
                     .parse(await listMyAgencyTimeEntries(context.session.user.id, input));
             }),
-        createManual: protectedProcedure
+        createManual: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     sprintItemId: z.string().min(1),
@@ -425,7 +425,7 @@ export const agencyOpsRouter = {
                     await createManualAgencyTimeEntry(context.session.user.id, input),
                 );
             }),
-        updateMine: protectedProcedure
+        updateMine: protectedProProcedure
             .input(
                 teamScopedInputSchema.extend({
                     entryId: z.string().min(1),
@@ -437,7 +437,7 @@ export const agencyOpsRouter = {
             .handler(async ({ context, input }) => {
                 return agencyTimeEntrySchema.parse(await updateMyAgencyTimeEntry(context.session.user.id, input));
             }),
-        deleteMine: protectedProcedure
+        deleteMine: protectedProProcedure
             .input(teamScopedInputSchema.extend({ entryId: z.string().min(1) }))
             .handler(async ({ context, input }) => {
                 return z
@@ -449,14 +449,14 @@ export const agencyOpsRouter = {
             }),
     },
     reports: {
-        summary: protectedProcedure.input(reportsInputSchema).handler(async ({ context, input }) => {
+        summary: protectedProProcedure.input(reportsInputSchema).handler(async ({ context, input }) => {
             return z
                 .object({
                     summary: reportsSummarySchema,
                 })
                 .parse(await getAgencyReportsSummary(context.session.user.id, input));
         }),
-        exportCsv: protectedProcedure.input(reportsInputSchema).handler(async ({ context, input }) => {
+        exportCsv: protectedProProcedure.input(reportsInputSchema).handler(async ({ context, input }) => {
             return z
                 .object({
                     contentType: z.literal("text/csv"),

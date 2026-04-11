@@ -4,6 +4,9 @@
   "exports": {
     ".": {
       "default": "./src/index.ts"
+    },
+    "./tiers": {
+      "default": "./src/tiers.ts"
     }
   },
   "scripts": {

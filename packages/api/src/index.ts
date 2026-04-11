@@ -1,1 +1,1 @@
-export { o, protectedProcedure, publicProcedure } from "./procedures";
+export { o, protectedProcedure, protectedProProcedure, publicProcedure } from "./procedures";

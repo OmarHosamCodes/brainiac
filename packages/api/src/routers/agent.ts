@@ -13,8 +13,10 @@ import {
   openRouterModelCatalogResponseSchema,
   openRouterFreeModelsResponseSchema,
 } from "@brainiac/agent";
+import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 
+import { getBillingStateForUser } from "../billing-guard";
 import { protectedProcedure } from "../procedures";
 import { toInternalServerError } from "../dev-errors";
 import {
@@ -50,6 +52,21 @@ export const agentRouter = {
   chat: {
     turn: protectedProcedure.input(agentChatTurnInputSchema).handler(async ({ input, context }) => {
       try {
+        // Enforce conversation limit for free tier (only for new conversations)
+        if (!input.conversationId) {
+          const billing = await getBillingStateForUser(context.session.user.id);
+
+          if (billing.limits.aiConversations !== -1) {
+            const existing = await listDashboardConversations(context.session.user.id);
+            if (existing.conversations.length >= billing.limits.aiConversations) {
+              throw new ORPCError("FORBIDDEN", {
+                message: `Your ${billing.tier} plan allows up to ${billing.limits.aiConversations} AI conversations`,
+                data: { limit: billing.limits.aiConversations, current: existing.conversations.length },
+              });
+            }
+          }
+        }
+
         return agentChatTurnResponseSchema.parse(
           await appendDashboardConversationTurn(
             context.session.user.id,
