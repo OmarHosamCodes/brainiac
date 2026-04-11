@@ -18,9 +18,11 @@ const props = withDefaults(
         nodes: WorkspaceNode[];
         compact?: boolean;
         scopeKind?: "nodes" | "blocks";
+        activeTabId?: string | null;
     }>(),
     {
         scopeKind: "nodes",
+        activeTabId: null,
     },
 );
 
@@ -108,7 +110,7 @@ const {
     toolPresetOptions,
     toolPresetStatusLabel,
     toolsOnly,
-} = useDashboardAgentChat(toRef(props, "nodes"));
+} = useDashboardAgentChat(toRef(props, "nodes"), toRef(props, "activeTabId"));
 
 const isBlockScope = computed(() => props.scopeKind === "blocks");
 const activeConversationMeta = computed(

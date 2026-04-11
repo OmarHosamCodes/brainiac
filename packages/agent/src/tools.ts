@@ -1386,7 +1386,6 @@ function describeBlockEditGuide(
       });
   }
 
-  return assertNever(block);
 }
 
 function collectPromptOutputFragments(outputs: { prompt: string; output: string }[]) {
@@ -1802,7 +1801,6 @@ function collectBlockSearchDetails(
     }
   }
 
-  return assertNever(block);
 }
 
 function buildBlockSearchText(
@@ -1966,7 +1964,6 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return truncate(block.notes || block.latestAiOutput || JSON.stringify(block.values));
   }
 
-  return assertNever(block);
 }
 
 function getNodeBlockTypes(node: WorkspaceNode) {
@@ -2271,6 +2268,7 @@ function createBlockByType(args: {
   node: WorkspaceNode;
   type: z.infer<typeof workspaceBlockTypeSchema>;
   title?: string;
+  content?: string;
   customTemplateId?: string;
 }) {
   const trimmedTitle = args.title?.trim();
@@ -2280,7 +2278,10 @@ function createBlockByType(args: {
     case "task-list":
       return createWorkspaceTaskListBlock(titleInput);
     case "notes":
-      return createWorkspaceNotesBlock(titleInput);
+      return createWorkspaceNotesBlock({
+        ...titleInput,
+        ...(args.content ? { body: args.content } : {}),
+      });
     case "table":
       return createWorkspaceTableBlock(titleInput);
     case "checklist":
@@ -2386,7 +2387,6 @@ function createBlockByType(args: {
     }
   }
 
-  return assertNever(args.type);
 }
 
 type DashboardSearchEntry = Omit<DashboardSearchMatch, "excerpt" | "score"> & {
@@ -2748,7 +2748,7 @@ export function buildDashboardAgentTools(
         tool({
           name: "create_node",
           description:
-            "Create a new dashboard node with a default overview tab. Use this when the user asks to add a node.",
+            "Create a new dashboard node with a default overview tab. ONLY use this when the user explicitly asks to create a new node. If the workspace is scoped to an existing node and the user asks to add a block or content, use create_block instead — do NOT create a new node.",
           inputSchema: z.object({
             title: z.string().trim().min(1).max(120),
             content: z.string().max(4000).optional(),
@@ -3019,16 +3019,17 @@ export function buildDashboardAgentTools(
         tool({
           name: "create_block",
           description:
-            "Create a new block inside an existing tab. Supports the full workspace block catalog. Use customTemplateId when creating a custom block.",
+            "Create a new block inside an existing tab. Requires nodeId and tabId — use the scoped IDs from the current context when available. This is the correct tool when the user asks to add a block, content, or a new section to their current tab. Do NOT use create_node for this. Supports the full workspace block catalog. Use customTemplateId when creating a custom block. For notes blocks, pass content to set the body text in a single step instead of needing a follow-up patch_block call.",
           inputSchema: z.object({
             nodeId: z.string().trim().min(1),
             tabId: z.string().trim().min(1),
             type: workspaceBlockTypeSchema,
             title: z.string().trim().min(1).max(120).optional(),
+            content: z.string().max(8000).optional().describe("Initial body text for notes blocks. Ignored for other block types."),
             customTemplateId: z.string().trim().min(1).optional(),
           }),
           outputSchema: blockMutationOutputSchema,
-          execute: async ({ nodeId, tabId, type, title, customTemplateId }) => {
+          execute: async ({ nodeId, tabId, type, title, content, customTemplateId }) => {
             const { result, updatedAt, nodeCount } = await workspace.applyMutation(
               (draft, timestamp) => {
                 const { node, tab } = requireTab(draft, nodeId, tabId);
@@ -3037,6 +3038,7 @@ export function buildDashboardAgentTools(
                   type,
                   title,
                   customTemplateId,
+                  ...(type === "notes" && content ? { content } : {}),
                 });
 
                 tab.blocks.push(block);

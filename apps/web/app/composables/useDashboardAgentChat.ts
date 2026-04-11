@@ -197,17 +197,17 @@ function readModelPreferences(): DashboardAgentModelPreferences {
     return {
       defaultModelId:
         typeof parsedValue.defaultModelId === "string" &&
-        parsedValue.defaultModelId.trim().length > 0
+          parsedValue.defaultModelId.trim().length > 0
           ? parsedValue.defaultModelId
           : undefined,
       favoriteModelIds: Array.isArray(parsedValue.favoriteModelIds)
         ? [
-            ...new Set(
-              parsedValue.favoriteModelIds.filter(
-                (value): value is string => typeof value === "string",
-              ),
+          ...new Set(
+            parsedValue.favoriteModelIds.filter(
+              (value): value is string => typeof value === "string",
             ),
-          ]
+          ),
+        ]
         : [],
     };
   } catch {
@@ -294,7 +294,7 @@ function toConversationSummary(
   };
 }
 
-export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
+export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>, activeTabId?: Ref<string | null>) {
   const initialModelPreferences = readModelPreferences();
   const authSession = useAuthSession();
   const orpc = useOrpc();
@@ -585,9 +585,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   });
   const scopeLabel = computed(() => {
     if (selectedNodes.value.length > 0) {
-      return `${selectedNodes.value.length} selected node${
-        selectedNodes.value.length === 1 ? "" : "s"
-      } in scope`;
+      return `${selectedNodes.value.length} selected node${selectedNodes.value.length === 1 ? "" : "s"
+        } in scope`;
     }
 
     if (singleScopeTitle.value) {
@@ -738,9 +737,9 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   const modelError = computed(() =>
     modelCatalogQuery.isError.value
       ? getErrorMessage(
-          modelCatalogQuery.error.value,
-          "Unable to load the OpenRouter model catalog.",
-        )
+        modelCatalogQuery.error.value,
+        "Unable to load the OpenRouter model catalog.",
+      )
       : null,
   );
   const modelDebugDetails = computed(() =>
@@ -751,9 +750,9 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
   const accountStatusError = computed(() =>
     accountStatusQuery.isError.value
       ? getErrorMessage(
-          accountStatusQuery.error.value,
-          "Unable to load OpenRouter account status.",
-        )
+        accountStatusQuery.error.value,
+        "Unable to load OpenRouter account status.",
+      )
       : null,
   );
   const hasConversations = computed(() => conversationList.value.length > 0);
@@ -796,7 +795,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
 
       const nextDefaultModel =
         preferredDefaultModelId.value &&
-        availableIds.has(preferredDefaultModelId.value)
+          availableIds.has(preferredDefaultModelId.value)
           ? preferredDefaultModelId.value
           : availableIds.has(payload.defaultModel)
             ? payload.defaultModel
@@ -827,7 +826,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         !isNewConversation &&
         syncedConversationToolPreset.value !== null &&
         conversationDraftToolPreset.value !==
-          syncedConversationToolPreset.value;
+        syncedConversationToolPreset.value;
 
       conversationDraftModelId.value =
         conversation.model ?? conversationDraftModelId.value;
@@ -952,8 +951,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         (
           current:
             | {
-                conversations?: DashboardConversationSummary[];
-              }
+              conversations?: DashboardConversationSummary[];
+            }
             | undefined,
         ) => ({
           conversations: upsertConversationSummary(
@@ -996,8 +995,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         (
           current:
             | {
-                conversations?: DashboardConversationSummary[];
-              }
+              conversations?: DashboardConversationSummary[];
+            }
             | undefined,
         ) => ({
           conversations: (current?.conversations ?? []).filter(
@@ -1053,6 +1052,7 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
           activeContextNodeTitles.value.length > 0
             ? activeContextNodeTitles.value
             : undefined,
+        ...(activeTabId?.value ? { activeTabId: activeTabId.value } : {}),
         ...(model ? { model } : {}),
         toolPreset: selectedToolPreset.value,
       });
@@ -1070,8 +1070,8 @@ export function useDashboardAgentChat(nodes: Ref<WorkspaceNode[]>) {
         (
           current:
             | {
-                conversations?: DashboardConversationSummary[];
-              }
+              conversations?: DashboardConversationSummary[];
+            }
             | undefined,
         ) => ({
           conversations: upsertConversationSummary(

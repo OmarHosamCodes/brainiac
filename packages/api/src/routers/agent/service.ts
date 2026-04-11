@@ -282,9 +282,9 @@ export async function appendDashboardConversationTurn(
   const [fullWorkspaceSnapshot, marketplaceItems] = await Promise.all([
     input.nodes
       ? Promise.resolve({
-          nodes: input.nodes,
-          updatedAt: null,
-        })
+        nodes: input.nodes,
+        updatedAt: null,
+      })
       : getWorkspaceSnapshot(userId),
     getWorkspaceMarketplaceItems(),
   ]);
@@ -292,10 +292,10 @@ export async function appendDashboardConversationTurn(
   const conversation = input.conversationId
     ? await getConversationRecord(userId, input.conversationId)
     : await createDashboardConversation(userId, {
-        content: input.content,
-        model: input.model,
-        toolPreset: input.toolPreset,
-      });
+      content: input.content,
+      model: input.model,
+      toolPreset: input.toolPreset,
+    });
   const createdConversation = !input.conversationId;
 
   const recentMessagesDesc = await db
@@ -329,6 +329,7 @@ export async function appendDashboardConversationTurn(
       marketplaceItems,
       updatedAt: fullWorkspaceSnapshot.updatedAt,
       userName,
+      activeTabId: input.activeTabId,
     },
     {
       model: input.model,
@@ -341,9 +342,9 @@ export async function appendDashboardConversationTurn(
   );
   const workspaceSnapshot = result.workspaceSnapshot
     ? {
-        nodes: result.workspaceSnapshot.nodes,
-        updatedAt: (await saveWorkspaceNodes(userId, result.workspaceSnapshot.nodes)).updatedAt,
-      }
+      nodes: result.workspaceSnapshot.nodes,
+      updatedAt: (await saveWorkspaceNodes(userId, result.workspaceSnapshot.nodes)).updatedAt,
+    }
     : null;
 
   const userMessageRow = {
