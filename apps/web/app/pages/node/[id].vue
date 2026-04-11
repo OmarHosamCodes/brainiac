@@ -2851,6 +2851,7 @@ provide(workspaceNodeEditorContextKey, {
                         <div class="min-h-0 flex-1">
                             <DashboardAgentChatPanel
                                 :nodes="agentChatNodes"
+                                :active-tab-id="activeTabId || null"
                                 scope-kind="blocks"
                                 @close="isAgentChatVisible = false"
                             >
@@ -2923,6 +2924,7 @@ provide(workspaceNodeEditorContextKey, {
                 <div class="pointer-events-auto min-h-0 flex-1">
                     <DashboardAgentChatPanel
                         :nodes="agentChatNodes"
+                        :active-tab-id="activeTabId || null"
                         scope-kind="blocks"
                         @close="isAgentChatVisible = false"
                     >

@@ -157,6 +157,7 @@ export const agentChatTurnInputSchema = z.object({
   nodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
   scopeNodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
   contextNodeTitles: z.array(z.string().trim().min(1).max(120)).max(24).optional(),
+  activeTabId: z.string().trim().min(1).optional(),
   model: z.string().trim().min(1).optional(),
   toolPreset: dashboardAgentToolPresetInputSchema,
 });
@@ -193,6 +194,7 @@ export type DashboardAgentWorkspaceContext = {
   marketplaceItems?: WorkspaceMarketplaceItem[];
   updatedAt?: string | null;
   userName?: string | null;
+  activeTabId?: string | null;
 };
 
 export type DashboardAgentConfig = {
