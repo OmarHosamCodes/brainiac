@@ -1,6 +1,6 @@
 import {
   workspaceNodeVisibilitySchema,
-  workspaceMarketplaceListSchema,
+  workspaceMarketplaceListInputSchema,
   workspaceMarketplaceSaveInputSchema,
   workspaceSaveInputSchema,
 } from "@brainiac/workspace";
@@ -82,11 +82,11 @@ export const workspaceRouter = {
         .parse(await deleteWorkspaceNode(context.session.user.id, input));
     }),
   marketplace: {
-    list: protectedProcedure.handler(async () => {
-      return workspaceMarketplaceListSchema.parse({
-        items: await getWorkspaceMarketplaceItems(),
-      });
-    }),
+    list: protectedProcedure
+      .input(workspaceMarketplaceListInputSchema)
+      .handler(async ({ input }) => {
+        return getWorkspaceMarketplaceItems(input);
+      }),
     save: protectedProProcedure
       .input(workspaceMarketplaceSaveInputSchema)
       .handler(async ({ input, context }) => {
