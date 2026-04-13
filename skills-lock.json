@@ -6,11 +6,6 @@
       "sourceType": "github",
       "computedHash": "b00cb71343fa7e987489ad330e3dd3e504ff893b9ddd2b30cacea93691b78e46"
     },
-    "arrange": {
-      "source": "pbakaus/impeccable",
-      "sourceType": "github",
-      "computedHash": "698fb952e9ef0d2551a5c3421ef61e084934420e0d8371a02efb4f76f21049e8"
-    },
     "audit": {
       "source": "pbakaus/impeccable",
       "sourceType": "github",
@@ -30,11 +25,6 @@
       "source": "pbakaus/impeccable",
       "sourceType": "github",
       "computedHash": "59d3facaee0d7c969f23e938c35239183d3fdd9befff526908585e55afa3a9dd"
-    },
-    "frontend-design": {
-      "source": "pbakaus/impeccable",
-      "sourceType": "github",
-      "computedHash": "9ebe6c652743fcde8d2ae773f34b6f548dcc8b2e75a3a30936adcd8b95dd2d16"
     },
     "hono": {
       "source": "yusukebe/hono-skill",
@@ -65,11 +55,6 @@
       "source": "pbakaus/impeccable",
       "sourceType": "github",
       "computedHash": "8edad33758f2461f51afdb51741bfcc4cc57d84ea42e2751a84be2c6a2d48f69"
-    },
-    "teach-impeccable": {
-      "source": "pbakaus/impeccable",
-      "sourceType": "github",
-      "computedHash": "b3b5541bb9b0a260af793c7d79c2db4a436c2cd9384be34a4024c7f28af72e62"
     },
     "vue-pinia-best-practices": {
       "source": "vuejs-ai/skills",

@@ -13,6 +13,7 @@ import {
 } from "./shared";
 import type {
   WorkspaceCollectedTask,
+  WorkspaceCollectedTaskBlockType,
   WorkspaceContentPipelineStatus,
   WorkspaceEisenhowerDomainAllocation,
   WorkspaceEisenhowerMatrixBlock,
@@ -104,11 +105,11 @@ function mapContentPipelineStatusToTaskImportance(status: WorkspaceContentPipeli
   }
 }
 
-function collectTasksFromSourceNode(sourceNode: WorkspaceNode) {
+function collectTasksFromSourceNode(sourceNode: WorkspaceNode): WorkspaceCollectedTask[] {
   return sourceNode.tabs.flatMap((tab) =>
-    tab.blocks.flatMap((block) => {
+    tab.blocks.flatMap<WorkspaceCollectedTask>((block) => {
       if (block.type === "content-pipeline") {
-        return block.items.map(
+        return block.items.map<WorkspaceCollectedTask>(
           (item) =>
             ({
               sourceNodeId: sourceNode.id,
@@ -116,6 +117,7 @@ function collectTasksFromSourceNode(sourceNode: WorkspaceNode) {
                 trimToEmpty(sourceNode.title) || trimToEmpty(sourceNode.label) || "Untitled node",
               blockId: block.id,
               blockTitle: getDisplayBlockTitle(block),
+              blockType: block.type,
               tabId: tab.id,
               tabTitle: getDisplayTabTitle(tab),
               task: {
@@ -137,13 +139,14 @@ function collectTasksFromSourceNode(sourceNode: WorkspaceNode) {
         return [];
       }
 
-      return block.tasks.map(
+      return block.tasks.map<WorkspaceCollectedTask>(
         (task) =>
           ({
             sourceNodeId: sourceNode.id,
             sourceNodeTitle: trimToEmpty(sourceNode.title) || trimToEmpty(sourceNode.label) || "Untitled node",
             blockId: block.id,
             blockTitle: getDisplayBlockTitle(block),
+            blockType: block.type,
             tabId: tab.id,
             tabTitle: getDisplayTabTitle(tab),
             task,
@@ -178,6 +181,22 @@ export function collectWorkspaceNodeTasks(node: WorkspaceNode, allNodes?: Worksp
   return resolveTaskScopeNodes(node, allNodes).flatMap((scopedNode) =>
     collectTasksFromSourceNode(scopedNode),
   );
+}
+
+export function filterCollectedTasksByTimeOrchestratorSettings(
+  items: WorkspaceCollectedTask[],
+  settings: Partial<WorkspaceTimeOrchestratorSettings> = {},
+) {
+  const resolvedSettings = createWorkspaceTimeOrchestratorSettings(settings);
+
+  return items.filter(({ task }) => {
+    const domainAllowed = task.domain
+      ? resolvedSettings.domains.includes(task.domain)
+      : resolvedSettings.includeUnassigned;
+    const quadrantAllowed = resolvedSettings.quadrants.includes(getWorkspaceTaskQuadrant(task));
+
+    return domainAllowed && quadrantAllowed;
+  });
 }
 
 function getPriorityScore(priority: WorkspaceTaskPriority | null | undefined) {
@@ -321,19 +340,10 @@ export function getTimeOrchestratorSummary(
   now = new Date(),
   allNodes?: WorkspaceNode[],
 ): WorkspaceTimeOrchestratorSummary {
-  const resolvedSettings = createWorkspaceTimeOrchestratorSettings(settings);
-  const tasks = collectWorkspaceNodeTasks(node, allNodes).filter(({ task }) => {
-    if (task.completed) {
-      return false;
-    }
-
-    const domainAllowed = task.domain
-      ? resolvedSettings.domains.includes(task.domain)
-      : resolvedSettings.includeUnassigned;
-    const quadrantAllowed = resolvedSettings.quadrants.includes(getWorkspaceTaskQuadrant(task));
-
-    return domainAllowed && quadrantAllowed;
-  });
+  const tasks = filterCollectedTasksByTimeOrchestratorSettings(
+    collectWorkspaceNodeTasks(node, allNodes).filter(({ task }) => !task.completed),
+    settings,
+  );
   const todayValue = getTodayValue(now);
   const totalEstimateMinutes = tasks.reduce((sum, { task }) => sum + task.estimateMinutes, 0);
   const averageUrgency =
@@ -476,12 +486,45 @@ export function sortEisenhowerTasks(tasks: WorkspaceTask[], now = new Date()) {
   });
 }
 
-export function getEisenhowerMatrixSummary(
+function sortCollectedEisenhowerTasks(tasks: WorkspaceCollectedTask[], now = new Date()) {
+  return [...tasks].sort((left, right) => {
+    if (left.task.completed !== right.task.completed) {
+      return Number(left.task.completed) - Number(right.task.completed);
+    }
+
+    const scoreDelta = getTaskUrgencyScore(right.task, now) - getTaskUrgencyScore(left.task, now);
+
+    if (scoreDelta !== 0) {
+      return scoreDelta;
+    }
+
+    return trimToEmpty(left.task.text).localeCompare(trimToEmpty(right.task.text));
+  });
+}
+
+function createLocalCollectedTask(
+  task: WorkspaceTask,
   block: WorkspaceEisenhowerMatrixBlock,
+  blockType: WorkspaceCollectedTaskBlockType = "eisenhower-matrix",
+): WorkspaceCollectedTask {
+  return {
+    sourceNodeId: block.id,
+    sourceNodeTitle: block.title,
+    blockId: block.id,
+    blockTitle: block.title,
+    blockType,
+    tabId: block.id,
+    tabTitle: block.title,
+    task,
+  };
+}
+
+export function getEisenhowerMatrixSummaryFromTasks(
+  tasks: WorkspaceCollectedTask[],
   now = new Date(),
 ): WorkspaceEisenhowerMatrixSummary {
-  const openTasks = block.tasks.filter((task) => !task.completed);
-  const totalEstimateMinutes = block.tasks.reduce((sum, task) => sum + task.estimateMinutes, 0);
+  const openTasks = tasks.filter((item) => !item.task.completed);
+  const totalEstimateMinutes = tasks.reduce((sum, item) => sum + item.task.estimateMinutes, 0);
   const domainMap = new Map<WorkspaceTaskDomain | null, WorkspaceEisenhowerDomainAllocation>();
   const quadrants = {
     do: {
@@ -489,43 +532,43 @@ export function getEisenhowerMatrixSummary(
       label: getWorkspaceTaskQuadrantLabel("do"),
       taskCount: 0,
       estimateMinutes: 0,
-      tasks: [] as WorkspaceTask[],
+      tasks: [] as WorkspaceCollectedTask[],
     },
     schedule: {
       key: "schedule",
       label: getWorkspaceTaskQuadrantLabel("schedule"),
       taskCount: 0,
       estimateMinutes: 0,
-      tasks: [] as WorkspaceTask[],
+      tasks: [] as WorkspaceCollectedTask[],
     },
     delegate: {
       key: "delegate",
       label: getWorkspaceTaskQuadrantLabel("delegate"),
       taskCount: 0,
       estimateMinutes: 0,
-      tasks: [] as WorkspaceTask[],
+      tasks: [] as WorkspaceCollectedTask[],
     },
     eliminate: {
       key: "eliminate",
       label: getWorkspaceTaskQuadrantLabel("eliminate"),
       taskCount: 0,
       estimateMinutes: 0,
-      tasks: [] as WorkspaceTask[],
+      tasks: [] as WorkspaceCollectedTask[],
     },
   } satisfies Record<WorkspaceTaskQuadrant, WorkspaceEisenhowerQuadrantSummary>;
 
-  for (const task of openTasks) {
-    const quadrant = quadrants[getWorkspaceTaskQuadrant(task)];
+  for (const item of openTasks) {
+    const quadrant = quadrants[getWorkspaceTaskQuadrant(item.task)];
     quadrant.taskCount += 1;
-    quadrant.estimateMinutes += task.estimateMinutes;
-    quadrant.tasks.push(task);
+    quadrant.estimateMinutes += item.task.estimateMinutes;
+    quadrant.tasks.push(item);
 
-    const key = task.domain ?? null;
+    const key = item.task.domain ?? null;
     const existing = domainMap.get(key);
 
     if (existing) {
       existing.taskCount += 1;
-      existing.estimateMinutes += task.estimateMinutes;
+      existing.estimateMinutes += item.task.estimateMinutes;
       continue;
     }
 
@@ -533,35 +576,49 @@ export function getEisenhowerMatrixSummary(
       domain: key,
       label: getWorkspaceTaskDomainLabel(key),
       taskCount: 1,
-      estimateMinutes: task.estimateMinutes,
+      estimateMinutes: item.task.estimateMinutes,
     });
   }
 
   for (const quadrant of Object.values(quadrants)) {
-    quadrant.tasks = sortEisenhowerTasks(quadrant.tasks, now);
+    quadrant.tasks = sortCollectedEisenhowerTasks(quadrant.tasks, now);
   }
 
   return {
-    totalTaskCount: block.tasks.length,
+    totalTaskCount: tasks.length,
     totalEstimateMinutes,
     overdueCount: openTasks.filter(
-      (task) => task.dueDate && getDueDateValue(task.dueDate) < getTodayValue(now),
+      (item) => item.task.dueDate && getDueDateValue(item.task.dueDate) < getTodayValue(now),
     ).length,
-    completedCount: block.tasks.filter((task) => task.completed).length,
-    activeDomainCount: new Set(block.tasks.map((task) => task.domain).filter(Boolean)).size,
+    completedCount: tasks.filter((item) => item.task.completed).length,
+    activeDomainCount: new Set(tasks.map((item) => item.task.domain).filter(Boolean)).size,
     domainAllocation: [...domainMap.values()].sort(
       (left, right) =>
         right.estimateMinutes - left.estimateMinutes || right.taskCount - left.taskCount,
     ),
     quadrants,
-    prioritizedTasks: sortEisenhowerTasks(block.tasks, now),
+    prioritizedTasks: sortCollectedEisenhowerTasks(tasks, now),
   };
 }
 
-export function buildEisenhowerBattlePlanPrompt(block: WorkspaceEisenhowerMatrixBlock) {
+export function getEisenhowerMatrixSummary(
+  block: WorkspaceEisenhowerMatrixBlock,
+  now = new Date(),
+): WorkspaceEisenhowerMatrixSummary {
+  return getEisenhowerMatrixSummaryFromTasks(
+    filterCollectedTasksByTimeOrchestratorSettings(
+      block.tasks.map((task) => createLocalCollectedTask(task, block)),
+      block.settings,
+    ),
+    now,
+  );
+}
+
+export function buildEisenhowerBattlePlanPromptFromTasks(tasks: WorkspaceCollectedTask[]) {
   const taskLines =
-    block.tasks.length > 0
-      ? sortEisenhowerTasks(block.tasks).map((task, index) => {
+    tasks.length > 0
+      ? sortCollectedEisenhowerTasks(tasks).map((item, index) => {
+        const { task } = item;
         const meta = [
           task.domain
             ? `domain ${getWorkspaceTaskDomainLabel(task.domain)}`
@@ -572,6 +629,9 @@ export function buildEisenhowerBattlePlanPrompt(block: WorkspaceEisenhowerMatrix
           `quadrant ${getWorkspaceTaskQuadrantLabel(getWorkspaceTaskQuadrant(task))}`,
           task.completed ? "completed" : "open",
           task.dueDate ? `due ${task.dueDate}` : "",
+          item.blockType === "content-pipeline"
+            ? `source ${item.sourceNodeTitle} / ${item.blockTitle}`
+            : `${item.sourceNodeTitle} / ${item.blockTitle}`,
         ]
           .filter(Boolean)
           .join(", ");
@@ -593,6 +653,15 @@ export function buildEisenhowerBattlePlanPrompt(block: WorkspaceEisenhowerMatrix
     "Tasks:",
     ...taskLines.map((line) => `- ${line}`),
   ].join("\n");
+}
+
+export function buildEisenhowerBattlePlanPrompt(block: WorkspaceEisenhowerMatrixBlock) {
+  return buildEisenhowerBattlePlanPromptFromTasks(
+    filterCollectedTasksByTimeOrchestratorSettings(
+      block.tasks.map((task) => createLocalCollectedTask(task, block)),
+      block.settings,
+    ),
+  );
 }
 
 export function createWorkspaceLeadershipRhythmFilter(

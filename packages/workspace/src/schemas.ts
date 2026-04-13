@@ -719,6 +719,11 @@ export const workspaceCohortHealthDashboardBlockSchema = workspaceBlockBaseSchem
 export const workspaceEisenhowerMatrixBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("eisenhower-matrix"),
   tasks: z.array(workspaceTaskSchema).max(WORKSPACE_TASK_LIMIT).default([]),
+  settings: workspaceTimeOrchestratorSettingsSchema.default({
+    domains: [...WORKSPACE_TASK_DOMAINS],
+    includeUnassigned: true,
+    quadrants: [...WORKSPACE_TASK_QUADRANTS],
+  }),
   latestBattlePlan: z.string().max(12000).default(""),
   battlePlanUpdatedAt: isoTimestampSchema.nullable().optional(),
 });

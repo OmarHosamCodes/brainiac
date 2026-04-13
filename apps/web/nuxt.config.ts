@@ -10,7 +10,7 @@ export default defineNuxtConfig({
   modules: ["@pinia/nuxt", "@nuxt/ui"],
   css: ["~/assets/css/main.css"],
   devServer: {
-    port: 3001,
+    port: 7001,
   },
   vite: {
     optimizeDeps: {

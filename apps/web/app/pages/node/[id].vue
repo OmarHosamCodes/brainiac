@@ -54,7 +54,9 @@ import {
     createWorkspaceTimelineBlock,
     createWorkspaceTimelineMilestone,
     createWorkspaceTrackerBlock,
+    collectWorkspaceNodeTasks,
     evaluateCustomBlockFormula,
+    filterCollectedTasksByTimeOrchestratorSettings,
     fillCustomBlockPromptTemplate,
     generateWorkspacePromptOutput,
     getTimeOrchestratorSummary,
@@ -63,6 +65,7 @@ import {
     type WorkspaceBlock,
     type WorkspaceCollectedTask,
     type WorkspaceCustomBlock,
+    type WorkspaceEisenhowerMatrixBlock,
     type WorkspaceKanbanCard,
     type WorkspaceNode,
     type WorkspaceNodeTab,
@@ -1706,6 +1709,38 @@ function getTimeOrchestratorSummaryForBlock(
         : null;
 }
 
+function getScopedEisenhowerTasksForBlock(
+    block: WorkspaceEisenhowerMatrixBlock,
+) {
+    if (!node.value) {
+        return [];
+    }
+
+    if (node.value.nodeType === "orchestrator") {
+        return filterCollectedTasksByTimeOrchestratorSettings(
+            collectWorkspaceNodeTasks(node.value, draftNodes.value),
+            block.settings,
+        );
+    }
+
+    return filterCollectedTasksByTimeOrchestratorSettings(
+        block.tasks.map((task) => ({
+            sourceNodeId: node.value.id,
+            sourceNodeTitle:
+                node.value.title.trim() ||
+                node.value.label.trim() ||
+                "Untitled node",
+            blockId: block.id,
+            blockTitle: getDisplayBlockTitle(block),
+            blockType: block.type,
+            tabId: activeTab.value?.id ?? block.id,
+            tabTitle: getDisplayTabTitle(activeTab.value),
+            task,
+        })),
+        block.settings,
+    );
+}
+
 function getDisplayTabTitle(tab: WorkspaceNodeTab | null | undefined) {
     return tab?.title.trim() || "Untitled tab";
 }
@@ -1938,9 +1973,11 @@ function getBlockSearchText(block: WorkspaceBlock) {
             ]),
         );
     } else if (block.type === "eisenhower-matrix") {
+        const scopedTasks = getScopedEisenhowerTasksForBlock(block);
+
         fragments.push(
             block.latestBattlePlan,
-            ...block.tasks.flatMap((task) => [
+            ...scopedTasks.flatMap(({ task, sourceNodeTitle, blockTitle }) => [
                 task.text,
                 task.domain ?? "",
                 task.priority ?? "",
@@ -1949,6 +1986,8 @@ function getBlockSearchText(block: WorkspaceBlock) {
                 String(task.importance),
                 String(task.estimateMinutes),
                 task.completed ? "completed" : "open",
+                sourceNodeTitle,
+                blockTitle,
             ]),
         );
     } else if (block.type === "leadership-rhythm-planner") {
@@ -2352,9 +2391,11 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
             ]),
         );
     } else if (block.type === "eisenhower-matrix") {
+        const scopedTasks = getScopedEisenhowerTasksForBlock(block);
+
         details.push(
             block.latestBattlePlan,
-            ...block.tasks.flatMap((task) => [
+            ...scopedTasks.flatMap(({ task, sourceNodeTitle, blockTitle }) => [
                 task.text,
                 task.domain
                     ? getWorkspaceTaskDomainLabel(task.domain)
@@ -2364,6 +2405,8 @@ function collectBlockSearchDetails(block: WorkspaceBlock) {
                 `${task.importance}/10 importance`,
                 `${task.estimateMinutes} minutes`,
                 task.completed ? "Completed" : "Open",
+                sourceNodeTitle,
+                blockTitle,
             ]),
         );
     } else if (block.type === "leadership-rhythm-planner") {

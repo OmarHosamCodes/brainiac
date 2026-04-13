@@ -1,15 +1,22 @@
 <script setup lang="ts">
 import {
-    buildEisenhowerBattlePlanPrompt,
-    createWorkspaceTask,
-    getEisenhowerMatrixSummary,
-    getWorkspaceTaskDomainLabel,
-    type WorkspaceEisenhowerMatrixBlock,
-    type WorkspaceTask,
-    type WorkspaceTaskDomain,
-    type WorkspaceTaskQuadrant,
+  WORKSPACE_TASK_DOMAINS,
+  WORKSPACE_TASK_QUADRANTS,
+  buildEisenhowerBattlePlanPromptFromTasks,
+  collectWorkspaceNodeTasks,
+  createWorkspaceTask,
+  createWorkspaceTimeOrchestratorSettings,
+  filterCollectedTasksByTimeOrchestratorSettings,
+  getEisenhowerMatrixSummaryFromTasks,
+  getWorkspaceTaskDomainLabel,
+  type WorkspaceCollectedTask,
+  type WorkspaceEisenhowerMatrixBlock,
+  type WorkspaceTask,
+  type WorkspaceTaskDomain,
+  type WorkspaceTaskQuadrant,
 } from "@brainiac/workspace";
 
+import WorkspaceOrchestratorSourcesModal from "~/components/workspace/node/blocks/WorkspaceOrchestratorSourcesModal.vue";
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
 import { formatDateTime } from "~/utils/format-date-time";
 import { getErrorMessage } from "~/utils/get-error-message";
@@ -22,29 +29,125 @@ const props = defineProps<{
 
 const toast = useToast();
 const {
+  currentNode,
+  allNodes,
   domainOptions,
   mutateTypedBlock,
+  mutateCollectedTask,
+  connectSource,
+  disconnectSource,
+  removeCollectedTask,
+  addTaskToSource,
+  navigateToSource,
   runBlockAgentPrompt,
   getBlockOperationState,
+  formatRelativeTaskMeta,
 } = useWorkspaceNodeEditorContext();
 
-const summary = computed(() => getEisenhowerMatrixSummary(props.block));
+const sourcesModalOpen = ref(false);
+
 const operationState = computed(() => getBlockOperationState(props.tabId, props.block.id));
+const isOrchestratorNode = computed(() => currentNode.value?.nodeType === "orchestrator");
+const currentNodeTitle = computed(
+  () =>
+    currentNode.value?.title.trim() ||
+    currentNode.value?.label.trim() ||
+    "Current node",
+);
+const currentTabTitle = computed(() => {
+  const tab = currentNode.value?.tabs.find((entry) => entry.id === props.tabId);
+
+  return tab?.title.trim() || "Current tab";
+});
+
+const quadrantMeta = {
+  do: {
+    description: "Urgent + important",
+    className: "border-error/25 bg-error/5",
+  },
+  schedule: {
+    description: "Important, not urgent",
+    className: "border-primary/25 bg-primary/5",
+  },
+  delegate: {
+    description: "Urgent, lower leverage",
+    className: "border-warning/25 bg-warning/5",
+  },
+  eliminate: {
+    description: "Low urgency + importance",
+    className: "border-muted/35 bg-elevated/20",
+  },
+} satisfies Record<
+  WorkspaceTaskQuadrant,
+  { description: string; className: string }
+>;
+
+const scopedCollectedTasks = computed<WorkspaceCollectedTask[]>(() => {
+  if (!currentNode.value) {
+    return [];
+  }
+
+  if (isOrchestratorNode.value) {
+    return collectWorkspaceNodeTasks(currentNode.value, allNodes.value);
+  }
+
+  return props.block.tasks.map((task) => ({
+    sourceNodeId: currentNode.value!.id,
+    sourceNodeTitle: currentNodeTitle.value,
+    blockId: props.block.id,
+    blockTitle: props.block.title.trim() || "Eisenhower matrix",
+    blockType: "eisenhower-matrix",
+    tabId: props.tabId,
+    tabTitle: currentTabTitle.value,
+    task,
+  }));
+});
+
+const filteredCollectedTasks = computed(() =>
+  filterCollectedTasksByTimeOrchestratorSettings(
+    scopedCollectedTasks.value,
+    props.block.settings,
+  ),
+);
+
+const summary = computed(() =>
+  getEisenhowerMatrixSummaryFromTasks(filteredCollectedTasks.value),
+);
+
+const openScopedTasks = computed(() =>
+  scopedCollectedTasks.value.filter(({ task }) => !task.completed),
+);
+
+const visibleQuadrants = computed(() =>
+  props.block.settings.quadrants.map((quadrant) => summary.value.quadrants[quadrant]),
+);
+
+const taskEditorDescription = computed(() =>
+  isOrchestratorNode.value
+    ? "Edit tasks across connected sources. Derived content pipeline signals stay partially read-only."
+    : "Edit the task list directly and the matrix will re-sort itself instantly.",
+);
 
 const matrixStatus = computed(() => {
   if (operationState.value.pending) {
     return {
       label: operationState.value.label || "Running analysis",
       tone: "primary" as const,
-      description: "The Orchestrator is generating a battle plan from the current matrix.",
+      description: "The Orchestrator is generating a battle plan from the current filtered matrix scope.",
     };
   }
 
-  if (summary.value.prioritizedTasks.length === 0) {
+  if (filteredCollectedTasks.value.length === 0) {
     return {
-      label: "No tasks yet",
+      label:
+        scopedCollectedTasks.value.length === 0
+          ? "No tasks yet"
+          : "No tasks match filters",
       tone: "warning" as const,
-      description: "Add tasks so urgency and importance can map your priorities.",
+      description:
+        scopedCollectedTasks.value.length === 0
+          ? "Add tasks so urgency and importance can map your priorities."
+          : "Adjust the domain or quadrant filters to widen the matrix scope.",
     };
   }
 
@@ -56,7 +159,10 @@ const matrixStatus = computed(() => {
     };
   }
 
-  if (summary.value.quadrants.do.taskCount === 0) {
+  if (
+    props.block.settings.quadrants.includes("do") &&
+    summary.value.quadrants.do.taskCount === 0
+  ) {
     return {
       label: "No do-now tasks",
       tone: "primary" as const,
@@ -67,41 +173,63 @@ const matrixStatus = computed(() => {
   return {
     label: "Matrix ready",
     tone: "success" as const,
-    description: "Priorities are distributed and ready for execution.",
+    description: "Priorities are distributed across the current filtered scope and ready for execution.",
   };
 });
 
-const quadrantMeta: Array<{
-  key: WorkspaceTaskQuadrant;
-  label: string;
-  description: string;
-  className: string;
-}> = [
-  {
-    key: "do",
-    label: "Do Now",
-    description: "Urgent + important",
-    className: "border-error/25 bg-error/5",
-  },
-  {
-    key: "schedule",
-    label: "Schedule",
-    description: "Important, not urgent",
-    className: "border-primary/25 bg-primary/5",
-  },
-  {
-    key: "delegate",
-    label: "Delegate",
-    description: "Urgent, lower leverage",
-    className: "border-warning/25 bg-warning/5",
-  },
-  {
-    key: "eliminate",
-    label: "Eliminate",
-    description: "Low urgency + importance",
-    className: "border-muted/35 bg-elevated/20",
-  },
-];
+const domainFilters = computed(() => {
+  const counts = new Map<WorkspaceTaskDomain, number>();
+
+  for (const domain of WORKSPACE_TASK_DOMAINS) {
+    counts.set(domain, 0);
+  }
+
+  let unassigned = 0;
+
+  for (const item of openScopedTasks.value) {
+    if (item.task.domain) {
+      counts.set(item.task.domain, (counts.get(item.task.domain) ?? 0) + 1);
+      continue;
+    }
+
+    unassigned += 1;
+  }
+
+  return [
+    ...WORKSPACE_TASK_DOMAINS.map((domain) => ({
+      key: domain,
+      label: getWorkspaceTaskDomainLabel(domain),
+      count: counts.get(domain) ?? 0,
+      active: props.block.settings.domains.includes(domain),
+    })),
+    {
+      key: "unassigned" as const,
+      label: "Unassigned",
+      count: unassigned,
+      active: props.block.settings.includeUnassigned,
+    },
+  ];
+});
+
+const quadrantFilters = computed(() => {
+  const counts = new Map<WorkspaceTaskQuadrant, number>();
+
+  for (const quadrant of WORKSPACE_TASK_QUADRANTS) {
+    counts.set(quadrant, 0);
+  }
+
+  for (const item of openScopedTasks.value) {
+    const key = getScopedQuadrant(item);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+
+  return WORKSPACE_TASK_QUADRANTS.map((quadrant) => ({
+    key: quadrant,
+    label: summary.value.quadrants[quadrant].label,
+    count: counts.get(quadrant) ?? 0,
+    active: props.block.settings.quadrants.includes(quadrant),
+  }));
+});
 
 function formatDuration(totalMinutes: number) {
   const hours = Math.floor(totalMinutes / 60);
@@ -133,14 +261,7 @@ function getInputValue(event: Event) {
 }
 
 function toTaskDomain(value: string | null | undefined) {
-  return value === "strategy" ||
-    value === "people" ||
-    value === "sales" ||
-    value === "content" ||
-    value === "brand" ||
-    value === "finance" ||
-    value === "education" ||
-    value === "orchestrator"
+  return WORKSPACE_TASK_DOMAINS.includes(value as WorkspaceTaskDomain)
     ? (value as WorkspaceTaskDomain)
     : null;
 }
@@ -172,6 +293,83 @@ function getDomainPillClass(domain: WorkspaceTaskDomain | null | undefined) {
   }
 }
 
+function getQuadrantClassName(quadrant: WorkspaceTaskQuadrant) {
+  return quadrantMeta[quadrant].className;
+}
+
+function getQuadrantDescription(quadrant: WorkspaceTaskQuadrant) {
+  return quadrantMeta[quadrant].description;
+}
+
+function getCollectedTaskKey(item: WorkspaceCollectedTask) {
+  return `${item.sourceNodeId}:${item.blockId}:${item.task.id}`;
+}
+
+function isDerivedTask(item: WorkspaceCollectedTask) {
+  return item.blockType === "content-pipeline";
+}
+
+function getScopedQuadrant(item: WorkspaceCollectedTask): WorkspaceTaskQuadrant {
+  if (item.task.urgency >= 7 && item.task.importance >= 7) {
+    return "do";
+  }
+
+  if (item.task.importance >= 7) {
+    return "schedule";
+  }
+
+  if (item.task.urgency >= 7) {
+    return "delegate";
+  }
+
+  return "eliminate";
+}
+
+function updateSettings(
+  mutator: (settings: WorkspaceEisenhowerMatrixBlock["settings"]) => void,
+) {
+  mutateTypedBlock(
+    props.tabId,
+    props.block.id,
+    "eisenhower-matrix",
+    (entry) => {
+      const nextSettings = createWorkspaceTimeOrchestratorSettings(entry.settings);
+      mutator(nextSettings);
+      entry.settings = createWorkspaceTimeOrchestratorSettings(nextSettings);
+    },
+  );
+}
+
+function toggleDomain(domain: WorkspaceTaskDomain) {
+  updateSettings((settings) => {
+    settings.domains = settings.domains.includes(domain)
+      ? settings.domains.filter((entry) => entry !== domain)
+      : [...settings.domains, domain];
+  });
+}
+
+function toggleUnassigned() {
+  updateSettings((settings) => {
+    settings.includeUnassigned = !settings.includeUnassigned;
+  });
+}
+
+function toggleQuadrant(quadrant: WorkspaceTaskQuadrant) {
+  updateSettings((settings) => {
+    settings.quadrants = settings.quadrants.includes(quadrant)
+      ? settings.quadrants.filter((entry) => entry !== quadrant)
+      : [...settings.quadrants, quadrant];
+  });
+}
+
+function resetFilters() {
+  updateSettings((settings) => {
+    settings.domains = [...WORKSPACE_TASK_DOMAINS];
+    settings.includeUnassigned = true;
+    settings.quadrants = [...WORKSPACE_TASK_QUADRANTS];
+  });
+}
+
 function mutateEisenhowerBlock(
   mutator: (block: WorkspaceEisenhowerMatrixBlock, timestamp: string) => void,
 ) {
@@ -185,16 +383,8 @@ function mutateEisenhowerBlock(
   );
 }
 
-function mutateTask(taskId: string, mutator: (task: WorkspaceTask) => void) {
-  mutateEisenhowerBlock((block) => {
-    const task = block.tasks.find((entry) => entry.id === taskId);
-
-    if (!task) {
-      return;
-    }
-
-    mutator(task);
-  });
+function mutateTaskItem(item: WorkspaceCollectedTask, mutator: (task: WorkspaceTask) => void) {
+  mutateCollectedTask(item, mutator);
 }
 
 function addTask() {
@@ -211,56 +401,93 @@ function addTask() {
   });
 }
 
-function removeTask(taskId: string) {
-  mutateEisenhowerBlock((block) => {
-    block.tasks = block.tasks.filter((task) => task.id !== taskId);
-  });
+function removeTaskItem(item: WorkspaceCollectedTask) {
+  removeCollectedTask(item);
 }
 
-function toggleTaskCompleted(taskId: string, value: boolean | string | undefined) {
-  mutateTask(taskId, (entry) => {
+function toggleTaskCompleted(item: WorkspaceCollectedTask, value: boolean | string | undefined) {
+  mutateTaskItem(item, (entry) => {
     entry.completed = Boolean(value);
   });
 }
 
-function updateTaskText(taskId: string, value: string | number | undefined) {
-  mutateTask(taskId, (entry) => {
+function updateTaskText(
+  item: WorkspaceCollectedTask,
+  value: string | number | undefined,
+) {
+  mutateTaskItem(item, (entry) => {
     entry.text = String(value ?? "").slice(0, 240);
   });
 }
 
-function updateTaskDomain(taskId: string, value: string | undefined) {
-  mutateTask(taskId, (entry) => {
+function updateTaskDomain(item: WorkspaceCollectedTask, value: string | undefined) {
+  mutateTaskItem(item, (entry) => {
     entry.domain = toTaskDomain(value);
   });
 }
 
-function updateTaskUrgency(taskId: string, value: string | number | null | undefined) {
-  mutateTask(taskId, (entry) => {
+function updateTaskUrgency(
+  item: WorkspaceCollectedTask,
+  value: string | number | null | undefined,
+) {
+  if (isDerivedTask(item)) {
+    return;
+  }
+
+  mutateTaskItem(item, (entry) => {
     entry.urgency = clampTenPointScale(value, entry.urgency);
   });
 }
 
-function updateTaskImportance(taskId: string, value: string | number | null | undefined) {
-  mutateTask(taskId, (entry) => {
+function updateTaskImportance(
+  item: WorkspaceCollectedTask,
+  value: string | number | null | undefined,
+) {
+  if (isDerivedTask(item)) {
+    return;
+  }
+
+  mutateTaskItem(item, (entry) => {
     entry.importance = clampTenPointScale(value, entry.importance);
   });
 }
 
-function updateTaskEstimate(taskId: string, value: string | number | null | undefined) {
-  mutateTask(taskId, (entry) => {
+function updateTaskEstimate(
+  item: WorkspaceCollectedTask,
+  value: string | number | null | undefined,
+) {
+  if (isDerivedTask(item)) {
+    return;
+  }
+
+  mutateTaskItem(item, (entry) => {
     entry.estimateMinutes = clampEstimate(value, entry.estimateMinutes);
   });
 }
 
-function updateTaskDueDate(taskId: string, value: string | undefined) {
-  mutateTask(taskId, (entry) => {
+function updateTaskDueDate(item: WorkspaceCollectedTask, value: string | undefined) {
+  if (isDerivedTask(item)) {
+    return;
+  }
+
+  mutateTaskItem(item, (entry) => {
     entry.dueDate = value || null;
   });
 }
 
+function navigateToTaskSource(item: WorkspaceCollectedTask) {
+  navigateToSource(item.sourceNodeId);
+}
+
+function handleMutateTask(
+  item: WorkspaceCollectedTask,
+  mutator: (task: WorkspaceCollectedTask["task"]) => void,
+) {
+  mutateTaskItem(item, mutator);
+}
+
 async function prioritizeWithAi() {
-  if (props.block.tasks.length === 0 || operationState.value.pending) {
+  if (filteredCollectedTasks.value.length === 0 || operationState.value.pending) {
     return;
   }
 
@@ -268,7 +495,7 @@ async function prioritizeWithAi() {
     const response = await runBlockAgentPrompt(
       props.tabId,
       props.block.id,
-      buildEisenhowerBattlePlanPrompt(props.block),
+      buildEisenhowerBattlePlanPromptFromTasks(filteredCollectedTasks.value),
     );
 
     mutateEisenhowerBlock((block, timestamp) => {
@@ -297,9 +524,19 @@ async function prioritizeWithAi() {
   <div class="space-y-6">
     <section class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
       <div class="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h3 class="text-sm font-semibold text-highlighted">Priority matrix</h3>
-          <p class="mt-1 text-sm text-muted">{{ matrixStatus.description }}</p>
+        <div class="space-y-2">
+          <div class="flex items-center gap-2 text-primary">
+            <UIcon name="i-lucide-layout-grid" class="size-5" />
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em]">
+              Eisenhower Matrix
+            </p>
+          </div>
+          <h3 class="text-lg font-bold tracking-tight text-highlighted">
+            Prioritize across the current task scope
+          </h3>
+          <p class="max-w-2xl text-sm text-muted">
+            {{ matrixStatus.description }}
+          </p>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
@@ -317,105 +554,225 @@ async function prioritizeWithAi() {
               Syncing
             </span>
           </UBadge>
+          <UButton
+            v-if="isOrchestratorNode"
+            color="primary"
+            variant="soft"
+            size="sm"
+            icon="i-lucide-plug-2"
+            class="rounded-full px-4"
+            aria-label="Manage connected sources"
+            @click="sourcesModalOpen = true"
+          >
+            Manage Sources
+          </UButton>
+          <UButton
+            color="neutral"
+            variant="soft"
+            size="sm"
+            icon="i-lucide-rotate-ccw"
+            class="rounded-full px-4"
+            aria-label="Reset matrix filters"
+            @click="resetFilters"
+          >
+            Reset Filters
+          </UButton>
         </div>
+      </div>
+
+      <div class="mt-6 grid gap-6 lg:grid-cols-2">
+        <fieldset class="space-y-3">
+          <legend class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+            Domain filters
+          </legend>
+          <div class="flex flex-wrap gap-2">
+            <UButton
+              v-for="domain in domainFilters"
+              :key="domain.key"
+              type="button"
+              size="sm"
+              :color="domain.active ? 'primary' : 'neutral'"
+              :variant="domain.active ? 'soft' : 'outline'"
+              class="rounded-xl"
+              :aria-pressed="domain.active"
+              :aria-label="`${domain.active ? 'Disable' : 'Enable'} ${domain.label} domain filter`"
+              @click="
+                domain.key === 'unassigned'
+                  ? toggleUnassigned()
+                  : toggleDomain(domain.key)
+              "
+            >
+              {{ domain.label }}
+              <span class="ml-2 text-[10px] font-black opacity-60">
+                {{ domain.count }}
+              </span>
+            </UButton>
+          </div>
+        </fieldset>
+
+        <fieldset class="space-y-3">
+          <legend class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+            Quadrant filters
+          </legend>
+          <div class="flex flex-wrap gap-2">
+            <UButton
+              v-for="quadrant in quadrantFilters"
+              :key="quadrant.key"
+              type="button"
+              size="sm"
+              :color="quadrant.active ? 'primary' : 'neutral'"
+              :variant="quadrant.active ? 'soft' : 'outline'"
+              class="rounded-xl"
+              :aria-pressed="quadrant.active"
+              :aria-label="`${quadrant.active ? 'Disable' : 'Enable'} ${quadrant.label} quadrant filter`"
+              @click="toggleQuadrant(quadrant.key)"
+            >
+              {{ quadrant.label }}
+              <span class="ml-2 text-[10px] font-black opacity-60">
+                {{ quadrant.count }}
+              </span>
+            </UButton>
+          </div>
+        </fieldset>
       </div>
     </section>
 
-    <!-- Summary Grid -->
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="rounded-3xl bg-primary/5 p-5 border border-primary/10">
+      <div class="rounded-3xl border border-primary/10 bg-primary/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
           Total Task Time
         </p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-primary">
+        <p class="mt-2 text-2xl font-black tracking-tight text-primary sm:text-3xl">
           {{ formatDuration(summary.totalEstimateMinutes) }}
         </p>
       </div>
 
-      <div class="rounded-3xl bg-error/5 p-5 border border-error/10">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/60">Overdue</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-error">
+      <div class="rounded-3xl border border-error/10 bg-error/5 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/60">
+          Overdue
+        </p>
+        <p class="mt-2 text-2xl font-black tracking-tight text-error sm:text-3xl">
           {{ summary.overdueCount }}
         </p>
       </div>
 
-      <div class="rounded-3xl bg-success/5 p-5 border border-success/10">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/60">Completed</p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-success">
+      <div class="rounded-3xl border border-success/10 bg-success/5 p-5">
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/60">
+          Completed
+        </p>
+        <p class="mt-2 text-2xl font-black tracking-tight text-success sm:text-3xl">
           {{ summary.completedCount }}
         </p>
       </div>
 
-      <div class="rounded-3xl bg-secondary/5 p-5 border border-secondary/10">
+      <div class="rounded-3xl border border-secondary/10 bg-secondary/5 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/60">
           Active Domains
         </p>
-        <p class="mt-2 text-2xl sm:text-3xl font-black tracking-tight text-secondary">
+        <p class="mt-2 text-2xl font-black tracking-tight text-secondary sm:text-3xl">
           {{ summary.activeDomainCount }}
         </p>
       </div>
     </div>
 
-    <!-- Quadrant Grid -->
-    <div class="grid gap-4 xl:grid-cols-2">
+    <div
+      class="grid gap-4"
+      :class="visibleQuadrants.length > 1 ? 'xl:grid-cols-2' : ''"
+    >
       <article
-        v-for="quadrant in quadrantMeta"
+        v-for="quadrant in visibleQuadrants"
         :key="quadrant.key"
         class="rounded-3xl border border-muted/20 p-5"
-        :class="quadrant.className"
+        :class="getQuadrantClassName(quadrant.key)"
       >
         <div class="flex items-start justify-between gap-3">
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
               {{ quadrant.label }}
             </p>
-            <p class="mt-1 text-xs font-medium text-muted/80">{{ quadrant.description }}</p>
+            <p class="mt-1 text-xs font-medium text-muted/80">
+              {{ getQuadrantDescription(quadrant.key) }}
+            </p>
           </div>
 
           <div class="text-right">
             <p class="text-2xl font-black tracking-tight text-highlighted">
-              {{ summary.quadrants[quadrant.key].taskCount }}
+              {{ quadrant.taskCount }}
             </p>
             <p class="text-[10px] font-bold uppercase tracking-widest text-muted/60">
-              {{ formatDuration(summary.quadrants[quadrant.key].estimateMinutes) }}
+              {{ formatDuration(quadrant.estimateMinutes) }}
             </p>
           </div>
         </div>
 
-        <!-- Empty State -->
         <div
-          v-if="summary.quadrants[quadrant.key].tasks.length === 0"
-          class="mt-4 border-dashed border-muted/20 rounded-2xl py-8 text-center bg-elevated/5 text-sm font-medium text-muted/60"
+          v-if="quadrant.tasks.length === 0"
+          class="mt-4 rounded-2xl border border-dashed border-muted/20 bg-elevated/5 py-8 text-center text-sm font-medium text-muted/60"
         >
           No tasks in this quadrant.
         </div>
 
         <div v-else class="mt-4 space-y-3">
           <article
-            v-for="task in summary.quadrants[quadrant.key].tasks"
-            :key="task.id"
+            v-for="item in quadrant.tasks"
+            :key="getCollectedTaskKey(item)"
             class="rounded-2xl border border-muted/20 bg-default/40 p-4"
           >
             <div class="flex items-start gap-3">
               <UCheckbox
-                :model-value="task.completed"
+                :model-value="item.task.completed"
                 class="mt-1"
-                @update:model-value="toggleTaskCompleted(task.id, $event as boolean | string | undefined)"
+                @update:model-value="
+                  toggleTaskCompleted(item, $event as boolean | string | undefined)
+                "
               />
 
               <div class="min-w-0 flex-1 space-y-2">
-                <p class="font-semibold text-highlighted text-sm">{{ task.text }}</p>
+                <p class="text-sm font-semibold text-highlighted">
+                  {{ item.task.text }}
+                </p>
                 <div class="flex flex-wrap gap-2">
-                  <UBadge :class="getDomainPillClass(task.domain)" variant="subtle" size="sm" class="rounded-lg">
-                    {{ getWorkspaceTaskDomainLabel(task.domain) }}
+                  <UBadge
+                    :class="getDomainPillClass(item.task.domain)"
+                    variant="subtle"
+                    size="sm"
+                    class="rounded-lg"
+                  >
+                    {{ getWorkspaceTaskDomainLabel(item.task.domain) }}
                   </UBadge>
                   <UBadge color="neutral" variant="soft" size="sm" class="rounded-lg">
-                    {{ formatDuration(task.estimateMinutes) }}
+                    {{ formatDuration(item.task.estimateMinutes) }}
                   </UBadge>
-                  <UBadge v-if="isOverdue(task)" color="error" variant="soft" size="sm" class="rounded-lg">
+                  <UBadge
+                    color="neutral"
+                    variant="soft"
+                    size="sm"
+                    class="rounded-lg"
+                  >
+                    {{ item.sourceNodeTitle }}
+                  </UBadge>
+                  <UBadge
+                    v-if="isDerivedTask(item)"
+                    color="secondary"
+                    variant="soft"
+                    size="sm"
+                    class="rounded-lg"
+                  >
+                    Derived
+                  </UBadge>
+                  <UBadge
+                    v-if="isOverdue(item.task)"
+                    color="error"
+                    variant="soft"
+                    size="sm"
+                    class="rounded-lg"
+                  >
                     Overdue
                   </UBadge>
                 </div>
+                <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-muted/40">
+                  {{ formatRelativeTaskMeta(item) }}
+                </p>
               </div>
             </div>
           </article>
@@ -423,12 +780,13 @@ async function prioritizeWithAi() {
       </article>
     </div>
 
-    <!-- Domain Allocation -->
     <section class="rounded-3xl border border-muted/20 bg-default/40 p-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">Domain time allocation</h3>
-          <p class="text-xs text-muted mt-1">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-highlighted">
+            Domain time allocation
+          </h3>
+          <p class="mt-1 text-xs text-muted">
             Open task load is grouped by domain so time concentration is visible at a glance.
           </p>
         </div>
@@ -436,7 +794,7 @@ async function prioritizeWithAi() {
 
       <div
         v-if="summary.domainAllocation.length === 0"
-        class="mt-6 border-dashed border-muted/20 rounded-2xl py-12 text-center bg-elevated/5 text-sm font-medium text-muted/60"
+        class="mt-6 rounded-2xl border border-dashed border-muted/20 bg-elevated/5 py-12 text-center text-sm font-medium text-muted/60"
       >
         No open task load yet.
       </div>
@@ -448,8 +806,15 @@ async function prioritizeWithAi() {
         >
           <div class="mb-2 flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
-              <span class="text-sm font-bold text-highlighted">{{ allocation.label }}</span>
-              <UBadge :class="getDomainPillClass(allocation.domain)" variant="subtle" size="sm" class="rounded-lg">
+              <span class="text-sm font-bold text-highlighted">
+                {{ allocation.label }}
+              </span>
+              <UBadge
+                :class="getDomainPillClass(allocation.domain)"
+                variant="subtle"
+                size="sm"
+                class="rounded-lg"
+              >
                 {{ allocation.taskCount }} tasks
               </UBadge>
             </div>
@@ -469,13 +834,14 @@ async function prioritizeWithAi() {
       </div>
     </section>
 
-    <!-- Task Editor -->
     <section class="rounded-3xl border border-muted/20 bg-default/40 p-6">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">Task editor</h3>
-          <p class="text-xs text-muted mt-1">
-            Edit the task list directly and the matrix will re-sort itself instantly.
+          <h3 class="text-sm font-bold uppercase tracking-wider text-highlighted">
+            Task editor
+          </h3>
+          <p class="mt-1 text-xs text-muted">
+            {{ taskEditorDescription }}
           </p>
         </div>
 
@@ -496,7 +862,7 @@ async function prioritizeWithAi() {
             icon="i-lucide-sparkles"
             class="rounded-full px-4"
             size="sm"
-            :disabled="block.tasks.length === 0 || operationState.pending"
+            :disabled="filteredCollectedTasks.length === 0 || operationState.pending"
             :loading="operationState.pending"
             @click="prioritizeWithAi"
           >
@@ -507,107 +873,180 @@ async function prioritizeWithAi() {
 
       <div
         v-if="summary.prioritizedTasks.length === 0"
-        class="mt-6 border-dashed border-muted/20 rounded-3xl py-12 text-center bg-elevated/5 text-sm font-medium text-muted/60"
+        class="mt-6 rounded-3xl border border-dashed border-muted/20 bg-elevated/5 py-12 text-center text-sm font-medium text-muted/60"
       >
-        No tasks to prioritize yet.
+        {{
+          scopedCollectedTasks.length === 0
+            ? "No tasks to prioritize yet."
+            : "No tasks match the current filters."
+        }}
       </div>
 
       <div v-else class="mt-6 space-y-4">
         <article
-          v-for="task in summary.prioritizedTasks"
-          :key="task.id"
+          v-for="item in summary.prioritizedTasks"
+          :key="getCollectedTaskKey(item)"
           class="rounded-2xl border border-muted/20 bg-elevated/5 p-4"
         >
           <div class="grid gap-4 xl:grid-cols-[auto_minmax(0,1.3fr)_minmax(0,0.7fr)]">
             <div class="flex items-start pt-2">
               <UCheckbox
-                :model-value="task.completed"
-                @update:model-value="toggleTaskCompleted(task.id, $event as boolean | string | undefined)"
+                :model-value="item.task.completed"
+                @update:model-value="
+                  toggleTaskCompleted(item, $event as boolean | string | undefined)
+                "
               />
             </div>
 
             <div class="space-y-4">
+              <div class="flex flex-wrap items-center gap-2">
+                <UBadge color="neutral" variant="soft" size="sm" class="rounded-lg">
+                  {{ item.sourceNodeTitle }}
+                </UBadge>
+                <UBadge
+                  color="neutral"
+                  variant="soft"
+                  size="sm"
+                  class="rounded-lg"
+                >
+                  {{ item.blockTitle }}
+                </UBadge>
+                <UBadge
+                  v-if="isDerivedTask(item)"
+                  color="secondary"
+                  variant="soft"
+                  size="sm"
+                  class="rounded-lg"
+                >
+                  Content pipeline
+                </UBadge>
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  icon="i-lucide-arrow-up-right"
+                  class="rounded-lg"
+                  @click="navigateToTaskSource(item)"
+                >
+                  Open source
+                </UButton>
+              </div>
+
+              <p class="text-[10px] font-bold uppercase tracking-[0.14em] text-muted/40">
+                {{ formatRelativeTaskMeta(item) }}
+              </p>
+
+              <p
+                v-if="isDerivedTask(item)"
+                class="text-xs text-muted"
+              >
+                Urgency, importance, estimate, and due date are derived from the source content
+                pipeline and are read-only here.
+              </p>
+
               <div class="grid gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,0.6fr)]">
                 <UInput
-                  :model-value="task.text"
+                  :model-value="item.task.text"
                   placeholder="Task name"
                   variant="subtle"
                   class="rounded-xl"
-                  @update:model-value="updateTaskText(task.id, $event as string | number | undefined)"
+                  @update:model-value="
+                    updateTaskText(item, $event as string | number | undefined)
+                  "
                 />
 
                 <USelect
-                  :model-value="task.domain ?? ''"
+                  v-if="!isDerivedTask(item)"
+                  :model-value="item.task.domain ?? ''"
                   :items="domainOptions"
                   variant="subtle"
                   class="rounded-xl"
-                  @update:model-value="updateTaskDomain(task.id, $event as string | undefined)"
+                  @update:model-value="
+                    updateTaskDomain(item, $event as string | undefined)
+                  "
+                />
+                <UInput
+                  v-else
+                  :model-value="getWorkspaceTaskDomainLabel(item.task.domain)"
+                  variant="subtle"
+                  class="rounded-xl"
+                  disabled
                 />
               </div>
 
               <div class="grid gap-4 md:grid-cols-2">
                 <div class="space-y-2 rounded-xl border border-muted/20 bg-default/40 p-3">
                   <div class="flex items-center justify-between gap-2">
-                    <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
-                      >Urgency</span
-                    >
-                    <span class="text-sm font-black text-highlighted"
-                      >{{ task.urgency }}/10</span
-                    >
+                    <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+                      Urgency
+                    </span>
+                    <span class="text-sm font-black text-highlighted">
+                      {{ item.task.urgency }}/10
+                    </span>
                   </div>
                   <input
-                    :value="task.urgency"
+                    :value="item.task.urgency"
                     type="range"
                     min="1"
                     max="10"
-                    class="h-1.5 w-full appearance-none rounded-full bg-error/20 accent-error"
-                    @input="updateTaskUrgency(task.id, getInputValue($event))"
+                    :disabled="isDerivedTask(item)"
+                    class="h-1.5 w-full appearance-none rounded-full bg-error/20 accent-error disabled:cursor-not-allowed disabled:opacity-50"
+                    @input="updateTaskUrgency(item, getInputValue($event))"
                   />
                 </div>
 
                 <div class="space-y-2 rounded-xl border border-muted/20 bg-default/40 p-3">
                   <div class="flex items-center justify-between gap-2">
-                    <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
-                      >Importance</span
-                    >
-                    <span class="text-sm font-black text-highlighted"
-                      >{{ task.importance }}/10</span
-                    >
+                    <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+                      Importance
+                    </span>
+                    <span class="text-sm font-black text-highlighted">
+                      {{ item.task.importance }}/10
+                    </span>
                   </div>
                   <input
-                    :value="task.importance"
+                    :value="item.task.importance"
                     type="range"
                     min="1"
                     max="10"
-                    class="h-1.5 w-full appearance-none rounded-full bg-primary/20 accent-primary"
-                    @input="updateTaskImportance(task.id, getInputValue($event))"
+                    :disabled="isDerivedTask(item)"
+                    class="h-1.5 w-full appearance-none rounded-full bg-primary/20 accent-primary disabled:cursor-not-allowed disabled:opacity-50"
+                    @input="updateTaskImportance(item, getInputValue($event))"
                   />
                 </div>
               </div>
             </div>
 
-            <div
-              class="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)_auto] xl:grid-cols-1"
-            >
+            <div class="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)_auto] xl:grid-cols-1">
               <div class="space-y-1">
-                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Time Estimate</label>
+                <label class="px-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+                  Time Estimate
+                </label>
                 <UInput
-                  :model-value="String(task.estimateMinutes)"
+                  :model-value="String(item.task.estimateMinutes)"
                   type="number"
                   variant="subtle"
                   class="rounded-xl"
-                  @update:model-value="updateTaskEstimate(task.id, $event as string | number | null | undefined)"
+                  :disabled="isDerivedTask(item)"
+                  @update:model-value="
+                    updateTaskEstimate(item, $event as string | number | null | undefined)
+                  "
                 />
               </div>
 
               <div class="space-y-1">
-                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 px-1">Due Date</label>
+                <label class="px-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+                  Due Date
+                </label>
                 <UInput
-                  :model-value="task.dueDate ?? ''"
+                  :model-value="item.task.dueDate ?? ''"
                   type="date"
                   variant="subtle"
                   class="rounded-xl"
-                  @update:model-value="updateTaskDueDate(task.id, $event as string | undefined)"
+                  :disabled="isDerivedTask(item)"
+                  @update:model-value="
+                    updateTaskDueDate(item, $event as string | undefined)
+                  "
                 />
               </div>
 
@@ -618,7 +1057,7 @@ async function prioritizeWithAi() {
                   icon="i-lucide-trash-2"
                   class="rounded-lg hover:bg-error/10 hover:text-error"
                   size="sm"
-                  @click="removeTask(task.id)"
+                  @click="removeTaskItem(item)"
                 />
               </div>
             </div>
@@ -627,18 +1066,22 @@ async function prioritizeWithAi() {
       </div>
     </section>
 
-    <!-- AI Battle Plan -->
     <section class="rounded-3xl border border-primary/20 bg-primary/5 p-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 class="text-sm font-bold text-highlighted uppercase tracking-wider">AI battle plan</h3>
-          <p class="text-xs text-muted mt-1">
-            The Orchestrator agent turns the current matrix into a concrete sequencing
-            recommendation.
+          <h3 class="text-sm font-bold uppercase tracking-wider text-highlighted">
+            AI battle plan
+          </h3>
+          <p class="mt-1 text-xs text-muted">
+            The Orchestrator agent turns the current filtered matrix scope into a concrete
+            sequencing recommendation.
           </p>
         </div>
 
-        <p v-if="block.battlePlanUpdatedAt" class="text-[10px] font-bold uppercase tracking-widest text-muted/60">
+        <p
+          v-if="block.battlePlanUpdatedAt"
+          class="text-[10px] font-bold uppercase tracking-widest text-muted/60"
+        >
           Last updated {{ formatDateTime(block.battlePlanUpdatedAt) }}
         </p>
       </div>
@@ -648,10 +1091,24 @@ async function prioritizeWithAi() {
         v-html="
           renderSimpleMarkdown(
             block.latestBattlePlan ||
-              'Run AI Prioritize to generate a battle plan from the current matrix.',
+              'Run AI Prioritize to generate a battle plan from the current filtered matrix scope.',
           )
         "
       />
     </section>
+
+    <WorkspaceOrchestratorSourcesModal
+      v-if="currentNode && isOrchestratorNode"
+      :open="sourcesModalOpen"
+      :orchestrator-node="currentNode"
+      :all-nodes="allNodes"
+      @update:open="sourcesModalOpen = $event"
+      @connect="connectSource"
+      @disconnect="disconnectSource"
+      @mutate-task="handleMutateTask"
+      @remove-task="removeCollectedTask"
+      @add-task="addTaskToSource"
+      @navigate-to-source="navigateToSource"
+    />
   </div>
 </template>

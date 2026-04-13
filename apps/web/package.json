@@ -5,6 +5,7 @@
   "scripts": {
     "build": "NODE_OPTIONS=--max-old-space-size=4096 nuxt build",
     "dev": "nuxt dev",
+    "dev:portless": "portless web.brainiac nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "test": "bun test --preload ./test/setup.ts",
