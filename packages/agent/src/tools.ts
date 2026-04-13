@@ -986,7 +986,14 @@ function describeBlockEditGuide(
     case "eisenhower-matrix":
       return createBlockEditGuide({
         blockType: block.type,
-        editableFieldPaths: ["title", "latestBattlePlan", ...prefixPaths("tasks[]", taskLeafPaths)],
+        editableFieldPaths: [
+          "title",
+          "settings.domains[]",
+          "settings.includeUnassigned",
+          "settings.quadrants[]",
+          "latestBattlePlan",
+          ...prefixPaths("tasks[]", taskLeafPaths),
+        ],
         notes: ["Only change latestBattlePlan when the user wants the synthesized plan updated."],
       });
     case "leadership-rhythm-planner":

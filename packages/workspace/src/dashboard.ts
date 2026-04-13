@@ -90,7 +90,8 @@ import {
 } from "./strategy";
 import {
   collectWorkspaceNodeTasks,
-  getEisenhowerMatrixSummary,
+  filterCollectedTasksByTimeOrchestratorSettings,
+  getEisenhowerMatrixSummaryFromTasks,
   getLeadershipRhythmPlannerSummary,
   getTimeOrchestratorSummary,
   getWorkspaceTaskDomainLabel,
@@ -100,6 +101,7 @@ import {
 } from "./tasks";
 import type {
   WorkspaceBlock,
+  WorkspaceCollectedTask,
   WorkspaceCustomBlock,
   WorkspaceCustomBlockTemplate,
   WorkspaceCustomBlockValue,
@@ -122,7 +124,8 @@ import type {
   WorkspaceTrackerTrend,
 } from "./types";
 
-function formatDashboardTaskLine(task: WorkspaceTask) {
+function formatDashboardTaskLine(taskEntry: WorkspaceCollectedTask | WorkspaceTask) {
+  const task = "task" in taskEntry ? taskEntry.task : taskEntry;
   const fragments: string[] = [];
 
   if (task.domain) {
@@ -138,6 +141,33 @@ function formatDashboardTaskLine(task: WorkspaceTask) {
   }
 
   return fragments.length > 0 ? `${task.text} (${fragments.join(", ")})` : task.text;
+}
+
+function getScopedEisenhowerSummary(
+  node: WorkspaceNode,
+  block: Extract<WorkspaceBlock, { type: "eisenhower-matrix" }>,
+  allNodes?: WorkspaceNode[],
+) {
+  if (node.nodeType === "orchestrator" && allNodes && allNodes.length > 0) {
+    return getEisenhowerMatrixSummaryFromTasks(
+      filterCollectedTasksByTimeOrchestratorSettings(collectWorkspaceNodeTasks(node, allNodes), block.settings),
+    );
+  }
+
+  const localTasks = block.tasks.map<WorkspaceCollectedTask>((task) => ({
+    sourceNodeId: node.id,
+    sourceNodeTitle: trimToEmpty(node.title) || trimToEmpty(node.label) || "Untitled node",
+    blockId: block.id,
+    blockTitle: getDisplayBlockTitle(block),
+    blockType: block.type,
+    tabId: block.id,
+    tabTitle: getDisplayBlockTitle(block),
+    task,
+  }));
+
+  return getEisenhowerMatrixSummaryFromTasks(
+    filterCollectedTasksByTimeOrchestratorSettings(localTasks, block.settings),
+  );
 }
 
 function formatEgpValue(value: number) {
@@ -756,7 +786,7 @@ function buildWorkspaceNodeDashboardDetail(
   }
 
   if (block.type === "eisenhower-matrix") {
-    const summary = getEisenhowerMatrixSummary(block);
+    const summary = getScopedEisenhowerSummary(node, block, allNodes);
 
     return {
       tabId: tab.id,
@@ -766,7 +796,7 @@ function buildWorkspaceNodeDashboardDetail(
       blockType: block.type,
       summary:
         summary.totalTaskCount > 0
-          ? `${summary.prioritizedTasks.filter((task) => !task.completed).length} open tasks sorted across four priority quadrants.`
+          ? `${summary.prioritizedTasks.filter(({ task }) => !task.completed).length} open tasks sorted across four priority quadrants.`
           : "No tasks added yet.",
       metrics: [
         {
@@ -783,7 +813,7 @@ function buildWorkspaceNodeDashboardDetail(
         },
       ],
       highlights: summary.prioritizedTasks
-        .filter((task) => !task.completed)
+        .filter(({ task }) => !task.completed)
         .slice(0, 2)
         .map((task) => formatDashboardTaskLine(task)),
     };
@@ -1946,10 +1976,10 @@ export function getWorkspaceNodePreview(node: WorkspaceNode, maxLength = 180) {
       }
 
       if (block.type === "eisenhower-matrix" && block.tasks.length > 0) {
-        const summary = getEisenhowerMatrixSummary(block);
+        const summary = getScopedEisenhowerSummary(node, block);
 
         return truncateText(
-          `${block.title}: ${summary.prioritizedTasks.filter((task) => !task.completed).length} open tasks, ${summary.overdueCount} overdue, ${summary.completedCount} completed.`,
+          `${block.title}: ${summary.prioritizedTasks.filter(({ task }) => !task.completed).length} open tasks, ${summary.overdueCount} overdue, ${summary.completedCount} completed.`,
           maxLength,
         );
       }

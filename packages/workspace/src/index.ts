@@ -1827,6 +1827,7 @@ export function createWorkspaceEisenhowerMatrixBlock(
     type: "eisenhower-matrix",
     title: partial.title ?? "Eisenhower matrix",
     tasks: partial.tasks ?? getEisenhowerMatrixDefaultTasks(),
+    settings: createWorkspaceTimeOrchestratorSettings(partial.settings),
     latestBattlePlan: partial.latestBattlePlan ?? "",
     battlePlanUpdatedAt: partial.battlePlanUpdatedAt ?? null,
     createdAt: partial.createdAt ?? timestamp,
@@ -2773,6 +2774,7 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
       return workspaceEisenhowerMatrixBlockSchema.parse({
         ...block,
         tasks: block.tasks ?? [],
+        settings: createWorkspaceTimeOrchestratorSettings(block.settings),
         latestBattlePlan: block.latestBattlePlan ?? "",
         battlePlanUpdatedAt: block.battlePlanUpdatedAt ?? null,
       });
@@ -3328,6 +3330,7 @@ export function cloneWorkspaceBlockForInsertion(
           ...task,
           id: createWorkspaceId("task"),
         })),
+        settings: createWorkspaceTimeOrchestratorSettings(block.settings),
         createdAt: timestamp,
         updatedAt: timestamp,
       });

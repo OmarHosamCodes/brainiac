@@ -349,11 +349,17 @@ export type WorkspaceMarketplaceSaveInput = z.infer<typeof workspaceMarketplaceS
 export type WorkspaceCustomBlockValue = z.infer<typeof workspaceCustomBlockValueSchema>;
 export type WorkspaceNodeRecord = WorkspaceNode;
 
+export type WorkspaceCollectedTaskBlockType =
+  | "task-list"
+  | "eisenhower-matrix"
+  | "content-pipeline";
+
 export type WorkspaceCollectedTask = {
   sourceNodeId: string;
   sourceNodeTitle: string;
   blockId: string;
   blockTitle: string;
+  blockType: WorkspaceCollectedTaskBlockType;
   tabId: string;
   tabTitle: string;
   task: WorkspaceTask;
@@ -689,7 +695,7 @@ export type WorkspaceEisenhowerQuadrantSummary = {
   label: string;
   taskCount: number;
   estimateMinutes: number;
-  tasks: WorkspaceTask[];
+  tasks: WorkspaceCollectedTask[];
 };
 
 export type WorkspaceEisenhowerMatrixSummary = {
@@ -700,7 +706,7 @@ export type WorkspaceEisenhowerMatrixSummary = {
   activeDomainCount: number;
   domainAllocation: WorkspaceEisenhowerDomainAllocation[];
   quadrants: Record<WorkspaceTaskQuadrant, WorkspaceEisenhowerQuadrantSummary>;
-  prioritizedTasks: WorkspaceTask[];
+  prioritizedTasks: WorkspaceCollectedTask[];
 };
 
 export type WorkspaceLeadershipRhythmSummary = {

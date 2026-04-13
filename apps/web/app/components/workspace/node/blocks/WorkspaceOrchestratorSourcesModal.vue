@@ -207,6 +207,10 @@ function handleNavigate(sourceNodeId: string) {
     emit("navigate-to-source", sourceNodeId);
 }
 
+function canEditPriority(item: WorkspaceCollectedTask) {
+    return item.blockType !== "content-pipeline";
+}
+
 function closeModal() {
     emit("update:open", false);
 }
@@ -536,6 +540,7 @@ const priorityMenuItems = (item: WorkspaceCollectedTask) => [
 
                                 <!-- Priority Dropdown -->
                                 <UDropdownMenu
+                                    v-if="canEditPriority(item)"
                                     :items="priorityMenuItems(item)"
                                 >
                                     <UButton
@@ -561,6 +566,26 @@ const priorityMenuItems = (item: WorkspaceCollectedTask) => [
                                         }}
                                     </UButton>
                                 </UDropdownMenu>
+                                <UButton
+                                    v-else
+                                    size="xs"
+                                    variant="ghost"
+                                    color="neutral"
+                                    class="rounded-lg"
+                                    disabled
+                                    :title="
+                                        'Priority is derived from content pipeline status and cannot be changed here.'
+                                    "
+                                >
+                                    {{
+                                        item.task.priority
+                                            ? item.task.priority
+                                                  .charAt(0)
+                                                  .toUpperCase() +
+                                              item.task.priority.slice(1)
+                                            : "Derived"
+                                    }}
+                                </UButton>
 
                                 <!-- Source Badge (clickable → navigate) -->
                                 <button
