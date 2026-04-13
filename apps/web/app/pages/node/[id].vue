@@ -482,7 +482,11 @@ function deleteActiveTab() {
         (tab) => tab.id === currentTabId,
     );
 
-    if (!window.confirm(`Delete "${getDisplayTabTitle(activeTab.value)}"?`)) {
+    if (
+        !window.confirm(
+            `Delete workspace "${getDisplayTabTitle(activeTab.value)}" and all of its blocks?`,
+        )
+    ) {
         return;
     }
 
@@ -727,7 +731,7 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
     }
 
     mutateTab(activeTab.value.id, (tab) => {
-        tab.blocks.push(nextBlock);
+        tab.blocks.unshift(nextBlock);
     });
 }
 
@@ -753,11 +757,23 @@ function addBlockPresetToActiveTab(presetId: WorkspaceBlockPresetId) {
     }
 
     mutateTab(activeTab.value.id, (tab) => {
-        tab.blocks.push(...preset.createBlocks());
+        tab.blocks.unshift(...preset.createBlocks());
     });
 }
 
 function removeBlock(tabId: string, blockId: string) {
+    const block = node.value?.tabs
+        .find((tab) => tab.id === tabId)
+        ?.blocks.find((entry) => entry.id === blockId);
+
+    if (!block) {
+        return;
+    }
+
+    if (!window.confirm(`Delete block "${getDisplayBlockTitle(block)}"?`)) {
+        return;
+    }
+
     if (isAgentContextBlock(tabId, blockId)) {
         removeAgentContextBlock(tabId, blockId);
     }
