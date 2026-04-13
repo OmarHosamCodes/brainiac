@@ -1171,3 +1171,15 @@ export const workspaceMarketplaceSaveInputSchema = z.object({
 export const workspaceMarketplaceListSchema = z.object({
   items: z.array(workspaceMarketplaceItemSchema).max(WORKSPACE_MARKETPLACE_ITEM_LIMIT).default([]),
 });
+
+export const workspaceMarketplaceListInputSchema = z.object({
+  cursor: z.string().min(1).optional(),
+  limit: z.number().int().min(1).max(50).default(20),
+  kind: z.enum(["all", "node", "tab", "block"]).default("all"),
+  search: z.string().max(120).optional(),
+});
+
+export const workspaceMarketplaceListOutputSchema = z.object({
+  items: z.array(workspaceMarketplaceItemSchema),
+  nextCursor: z.string().nullable(),
+});

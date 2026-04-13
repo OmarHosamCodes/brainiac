@@ -5,19 +5,19 @@ import {
   workspaceTeamMember,
 } from "@brainiac/db/schema";
 import {
-  WORKSPACE_MARKETPLACE_ITEM_LIMIT,
   createWorkspaceId,
   normalizeWorkspaceNode,
   workspaceMarketplaceItemSchema,
   workspaceNodeVisibilitySchema,
-  type WorkspaceMarketplaceItem,
+  type WorkspaceMarketplaceListInput,
+  type WorkspaceMarketplaceListOutput,
   type WorkspaceMarketplaceSaveInput,
   type WorkspaceNode,
   type WorkspaceNodeVisibility,
   type WorkspaceTeamRole,
 } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, lt, or } from "drizzle-orm";
 
 const TEAM_ROLE_WEIGHT: Record<WorkspaceTeamRole, number> = {
   viewer: 1,
@@ -481,7 +481,54 @@ export async function deleteWorkspaceNode(
   };
 }
 
-export async function getWorkspaceMarketplaceItems(): Promise<WorkspaceMarketplaceItem[]> {
+export async function getWorkspaceMarketplaceItems(
+  input: WorkspaceMarketplaceListInput,
+): Promise<WorkspaceMarketplaceListOutput> {
+  const limit = input.limit ?? 20;
+  const kind = input.kind ?? "all";
+  const search = input.search?.trim() ?? "";
+  const cursor = input.cursor;
+
+  const conditions: ReturnType<typeof eq>[] = [];
+
+  if (kind !== "all") {
+    conditions.push(eq(workspaceMarketplaceItem.kind, kind));
+  }
+
+  if (search) {
+    const pattern = `%${search}%`;
+    conditions.push(
+      or(
+        ilike(workspaceMarketplaceItem.title, pattern),
+        ilike(workspaceMarketplaceItem.summary, pattern),
+        ilike(workspaceMarketplaceItem.createdByName, pattern),
+      )!,
+    );
+  }
+
+  if (cursor) {
+    const [cursorRow] = await db
+      .select({
+        createdAt: workspaceMarketplaceItem.createdAt,
+        id: workspaceMarketplaceItem.id,
+      })
+      .from(workspaceMarketplaceItem)
+      .where(eq(workspaceMarketplaceItem.id, cursor))
+      .limit(1);
+
+    if (cursorRow) {
+      conditions.push(
+        or(
+          lt(workspaceMarketplaceItem.createdAt, cursorRow.createdAt),
+          and(
+            eq(workspaceMarketplaceItem.createdAt, cursorRow.createdAt),
+            lt(workspaceMarketplaceItem.id, cursorRow.id),
+          ),
+        )!,
+      );
+    }
+  }
+
   const rows = await db
     .select({
       id: workspaceMarketplaceItem.id,
@@ -494,10 +541,15 @@ export async function getWorkspaceMarketplaceItems(): Promise<WorkspaceMarketpla
       updatedAt: workspaceMarketplaceItem.updatedAt,
     })
     .from(workspaceMarketplaceItem)
-    .orderBy(desc(workspaceMarketplaceItem.createdAt))
-    .limit(WORKSPACE_MARKETPLACE_ITEM_LIMIT);
+    .where(conditions.length > 0 ? and(...conditions) : undefined)
+    .orderBy(desc(workspaceMarketplaceItem.createdAt), desc(workspaceMarketplaceItem.id))
+    .limit(limit + 1);
 
-  return rows.map((row) =>
+  const hasMore = rows.length > limit;
+  const pageRows = hasMore ? rows.slice(0, limit) : rows;
+  const nextCursor = hasMore ? pageRows[pageRows.length - 1]!.id : null;
+
+  const items = pageRows.map((row) =>
     workspaceMarketplaceItemSchema.parse({
       id: row.id,
       title: row.title,
@@ -509,6 +561,8 @@ export async function getWorkspaceMarketplaceItems(): Promise<WorkspaceMarketpla
       updatedAt: row.updatedAt.toISOString(),
     }),
   );
+
+  return { items, nextCursor };
 }
 
 export async function saveWorkspaceMarketplaceItem(

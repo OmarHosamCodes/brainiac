@@ -78,6 +78,8 @@ import {
   workspaceLeadershipRhythmSchema,
   workspaceLearningOutcomesMatrixBlockSchema,
   workspaceMarketplaceItemSchema,
+  workspaceMarketplaceListInputSchema,
+  workspaceMarketplaceListOutputSchema,
   workspaceMarketplacePayloadSchema,
   workspaceMarketplaceSaveInputSchema,
   workspaceMessageHouseBlockSchema,
@@ -346,6 +348,8 @@ export type WorkspaceSaveInput = z.infer<typeof workspaceSaveInputSchema>;
 export type WorkspaceMarketplacePayload = z.infer<typeof workspaceMarketplacePayloadSchema>;
 export type WorkspaceMarketplaceItem = z.infer<typeof workspaceMarketplaceItemSchema>;
 export type WorkspaceMarketplaceSaveInput = z.infer<typeof workspaceMarketplaceSaveInputSchema>;
+export type WorkspaceMarketplaceListInput = z.infer<typeof workspaceMarketplaceListInputSchema>;
+export type WorkspaceMarketplaceListOutput = z.infer<typeof workspaceMarketplaceListOutputSchema>;
 export type WorkspaceCustomBlockValue = z.infer<typeof workspaceCustomBlockValueSchema>;
 export type WorkspaceNodeRecord = WorkspaceNode;
 

@@ -279,14 +279,14 @@ export async function appendDashboardConversationTurn(
   input: AgentChatTurnInput,
 ) {
   const now = new Date();
-  const [fullWorkspaceSnapshot, marketplaceItems] = await Promise.all([
+  const [fullWorkspaceSnapshot, marketplaceResult] = await Promise.all([
     input.nodes
       ? Promise.resolve({
         nodes: input.nodes,
         updatedAt: null,
       })
       : getWorkspaceSnapshot(userId),
-    getWorkspaceMarketplaceItems(),
+    getWorkspaceMarketplaceItems({ limit: 200, kind: "all" }),
   ]);
 
   const conversation = input.conversationId
@@ -326,7 +326,7 @@ export async function appendDashboardConversationTurn(
     {
       nodes: fullWorkspaceSnapshot.nodes,
       scopeNodes,
-      marketplaceItems,
+      marketplaceItems: marketplaceResult.items,
       updatedAt: fullWorkspaceSnapshot.updatedAt,
       userName,
       activeTabId: input.activeTabId,
