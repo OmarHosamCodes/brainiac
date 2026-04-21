@@ -999,6 +999,13 @@ export const workspaceAgencyTimeReportsBlockSchema = workspaceBlockBaseSchema.ex
   selectedMemberUserId: z.string().min(1).nullable().optional(),
 });
 
+export const workspaceAgencySettingsBlockSchema = workspaceBlockBaseSchema.extend({
+  type: z.literal("agency-settings"),
+  teamId: z.string().min(1).nullable().optional(),
+  billingPeriodStartDay: z.number().int().min(1).max(28).default(1),
+  billingPeriodEndDay: z.number().int().min(1).max(28).default(28),
+});
+
 export const workspaceCustomBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("custom"),
   definitionId: z.string().min(1),
@@ -1055,6 +1062,7 @@ export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceAgencyTimeEntriesLogBlockSchema,
   workspaceAgencySprintBoardBlockSchema,
   workspaceAgencyTimeReportsBlockSchema,
+  workspaceAgencySettingsBlockSchema,
   workspaceCustomBlockSchema,
 ]);
 

@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import {
     cloneWorkspaceNodes,
+    AGENCY_OPERATOR_PREDEFINED_TAB_TITLES,
     createDefaultWorkspaceTab,
     createWorkspace2x2MatrixBlock,
     createWorkspaceAgencyProjectManagerBlock,
+    createWorkspaceAgencySettingsBlock,
     createWorkspaceAgencySprintBoardBlock,
     createWorkspaceAgencyTimeEntriesLogBlock,
     createWorkspaceAgencyTimeReportsBlock,
@@ -296,6 +298,7 @@ const domainOptions = workspaceNodeDomainOptions;
 
 const agencyOperationsBlockTypeSet = new Set<WorkspaceBlock["type"]>([
     "agency-project-manager",
+    "agency-settings",
     "agency-time-tracker",
     "agency-time-entries-log",
     "agency-sprint-board",
@@ -477,6 +480,20 @@ function submitTabEditor() {
 
 function deleteActiveTab() {
     if (!node.value || !activeTab.value) {
+        return;
+    }
+
+    // Prevent deleting locked predefined tabs on agency-operator nodes
+    if (
+        node.value.nodeType === "agency-operator" &&
+        (AGENCY_OPERATOR_PREDEFINED_TAB_TITLES as readonly string[]).includes(activeTab.value.title)
+    ) {
+        toast.add({
+            title: "Tab locked",
+            description:
+                "This workspace tab is part of the Agency Operator structure and cannot be deleted.",
+            color: "warning",
+        });
         return;
     }
 
@@ -726,6 +743,11 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
             break;
         case "agency-time-reports":
             nextBlock = createWorkspaceAgencyTimeReportsBlock({
+                teamId: preferredAgencyTeamId,
+            });
+            break;
+        case "agency-settings":
+            nextBlock = createWorkspaceAgencySettingsBlock({
                 teamId: preferredAgencyTeamId,
             });
             break;

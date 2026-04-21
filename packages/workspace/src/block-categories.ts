@@ -48,6 +48,11 @@ export const workspaceBlockCategories = [
         label: "Agency time reports",
         icon: "i-lucide-chart-pie",
       },
+      {
+        blockType: "agency-settings",
+        label: "Agency settings",
+        icon: "i-lucide-settings-2",
+      },
     ],
   },
   {

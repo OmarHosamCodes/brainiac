@@ -15,6 +15,14 @@ export function getCanonicalConnectionPair(
     return null;
   }
 
+  // Agency-operator nodes are standalone — never participate in canvas connections.
+  if (
+    sourceNode.nodeType === "agency-operator" ||
+    targetNode.nodeType === "agency-operator"
+  ) {
+    return null;
+  }
+
   if (sourceNode.nodeType === targetNode.nodeType) {
     return null;
   }

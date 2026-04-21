@@ -1851,6 +1851,34 @@ function buildWorkspaceNodeDashboardDetail(
     };
   }
 
+  if (block.type === "agency-settings") {
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: block.teamId
+        ? `Billing period runs day ${block.billingPeriodStartDay} to day ${block.billingPeriodEndDay} of the following month.`
+        : "Agency settings waiting for team binding.",
+      metrics: [
+        {
+          label: "Team",
+          value: block.teamId ? "Linked" : "Unlinked",
+        },
+        {
+          label: "Period start",
+          value: `Day ${block.billingPeriodStartDay}`,
+        },
+        {
+          label: "Period end",
+          value: `Day ${block.billingPeriodEndDay}`,
+        },
+      ],
+      highlights: [],
+    };
+  }
+
   const template = node.customBlockTemplates.find((entry) => entry.id === block.definitionId);
   const formulaResult = evaluateCustomBlockFormula(template?.formula?.expression, block.values);
   const filledValues = Object.entries(block.values)

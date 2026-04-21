@@ -47,7 +47,9 @@ export const DEFAULT_WORKSPACE_NODE_HEIGHT = 220;
 export const DEFAULT_WORKSPACE_NODE_MIN_WIDTH = 260;
 export const DEFAULT_WORKSPACE_NODE_MIN_HEIGHT = 180;
 
-export const WORKSPACE_NODE_TYPES = ["standard", "orchestrator"] as const;
+export const WORKSPACE_NODE_TYPES = ["standard", "orchestrator", "agency-operator"] as const;
+
+export const AGENCY_OPERATOR_PREDEFINED_TAB_TITLES = ["Overview", "Team", "Settings"] as const;
 
 export const WORKSPACE_TASK_DOMAINS = [
   "strategy",
