@@ -8,6 +8,7 @@
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "dev": "bun run --hot src/index.ts",
     "dev:portless": "portless server.brainiac bun run --hot src/index.ts",
+    "grant:lifetime-pro": "bun run src/grant-lifetime-pro.ts",
     "db:seed": "bun run src/seed.ts",
     "start": "bun run dist/index.mjs",
     "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"

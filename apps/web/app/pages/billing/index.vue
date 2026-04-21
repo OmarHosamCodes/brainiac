@@ -4,7 +4,7 @@ definePageMeta({
   middleware: ["auth"],
 });
 
-const { tier, isPro, subscription, limits, checkout, openPortal, billingQuery } = useBilling();
+const { isPro, subscription, limits, checkout, openPortal, billingQuery } = useBilling();
 
 const formattedRenewalDate = computed(() => {
   if (!subscription.value?.currentPeriodEnd) return null;
@@ -14,6 +14,8 @@ const formattedRenewalDate = computed(() => {
     day: "numeric",
   });
 });
+
+const isLifetimeSubscription = computed(() => Boolean(subscription.value?.isLifetime));
 
 const limitItems = computed(() => [
   { label: "Workspace Nodes", value: limits.value.workspaceNodes, icon: "i-lucide-layout-grid" },
@@ -66,7 +68,10 @@ const limitItems = computed(() => [
                 </UBadge>
               </div>
 
-              <p v-if="subscription" class="text-sm text-neutral-500">
+              <p v-if="isLifetimeSubscription" class="text-sm text-neutral-500">
+                Lifetime access
+              </p>
+              <p v-else-if="subscription" class="text-sm text-neutral-500">
                 {{ subscription.status === "active" ? "Renews" : "Ends" }}
                 {{ formattedRenewalDate }}
               </p>
@@ -77,7 +82,7 @@ const limitItems = computed(() => [
 
             <div class="flex gap-3">
               <UButton
-                v-if="isPro"
+                v-if="isPro && !isLifetimeSubscription"
                 variant="outline"
                 color="neutral"
                 @click="openPortal"
@@ -85,7 +90,7 @@ const limitItems = computed(() => [
                 Manage Subscription
               </UButton>
               <UButton
-                v-else
+                v-else-if="!isPro"
                 color="primary"
                 class="shadow-lg shadow-emerald-500/20"
                 @click="checkout('pro')"

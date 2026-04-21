@@ -3,6 +3,7 @@ definePageMeta({ layout: "default" });
 
 const session = useAuthSession();
 const isAuthenticated = computed(() => Boolean(session.value?.data?.user));
+const { checkout, isPro } = useBilling();
 
 const features = [
   { icon: "i-lucide-layout-grid", label: "Workspace Nodes", free: "10", pro: "200" },
@@ -21,7 +22,10 @@ async function handleCheckout() {
     return;
   }
 
-  const { checkout } = useBilling();
+  if (isPro.value) {
+    await navigateTo("/billing");
+    return;
+  }
   await checkout("pro");
 }
 </script>
@@ -123,11 +127,12 @@ async function handleCheckout() {
             <UButton
               block
               size="lg"
-              color="primary"
-              class="mb-6 shadow-lg shadow-emerald-500/20"
+              :color="isAuthenticated && isPro ? 'neutral' : 'primary'"
+              :variant="isAuthenticated && isPro ? 'outline' : 'solid'"
+              :class="isAuthenticated && isPro ? 'mb-6' : 'mb-6 shadow-lg shadow-emerald-500/20'"
               @click="handleCheckout"
             >
-              Upgrade to Pro
+              {{ isAuthenticated && isPro ? "Current Plan" : "Upgrade to Pro" }}
             </UButton>
 
             <ul class="space-y-3">

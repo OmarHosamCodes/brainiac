@@ -50,6 +50,9 @@
     "db:seed": {
       "cache": false
     },
+    "grant:lifetime-pro": {
+      "cache": false
+    },
     "db:studio": {
       "cache": false,
       "persistent": true
