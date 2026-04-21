@@ -52,6 +52,19 @@ const nodeTypeMeta = computed(() => {
     };
   }
 
+  if (workspaceNode.value.nodeType === "agency-operator") {
+    const teamName = workspaceNode.value.title || "Unassigned team";
+
+    return {
+      label: "Agency Operator",
+      icon: "i-lucide-building-2",
+      accentClass:
+        "border-[rgb(var(--workspace-node-rgb)/0.24)] bg-[rgb(var(--workspace-node-rgb)/0.12)] text-[rgb(var(--workspace-node-rgb))]",
+      detail: teamName,
+      footer: teamName,
+    };
+  }
+
   const label =
     linkedOrchestratorCount.value > 0
       ? `Linked to ${linkedOrchestratorCount.value} orchestrator${linkedOrchestratorCount.value === 1 ? "" : "s"}`
@@ -79,14 +92,14 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
     <!-- Tinted Background Layer -->
     <div class="absolute inset-0 rounded-[2rem] bg-neutral-50/50 dark:bg-neutral-950/50 -z-20" />
     <div
-      v-if="workspaceNode.nodeType === 'orchestrator'"
+      v-if="workspaceNode.nodeType === 'orchestrator' || workspaceNode.nodeType === 'agency-operator'"
       class="absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top_right,rgb(var(--workspace-node-rgb)/0.18),transparent_48%),linear-gradient(140deg,rgb(var(--workspace-node-rgb)/0.12),transparent_60%)] -z-20"
     />
     <div
       class="absolute inset-0 rounded-[2rem] bg-[rgb(var(--workspace-node-rgb)/0.05)] dark:bg-[rgb(var(--workspace-node-rgb)/0.1)] border border-[rgb(var(--workspace-node-rgb)/0.2)] dark:border-[rgb(var(--workspace-node-rgb)/0.3)] -z-10"
     />
     <div
-      v-if="workspaceNode.nodeType === 'orchestrator'"
+      v-if="workspaceNode.nodeType === 'orchestrator' || workspaceNode.nodeType === 'agency-operator'"
       class="absolute inset-3 rounded-[1.55rem] border border-[rgb(var(--workspace-node-rgb)/0.18)] bg-[linear-gradient(120deg,rgb(var(--workspace-node-rgb)/0.08),transparent_48%)] -z-10"
     />
 

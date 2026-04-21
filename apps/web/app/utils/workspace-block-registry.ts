@@ -3,6 +3,7 @@ import type { Component } from "vue";
 
 import Workspace2x2MatrixBlockEditor from "~/components/workspace/node/blocks/Workspace2x2MatrixBlockEditor.vue";
 import WorkspaceAgencyProjectManagerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyProjectManagerBlockEditor.vue";
+import WorkspaceAgencySettingsBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencySettingsBlockEditor.vue";
 import WorkspaceAgencySprintBoardBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencySprintBoardBlockEditor.vue";
 import WorkspaceAgencyTimeEntriesLogBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeEntriesLogBlockEditor.vue";
 import WorkspaceAgencyTimeReportsBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeReportsBlockEditor.vue";
@@ -333,6 +334,12 @@ export const workspaceBlockRegistry = {
     label: "Agency time reports",
     icon: "i-lucide-chart-pie",
     addGroup: "secondary",
+  },
+  "agency-settings": {
+    component: WorkspaceAgencySettingsBlockEditor,
+    label: "Agency settings",
+    icon: "i-lucide-calendar-range",
+    addGroup: null,
   },
   custom: {
     component: WorkspaceCustomBlockEditor,

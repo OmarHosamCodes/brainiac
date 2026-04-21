@@ -16,6 +16,7 @@ import {
   workspaceAgencyTimeEntriesLogBlockSchema,
   workspaceAgencyTimeReportsBlockSchema,
   workspaceAgencyTimeTrackerBlockSchema,
+  workspaceAgencySettingsBlockSchema,
   workspaceAiPromptBlockSchema,
   workspaceAssumptionTrackerBlockSchema,
   workspaceAuthorityScoreMetricsSchema,
@@ -118,6 +119,7 @@ import type {
   WorkspaceAgencyTimeEntriesLogBlock,
   WorkspaceAgencyTimeReportsBlock,
   WorkspaceAgencyTimeTrackerBlock,
+  WorkspaceAgencySettingsBlock,
   WorkspaceAiPromptBlock,
   WorkspaceAssumptionTrackerBlock,
   WorkspaceAuthorityScoreMetrics,
@@ -2370,6 +2372,45 @@ export function createWorkspaceAgencyTimeReportsBlock(
   });
 }
 
+export function createWorkspaceAgencySettingsBlock(
+  partial: Partial<WorkspaceAgencySettingsBlock> = {},
+): WorkspaceAgencySettingsBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceAgencySettingsBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "agency-settings",
+    title: partial.title ?? "Agency settings",
+    teamId: partial.teamId ?? null,
+    billingPeriodStartDay: partial.billingPeriodStartDay ?? 1,
+    billingPeriodEndDay: partial.billingPeriodEndDay ?? 28,
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
+export function createAgencyOperatorNodeTabs(teamId: string | null = null) {
+  const overviewTab = createWorkspaceNodeTab({
+    title: "Overview",
+    blocks: [createWorkspaceAgencyTimeTrackerBlock({ teamId })],
+  });
+
+  const teamTab = createWorkspaceNodeTab({
+    title: "Team",
+    blocks: [createWorkspaceAgencyTimeReportsBlock({ teamId })],
+  });
+
+  const settingsTab = createWorkspaceNodeTab({
+    title: "Settings",
+    blocks: [
+      createWorkspaceAgencyProjectManagerBlock({ teamId }),
+      createWorkspaceAgencySettingsBlock({ teamId }),
+    ],
+  });
+
+  return [overviewTab, teamTab, settingsTab] as const;
+}
+
 export function createWorkspaceCustomBlockTemplate(
   partial: Partial<WorkspaceCustomBlockTemplate> & {
     fields: WorkspaceCustomBlockField[];
@@ -2939,6 +2980,13 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         selectedClientId: block.selectedClientId ?? null,
         selectedProjectId: block.selectedProjectId ?? null,
         selectedMemberUserId: block.selectedMemberUserId ?? null,
+      });
+    case "agency-settings":
+      return workspaceAgencySettingsBlockSchema.parse({
+        ...block,
+        teamId: block.teamId ?? null,
+        billingPeriodStartDay: block.billingPeriodStartDay ?? 1,
+        billingPeriodEndDay: block.billingPeriodEndDay ?? 28,
       });
     case "custom":
       return workspaceCustomBlockSchema.parse({
@@ -3673,6 +3721,13 @@ export function cloneWorkspaceBlockForInsertion(
       });
     case "agency-time-reports":
       return workspaceAgencyTimeReportsBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "agency-settings":
+      return workspaceAgencySettingsBlockSchema.parse({
         ...block,
         id: createWorkspaceId("block"),
         createdAt: timestamp,

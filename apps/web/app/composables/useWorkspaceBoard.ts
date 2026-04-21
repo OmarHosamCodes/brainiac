@@ -15,6 +15,7 @@ export function useWorkspaceBoard() {
     nodeDraft,
     editorBlockOptions,
     isDraftValid,
+    agencyOperatorConnectOpen,
   } = storeToRefs(workspaceStore);
 
   async function openNodePage(payload: { nodeId: string }) {
@@ -39,6 +40,7 @@ export function useWorkspaceBoard() {
     nodeDraft,
     editorBlockOptions,
     isDraftValid,
+    agencyOperatorConnectOpen,
     closeEditor: workspaceStore.closeEditor,
     openCreateNode: workspaceStore.openCreateNode,
     openEditNode: workspaceStore.openEditNode,
@@ -47,5 +49,7 @@ export function useWorkspaceBoard() {
     disconnectNodePair: workspaceStore.disconnectNodePair,
     removeNode: workspaceStore.removeNode,
     submitNodeEditor: workspaceStore.submitNodeEditor,
+    openCreateAgencyOperatorNode: workspaceStore.openCreateAgencyOperatorNode,
+    submitCreateAgencyOperatorNode: workspaceStore.submitCreateAgencyOperatorNode,
   };
 }

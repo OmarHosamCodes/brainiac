@@ -129,6 +129,7 @@ const emit = defineEmits<{
   "update:nodes": [nodes: CanvasNodeModel[]];
   "update:selectedNodeIds": [selectedNodeIds: string[]];
   "create-node": [payload: CreateNodePayload];
+  "create-agency-operator-node": [payload: CreateNodePayload];
   "edit-node": [payload: { nodeId: string }];
   "connect-node-pair": [payload: { orchestratorNodeId: string; standardNodeId: string }];
   "disconnect-node-pair": [payload: { orchestratorNodeId: string; standardNodeId: string }];
@@ -998,6 +999,16 @@ const contextMenuItems = computed<ContextMenuItem[][]>(() => {
           });
         },
       },
+      {
+        label: "Agency Operator node",
+        icon: "i-lucide-building-2",
+        onSelect: () => {
+          emit("create-agency-operator-node", {
+            x: worldX,
+            y: worldY,
+          });
+        },
+      },
     ]);
   }
 
@@ -1005,6 +1016,7 @@ const contextMenuItems = computed<ContextMenuItem[][]>(() => {
     const nodeId = contextTarget.value.nodeId;
     const eligibleTargetIds = getEligibleConnectionTargetIds(props.nodes, nodeId);
     const isConnectSource = connectSourceNodeId.value === nodeId;
+    const rightClickedNode = props.nodes.find((n) => n.id === nodeId);
 
     items.push([
       {
@@ -1014,6 +1026,17 @@ const contextMenuItems = computed<ContextMenuItem[][]>(() => {
           emit("edit-node", { nodeId });
         },
       },
+      ...(rightClickedNode?.nodeType === "agency-operator"
+        ? [
+            {
+              label: "View team settings",
+              icon: "i-lucide-settings",
+              onSelect: () => {
+                emit("open-node", { nodeId });
+              },
+            } satisfies ContextMenuItem,
+          ]
+        : []),
       ...(eligibleTargetIds.length > 0
         ? [
             {

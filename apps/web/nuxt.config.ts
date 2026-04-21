@@ -22,7 +22,6 @@ export default defineNuxtConfig({
         "@orpc/tanstack-query",
         "@tanstack/vue-query",
         "zod",
-        "@polar-sh/better-auth",
       ],
     },
   },
