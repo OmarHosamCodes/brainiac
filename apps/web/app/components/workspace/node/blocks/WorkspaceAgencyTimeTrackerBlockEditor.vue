@@ -19,6 +19,7 @@ const now = ref(Date.now());
 const timerDescription = ref("");
 const selectedProjectId = ref("");
 const selectedTagIds = ref<string[]>([]);
+const tagSearch = ref("");
 
 let tickerHandle: ReturnType<typeof setInterval> | null = null;
 let syncedTimerId: string | null = null;
@@ -80,6 +81,14 @@ const tagsQuery = useQuery(
 );
 
 const tags = computed(() => tagsQuery.data.value?.items ?? []);
+const filteredTags = computed(() => {
+    const query = tagSearch.value.trim().toLowerCase();
+    if (!query) {
+        return tags.value;
+    }
+
+    return tags.value.filter((tag) => tag.name.toLowerCase().includes(query));
+});
 
 const activeTimerQuery = useQuery(
     computed(() => ({
@@ -335,26 +344,42 @@ async function discardTimer() {
                     />
 
                     <template #content>
-                        <div class="max-w-64 flex flex-wrap gap-1 p-2">
-                            <UButton
-                                v-for="tag in tags"
-                                :key="tag.id"
-                                :variant="
-                                    selectedTagIds.includes(tag.id)
-                                        ? 'soft'
-                                        : 'ghost'
-                                "
-                                :color="
-                                    selectedTagIds.includes(tag.id)
-                                        ? 'primary'
-                                        : 'neutral'
-                                "
+                        <div class="w-64 space-y-2 p-2">
+                            <UInput
+                                v-model="tagSearch"
+                                icon="i-lucide-search"
+                                placeholder="Search tags"
                                 size="xs"
-                                class="rounded-full"
-                                @click="toggleTag(tag.id)"
-                            >
-                                {{ tag.name }}
-                            </UButton>
+                            />
+
+                            <div class="flex max-h-52 flex-wrap gap-1 overflow-y-auto">
+                                <UButton
+                                    v-for="tag in filteredTags"
+                                    :key="tag.id"
+                                    :variant="
+                                        selectedTagIds.includes(tag.id)
+                                            ? 'soft'
+                                            : 'ghost'
+                                    "
+                                    :color="
+                                        selectedTagIds.includes(tag.id)
+                                            ? 'primary'
+                                            : 'neutral'
+                                    "
+                                    size="xs"
+                                    class="rounded-full"
+                                    @click="toggleTag(tag.id)"
+                                >
+                                    {{ tag.name }}
+                                </UButton>
+
+                                <div
+                                    v-if="filteredTags.length === 0"
+                                    class="px-1 py-2 text-xs text-muted"
+                                >
+                                    No matching tags.
+                                </div>
+                            </div>
                         </div>
                     </template>
                 </UPopover>
