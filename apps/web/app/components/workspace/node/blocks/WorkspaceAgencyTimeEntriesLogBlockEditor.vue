@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { WorkspaceAgencyTimeEntriesLogBlock } from "@brainiac/workspace";
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useQuery } from "@tanstack/vue-query";
+import { storeToRefs } from "pinia";
 
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
 import { getErrorMessage } from "~/utils/get-error-message";
+import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
 
 const props = defineProps<{
   block: WorkspaceAgencyTimeEntriesLogBlock;
@@ -12,9 +14,10 @@ const props = defineProps<{
 
 const { currentNode, mutateTypedBlock } = useWorkspaceNodeEditorContext();
 const orpc = useOrpc();
-const toast = useToast();
 const authSession = useAuthSession();
 const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
+const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
+const { deletingEntryIds, isTimerMutationPending } = storeToRefs(agencyTimeTrackingStore);
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -65,9 +68,26 @@ const entriesQuery = useQuery(
     enabled: Boolean(effectiveTeamId.value),
   })),
 );
-
-const deleteEntryMutation = useMutation(orpc.agencyOps.timeEntries.deleteMine.mutationOptions());
-const startTimerMutation = useMutation(orpc.agencyOps.timer.start.mutationOptions());
+const projectsQuery = useQuery(
+  computed(() => ({
+    ...orpc.agencyOps.projects.list.queryOptions({
+      input: {
+        teamId: effectiveTeamId.value,
+      },
+    }),
+    enabled: Boolean(effectiveTeamId.value),
+  })),
+);
+const entriesQueryKey = computed(() =>
+  orpc.agencyOps.timeEntries.listMine.queryOptions({
+    input: {
+      teamId: effectiveTeamId.value,
+      page: page.value,
+      pageSize: props.block.pageSize,
+    },
+  }).queryKey,
+);
+const projects = computed(() => projectsQuery.data.value?.items ?? []);
 
 type EntryRow = NonNullable<typeof entriesQuery.data.value>["items"][number];
 
@@ -157,11 +177,44 @@ watch(effectiveTeamId, () => {
   page.value = 1;
 });
 
-const logRefreshing = computed(
-  () => teamsQuery.isFetching.value || entriesQuery.isFetching.value,
+watch(
+  () => ({
+    teamId: effectiveTeamId.value,
+    page: page.value,
+    queryKey: entriesQueryKey.value,
+  }),
+  (next, previous) => {
+    if (previous?.teamId) {
+      agencyTimeTrackingStore.unregisterLogQuery(previous.queryKey);
+    }
+
+    if (!next.teamId) {
+      return;
+    }
+
+    agencyTimeTrackingStore.registerLogQuery({
+      teamId: next.teamId,
+      page: next.page,
+      queryKey: next.queryKey,
+    });
+  },
+  { immediate: true },
 );
 
-const logQueryError = computed(() => entriesQuery.error.value ?? null);
+onBeforeUnmount(() => {
+  agencyTimeTrackingStore.unregisterLogQuery(entriesQueryKey.value);
+});
+
+const logRefreshing = computed(
+  () =>
+    teamsQuery.isFetching.value ||
+    entriesQuery.isFetching.value ||
+    projectsQuery.isFetching.value,
+);
+
+const logQueryError = computed(
+  () => entriesQuery.error.value ?? projectsQuery.error.value ?? null,
+);
 
 function mutateTimeEntriesLogBlock(mutator: (block: WorkspaceAgencyTimeEntriesLogBlock) => void) {
   mutateTypedBlock(props.tabId, props.block.id, "agency-time-entries-log", mutator);
@@ -213,68 +266,46 @@ function formatDateTime(value: string) {
 
 async function deleteEntry(entryId: string) {
   const teamId = effectiveTeamId.value;
+  const entry = entries.value.find((item) => item.id === entryId);
 
-  if (!teamId) {
+  if (!teamId || !entry) {
     return;
   }
 
-  try {
-    await deleteEntryMutation.mutateAsync({ teamId, entryId });
-    await entriesQuery.refetch();
-  } catch (error) {
-    toast.add({
-      title: "Unable to delete entry",
-      description: getErrorMessage(error, "Please try again."),
-      color: "error",
-    });
-  }
+  await agencyTimeTrackingStore.deleteEntries({
+    teamId,
+    entries: [entry],
+  });
 }
 
 async function deleteGroupEntries(entryIds: string[]) {
   const teamId = effectiveTeamId.value;
+  const selectedEntries = entries.value.filter((entry) => entryIds.includes(entry.id));
 
-  if (!teamId) {
+  if (!teamId || selectedEntries.length === 0) {
     return;
   }
 
-  try {
-    await Promise.all(entryIds.map((entryId) => deleteEntryMutation.mutateAsync({ teamId, entryId })));
-    await entriesQuery.refetch();
-  } catch (error) {
-    toast.add({
-      title: "Unable to delete entries",
-      description: getErrorMessage(error, "Please try again."),
-      color: "error",
-    });
-  }
+  await agencyTimeTrackingStore.deleteEntries({
+    teamId,
+    entries: selectedEntries,
+  });
 }
 
-async function restartEntry(entry: { projectId: string; description: string }) {
+async function restartEntry(group: GroupedEntry) {
   const teamId = effectiveTeamId.value;
+  const project = projects.value.find((projectEntry) => projectEntry.id === group.projectId);
 
-  if (!teamId) {
+  if (!teamId || !project) {
     return;
   }
 
-  try {
-    await startTimerMutation.mutateAsync({
-      teamId,
-      projectId: entry.projectId,
-      description: entry.description || undefined,
-    });
-
-    toast.add({
-      title: "Timer started",
-      description: `Tracking ${entry.description || "time"}.`,
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Unable to start timer",
-      description: getErrorMessage(error, "Please try again."),
-      color: "error",
-    });
-  }
+  await agencyTimeTrackingStore.restartEntry({
+    teamId,
+    project,
+    description: group.description,
+    tags: group.tags,
+  });
 }
 
 function groupMenuItems(group: GroupedEntry) {
@@ -515,7 +546,7 @@ function toggleGroup(key: string) {
               color="neutral"
               variant="ghost"
               size="xs"
-              :loading="startTimerMutation.isPending.value"
+              :loading="isTimerMutationPending"
               :disabled="!effectiveTeamId"
               :aria-label="`Restart timer for ${group.projectName}`"
               @click="restartEntry(group)"
@@ -566,6 +597,7 @@ function toggleGroup(key: string) {
                   color="error"
                   variant="ghost"
                   size="xs"
+                  :loading="deletingEntryIds.includes(entry.id)"
                   :aria-label="`Delete entry from ${formatDateTime(entry.startedAt)}`"
                   @click="deleteEntry(entry.id)"
                 />
