@@ -892,6 +892,7 @@ export async function stopAgencyTimer(
 		teamId?: string;
 		description?: string;
 		tagIds?: string[];
+		discard?: boolean;
 	},
 ) {
 	const [active] = await db
@@ -924,6 +925,15 @@ export async function stopAgencyTimer(
 	const now = new Date();
 	const description = input.description?.trim() ?? active.description;
 	const durationSeconds = getDurationSeconds(active.startedAt, now);
+
+	if (input.discard) {
+		await db.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, active.id));
+
+		return {
+			timer: null,
+			createdEntry: null,
+		};
+	}
 
 	const [entry] = await db.transaction(async (tx) => {
 		const [created] = await tx

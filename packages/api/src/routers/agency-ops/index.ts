@@ -80,6 +80,7 @@ const agencyActiveTimerSchema = z.object({
     userId: z.string().min(1),
     projectId: z.string().min(1),
     projectName: z.string().min(1),
+    tags: z.array(agencyTagSchema),
     description: z.string(),
     startedAt: z.string().datetime(),
     createdAt: z.string().datetime(),
@@ -267,6 +268,7 @@ export const agencyOpsRouter = {
                     teamId: z.string().min(1).optional(),
                     description: z.string().max(2_000).optional(),
                     tagIds: z.array(z.string().min(1)).optional(),
+                    discard: z.boolean().optional(),
                 }),
             )
             .handler(async ({ context, input }) => {

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import type { WorkspaceAgencyTimeTrackerBlock } from "@brainiac/workspace";
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useQuery } from "@tanstack/vue-query";
+import { storeToRefs } from "pinia";
+
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
-import { getErrorMessage } from "~/utils/get-error-message";
+import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
 
 const props = defineProps<{
     block: WorkspaceAgencyTimeTrackerBlock;
@@ -11,18 +13,17 @@ const props = defineProps<{
 
 const { currentNode, mutateTypedBlock } = useWorkspaceNodeEditorContext();
 const orpc = useOrpc();
-const toast = useToast();
 const authSession = useAuthSession();
 const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
+const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
+const { draftByTeam, isTimerMutationPending } = storeToRefs(
+    agencyTimeTrackingStore,
+);
 
 const now = ref(Date.now());
-const timerDescription = ref("");
-const selectedProjectId = ref("");
-const selectedTagIds = ref<string[]>([]);
 const tagSearch = ref("");
 
 let tickerHandle: ReturnType<typeof setInterval> | null = null;
-let syncedTimerId: string | null = null;
 
 onMounted(() => {
     tickerHandle = setInterval(() => {
@@ -103,29 +104,106 @@ const activeTimerQuery = useQuery(
 );
 
 const activeTimer = computed(() => activeTimerQuery.data.value?.timer ?? null);
+const activeTimerQueryKey = computed(() =>
+    orpc.agencyOps.timer.getActive.queryOptions({
+        input: {
+            teamId: effectiveTeamId.value || undefined,
+        },
+    }).queryKey,
+);
+const trackerDraft = computed(() =>
+    effectiveTeamId.value ? draftByTeam.value[effectiveTeamId.value] ?? null : null,
+);
+const timerDescription = computed({
+    get: () => trackerDraft.value?.description ?? "",
+    set: (value: string) => {
+        if (!effectiveTeamId.value) {
+            return;
+        }
+
+        agencyTimeTrackingStore.setTrackerDescription(effectiveTeamId.value, value);
+    },
+});
+const selectedProjectId = computed({
+    get: () => trackerDraft.value?.projectId ?? "",
+    set: (value: string) => {
+        if (!effectiveTeamId.value) {
+            return;
+        }
+
+        agencyTimeTrackingStore.setTrackerProjectId(effectiveTeamId.value, value || "");
+    },
+});
+const selectedTagIds = computed({
+    get: () => trackerDraft.value?.selectedTagIds ?? [],
+    set: (value: string[]) => {
+        if (!effectiveTeamId.value) {
+            return;
+        }
+
+        agencyTimeTrackingStore.setTrackerSelectedTagIds(
+            effectiveTeamId.value,
+            value ?? [],
+        );
+    },
+});
+const selectedProject = computed(
+    () =>
+        projects.value.find((project) => project.id === selectedProjectId.value) ?? null,
+);
+const selectedTags = computed(() => {
+    const selectedIds = new Set(selectedTagIds.value);
+
+    return tags.value.filter((tag) => selectedIds.has(tag.id));
+});
 
 watch(
-    activeTimer,
-    (timer) => {
-        if (!timer) {
-            syncedTimerId = null;
+    effectiveTeamId,
+    (teamId) => {
+        if (!teamId) {
             return;
         }
-        if (syncedTimerId === timer.id) {
-            return;
-        }
-        syncedTimerId = timer.id;
-        timerDescription.value = timer.description;
-        selectedProjectId.value = timer.projectId;
+
+        agencyTimeTrackingStore.ensureTrackerDraft(teamId);
     },
     { immediate: true },
 );
 
-const startTimerMutation = useMutation(
-    orpc.agencyOps.timer.start.mutationOptions(),
+watch(
+    activeTimer,
+    (timer) => {
+        if (!effectiveTeamId.value) {
+            return;
+        }
+
+        agencyTimeTrackingStore.syncDraftFromActiveTimer(
+            effectiveTeamId.value,
+            timer,
+        );
+    },
+    { immediate: true },
 );
-const stopTimerMutation = useMutation(
-    orpc.agencyOps.timer.stop.mutationOptions(),
+
+watch(
+    () => ({
+        teamId: effectiveTeamId.value,
+        queryKey: activeTimerQueryKey.value,
+    }),
+    (next, previous) => {
+        if (previous?.teamId) {
+            agencyTimeTrackingStore.unregisterActiveTimerQuery(previous.queryKey);
+        }
+
+        if (!next.teamId) {
+            return;
+        }
+
+        agencyTimeTrackingStore.registerActiveTimerQuery({
+            teamId: next.teamId,
+            queryKey: next.queryKey,
+        });
+    },
+    { immediate: true },
 );
 
 const elapsedSeconds = computed(() => {
@@ -141,13 +219,10 @@ const elapsedSeconds = computed(() => {
 
 const canStartTimer = computed(
     () =>
-        Boolean(effectiveTeamId.value && selectedProjectId.value && !activeTimer.value),
+        Boolean(effectiveTeamId.value && selectedProject.value && !activeTimer.value),
 );
 
-const trackerBusy = computed(
-    () =>
-        startTimerMutation.isPending.value || stopTimerMutation.isPending.value,
-);
+const trackerBusy = computed(() => isTimerMutationPending.value);
 
 const discardMenuItems = computed(() => [
     [
@@ -155,10 +230,16 @@ const discardMenuItems = computed(() => [
             label: "Discard timer",
             icon: "i-lucide-trash-2",
             color: "error" as const,
-            onSelect: discardTimer,
+            onSelect: () => {
+                void discardTimer();
+            },
         },
     ],
 ]);
+
+onBeforeUnmount(() => {
+    agencyTimeTrackingStore.unregisterActiveTimerQuery(activeTimerQueryKey.value);
+});
 
 function updateTeam(teamId: string | undefined) {
     mutateTypedBlock(
@@ -186,103 +267,59 @@ function formatDuration(seconds: number) {
 }
 
 function toggleTag(tagId: string) {
-    if (selectedTagIds.value.includes(tagId)) {
-        selectedTagIds.value = selectedTagIds.value.filter((id) => id !== tagId);
-    } else {
-        selectedTagIds.value = [...selectedTagIds.value, tagId];
+    if (!effectiveTeamId.value) {
+        return;
     }
-}
 
-async function refreshTrackerData() {
-    await Promise.all([
-        activeTimerQuery.refetch(),
-        projectsQuery.refetch(),
-        tagsQuery.refetch(),
-    ]);
+    agencyTimeTrackingStore.toggleTrackerTag(effectiveTeamId.value, tagId);
 }
 
 async function startTimer() {
     const teamId = effectiveTeamId.value;
-    if (!teamId || !selectedProjectId.value) {
+    const project = selectedProject.value;
+
+    if (!teamId || !project) {
         return;
     }
-    try {
-        await startTimerMutation.mutateAsync({
-            teamId,
-            projectId: selectedProjectId.value,
-            tagIds: selectedTagIds.value,
-            description: timerDescription.value.trim(),
-        });
-        await refreshTrackerData();
-        toast.add({
-            title: "Timer started",
-            color: "success",
-        });
-    } catch (error) {
-        toast.add({
-            title: "Unable to start timer",
-            description: getErrorMessage(error, "Please try again."),
-            color: "error",
-        });
-    }
+
+    await agencyTimeTrackingStore.startTimer({
+        teamId,
+        project,
+        tagIds: [...selectedTagIds.value],
+        selectedTags: [...selectedTags.value],
+        description: timerDescription.value,
+    });
 }
 
 async function stopTimer() {
-    if (!effectiveTeamId.value) {
+    const teamId = effectiveTeamId.value;
+
+    if (!teamId) {
         return;
     }
-    try {
-        const result = await stopTimerMutation.mutateAsync({
-            teamId: effectiveTeamId.value,
-            tagIds: selectedTagIds.value,
-            description: timerDescription.value.trim(),
-        });
 
-        timerDescription.value = "";
-        selectedTagIds.value = [];
-        syncedTimerId = null;
-        await refreshTrackerData();
-
-        toast.add({
-            title: "Timer stopped",
-            description: result.createdEntry
-                ? `Saved ${formatDuration(result.createdEntry.durationSeconds)}.`
-                : "The timer has been stopped.",
-            color: "success",
-        });
-    } catch (error) {
-        toast.add({
-            title: "Unable to stop timer",
-            description: getErrorMessage(error, "Please try again."),
-            color: "error",
-        });
-    }
+    await agencyTimeTrackingStore.stopTimer({
+        teamId,
+        activeTimer: activeTimer.value,
+        tagIds: [...selectedTagIds.value],
+        selectedTags: [...selectedTags.value],
+        description: timerDescription.value,
+    });
 }
 
 async function discardTimer() {
-    try {
-        await stopTimerMutation.mutateAsync({
-            teamId: effectiveTeamId.value!,
-            discard: true,
-        });
-
-        timerDescription.value = "";
-        selectedTagIds.value = [];
-        syncedTimerId = null;
-        await refreshTrackerData();
-
-        toast.add({
-            title: "Timer discarded",
-            description: "Time was not saved.",
-            color: "neutral",
-        });
-    } catch (error) {
-        toast.add({
-            title: "Unable to discard timer",
-            description: getErrorMessage(error, "Please try again."),
-            color: "error",
-        });
+    if (!effectiveTeamId.value) {
+        return;
     }
+
+    await agencyTimeTrackingStore.stopTimer({
+        teamId: effectiveTeamId.value,
+        activeTimer: activeTimer.value,
+        tagIds: [...selectedTagIds.value],
+        selectedTags: [...selectedTags.value],
+        description: timerDescription.value,
+        discard: true,
+    });
 }
 </script>
 
