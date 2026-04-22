@@ -12,7 +12,7 @@ import {
 } from "@brainiac/db/schema";
 import { createWorkspaceId, type WorkspaceTeamRole } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
-import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 
 const TEAM_ROLE_WEIGHT: Record<WorkspaceTeamRole, number> = {
 	viewer: 1,
@@ -1581,6 +1581,132 @@ export async function getAgencyReportsSummary(
 
 	return {
 		summary,
+	};
+}
+
+export async function getAgencyTimeSummary(
+	actorUserId: string,
+	input: {
+		teamId: string;
+		from: string;
+		to: string;
+		clientId?: string;
+		projectId?: string;
+		memberUserId?: string;
+		tagIds?: string[];
+	},
+) {
+	await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+	const from = parseIsoDateTime(input.from, "from");
+	const to = parseIsoDateTime(input.to, "to");
+
+	// Team members
+	const members = await db
+		.select({
+			id: user.id,
+			name: user.name,
+			email: user.email,
+			image: user.image,
+		})
+		.from(workspaceTeamMember)
+		.innerJoin(user, eq(user.id, workspaceTeamMember.userId))
+		.where(eq(workspaceTeamMember.teamId, input.teamId))
+		.orderBy(asc(user.name));
+
+	// Active timers for the whole team
+	const activeTimers = await db
+		.select({
+			userId: agencyOpsActiveTimer.userId,
+			projectName: agencyOpsProject.name,
+			description: agencyOpsActiveTimer.description,
+		})
+		.from(agencyOpsActiveTimer)
+		.innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+		.where(eq(agencyOpsActiveTimer.teamId, input.teamId));
+
+	const activeTimerByUser = new Map(activeTimers.map((t) => [t.userId, t]));
+
+	// Time entry filters
+	const entryFilters = [
+		eq(agencyOpsTimeEntry.teamId, input.teamId),
+		isNull(agencyOpsTimeEntry.deletedAt),
+		gte(agencyOpsTimeEntry.startedAt, from),
+		lte(agencyOpsTimeEntry.startedAt, to),
+	];
+
+	if (input.clientId) {
+		entryFilters.push(eq(agencyOpsProject.clientId, input.clientId));
+	}
+	if (input.projectId) {
+		entryFilters.push(eq(agencyOpsProject.id, input.projectId));
+	}
+	if (input.memberUserId) {
+		entryFilters.push(eq(agencyOpsTimeEntry.userId, input.memberUserId));
+	}
+	if (input.tagIds && input.tagIds.length > 0) {
+		entryFilters.push(
+			inArray(
+				agencyOpsTimeEntry.id,
+				db
+					.select({ timeEntryId: agencyOpsTimeEntryTag.timeEntryId })
+					.from(agencyOpsTimeEntryTag)
+					.where(inArray(agencyOpsTimeEntryTag.tagId, input.tagIds)),
+			),
+		);
+	}
+
+	const entries = await db
+		.select({
+			userId: agencyOpsTimeEntry.userId,
+			projectName: agencyOpsProject.name,
+			description: agencyOpsTimeEntry.description,
+			durationSeconds: agencyOpsTimeEntry.durationSeconds,
+		})
+		.from(agencyOpsTimeEntry)
+		.innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+		.where(and(...entryFilters))
+		.orderBy(desc(agencyOpsTimeEntry.startedAt));
+
+	const totalSecondsPerMember = new Map<string, number>();
+	const latestEntryPerMember = new Map<string, { projectName: string; description: string }>();
+
+	for (const entry of entries) {
+		totalSecondsPerMember.set(
+			entry.userId,
+			(totalSecondsPerMember.get(entry.userId) ?? 0) + Number(entry.durationSeconds),
+		);
+		if (!latestEntryPerMember.has(entry.userId)) {
+			latestEntryPerMember.set(entry.userId, {
+				projectName: entry.projectName,
+				description: entry.description,
+			});
+		}
+	}
+
+	const totalSeconds = [...totalSecondsPerMember.values()].reduce((a, b) => a + b, 0);
+
+	return {
+		summary: {
+			totalSeconds,
+			activeCount: activeTimers.length,
+			teamMembers: members.map((member) => {
+				const activeTimer = activeTimerByUser.get(member.id);
+				return {
+					id: member.id,
+					avatar: member.image ?? null,
+					name: member.name ?? "Unknown",
+					email: member.email,
+					isActive: activeTimerByUser.has(member.id),
+					totalSeconds: totalSecondsPerMember.get(member.id) ?? 0,
+					latestEntry:
+						latestEntryPerMember.get(member.id) ??
+						(activeTimer
+							? { projectName: activeTimer.projectName, description: activeTimer.description }
+							: null),
+				};
+			}),
+		},
 	};
 }
 
