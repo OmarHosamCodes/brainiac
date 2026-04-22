@@ -4,9 +4,8 @@ import type { Component } from "vue";
 import Workspace2x2MatrixBlockEditor from "~/components/workspace/node/blocks/Workspace2x2MatrixBlockEditor.vue";
 import WorkspaceAgencyProjectManagerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyProjectManagerBlockEditor.vue";
 import WorkspaceAgencySettingsBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencySettingsBlockEditor.vue";
-import WorkspaceAgencySprintBoardBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencySprintBoardBlockEditor.vue";
 import WorkspaceAgencyTimeEntriesLogBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeEntriesLogBlockEditor.vue";
-import WorkspaceAgencyTimeReportsBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeReportsBlockEditor.vue";
+import WorkspaceAgencyTimeSummaryBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeSummaryBlockEditor.vue";
 import WorkspaceAgencyTimeTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeTrackerBlockEditor.vue";
 import WorkspaceAiPromptBlockEditor from "~/components/workspace/node/blocks/WorkspaceAiPromptBlockEditor.vue";
 import WorkspaceAssumptionTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAssumptionTrackerBlockEditor.vue";
@@ -317,25 +316,19 @@ export const workspaceBlockRegistry = {
     icon: "i-lucide-timer",
     addGroup: "secondary",
   },
-  "agency-time-entries-log": {
-    component: WorkspaceAgencyTimeEntriesLogBlockEditor,
-    label: "Agency time entries log",
-    icon: "i-lucide-logs",
-    addGroup: "secondary",
-  },
-  "agency-sprint-board": {
-    component: WorkspaceAgencySprintBoardBlockEditor,
-    label: "Agency sprint board",
-    icon: "i-lucide-layout-panel-top",
-    addGroup: "secondary",
-  },
-  "agency-time-reports": {
-    component: WorkspaceAgencyTimeReportsBlockEditor,
-    label: "Agency time reports",
-    icon: "i-lucide-chart-pie",
-    addGroup: "secondary",
-  },
-  "agency-settings": {
+   "agency-time-entries-log": {
+     component: WorkspaceAgencyTimeEntriesLogBlockEditor,
+     label: "Agency time entries log",
+     icon: "i-lucide-logs",
+     addGroup: "secondary",
+   },
+   "agency-time-summary": {
+     component: WorkspaceAgencyTimeSummaryBlockEditor,
+     label: "Agency time summary",
+     icon: "i-lucide-chart-pie",
+     addGroup: "secondary",
+   },
+   "agency-settings": {
     component: WorkspaceAgencySettingsBlockEditor,
     label: "Agency settings",
     icon: "i-lucide-calendar-range",

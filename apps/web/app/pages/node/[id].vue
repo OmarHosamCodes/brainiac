@@ -6,9 +6,8 @@ import {
     createWorkspace2x2MatrixBlock,
     createWorkspaceAgencyProjectManagerBlock,
     createWorkspaceAgencySettingsBlock,
-    createWorkspaceAgencySprintBoardBlock,
     createWorkspaceAgencyTimeEntriesLogBlock,
-    createWorkspaceAgencyTimeReportsBlock,
+    createWorkspaceAgencyTimeSummaryBlock,
     createWorkspaceAgencyTimeTrackerBlock,
     createWorkspaceAiPromptBlock,
     createWorkspaceAssumptionTrackerBlock,
@@ -301,8 +300,7 @@ const agencyOperationsBlockTypeSet = new Set<WorkspaceBlock["type"]>([
     "agency-settings",
     "agency-time-tracker",
     "agency-time-entries-log",
-    "agency-sprint-board",
-    "agency-time-reports",
+    "agency-time-summary",
 ]);
 
 watch(
@@ -736,13 +734,8 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
                 teamId: preferredAgencyTeamId,
             });
             break;
-        case "agency-sprint-board":
-            nextBlock = createWorkspaceAgencySprintBoardBlock({
-                teamId: preferredAgencyTeamId,
-            });
-            break;
-        case "agency-time-reports":
-            nextBlock = createWorkspaceAgencyTimeReportsBlock({
+        case "agency-time-summary":
+            nextBlock = createWorkspaceAgencyTimeSummaryBlock({
                 teamId: preferredAgencyTeamId,
             });
             break;

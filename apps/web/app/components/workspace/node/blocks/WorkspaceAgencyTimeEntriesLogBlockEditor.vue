@@ -67,9 +67,9 @@ const entriesQuery = useQuery(
   })),
 );
 
-const sprintsQuery = useQuery(
+const clientsQuery = useQuery(
   computed(() => ({
-    ...orpc.agencyOps.sprints.list.queryOptions({
+    ...orpc.agencyOps.clients.list.queryOptions({
       input: {
         teamId: effectiveTeamId.value,
       },
@@ -78,61 +78,75 @@ const sprintsQuery = useQuery(
   })),
 );
 
-const sprints = computed(() => sprintsQuery.data.value?.items ?? []);
+const clients = computed(() => clientsQuery.data.value?.items ?? []);
+const selectedClientId = ref(props.block.selectedClientId ?? "");
 
-const selectedSprintId = ref("");
-watch(
-  sprints,
-  (nextSprints) => {
-    if (selectedSprintId.value && nextSprints.some((sprint) => sprint.id === selectedSprintId.value)) {
-      return;
-    }
-
-    selectedSprintId.value =
-      nextSprints.find((sprint) => sprint.status === "active")?.id ??
-      nextSprints[0]?.id ??
-      "";
-  },
-  { immediate: true },
-);
-
-const sprintOptions = computed(() =>
-  sprints.value.map((sprint) => ({
-    label: `${sprint.name} (${sprint.status})`,
-    value: sprint.id,
+const clientOptions = computed(() =>
+  clients.value.map((client) => ({
+    label: client.name,
+    value: client.id,
   })),
 );
 
-const sprintItemsQuery = useQuery(
+const projectsQuery = useQuery(
   computed(() => ({
-    ...orpc.agencyOps.sprintItems.list.queryOptions({
+    ...orpc.agencyOps.projects.list.queryOptions({
       input: {
         teamId: effectiveTeamId.value,
-        sprintId: selectedSprintId.value,
+        clientId: selectedClientId.value || undefined,
       },
     }),
-    enabled: Boolean(effectiveTeamId.value && selectedSprintId.value),
+    enabled: Boolean(effectiveTeamId.value),
   })),
 );
 
-const sprintItems = computed(() => sprintItemsQuery.data.value?.items ?? []);
-const selectedSprintItemId = ref("");
+const projects = computed(() => projectsQuery.data.value?.items ?? []);
+const selectedProjectId = ref(props.block.selectedProjectId ?? "");
 
-watch(
-  sprintItems,
-  (nextItems) => {
-    if (selectedSprintItemId.value && nextItems.some((item) => item.id === selectedSprintItemId.value)) {
-      return;
-    }
-
-    selectedSprintItemId.value = nextItems[0]?.id ?? "";
-  },
-  { immediate: true },
+const projectOptions = computed(() =>
+  projects.value.map((project) => ({
+    label: project.name,
+    value: project.id,
+  })),
 );
 
-const sprintItemOptions = computed(() =>
-  sprintItems.value.map((item) => ({ label: item.title, value: item.id })),
+const tagsQuery = useQuery(
+  computed(() => ({
+    ...orpc.agencyOps.tags.list.queryOptions({
+      input: {
+        teamId: effectiveTeamId.value,
+      },
+    }),
+    enabled: Boolean(effectiveTeamId.value),
+  })),
 );
+
+const tags = computed(() => tagsQuery.data.value?.items ?? []);
+const selectedTagIds = ref(props.block.selectedTagIds ?? []);
+
+const tagOptions = computed(() =>
+  tags.value.map((tag) => ({
+    label: tag.name,
+    value: tag.id,
+  })),
+);
+
+const selectedMemberUserId = ref(props.block.selectedMemberUserId ?? "");
+
+const memberOptions = computed(() => {
+  const memberSet = new Set<string>();
+  for (const entry of entries.value) {
+    memberSet.add(entry.userId);
+  }
+  
+  return Array.from(memberSet).map((userId) => {
+    const entry = entries.value.find((e) => e.userId === userId);
+    return {
+      label: entry ? `${entry.userName} (${entry.userId.slice(0, 8)})` : userId,
+      value: userId,
+    };
+  });
+});
 
 const createManualMutation = useMutation(orpc.agencyOps.timeEntries.createManual.mutationOptions());
 const deleteEntryMutation = useMutation(orpc.agencyOps.timeEntries.deleteMine.mutationOptions());
@@ -162,6 +176,8 @@ const manualDraft = reactive({
   startAt: "",
   endAt: "",
   description: "",
+  projectId: "",
+  tagIds: [] as string[],
 });
 
 const manualEntryValidation = computed(() => {
@@ -227,14 +243,16 @@ const logRefreshing = computed(
   () =>
     teamsQuery.isFetching.value ||
     entriesQuery.isFetching.value ||
-    sprintsQuery.isFetching.value ||
-    sprintItemsQuery.isFetching.value,
+    clientsQuery.isFetching.value ||
+    projectsQuery.isFetching.value ||
+    tagsQuery.isFetching.value,
 );
 const logQueryError = computed(
   () =>
     entriesQuery.error.value ||
-    sprintsQuery.error.value ||
-    sprintItemsQuery.error.value ||
+    clientsQuery.error.value ||
+    projectsQuery.error.value ||
+    tagsQuery.error.value ||
     null,
 );
 
@@ -279,11 +297,11 @@ const logStatus = computed(() => {
     };
   }
 
-  if (!selectedSprintId.value || !selectedSprintItemId.value) {
+  if (!selectedProjectId.value) {
     return {
-      label: "Pick a sprint item",
+      label: "Pick a project",
       tone: "warning" as const,
-      description: "Choose a sprint and task before logging manual time.",
+      description: "Choose a project before logging manual time.",
     };
   }
 
@@ -299,7 +317,7 @@ const logStatus = computed(() => {
     return {
       label: "No entries yet",
       tone: "primary" as const,
-      description: "Log your first sprint item entry to start building history.",
+      description: "Log your first time entry to start building history.",
     };
   }
 
@@ -425,28 +443,31 @@ async function createManualEntry() {
   const startAt = toIsoString(manualDraft.startAt);
   const endAt = toIsoString(manualDraft.endAt);
 
-  if (!teamId || !selectedSprintItemId.value || !startAt || !endAt || !manualEntryValidation.value.valid) {
+  if (!teamId || !manualDraft.projectId || !startAt || !endAt || !manualEntryValidation.value.valid) {
     return;
   }
 
   try {
     await createManualMutation.mutateAsync({
       teamId,
-      sprintItemId: selectedSprintItemId.value,
+      projectId: manualDraft.projectId,
       startAt,
       endAt,
       description: manualDraft.description.trim(),
+      tagIds: manualDraft.tagIds.length > 0 ? manualDraft.tagIds : undefined,
     });
 
     manualDraft.startAt = "";
     manualDraft.endAt = "";
     manualDraft.description = "";
+    manualDraft.projectId = "";
+    manualDraft.tagIds = [];
     page.value = 1;
     await entriesQuery.refetch();
 
     toast.add({
       title: "Time entry logged",
-      description: "The manual entry is now part of your sprint history.",
+      description: "The entry is now part of your time history.",
       color: "success",
     });
   } catch (error) {
@@ -509,9 +530,9 @@ function goToNextPage() {
     <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-4">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h3 class="text-sm font-semibold text-highlighted">Log setup</h3>
+          <h3 class="text-sm font-semibold text-highlighted">Filter entries</h3>
           <p class="mt-1 text-sm text-muted">
-            Set team context, page size, and sprint scope before logging or cleaning up entries.
+            Filter time entries by project, client, team member, or tags to find what you're looking for.
           </p>
         </div>
 
@@ -557,21 +578,65 @@ function goToNextPage() {
           />
         </UFormField>
 
-        <UFormField label="Sprint" size="sm">
+        <UFormField label="Client" size="sm">
           <USelect
-            v-model="selectedSprintId"
-            :items="sprintOptions"
-            placeholder="Select sprint"
-            :disabled="!effectiveTeamId || sprintsQuery.isPending.value"
+            v-model="selectedClientId"
+            :items="clientOptions"
+            placeholder="Filter by client"
+            size="sm"
+            clearable
+            :disabled="!effectiveTeamId || clientsQuery.isPending.value"
+            @update:model-value="(v) => {
+              selectedClientId = v as string;
+              mutateTypedBlock(props.tabId, props.block.id, (draft) => { draft.selectedClientId = v ?? null; });
+            }"
           />
         </UFormField>
 
-        <UFormField label="Task / step" size="sm">
+        <UFormField label="Project" size="sm">
           <USelect
-            v-model="selectedSprintItemId"
-            :items="sprintItemOptions"
-            placeholder="Select sprint item"
-            :disabled="!selectedSprintId || sprintItemsQuery.isPending.value"
+            v-model="selectedProjectId"
+            :items="projectOptions"
+            placeholder="Filter by project"
+            size="sm"
+            clearable
+            :disabled="!effectiveTeamId || projectsQuery.isPending.value"
+            @update:model-value="(v) => {
+              selectedProjectId = v as string;
+              mutateTypedBlock(props.tabId, props.block.id, (draft) => { draft.selectedProjectId = v ?? null; });
+            }"
+          />
+        </UFormField>
+
+        <UFormField label="Team member" size="sm">
+          <USelect
+            v-model="selectedMemberUserId"
+            :items="memberOptions"
+            placeholder="Filter by member"
+            size="sm"
+            clearable
+            :disabled="!effectiveTeamId || memberOptions.length === 0"
+            @update:model-value="(v) => {
+              selectedMemberUserId = v as string;
+              mutateTypedBlock(props.tabId, props.block.id, (draft) => { draft.selectedMemberUserId = v ?? null; });
+            }"
+          />
+        </UFormField>
+
+        <UFormField label="Tags" size="sm">
+          <USelectMenu
+            v-model="selectedTagIds"
+            :items="tagOptions"
+            placeholder="Filter by tags"
+            size="sm"
+            multiple
+            searchable
+            clearable
+            :disabled="!effectiveTeamId || tagsQuery.isPending.value"
+            @update:model-value="(v) => {
+              selectedTagIds = Array.isArray(v) ? v : [];
+              mutateTypedBlock(props.tabId, props.block.id, (draft) => { draft.selectedTagIds = selectedTagIds; });
+            }"
           />
         </UFormField>
       </div>
@@ -631,17 +696,44 @@ function goToNextPage() {
       </div>
 
       <div class="grid gap-2 md:grid-cols-2">
+        <UFormField label="Project" size="sm">
+          <USelect
+            v-model="manualDraft.projectId"
+            :items="projectOptions"
+            placeholder="Select a project"
+            size="sm"
+            :disabled="!effectiveTeamId || projectsQuery.isPending.value"
+          />
+        </UFormField>
+
+        <UFormField label="Tags" size="sm">
+          <USelectMenu
+            v-model="manualDraft.tagIds"
+            :items="tagOptions"
+            placeholder="Select tags (optional)"
+            size="sm"
+            multiple
+            searchable
+            clearable
+            :disabled="!effectiveTeamId || tagsQuery.isPending.value"
+          />
+        </UFormField>
+      </div>
+
+      <div class="grid gap-2 md:grid-cols-2">
         <UInput
           v-model="manualDraft.startAt"
           type="datetime-local"
+          placeholder="Start time"
           aria-label="Manual entry start time"
-          :disabled="!selectedSprintItemId"
+          :disabled="!manualDraft.projectId"
         />
         <UInput
           v-model="manualDraft.endAt"
           type="datetime-local"
+          placeholder="End time"
           aria-label="Manual entry end time"
-          :disabled="!selectedSprintItemId"
+          :disabled="!manualDraft.projectId"
         />
       </div>
 
@@ -667,7 +759,7 @@ function goToNextPage() {
         icon="i-lucide-plus"
         :loading="createManualMutation.isPending.value"
         :disabled="
-          !selectedSprintItemId ||
+          !manualDraft.projectId ||
           !manualDraft.startAt ||
           !manualDraft.endAt ||
           !manualEntryValidation.valid
@@ -675,7 +767,7 @@ function goToNextPage() {
         aria-label="Log manual entry"
         @click="createManualEntry"
       >
-        Log manual entry
+        Log entry
       </UButton>
     </section>
 
@@ -726,13 +818,14 @@ function goToNextPage() {
         :key="entry.id"
         class="rounded-2xl border border-muted/20 bg-default/70 p-3"
       >
-        <div class="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <p class="text-sm font-medium text-highlighted">{{ entry.sprintItemTitle }}</p>
-            <p class="text-xs text-muted">{{ entry.projectName }} · {{ entry.clientName }}</p>
+        <div class="flex flex-wrap items-start justify-between gap-2">
+          <div class="flex-1">
+            <p class="text-sm font-medium text-highlighted">{{ entry.projectName }}</p>
+            <p class="text-xs text-muted">{{ entry.clientName }} · {{ entry.userName }}</p>
+            <p v-if="entry.description" class="mt-1 text-xs text-toned">{{ entry.description }}</p>
           </div>
 
-          <div class="flex items-center gap-2">
+          <div class="flex flex-shrink-0 items-center gap-2">
             <UBadge color="primary" variant="soft">{{ formatDuration(entry.durationSeconds) }}</UBadge>
             <UButton
               color="neutral"
@@ -740,16 +833,15 @@ function goToNextPage() {
               size="xs"
               icon="i-lucide-trash-2"
               :disabled="deleteEntryMutation.isPending.value"
-              :aria-label="`Delete ${entry.sprintItemTitle || 'time'} entry`"
+              :aria-label="`Delete ${entry.projectName || 'time'} entry`"
               @click="deleteEntry(entry.id)"
             />
           </div>
         </div>
 
-        <p class="mt-1 text-xs text-muted">
+        <p class="mt-2 text-xs text-muted">
           {{ formatDateTime(entry.startedAt) }} - {{ formatDateTime(entry.endedAt) }}
         </p>
-        <p v-if="entry.description" class="mt-1 text-xs text-toned">{{ entry.description }}</p>
       </article>
 
       <div class="flex items-center justify-between gap-2 pt-2">
