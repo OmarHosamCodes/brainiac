@@ -2375,7 +2375,10 @@ export function createWorkspaceAgencySettingsBlock(
 export function createAgencyOperatorNodeTabs(teamId: string | null = null) {
   const overviewTab = createWorkspaceNodeTab({
     title: "Overview",
-    blocks: [createWorkspaceAgencyTimeTrackerBlock({ teamId })],
+    blocks: [
+      createWorkspaceAgencyTimeTrackerBlock({ teamId }),
+      createWorkspaceAgencyTimeEntriesLogBlock({ teamId }),
+    ],
   });
 
   const teamTab = createWorkspaceNodeTab({
