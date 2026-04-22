@@ -25,7 +25,7 @@
   "scripts": {
     "dev": "turbo dev",
     "dev:portless": "turbo dev:portless",
-    "build": "turbo build",
+    "build": "turbo build --concurrency=1",
     "check-types": "turbo check-types",
     "dev:web": "turbo -F web dev",
     "dev:server": "turbo -F server dev",
