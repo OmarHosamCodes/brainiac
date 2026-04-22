@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
 import { getErrorMessage } from "~/utils/get-error-message";
+import { normalizeAgencyLinkUrl } from "~/utils/normalize-agency-link-url";
 
 type AgencyTag = {
   id: string;
@@ -30,6 +31,7 @@ type AgencyActiveTimer = {
   projectName: string;
   tags: AgencyTag[];
   description: string;
+  linkUrl: string | null;
   startedAt: string;
   createdAt: string;
   updatedAt: string;
@@ -47,6 +49,7 @@ type AgencyTimeEntry = {
   tags: AgencyTag[];
   source: "timer" | "manual";
   description: string;
+  linkUrl: string | null;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
@@ -82,6 +85,7 @@ type TrackerDraft = {
   description: string;
   projectId: string;
   selectedTagIds: string[];
+  linkUrl: string;
   syncedTimerId: string | null;
 };
 
@@ -105,6 +109,7 @@ type StartTimerPayload = {
   teamId: string;
   project: Pick<AgencyProjectSummary, "id" | "name">;
   description: string;
+  linkUrl: string;
   tagIds: string[];
   selectedTags: AgencyTag[];
   successDescription?: string;
@@ -113,6 +118,7 @@ type StartTimerPayload = {
 type StopTimerPayload = {
   teamId: string;
   description: string;
+  linkUrl: string;
   tagIds: string[];
   selectedTags: AgencyTag[];
   discard?: boolean;
@@ -123,6 +129,7 @@ type RestartEntryPayload = {
   teamId: string;
   project: Pick<AgencyProjectSummary, "id" | "name">;
   description: string;
+  linkUrl: string | null;
   tags: AgencyTag[];
 };
 
@@ -173,6 +180,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
       description: "",
       projectId: "",
       selectedTagIds: [],
+      linkUrl: "",
       syncedTimerId: null,
     };
 
@@ -214,6 +222,16 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
     draft.selectedTagIds = [...tagIds];
   }
 
+  function setTrackerLinkUrl(teamId: string, linkUrl: string) {
+    const draft = ensureTrackerDraft(teamId);
+
+    if (!draft) {
+      return;
+    }
+
+    draft.linkUrl = linkUrl;
+  }
+
   function toggleTrackerTag(teamId: string, tagId: string) {
     const draft = ensureTrackerDraft(teamId);
 
@@ -248,6 +266,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
     draft.description = timer.description;
     draft.projectId = timer.projectId;
     draft.selectedTagIds = timer.tags.map((tag) => tag.id);
+    draft.linkUrl = timer.linkUrl ?? "";
     draft.syncedTimerId = timer.id;
   }
 
@@ -283,6 +302,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
       teamId: payload.teamId,
       project: payload.project,
       description: payload.description,
+      linkUrl: payload.linkUrl,
       tags: payload.selectedTags,
       startedAt: nowIso,
     });
@@ -294,6 +314,17 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
     const draft = ensureTrackerDraft(payload.teamId);
 
     if (!draft) {
+      return;
+    }
+
+    const { normalizedUrl, error } = normalizeAgencyLinkUrl(payload.linkUrl);
+
+    if (error) {
+      toast.add({
+        title: "Unable to start timer",
+        description: error,
+        color: "error",
+      });
       return;
     }
 
@@ -309,12 +340,14 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
       draft.description = optimisticTimer.description;
       draft.projectId = optimisticTimer.projectId;
       draft.selectedTagIds = payload.tagIds;
+      draft.linkUrl = normalizedUrl ?? "";
       draft.syncedTimerId = optimisticTimer.id;
 
       const result = (await startTimerMutation.mutateAsync({
         teamId: payload.teamId,
         projectId: payload.project.id,
         description: payload.description.trim(),
+        linkUrl: normalizedUrl,
         tagIds: payload.tagIds,
       })) as AgencyActiveTimerQueryData;
 
@@ -351,6 +384,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
       teamId: payload.teamId,
       project: payload.project,
       description: payload.description,
+      linkUrl: payload.linkUrl ?? "",
       tagIds: payload.tags.map((tag) => tag.id),
       selectedTags: payload.tags,
       successDescription: `Tracking ${payload.description || "time"}.`,
@@ -369,6 +403,12 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
     const affectedLogTeams = new Set<string>([activeTimer.teamId]);
     const logSnapshots = snapshotQueries(getRegisteredLogQueries(affectedLogTeams));
     const description = payload.description.trim();
+    const { normalizedUrl, error } = payload.discard
+      ? {
+          normalizedUrl: null,
+          error: null,
+        }
+      : normalizeAgencyLinkUrl(payload.linkUrl);
     const nextTags = payload.tagIds.length > 0
       ? payload.selectedTags
       : activeTimer.tags;
@@ -377,11 +417,21 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
       : createOptimisticEntryFromTimer(activeTimer, {
           endedAt: new Date().toISOString(),
           description: description || activeTimer.description,
+          linkUrl: normalizedUrl,
           tags: nextTags,
         });
     const draft = ensureTrackerDraft(payload.teamId);
 
     if (!draft) {
+      return;
+    }
+
+    if (error) {
+      toast.add({
+        title: payload.discard ? "Unable to discard timer" : "Unable to stop timer",
+        description: error,
+        color: "error",
+      });
       return;
     }
 
@@ -396,11 +446,13 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
 
       draft.description = "";
       draft.selectedTagIds = [];
+      draft.linkUrl = "";
       draft.syncedTimerId = null;
 
       const result = (await stopTimerMutation.mutateAsync({
         teamId: payload.teamId,
         description,
+        linkUrl: normalizedUrl,
         tagIds: payload.tagIds,
         discard: payload.discard,
       })) as {
@@ -544,9 +596,12 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
     teamId: string;
     project: Pick<AgencyProjectSummary, "id" | "name">;
     description: string;
+    linkUrl: string;
     tags: AgencyTag[];
     startedAt: string;
   }) {
+    const { normalizedUrl } = normalizeAgencyLinkUrl(payload.linkUrl);
+
     return {
       id: createOptimisticId("agency-active-timer"),
       teamId: payload.teamId,
@@ -555,6 +610,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
       projectName: payload.project.name,
       tags: [...payload.tags],
       description: payload.description.trim(),
+      linkUrl: normalizedUrl,
       startedAt: payload.startedAt,
       createdAt: payload.startedAt,
       updatedAt: payload.startedAt,
@@ -566,6 +622,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
     overrides: {
       endedAt: string;
       description?: string;
+      linkUrl?: string | null;
       tags?: AgencyTag[];
       clientId?: string;
       clientName?: string;
@@ -583,6 +640,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
       tags: [...(overrides.tags ?? timer.tags)],
       source: "timer",
       description: overrides.description ?? timer.description,
+      linkUrl: overrides.linkUrl !== undefined ? overrides.linkUrl : timer.linkUrl,
       startedAt: timer.startedAt,
       endedAt: overrides.endedAt,
       durationSeconds: getDurationSeconds(timer.startedAt, overrides.endedAt),
@@ -796,6 +854,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
     setTrackerDescription,
     setTrackerProjectId,
     setTrackerSelectedTagIds,
+    setTrackerLinkUrl,
     toggleTrackerTag,
     syncDraftFromActiveTimer,
     registerActiveTimerQuery,

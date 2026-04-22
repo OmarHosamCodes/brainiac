@@ -96,6 +96,7 @@ type GroupedEntry = {
   projectId: string;
   projectName: string;
   description: string;
+  linkUrl: string | null;
   tags: EntryRow["tags"];
   totalSeconds: number;
   entries: Array<{
@@ -117,7 +118,7 @@ const groupedEntries = computed<GroupedEntry[]>(() => {
       .sort((a, b) => a.id.localeCompare(b.id))
       .map((t) => t.id)
       .join(",");
-    const key = `${entry.projectId}||${entry.description ?? ""}||${tagKey}`;
+    const key = `${entry.projectId}||${entry.description ?? ""}||${entry.linkUrl ?? ""}||${tagKey}`;
 
     const existing = map.get(key);
 
@@ -135,6 +136,7 @@ const groupedEntries = computed<GroupedEntry[]>(() => {
         projectId: entry.projectId,
         projectName: entry.projectName,
         description: entry.description ?? "",
+        linkUrl: entry.linkUrl ?? null,
         tags: entry.tags,
         totalSeconds: entry.durationSeconds,
         entries: [
@@ -304,6 +306,7 @@ async function restartEntry(group: GroupedEntry) {
     teamId,
     project,
     description: group.description,
+    linkUrl: group.linkUrl,
     tags: group.tags,
   });
 }
@@ -490,9 +493,24 @@ function toggleGroup(key: string) {
 
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium text-highlighted">{{ group.projectName }}</p>
-            <p v-if="group.description" class="mt-0.5 truncate text-xs text-muted">
-              {{ group.description }}
-            </p>
+            <div
+              v-if="group.description || group.linkUrl"
+              class="mt-0.5 flex items-center gap-1.5"
+            >
+              <p v-if="group.description" class="truncate text-xs text-muted">
+                {{ group.description }}
+              </p>
+              <a
+                v-if="group.linkUrl"
+                :href="group.linkUrl"
+                target="_blank"
+                rel="noreferrer"
+                class="shrink-0 text-muted transition hover:text-primary"
+                aria-label="Open linked entry URL"
+              >
+                <UIcon name="i-lucide-external-link" class="size-3.5" />
+              </a>
+            </div>
             <!-- Inline time range for single-entry groups -->
             <div v-if="group.entries.length === 1" class="mt-1.5">
               <span class="text-[10px] text-muted">

@@ -92,6 +92,7 @@ export const agencyOpsTimeEntry = pgTable(
             .references(() => user.id, { onDelete: "cascade" }),
         source: text("source").$type<AgencyOpsTimeEntrySource>().notNull().default("timer"),
         description: text("description").notNull().default(""),
+        linkUrl: text("link_url"),
         startedAt: timestamp("started_at").notNull(),
         endedAt: timestamp("ended_at").notNull(),
         durationSeconds: integer("duration_seconds").notNull(),
@@ -143,6 +144,7 @@ export const agencyOpsActiveTimer = pgTable(
             .notNull()
             .references(() => user.id, { onDelete: "cascade" }),
         description: text("description").notNull().default(""),
+        linkUrl: text("link_url"),
         startedAt: timestamp("started_at").notNull(),
         createdAt: timestamp("created_at").defaultNow().notNull(),
         updatedAt: timestamp("updated_at")

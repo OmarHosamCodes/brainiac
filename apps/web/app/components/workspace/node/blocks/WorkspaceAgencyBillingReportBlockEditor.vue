@@ -3,6 +3,7 @@ import type { WorkspaceAgencyBillingReportBlock } from "@brainiac/workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
 import { getErrorMessage } from "~/utils/get-error-message";
+import { normalizeAgencyLinkUrl } from "~/utils/normalize-agency-link-url";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ type AgencyTimeEntry = {
     tags: AgencyTag[];
     source: string;
     description: string;
+    linkUrl: string | null;
     startedAt: string;
     endedAt: string;
     durationSeconds: number;
@@ -61,6 +63,14 @@ const editDraft = ref<Partial<AgencyTimeEntry & { startAt: string; endAt: string
 const aiFlags = ref<Map<string, FlagReason>>(new Map());
 const isAiScanning = ref(false);
 const showSettings = ref(false);
+const editDraftLinkUrl = computed({
+    get: () => editDraft.value.linkUrl ?? "",
+    set: (value: string) => {
+        editDraft.value.linkUrl = value;
+    },
+});
+const editDraftLinkState = computed(() => normalizeAgencyLinkUrl(editDraftLinkUrl.value));
+const hasValidEditDraftLink = computed(() => Boolean(editDraftLinkState.value.normalizedUrl));
 
 // ─── Billing period computation ───────────────────────────────────────────────
 
@@ -260,6 +270,7 @@ const updateEntryMutation = useMutation({
         startAt?: string;
         endAt?: string;
         description?: string;
+        linkUrl?: string | null;
         projectId?: string;
         tagIds?: string[];
     }) => {
@@ -285,6 +296,7 @@ function startEdit(entry: AgencyTimeEntry) {
     editDraft.value = {
         id: entry.id,
         description: entry.description,
+        linkUrl: entry.linkUrl ?? "",
         startAt: entry.startedAt,
         endAt: entry.endedAt,
         projectId: entry.projectId,
@@ -299,11 +311,24 @@ function cancelEdit() {
 
 function commitEdit() {
     if (!editingEntryId.value) return;
+
+    const { normalizedUrl, error } = normalizeAgencyLinkUrl(editDraftLinkUrl.value);
+
+    if (error) {
+        toast.add({
+            title: "Invalid entry link",
+            description: error,
+            color: "error",
+        });
+        return;
+    }
+
     updateEntryMutation.mutate({
         entryId: editingEntryId.value,
         startAt: editDraft.value.startAt,
         endAt: editDraft.value.endAt,
         description: editDraft.value.description,
+        linkUrl: normalizedUrl,
         projectId: editDraft.value.projectId,
         tagIds: editDraft.value.tags?.map((t) => t.id),
     });
@@ -732,6 +757,16 @@ function datetimeLocalToIso(local: string): string {
                                     <p class="truncate text-xs text-zinc-300">
                                         {{ entry.description || '—' }}
                                     </p>
+                                    <a
+                                        v-if="entry.linkUrl"
+                                        :href="entry.linkUrl"
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        class="shrink-0 text-zinc-500 transition hover:text-emerald-400"
+                                        aria-label="Open linked entry URL"
+                                    >
+                                        <UIcon name="i-lucide-external-link" class="size-3" />
+                                    </a>
                                     <UTooltip
                                         v-if="allFlags.has(entry.id)"
                                         :text="flagLabel(allFlags.get(entry.id)!)"
@@ -799,12 +834,61 @@ function datetimeLocalToIso(local: string): string {
                                 />
                             </td>
                             <td class="px-3 py-2.5">
-                                <UInput
-                                    v-model="editDraft.description"
-                                    placeholder="Description…"
-                                    size="xs"
-                                    class="w-48"
-                                />
+                                <div class="flex items-center gap-2">
+                                    <UInput
+                                        v-model="editDraft.description"
+                                        placeholder="Description…"
+                                        size="xs"
+                                        class="w-48"
+                                    />
+
+                                    <UPopover :content="{ align: 'end' }">
+                                        <UButton
+                                            icon="i-lucide-link"
+                                            :color="hasValidEditDraftLink ? 'primary' : 'neutral'"
+                                            variant="ghost"
+                                            size="xs"
+                                        />
+
+                                        <template #content>
+                                            <div class="w-72 space-y-2 p-2">
+                                                    <UInput
+                                                    v-model="editDraftLinkUrl"
+                                                    icon="i-lucide-link"
+                                                    placeholder="Paste a task, ticket, or brief URL"
+                                                    size="xs"
+                                                />
+
+                                                <div class="flex items-center justify-between gap-2">
+                                                    <p
+                                                        v-if="editDraftLinkState.error"
+                                                        class="text-[11px] text-error"
+                                                    >
+                                                        {{ editDraftLinkState.error }}
+                                                    </p>
+                                                    <p
+                                                        v-else-if="hasValidEditDraftLink"
+                                                        class="truncate text-[11px] text-zinc-500"
+                                                    >
+                                                        {{ editDraftLinkState.normalizedUrl }}
+                                                    </p>
+                                                    <span v-else class="text-[11px] text-zinc-500">
+                                                        Link this entry to a task or brief.
+                                                    </span>
+
+                                                    <UButton
+                                                        label="Clear"
+                                                        color="neutral"
+                                                        variant="ghost"
+                                                        size="xs"
+                                                        :disabled="!editDraftLinkUrl"
+                                                        @click="editDraftLinkUrl = ''"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </UPopover>
+                                </div>
                             </td>
                             <td class="px-3 py-2.5">
                                 <input

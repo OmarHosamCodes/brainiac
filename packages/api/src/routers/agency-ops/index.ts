@@ -69,6 +69,7 @@ const agencyTimeEntrySchema = z.object({
     tags: z.array(agencyTagSchema),
     source: agencyTimeEntrySourceSchema,
     description: z.string(),
+    linkUrl: z.string().url().nullable(),
     startedAt: z.string().datetime(),
     endedAt: z.string().datetime(),
     durationSeconds: z.number().int().positive(),
@@ -84,6 +85,7 @@ const agencyActiveTimerSchema = z.object({
     projectName: z.string().min(1),
     tags: z.array(agencyTagSchema),
     description: z.string(),
+    linkUrl: z.string().url().nullable(),
     startedAt: z.string().datetime(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
@@ -256,6 +258,7 @@ export const agencyOpsRouter = {
                 teamScopedInputSchema.extend({
                     projectId: z.string().min(1),
                     description: z.string().max(2_000).optional(),
+                    linkUrl: z.string().max(2_048).nullable().optional(),
                     tagIds: z.array(z.string().min(1)).optional(),
                 }),
             )
@@ -269,6 +272,7 @@ export const agencyOpsRouter = {
                 z.object({
                     teamId: z.string().min(1).optional(),
                     description: z.string().max(2_000).optional(),
+                    linkUrl: z.string().max(2_048).nullable().optional(),
                     tagIds: z.array(z.string().min(1)).optional(),
                     discard: z.boolean().optional(),
                 }),
@@ -319,6 +323,7 @@ export const agencyOpsRouter = {
                     startAt: z.string().datetime(),
                     endAt: z.string().datetime(),
                     description: z.string().max(2_000).optional(),
+                    linkUrl: z.string().max(2_048).nullable().optional(),
                     tagIds: z.array(z.string().min(1)).optional(),
                 }),
             )
@@ -334,6 +339,7 @@ export const agencyOpsRouter = {
                     startAt: z.string().datetime().optional(),
                     endAt: z.string().datetime().optional(),
                     description: z.string().max(2_000).optional(),
+                    linkUrl: z.string().max(2_048).nullable().optional(),
                 }),
             )
             .handler(async ({ context, input }) => {
@@ -399,6 +405,7 @@ export const agencyOpsRouter = {
                     startAt: z.string().datetime().optional(),
                     endAt: z.string().datetime().optional(),
                     description: z.string().max(2_000).optional(),
+                    linkUrl: z.string().max(2_048).nullable().optional(),
                     projectId: z.string().min(1).optional(),
                     tagIds: z.array(z.string().min(1)).optional(),
                 }),

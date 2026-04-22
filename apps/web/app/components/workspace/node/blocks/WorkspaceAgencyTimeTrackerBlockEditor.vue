@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import type { SelectMenuItem } from "@nuxt/ui";
 import type { WorkspaceAgencyTimeTrackerBlock } from "@brainiac/workspace";
 import { useQuery } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
+import { normalizeAgencyLinkUrl } from "~/utils/normalize-agency-link-url";
 
 const props = defineProps<{
     block: WorkspaceAgencyTimeTrackerBlock;
@@ -22,6 +24,7 @@ const { draftByTeam, isTimerMutationPending } = storeToRefs(
 
 const now = ref(Date.now());
 const tagSearch = ref("");
+const projectSearchTerm = ref("");
 
 let tickerHandle: ReturnType<typeof setInterval> | null = null;
 
@@ -69,6 +72,47 @@ const projectsQuery = useQuery(
 );
 
 const projects = computed(() => projectsQuery.data.value?.items ?? []);
+const projectSelectItems = computed<SelectMenuItem[]>(() => {
+    const query = projectSearchTerm.value.trim().toLowerCase();
+    const filteredProjects = query
+        ? projects.value.filter((project) => {
+              const searchableText = `${project.name} ${project.clientName}`.toLowerCase();
+              return searchableText.includes(query);
+          })
+        : projects.value;
+    const groupedProjects = new Map<string, typeof projects.value>();
+
+    for (const project of filteredProjects) {
+        const existingProjects = groupedProjects.get(project.clientName);
+
+        if (existingProjects) {
+            existingProjects.push(project);
+            continue;
+        }
+
+        groupedProjects.set(project.clientName, [project]);
+    }
+
+    return [...groupedProjects.entries()]
+        .sort(([leftClient], [rightClient]) =>
+            leftClient.localeCompare(rightClient),
+        )
+        .flatMap(([clientName, clientProjects]) => [
+            {
+                type: "label" as const,
+                label: clientName,
+            },
+            ...[...clientProjects]
+                 .sort((leftProject, rightProject) =>
+                     leftProject.name.localeCompare(rightProject.name),
+                 )
+                 .map((project) => ({
+                     label: project.name,
+                     value: project.id,
+                     clientName,
+                 })),
+         ]);
+ });
 
 const tagsQuery = useQuery(
     computed(() => ({
@@ -147,6 +191,16 @@ const selectedTagIds = computed({
         );
     },
 });
+const timerLinkUrl = computed({
+    get: () => trackerDraft.value?.linkUrl ?? "",
+    set: (value: string) => {
+        if (!effectiveTeamId.value) {
+            return;
+        }
+
+        agencyTimeTrackingStore.setTrackerLinkUrl(effectiveTeamId.value, value);
+    },
+});
 const selectedProject = computed(
     () =>
         projects.value.find((project) => project.id === selectedProjectId.value) ?? null,
@@ -156,6 +210,8 @@ const selectedTags = computed(() => {
 
     return tags.value.filter((tag) => selectedIds.has(tag.id));
 });
+const linkUrlState = computed(() => normalizeAgencyLinkUrl(timerLinkUrl.value));
+const hasValidLinkUrl = computed(() => Boolean(linkUrlState.value.normalizedUrl));
 
 watch(
     effectiveTeamId,
@@ -221,6 +277,35 @@ const canStartTimer = computed(
     () =>
         Boolean(effectiveTeamId.value && selectedProject.value && !activeTimer.value),
 );
+const canStopTimer = computed(
+    () =>
+        Boolean(
+            activeTimer.value &&
+                selectedProjectId.value &&
+                selectedTagIds.value.length > 0,
+        ),
+);
+const stopValidationHint = computed(() => {
+    if (!activeTimer.value || canStopTimer.value) {
+        return "";
+    }
+
+    const missingRequirements: string[] = [];
+
+    if (!selectedProjectId.value) {
+        missingRequirements.push("a project");
+    }
+
+    if (selectedTagIds.value.length === 0) {
+        missingRequirements.push("at least one tag");
+    }
+
+    if (missingRequirements.length === 0) {
+        return "";
+    }
+
+    return `Select ${missingRequirements.join(" and ")} to stop and save this timer.`;
+});
 
 const trackerBusy = computed(() => isTimerMutationPending.value);
 
@@ -288,13 +373,14 @@ async function startTimer() {
         tagIds: [...selectedTagIds.value],
         selectedTags: [...selectedTags.value],
         description: timerDescription.value,
+        linkUrl: timerLinkUrl.value,
     });
 }
 
 async function stopTimer() {
     const teamId = effectiveTeamId.value;
 
-    if (!teamId) {
+    if (!teamId || !activeTimer.value || !canStopTimer.value) {
         return;
     }
 
@@ -304,6 +390,7 @@ async function stopTimer() {
         tagIds: [...selectedTagIds.value],
         selectedTags: [...selectedTags.value],
         description: timerDescription.value,
+        linkUrl: timerLinkUrl.value,
     });
 }
 
@@ -318,13 +405,14 @@ async function discardTimer() {
         tagIds: [...selectedTagIds.value],
         selectedTags: [...selectedTags.value],
         description: timerDescription.value,
+        linkUrl: timerLinkUrl.value,
         discard: true,
     });
 }
 </script>
 
 <template>
-    <div>
+    <div class="space-y-2">
         <div
             v-if="!effectiveTeamId"
             class="mb-2 flex items-center gap-2"
@@ -348,7 +436,7 @@ async function discardTimer() {
             />
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <UInput
                 v-model="timerDescription"
                 placeholder="What are you working on?"
@@ -359,18 +447,26 @@ async function discardTimer() {
 
             <USelectMenu
                 v-model="selectedProjectId"
-                :items="
-                    projects.map((project) => ({
-                        label: project.name,
-                        value: project.id,
-                    }))
-                "
+                v-model:search-term="projectSearchTerm"
+                :items="projectSelectItems"
                 :placeholder="!effectiveTeamId ? 'Team first' : 'Project'"
+                :search-input="{
+                    placeholder: 'Search projects or clients',
+                }"
+                :content="{ align: 'start' }"
                 size="sm"
                 class="w-40 shrink-0"
-                searchable
+                ignore-filter
                 value-key="value"
-                :disabled="!effectiveTeamId || projectsQuery.isPending.value"
+                :ui="{
+                    content: 'max-h-72 overflow-hidden',
+                    viewport: 'max-h-72 overflow-y-auto',
+                }"
+                :disabled="
+                    !effectiveTeamId ||
+                    projectsQuery.isPending.value ||
+                    Boolean(activeTimer)
+                "
             />
 
             <div v-if="tags.length > 0" class="shrink-0">
@@ -424,6 +520,56 @@ async function discardTimer() {
                 </UPopover>
             </div>
 
+            <div class="shrink-0">
+                <UPopover :content="{ align: 'end' }">
+                    <UButton
+                        icon="i-lucide-link"
+                        size="xs"
+                        variant="ghost"
+                        :color="hasValidLinkUrl ? 'primary' : 'neutral'"
+                        :disabled="trackerBusy || !effectiveTeamId"
+                    />
+
+                    <template #content>
+                        <div class="w-72 space-y-2 p-2">
+                            <UInput
+                                v-model="timerLinkUrl"
+                                icon="i-lucide-link"
+                                placeholder="Paste a task, ticket, or brief URL"
+                                size="xs"
+                            />
+
+                            <div class="flex items-center justify-between gap-2">
+                                <p
+                                    v-if="linkUrlState.error"
+                                    class="text-[11px] text-error"
+                                >
+                                    {{ linkUrlState.error }}
+                                </p>
+                                <p
+                                    v-else-if="hasValidLinkUrl"
+                                    class="truncate text-[11px] text-muted"
+                                >
+                                    {{ linkUrlState.normalizedUrl }}
+                                </p>
+                                <span v-else class="text-[11px] text-muted">
+                                    Link this entry to a task or brief.
+                                </span>
+
+                                <UButton
+                                    label="Clear"
+                                    color="neutral"
+                                    variant="ghost"
+                                    size="xs"
+                                    :disabled="!timerLinkUrl"
+                                    @click="timerLinkUrl = ''"
+                                />
+                            </div>
+                        </div>
+                    </template>
+                </UPopover>
+            </div>
+
             <UButton
                 :label="
                     activeTimer ? formatDuration(elapsedSeconds) : 'Start'
@@ -431,7 +577,7 @@ async function discardTimer() {
                 :color="activeTimer ? 'warning' : 'primary'"
                 size="sm"
                 class="min-w-24 shrink-0 font-mono tabular-nums"
-                :disabled="!canStartTimer && !activeTimer"
+                :disabled="activeTimer ? !canStopTimer : !canStartTimer"
                 :loading="trackerBusy"
                 @click="activeTimer ? stopTimer() : startTimer()"
             />
@@ -449,5 +595,12 @@ async function discardTimer() {
                 />
             </UDropdownMenu>
         </div>
+
+        <p
+            v-if="stopValidationHint"
+            class="text-xs text-warning"
+        >
+            {{ stopValidationHint }}
+        </p>
     </div>
 </template>

@@ -60,6 +60,7 @@ type AgencyTimeEntryRecord = {
 	tags: AgencyTagRecord[];
 	source: AgencyTimeEntrySource;
 	description: string;
+	linkUrl: string | null;
 	startedAt: string;
 	endedAt: string;
 	durationSeconds: number;
@@ -75,6 +76,7 @@ type AgencyActiveTimerRecord = {
 	projectName: string;
 	tags: AgencyTagRecord[];
 	description: string;
+	linkUrl: string | null;
 	startedAt: string;
 	createdAt: string;
 	updatedAt: string;
@@ -144,6 +146,40 @@ function parseIsoDateTime(value: string, fieldName: string) {
 	}
 
 	return parsed;
+}
+
+function normalizeAgencyLinkUrl(value: string | null | undefined) {
+	if (value === undefined) {
+		return undefined;
+	}
+
+	const trimmedValue = value?.trim() ?? "";
+
+	if (!trimmedValue) {
+		return null;
+	}
+
+	const candidate = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmedValue)
+		? trimmedValue
+		: `https://${trimmedValue}`;
+
+	let parsed: URL;
+
+	try {
+		parsed = new URL(candidate);
+	} catch {
+		throw new ORPCError("BAD_REQUEST", {
+			message: "Invalid link URL.",
+		});
+	}
+
+	if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+		throw new ORPCError("BAD_REQUEST", {
+			message: "Link URL must use http or https.",
+		});
+	}
+
+	return parsed.toString();
 }
 
 function validateDateRange(startedAt: Date, endedAt: Date) {
@@ -258,6 +294,7 @@ async function getActiveTimerByUser(userId: string) {
 			projectId: agencyOpsActiveTimer.projectId,
 			projectName: agencyOpsProject.name,
 			description: agencyOpsActiveTimer.description,
+			linkUrl: agencyOpsActiveTimer.linkUrl,
 			startedAt: agencyOpsActiveTimer.startedAt,
 			createdAt: agencyOpsActiveTimer.createdAt,
 			updatedAt: agencyOpsActiveTimer.updatedAt,
@@ -294,6 +331,7 @@ async function getActiveTimerByUser(userId: string) {
 		projectName: timer.projectName,
 		tags: tags.map(mapTagRow),
 		description: timer.description,
+		linkUrl: timer.linkUrl,
 		startedAt: timer.startedAt.toISOString(),
 		createdAt: timer.createdAt.toISOString(),
 		updatedAt: timer.updatedAt.toISOString(),
@@ -792,11 +830,13 @@ export async function startAgencyTimer(
 		projectId: string;
 		tagIds?: string[];
 		description?: string;
+		linkUrl?: string | null;
 	},
 ) {
 	await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
 	await getProjectByIdForTeam(input.teamId, input.projectId);
+	const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
 	const now = new Date();
 
@@ -806,6 +846,7 @@ export async function startAgencyTimer(
 			teamId: agencyOpsActiveTimer.teamId,
 			projectId: agencyOpsActiveTimer.projectId,
 			description: agencyOpsActiveTimer.description,
+			linkUrl: agencyOpsActiveTimer.linkUrl,
 			startedAt: agencyOpsActiveTimer.startedAt,
 		})
 		.from(agencyOpsActiveTimer)
@@ -825,6 +866,7 @@ export async function startAgencyTimer(
 					userId: actorUserId,
 					source: "timer",
 					description: existing.description,
+					linkUrl: existing.linkUrl,
 					startedAt: existing.startedAt,
 					endedAt: now,
 					durationSeconds,
@@ -863,6 +905,7 @@ export async function startAgencyTimer(
 				projectId: input.projectId,
 				userId: actorUserId,
 				description: input.description?.trim() ?? "",
+				linkUrl: normalizedLinkUrl ?? null,
 				startedAt: now,
 				createdAt: now,
 				updatedAt: now,
@@ -891,6 +934,7 @@ export async function stopAgencyTimer(
 	input: {
 		teamId?: string;
 		description?: string;
+		linkUrl?: string | null;
 		tagIds?: string[];
 		discard?: boolean;
 	},
@@ -901,6 +945,7 @@ export async function stopAgencyTimer(
 			teamId: agencyOpsActiveTimer.teamId,
 			projectId: agencyOpsActiveTimer.projectId,
 			description: agencyOpsActiveTimer.description,
+			linkUrl: agencyOpsActiveTimer.linkUrl,
 			startedAt: agencyOpsActiveTimer.startedAt,
 		})
 		.from(agencyOpsActiveTimer)
@@ -924,6 +969,9 @@ export async function stopAgencyTimer(
 
 	const now = new Date();
 	const description = input.description?.trim() ?? active.description;
+	const normalizedLinkUrl = input.discard ? null : normalizeAgencyLinkUrl(input.linkUrl);
+	const resolvedLinkUrl =
+		normalizedLinkUrl === undefined ? active.linkUrl : normalizedLinkUrl;
 	const durationSeconds = getDurationSeconds(active.startedAt, now);
 
 	if (input.discard) {
@@ -945,6 +993,7 @@ export async function stopAgencyTimer(
 				userId: actorUserId,
 				source: "timer",
 				description,
+				linkUrl: resolvedLinkUrl,
 				startedAt: active.startedAt,
 				endedAt: now,
 				durationSeconds,
@@ -1000,6 +1049,7 @@ export async function stopAgencyTimer(
 			clientName: agencyOpsClient.name,
 			source: agencyOpsTimeEntry.source,
 			description: agencyOpsTimeEntry.description,
+			linkUrl: agencyOpsTimeEntry.linkUrl,
 			startedAt: agencyOpsTimeEntry.startedAt,
 			endedAt: agencyOpsTimeEntry.endedAt,
 			durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1027,23 +1077,24 @@ export async function stopAgencyTimer(
 
 	const createdEntry = row
 		? {
-				id: row.id,
-				teamId: row.teamId,
-				userId: row.userId,
-				userName: row.userName ?? "Unknown",
-				projectId: row.projectId,
-				projectName: row.projectName,
-				clientId: row.clientId,
-				clientName: row.clientName,
-				tags: tags.map(mapTagRow),
-				source: row.source,
-				description: row.description,
-				startedAt: row.startedAt.toISOString(),
-				endedAt: row.endedAt.toISOString(),
-				durationSeconds: row.durationSeconds,
-				createdAt: row.createdAt.toISOString(),
-				updatedAt: row.updatedAt.toISOString(),
-		  } satisfies AgencyTimeEntryRecord
+			id: row.id,
+			teamId: row.teamId,
+			userId: row.userId,
+			userName: row.userName ?? "Unknown",
+			projectId: row.projectId,
+			projectName: row.projectName,
+			clientId: row.clientId,
+			clientName: row.clientName,
+			tags: tags.map(mapTagRow),
+			source: row.source,
+			description: row.description,
+			linkUrl: row.linkUrl,
+			startedAt: row.startedAt.toISOString(),
+			endedAt: row.endedAt.toISOString(),
+			durationSeconds: row.durationSeconds,
+			createdAt: row.createdAt.toISOString(),
+			updatedAt: row.updatedAt.toISOString(),
+		} satisfies AgencyTimeEntryRecord
 		: null;
 
 	return {
@@ -1079,6 +1130,7 @@ export async function listMyAgencyTimeEntries(
 			clientName: agencyOpsClient.name,
 			source: agencyOpsTimeEntry.source,
 			description: agencyOpsTimeEntry.description,
+			linkUrl: agencyOpsTimeEntry.linkUrl,
 			startedAt: agencyOpsTimeEntry.startedAt,
 			endedAt: agencyOpsTimeEntry.endedAt,
 			durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1127,6 +1179,7 @@ export async function listMyAgencyTimeEntries(
 				tags: tags.map(mapTagRow),
 				source: row.source,
 				description: row.description,
+				linkUrl: row.linkUrl,
 				startedAt: row.startedAt.toISOString(),
 				endedAt: row.endedAt.toISOString(),
 				durationSeconds: row.durationSeconds,
@@ -1207,6 +1260,7 @@ export async function createManualAgencyTimeEntry(
 		startAt: string;
 		endAt: string;
 		description?: string;
+		linkUrl?: string | null;
 		tagIds?: string[];
 	},
 ) {
@@ -1217,6 +1271,7 @@ export async function createManualAgencyTimeEntry(
 	const startAt = parseIsoDateTime(input.startAt, "startAt");
 	const endAt = parseIsoDateTime(input.endAt, "endAt");
 	validateDateRange(startAt, endAt);
+	const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
 	const now = new Date();
 	const durationSeconds = getDurationSeconds(startAt, endAt);
@@ -1231,6 +1286,7 @@ export async function createManualAgencyTimeEntry(
 				userId: actorUserId,
 				source: "manual",
 				description: input.description?.trim() ?? "",
+				linkUrl: normalizedLinkUrl ?? null,
 				startedAt: startAt,
 				endedAt: endAt,
 				durationSeconds,
@@ -1267,6 +1323,7 @@ export async function createManualAgencyTimeEntry(
 			clientName: agencyOpsClient.name,
 			source: agencyOpsTimeEntry.source,
 			description: agencyOpsTimeEntry.description,
+			linkUrl: agencyOpsTimeEntry.linkUrl,
 			startedAt: agencyOpsTimeEntry.startedAt,
 			endedAt: agencyOpsTimeEntry.endedAt,
 			durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1308,6 +1365,7 @@ export async function createManualAgencyTimeEntry(
 		tags: tags.map(mapTagRow),
 		source: row.source,
 		description: row.description,
+		linkUrl: row.linkUrl,
 		startedAt: row.startedAt.toISOString(),
 		endedAt: row.endedAt.toISOString(),
 		durationSeconds: row.durationSeconds,
@@ -1324,6 +1382,7 @@ export async function updateMyAgencyTimeEntry(
 		startAt?: string;
 		endAt?: string;
 		description?: string;
+		linkUrl?: string | null;
 		tagIds?: string[];
 	},
 ) {
@@ -1356,6 +1415,7 @@ export async function updateMyAgencyTimeEntry(
 		? parseIsoDateTime(input.endAt, "endAt")
 		: current.endedAt;
 	validateDateRange(nextStartedAt, nextEndedAt);
+	const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
 	const now = new Date();
 	const durationSeconds = getDurationSeconds(nextStartedAt, nextEndedAt);
@@ -1368,6 +1428,7 @@ export async function updateMyAgencyTimeEntry(
 				endedAt: nextEndedAt,
 				durationSeconds,
 				description: input.description?.trim(),
+				...(normalizedLinkUrl !== undefined ? { linkUrl: normalizedLinkUrl } : {}),
 				updatedAt: now,
 			})
 			.where(
@@ -1414,6 +1475,7 @@ export async function updateMyAgencyTimeEntry(
 			clientName: agencyOpsClient.name,
 			source: agencyOpsTimeEntry.source,
 			description: agencyOpsTimeEntry.description,
+			linkUrl: agencyOpsTimeEntry.linkUrl,
 			startedAt: agencyOpsTimeEntry.startedAt,
 			endedAt: agencyOpsTimeEntry.endedAt,
 			durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1455,6 +1517,7 @@ export async function updateMyAgencyTimeEntry(
 		tags: tags.map(mapTagRow),
 		source: row.source,
 		description: row.description,
+		linkUrl: row.linkUrl,
 		startedAt: row.startedAt.toISOString(),
 		endedAt: row.endedAt.toISOString(),
 		durationSeconds: row.durationSeconds,
@@ -1850,6 +1913,7 @@ export async function listAllAgencyTimeEntries(
 			clientName: agencyOpsClient.name,
 			source: agencyOpsTimeEntry.source,
 			description: agencyOpsTimeEntry.description,
+			linkUrl: agencyOpsTimeEntry.linkUrl,
 			startedAt: agencyOpsTimeEntry.startedAt,
 			endedAt: agencyOpsTimeEntry.endedAt,
 			durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1894,6 +1958,7 @@ export async function listAllAgencyTimeEntries(
 				tags: tags.map(mapTagRow),
 				source: row.source,
 				description: row.description,
+				linkUrl: row.linkUrl,
 				startedAt: row.startedAt.toISOString(),
 				endedAt: row.endedAt.toISOString(),
 				durationSeconds: row.durationSeconds,
@@ -1933,6 +1998,7 @@ export async function updateAnyAgencyTimeEntry(
 		startAt?: string;
 		endAt?: string;
 		description?: string;
+		linkUrl?: string | null;
 		projectId?: string;
 		tagIds?: string[];
 	},
@@ -1965,6 +2031,7 @@ export async function updateAnyAgencyTimeEntry(
 		? parseIsoDateTime(input.endAt, "endAt")
 		: current.endedAt;
 	validateDateRange(nextStartedAt, nextEndedAt);
+	const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
 	const now = new Date();
 	const durationSeconds = getDurationSeconds(nextStartedAt, nextEndedAt);
@@ -1978,6 +2045,7 @@ export async function updateAnyAgencyTimeEntry(
 				endedAt: nextEndedAt,
 				durationSeconds,
 				description: input.description?.trim(),
+				...(normalizedLinkUrl !== undefined ? { linkUrl: normalizedLinkUrl } : {}),
 				updatedAt: now,
 			})
 			.where(
@@ -2023,6 +2091,7 @@ export async function updateAnyAgencyTimeEntry(
 			clientName: agencyOpsClient.name,
 			source: agencyOpsTimeEntry.source,
 			description: agencyOpsTimeEntry.description,
+			linkUrl: agencyOpsTimeEntry.linkUrl,
 			startedAt: agencyOpsTimeEntry.startedAt,
 			endedAt: agencyOpsTimeEntry.endedAt,
 			durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -2064,6 +2133,7 @@ export async function updateAnyAgencyTimeEntry(
 		tags: tags.map(mapTagRow),
 		source: row.source,
 		description: row.description,
+		linkUrl: row.linkUrl,
 		startedAt: row.startedAt.toISOString(),
 		endedAt: row.endedAt.toISOString(),
 		durationSeconds: row.durationSeconds,

@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 
+import "../../test/setup";
+
 type MutationHandler = (input: unknown) => Promise<unknown>;
 type QueryCache = Map<string, unknown>;
 type ToastEvent = {
@@ -51,6 +53,7 @@ type AgencyActiveTimer = {
   projectName: string;
   tags: AgencyTag[];
   description: string;
+  linkUrl: string | null;
   startedAt: string;
   createdAt: string;
   updatedAt: string;
@@ -68,6 +71,7 @@ type AgencyTimeEntry = {
   tags: AgencyTag[];
   source: "timer" | "manual";
   description: string;
+  linkUrl: string | null;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
@@ -95,6 +99,7 @@ type TrackerDraft = {
   description: string;
   projectId: string;
   selectedTagIds: string[];
+  linkUrl: string;
   syncedTimerId: string | null;
 };
 
@@ -106,12 +111,14 @@ type AgencyTimeTrackingStore = {
   setTrackerProjectId: (teamId: string, projectId: string) => void;
   setTrackerDescription: (teamId: string, description: string) => void;
   setTrackerSelectedTagIds: (teamId: string, tagIds: string[]) => void;
+  setTrackerLinkUrl: (teamId: string, linkUrl: string) => void;
   registerActiveTimerQuery: (payload: { teamId: string; queryKey: readonly unknown[] }) => void;
   registerLogQuery: (payload: { teamId: string; page: number; queryKey: readonly unknown[] }) => void;
   startTimer: (payload: {
     teamId: string;
     project: { id: string; name: string };
     description: string;
+    linkUrl: string;
     tagIds: string[];
     selectedTags: AgencyTag[];
   }) => Promise<void>;
@@ -119,6 +126,7 @@ type AgencyTimeTrackingStore = {
     teamId: string;
     activeTimer: AgencyActiveTimer;
     description: string;
+    linkUrl: string;
     tagIds: string[];
     selectedTags: AgencyTag[];
   }) => Promise<void>;
@@ -126,6 +134,7 @@ type AgencyTimeTrackingStore = {
     teamId: string;
     project: { id: string; name: string };
     description: string;
+    linkUrl: string | null;
     tags: AgencyTag[];
   }) => Promise<void>;
   deleteEntries: (payload: {
@@ -207,6 +216,7 @@ function createActiveTimer(overrides: Partial<AgencyActiveTimer> = {}): AgencyAc
     projectName: "Current project",
     tags: [createTag("tag-1", "Billable")],
     description: "Current work",
+    linkUrl: "https://brainiac.test/current-task",
     startedAt: "2026-04-22T10:00:00.000Z",
     createdAt: "2026-04-22T10:00:00.000Z",
     updatedAt: "2026-04-22T10:00:00.000Z",
@@ -227,6 +237,7 @@ function createTimeEntry(overrides: Partial<AgencyTimeEntry> = {}): AgencyTimeEn
     tags: [createTag("tag-1", "Billable")],
     source: "timer",
     description: "Current work",
+    linkUrl: "https://brainiac.test/current-task",
     startedAt: "2026-04-22T10:00:00.000Z",
     endedAt: "2026-04-22T11:00:00.000Z",
     durationSeconds: 3600,
@@ -266,7 +277,7 @@ async function createStore(handlers?: Partial<{
 
   const { useAgencyTimeTrackingStore } = await import("./agency-time-tracking");
 
-  return useAgencyTimeTrackingStore() as AgencyTimeTrackingStore;
+  return useAgencyTimeTrackingStore() as unknown as AgencyTimeTrackingStore;
 }
 
 beforeEach(() => {
@@ -291,6 +302,7 @@ describe("useAgencyTimeTrackingStore", () => {
     const runtime = getGlobalRuntime();
     const nextTag = createTag("tag-2", "Support");
     const existingTimer = createActiveTimer();
+    let startInput: Record<string, unknown> | undefined;
     const activeTimerQueryKey = ["agencyOps", "timer", "getActive", { teamId: "team-1" }];
     const logQueryKey = [
       "agencyOps",
@@ -303,13 +315,17 @@ describe("useAgencyTimeTrackingStore", () => {
       projectId: "project-2",
       projectName: "Next project",
       description: "Next task",
+      linkUrl: "https://brainiac.test/next-task",
       tags: [nextTag],
       startedAt: "2026-04-22T11:05:00.000Z",
       createdAt: "2026-04-22T11:05:00.000Z",
       updatedAt: "2026-04-22T11:05:00.000Z",
     });
     const store = await createStore({
-      start: async () => ({ timer: serverTimer }),
+      start: async (input) => {
+        startInput = input as Record<string, unknown>;
+        return { timer: serverTimer };
+      },
     });
 
     setCachedQuery(runtime.queryCache, activeTimerQueryKey, { timer: existingTimer });
@@ -325,6 +341,7 @@ describe("useAgencyTimeTrackingStore", () => {
         name: "Next project",
       },
       description: "Next task",
+      linkUrl: "brainiac.test/next-task",
       tagIds: [nextTag.id],
       selectedTags: [nextTag],
     });
@@ -338,8 +355,10 @@ describe("useAgencyTimeTrackingStore", () => {
     expect(cachedLog?.total).toBe(1);
     expect(cachedLog?.items[0]?.projectId).toBe(existingTimer.projectId);
     expect(cachedLog?.items[0]?.description).toBe(existingTimer.description);
+    expect(cachedLog?.items[0]?.linkUrl).toBe(existingTimer.linkUrl);
     expect(cachedTimer?.timer?.id).toBe(serverTimer.id);
     expect(cachedTimer?.timer?.projectId).toBe("project-2");
+    expect(startInput?.linkUrl).toBe("https://brainiac.test/next-task");
     expect(runtime.toastEvents.at(-1)?.title).toBe("Timer started");
   });
 
@@ -347,6 +366,7 @@ describe("useAgencyTimeTrackingStore", () => {
     const runtime = getGlobalRuntime();
     const activeTimer = createActiveTimer();
     const createdEntry = createTimeEntry();
+    let stopInput: Record<string, unknown> | undefined;
     const activeTimerQueryKey = ["agencyOps", "timer", "getActive", { teamId: "team-1" }];
     const logQueryKey = [
       "agencyOps",
@@ -355,7 +375,10 @@ describe("useAgencyTimeTrackingStore", () => {
       { teamId: "team-1", page: 1, pageSize: 25 },
     ];
     const store = await createStore({
-      stop: async () => ({ timer: null, createdEntry }),
+      stop: async (input) => {
+        stopInput = input as Record<string, unknown>;
+        return { timer: null, createdEntry };
+      },
     });
 
     setCachedQuery(runtime.queryCache, activeTimerQueryKey, { timer: activeTimer });
@@ -367,11 +390,13 @@ describe("useAgencyTimeTrackingStore", () => {
     store.setTrackerProjectId("team-1", activeTimer.projectId);
     store.setTrackerDescription("team-1", activeTimer.description);
     store.setTrackerSelectedTagIds("team-1", activeTimer.tags.map((tag) => tag.id));
+    store.setTrackerLinkUrl("team-1", "brainiac.test/stopped-entry");
 
     await store.stopTimer({
       teamId: "team-1",
       activeTimer,
       description: activeTimer.description,
+      linkUrl: "brainiac.test/stopped-entry",
       tagIds: activeTimer.tags.map((tag) => tag.id),
       selectedTags: activeTimer.tags,
     });
@@ -384,9 +409,12 @@ describe("useAgencyTimeTrackingStore", () => {
 
     expect(cachedLog?.total).toBe(1);
     expect(cachedLog?.items[0]?.description).toBe(activeTimer.description);
+    expect(cachedLog?.items[0]?.linkUrl).toBe("https://brainiac.test/stopped-entry");
     expect(cachedTimer?.timer).toBeNull();
     expect(store.draftByTeam.value["team-1"]?.description).toBe("");
     expect(store.draftByTeam.value["team-1"]?.selectedTagIds).toEqual([]);
+    expect(store.draftByTeam.value["team-1"]?.linkUrl).toBe("");
+    expect(stopInput?.linkUrl).toBe("https://brainiac.test/stopped-entry");
     expect(runtime.toastEvents.at(-1)?.title).toBe("Timer stopped");
   });
 
@@ -397,8 +425,10 @@ describe("useAgencyTimeTrackingStore", () => {
       projectId: "project-current",
       projectName: "Current project",
       description: "Current work",
+      linkUrl: "https://brainiac.test/current-work",
     });
     const nextTag = createTag("tag-2", "Support");
+    let startInput: Record<string, unknown> | undefined;
     const activeTimerQueryKey = ["agencyOps", "timer", "getActive", { teamId: "team-1" }];
     const logQueryKey = [
       "agencyOps",
@@ -411,10 +441,14 @@ describe("useAgencyTimeTrackingStore", () => {
       projectId: "project-2",
       projectName: "Recovery",
       description: "Handle inbox",
+      linkUrl: "https://brainiac.test/recovery",
       tags: [nextTag],
     });
     const store = await createStore({
-      start: async () => ({ timer: nextTimer }),
+      start: async (input) => {
+        startInput = input as Record<string, unknown>;
+        return { timer: nextTimer };
+      },
     });
 
     setCachedQuery(runtime.queryCache, activeTimerQueryKey, { timer: currentTimer });
@@ -430,6 +464,7 @@ describe("useAgencyTimeTrackingStore", () => {
         name: "Recovery",
       },
       description: "Handle inbox",
+      linkUrl: "brainiac.test/recovery",
       tags: [nextTag],
     });
 
@@ -440,8 +475,11 @@ describe("useAgencyTimeTrackingStore", () => {
     );
 
     expect(cachedLog?.items[0]?.projectId).toBe(currentTimer.projectId);
+    expect(cachedLog?.items[0]?.linkUrl).toBe(currentTimer.linkUrl);
     expect(cachedTimer?.timer?.projectId).toBe("project-2");
+    expect(cachedTimer?.timer?.linkUrl).toBe("https://brainiac.test/recovery");
     expect(cachedTimer?.timer?.tags.map((tag) => tag.id)).toEqual([nextTag.id]);
+    expect(startInput?.linkUrl).toBe("https://brainiac.test/recovery");
     expect(runtime.toastEvents.at(-1)?.description).toBe("Tracking Handle inbox.");
   });
 
