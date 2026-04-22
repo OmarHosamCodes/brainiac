@@ -10,6 +10,7 @@ import {
   workspaceAgencyTimeSummaryBlockSchema,
   workspaceAgencyTimeTrackerBlockSchema,
   workspaceAgencySettingsBlockSchema,
+  workspaceAgencyBillingReportBlockSchema,
   workspaceAiPromptBlockSchema,
   workspaceAssumptionTrackerBlockSchema,
   workspaceAuthorityScoreMetricKeySchema,
@@ -287,6 +288,7 @@ export type WorkspaceAgencyTimeEntriesLogBlock = z.infer<
 >;
 export type WorkspaceAgencyTimeSummaryBlock = z.infer<typeof workspaceAgencyTimeSummaryBlockSchema>;
 export type WorkspaceAgencySettingsBlock = z.infer<typeof workspaceAgencySettingsBlockSchema>;
+export type WorkspaceAgencyBillingReportBlock = z.infer<typeof workspaceAgencyBillingReportBlockSchema>;
 export type WorkspaceCourseRoadmapBlock = z.infer<typeof workspaceCourseRoadmapBlockSchema>;
 export type WorkspaceLearningOutcomesMatrixBlock = z.infer<
   typeof workspaceLearningOutcomesMatrixBlockSchema

@@ -48,6 +48,12 @@ export const workspaceBlockCategories = [
         label: "Agency settings",
         icon: "i-lucide-settings-2",
       },
+      {
+        blockType: "agency-billing-report",
+        label: "Agency billing report",
+        icon: "i-lucide-file-clock",
+        teamOnly: true,
+      },
     ],
   },
   {

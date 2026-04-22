@@ -1789,3 +1789,285 @@ export async function exportAgencyReportsCsv(
 		totalRows: records.length,
 	};
 }
+
+export async function listAllAgencyTimeEntries(
+	actorUserId: string,
+	input: {
+		teamId: string;
+		from: string;
+		to: string;
+		page?: number;
+		pageSize?: number;
+		clientId?: string;
+		projectId?: string;
+		memberUserId?: string;
+		tagIds?: string[];
+	},
+) {
+	await requireTeamMembership(actorUserId, input.teamId, "editor");
+
+	const from = parseIsoDateTime(input.from, "from");
+	const to = parseIsoDateTime(input.to, "to");
+
+	if (from > to) {
+		throw new ORPCError("BAD_REQUEST", {
+			message: "from must be before or equal to to.",
+		});
+	}
+
+	const page = Math.max(1, input.page ?? 1);
+	const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 25));
+	const offset = (page - 1) * pageSize;
+
+	const filters = [
+		eq(agencyOpsTimeEntry.teamId, input.teamId),
+		isNull(agencyOpsTimeEntry.deletedAt),
+		gte(agencyOpsTimeEntry.startedAt, from),
+		lte(agencyOpsTimeEntry.startedAt, to),
+	];
+
+	if (input.clientId) {
+		filters.push(eq(agencyOpsProject.clientId, input.clientId));
+	}
+
+	if (input.projectId) {
+		filters.push(eq(agencyOpsProject.id, input.projectId));
+	}
+
+	if (input.memberUserId) {
+		filters.push(eq(agencyOpsTimeEntry.userId, input.memberUserId));
+	}
+
+	const rows = await db
+		.select({
+			id: agencyOpsTimeEntry.id,
+			teamId: agencyOpsTimeEntry.teamId,
+			userId: agencyOpsTimeEntry.userId,
+			userName: user.name,
+			projectId: agencyOpsTimeEntry.projectId,
+			projectName: agencyOpsProject.name,
+			clientId: agencyOpsClient.id,
+			clientName: agencyOpsClient.name,
+			source: agencyOpsTimeEntry.source,
+			description: agencyOpsTimeEntry.description,
+			startedAt: agencyOpsTimeEntry.startedAt,
+			endedAt: agencyOpsTimeEntry.endedAt,
+			durationSeconds: agencyOpsTimeEntry.durationSeconds,
+			createdAt: agencyOpsTimeEntry.createdAt,
+			updatedAt: agencyOpsTimeEntry.updatedAt,
+		})
+		.from(agencyOpsTimeEntry)
+		.innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+		.innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+		.leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+		.where(and(...filters))
+		.orderBy(desc(agencyOpsTimeEntry.startedAt))
+		.limit(pageSize)
+		.offset(offset);
+
+	// Filter by tagIds if provided (post-query, since tags are in a join table)
+	const tagFilter = input.tagIds && input.tagIds.length > 0 ? new Set(input.tagIds) : null;
+
+	const entriesWithTags = await Promise.all(
+		rows.map(async (row) => {
+			const tags = await db
+				.select({
+					id: agencyOpsTag.id,
+					teamId: agencyOpsTag.teamId,
+					name: agencyOpsTag.name,
+					createdAt: agencyOpsTag.createdAt,
+					updatedAt: agencyOpsTag.updatedAt,
+				})
+				.from(agencyOpsTimeEntryTag)
+				.innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
+				.where(eq(agencyOpsTimeEntryTag.timeEntryId, row.id));
+
+			return {
+				id: row.id,
+				teamId: row.teamId,
+				userId: row.userId,
+				userName: row.userName ?? "Unknown",
+				projectId: row.projectId,
+				projectName: row.projectName,
+				clientId: row.clientId,
+				clientName: row.clientName,
+				tags: tags.map(mapTagRow),
+				source: row.source,
+				description: row.description,
+				startedAt: row.startedAt.toISOString(),
+				endedAt: row.endedAt.toISOString(),
+				durationSeconds: row.durationSeconds,
+				createdAt: row.createdAt.toISOString(),
+				updatedAt: row.updatedAt.toISOString(),
+			} satisfies AgencyTimeEntryRecord;
+		}),
+	);
+
+	const filteredEntries = tagFilter
+		? entriesWithTags.filter((e) => e.tags.some((t) => tagFilter.has(t.id)))
+		: entriesWithTags;
+
+	const [countRow] = await db
+		.select({ count: sql<number>`count(*)` })
+		.from(agencyOpsTimeEntry)
+		.innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+		.innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+		.where(and(...filters));
+
+	const parsedTotal = Number(countRow?.count ?? 0);
+	const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
+
+	return {
+		items: filteredEntries,
+		page,
+		pageSize,
+		total,
+	};
+}
+
+export async function updateAnyAgencyTimeEntry(
+	actorUserId: string,
+	input: {
+		teamId: string;
+		entryId: string;
+		startAt?: string;
+		endAt?: string;
+		description?: string;
+		projectId?: string;
+		tagIds?: string[];
+	},
+) {
+	await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+	const [current] = await db
+		.select({
+			startedAt: agencyOpsTimeEntry.startedAt,
+			endedAt: agencyOpsTimeEntry.endedAt,
+		})
+		.from(agencyOpsTimeEntry)
+		.where(
+			and(
+				eq(agencyOpsTimeEntry.id, input.entryId),
+				eq(agencyOpsTimeEntry.teamId, input.teamId),
+				isNull(agencyOpsTimeEntry.deletedAt),
+			),
+		)
+		.limit(1);
+
+	if (!current) {
+		throw new ORPCError("NOT_FOUND");
+	}
+
+	const nextStartedAt = input.startAt
+		? parseIsoDateTime(input.startAt, "startAt")
+		: current.startedAt;
+	const nextEndedAt = input.endAt
+		? parseIsoDateTime(input.endAt, "endAt")
+		: current.endedAt;
+	validateDateRange(nextStartedAt, nextEndedAt);
+
+	const now = new Date();
+	const durationSeconds = getDurationSeconds(nextStartedAt, nextEndedAt);
+
+	const [updated] = await db.transaction(async (tx) => {
+		const [timeEntry] = await tx
+			.update(agencyOpsTimeEntry)
+			.set({
+				...(input.projectId ? { projectId: input.projectId } : {}),
+				startedAt: nextStartedAt,
+				endedAt: nextEndedAt,
+				durationSeconds,
+				description: input.description?.trim(),
+				updatedAt: now,
+			})
+			.where(
+				and(
+					eq(agencyOpsTimeEntry.id, input.entryId),
+					eq(agencyOpsTimeEntry.teamId, input.teamId),
+					isNull(agencyOpsTimeEntry.deletedAt),
+				),
+			)
+			.returning({ id: agencyOpsTimeEntry.id });
+
+		if (input.tagIds !== undefined && timeEntry) {
+			await tx
+				.delete(agencyOpsTimeEntryTag)
+				.where(eq(agencyOpsTimeEntryTag.timeEntryId, timeEntry.id));
+
+			if (input.tagIds.length > 0) {
+				await tx.insert(agencyOpsTimeEntryTag).values(
+					input.tagIds.map((tagId) => ({
+						timeEntryId: timeEntry.id,
+						tagId,
+					})),
+				);
+			}
+		}
+
+		return [timeEntry];
+	});
+
+	if (!updated) {
+		throw new ORPCError("NOT_FOUND");
+	}
+
+	const [row] = await db
+		.select({
+			id: agencyOpsTimeEntry.id,
+			teamId: agencyOpsTimeEntry.teamId,
+			userId: agencyOpsTimeEntry.userId,
+			userName: user.name,
+			projectId: agencyOpsTimeEntry.projectId,
+			projectName: agencyOpsProject.name,
+			clientId: agencyOpsClient.id,
+			clientName: agencyOpsClient.name,
+			source: agencyOpsTimeEntry.source,
+			description: agencyOpsTimeEntry.description,
+			startedAt: agencyOpsTimeEntry.startedAt,
+			endedAt: agencyOpsTimeEntry.endedAt,
+			durationSeconds: agencyOpsTimeEntry.durationSeconds,
+			createdAt: agencyOpsTimeEntry.createdAt,
+			updatedAt: agencyOpsTimeEntry.updatedAt,
+		})
+		.from(agencyOpsTimeEntry)
+		.innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+		.innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+		.leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+		.where(eq(agencyOpsTimeEntry.id, updated.id))
+		.limit(1);
+
+	if (!row) {
+		throw new ORPCError("NOT_FOUND");
+	}
+
+	const tags = await db
+		.select({
+			id: agencyOpsTag.id,
+			teamId: agencyOpsTag.teamId,
+			name: agencyOpsTag.name,
+			createdAt: agencyOpsTag.createdAt,
+			updatedAt: agencyOpsTag.updatedAt,
+		})
+		.from(agencyOpsTimeEntryTag)
+		.innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
+		.where(eq(agencyOpsTimeEntryTag.timeEntryId, updated.id));
+
+	return {
+		id: row.id,
+		teamId: row.teamId,
+		userId: row.userId,
+		userName: row.userName ?? "Unknown",
+		projectId: row.projectId,
+		projectName: row.projectName,
+		clientId: row.clientId,
+		clientName: row.clientName,
+		tags: tags.map(mapTagRow),
+		source: row.source,
+		description: row.description,
+		startedAt: row.startedAt.toISOString(),
+		endedAt: row.endedAt.toISOString(),
+		durationSeconds: row.durationSeconds,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
+	} satisfies AgencyTimeEntryRecord;
+}

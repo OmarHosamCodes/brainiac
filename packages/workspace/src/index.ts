@@ -16,6 +16,7 @@ import {
   workspaceAgencyTimeSummaryBlockSchema,
   workspaceAgencyTimeTrackerBlockSchema,
   workspaceAgencySettingsBlockSchema,
+  workspaceAgencyBillingReportBlockSchema,
   workspaceAiPromptBlockSchema,
   workspaceAssumptionTrackerBlockSchema,
   workspaceAuthorityScoreMetricsSchema,
@@ -118,6 +119,7 @@ import type {
   WorkspaceAgencyTimeSummaryBlock,
   WorkspaceAgencyTimeTrackerBlock,
   WorkspaceAgencySettingsBlock,
+  WorkspaceAgencyBillingReportBlock,
   WorkspaceAiPromptBlock,
   WorkspaceAssumptionTrackerBlock,
   WorkspaceAuthorityScoreMetrics,
@@ -2372,6 +2374,29 @@ export function createWorkspaceAgencySettingsBlock(
   });
 }
 
+export function createWorkspaceAgencyBillingReportBlock(
+  partial: Partial<WorkspaceAgencyBillingReportBlock> = {},
+): WorkspaceAgencyBillingReportBlock {
+  const timestamp = getNowIsoString();
+
+  return workspaceAgencyBillingReportBlockSchema.parse({
+    id: partial.id ?? createWorkspaceId("block"),
+    type: "agency-billing-report",
+    title: partial.title ?? "Agency billing report",
+    teamId: partial.teamId ?? null,
+    periodOffset: partial.periodOffset ?? 0,
+    billingPeriodStartDay: partial.billingPeriodStartDay ?? 1,
+    billingPeriodEndDay: partial.billingPeriodEndDay ?? 28,
+    reviewedEntryIds: partial.reviewedEntryIds ?? [],
+    pageSize: partial.pageSize ?? 25,
+    selectedClientId: partial.selectedClientId ?? null,
+    selectedProjectId: partial.selectedProjectId ?? null,
+    selectedMemberUserId: partial.selectedMemberUserId ?? null,
+    createdAt: partial.createdAt ?? timestamp,
+    updatedAt: partial.updatedAt ?? timestamp,
+  });
+}
+
 export function createAgencyOperatorNodeTabs(teamId: string | null = null) {
   const overviewTab = createWorkspaceNodeTab({
     title: "Overview",
@@ -2961,6 +2986,19 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         selectedProjectId: block.selectedProjectId ?? null,
         selectedMemberUserId: block.selectedMemberUserId ?? null,
         selectedTagIds: block.selectedTagIds ?? [],
+      });
+    case "agency-billing-report":
+      return workspaceAgencyBillingReportBlockSchema.parse({
+        ...block,
+        teamId: block.teamId ?? null,
+        periodOffset: block.periodOffset ?? 0,
+        billingPeriodStartDay: block.billingPeriodStartDay ?? 1,
+        billingPeriodEndDay: block.billingPeriodEndDay ?? 28,
+        reviewedEntryIds: block.reviewedEntryIds ?? [],
+        pageSize: block.pageSize ?? 25,
+        selectedClientId: block.selectedClientId ?? null,
+        selectedProjectId: block.selectedProjectId ?? null,
+        selectedMemberUserId: block.selectedMemberUserId ?? null,
       });
     case "agency-settings":
       return workspaceAgencySettingsBlockSchema.parse({
@@ -3695,6 +3733,13 @@ export function cloneWorkspaceBlockForInsertion(
       });
     case "agency-time-summary":
       return workspaceAgencyTimeSummaryBlockSchema.parse({
+        ...block,
+        id: createWorkspaceId("block"),
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+    case "agency-billing-report":
+      return workspaceAgencyBillingReportBlockSchema.parse({
         ...block,
         id: createWorkspaceId("block"),
         createdAt: timestamp,

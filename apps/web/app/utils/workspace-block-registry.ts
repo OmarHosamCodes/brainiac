@@ -2,6 +2,7 @@ import type { WorkspaceBlock } from "@brainiac/workspace";
 import type { Component } from "vue";
 
 import Workspace2x2MatrixBlockEditor from "~/components/workspace/node/blocks/Workspace2x2MatrixBlockEditor.vue";
+import WorkspaceAgencyBillingReportBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyBillingReportBlockEditor.vue";
 import WorkspaceAgencyProjectManagerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyProjectManagerBlockEditor.vue";
 import WorkspaceAgencySettingsBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencySettingsBlockEditor.vue";
 import WorkspaceAgencyTimeEntriesLogBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeEntriesLogBlockEditor.vue";
@@ -326,6 +327,12 @@ export const workspaceBlockRegistry = {
      component: WorkspaceAgencyTimeSummaryBlockEditor,
      label: "Agency time summary",
      icon: "i-lucide-chart-pie",
+     addGroup: "secondary",
+   },
+   "agency-billing-report": {
+     component: WorkspaceAgencyBillingReportBlockEditor,
+     label: "Agency billing report",
+     icon: "i-lucide-receipt",
      addGroup: "secondary",
    },
    "agency-settings": {

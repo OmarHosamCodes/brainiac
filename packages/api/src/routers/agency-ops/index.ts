@@ -14,12 +14,14 @@ import {
     getAgencyTimeSummary,
     listAgencyClients,
     listAgencyProjects,
+    listAllAgencyTimeEntries,
     listMyAgencyTimeEntries,
     listTags,
     startAgencyTimer,
     stopAgencyTimer,
     updateAgencyClient,
     updateAgencyProject,
+    updateAnyAgencyTimeEntry,
     updateMyAgencyTimeEntry,
 } from "./service";
 
@@ -373,5 +375,38 @@ export const agencyOpsRouter = {
                 })
                 .parse(await exportAgencyReportsCsv(context.session.user.id, input));
         }),
+        listEntries: protectedProProcedure
+            .input(
+                reportsInputSchema.extend({
+                    page: z.number().int().min(1).optional(),
+                    pageSize: z.number().int().min(1).max(100).optional(),
+                }),
+            )
+            .handler(async ({ context, input }) => {
+                return z
+                    .object({
+                        items: z.array(agencyTimeEntrySchema),
+                        page: z.number().int().min(1),
+                        pageSize: z.number().int().min(1),
+                        total: z.number().int().nonnegative(),
+                    })
+                    .parse(await listAllAgencyTimeEntries(context.session.user.id, input));
+            }),
+        updateEntry: protectedProProcedure
+            .input(
+                teamScopedInputSchema.extend({
+                    entryId: z.string().min(1),
+                    startAt: z.string().datetime().optional(),
+                    endAt: z.string().datetime().optional(),
+                    description: z.string().max(2_000).optional(),
+                    projectId: z.string().min(1).optional(),
+                    tagIds: z.array(z.string().min(1)).optional(),
+                }),
+            )
+            .handler(async ({ context, input }) => {
+                return agencyTimeEntrySchema.parse(
+                    await updateAnyAgencyTimeEntry(context.session.user.id, input),
+                );
+            }),
     },
 };

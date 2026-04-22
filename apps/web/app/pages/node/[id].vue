@@ -4,6 +4,7 @@ import {
     AGENCY_OPERATOR_PREDEFINED_TAB_TITLES,
     createDefaultWorkspaceTab,
     createWorkspace2x2MatrixBlock,
+    createWorkspaceAgencyBillingReportBlock,
     createWorkspaceAgencyProjectManagerBlock,
     createWorkspaceAgencySettingsBlock,
     createWorkspaceAgencyTimeEntriesLogBlock,
@@ -736,6 +737,11 @@ function addBlockToActiveTab(type: WorkspaceBlock["type"]) {
             break;
         case "agency-time-summary":
             nextBlock = createWorkspaceAgencyTimeSummaryBlock({
+                teamId: preferredAgencyTeamId,
+            });
+            break;
+        case "agency-billing-report":
+            nextBlock = createWorkspaceAgencyBillingReportBlock({
                 teamId: preferredAgencyTeamId,
             });
             break;
