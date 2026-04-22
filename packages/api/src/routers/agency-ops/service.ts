@@ -158,10 +158,6 @@ function getDurationSeconds(startedAt: Date, endedAt: Date) {
 	return Math.max(1, Math.floor((endedAt.getTime() - startedAt.getTime()) / 1_000));
 }
 
-function toIso(value: Date | null | undefined) {
-	return value ? value.toISOString() : null;
-}
-
 function getWeekStartUtc(anchor: Date) {
 	const utcDay = anchor.getUTCDay();
 	const diff = utcDay === 0 ? -6 : 1 - utcDay;
@@ -288,7 +284,7 @@ async function getActiveTimerByUser(userId: string) {
 		})
 		.from(agencyOpsActiveTimerTag)
 		.innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsActiveTimerTag.tagId))
-		.where(eq(agencyOpsActiveTimerTag.timerItemId, timer.id));
+		.where(eq(agencyOpsActiveTimerTag.activeTimerId, timer.id));
 
 	return {
 		id: timer.id,
@@ -842,15 +838,13 @@ export async function startAgencyTimer(
 				const existingTags = await tx
 					.select({ tagId: agencyOpsActiveTimerTag.tagId })
 					.from(agencyOpsActiveTimerTag)
-					.where(eq(agencyOpsActiveTimerTag.timerItemId, existing.id));
+					.where(eq(agencyOpsActiveTimerTag.activeTimerId, existing.id));
 
 				if (existingTags.length > 0) {
 					await tx.insert(agencyOpsTimeEntryTag).values(
 						existingTags.map((tag) => ({
-							id: createWorkspaceId("agency-entry-tag"),
 							timeEntryId: timeEntry.id,
 							tagId: tag.tagId,
-							createdAt: now,
 						})),
 					);
 				}
@@ -878,10 +872,8 @@ export async function startAgencyTimer(
 		if (newTimer && input.tagIds && input.tagIds.length > 0) {
 			await tx.insert(agencyOpsActiveTimerTag).values(
 				input.tagIds.map((tagId) => ({
-					id: createWorkspaceId("agency-timer-tag"),
-					timerItemId: newTimer.id,
+					activeTimerId: newTimer.id,
 					tagId,
-					createdAt: now,
 				})),
 			);
 		}
@@ -961,7 +953,7 @@ export async function stopAgencyTimer(
 				const existingTags = await tx
 					.select({ tagId: agencyOpsActiveTimerTag.tagId })
 					.from(agencyOpsActiveTimerTag)
-					.where(eq(agencyOpsActiveTimerTag.timerItemId, active.id));
+					.where(eq(agencyOpsActiveTimerTag.activeTimerId, active.id));
 
 				tagsToInsert = existingTags;
 			}
@@ -969,10 +961,8 @@ export async function stopAgencyTimer(
 			if (tagsToInsert.length > 0) {
 				await tx.insert(agencyOpsTimeEntryTag).values(
 					tagsToInsert.map((tag) => ({
-						id: createWorkspaceId("agency-entry-tag"),
 						timeEntryId: created.id,
 						tagId: tag.tagId,
-						createdAt: now,
 					})),
 				);
 			}
@@ -1242,10 +1232,8 @@ export async function createManualAgencyTimeEntry(
 		if (timeEntry && input.tagIds && input.tagIds.length > 0) {
 			await tx.insert(agencyOpsTimeEntryTag).values(
 				input.tagIds.map((tagId) => ({
-					id: createWorkspaceId("agency-entry-tag"),
 					timeEntryId: timeEntry.id,
 					tagId,
-					createdAt: now,
 				})),
 			);
 		}
@@ -1302,7 +1290,7 @@ export async function createManualAgencyTimeEntry(
 		id: row.id,
 		teamId: row.teamId,
 		userId: row.userId,
-		userName: row.userName,
+		userName: row.userName ?? "Unknown",
 		projectId: row.projectId,
 		projectName: row.projectName,
 		clientId: row.clientId,
@@ -1390,10 +1378,8 @@ export async function updateMyAgencyTimeEntry(
 			if (input.tagIds.length > 0) {
 				await tx.insert(agencyOpsTimeEntryTag).values(
 					input.tagIds.map((tagId) => ({
-						id: createWorkspaceId("agency-entry-tag"),
 						timeEntryId: timeEntry.id,
 						tagId,
-						createdAt: now,
 					})),
 				);
 			}

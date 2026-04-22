@@ -12,9 +12,8 @@ import {
   workspace2x2MatrixQuadrantSchema,
   workspace2x2MatrixQuadrantsSchema,
   workspaceAgencyProjectManagerBlockSchema,
-  workspaceAgencySprintBoardBlockSchema,
   workspaceAgencyTimeEntriesLogBlockSchema,
-  workspaceAgencyTimeReportsBlockSchema,
+  workspaceAgencyTimeSummaryBlockSchema,
   workspaceAgencyTimeTrackerBlockSchema,
   workspaceAgencySettingsBlockSchema,
   workspaceAiPromptBlockSchema,
@@ -115,9 +114,8 @@ import type {
   Workspace2x2MatrixQuadrant,
   Workspace2x2MatrixQuadrants,
   WorkspaceAgencyProjectManagerBlock,
-  WorkspaceAgencySprintBoardBlock,
   WorkspaceAgencyTimeEntriesLogBlock,
-  WorkspaceAgencyTimeReportsBlock,
+  WorkspaceAgencyTimeSummaryBlock,
   WorkspaceAgencyTimeTrackerBlock,
   WorkspaceAgencySettingsBlock,
   WorkspaceAiPromptBlock,
@@ -2294,9 +2292,6 @@ export function createWorkspaceAgencyProjectManagerBlock(
     type: "agency-project-manager",
     title: partial.title ?? "Agency project manager",
     teamId: partial.teamId ?? null,
-    selectedClientId: partial.selectedClientId ?? null,
-    showArchivedClients: partial.showArchivedClients ?? false,
-    showArchivedProjects: partial.showArchivedProjects ?? false,
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
   });
@@ -2312,7 +2307,7 @@ export function createWorkspaceAgencyTimeTrackerBlock(
     type: "agency-time-tracker",
     title: partial.title ?? "Agency time tracker",
     teamId: partial.teamId ?? null,
-    showRecentEntries: partial.showRecentEntries ?? true,
+    selectedTagIds: partial.selectedTagIds ?? [],
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
   });
@@ -2329,37 +2324,24 @@ export function createWorkspaceAgencyTimeEntriesLogBlock(
     title: partial.title ?? "Agency time entries log",
     teamId: partial.teamId ?? null,
     pageSize: partial.pageSize ?? 25,
+    selectedClientId: partial.selectedClientId ?? null,
+    selectedProjectId: partial.selectedProjectId ?? null,
+    selectedMemberUserId: partial.selectedMemberUserId ?? null,
+    selectedTagIds: partial.selectedTagIds ?? [],
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
   });
 }
 
-export function createWorkspaceAgencySprintBoardBlock(
-  partial: Partial<WorkspaceAgencySprintBoardBlock> = {},
-): WorkspaceAgencySprintBoardBlock {
+export function createWorkspaceAgencyTimeSummaryBlock(
+  partial: Partial<WorkspaceAgencyTimeSummaryBlock> = {},
+): WorkspaceAgencyTimeSummaryBlock {
   const timestamp = getNowIsoString();
 
-  return workspaceAgencySprintBoardBlockSchema.parse({
+  return workspaceAgencyTimeSummaryBlockSchema.parse({
     id: partial.id ?? createWorkspaceId("block"),
-    type: "agency-sprint-board",
-    title: partial.title ?? "Agency sprint board",
-    teamId: partial.teamId ?? null,
-    activeSprintId: partial.activeSprintId ?? null,
-    showCompletedItems: partial.showCompletedItems ?? true,
-    createdAt: partial.createdAt ?? timestamp,
-    updatedAt: partial.updatedAt ?? timestamp,
-  });
-}
-
-export function createWorkspaceAgencyTimeReportsBlock(
-  partial: Partial<WorkspaceAgencyTimeReportsBlock> = {},
-): WorkspaceAgencyTimeReportsBlock {
-  const timestamp = getNowIsoString();
-
-  return workspaceAgencyTimeReportsBlockSchema.parse({
-    id: partial.id ?? createWorkspaceId("block"),
-    type: "agency-time-reports",
-    title: partial.title ?? "Agency time reports",
+    type: "agency-time-summary",
+    title: partial.title ?? "Agency time summary",
     teamId: partial.teamId ?? null,
     datePreset: partial.datePreset ?? "this-week",
     fromDate: partial.fromDate ?? null,
@@ -2367,6 +2349,7 @@ export function createWorkspaceAgencyTimeReportsBlock(
     selectedClientId: partial.selectedClientId ?? null,
     selectedProjectId: partial.selectedProjectId ?? null,
     selectedMemberUserId: partial.selectedMemberUserId ?? null,
+    selectedTagIds: partial.selectedTagIds ?? [],
     createdAt: partial.createdAt ?? timestamp,
     updatedAt: partial.updatedAt ?? timestamp,
   });
@@ -2397,7 +2380,7 @@ export function createAgencyOperatorNodeTabs(teamId: string | null = null) {
 
   const teamTab = createWorkspaceNodeTab({
     title: "Team",
-    blocks: [createWorkspaceAgencyTimeReportsBlock({ teamId })],
+    blocks: [createWorkspaceAgencyTimeSummaryBlock({ teamId })],
   });
 
   const settingsTab = createWorkspaceNodeTab({
@@ -2947,31 +2930,25 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
       return workspaceAgencyProjectManagerBlockSchema.parse({
         ...block,
         teamId: block.teamId ?? null,
-        selectedClientId: block.selectedClientId ?? null,
-        showArchivedClients: block.showArchivedClients ?? false,
-        showArchivedProjects: block.showArchivedProjects ?? false,
       });
     case "agency-time-tracker":
       return workspaceAgencyTimeTrackerBlockSchema.parse({
         ...block,
         teamId: block.teamId ?? null,
-        showRecentEntries: block.showRecentEntries ?? true,
+        selectedTagIds: block.selectedTagIds ?? [],
       });
     case "agency-time-entries-log":
       return workspaceAgencyTimeEntriesLogBlockSchema.parse({
         ...block,
         teamId: block.teamId ?? null,
         pageSize: block.pageSize ?? 25,
+        selectedClientId: block.selectedClientId ?? null,
+        selectedProjectId: block.selectedProjectId ?? null,
+        selectedMemberUserId: block.selectedMemberUserId ?? null,
+        selectedTagIds: block.selectedTagIds ?? [],
       });
-    case "agency-sprint-board":
-      return workspaceAgencySprintBoardBlockSchema.parse({
-        ...block,
-        teamId: block.teamId ?? null,
-        activeSprintId: block.activeSprintId ?? null,
-        showCompletedItems: block.showCompletedItems ?? true,
-      });
-    case "agency-time-reports":
-      return workspaceAgencyTimeReportsBlockSchema.parse({
+    case "agency-time-summary":
+      return workspaceAgencyTimeSummaryBlockSchema.parse({
         ...block,
         teamId: block.teamId ?? null,
         datePreset: block.datePreset ?? "this-week",
@@ -2980,6 +2957,7 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         selectedClientId: block.selectedClientId ?? null,
         selectedProjectId: block.selectedProjectId ?? null,
         selectedMemberUserId: block.selectedMemberUserId ?? null,
+        selectedTagIds: block.selectedTagIds ?? [],
       });
     case "agency-settings":
       return workspaceAgencySettingsBlockSchema.parse({
@@ -3712,15 +3690,8 @@ export function cloneWorkspaceBlockForInsertion(
         createdAt: timestamp,
         updatedAt: timestamp,
       });
-    case "agency-sprint-board":
-      return workspaceAgencySprintBoardBlockSchema.parse({
-        ...block,
-        id: createWorkspaceId("block"),
-        createdAt: timestamp,
-        updatedAt: timestamp,
-      });
-    case "agency-time-reports":
-      return workspaceAgencyTimeReportsBlockSchema.parse({
+    case "agency-time-summary":
+      return workspaceAgencyTimeSummaryBlockSchema.parse({
         ...block,
         id: createWorkspaceId("block"),
         createdAt: timestamp,

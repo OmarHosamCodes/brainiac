@@ -1,5 +1,4 @@
 import { stepCountIs } from "@openrouter/sdk/lib/stop-conditions";
-import type { OpenResponsesUsage } from "@openrouter/sdk/models";
 
 import { createOpenRouterClient } from "./client";
 import { resolveOpenRouterModel } from "./models";
@@ -19,6 +18,19 @@ import {
   type DashboardAgentWorkspaceContext,
   type DashboardConversationUsageLatest,
 } from "./types";
+
+type OpenRouterUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cost?: number | null;
+  inputTokensDetails?: {
+    cachedTokens?: number | null;
+  } | null;
+  outputTokensDetails?: {
+    reasoningTokens?: number | null;
+  } | null;
+};
 
 function getScopedWorkspaceNodes(workspace: DashboardAgentWorkspaceContext) {
   if (workspace.scopeNodes && workspace.scopeNodes.length > 0) {
@@ -360,7 +372,7 @@ async function runToolEnabledPass(args: {
 }
 
 function normalizeUsage(
-  usage: OpenResponsesUsage | null | undefined,
+  usage: OpenRouterUsage | null | undefined,
   modelId: string,
   contextLength: number | null,
 ): DashboardConversationUsageLatest | null {
@@ -372,9 +384,9 @@ function normalizeUsage(
     modelId,
     contextLength,
     inputTokens: usage.inputTokens,
-    cachedTokens: usage.inputTokensDetails.cachedTokens ?? 0,
+    cachedTokens: usage.inputTokensDetails?.cachedTokens ?? 0,
     outputTokens: usage.outputTokens,
-    reasoningTokens: usage.outputTokensDetails.reasoningTokens ?? 0,
+    reasoningTokens: usage.outputTokensDetails?.reasoningTokens ?? 0,
     totalTokens: usage.totalTokens,
     costUsd: usage.cost ?? null,
   };
@@ -505,4 +517,3 @@ export async function runDashboardAgent(
 
 export * from "./models";
 export * from "./types";
-

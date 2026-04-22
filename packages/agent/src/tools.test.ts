@@ -74,8 +74,8 @@ const allSupportedBlockTypes = [
   "agency-project-manager",
   "agency-time-tracker",
   "agency-time-entries-log",
-  "agency-sprint-board",
-  "agency-time-reports",
+  "agency-time-summary",
+  "agency-settings",
   "custom",
 ] as const;
 

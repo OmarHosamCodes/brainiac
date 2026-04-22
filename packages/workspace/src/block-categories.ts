@@ -39,13 +39,8 @@ export const workspaceBlockCategories = [
         icon: "i-lucide-logs",
       },
       {
-        blockType: "agency-sprint-board",
-        label: "Agency sprint board",
-        icon: "i-lucide-layout-panel-top",
-      },
-      {
-        blockType: "agency-time-reports",
-        label: "Agency time reports",
+        blockType: "agency-time-summary",
+        label: "Agency time summary",
         icon: "i-lucide-chart-pie",
       },
       {
