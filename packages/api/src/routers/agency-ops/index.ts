@@ -47,6 +47,14 @@ const agencyProjectSchema = z.object({
     updatedAt: z.string().datetime(),
 });
 
+const agencyTagSchema = z.object({
+    id: z.string().min(1),
+    teamId: z.string().min(1),
+    name: z.string().min(1),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+});
+
 const agencyTimeEntrySchema = z.object({
     id: z.string().min(1),
     teamId: z.string().min(1),
@@ -56,6 +64,7 @@ const agencyTimeEntrySchema = z.object({
     projectName: z.string().min(1),
     clientId: z.string().min(1),
     clientName: z.string().min(1),
+    tags: z.array(agencyTagSchema),
     source: agencyTimeEntrySourceSchema,
     description: z.string(),
     startedAt: z.string().datetime(),
@@ -73,14 +82,6 @@ const agencyActiveTimerSchema = z.object({
     projectName: z.string().min(1),
     description: z.string(),
     startedAt: z.string().datetime(),
-    createdAt: z.string().datetime(),
-    updatedAt: z.string().datetime(),
-});
-
-const agencyTagSchema = z.object({
-    id: z.string().min(1),
-    teamId: z.string().min(1),
-    name: z.string().min(1),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
 });
