@@ -320,7 +320,7 @@ async function discardTimer() {
                 :disabled="trackerBusy || !effectiveTeamId"
             />
 
-            <USelect
+            <USelectMenu
                 v-model="selectedProjectId"
                 :items="
                     projects.map((project) => ({
@@ -331,6 +331,8 @@ async function discardTimer() {
                 :placeholder="!effectiveTeamId ? 'Team first' : 'Project'"
                 size="sm"
                 class="w-40 shrink-0"
+                searchable
+                value-key="value"
                 :disabled="!effectiveTeamId || projectsQuery.isPending.value"
             />
 
