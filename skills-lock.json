@@ -60,6 +60,51 @@
       "source": "vuejs-ai/skills",
       "sourceType": "github",
       "computedHash": "d4ba913bec21910b8e37b2115cd964df2dc43ad62346b981c7b88d4ddc8cf792"
+    },
+    "wiki-export": {
+      "source": "ar9av/obsidian-wiki",
+      "sourceType": "github",
+      "computedHash": "4b26018ff2ba71290c52e42ade0bcd8fe9bc08ea2ffa8a15bbf2200bcdf0e1f1"
+    },
+    "wiki-history-ingest": {
+      "source": "ar9av/obsidian-wiki",
+      "sourceType": "github",
+      "computedHash": "f478e4a1bd78db091ac26aa8ccf17b923e30f2483a11e83f6637f02487d0fa0e"
+    },
+    "wiki-ingest": {
+      "source": "ar9av/obsidian-wiki",
+      "sourceType": "github",
+      "computedHash": "bb41f3dc3d52f6c2e6dba196bab044f5bca22d1c047aa3f05a9471ad324e07ad"
+    },
+    "wiki-lint": {
+      "source": "ar9av/obsidian-wiki",
+      "sourceType": "github",
+      "computedHash": "b51cb3e064aace5eae6f9ac34c1a2f75dda1f77f87f7c758c4e503612bab6c75"
+    },
+    "wiki-query": {
+      "source": "ar9av/obsidian-wiki",
+      "sourceType": "github",
+      "computedHash": "e4f1484ae5cde1bf8b3dec98d1b1f21d7f3b66c26ec02048cda1f0f248e848ff"
+    },
+    "wiki-rebuild": {
+      "source": "ar9av/obsidian-wiki",
+      "sourceType": "github",
+      "computedHash": "05509c18c539777a483a7ae698954f0bdc609859449f59882b77474676a89a3e"
+    },
+    "wiki-setup": {
+      "source": "ar9av/obsidian-wiki",
+      "sourceType": "github",
+      "computedHash": "2823054f5ffb013047d9f9c037df1a13104159afe039c87d9fbf0208c109edbb"
+    },
+    "wiki-status": {
+      "source": "ar9av/obsidian-wiki",
+      "sourceType": "github",
+      "computedHash": "fbcad5a1492dcc2071d5029a97ec0ce3ddbf6aebcf4db351ae5239ac53ae31e5"
+    },
+    "wiki-update": {
+      "source": "ar9av/obsidian-wiki",
+      "sourceType": "github",
+      "computedHash": "afaf74299c76b5974c938e21e895d00ceac7320b8a4d4078f50acf0aa3b538ef"
     }
   }
 }

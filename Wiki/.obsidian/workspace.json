@@ -18,22 +18,6 @@
             }
           }
         ]
-      },
-      {
-        "id": "ea7e2655c5df3bbd",
-        "type": "tabs",
-        "children": [
-          {
-            "id": "085c6f2c1b231b7a",
-            "type": "leaf",
-            "state": {
-              "type": "graph",
-              "state": {},
-              "icon": "lucide-git-fork",
-              "title": "Graph view"
-            }
-          }
-        ]
       }
     ],
     "direction": "vertical"
@@ -53,7 +37,7 @@
               "type": "file-explorer",
               "state": {
                 "sortOrder": "alphabetical",
-                "autoReveal": false
+                "autoReveal": true
               },
               "icon": "lucide-folder-closed",
               "title": "Files"
@@ -106,6 +90,7 @@
             "state": {
               "type": "backlink",
               "state": {
+                "file": "index.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -115,7 +100,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks"
+              "title": "Backlinks for index"
             }
           },
           {
@@ -124,11 +109,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
+                "file": "index.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links"
+              "title": "Outgoing links from index"
             }
           },
           {
@@ -166,13 +152,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "Welcome.md",
+                "file": "index.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of Welcome"
+              "title": "Outline of index"
             }
           }
         ]
@@ -195,7 +181,18 @@
   },
   "active": "2cbb94f61bf924b0",
   "lastOpenFiles": [
-    "create a link.md",
-    "Welcome.md"
+    "log.md",
+    "Welcome.md",
+    "index.md",
+    "_raw",
+    "_archives",
+    "projects",
+    "journal",
+    "synthesis",
+    "references",
+    "skills",
+    "entities",
+    "concepts",
+    "create a link.md"
   ]
 }
