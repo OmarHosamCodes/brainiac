@@ -12,6 +12,7 @@ export default defineNuxtConfig({
   devServer: {
     port: 7001,
   },
+  debug: true,
   vite: {
     optimizeDeps: {
       include: [

@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import type { WorkspaceAgencyTimeTrackerBlock } from "@brainiac/workspace";
 import type { SelectMenuItem } from "@nuxt/ui";
+import type { WorkspaceAgencyTimeTrackerBlock } from "@brainiac/workspace";
 import { useQuery } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
-import { normalizeAgencyLinkUrl } from "~/utils/normalize-agency-link-url";
+import {
+  getAgencyLinkUrlDisplayLabel,
+  normalizeAgencyLinkUrl,
+} from "~/utils/normalize-agency-link-url";
 
 const props = defineProps<{
   block: WorkspaceAgencyTimeTrackerBlock;
@@ -201,6 +204,9 @@ const selectedTags = computed(() => {
 });
 const linkUrlState = computed(() => normalizeAgencyLinkUrl(timerLinkUrl.value));
 const hasValidLinkUrl = computed(() => Boolean(linkUrlState.value.normalizedUrl));
+const linkUrlDisplayLabel = computed(() =>
+  getAgencyLinkUrlDisplayLabel(linkUrlState.value.normalizedUrl),
+);
 
 watch(
   effectiveTeamId,
@@ -434,14 +440,13 @@ async function discardTimer() {
         :disabled="!effectiveTeamId || projectsQuery.isPending.value || Boolean(activeTimer)"
       />
 
-      <div class="shrink-0">
+      <div v-if="tags.length > 0" class="shrink-0">
         <UPopover :content="{ align: 'end' }">
           <UButton
             icon="i-lucide-tag"
             size="xs"
             variant="ghost"
             :color="selectedTagIds.length > 0 ? 'primary' : 'neutral'"
-            :disabled="trackerBusy || !effectiveTeamId"
           />
 
           <template #content>
@@ -532,6 +537,34 @@ async function discardTimer() {
       <UDropdownMenu v-if="activeTimer" :items="discardMenuItems" :content="{ align: 'end' }">
         <UButton icon="i-lucide-more-vertical" color="neutral" variant="ghost" size="sm" />
       </UDropdownMenu>
+    </div>
+
+    <div
+      v-if="selectedTags.length > 0 || hasValidLinkUrl"
+      class="flex flex-wrap items-center gap-1.5"
+    >
+      <a
+        v-if="linkUrlState.normalizedUrl"
+        :href="linkUrlState.normalizedUrl"
+        target="_blank"
+        rel="noreferrer"
+        class="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-xs text-primary transition hover:border-primary/40 hover:bg-primary/15"
+      >
+        <UIcon name="i-lucide-link" class="size-3 shrink-0" />
+        <span class="truncate">
+          {{ linkUrlDisplayLabel }}
+        </span>
+      </a>
+
+      <UBadge
+        v-for="tag in selectedTags"
+        :key="tag.id"
+        color="primary"
+        variant="soft"
+        class="rounded-full"
+      >
+        {{ tag.name }}
+      </UBadge>
     </div>
 
     <p v-if="stopValidationHint" class="text-xs text-warning">
