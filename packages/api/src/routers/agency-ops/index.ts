@@ -11,6 +11,7 @@ import {
     exportAgencyReportsCsv,
     getAgencyActiveTimer,
     getAgencyReportsSummary,
+    getAgencyTimeSummary,
     listAgencyClients,
     listAgencyProjects,
     listMyAgencyTimeEntries,
@@ -120,6 +121,27 @@ const reportsInputSchema = teamScopedInputSchema.extend({
     projectId: z.string().min(1).optional(),
     memberUserId: z.string().min(1).optional(),
     tagIds: z.array(z.string().min(1)).optional(),
+});
+
+const timeSummarySchema = z.object({
+    totalSeconds: z.number().int().nonnegative(),
+    activeCount: z.number().int().nonnegative(),
+    teamMembers: z.array(
+        z.object({
+            id: z.string().min(1),
+            avatar: z.string().nullable(),
+            name: z.string(),
+            email: z.email(),
+            isActive: z.boolean(),
+            totalSeconds: z.number().int().nonnegative(),
+            latestEntry: z
+                .object({
+                    projectName: z.string(),
+                    description: z.string(),
+                })
+                .nullable(),
+        }),
+    ),
 });
 
 export const agencyOpsRouter = {
@@ -322,6 +344,13 @@ export const agencyOpsRouter = {
                     })
                     .parse(await deleteMyAgencyTimeEntry(context.session.user.id, input));
             }),
+    },
+    summary: {
+        list: protectedProProcedure.input(reportsInputSchema).handler(async ({ context, input }) => {
+            return z
+                .object({ summary: timeSummarySchema })
+                .parse(await getAgencyTimeSummary(context.session.user.id, input));
+        }),
     },
     reports: {
         summary: protectedProProcedure.input(reportsInputSchema).handler(async ({ context, input }) => {
