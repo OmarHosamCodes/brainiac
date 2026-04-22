@@ -1,4 +1,9 @@
 import {
+  createWorkspaceAgencyProjectManagerBlock,
+  createWorkspaceAgencySettingsBlock,
+  createWorkspaceAgencyTimeEntriesLogBlock,
+  createWorkspaceAgencyTimeSummaryBlock,
+  createWorkspaceAgencyTimeTrackerBlock,
   createWorkspaceCourseRoadmapBlock,
   createWorkspaceCourseRoadmapCourse,
   createWorkspaceCourseRoadmapLesson,
@@ -20,7 +25,11 @@ import {
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 
-import { buildDashboardAgentTools, createDashboardAgentWorkspaceRuntime } from "./tools";
+import {
+  buildDashboardAgentTools,
+  createDashboardAgentWorkspaceRuntime,
+  summarizeBlock,
+} from "./tools";
 
 type ToolFunction = {
   name: string;
@@ -235,6 +244,76 @@ function createFixture() {
       messageHouseBlock,
       customBlock,
       courseRoadmapBlock,
+    },
+  };
+}
+
+function createAgencyFixture() {
+  const projectManagerBlock = createWorkspaceAgencyProjectManagerBlock({
+    title: "Agency PM",
+    teamId: "team-pm",
+  });
+  const timeTrackerBlock = createWorkspaceAgencyTimeTrackerBlock({
+    title: "Live Timer",
+    teamId: "team-tracker",
+    selectedTagIds: ["hidden-tracker-tag"],
+  });
+  const timeEntriesLogBlock = createWorkspaceAgencyTimeEntriesLogBlock({
+    title: "Entries Log",
+    teamId: "team-log",
+    pageSize: 50,
+    selectedClientId: "hidden-log-client",
+    selectedProjectId: "hidden-log-project",
+    selectedMemberUserId: "hidden-log-member",
+    selectedTagIds: ["hidden-log-tag"],
+  });
+  const timeSummaryBlock = createWorkspaceAgencyTimeSummaryBlock({
+    title: "Summary",
+    teamId: "team-summary",
+    datePreset: "custom",
+    fromDate: "2026-01-01",
+    toDate: "2026-01-31",
+    selectedClientId: "hidden-summary-client",
+    selectedProjectId: "hidden-summary-project",
+    selectedMemberUserId: "hidden-summary-member",
+    selectedTagIds: ["hidden-summary-tag"],
+  });
+  const settingsBlock = createWorkspaceAgencySettingsBlock({
+    title: "Agency Settings",
+    teamId: "team-settings",
+    billingPeriodStartDay: 4,
+    billingPeriodEndDay: 24,
+  });
+
+  const tab = createWorkspaceNodeTab({
+    title: "Agency",
+    blocks: [
+      projectManagerBlock,
+      timeTrackerBlock,
+      timeEntriesLogBlock,
+      timeSummaryBlock,
+      settingsBlock,
+    ],
+  });
+  const node = createWorkspaceNode({
+    title: "Agency Ops",
+    tabs: [tab],
+  });
+  const runtime = createDashboardAgentWorkspaceRuntime({
+    nodes: [node],
+  });
+  const tools = buildDashboardAgentTools(runtime, [], "agent");
+
+  return {
+    tools,
+    node,
+    tab,
+    blocks: {
+      projectManagerBlock,
+      timeTrackerBlock,
+      timeEntriesLogBlock,
+      timeSummaryBlock,
+      settingsBlock,
     },
   };
 }
@@ -515,5 +594,123 @@ describe("buildDashboardAgentTools", () => {
     expect(customBlockDetails.editGuide?.referenceFieldPaths).toContain("definitionId");
     expect(customBlockDetails.editGuide?.editableFieldPaths).toContain("values.angle");
     expect(customBlockDetails.customBlockTemplate?.name).toBe("Campaign brief");
+  });
+
+  test("agency block edit guides reflect current persisted editor fields", async () => {
+    const fixture = createAgencyFixture();
+
+    const timeTrackerDetails = await callTool(fixture.tools, "get_block_details", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.timeTrackerBlock.id,
+      detailLevel: "summary",
+    });
+    const timeEntriesLogDetails = await callTool(fixture.tools, "get_block_details", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.timeEntriesLogBlock.id,
+      detailLevel: "summary",
+    });
+    const timeSummaryDetails = await callTool(fixture.tools, "get_block_details", {
+      nodeId: fixture.node.id,
+      tabId: fixture.tab.id,
+      blockId: fixture.blocks.timeSummaryBlock.id,
+      detailLevel: "summary",
+    });
+
+    expect(timeTrackerDetails.editGuide?.editableFieldPaths).toContain("teamId");
+    expect(timeTrackerDetails.editGuide?.editableFieldPaths).not.toContain("selectedTagIds");
+
+    expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).toContain("pageSize");
+    expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).not.toContain(
+      "selectedClientId",
+    );
+    expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).not.toContain(
+      "selectedProjectId",
+    );
+    expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).not.toContain(
+      "selectedMemberUserId",
+    );
+    expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).not.toContain(
+      "selectedTagIds",
+    );
+
+    expect(timeSummaryDetails.editGuide?.editableFieldPaths).toContain("datePreset");
+    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain("fromDate");
+    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain("toDate");
+    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain(
+      "selectedClientId",
+    );
+    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain(
+      "selectedProjectId",
+    );
+    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain(
+      "selectedMemberUserId",
+    );
+    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain(
+      "selectedTagIds",
+    );
+  });
+
+  test("agency search and summaries ignore non-persisted local editor fields", async () => {
+    const fixture = createAgencyFixture();
+    const hiddenQueries = [
+      {
+        query: "hidden-tracker-tag",
+        blockId: fixture.blocks.timeTrackerBlock.id,
+      },
+      {
+        query: "hidden-log-client",
+        blockId: fixture.blocks.timeEntriesLogBlock.id,
+      },
+      {
+        query: "hidden-log-project",
+        blockId: fixture.blocks.timeEntriesLogBlock.id,
+      },
+      {
+        query: "hidden-log-member",
+        blockId: fixture.blocks.timeEntriesLogBlock.id,
+      },
+      {
+        query: "hidden-log-tag",
+        blockId: fixture.blocks.timeEntriesLogBlock.id,
+      },
+      {
+        query: "hidden-summary-client",
+        blockId: fixture.blocks.timeSummaryBlock.id,
+      },
+      {
+        query: "hidden-summary-project",
+        blockId: fixture.blocks.timeSummaryBlock.id,
+      },
+      {
+        query: "hidden-summary-member",
+        blockId: fixture.blocks.timeSummaryBlock.id,
+      },
+      {
+        query: "hidden-summary-tag",
+        blockId: fixture.blocks.timeSummaryBlock.id,
+      },
+      {
+        query: "2026-01-31",
+        blockId: fixture.blocks.timeSummaryBlock.id,
+      },
+    ];
+
+    for (const hiddenQuery of hiddenQueries) {
+      const result = await callTool(fixture.tools, "search_dashboard", {
+        query: hiddenQuery.query,
+        limit: 10,
+      });
+
+      expect(
+        result.matches.some(
+          (match: any) =>
+            match.matchType === "block" && match.blockId === hiddenQuery.blockId,
+        ),
+      ).toBeFalse();
+    }
+
+    expect(summarizeBlock(fixture.blocks.timeTrackerBlock)).toBe("Live team time tracker");
   });
 });

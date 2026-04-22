@@ -1326,51 +1326,36 @@ function describeBlockEditGuide(
         blockType: block.type,
         editableFieldPaths: ["title", "teamId"],
         referenceFieldPaths: ["teamId"],
+        notes: [
+          "Clients, projects, and tags are managed through live backend actions in the current editor; this block only persists the linked team.",
+        ],
       });
     case "agency-time-tracker":
       return createBlockEditGuide({
         blockType: block.type,
-        editableFieldPaths: ["title", "teamId", "selectedTagIds"],
+        editableFieldPaths: ["title", "teamId"],
         referenceFieldPaths: ["teamId"],
+        notes: [
+          "The current editor keeps the timer description, selected project, and selected tags in session/store state instead of persisting them on the block.",
+        ],
       });
     case "agency-time-entries-log":
       return createBlockEditGuide({
         blockType: block.type,
-        editableFieldPaths: [
-          "title",
-          "teamId",
-          "pageSize",
-          "selectedClientId",
-          "selectedProjectId",
-          "selectedMemberUserId",
-          "selectedTagIds",
-        ],
-        referenceFieldPaths: [
-          "teamId",
-          "selectedClientId",
-          "selectedProjectId",
-          "selectedMemberUserId",
+        editableFieldPaths: ["title", "teamId", "pageSize"],
+        referenceFieldPaths: ["teamId"],
+        notes: [
+          "The current editor only writes the linked team and page size back to the block; entry filters are derived from live query state.",
         ],
       });
     case "agency-time-summary":
       return createBlockEditGuide({
         blockType: block.type,
-        editableFieldPaths: [
-          "title",
-          "teamId",
-          "datePreset",
-          "fromDate",
-          "toDate",
-          "selectedClientId",
-          "selectedProjectId",
-          "selectedMemberUserId",
-          "selectedTagIds",
-        ],
-        referenceFieldPaths: [
-          "teamId",
-          "selectedClientId",
-          "selectedProjectId",
-          "selectedMemberUserId",
+        editableFieldPaths: ["title", "teamId", "datePreset"],
+        referenceFieldPaths: ["teamId"],
+        notes: [
+          "The current editor only persists the linked team and date preset.",
+          "Client, project, member, tag, and custom date inputs currently live in local UI state and are not written back to the block payload.",
         ],
       });
     case "agency-settings":
@@ -1781,29 +1766,16 @@ function collectBlockSearchDetails(
         block.teamId ?? "",
       ]);
     case "agency-time-tracker":
-      return normalizeSearchFragments([
-        block.teamId ?? "",
-        ...block.selectedTagIds,
-      ]);
+      return normalizeSearchFragments([block.teamId ?? ""]);
     case "agency-time-entries-log":
       return normalizeSearchFragments([
         block.teamId ?? "",
         block.pageSize,
-        block.selectedClientId ?? "",
-        block.selectedProjectId ?? "",
-        block.selectedMemberUserId ?? "",
-        ...block.selectedTagIds,
       ]);
     case "agency-time-summary":
       return normalizeSearchFragments([
         block.teamId ?? "",
         block.datePreset,
-        block.fromDate ?? "",
-        block.toDate ?? "",
-        block.selectedClientId ?? "",
-        block.selectedProjectId ?? "",
-        block.selectedMemberUserId ?? "",
-        ...block.selectedTagIds,
       ]);
     case "agency-settings":
       return normalizeSearchFragments([
@@ -1973,7 +1945,7 @@ export function summarizeBlock(block: WorkspaceBlock) {
         : "Agency project manager awaiting team link";
     case "agency-time-tracker":
       return block.teamId
-        ? `Live team time tracker${block.selectedTagIds.length > 0 ? ` (${block.selectedTagIds.length} tag filters)` : ""}`
+        ? "Live team time tracker"
         : "Agency time tracker awaiting team link";
     case "agency-time-entries-log":
       return block.teamId
