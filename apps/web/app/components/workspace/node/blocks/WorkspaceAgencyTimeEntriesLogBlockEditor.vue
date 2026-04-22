@@ -69,8 +69,68 @@ const entriesQuery = useQuery(
 const deleteEntryMutation = useMutation(orpc.agencyOps.timeEntries.deleteMine.mutationOptions());
 const startTimerMutation = useMutation(orpc.agencyOps.timer.start.mutationOptions());
 
+type EntryRow = NonNullable<typeof entriesQuery.data.value>["items"][number];
+
+type GroupedEntry = {
+  key: string;
+  projectId: string;
+  projectName: string;
+  description: string;
+  tags: EntryRow["tags"];
+  totalSeconds: number;
+  entries: Array<{
+    id: string;
+    startedAt: string;
+    endedAt: string;
+    durationSeconds: number;
+  }>;
+};
+
 const entries = computed(() => entriesQuery.data.value?.items ?? []);
 const totalEntries = computed(() => entriesQuery.data.value?.total ?? 0);
+
+const groupedEntries = computed<GroupedEntry[]>(() => {
+  const map = new Map<string, GroupedEntry>();
+
+  for (const entry of entries.value) {
+    const tagKey = [...entry.tags]
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((t) => t.id)
+      .join(",");
+    const key = `${entry.projectId}||${entry.description ?? ""}||${tagKey}`;
+
+    const existing = map.get(key);
+
+    if (existing) {
+      existing.totalSeconds += entry.durationSeconds;
+      existing.entries.push({
+        id: entry.id,
+        startedAt: entry.startedAt,
+        endedAt: entry.endedAt,
+        durationSeconds: entry.durationSeconds,
+      });
+    } else {
+      map.set(key, {
+        key,
+        projectId: entry.projectId,
+        projectName: entry.projectName,
+        description: entry.description ?? "",
+        tags: entry.tags,
+        totalSeconds: entry.durationSeconds,
+        entries: [
+          {
+            id: entry.id,
+            startedAt: entry.startedAt,
+            endedAt: entry.endedAt,
+            durationSeconds: entry.durationSeconds,
+          },
+        ],
+      });
+    }
+  }
+
+  return [...map.values()];
+});
 const maxPage = computed(() => {
   if (props.block.pageSize <= 0) {
     return 1;
@@ -170,6 +230,25 @@ async function deleteEntry(entryId: string) {
   }
 }
 
+async function deleteGroupEntries(entryIds: string[]) {
+  const teamId = effectiveTeamId.value;
+
+  if (!teamId) {
+    return;
+  }
+
+  try {
+    await Promise.all(entryIds.map((entryId) => deleteEntryMutation.mutateAsync({ teamId, entryId })));
+    await entriesQuery.refetch();
+  } catch (error) {
+    toast.add({
+      title: "Unable to delete entries",
+      description: getErrorMessage(error, "Please try again."),
+      color: "error",
+    });
+  }
+}
+
 async function restartEntry(entry: { projectId: string; description: string }) {
   const teamId = effectiveTeamId.value;
 
@@ -198,14 +277,16 @@ async function restartEntry(entry: { projectId: string; description: string }) {
   }
 }
 
-function entryMenuItems(entryId: string) {
+function groupMenuItems(group: GroupedEntry) {
+  const allIds = group.entries.map((e) => e.id);
+
   return [
     [
       {
-        label: "Delete entry",
+        label: group.entries.length > 1 ? `Delete all (${group.entries.length})` : "Delete entry",
         icon: "i-lucide-trash-2",
         color: "error" as const,
-        onSelect: () => deleteEntry(entryId),
+        onSelect: () => deleteGroupEntries(allIds),
       },
     ],
   ];
@@ -217,6 +298,18 @@ function goToPreviousPage() {
 
 function goToNextPage() {
   page.value = Math.min(maxPage.value, page.value + 1);
+}
+
+const expandedGroups = ref(new Set<string>());
+
+function toggleGroup(key: string) {
+  if (expandedGroups.value.has(key)) {
+    expandedGroups.value.delete(key);
+  } else {
+    expandedGroups.value.add(key);
+  }
+  // Trigger reactivity
+  expandedGroups.value = new Set(expandedGroups.value);
 }
 </script>
 
@@ -346,39 +439,76 @@ function goToNextPage() {
 
       <!-- Entry rows -->
       <article
-        v-for="entry in entries"
-        :key="entry.id"
+        v-for="group in groupedEntries"
+        :key="group.key"
         class="rounded-2xl border border-muted/20 bg-default/70 p-3"
       >
+        <!-- Group header -->
         <div class="flex items-start gap-3">
-          <!-- Main content -->
+          <!-- Chevron toggle for multi-entry groups -->
+          <button
+            v-if="group.entries.length > 1"
+            type="button"
+            class="mt-0.5 shrink-0 text-muted transition-transform duration-200"
+            :class="expandedGroups.has(group.key) ? 'rotate-90' : ''"
+            :aria-label="expandedGroups.has(group.key) ? 'Collapse entries' : 'Expand entries'"
+            @click="toggleGroup(group.key)"
+          >
+            <UIcon name="i-lucide-chevron-right" class="size-3.5" />
+          </button>
+
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-highlighted">{{ entry.projectName }}</p>
-            <p v-if="entry.description" class="mt-0.5 truncate text-xs text-muted">
-              {{ entry.description }}
+            <p class="truncate text-sm font-medium text-highlighted">{{ group.projectName }}</p>
+            <p v-if="group.description" class="mt-0.5 truncate text-xs text-muted">
+              {{ group.description }}
             </p>
-            <div class="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <!-- Inline time range for single-entry groups -->
+            <div v-if="group.entries.length === 1" class="mt-1.5">
               <span class="text-[10px] text-muted">
-                {{ formatDateTime(entry.startedAt) }} &ndash; {{ formatDateTime(entry.endedAt) }}
+                {{ formatDateTime(group.entries[0]!.startedAt) }} &ndash;
+                {{ formatDateTime(group.entries[0]!.endedAt) }}
               </span>
-              <UButton
-                v-for="tag in entry.tags"
-                :key="tag.id"
-                :label="tag.name"
-                size="xs"
-                variant="soft"
-                color="primary"
-                class="rounded-full"
-                tabindex="-1"
-              />
+            </div>
+
+            <!-- Tags popover -->
+            <div v-if="group.tags.length > 0" class="mt-1.5">
+              <UPopover :content="{ align: 'start' }">
+                <UButton
+                  icon="i-lucide-tag"
+                  size="xs"
+                  variant="ghost"
+                  color="primary"
+                  :label="group.tags.length > 1 ? String(group.tags.length) : undefined"
+                  :aria-label="`${group.tags.length} tag${group.tags.length === 1 ? '' : 's'}`"
+                />
+                <template #content>
+                  <div class="flex max-w-56 flex-wrap gap-1 p-2">
+                    <UButton
+                      v-for="tag in group.tags"
+                      :key="tag.id"
+                      :label="tag.name"
+                      size="xs"
+                      variant="soft"
+                      color="primary"
+                      class="rounded-full"
+                      tabindex="-1"
+                    />
+                  </div>
+                </template>
+              </UPopover>
             </div>
           </div>
 
           <!-- Actions -->
           <div class="flex shrink-0 items-center gap-1.5">
-            <UBadge color="primary" variant="soft" class="font-mono tabular-nums">
-              {{ formatDuration(entry.durationSeconds) }}
-            </UBadge>
+            <div class="text-right">
+              <UBadge color="primary" variant="soft" class="font-mono tabular-nums">
+                {{ formatDuration(group.totalSeconds) }}
+              </UBadge>
+              <p v-if="group.entries.length > 1" class="mt-0.5 text-[10px] text-muted">
+                {{ group.entries.length }} entries
+              </p>
+            </div>
 
             <UButton
               icon="i-lucide-play"
@@ -387,12 +517,12 @@ function goToNextPage() {
               size="xs"
               :loading="startTimerMutation.isPending.value"
               :disabled="!effectiveTeamId"
-              :aria-label="`Restart timer for ${entry.projectName}`"
-              @click="restartEntry(entry)"
+              :aria-label="`Restart timer for ${group.projectName}`"
+              @click="restartEntry(group)"
             />
 
             <UDropdownMenu
-              :items="entryMenuItems(entry.id)"
+              :items="groupMenuItems(group)"
               :content="{ align: 'end' }"
             >
               <UButton
@@ -400,11 +530,49 @@ function goToNextPage() {
                 color="neutral"
                 variant="ghost"
                 size="xs"
-                :aria-label="`Options for ${entry.projectName} entry`"
+                :aria-label="`Options for ${group.projectName} entries`"
               />
             </UDropdownMenu>
           </div>
         </div>
+
+        <!-- Collapsible sub-rows: individual time ranges for multi-entry groups -->
+        <Transition
+          enter-active-class="transition-all duration-200 ease-out overflow-hidden"
+          leave-active-class="transition-all duration-150 ease-in overflow-hidden"
+          enter-from-class="max-h-0 opacity-0"
+          enter-to-class="max-h-96 opacity-100"
+          leave-from-class="max-h-96 opacity-100"
+          leave-to-class="max-h-0 opacity-0"
+        >
+          <div
+            v-if="group.entries.length > 1 && expandedGroups.has(group.key)"
+            class="mt-2 space-y-1 border-t border-muted/10 pt-2"
+          >
+            <div
+              v-for="entry in group.entries"
+              :key="entry.id"
+              class="flex items-center justify-between gap-2"
+            >
+              <span class="text-[10px] text-muted">
+                {{ formatDateTime(entry.startedAt) }} &ndash; {{ formatDateTime(entry.endedAt) }}
+              </span>
+              <div class="flex shrink-0 items-center gap-1.5">
+                <span class="font-mono text-[10px] tabular-nums text-muted">
+                  {{ formatDuration(entry.durationSeconds) }}
+                </span>
+                <UButton
+                  icon="i-lucide-trash-2"
+                  color="error"
+                  variant="ghost"
+                  size="xs"
+                  :aria-label="`Delete entry from ${formatDateTime(entry.startedAt)}`"
+                  @click="deleteEntry(entry.id)"
+                />
+              </div>
+            </div>
+          </div>
+        </Transition>
       </article>
 
       <!-- Pagination -->
