@@ -1738,18 +1738,8 @@ function buildWorkspaceNodeDashboardDetail(
           label: "Team",
           value: block.teamId ? "Linked" : "Unlinked",
         },
-        {
-          label: "Archived clients",
-          value: block.showArchivedClients ? "Shown" : "Hidden",
-        },
-        {
-          label: "Archived projects",
-          value: block.showArchivedProjects ? "Shown" : "Hidden",
-        },
       ],
-      highlights: [
-        block.selectedClientId ? "Client filter is active." : "Showing all clients.",
-      ],
+      highlights: ["Create clients and projects for the linked team."],
     };
   }
 
@@ -1761,7 +1751,7 @@ function buildWorkspaceNodeDashboardDetail(
       blockTitle: getDisplayBlockTitle(block),
       blockType: block.type,
       summary: block.teamId
-        ? "Tracks live timer sessions against sprint tasks and steps."
+        ? "Tracks live timer sessions against agency projects."
         : "Agency time tracker waiting for team binding.",
       metrics: [
         {
@@ -1769,11 +1759,11 @@ function buildWorkspaceNodeDashboardDetail(
           value: block.teamId ? "Linked" : "Unlinked",
         },
         {
-          label: "Recent log",
-          value: block.showRecentEntries ? "Shown" : "Hidden",
+          label: "Tag filters",
+          value: String(block.selectedTagIds.length),
         },
       ],
-      highlights: ["Timer starts only from agency sprint items."],
+      highlights: ["Timer starts from the selected project."],
     };
   }
 
@@ -1801,7 +1791,7 @@ function buildWorkspaceNodeDashboardDetail(
     };
   }
 
-  if (block.type === "agency-sprint-board") {
+  if (block.type === "agency-time-summary") {
     return {
       tabId: tab.id,
       tabTitle: getDisplayTabTitle(tab),
@@ -1809,34 +1799,8 @@ function buildWorkspaceNodeDashboardDetail(
       blockTitle: getDisplayBlockTitle(block),
       blockType: block.type,
       summary: block.teamId
-        ? "Sprint board for agency tasks and steps."
-        : "Agency sprint board waiting for team binding.",
-      metrics: [
-        {
-          label: "Team",
-          value: block.teamId ? "Linked" : "Unlinked",
-        },
-        {
-          label: "Completed",
-          value: block.showCompletedItems ? "Shown" : "Hidden",
-        },
-      ],
-      highlights: [
-        block.activeSprintId ? "An active sprint is selected." : "No sprint selected yet.",
-      ],
-    };
-  }
-
-  if (block.type === "agency-time-reports") {
-    return {
-      tabId: tab.id,
-      tabTitle: getDisplayTabTitle(tab),
-      blockId: block.id,
-      blockTitle: getDisplayBlockTitle(block),
-      blockType: block.type,
-      summary: block.teamId
-        ? "Team-level utilization, burn, and distribution reporting."
-        : "Agency reports waiting for team binding.",
+        ? "Team-level hours, activity, and breakdown reporting."
+        : "Agency time summary waiting for team binding.",
       metrics: [
         {
           label: "Team",
@@ -1847,7 +1811,17 @@ function buildWorkspaceNodeDashboardDetail(
           value: block.datePreset,
         },
       ],
-      highlights: ["CSV export available for the filtered range."],
+      highlights: [
+        block.selectedProjectId
+          ? "Project filter is active."
+          : block.selectedClientId
+            ? "Client filter is active."
+            : block.selectedMemberUserId
+              ? "Member filter is active."
+              : block.selectedTagIds.length > 0
+                ? `${block.selectedTagIds.length} tag filters applied.`
+                : "Showing the full team summary.",
+      ],
     };
   }
 
