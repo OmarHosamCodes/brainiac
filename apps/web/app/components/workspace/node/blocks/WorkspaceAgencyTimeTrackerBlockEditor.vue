@@ -184,10 +184,6 @@ function toggleTag(tagId: string) {
     }
 }
 
-function tagName(id: string) {
-    return tags.value.find((t) => t.id === id)?.name ?? "";
-}
-
 async function refreshTrackerData() {
     await Promise.all([
         activeTimerQuery.refetch(),
@@ -329,28 +325,13 @@ async function discardTimer() {
                 :disabled="!effectiveTeamId || projectsQuery.isPending.value"
             />
 
-            <div v-if="tags.length > 0" class="flex items-center gap-1 shrink-0">
-                <UBadge
-                    v-for="tagId in selectedTagIds"
-                    :key="tagId"
-                    size="xs"
-                    variant="soft"
-                    class="cursor-pointer rounded-full"
-                    @click="
-                        selectedTagIds = selectedTagIds.filter(
-                            (id) => id !== tagId,
-                        )
-                    "
-                >
-                    {{ tagName(tagId) }}
-                </UBadge>
-
+            <div v-if="tags.length > 0" class="shrink-0">
                 <UPopover :content="{ align: 'end' }">
                     <UButton
                         icon="i-lucide-tag"
                         size="xs"
                         variant="ghost"
-                        color="neutral"
+                        :color="selectedTagIds.length > 0 ? 'primary' : 'neutral'"
                     />
 
                     <template #content>
