@@ -517,9 +517,9 @@ describe("buildDashboardAgentTools", () => {
     expect(patched.matchCount).toBeGreaterThan(0);
     expect(
       updated.block?.type === "course-roadmap" &&
-      updated.block.courses.every((course: any) =>
-        course.lessons.every((lesson: any) => lesson.recorded),
-      ),
+        updated.block.courses.every((course: any) =>
+          course.lessons.every((lesson: any) => lesson.recorded),
+        ),
     ).toBeTrue();
   });
 
@@ -552,8 +552,8 @@ describe("buildDashboardAgentTools", () => {
     expect(patched.matchCount).toBe(1);
     expect(
       updated.block?.type === "kanban" &&
-      updated.block.cards.find((card: any) => card.id === cardId)?.description ===
-      nextDescription,
+        updated.block.cards.find((card: any) => card.id === cardId)?.description ===
+          nextDescription,
     ).toBeTrue();
   });
 
@@ -622,34 +622,20 @@ describe("buildDashboardAgentTools", () => {
     expect(timeTrackerDetails.editGuide?.editableFieldPaths).not.toContain("selectedTagIds");
 
     expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).toContain("pageSize");
-    expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).not.toContain(
-      "selectedClientId",
-    );
-    expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).not.toContain(
-      "selectedProjectId",
-    );
+    expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).not.toContain("selectedClientId");
+    expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).not.toContain("selectedProjectId");
     expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).not.toContain(
       "selectedMemberUserId",
     );
-    expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).not.toContain(
-      "selectedTagIds",
-    );
+    expect(timeEntriesLogDetails.editGuide?.editableFieldPaths).not.toContain("selectedTagIds");
 
     expect(timeSummaryDetails.editGuide?.editableFieldPaths).toContain("datePreset");
     expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain("fromDate");
     expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain("toDate");
-    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain(
-      "selectedClientId",
-    );
-    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain(
-      "selectedProjectId",
-    );
-    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain(
-      "selectedMemberUserId",
-    );
-    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain(
-      "selectedTagIds",
-    );
+    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain("selectedClientId");
+    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain("selectedProjectId");
+    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain("selectedMemberUserId");
+    expect(timeSummaryDetails.editGuide?.editableFieldPaths).not.toContain("selectedTagIds");
   });
 
   test("agency search and summaries ignore non-persisted local editor fields", async () => {
@@ -705,8 +691,7 @@ describe("buildDashboardAgentTools", () => {
 
       expect(
         result.matches.some(
-          (match: any) =>
-            match.matchType === "block" && match.blockId === hiddenQuery.blockId,
+          (match: any) => match.matchType === "block" && match.blockId === hiddenQuery.blockId,
         ),
       ).toBeFalse();
     }

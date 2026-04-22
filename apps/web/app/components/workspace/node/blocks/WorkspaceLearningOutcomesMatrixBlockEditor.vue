@@ -237,7 +237,10 @@ async function runAnalysis() {
 
       <div class="grid gap-4 sm:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)]">
         <div class="space-y-1.5">
-          <label :for="'course-select'" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+          <label
+            :for="'course-select'"
+            class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+          >
             Selected Course
           </label>
           <USelect
@@ -250,11 +253,16 @@ async function runAnalysis() {
             :disabled="availableCourses.length === 0"
             @update:model-value="updateSelectedCourse($event)"
           />
-          <p class="text-[10px] text-muted/50 leading-relaxed">Lessons and outcomes passed automatically.</p>
+          <p class="text-[10px] text-muted/50 leading-relaxed">
+            Lessons and outcomes passed automatically.
+          </p>
         </div>
 
         <div class="space-y-1.5">
-          <label :for="'analysis-prompt'" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+          <label
+            :for="'analysis-prompt'"
+            class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+          >
             Analysis Prompt
           </label>
           <UTextarea
@@ -297,7 +305,10 @@ async function runAnalysis() {
           </p>
         </div>
 
-        <p v-if="block.outputHistory[0]?.createdAt" class="text-[10px] font-bold uppercase tracking-widest text-muted/60">
+        <p
+          v-if="block.outputHistory[0]?.createdAt"
+          class="text-[10px] font-bold uppercase tracking-widest text-muted/60"
+        >
           Updated {{ formatDateTime(block.outputHistory[0].createdAt) }}
         </p>
       </div>
@@ -319,10 +330,7 @@ async function runAnalysis() {
 
       <div class="grid gap-3">
         <template v-for="(entry, index) in block.outputHistory" :key="entry.id">
-          <article
-            v-if="index > 0"
-            class="rounded-xl border border-muted/20 bg-default/40 p-3"
-          >
+          <article v-if="index > 0" class="rounded-xl border border-muted/20 bg-default/40 p-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <p class="text-xs font-bold text-highlighted uppercase tracking-wider">
                 {{ entry.prompt }}

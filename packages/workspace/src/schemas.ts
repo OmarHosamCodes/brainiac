@@ -1065,12 +1065,12 @@ export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceProfitabilityCashFlowBlockSchema,
   workspacePricingSimulatorBlockSchema,
   workspaceCollectionsTrackerBlockSchema,
-   workspaceAgencyProjectManagerBlockSchema,
-   workspaceAgencyTimeTrackerBlockSchema,
-   workspaceAgencyTimeEntriesLogBlockSchema,
-   workspaceAgencyTimeSummaryBlockSchema,
-   workspaceAgencySettingsBlockSchema,
-   workspaceAgencyBillingReportBlockSchema,
+  workspaceAgencyProjectManagerBlockSchema,
+  workspaceAgencyTimeTrackerBlockSchema,
+  workspaceAgencyTimeEntriesLogBlockSchema,
+  workspaceAgencyTimeSummaryBlockSchema,
+  workspaceAgencySettingsBlockSchema,
+  workspaceAgencyBillingReportBlockSchema,
   workspaceCustomBlockSchema,
 ]);
 

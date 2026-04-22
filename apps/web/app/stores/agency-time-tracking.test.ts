@@ -113,7 +113,11 @@ type AgencyTimeTrackingStore = {
   setTrackerSelectedTagIds: (teamId: string, tagIds: string[]) => void;
   setTrackerLinkUrl: (teamId: string, linkUrl: string) => void;
   registerActiveTimerQuery: (payload: { teamId: string; queryKey: readonly unknown[] }) => void;
-  registerLogQuery: (payload: { teamId: string; page: number; queryKey: readonly unknown[] }) => void;
+  registerLogQuery: (payload: {
+    teamId: string;
+    page: number;
+    queryKey: readonly unknown[];
+  }) => void;
   startTimer: (payload: {
     teamId: string;
     project: { id: string; name: string };
@@ -137,10 +141,7 @@ type AgencyTimeTrackingStore = {
     linkUrl: string | null;
     tags: AgencyTag[];
   }) => Promise<void>;
-  deleteEntries: (payload: {
-    teamId: string;
-    entries: AgencyTimeEntry[];
-  }) => Promise<void>;
+  deleteEntries: (payload: { teamId: string; entries: AgencyTimeEntry[] }) => Promise<void>;
 };
 
 mock.module("pinia", () => ({
@@ -260,11 +261,13 @@ function createEntriesListData(
   };
 }
 
-async function createStore(handlers?: Partial<{
-  start: MutationHandler;
-  stop: MutationHandler;
-  deleteEntry: MutationHandler;
-}>): Promise<AgencyTimeTrackingStore> {
+async function createStore(
+  handlers?: Partial<{
+    start: MutationHandler;
+    stop: MutationHandler;
+    deleteEntry: MutationHandler;
+  }>,
+): Promise<AgencyTimeTrackingStore> {
   const runtime = getGlobalRuntime();
 
   runtime.mutationIndex = 0;
@@ -346,7 +349,10 @@ describe("useAgencyTimeTrackingStore", () => {
       selectedTags: [nextTag],
     });
 
-    const cachedLog = getCachedQuery<AgencyTimeEntriesListQueryData>(runtime.queryCache, logQueryKey);
+    const cachedLog = getCachedQuery<AgencyTimeEntriesListQueryData>(
+      runtime.queryCache,
+      logQueryKey,
+    );
     const cachedTimer = getCachedQuery<{ timer: AgencyActiveTimer | null }>(
       runtime.queryCache,
       activeTimerQueryKey,
@@ -389,7 +395,10 @@ describe("useAgencyTimeTrackingStore", () => {
     store.ensureTrackerDraft("team-1");
     store.setTrackerProjectId("team-1", activeTimer.projectId);
     store.setTrackerDescription("team-1", activeTimer.description);
-    store.setTrackerSelectedTagIds("team-1", activeTimer.tags.map((tag) => tag.id));
+    store.setTrackerSelectedTagIds(
+      "team-1",
+      activeTimer.tags.map((tag) => tag.id),
+    );
     store.setTrackerLinkUrl("team-1", "brainiac.test/stopped-entry");
 
     await store.stopTimer({
@@ -401,7 +410,10 @@ describe("useAgencyTimeTrackingStore", () => {
       selectedTags: activeTimer.tags,
     });
 
-    const cachedLog = getCachedQuery<AgencyTimeEntriesListQueryData>(runtime.queryCache, logQueryKey);
+    const cachedLog = getCachedQuery<AgencyTimeEntriesListQueryData>(
+      runtime.queryCache,
+      logQueryKey,
+    );
     const cachedTimer = getCachedQuery<{ timer: AgencyActiveTimer | null }>(
       runtime.queryCache,
       activeTimerQueryKey,
@@ -468,7 +480,10 @@ describe("useAgencyTimeTrackingStore", () => {
       tags: [nextTag],
     });
 
-    const cachedLog = getCachedQuery<AgencyTimeEntriesListQueryData>(runtime.queryCache, logQueryKey);
+    const cachedLog = getCachedQuery<AgencyTimeEntriesListQueryData>(
+      runtime.queryCache,
+      logQueryKey,
+    );
     const cachedTimer = getCachedQuery<{ timer: AgencyActiveTimer | null }>(
       runtime.queryCache,
       activeTimerQueryKey,
@@ -515,7 +530,10 @@ describe("useAgencyTimeTrackingStore", () => {
       entries: [entry],
     });
 
-    const cachedLog = getCachedQuery<AgencyTimeEntriesListQueryData>(runtime.queryCache, logQueryKey);
+    const cachedLog = getCachedQuery<AgencyTimeEntriesListQueryData>(
+      runtime.queryCache,
+      logQueryKey,
+    );
 
     expect(cachedLog?.total).toBe(1);
     expect(cachedLog?.items.map((item) => item.id)).toEqual([entry.id]);

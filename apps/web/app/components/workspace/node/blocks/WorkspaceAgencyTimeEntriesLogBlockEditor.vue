@@ -4,8 +4,8 @@ import { useQuery } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
-import { getErrorMessage } from "~/utils/get-error-message";
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
+import { getErrorMessage } from "~/utils/get-error-message";
 
 const props = defineProps<{
   block: WorkspaceAgencyTimeEntriesLogBlock;
@@ -78,14 +78,15 @@ const projectsQuery = useQuery(
     enabled: Boolean(effectiveTeamId.value),
   })),
 );
-const entriesQueryKey = computed(() =>
-  orpc.agencyOps.timeEntries.listMine.queryOptions({
-    input: {
-      teamId: effectiveTeamId.value,
-      page: page.value,
-      pageSize: props.block.pageSize,
-    },
-  }).queryKey,
+const entriesQueryKey = computed(
+  () =>
+    orpc.agencyOps.timeEntries.listMine.queryOptions({
+      input: {
+        teamId: effectiveTeamId.value,
+        page: page.value,
+        pageSize: props.block.pageSize,
+      },
+    }).queryKey,
 );
 const projects = computed(() => projectsQuery.data.value?.items ?? []);
 
@@ -209,14 +210,10 @@ onBeforeUnmount(() => {
 
 const logRefreshing = computed(
   () =>
-    teamsQuery.isFetching.value ||
-    entriesQuery.isFetching.value ||
-    projectsQuery.isFetching.value,
+    teamsQuery.isFetching.value || entriesQuery.isFetching.value || projectsQuery.isFetching.value,
 );
 
-const logQueryError = computed(
-  () => entriesQuery.error.value ?? projectsQuery.error.value ?? null,
-);
+const logQueryError = computed(() => entriesQuery.error.value ?? projectsQuery.error.value ?? null);
 
 function mutateTimeEntriesLogBlock(mutator: (block: WorkspaceAgencyTimeEntriesLogBlock) => void) {
   mutateTypedBlock(props.tabId, props.block.id, "agency-time-entries-log", mutator);
@@ -379,12 +376,7 @@ function toggleGroup(key: string) {
         @update:model-value="setPageSize($event as string | number | undefined)"
       />
 
-      <UBadge
-        v-if="logRefreshing"
-        color="neutral"
-        variant="soft"
-        class="rounded-full"
-      >
+      <UBadge v-if="logRefreshing" color="neutral" variant="soft" class="rounded-full">
         <span class="inline-flex items-center gap-1.5">
           <UIcon name="i-lucide-loader-2" class="size-3.5 animate-spin" />
           Syncing
@@ -445,12 +437,16 @@ function toggleGroup(key: string) {
         <div class="flex items-center gap-3">
           <div class="text-right">
             <p class="text-[10px] uppercase tracking-[0.16em] text-muted">Today</p>
-            <p class="font-mono text-sm font-semibold tabular-nums text-highlighted">{{ formatDuration(todaySeconds) }}</p>
+            <p class="font-mono text-sm font-semibold tabular-nums text-highlighted">
+              {{ formatDuration(todaySeconds) }}
+            </p>
           </div>
           <div class="h-6 w-px bg-muted/20" />
           <div class="text-right">
             <p class="text-[10px] uppercase tracking-[0.16em] text-muted">This week</p>
-            <p class="font-mono text-sm font-semibold tabular-nums text-primary">{{ formatDuration(weekSummary?.totalSeconds ?? 0) }}</p>
+            <p class="font-mono text-sm font-semibold tabular-nums text-primary">
+              {{ formatDuration(weekSummary?.totalSeconds ?? 0) }}
+            </p>
           </div>
         </div>
       </div>
@@ -505,7 +501,10 @@ function toggleGroup(key: string) {
             </div>
 
             <!-- Tags and link inline controls -->
-            <div v-if="group.tags.length > 0 || group.linkUrl" class="mt-1.5 flex items-center gap-1">
+            <div
+              v-if="group.tags.length > 0 || group.linkUrl"
+              class="mt-1.5 flex items-center gap-1"
+            >
               <!-- Tags popover -->
               <UPopover v-if="group.tags.length > 0" :content="{ align: 'start' }">
                 <UButton
@@ -587,10 +586,7 @@ function toggleGroup(key: string) {
               @click="restartEntry(group)"
             />
 
-            <UDropdownMenu
-              :items="groupMenuItems(group)"
-              :content="{ align: 'end' }"
-            >
+            <UDropdownMenu :items="groupMenuItems(group)" :content="{ align: 'end' }">
               <UButton
                 icon="i-lucide-more-vertical"
                 color="neutral"

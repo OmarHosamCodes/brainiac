@@ -135,7 +135,9 @@ const bottomSections = [
         variant="subtle"
         :rows="3"
         class="rounded-2xl"
-        :ui="{ base: 'bg-default/60 text-lg font-black tracking-tight leading-relaxed placeholder:text-muted/30' }"
+        :ui="{
+          base: 'bg-default/60 text-lg font-black tracking-tight leading-relaxed placeholder:text-muted/30',
+        }"
         placeholder="What is the single promise this brand owns?"
         @update:model-value="
           mutateBlock(tabId, block.id, (entry) => {
@@ -154,7 +156,10 @@ const bottomSections = [
         class="rounded-2xl border border-muted/20 bg-default/40 p-4 transition-colors hover:border-muted/30"
       >
         <div class="mb-3">
-          <label :for="'pillar-title-' + pillar.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+          <label
+            :for="'pillar-title-' + pillar.id"
+            class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+          >
             Pillar
           </label>
           <UInput
@@ -164,7 +169,9 @@ const bottomSections = [
             placeholder="Pillar title"
             size="lg"
             class="w-full"
-            :ui="{ base: 'px-0 text-base font-black text-highlighted placeholder:text-muted/40 uppercase tracking-tight' }"
+            :ui="{
+              base: 'px-0 text-base font-black text-highlighted placeholder:text-muted/40 uppercase tracking-tight',
+            }"
             @update:model-value="
               mutateBlock(tabId, block.id, (entry) => {
                 if (entry.type !== 'message-house') return;
@@ -176,7 +183,10 @@ const bottomSections = [
           />
         </div>
 
-        <label :for="'pillar-body-' + pillar.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+        <label
+          :for="'pillar-body-' + pillar.id"
+          class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+        >
           Message
         </label>
         <UTextarea
@@ -207,7 +217,10 @@ const bottomSections = [
         :key="section.key"
         class="rounded-2xl border border-muted/20 bg-default/40 p-4 transition-colors hover:border-muted/30"
       >
-        <label :for="section.key" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+        <label
+          :for="section.key"
+          class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+        >
           {{ section.label }}
         </label>
         <UTextarea
@@ -234,12 +247,13 @@ const bottomSections = [
       <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
         <div>
           <h2 class="text-sm font-black text-highlighted tracking-tight">Stress-Test Output</h2>
-          <p class="text-xs text-muted mt-0.5">
-            Finds gaps, contradictions, and weak proof.
-          </p>
+          <p class="text-xs text-muted mt-0.5">Finds gaps, contradictions, and weak proof.</p>
         </div>
 
-        <p v-if="block.stressTestUpdatedAt" class="text-[10px] font-bold uppercase tracking-widest text-muted/60">
+        <p
+          v-if="block.stressTestUpdatedAt"
+          class="text-[10px] font-bold uppercase tracking-widest text-muted/60"
+        >
           Last run {{ formatDateTime(block.stressTestUpdatedAt) }}
         </p>
       </div>
@@ -247,8 +261,12 @@ const bottomSections = [
       <div
         class="rounded-xl border border-muted/20 bg-default/60 p-4 text-sm leading-relaxed text-toned min-h-[80px]"
       >
-        <p v-if="block.latestStressTest" class="whitespace-pre-wrap">{{ block.latestStressTest }}</p>
-        <p v-else class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">Run AI Stress-Test to get a critique of the messaging</p>
+        <p v-if="block.latestStressTest" class="whitespace-pre-wrap">
+          {{ block.latestStressTest }}
+        </p>
+        <p v-else class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/40">
+          Run AI Stress-Test to get a critique of the messaging
+        </p>
       </div>
     </section>
   </div>

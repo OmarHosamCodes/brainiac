@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import {
-    createWorkspaceDelegationItem,
-    getDelegationMatrixSummary,
-    workspaceDelegationStatusLabels,
-    type WorkspaceDelegationMatrixBlock,
-    type WorkspaceDelegationStatus,
+  createWorkspaceDelegationItem,
+  getDelegationMatrixSummary,
+  workspaceDelegationStatusLabels,
+  type WorkspaceDelegationMatrixBlock,
+  type WorkspaceDelegationStatus,
 } from "@brainiac/workspace";
 
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
@@ -62,8 +62,7 @@ const filteredItems = computed(() => {
   if (sortMode.value === "hours") {
     return baseItems.sort(
       (left, right) =>
-        right.hoursPerWeek - left.hoursPerWeek ||
-        left.task.localeCompare(right.task),
+        right.hoursPerWeek - left.hoursPerWeek || left.task.localeCompare(right.task),
     );
   }
 
@@ -257,7 +256,9 @@ function getStatusButtonClasses(
         :key="card.key"
         class="rounded-3xl border border-muted/20 bg-elevated/10 p-5"
       >
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">{{ card.label }}</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+          {{ card.label }}
+        </p>
         <p class="mt-2 text-2xl font-black tracking-tight sm:text-3xl" :class="card.accentClass">
           {{ card.value }}
         </p>
@@ -270,16 +271,18 @@ function getStatusButtonClasses(
         <div>
           <p class="text-sm font-semibold text-highlighted">Delegation tracker</p>
           <p class="text-sm text-muted">
-            Prioritize trapped founder tasks first, then assign explicit ownership and move each handoff toward delegated.
+            Prioritize trapped founder tasks first, then assign explicit ownership and move each
+            handoff toward delegated.
           </p>
           <p v-if="unassignedHandoffCount > 0" class="mt-2 text-xs text-warning">
-            {{ unassignedHandoffCount }} item{{ unassignedHandoffCount === 1 ? "" : "s" }} still missing a clear owner.
+            {{ unassignedHandoffCount }} item{{ unassignedHandoffCount === 1 ? "" : "s" }} still
+            missing a clear owner.
           </p>
         </div>
 
         <div class="flex flex-wrap items-center gap-2">
           <UButton
-            v-for="status in (['all', ...statusOptions] as Array<'all' | WorkspaceDelegationStatus>)"
+            v-for="status in ['all', ...statusOptions] as Array<'all' | WorkspaceDelegationStatus>"
             :key="status"
             color="neutral"
             :variant="filterStatus === status ? 'solid' : 'soft'"
@@ -321,12 +324,15 @@ function getStatusButtonClasses(
             :model-value="sortMode"
             :items="sortOptions"
             aria-label="Sort delegation items"
-            @update:model-value="sortMode = (($event as 'priority' | 'hours' | 'task' | undefined) ?? 'priority')"
+            @update:model-value="
+              sortMode = ($event as 'priority' | 'hours' | 'task' | undefined) ?? 'priority'
+            "
           />
         </UFormField>
 
         <div class="rounded-2xl border border-muted/20 bg-default/50 px-3 py-2 text-xs text-muted">
-          Currency values use the hourly rate context shown above. Update it before reviewing weekly cost impact.
+          Currency values use the hourly rate context shown above. Update it before reviewing weekly
+          cost impact.
         </div>
 
         <UButton
@@ -347,7 +353,9 @@ function getStatusButtonClasses(
       class="rounded-3xl border border-dashed border-muted/20 bg-elevated/5 py-12 text-center"
     >
       <p class="text-sm font-semibold text-muted">No delegation items yet.</p>
-      <p class="mt-1 text-sm text-muted">Add a recurring task to begin mapping handoff opportunities.</p>
+      <p class="mt-1 text-sm text-muted">
+        Add a recurring task to begin mapping handoff opportunities.
+      </p>
     </div>
 
     <div
@@ -355,7 +363,9 @@ function getStatusButtonClasses(
       class="rounded-3xl border border-dashed border-muted/20 bg-elevated/5 py-12 text-center"
     >
       <p class="text-sm font-semibold text-muted">No items match this filter.</p>
-      <p class="mt-1 text-sm text-muted">Switch to another status filter to continue planning handoffs.</p>
+      <p class="mt-1 text-sm text-muted">
+        Switch to another status filter to continue planning handoffs.
+      </p>
     </div>
 
     <div v-else class="space-y-4">
@@ -379,7 +389,8 @@ function getStatusButtonClasses(
               @update:model-value="updateTask(item.id, $event as string | number | undefined)"
             />
             <p class="mt-2 text-sm text-muted">
-              {{ item.hoursPerWeek }}h/week · {{ formatCurrency(item.hoursPerWeek * block.hourlyRate) }} of founder time
+              {{ item.hoursPerWeek }}h/week ·
+              {{ formatCurrency(item.hoursPerWeek * block.hourlyRate) }} of founder time
             </p>
           </div>
 

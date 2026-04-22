@@ -42,7 +42,9 @@ const quadrants = [
     <div class="grid gap-3 sm:grid-cols-2">
       <div class="rounded-2xl border border-muted/20 bg-default/40 p-4">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Filled</p>
-        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-highlighted">{{ summary.filledCellCount }}/4</p>
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-highlighted">
+          {{ summary.filledCellCount }}/4
+        </p>
       </div>
       <div class="rounded-2xl border border-primary/10 bg-primary/5 p-4">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Coverage</p>

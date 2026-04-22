@@ -50,7 +50,6 @@ import WorkspaceTimeOrchestratorBlockEditor from "~/components/workspace/node/bl
 import WorkspaceTimelineBlockEditor from "~/components/workspace/node/blocks/WorkspaceTimelineBlockEditor.vue";
 import WorkspaceTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceTrackerBlockEditor.vue";
 
-
 export type WorkspaceBlockRegistryEntry = {
   component: Component;
   label: string;
@@ -317,25 +316,25 @@ export const workspaceBlockRegistry = {
     icon: "i-lucide-timer",
     addGroup: "secondary",
   },
-   "agency-time-entries-log": {
-     component: WorkspaceAgencyTimeEntriesLogBlockEditor,
-     label: "Agency time entries log",
-     icon: "i-lucide-logs",
-     addGroup: "secondary",
-   },
-   "agency-time-summary": {
-     component: WorkspaceAgencyTimeSummaryBlockEditor,
-     label: "Agency time summary",
-     icon: "i-lucide-chart-pie",
-     addGroup: "secondary",
-   },
-   "agency-billing-report": {
-     component: WorkspaceAgencyBillingReportBlockEditor,
-     label: "Agency billing report",
-     icon: "i-lucide-receipt",
-     addGroup: "secondary",
-   },
-   "agency-settings": {
+  "agency-time-entries-log": {
+    component: WorkspaceAgencyTimeEntriesLogBlockEditor,
+    label: "Agency time entries log",
+    icon: "i-lucide-logs",
+    addGroup: "secondary",
+  },
+  "agency-time-summary": {
+    component: WorkspaceAgencyTimeSummaryBlockEditor,
+    label: "Agency time summary",
+    icon: "i-lucide-chart-pie",
+    addGroup: "secondary",
+  },
+  "agency-billing-report": {
+    component: WorkspaceAgencyBillingReportBlockEditor,
+    label: "Agency billing report",
+    icon: "i-lucide-receipt",
+    addGroup: "secondary",
+  },
+  "agency-settings": {
     component: WorkspaceAgencySettingsBlockEditor,
     label: "Agency settings",
     icon: "i-lucide-calendar-range",
@@ -352,8 +351,8 @@ export const workspaceBlockRegistry = {
 export const workspacePrimaryBlockTypes = Object.entries(workspaceBlockRegistry)
   .filter(([, entry]) => entry.addGroup === "primary")
   .map(([type]) => type) as Array<
-    Extract<WorkspaceBlock["type"], "task-list" | "notes" | "decision">
-  >;
+  Extract<WorkspaceBlock["type"], "task-list" | "notes" | "decision">
+>;
 
 export function getWorkspaceBlockRegistryEntry(type: WorkspaceBlock["type"]) {
   return workspaceBlockRegistry[type];

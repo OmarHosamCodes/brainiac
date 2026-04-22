@@ -85,7 +85,10 @@ function updateMetricTarget(metricKey: WorkspaceAuthorityScoreMetricKey, value: 
       return;
     }
 
-    block.metrics[metricKey].target = Math.max(1, toInteger(value, block.metrics[metricKey].target));
+    block.metrics[metricKey].target = Math.max(
+      1,
+      toInteger(value, block.metrics[metricKey].target),
+    );
   });
 }
 </script>
@@ -126,7 +129,9 @@ function updateMetricTarget(metricKey: WorkspaceAuthorityScoreMetricKey, value: 
     <div class="flex items-center justify-between gap-3 px-1">
       <div>
         <h2 class="text-sm font-black text-highlighted tracking-tight">Authority Metrics</h2>
-        <p class="text-xs text-muted">Track key authority indicators with quick increments and precise editing.</p>
+        <p class="text-xs text-muted">
+          Track key authority indicators with quick increments and precise editing.
+        </p>
       </div>
     </div>
 

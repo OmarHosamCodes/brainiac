@@ -513,7 +513,7 @@ watch(
         :disabled="!canSubmit"
         @click="submit"
       >
-        {{ kind === 'node' ? 'Add to Dashboard' : 'Import' }}
+        {{ kind === "node" ? "Add to Dashboard" : "Import" }}
       </UButton>
     </template>
   </UModal>

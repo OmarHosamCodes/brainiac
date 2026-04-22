@@ -29,10 +29,7 @@ export function useTeamSelection() {
   watch(
     teams,
     (nextTeams) => {
-      if (
-        selectedTeamId.value &&
-        nextTeams.some((team) => team.id === selectedTeamId.value)
-      ) {
+      if (selectedTeamId.value && nextTeams.some((team) => team.id === selectedTeamId.value)) {
         return;
       }
 

@@ -31,9 +31,7 @@ async function handleCheckout() {
 </script>
 
 <template>
-  <div
-    class="min-h-screen bg-white dark:bg-neutral-950 selection:bg-emerald-500/30"
-  >
+  <div class="min-h-screen bg-white dark:bg-neutral-950 selection:bg-emerald-500/30">
     <Header />
 
     <div class="max-w-5xl mx-auto px-6 pt-32 pb-24">
@@ -51,8 +49,8 @@ async function handleCheckout() {
           Start free, upgrade when ready
         </h1>
         <p class="text-lg text-neutral-500 dark:text-neutral-400 max-w-xl mx-auto">
-          Everything you need to organize, collaborate, and think strategically — all in one
-          spatial workspace.
+          Everything you need to organize, collaborate, and think strategically — all in one spatial
+          workspace.
         </p>
       </div>
 
@@ -69,14 +67,7 @@ async function handleCheckout() {
               Perfect for getting started with spatial thinking.
             </p>
 
-            <UButton
-              to="/dashboard"
-              block
-              size="lg"
-              variant="outline"
-              color="neutral"
-              class="mb-6"
-            >
+            <UButton to="/dashboard" block size="lg" variant="outline" color="neutral" class="mb-6">
               Get Started
             </UButton>
 
@@ -92,7 +83,11 @@ async function handleCheckout() {
                   :class="feature.free === false ? 'text-neutral-400' : 'text-emerald-500'"
                 />
                 <span
-                  :class="feature.free === false ? 'text-neutral-400' : 'text-neutral-600 dark:text-neutral-300'"
+                  :class="
+                    feature.free === false
+                      ? 'text-neutral-400'
+                      : 'text-neutral-600 dark:text-neutral-300'
+                  "
                 >
                   {{ feature.label }}
                   <span v-if="typeof feature.free === 'string'" class="text-neutral-400">
@@ -105,9 +100,7 @@ async function handleCheckout() {
         </UCard>
 
         <!-- Pro Tier -->
-        <UCard
-          class="relative overflow-hidden ring-2 ring-emerald-500/50"
-        >
+        <UCard class="relative overflow-hidden ring-2 ring-emerald-500/50">
           <div
             class="absolute top-0 right-0 px-3 py-1 bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-bl-2xl"
           >
@@ -144,7 +137,10 @@ async function handleCheckout() {
                 <UIcon name="i-lucide-check" class="size-4 shrink-0 text-emerald-500" />
                 <span class="text-neutral-600 dark:text-neutral-300">
                   {{ feature.label }}
-                  <span v-if="typeof feature.pro === 'string'" class="text-emerald-500 font-semibold">
+                  <span
+                    v-if="typeof feature.pro === 'string'"
+                    class="text-emerald-500 font-semibold"
+                  >
                     — {{ feature.pro }}
                   </span>
                 </span>

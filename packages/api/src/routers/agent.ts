@@ -61,7 +61,10 @@ export const agentRouter = {
             if (existing.conversations.length >= billing.limits.aiConversations) {
               throw new ORPCError("FORBIDDEN", {
                 message: `Your ${billing.tier} plan allows up to ${billing.limits.aiConversations} AI conversations`,
-                data: { limit: billing.limits.aiConversations, current: existing.conversations.length },
+                data: {
+                  limit: billing.limits.aiConversations,
+                  current: existing.conversations.length,
+                },
               });
             }
           }

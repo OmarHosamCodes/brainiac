@@ -31,7 +31,9 @@ function addStep() {
 <template>
   <div class="space-y-5">
     <!-- Header with Progress -->
-    <div class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-muted/20 bg-default/40 p-4">
+    <div
+      class="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-muted/20 bg-default/40 p-4"
+    >
       <div class="space-y-1.5">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Progress</p>
         <div class="flex items-center gap-3">
@@ -169,7 +171,10 @@ function addStep() {
           </div>
 
           <div v-if="expandedStepId === step.id" class="mt-4 border-t border-muted/10 pt-4">
-            <label :for="'step-note-' + step.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-2">
+            <label
+              :for="'step-note-' + step.id"
+              class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-2"
+            >
               Notes
             </label>
             <UTextarea
@@ -202,7 +207,9 @@ function addStep() {
         v-if="block.steps.length === 0"
         class="border-dashed border-muted/20 rounded-2xl py-10 text-center bg-elevated/5"
       >
-        <div class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto">
+        <div
+          class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto"
+        >
           <UIcon name="i-lucide-list-checks" size="24" />
         </div>
         <p class="mt-3 text-xs font-bold text-muted">No steps yet</p>

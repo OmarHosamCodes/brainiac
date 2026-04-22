@@ -160,7 +160,9 @@ function getHealthTextClasses(health: WorkspaceOkrHealth) {
       v-if="block.objectives.length === 0"
       class="border-dashed border-muted/20 rounded-2xl py-10 text-center bg-elevated/5"
     >
-      <div class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto">
+      <div
+        class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto"
+      >
         <UIcon name="i-lucide-target" size="24" />
       </div>
       <p class="mt-3 text-xs font-bold text-muted">No objectives yet</p>
@@ -195,15 +197,15 @@ function getHealthTextClasses(health: WorkspaceOkrHealth) {
               "
             />
             <p class="mt-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
-              {{ objective.keyResults.length }} key result{{ objective.keyResults.length !== 1 ? 's' : '' }}
+              {{ objective.keyResults.length }} key result{{
+                objective.keyResults.length !== 1 ? "s" : ""
+              }}
             </p>
           </div>
 
           <div class="flex items-start gap-3 shrink-0">
             <div class="text-right">
-              <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
-                Progress
-              </p>
+              <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Progress</p>
               <p
                 class="mt-1 text-xl sm:text-2xl font-black tracking-tight"
                 :class="getHealthTextClasses(getOkrHealth(getOkrObjectiveProgress(objective)))"

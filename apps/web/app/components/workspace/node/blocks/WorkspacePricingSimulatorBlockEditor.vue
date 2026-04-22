@@ -123,7 +123,10 @@ const controls = [
         class="rounded-xl border border-muted/20 bg-elevated/10 p-3"
       >
         <div class="flex items-center justify-between gap-3 mb-2">
-          <label :for="control.key" class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+          <label
+            :for="control.key"
+            class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+          >
             {{ control.label }}
           </label>
           <div class="flex items-center gap-1.5">
@@ -172,7 +175,9 @@ const controls = [
           />
         </div>
 
-        <div class="mt-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/50">
+        <div
+          class="mt-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted/50"
+        >
           <span>{{ control.min }}</span>
           <span>{{ control.max }}</span>
         </div>

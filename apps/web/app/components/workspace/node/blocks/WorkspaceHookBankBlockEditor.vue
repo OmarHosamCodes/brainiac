@@ -170,7 +170,9 @@ async function generateHooks() {
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <div class="rounded-2xl bg-primary/5 p-4 border border-primary/10">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">Hooks</p>
-        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-primary">{{ summary.hookCount }}</p>
+        <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-primary">
+          {{ summary.hookCount }}
+        </p>
       </div>
 
       <div class="rounded-2xl bg-warning/5 p-4 border border-warning/10">
@@ -194,8 +196,13 @@ async function generateHooks() {
     <div class="flex flex-wrap items-start justify-between gap-3 px-1">
       <div>
         <h2 class="text-sm font-black text-highlighted tracking-tight">Hook Bank</h2>
-        <p class="text-xs text-muted">Hooks sorted by score to surface the strongest opening angles.</p>
-        <p v-if="block.lastGeneratedAt" class="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted/60">
+        <p class="text-xs text-muted">
+          Hooks sorted by score to surface the strongest opening angles.
+        </p>
+        <p
+          v-if="block.lastGeneratedAt"
+          class="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted/60"
+        >
           Last generated {{ formatDateTime(block.lastGeneratedAt) }}
         </p>
       </div>
@@ -230,7 +237,9 @@ async function generateHooks() {
       v-if="sortedHooks.length === 0"
       class="border-dashed border-muted/20 rounded-2xl py-10 text-center bg-elevated/5"
     >
-      <div class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto">
+      <div
+        class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto"
+      >
         <UIcon name="i-lucide-link" size="24" />
       </div>
       <p class="mt-3 text-xs font-bold text-muted">No hooks stored yet</p>
@@ -257,7 +266,10 @@ async function generateHooks() {
           <div class="min-w-0 flex-1 space-y-3">
             <!-- Category Input -->
             <div>
-              <label :for="'category-' + hook.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              <label
+                :for="'category-' + hook.id"
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+              >
                 Category
               </label>
               <UInput
@@ -278,14 +290,19 @@ async function generateHooks() {
 
             <!-- Accessible Score Rating -->
             <div>
-              <label :for="'score-' + hook.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              <label
+                :for="'score-' + hook.id"
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+              >
                 Hook Score ({{ hook.score }}/10)
               </label>
               <div class="flex items-center gap-2">
                 <USelect
                   :id="'score-' + hook.id"
                   :model-value="hook.score"
-                  :items="Array.from({ length: 10 }, (_, i) => ({ label: `${i + 1}`, value: i + 1 }))"
+                  :items="
+                    Array.from({ length: 10 }, (_, i) => ({ label: `${i + 1}`, value: i + 1 }))
+                  "
                   variant="subtle"
                   size="sm"
                   class="w-20 rounded-xl"
@@ -305,7 +322,10 @@ async function generateHooks() {
 
             <!-- Hook Text -->
             <div>
-              <label :for="'text-' + hook.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              <label
+                :for="'text-' + hook.id"
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+              >
                 Hook Text
               </label>
               <UTextarea

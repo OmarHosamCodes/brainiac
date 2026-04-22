@@ -38,22 +38,19 @@ const handleSignOut = async () => {
     <UButton v-else-if="!session.data" variant="outline" to="/login"> Sign In </UButton>
 
     <div v-else class="flex items-center gap-2">
-      <UBadge
-        :color="isPro ? 'primary' : 'neutral'"
-        variant="subtle"
-        size="xs"
-      >
-        {{ tier === 'pro' ? 'Pro' : 'Free' }}
+      <UBadge :color="isPro ? 'primary' : 'neutral'" variant="subtle" size="xs">
+        {{ tier === "pro" ? "Pro" : "Free" }}
       </UBadge>
 
-      <UButton variant="ghost" color="neutral" to="/billing" icon="i-lucide-credit-card" size="sm" />
-
       <UButton
-        variant="solid"
-        icon="i-lucide-log-out"
-        label="Sign out"
-        @click="handleSignOut()"
+        variant="ghost"
+        color="neutral"
+        to="/billing"
+        icon="i-lucide-credit-card"
+        size="sm"
       />
+
+      <UButton variant="solid" icon="i-lucide-log-out" label="Sign out" @click="handleSignOut()" />
     </div>
   </div>
 </template>

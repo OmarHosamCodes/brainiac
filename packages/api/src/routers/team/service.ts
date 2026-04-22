@@ -335,7 +335,9 @@ export async function updateTeamMemberRole(
     const ownerCountRows = await db
       .select({ id: workspaceTeamMember.id })
       .from(workspaceTeamMember)
-      .where(and(eq(workspaceTeamMember.teamId, input.teamId), eq(workspaceTeamMember.role, "owner")));
+      .where(
+        and(eq(workspaceTeamMember.teamId, input.teamId), eq(workspaceTeamMember.role, "owner")),
+      );
 
     if (ownerCountRows.length <= 1) {
       throw new ORPCError("BAD_REQUEST");
@@ -349,7 +351,12 @@ export async function updateTeamMemberRole(
       role: input.role,
       updatedAt: now,
     })
-    .where(and(eq(workspaceTeamMember.teamId, input.teamId), eq(workspaceTeamMember.userId, input.userId)))
+    .where(
+      and(
+        eq(workspaceTeamMember.teamId, input.teamId),
+        eq(workspaceTeamMember.userId, input.userId),
+      ),
+    )
     .returning({
       teamId: workspaceTeamMember.teamId,
       userId: workspaceTeamMember.userId,
@@ -378,7 +385,9 @@ export async function removeTeamMember(
     const ownerCountRows = await db
       .select({ id: workspaceTeamMember.id })
       .from(workspaceTeamMember)
-      .where(and(eq(workspaceTeamMember.teamId, input.teamId), eq(workspaceTeamMember.role, "owner")));
+      .where(
+        and(eq(workspaceTeamMember.teamId, input.teamId), eq(workspaceTeamMember.role, "owner")),
+      );
 
     if (ownerCountRows.length <= 1) {
       throw new ORPCError("BAD_REQUEST");
@@ -387,7 +396,12 @@ export async function removeTeamMember(
 
   const [removed] = await db
     .delete(workspaceTeamMember)
-    .where(and(eq(workspaceTeamMember.teamId, input.teamId), eq(workspaceTeamMember.userId, input.userId)))
+    .where(
+      and(
+        eq(workspaceTeamMember.teamId, input.teamId),
+        eq(workspaceTeamMember.userId, input.userId),
+      ),
+    )
     .returning({
       teamId: workspaceTeamMember.teamId,
       userId: workspaceTeamMember.userId,

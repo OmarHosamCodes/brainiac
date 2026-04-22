@@ -174,9 +174,7 @@ export type WorkspaceProcessStep = z.infer<typeof workspaceProcessStepSchema>;
 export type Workspace2x2MatrixItem = z.infer<typeof workspace2x2MatrixItemSchema>;
 export type Workspace2x2MatrixQuadrant = z.infer<typeof workspace2x2MatrixQuadrantSchema>;
 export type Workspace2x2MatrixQuadrants = z.infer<typeof workspace2x2MatrixQuadrantsSchema>;
-export type WorkspaceSkillsHeatMapDimension = z.infer<
-  typeof workspaceSkillsHeatMapDimensionSchema
->;
+export type WorkspaceSkillsHeatMapDimension = z.infer<typeof workspaceSkillsHeatMapDimensionSchema>;
 export type WorkspacePeopleSkillDimension = z.infer<typeof workspacePeopleSkillDimensionSchema>;
 export type WorkspaceSkillsHeatMapScores = z.infer<typeof workspaceSkillsHeatMapScoresSchema>;
 export type WorkspaceSkillsHeatMapMember = z.infer<typeof workspaceSkillsHeatMapMemberSchema>;
@@ -288,7 +286,9 @@ export type WorkspaceAgencyTimeEntriesLogBlock = z.infer<
 >;
 export type WorkspaceAgencyTimeSummaryBlock = z.infer<typeof workspaceAgencyTimeSummaryBlockSchema>;
 export type WorkspaceAgencySettingsBlock = z.infer<typeof workspaceAgencySettingsBlockSchema>;
-export type WorkspaceAgencyBillingReportBlock = z.infer<typeof workspaceAgencyBillingReportBlockSchema>;
+export type WorkspaceAgencyBillingReportBlock = z.infer<
+  typeof workspaceAgencyBillingReportBlockSchema
+>;
 export type WorkspaceCourseRoadmapBlock = z.infer<typeof workspaceCourseRoadmapBlockSchema>;
 export type WorkspaceLearningOutcomesMatrixBlock = z.infer<
   typeof workspaceLearningOutcomesMatrixBlockSchema

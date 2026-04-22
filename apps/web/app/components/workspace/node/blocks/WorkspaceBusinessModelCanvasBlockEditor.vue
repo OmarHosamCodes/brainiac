@@ -125,7 +125,9 @@ function runAnalysis() {
     <div class="flex flex-wrap items-center justify-between gap-3 px-1">
       <div>
         <h2 class="text-sm font-black text-highlighted tracking-tight">Business Model Canvas</h2>
-        <p class="text-xs text-muted">Pressure-test how the model creates, delivers, and captures value.</p>
+        <p class="text-xs text-muted">
+          Pressure-test how the model creates, delivers, and captures value.
+        </p>
       </div>
 
       <UButton
@@ -151,7 +153,7 @@ function runAnalysis() {
             `bmc-${cell.area}`,
             block.cells[cell.key].trim()
               ? 'border-muted/20 bg-default/40'
-              : 'border-warning/30 bg-warning/5'
+              : 'border-warning/30 bg-warning/5',
           ]"
         >
           <div class="mb-3 flex items-center justify-between gap-2">
@@ -192,13 +194,19 @@ function runAnalysis() {
       class="rounded-2xl border border-warning/20 bg-warning/5 p-4"
     >
       <div class="flex items-start gap-3">
-        <div class="flex size-8 items-center justify-center rounded-lg bg-warning/10 text-warning shrink-0">
+        <div
+          class="flex size-8 items-center justify-center rounded-lg bg-warning/10 text-warning shrink-0"
+        >
           <UIcon name="i-lucide-alert-triangle" size="16" />
         </div>
         <div class="flex-1">
           <p class="text-sm font-bold text-warning">Incomplete canvas</p>
           <p class="text-xs text-muted mt-1">
-            {{ summary.missingCellCount }} cell{{ summary.missingCellCount !== 1 ? 's' : '' }} need{{ summary.missingCellCount === 1 ? 's' : '' }} attention. Fill all cells for a complete model analysis.
+            {{ summary.missingCellCount }} cell{{
+              summary.missingCellCount !== 1 ? "s" : ""
+            }}
+            need{{ summary.missingCellCount === 1 ? "s" : "" }} attention. Fill all cells for a
+            complete model analysis.
           </p>
         </div>
       </div>
@@ -214,7 +222,10 @@ function runAnalysis() {
           </p>
         </div>
 
-        <p v-if="block.analysisUpdatedAt" class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+        <p
+          v-if="block.analysisUpdatedAt"
+          class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+        >
           Last analyzed {{ formatDateTime(block.analysisUpdatedAt) }}
         </p>
       </div>

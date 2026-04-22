@@ -143,7 +143,8 @@ function collectTasksFromSourceNode(sourceNode: WorkspaceNode): WorkspaceCollect
         (task) =>
           ({
             sourceNodeId: sourceNode.id,
-            sourceNodeTitle: trimToEmpty(sourceNode.title) || trimToEmpty(sourceNode.label) || "Untitled node",
+            sourceNodeTitle:
+              trimToEmpty(sourceNode.title) || trimToEmpty(sourceNode.label) || "Untitled node",
             blockId: block.id,
             blockTitle: getDisplayBlockTitle(block),
             blockType: block.type,
@@ -354,8 +355,8 @@ export function getTimeOrchestratorSummary(
     tasks.length === 0
       ? 0
       : Number(
-        (tasks.reduce((sum, { task }) => sum + task.importance, 0) / tasks.length).toFixed(1),
-      );
+          (tasks.reduce((sum, { task }) => sum + task.importance, 0) / tasks.length).toFixed(1),
+        );
 
   const overdue = tasks
     .filter(({ task }) => task.dueDate && getDueDateValue(task.dueDate) < todayValue)
@@ -618,26 +619,26 @@ export function buildEisenhowerBattlePlanPromptFromTasks(tasks: WorkspaceCollect
   const taskLines =
     tasks.length > 0
       ? sortCollectedEisenhowerTasks(tasks).map((item, index) => {
-        const { task } = item;
-        const meta = [
-          task.domain
-            ? `domain ${getWorkspaceTaskDomainLabel(task.domain)}`
-            : "domain unassigned",
-          `urgency ${task.urgency}/10`,
-          `importance ${task.importance}/10`,
-          `${task.estimateMinutes} minutes`,
-          `quadrant ${getWorkspaceTaskQuadrantLabel(getWorkspaceTaskQuadrant(task))}`,
-          task.completed ? "completed" : "open",
-          task.dueDate ? `due ${task.dueDate}` : "",
-          item.blockType === "content-pipeline"
-            ? `source ${item.sourceNodeTitle} / ${item.blockTitle}`
-            : `${item.sourceNodeTitle} / ${item.blockTitle}`,
-        ]
-          .filter(Boolean)
-          .join(", ");
+          const { task } = item;
+          const meta = [
+            task.domain
+              ? `domain ${getWorkspaceTaskDomainLabel(task.domain)}`
+              : "domain unassigned",
+            `urgency ${task.urgency}/10`,
+            `importance ${task.importance}/10`,
+            `${task.estimateMinutes} minutes`,
+            `quadrant ${getWorkspaceTaskQuadrantLabel(getWorkspaceTaskQuadrant(task))}`,
+            task.completed ? "completed" : "open",
+            task.dueDate ? `due ${task.dueDate}` : "",
+            item.blockType === "content-pipeline"
+              ? `source ${item.sourceNodeTitle} / ${item.blockTitle}`
+              : `${item.sourceNodeTitle} / ${item.blockTitle}`,
+          ]
+            .filter(Boolean)
+            .join(", ");
 
-        return `${index + 1}. ${task.text} (${meta})`;
-      })
+          return `${index + 1}. ${task.text} (${meta})`;
+        })
       : ["No tasks recorded."];
 
   return [

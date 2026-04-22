@@ -113,13 +113,13 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
     <!-- Executive Summary -->
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-2xl bg-primary/5 p-4 border border-primary/10">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
-          Pipeline Value
-        </p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Pipeline Value</p>
         <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-primary">
           {{ formatCurrency(summary.totalValue) }}
         </p>
-        <p class="mt-1 text-[11px] text-muted/60 font-semibold uppercase tracking-wider">{{ summary.dealCount }} deals</p>
+        <p class="mt-1 text-[11px] text-muted/60 font-semibold uppercase tracking-wider">
+          {{ summary.dealCount }} deals
+        </p>
       </div>
 
       <div class="rounded-2xl bg-warning/5 p-4 border border-warning/10">
@@ -127,17 +127,19 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
         <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-warning">
           {{ formatCurrency(summary.openValue) }}
         </p>
-        <p class="mt-1 text-[11px] text-muted/60 font-semibold uppercase tracking-wider">In progress</p>
+        <p class="mt-1 text-[11px] text-muted/60 font-semibold uppercase tracking-wider">
+          In progress
+        </p>
       </div>
 
       <div class="rounded-2xl bg-success/5 p-4 border border-success/10">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
-          Closed Value
-        </p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Closed Value</p>
         <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-success">
           {{ formatCurrency(summary.closedValue) }}
         </p>
-        <p class="mt-1 text-[11px] text-muted/60 font-semibold uppercase tracking-wider">Converted</p>
+        <p class="mt-1 text-[11px] text-muted/60 font-semibold uppercase tracking-wider">
+          Converted
+        </p>
       </div>
 
       <div class="rounded-2xl bg-error/5 p-4 border border-error/10">
@@ -145,7 +147,9 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
         <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-error">
           {{ summary.stageSummaries[0]?.dealCount ?? 0 }}
         </p>
-        <p class="mt-1 text-[11px] text-muted/60 font-semibold uppercase tracking-wider">Leads qualified</p>
+        <p class="mt-1 text-[11px] text-muted/60 font-semibold uppercase tracking-wider">
+          Leads qualified
+        </p>
       </div>
     </div>
 
@@ -183,7 +187,7 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
                   {{ stage.label }}
                 </p>
                 <p class="mt-0.5 text-sm font-bold text-highlighted">
-                  {{ stage.dealCount }} deal{{ stage.dealCount !== 1 ? 's' : '' }}
+                  {{ stage.dealCount }} deal{{ stage.dealCount !== 1 ? "s" : "" }}
                 </p>
               </div>
 
@@ -207,7 +211,9 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
         v-if="sortedDeals.length === 0"
         class="border-dashed border-muted/20 rounded-2xl py-10 text-center bg-elevated/5"
       >
-        <div class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto">
+        <div
+          class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto"
+        >
           <UIcon name="i-lucide-funnel" size="24" />
         </div>
         <p class="mt-3 text-xs font-bold text-muted">No deals yet</p>
@@ -245,13 +251,18 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
                 />
               </div>
 
-              <p class="mt-1.5 pl-3.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+              <p
+                class="mt-1.5 pl-3.5 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+              >
                 {{ workspaceSalesTemperatureLabels[deal.temperature] }} temperature
               </p>
             </div>
 
             <div>
-              <label :for="'value-' + deal.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              <label
+                :for="'value-' + deal.id"
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+              >
                 Value (EGP)
               </label>
               <UInput
@@ -272,7 +283,10 @@ function getStageRowClasses(stage: WorkspaceSalesPipelineStage) {
             </div>
 
             <div>
-              <label :for="'stage-' + deal.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              <label
+                :for="'stage-' + deal.id"
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+              >
                 Stage
               </label>
               <USelect

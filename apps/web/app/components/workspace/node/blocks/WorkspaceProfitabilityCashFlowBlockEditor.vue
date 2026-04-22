@@ -134,7 +134,7 @@ function getProfitTone(value: number) {
     text: "text-error",
     bg: "bg-error/5",
     border: "border-error/10",
-      icon: "bg-error/10 text-error",
+    icon: "bg-error/10 text-error",
   };
 }
 
@@ -158,7 +158,9 @@ function getHealthTone(healthPercent: number) {
       <div class="flex items-center justify-between gap-3 px-1">
         <div>
           <h2 class="text-lg font-black text-highlighted tracking-tight">Cash Flow Overview</h2>
-          <p class="text-xs text-muted">Real-time profitability and margin metrics across all clients.</p>
+          <p class="text-xs text-muted">
+            Real-time profitability and margin metrics across all clients.
+          </p>
         </div>
       </div>
 
@@ -166,7 +168,11 @@ function getHealthTone(healthPercent: number) {
         <!-- Revenue Card -->
         <div
           class="rounded-3xl p-5 border transition-colors"
-          :class="getProfitTone(summary.totalRevenue > 0 ? 1 : 0).bg + ' ' + getProfitTone(summary.totalRevenue > 0 ? 1 : 0).border"
+          :class="
+            getProfitTone(summary.totalRevenue > 0 ? 1 : 0).bg +
+            ' ' +
+            getProfitTone(summary.totalRevenue > 0 ? 1 : 0).border
+          "
         >
           <div class="flex items-center gap-2.5">
             <div
@@ -177,7 +183,9 @@ function getHealthTone(healthPercent: number) {
             </div>
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Revenue</p>
           </div>
-          <p class="mt-3 text-2xl sm:text-3xl font-black tracking-tight text-success truncate font-mono">
+          <p
+            class="mt-3 text-2xl sm:text-3xl font-black tracking-tight text-success truncate font-mono"
+          >
             {{ formatCurrency(summary.totalRevenue) }}
           </p>
         </div>
@@ -188,12 +196,17 @@ function getHealthTone(healthPercent: number) {
           :class="getProfitTone(-1).bg + ' ' + getProfitTone(-1).border"
         >
           <div class="flex items-center gap-2.5">
-            <div class="flex size-8 items-center justify-center rounded-xl text-error" :class="getProfitTone(-1).icon">
+            <div
+              class="flex size-8 items-center justify-center rounded-xl text-error"
+              :class="getProfitTone(-1).icon"
+            >
               <UIcon name="i-lucide-trending-down" size="18" />
             </div>
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Expenses</p>
           </div>
-          <p class="mt-3 text-2xl sm:text-3xl font-black tracking-tight text-error truncate font-mono">
+          <p
+            class="mt-3 text-2xl sm:text-3xl font-black tracking-tight text-error truncate font-mono"
+          >
             {{ formatCurrency(summary.totalExpenses) }}
           </p>
         </div>
@@ -201,7 +214,9 @@ function getHealthTone(healthPercent: number) {
         <!-- Profit Card -->
         <div
           class="rounded-3xl p-5 border transition-colors"
-          :class="getProfitTone(summary.totalProfit).bg + ' ' + getProfitTone(summary.totalProfit).border"
+          :class="
+            getProfitTone(summary.totalProfit).bg + ' ' + getProfitTone(summary.totalProfit).border
+          "
         >
           <div class="flex items-center gap-2.5">
             <div
@@ -223,7 +238,11 @@ function getHealthTone(healthPercent: number) {
         <!-- Margin Card -->
         <div
           class="rounded-3xl p-5 border transition-colors"
-          :class="getMarginTone(summary.marginPercent).bg + ' ' + getMarginTone(summary.marginPercent).border"
+          :class="
+            getMarginTone(summary.marginPercent).bg +
+            ' ' +
+            getMarginTone(summary.marginPercent).border
+          "
         >
           <div class="flex items-center gap-2.5">
             <div
@@ -250,7 +269,9 @@ function getHealthTone(healthPercent: number) {
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-1">
           <div>
             <h2 class="text-lg font-black text-highlighted tracking-tight">Client Portfolio</h2>
-            <p class="text-xs text-muted">Track profitability, margins, and collection status per client.</p>
+            <p class="text-xs text-muted">
+              Track profitability, margins, and collection status per client.
+            </p>
           </div>
 
           <UButton
@@ -269,7 +290,9 @@ function getHealthTone(healthPercent: number) {
           v-if="block.clients.length === 0"
           class="border-dashed border-muted/20 rounded-3xl py-10 text-center bg-elevated/5 flex flex-col items-center justify-center"
         >
-          <div class="flex size-16 items-center justify-center rounded-2xl bg-muted/10 text-muted/30">
+          <div
+            class="flex size-16 items-center justify-center rounded-2xl bg-muted/10 text-muted/30"
+          >
             <UIcon name="i-lucide-users-2" size="32" />
           </div>
           <p class="mt-4 text-sm font-bold text-muted">No clients yet</p>
@@ -300,7 +323,9 @@ function getHealthTone(healthPercent: number) {
                   placeholder="Client name"
                   variant="none"
                   size="lg"
-                  :ui="{ base: 'px-0 text-highlighted placeholder:text-muted/30 text-xl font-black tracking-tight' }"
+                  :ui="{
+                    base: 'px-0 text-highlighted placeholder:text-muted/30 text-xl font-black tracking-tight',
+                  }"
                   @update:model-value="
                     mutateBlock(tabId, block.id, (entry) => {
                       if (entry.type !== 'profitability-cash-flow') return;
@@ -314,7 +339,15 @@ function getHealthTone(healthPercent: number) {
 
               <div class="flex items-center gap-3 shrink-0">
                 <UBadge
-                  :color="getMarginTone(getProfitabilityClientMarginPercent(client)).text === 'text-success' ? 'success' : getMarginTone(getProfitabilityClientMarginPercent(client)).text === 'text-warning' ? 'warning' : 'error'"
+                  :color="
+                    getMarginTone(getProfitabilityClientMarginPercent(client)).text ===
+                    'text-success'
+                      ? 'success'
+                      : getMarginTone(getProfitabilityClientMarginPercent(client)).text ===
+                          'text-warning'
+                        ? 'warning'
+                        : 'error'
+                  "
                   variant="soft"
                   size="md"
                   class="rounded-xl px-3 py-1 font-mono font-bold"
@@ -337,7 +370,9 @@ function getHealthTone(healthPercent: number) {
             <div class="grid gap-4 sm:grid-cols-3">
               <!-- Collection Status -->
               <div>
-                <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-2">
+                <label
+                  class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-2"
+                >
                   Payment Status
                 </label>
                 <USelect
@@ -360,7 +395,9 @@ function getHealthTone(healthPercent: number) {
 
               <!-- Revenue -->
               <div>
-                <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-2">
+                <label
+                  class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-2"
+                >
                   Revenue (EGP)
                 </label>
                 <UInput
@@ -382,7 +419,9 @@ function getHealthTone(healthPercent: number) {
 
               <!-- Direct Cost -->
               <div>
-                <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-2">
+                <label
+                  class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-2"
+                >
                   Direct Cost (EGP)
                 </label>
                 <UInput
@@ -420,9 +459,14 @@ function getHealthTone(healthPercent: number) {
                     @update:model-value="
                       mutateBlock(tabId, block.id, (entry) => {
                         if (entry.type !== 'profitability-cash-flow') return;
-                        const target = entry.clients.find((candidate) => candidate.id === client.id);
+                        const target = entry.clients.find(
+                          (candidate) => candidate.id === client.id,
+                        );
                         if (!target) return;
-                        target.healthPercent = Math.min(100, toInteger($event ?? '0', target.healthPercent));
+                        target.healthPercent = Math.min(
+                          100,
+                          toInteger($event ?? '0', target.healthPercent),
+                        );
                       })
                     "
                   />
@@ -441,7 +485,9 @@ function getHealthTone(healthPercent: number) {
       </section>
 
       <!-- Expense Breakdown Section -->
-      <section class="flex flex-col gap-5 rounded-2xl border border-muted/20 bg-elevated/5 p-6 lg:sticky lg:top-8 lg:h-fit">
+      <section
+        class="flex flex-col gap-5 rounded-2xl border border-muted/20 bg-elevated/5 p-6 lg:sticky lg:top-8 lg:h-fit"
+      >
         <div class="flex items-center justify-between gap-3">
           <div>
             <h2 class="text-base font-black text-highlighted tracking-tight">Monthly Overhead</h2>
@@ -481,11 +527,15 @@ function getHealthTone(healthPercent: number) {
                   placeholder="Category name"
                   variant="none"
                   size="sm"
-                  :ui="{ base: 'px-0 text-highlighted placeholder:text-muted/30 text-sm font-bold' }"
+                  :ui="{
+                    base: 'px-0 text-highlighted placeholder:text-muted/30 text-sm font-bold',
+                  }"
                   @update:model-value="
                     mutateBlock(tabId, block.id, (entry) => {
                       if (entry.type !== 'profitability-cash-flow') return;
-                      const target = entry.expenses.find((candidate) => candidate.id === expense.id);
+                      const target = entry.expenses.find(
+                        (candidate) => candidate.id === expense.id,
+                      );
                       if (!target) return;
                       target.category = ($event ?? '').slice(0, 120);
                     })
@@ -506,7 +556,9 @@ function getHealthTone(healthPercent: number) {
 
             <div class="flex items-end justify-between gap-3">
               <div class="flex-1">
-                <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+                <label
+                  class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+                >
                   Monthly (EGP)
                 </label>
                 <UInput
@@ -518,7 +570,9 @@ function getHealthTone(healthPercent: number) {
                   @update:model-value="
                     mutateBlock(tabId, block.id, (entry) => {
                       if (entry.type !== 'profitability-cash-flow') return;
-                      const target = entry.expenses.find((candidate) => candidate.id === expense.id);
+                      const target = entry.expenses.find(
+                        (candidate) => candidate.id === expense.id,
+                      );
                       if (!target) return;
                       target.amountEgp = toInteger($event ?? '0', target.amountEgp);
                     })
@@ -535,14 +589,20 @@ function getHealthTone(healthPercent: number) {
           </article>
 
           <!-- Total Overhead Summary -->
-          <div class="flex items-center justify-between rounded-xl bg-primary/5 p-4 border border-primary/10">
+          <div
+            class="flex items-center justify-between rounded-xl bg-primary/5 p-4 border border-primary/10"
+          >
             <div>
-              <p class="text-[10px] font-bold text-muted/60 uppercase tracking-[0.2em]">Total Monthly</p>
+              <p class="text-[10px] font-bold text-muted/60 uppercase tracking-[0.2em]">
+                Total Monthly
+              </p>
               <p class="text-lg font-black text-primary mt-1 tracking-tight font-mono">
                 {{ formatCurrency(totalExpenseBreakdown) }}
               </p>
             </div>
-            <div class="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10">
+            <div
+              class="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary border border-primary/10"
+            >
               <UIcon name="i-lucide-calculator" size="20" />
             </div>
           </div>
@@ -551,7 +611,3 @@ function getHealthTone(healthPercent: number) {
     </div>
   </div>
 </template>
-
-
-
-

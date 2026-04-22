@@ -1,7 +1,4 @@
-import {
-  WORKSPACE_TASK_DOMAINS,
-  getWorkspaceTaskDomainLabel,
-} from "@brainiac/workspace";
+import { WORKSPACE_TASK_DOMAINS, getWorkspaceTaskDomainLabel } from "@brainiac/workspace";
 
 import type {
   WorkspaceNodeDomainOption,

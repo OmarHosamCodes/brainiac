@@ -186,14 +186,13 @@ const connectSourceNodeId = computed(() =>
   connectState.value.mode === "idle" ? null : connectState.value.sourceNodeId,
 );
 const connectModeTargetIdSet = computed(
-  () =>
-    new Set(connectState.value.mode === "idle" ? [] : connectState.value.eligibleTargetIds),
+  () => new Set(connectState.value.mode === "idle" ? [] : connectState.value.eligibleTargetIds),
 );
 const hoveredConnectTargetId = computed(() =>
   connectState.value.mode === "dragging" ? connectState.value.hoveredTargetId : null,
 );
 const connectSourceNode = computed(() =>
-  connectSourceNodeId.value ? nodeById.value.get(connectSourceNodeId.value) ?? null : null,
+  connectSourceNodeId.value ? (nodeById.value.get(connectSourceNodeId.value) ?? null) : null,
 );
 const connectModeInstruction = computed(() => {
   const sourceNode = connectSourceNode.value;
@@ -466,7 +465,11 @@ function refreshConnectMode() {
 function startConnectionDrag(event: PointerEvent, node: CanvasNodeModel) {
   const worldPoint = screenToWorld(event.clientX, event.clientY);
 
-  if (!worldPoint || connectState.value.mode !== "armed" || connectState.value.sourceNodeId !== node.id) {
+  if (
+    !worldPoint ||
+    connectState.value.mode !== "armed" ||
+    connectState.value.sourceNodeId !== node.id
+  ) {
     return;
   }
 
@@ -591,12 +594,15 @@ function isEligibleConnectTarget(nodeId: string) {
 }
 
 function isDimmedByConnectMode(nodeId: string) {
-  return isConnectModeActive.value && !isConnectSourceNode(nodeId) && !isEligibleConnectTarget(nodeId);
+  return (
+    isConnectModeActive.value && !isConnectSourceNode(nodeId) && !isEligibleConnectTarget(nodeId)
+  );
 }
 
 function getNodeShellClasses(node: CanvasNodeModel) {
   return {
-    "is-dragging": activeInteraction.value?.mode === "drag" && activeInteraction.value.nodeId === node.id,
+    "is-dragging":
+      activeInteraction.value?.mode === "drag" && activeInteraction.value.nodeId === node.id,
     "is-source": isConnectSourceNode(node.id),
     "is-target": isEligibleConnectTarget(node.id),
     "is-hovered-target": hoveredConnectTargetId.value === node.id,
@@ -854,7 +860,7 @@ function onWindowPointerUp(event: PointerEvent) {
 
     const sourceNode = nodeById.value.get(connectState.value.sourceNodeId);
     const targetNode = connectState.value.hoveredTargetId
-      ? nodeById.value.get(connectState.value.hoveredTargetId) ?? null
+      ? (nodeById.value.get(connectState.value.hoveredTargetId) ?? null)
       : null;
     const pair = getCanonicalConnectionPair(sourceNode, targetNode);
 
@@ -1041,7 +1047,8 @@ const contextMenuItems = computed<ContextMenuItem[][]>(() => {
         ? [
             {
               label: isConnectSource && isConnectModeActive.value ? "Cancel connect" : "Connect",
-              icon: isConnectSource && isConnectModeActive.value ? "i-lucide-x" : "i-lucide-waypoints",
+              icon:
+                isConnectSource && isConnectModeActive.value ? "i-lucide-x" : "i-lucide-waypoints",
               onSelect: () => {
                 if (isConnectSource && isConnectModeActive.value) {
                   cancelConnectMode();
@@ -1404,11 +1411,7 @@ onBeforeUnmount(() => {
                 :marker-end="`url(#canvas-connection-arrow-${edge.key})`"
                 :stroke="`rgb(${edge.colorRgb})`"
               />
-              <path
-                class="canvas-connection-hit"
-                :d="edge.hitPath"
-                stroke="transparent"
-              />
+              <path class="canvas-connection-hit" :d="edge.hitPath" stroke="transparent" />
             </g>
 
             <path
@@ -1501,10 +1504,16 @@ onBeforeUnmount(() => {
       v-if="isConnectModeActive && connectSourceNode"
       class="pointer-events-none absolute left-1/2 top-6 z-40 -translate-x-1/2 px-4"
     >
-      <div class="flex items-center gap-3 rounded-full border border-neutral-200/70 bg-white/88 px-4 py-2 text-xs font-medium text-neutral-700 shadow-xl backdrop-blur-xl dark:border-neutral-800/70 dark:bg-neutral-950/88 dark:text-neutral-200">
-        <span class="inline-flex size-2.5 rounded-full bg-primary-500 shadow-[0_0_14px_rgba(59,130,246,0.55)]" />
+      <div
+        class="flex items-center gap-3 rounded-full border border-neutral-200/70 bg-white/88 px-4 py-2 text-xs font-medium text-neutral-700 shadow-xl backdrop-blur-xl dark:border-neutral-800/70 dark:bg-neutral-950/88 dark:text-neutral-200"
+      >
+        <span
+          class="inline-flex size-2.5 rounded-full bg-primary-500 shadow-[0_0_14px_rgba(59,130,246,0.55)]"
+        />
         <span>{{ connectModeInstruction }}</span>
-        <span class="rounded-full border border-neutral-200/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400 dark:border-neutral-800/80">
+        <span
+          class="rounded-full border border-neutral-200/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400 dark:border-neutral-800/80"
+        >
           Esc
         </span>
       </div>

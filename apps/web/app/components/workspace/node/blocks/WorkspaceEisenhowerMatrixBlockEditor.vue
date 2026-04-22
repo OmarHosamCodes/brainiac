@@ -49,10 +49,7 @@ const sourcesModalOpen = ref(false);
 const operationState = computed(() => getBlockOperationState(props.tabId, props.block.id));
 const isOrchestratorNode = computed(() => currentNode.value?.nodeType === "orchestrator");
 const currentNodeTitle = computed(
-  () =>
-    currentNode.value?.title.trim() ||
-    currentNode.value?.label.trim() ||
-    "Current node",
+  () => currentNode.value?.title.trim() || currentNode.value?.label.trim() || "Current node",
 );
 const currentTabTitle = computed(() => {
   const tab = currentNode.value?.tabs.find((entry) => entry.id === props.tabId);
@@ -77,10 +74,7 @@ const quadrantMeta = {
     description: "Low urgency + importance",
     className: "border-muted/35 bg-elevated/20",
   },
-} satisfies Record<
-  WorkspaceTaskQuadrant,
-  { description: string; className: string }
->;
+} satisfies Record<WorkspaceTaskQuadrant, { description: string; className: string }>;
 
 const scopedCollectedTasks = computed<WorkspaceCollectedTask[]>(() => {
   if (!currentNode.value) {
@@ -104,15 +98,10 @@ const scopedCollectedTasks = computed<WorkspaceCollectedTask[]>(() => {
 });
 
 const filteredCollectedTasks = computed(() =>
-  filterCollectedTasksByTimeOrchestratorSettings(
-    scopedCollectedTasks.value,
-    props.block.settings,
-  ),
+  filterCollectedTasksByTimeOrchestratorSettings(scopedCollectedTasks.value, props.block.settings),
 );
 
-const summary = computed(() =>
-  getEisenhowerMatrixSummaryFromTasks(filteredCollectedTasks.value),
-);
+const summary = computed(() => getEisenhowerMatrixSummaryFromTasks(filteredCollectedTasks.value));
 
 const openScopedTasks = computed(() =>
   scopedCollectedTasks.value.filter(({ task }) => !task.completed),
@@ -133,16 +122,14 @@ const matrixStatus = computed(() => {
     return {
       label: operationState.value.label || "Running analysis",
       tone: "primary" as const,
-      description: "The Orchestrator is generating a battle plan from the current filtered matrix scope.",
+      description:
+        "The Orchestrator is generating a battle plan from the current filtered matrix scope.",
     };
   }
 
   if (filteredCollectedTasks.value.length === 0) {
     return {
-      label:
-        scopedCollectedTasks.value.length === 0
-          ? "No tasks yet"
-          : "No tasks match filters",
+      label: scopedCollectedTasks.value.length === 0 ? "No tasks yet" : "No tasks match filters",
       tone: "warning" as const,
       description:
         scopedCollectedTasks.value.length === 0
@@ -159,10 +146,7 @@ const matrixStatus = computed(() => {
     };
   }
 
-  if (
-    props.block.settings.quadrants.includes("do") &&
-    summary.value.quadrants.do.taskCount === 0
-  ) {
+  if (props.block.settings.quadrants.includes("do") && summary.value.quadrants.do.taskCount === 0) {
     return {
       label: "No do-now tasks",
       tone: "primary" as const,
@@ -173,7 +157,8 @@ const matrixStatus = computed(() => {
   return {
     label: "Matrix ready",
     tone: "success" as const,
-    description: "Priorities are distributed across the current filtered scope and ready for execution.",
+    description:
+      "Priorities are distributed across the current filtered scope and ready for execution.",
   };
 });
 
@@ -325,19 +310,12 @@ function getScopedQuadrant(item: WorkspaceCollectedTask): WorkspaceTaskQuadrant 
   return "eliminate";
 }
 
-function updateSettings(
-  mutator: (settings: WorkspaceEisenhowerMatrixBlock["settings"]) => void,
-) {
-  mutateTypedBlock(
-    props.tabId,
-    props.block.id,
-    "eisenhower-matrix",
-    (entry) => {
-      const nextSettings = createWorkspaceTimeOrchestratorSettings(entry.settings);
-      mutator(nextSettings);
-      entry.settings = createWorkspaceTimeOrchestratorSettings(nextSettings);
-    },
-  );
+function updateSettings(mutator: (settings: WorkspaceEisenhowerMatrixBlock["settings"]) => void) {
+  mutateTypedBlock(props.tabId, props.block.id, "eisenhower-matrix", (entry) => {
+    const nextSettings = createWorkspaceTimeOrchestratorSettings(entry.settings);
+    mutator(nextSettings);
+    entry.settings = createWorkspaceTimeOrchestratorSettings(nextSettings);
+  });
 }
 
 function toggleDomain(domain: WorkspaceTaskDomain) {
@@ -411,10 +389,7 @@ function toggleTaskCompleted(item: WorkspaceCollectedTask, value: boolean | stri
   });
 }
 
-function updateTaskText(
-  item: WorkspaceCollectedTask,
-  value: string | number | undefined,
-) {
+function updateTaskText(item: WorkspaceCollectedTask, value: string | number | undefined) {
   mutateTaskItem(item, (entry) => {
     entry.text = String(value ?? "").slice(0, 240);
   });
@@ -527,9 +502,7 @@ async function prioritizeWithAi() {
         <div class="space-y-2">
           <div class="flex items-center gap-2 text-primary">
             <UIcon name="i-lucide-layout-grid" class="size-5" />
-            <p class="text-[10px] font-bold uppercase tracking-[0.2em]">
-              Eisenhower Matrix
-            </p>
+            <p class="text-[10px] font-bold uppercase tracking-[0.2em]">Eisenhower Matrix</p>
           </div>
           <h3 class="text-lg font-bold tracking-tight text-highlighted">
             Prioritize across the current task scope
@@ -543,12 +516,7 @@ async function prioritizeWithAi() {
           <UBadge :color="matrixStatus.tone" variant="soft" class="rounded-full">
             {{ matrixStatus.label }}
           </UBadge>
-          <UBadge
-            v-if="operationState.pending"
-            color="neutral"
-            variant="soft"
-            class="rounded-full"
-          >
+          <UBadge v-if="operationState.pending" color="neutral" variant="soft" class="rounded-full">
             <span class="inline-flex items-center gap-1.5">
               <UIcon name="i-lucide-loader-2" class="size-3.5 animate-spin" />
               Syncing
@@ -596,11 +564,7 @@ async function prioritizeWithAi() {
               class="rounded-xl"
               :aria-pressed="domain.active"
               :aria-label="`${domain.active ? 'Disable' : 'Enable'} ${domain.label} domain filter`"
-              @click="
-                domain.key === 'unassigned'
-                  ? toggleUnassigned()
-                  : toggleDomain(domain.key)
-              "
+              @click="domain.key === 'unassigned' ? toggleUnassigned() : toggleDomain(domain.key)"
             >
               {{ domain.label }}
               <span class="ml-2 text-[10px] font-black opacity-60">
@@ -648,18 +612,14 @@ async function prioritizeWithAi() {
       </div>
 
       <div class="rounded-3xl border border-error/10 bg-error/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/60">
-          Overdue
-        </p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/60">Overdue</p>
         <p class="mt-2 text-2xl font-black tracking-tight text-error sm:text-3xl">
           {{ summary.overdueCount }}
         </p>
       </div>
 
       <div class="rounded-3xl border border-success/10 bg-success/5 p-5">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/60">
-          Completed
-        </p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-success/60">Completed</p>
         <p class="mt-2 text-2xl font-black tracking-tight text-success sm:text-3xl">
           {{ summary.completedCount }}
         </p>
@@ -675,10 +635,7 @@ async function prioritizeWithAi() {
       </div>
     </div>
 
-    <div
-      class="grid gap-4"
-      :class="visibleQuadrants.length > 1 ? 'xl:grid-cols-2' : ''"
-    >
+    <div class="grid gap-4" :class="visibleQuadrants.length > 1 ? 'xl:grid-cols-2' : ''">
       <article
         v-for="quadrant in visibleQuadrants"
         :key="quadrant.key"
@@ -743,12 +700,7 @@ async function prioritizeWithAi() {
                   <UBadge color="neutral" variant="soft" size="sm" class="rounded-lg">
                     {{ formatDuration(item.task.estimateMinutes) }}
                   </UBadge>
-                  <UBadge
-                    color="neutral"
-                    variant="soft"
-                    size="sm"
-                    class="rounded-lg"
-                  >
+                  <UBadge color="neutral" variant="soft" size="sm" class="rounded-lg">
                     {{ item.sourceNodeTitle }}
                   </UBadge>
                   <UBadge
@@ -837,9 +789,7 @@ async function prioritizeWithAi() {
     <section class="rounded-3xl border border-muted/20 bg-default/40 p-6">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h3 class="text-sm font-bold uppercase tracking-wider text-highlighted">
-            Task editor
-          </h3>
+          <h3 class="text-sm font-bold uppercase tracking-wider text-highlighted">Task editor</h3>
           <p class="mt-1 text-xs text-muted">
             {{ taskEditorDescription }}
           </p>
@@ -866,7 +816,9 @@ async function prioritizeWithAi() {
             :loading="operationState.pending"
             @click="prioritizeWithAi"
           >
-            {{ operationState.pending ? (operationState.label || "Running analysis") : "AI Prioritize" }}
+            {{
+              operationState.pending ? operationState.label || "Running analysis" : "AI Prioritize"
+            }}
           </UButton>
         </div>
       </div>
@@ -903,12 +855,7 @@ async function prioritizeWithAi() {
                 <UBadge color="neutral" variant="soft" size="sm" class="rounded-lg">
                   {{ item.sourceNodeTitle }}
                 </UBadge>
-                <UBadge
-                  color="neutral"
-                  variant="soft"
-                  size="sm"
-                  class="rounded-lg"
-                >
+                <UBadge color="neutral" variant="soft" size="sm" class="rounded-lg">
                   {{ item.blockTitle }}
                 </UBadge>
                 <UBadge
@@ -936,10 +883,7 @@ async function prioritizeWithAi() {
                 {{ formatRelativeTaskMeta(item) }}
               </p>
 
-              <p
-                v-if="isDerivedTask(item)"
-                class="text-xs text-muted"
-              >
+              <p v-if="isDerivedTask(item)" class="text-xs text-muted">
                 Urgency, importance, estimate, and due date are derived from the source content
                 pipeline and are read-only here.
               </p>
@@ -950,9 +894,7 @@ async function prioritizeWithAi() {
                   placeholder="Task name"
                   variant="subtle"
                   class="rounded-xl"
-                  @update:model-value="
-                    updateTaskText(item, $event as string | number | undefined)
-                  "
+                  @update:model-value="updateTaskText(item, $event as string | number | undefined)"
                 />
 
                 <USelect
@@ -961,9 +903,7 @@ async function prioritizeWithAi() {
                   :items="domainOptions"
                   variant="subtle"
                   class="rounded-xl"
-                  @update:model-value="
-                    updateTaskDomain(item, $event as string | undefined)
-                  "
+                  @update:model-value="updateTaskDomain(item, $event as string | undefined)"
                 />
                 <UInput
                   v-else
@@ -1017,7 +957,9 @@ async function prioritizeWithAi() {
               </div>
             </div>
 
-            <div class="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)_auto] xl:grid-cols-1">
+            <div
+              class="grid gap-4 md:grid-cols-[minmax(0,0.65fr)_minmax(0,0.35fr)_auto] xl:grid-cols-1"
+            >
               <div class="space-y-1">
                 <label class="px-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
                   Time Estimate
@@ -1044,9 +986,7 @@ async function prioritizeWithAi() {
                   variant="subtle"
                   class="rounded-xl"
                   :disabled="isDerivedTask(item)"
-                  @update:model-value="
-                    updateTaskDueDate(item, $event as string | undefined)
-                  "
+                  @update:model-value="updateTaskDueDate(item, $event as string | undefined)"
                 />
               </div>
 

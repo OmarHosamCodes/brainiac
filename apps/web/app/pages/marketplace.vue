@@ -127,7 +127,9 @@ function onImported(payload: { kind: string; nodeId?: string }) {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col bg-neutral-50 dark:bg-neutral-950 selection:bg-blue-500/30">
+  <div
+    class="flex min-h-screen flex-col bg-neutral-50 dark:bg-neutral-950 selection:bg-blue-500/30"
+  >
     <Header />
 
     <main class="flex flex-1 flex-col px-4 pb-10 pt-28 md:px-6">
@@ -207,7 +209,9 @@ function onImported(payload: { kind: string; nodeId?: string }) {
 
         <!-- Empty state -->
         <UEmpty
-          v-else-if="!isInitialLoading && allItems.length === 0 && !marketplaceQuery.isFetchingNextPage.value"
+          v-else-if="
+            !isInitialLoading && allItems.length === 0 && !marketplaceQuery.isFetchingNextPage.value
+          "
           icon="i-lucide-search-x"
           title="No items found"
           description="We couldn't find any marketplace items matching your current filters or search query."

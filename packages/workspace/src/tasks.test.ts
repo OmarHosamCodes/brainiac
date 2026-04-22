@@ -192,9 +192,7 @@ describe("eisenhower matrix orchestration", () => {
     const prompt = buildEisenhowerBattlePlanPromptFromTasks(summary.prioritizedTasks);
 
     expect(summary.totalTaskCount).toBe(1);
-    expect(summary.prioritizedTasks.map((item) => item.task.text)).toEqual([
-      "Ship newsletter",
-    ]);
+    expect(summary.prioritizedTasks.map((item) => item.task.text)).toEqual(["Ship newsletter"]);
     expect(prompt).toContain("Ship newsletter");
     expect(prompt).toContain("domain Content");
     expect(prompt).toContain("Filtered matrix");

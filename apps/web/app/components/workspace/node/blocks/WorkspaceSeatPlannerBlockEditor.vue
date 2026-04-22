@@ -92,9 +92,7 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
     <!-- Summary Stats -->
     <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-2xl bg-primary/5 p-4 border border-primary/10">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
-          Filled Seats
-        </p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Filled Seats</p>
         <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-primary">
           {{ summary.filledSeats }}
         </p>
@@ -126,7 +124,9 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
     <div class="flex flex-wrap items-center justify-between gap-3 px-1">
       <div>
         <h2 class="text-sm font-black text-highlighted tracking-tight">Seat Ownership Planner</h2>
-        <p class="text-xs text-muted">Clarify critical functions, fragile seats, and coverage gaps.</p>
+        <p class="text-xs text-muted">
+          Clarify critical functions, fragile seats, and coverage gaps.
+        </p>
       </div>
 
       <UButton
@@ -166,7 +166,9 @@ function getFilterCount(filter: WorkspaceSeatPlannerBlock["filter"]) {
       v-if="visibleSeats.length === 0"
       class="border-dashed border-muted/20 rounded-2xl py-10 text-center bg-elevated/5"
     >
-      <div class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto">
+      <div
+        class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto"
+      >
         <UIcon name="i-lucide-users" size="24" />
       </div>
       <p class="mt-3 text-xs font-bold text-muted">No seats match this filter</p>

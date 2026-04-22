@@ -55,7 +55,9 @@ const canSaveTeamName = computed(() => {
     return false;
   }
 
-  return props.teamNameDraft.trim().length > 0 && props.teamNameDraft.trim() !== props.selectedTeam.name;
+  return (
+    props.teamNameDraft.trim().length > 0 && props.teamNameDraft.trim() !== props.selectedTeam.name
+  );
 });
 
 const selectedRoleDescription = computed(() => {
@@ -114,10 +116,14 @@ function handleMemberRoleChange(event: Event) {
       />
 
       <template v-else>
-        <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-muted/30 bg-elevated/20 p-4">
+        <div
+          class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-muted/30 bg-elevated/20 p-4"
+        >
           <div>
             <p class="text-xs font-bold uppercase tracking-[0.16em] text-muted">Current Team</p>
-            <h3 class="mt-1 text-lg font-semibold text-highlighted">{{ props.selectedTeam.name }}</h3>
+            <h3 class="mt-1 text-lg font-semibold text-highlighted">
+              {{ props.selectedTeam.name }}
+            </h3>
             <p class="mt-1 text-xs text-muted">{{ selectedRoleDescription }}</p>
           </div>
           <UBadge color="neutral" variant="soft" size="sm">

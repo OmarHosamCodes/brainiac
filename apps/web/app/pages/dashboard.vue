@@ -58,14 +58,8 @@ const { isChatVisible, isTeamAsideCompact } = useDashboardLayout({
 });
 
 const teamSelection = useTeamSelection();
-const {
-  newTeamName,
-  selectedTeam,
-  selectedTeamId,
-  teamListQuery,
-  teamNameDraft,
-  teams,
-} = teamSelection;
+const { newTeamName, selectedTeam, selectedTeamId, teamListQuery, teamNameDraft, teams } =
+  teamSelection;
 
 const teamManagement = useTeamManagement({
   teamSelection,
@@ -113,7 +107,7 @@ const {
 });
 
 const teamItems = computed(() =>
-  teams.value.map(team => ({
+  teams.value.map((team) => ({
     label: `${team.name} (${team.role})`,
     value: team.id,
   })),
@@ -127,7 +121,11 @@ const nodeShareActionLabel = computed(() =>
   isSelectedNodeShared.value ? "Unshare Node" : "Share Node",
 );
 const nodeShareActionDisabled = computed(() => {
-  if (!selectedNode.value || isNodeShareActionPending.value || !canManageSelectedNodeSharing.value) {
+  if (
+    !selectedNode.value ||
+    isNodeShareActionPending.value ||
+    !canManageSelectedNodeSharing.value
+  ) {
     return true;
   }
 
@@ -228,7 +226,9 @@ function toggleSelectedNodeSharing() {
         </div>
 
         <div class="mt-4">
-          <label class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.15em] text-neutral-500">
+          <label
+            class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.15em] text-neutral-500"
+          >
             Share Target
           </label>
           <USelect
@@ -240,7 +240,9 @@ function toggleSelectedNodeSharing() {
           />
         </div>
 
-        <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
+        <div
+          class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70"
+        >
           <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
             Team Management
           </p>
@@ -262,33 +264,38 @@ function toggleSelectedNodeSharing() {
 
           <div v-if="selectedTeam && !canInvite" class="mt-3 flex items-center gap-2">
             <UBadge color="neutral" variant="subtle" size="sm">Requires Owner</UBadge>
-            <p class="text-xs text-neutral-500">Owner role is required for member and role changes.</p>
+            <p class="text-xs text-neutral-500">
+              Owner role is required for member and role changes.
+            </p>
           </div>
         </div>
 
-        <div class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70">
+        <div
+          class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70"
+        >
           <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
             Selected Node
           </p>
           <p class="mt-1 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-            {{ selectedNode?.title ?? 'No node selected' }}
+            {{ selectedNode?.title ?? "No node selected" }}
           </p>
           <p class="mt-1 text-xs text-neutral-500">
             {{
               selectedNode
-                ? selectedNode.visibility === 'team'
+                ? selectedNode.visibility === "team"
                   ? canManageSelectedNodeSharing
                     ? `Shared to ${selectedNode.teamId}`
-                    : 'Team-shared node'
-                  : 'Private node'
-                : 'Click a node on canvas to share it.'
+                    : "Team-shared node"
+                  : "Private node"
+                : "Click a node on canvas to share it."
             }}
           </p>
           <p
             v-if="selectedNode && !canManageSelectedNodeSharing"
             class="mt-1 text-xs text-neutral-500"
           >
-            Role {{ selectedNodeTeamRole ?? 'viewer' }} can edit content, but only owners can access sharing actions and team IDs.
+            Role {{ selectedNodeTeamRole ?? "viewer" }} can edit content, but only owners can access
+            sharing actions and team IDs.
           </p>
         </div>
 

@@ -19,7 +19,6 @@ import type { ComputedRef, InjectionKey, Ref } from "vue";
 import { inject } from "vue";
 import type { WorkspaceBlockPresetId } from "~/utils/workspace-block-presets";
 
-
 export type WorkspaceBlockOperationState = {
   pending: boolean;
   label: string | null;
@@ -105,10 +104,7 @@ export type WorkspaceNodeEditorContext = {
     taskId: string,
     mutator: (task: WorkspaceTask) => void,
   ): void;
-  mutateCollectedTask(
-    item: WorkspaceCollectedTask,
-    mutator: (task: WorkspaceTask) => void,
-  ): void;
+  mutateCollectedTask(item: WorkspaceCollectedTask, mutator: (task: WorkspaceTask) => void): void;
   removeTask(tabId: string, blockId: string, taskId: string): void;
   addDecisionItem(tabId: string, blockId: string, list: "pros" | "cons"): void;
   mutateDecisionItem(
@@ -118,23 +114,13 @@ export type WorkspaceNodeEditorContext = {
     list: "pros" | "cons",
     mutator: (item: { id: string; text: string; weight: number }) => void,
   ): void;
-  removeDecisionItem(
-    tabId: string,
-    blockId: string,
-    itemId: string,
-    list: "pros" | "cons",
-  ): void;
+  removeDecisionItem(tabId: string, blockId: string, itemId: string, list: "pros" | "cons"): void;
   addTrackerEntry(tabId: string, blockId: string): void;
   mutateTrackerEntry(
     tabId: string,
     blockId: string,
     entryId: string,
-    mutator: (entry: {
-      id: string;
-      label: string;
-      value: number;
-      createdAt: string;
-    }) => void,
+    mutator: (entry: { id: string; label: string; value: number; createdAt: string }) => void,
   ): void;
   removeTrackerEntry(tabId: string, blockId: string, entryId: string): void;
   addKanbanColumn(tabId: string, blockId: string): void;
@@ -152,12 +138,7 @@ export type WorkspaceNodeEditorContext = {
     cardId: string,
     mutator: (card: WorkspaceKanbanBlock["cards"][number]) => void,
   ): void;
-  moveKanbanCard(
-    tabId: string,
-    blockId: string,
-    cardId: string,
-    targetColumnId: string,
-  ): void;
+  moveKanbanCard(tabId: string, blockId: string, cardId: string, targetColumnId: string): void;
   removeKanbanCard(tabId: string, blockId: string, cardId: string): void;
   addTimelineMilestone(tabId: string, blockId: string): void;
   mutateTimelineMilestone(
@@ -166,11 +147,7 @@ export type WorkspaceNodeEditorContext = {
     milestoneId: string,
     mutator: (milestone: WorkspaceTimelineBlock["milestones"][number]) => void,
   ): void;
-  removeTimelineMilestone(
-    tabId: string,
-    blockId: string,
-    milestoneId: string,
-  ): void;
+  removeTimelineMilestone(tabId: string, blockId: string, milestoneId: string): void;
   moveTimelineMilestone(
     tabId: string,
     blockId: string,
@@ -187,15 +164,8 @@ export type WorkspaceNodeEditorContext = {
   removeScorecardMetric(tabId: string, blockId: string, metricId: string): void;
   runPromptBlock(tabId: string, blockId: string): MaybePromise;
   runCustomPrompt(tabId: string, blockId: string): void;
-  runBlockAgentPrompt(
-    tabId: string,
-    blockId: string,
-    prompt: string,
-  ): Promise<string>;
-  getBlockOperationState(
-    tabId: string,
-    blockId: string,
-  ): WorkspaceBlockOperationState;
+  runBlockAgentPrompt(tabId: string, blockId: string, prompt: string): Promise<string>;
+  getBlockOperationState(tabId: string, blockId: string): WorkspaceBlockOperationState;
   isBlockOperationPending(tabId: string, blockId: string): boolean;
   toggleNotePreview(blockId: string): void;
   isNotePreviewEnabled(blockId: string): boolean;
@@ -206,9 +176,7 @@ export type WorkspaceNodeEditorContext = {
   getCustomTemplate(definitionId: string): WorkspaceCustomBlockTemplate | null;
   getCustomFormulaResult(block: WorkspaceCustomBlock): number | null;
   getCustomPromptPreview(block: WorkspaceCustomBlock): string;
-  getPriorityBadgeClass(
-    priority: WorkspaceTaskPriority | null | undefined,
-  ): string;
+  getPriorityBadgeClass(priority: WorkspaceTaskPriority | null | undefined): string;
   formatRelativeTaskMeta(item: WorkspaceCollectedTask): string;
   formatFormulaResult(value: number | null): string;
   renderNotesPreview(input: string): string;

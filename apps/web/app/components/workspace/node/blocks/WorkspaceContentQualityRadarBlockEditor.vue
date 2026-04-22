@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import {
-    WORKSPACE_CONTENT_QUALITY_DIMENSIONS,
-    getContentQualityRadarSummary,
-    workspaceContentQualityDimensionLabels,
-    type WorkspaceContentQualityDimension,
-    type WorkspaceContentQualityRadarBlock,
+  WORKSPACE_CONTENT_QUALITY_DIMENSIONS,
+  getContentQualityRadarSummary,
+  workspaceContentQualityDimensionLabels,
+  type WorkspaceContentQualityDimension,
+  type WorkspaceContentQualityRadarBlock,
 } from "@brainiac/workspace";
 
 import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
@@ -83,7 +83,9 @@ const ringPolygons = computed(() =>
   ),
 );
 
-const radarPolygonPoints = computed(() => axes.value.map((axis) => `${axis.valueX},${axis.valueY}`).join(" "));
+const radarPolygonPoints = computed(() =>
+  axes.value.map((axis) => `${axis.valueX},${axis.valueY}`).join(" "),
+);
 
 const rankedDimensions = computed(() =>
   [...WORKSPACE_CONTENT_QUALITY_DIMENSIONS].sort(
@@ -158,7 +160,10 @@ function clampScore(value: string | number | undefined) {
   return Math.min(10, Math.max(1, Math.round(numeric)));
 }
 
-function updateScore(dimension: WorkspaceContentQualityDimension, value: string | number | undefined) {
+function updateScore(
+  dimension: WorkspaceContentQualityDimension,
+  value: string | number | undefined,
+) {
   mutateRadarBlock((block) => {
     block.scores[dimension] = clampScore(value);
   });
@@ -186,7 +191,10 @@ function getScoreToneClasses(score: number) {
     <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Average</p>
-        <p class="mt-2 text-2xl font-black tracking-tight sm:text-3xl" :class="getAverageToneClasses()">
+        <p
+          class="mt-2 text-2xl font-black tracking-tight sm:text-3xl"
+          :class="getAverageToneClasses()"
+        >
           {{ summary.averageScore }}
         </p>
         <p class="mt-1 text-sm text-muted">Live average across all 10 quality dimensions</p>
@@ -194,7 +202,10 @@ function getScoreToneClasses(score: number) {
 
       <div class="rounded-3xl border border-muted/20 bg-elevated/10 p-5">
         <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Quality band</p>
-        <p class="mt-2 text-2xl font-black tracking-tight sm:text-3xl" :class="getAverageToneClasses()">
+        <p
+          class="mt-2 text-2xl font-black tracking-tight sm:text-3xl"
+          :class="getAverageToneClasses()"
+        >
           {{ qualityBand.label }}
         </p>
         <p class="mt-1 text-sm text-muted">{{ qualityBand.interpretation }}</p>
@@ -231,13 +242,17 @@ function getScoreToneClasses(score: number) {
           <div>
             <p class="text-sm font-semibold text-highlighted">Radar view</p>
             <p class="text-sm text-muted">
-              The filled shape expands where content quality is strong and collapses where execution needs work.
+              The filled shape expands where content quality is strong and collapses where execution
+              needs work.
             </p>
           </div>
 
           <div class="text-right">
             <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Score</p>
-            <p class="text-2xl font-black tracking-tight sm:text-3xl" :class="getAverageToneClasses()">
+            <p
+              class="text-2xl font-black tracking-tight sm:text-3xl"
+              :class="getAverageToneClasses()"
+            >
               {{ summary.averageScore }}
             </p>
           </div>
@@ -307,7 +322,10 @@ function getScoreToneClasses(score: number) {
                 <p class="text-xs font-semibold text-highlighted">
                   {{ workspaceContentQualityDimensionLabels[dimension] }}
                 </p>
-                <span class="text-xs font-black" :class="getScoreToneClasses(block.scores[dimension])">
+                <span
+                  class="text-xs font-black"
+                  :class="getScoreToneClasses(block.scores[dimension])"
+                >
                   {{ block.scores[dimension] }}/10
                 </span>
               </div>
@@ -321,7 +339,8 @@ function getScoreToneClasses(score: number) {
         <div class="mb-5">
           <p class="text-sm font-semibold text-highlighted">Dimension controls</p>
           <p class="text-sm text-muted">
-            Score each pillar from 1 to 10. Use the benchmark note to decide what to improve before publishing.
+            Score each pillar from 1 to 10. Use the benchmark note to decide what to improve before
+            publishing.
           </p>
         </div>
 
@@ -335,7 +354,10 @@ function getScoreToneClasses(score: number) {
               <p class="text-sm font-semibold text-highlighted">
                 {{ workspaceContentQualityDimensionLabels[dimension] }}
               </p>
-              <span class="text-sm font-black" :class="getScoreToneClasses(block.scores[dimension])">
+              <span
+                class="text-sm font-black"
+                :class="getScoreToneClasses(block.scores[dimension])"
+              >
                 {{ block.scores[dimension] }}
               </span>
             </div>

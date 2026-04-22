@@ -24,9 +24,7 @@ const runError = ref<string | null>(null);
 
 const template = computed(() => getCustomTemplate(props.block.definitionId));
 const operationState = computed(() => getBlockOperationState(props.tabId, props.block.id));
-const formulaResult = computed(() =>
-  template.value ? getCustomFormulaResult(props.block) : null,
-);
+const formulaResult = computed(() => (template.value ? getCustomFormulaResult(props.block) : null));
 
 const fieldTotal = computed(() => template.value?.fields.length ?? 0);
 
@@ -50,9 +48,7 @@ const completionPercent = computed(() => {
   return Math.round((completedFieldCount.value / fieldTotal.value) * 100);
 });
 
-const hasPromptTemplate = computed(() =>
-  Boolean(template.value?.aiPromptTemplate?.trim()),
-);
+const hasPromptTemplate = computed(() => Boolean(template.value?.aiPromptTemplate?.trim()));
 
 const hasLatestOutput = computed(() => props.block.latestAiOutput.trim().length > 0);
 const latestOutputEntry = computed(() => props.block.outputHistory[0] ?? null);
@@ -138,18 +134,14 @@ const summaryCards = computed(() => [
   {
     key: "formula",
     label: "Formula",
-    value: template.value?.formula
-      ? formatFormulaResult(formulaResult.value)
-      : "No formula",
+    value: template.value?.formula ? formatFormulaResult(formulaResult.value) : "No formula",
     supporting: template.value?.formula?.label || "Optional computed metric",
     accentClass: template.value?.formula ? "text-primary" : "text-muted",
   },
   {
     key: "ai",
     label: "AI outputs",
-    value: hasPromptTemplate.value
-      ? String(props.block.outputHistory.length)
-      : "Disabled",
+    value: hasPromptTemplate.value ? String(props.block.outputHistory.length) : "Disabled",
     supporting: latestOutputEntry.value
       ? `Last run ${formatDateTime(latestOutputEntry.value.createdAt)}`
       : hasPromptTemplate.value
@@ -277,17 +269,14 @@ async function handleRunPrompt() {
           <div class="flex flex-wrap items-center gap-2">
             <UBadge color="warning" variant="soft" class="rounded-full">Legacy block</UBadge>
             <UBadge color="neutral" variant="soft" class="rounded-full">{{ template.name }}</UBadge>
-            <UBadge :color="blockStatus.tone" variant="soft" class="rounded-full">{{ blockStatus.label }}</UBadge>
+            <UBadge :color="blockStatus.tone" variant="soft" class="rounded-full">{{
+              blockStatus.label
+            }}</UBadge>
           </div>
           <p class="mt-2 text-sm text-muted">{{ blockStatus.description }}</p>
         </div>
 
-        <UBadge
-          v-if="operationState.pending"
-          color="primary"
-          variant="soft"
-          class="rounded-full"
-        >
+        <UBadge v-if="operationState.pending" color="primary" variant="soft" class="rounded-full">
           <span class="inline-flex items-center gap-1.5">
             <UIcon name="i-lucide-loader-2" class="size-3.5 animate-spin" />
             {{ operationState.label || "Running" }}
@@ -302,7 +291,9 @@ async function handleRunPrompt() {
         :key="card.key"
         class="rounded-3xl border border-muted/20 bg-elevated/10 p-5"
       >
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">{{ card.label }}</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+          {{ card.label }}
+        </p>
         <p class="mt-2 text-2xl font-black tracking-tight sm:text-3xl" :class="card.accentClass">
           {{ card.value }}
         </p>
@@ -344,14 +335,18 @@ async function handleRunPrompt() {
             class="w-full"
             :ui="{ base: 'rounded-2xl' }"
             :aria-label="field.label"
-            @update:model-value="updateFieldValue(field, $event as string | number | boolean | undefined)"
+            @update:model-value="
+              updateFieldValue(field, $event as string | number | boolean | undefined)
+            "
           />
 
           <label
             v-else-if="field.type === 'checkbox'"
             class="flex items-center justify-between gap-3 rounded-2xl border border-muted/20 bg-default/70 px-3 py-2"
           >
-            <span class="text-sm text-toned">{{ getCheckedValue(field) ? "Enabled" : "Disabled" }}</span>
+            <span class="text-sm text-toned">{{
+              getCheckedValue(field) ? "Enabled" : "Disabled"
+            }}</span>
             <UCheckbox
               :model-value="getCheckedValue(field)"
               :aria-label="field.label"
@@ -366,7 +361,9 @@ async function handleRunPrompt() {
             class="w-full"
             :ui="{ base: 'rounded-2xl' }"
             :aria-label="field.label"
-            @update:model-value="updateFieldValue(field, $event as string | number | boolean | undefined)"
+            @update:model-value="
+              updateFieldValue(field, $event as string | number | boolean | undefined)
+            "
           />
         </article>
       </div>
@@ -416,7 +413,11 @@ async function handleRunPrompt() {
             {{ getCustomPromptPreview(block) }}
           </p>
           <p class="text-xs text-muted">
-            {{ hasLatestOutput ? "Regenerate after important field changes." : "Generate an initial draft once key fields are filled." }}
+            {{
+              hasLatestOutput
+                ? "Regenerate after important field changes."
+                : "Generate an initial draft once key fields are filled."
+            }}
           </p>
         </div>
 
@@ -444,7 +445,9 @@ async function handleRunPrompt() {
 
       <div class="rounded-2xl border border-muted/20 bg-elevated/10 p-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Latest output</p>
+          <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+            Latest output
+          </p>
           <span v-if="latestOutputEntry" class="text-xs text-muted">
             {{ formatDateTime(latestOutputEntry.createdAt) }}
           </span>
@@ -464,7 +467,9 @@ async function handleRunPrompt() {
           >
             <p class="text-[11px] text-muted">{{ formatDateTime(entry.createdAt) }}</p>
             <p class="mt-1 line-clamp-2 text-xs italic text-toned/80">"{{ entry.prompt }}"</p>
-            <p class="mt-2 line-clamp-3 whitespace-pre-wrap text-xs text-toned">{{ entry.output }}</p>
+            <p class="mt-2 line-clamp-3 whitespace-pre-wrap text-xs text-toned">
+              {{ entry.output }}
+            </p>
           </article>
         </div>
       </div>

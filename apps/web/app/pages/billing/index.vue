@@ -59,25 +59,17 @@ const limitItems = computed(() => [
                 <h2 class="text-xl font-bold text-neutral-900 dark:text-neutral-100">
                   {{ isPro ? "Pro" : "Free" }} Plan
                 </h2>
-                <UBadge
-                  :color="isPro ? 'primary' : 'neutral'"
-                  variant="subtle"
-                  size="sm"
-                >
+                <UBadge :color="isPro ? 'primary' : 'neutral'" variant="subtle" size="sm">
                   {{ isPro ? "Active" : "Current" }}
                 </UBadge>
               </div>
 
-              <p v-if="isLifetimeSubscription" class="text-sm text-neutral-500">
-                Lifetime access
-              </p>
+              <p v-if="isLifetimeSubscription" class="text-sm text-neutral-500">Lifetime access</p>
               <p v-else-if="subscription" class="text-sm text-neutral-500">
                 {{ subscription.status === "active" ? "Renews" : "Ends" }}
                 {{ formattedRenewalDate }}
               </p>
-              <p v-else class="text-sm text-neutral-500">
-                No active subscription
-              </p>
+              <p v-else class="text-sm text-neutral-500">No active subscription</p>
             </div>
 
             <div class="flex gap-3">

@@ -2,11 +2,11 @@
 import type { CanvasNodeModel } from "~/composables/useCanvas";
 
 import {
-    getWorkspaceNodeDashboardDetails,
-    getWorkspaceNodePreview,
-    getWorkspaceNodeStats,
-    type WorkspaceBlock,
-    type WorkspaceNode,
+  getWorkspaceNodeDashboardDetails,
+  getWorkspaceNodePreview,
+  getWorkspaceNodeStats,
+  type WorkspaceBlock,
+  type WorkspaceNode,
 } from "@brainiac/workspace";
 
 import { getWorkspaceBlockRegistryEntry } from "~/utils/workspace-block-registry";
@@ -31,16 +31,20 @@ const tintStyle = computed(() => getWorkspaceNodeTintStyle(workspaceNode.value.d
 const outboundConnectionCount = computed(() =>
   workspaceNode.value.nodeType === "orchestrator" ? workspaceNode.value.connections.length : 0,
 );
-const linkedOrchestratorCount = computed(() =>
-  allWorkspaceNodes.value.filter(
-    (node) =>
-      node.nodeType === "orchestrator" &&
-      node.connections.some((connection) => connection.targetNodeId === workspaceNode.value.id),
-  ).length,
+const linkedOrchestratorCount = computed(
+  () =>
+    allWorkspaceNodes.value.filter(
+      (node) =>
+        node.nodeType === "orchestrator" &&
+        node.connections.some((connection) => connection.targetNodeId === workspaceNode.value.id),
+    ).length,
 );
 const nodeTypeMeta = computed(() => {
   if (workspaceNode.value.nodeType === "orchestrator") {
-    const label = outboundConnectionCount.value === 1 ? "1 linked node" : `${outboundConnectionCount.value} linked nodes`;
+    const label =
+      outboundConnectionCount.value === 1
+        ? "1 linked node"
+        : `${outboundConnectionCount.value} linked nodes`;
 
     return {
       label: "Orchestrator",
@@ -73,7 +77,8 @@ const nodeTypeMeta = computed(() => {
   return {
     label: "Standard",
     icon: "i-lucide-square-stack",
-    accentClass: "border-neutral-200/80 bg-white/70 text-neutral-700 dark:border-neutral-800/80 dark:bg-neutral-900/70 dark:text-neutral-200",
+    accentClass:
+      "border-neutral-200/80 bg-white/70 text-neutral-700 dark:border-neutral-800/80 dark:bg-neutral-900/70 dark:text-neutral-200",
     detail: label,
     footer: label,
   };
@@ -92,14 +97,18 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
     <!-- Tinted Background Layer -->
     <div class="absolute inset-0 rounded-[2rem] bg-neutral-50/50 dark:bg-neutral-950/50 -z-20" />
     <div
-      v-if="workspaceNode.nodeType === 'orchestrator' || workspaceNode.nodeType === 'agency-operator'"
+      v-if="
+        workspaceNode.nodeType === 'orchestrator' || workspaceNode.nodeType === 'agency-operator'
+      "
       class="absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top_right,rgb(var(--workspace-node-rgb)/0.18),transparent_48%),linear-gradient(140deg,rgb(var(--workspace-node-rgb)/0.12),transparent_60%)] -z-20"
     />
     <div
       class="absolute inset-0 rounded-[2rem] bg-[rgb(var(--workspace-node-rgb)/0.05)] dark:bg-[rgb(var(--workspace-node-rgb)/0.1)] border border-[rgb(var(--workspace-node-rgb)/0.2)] dark:border-[rgb(var(--workspace-node-rgb)/0.3)] -z-10"
     />
     <div
-      v-if="workspaceNode.nodeType === 'orchestrator' || workspaceNode.nodeType === 'agency-operator'"
+      v-if="
+        workspaceNode.nodeType === 'orchestrator' || workspaceNode.nodeType === 'agency-operator'
+      "
       class="absolute inset-3 rounded-[1.55rem] border border-[rgb(var(--workspace-node-rgb)/0.18)] bg-[linear-gradient(120deg,rgb(var(--workspace-node-rgb)/0.08),transparent_48%)] -z-10"
     />
 

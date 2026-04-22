@@ -1,26 +1,26 @@
 <script setup lang="ts">
 import type {
-    WorkspaceBlock,
-    WorkspaceNode,
-    WorkspaceNodeTab,
-    WorkspaceTeamRole,
+  WorkspaceBlock,
+  WorkspaceNode,
+  WorkspaceNodeTab,
+  WorkspaceTeamRole,
 } from "@brainiac/workspace";
 import { AGENCY_OPERATOR_PREDEFINED_TAB_TITLES } from "@brainiac/workspace";
 import {
-    useWorkspaceNodeEditorContext,
-    type WorkspaceSaveBadge,
+  useWorkspaceNodeEditorContext,
+  type WorkspaceSaveBadge,
 } from "~/components/workspace/node/context";
 import {
-    workspaceAddBlockCategories,
-    type WorkspaceAddBlockCategory,
+  workspaceAddBlockCategories,
+  type WorkspaceAddBlockCategory,
 } from "~/utils/workspace-add-block-menu";
 import {
-    workspaceBlockPresets,
-    type WorkspaceBlockPresetId,
+  workspaceBlockPresets,
+  type WorkspaceBlockPresetId,
 } from "~/utils/workspace-block-presets";
 import {
-    getWorkspaceBlockRegistryEntry,
-    workspacePrimaryBlockTypes,
+  getWorkspaceBlockRegistryEntry,
+  workspacePrimaryBlockTypes,
 } from "~/utils/workspace-block-registry";
 
 type WorkspaceTeamSummary = {
@@ -374,7 +374,10 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
                   >
                     Role: {{ activeTeamRoleLabel }}
                   </span>
-                  <span v-if="canManageNodeSharing && nodeTeamName" class="truncate text-[11px] text-muted">
+                  <span
+                    v-if="canManageNodeSharing && nodeTeamName"
+                    class="truncate text-[11px] text-muted"
+                  >
                     Team: {{ nodeTeamName }}
                   </span>
                 </div>
@@ -407,7 +410,8 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
             </div>
 
             <p v-else class="mt-2 text-[11px] leading-relaxed text-muted">
-              Editing is allowed for your role. Only team owners can access sharing controls and team identifiers.
+              Editing is allowed for your role. Only team owners can access sharing controls and
+              team identifiers.
             </p>
           </div>
         </div>
@@ -435,7 +439,10 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
             />
             <span class="flex-1 truncate text-left">{{ getDisplayTabTitle(tab) }}</span>
             <UIcon
-              v-if="node.nodeType === 'agency-operator' && (AGENCY_OPERATOR_PREDEFINED_TAB_TITLES as readonly string[]).includes(tab.title)"
+              v-if="
+                node.nodeType === 'agency-operator' &&
+                (AGENCY_OPERATOR_PREDEFINED_TAB_TITLES as readonly string[]).includes(tab.title)
+              "
               name="i-lucide-lock"
               class="size-3 shrink-0 opacity-50"
               :title="`${tab.title} is a locked Agency Operator tab`"
@@ -480,8 +487,17 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
             variant="ghost"
             icon="i-lucide-trash-2"
             class="w-full justify-start rounded-2xl hover:text-error"
-            :disabled="node.nodeType === 'agency-operator' && (AGENCY_OPERATOR_PREDEFINED_TAB_TITLES as readonly string[]).includes(activeTab.title)"
-            :class="{ 'cursor-not-allowed opacity-40': node.nodeType === 'agency-operator' && (AGENCY_OPERATOR_PREDEFINED_TAB_TITLES as readonly string[]).includes(activeTab.title) }"
+            :disabled="
+              node.nodeType === 'agency-operator' &&
+              (AGENCY_OPERATOR_PREDEFINED_TAB_TITLES as readonly string[]).includes(activeTab.title)
+            "
+            :class="{
+              'cursor-not-allowed opacity-40':
+                node.nodeType === 'agency-operator' &&
+                (AGENCY_OPERATOR_PREDEFINED_TAB_TITLES as readonly string[]).includes(
+                  activeTab.title,
+                ),
+            }"
             @click="deleteActiveTab"
           >
             Delete

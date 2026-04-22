@@ -304,7 +304,9 @@ export const workspaceBlockCategories = [
 
 const workspaceTeamOnlyBlockTypeSet = new Set(
   workspaceBlockCategories.flatMap((category) =>
-    category.items.filter((item) => "teamOnly" in item && item.teamOnly).map((item) => item.blockType),
+    category.items
+      .filter((item) => "teamOnly" in item && item.teamOnly)
+      .map((item) => item.blockType),
   ),
 );
 

@@ -1,13 +1,17 @@
 # Agency Operations Redesign - Implementation Plan
 
 ## Overview
+
 This document outlines the implementation strategy for the Agency Operation Blocks redesign, following the confirmed design brief.
 
 ## Phase 1: Foundation (Database & API)
+
 ### 1.1 Database Migrations
+
 **File**: `packages/db/src/schema/agency-ops.ts`
+
 - Remove: `agencyOpsSprint` table (cascade delete to sprint items, time entries)
-- Remove: `agencyOpsSprintItem` table 
+- Remove: `agencyOpsSprintItem` table
 - Simplify `agencyOpsClient`: remove `brandColor`, `status`, `archivedAt` fields
 - Simplify `agencyOpsProject`: remove `description`, `status`, `budgetMinutes`, `archivedAt` fields
 - Add `agencyOpsTag` table:
@@ -19,15 +23,18 @@ This document outlines the implementation strategy for the Agency Operation Bloc
 - Update `agencyOpsActiveTimer`: remove `sprintId`, `sprintItemId`
 
 ### 1.2 API Router Updates
+
 **File**: `packages/api/src/routers/agency-ops/index.ts` + `service.ts`
 
 **Remove**:
+
 - `sprints.*` endpoints (list, create, update)
 - `sprintItems.*` endpoints (list, create, update)
 - All sprint/sprintItem schema definitions
 - References to sprint/sprintItem in reports
 
 **Update**:
+
 - `clients`: Remove `brandColor`, `status`, `archived` from schemas/inputs
 - `projects`: Remove `description`, `status`, `budgetMinutes`, `archived` from schemas/inputs
 - `timer.start`: Remove `sprintItemId` requirement, make `projectId` required, add `tagIds` optional
@@ -37,6 +44,7 @@ This document outlines the implementation strategy for the Agency Operation Bloc
 - `reports.summary`: Simplify to team activity + time by client/project
 
 **Add**:
+
 - `tags.*` endpoints:
   - `list(teamId)` → returns team tags
   - `create(teamId, name)` → creates new tag
@@ -45,10 +53,13 @@ This document outlines the implementation strategy for the Agency Operation Bloc
   - `removeFromEntry(teamId, entryId, tagIds)` → removes tags from time entry
 
 ## Phase 2: Frontend Components
+
 ### 2.1 Time Tracker Block
+
 **File**: `apps/web/app/components/workspace/node/blocks/WorkspaceAgencyTimeTrackerBlockEditor.vue`
 
 **Key changes**:
+
 - Form structure: description (optional), project (required select), tags (multi-select from team list)
 - Timer display: large monospaced elapsed time
 - Button states: "Start" (idle) → "Stop" (running)
@@ -58,9 +69,11 @@ This document outlines the implementation strategy for the Agency Operation Bloc
 - Update schema in component: remove `showRecentEntries`, add `selectedTagIds`
 
 ### 2.2 Time Summary Block (formerly Time Reports)
+
 **File**: `apps/web/app/components/workspace/node/blocks/WorkspaceAgencyTimeReportsBlockEditor.vue`
 
 **Key changes**:
+
 - Rename to `WorkspaceAgencyTimeSummaryBlockEditor.vue`
 - Update block type: `"agency-time-summary"` (instead of `"agency-time-reports"`)
 - Filter bar: date preset pills, then dropdowns (client, project, member, tags)
@@ -73,9 +86,11 @@ This document outlines the implementation strategy for the Agency Operation Bloc
 - Update schema: add `selectedTagIds` optional
 
 ### 2.3 Project Manager Block
+
 **File**: `apps/web/app/components/workspace/node/blocks/WorkspaceAgencyProjectManagerBlockEditor.vue`
 
 **Key changes**:
+
 - Simplify layout: clients (left) | projects (right)
 - Clients panel: name input + Add button, simple list of names (no color, no status)
 - Projects panel: name input + Add button, simple list of names (filtered by selected client)
@@ -83,9 +98,11 @@ This document outlines the implementation strategy for the Agency Operation Bloc
 - Update schema: remove `selectedClientId`, `showArchivedClients`, `showArchivedProjects`
 
 ### 2.4 Time Entries Log Block
+
 **File**: `apps/web/app/components/workspace/node/blocks/WorkspaceAgencyTimeEntriesLogBlockEditor.vue`
 
 **Key changes**:
+
 - Filter bar: client, project, member, tags (multi-select)
 - Table columns: date, user, project, description, tags (chip display), duration, delete action
 - Remove: sprint, sprint item columns
@@ -94,9 +111,11 @@ This document outlines the implementation strategy for the Agency Operation Bloc
 - Update schema: add `selectedClientId`, `selectedProjectId`, `selectedMemberUserId`, `selectedTagIds`
 
 ### 2.5 Settings Block
+
 **File**: `apps/web/app/components/workspace/node/blocks/WorkspaceAgencySettingsBlockEditor.vue`
 
 **Key changes**:
+
 - Keep: billing period configuration (start/end day of month)
 - Add: Tags management section
   - Display: list of team tags with delete buttons
@@ -104,6 +123,7 @@ This document outlines the implementation strategy for the Agency Operation Bloc
   - Empty state: "No tags yet — add your first tag to start categorizing time entries"
 
 ## Phase 3: Workspace Schema Updates
+
 **File**: `packages/workspace/src/schemas.ts`
 
 - Add: `agencyOpsTagSchema` (for API response validation)
@@ -115,17 +135,20 @@ This document outlines the implementation strategy for the Agency Operation Bloc
 - Update: `workspaceAgencyTimeEntriesLogBlockSchema` (add filter fields)
 
 ## Phase 4: Component Removal & Migration
+
 - Delete: `WorkspaceAgencySprintBoardBlockEditor.vue`
 - Update: workspace block type registration to remove sprint board
 - Add migration script: Convert stored blocks with type `"agency-time-reports"` to `"agency-time-summary"`
 
 ## Design System Application
+
 All components will adhere to:
+
 - **Spacing**: 4pt base scale (4, 8, 12, 16, 24, 32, 48, 64, 96px) using `gap` for sibling spacing
 - **Typography**: Public Sans (body), JetBrains Mono (data/elapsed time), bold weights for hierarchy
 - **Color**: Emerald accent (#10b981), zinc neutral (#27272a), dark mode first
 - **Shape**: Highly rounded (32px cards, pill badges, 2xl inputs)
-- **Interaction**: 
+- **Interaction**:
   - Hover states (subtle lift, color shift)
   - Focus rings visible only for keyboard (`:focus-visible`)
   - Optimistic UI for create/delete operations
@@ -135,6 +158,7 @@ All components will adhere to:
 - **Responsive**: Container queries for component adaptation, not viewport breakpoints
 
 ## Testing Checklist
+
 - [ ] All blocks render without errors
 - [ ] Time Tracker: start/stop timer flow
 - [ ] Time Tracker: discard confirmation appears and works
@@ -150,6 +174,7 @@ All components will adhere to:
 - [ ] AI slop test: no side-stripe borders, no gradient text, no generic cards
 
 ## Success Criteria
+
 1. ✓ Design brief matches implementation exactly
 2. ✓ Zero sprint/sprintItem references in code
 3. ✓ Tag-based filtering working across all blocks

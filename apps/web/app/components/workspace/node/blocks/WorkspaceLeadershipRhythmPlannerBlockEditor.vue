@@ -124,7 +124,9 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
     <section class="space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
-          <h2 class="text-sm font-black text-highlighted tracking-tight">Leadership Rhythm Planner</h2>
+          <h2 class="text-sm font-black text-highlighted tracking-tight">
+            Leadership Rhythm Planner
+          </h2>
           <p class="text-xs text-muted">Track recurring meetings to prevent cadence gaps.</p>
         </div>
         <UButton
@@ -158,7 +160,9 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
 
         <div class="rounded-2xl bg-error/5 p-4 border border-error/10">
           <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-error/60">Missed</p>
-          <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-error">{{ summary.missedCount }}</p>
+          <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-error">
+            {{ summary.missedCount }}
+          </p>
         </div>
 
         <div class="rounded-2xl bg-secondary/5 p-4 border border-secondary/10">
@@ -214,7 +218,9 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
       v-if="visibleMeetings.length === 0"
       class="border-dashed border-muted/20 rounded-2xl py-10 text-center bg-elevated/5"
     >
-      <div class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto">
+      <div
+        class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto"
+      >
         <UIcon name="i-lucide-calendar" size="24" />
       </div>
       <p class="mt-3 text-xs font-bold text-muted">No meetings match this filter</p>
@@ -236,7 +242,9 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
               variant="none"
               placeholder="Meeting name"
               class="w-full"
-              :ui="{ base: 'px-0 text-base font-black text-highlighted placeholder:text-muted/30 uppercase tracking-tight' }"
+              :ui="{
+                base: 'px-0 text-base font-black text-highlighted placeholder:text-muted/30 uppercase tracking-tight',
+              }"
               @update:model-value="
                 mutateMeeting(meeting.id, (entry) => {
                   entry.name = ($event ?? '').slice(0, 120);
@@ -296,7 +304,9 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
           <!-- Left: Basic Info -->
           <div class="grid gap-3 sm:grid-cols-2">
             <div>
-              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              <label
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+              >
                 Owner
               </label>
               <UInput
@@ -313,7 +323,9 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
             </div>
 
             <div>
-              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              <label
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+              >
                 Participants
               </label>
               <UInput
@@ -330,7 +342,9 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
             </div>
 
             <div>
-              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              <label
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+              >
                 Frequency
               </label>
               <USelect
@@ -348,7 +362,9 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
             </div>
 
             <div>
-              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              <label
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+              >
                 Next Date
               </label>
               <UInput
@@ -369,7 +385,9 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
           <!-- Right: Purpose + Status Summary -->
           <div class="grid gap-3 sm:grid-cols-[1fr_auto]">
             <div class="sm:col-span-2">
-              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              <label
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+              >
                 Purpose & Agenda
               </label>
               <UTextarea
@@ -388,7 +406,9 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
             </div>
 
             <div>
-              <label class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+              <label
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+              >
                 Duration (min)
               </label>
               <UInput
@@ -417,14 +437,16 @@ function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
               <span
                 v-if="isLeadershipMeetingUpcoming(meeting)"
                 class="mt-1 text-sm font-black text-primary tracking-tight"
-              >Upcoming</span
+                >Upcoming</span
               >
               <span
                 v-else-if="isLeadershipMeetingMissed(meeting)"
                 class="mt-1 text-sm font-black text-error tracking-tight"
-              >Attention</span
+                >Attention</span
               >
-              <span v-else class="mt-1 text-sm font-black text-highlighted tracking-tight">On track</span>
+              <span v-else class="mt-1 text-sm font-black text-highlighted tracking-tight"
+                >On track</span
+              >
             </div>
           </div>
         </div>

@@ -106,7 +106,9 @@ function getCellClasses(key: WorkspaceTalentGridBoxKey) {
   }
 }
 
-function getCellTone(key: WorkspaceTalentGridBoxKey): "success" | "primary" | "neutral" | "warning" | "error" {
+function getCellTone(
+  key: WorkspaceTalentGridBoxKey,
+): "success" | "primary" | "neutral" | "warning" | "error" {
   switch (key) {
     case "superstar":
     case "growth-star":
@@ -127,15 +129,15 @@ function getCellTone(key: WorkspaceTalentGridBoxKey): "success" | "primary" | "n
 
 function getBoxDescription(key: WorkspaceTalentGridBoxKey): string {
   const descriptions: Record<WorkspaceTalentGridBoxKey, string> = {
-    "superstar": "Exceeds expectations with high growth potential",
+    superstar: "Exceeds expectations with high growth potential",
     "growth-star": "Strong performer ready for advancement",
     "high-performer": "Consistent excellence in current role",
-    "enigma": "High potential seeking clearer direction",
+    enigma: "High potential seeking clearer direction",
     "core-player": "Reliable contributor to team success",
     "average-joe": "Steady performer in established domain",
     "under-performer": "Support needed to reach full potential",
-    "specialist": "Deep expertise in focused area",
-    "risk": "Opportunity for role alignment discussion",
+    specialist: "Deep expertise in focused area",
+    risk: "Opportunity for role alignment discussion",
   };
   return descriptions[key] || "";
 }
@@ -160,14 +162,18 @@ function getBoxDescription(key: WorkspaceTalentGridBoxKey): string {
       </div>
 
       <div class="rounded-2xl border border-muted/20 bg-elevated/10 p-4">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">Core Contributors</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60">
+          Core Contributors
+        </p>
         <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-highlighted">
           {{ summary.corePlayerCount }}
         </p>
       </div>
 
       <div class="rounded-2xl border border-warning/20 bg-warning/5 p-4">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">Development Focus</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">
+          Development Focus
+        </p>
         <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-warning">
           {{ summary.riskCount + summary.underPerformerCount }}
         </p>
@@ -230,7 +236,9 @@ function getBoxDescription(key: WorkspaceTalentGridBoxKey): string {
                   {{ workspaceTalentGridBoxLabels[cell] }}
                 </p>
                 <p class="mt-1 text-[9px] text-muted/40 leading-tight">
-                  {{ membersByBox.get(cell)?.length ?? 0 }} member{{ (membersByBox.get(cell)?.length ?? 0) !== 1 ? 's' : '' }}
+                  {{ membersByBox.get(cell)?.length ?? 0 }} member{{
+                    (membersByBox.get(cell)?.length ?? 0) !== 1 ? "s" : ""
+                  }}
                 </p>
               </div>
             </div>
@@ -254,7 +262,9 @@ function getBoxDescription(key: WorkspaceTalentGridBoxKey): string {
       v-if="block.members.length === 0"
       class="rounded-2xl border border-dashed border-muted/20 bg-elevated/5 py-10 text-center"
     >
-      <div class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto">
+      <div
+        class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto"
+      >
         <UIcon name="i-lucide-users" size="24" />
       </div>
       <p class="mt-3 text-xs font-bold text-muted">No team members yet</p>
@@ -329,7 +339,8 @@ function getBoxDescription(key: WorkspaceTalentGridBoxKey): string {
         <div class="grid gap-3 sm:grid-cols-2">
           <div class="rounded-xl border border-muted/20 bg-elevated/10 p-3">
             <div class="flex items-center justify-between mb-2">
-              <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+              <label
+                class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
                 for="performance-{{ member.id }}"
               >
                 Performance
@@ -359,7 +370,8 @@ function getBoxDescription(key: WorkspaceTalentGridBoxKey): string {
 
           <div class="rounded-xl border border-muted/20 bg-elevated/10 p-3">
             <div class="flex items-center justify-between mb-2">
-              <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
+              <label
+                class="text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60"
                 for="potential-{{ member.id }}"
               >
                 Growth Potential
@@ -388,7 +400,10 @@ function getBoxDescription(key: WorkspaceTalentGridBoxKey): string {
           </div>
         </div>
 
-        <div v-if="getBoxDescription(getTalentGridBoxKey(member.performance, member.potential))" class="mt-3 rounded-lg bg-muted/5 px-3 py-2">
+        <div
+          v-if="getBoxDescription(getTalentGridBoxKey(member.performance, member.potential))"
+          class="mt-3 rounded-lg bg-muted/5 px-3 py-2"
+        >
           <p class="text-[10px] text-muted/70 leading-snug">
             {{ getBoxDescription(getTalentGridBoxKey(member.performance, member.potential)) }}
           </p>

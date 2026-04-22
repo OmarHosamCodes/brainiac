@@ -102,7 +102,10 @@ export function getSkillsHeatMapSummary(
   const dimensionIds = block.dimensions.map((d) => d.id);
   const averageByDimension = Object.fromEntries(
     dimensionIds.map((dimensionId) => {
-      const total = block.members.reduce((sum, member) => sum + (member.scores[dimensionId] ?? 0), 0);
+      const total = block.members.reduce(
+        (sum, member) => sum + (member.scores[dimensionId] ?? 0),
+        0,
+      );
       const average =
         block.members.length > 0 ? Number((total / block.members.length).toFixed(1)) : 0;
       return [dimensionId, average];

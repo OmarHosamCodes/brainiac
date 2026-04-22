@@ -158,9 +158,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
 
   const startTimerMutation = useMutation(orpc.agencyOps.timer.start.mutationOptions());
   const stopTimerMutation = useMutation(orpc.agencyOps.timer.stop.mutationOptions());
-  const deleteEntryMutation = useMutation(
-    orpc.agencyOps.timeEntries.deleteMine.mutationOptions(),
-  );
+  const deleteEntryMutation = useMutation(orpc.agencyOps.timeEntries.deleteMine.mutationOptions());
 
   const activeTimerQueryRegistry = new Map<string, RegisteredActiveTimerQuery>();
   const logQueryRegistry = new Map<string, RegisteredLogQuery>();
@@ -354,10 +352,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
       patchActiveTimerCaches(result.timer);
       syncDraftFromActiveTimer(payload.teamId, result.timer);
 
-      await Promise.all([
-        invalidateActiveTimerQueries(),
-        invalidateLogQueries(affectedLogTeams),
-      ]);
+      await Promise.all([invalidateActiveTimerQueries(), invalidateLogQueries(affectedLogTeams)]);
 
       toast.add({
         title: "Timer started",
@@ -409,9 +404,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
           error: null,
         }
       : normalizeAgencyLinkUrl(payload.linkUrl);
-    const nextTags = payload.tagIds.length > 0
-      ? payload.selectedTags
-      : activeTimer.tags;
+    const nextTags = payload.tagIds.length > 0 ? payload.selectedTags : activeTimer.tags;
     const optimisticEntry = payload.discard
       ? null
       : createOptimisticEntryFromTimer(activeTimer, {
@@ -462,10 +455,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
 
       patchActiveTimerCaches(result.timer);
 
-      await Promise.all([
-        invalidateActiveTimerQueries(),
-        invalidateLogQueries(affectedLogTeams),
-      ]);
+      await Promise.all([invalidateActiveTimerQueries(), invalidateLogQueries(affectedLogTeams)]);
 
       toast.add({
         title: payload.discard ? "Timer discarded" : "Timer stopped",
@@ -499,9 +489,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
     const uniqueEntries = dedupeEntries(payload.entries);
     const ids = uniqueEntries.map((entry) => entry.id);
     const previousDeletingIds = [...deletingEntryIds.value];
-    const logSnapshots = snapshotQueries(
-      getRegisteredLogQueries(new Set([payload.teamId])),
-    );
+    const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([payload.teamId])));
 
     deletingEntryIds.value = [...new Set([...deletingEntryIds.value, ...ids])];
 
@@ -541,9 +529,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
 
   function getCachedActiveTimer() {
     for (const registeredQuery of activeTimerQueryRegistry.values()) {
-      const cached = queryClient.getQueryData<AgencyActiveTimerQueryData>(
-        registeredQuery.queryKey,
-      );
+      const cached = queryClient.getQueryData<AgencyActiveTimerQueryData>(registeredQuery.queryKey);
 
       if (cached?.timer) {
         return cached.timer;
@@ -685,10 +671,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
         registeredQuery.queryKey,
         (current) => ({
           ...(current ?? { timer: null }),
-          timer:
-            timer && registeredQuery.teamId === timer.teamId
-              ? timer
-              : null,
+          timer: timer && registeredQuery.teamId === timer.teamId ? timer : null,
         }),
       );
     });

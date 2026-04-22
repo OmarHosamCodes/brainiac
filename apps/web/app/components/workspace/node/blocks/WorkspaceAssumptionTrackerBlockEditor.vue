@@ -209,7 +209,9 @@ function removeAssumption(assumptionId: string) {
       </div>
 
       <div class="rounded-2xl bg-warning/10 border border-warning/20 p-4">
-        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">Avg Confidence</p>
+        <p class="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">
+          Avg Confidence
+        </p>
         <p class="mt-2 text-xl sm:text-2xl font-black tracking-tight text-warning">
           {{ summary.averageConfidence }}/5
         </p>
@@ -260,7 +262,9 @@ function removeAssumption(assumptionId: string) {
       v-if="visibleAssumptions.length === 0"
       class="border-dashed border border-muted/20 rounded-2xl py-10 text-center bg-elevated/5"
     >
-      <div class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto">
+      <div
+        class="flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted/30 mx-auto"
+      >
         <UIcon name="i-lucide-activity" size="24" />
       </div>
       <p class="mt-3 text-xs font-bold text-muted">No assumptions in this filter</p>
@@ -306,7 +310,15 @@ function removeAssumption(assumptionId: string) {
 
           <div class="flex items-center gap-2 shrink-0">
             <UBadge
-              :color="assumption.status === 'confirmed' ? 'success' : assumption.status === 'at-risk' ? 'error' : assumption.status === 'false' ? 'neutral' : 'warning'"
+              :color="
+                assumption.status === 'confirmed'
+                  ? 'success'
+                  : assumption.status === 'at-risk'
+                    ? 'error'
+                    : assumption.status === 'false'
+                      ? 'neutral'
+                      : 'warning'
+              "
               variant="soft"
               size="md"
               class="rounded-lg px-3"
@@ -328,7 +340,10 @@ function removeAssumption(assumptionId: string) {
         <!-- Quick Fields -->
         <div class="grid gap-3 sm:grid-cols-3 mb-4">
           <div>
-            <label :for="'link-' + assumption.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+            <label
+              :for="'link-' + assumption.id"
+              class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+            >
               Link
             </label>
             <USelect
@@ -353,7 +368,10 @@ function removeAssumption(assumptionId: string) {
           </div>
 
           <div>
-            <label :for="'owner-' + assumption.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+            <label
+              :for="'owner-' + assumption.id"
+              class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+            >
               Owner
             </label>
             <UInput
@@ -376,7 +394,10 @@ function removeAssumption(assumptionId: string) {
           </div>
 
           <div>
-            <label :for="'review-' + assumption.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+            <label
+              :for="'review-' + assumption.id"
+              class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+            >
               Review Date
             </label>
             <UInput
@@ -457,7 +478,10 @@ function removeAssumption(assumptionId: string) {
           </div>
 
           <div>
-            <label :for="'evidence-' + assumption.id" class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5">
+            <label
+              :for="'evidence-' + assumption.id"
+              class="block text-[10px] font-bold uppercase tracking-[0.2em] text-muted/60 mb-1.5"
+            >
               Evidence Notes
             </label>
             <UTextarea

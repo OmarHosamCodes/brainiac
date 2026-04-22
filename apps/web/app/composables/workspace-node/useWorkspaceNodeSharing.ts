@@ -151,10 +151,7 @@ export function useWorkspaceNodeSharing(options: UseWorkspaceNodeSharingOptions)
         return;
       }
 
-      if (
-        nodeShareTeamId.value &&
-        currentTeams.some((team) => team.id === nodeShareTeamId.value)
-      ) {
+      if (nodeShareTeamId.value && currentTeams.some((team) => team.id === nodeShareTeamId.value)) {
         return;
       }
 

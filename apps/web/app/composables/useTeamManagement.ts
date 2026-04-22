@@ -50,9 +50,7 @@ export function useTeamManagement(options: TeamManagementOptions) {
   const updateTeamMutation = useMutation(orpc.team.update.mutationOptions());
   const deleteTeamMutation = useMutation(orpc.team.delete.mutationOptions());
   const addTeamMemberMutation = useMutation(orpc.team.members.add.mutationOptions());
-  const updateTeamMemberRoleMutation = useMutation(
-    orpc.team.members.updateRole.mutationOptions(),
-  );
+  const updateTeamMemberRoleMutation = useMutation(orpc.team.members.updateRole.mutationOptions());
   const removeTeamMemberMutation = useMutation(orpc.team.members.remove.mutationOptions());
   const teamListQueryKey = orpc.team.list.queryOptions().queryKey;
 
@@ -127,24 +125,24 @@ export function useTeamManagement(options: TeamManagementOptions) {
     queryClient.setQueryData<TeamDetail | undefined>(teamDetailQueryKey, (current) =>
       current
         ? {
-          ...current,
-          name,
-        }
+            ...current,
+            name,
+          }
         : current,
     );
     queryClient.setQueryData<{ items: TeamSummary[] } | undefined>(teamListQueryKey, (current) =>
       current
         ? {
-          ...current,
-          items: current.items.map((team) =>
-            team.id === teamId
-              ? {
-                ...team,
-                name,
-              }
-              : team,
-          ),
-        }
+            ...current,
+            items: current.items.map((team) =>
+              team.id === teamId
+                ? {
+                    ...team,
+                    name,
+                  }
+                : team,
+            ),
+          }
         : current,
     );
 
@@ -154,26 +152,26 @@ export function useTeamManagement(options: TeamManagementOptions) {
       queryClient.setQueryData<TeamDetail | undefined>(teamDetailQueryKey, (current) =>
         current
           ? {
-            ...current,
-            name: updatedTeam.name,
-            role: updatedTeam.role,
-            updatedAt: updatedTeam.updatedAt,
-          }
+              ...current,
+              name: updatedTeam.name,
+              role: updatedTeam.role,
+              updatedAt: updatedTeam.updatedAt,
+            }
           : current,
       );
       queryClient.setQueryData<{ items: TeamSummary[] } | undefined>(teamListQueryKey, (current) =>
         current
           ? {
-            ...current,
-            items: current.items.map((team) =>
-              team.id === updatedTeam.id
-                ? {
-                  ...team,
-                  ...updatedTeam,
-                }
-                : team,
-            ),
-          }
+              ...current,
+              items: current.items.map((team) =>
+                team.id === updatedTeam.id
+                  ? {
+                      ...team,
+                      ...updatedTeam,
+                    }
+                  : team,
+              ),
+            }
           : current,
       );
 
@@ -250,9 +248,9 @@ export function useTeamManagement(options: TeamManagementOptions) {
     queryClient.setQueryData<TeamDetail | undefined>(teamDetailQueryKey, (current) =>
       current
         ? {
-          ...current,
-          members: [...current.members, optimisticMember],
-        }
+            ...current,
+            members: [...current.members, optimisticMember],
+          }
         : current,
     );
 
@@ -271,7 +269,9 @@ export function useTeamManagement(options: TeamManagementOptions) {
         const replacedMembers = current.members.map((member) =>
           member.userId === pendingMemberId ? addedMember : member,
         );
-        const hasRealMember = replacedMembers.some((member) => member.userId === addedMember.userId);
+        const hasRealMember = replacedMembers.some(
+          (member) => member.userId === addedMember.userId,
+        );
 
         return {
           ...current,
@@ -314,16 +314,16 @@ export function useTeamManagement(options: TeamManagementOptions) {
     queryClient.setQueryData<TeamDetail | undefined>(teamDetailQueryKey, (current) =>
       current
         ? {
-          ...current,
-          members: current.members.map((member) =>
-            member.userId === userId
-              ? {
-                ...member,
-                role,
-              }
-              : member,
-          ),
-        }
+            ...current,
+            members: current.members.map((member) =>
+              member.userId === userId
+                ? {
+                    ...member,
+                    role,
+                  }
+                : member,
+            ),
+          }
         : current,
     );
 
@@ -362,9 +362,9 @@ export function useTeamManagement(options: TeamManagementOptions) {
     queryClient.setQueryData<TeamDetail | undefined>(teamDetailQueryKey, (current) =>
       current
         ? {
-          ...current,
-          members: current.members.filter((member) => member.userId !== userId),
-        }
+            ...current,
+            members: current.members.filter((member) => member.userId !== userId),
+          }
         : current,
     );
 

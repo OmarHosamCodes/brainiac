@@ -41,13 +41,7 @@ POLAR_WEBHOOK_SECRET=...
 
 ```typescript
 import { betterAuth } from "better-auth";
-import {
-  polar,
-  checkout,
-  portal,
-  usage,
-  webhooks,
-} from "@polar-sh/better-auth";
+import { polar, checkout, portal, usage, webhooks } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 
 const polarClient = new Polar({
@@ -86,8 +80,7 @@ const auth = betterAuth({
         webhooks({
           secret: process.env.POLAR_WEBHOOK_SECRET,
           onOrderPaid: (payload) => console.log("💸 Order Paid:", payload),
-          onCustomerStateChanged: (payload) =>
-            console.log("👤 State Changed:", payload),
+          onCustomerStateChanged: (payload) => console.log("👤 State Changed:", payload),
           onPayload: (payload) => console.log("📨 Other Event:", payload),
         }),
       ],

@@ -16,10 +16,7 @@ export function getCanonicalConnectionPair(
   }
 
   // Agency-operator nodes are standalone — never participate in canvas connections.
-  if (
-    sourceNode.nodeType === "agency-operator" ||
-    targetNode.nodeType === "agency-operator"
-  ) {
+  if (sourceNode.nodeType === "agency-operator" || targetNode.nodeType === "agency-operator") {
     return null;
   }
 
@@ -51,7 +48,9 @@ export function hasConnection(
     return false;
   }
 
-  return orchestratorNode.connections.some((connection) => connection.targetNodeId === standardNodeId);
+  return orchestratorNode.connections.some(
+    (connection) => connection.targetNodeId === standardNodeId,
+  );
 }
 
 export function getEligibleConnectionTargetIds(

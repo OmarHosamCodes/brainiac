@@ -29,7 +29,10 @@ function hasRoleAtLeast(role: WorkspaceTeamRole, required: WorkspaceTeamRole) {
   return TEAM_ROLE_WEIGHT[role] >= TEAM_ROLE_WEIGHT[required];
 }
 
-function normalizeVisibility(visibility: WorkspaceNodeVisibility | undefined, teamId: string | null) {
+function normalizeVisibility(
+  visibility: WorkspaceNodeVisibility | undefined,
+  teamId: string | null,
+) {
   const parsedVisibility = workspaceNodeVisibilitySchema.parse(visibility ?? "private");
 
   if (!teamId) {
@@ -144,11 +147,13 @@ export async function getWorkspaceSnapshot(userId: string) {
   const memberRows =
     teamIds.length > 0
       ? await db
-        .select({ userId: workspaceTeamMember.userId })
-        .from(workspaceTeamMember)
-        .where(inArray(workspaceTeamMember.teamId, teamIds))
+          .select({ userId: workspaceTeamMember.userId })
+          .from(workspaceTeamMember)
+          .where(inArray(workspaceTeamMember.teamId, teamIds))
       : [];
-  const relatedUserIds = [...new Set(memberRows.map((row) => row.userId).filter((id) => id !== userId))];
+  const relatedUserIds = [
+    ...new Set(memberRows.map((row) => row.userId).filter((id) => id !== userId)),
+  ];
   const relatedWorkspaces = await getWorkspaceRowsByUserIds(relatedUserIds);
 
   const ownNodes = (workspace?.nodes ?? []).map((node) =>
@@ -309,7 +314,10 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
   };
 }
 
-export async function shareWorkspaceNode(userId: string, input: { nodeId: string; teamId: string }) {
+export async function shareWorkspaceNode(
+  userId: string,
+  input: { nodeId: string; teamId: string },
+) {
   const membershipMap = await getMembershipMapByUser(userId);
   const role = membershipMap.get(input.teamId);
 
@@ -323,7 +331,9 @@ export async function shareWorkspaceNode(userId: string, input: { nodeId: string
     .where(eq(dashboardWorkspace.userId, userId))
     .limit(1);
 
-  const nodes = (workspace?.nodes ?? []).map((node) => withOwnerDefaults(node as WorkspaceNode, userId));
+  const nodes = (workspace?.nodes ?? []).map((node) =>
+    withOwnerDefaults(node as WorkspaceNode, userId),
+  );
   const targetNode = nodes.find((node) => node.id === input.nodeId);
 
   if (!targetNode) {
@@ -366,7 +376,9 @@ export async function unshareWorkspaceNode(userId: string, input: { nodeId: stri
     .where(eq(dashboardWorkspace.userId, userId))
     .limit(1);
 
-  const nodes = (workspace?.nodes ?? []).map((node) => withOwnerDefaults(node as WorkspaceNode, userId));
+  const nodes = (workspace?.nodes ?? []).map((node) =>
+    withOwnerDefaults(node as WorkspaceNode, userId),
+  );
   const targetNode = nodes.find((node) => node.id === input.nodeId);
 
   if (!targetNode) {
@@ -461,7 +473,9 @@ export async function deleteWorkspaceNode(
     .where(eq(dashboardWorkspace.userId, userId))
     .limit(1);
 
-  const nodes = (workspace?.nodes ?? []).map((node) => withOwnerDefaults(node as WorkspaceNode, userId));
+  const nodes = (workspace?.nodes ?? []).map((node) =>
+    withOwnerDefaults(node as WorkspaceNode, userId),
+  );
 
   if (!nodes.some((node) => node.id === input.nodeId)) {
     throw new ORPCError("NOT_FOUND");

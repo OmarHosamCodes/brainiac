@@ -55,15 +55,19 @@ export function useNodeSharing(options: NodeSharingOptions) {
     }
 
     return (
-      teamSelection.teams.value.find((team) => team.id === teamSelection.selectedTeamId.value)?.role ??
-      null
+      teamSelection.teams.value.find((team) => team.id === teamSelection.selectedTeamId.value)
+        ?.role ?? null
     );
   });
 
   const canManageSelectedNodeSharing = computed(() => selectedNodeTeamRole.value === "owner");
 
   async function shareSelectedNode() {
-    if (!selectedNode.value || !teamSelection.selectedTeamId.value || !canManageSelectedNodeSharing.value) {
+    if (
+      !selectedNode.value ||
+      !teamSelection.selectedTeamId.value ||
+      !canManageSelectedNodeSharing.value
+    ) {
       if (selectedNode.value && !canManageSelectedNodeSharing.value) {
         toast.add({
           title: "Owner role required",

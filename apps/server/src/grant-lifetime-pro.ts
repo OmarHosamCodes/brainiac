@@ -89,10 +89,7 @@ async function grantLifetimePro(email: string) {
     return;
   }
 
-  await db
-    .update(user)
-    .set({ lifetimePro: true })
-    .where(eq(user.id, existingUser.id));
+  await db.update(user).set({ lifetimePro: true }).where(eq(user.id, existingUser.id));
 
   console.log(`Granted Lifetime Pro to ${existingUser.email} (${existingUser.id}).`);
 }

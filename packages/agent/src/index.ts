@@ -103,17 +103,17 @@ function buildFocusedWorkspaceDetails(nodes: ReturnType<typeof getScopedWorkspac
     `Block summary: ${summarizeBlock(block)}`,
     ...(parsedScope
       ? [
-        `MUTATION TARGET IDs — use these when calling mutation tools:`,
-        `  nodeId: ${parsedScope.originalNodeId}`,
-        `  tabId: ${tab.id}`,
-        `  blockId: ${parsedScope.focusedBlockId}`,
-      ]
+          `MUTATION TARGET IDs — use these when calling mutation tools:`,
+          `  nodeId: ${parsedScope.originalNodeId}`,
+          `  tabId: ${tab.id}`,
+          `  blockId: ${parsedScope.focusedBlockId}`,
+        ]
       : [
-        `MUTATION TARGET IDs — use these when calling mutation tools:`,
-        `  nodeId: ${node.id}`,
-        `  tabId: ${tab.id}`,
-        `  blockId: ${block.id}`,
-      ]),
+          `MUTATION TARGET IDs — use these when calling mutation tools:`,
+          `  nodeId: ${node.id}`,
+          `  tabId: ${tab.id}`,
+          `  blockId: ${block.id}`,
+        ]),
   ].join("\n");
 }
 
@@ -134,22 +134,26 @@ function buildScopedWorkspaceContext(workspace: DashboardAgentWorkspaceContext) 
     const parsedScope = parseScopedNodeId(node.id);
     const realNodeId = parsedScope?.originalNodeId ?? node.id;
     const activeTabId = workspace.activeTabId ?? node.viewState?.activeTabId;
-    const activeTab = activeTabId
-      ? node.tabs.find((tab) => tab.id === activeTabId)
-      : node.tabs[0];
+    const activeTab = activeTabId ? node.tabs.find((tab) => tab.id === activeTabId) : node.tabs[0];
 
     const lines = [
       `CURRENT SCOPE: You are inside node "${node.title}" (nodeId: ${realNodeId}).`,
       ...(activeTab
-        ? [`Active tab: "${activeTab.title}" (tabId: ${activeTab.id}) with ${activeTab.blocks.length} block${activeTab.blocks.length === 1 ? "" : "s"}.`]
+        ? [
+            `Active tab: "${activeTab.title}" (tabId: ${activeTab.id}) with ${activeTab.blocks.length} block${activeTab.blocks.length === 1 ? "" : "s"}.`,
+          ]
         : []),
     ];
 
     if (parsedScope) {
-      const focusedBlock = activeTab?.blocks.find((block) => block.id === parsedScope.focusedBlockId);
+      const focusedBlock = activeTab?.blocks.find(
+        (block) => block.id === parsedScope.focusedBlockId,
+      );
 
       if (focusedBlock) {
-        lines.push(`Focused block: "${focusedBlock.title || "Untitled"}" (blockId: ${focusedBlock.id}, type: ${focusedBlock.type}).`);
+        lines.push(
+          `Focused block: "${focusedBlock.title || "Untitled"}" (blockId: ${focusedBlock.id}, type: ${focusedBlock.type}).`,
+        );
       }
     }
 
@@ -190,8 +194,8 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
     `The dashboard currently has ${workspace.nodes.length} nodes.`,
     ...(scopedWorkspace
       ? [
-        `The current turn is scoped to ${scopedNodes.length} node${scopedNodes.length === 1 ? "" : "s"}. Prioritize those unless the user asks you to work elsewhere.`,
-      ]
+          `The current turn is scoped to ${scopedNodes.length} node${scopedNodes.length === 1 ? "" : "s"}. Prioritize those unless the user asks you to work elsewhere.`,
+        ]
       : []),
     `The marketplace currently has ${marketplaceCount} items.`,
     scopedWorkspace ? "Scoped dashboard overview:" : "Dashboard overview:",
@@ -232,8 +236,8 @@ function buildAskInstructions(
     "For block edits, prefer patch_block for targeted field updates and bulk nested changes.",
     ...(scopedWorkspace
       ? [
-        "SCOPE WORKFLOW: The user is inside a specific node. Inspect the scoped node's data first before looking elsewhere. Use the provided nodeId and tabId to target your inspection tools.",
-      ]
+          "SCOPE WORKFLOW: The user is inside a specific node. Inspect the scoped node's data first before looking elsewhere. Use the provided nodeId and tabId to target your inspection tools.",
+        ]
       : []),
   ].join("\n");
 }
@@ -255,18 +259,18 @@ function buildAgentOnlyInstructions(
     "If tools are available and the workspace has nodes, do at least one inspection step before your final answer.",
     ...(scopedWorkspace
       ? [
-        "",
-        "SCOPED MUTATION WORKFLOW — follow these steps in order:",
-        "1. IDENTIFY SCOPE: The user is inside a specific node. The CURRENT SCOPE section above provides the target nodeId, tabId, and optionally blockId. All mutations default to these IDs.",
-        '2. READ BEFORE WRITE: Call get_block_details or get_tab_details on the scoped target to understand its current state before mutating.',
-        "3. APPLY MUTATIONS TO SCOPE: Use the scoped nodeId and tabId for create_block, patch_block, create_tab, etc. Do NOT create a new node unless the user explicitly asks to create a new node.",
-        '4. RESOLVE REFERENCES: When the user says "here", "this tab", "this node", "this block", or "current", always resolve to the scoped IDs provided above.',
-        "",
-        "ANTI-PATTERNS — never do these when scoped:",
-        "- NEVER call create_node when the user asks to add a block or content. Use create_block with the scoped nodeId and tabId instead.",
-        "- NEVER create a new tab when the user says \"add a block to this tab\". Use the active tabId from the scope.",
-        "- NEVER guess node/tab/block IDs. Use the exact IDs provided in CURRENT SCOPE and MUTATION TARGET IDs.",
-      ]
+          "",
+          "SCOPED MUTATION WORKFLOW — follow these steps in order:",
+          "1. IDENTIFY SCOPE: The user is inside a specific node. The CURRENT SCOPE section above provides the target nodeId, tabId, and optionally blockId. All mutations default to these IDs.",
+          "2. READ BEFORE WRITE: Call get_block_details or get_tab_details on the scoped target to understand its current state before mutating.",
+          "3. APPLY MUTATIONS TO SCOPE: Use the scoped nodeId and tabId for create_block, patch_block, create_tab, etc. Do NOT create a new node unless the user explicitly asks to create a new node.",
+          '4. RESOLVE REFERENCES: When the user says "here", "this tab", "this node", "this block", or "current", always resolve to the scoped IDs provided above.',
+          "",
+          "ANTI-PATTERNS — never do these when scoped:",
+          "- NEVER call create_node when the user asks to add a block or content. Use create_block with the scoped nodeId and tabId instead.",
+          '- NEVER create a new tab when the user says "add a block to this tab". Use the active tabId from the scope.',
+          "- NEVER guess node/tab/block IDs. Use the exact IDs provided in CURRENT SCOPE and MUTATION TARGET IDs.",
+        ]
       : []),
   ].join("\n");
 }
@@ -290,9 +294,9 @@ function resolveAgentExecutionConfig(
         instructions: supportsTools
           ? buildAgentOnlyInstructions(workspace)
           : buildDirectAnswerInstructions(
-            workspace,
-            "Deep inspection is limited because the selected model cannot call tools.",
-          ),
+              workspace,
+              "Deep inspection is limited because the selected model cannot call tools.",
+            ),
         fallbackInstructions: buildDirectAnswerInstructions(
           workspace,
           "Deep inspection is limited because the selected model cannot call tools.",
@@ -308,9 +312,9 @@ function resolveAgentExecutionConfig(
         instructions: supportsTools
           ? buildAskInstructions(workspace)
           : buildDirectAnswerInstructions(
-            workspace,
-            "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
-          ),
+              workspace,
+              "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
+            ),
         fallbackInstructions: buildDirectAnswerInstructions(
           workspace,
           "Tooling is unavailable for the selected model, so this answer is limited to the provided workspace context.",
@@ -479,11 +483,11 @@ export async function runDashboardAgent(
 
     const fallbackInstructions = toolsWereCalled
       ? [
-        buildAgentInstructions(workspace),
-        runtimeHasChanges
-          ? "You already called tools and applied mutations to the workspace. Summarize the completed actions for the user. Do not say that tools are unavailable — you already used them successfully."
-          : "You called tools but the mutations did not complete. Explain what you attempted and what went wrong. Do not say that tools are unavailable — you did call tools but encountered errors.",
-      ].join("\n")
+          buildAgentInstructions(workspace),
+          runtimeHasChanges
+            ? "You already called tools and applied mutations to the workspace. Summarize the completed actions for the user. Do not say that tools are unavailable — you already used them successfully."
+            : "You called tools but the mutations did not complete. Explain what you attempted and what went wrong. Do not say that tools are unavailable — you did call tools but encountered errors.",
+        ].join("\n")
       : executionConfig.fallbackInstructions;
 
     const fallbackResult = client.callModel({

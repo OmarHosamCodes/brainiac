@@ -14,7 +14,7 @@ import {
   type WorkspaceBlock,
   type WorkspaceMarketplacePayload,
   type WorkspaceNode,
-  type WorkspaceNodeTab
+  type WorkspaceNodeTab,
 } from "@brainiac/workspace";
 
 function cloneForTransport<T>(value: T): T {

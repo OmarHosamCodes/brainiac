@@ -30,9 +30,7 @@ onMounted(() => {
         Your subscription is now active. Enjoy the full power of Brainiac Studio.
       </p>
 
-      <p v-if="checkoutId" class="text-xs text-neutral-400 mb-6">
-        Checkout ID: {{ checkoutId }}
-      </p>
+      <p v-if="checkoutId" class="text-xs text-neutral-400 mb-6">Checkout ID: {{ checkoutId }}</p>
 
       <div class="flex flex-col gap-3">
         <UButton
@@ -44,13 +42,7 @@ onMounted(() => {
         >
           Go to Dashboard
         </UButton>
-        <UButton
-          to="/billing"
-          size="lg"
-          variant="outline"
-          color="neutral"
-          block
-        >
+        <UButton to="/billing" size="lg" variant="outline" color="neutral" block>
           View Billing Details
         </UButton>
       </div>

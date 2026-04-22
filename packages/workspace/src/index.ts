@@ -108,7 +108,10 @@ import {
   workspaceTrackerBlockSchema,
 } from "./schemas";
 import { getNowIsoString } from "./shared";
-import { createWorkspaceLeadershipRhythmFilter, createWorkspaceTimeOrchestratorSettings } from "./tasks";
+import {
+  createWorkspaceLeadershipRhythmFilter,
+  createWorkspaceTimeOrchestratorSettings,
+} from "./tasks";
 import type {
   Workspace2x2MatrixBlock,
   Workspace2x2MatrixItem,
@@ -1861,10 +1864,10 @@ export function createWorkspaceKanbanBlock(
     partial.columns && partial.columns.length > 0
       ? partial.columns
       : [
-        createWorkspaceKanbanColumn({ title: "Backlog" }),
-        createWorkspaceKanbanColumn({ title: "In progress" }),
-        createWorkspaceKanbanColumn({ title: "Done" }),
-      ];
+          createWorkspaceKanbanColumn({ title: "Backlog" }),
+          createWorkspaceKanbanColumn({ title: "In progress" }),
+          createWorkspaceKanbanColumn({ title: "Done" }),
+        ];
 
   return workspaceKanbanBlockSchema.parse({
     id: partial.id ?? createWorkspaceId("block"),
@@ -2636,13 +2639,13 @@ function normalizeWorkspaceDecisionMatrixBlock(
   const options =
     block.options && block.options.length > 0
       ? block.options.map((option) =>
-        workspaceDecisionMatrixOptionSchema.parse({
-          ...option,
-          scores: Object.fromEntries(
-            criteria.map((criterion) => [criterion.id, option.scores?.[criterion.id] ?? 5]),
-          ),
-        }),
-      )
+          workspaceDecisionMatrixOptionSchema.parse({
+            ...option,
+            scores: Object.fromEntries(
+              criteria.map((criterion) => [criterion.id, option.scores?.[criterion.id] ?? 5]),
+            ),
+          }),
+        )
       : createWorkspaceDecisionMatrixBlock({ criteria }).options;
 
   return workspaceDecisionMatrixBlockSchema.parse({
@@ -3026,9 +3029,9 @@ export function normalizeWorkspaceNode(node: WorkspaceNode): WorkspaceNode {
   const sanitizedTabs = rawTabs.map((tab: unknown) => {
     const tabRecord = tab as Record<string, unknown>;
     const tabBlocks = Array.isArray(tabRecord.blocks)
-      ? (tabRecord.blocks as unknown[]).filter((block: unknown) =>
-        workspaceBlockSchema.safeParse(block).success,
-      )
+      ? (tabRecord.blocks as unknown[]).filter(
+          (block: unknown) => workspaceBlockSchema.safeParse(block).success,
+        )
       : [];
 
     return {

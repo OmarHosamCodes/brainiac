@@ -70,8 +70,8 @@ export function normalizeBillingState(
     .filter(Boolean);
 
   // First try to match configured Pro product IDs
-  const proSubscription = customerState.activeSubscriptions.find(
-    (sub) => proProductIds.includes(sub.productId),
+  const proSubscription = customerState.activeSubscriptions.find((sub) =>
+    proProductIds.includes(sub.productId),
   );
 
   if (proSubscription) {

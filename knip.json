@@ -15,75 +15,36 @@
         "app/composables/**/*.ts",
         "app/utils/**/*.ts"
       ],
-      "project": [
-        "app/**/*.{ts,vue}"
-      ],
-      "ignoreDependencies": [
-        "@iconify-json/lucide",
-        "@iconify-json/simple-icons"
-      ]
+      "project": ["app/**/*.{ts,vue}"],
+      "ignoreDependencies": ["@iconify-json/lucide", "@iconify-json/simple-icons"]
     },
     "apps/server": {
-      "entry": [
-        "src/index.ts",
-        "src/seed.ts",
-        "tsdown.config.ts"
-      ],
-      "project": [
-        "src/**/*.ts"
-      ]
+      "entry": ["src/index.ts", "src/seed.ts", "tsdown.config.ts"],
+      "project": ["src/**/*.ts"]
     },
     "packages/agent": {
-      "entry": [
-        "src/index.ts",
-        "src/tools.test.ts"
-      ],
-      "project": [
-        "src/**/*.ts"
-      ]
+      "entry": ["src/index.ts", "src/tools.test.ts"],
+      "project": ["src/**/*.ts"]
     },
     "packages/api": {
-      "entry": [
-        "src/index.ts"
-      ],
-      "project": [
-        "src/**/*.ts"
-      ]
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
     },
     "packages/auth": {
-      "entry": [
-        "src/index.ts"
-      ],
-      "project": [
-        "src/**/*.ts"
-      ]
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
     },
     "packages/db": {
-      "entry": [
-        "src/index.ts",
-        "drizzle.config.ts"
-      ],
-      "project": [
-        "src/**/*.ts",
-        "drizzle.config.ts"
-      ]
+      "entry": ["src/index.ts", "drizzle.config.ts"],
+      "project": ["src/**/*.ts", "drizzle.config.ts"]
     },
     "packages/env": {
-      "entry": [
-        "src/server.ts",
-        "src/web.ts"
-      ],
-      "project": [
-        "src/**/*.ts"
-      ]
+      "entry": ["src/server.ts", "src/web.ts"],
+      "project": ["src/**/*.ts"]
     },
     "packages/workspace": {
-      "entry": [
-        "src/index.ts"
-      ],
-      "project": [
-        "src/**/*.ts"
-      ]
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
     }
   }
 }

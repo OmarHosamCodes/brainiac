@@ -115,7 +115,11 @@ describe("workspace-node-connections", () => {
       connections: [{ targetNodeId: "orch-1" }],
     } satisfies WorkspaceNode;
 
-    const sanitizedNodes = sanitizeConnections([orchestratorNode, secondOrchestrator, standardNode]);
+    const sanitizedNodes = sanitizeConnections([
+      orchestratorNode,
+      secondOrchestrator,
+      standardNode,
+    ]);
 
     expect(sanitizedNodes[0]?.connections).toEqual([{ targetNodeId: "std-1" }]);
     expect(sanitizedNodes[1]?.connections).toEqual([]);

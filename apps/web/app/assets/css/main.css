@@ -2,6 +2,6 @@
 @import "@nuxt/ui";
 
 @theme {
-    --font-sans: "Public Sans", system-ui, -apple-system, sans-serif;
-    --font-mono: "JetBrains Mono", monospace;
+  --font-sans: "Public Sans", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
 }
