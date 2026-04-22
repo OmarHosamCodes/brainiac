@@ -469,13 +469,14 @@ async function discardTimer() {
                 "
             />
 
-            <div v-if="tags.length > 0" class="shrink-0">
+            <div class="shrink-0">
                 <UPopover :content="{ align: 'end' }">
                     <UButton
                         icon="i-lucide-tag"
                         size="xs"
                         variant="ghost"
                         :color="selectedTagIds.length > 0 ? 'primary' : 'neutral'"
+                        :disabled="trackerBusy || !effectiveTeamId"
                     />
 
                     <template #content>

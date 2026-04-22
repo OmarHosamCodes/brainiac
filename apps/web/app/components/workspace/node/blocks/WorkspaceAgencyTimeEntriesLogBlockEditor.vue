@@ -493,24 +493,9 @@ function toggleGroup(key: string) {
 
           <div class="min-w-0 flex-1">
             <p class="truncate text-sm font-medium text-highlighted">{{ group.projectName }}</p>
-            <div
-              v-if="group.description || group.linkUrl"
-              class="mt-0.5 flex items-center gap-1.5"
-            >
-              <p v-if="group.description" class="truncate text-xs text-muted">
-                {{ group.description }}
-              </p>
-              <a
-                v-if="group.linkUrl"
-                :href="group.linkUrl"
-                target="_blank"
-                rel="noreferrer"
-                class="shrink-0 text-muted transition hover:text-primary"
-                aria-label="Open linked entry URL"
-              >
-                <UIcon name="i-lucide-external-link" class="size-3.5" />
-              </a>
-            </div>
+            <p v-if="group.description" class="mt-0.5 truncate text-xs text-muted">
+              {{ group.description }}
+            </p>
             <!-- Inline time range for single-entry groups -->
             <div v-if="group.entries.length === 1" class="mt-1.5">
               <span class="text-[10px] text-muted">
@@ -519,9 +504,10 @@ function toggleGroup(key: string) {
               </span>
             </div>
 
-            <!-- Tags popover -->
-            <div v-if="group.tags.length > 0" class="mt-1.5">
-              <UPopover :content="{ align: 'start' }">
+            <!-- Tags and link inline controls -->
+            <div v-if="group.tags.length > 0 || group.linkUrl" class="mt-1.5 flex items-center gap-1">
+              <!-- Tags popover -->
+              <UPopover v-if="group.tags.length > 0" :content="{ align: 'start' }">
                 <UButton
                   icon="i-lucide-tag"
                   size="xs"
@@ -542,6 +528,37 @@ function toggleGroup(key: string) {
                       class="rounded-full"
                       tabindex="-1"
                     />
+                  </div>
+                </template>
+              </UPopover>
+
+              <!-- Link popover -->
+              <UPopover v-if="group.linkUrl" :content="{ align: 'start' }">
+                <UButton
+                  icon="i-lucide-link"
+                  size="xs"
+                  variant="ghost"
+                  color="primary"
+                  aria-label="View linked URL"
+                />
+                <template #content>
+                  <div class="w-72 space-y-2 p-2">
+                    <div class="flex items-center gap-2">
+                      <UIcon name="i-lucide-link" class="size-3.5 shrink-0 text-muted" />
+                      <p class="truncate text-xs text-muted">{{ group.linkUrl }}</p>
+                    </div>
+                    <div class="flex justify-end">
+                      <UButton
+                        label="Open link"
+                        size="xs"
+                        variant="ghost"
+                        color="primary"
+                        trailing-icon="i-lucide-external-link"
+                        :to="group.linkUrl"
+                        target="_blank"
+                        rel="noreferrer"
+                      />
+                    </div>
                   </div>
                 </template>
               </UPopover>
