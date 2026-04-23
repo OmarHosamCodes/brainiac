@@ -15,6 +15,11 @@ title: Wiki Index
     - [[projects/brainiac/layer1-env-package|@brainiac/env]] — validated env vars (server: DATABASE_URL, auth, Polar; web: NUXT_PUBLIC_SERVER_URL)
     - [[projects/brainiac/layer1-db-package|@brainiac/db]] — Drizzle client + all PostgreSQL schemas (auth, workspace, team, agency-ops)
     - [[projects/brainiac/layer1-workspace-package|@brainiac/workspace]] — all block/node types, Zod schemas, constants, tiers, factory functions
+  - **Layer 2 — Data/State**
+    - [[projects/brainiac/layer2-auth-package|@brainiac/auth]] — BetterAuth instance: Drizzle adapter, email/password, Polar checkout/portal/webhooks plugins
+    - [[projects/brainiac/layer2-workspace-store|useWorkspaceStore]] — Pinia store: node CRUD, save/sync lifecycle, revision tracking, optimistic editor draft
+    - [[projects/brainiac/layer2-agency-time-tracking-store|useAgencyTimeTrackingStore]] — Pinia store: per-team tracker drafts, timer start/stop/restart, optimistic cache patching, query registry
+    - [[projects/brainiac/layer2-client-composables|Client Composables]] — useOrpc, useAuthClient, useAuthSession (thin Nuxt plugin wrappers)
   - **Layer N — Features/Blocks**
     - [[projects/brainiac/brainiac-agency-time-tracker|Agency Time Tracker Block]] — grouped project selector, stop gating, entry links
     - [[projects/brainiac/brainiac-eisenhower-matrix|Eisenhower Matrix Block]] — source-aware task prioritization
