@@ -12,6 +12,7 @@ build
 .env
 .env*
 .env*.local
+!.env.example
 
 # IDEs and editors
 .vscode/*
@@ -52,3 +53,14 @@ coverage
 .cache
 tmp
 temp
+
+# BEADS runtime
+.beads/beads.db
+.beads/daemon.lock
+.beads/daemon.pid
+.beads/daemon.log
+.beads/temp/
+
+# BEADS execution state (working files for context recovery)
+.beads/context/
+.beads/plans/

@@ -20,6 +20,18 @@ title: Wiki Index
     - [[projects/brainiac/layer2-workspace-store|useWorkspaceStore]] — Pinia store: node CRUD, save/sync lifecycle, revision tracking, optimistic editor draft
     - [[projects/brainiac/layer2-agency-time-tracking-store|useAgencyTimeTrackingStore]] — Pinia store: per-team tracker drafts, timer start/stop/restart, optimistic cache patching, query registry
     - [[projects/brainiac/layer2-client-composables|Client Composables]] — useOrpc, useAuthClient, useAuthSession (thin Nuxt plugin wrappers)
+  - **Layer 3 — API/Logic**
+    - [[projects/brainiac/layer3-procedures-context|ORPC Procedures & Context]] — createContext (BetterAuth session extraction), publicProcedure / protectedProcedure / protectedProProcedure middleware chain
+    - [[projects/brainiac/layer3-app-router|appRouter]] — root ORPC router: agent, agencyOps, billing, system (spread), team, workspace; exports AppRouter + AppRouterClient types
+    - [[projects/brainiac/layer3-billing|Billing State & Guard]] — billing.ts: BillingState type + normalizeBillingState; billing-guard.ts: getBillingStateForUser + requirePro middleware
+    - [[projects/brainiac/layer3-dev-errors|Dev Error Handling]] — toProcedureError / toInternalServerError: maps OpenRouter HTTP errors + dev/prod ORPCError conversion
+    - [[projects/brainiac/layer3-router-system-billing|System & Billing Routers]] — healthCheck (public), privateData (protected), billing.state (protected → getBillingStateForUser)
+    - [[projects/brainiac/layer3-router-agent|Agent Router]] — freeModels, modelCatalog, accountStatus, chat.turn (billing-gated), conversations CRUD; all via @brainiac/agent + OpenRouter
+    - [[projects/brainiac/layer3-router-workspace|Workspace Router]] — workspace get/save (node-limit gated), shareNode, unshareNode, deleteNode, marketplace list/save (Pro)
+    - [[projects/brainiac/layer3-router-team|Team Router]] — team CRUD (team-limit gated on create), members add/updateRole/remove; RBAC via workspaceTeamRoleSchema
+    - [[projects/brainiac/layer3-router-agency-ops|Agency Ops Router]] — Pro-only: clients, projects, tags CRUD; timer start/stop/getActive; timeEntries CRUD; summary + reports (CSV export)
+    - [[projects/brainiac/layer3-server-app|Server App & Handlers]] — Hono app (port 7000): CORS, auth routes, billing redirect, RPCHandler (/rpc/*), OpenAPIHandler (/api-reference/*)
+    - [[projects/brainiac/layer3-web-middleware|Web Route Middleware]] — auth.ts (session guard → /login), workspace.ts (preloadWorkspace on route enter); both client-only Nuxt middleware
   - **Layer N — Features/Blocks**
     - [[projects/brainiac/brainiac-agency-time-tracker|Agency Time Tracker Block]] — grouped project selector, stop gating, entry links
     - [[projects/brainiac/brainiac-eisenhower-matrix|Eisenhower Matrix Block]] — source-aware task prioritization
