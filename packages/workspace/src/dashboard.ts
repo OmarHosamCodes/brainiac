@@ -270,11 +270,11 @@ function buildWorkspaceNodeDashboardDetail(
         },
         ...(overdueTasks > 0
           ? [
-              {
-                label: "Overdue",
-                value: String(overdueTasks),
-              },
-            ]
+            {
+              label: "Overdue",
+              value: String(overdueTasks),
+            },
+          ]
           : []),
       ],
       highlights: openTasks.slice(0, 2).map((task) => formatDashboardTaskLine(task)),
@@ -502,11 +502,11 @@ function buildWorkspaceNodeDashboardDetail(
         },
         ...(latestEntry
           ? [
-              {
-                label: "Trend",
-                value: trendLabel,
-              },
-            ]
+            {
+              label: "Trend",
+              value: trendLabel,
+            },
+          ]
           : []),
       ],
       highlights: block.entries
@@ -963,17 +963,17 @@ function buildWorkspaceNodeDashboardDetail(
       highlights:
         summary.memberCount > 0
           ? [
-              ...(summary.strongestDimension
-                ? [
-                    `Strongest: ${getSkillsHeatMapDimensionLabel(block, summary.strongestDimension)} ${summary.averageByDimension[summary.strongestDimension]}/10`,
-                  ]
-                : []),
-              ...(summary.weakestDimension
-                ? [
-                    `Weakest: ${getSkillsHeatMapDimensionLabel(block, summary.weakestDimension)} ${summary.averageByDimension[summary.weakestDimension]}/10`,
-                  ]
-                : []),
-            ]
+            ...(summary.strongestDimension
+              ? [
+                `Strongest: ${getSkillsHeatMapDimensionLabel(block, summary.strongestDimension)} ${summary.averageByDimension[summary.strongestDimension]}/10`,
+              ]
+              : []),
+            ...(summary.weakestDimension
+              ? [
+                `Weakest: ${getSkillsHeatMapDimensionLabel(block, summary.weakestDimension)} ${summary.averageByDimension[summary.weakestDimension]}/10`,
+              ]
+              : []),
+          ]
           : [],
     };
   }
@@ -1349,13 +1349,13 @@ function buildWorkspaceNodeDashboardDetail(
       highlights: [
         ...(summary.strongestMetric
           ? [
-              `Strongest: ${workspaceAuthorityScoreMetricLabels[summary.strongestMetric]} ${summary.metrics[summary.strongestMetric].value}/${summary.metrics[summary.strongestMetric].target}`,
-            ]
+            `Strongest: ${workspaceAuthorityScoreMetricLabels[summary.strongestMetric]} ${summary.metrics[summary.strongestMetric].value}/${summary.metrics[summary.strongestMetric].target}`,
+          ]
           : []),
         ...(summary.weakestMetric
           ? [
-              `Weakest: ${workspaceAuthorityScoreMetricLabels[summary.weakestMetric]} ${summary.metrics[summary.weakestMetric].value}/${summary.metrics[summary.weakestMetric].target}`,
-            ]
+            `Weakest: ${workspaceAuthorityScoreMetricLabels[summary.weakestMetric]} ${summary.metrics[summary.weakestMetric].value}/${summary.metrics[summary.weakestMetric].target}`,
+          ]
           : []),
       ],
     };
@@ -1566,11 +1566,11 @@ function buildWorkspaceNodeDashboardDetail(
       highlights:
         summary.strongestCells.length > 0
           ? summary.strongestCells.map(
-              (cellKey) => `Strong: ${workspaceBusinessModelCanvasCellLabels[cellKey]}`,
-            )
+            (cellKey) => `Strong: ${workspaceBusinessModelCanvasCellLabels[cellKey]}`,
+          )
           : summary.missingCells
-              .slice(0, 2)
-              .map((cellKey) => `Missing: ${workspaceBusinessModelCanvasCellLabels[cellKey]}`),
+            .slice(0, 2)
+            .map((cellKey) => `Missing: ${workspaceBusinessModelCanvasCellLabels[cellKey]}`),
     };
   }
 
@@ -1853,6 +1853,42 @@ function buildWorkspaceNodeDashboardDetail(
         },
       ],
       highlights: [],
+    };
+  }
+
+  if (block.type === "agency-billing-report") {
+    return {
+      tabId: tab.id,
+      tabTitle: getDisplayTabTitle(tab),
+      blockId: block.id,
+      blockTitle: getDisplayBlockTitle(block),
+      blockType: block.type,
+      summary: block.teamId
+        ? `Billing report runs day ${block.billingPeriodStartDay} to day ${block.billingPeriodEndDay} with ${block.reviewedEntryIds.length} reviewed entries.`
+        : "Agency billing report waiting for team binding.",
+      metrics: [
+        {
+          label: "Team",
+          value: block.teamId ? "Linked" : "Unlinked",
+        },
+        {
+          label: "Page size",
+          value: String(block.pageSize),
+        },
+        {
+          label: "Reviewed",
+          value: String(block.reviewedEntryIds.length),
+        },
+      ],
+      highlights: [
+        block.selectedProjectId
+          ? "Project filter is active."
+          : block.selectedClientId
+            ? "Client filter is active."
+            : block.selectedMemberUserId
+              ? "Member filter is active."
+              : "Showing the full billing report scope.",
+      ],
     };
   }
 
@@ -2579,9 +2615,9 @@ export function generateWorkspacePromptOutput(node: WorkspaceNode, prompt: strin
     const lines =
       timeSummary.suggestedNextActions.length > 0
         ? timeSummary.suggestedNextActions.map(
-            ({ task, tabTitle, blockTitle }) =>
-              `${task.text} [${tabTitle} / ${blockTitle}]${task.domain ? `, ${getWorkspaceTaskDomainLabel(task.domain)}` : ""}${task.dueDate ? ` due ${task.dueDate}` : ""}${task.priority ? `, ${task.priority} priority` : ""}, urgency ${task.urgency}/10, importance ${task.importance}/10${task.estimateMinutes ? `, ${task.estimateMinutes}m` : ""}`,
-          )
+          ({ task, tabTitle, blockTitle }) =>
+            `${task.text} [${tabTitle} / ${blockTitle}]${task.domain ? `, ${getWorkspaceTaskDomainLabel(task.domain)}` : ""}${task.dueDate ? ` due ${task.dueDate}` : ""}${task.priority ? `, ${task.priority} priority` : ""}, urgency ${task.urgency}/10, importance ${task.importance}/10${task.estimateMinutes ? `, ${task.estimateMinutes}m` : ""}`,
+        )
         : ["No outstanding tasks found."];
 
     return `${intro}\n\nSuggested next actions:\n- ${lines.join("\n- ")}`;

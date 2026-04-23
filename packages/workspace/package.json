@@ -10,6 +10,7 @@
     }
   },
   "scripts": {
+    "check-types": "tsc -p tsconfig.json --noEmit",
     "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"
   },
   "dependencies": {
