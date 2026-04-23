@@ -39,7 +39,23 @@ title: Wiki Index
     - [[projects/brainiac/layer4-agent-runner|Dashboard Agent Runner]] — `runDashboardAgent`: model resolution → workspace runtime → instruction building (ask/agent/fallback) → OpenRouter `callModel` with tools; retry logic, fallback pass
     - [[projects/brainiac/layer4-agent-tools|Workspace Tools & Runtime]] — `buildDashboardAgentTools` (9 read + 10 mutation tools), `createDashboardAgentWorkspaceRuntime` (mutable in-memory clone), `patch_block` path engine, `describeBlockEditGuide` for 44 block types
     - [[projects/brainiac/layer4-agent-service|Agent API Service]] — conversation CRUD against `dashboardConversation`/`dashboardConversationMessage` tables; `appendDashboardConversationTurn` orchestrates workspace fetch → agent run → DB persist → workspace save
-  - **Layer N — Features/Blocks**
+  - **Layer 5 — UI/Features**
+    - [[projects/brainiac/layer5-app-bootstrap|App Bootstrap]] — app.vue root, app.config.ts, default layout, auth-client/orpc/vue-query plugins
+    - [[projects/brainiac/layer5-pages-public|Public Pages]] — index (hero + health check), login (split auth panel), pricing (free/pro grid), privacy, terms
+    - [[projects/brainiac/layer5-pages-protected|Protected Pages]] — dashboard (infinite canvas + teams + agent), marketplace (infinite scroll), billing/index + billing/success
+    - [[projects/brainiac/layer5-page-node|Node Detail Page]] — `/node/[id]` (2500+ lines): tab/block management, agent context, sharing, marketplace publish
+    - [[projects/brainiac/layer5-composables-core|Core Composables]] — useOrpc (plugin accessor), useAuthClient/useAuthSession, useBilling (Polar checkout), useDashboardLayout
+    - [[projects/brainiac/layer5-composables-workspace|Workspace Composables]] — useWorkspaceBoard (store facade), useCanvas (pan/zoom engine), useNodeSharing (board), useWorkspaceNodeSharing (node)
+    - [[projects/brainiac/layer5-composables-team|Team Composables]] — useTeamSelection (list+detail queries, auto-select), useTeamManagement (CRUD + optimistic updates)
+    - [[projects/brainiac/layer5-composable-agent-chat|Agent Chat Composable]] — useDashboardAgentChat: 8 queries/mutations, @mention system, model preferences, localStorage
+    - [[projects/brainiac/layer5-components-core|Core Components]] — Header (floating pill nav), UserMenu, LegalPageShell, InfiniteCanvas (canvas engine + connections + resize)
+    - [[projects/brainiac/layer5-components-auth|Auth Components]] — SignInForm, SignUpForm (email/password, better-auth)
+    - [[projects/brainiac/layer5-components-workspace|Workspace Board Components]] — WorkspaceNodeCard, WorkspaceBoardStatus, WorkspaceEditorModal, AgencyOperatorConnectModal, Marketplace/Team/Dashboard AI components
+    - [[projects/brainiac/layer5-components-node-editor|Node Editor Components]] — WorkspaceNodeShell, WorkspaceNodeBlockRenderer (dynamic), WorkspaceNodeEditorContext (80+ field provide/inject contract)
+    - [[projects/brainiac/layer5-block-registry|Block Registry & 44 Block Editors]] — workspaceBlockRegistry map + all block editor components (core/analysis/planning/business/sales/content/HR/learning/time/agency/health/AI)
+    - [[projects/brainiac/layer5-stores|Stores]] — useWorkspaceStore (node CRUD, revision-based sync, debounced save), useAgencyTimeTrackingStore (timer clock-in/out, optimistic cache)
+    - [[projects/brainiac/layer5-utils|Utilities & Constants]] — workspace-node-connections, workspace-node-dashboard (tint), workspace-marketplace (serialize/clone), workspace-block-presets (5 packs), workspace-node-formatters, dashboard-agent-mentions, render-simple-markdown, get-error-message, workspace-node-options
+  - **Layer N — Features/Blocks (legacy entries)**
     - [[projects/brainiac/brainiac-agency-time-tracker|Agency Time Tracker Block]] — grouped project selector, stop gating, entry links
     - [[projects/brainiac/brainiac-eisenhower-matrix|Eisenhower Matrix Block]] — source-aware task prioritization
     - [[projects/brainiac/brainiac-time-orchestrator|Time Orchestrator Block]] — task orchestration from connected nodes
