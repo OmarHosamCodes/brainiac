@@ -32,6 +32,13 @@ title: Wiki Index
     - [[projects/brainiac/layer3-router-agency-ops|Agency Ops Router]] — Pro-only: clients, projects, tags CRUD; timer start/stop/getActive; timeEntries CRUD; summary + reports (CSV export)
     - [[projects/brainiac/layer3-server-app|Server App & Handlers]] — Hono app (port 7000): CORS, auth routes, billing redirect, RPCHandler (/rpc/*), OpenAPIHandler (/api-reference/*)
     - [[projects/brainiac/layer3-web-middleware|Web Route Middleware]] — auth.ts (session guard → /login), workspace.ts (preloadWorkspace on route enter); both client-only Nuxt middleware
+  - **Layer 4 — Agents/Tools**
+    - [[projects/brainiac/layer4-agent-client|OpenRouter Client Factory]] — `createOpenRouterClient`: authenticated `OpenRouter` SDK instance; throws if `OPENROUTER_API_KEY` absent
+    - [[projects/brainiac/layer4-agent-models|OpenRouter Model Catalog & Account Status]] — catalog fetch/cache (10 min TTL), free-model filter, account status (60 s TTL), 7 exported functions + 6 Zod schemas
+    - [[projects/brainiac/layer4-agent-types|Agent Types & Schemas]] — all agent Zod schemas (usage, presets, messages, conversations, I/O), constants (`DEFAULT_AGENT_MODEL`, window/history limits), TypeScript types
+    - [[projects/brainiac/layer4-agent-runner|Dashboard Agent Runner]] — `runDashboardAgent`: model resolution → workspace runtime → instruction building (ask/agent/fallback) → OpenRouter `callModel` with tools; retry logic, fallback pass
+    - [[projects/brainiac/layer4-agent-tools|Workspace Tools & Runtime]] — `buildDashboardAgentTools` (9 read + 10 mutation tools), `createDashboardAgentWorkspaceRuntime` (mutable in-memory clone), `patch_block` path engine, `describeBlockEditGuide` for 44 block types
+    - [[projects/brainiac/layer4-agent-service|Agent API Service]] — conversation CRUD against `dashboardConversation`/`dashboardConversationMessage` tables; `appendDashboardConversationTurn` orchestrates workspace fetch → agent run → DB persist → workspace save
   - **Layer N — Features/Blocks**
     - [[projects/brainiac/brainiac-agency-time-tracker|Agency Time Tracker Block]] — grouped project selector, stop gating, entry links
     - [[projects/brainiac/brainiac-eisenhower-matrix|Eisenhower Matrix Block]] — source-aware task prioritization
