@@ -9,10 +9,17 @@ title: Wiki Index
 ## Projects
 
 - [[projects/brainiac/brainiac|Brainiac]] — Nuxt/Vue workspace app with AI-powered blocks
-  - [[projects/brainiac/brainiac-agency-time-tracker|Agency Time Tracker Block]] — grouped project selector, stop gating, entry links
-  - [[projects/brainiac/brainiac-eisenhower-matrix|Eisenhower Matrix Block]] — source-aware task prioritization
-  - [[projects/brainiac/brainiac-time-orchestrator|Time Orchestrator Block]] — task orchestration from connected nodes
-  - [[projects/brainiac/brainiac-workspace-editor-modal|Workspace Editor Modal]] — node settings with swatch tint picker
+  - **Layer 1 — Configs/Primitives**
+    - [[projects/brainiac/layer1-monorepo-config|Monorepo Root Config]] — package.json, turbo.json, tsconfig.json, knip.json
+    - [[projects/brainiac/layer1-config-package|@brainiac/config]] — shared TypeScript compiler options (tsconfig.base.json)
+    - [[projects/brainiac/layer1-env-package|@brainiac/env]] — validated env vars (server: DATABASE_URL, auth, Polar; web: NUXT_PUBLIC_SERVER_URL)
+    - [[projects/brainiac/layer1-db-package|@brainiac/db]] — Drizzle client + all PostgreSQL schemas (auth, workspace, team, agency-ops)
+    - [[projects/brainiac/layer1-workspace-package|@brainiac/workspace]] — all block/node types, Zod schemas, constants, tiers, factory functions
+  - **Layer N — Features/Blocks**
+    - [[projects/brainiac/brainiac-agency-time-tracker|Agency Time Tracker Block]] — grouped project selector, stop gating, entry links
+    - [[projects/brainiac/brainiac-eisenhower-matrix|Eisenhower Matrix Block]] — source-aware task prioritization
+    - [[projects/brainiac/brainiac-time-orchestrator|Time Orchestrator Block]] — task orchestration from connected nodes
+    - [[projects/brainiac/brainiac-workspace-editor-modal|Workspace Editor Modal]] — node settings with swatch tint picker
 - [[projects/ogm-reimagined/ogm-reimagined|OGM Reimagined]] — React/TanStack admin panel for platform management
 
 ## Concepts
