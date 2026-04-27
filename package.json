@@ -45,8 +45,7 @@
     "check": "oxlint && oxfmt --write",
     "check:unused": "knip --include dependencies,devDependencies,exports,files,types",
     "clean": "git clean -xdf .turbo node_modules temp",
-    "clean:workspaces": "turbo clean",
-    "prepare": "husky"
+    "clean:workspaces": "turbo clean"
   },
   "devDependencies": {
     "@brainiac/config": "workspace:*",
