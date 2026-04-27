@@ -23,6 +23,7 @@
   },
   "type": "module",
   "scripts": {
+    "setup": "bash scripts/setup.sh",
     "dev": "turbo dev",
     "dev:portless": "turbo dev:portless",
     "build": "turbo build --concurrency=1",

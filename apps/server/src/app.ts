@@ -1,3 +1,16 @@
+/**
+ * Backend Application Setup (Hono + oRPC)
+ * 
+ * This file configures the main Hono server with:
+ * - CORS for cross-origin requests from the frontend
+ * - Authentication via Better Auth
+ * - oRPC endpoint at /api/app (type-safe RPC layer)
+ * - Error handling and logging
+ * 
+ * Entry point: apps/server/src/index.ts
+ * Start with: bun run dev (runs on port 7000 via BETTER_AUTH_URL)
+ */
+
 import { createContext } from "@brainiac/api/context";
 import { auth } from "@brainiac/auth";
 import { env } from "@brainiac/env/server";
@@ -6,8 +19,13 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 
 import { handleAppRouterRequest } from "./lib/handlers";
+import { logStartup } from "./lib/startup";
 
 function getRpcDebugResponse(error: unknown, path: string) {
+  /**
+   * Format RPC errors with debugging info in development
+   * This helps frontend developers understand what went wrong
+   */
   const message =
     error instanceof Error && error.message
       ? error.message
@@ -44,6 +62,18 @@ function getRpcDebugResponse(error: unknown, path: string) {
 }
 
 function createApp() {
+  /**
+   * Initialize the Hono application
+   * 
+   * Setup order:
+   * 1. Error handler - catches all errors and logs them
+   * 2. Logging - logs incoming requests
+   * 3. CORS - enables cross-origin requests from frontend
+   * 4. Auth routes - /api/auth/* endpoints from Better Auth
+   * 5. Billing redirect - /billing/success for payment webhooks
+   * 6. RPC handler - all /api/app/* requests go to oRPC router
+   * 7. Health check - GET / returns "OK" for monitoring
+   */
   const app = new Hono();
 
   app.onError((error, context) => {
@@ -103,7 +133,26 @@ function createApp() {
 
 const app = createApp();
 
+// Log startup information in development
+if (env.NODE_ENV === "development") {
+  logStartup({
+    port: 7000,
+    baseUrl: env.BETTER_AUTH_URL,
+    corsOrigin: env.CORS_ORIGIN,
+  });
+}
+
+/**
+ * Server export for Bun
+ * 
+ * Port 7000 is configured for development via Traefik TCP proxy.
+ * The actual Bun dev server runs on port 3000 and is proxied through
+ * Traefik to 7000 for consistent URLs.
+ * 
+ * To disable Traefik proxy and run on actual ports (3000/3001), use:
+ *   bun run dev:portless
+ */
 export default {
-  port: 7000,
+  port: 7000,  // Proxied via Traefik (actual dev server is on 3000)
   fetch: app.fetch,
 };
