@@ -1,6 +1,5 @@
 import {
   cloneWorkspaceNodes,
-  createAgencyOperatorNodeTabs,
   createDefaultWorkspaceTab,
   DEFAULT_WORKSPACE_NODE_HEIGHT,
   DEFAULT_WORKSPACE_NODE_MIN_HEIGHT,
@@ -44,8 +43,6 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   const editorMode = ref<EditorMode>("create");
   const activeNodeId = ref<string | null>(null);
   const pendingNodePosition = ref<NodePosition | null>(null);
-  const agencyOperatorConnectOpen = ref(false);
-  const pendingAgencyOperatorPosition = ref<NodePosition | null>(null);
   const loadApplied = ref(false);
   const isHydratingWorkspace = ref(false);
   const saveState = ref<SaveState>("idle");
@@ -575,51 +572,6 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     closeEditor();
   }
 
-  function openCreateAgencyOperatorNode(position: NodePosition) {
-    pendingAgencyOperatorPosition.value = position;
-    agencyOperatorConnectOpen.value = true;
-  }
-
-  function submitCreateAgencyOperatorNode(payload: { teamId: string; teamName: string }) {
-    const { teamId, teamName } = payload;
-    const position = pendingAgencyOperatorPosition.value ?? { x: 0, y: 0 };
-    const timestamp = new Date().toISOString();
-    const tabs = createAgencyOperatorNodeTabs(teamId);
-
-    const nextNode = normalizeWorkspaceNode({
-      id: createNodeId(),
-      title: teamName,
-      content: "",
-      nodeType: "agency-operator",
-      connections: [],
-      label: teamName,
-      teamId,
-      x: position.x - 160,
-      y: position.y - 110,
-      width: DEFAULT_WORKSPACE_NODE_WIDTH,
-      height: DEFAULT_WORKSPACE_NODE_HEIGHT,
-      minWidth: DEFAULT_WORKSPACE_NODE_MIN_WIDTH,
-      minHeight: DEFAULT_WORKSPACE_NODE_MIN_HEIGHT,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      tabs: [...tabs],
-      customBlockTemplates: [],
-      viewState: {
-        activeTabId: tabs[0]?.id ?? null,
-        notePreviewState: {},
-      },
-      dashboard: {
-        tint: "emerald",
-        featuredBlocks: [],
-      },
-    });
-
-    nodes.value = [...nodes.value, nextNode];
-    selectedNodeIds.value = [nextNode.id];
-    agencyOperatorConnectOpen.value = false;
-    pendingAgencyOperatorPosition.value = null;
-  }
-
   watch(
     () => authSession.value?.data?.user?.id ?? null,
     (userId, previousUserId) => {
@@ -694,7 +646,6 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     nodeDraft,
     editorBlockOptions,
     isDraftValid,
-    agencyOperatorConnectOpen,
     closeEditor,
     openCreateNode,
     openEditNode,
@@ -702,8 +653,6 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     disconnectNodePair,
     removeNode,
     submitNodeEditor,
-    openCreateAgencyOperatorNode,
-    submitCreateAgencyOperatorNode,
     applyWorkspaceSnapshot,
     updateNodes,
   };

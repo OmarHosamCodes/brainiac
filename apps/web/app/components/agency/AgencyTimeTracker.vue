@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import type { SelectMenuItem } from "@nuxt/ui";
-import type { WorkspaceAgencyTimeTrackerBlock } from "@brainiac/workspace";
 import { useQuery } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
-import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
 import {
   getAgencyLinkUrlDisplayLabel,
@@ -12,14 +10,10 @@ import {
 } from "~/utils/normalize-agency-link-url";
 
 const props = defineProps<{
-  block: WorkspaceAgencyTimeTrackerBlock;
-  tabId: string;
+  teamId: string;
 }>();
 
-const { currentNode, mutateTypedBlock } = useWorkspaceNodeEditorContext();
 const orpc = useOrpc();
-const authSession = useAuthSession();
-const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
 const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
 const { draftByTeam, isTimerMutationPending } = storeToRefs(agencyTimeTrackingStore);
 
@@ -42,22 +36,7 @@ onBeforeUnmount(() => {
   }
 });
 
-const teamsQuery = useQuery(
-  computed(() => ({
-    ...orpc.team.list.queryOptions(),
-    enabled: authEnabled.value,
-  })),
-);
-
-const teams = computed(() => teamsQuery.data.value?.items ?? []);
-const teamIds = computed(() => new Set(teams.value.map((team) => team.id)));
-const preferredTeamId = computed(() => props.block.teamId ?? currentNode.value?.teamId ?? "");
-const effectiveTeamId = computed(() => {
-  if (!preferredTeamId.value) {
-    return teams.value[0]?.id ?? "";
-  }
-  return teamIds.value.has(preferredTeamId.value) ? preferredTeamId.value : "";
-});
+const effectiveTeamId = computed(() => props.teamId);
 
 const projectsQuery = useQuery(
   computed(() => ({
@@ -312,12 +291,6 @@ onBeforeUnmount(() => {
   agencyTimeTrackingStore.unregisterActiveTimerQuery(activeTimerQueryKey.value);
 });
 
-function updateTeam(teamId: string | undefined) {
-  mutateTypedBlock(props.tabId, props.block.id, "agency-time-tracker", (entry) => {
-    entry.teamId = teamId || null;
-  });
-}
-
 function formatDuration(seconds: number) {
   const safeSeconds = Math.max(0, Math.round(seconds));
   const hours = Math.floor(safeSeconds / 3_600)
@@ -394,23 +367,6 @@ async function discardTimer() {
 
 <template>
   <div class="space-y-2">
-    <div v-if="!effectiveTeamId" class="mb-2 flex items-center gap-2">
-      <UIcon name="i-lucide-alert-circle" class="size-3.5 shrink-0 text-warning" />
-      <USelect
-        :model-value="effectiveTeamId"
-        :items="
-          teams.map((team) => ({
-            label: `${team.name} · ${team.role}`,
-            value: team.id,
-          }))
-        "
-        placeholder="Select a team"
-        size="xs"
-        :disabled="!authEnabled || teamsQuery.isPending.value"
-        @update:model-value="updateTeam($event as string | undefined)"
-      />
-    </div>
-
     <div class="flex flex-wrap items-center gap-2">
       <UInput
         v-model="timerDescription"

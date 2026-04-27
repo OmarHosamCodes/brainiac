@@ -1,21 +1,15 @@
 <script setup lang="ts">
-import type { WorkspaceAgencyTimeEntriesLogBlock } from "@brainiac/workspace";
 import { useQuery } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
-import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const props = defineProps<{
-  block: WorkspaceAgencyTimeEntriesLogBlock;
-  tabId: string;
+  teamId: string;
 }>();
 
-const { currentNode, mutateTypedBlock } = useWorkspaceNodeEditorContext();
 const orpc = useOrpc();
-const authSession = useAuthSession();
-const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
 const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
 const { deletingEntryIds, isTimerMutationPending } = storeToRefs(agencyTimeTrackingStore);
 
@@ -26,35 +20,10 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
-const teamsQuery = useQuery(
-  computed(() => ({
-    ...orpc.team.list.queryOptions(),
-    enabled: authEnabled.value,
-  })),
-);
-const teams = computed(() => teamsQuery.data.value?.items ?? []);
-const teamsById = computed(() => new Map(teams.value.map((team) => [team.id, team])));
-const preferredTeamId = computed(() => props.block.teamId ?? currentNode.value?.teamId ?? "");
-const selectedTeamIsUnavailable = computed(
-  () => Boolean(preferredTeamId.value) && !teamsById.value.has(preferredTeamId.value),
-);
-const effectiveTeamId = computed(() => {
-  if (!preferredTeamId.value) {
-    return teams.value[0]?.id ?? "";
-  }
-
-  if (!teamsById.value.has(preferredTeamId.value)) {
-    return "";
-  }
-
-  return preferredTeamId.value;
-});
-
-const teamOptions = computed(() =>
-  teams.value.map((team) => ({ label: `${team.name} (${team.role})`, value: team.id })),
-);
+const effectiveTeamId = computed(() => props.teamId);
 
 const page = ref(1);
+const pageSize = ref(20);
 
 const entriesQuery = useQuery(
   computed(() => ({
@@ -62,7 +31,7 @@ const entriesQuery = useQuery(
       input: {
         teamId: effectiveTeamId.value,
         page: page.value,
-        pageSize: props.block.pageSize,
+        pageSize: pageSize.value,
       },
     }),
     enabled: Boolean(effectiveTeamId.value),
@@ -84,7 +53,7 @@ const entriesQueryKey = computed(
       input: {
         teamId: effectiveTeamId.value,
         page: page.value,
-        pageSize: props.block.pageSize,
+        pageSize: pageSize.value,
       },
     }).queryKey,
 );
@@ -155,11 +124,11 @@ const groupedEntries = computed<GroupedEntry[]>(() => {
   return [...map.values()];
 });
 const maxPage = computed(() => {
-  if (props.block.pageSize <= 0) {
+  if (pageSize.value <= 0) {
     return 1;
   }
 
-  return Math.max(1, Math.ceil(totalEntries.value / props.block.pageSize));
+  return Math.max(1, Math.ceil(totalEntries.value / pageSize.value));
 });
 const weekSummary = computed(() => entriesQuery.data.value?.weekSummary ?? null);
 
@@ -209,23 +178,10 @@ onBeforeUnmount(() => {
 });
 
 const logRefreshing = computed(
-  () =>
-    teamsQuery.isFetching.value || entriesQuery.isFetching.value || projectsQuery.isFetching.value,
+  () => entriesQuery.isFetching.value || projectsQuery.isFetching.value,
 );
 
 const logQueryError = computed(() => entriesQuery.error.value ?? projectsQuery.error.value ?? null);
-
-function mutateTimeEntriesLogBlock(mutator: (block: WorkspaceAgencyTimeEntriesLogBlock) => void) {
-  mutateTypedBlock(props.tabId, props.block.id, "agency-time-entries-log", mutator);
-}
-
-function updateTeam(teamId: string | undefined) {
-  page.value = 1;
-
-  mutateTimeEntriesLogBlock((block) => {
-    block.teamId = teamId || null;
-  });
-}
 
 function setPageSize(value: string | number | undefined) {
   const numeric = Number(value);
@@ -234,10 +190,7 @@ function setPageSize(value: string | number | undefined) {
     return;
   }
 
-  mutateTimeEntriesLogBlock((block) => {
-    block.pageSize = Math.min(100, Math.max(5, Math.round(numeric)));
-  });
-
+  pageSize.value = Math.min(100, Math.max(5, Math.round(numeric)));
   page.value = 1;
 }
 
@@ -339,33 +292,15 @@ function toggleGroup(key: string) {
   } else {
     expandedGroups.value.add(key);
   }
-  // Trigger reactivity
   expandedGroups.value = new Set(expandedGroups.value);
 }
 </script>
 
 <template>
   <div class="space-y-4">
-    <!-- Inline team + page size controls -->
     <div class="flex flex-wrap items-center gap-3">
-      <div class="flex items-center gap-2">
-        <UIcon
-          v-if="!effectiveTeamId"
-          name="i-lucide-alert-circle"
-          class="size-3.5 shrink-0 text-warning"
-        />
-        <USelect
-          :model-value="effectiveTeamId"
-          :items="teamOptions"
-          placeholder="Select a team"
-          size="sm"
-          :disabled="!authEnabled || teamsQuery.isPending.value"
-          @update:model-value="updateTeam($event as string | undefined)"
-        />
-      </div>
-
       <UInput
-        :model-value="String(block.pageSize)"
+        :model-value="String(pageSize)"
         type="number"
         min="5"
         max="100"
@@ -384,45 +319,8 @@ function toggleGroup(key: string) {
       </UBadge>
     </div>
 
-    <!-- Auth / team error alerts -->
     <UAlert
-      v-if="!authEnabled"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-lock"
-      title="Sign in required"
-      description="Connect your account to load team time-tracking data."
-    />
-
-    <UAlert
-      v-else-if="teamsQuery.error.value"
-      color="error"
-      variant="soft"
-      icon="i-lucide-alert-triangle"
-      title="Unable to load teams"
-      :description="getErrorMessage(teamsQuery.error.value, 'Please refresh and try again.')"
-    />
-
-    <UAlert
-      v-else-if="selectedTeamIsUnavailable"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-users-round"
-      title="Team unavailable"
-      description="This log is linked to a team you can no longer access."
-    />
-
-    <UAlert
-      v-else-if="!effectiveTeamId"
-      color="warning"
-      variant="soft"
-      icon="i-lucide-users-round"
-      title="Team required"
-      description="Bind this log block to a team before reviewing entries."
-    />
-
-    <UAlert
-      v-else-if="logQueryError"
+      v-if="logQueryError"
       color="error"
       variant="soft"
       icon="i-lucide-alert-triangle"
@@ -430,7 +328,6 @@ function toggleGroup(key: string) {
       :description="getErrorMessage(logQueryError, 'Please refresh and try again.')"
     />
 
-    <!-- Entries list -->
     <section class="space-y-3 rounded-3xl border border-muted/20 bg-elevated/10 p-4">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h3 class="text-sm font-semibold text-highlighted">My time entries</h3>
@@ -451,7 +348,6 @@ function toggleGroup(key: string) {
         </div>
       </div>
 
-      <!-- Loading skeleton -->
       <div
         v-if="entriesQuery.isPending.value && entries.length === 0"
         class="rounded-2xl border border-dashed border-muted/30 p-4 text-sm text-muted"
@@ -459,7 +355,6 @@ function toggleGroup(key: string) {
         Loading time entries...
       </div>
 
-      <!-- Empty state -->
       <div
         v-else-if="entries.length === 0"
         class="rounded-2xl border border-dashed border-muted/30 p-4 text-sm text-muted"
@@ -467,15 +362,12 @@ function toggleGroup(key: string) {
         No entries found. Run a timer to populate your history.
       </div>
 
-      <!-- Entry rows -->
       <article
         v-for="group in groupedEntries"
         :key="group.key"
         class="rounded-2xl border border-muted/20 bg-default/70 p-3"
       >
-        <!-- Group header -->
         <div class="flex items-start gap-3">
-          <!-- Chevron toggle for multi-entry groups -->
           <button
             v-if="group.entries.length > 1"
             type="button"
@@ -492,7 +384,6 @@ function toggleGroup(key: string) {
             <p v-if="group.description" class="mt-0.5 truncate text-xs text-muted">
               {{ group.description }}
             </p>
-            <!-- Inline time range for single-entry groups -->
             <div v-if="group.entries.length === 1" class="mt-1.5">
               <span class="text-[10px] text-muted">
                 {{ formatDateTime(group.entries[0]!.startedAt) }} &ndash;
@@ -500,12 +391,10 @@ function toggleGroup(key: string) {
               </span>
             </div>
 
-            <!-- Tags and link inline controls -->
             <div
               v-if="group.tags.length > 0 || group.linkUrl"
               class="mt-1.5 flex items-center gap-1"
             >
-              <!-- Tags popover -->
               <UPopover v-if="group.tags.length > 0" :content="{ align: 'start' }">
                 <UButton
                   icon="i-lucide-tag"
@@ -531,7 +420,6 @@ function toggleGroup(key: string) {
                 </template>
               </UPopover>
 
-              <!-- Link popover -->
               <UPopover v-if="group.linkUrl" :content="{ align: 'start' }">
                 <UButton
                   icon="i-lucide-link"
@@ -564,7 +452,6 @@ function toggleGroup(key: string) {
             </div>
           </div>
 
-          <!-- Actions -->
           <div class="flex shrink-0 items-center gap-1.5">
             <div class="text-right">
               <UBadge color="primary" variant="soft" class="font-mono tabular-nums">
@@ -598,7 +485,6 @@ function toggleGroup(key: string) {
           </div>
         </div>
 
-        <!-- Collapsible sub-rows: individual time ranges for multi-entry groups -->
         <Transition
           enter-active-class="transition-all duration-200 ease-out overflow-hidden"
           leave-active-class="transition-all duration-150 ease-in overflow-hidden"
@@ -638,7 +524,6 @@ function toggleGroup(key: string) {
         </Transition>
       </article>
 
-      <!-- Pagination -->
       <div class="flex items-center justify-between gap-2 pt-2">
         <UButton
           color="neutral"

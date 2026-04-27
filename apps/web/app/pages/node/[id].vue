@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import {
   cloneWorkspaceNodes,
-  AGENCY_OPERATOR_PREDEFINED_TAB_TITLES,
   createDefaultWorkspaceTab,
   createWorkspace2x2MatrixBlock,
   createWorkspaceAgencyBillingReportBlock,
@@ -457,20 +456,6 @@ function submitTabEditor() {
 
 function deleteActiveTab() {
   if (!node.value || !activeTab.value) {
-    return;
-  }
-
-  // Prevent deleting locked predefined tabs on agency-operator nodes
-  if (
-    node.value.nodeType === "agency-operator" &&
-    (AGENCY_OPERATOR_PREDEFINED_TAB_TITLES as readonly string[]).includes(activeTab.value.title)
-  ) {
-    toast.add({
-      title: "Tab locked",
-      description:
-        "This workspace tab is part of the Agency Operator structure and cannot be deleted.",
-      color: "warning",
-    });
     return;
   }
 

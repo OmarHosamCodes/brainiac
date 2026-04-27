@@ -11,6 +11,12 @@ const items = computed(() => [
     active: route.path.startsWith("/dashboard"),
   },
   {
+    label: "Agency",
+    to: "/agency",
+    icon: "i-lucide-briefcase",
+    active: route.path.startsWith("/agency"),
+  },
+  {
     label: "Marketplace",
     to: "/marketplace",
     icon: "i-lucide-shopping-bag",

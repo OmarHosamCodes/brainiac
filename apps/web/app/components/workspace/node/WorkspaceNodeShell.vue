@@ -5,7 +5,6 @@ import type {
   WorkspaceNodeTab,
   WorkspaceTeamRole,
 } from "@brainiac/workspace";
-import { AGENCY_OPERATOR_PREDEFINED_TAB_TITLES } from "@brainiac/workspace";
 import {
   useWorkspaceNodeEditorContext,
   type WorkspaceSaveBadge,
@@ -438,15 +437,6 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
               class="size-4.5 shrink-0"
             />
             <span class="flex-1 truncate text-left">{{ getDisplayTabTitle(tab) }}</span>
-            <UIcon
-              v-if="
-                node.nodeType === 'agency-operator' &&
-                (AGENCY_OPERATOR_PREDEFINED_TAB_TITLES as readonly string[]).includes(tab.title)
-              "
-              name="i-lucide-lock"
-              class="size-3 shrink-0 opacity-50"
-              :title="`${tab.title} is a locked Agency Operator tab`"
-            />
           </button>
 
           <button
@@ -487,17 +477,6 @@ function handleAddBlockPresetSelection(presetId: WorkspaceBlockPresetId) {
             variant="ghost"
             icon="i-lucide-trash-2"
             class="w-full justify-start rounded-2xl hover:text-error"
-            :disabled="
-              node.nodeType === 'agency-operator' &&
-              (AGENCY_OPERATOR_PREDEFINED_TAB_TITLES as readonly string[]).includes(activeTab.title)
-            "
-            :class="{
-              'cursor-not-allowed opacity-40':
-                node.nodeType === 'agency-operator' &&
-                (AGENCY_OPERATOR_PREDEFINED_TAB_TITLES as readonly string[]).includes(
-                  activeTab.title,
-                ),
-            }"
             @click="deleteActiveTab"
           >
             Delete

@@ -1,37 +1,26 @@
 <script setup lang="ts">
-import type { WorkspaceAgencyProjectManagerBlock } from "@brainiac/workspace";
 import { useMutation, useQuery } from "@tanstack/vue-query";
-import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
+
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const props = defineProps<{
-  block: WorkspaceAgencyProjectManagerBlock;
-  tabId: string;
+  teamId: string;
 }>();
 
-const { mutateTypedBlock } = useWorkspaceNodeEditorContext();
 const orpc = useOrpc();
 const toast = useToast();
-const authSession = useAuthSession();
-const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
 
 const selectedClientId = ref("");
 const newClientName = ref("");
 const newProjectName = ref("");
 const newTagName = ref("");
 
-// Teams query
-const teamsQuery = useQuery(
-  computed(() => ({
-    ...orpc.team.list.queryOptions(),
-    enabled: authEnabled.value,
-  })),
-);
+const effectiveTeamId = computed(() => props.teamId);
 
-const teams = computed(() => teamsQuery.data.value?.items ?? []);
-const effectiveTeamId = computed(() => props.block.teamId || teams.value[0]?.id || "");
+watch(effectiveTeamId, () => {
+  selectedClientId.value = "";
+});
 
-// Clients query
 const clientsQuery = useQuery(
   computed(() => ({
     ...orpc.agencyOps.clients.list.queryOptions({
@@ -45,7 +34,6 @@ const clientsQuery = useQuery(
 
 const clients = computed(() => clientsQuery.data.value?.items ?? []);
 
-// Projects query
 const projectsQuery = useQuery(
   computed(() => ({
     ...orpc.agencyOps.projects.list.queryOptions({
@@ -63,7 +51,6 @@ const selectedClient = computed(
   () => clients.value.find((c) => c.id === selectedClientId.value) ?? null,
 );
 
-// Tags query
 const tagsQuery = useQuery(
   computed(() => ({
     ...orpc.agencyOps.tags.list.queryOptions({
@@ -77,20 +64,10 @@ const tagsQuery = useQuery(
 
 const tags = computed(() => tagsQuery.data.value?.items ?? []);
 
-// Mutations
 const createClientMutation = useMutation(orpc.agencyOps.clients.create.mutationOptions());
-
 const createProjectMutation = useMutation(orpc.agencyOps.projects.create.mutationOptions());
-
 const createTagMutation = useMutation(orpc.agencyOps.tags.create.mutationOptions());
-
 const deleteTagMutation = useMutation(orpc.agencyOps.tags.delete.mutationOptions());
-
-function updateTeam(teamId: string | undefined) {
-  mutateTypedBlock(props.tabId, props.block.id, "agency-project-manager", (entry) => {
-    entry.teamId = teamId || null;
-  });
-}
 
 async function createClient() {
   const name = newClientName.value.trim();
@@ -212,33 +189,13 @@ async function deleteTag(tagId: string) {
 
 <template>
   <div class="space-y-6">
-    <!-- Team selector -->
-    <div
-      class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm p-4 dark:border-zinc-800/50 dark:bg-zinc-950/50"
-    >
-      <UFormField label="Team" size="sm" class="mb-0">
-        <USelect
-          :model-value="effectiveTeamId"
-          :items="
-            teams.map((team) => ({
-              label: team.name,
-              value: team.id,
-            }))
-          "
-          placeholder="Select team"
-          size="sm"
-          @update:model-value="updateTeam($event as string)"
-        />
-      </UFormField>
-    </div>
-
     <!-- Two-column layout: Clients | Projects -->
     <div class="grid gap-6 md:grid-cols-2">
       <!-- Clients panel -->
       <div
-        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm p-4 dark:border-zinc-800/50 dark:bg-zinc-950/50"
+        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
       >
-        <h3 class="text-sm font-semibold text-zinc-100 mb-4">Clients</h3>
+        <h3 class="mb-4 text-sm font-semibold text-zinc-100">Clients</h3>
 
         <!-- Create client form -->
         <div class="mb-4 flex gap-2">
@@ -252,7 +209,7 @@ async function deleteTag(tagId: string) {
           <UButton
             label="Add"
             size="sm"
-            color="emerald"
+            color="primary"
             :loading="createClientMutation.isPending.value"
             :disabled="!newClientName.trim() || !effectiveTeamId"
             @click="createClient"
@@ -285,9 +242,9 @@ async function deleteTag(tagId: string) {
 
       <!-- Projects panel -->
       <div
-        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm p-4 dark:border-zinc-800/50 dark:bg-zinc-950/50"
+        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
       >
-        <h3 class="text-sm font-semibold text-zinc-100 mb-4">
+        <h3 class="mb-4 text-sm font-semibold text-zinc-100">
           Projects
           <span v-if="selectedClient" class="ml-1 text-xs font-normal text-zinc-500">
             for {{ selectedClient.name }}
@@ -306,7 +263,7 @@ async function deleteTag(tagId: string) {
           <UButton
             label="Add"
             size="sm"
-            color="emerald"
+            color="primary"
             :loading="createProjectMutation.isPending.value"
             :disabled="!newProjectName.trim()"
             @click="createProject"
@@ -356,7 +313,7 @@ async function deleteTag(tagId: string) {
 
       <!-- Create tag form -->
       <div
-        class="mb-4 rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm p-4 dark:border-zinc-800/50 dark:bg-zinc-950/50"
+        class="mb-4 rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
       >
         <div class="flex gap-2">
           <UInput
@@ -369,7 +326,7 @@ async function deleteTag(tagId: string) {
           <UButton
             label="Add"
             size="sm"
-            color="emerald"
+            color="primary"
             :loading="createTagMutation.isPending.value"
             :disabled="!newTagName.trim()"
             @click="createTag"
@@ -380,17 +337,17 @@ async function deleteTag(tagId: string) {
       <!-- Tags list -->
       <div
         v-if="tags.length > 0"
-        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm p-4 dark:border-zinc-800/50 dark:bg-zinc-950/50"
+        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
       >
         <div class="flex flex-wrap gap-2">
           <div
             v-for="tag in tags"
             :key="tag.id"
-            class="flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1.5 text-sm border border-emerald-500/30"
+            class="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-sm"
           >
             <span class="text-emerald-100">{{ tag.name }}</span>
             <button
-              class="ml-auto text-emerald-500/60 hover:text-emerald-400 transition-colors"
+              class="ml-auto text-emerald-500/60 transition-colors hover:text-emerald-400"
               :disabled="deleteTagMutation.isPending.value"
               @click="deleteTag(tag.id)"
             >

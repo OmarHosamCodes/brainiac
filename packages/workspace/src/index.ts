@@ -2400,31 +2400,6 @@ export function createWorkspaceAgencyBillingReportBlock(
   });
 }
 
-export function createAgencyOperatorNodeTabs(teamId: string | null = null) {
-  const overviewTab = createWorkspaceNodeTab({
-    title: "Overview",
-    blocks: [
-      createWorkspaceAgencyTimeTrackerBlock({ teamId }),
-      createWorkspaceAgencyTimeEntriesLogBlock({ teamId }),
-    ],
-  });
-
-  const teamTab = createWorkspaceNodeTab({
-    title: "Team",
-    blocks: [createWorkspaceAgencyTimeSummaryBlock({ teamId })],
-  });
-
-  const settingsTab = createWorkspaceNodeTab({
-    title: "Settings",
-    blocks: [
-      createWorkspaceAgencyProjectManagerBlock({ teamId }),
-      createWorkspaceAgencySettingsBlock({ teamId }),
-    ],
-  });
-
-  return [overviewTab, teamTab, settingsTab] as const;
-}
-
 export function createWorkspaceCustomBlockTemplate(
   partial: Partial<WorkspaceCustomBlockTemplate> & {
     fields: WorkspaceCustomBlockField[];

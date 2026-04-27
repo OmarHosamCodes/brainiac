@@ -2,12 +2,7 @@ import type { WorkspaceBlock } from "@brainiac/workspace";
 import type { Component } from "vue";
 
 import Workspace2x2MatrixBlockEditor from "~/components/workspace/node/blocks/Workspace2x2MatrixBlockEditor.vue";
-import WorkspaceAgencyBillingReportBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyBillingReportBlockEditor.vue";
-import WorkspaceAgencyProjectManagerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyProjectManagerBlockEditor.vue";
-import WorkspaceAgencySettingsBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencySettingsBlockEditor.vue";
-import WorkspaceAgencyTimeEntriesLogBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeEntriesLogBlockEditor.vue";
-import WorkspaceAgencyTimeSummaryBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeSummaryBlockEditor.vue";
-import WorkspaceAgencyTimeTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyTimeTrackerBlockEditor.vue";
+import WorkspaceAgencyDeprecatedBlockEditor from "~/components/workspace/node/blocks/WorkspaceAgencyDeprecatedBlockEditor.vue";
 import WorkspaceAiPromptBlockEditor from "~/components/workspace/node/blocks/WorkspaceAiPromptBlockEditor.vue";
 import WorkspaceAssumptionTrackerBlockEditor from "~/components/workspace/node/blocks/WorkspaceAssumptionTrackerBlockEditor.vue";
 import WorkspaceAuthorityScorecardBlockEditor from "~/components/workspace/node/blocks/WorkspaceAuthorityScorecardBlockEditor.vue";
@@ -305,38 +300,38 @@ export const workspaceBlockRegistry = {
     addGroup: "secondary",
   },
   "agency-project-manager": {
-    component: WorkspaceAgencyProjectManagerBlockEditor,
-    label: "Agency project manager",
+    component: WorkspaceAgencyDeprecatedBlockEditor,
+    label: "Agency project manager (moved)",
     icon: "i-lucide-briefcase-business",
-    addGroup: "secondary",
+    addGroup: null,
   },
   "agency-time-tracker": {
-    component: WorkspaceAgencyTimeTrackerBlockEditor,
-    label: "Agency time tracker",
+    component: WorkspaceAgencyDeprecatedBlockEditor,
+    label: "Agency time tracker (moved)",
     icon: "i-lucide-timer",
-    addGroup: "secondary",
+    addGroup: null,
   },
   "agency-time-entries-log": {
-    component: WorkspaceAgencyTimeEntriesLogBlockEditor,
-    label: "Agency time entries log",
+    component: WorkspaceAgencyDeprecatedBlockEditor,
+    label: "Agency time entries log (moved)",
     icon: "i-lucide-logs",
-    addGroup: "secondary",
+    addGroup: null,
   },
   "agency-time-summary": {
-    component: WorkspaceAgencyTimeSummaryBlockEditor,
-    label: "Agency time summary",
+    component: WorkspaceAgencyDeprecatedBlockEditor,
+    label: "Agency time summary (moved)",
     icon: "i-lucide-chart-pie",
-    addGroup: "secondary",
+    addGroup: null,
   },
   "agency-billing-report": {
-    component: WorkspaceAgencyBillingReportBlockEditor,
-    label: "Agency billing report",
+    component: WorkspaceAgencyDeprecatedBlockEditor,
+    label: "Agency billing report (moved)",
     icon: "i-lucide-receipt",
-    addGroup: "secondary",
+    addGroup: null,
   },
   "agency-settings": {
-    component: WorkspaceAgencySettingsBlockEditor,
-    label: "Agency settings",
+    component: WorkspaceAgencyDeprecatedBlockEditor,
+    label: "Agency settings (moved)",
     icon: "i-lucide-calendar-range",
     addGroup: null,
   },

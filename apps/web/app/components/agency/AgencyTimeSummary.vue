@@ -1,34 +1,28 @@
 <script setup lang="ts">
-import type { WorkspaceAgencyTimeSummaryBlock } from "@brainiac/workspace";
-import { useMutation, useQuery } from "@tanstack/vue-query";
-import { useWorkspaceNodeEditorContext } from "~/components/workspace/node/context";
-import { getErrorMessage } from "~/utils/get-error-message";
+import { useQuery } from "@tanstack/vue-query";
 
 const props = defineProps<{
-  block: WorkspaceAgencyTimeSummaryBlock;
-  tabId: string;
+  teamId: string;
 }>();
 
-const { mutateTypedBlock } = useWorkspaceNodeEditorContext();
 const orpc = useOrpc();
-const toast = useToast();
-const authSession = useAuthSession();
-const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
 
-const datePreset = ref<"this-week" | "last-month" | "year-to-date" | "custom">(
-  (props.block.datePreset as any) ?? "this-week",
-);
+type DatePreset = "this-week" | "last-month" | "year-to-date" | "custom";
+
+const datePreset = ref<DatePreset>("this-week");
 const customFromDate = ref("");
 const customToDate = ref("");
-const selectedClientId = ref(props.block.selectedClientId ?? "");
-const selectedProjectId = ref(props.block.selectedProjectId ?? "");
-const selectedMemberUserId = ref(props.block.selectedMemberUserId ?? "");
-const selectedTagIds = ref<string[]>(props.block.selectedTagIds ?? []);
+const selectedClientId = ref("");
+const selectedProjectId = ref("");
+const selectedMemberUserId = ref("");
+const selectedTagIds = ref<string[]>([]);
 
-// Calculate date range based on preset
+const effectiveTeamId = computed(() => props.teamId);
+
 const dateRange = computed(() => {
   const now = new Date();
-  let from: Date, to: Date;
+  let from: Date;
+  let to: Date;
 
   switch (datePreset.value) {
     case "this-week": {
@@ -64,18 +58,6 @@ const dateRange = computed(() => {
   return { from, to };
 });
 
-// Teams query
-const teamsQuery = useQuery(
-  computed(() => ({
-    ...orpc.team.list.queryOptions(),
-    enabled: authEnabled.value,
-  })),
-);
-
-const teams = computed(() => teamsQuery.data.value?.items ?? []);
-const effectiveTeamId = computed(() => props.block.teamId || teams.value[0]?.id || "");
-
-// Clients query
 const clientsQuery = useQuery(
   computed(() => ({
     ...orpc.agencyOps.clients.list.queryOptions({
@@ -89,7 +71,6 @@ const clientsQuery = useQuery(
 
 const clients = computed(() => clientsQuery.data.value?.items ?? []);
 
-// Projects query
 const projectsQuery = useQuery(
   computed(() => ({
     ...orpc.agencyOps.projects.list.queryOptions({
@@ -104,7 +85,6 @@ const projectsQuery = useQuery(
 
 const projects = computed(() => projectsQuery.data.value?.items ?? []);
 
-// Tags query
 const tagsQuery = useQuery(
   computed(() => ({
     ...orpc.agencyOps.tags.list.queryOptions({
@@ -118,7 +98,6 @@ const tagsQuery = useQuery(
 
 const tags = computed(() => tagsQuery.data.value?.items ?? []);
 
-// Summary query (new simplified endpoint)
 const summaryQuery = useQuery(
   computed(() => ({
     ...orpc.agencyOps.summary.list.queryOptions({
@@ -138,23 +117,16 @@ const summaryQuery = useQuery(
 
 const summaryData = computed(() => summaryQuery.data.value?.summary ?? null);
 
-function updateTeam(teamId: string | undefined) {
-  mutateTypedBlock(props.tabId, props.block.id, "agency-time-summary", (entry) => {
-    entry.teamId = teamId || null;
-  });
-}
-
-function updateDatePreset(preset: "this-week" | "last-month" | "year-to-date" | "custom") {
+function updateDatePreset(preset: DatePreset) {
   datePreset.value = preset;
-  mutateTypedBlock(props.tabId, props.block.id, "agency-time-summary", (entry) => {
-    entry.datePreset = preset;
-  });
 }
 
-function formatDuration(seconds: number) {
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  return `${hours}h ${minutes}m`;
+function toggleTag(tagId: string) {
+  if (selectedTagIds.value.includes(tagId)) {
+    selectedTagIds.value = selectedTagIds.value.filter((id) => id !== tagId);
+  } else {
+    selectedTagIds.value = [...selectedTagIds.value, tagId];
+  }
 }
 
 function formatHours(seconds: number) {
@@ -166,50 +138,42 @@ function formatHours(seconds: number) {
   <div class="space-y-6">
     <!-- Filter bar -->
     <div
-      class="space-y-4 rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm p-4 dark:border-zinc-800/50 dark:bg-zinc-950/50"
+      class="space-y-4 rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
     >
-      <!-- Team & Date -->
-      <div class="grid gap-3 md:grid-cols-4">
-        <UFormField label="Team" size="sm" class="mb-0">
-          <USelect
-            :model-value="effectiveTeamId"
-            :items="
-              teams.map((team) => ({
-                label: team.name,
-                value: team.id,
-              }))
-            "
-            placeholder="Select team"
-            size="sm"
-            @update:model-value="updateTeam($event as string)"
+      <!-- Date preset -->
+      <div>
+        <label
+          class="mb-2 block text-xs font-semibold uppercase tracking-widest text-zinc-600 dark:text-zinc-400"
+        >
+          Period
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <UButton
+            v-for="preset in [
+              { label: 'This week', value: 'this-week' as DatePreset },
+              { label: 'Last month', value: 'last-month' as DatePreset },
+              { label: 'YTD', value: 'year-to-date' as DatePreset },
+              { label: 'Custom', value: 'custom' as DatePreset },
+            ]"
+            :key="preset.value"
+            :label="preset.label"
+            size="xs"
+            :variant="datePreset === preset.value ? 'soft' : 'ghost'"
+            :color="datePreset === preset.value ? 'primary' : 'neutral'"
+            class="rounded-full"
+            @click="updateDatePreset(preset.value)"
           />
-        </UFormField>
-
-        <!-- Date preset -->
-        <div>
-          <label
-            class="block text-xs font-semibold uppercase tracking-widest text-zinc-600 dark:text-zinc-400 mb-2"
-          >
-            Period
-          </label>
-          <div class="flex flex-wrap gap-2">
-            <UButton
-              v-for="preset in [
-                { label: 'This week', value: 'this-week' },
-                { label: 'Last month', value: 'last-month' },
-                { label: 'YTD', value: 'year-to-date' },
-                { label: 'Custom', value: 'custom' },
-              ]"
-              :key="preset.value"
-              :label="preset.label"
-              size="xs"
-              :variant="datePreset === preset.value ? 'soft' : 'ghost'"
-              :color="datePreset === preset.value ? 'emerald' : 'gray'"
-              class="rounded-full"
-              @click="updateDatePreset(preset.value as any)"
-            />
-          </div>
         </div>
+      </div>
+
+      <!-- Custom range -->
+      <div v-if="datePreset === 'custom'" class="grid gap-3 md:grid-cols-2">
+        <UFormField label="From" size="sm" class="mb-0">
+          <UInput v-model="customFromDate" type="date" size="sm" />
+        </UFormField>
+        <UFormField label="To" size="sm" class="mb-0">
+          <UInput v-model="customToDate" type="date" size="sm" />
+        </UFormField>
       </div>
 
       <!-- Detailed filters -->
@@ -267,13 +231,9 @@ function formatHours(seconds: number) {
               :label="tag.name"
               size="xs"
               :variant="selectedTagIds.includes(tag.id) ? 'soft' : 'ghost'"
-              :color="selectedTagIds.includes(tag.id) ? 'emerald' : 'gray'"
+              :color="selectedTagIds.includes(tag.id) ? 'primary' : 'neutral'"
               class="rounded-full"
-              @click="
-                selectedTagIds.includes(tag.id)
-                  ? (selectedTagIds = selectedTagIds.filter((id) => id !== tag.id))
-                  : (selectedTagIds = [...selectedTagIds, tag.id])
-              "
+              @click="toggleTag(tag.id)"
             />
             <span v-if="tags.length > 3" class="text-xs text-zinc-500">
               +{{ tags.length - 3 }} more
@@ -287,7 +247,7 @@ function formatHours(seconds: number) {
     <!-- Summary stats -->
     <div v-if="summaryData" class="grid gap-4 md:grid-cols-3">
       <div
-        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm p-4 dark:border-zinc-800/50 dark:bg-zinc-950/50"
+        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
       >
         <p class="text-xs font-semibold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
           Total hours
@@ -298,7 +258,7 @@ function formatHours(seconds: number) {
       </div>
 
       <div
-        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm p-4 dark:border-zinc-800/50 dark:bg-zinc-950/50"
+        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
       >
         <p class="text-xs font-semibold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
           Active timers
@@ -309,7 +269,7 @@ function formatHours(seconds: number) {
       </div>
 
       <div
-        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm p-4 dark:border-zinc-800/50 dark:bg-zinc-950/50"
+        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
       >
         <p class="text-xs font-semibold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
           Team members
@@ -323,7 +283,7 @@ function formatHours(seconds: number) {
     <!-- Team activity table -->
     <div
       v-if="summaryData?.teamMembers && summaryData.teamMembers.length > 0"
-      class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm overflow-hidden dark:border-zinc-800/50 dark:bg-zinc-950/50"
+      class="overflow-hidden rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
     >
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
@@ -338,16 +298,16 @@ function formatHours(seconds: number) {
             <tr
               v-for="member in summaryData.teamMembers"
               :key="member.id"
-              class="hover:bg-zinc-800/30 transition-colors"
+              class="transition-colors hover:bg-zinc-800/30"
             >
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
-                  <UAvatar :src="member.avatar" :alt="member.name" size="sm" />
+                  <UAvatar :src="member.avatar ?? undefined" :alt="member.name" size="sm" />
                   <div class="min-w-0">
                     <p class="font-medium text-zinc-100">
                       {{ member.name }}
                     </p>
-                    <p class="text-xs text-zinc-500 truncate">
+                    <p class="truncate text-xs text-zinc-500">
                       {{ member.email }}
                     </p>
                   </div>
@@ -358,7 +318,7 @@ function formatHours(seconds: number) {
                   <div class="flex items-center gap-2">
                     <span
                       v-if="member.isActive"
-                      class="inline-block size-2 rounded-full bg-emerald-500 animate-pulse"
+                      class="inline-block size-2 animate-pulse rounded-full bg-emerald-500"
                     />
                     <p class="text-sm text-zinc-300">
                       {{ member.latestEntry.projectName }}
@@ -366,7 +326,7 @@ function formatHours(seconds: number) {
                   </div>
                   <p
                     v-if="member.latestEntry.description"
-                    class="text-xs text-zinc-500 truncate mt-1"
+                    class="mt-1 truncate text-xs text-zinc-500"
                   >
                     {{ member.latestEntry.description }}
                   </p>
@@ -397,7 +357,7 @@ function formatHours(seconds: number) {
     <!-- Loading -->
     <div
       v-if="summaryQuery.isPending.value"
-      class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm p-8 text-center dark:border-zinc-800/50 dark:bg-zinc-950/50"
+      class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-8 text-center backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
     >
       <UIcon name="i-lucide-loader-2" class="mx-auto size-6 animate-spin text-zinc-400" />
       <p class="mt-4 text-sm text-zinc-400">Loading data...</p>

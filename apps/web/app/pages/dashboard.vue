@@ -25,9 +25,6 @@ const {
   selectedNodeIds,
   submitNodeEditor,
   workspaceQuery,
-  agencyOperatorConnectOpen,
-  openCreateAgencyOperatorNode,
-  submitCreateAgencyOperatorNode,
 } = useWorkspaceBoard();
 
 const canvasRef = ref<{ fitAllNodes: () => void } | null>(null);
@@ -41,17 +38,6 @@ const stopAutoFit = watch(
   },
   { immediate: true, flush: "post" },
 );
-
-const boundAgencyOperatorTeamIds = computed(() => {
-  const teamIds = new Set<string>();
-  for (const node of nodes.value) {
-    if (node.nodeType === "agency-operator") {
-      const teamId = (node as { teamId?: string | null }).teamId;
-      if (teamId) teamIds.add(teamId);
-    }
-  }
-  return teamIds;
-});
 
 const { isChatVisible, isTeamAsideCompact } = useDashboardLayout({
   chatVisibleByDefault: false,
@@ -159,7 +145,6 @@ function toggleSelectedNodeSharing() {
         v-model:selected-node-ids="selectedNodeIds"
         :loading="isWorkspaceInitialLoading"
         @create-node="openCreateNode"
-        @create-agency-operator-node="openCreateAgencyOperatorNode"
         @edit-node="openEditNode"
         @connect-node-pair="connectNodePair"
         @disconnect-node-pair="disconnectNodePair"
@@ -420,13 +405,6 @@ function toggleSelectedNodeSharing() {
       @update:node-type="nodeDraft.nodeType = $event"
       @update:tint="nodeDraft.tint = $event"
       @update:title="nodeDraft.title = $event"
-    />
-
-    <LazyWorkspaceAgencyOperatorConnectModal
-      :open="agencyOperatorConnectOpen"
-      :bound-team-ids="boundAgencyOperatorTeamIds"
-      @update:open="agencyOperatorConnectOpen = $event"
-      @submit="submitCreateAgencyOperatorNode"
     />
   </div>
 </template>

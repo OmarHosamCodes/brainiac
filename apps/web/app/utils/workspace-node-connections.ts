@@ -5,18 +5,17 @@ export type WorkspaceCanonicalConnectionPair = {
   standardNodeId: string;
 };
 
-type WorkspaceConnectionNode = Pick<WorkspaceNode, "id" | "nodeType" | "connections">;
+type WorkspaceConnectionNode = {
+  id: WorkspaceNode["id"];
+  nodeType?: WorkspaceNode["nodeType"];
+  connections?: WorkspaceNode["connections"];
+};
 
 export function getCanonicalConnectionPair(
   sourceNode: WorkspaceConnectionNode | null | undefined,
   targetNode: WorkspaceConnectionNode | null | undefined,
 ): WorkspaceCanonicalConnectionPair | null {
   if (!sourceNode || !targetNode || sourceNode.id === targetNode.id) {
-    return null;
-  }
-
-  // Agency-operator nodes are standalone — never participate in canvas connections.
-  if (sourceNode.nodeType === "agency-operator" || targetNode.nodeType === "agency-operator") {
     return null;
   }
 
@@ -48,9 +47,9 @@ export function hasConnection(
     return false;
   }
 
-  return orchestratorNode.connections.some(
+  return orchestratorNode.connections?.some(
     (connection) => connection.targetNodeId === standardNodeId,
-  );
+  ) ?? false;
 }
 
 export function getEligibleConnectionTargetIds(
