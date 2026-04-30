@@ -25,6 +25,7 @@ The `shape` agent skill is used **before writing code** to plan a feature's UX a
 ## Observed Usage
 
 In the brainiac project, `shape` was invoked to plan a **global user styling settings** feature with node-level style overrides:
+
 - Per-user preferences vs. per-workspace configuration
 - Node tint/styling customization
 

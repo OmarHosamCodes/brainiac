@@ -51,9 +51,7 @@ export function normalizeAgencyLinkUrl(
  * "https://www.example.com/path/". Returns an empty string for nullish input
  * so it can be used directly in templates.
  */
-export function getAgencyLinkUrlDisplayLabel(
-  normalizedUrl: string | null | undefined,
-): string {
+export function getAgencyLinkUrlDisplayLabel(normalizedUrl: string | null | undefined): string {
   if (!normalizedUrl) {
     return "";
   }

@@ -1,6 +1,6 @@
 /**
  * Environment Variable Error Helper
- * 
+ *
  * Provides helpful error messages when environment variables are missing or invalid
  * This runs before the app starts to give developers immediate feedback.
  */

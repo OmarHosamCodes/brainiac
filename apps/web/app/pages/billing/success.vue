@@ -1,8 +1,10 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: "default",
+  layout: "app",
   middleware: ["auth"],
 });
+
+useAppShellPageTitle("Billing");
 
 const route = useRoute();
 const { refreshBillingState } = useBilling();
@@ -15,7 +17,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white dark:bg-neutral-950 flex items-center justify-center">
+  <div
+    class="flex h-full items-start justify-center overflow-y-auto bg-white px-6 pt-12 dark:bg-neutral-950"
+  >
     <div class="max-w-md w-full px-6 text-center">
       <div
         class="mx-auto mb-6 flex items-center justify-center size-16 rounded-full bg-emerald-500/10"

@@ -92,7 +92,7 @@ Backend endpoints are defined using Hono + oRPC for end-to-end type safety.
 
 ```typescript
 // packages/api/src/routes/myFeature.ts
-import { createRouter } from '@brainiac/api';
+import { createRouter } from "@brainiac/api";
 
 export const myFeatureRouter = createRouter({
   getItems: router.query({
@@ -116,9 +116,9 @@ export const myFeatureRouter = createRouter({
 #### 2. Register in Backend (`apps/server/src/app.ts`)
 
 ```typescript
-import { myFeatureRouter } from '@brainiac/api/routes/myFeature';
+import { myFeatureRouter } from "@brainiac/api/routes/myFeature";
 
-app.rpc('/my-feature', myFeatureRouter);
+app.rpc("/my-feature", myFeatureRouter);
 ```
 
 #### 3. Use in Frontend (Nuxt)
@@ -128,7 +128,7 @@ The types are automatically inferred:
 ```vue
 <script setup lang="ts">
 const items = await $rpc.myFeature.getItems({
-  workspaceId: 'workspace-123',
+  workspaceId: "workspace-123",
 });
 </script>
 ```
@@ -171,12 +171,12 @@ Database schema is defined using Drizzle ORM in `packages/db/src/schema/`.
 
 ```typescript
 // packages/db/src/schema/myTable.ts
-import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-export const myTable = pgTable('my_table', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  createdAt: timestamp('created_at').defaultNow(),
+export const myTable = pgTable("my_table", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 ```
 
@@ -190,8 +190,8 @@ bun run db:push        # Apply to database
 #### 3. Use in Queries
 
 ```typescript
-import { db } from '@brainiac/db';
-import { myTable } from '@brainiac/db/schema';
+import { db } from "@brainiac/db";
+import { myTable } from "@brainiac/db/schema";
 
 const items = await db.select().from(myTable);
 ```
@@ -210,7 +210,7 @@ export const env = z.object({
 2. Use in code:
 
 ```typescript
-import { env } from '@brainiac/env';
+import { env } from "@brainiac/env";
 
 console.log(env.MY_NEW_VAR);
 ```

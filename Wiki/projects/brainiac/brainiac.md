@@ -27,11 +27,11 @@ A Nuxt 3 / Vue monorepo workspace application. The core UX is a canvas of **node
 
 ## Key Blocks
 
-| Block | Purpose |
-|---|---|
+| Block                            | Purpose                                                    |
+| -------------------------------- | ---------------------------------------------------------- |
 | [[brainiac-agency-time-tracker]] | Track billable time per project/client with tags and links |
-| [[brainiac-eisenhower-matrix]] | Prioritize tasks across urgency/importance quadrants |
-| [[brainiac-time-orchestrator]] | Orchestrate tasks sourced from connected nodes |
+| [[brainiac-eisenhower-matrix]]   | Prioritize tasks across urgency/importance quadrants       |
+| [[brainiac-time-orchestrator]]   | Orchestrate tasks sourced from connected nodes             |
 
 ## Related Projects
 

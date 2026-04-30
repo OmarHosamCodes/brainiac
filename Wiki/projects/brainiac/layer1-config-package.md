@@ -22,33 +22,33 @@ layer: 1
 
 ## `tsconfig.base.json` Compiler Options
 
-| Option | Value |
-|---|---|
-| `target` | `ESNext` |
-| `module` | `ESNext` |
-| `moduleResolution` | `bundler` |
-| `lib` | `["ESNext"]` |
-| `verbatimModuleSyntax` | `true` |
-| `strict` | `true` |
-| `skipLibCheck` | `true` |
-| `resolveJsonModule` | `true` |
-| `allowSyntheticDefaultImports` | `true` |
-| `esModuleInterop` | `true` |
-| `forceConsistentCasingInFileNames` | `true` |
-| `isolatedModules` | `true` |
-| `noUncheckedIndexedAccess` | `true` |
-| `noUnusedLocals` | `true` |
-| `noUnusedParameters` | `true` |
-| `noFallthroughCasesInSwitch` | `true` |
-| `types` | `["bun"]` |
+| Option                             | Value        |
+| ---------------------------------- | ------------ |
+| `target`                           | `ESNext`     |
+| `module`                           | `ESNext`     |
+| `moduleResolution`                 | `bundler`    |
+| `lib`                              | `["ESNext"]` |
+| `verbatimModuleSyntax`             | `true`       |
+| `strict`                           | `true`       |
+| `skipLibCheck`                     | `true`       |
+| `resolveJsonModule`                | `true`       |
+| `allowSyntheticDefaultImports`     | `true`       |
+| `esModuleInterop`                  | `true`       |
+| `forceConsistentCasingInFileNames` | `true`       |
+| `isolatedModules`                  | `true`       |
+| `noUncheckedIndexedAccess`         | `true`       |
+| `noUnusedLocals`                   | `true`       |
+| `noUnusedParameters`               | `true`       |
+| `noFallthroughCasesInSwitch`       | `true`       |
+| `types`                            | `["bun"]`    |
 
 ## Relationships
 
-| Role | Entity | Mechanism |
-|---|---|---|
-| **Incoming (Dependents)** | `tsconfig.json` (root) | `"extends": "@brainiac/config/tsconfig.base.json"` |
-| **Incoming (Dependents)** | Every `packages/*/tsconfig.json` and `apps/*/tsconfig.json` | `"extends": "@brainiac/config/tsconfig.base.json"` |
-| **Outgoing (Dependencies)** | None | — |
+| Role                        | Entity                                                      | Mechanism                                          |
+| --------------------------- | ----------------------------------------------------------- | -------------------------------------------------- |
+| **Incoming (Dependents)**   | `tsconfig.json` (root)                                      | `"extends": "@brainiac/config/tsconfig.base.json"` |
+| **Incoming (Dependents)**   | Every `packages/*/tsconfig.json` and `apps/*/tsconfig.json` | `"extends": "@brainiac/config/tsconfig.base.json"` |
+| **Outgoing (Dependencies)** | None                                                        | —                                                  |
 
 ## Standalone Status
 

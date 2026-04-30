@@ -55,9 +55,11 @@ type WorkspaceCleanupResult = {
   totalNodesAfter: number;
 };
 
-function cleanupWorkspaceNodes(
-  nodes: WorkspaceNodeRecord[],
-): { nextNodes: WorkspaceNodeRecord[]; removedNodeIds: string[]; prunedConnections: number } {
+function cleanupWorkspaceNodes(nodes: WorkspaceNodeRecord[]): {
+  nextNodes: WorkspaceNodeRecord[];
+  removedNodeIds: string[];
+  prunedConnections: number;
+} {
   const removedNodeIds = new Set<string>();
 
   for (const node of nodes) {

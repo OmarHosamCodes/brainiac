@@ -1,6 +1,6 @@
 /**
  * Server startup utility
- * 
+ *
  * Provides helpful logging and information when the development server starts
  */
 

@@ -55,11 +55,11 @@ title: Wiki Index
 
 # Wiki Index
 
-*This index is automatically maintained. Last updated: TIMESTAMP*
+_This index is automatically maintained. Last updated: TIMESTAMP_
 
 ## Concepts
 
-*No pages yet. Use `wiki-ingest` to add your first source.*
+_No pages yet. Use `wiki-ingest` to add your first source._
 
 ## Entities
 
@@ -89,6 +89,7 @@ title: Wiki Log
 Create minimal Obsidian config for a good out-of-box experience:
 
 ### .obsidian/app.json
+
 ```json
 {
   "strictLineBreaks": false,
@@ -99,6 +100,7 @@ Create minimal Obsidian config for a good out-of-box experience:
 ```
 
 ### .obsidian/appearance.json
+
 ```json
 {
   "baseFontSize": 16
@@ -117,6 +119,7 @@ Tell the user about these recommended community plugins (they install manually):
 ## Step 6: Verify Setup
 
 Run a quick sanity check:
+
 - [ ] Vault directory exists with: `concepts/`, `entities/`, `skills/`, `references/`, `synthesis/`, `journal/`, `projects/`, `_archives/`, `_raw/`
 - [ ] `index.md` exists at vault root
 - [ ] `log.md` exists at vault root
@@ -125,6 +128,7 @@ Run a quick sanity check:
 - [ ] Source directories (if configured) exist and are readable
 
 Report the results and tell the user they can now:
+
 1. Open the vault in Obsidian (File → Open Vault → select the directory)
 2. Run `wiki-status` to see what's available to ingest
 3. Run `wiki-ingest` to add their first sources

@@ -12,6 +12,7 @@ tags: [layer3, web, nuxt, middleware, auth, workspace]
 **File:** `apps/web/app/middleware/auth.ts`
 
 ### Execution Mechanism
+
 - Declared via `defineNuxtRouteMiddleware`.
 - Skips entirely on server (`if (import.meta.server) return`).
 - Client-only:
@@ -21,15 +22,18 @@ tags: [layer3, web, nuxt, middleware, auth, workspace]
   4. If `!session.value.data` → calls `navigateTo("/login")`.
 
 ### Outgoing Dependencies
-| Dependency | Mechanism |
-|---|---|
-| `useAuthClient()` | Layer 2 composable (`apps/web/app/composables/useAuthClient.ts`) — returns BetterAuth client instance |
-| `useAuthSession()` | Layer 2 composable — returns reactive session ref |
+
+| Dependency         | Mechanism                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------- |
+| `useAuthClient()`  | Layer 2 composable (`apps/web/app/composables/useAuthClient.ts`) — returns BetterAuth client instance |
+| `useAuthSession()` | Layer 2 composable — returns reactive session ref                                                     |
 
 ### Incoming Dependents
+
 Applied as a route middleware on protected pages/layouts via `definePageMeta({ middleware: ["auth"] })` or globally in layout files.
 
 ### Standalone Status
+
 Not standalone — depends on `useAuthClient`, `useAuthSession`.
 
 ---
@@ -41,6 +45,7 @@ Not standalone — depends on `useAuthClient`, `useAuthSession`.
 **File:** `apps/web/app/middleware/workspace.ts`
 
 ### Execution Mechanism
+
 - Declared via `defineNuxtRouteMiddleware`.
 - Skips entirely on server (`if (import.meta.server) return`).
 - Client-only:
@@ -48,12 +53,15 @@ Not standalone — depends on `useAuthClient`, `useAuthSession`.
   2. Awaits `workspaceStore.preloadWorkspace()` — triggers `orpc.workspace.get.useQuery()` fetch if not yet loaded.
 
 ### Outgoing Dependencies
-| Dependency | Mechanism |
-|---|---|
+
+| Dependency            | Mechanism                                                                                                                                   |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `useWorkspaceStore()` | Layer 2 Pinia store (`apps/web/app/stores/workspace.ts`) — calls `preloadWorkspace()` action which executes `orpc.workspace.get` ORPC query |
 
 ### Incoming Dependents
+
 Applied as a route middleware on workspace-requiring pages via `definePageMeta({ middleware: ["workspace"] })`.
 
 ### Standalone Status
+
 Not standalone — depends on `useWorkspaceStore`.

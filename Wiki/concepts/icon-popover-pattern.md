@@ -26,11 +26,11 @@ A recurring UI pattern in [[brainiac]] where **icon buttons trigger popovers** f
 
 ## Examples in Brainiac
 
-| Field | Icon | Popover content |
-|---|---|---|
-| Entry link (tracker) | `i-lucide-link` | URL input + save |
-| Entry link (log) | `i-lucide-link` | URL display + "Open link" button |
-| Tags (tracker + log) | `i-lucide-tag` | Searchable tag toggles |
+| Field                | Icon            | Popover content                  |
+| -------------------- | --------------- | -------------------------------- |
+| Entry link (tracker) | `i-lucide-link` | URL input + save                 |
+| Entry link (log)     | `i-lucide-link` | URL display + "Open link" button |
+| Tags (tracker + log) | `i-lucide-tag`  | Searchable tag toggles           |
 
 ## Key Implementation Notes
 

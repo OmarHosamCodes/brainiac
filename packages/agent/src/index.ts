@@ -397,7 +397,7 @@ async function runToolEnabledPass(args: {
             !Array.isArray(parsedOutput) &&
             "error" in parsedOutput &&
             typeof (parsedOutput as { error?: unknown }).error === "string"
-              ? ((parsedOutput as { error?: string }).error?.trim() || null)
+              ? (parsedOutput as { error?: string }).error?.trim() || null
               : null;
           const errorMessage =
             rawErrorMessage && rawErrorMessage.length > 2000

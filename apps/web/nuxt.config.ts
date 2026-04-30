@@ -1,14 +1,14 @@
 /**
  * Nuxt Configuration
- * 
+ *
  * Development ports:
  * - Frontend: 7001 (this file)
  * - Backend: 7000 (NUXT_PUBLIC_SERVER_URL in .env)
- * 
+ *
  * These ports are managed by a Traefik TCP proxy for development.
  * The actual dev servers run on 3000 (backend) and 3001 (frontend)
  * and are proxied through Traefik on 7000/7001.
- * 
+ *
  * If you want to run without the proxy, use:
  *   bun run dev:portless  (routes available at localhost:3000/3001)
  */
@@ -25,7 +25,7 @@ export default defineNuxtConfig({
   modules: ["@pinia/nuxt", "@nuxt/ui"],
   css: ["~/assets/css/main.css"],
   devServer: {
-    port: 7001,  // Routed through Traefik proxy
+    port: 7001, // Routed through Traefik proxy
   },
   debug: true,
   vite: {

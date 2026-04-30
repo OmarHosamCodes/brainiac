@@ -16,6 +16,7 @@ layer: 1
 ## Primary Entities
 
 ### `package.json` (root)
+
 - **Type:** Workspace Config
 - **Path:** `package.json`
 - **Package manager:** `bun@1.3.10`
@@ -31,6 +32,7 @@ layer: 1
 ---
 
 ### `turbo.json`
+
 - **Type:** Build Orchestrator Config
 - **Path:** `turbo.json`
 - **UI:** `tui`
@@ -46,6 +48,7 @@ layer: 1
 ---
 
 ### `tsconfig.json` (root)
+
 - **Type:** TypeScript Config
 - **Path:** `tsconfig.json`
 - **Outgoing dependency:** extends `@brainiac/config/tsconfig.base.json`
@@ -54,6 +57,7 @@ layer: 1
 ---
 
 ### `knip.json`
+
 - **Type:** Dead-code / unused-export Config
 - **Path:** `knip.json`
 - **Workspaces configured:** `apps/web`, `apps/server`, `packages/agent`, `packages/api`, `packages/auth`, `packages/db`, `packages/env`, `packages/workspace`
@@ -64,9 +68,9 @@ layer: 1
 
 ## Relationship Map
 
-| Entity | Incoming (Dependents) | Outgoing (Dependencies) | Mechanism |
-|---|---|---|---|
-| `package.json` (root) | CI, developer scripts | All `apps/*` and `packages/*` | Bun workspace resolution |
-| `turbo.json` | `turbo dev/build/check-types` CLI | All tasks in workspace packages | Task graph pipeline DAG |
-| `tsconfig.json` (root) | Root-level type-check | `@brainiac/config/tsconfig.base.json` | `extends` directive |
-| `knip.json` | `bun run check:unused` | All workspace `entry`/`project` globs | Knip static analysis |
+| Entity                 | Incoming (Dependents)             | Outgoing (Dependencies)               | Mechanism                |
+| ---------------------- | --------------------------------- | ------------------------------------- | ------------------------ |
+| `package.json` (root)  | CI, developer scripts             | All `apps/*` and `packages/*`         | Bun workspace resolution |
+| `turbo.json`           | `turbo dev/build/check-types` CLI | All tasks in workspace packages       | Task graph pipeline DAG  |
+| `tsconfig.json` (root) | Root-level type-check             | `@brainiac/config/tsconfig.base.json` | `extends` directive      |
+| `knip.json`            | `bun run check:unused`            | All workspace `entry`/`project` globs | Knip static analysis     |

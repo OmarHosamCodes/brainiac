@@ -33,6 +33,7 @@ Renders `PlatformBrandingCard` (`apps/admin-panel/src/component/platform-brandin
 ### Community Name Field Removal
 
 Previously the platform branding card had an editable `communityName` field. This was removed:
+
 - The field is no longer stored as part of shared platform branding
 - In the admin form it is replaced by a **derived, non-editable** value:
   - Uses the **active admin community** name when one is active

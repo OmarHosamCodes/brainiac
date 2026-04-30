@@ -35,6 +35,7 @@ Pages with no `visibility/` tag, or tagged `visibility/public`, are always inclu
 Glob all `.md` files in the vault (excluding `_archives/`, `_raw/`, `.obsidian/`, `index.md`, `log.md`, `_insights.md`). In filtered mode, also skip pages whose tags contain `visibility/internal` or `visibility/pii`.
 
 For each page, extract from frontmatter:
+
 - `id` — relative path from vault root, without `.md` extension (e.g. `concepts/transformers`)
 - `label` — `title` field from frontmatter, or filename if missing
 - `category` — directory prefix (`concepts`, `entities`, `skills`, `references`, `synthesis`, `projects`, or `journal`)
@@ -44,6 +45,7 @@ For each page, extract from frontmatter:
 This is your **node list**.
 
 For each page, Grep the body for `\[\[.*?\]\]` to extract all wikilinks:
+
 - Parse each `[[target]]` or `[[target|display]]` — use the target part only
 - Resolve the target to a node id (normalize: lowercase, spaces→hyphens, strip `.md`)
 - Skip links that point outside the node list (broken links)
@@ -55,6 +57,7 @@ This is your **edge list**.
 ## Step 2: Assign Community IDs
 
 Group pages into communities by tag clustering:
+
 - Pages sharing the same dominant tag belong to the same community
 - Dominant tag = the first tag in the page's frontmatter tags array
 - Pages with no tags get community id `null`
@@ -164,17 +167,21 @@ A self-contained interactive visualization using the vis.js CDN (no local depend
 Build the HTML file by:
 
 1. Generating a JSON array of node objects for vis.js:
+
 ```js
 {id: "concepts/transformers", label: "Transformer Architecture", color: {background: "#4E79A7"}, size: <degree * 3 + 8>, title: "concepts | #ml #architecture", community: 0}
 ```
+
 - Color by community (cycle through: `#4E79A7`, `#F28E2B`, `#E15759`, `#76B7B2`, `#59A14F`, `#EDC948`, `#B07AA1`, `#FF9DA7`, `#9C755F`, `#BAB0AC`)
 - Size by degree (incoming + outgoing link count): `size = degree * 3 + 8`, capped at 60
 - `title` = tooltip text shown on hover: category, tags, summary (if available)
 
 2. Generating a JSON array of edge objects for vis.js:
+
 ```js
 {from: "concepts/transformers", to: "entities/vaswani", dashes: false, width: 1, color: {color: "#666", opacity: 0.6}}
 ```
+
 - `dashes: true` for INFERRED edges
 - `dashes: [4,8]` for AMBIGUOUS edges
 
@@ -183,64 +190,108 @@ Build the HTML file by:
 ```html
 <!DOCTYPE html>
 <html>
-<head>
-<meta charset="utf-8">
-<title>Wiki Knowledge Graph</title>
-<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f0f1a; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; display: flex; height: 100vh; }
-  #graph { flex: 1; }
-  #sidebar { width: 260px; background: #1a1a2e; border-left: 1px solid #2a2a4e; padding: 14px; overflow-y: auto; font-size: 13px; }
-  #sidebar h3 { color: #aaa; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 10px; }
-  #info { margin-bottom: 16px; line-height: 1.6; color: #ccc; }
-  .legend-item { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 12px; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  #stats { margin-top: 16px; color: #555; font-size: 11px; }
-</style>
-</head>
-<body>
-<div id="graph"></div>
-<div id="sidebar">
-  <h3>Wiki Knowledge Graph</h3>
-  <div id="info">Click a node to see details.</div>
-  <h3 style="margin-top:12px">Communities</h3>
-  <div id="legend"><!-- populated by JS --></div>
-  <div id="stats"><!-- populated by JS --></div>
-</div>
-<script>
-const NODES_DATA = /* NODES_JSON */;
-const EDGES_DATA = /* EDGES_JSON */;
-const COMMUNITY_COLORS = ["#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F","#EDC948","#B07AA1","#FF9DA7","#9C755F","#BAB0AC"];
+  <head>
+    <meta charset="utf-8" />
+    <title>Wiki Knowledge Graph</title>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      body {
+        background: #0f0f1a;
+        color: #e0e0e0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        display: flex;
+        height: 100vh;
+      }
+      #graph {
+        flex: 1;
+      }
+      #sidebar {
+        width: 260px;
+        background: #1a1a2e;
+        border-left: 1px solid #2a2a4e;
+        padding: 14px;
+        overflow-y: auto;
+        font-size: 13px;
+      }
+      #sidebar h3 {
+        color: #aaa;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 0 0 10px;
+      }
+      #info {
+        margin-bottom: 16px;
+        line-height: 1.6;
+        color: #ccc;
+      }
+      .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 3px 0;
+        font-size: 12px;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      #stats {
+        margin-top: 16px;
+        color: #555;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="graph"></div>
+    <div id="sidebar">
+      <h3>Wiki Knowledge Graph</h3>
+      <div id="info">Click a node to see details.</div>
+      <h3 style="margin-top:12px">Communities</h3>
+      <div id="legend"><!-- populated by JS --></div>
+      <div id="stats"><!-- populated by JS --></div>
+    </div>
+    <script>
+      const NODES_DATA = /* NODES_JSON */;
+      const EDGES_DATA = /* EDGES_JSON */;
+      const COMMUNITY_COLORS = ["#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F","#EDC948","#B07AA1","#FF9DA7","#9C755F","#BAB0AC"];
 
-const nodes = new vis.DataSet(NODES_DATA);
-const edges = new vis.DataSet(EDGES_DATA);
-const network = new vis.Network(document.getElementById('graph'), {nodes, edges}, {
-  physics: { solver: 'forceAtlas2Based', forceAtlas2Based: { gravitationalConstant: -60, springLength: 120 }, stabilization: { iterations: 200 } },
-  interaction: { hover: true, tooltipDelay: 100 },
-  nodes: { shape: 'dot', borderWidth: 1.5 },
-  edges: { smooth: { type: 'continuous' }, arrows: { to: { enabled: true, scaleFactor: 0.4 } } }
-});
-network.once('stabilizationIterationsDone', () => network.setOptions({ physics: { enabled: false } }));
+      const nodes = new vis.DataSet(NODES_DATA);
+      const edges = new vis.DataSet(EDGES_DATA);
+      const network = new vis.Network(document.getElementById('graph'), {nodes, edges}, {
+        physics: { solver: 'forceAtlas2Based', forceAtlas2Based: { gravitationalConstant: -60, springLength: 120 }, stabilization: { iterations: 200 } },
+        interaction: { hover: true, tooltipDelay: 100 },
+        nodes: { shape: 'dot', borderWidth: 1.5 },
+        edges: { smooth: { type: 'continuous' }, arrows: { to: { enabled: true, scaleFactor: 0.4 } } }
+      });
+      network.once('stabilizationIterationsDone', () => network.setOptions({ physics: { enabled: false } }));
 
-network.on('click', ({nodes: sel}) => {
-  if (!sel.length) return;
-  const n = NODES_DATA.find(x => x.id === sel[0]);
-  if (!n) return;
-  document.getElementById('info').innerHTML = `<b>${n.label}</b><br>Category: ${n.category||'—'}<br>Tags: ${n.tags||'—'}<br>${n.summary ? '<br>'+n.summary : ''}`;
-});
+      network.on('click', ({nodes: sel}) => {
+        if (!sel.length) return;
+        const n = NODES_DATA.find(x => x.id === sel[0]);
+        if (!n) return;
+        document.getElementById('info').innerHTML = `<b>${n.label}</b><br>Category: ${n.category||'—'}<br>Tags: ${n.tags||'—'}<br>${n.summary ? '<br>'+n.summary : ''}`;
+      });
 
-// Build legend
-const communities = {};
-NODES_DATA.forEach(n => { if (n.community != null) communities[n.community] = (communities[n.community]||0)+1; });
-const leg = document.getElementById('legend');
-Object.entries(communities).sort((a,b)=>b[1]-a[1]).forEach(([cid, count]) => {
-  const color = COMMUNITY_COLORS[cid % COMMUNITY_COLORS.length];
-  leg.innerHTML += `<div class="legend-item"><div class="dot" style="background:${color}"></div>Community ${cid} (${count})</div>`;
-});
-document.getElementById('stats').textContent = `${NODES_DATA.length} pages · ${EDGES_DATA.length} links`;
-</script>
-</body>
+      // Build legend
+      const communities = {};
+      NODES_DATA.forEach(n => { if (n.community != null) communities[n.community] = (communities[n.community]||0)+1; });
+      const leg = document.getElementById('legend');
+      Object.entries(communities).sort((a,b)=>b[1]-a[1]).forEach(([cid, count]) => {
+        const color = COMMUNITY_COLORS[cid % COMMUNITY_COLORS.length];
+        leg.innerHTML += `<div class="legend-item"><div class="dot" style="background:${color}"></div>Community ${cid} (${count})</div>`;
+      });
+      document.getElementById('stats').textContent = `${NODES_DATA.length} pages · ${EDGES_DATA.length} links`;
+    </script>
+  </body>
 </html>
 ```
 
@@ -259,6 +310,7 @@ Wiki export complete → wiki-export/
 ```
 
 In filtered mode, append a line showing what was excluded:
+
 ```
   (filtered: X of Y pages excluded — visibility/internal, visibility/pii)
 ```

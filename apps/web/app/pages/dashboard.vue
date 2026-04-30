@@ -1,5 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
+  layout: "app",
   middleware: ["auth", "workspace"],
 });
 
@@ -39,9 +40,10 @@ const stopAutoFit = watch(
   { immediate: true, flush: "post" },
 );
 
-const { isChatVisible, isTeamAsideCompact } = useDashboardLayout({
-  chatVisibleByDefault: false,
-});
+const { setAgentDockOpen } = useAppShell();
+useAppShellPageTitle("Dashboard");
+useAppShellCustomDock();
+const { isTeamAsideCompact } = useDashboardLayout();
 
 const teamSelection = useTeamSelection();
 const { newTeamName, selectedTeam, selectedTeamId, teamListQuery, teamNameDraft, teams } =
@@ -130,196 +132,132 @@ function toggleSelectedNodeSharing() {
 
   shareSelectedNode();
 }
-
-function handleAgentRailShortcut(event: KeyboardEvent) {
-  const isMac = typeof navigator !== "undefined" && /mac|iphone|ipad/i.test(navigator.platform);
-  const modifier = isMac ? event.metaKey : event.ctrlKey;
-  if (modifier && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "j") {
-    event.preventDefault();
-    isChatVisible.value = !isChatVisible.value;
-  }
-}
-
-const shortcutLabel = ref("Ctrl+J");
-
-onMounted(() => {
-  if (typeof navigator !== "undefined" && /mac|iphone|ipad/i.test(navigator.platform)) {
-    shortcutLabel.value = "⌘J";
-  }
-  window.addEventListener("keydown", handleAgentRailShortcut);
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener("keydown", handleAgentRailShortcut);
-});
 </script>
 
 <template>
   <div
-    class="relative h-screen w-screen overflow-hidden bg-neutral-50 dark:bg-neutral-950 selection:bg-blue-500/30"
+    class="relative h-full w-full overflow-hidden bg-neutral-50 dark:bg-neutral-950 selection:bg-blue-500/30"
   >
-    <Header />
-
-    <main class="h-full w-full">
-      <InfiniteCanvas
-        ref="canvasRef"
-        v-model:nodes="nodes"
-        v-model:selected-node-ids="selectedNodeIds"
-        :loading="isWorkspaceInitialLoading"
-        @create-node="openCreateNode"
-        @edit-node="openEditNode"
-        @connect-node-pair="connectNodePair"
-        @disconnect-node-pair="disconnectNodePair"
-        @remove-node="removeNode"
-        @open-node="openNodePage"
-      >
-        <template #node="{ node, selected, allNodes }">
-          <WorkspaceNodeCard :node="node" :selected="selected" :all-nodes="allNodes" />
-        </template>
-      </InfiniteCanvas>
-    </main>
-
-    <aside
-      class="fixed left-6 top-24 z-40 max-h-[calc(100vh-7rem)] rounded-2xl border border-neutral-200/60 bg-white/85 shadow-xl backdrop-blur-xl transition-all duration-300 dark:border-neutral-800/60 dark:bg-neutral-950/85"
-      :class="isTeamAsideCompact ? 'w-14 p-2' : 'w-[24rem] overflow-y-auto p-4'"
-    >
-      <div v-if="isTeamAsideCompact" class="flex items-center justify-center">
+    <Teleport to="#app-shell-actions" defer>
+      <div class="flex items-center gap-2">
         <UButton
-          icon="i-lucide-users"
-          variant="outline"
+          :icon="isTeamAsideCompact ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
           color="neutral"
-          size="md"
-          square
-          aria-label="Expand team panel"
-          @click="isTeamAsideCompact = false"
+          variant="ghost"
+          class="rounded-2xl"
+          @click="isTeamAsideCompact = !isTeamAsideCompact"
+        >
+          <span class="hidden lg:inline">Workspace</span>
+        </UButton>
+        <UButton
+          label="Add"
+          icon="i-lucide-plus"
+          color="neutral"
+          variant="soft"
+          class="rounded-2xl"
+          @click="openCreateNode()"
         />
       </div>
+    </Teleport>
 
-      <template v-else>
-        <div class="flex items-center justify-between gap-3">
-          <h2 class="text-xs font-bold uppercase tracking-[0.22em] text-neutral-500">Teams</h2>
-          <div class="flex items-center gap-2">
-            <span class="text-[11px] font-medium text-neutral-500">{{ teams.length }} total</span>
-            <UButton
-              icon="i-lucide-users"
-              variant="outline"
-              color="neutral"
-              size="md"
-              square
-              aria-label="Compact team panel"
-              @click="isTeamAsideCompact = true"
-            />
-          </div>
-        </div>
+    <Teleport to="#app-shell-context" defer>
+      <div class="hidden items-center gap-2 md:flex">
+        <USelectMenu
+          v-model="selectedTeamId"
+          :items="teamItems"
+          value-key="value"
+          class="w-52"
+          size="sm"
+          :search-input="{ placeholder: 'Find team' }"
+          placeholder="Team"
+        />
+      </div>
+    </Teleport>
 
-        <div class="mt-3 flex items-center gap-2">
-          <UInput
-            v-model="newTeamName"
-            type="text"
-            placeholder="New team name"
-            size="sm"
-            class="flex-1"
-            @keydown.enter.prevent="createTeam"
-          />
-          <UButton
-            label="Create"
-            color="neutral"
-            variant="solid"
-            size="sm"
-            :loading="createTeamMutation.isPending.value"
-            :disabled="!newTeamName.trim()"
-            @click="createTeam"
-          />
-        </div>
+    <Teleport to="#app-shell-dock-content" defer>
+      <div class="flex h-full min-h-0 flex-col">
+        <LazyDashboardAgentChatPanel :nodes="nodes" @close="setAgentDockOpen(false)" />
+      </div>
+    </Teleport>
 
-        <div class="mt-4">
-          <label
-            class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.15em] text-neutral-500"
+    <main class="h-full w-full">
+      <div class="flex h-full w-full overflow-hidden">
+        <DashboardWorkspaceSidebar
+          class="hidden md:block"
+          :compact="isTeamAsideCompact"
+          :teams-count="teams.length"
+          :new-team-name="newTeamName"
+          :selected-team-id="selectedTeamId"
+          :team-items="teamItems"
+          :selected-team="selectedTeam"
+          :selected-node="selectedNode"
+          :can-invite="canInvite"
+          :can-manage-selected-node-sharing="canManageSelectedNodeSharing"
+          :selected-node-team-role="selectedNodeTeamRole"
+          :is-selected-node-shared="isSelectedNodeShared"
+          :is-node-share-action-pending="isNodeShareActionPending"
+          :node-share-action-label="nodeShareActionLabel"
+          :node-share-action-disabled="nodeShareActionDisabled"
+          @update:compact="isTeamAsideCompact = $event"
+          @update:new-team-name="newTeamName = $event"
+          @update:selected-team-id="selectedTeamId = $event"
+          @create-team="createTeam"
+          @open-team-settings="isTeamSettingsModalOpen = true"
+          @toggle-selected-node-sharing="toggleSelectedNodeSharing"
+        />
+
+        <div class="min-w-0 flex-1">
+          <InfiniteCanvas
+            ref="canvasRef"
+            v-model:nodes="nodes"
+            v-model:selected-node-ids="selectedNodeIds"
+            :loading="isWorkspaceInitialLoading"
+            @create-node="openCreateNode"
+            @edit-node="openEditNode"
+            @connect-node-pair="connectNodePair"
+            @disconnect-node-pair="disconnectNodePair"
+            @remove-node="removeNode"
+            @open-node="openNodePage"
           >
-            Share Target
-          </label>
-          <USelect
-            v-model="selectedTeamId"
-            :items="teamItems"
-            placeholder="Select a team"
-            size="sm"
-            class="w-full"
-          />
+            <template #node="{ node, selected, allNodes }">
+              <WorkspaceNodeCard :node="node" :selected="selected" :all-nodes="allNodes" />
+            </template>
+          </InfiniteCanvas>
         </div>
+      </div>
+    </main>
 
-        <div
-          class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70"
-        >
-          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
-            Team Management
-          </p>
-
-          <p class="mt-2 text-xs text-neutral-500">
-            Open the dedicated team settings modal to manage members and access rules.
-          </p>
-
-          <UButton
-            label="Manage Team"
-            color="primary"
-            variant="solid"
-            block
-            size="sm"
-            class="mt-3"
-            :disabled="!selectedTeam"
-            @click="isTeamSettingsModalOpen = true"
-          />
-
-          <div v-if="selectedTeam && !canInvite" class="mt-3 flex items-center gap-2">
-            <UBadge color="neutral" variant="subtle" size="sm">Requires Owner</UBadge>
-            <p class="text-xs text-neutral-500">
-              Owner role is required for member and role changes.
-            </p>
-          </div>
-        </div>
-
-        <div
-          class="mt-4 rounded-xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70"
-        >
-          <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
-            Selected Node
-          </p>
-          <p class="mt-1 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-            {{ selectedNode?.title ?? "No node selected" }}
-          </p>
-          <p class="mt-1 text-xs text-neutral-500">
-            {{
-              selectedNode
-                ? selectedNode.visibility === "team"
-                  ? canManageSelectedNodeSharing
-                    ? `Shared to ${selectedNode.teamId}`
-                    : "Team-shared node"
-                  : "Private node"
-                : "Click a node on canvas to share it."
-            }}
-          </p>
-          <p
-            v-if="selectedNode && !canManageSelectedNodeSharing"
-            class="mt-1 text-xs text-neutral-500"
-          >
-            Role {{ selectedNodeTeamRole ?? "viewer" }} can edit content, but only owners can access
-            sharing actions and team IDs.
-          </p>
-        </div>
-
-        <div v-if="canManageSelectedNodeSharing" class="mt-3">
-          <UButton
-            :label="nodeShareActionLabel"
-            block
-            size="sm"
-            :color="isSelectedNodeShared ? 'neutral' : 'primary'"
-            :variant="isSelectedNodeShared ? 'outline' : 'solid'"
-            :loading="isNodeShareActionPending"
-            :disabled="nodeShareActionDisabled"
-            @click="toggleSelectedNodeSharing"
-          />
-        </div>
+    <USlideover
+      :open="!isTeamAsideCompact"
+      side="left"
+      class="md:hidden"
+      @update:open="isTeamAsideCompact = !$event"
+    >
+      <template #content>
+        <DashboardWorkspaceSidebar
+          :compact="false"
+          :teams-count="teams.length"
+          :new-team-name="newTeamName"
+          :selected-team-id="selectedTeamId"
+          :team-items="teamItems"
+          :selected-team="selectedTeam"
+          :selected-node="selectedNode"
+          :can-invite="canInvite"
+          :can-manage-selected-node-sharing="canManageSelectedNodeSharing"
+          :selected-node-team-role="selectedNodeTeamRole"
+          :is-selected-node-shared="isSelectedNodeShared"
+          :is-node-share-action-pending="isNodeShareActionPending"
+          :node-share-action-label="nodeShareActionLabel"
+          :node-share-action-disabled="nodeShareActionDisabled"
+          @update:new-team-name="newTeamName = $event"
+          @update:selected-team-id="selectedTeamId = $event"
+          @create-team="createTeam"
+          @open-team-settings="isTeamSettingsModalOpen = true"
+          @toggle-selected-node-sharing="toggleSelectedNodeSharing"
+          @update:compact="isTeamAsideCompact = $event"
+        />
       </template>
-    </aside>
+    </USlideover>
 
     <LazyTeamSettingsModal
       :open="isTeamSettingsModalOpen"
@@ -348,46 +286,15 @@ onBeforeUnmount(() => {
       @remove-member="removeMember"
     />
 
-    <aside
-      class="agent-rail fixed bottom-4 right-3 top-24 z-40 flex flex-col overflow-hidden transition-[width] duration-300 ease-out sm:bottom-6 sm:right-6"
-      :class="
-        isChatVisible
-          ? 'w-[min(28rem,calc(100vw-1.5rem))]'
-          : 'w-12 rounded-[1.75rem] border border-neutral-200/70 bg-white/85 shadow-2xl shadow-black/10 backdrop-blur-xl hover:border-neutral-300 dark:border-neutral-800/70 dark:bg-neutral-950/85 dark:hover:border-neutral-700'
-      "
-      :aria-label="isChatVisible ? 'Agent rail (expanded)' : 'Agent rail (collapsed)'"
+    <div
+      class="pointer-events-none absolute left-4 bottom-4 z-30 flex max-w-xs flex-col gap-3 md:left-6 md:bottom-6"
     >
-      <button
-        v-if="!isChatVisible"
-        type="button"
-        class="group flex h-full w-full flex-col items-center justify-between gap-3 px-1.5 py-4 text-neutral-500 transition hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
-        aria-label="Open agent rail"
-        :title="`Agent rail · ${shortcutLabel}`"
-        @click="isChatVisible = true"
-      >
-        <UIcon name="i-lucide-sparkles" class="size-4" />
-        <span class="text-[10px] font-bold uppercase tracking-[0.32em] [writing-mode:vertical-rl]">
-          Agent
-        </span>
-        <span
-          class="hidden rounded-md border border-neutral-200/70 px-1 py-0.5 text-[9px] font-semibold tracking-wider text-neutral-400 dark:border-neutral-800/70 sm:inline-flex"
-        >
-          {{ shortcutLabel }}
-        </span>
-      </button>
-
-      <div v-else class="flex h-full min-h-0 flex-1 flex-col">
-        <LazyDashboardAgentChatPanel :nodes="nodes" @close="isChatVisible = false" />
-      </div>
-    </aside>
-
-    <div class="fixed left-6 bottom-6 z-50 flex flex-col gap-3">
       <WorkspaceBoardStatus
         v-if="!isWorkspaceInitialLoading"
         :badge="saveBadge"
         :nodes-count="nodes.length"
         :user-name="authSession.data?.user?.name"
-        class="bg-white/70 dark:bg-neutral-900/70 backdrop-blur-xl border border-neutral-200/50 dark:border-neutral-800/50 rounded-2xl p-3 shadow-xl"
+        class="pointer-events-auto rounded-2xl border border-neutral-200/80 bg-white/96 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/96"
       />
 
       <UAlert
@@ -397,7 +304,7 @@ onBeforeUnmount(() => {
         icon="i-lucide-cloud-off"
         title="Save Failed"
         :description="saveError"
-        class="max-w-xs shadow-xl backdrop-blur-xl bg-red-500/10 border-red-500/20"
+        class="pointer-events-auto max-w-xs border-red-500/20 bg-red-500/10"
       />
 
       <UAlert
@@ -406,13 +313,16 @@ onBeforeUnmount(() => {
         icon="i-lucide-alert-circle"
         title="Workspace Error"
         :description="workspaceQuery.error?.message"
-        class="max-w-xs shadow-xl backdrop-blur-xl bg-red-500/10 border-red-500/20"
+        class="pointer-events-auto max-w-xs border-red-500/20 bg-red-500/10"
       />
     </div>
 
-    <div v-if="isWorkspaceRefreshing" class="fixed right-6 top-8 z-60">
+    <div
+      v-if="isWorkspaceRefreshing"
+      class="pointer-events-none absolute right-4 top-4 z-30 md:right-6 md:top-6"
+    >
       <div
-        class="flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 dark:bg-blue-400/10 border border-blue-500/20 dark:border-blue-400/20 rounded-full text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 backdrop-blur-xl shadow-lg"
+        class="pointer-events-auto flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:border-blue-400/20 dark:bg-blue-400/10 dark:text-blue-400"
       >
         <UIcon name="i-lucide-loader-2" class="size-3 animate-spin" />
         Syncing
@@ -439,28 +349,3 @@ onBeforeUnmount(() => {
     />
   </div>
 </template>
-
-<style scoped>
-main,
-aside {
-  animation: fade-in 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  main,
-  aside {
-    animation: none;
-  }
-}
-</style>

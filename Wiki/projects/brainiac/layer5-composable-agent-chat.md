@@ -15,30 +15,30 @@ The most complex composable (~1200+ lines). Manages the full dashboard AI agent 
 
 ## Imports
 
-| Import | Source |
-|---|---|
-| `DashboardAgentToolPreset`, `DashboardConversationDetail`, `DashboardConversationMessage`, `DashboardConversationSummary`, `DashboardConversationUsageSummary`, `OpenRouterCatalogModel` | `@brainiac/agent` |
-| `WorkspaceNode` | `@brainiac/workspace` |
-| `useMutation`, `useQuery`, `useQueryClient` | `@tanstack/vue-query` |
-| `storeToRefs` | `pinia` |
-| `getActiveDashboardNodeMention`, `getDashboardNodeMentionSuggestions`, `stripActiveDashboardNodeMention` | `~/utils/dashboard-agent-mentions` |
-| `getErrorDebugDetails` | `~/utils/get-error-debug-details` |
-| `getErrorMessage` | `~/utils/get-error-message` |
+| Import                                                                                                                                                                                   | Source                             |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `DashboardAgentToolPreset`, `DashboardConversationDetail`, `DashboardConversationMessage`, `DashboardConversationSummary`, `DashboardConversationUsageSummary`, `OpenRouterCatalogModel` | `@brainiac/agent`                  |
+| `WorkspaceNode`                                                                                                                                                                          | `@brainiac/workspace`              |
+| `useMutation`, `useQuery`, `useQueryClient`                                                                                                                                              | `@tanstack/vue-query`              |
+| `storeToRefs`                                                                                                                                                                            | `pinia`                            |
+| `getActiveDashboardNodeMention`, `getDashboardNodeMentionSuggestions`, `stripActiveDashboardNodeMention`                                                                                 | `~/utils/dashboard-agent-mentions` |
+| `getErrorDebugDetails`                                                                                                                                                                   | `~/utils/get-error-debug-details`  |
+| `getErrorMessage`                                                                                                                                                                        | `~/utils/get-error-message`        |
 
 ---
 
 ## Queries & Mutations
 
-| Operation | oRPC Procedure | Cache TTL |
-|---|---|---|
-| `modelCatalogQuery` | `orpc.agent.modelCatalog` | 10 min |
-| `accountStatusQuery` | `orpc.agent.accountStatus` | 60 s |
-| `conversationListQuery` | `orpc.agent.conversations.list` | — |
-| `conversationDetailQuery` | `orpc.agent.conversations.get` | — |
-| `sendTurnMutation` | `orpc.agent.chat.turn` | — |
-| `createConversationMutation` | `orpc.agent.conversations.create` | — |
-| `renameConversationMutation` | `orpc.agent.conversations.rename` | — |
-| `deleteConversationMutation` | `orpc.agent.conversations.delete` | — |
+| Operation                    | oRPC Procedure                    | Cache TTL |
+| ---------------------------- | --------------------------------- | --------- |
+| `modelCatalogQuery`          | `orpc.agent.modelCatalog`         | 10 min    |
+| `accountStatusQuery`         | `orpc.agent.accountStatus`        | 60 s      |
+| `conversationListQuery`      | `orpc.agent.conversations.list`   | —         |
+| `conversationDetailQuery`    | `orpc.agent.conversations.get`    | —         |
+| `sendTurnMutation`           | `orpc.agent.chat.turn`            | —         |
+| `createConversationMutation` | `orpc.agent.conversations.create` | —         |
+| `renameConversationMutation` | `orpc.agent.conversations.rename` | —         |
+| `deleteConversationMutation` | `orpc.agent.conversations.delete` | —         |
 
 ---
 
@@ -59,38 +59,38 @@ Persisted to `localStorage` under key `brainiac.dashboard.agent.model-preference
 
 ## Formatters
 
-| Function | Purpose |
-|---|---|
-| `formatCompactNumber` | `Intl.NumberFormat` compact notation |
-| `formatContextLength` | `"123K ctx"` display |
-| `formatUsd` | `$0.00` currency display |
-| `formatRelativeTime` | `Intl.RelativeTimeFormat` relative timestamps |
+| Function              | Purpose                                       |
+| --------------------- | --------------------------------------------- |
+| `formatCompactNumber` | `Intl.NumberFormat` compact notation          |
+| `formatContextLength` | `"123K ctx"` display                          |
+| `formatUsd`           | `$0.00` currency display                      |
+| `formatRelativeTime`  | `Intl.RelativeTimeFormat` relative timestamps |
 
 ---
 
 ## Incoming Dependents
 
-| Consumer | Mechanism |
-|---|---|
+| Consumer                      | Mechanism                                |
+| ----------------------------- | ---------------------------------------- |
 | `DashboardAgentChatPanel.vue` | calls `useDashboardAgentChat({ nodes })` |
 
 ---
 
 ## Outgoing Dependencies
 
-| Dependency | Mechanism |
-|---|---|
-| `@brainiac/agent` | 6 type imports for conversation/model structures |
-| `@brainiac/workspace` | `WorkspaceNode` type |
-| `@tanstack/vue-query` | `useMutation`, `useQuery`, `useQueryClient` |
-| `pinia` (`storeToRefs`) | reads workspace store refs |
-| `useOrpc()` | all 8 agent/conversation oRPC query + mutation options |
-| `useAuthSession()` | auth guard for enabled state |
-| `~/utils/dashboard-agent-mentions` | mention parsing + suggestion scoring |
-| `~/utils/get-error-debug-details` | error debug info for display |
-| `~/utils/get-error-message` | error message extraction |
-| `localStorage` | model preference persistence |
-| `Intl.NumberFormat`, `Intl.RelativeTimeFormat` | formatting utilities |
+| Dependency                                     | Mechanism                                              |
+| ---------------------------------------------- | ------------------------------------------------------ |
+| `@brainiac/agent`                              | 6 type imports for conversation/model structures       |
+| `@brainiac/workspace`                          | `WorkspaceNode` type                                   |
+| `@tanstack/vue-query`                          | `useMutation`, `useQuery`, `useQueryClient`            |
+| `pinia` (`storeToRefs`)                        | reads workspace store refs                             |
+| `useOrpc()`                                    | all 8 agent/conversation oRPC query + mutation options |
+| `useAuthSession()`                             | auth guard for enabled state                           |
+| `~/utils/dashboard-agent-mentions`             | mention parsing + suggestion scoring                   |
+| `~/utils/get-error-debug-details`              | error debug info for display                           |
+| `~/utils/get-error-message`                    | error message extraction                               |
+| `localStorage`                                 | model preference persistence                           |
+| `Intl.NumberFormat`, `Intl.RelativeTimeFormat` | formatting utilities                                   |
 
 ---
 

@@ -16,25 +16,25 @@ The most complex page in the application (~2500+ lines). Provides the full node 
 
 ## Key State
 
-| Ref/Computed | Description |
-|---|---|
-| `nodeId` | computed from `route.params.id` |
-| `node` | derived from `workspaceStore.nodes` by `nodeId` |
-| `activeTabId` | `node.viewState.activeTabId` |
-| `activeTab` | resolved tab object from `node.tabs` |
-| `visibleBlocks` | `activeTab.blocks` filtered by `blockSearch` |
-| `tabEditor` | reactive `{ open, mode: "create" | "rename", title }` |
+| Ref/Computed          | Description                                            |
+| --------------------- | ------------------------------------------------------ | ------------------ |
+| `nodeId`              | computed from `route.params.id`                        |
+| `node`                | derived from `workspaceStore.nodes` by `nodeId`        |
+| `activeTabId`         | `node.viewState.activeTabId`                           |
+| `activeTab`           | resolved tab object from `node.tabs`                   |
+| `visibleBlocks`       | `activeTab.blocks` filtered by `blockSearch`           |
+| `tabEditor`           | reactive `{ open, mode: "create"                       | "rename", title }` |
 | `agentContextTargets` | array of `{ tabId, blockId }` for scoped agent context |
-| `isAgentChatVisible` | toggles agent panel visibility |
+| `isAgentChatVisible`  | toggles agent panel visibility                         |
 
 ---
 
 ## Mutations (via `useOrpc` + `useMutation`)
 
-| Mutation | oRPC Procedure |
-|---|---|
-| `saveMarketplaceItem` | `orpc.workspace.marketplace.save` |
-| `blockAgentPromptMutation` | `orpc.agent.chat.turn` |
+| Mutation                   | oRPC Procedure                    |
+| -------------------------- | --------------------------------- |
+| `saveMarketplaceItem`      | `orpc.workspace.marketplace.save` |
+| `blockAgentPromptMutation` | `orpc.agent.chat.turn`            |
 
 ---
 
@@ -52,35 +52,35 @@ Provides a `WorkspaceNodeEditorContext` via `workspaceNodeEditorContextKey` with
 
 ## Incoming Dependents
 
-| Consumer | Mechanism |
-|---|---|
+| Consumer                                                   | Mechanism                                                |
+| ---------------------------------------------------------- | -------------------------------------------------------- |
 | `pages/dashboard.vue` via `useWorkspaceBoard.openNodePage` | `navigateTo("/node/:id")` after `preloadRouteComponents` |
-| Direct URL navigation | Nuxt dynamic route `/node/[id]` |
+| Direct URL navigation                                      | Nuxt dynamic route `/node/[id]`                          |
 
 ---
 
 ## Outgoing Dependencies
 
-| Dependency | Mechanism |
-|---|---|
-| `@brainiac/workspace` | 45+ block factory imports, all block/node types, evaluation utilities, `collectWorkspaceNodeTasks`, `normalizeWorkspaceNode` |
-| `@nuxt/ui` | `DropdownMenuItem` type |
-| `@tanstack/vue-query` | `useMutation` for marketplace save + agent chat turn |
-| `pinia` (`storeToRefs`) | reads workspace store refs directly |
-| `useWorkspaceStore()` (Pinia) | `nodes`, `isWorkspaceInitialLoading`, `isWorkspaceRefreshing`, `saveBadge`, `saveError`; calls `workspaceStore.workspaceQuery` |
-| `useOrpc()` | creates mutations `orpc.workspace.marketplace.save` + `orpc.agent.chat.turn` |
-| `useWorkspaceNodeSharing({ node, workspaceQuery })` | reads `activeTeamMembership`, `activeTeamRole`, `canEditNodeContent`, `canManageNodeSharing`, `nodeOwnerLabel`, `nodeShareTeamId`, `nodeVisibilityBadgeClass`, `nodeVisibilityLabel`, `shareCurrentNodeToTeam`, `unshareCurrentNodeFromTeam`, `shareNodeMutation`, `unshareNodeMutation`, `teamListQuery`, `teams` |
-| `~/components/workspace/node/context` | imports `workspaceNodeEditorContextKey`, `WorkspaceTabEditorMode` type |
-| `~/composables/workspace-node/useWorkspaceNodeSharing` | imports composable |
-| `~/constants/workspace-node-options` | imports `workspaceNodeDomainOptions`, `workspaceNodePriorityOptions` |
-| `~/utils/get-error-message` | `getErrorMessage` |
-| `~/utils/render-simple-markdown` | `renderSimpleMarkdown` |
-| `~/utils/workspace-add-block-menu` | `createWorkspaceAddBlockMenuItems` |
-| `~/utils/workspace-block-presets` | `getWorkspaceBlockPreset`, `workspaceBlockPresets`, `WorkspaceBlockPresetId` type |
-| `~/utils/workspace-marketplace` | `createBlockMarketplacePayload`, `createNodeMarketplacePayload`, `createTabMarketplacePayload` |
-| `~/utils/workspace-node-formatters` | `formatWorkspaceFormulaResult`, `formatWorkspaceRelativeTaskMeta`, `getWorkspaceTaskPriorityBadgeClass` |
-| `WorkspaceNodeShell` component | renders the full node UI shell |
-| Nuxt `useRoute()`, `useToast()` | routing + toast notifications |
+| Dependency                                             | Mechanism                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@brainiac/workspace`                                  | 45+ block factory imports, all block/node types, evaluation utilities, `collectWorkspaceNodeTasks`, `normalizeWorkspaceNode`                                                                                                                                                                                       |
+| `@nuxt/ui`                                             | `DropdownMenuItem` type                                                                                                                                                                                                                                                                                            |
+| `@tanstack/vue-query`                                  | `useMutation` for marketplace save + agent chat turn                                                                                                                                                                                                                                                               |
+| `pinia` (`storeToRefs`)                                | reads workspace store refs directly                                                                                                                                                                                                                                                                                |
+| `useWorkspaceStore()` (Pinia)                          | `nodes`, `isWorkspaceInitialLoading`, `isWorkspaceRefreshing`, `saveBadge`, `saveError`; calls `workspaceStore.workspaceQuery`                                                                                                                                                                                     |
+| `useOrpc()`                                            | creates mutations `orpc.workspace.marketplace.save` + `orpc.agent.chat.turn`                                                                                                                                                                                                                                       |
+| `useWorkspaceNodeSharing({ node, workspaceQuery })`    | reads `activeTeamMembership`, `activeTeamRole`, `canEditNodeContent`, `canManageNodeSharing`, `nodeOwnerLabel`, `nodeShareTeamId`, `nodeVisibilityBadgeClass`, `nodeVisibilityLabel`, `shareCurrentNodeToTeam`, `unshareCurrentNodeFromTeam`, `shareNodeMutation`, `unshareNodeMutation`, `teamListQuery`, `teams` |
+| `~/components/workspace/node/context`                  | imports `workspaceNodeEditorContextKey`, `WorkspaceTabEditorMode` type                                                                                                                                                                                                                                             |
+| `~/composables/workspace-node/useWorkspaceNodeSharing` | imports composable                                                                                                                                                                                                                                                                                                 |
+| `~/constants/workspace-node-options`                   | imports `workspaceNodeDomainOptions`, `workspaceNodePriorityOptions`                                                                                                                                                                                                                                               |
+| `~/utils/get-error-message`                            | `getErrorMessage`                                                                                                                                                                                                                                                                                                  |
+| `~/utils/render-simple-markdown`                       | `renderSimpleMarkdown`                                                                                                                                                                                                                                                                                             |
+| `~/utils/workspace-add-block-menu`                     | `createWorkspaceAddBlockMenuItems`                                                                                                                                                                                                                                                                                 |
+| `~/utils/workspace-block-presets`                      | `getWorkspaceBlockPreset`, `workspaceBlockPresets`, `WorkspaceBlockPresetId` type                                                                                                                                                                                                                                  |
+| `~/utils/workspace-marketplace`                        | `createBlockMarketplacePayload`, `createNodeMarketplacePayload`, `createTabMarketplacePayload`                                                                                                                                                                                                                     |
+| `~/utils/workspace-node-formatters`                    | `formatWorkspaceFormulaResult`, `formatWorkspaceRelativeTaskMeta`, `getWorkspaceTaskPriorityBadgeClass`                                                                                                                                                                                                            |
+| `WorkspaceNodeShell` component                         | renders the full node UI shell                                                                                                                                                                                                                                                                                     |
+| Nuxt `useRoute()`, `useToast()`                        | routing + toast notifications                                                                                                                                                                                                                                                                                      |
 
 ---
 

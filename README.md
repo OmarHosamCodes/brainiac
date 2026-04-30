@@ -19,6 +19,7 @@ bun run setup
 ```
 
 This script will:
+
 - ✅ Copy and setup environment files
 - ✅ Install dependencies
 - ✅ Start PostgreSQL (if Docker is installed)
@@ -27,6 +28,7 @@ This script will:
 - ✅ Verify TypeScript types
 
 Then start the dev server:
+
 ```bash
 bun run dev
 ```
@@ -62,6 +64,7 @@ bun run dev
 Visit [http://localhost:3001](http://localhost:3001) to see the app. The API is at [http://localhost:3000](http://localhost:3000).
 
 **Demo accounts** (if seeded):
+
 - `founder@brainiac.test` / `brainiac1234`
 - `ops@brainiac.test` / `brainiac1234`
 - `analyst@brainiac.test` / `brainiac1234`
@@ -77,17 +80,17 @@ Visit [http://localhost:3001](http://localhost:3001) to see the app. The API is 
 
 ## 🏗️ Tech Stack
 
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Frontend** | Nuxt 4 + Vue 3 | Modern, reactive UI framework |
-| **Backend** | Hono + oRPC | Lightweight API with end-to-end type safety |
-| **Database** | PostgreSQL + Drizzle | Type-safe ORM and relational data |
-| **Runtime** | Bun v1.3.10 | Fast JavaScript runtime |
-| **Build** | Turborepo | Optimized monorepo builds |
-| **Styling** | TailwindCSS | Utility-first CSS framework |
-| **Auth** | Better-Auth | Modern authentication framework |
-| **Tooling** | Oxlint + Oxfmt | Fast Rust-based linting & formatting |
-| **Types** | TypeScript | Full type safety across the stack |
+| Layer        | Technology           | Purpose                                     |
+| ------------ | -------------------- | ------------------------------------------- |
+| **Frontend** | Nuxt 4 + Vue 3       | Modern, reactive UI framework               |
+| **Backend**  | Hono + oRPC          | Lightweight API with end-to-end type safety |
+| **Database** | PostgreSQL + Drizzle | Type-safe ORM and relational data           |
+| **Runtime**  | Bun v1.3.10          | Fast JavaScript runtime                     |
+| **Build**    | Turborepo            | Optimized monorepo builds                   |
+| **Styling**  | TailwindCSS          | Utility-first CSS framework                 |
+| **Auth**     | Better-Auth          | Modern authentication framework             |
+| **Tooling**  | Oxlint + Oxfmt       | Fast Rust-based linting & formatting        |
+| **Types**    | TypeScript           | Full type safety across the stack           |
 
 ## Database Management
 
@@ -110,15 +113,16 @@ bun run db:seed
 
 If you ran `bun run db:seed`, three demo accounts are created:
 
-| Email | Password | Role |
-|-------|----------|------|
-| `founder@brainiac.test` | `brainiac1234` | Founder |
-| `ops@brainiac.test` | `brainiac1234` | Operations |
-| `analyst@brainiac.test` | `brainiac1234` | Analyst |
+| Email                   | Password       | Role       |
+| ----------------------- | -------------- | ---------- |
+| `founder@brainiac.test` | `brainiac1234` | Founder    |
+| `ops@brainiac.test`     | `brainiac1234` | Operations |
+| `analyst@brainiac.test` | `brainiac1234` | Analyst    |
 
 **Change seed password**: Set `BRAINIAC_SEED_PASSWORD` before running `bun run db:seed`
 
 **Seed into existing account**:
+
 ```bash
 bun run db:seed -- --email you@example.com
 ```

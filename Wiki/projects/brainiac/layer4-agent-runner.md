@@ -16,7 +16,7 @@ export async function runDashboardAgent(
   messages: AgentMessage[],
   workspace: DashboardAgentWorkspaceContext,
   config: DashboardAgentConfig = {},
-): Promise<AgentChatResponse>
+): Promise<AgentChatResponse>;
 ```
 
 This is the top-level entry point that executes a full agent chat turn against OpenRouter.
@@ -40,13 +40,13 @@ runDashboardAgent(messages, workspace, config)
 
 ## Instruction Builders
 
-| Function | Preset | Key Rules |
-|---|---|---|
-| `buildAgentInstructions(workspace)` | base (used by all) | Sets persona, injects workspace overview, scoped context, focused block details, user + timestamp labels |
-| `buildAskInstructions(workspace)` | `"ask"` | Read-only; max 1 inspection tool before answering; no mutations; resolves scoped node if present |
-| `buildAgentOnlyInstructions(workspace)` | `"agent"` | Mutations enabled; `READ BEFORE WRITE`; `SCOPED MUTATION WORKFLOW` (4-step anti-pattern list) |
-| `buildDirectAnswerInstructions(workspace)` | fallback | No tools; answer from provided context only |
-| `buildToolEnabledAgentInstructions(workspace)` | pass-through | Wraps `buildAgentInstructions` |
+| Function                                       | Preset             | Key Rules                                                                                                |
+| ---------------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `buildAgentInstructions(workspace)`            | base (used by all) | Sets persona, injects workspace overview, scoped context, focused block details, user + timestamp labels |
+| `buildAskInstructions(workspace)`              | `"ask"`            | Read-only; max 1 inspection tool before answering; no mutations; resolves scoped node if present         |
+| `buildAgentOnlyInstructions(workspace)`        | `"agent"`          | Mutations enabled; `READ BEFORE WRITE`; `SCOPED MUTATION WORKFLOW` (4-step anti-pattern list)            |
+| `buildDirectAnswerInstructions(workspace)`     | fallback           | No tools; answer from provided context only                                                              |
+| `buildToolEnabledAgentInstructions(workspace)` | pass-through       | Wraps `buildAgentInstructions`                                                                           |
 
 ## Scoped Context Mechanics
 
@@ -91,19 +91,19 @@ const result = createOpenRouterClient().callModel({
 
 ## Incoming Dependents
 
-| Consumer | Mechanism |
-|---|---|
+| Consumer                                    | Mechanism                                                                                              |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `packages/api/src/routers/agent/service.ts` | calls `runDashboardAgent(messages, workspaceContext, config)` inside `appendDashboardConversationTurn` |
 
 ## Outgoing Dependencies
 
-| Dependency | Mechanism |
-|---|---|
-| `packages/agent/src/client.ts` | `createOpenRouterClient()` for SDK calls |
-| `packages/agent/src/models.ts` | `resolveOpenRouterModel()` to resolve model ID |
-| `packages/agent/src/tools.ts` | `buildDashboardAgentTools`, `createDashboardAgentWorkspaceRuntime`, `buildWorkspaceOverview`, `summarizeBlock` |
-| `packages/agent/src/types.ts` | all type/schema imports |
-| `@openrouter/sdk/lib/stop-conditions` | `stepCountIs(n)` stop condition |
+| Dependency                            | Mechanism                                                                                                      |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `packages/agent/src/client.ts`        | `createOpenRouterClient()` for SDK calls                                                                       |
+| `packages/agent/src/models.ts`        | `resolveOpenRouterModel()` to resolve model ID                                                                 |
+| `packages/agent/src/tools.ts`         | `buildDashboardAgentTools`, `createDashboardAgentWorkspaceRuntime`, `buildWorkspaceOverview`, `summarizeBlock` |
+| `packages/agent/src/types.ts`         | all type/schema imports                                                                                        |
+| `@openrouter/sdk/lib/stop-conditions` | `stepCountIs(n)` stop condition                                                                                |
 
 ## Standalone Status
 

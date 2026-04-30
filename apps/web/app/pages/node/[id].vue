@@ -106,6 +106,7 @@ import {
 } from "~/utils/workspace-node-formatters";
 
 definePageMeta({
+  layout: "app",
   middleware: ["auth", "workspace"],
 });
 
@@ -143,24 +144,9 @@ const node = computed(() => {
 });
 
 const activeTabId = computed(() => node.value?.viewState.activeTabId ?? "");
-const isAgentChatVisible = ref(true);
-
-function handleAgentRailShortcut(event: KeyboardEvent) {
-  const isMac = typeof navigator !== "undefined" && /mac|iphone|ipad/i.test(navigator.platform);
-  const modifier = isMac ? event.metaKey : event.ctrlKey;
-  if (modifier && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "j") {
-    event.preventDefault();
-    isAgentChatVisible.value = !isAgentChatVisible.value;
-  }
-}
-
-onMounted(() => {
-  window.addEventListener("keydown", handleAgentRailShortcut);
-});
-
-onBeforeUnmount(() => {
-  window.removeEventListener("keydown", handleAgentRailShortcut);
-});
+const { setAgentDockOpen } = useAppShell();
+useAppShellCustomDock();
+useAppShellPageTitle(computed(() => node.value?.title ?? "Node"));
 const agentContextTargets = ref<AgentContextTarget[]>([]);
 const {
   activeTeamMembership,
@@ -1678,7 +1664,7 @@ function setAgentContextBlock(tabId: string, blockId: string) {
     agentContextTargets.value = [...agentContextTargets.value, { tabId, blockId }];
   }
 
-  isAgentChatVisible.value = true;
+  setAgentDockOpen(true);
 }
 
 function toggleAgentContextBlock(tabId: string, blockId: string) {
@@ -2582,6 +2568,58 @@ provide(workspaceNodeEditorContextKey, {
 
 <template>
   <div class="relative h-full w-full overflow-hidden">
+    <Teleport to="#app-shell-dock-content" defer>
+      <div class="flex h-full min-h-0 flex-col">
+        <DashboardAgentChatPanel
+          :nodes="agentChatNodes"
+          :active-tab-id="activeTabId || null"
+          scope-kind="blocks"
+          @close="setAgentDockOpen(false)"
+        >
+          <template #scope-badges>
+            <div
+              v-if="agentContextBadgeItems.length > 0"
+              class="flex items-start justify-between gap-2"
+            >
+              <div class="flex min-w-0 flex-wrap items-center gap-1.5">
+                <UBadge
+                  v-for="item in agentContextBadgeItems"
+                  :key="item.id"
+                  :title="item.title"
+                  color="neutral"
+                  variant="soft"
+                  size="sm"
+                  class="group rounded-full pl-2.5 pr-1.5"
+                >
+                  <span class="max-w-40 truncate text-[11px] font-medium">
+                    {{ item.label }}
+                  </span>
+                  <UButton
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    icon="i-lucide-x"
+                    class="ml-1 size-4 rounded-full p-0 opacity-0 transition pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                    @click="toggleAgentContextBlock(item.tabId, item.blockId)"
+                  />
+                </UBadge>
+              </div>
+
+              <UButton
+                v-if="agentContextBadgeItems.length > 1"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                icon="i-lucide-eraser"
+                class="shrink-0 rounded-full"
+                @click="clearAgentContextBlock"
+              />
+            </div>
+          </template>
+        </DashboardAgentChatPanel>
+      </div>
+    </Teleport>
+
     <div v-if="workspaceQuery.status === 'error'" class="p-6">
       <UAlert
         color="error"
@@ -2654,137 +2692,14 @@ provide(workspaceNodeEditorContextKey, {
             />
           </div>
         </div>
-
-        <div
-          class="agent-rail hidden shrink-0 overflow-hidden border-l border-neutral-200/60 bg-white/50 transition-[width,opacity] duration-300 dark:border-neutral-800/60 dark:bg-neutral-950/40 lg:block"
-          :class="isAgentChatVisible ? 'w-104 opacity-100' : 'pointer-events-none w-0 opacity-0'"
-        >
-          <div class="agent-rail-aura" aria-hidden="true" />
-          <div class="sticky top-0 flex h-full min-h-0 flex-col gap-3 p-3">
-            <div class="min-h-0 flex-1">
-              <DashboardAgentChatPanel
-                :nodes="agentChatNodes"
-                :active-tab-id="activeTabId || null"
-                scope-kind="blocks"
-                @close="isAgentChatVisible = false"
-              >
-                <template #scope-badges>
-                  <div
-                    v-if="agentContextBadgeItems.length > 0"
-                    class="flex items-start justify-between gap-2"
-                  >
-                    <div class="flex min-w-0 flex-wrap items-center gap-1.5">
-                      <UBadge
-                        v-for="item in agentContextBadgeItems"
-                        :key="item.id"
-                        :title="item.title"
-                        color="neutral"
-                        variant="soft"
-                        size="sm"
-                        class="group rounded-full pl-2.5 pr-1.5"
-                      >
-                        <span class="max-w-40 truncate text-[11px] font-medium">
-                          {{ item.label }}
-                        </span>
-                        <UButton
-                          color="neutral"
-                          variant="ghost"
-                          size="xs"
-                          icon="i-lucide-x"
-                          class="ml-1 size-4 rounded-full p-0 opacity-0 transition pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
-                          @click="toggleAgentContextBlock(item.tabId, item.blockId)"
-                        />
-                      </UBadge>
-                    </div>
-
-                    <UButton
-                      v-if="agentContextBadgeItems.length > 1"
-                      color="neutral"
-                      variant="ghost"
-                      size="xs"
-                      icon="i-lucide-eraser"
-                      class="shrink-0 rounded-full"
-                      @click="clearAgentContextBlock"
-                    />
-                  </div>
-                </template>
-              </DashboardAgentChatPanel>
-            </div>
-          </div>
-        </div>
       </div>
 
       <div
-        class="pointer-events-none fixed bottom-4 right-3 top-20 z-40 flex w-[min(26rem,calc(100vw-1.5rem))] flex-col gap-3 transition-all duration-300 sm:bottom-6 sm:right-6 sm:top-24 lg:hidden"
-        :class="
-          isAgentChatVisible
-            ? 'translate-x-0 opacity-100'
-            : 'pointer-events-none translate-x-8 opacity-0'
-        "
+        v-if="isWorkspaceRefreshing"
+        class="pointer-events-none absolute right-4 top-4 z-30 md:right-6 md:top-6"
       >
-        <div class="pointer-events-auto min-h-0 flex-1">
-          <DashboardAgentChatPanel
-            :nodes="agentChatNodes"
-            :active-tab-id="activeTabId || null"
-            scope-kind="blocks"
-            @close="isAgentChatVisible = false"
-          >
-            <template #scope-badges>
-              <div
-                v-if="agentContextBadgeItems.length > 0"
-                class="flex items-start justify-between gap-2"
-              >
-                <div class="flex min-w-0 flex-wrap items-center gap-1.5">
-                  <UBadge
-                    v-for="item in agentContextBadgeItems"
-                    :key="item.id"
-                    :title="item.title"
-                    color="neutral"
-                    variant="soft"
-                    size="sm"
-                    class="group rounded-full pl-2.5 pr-1.5"
-                  >
-                    <span class="max-w-40 truncate text-[11px] font-medium">
-                      {{ item.label }}
-                    </span>
-                    <UButton
-                      color="neutral"
-                      variant="ghost"
-                      size="xs"
-                      icon="i-lucide-x"
-                      class="ml-1 size-4 rounded-full p-0 opacity-0 transition pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
-                      @click="toggleAgentContextBlock(item.tabId, item.blockId)"
-                    />
-                  </UBadge>
-                </div>
-
-                <UButton
-                  v-if="agentContextBadgeItems.length > 1"
-                  color="neutral"
-                  variant="ghost"
-                  size="xs"
-                  icon="i-lucide-eraser"
-                  class="shrink-0 rounded-full"
-                  @click="clearAgentContextBlock"
-                />
-              </div>
-            </template>
-          </DashboardAgentChatPanel>
-        </div>
-      </div>
-
-      <button
-        v-if="!isAgentChatVisible"
-        type="button"
-        class="fixed bottom-8 right-8 z-50 flex size-14 items-center justify-center rounded-2xl bg-neutral-900 text-white shadow-2xl shadow-black/20 transition-all duration-300 hover:scale-110 active:scale-95 dark:bg-neutral-100 dark:text-neutral-900"
-        @click="isAgentChatVisible = true"
-      >
-        <UIcon name="i-lucide-sparkles" class="size-6" />
-      </button>
-
-      <div v-if="isWorkspaceRefreshing" class="pointer-events-none fixed right-6 top-20 z-50">
         <div
-          class="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-muted/70 bg-default/90 px-3 py-2 text-xs font-medium text-toned shadow-lg shadow-black/5 backdrop-blur-md"
+          class="pointer-events-auto inline-flex items-center gap-2 rounded-full border border-muted/70 bg-default/95 px-3 py-2 text-xs font-medium text-toned"
         >
           <UIcon name="i-lucide-loader-2" class="size-3.5 animate-spin text-primary" />
           Refreshing workspace

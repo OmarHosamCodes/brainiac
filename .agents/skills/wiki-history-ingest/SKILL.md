@@ -14,13 +14,13 @@ This is a thin router for **history sources only**. It does not replace `wiki-in
 
 If the user invokes `/wiki-history-ingest <target>` (or equivalent text command), dispatch directly:
 
-| Subcommand | Route To |
-|---|---|
-| `claude` | `claude-history-ingest` |
-| `codex` | `codex-history-ingest` |
-| `hermes` | `hermes-history-ingest` |
-| `openclaw` | `openclaw-history-ingest` |
-| `auto` | infer from context using rules below |
+| Subcommand | Route To                             |
+| ---------- | ------------------------------------ |
+| `claude`   | `claude-history-ingest`              |
+| `codex`    | `codex-history-ingest`               |
+| `hermes`   | `hermes-history-ingest`              |
+| `openclaw` | `openclaw-history-ingest`            |
+| `auto`     | infer from context using rules below |
 
 ## Routing Rules
 

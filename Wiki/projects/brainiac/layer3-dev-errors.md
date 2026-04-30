@@ -10,14 +10,16 @@ tags: [layer3, api, errors, orpc, openrouter]
 **File:** `packages/api/src/dev-errors.ts`
 
 ## Exports
-| Export | Description |
-|---|---|
+
+| Export                                         | Description                                                                                  |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `toProcedureError(procedure, error, context?)` | Converts any caught error into a typed `ORPCError`; handles OpenRouter HTTP errors specially |
-| `toInternalServerError` | Alias for `toProcedureError` |
+| `toInternalServerError`                        | Alias for `toProcedureError`                                                                 |
 
 ## Error Handling Logic
 
 ### `toProcedureError(procedure, error, context)`
+
 1. If `error instanceof ORPCError` → re-throw as-is (pass-through).
 2. Logs `console.error([procedure], error)`.
 3. If `isOpenRouterHttpError(error)` → call `toOpenRouterProcedureError` which maps HTTP status codes to ORPC codes:
@@ -27,19 +29,23 @@ tags: [layer3, api, errors, orpc, openrouter]
 5. In development → return `ORPCError("INTERNAL_SERVER_ERROR")` with `data.debug` JSON containing: `procedure`, `errorName`, `message`, `cause`, `stack`, and if OpenRouter error: `upstreamStatus`, `upstreamContentType`, `upstreamBody`.
 
 ### OpenRouter HTTP Error Detection (`isOpenRouterHttpError`)
+
 Checks that the error has `statusCode: number`, `body: string`, `contentType: string`, and `rawResponse: Response` properties via `Reflect.get`.
 
 ## Outgoing Dependencies
-| Dependency | Mechanism |
-|---|---|
+
+| Dependency                     | Mechanism                                                                               |
+| ------------------------------ | --------------------------------------------------------------------------------------- |
 | `@brainiac/env/server` (`env`) | reads `env.NODE_ENV` to switch between dev debug payloads and production generic errors |
-| `@orpc/server` (`ORPCError`) | constructs typed ORPC errors with codes, messages, and optional `data.debug` |
+| `@orpc/server` (`ORPCError`)   | constructs typed ORPC errors with codes, messages, and optional `data.debug`            |
 
 ## Incoming Dependents
-| Consumer | Mechanism |
-|---|---|
-| `packages/api/src/procedures.ts` | `devErrorMiddleware` wraps every procedure call; catches all unhandled errors via `toProcedureError("rpc.procedure", error)` |
-| `routers/agent.ts` | calls `toInternalServerError("agent.*", error, { ...context })` inside every `try/catch` block with procedure-specific debug context (conversationId, model, toolPreset, etc.) |
+
+| Consumer                         | Mechanism                                                                                                                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `packages/api/src/procedures.ts` | `devErrorMiddleware` wraps every procedure call; catches all unhandled errors via `toProcedureError("rpc.procedure", error)`                                                   |
+| `routers/agent.ts`               | calls `toInternalServerError("agent.*", error, { ...context })` inside every `try/catch` block with procedure-specific debug context (conversationId, model, toolPreset, etc.) |
 
 ## Standalone Status
+
 Not standalone — depends on `@brainiac/env/server` and `@orpc/server`.

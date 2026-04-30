@@ -13,17 +13,19 @@ tags: [layer5, pages, nuxt, vue, auth, billing, legal]
 Hero section with animated badge, title, body copy, CTA buttons, and a live system status bar. Performs an `orpc.healthCheck` query on mount (SSR-prefetched via `onServerPrefetch`). Status bar shows green pulse if `healthCheck.isSuccess`.
 
 ### Incoming Dependents
-| Consumer | Mechanism |
-|---|---|
+
+| Consumer    | Mechanism                |
+| ----------- | ------------------------ |
 | Root router | Nuxt auto-routing at `/` |
 
 ### Outgoing Dependencies
-| Dependency | Mechanism |
-|---|---|
-| `useOrpc()` | calls `orpc.healthCheck.queryOptions()` via TanStack Vue Query |
-| `@tanstack/vue-query` | `useQuery` for health check |
-| `Header` component | rendered in template |
-| Nuxt UI (`UButton`, `UIcon`) | CTA buttons + icons |
+
+| Dependency                   | Mechanism                                                      |
+| ---------------------------- | -------------------------------------------------------------- |
+| `useOrpc()`                  | calls `orpc.healthCheck.queryOptions()` via TanStack Vue Query |
+| `@tanstack/vue-query`        | `useQuery` for health check                                    |
+| `Header` component           | rendered in template                                           |
+| Nuxt UI (`UButton`, `UIcon`) | CTA buttons + icons                                            |
 
 **Standalone Status:** Not standalone — depends on `useOrpc`, TanStack Vue Query, Header, Nuxt UI.
 
@@ -38,18 +40,20 @@ Hero section with animated badge, title, body copy, CTA buttons, and a live syst
 Two-panel auth page. Left pane: branded hero with stats. Right pane: conditionally renders `SignInForm` or `SignUpForm` controlled by `showSignIn` ref. Watches `useAuthSession()` — redirects to `/dashboard` on successful auth.
 
 ### Incoming Dependents
-| Consumer | Mechanism |
-|---|---|
-| `middleware/auth.ts` | redirects unauthenticated users here |
+
+| Consumer               | Mechanism                                       |
+| ---------------------- | ----------------------------------------------- |
+| `middleware/auth.ts`   | redirects unauthenticated users here            |
 | `pages/login.vue` self | `navigateTo("/dashboard")` on session establish |
 
 ### Outgoing Dependencies
-| Dependency | Mechanism |
-|---|---|
-| `useAuthSession()` | watches session, redirects on `session.data` truthy |
-| `SignInForm` component | rendered when `showSignIn === true` |
-| `SignUpForm` component | rendered when `showSignIn === false` |
-| Nuxt UI (`UIcon`, `ULink`) | icons + navigation links |
+
+| Dependency                 | Mechanism                                           |
+| -------------------------- | --------------------------------------------------- |
+| `useAuthSession()`         | watches session, redirects on `session.data` truthy |
+| `SignInForm` component     | rendered when `showSignIn === true`                 |
+| `SignUpForm` component     | rendered when `showSignIn === false`                |
+| Nuxt UI (`UIcon`, `ULink`) | icons + navigation links                            |
 
 **Standalone Status:** Not standalone — depends on auth composables, two form components, Nuxt UI.
 
@@ -64,18 +68,20 @@ Two-panel auth page. Left pane: branded hero with stats. Right pane: conditional
 Two-column pricing grid (Free vs Pro tiers). Lists 8 feature comparisons from a static `features` array. Calls `useBilling()` for `isPro` + `checkout`. `handleCheckout` navigates to `/login` if unauthenticated, `/billing` if already Pro, else calls `checkout("pro")`.
 
 ### Incoming Dependents
-| Consumer | Mechanism |
-|---|---|
-| Root router | Nuxt auto-routing at `/pricing` |
-| `pages/index.vue` | `UButton to="/pricing"` |
+
+| Consumer          | Mechanism                       |
+| ----------------- | ------------------------------- |
+| Root router       | Nuxt auto-routing at `/pricing` |
+| `pages/index.vue` | `UButton to="/pricing"`         |
 
 ### Outgoing Dependencies
-| Dependency | Mechanism |
-|---|---|
-| `useAuthSession()` | computes `isAuthenticated` |
-| `useBilling()` | calls `checkout`, reads `isPro` |
-| `Header` component | rendered in template |
-| Nuxt UI (`UCard`, `UButton`, `UBadge`, `UIcon`) | UI primitives |
+
+| Dependency                                      | Mechanism                       |
+| ----------------------------------------------- | ------------------------------- |
+| `useAuthSession()`                              | computes `isAuthenticated`      |
+| `useBilling()`                                  | calls `checkout`, reads `isPro` |
+| `Header` component                              | rendered in template            |
+| Nuxt UI (`UCard`, `UButton`, `UBadge`, `UIcon`) | UI primitives                   |
 
 **Standalone Status:** Not standalone — depends on auth + billing composables, Header, Nuxt UI.
 
@@ -89,16 +95,18 @@ Two-column pricing grid (Free vs Pro tiers). Lists 8 feature comparisons from a 
 Renders 10 privacy policy sections (scope, data collected, AI processing, sharing, retention, rights, security, international transfers, updates) via `LegalPageShell`. Uses `useSeoMeta` for page title/description.
 
 ### Incoming Dependents
-| Consumer | Mechanism |
-|---|---|
-| Root router | Nuxt auto-routing at `/privacy` |
-| `pages/login.vue` | `ULink to="/privacy"` |
+
+| Consumer          | Mechanism                       |
+| ----------------- | ------------------------------- |
+| Root router       | Nuxt auto-routing at `/privacy` |
+| `pages/login.vue` | `ULink to="/privacy"`           |
 
 ### Outgoing Dependencies
-| Dependency | Mechanism |
-|---|---|
+
+| Dependency                 | Mechanism                                                                   |
+| -------------------------- | --------------------------------------------------------------------------- |
 | `LegalPageShell` component | passes `title`, `summary`, `effectiveDate`, `lastUpdated`, `sections` props |
-| Nuxt `useSeoMeta` | sets `title` + `description` meta tags |
+| Nuxt `useSeoMeta`          | sets `title` + `description` meta tags                                      |
 
 **Standalone Status:** Not standalone — depends on `LegalPageShell`, Nuxt `useSeoMeta`.
 
@@ -112,8 +120,9 @@ Renders 10 privacy policy sections (scope, data collected, AI processing, sharin
 Structurally identical to `privacy.vue` — renders ToS sections via `LegalPageShell`.
 
 ### Outgoing Dependencies
-| Dependency | Mechanism |
-|---|---|
+
+| Dependency                 | Mechanism                      |
+| -------------------------- | ------------------------------ |
 | `LegalPageShell` component | passes legal sections as props |
 
 **Standalone Status:** Not standalone — depends on `LegalPageShell`.

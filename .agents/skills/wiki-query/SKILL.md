@@ -40,18 +40,20 @@ In filtered mode, note the filter in the Step 6 log entry: `mode=filtered`.
 ### Step 1: Understand the Question
 
 Classify the query type:
+
 - **Factual lookup** — "What is X?" → Find the relevant page(s)
 - **Relationship query** — "How does X relate to Y?" → Find both pages and their cross-references
 - **Synthesis query** — "What's the current thinking on X?" → Find all pages that touch X, synthesize
 - **Gap query** — "What don't I know about X?" → Find what's missing, check open questions sections
 
 Also decide the **mode**:
+
 - **Index-only mode** — triggered by "quick answer", "just scan", "don't read the pages", "fast lookup". Stops at Step 3. Answers from frontmatter + `index.md` only.
 - **Normal mode** — the full tiered pipeline below.
 
 ### Step 2: Index Pass (cheap)
 
-Build a candidate set *without opening any page bodies*:
+Build a candidate set _without opening any page bodies_:
 
 - You've already read `index.md` above — use it as the first filter. It lists every page with a one-line description and tags.
 - Use `Grep` to scan page **frontmatter only** for title, tag, alias, and summary matches. A pattern like `^(title|tags|aliases|summary):` scoped to vault `.md` files is far cheaper than content grep.
@@ -90,7 +92,7 @@ If `QMD_PAPERS_COLLECTION` is set and the user is asking about a topic likely co
 
 ### Step 3: Section Pass (medium cost — only if Steps 2/2b are inconclusive)
 
-For each of the top candidates, pull the relevant section *without reading the whole page*:
+For each of the top candidates, pull the relevant section _without reading the whole page_:
 
 - Use `Grep -A 10 -B 2 "<query-term>" <candidate-file>` to get just the lines around the match.
 - This usually returns 15–30 lines per hit instead of 100–500.
@@ -108,6 +110,7 @@ Only when Steps 2 and 3 don't answer the question:
 ### Step 5: Synthesize an Answer
 
 Compose your answer from wiki content:
+
 - Cite specific wiki pages using `[[page-name]]` notation
 - Note which step the answer came from ("found in summary" vs "grepped section" vs "full page read") — helps the user understand confidence
 - If the wiki has contradictions, present both sides
@@ -117,6 +120,7 @@ Compose your answer from wiki content:
 ### Step 6: Log the Query
 
 Append to `log.md`:
+
 ```
 - [TIMESTAMP] QUERY query="the user's question" result_pages=N mode=normal|index_only|filtered escalated=true|false
 ```

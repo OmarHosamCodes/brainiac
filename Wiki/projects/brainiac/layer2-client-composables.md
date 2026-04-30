@@ -15,10 +15,10 @@ layer: 2
 
 ## Primary Entities
 
-| Name | Type | File |
-|---|---|---|
-| `useOrpc` | Composable | `apps/web/app/composables/useOrpc.ts` |
-| `useAuthClient` | Composable | `apps/web/app/composables/useAuthClient.ts` |
+| Name             | Type       | File                                        |
+| ---------------- | ---------- | ------------------------------------------- |
+| `useOrpc`        | Composable | `apps/web/app/composables/useOrpc.ts`       |
+| `useAuthClient`  | Composable | `apps/web/app/composables/useAuthClient.ts` |
 | `useAuthSession` | Composable | `apps/web/app/composables/useAuthClient.ts` |
 
 ---
@@ -66,13 +66,13 @@ export function useAuthSession() {
 
 ## Relationships
 
-| Role | Entity | Mechanism |
-|---|---|---|
-| **Incoming (Dependents)** | `useWorkspaceStore` | `useOrpc()`, `useAuthSession()` |
-| **Incoming (Dependents)** | `useAgencyTimeTrackingStore` | `useOrpc()`, `useAuthSession()` (via `useAuthClient`) |
-| **Incoming (Dependents)** | All composables calling ORPC procedures | `useOrpc()` |
-| **Outgoing (Dependencies)** | Nuxt plugin `$orpc` | `useNuxtApp().$orpc` — ORPC client injected by web app plugin |
-| **Outgoing (Dependencies)** | Nuxt plugin `$authClient` | `useNuxtApp().$authClient` — BetterAuth client injected by web app plugin |
+| Role                        | Entity                                  | Mechanism                                                                 |
+| --------------------------- | --------------------------------------- | ------------------------------------------------------------------------- |
+| **Incoming (Dependents)**   | `useWorkspaceStore`                     | `useOrpc()`, `useAuthSession()`                                           |
+| **Incoming (Dependents)**   | `useAgencyTimeTrackingStore`            | `useOrpc()`, `useAuthSession()` (via `useAuthClient`)                     |
+| **Incoming (Dependents)**   | All composables calling ORPC procedures | `useOrpc()`                                                               |
+| **Outgoing (Dependencies)** | Nuxt plugin `$orpc`                     | `useNuxtApp().$orpc` — ORPC client injected by web app plugin             |
+| **Outgoing (Dependencies)** | Nuxt plugin `$authClient`               | `useNuxtApp().$authClient` — BetterAuth client injected by web app plugin |
 
 ## Standalone Status
 

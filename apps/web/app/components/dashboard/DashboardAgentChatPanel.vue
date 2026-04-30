@@ -451,8 +451,7 @@ function extractFetchedLinkCard(
     return null;
   }
 
-  const url =
-    (outputObj?.url as string | undefined) ?? (inputObj?.url as string | undefined) ?? "";
+  const url = (outputObj?.url as string | undefined) ?? (inputObj?.url as string | undefined) ?? "";
   const finalUrl = (outputObj?.finalUrl as string | undefined) ?? url;
 
   if (!url && !finalUrl) {
@@ -511,9 +510,7 @@ function humanizeToolName(name: string) {
     return TOOL_LABELS[name];
   }
 
-  return name
-    .replace(/[_-]+/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  return name.replace(/[_-]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function truncateString(value: string, max = 80) {
@@ -553,9 +550,7 @@ function summarizeToolCall(name: string, input: unknown, output: unknown): strin
     case "get_marketplace_item_details": {
       const summary = outputObj?.summary as Record<string, unknown> | null | undefined;
       const title =
-        (summary?.title as string | undefined) ??
-        (outputObj?.title as string | undefined) ??
-        "";
+        (summary?.title as string | undefined) ?? (outputObj?.title as string | undefined) ?? "";
       return title ? truncateString(title, 70) : "";
     }
     case "create_block":
@@ -563,9 +558,7 @@ function summarizeToolCall(name: string, input: unknown, output: unknown): strin
     case "replace_block":
     case "delete_block": {
       const blockType =
-        (inputObj?.blockType as string | undefined) ??
-        (inputObj?.type as string | undefined) ??
-        "";
+        (inputObj?.blockType as string | undefined) ?? (inputObj?.type as string | undefined) ?? "";
       const title =
         (inputObj?.title as string | undefined) ??
         ((inputObj?.block as Record<string, unknown> | undefined)?.title as string | undefined) ??
@@ -618,8 +611,7 @@ function normalizeToolCall(entry: AgentToolCallEntry, index: number): Normalized
 
   const call = entry as AgentToolCall;
   const summary = summarizeToolCall(call.name, call.input, call.output);
-  const hasDetails =
-    call.input !== undefined || call.output !== undefined || Boolean(call.error);
+  const hasDetails = call.input !== undefined || call.output !== undefined || Boolean(call.error);
 
   return {
     key: `${index}:${call.id ?? call.name}`,
@@ -654,7 +646,11 @@ function getToolIcon(name: string) {
   if (name === "fetch_web_page") {
     return "i-lucide-globe";
   }
-  if (name.startsWith("search_") || name === "list_dashboard_nodes" || name === "list_marketplace_items") {
+  if (
+    name.startsWith("search_") ||
+    name === "list_dashboard_nodes" ||
+    name === "list_marketplace_items"
+  ) {
     return "i-lucide-search";
   }
   if (name.startsWith("get_")) {
@@ -952,10 +948,7 @@ function closeToolResponsePreview() {
               v-html="renderAssistantMessage(message.content)"
             />
 
-            <div
-              v-if="getMessageToolCalls(message).length"
-              class="mt-3 flex flex-col gap-1.5"
-            >
+            <div v-if="getMessageToolCalls(message).length" class="mt-3 flex flex-col gap-1.5">
               <div
                 v-for="call in getMessageToolCalls(message)"
                 :key="call.key"
@@ -981,9 +974,7 @@ function closeToolResponsePreview() {
                       'animate-spin': call.status === 'in_progress',
                     }"
                   />
-                  <span
-                    class="font-medium text-neutral-700 dark:text-neutral-200"
-                  >
+                  <span class="font-medium text-neutral-700 dark:text-neutral-200">
                     {{ call.label }}
                   </span>
                   <span
@@ -1064,7 +1055,8 @@ function closeToolResponsePreview() {
                     </div>
                     <pre
                       class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md bg-neutral-100/70 px-2 py-1.5 font-mono text-[11px] leading-relaxed text-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300"
-                    >{{ formatToolPayload(call.input) }}</pre>
+                      >{{ formatToolPayload(call.input) }}</pre
+                    >
                   </div>
                   <div v-if="call.output !== undefined">
                     <div
@@ -1074,7 +1066,8 @@ function closeToolResponsePreview() {
                     </div>
                     <pre
                       class="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md bg-neutral-100/70 px-2 py-1.5 font-mono text-[11px] leading-relaxed text-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300"
-                    >{{ formatToolPayload(call.output) }}</pre>
+                      >{{ formatToolPayload(call.output) }}</pre
+                    >
                   </div>
                 </div>
               </div>
@@ -1131,12 +1124,16 @@ function closeToolResponsePreview() {
         role="status"
         aria-live="polite"
       >
-        <div class="flex items-center gap-2.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+        <div
+          class="flex items-center gap-2.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400"
+        >
           <span class="agent-progress-pulse relative flex size-1.5 shrink-0">
             <span
               class="absolute inline-flex h-full w-full animate-ping rounded-full bg-neutral-400/60 opacity-75 dark:bg-neutral-500/60"
             />
-            <span class="relative inline-flex size-1.5 rounded-full bg-neutral-500 dark:bg-neutral-400" />
+            <span
+              class="relative inline-flex size-1.5 rounded-full bg-neutral-500 dark:bg-neutral-400"
+            />
           </span>
           <Transition
             mode="out-in"

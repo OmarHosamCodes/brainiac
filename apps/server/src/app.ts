@@ -1,12 +1,12 @@
 /**
  * Backend Application Setup (Hono + oRPC)
- * 
+ *
  * This file configures the main Hono server with:
  * - CORS for cross-origin requests from the frontend
  * - Authentication via Better Auth
  * - oRPC endpoint at /api/app (type-safe RPC layer)
  * - Error handling and logging
- * 
+ *
  * Entry point: apps/server/src/index.ts
  * Start with: bun run dev (runs on port 7000 via BETTER_AUTH_URL)
  */
@@ -27,9 +27,7 @@ function getRpcDebugResponse(error: unknown, path: string) {
    * This helps frontend developers understand what went wrong
    */
   const message =
-    error instanceof Error && error.message
-      ? error.message
-      : "Unhandled server error";
+    error instanceof Error && error.message ? error.message : "Unhandled server error";
   const cause =
     error instanceof Error && error.cause instanceof Error
       ? error.cause.message
@@ -64,7 +62,7 @@ function getRpcDebugResponse(error: unknown, path: string) {
 function createApp() {
   /**
    * Initialize the Hono application
-   * 
+   *
    * Setup order:
    * 1. Error handler - catches all errors and logs them
    * 2. Logging - logs incoming requests
@@ -79,10 +77,7 @@ function createApp() {
   app.onError((error, context) => {
     console.error(error);
 
-    if (
-      env.NODE_ENV === "development" &&
-      context.req.path.startsWith("/rpc/")
-    ) {
+    if (env.NODE_ENV === "development" && context.req.path.startsWith("/rpc/")) {
       return getRpcDebugResponse(error, context.req.path);
     }
 
@@ -100,9 +95,7 @@ function createApp() {
     }),
   );
 
-  app.on(["GET", "POST"], "/api/auth/*", (context) =>
-    auth.handler(context.req.raw),
-  );
+  app.on(["GET", "POST"], "/api/auth/*", (context) => auth.handler(context.req.raw));
 
   app.get("/billing/success", (context) => {
     const url = new URL("/billing/success", env.CORS_ORIGIN);
@@ -112,10 +105,7 @@ function createApp() {
 
   app.use("/*", async (context, next) => {
     const requestContext = await createContext({ context });
-    const response = await handleAppRouterRequest(
-      context.req.raw,
-      requestContext,
-    );
+    const response = await handleAppRouterRequest(context.req.raw, requestContext);
 
     if (response) {
       return response;
@@ -144,15 +134,15 @@ if (env.NODE_ENV === "development") {
 
 /**
  * Server export for Bun
- * 
+ *
  * Port 7000 is configured for development via Traefik TCP proxy.
  * The actual Bun dev server runs on port 3000 and is proxied through
  * Traefik to 7000 for consistent URLs.
- * 
+ *
  * To disable Traefik proxy and run on actual ports (3000/3001), use:
  *   bun run dev:portless
  */
 export default {
-  port: 7000,  // Proxied via Traefik (actual dev server is on 3000)
+  port: 7000, // Proxied via Traefik (actual dev server is on 3000)
   fetch: app.fetch,
 };

@@ -20,17 +20,20 @@ File: `apps/web/app/components/workspace/node/blocks/WorkspaceAgencyTimeTrackerB
 ## Features
 
 ### Grouped Project/Client Selector
+
 - Projects are grouped under non-selectable **client** headers
 - Height is limited and the dropdown is scrollable
 - Clients are displayed as section headers; only leaf projects are selectable
 
 ### Stop Gating
+
 - The timer **cannot be stopped** unless:
   1. A **project** is selected
   2. At least **one tag** is selected
 - The stop action is disabled with visual feedback when conditions are unmet
 
 ### Entry Links (Link Popover)
+
 - A `i-lucide-link` ghost button appears inline with the timer controls
 - On click, a popover opens where the user can insert/edit a URL
 - Link icon is colored primary when a URL is set, ghost when empty
@@ -38,11 +41,13 @@ File: `apps/web/app/components/workspace/node/blocks/WorkspaceAgencyTimeTrackerB
 - A `getAgencyLinkUrlDisplayLabel` util derives a human-readable label from the URL (hostname or short path)
 
 ### Tag Selector (Tag Popover)
+
 - A `i-lucide-tag` ghost button is shown **only when tags exist** (`v-if="tags.length > 0"`)
 - On click, a popover with searchable tag toggles opens
 - Tags always show, with "No matching tags." when list is empty
 
 ### Active State Summary Row
+
 - Below the main controls, a flex-wrap row is shown **only when tags are selected or a valid link URL is set**
 - Link appears as a clickable pill (`<a>`) with a primary-tinted border, showing the display label and a link icon — opens in a new tab
 - Each selected tag appears as a `UBadge` (soft primary, rounded-full)
@@ -51,6 +56,7 @@ File: `apps/web/app/components/workspace/node/blocks/WorkspaceAgencyTimeTrackerB
 ## Log Entry Consistency
 
 The time entry log (`WorkspaceAgencyTimeEntriesLog`) uses the **same icon+popover pattern** as the tracker:
+
 - Link: `i-lucide-link` → popover showing URL + "Open link" button with external-link icon (read-only in log)
 - Tags: `i-lucide-tag` → same toggle popover, placed inline with the link button in a shared flex row
 

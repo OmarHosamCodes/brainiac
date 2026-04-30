@@ -87,6 +87,7 @@ Same as Mode 1 above, but with reason `"rebuild"`.
 ### Step 2: Clear live wiki
 
 Remove all content from the category directories (`concepts/`, `entities/`, `skills/`, etc.) and the `projects/` directory. Keep:
+
 - `_archives/` (obviously)
 - `.obsidian/` (Obsidian config)
 - `.env` (if present in vault)
@@ -110,6 +111,7 @@ Each of these will rebuild the manifest as they go.
 ### Step 4: Log the rebuild
 
 Append to `log.md`:
+
 ```
 - [TIMESTAMP] REBUILD archived_to="_archives/2026-04-06T10-30-00Z" previous_pages=87
 ```
@@ -125,10 +127,10 @@ Read `_archives/` directory. For each archive, read `archive-meta.json` and pres
 ```markdown
 ## Available Archives
 
-| Date | Reason | Pages | Sources |
-|---|---|---|---|
-| 2026-04-06 10:30 | rebuild | 87 | 42 |
-| 2026-03-15 08:00 | snapshot | 65 | 31 |
+| Date             | Reason   | Pages | Sources |
+| ---------------- | -------- | ----- | ------- |
+| 2026-04-06 10:30 | rebuild  | 87    | 42      |
+| 2026-03-15 08:00 | snapshot | 65    | 31      |
 ```
 
 ### Step 2: Confirm which archive to restore

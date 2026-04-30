@@ -33,18 +33,18 @@ layer: 1
 
 ### Validated Variables
 
-| Variable | Zod Rule |
-|---|---|
-| `DATABASE_URL` | `z.string().min(1)` |
-| `BETTER_AUTH_SECRET` | `z.string().min(32)` |
-| `BETTER_AUTH_URL` | `z.url()` |
-| `CORS_ORIGIN` | `z.url()` |
-| `OPENROUTER_API_KEY` | `z.string().min(1)` |
-| `NODE_ENV` | `z.enum(["development","production","test"]).default("development")` |
-| `POLAR_ACCESS_TOKEN` | `z.string().min(1)` |
-| `POLAR_WEBHOOK_SECRET` | `z.string().min(1)` |
-| `POLAR_SERVER` | `z.enum(["sandbox","production"]).default("sandbox")` |
-| `POLAR_PRODUCT_PRO` | `z.string().min(1)` |
+| Variable               | Zod Rule                                                             |
+| ---------------------- | -------------------------------------------------------------------- |
+| `DATABASE_URL`         | `z.string().min(1)`                                                  |
+| `BETTER_AUTH_SECRET`   | `z.string().min(32)`                                                 |
+| `BETTER_AUTH_URL`      | `z.url()`                                                            |
+| `CORS_ORIGIN`          | `z.url()`                                                            |
+| `OPENROUTER_API_KEY`   | `z.string().min(1)`                                                  |
+| `NODE_ENV`             | `z.enum(["development","production","test"]).default("development")` |
+| `POLAR_ACCESS_TOKEN`   | `z.string().min(1)`                                                  |
+| `POLAR_WEBHOOK_SECRET` | `z.string().min(1)`                                                  |
+| `POLAR_SERVER`         | `z.enum(["sandbox","production"]).default("sandbox")`                |
+| `POLAR_PRODUCT_PRO`    | `z.string().min(1)`                                                  |
 
 ---
 
@@ -57,23 +57,23 @@ layer: 1
 
 ### Validated Variables
 
-| Variable | Zod Rule |
-|---|---|
+| Variable                 | Zod Rule  |
+| ------------------------ | --------- |
 | `NUXT_PUBLIC_SERVER_URL` | `z.url()` |
 
 ---
 
 ## Relationships
 
-| Role | Entity | Mechanism |
-|---|---|---|
-| **Incoming (Dependents)** | `packages/db/src/index.ts` | `import { env } from "@brainiac/env/server"` → accesses `env.DATABASE_URL` to initialize Drizzle |
-| **Incoming (Dependents)** | `apps/server` (auth, routes) | `import { env } from "@brainiac/env/server"` → accesses auth secrets, CORS, Polar tokens |
-| **Incoming (Dependents)** | `apps/web/nuxt.config.ts` | `import { env } from "@brainiac/env/web"` → build-time validation of `NUXT_PUBLIC_SERVER_URL` |
-| **Outgoing (Dependencies)** | `@t3-oss/env-core` | `createEnv()` call with server schema |
-| **Outgoing (Dependencies)** | `@t3-oss/env-nuxt` | `createEnv()` call with client schema |
-| **Outgoing (Dependencies)** | `zod` (catalog) | All schema validators |
-| **Outgoing (Dependencies)** | `dotenv` (catalog) | `import "dotenv/config"` side-effect in server.ts |
+| Role                        | Entity                       | Mechanism                                                                                        |
+| --------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------ |
+| **Incoming (Dependents)**   | `packages/db/src/index.ts`   | `import { env } from "@brainiac/env/server"` → accesses `env.DATABASE_URL` to initialize Drizzle |
+| **Incoming (Dependents)**   | `apps/server` (auth, routes) | `import { env } from "@brainiac/env/server"` → accesses auth secrets, CORS, Polar tokens         |
+| **Incoming (Dependents)**   | `apps/web/nuxt.config.ts`    | `import { env } from "@brainiac/env/web"` → build-time validation of `NUXT_PUBLIC_SERVER_URL`    |
+| **Outgoing (Dependencies)** | `@t3-oss/env-core`           | `createEnv()` call with server schema                                                            |
+| **Outgoing (Dependencies)** | `@t3-oss/env-nuxt`           | `createEnv()` call with client schema                                                            |
+| **Outgoing (Dependencies)** | `zod` (catalog)              | All schema validators                                                                            |
+| **Outgoing (Dependencies)** | `dotenv` (catalog)           | `import "dotenv/config"` side-effect in server.ts                                                |
 
 ## Standalone Status
 

@@ -19,7 +19,10 @@
       "content_hash": "sha256:279024cdeaea67e9314aaf40699a5218ee35c7a2beb4b77d26c5ae270bf8b456",
       "source_type": "claude_conversation",
       "project": "brainiac",
-      "pages_created": ["projects/brainiac/brainiac-agency-time-tracker.md", "concepts/icon-popover-pattern.md"],
+      "pages_created": [
+        "projects/brainiac/brainiac-agency-time-tracker.md",
+        "concepts/icon-popover-pattern.md"
+      ],
       "pages_updated": ["projects/brainiac/brainiac.md"]
     },
     "/home/omar/.claude/projects/-home-omar-Projects-brainiac/b9fca575-a0bd-4b41-abba-f41a026a46c7.jsonl": {
@@ -59,7 +62,10 @@
       "content_hash": "sha256:5cdd24e4557ca957474eb294748c748f4a7e69090644849dd9ac5a57e5b55d10",
       "source_type": "codex_rollout",
       "project": "brainiac",
-      "pages_created": ["projects/brainiac/brainiac-eisenhower-matrix.md", "projects/brainiac/brainiac-time-orchestrator.md"],
+      "pages_created": [
+        "projects/brainiac/brainiac-eisenhower-matrix.md",
+        "projects/brainiac/brainiac-time-orchestrator.md"
+      ],
       "pages_updated": ["projects/brainiac/brainiac.md"]
     },
     "/home/omar/.codex/sessions/2026/04/13/rollout-2026-04-13T22-13-16-019d887a-1828-72d2-8b7f-bed81349f213.jsonl": {

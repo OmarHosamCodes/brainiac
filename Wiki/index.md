@@ -4,7 +4,7 @@ title: Wiki Index
 
 # Wiki Index
 
-*This index is automatically maintained. Last updated: 2026-04-23T00:00:00Z*
+_This index is automatically maintained. Last updated: 2026-04-23T00:00:00Z_
 
 ## Projects
 
@@ -30,7 +30,7 @@ title: Wiki Index
     - [[projects/brainiac/layer3-router-workspace|Workspace Router]] — workspace get/save (node-limit gated), shareNode, unshareNode, deleteNode, marketplace list/save (Pro)
     - [[projects/brainiac/layer3-router-team|Team Router]] — team CRUD (team-limit gated on create), members add/updateRole/remove; RBAC via workspaceTeamRoleSchema
     - [[projects/brainiac/layer3-router-agency-ops|Agency Ops Router]] — Pro-only: clients, projects, tags CRUD; timer start/stop/getActive; timeEntries CRUD; summary + reports (CSV export)
-    - [[projects/brainiac/layer3-server-app|Server App & Handlers]] — Hono app (port 7000): CORS, auth routes, billing redirect, RPCHandler (/rpc/*), OpenAPIHandler (/api-reference/*)
+    - [[projects/brainiac/layer3-server-app|Server App & Handlers]] — Hono app (port 7000): CORS, auth routes, billing redirect, RPCHandler (/rpc/_), OpenAPIHandler (/api-reference/_)
     - [[projects/brainiac/layer3-web-middleware|Web Route Middleware]] — auth.ts (session guard → /login), workspace.ts (preloadWorkspace on route enter); both client-only Nuxt middleware
   - **Layer 4 — Agents/Tools**
     - [[projects/brainiac/layer4-agent-client|OpenRouter Client Factory]] — `createOpenRouterClient`: authenticated `OpenRouter` SDK instance; throws if `OPENROUTER_API_KEY` absent

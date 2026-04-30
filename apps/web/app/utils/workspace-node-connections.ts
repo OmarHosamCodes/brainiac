@@ -47,9 +47,11 @@ export function hasConnection(
     return false;
   }
 
-  return orchestratorNode.connections?.some(
-    (connection) => connection.targetNodeId === standardNodeId,
-  ) ?? false;
+  return (
+    orchestratorNode.connections?.some(
+      (connection) => connection.targetNodeId === standardNodeId,
+    ) ?? false
+  );
 }
 
 export function getEligibleConnectionTargetIds(

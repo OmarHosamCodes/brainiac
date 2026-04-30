@@ -28,11 +28,13 @@ Run these checks in order. Report findings as you go.
 Find pages with zero incoming wikilinks. These are knowledge islands that nothing connects to.
 
 **How to check:**
+
 - Glob all `.md` files in the vault
 - For each page, Grep the rest of the vault for `[[page-name]]` references
 - Pages with zero incoming links (except `index.md` and `log.md`) are orphans
 
 **How to fix:**
+
 - Identify which existing pages should link to the orphan
 - Add wikilinks in appropriate sections
 
@@ -41,11 +43,13 @@ Find pages with zero incoming wikilinks. These are knowledge islands that nothin
 Find `[[wikilinks]]` that point to pages that don't exist.
 
 **How to check:**
+
 - Grep for `\[\[.*?\]\]` across all pages
 - Extract the link targets
 - Check if a corresponding `.md` file exists
 
 **How to fix:**
+
 - If the target was renamed, update the link
 - If the target should exist, create it
 - If the link is wrong, remove or correct it
@@ -55,22 +59,26 @@ Find `[[wikilinks]]` that point to pages that don't exist.
 Every page should have: title, category, tags, sources, created, updated.
 
 **How to check:**
+
 - Grep frontmatter blocks (scope to `^---` at file heads) instead of reading every page in full
 - Flag pages missing required fields
 
 **How to fix:**
+
 - Add missing fields with reasonable defaults
 
 ### 3a. Missing Summary (soft warning)
 
-Every page *should* have a `summary:` frontmatter field — 1–2 sentences, ≤200 chars. This is what cheap retrieval (e.g. `wiki-query`'s index-only mode) reads to avoid opening page bodies.
+Every page _should_ have a `summary:` frontmatter field — 1–2 sentences, ≤200 chars. This is what cheap retrieval (e.g. `wiki-query`'s index-only mode) reads to avoid opening page bodies.
 
 **How to check:**
+
 - Grep frontmatter for `^summary:` across the vault
 - Flag pages without it, **but as a soft warning, not an error** — older pages predating this field are fine; the check exists to nudge ingest skills into filling it on new writes.
 - Also flag pages whose summary exceeds 200 chars.
 
 **How to fix:**
+
 - Re-ingest the page, or manually write a short summary (1–2 sentences of the page's content).
 
 ### 4. Stale Content
@@ -78,6 +86,7 @@ Every page *should* have a `summary:` frontmatter field — 1–2 sentences, ≤
 Pages whose `updated` timestamp is old relative to their sources.
 
 **How to check:**
+
 - Compare page `updated` timestamps to source file modification times
 - Flag pages where sources have been modified after the page was last updated
 
@@ -86,11 +95,13 @@ Pages whose `updated` timestamp is old relative to their sources.
 Claims that conflict across pages.
 
 **How to check:**
+
 - This requires reading related pages and comparing claims
 - Focus on pages that share tags or are heavily cross-referenced
 - Look for phrases like "however", "in contrast", "despite" that may signal existing acknowledged contradictions vs. unacknowledged ones
 
 **How to fix:**
+
 - Add an "Open Questions" section noting the contradiction
 - Reference both sources and their claims
 
@@ -99,6 +110,7 @@ Claims that conflict across pages.
 Verify `index.md` matches the actual page inventory.
 
 **How to check:**
+
 - Compare pages listed in `index.md` to actual files on disk
 - Check that summaries in `index.md` still match page content
 
@@ -107,6 +119,7 @@ Verify `index.md` matches the actual page inventory.
 Check whether pages are being honest about how much of their content is inferred vs extracted. See the Provenance Markers section in `llm-wiki` for the convention.
 
 **How to check:**
+
 - For each page with a `provenance:` block or any `^[inferred]`/`^[ambiguous]` markers, count sentences/bullets and how many end with each marker
 - Compute rough fractions (`extracted`, `inferred`, `ambiguous`)
 - Apply these thresholds:
@@ -117,6 +130,7 @@ Check whether pages are being honest about how much of their content is inferred
 - **Skip** pages with no `provenance:` frontmatter and no markers — treated as fully extracted by convention
 
 **How to fix:**
+
 - For ambiguous-heavy: re-ingest from sources, resolve the uncertain claims, or split speculative content into a `synthesis/` page
 - For unsourced synthesis: add `sources:` to frontmatter or clearly label the page as synthesis
 - For hub pages with INFERRED > 20%: prioritize for re-ingestion — errors here have the widest blast radius
@@ -127,6 +141,7 @@ Check whether pages are being honest about how much of their content is inferred
 Checks whether pages that share a tag are actually linked to each other. Tags imply a topic cluster; if those pages don't reference each other, the cluster is fragmented — knowledge islands that should be woven together.
 
 **How to check:**
+
 - For each tag that appears on ≥ 5 pages:
   - `n` = count of pages with this tag
   - `actual_links` = count of wikilinks between any two pages in this tag group (check both directions)
@@ -134,6 +149,7 @@ Checks whether pages that share a tag are actually linked to each other. Tags im
 - Flag any tag group where cohesion < 0.15 and n ≥ 5
 
 **How to fix:**
+
 - Run the `cross-linker` skill targeted at the fragmented tag — it will surface and insert the missing links
 - If a tag group is large (n > 15) and still fragmented, consider splitting it into more specific sub-tags
 
@@ -148,6 +164,7 @@ Checks that `visibility/` tags are applied correctly and aren't silently missing
 - **Visibility tags in taxonomy:** `visibility/` tags are system tags and must **not** appear in `_meta/taxonomy.md`. If found there, flag as misconfigured — they'd be counted toward the 5-tag limit on pages that include them.
 
 **How to fix:**
+
 - For untagged PII patterns: add `visibility/pii` (or `visibility/internal` if it's team-context rather than personal data) to the page's frontmatter tags
 - For missing `sources:`: add provenance or escalate to the user — don't auto-fill
 - For taxonomy contamination: remove the `visibility/` entries from `_meta/taxonomy.md`
@@ -157,11 +174,13 @@ Checks that `visibility/` tags are applied correctly and aren't silently missing
 Find pages in `misc/` that have accumulated enough project affinity to be promoted.
 
 **How to check:**
+
 - Glob `$OBSIDIAN_VAULT_PATH/misc/*.md`
 - For each page, read the `affinity` frontmatter field
 - Flag pages where any single project's score ≥ 3
 
 **How to fix:**
+
 - Run the `cross-linker` skill first if affinity scores look stale (e.g., `affinity: {}` on a page with many wikilinks)
 - To promote: move the page to `projects/<project-name>/references/` (or another appropriate category), update its `category` frontmatter, remove `promotion_status`, and grep the vault for backlinks to update them
 
@@ -173,53 +192,65 @@ Report findings as a structured list:
 ## Wiki Health Report
 
 ### Orphaned Pages (N found)
+
 - `concepts/foo.md` — no incoming links
 
 ### Broken Wikilinks (N found)
+
 - `entities/bar.md:15` — links to [[nonexistent-page]]
 
 ### Missing Frontmatter (N found)
+
 - `skills/baz.md` — missing: tags, sources
 
 ### Stale Content (N found)
+
 - `references/paper-x.md` — source modified 2024-03-10, page last updated 2024-01-05
 
 ### Contradictions (N found)
+
 - `concepts/scaling.md` claims "X" but `synthesis/efficiency.md` claims "not X"
 
 ### Index Issues (N found)
+
 - `concepts/new-page.md` exists on disk but not in index.md
 
 ### Missing Summary (N found — soft)
+
 - `concepts/foo.md` — no `summary:` field
 - `entities/bar.md` — summary exceeds 200 chars
 
 ### Provenance Issues (N found)
+
 - `concepts/scaling.md` — AMBIGUOUS > 15%: 22% of claims are ambiguous (re-source or move to synthesis/)
 - `entities/some-tool.md` — drift: frontmatter says inferred=0.10, recomputed=0.45
 - `concepts/transformers.md` — hub page (31 incoming links) with INFERRED=28%: errors here propagate widely
 - `synthesis/speculation.md` — unsourced synthesis: no `sources:` field, 55% inferred
 
 ### Fragmented Tag Clusters (N found)
+
 - **#systems** — 7 pages, cohesion=0.06 ⚠️ — run cross-linker on this tag
 - **#databases** — 5 pages, cohesion=0.10 ⚠️
 
 ### Visibility Issues (N found)
+
 - `entities/user-records.md` — contains `email:` value pattern but no `visibility/pii` tag
 - `concepts/auth-flow.md` — tagged `visibility/pii` but missing `sources:` frontmatter
 - `_meta/taxonomy.md` — contains `visibility/internal` entry (system tag must not be in taxonomy)
 
 ### Misc Promotion Candidates (N found)
+
 Pages in misc/ that have ≥ 3 connections to a single project and are ready to be promoted:
 
-| Page | Top Project | Affinity Score |
-|---|---|---|
-| `misc/web-martinfowler-articles-microservices.md` | `obsidian-wiki` | 4 |
+| Page                                              | Top Project     | Affinity Score |
+| ------------------------------------------------- | --------------- | -------------- |
+| `misc/web-martinfowler-articles-microservices.md` | `obsidian-wiki` | 4              |
 ```
 
 ## After Linting
 
 Append to `log.md`:
+
 ```
 - [TIMESTAMP] LINT issues_found=N orphans=X broken_links=Y stale=Z contradictions=W prov_issues=P missing_summary=S fragmented_clusters=F visibility_issues=V promotion_candidates=C
 ```

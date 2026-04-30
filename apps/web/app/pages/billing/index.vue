@@ -1,8 +1,10 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: "default",
+  layout: "app",
   middleware: ["auth"],
 });
+
+useAppShellPageTitle("Billing");
 
 const { isPro, subscription, limits, checkout, openPortal, billingQuery } = useBilling();
 
@@ -42,10 +44,8 @@ const limitItems = computed(() => [
 </script>
 
 <template>
-  <div class="min-h-screen bg-white dark:bg-neutral-950">
-    <Header />
-
-    <div class="max-w-3xl mx-auto px-6 pt-32 pb-24">
+  <div class="h-full overflow-y-auto bg-white dark:bg-neutral-950">
+    <div class="max-w-3xl mx-auto px-6 pt-8 pb-24">
       <h1 class="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mb-8">Billing</h1>
 
       <USkeleton v-if="billingQuery.isPending.value" class="h-48 w-full rounded-[32px]" />

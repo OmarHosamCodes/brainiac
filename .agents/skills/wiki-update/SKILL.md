@@ -47,7 +47,7 @@ This is the core question from Karpathy's pattern: **what would you want to know
 
 Worth distilling:
 
-- Architecture decisions and *why* they were made
+- Architecture decisions and _why_ they were made
 - Patterns discovered while building (things you'd Google again otherwise)
 - What tools, services, APIs the project depends on and how they're wired together
 - Key abstractions, how they connect, what the mental model is
@@ -79,6 +79,7 @@ projects/<project-name>/
 ```
 
 The overview page (`<project-name>.md`) should have:
+
 - What the project is (one paragraph)
 - Key concepts and how they connect
 - Links to project-specific and global wiki pages
@@ -87,12 +88,12 @@ The overview page (`<project-name>.md`) should have:
 
 Things that aren't project-specific go in the global categories:
 
-| What you found | Where it goes |
-|---|---|
-| A general concept learned | `concepts/` |
-| A reusable pattern or technique | `skills/` |
-| A tool/service/person | `entities/` |
-| Cross-project analysis | `synthesis/` |
+| What you found                  | Where it goes |
+| ------------------------------- | ------------- |
+| A general concept learned       | `concepts/`   |
+| A reusable pattern or technique | `skills/`     |
+| A tool/service/person           | `entities/`   |
+| Cross-project analysis          | `synthesis/`  |
 
 ### Page format
 
@@ -101,12 +102,12 @@ Every page needs YAML frontmatter:
 ```markdown
 ---
 title: >-
-    Page Title
+  Page Title
 category: concepts
 tags: [tag1, tag2]
 sources: [projects/<project-name>]
 summary: >-
-    One or two sentences (≤200 chars) describing what this page covers.
+  One or two sentences (≤200 chars) describing what this page covers.
 provenance:
   extracted: 0.6
   inferred: 0.35
@@ -131,7 +132,7 @@ Use [[wikilinks]] to connect to other pages.
 **Apply provenance markers** per `llm-wiki` (Provenance Markers section). For project sync specifically:
 
 - **Extracted** — anything visible in the code, config, or a doc/commit message: file structure, dependencies, function signatures, what a file does.
-- **Inferred** — *why* a decision was made, design rationale, trade-offs, "the team chose X because Y" — unless a commit message, doc, or ADR states it explicitly.
+- **Inferred** — _why_ a decision was made, design rationale, trade-offs, "the team chose X because Y" — unless a commit message, doc, or ADR states it explicitly.
 - **Ambiguous** — when the code and docs disagree, or when there's clearly an in-progress migration with two patterns living side by side.
 
 Compute the rough fractions and write the `provenance:` block on every new/updated page.
@@ -176,6 +177,7 @@ Add entries for any new pages created.
 ### Update `log.md`
 
 Append:
+
 ```
 - [TIMESTAMP] WIKI_UPDATE project=<project-name> pages_updated=X pages_created=Y source_cwd=/path/to/project
 ```
@@ -184,5 +186,5 @@ Append:
 
 - **Be aggressive about merging.** If the project uses React Server Components, don't create a new page if `concepts/react-server-components.md` already exists. Update the existing one and add this project as a source.
 - **Consult the tag taxonomy.** Read `$VAULT/_meta/taxonomy.md` if it exists, and use canonical tags.
-- **Don't copy code.** Distill the *knowledge*, not the implementation. "This project uses a debounced search pattern with 300ms delay" is useful. Pasting the actual debounce function is not.
+- **Don't copy code.** Distill the _knowledge_, not the implementation. "This project uses a debounced search pattern with 300ms delay" is useful. Pasting the actual debounce function is not.
 - **Project overview is the anchor.** The `<project-name>.md` file is what you'd read to get oriented. Make it good.

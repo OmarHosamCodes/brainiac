@@ -26,17 +26,17 @@ export function createOpenRouterClient() {
 
 ## Incoming Dependents (Consumers)
 
-| Consumer | Mechanism |
-|---|---|
+| Consumer                       | Mechanism                                                                                                |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
 | `packages/agent/src/models.ts` | calls `createOpenRouterClient()` inside `fetchOpenRouterModelCatalog` and `fetchOpenRouterAccountStatus` |
-| `packages/agent/src/index.ts` | calls `createOpenRouterClient()` in `runToolEnabledPass` and `runDashboardAgent` |
+| `packages/agent/src/index.ts`  | calls `createOpenRouterClient()` in `runToolEnabledPass` and `runDashboardAgent`                         |
 
 ## Outgoing Dependencies
 
-| Dependency | Mechanism |
-|---|---|
-| `@brainiac/env/server` (`env`) | reads `env.OPENROUTER_API_KEY` for auth key |
-| `@openrouter/sdk` (`OpenRouter`) | instantiates `new OpenRouter({ apiKey })` |
+| Dependency                       | Mechanism                                   |
+| -------------------------------- | ------------------------------------------- |
+| `@brainiac/env/server` (`env`)   | reads `env.OPENROUTER_API_KEY` for auth key |
+| `@openrouter/sdk` (`OpenRouter`) | instantiates `new OpenRouter({ apiKey })`   |
 
 ## Standalone Status
 

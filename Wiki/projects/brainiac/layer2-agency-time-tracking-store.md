@@ -25,51 +25,51 @@ layer: 2
 
 ## Internal Type Definitions (local to file)
 
-| Type | Shape |
-|---|---|
-| `AgencyTag` | `{ id, teamId, name, createdAt, updatedAt }` |
-| `AgencyProjectSummary` | `{ id, teamId, clientId, clientName, name, createdAt, updatedAt }` |
-| `AgencyActiveTimer` | `{ id, teamId, userId, projectId, projectName, tags: AgencyTag[], description, linkUrl, startedAt, createdAt, updatedAt }` |
-| `AgencyTimeEntry` | `{ id, teamId, userId, userName, projectId, projectName, clientId, clientName, tags: AgencyTag[], source: "timer"\|"manual", description, linkUrl, startedAt, endedAt, durationSeconds, createdAt, updatedAt }` |
-| `AgencyWeekSummary` | `{ startDate, endDate, totalSeconds, daily: [{date, totalSeconds}[]] }` |
-| `AgencyActiveTimerQueryData` | `{ timer: AgencyActiveTimer \| null }` |
-| `AgencyTimeEntriesListQueryData` | `{ items: AgencyTimeEntry[], page, pageSize, total, weekSummary: AgencyWeekSummary }` |
-| `TrackerDraft` | `{ description, projectId, selectedTagIds: string[], linkUrl, syncedTimerId: string \| null }` |
-| `RegisteredActiveTimerQuery` | `{ queryKey: QueryKey, teamId: string }` |
-| `RegisteredLogQuery` | `{ queryKey: QueryKey, teamId: string, page: number }` |
-| `QuerySnapshot` | `{ queryKey: QueryKey, data: unknown }` |
-| `StartTimerPayload` | `{ teamId, project, description, linkUrl, tagIds, selectedTags, successDescription? }` |
-| `StopTimerPayload` | `{ teamId, description, linkUrl, tagIds, selectedTags, discard?, activeTimer? }` |
-| `RestartEntryPayload` | `{ teamId, project, description, linkUrl, tags }` |
-| `DeleteEntriesPayload` | `{ teamId, entries: Pick<AgencyTimeEntry, "id"\|"startedAt"\|"durationSeconds">[] }` |
+| Type                             | Shape                                                                                                                                                                                                           |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AgencyTag`                      | `{ id, teamId, name, createdAt, updatedAt }`                                                                                                                                                                    |
+| `AgencyProjectSummary`           | `{ id, teamId, clientId, clientName, name, createdAt, updatedAt }`                                                                                                                                              |
+| `AgencyActiveTimer`              | `{ id, teamId, userId, projectId, projectName, tags: AgencyTag[], description, linkUrl, startedAt, createdAt, updatedAt }`                                                                                      |
+| `AgencyTimeEntry`                | `{ id, teamId, userId, userName, projectId, projectName, clientId, clientName, tags: AgencyTag[], source: "timer"\|"manual", description, linkUrl, startedAt, endedAt, durationSeconds, createdAt, updatedAt }` |
+| `AgencyWeekSummary`              | `{ startDate, endDate, totalSeconds, daily: [{date, totalSeconds}[]] }`                                                                                                                                         |
+| `AgencyActiveTimerQueryData`     | `{ timer: AgencyActiveTimer \| null }`                                                                                                                                                                          |
+| `AgencyTimeEntriesListQueryData` | `{ items: AgencyTimeEntry[], page, pageSize, total, weekSummary: AgencyWeekSummary }`                                                                                                                           |
+| `TrackerDraft`                   | `{ description, projectId, selectedTagIds: string[], linkUrl, syncedTimerId: string \| null }`                                                                                                                  |
+| `RegisteredActiveTimerQuery`     | `{ queryKey: QueryKey, teamId: string }`                                                                                                                                                                        |
+| `RegisteredLogQuery`             | `{ queryKey: QueryKey, teamId: string, page: number }`                                                                                                                                                          |
+| `QuerySnapshot`                  | `{ queryKey: QueryKey, data: unknown }`                                                                                                                                                                         |
+| `StartTimerPayload`              | `{ teamId, project, description, linkUrl, tagIds, selectedTags, successDescription? }`                                                                                                                          |
+| `StopTimerPayload`               | `{ teamId, description, linkUrl, tagIds, selectedTags, discard?, activeTimer? }`                                                                                                                                |
+| `RestartEntryPayload`            | `{ teamId, project, description, linkUrl, tags }`                                                                                                                                                               |
+| `DeleteEntriesPayload`           | `{ teamId, entries: Pick<AgencyTimeEntry, "id"\|"startedAt"\|"durationSeconds">[] }`                                                                                                                            |
 
 ---
 
 ## Reactive State
 
-| Ref | Type | Purpose |
-|---|---|---|
-| `draftByTeam` | `ref<Record<string, TrackerDraft>>` | Per-team tracker form draft (description, projectId, tagIds, linkUrl, syncedTimerId) |
-| `timerStartCount` | `ref<number>` | Counts in-flight start mutations (incremented before, decremented after) |
-| `timerStopCount` | `ref<number>` | Counts in-flight stop mutations |
-| `deletingEntryIds` | `ref<string[]>` | IDs of entries currently being deleted (for UI loading state) |
+| Ref                | Type                                | Purpose                                                                              |
+| ------------------ | ----------------------------------- | ------------------------------------------------------------------------------------ |
+| `draftByTeam`      | `ref<Record<string, TrackerDraft>>` | Per-team tracker form draft (description, projectId, tagIds, linkUrl, syncedTimerId) |
+| `timerStartCount`  | `ref<number>`                       | Counts in-flight start mutations (incremented before, decremented after)             |
+| `timerStopCount`   | `ref<number>`                       | Counts in-flight stop mutations                                                      |
+| `deletingEntryIds` | `ref<string[]>`                     | IDs of entries currently being deleted (for UI loading state)                        |
 
 ---
 
 ## Computed Properties
 
-| Computed | Derived From | Purpose |
-|---|---|---|
+| Computed                 | Derived From                                  | Purpose                                      |
+| ------------------------ | --------------------------------------------- | -------------------------------------------- |
 | `isTimerMutationPending` | `timerStartCount > 0 \|\| timerStopCount > 0` | True while any timer start/stop is in flight |
 
 ---
 
 ## Query Registries (non-reactive, internal Maps)
 
-| Registry | Key | Value | Purpose |
-|---|---|---|---|
-| `activeTimerQueryRegistry` | `JSON.stringify(queryKey)` | `RegisteredActiveTimerQuery` | Tracks all mounted active-timer queries across teams |
-| `logQueryRegistry` | `JSON.stringify(queryKey)` | `RegisteredLogQuery` | Tracks all mounted time-entries-list queries per team+page |
+| Registry                   | Key                        | Value                        | Purpose                                                    |
+| -------------------------- | -------------------------- | ---------------------------- | ---------------------------------------------------------- |
+| `activeTimerQueryRegistry` | `JSON.stringify(queryKey)` | `RegisteredActiveTimerQuery` | Tracks all mounted active-timer queries across teams       |
+| `logQueryRegistry`         | `JSON.stringify(queryKey)` | `RegisteredLogQuery`         | Tracks all mounted time-entries-list queries per team+page |
 
 These registries enable cross-component cache patching without prop drilling or re-fetching all queries.
 
@@ -77,10 +77,10 @@ These registries enable cross-component cache patching without prop drilling or 
 
 ## TanStack Query Mutations
 
-| Symbol | Mechanism |
-|---|---|
-| `startTimerMutation` | `useMutation(orpc.agencyOps.timer.start.mutationOptions())` |
-| `stopTimerMutation` | `useMutation(orpc.agencyOps.timer.stop.mutationOptions())` |
+| Symbol                | Mechanism                                                              |
+| --------------------- | ---------------------------------------------------------------------- |
+| `startTimerMutation`  | `useMutation(orpc.agencyOps.timer.start.mutationOptions())`            |
+| `stopTimerMutation`   | `useMutation(orpc.agencyOps.timer.stop.mutationOptions())`             |
 | `deleteEntryMutation` | `useMutation(orpc.agencyOps.timeEntries.deleteMine.mutationOptions())` |
 
 ---
@@ -89,30 +89,31 @@ These registries enable cross-component cache patching without prop drilling or 
 
 ### Draft Management
 
-| Function | Description |
-|---|---|
-| `ensureTrackerDraft(teamId)` | Returns existing `TrackerDraft` for team or creates a new one with empty defaults |
-| `setTrackerDescription(teamId, description)` | Sets `draft.description` |
-| `setTrackerProjectId(teamId, projectId)` | Sets `draft.projectId` |
-| `setTrackerSelectedTagIds(teamId, tagIds)` | Replaces `draft.selectedTagIds` |
-| `setTrackerLinkUrl(teamId, linkUrl)` | Sets `draft.linkUrl` |
-| `toggleTrackerTag(teamId, tagId)` | Adds or removes `tagId` from `draft.selectedTagIds` |
-| `syncDraftFromActiveTimer(teamId, timer)` | Syncs draft fields from a live timer; skips if `syncedTimerId` already matches `timer.id` |
+| Function                                     | Description                                                                               |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `ensureTrackerDraft(teamId)`                 | Returns existing `TrackerDraft` for team or creates a new one with empty defaults         |
+| `setTrackerDescription(teamId, description)` | Sets `draft.description`                                                                  |
+| `setTrackerProjectId(teamId, projectId)`     | Sets `draft.projectId`                                                                    |
+| `setTrackerSelectedTagIds(teamId, tagIds)`   | Replaces `draft.selectedTagIds`                                                           |
+| `setTrackerLinkUrl(teamId, linkUrl)`         | Sets `draft.linkUrl`                                                                      |
+| `toggleTrackerTag(teamId, tagId)`            | Adds or removes `tagId` from `draft.selectedTagIds`                                       |
+| `syncDraftFromActiveTimer(teamId, timer)`    | Syncs draft fields from a live timer; skips if `syncedTimerId` already matches `timer.id` |
 
 ### Query Registry
 
-| Function | Description |
-|---|---|
-| `registerActiveTimerQuery(payload)` | Adds `{ queryKey, teamId }` to `activeTimerQueryRegistry` |
+| Function                               | Description                                               |
+| -------------------------------------- | --------------------------------------------------------- |
+| `registerActiveTimerQuery(payload)`    | Adds `{ queryKey, teamId }` to `activeTimerQueryRegistry` |
 | `unregisterActiveTimerQuery(queryKey)` | Removes from `activeTimerQueryRegistry` by serialized key |
-| `registerLogQuery(payload)` | Adds `{ queryKey, teamId, page }` to `logQueryRegistry` |
-| `unregisterLogQuery(queryKey)` | Removes from `logQueryRegistry` by serialized key |
+| `registerLogQuery(payload)`            | Adds `{ queryKey, teamId, page }` to `logQueryRegistry`   |
+| `unregisterLogQuery(queryKey)`         | Removes from `logQueryRegistry` by serialized key         |
 
 ### Timer Operations
 
 #### `startTimer(payload: StartTimerPayload)`
 
 Full optimistic flow:
+
 1. Snapshot current draft and all active-timer/log caches
 2. Call `normalizeAgencyLinkUrl(linkUrl)` — abort with toast on error
 3. Increment `timerStartCount`
@@ -133,6 +134,7 @@ Delegates to `startTimer` with `successDescription: "Tracking {description}."`.
 #### `stopTimer(payload: StopTimerPayload)`
 
 Full optimistic flow:
+
 1. Resolve `activeTimer` from `payload.activeTimer ?? getCachedActiveTimer()`
 2. Snapshot draft and query caches
 3. Call `normalizeAgencyLinkUrl` (skip if `discard`)
@@ -161,51 +163,51 @@ Full optimistic flow:
 
 ## Internal Cache-Patching Functions
 
-| Function | Description |
-|---|---|
-| `patchActiveTimerCaches(timer)` | Iterates `activeTimerQueryRegistry`, calls `queryClient.setQueryData` to write `{ timer: timer \| null }` into each cache (only sets non-null timer if `teamId` matches) |
-| `patchInsertedEntry(teamId, entry)` | Iterates `logQueryRegistry` for matching `teamId`, calls `queryClient.setQueryData` to prepend entry on page 1, increment total, update `weekSummary` |
-| `patchDeletedEntries(teamId, entries)` | Iterates `logQueryRegistry` for matching `teamId`, calls `queryClient.setQueryData` to filter entries out, decrement total, update `weekSummary` |
-| `updateWeekSummary(weekSummary, entry, direction)` | Recalculates `totalSeconds` and `daily` array for the given week; skips entries outside the week range |
+| Function                                           | Description                                                                                                                                                              |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `patchActiveTimerCaches(timer)`                    | Iterates `activeTimerQueryRegistry`, calls `queryClient.setQueryData` to write `{ timer: timer \| null }` into each cache (only sets non-null timer if `teamId` matches) |
+| `patchInsertedEntry(teamId, entry)`                | Iterates `logQueryRegistry` for matching `teamId`, calls `queryClient.setQueryData` to prepend entry on page 1, increment total, update `weekSummary`                    |
+| `patchDeletedEntries(teamId, entries)`             | Iterates `logQueryRegistry` for matching `teamId`, calls `queryClient.setQueryData` to filter entries out, decrement total, update `weekSummary`                         |
+| `updateWeekSummary(weekSummary, entry, direction)` | Recalculates `totalSeconds` and `daily` array for the given week; skips entries outside the week range                                                                   |
 
 ---
 
 ## Internal Helper Functions
 
-| Function | Description |
-|---|---|
-| `getCachedActiveTimer()` | Iterates `activeTimerQueryRegistry`, calls `queryClient.getQueryData` for each, returns first non-null timer found |
-| `getTrackerDraftSnapshot(teamId)` | Returns deep copy of current draft for rollback |
-| `restoreTrackerDraft(teamId, snapshot)` | Restores draft from snapshot (or deletes it if null) |
-| `snapshotQueries(queries)` | Maps `queryClient.getQueryData` over each registered query → `QuerySnapshot[]` |
-| `restoreQuerySnapshots(snapshots)` | Calls `queryClient.setQueryData` for each snapshot |
-| `getRegisteredLogQueries(teamIds)` | Filters `logQueryRegistry` to those matching a `Set<string>` of team IDs |
-| `invalidateActiveTimerQueries()` | Calls `queryClient.invalidateQueries` for every registered active-timer query |
-| `invalidateLogQueries(teamIds)` | Calls `queryClient.invalidateQueries` for each matching log query |
-| `createOptimisticTimer(payload)` | Builds `AgencyActiveTimer` with `createOptimisticId("agency-active-timer")`, normalized link URL |
-| `createOptimisticEntryFromTimer(timer, overrides)` | Builds `AgencyTimeEntry` from timer + overrides; computes `durationSeconds` via `getDurationSeconds` |
-| `getDurationSeconds(startedAt, endedAt)` | `Math.max(1, Math.floor((endMs - startMs) / 1000))` |
-| `createOptimisticId(prefix)` | `"${prefix}-${crypto.randomUUID()}"` or `"${prefix}-${Date.now()}-${random}"` |
-| `dedupeEntries(entries)` | Filters duplicate IDs using a `Set<string>` |
-| `formatDuration(seconds)` | Returns `"HH:MM:SS"` string — used in stop-timer success toast |
-| `getCurrentUserId()` | Returns `authSession.value?.data?.user?.id ?? "unknown-user"` |
+| Function                                           | Description                                                                                                        |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `getCachedActiveTimer()`                           | Iterates `activeTimerQueryRegistry`, calls `queryClient.getQueryData` for each, returns first non-null timer found |
+| `getTrackerDraftSnapshot(teamId)`                  | Returns deep copy of current draft for rollback                                                                    |
+| `restoreTrackerDraft(teamId, snapshot)`            | Restores draft from snapshot (or deletes it if null)                                                               |
+| `snapshotQueries(queries)`                         | Maps `queryClient.getQueryData` over each registered query → `QuerySnapshot[]`                                     |
+| `restoreQuerySnapshots(snapshots)`                 | Calls `queryClient.setQueryData` for each snapshot                                                                 |
+| `getRegisteredLogQueries(teamIds)`                 | Filters `logQueryRegistry` to those matching a `Set<string>` of team IDs                                           |
+| `invalidateActiveTimerQueries()`                   | Calls `queryClient.invalidateQueries` for every registered active-timer query                                      |
+| `invalidateLogQueries(teamIds)`                    | Calls `queryClient.invalidateQueries` for each matching log query                                                  |
+| `createOptimisticTimer(payload)`                   | Builds `AgencyActiveTimer` with `createOptimisticId("agency-active-timer")`, normalized link URL                   |
+| `createOptimisticEntryFromTimer(timer, overrides)` | Builds `AgencyTimeEntry` from timer + overrides; computes `durationSeconds` via `getDurationSeconds`               |
+| `getDurationSeconds(startedAt, endedAt)`           | `Math.max(1, Math.floor((endMs - startMs) / 1000))`                                                                |
+| `createOptimisticId(prefix)`                       | `"${prefix}-${crypto.randomUUID()}"` or `"${prefix}-${Date.now()}-${random}"`                                      |
+| `dedupeEntries(entries)`                           | Filters duplicate IDs using a `Set<string>`                                                                        |
+| `formatDuration(seconds)`                          | Returns `"HH:MM:SS"` string — used in stop-timer success toast                                                     |
+| `getCurrentUserId()`                               | Returns `authSession.value?.data?.user?.id ?? "unknown-user"`                                                      |
 
 ---
 
 ## Relationships
 
-| Role | Entity | Mechanism |
-|---|---|---|
-| **Incoming (Dependents)** | `WorkspaceAgencyTimeTrackerBlock` component | `useAgencyTimeTrackingStore()` — calls `startTimer`, `stopTimer`, `syncDraftFromActiveTimer`, draft setters, `registerActiveTimerQuery`, `registerLogQuery` |
-| **Incoming (Dependents)** | Any component mounting time-entry list | calls `registerLogQuery` / `unregisterLogQuery` |
-| **Outgoing (Dependencies)** | `useAuthSession()` | reads `authSession.value?.data?.user?.id` in `getCurrentUserId()` |
-| **Outgoing (Dependencies)** | `useOrpc()` → `orpc.agencyOps.timer.start` | `useMutation(orpc.agencyOps.timer.start.mutationOptions())` |
-| **Outgoing (Dependencies)** | `useOrpc()` → `orpc.agencyOps.timer.stop` | `useMutation(orpc.agencyOps.timer.stop.mutationOptions())` |
-| **Outgoing (Dependencies)** | `useOrpc()` → `orpc.agencyOps.timeEntries.deleteMine` | `useMutation(orpc.agencyOps.timeEntries.deleteMine.mutationOptions())` |
-| **Outgoing (Dependencies)** | `useToast()` | `toast.add({ title, description, color })` — Nuxt UI toast composable |
-| **Outgoing (Dependencies)** | `@tanstack/vue-query` | `useMutation`, `useQueryClient` — all server state |
-| **Outgoing (Dependencies)** | `~/utils/get-error-message` | `getErrorMessage(error, fallback)` |
-| **Outgoing (Dependencies)** | `~/utils/normalize-agency-link-url` | `normalizeAgencyLinkUrl(url)` → `{ normalizedUrl, error }` — validates and normalizes link URLs before mutation |
+| Role                        | Entity                                                | Mechanism                                                                                                                                                   |
+| --------------------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Incoming (Dependents)**   | `WorkspaceAgencyTimeTrackerBlock` component           | `useAgencyTimeTrackingStore()` — calls `startTimer`, `stopTimer`, `syncDraftFromActiveTimer`, draft setters, `registerActiveTimerQuery`, `registerLogQuery` |
+| **Incoming (Dependents)**   | Any component mounting time-entry list                | calls `registerLogQuery` / `unregisterLogQuery`                                                                                                             |
+| **Outgoing (Dependencies)** | `useAuthSession()`                                    | reads `authSession.value?.data?.user?.id` in `getCurrentUserId()`                                                                                           |
+| **Outgoing (Dependencies)** | `useOrpc()` → `orpc.agencyOps.timer.start`            | `useMutation(orpc.agencyOps.timer.start.mutationOptions())`                                                                                                 |
+| **Outgoing (Dependencies)** | `useOrpc()` → `orpc.agencyOps.timer.stop`             | `useMutation(orpc.agencyOps.timer.stop.mutationOptions())`                                                                                                  |
+| **Outgoing (Dependencies)** | `useOrpc()` → `orpc.agencyOps.timeEntries.deleteMine` | `useMutation(orpc.agencyOps.timeEntries.deleteMine.mutationOptions())`                                                                                      |
+| **Outgoing (Dependencies)** | `useToast()`                                          | `toast.add({ title, description, color })` — Nuxt UI toast composable                                                                                       |
+| **Outgoing (Dependencies)** | `@tanstack/vue-query`                                 | `useMutation`, `useQueryClient` — all server state                                                                                                          |
+| **Outgoing (Dependencies)** | `~/utils/get-error-message`                           | `getErrorMessage(error, fallback)`                                                                                                                          |
+| **Outgoing (Dependencies)** | `~/utils/normalize-agency-link-url`                   | `normalizeAgencyLinkUrl(url)` → `{ normalizedUrl, error }` — validates and normalizes link URLs before mutation                                             |
 
 ## Standalone Status
 

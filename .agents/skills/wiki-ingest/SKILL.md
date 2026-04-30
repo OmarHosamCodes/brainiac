@@ -37,6 +37,7 @@ This applies to all ingest modes and all source formats.
 This skill supports three modes. Ask the user or infer from context:
 
 ### Append Mode (default)
+
 Only ingest sources that are **new or modified** since last ingest. Check the manifest using both timestamp **and content hash**:
 
 - If a source path is not in `.manifest.json` → it's new, ingest it
@@ -49,13 +50,17 @@ Only ingest sources that are **new or modified** since last ingest. Check the ma
 This is the right choice most of the time. It's fast and avoids redundant work even when timestamps are unreliable.
 
 ### Full Mode
+
 Ingest everything regardless of manifest state. Use when:
+
 - The user explicitly asks for a full ingest
 - The manifest is missing or corrupted
 - After a `wiki-rebuild` has cleared the vault
 
 ### Raw Mode
+
 Process draft pages from the `_raw/` staging directory inside the vault. Use when:
+
 - The user says "process my drafts", "promote my raw pages", or drops files into `_raw/`
 - After a paste-heavy session where notes were captured quickly without structure
 
@@ -68,11 +73,12 @@ In raw mode, each file in `OBSIDIAN_VAULT_PATH/_raw/` (or `OBSIDIAN_RAW_DIR`) is
 ### Step 1: Read the Source
 
 Read the document(s) the user wants to ingest. In append mode, skip files the manifest says are already ingested and unchanged. Supported formats:
+
 - Markdown (`.md`) — read directly
 - Text (`.txt`) — read directly
 - PDF (`.pdf`) — use the Read tool with page ranges
 - Web clippings — markdown files from Obsidian Web Clipper
-- **Images** (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`) — *requires a vision-capable model*. Use the Read tool, which renders the image into your context. Treat screenshots, whiteboard photos, diagrams, and slide captures as first-class sources. If your model doesn't support vision, skip image sources and tell the user which files were skipped so they can re-run with a vision-capable model.
+- **Images** (`.png`, `.jpg`, `.jpeg`, `.webp`, `.gif`) — _requires a vision-capable model_. Use the Read tool, which renders the image into your context. Treat screenshots, whiteboard photos, diagrams, and slide captures as first-class sources. If your model doesn't support vision, skip image sources and tell the user which files were skipped so they can re-run with a vision-capable model.
 
 Note the source path — you'll need it for provenance tracking.
 
@@ -80,9 +86,9 @@ Note the source path — you'll need it for provenance tracking.
 
 When the source is an image, your extraction job is interpretive — you're reading visual content, not text. Walk the image methodically:
 
-1. **Transcribe** any visible text verbatim (UI labels, slide bullets, whiteboard handwriting, code snippets in screenshots). This is the only *extracted* content from an image.
+1. **Transcribe** any visible text verbatim (UI labels, slide bullets, whiteboard handwriting, code snippets in screenshots). This is the only _extracted_ content from an image.
 2. **Describe structure** — for diagrams, list the boxes/nodes and the arrows/edges. For screenshots, name the app or context if recognizable.
-3. **Extract concepts** — what is the image *about*? What ideas, entities, or relationships does it convey? Most of this is `^[inferred]`.
+3. **Extract concepts** — what is the image _about_? What ideas, entities, or relationships does it convey? Most of this is `^[inferred]`.
 4. **Note ambiguity** — handwriting you can't read, arrows whose direction is unclear, cropped content. Use `^[ambiguous]` and call it out.
 
 Vision is interpretive by nature, so image-derived pages will skew heavily toward `^[inferred]`. That's expected — the provenance markers exist precisely to surface this. Don't pretend an image's "meaning" was extracted when you really inferred it.
@@ -111,6 +117,7 @@ mcp__qmd__query:
 ```
 
 Use the returned snippets to:
+
 1. **Surface related papers** you may not have thought to link — add them as cross-references in the wiki page
 2. **Identify recurring themes** across the corpus — these deserve their own concept pages
 3. **Find contradictions** between this source and indexed papers — flag with `^[ambiguous]`
@@ -120,10 +127,10 @@ If the QMD results show that 3+ papers touch the same concept, that concept almo
 
 **Skip this step** if `QMD_PAPERS_COLLECTION` is not set.
 
-
 ### Step 2: Extract Knowledge
 
 From the source, identify:
+
 - **Key concepts** that deserve their own page or belong on an existing one
 - **Entities** (people, tools, projects, organizations) mentioned
 - **Claims** that can be attributed to the source
@@ -131,15 +138,17 @@ From the source, identify:
 - **Open questions** the source raises but doesn't answer
 
 **Track provenance per claim as you go.** For each claim you extract, mentally tag it as:
-- *Extracted* — the source explicitly states this
-- *Inferred* — you're generalizing across sources, drawing an implication, or filling a gap
-- *Ambiguous* — sources disagree, or the source is vague
+
+- _Extracted_ — the source explicitly states this
+- _Inferred_ — you're generalizing across sources, drawing an implication, or filling a gap
+- _Ambiguous_ — sources disagree, or the source is vague
 
 You'll apply markers in Step 5. Don't conflate these — the wiki's value depends on the user being able to tell signal from synthesis.
 
 ### Step 3: Determine Project Scope
 
 If the source belongs to a specific project:
+
 - Place project-specific knowledge under `projects/<project-name>/<category>/`
 - Place general knowledge in global category directories
 - Create or update the project overview at `projects/<name>/<name>.md` (named after the project — never `_project.md`, as Obsidian uses filenames as graph node labels)
@@ -149,6 +158,7 @@ If the source is not project-specific, put everything in global categories.
 ### Step 4: Plan Updates
 
 Before writing anything, plan which pages to update or create. Aim for 10-15 pages per ingest. For each:
+
 - Does this page already exist? (Check `index.md` and use Glob to search `OBSIDIAN_VAULT_PATH`)
 - If it exists, what new information does this source add?
 - If it's new, which category does it belong in?
@@ -159,12 +169,14 @@ Before writing anything, plan which pages to update or create. Aim for 10-15 pag
 For each page in your plan:
 
 **If creating a new page:**
+
 - Use the page template from the llm-wiki skill (frontmatter + sections)
 - Place in the correct category directory
 - Add `[[wikilinks]]` to at least 2-3 existing pages
 - Include the source in the `sources` frontmatter field
 
 **If updating an existing page:**
+
 - Read the current page first
 - Merge new information — don't just append
 - Update the `updated` timestamp in frontmatter
@@ -174,6 +186,7 @@ For each page in your plan:
 **Write a `summary:` frontmatter field** on every new page (1–2 sentences, ≤200 characters) answering "what is this page about?" for a reader who hasn't opened it. When updating an existing page whose meaning has shifted, rewrite the summary to match the new content. This field is what `wiki-query`'s cheap retrieval path reads — a missing or stale summary forces expensive full-page reads.
 
 **Apply a `visibility/` tag** if the content clearly warrants one (optional):
+
 - `visibility/internal` — architecture internals, system credentials patterns, team-only context
 - `visibility/pii` — content that references personal data, user records, or sensitive identifiers
 - No tag (default) — anything that's safe to surface in user-facing answers
@@ -181,6 +194,7 @@ For each page in your plan:
 `visibility/` tags are system tags and do **not** count toward the 5-tag limit. When in doubt, omit — untagged pages are treated as public. Never add a visibility tag just because a topic sounds technical.
 
 **Apply provenance markers** per the convention in `llm-wiki` (Provenance Markers section):
+
 - Inferred claims get a trailing `^[inferred]`
 - Ambiguous/contested claims get a trailing `^[ambiguous]`
 - Extracted claims need no marker
@@ -193,6 +207,7 @@ After writing pages, check that wikilinks work in both directions. If page A lin
 ### Step 7: Update Manifest and Special Files
 
 **`.manifest.json`** — For each source file ingested, add or update its entry:
+
 ```json
 {
   "ingested_at": "TIMESTAMP",
@@ -205,6 +220,7 @@ After writing pages, check that wikilinks work in both directions. If page A lin
   "pages_updated": ["list/of/pages.md"]
 }
 ```
+
 `content_hash` is the SHA-256 of the file contents at ingest time. Always write it — it's the primary skip signal on subsequent runs.
 
 Also update `stats.total_sources_ingested` and `stats.total_pages`.
@@ -214,6 +230,7 @@ If the manifest doesn't exist yet, create it with `version: 1`.
 **`index.md`** — Add entries for any new pages, update summaries for modified pages.
 
 **`log.md`** — Append an entry:
+
 ```
 - [TIMESTAMP] INGEST source="path/to/source" pages_updated=N pages_created=M mode=append|full
 ```
@@ -225,6 +242,7 @@ When ingesting a directory, process sources one at a time but maintain a running
 ## Quality Checklist
 
 After ingesting, verify:
+
 - [ ] Every new page has frontmatter with title, category, tags, sources
 - [ ] Every new page has at least 2 wikilinks to existing pages
 - [ ] No orphaned pages (pages with zero incoming links)

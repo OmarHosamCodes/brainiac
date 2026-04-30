@@ -8,45 +8,45 @@ Quick reference for common development tasks, workflows, and troubleshooting.
 
 ### Development Server
 
-| Command | Purpose |
-|---------|---------|
-| `bun run dev` | Start all apps (web + server) |
-| `bun run dev:web` | Frontend only (Nuxt) |
-| `bun run dev:server` | Backend only (Hono) |
-| `bun run dev:web -- -p 3002` | Frontend on different port |
+| Command                      | Purpose                       |
+| ---------------------------- | ----------------------------- |
+| `bun run dev`                | Start all apps (web + server) |
+| `bun run dev:web`            | Frontend only (Nuxt)          |
+| `bun run dev:server`         | Backend only (Hono)           |
+| `bun run dev:web -- -p 3002` | Frontend on different port    |
 
 ### Building & Checking
 
-| Command | Purpose |
-|---------|---------|
-| `bun run build` | Build for production |
-| `bun run check-types` | Check TypeScript types |
-| `bun run check` | Lint + format (Oxlint + Oxfmt) |
+| Command               | Purpose                        |
+| --------------------- | ------------------------------ |
+| `bun run build`       | Build for production           |
+| `bun run check-types` | Check TypeScript types         |
+| `bun run check`       | Lint + format (Oxlint + Oxfmt) |
 
 ### Database
 
-| Command | Purpose |
-|---------|---------|
-| `bun run db:start` | Start PostgreSQL in Docker |
-| `bun run db:push` | Apply schema changes |
-| `bun run db:generate` | Generate database types |
-| `bun run db:migrate` | Run pending migrations |
-| `bun run db:seed` | Load demo data |
-| `bun run db:studio` | Open Drizzle Studio UI |
+| Command               | Purpose                    |
+| --------------------- | -------------------------- |
+| `bun run db:start`    | Start PostgreSQL in Docker |
+| `bun run db:push`     | Apply schema changes       |
+| `bun run db:generate` | Generate database types    |
+| `bun run db:migrate`  | Run pending migrations     |
+| `bun run db:seed`     | Load demo data             |
+| `bun run db:studio`   | Open Drizzle Studio UI     |
 
 ---
 
 ## 📍 Where to Find Things
 
-| What | Where |
-|------|-------|
-| Frontend pages | `apps/web/app/pages/` |
-| Components | `apps/web/app/components/` |
-| API routes | `packages/api/src/routes/` |
-| Database schema | `packages/db/src/schema/` |
-| Auth config | `packages/auth/src/` |
+| What             | Where                       |
+| ---------------- | --------------------------- |
+| Frontend pages   | `apps/web/app/pages/`       |
+| Components       | `apps/web/app/components/`  |
+| API routes       | `packages/api/src/routes/`  |
+| Database schema  | `packages/db/src/schema/`   |
+| Auth config      | `packages/auth/src/`        |
 | Environment vars | `packages/env/src/index.ts` |
-| Server setup | `apps/server/src/app.ts` |
+| Server setup     | `apps/server/src/app.ts`    |
 
 ---
 
@@ -57,6 +57,7 @@ Quick reference for common development tasks, workflows, and troubleshooting.
 **Issue**: Type errors appear in editor but `bun run check-types` passes
 
 **Solution**: TypeScript in Bun can be stricter in some cases. Run:
+
 ```bash
 bun run check-types --force    # Force clear cache
 ```
@@ -66,6 +67,7 @@ bun run check-types --force    # Force clear cache
 **Issue**: Changes don't reflect without restarting
 
 **Solution**: This should work automatically. If stuck:
+
 1. Stop the dev server (`Ctrl+C`)
 2. Clear cache: `rm -rf .nuxt node_modules/.turbo`
 3. Restart: `bun run dev`
@@ -75,12 +77,14 @@ bun run check-types --force    # Force clear cache
 **Issue**: `Error: connect ECONNREFUSED` or similar
 
 **Steps**:
+
 1. Check PostgreSQL is running: `bun run db:start`
 2. Verify `.env` has correct `DATABASE_URL`
 3. Check Docker: `docker ps` should show postgres container
 4. View logs: `docker logs <container-id>`
 
 **Connection string format**:
+
 ```
 postgresql://user:password@localhost:5432/dbname
 ```
@@ -90,6 +94,7 @@ postgresql://user:password@localhost:5432/dbname
 **Issue**: `Address already in use` on 3001 or 3000
 
 **Solution**:
+
 ```bash
 # Kill process on port 3001 (frontend)
 lsof -i :3001
@@ -110,7 +115,7 @@ bun run dev:web -- -p 3002
 ```typescript
 export const env = z.object({
   DATABASE_URL: z.string(),
-  API_KEY: z.string(),              // Add new var
+  API_KEY: z.string(), // Add new var
   // ... other vars
 });
 ```
@@ -124,7 +129,7 @@ API_KEY=your_key_here
 3. Use in code:
 
 ```typescript
-import { env } from '@brainiac/env';
+import { env } from "@brainiac/env";
 
 const apiKey = env.API_KEY;
 ```
@@ -134,9 +139,9 @@ const apiKey = env.API_KEY;
 1. Modify schema in `packages/db/src/schema/`:
 
 ```typescript
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  newColumn: text('new_column'),  // Add new column
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  newColumn: text("new_column"), // Add new column
 });
 ```
 
@@ -157,8 +162,8 @@ bun run db:migrate
 1. Create or update router in `packages/api/src/routes/`:
 
 ```typescript
-import { createRouter } from '@brainiac/api';
-import { z } from 'zod';
+import { createRouter } from "@brainiac/api";
+import { z } from "zod";
 
 export const meRouter = createRouter({
   getProfile: router.query({
@@ -174,9 +179,9 @@ export const meRouter = createRouter({
 2. Register in `apps/server/src/app.ts`:
 
 ```typescript
-import { meRouter } from '@brainiac/api/routes/me';
+import { meRouter } from "@brainiac/api/routes/me";
 
-app.rpc('/me', meRouter);
+app.rpc("/me", meRouter);
 ```
 
 3. Use in frontend (types are automatic):
@@ -204,6 +209,7 @@ This opens a web interface at `https://local.drizzle.studio` where you can brows
 **Issue**: `Error: Cannot find module '@brainiac/...'`
 
 **Solution**:
+
 ```bash
 bun install              # Reinstall dependencies
 bun run check-types      # Verify types are correct
@@ -214,6 +220,7 @@ bun run check-types      # Verify types are correct
 **Issue**: `bun run db:seed` fails or doesn't create data
 
 **Solution**:
+
 ```bash
 # Check if database exists
 bun run db:studio
@@ -226,11 +233,13 @@ bun run db:seed
 ```
 
 **Custom password**:
+
 ```bash
 BRAINIAC_SEED_PASSWORD=mypassword bun run db:seed
 ```
 
 **Seed into existing account**:
+
 ```bash
 bun run db:seed -- --email your@email.com
 ```
@@ -240,11 +249,13 @@ bun run db:seed -- --email your@email.com
 **Issue**: Network request fails (CORS, connection refused)
 
 **Check**:
+
 1. Is backend running? `curl http://localhost:3000`
 2. Is frontend at correct URL? (`http://localhost:3001`)
 3. Check `.env` in `apps/web` for correct API URL
 
 **Common fix**:
+
 ```env
 # apps/web/.env
 NUXT_PUBLIC_API_BASE=http://localhost:3000
@@ -269,6 +280,7 @@ const data: MyType = response.data;
 **Issue**: Dev server slow, rebuilds take forever
 
 **Try**:
+
 ```bash
 # Rebuild from scratch
 rm -rf node_modules .nuxt .turbo bun.lock
@@ -307,7 +319,7 @@ docker logs <postgres-container-id>
 
 ```typescript
 // In any file
-import { env } from '@brainiac/env';
+import { env } from "@brainiac/env";
 console.log(env);
 ```
 

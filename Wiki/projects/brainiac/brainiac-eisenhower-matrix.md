@@ -31,6 +31,7 @@ When placed inside an **orchestrator** node, the block inherits the same scope a
 This behavior was added to match parity with `WorkspaceTimeOrchestratorBlockEditor.vue`.
 
 ### What was added
+
 - In orchestrator nodes: uses collected tasks from connected sources
 - Persists domain/quadrant filter state shared with the time orchestrator
 - Cross-source task support

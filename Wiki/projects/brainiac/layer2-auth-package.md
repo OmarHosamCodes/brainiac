@@ -32,17 +32,17 @@ layer: 2
 
 ### Authentication Methods
 
-| Method | Config |
-|---|---|
+| Method           | Config          |
+| ---------------- | --------------- |
 | Email + Password | `enabled: true` |
 
 ### Cookie Security
 
-| Attribute | Value |
-|---|---|
+| Attribute  | Value    |
+| ---------- | -------- |
 | `sameSite` | `"none"` |
-| `secure` | `true` |
-| `httpOnly` | `true` |
+| `secure`   | `true`   |
+| `httpOnly` | `true`   |
 
 ### Plugins
 
@@ -52,25 +52,25 @@ layer: 2
 - **`createCustomerOnSignUp: true`** — creates Polar customer record on every new signup
 - **Sub-plugins:**
 
-| Sub-plugin | Config |
-|---|---|
+| Sub-plugin | Config                                                                                                                                                               |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `checkout` | `productId: env.POLAR_PRODUCT_PRO`, `slug: "pro"`, `successUrl: "/billing/success?checkout_id={CHECKOUT_ID}"`, `authenticatedUsersOnly: true`, `returnUrl: /pricing` |
-| `portal` | `returnUrl: /dashboard` |
-| `webhooks` | `secret: env.POLAR_WEBHOOK_SECRET` |
+| `portal`   | `returnUrl: /dashboard`                                                                                                                                              |
+| `webhooks` | `secret: env.POLAR_WEBHOOK_SECRET`                                                                                                                                   |
 
 ---
 
 ## Relationships
 
-| Role | Entity | Mechanism |
-|---|---|---|
-| **Incoming (Dependents)** | `packages/api/src/context.ts` | calls `auth.api.getSession({ headers })` to extract session from every ORPC request |
-| **Outgoing (Dependencies)** | `@brainiac/db` (`db`) | `drizzleAdapter(db, ...)` — reads/writes `user`, `session`, `account`, `verification` tables |
-| **Outgoing (Dependencies)** | `@brainiac/db/schema/auth` | schema map passed to `drizzleAdapter` |
-| **Outgoing (Dependencies)** | `@brainiac/env/server` | `env.POLAR_ACCESS_TOKEN`, `env.POLAR_WEBHOOK_SECRET`, `env.POLAR_SERVER`, `env.BETTER_AUTH_SECRET`, `env.BETTER_AUTH_URL`, `env.CORS_ORIGIN` |
-| **Outgoing (Dependencies)** | `@polar-sh/better-auth` | `polar()`, `checkout()`, `portal()`, `webhooks()` plugin factories |
-| **Outgoing (Dependencies)** | `@polar-sh/sdk` | `new Polar(...)` client |
-| **Outgoing (Dependencies)** | `better-auth` | `betterAuth()` factory |
+| Role                        | Entity                        | Mechanism                                                                                                                                    |
+| --------------------------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Incoming (Dependents)**   | `packages/api/src/context.ts` | calls `auth.api.getSession({ headers })` to extract session from every ORPC request                                                          |
+| **Outgoing (Dependencies)** | `@brainiac/db` (`db`)         | `drizzleAdapter(db, ...)` — reads/writes `user`, `session`, `account`, `verification` tables                                                 |
+| **Outgoing (Dependencies)** | `@brainiac/db/schema/auth`    | schema map passed to `drizzleAdapter`                                                                                                        |
+| **Outgoing (Dependencies)** | `@brainiac/env/server`        | `env.POLAR_ACCESS_TOKEN`, `env.POLAR_WEBHOOK_SECRET`, `env.POLAR_SERVER`, `env.BETTER_AUTH_SECRET`, `env.BETTER_AUTH_URL`, `env.CORS_ORIGIN` |
+| **Outgoing (Dependencies)** | `@polar-sh/better-auth`       | `polar()`, `checkout()`, `portal()`, `webhooks()` plugin factories                                                                           |
+| **Outgoing (Dependencies)** | `@polar-sh/sdk`               | `new Polar(...)` client                                                                                                                      |
+| **Outgoing (Dependencies)** | `better-auth`                 | `betterAuth()` factory                                                                                                                       |
 
 ## Standalone Status
 
