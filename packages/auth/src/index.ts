@@ -21,6 +21,16 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  session: {
+    // Cache the resolved session in a signed cookie so `getSession` can verify
+    // it without a Postgres lookup. 5 minutes balances freshness against the
+    // latency cost of a DB round-trip on every navigation. Mutations that
+    // change session state (sign-out, sign-in) refresh the cookie immediately.
+    cookieCache: {
+      enabled: true,
+      maxAge: 5 * 60,
+    },
+  },
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
   advanced: {

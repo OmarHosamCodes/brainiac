@@ -69,11 +69,12 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     useQuery({
       ...workspaceGetQueryOptions,
       enabled: computed(() => Boolean(authSession.value?.data?.user)),
-      staleTime: 1_500,
-      refetchInterval: 4_000,
-      refetchIntervalInBackground: true,
+      staleTime: 30_000,
       refetchOnReconnect: true,
-      refetchOnWindowFocus: true,
+      // Polling and focus-refetches were causing constant re-fetches that
+      // saturated the auth path. Mutations explicitly invalidate this query
+      // so the cache stays accurate without background traffic.
+      refetchOnWindowFocus: false,
     }),
   );
   const saveWorkspace = useMutation(orpc.workspace.save.mutationOptions());
@@ -199,11 +200,21 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     isPreloadingWorkspace.value = true;
 
     try {
-      await queryClient.ensureQueryData({
+      const snapshot = await queryClient.ensureQueryData({
         ...workspaceGetQueryOptions,
-        staleTime: 1_500,
+        staleTime: 30_000,
       });
+
+      // Apply synchronously here rather than waiting for the watcher on
+      // `workspaceQuery.data` to fire on the next tick. This eliminates the
+      // empty-state flash when navigating into a workspace page that already
+      // has cached data.
+      if (snapshot && !loadApplied.value) {
+        applyRemoteSnapshot(snapshot.nodes, snapshot.updatedAt);
+      }
     } catch {
+      // Network errors surface via the query's error handler; the page can
+      // still render its skeleton/empty state.
     } finally {
       isPreloadingWorkspace.value = false;
     }

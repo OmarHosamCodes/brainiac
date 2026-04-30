@@ -27,7 +27,7 @@ export default defineNuxtConfig({
   devServer: {
     port: 7001, // Routed through Traefik proxy
   },
-  debug: true,
+  debug: false,
   vite: {
     optimizeDeps: {
       include: [

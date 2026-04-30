@@ -3,12 +3,12 @@ export default defineNuxtRouteMiddleware(async () => {
     return;
   }
 
-  const authClient = useAuthClient();
-  const session = useAuthSession();
+  // Single-flight: resolves once on the first navigation after the session
+  // has been determined (via SSR hydration or the client's first
+  // getSession). Subsequent navigations are a no-op.
+  await whenAuthSessionReady();
 
-  if (session.value.isPending) {
-    await authClient.getSession();
-  }
+  const session = useAuthSession();
 
   if (!session.value.data) {
     return navigateTo("/login");

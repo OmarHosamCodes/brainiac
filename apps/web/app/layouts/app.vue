@@ -162,7 +162,7 @@ function startDockResize(event: PointerEvent) {
   window.addEventListener("pointerup", finishResize, { once: true });
 }
 
-onMounted(async () => {
+onMounted(() => {
   if (typeof navigator !== "undefined" && /mac|iphone|ipad/i.test(navigator.platform)) {
     shellShortcutLabel.value = "⌘J";
     commandShortcutLabel.value = "⌘K";
@@ -170,9 +170,8 @@ onMounted(async () => {
 
   window.addEventListener("keydown", handleShellShortcuts);
 
-  if (authSession.value.data?.user && isWorkspaceRoute.value) {
-    await workspaceStore.preloadWorkspace();
-  }
+  // Workspace preload is owned by the `workspace` route middleware. Calling
+  // it again here was redundant and added a second waterfall on first paint.
 });
 
 onBeforeUnmount(() => {
