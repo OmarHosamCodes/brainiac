@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-01T00:00:00Z",
+  "title": "Design System: Brainiac",
+  "extensions": {
+    "colorMeta": {
+      "operator-emerald": {
+        "role": "primary",
+        "displayName": "Operator Emerald",
+        "canonical": "oklch(0.72 0.17 162)",
+        "tonalRamp": [
+          "oklch(0.22 0.06 162)",
+          "oklch(0.32 0.10 162)",
+          "oklch(0.42 0.13 162)",
+          "oklch(0.52 0.15 162)",
+          "oklch(0.62 0.16 162)",
+          "oklch(0.72 0.17 162)",
+          "oklch(0.82 0.12 162)",
+          "oklch(0.94 0.06 162)"
+        ]
+      },
+      "operator-emerald-deep": {
+        "role": "primary-hover",
+        "displayName": "Operator Emerald Deep",
+        "canonical": "oklch(0.65 0.16 162)"
+      },
+      "operator-emerald-soft": {
+        "role": "primary-soft",
+        "displayName": "Operator Emerald Soft",
+        "canonical": "oklch(0.94 0.06 162)"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0.18 0.005 285)",
+        "tonalRamp": [
+          "oklch(0.13 0.005 285)",
+          "oklch(0.18 0.005 285)",
+          "oklch(0.27 0.005 285)",
+          "oklch(0.40 0.005 285)",
+          "oklch(0.55 0.005 285)",
+          "oklch(0.70 0.004 285)",
+          "oklch(0.85 0.005 285)",
+          "oklch(0.91 0.004 285)"
+        ]
+      },
+      "ink-muted": {
+        "role": "neutral-muted",
+        "displayName": "Ink Muted",
+        "canonical": "oklch(0.40 0.005 285)"
+      },
+      "ink-dimmed": {
+        "role": "neutral-dimmed",
+        "displayName": "Ink Dimmed",
+        "canonical": "oklch(0.55 0.005 285)"
+      },
+      "paper": {
+        "role": "background",
+        "displayName": "Paper",
+        "canonical": "oklch(0.98 0.002 285)"
+      },
+      "paper-pure": {
+        "role": "surface",
+        "displayName": "Paper Pure",
+        "canonical": "oklch(0.99 0.002 285)"
+      },
+      "surface-elevated": {
+        "role": "surface-elevated",
+        "displayName": "Surface Elevated",
+        "canonical": "oklch(0.96 0.003 285)"
+      },
+      "hairline": {
+        "role": "border",
+        "displayName": "Hairline",
+        "canonical": "oklch(0.91 0.004 285)"
+      },
+      "hairline-strong": {
+        "role": "border-strong",
+        "displayName": "Hairline Strong",
+        "canonical": "oklch(0.85 0.005 285)"
+      },
+      "paper-inverted": {
+        "role": "background-inverted",
+        "displayName": "Paper Inverted",
+        "canonical": "oklch(0.13 0.005 285)"
+      },
+      "ink-inverted": {
+        "role": "neutral-inverted",
+        "displayName": "Ink Inverted",
+        "canonical": "oklch(0.98 0.002 285)"
+      },
+      "hairline-inverted": {
+        "role": "border-inverted",
+        "displayName": "Hairline Inverted",
+        "canonical": "oklch(0.27 0.005 285)"
+      },
+      "state-success": {
+        "role": "state-success",
+        "displayName": "State Success",
+        "canonical": "oklch(0.72 0.17 162)"
+      },
+      "state-warning": {
+        "role": "state-warning",
+        "displayName": "State Warning",
+        "canonical": "oklch(0.78 0.16 70)"
+      },
+      "state-error": {
+        "role": "state-error",
+        "displayName": "State Error",
+        "canonical": "oklch(0.65 0.22 25)"
+      },
+      "state-info": {
+        "role": "state-info",
+        "displayName": "State Info",
+        "canonical": "oklch(0.62 0.18 252)"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Marketing hero headlines. Tight tracking, near-overlapping leading."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section openings on marketing pages, page titles in product."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, panel headers, modal titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default reading text. Capped at 65–75ch on prose surfaces."
+      },
+      "body-lg": {
+        "displayName": "Body Large",
+        "purpose": "Hero supporting copy and marketing introductions."
+      },
+      "label": {
+        "displayName": "Label / Eyebrow",
+        "purpose": "Uppercase eyebrows, section markers, status indicators. The system's whisper."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Tool calls, latencies, IDs, code. What the system reports, not what it says."
+      }
+    },
+    "shadows": [
+      {
+        "name": "state-lift",
+        "value": "0 1px 2px oklch(0.18 0.005 285 / 0.05), 0 4px 12px oklch(0.18 0.005 285 / 0.06)",
+        "purpose": "Hover state on primary CTAs and interactive cards."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 3px oklch(0.72 0.17 162 / 0.20)",
+        "purpose": "Keyboard focus on inputs, buttons, links."
+      },
+      {
+        "name": "float-low",
+        "value": "0 4px 16px oklch(0.18 0.005 285 / 0.08)",
+        "purpose": "Toasts, popovers, dropdowns."
+      },
+      {
+        "name": "float-high",
+        "value": "0 12px 48px oklch(0.18 0.005 285 / 0.18)",
+        "purpose": "Modals, command palette."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out-quart",
+        "value": "cubic-bezier(0.25, 1, 0.5, 1)",
+        "purpose": "Default state transitions. Heavy decelerating settle."
+      },
+      {
+        "name": "ease-out-expo",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Reserved for the rare entrance moments where choreography is earned."
+      },
+      {
+        "name": "duration-fast",
+        "value": "150ms",
+        "purpose": "Hover, focus, color transitions."
+      },
+      {
+        "name": "duration-normal",
+        "value": "220ms",
+        "purpose": "State changes that need to be felt. The product default."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The accent CTA. Full-pill, bold, Operator Emerald. Used for the single most important action on a surface.",
+      "html": "<button class=\"ds-btn-primary\">Open workspace</button>",
+      "css": ".ds-btn-primary { background: oklch(0.72 0.17 162); color: oklch(0.99 0.002 285); font-family: 'Public Sans', system-ui, sans-serif; font-weight: 700; font-size: 0.9375rem; letter-spacing: -0.01em; padding: 12px 24px; border: none; border-radius: 9999px; cursor: pointer; transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1), box-shadow 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-primary:hover { background: oklch(0.65 0.16 162); box-shadow: 0 1px 2px oklch(0.18 0.005 285 / 0.05), 0 4px 12px oklch(0.18 0.005 285 / 0.06); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.72 0.17 162 / 0.20); } .ds-btn-primary:active { background: oklch(0.58 0.15 162); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary CTA on marketing surfaces. Hairline border, transparent background, ink text.",
+      "html": "<button class=\"ds-btn-outline\">See pricing</button>",
+      "css": ".ds-btn-outline { background: transparent; color: oklch(0.18 0.005 285); font-family: 'Public Sans', system-ui, sans-serif; font-weight: 700; font-size: 0.9375rem; padding: 12px 24px; border: 1px solid oklch(0.91 0.004 285); border-radius: 9999px; cursor: pointer; transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-outline:hover { background: oklch(0.96 0.003 285); } .ds-btn-outline:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.72 0.17 162 / 0.20); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Tertiary action. No border, no background until hover.",
+      "html": "<button class=\"ds-btn-ghost\">Cancel</button>",
+      "css": ".ds-btn-ghost { background: transparent; color: oklch(0.18 0.005 285); font-family: 'Public Sans', system-ui, sans-serif; font-weight: 700; font-size: 0.9375rem; padding: 12px 24px; border: none; border-radius: 9999px; cursor: pointer; transition: background 150ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-btn-ghost:hover { background: oklch(0.96 0.003 285); } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 3px oklch(0.72 0.17 162 / 0.20); }"
+    },
+    {
+      "name": "Badge",
+      "kind": "chip",
+      "refersTo": "badge",
+      "description": "Small full-pill label. Default uses surface-elevated; tinted variants per state.",
+      "html": "<span class=\"ds-badge\">Pro</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; background: oklch(0.96 0.003 285); color: oklch(0.40 0.005 285); font-family: 'Public Sans', system-ui, sans-serif; font-weight: 700; font-size: 0.6875rem; letter-spacing: 0.04em; padding: 2px 10px; border-radius: 9999px; }"
+    },
+    {
+      "name": "Eyebrow",
+      "kind": "custom",
+      "refersTo": "eyebrow",
+      "description": "Uppercase section marker. Whisper-quiet by design.",
+      "html": "<div class=\"ds-eyebrow\">01 / Canvas</div>",
+      "css": ".ds-eyebrow { font-family: 'Public Sans', system-ui, sans-serif; font-weight: 700; font-size: 0.6875rem; letter-spacing: 0.18em; text-transform: uppercase; color: oklch(0.55 0.005 285); }"
+    },
+    {
+      "name": "Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Default text input. 16px radius, hairline border, Operator Emerald focus.",
+      "html": "<input class=\"ds-input\" type=\"email\" placeholder=\"name@company.com\" />",
+      "css": ".ds-input { background: oklch(0.99 0.002 285); color: oklch(0.18 0.005 285); font-family: 'Public Sans', system-ui, sans-serif; font-weight: 600; font-size: 0.9375rem; padding: 12px 16px; border: 1px solid oklch(0.91 0.004 285); border-radius: 16px; outline: none; transition: border-color 150ms, box-shadow 150ms; width: 100%; box-sizing: border-box; } .ds-input::placeholder { color: oklch(0.65 0.005 285); font-weight: 400; } .ds-input:focus { border-color: oklch(0.72 0.17 162); box-shadow: 0 0 0 3px oklch(0.72 0.17 162 / 0.20); }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Generous 32px radius, hairline border, flat at rest. Lift only on hover for interactive cards.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Free</div><div class=\"ds-card-body\">Start with 10 nodes and the AI agent.</div></div>",
+      "css": ".ds-card { background: oklch(0.99 0.002 285); color: oklch(0.18 0.005 285); border: 1px solid oklch(0.91 0.004 285 / 0.5); border-radius: 32px; padding: 24px; font-family: 'Public Sans', system-ui, sans-serif; transition: box-shadow 220ms cubic-bezier(0.25, 1, 0.5, 1); } .ds-card-title { font-weight: 700; font-size: 1.125rem; margin-bottom: 8px; } .ds-card-body { font-weight: 400; font-size: 0.9375rem; line-height: 1.6; color: oklch(0.40 0.005 285); }"
+    },
+    {
+      "name": "System Status Indicator",
+      "kind": "custom",
+      "refersTo": "eyebrow",
+      "description": "A quiet inline status line. Dot + label, never a floating chrome.",
+      "html": "<div class=\"ds-status\"><span class=\"ds-status-dot\"></span><span class=\"ds-status-label\">All systems operational</span><span class=\"ds-status-meta\">· 24ms</span></div>",
+      "css": ".ds-status { display: inline-flex; align-items: center; gap: 8px; font-family: 'Public Sans', system-ui, sans-serif; font-weight: 700; font-size: 0.6875rem; letter-spacing: 0.16em; text-transform: uppercase; color: oklch(0.55 0.005 285); } .ds-status-dot { width: 6px; height: 6px; border-radius: 9999px; background: oklch(0.72 0.17 162); } .ds-status-meta { color: oklch(0.70 0.004 285); letter-spacing: 0; text-transform: none; font-weight: 500; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Two Registers, One Voice",
+    "overview": "Brainiac runs two surfaces inside one product. The Dashboard is spatial: an infinite canvas where users pan, zoom, place, and connect. The Agency is structured: rows, totals, time, execution. The visual system has to speak both dialects without ever sounding like two products bolted together. One typographic voice, one quiet color discipline, one component vocabulary; the layout grammar shifts between registers. The system rejects the dominant aesthetic of its category. No purple-blue gradient heroes, no animated orbs, no gradient text, no glassmorphism, no AI-tool neon. The agent is a tool, not a personality. The canvas is the product. UI chrome serves the work and gets out of the way the moment a user is thinking. Calm, focused, plain-spoken. Trust earned through restraint, not flash. The marketing register is allowed editorial confidence; the product register is allowed density. Same family, same components, different rhythm.",
+    "keyCharacteristics": [
+      "Restrained color: tinted neutrals, one accent (Operator Emerald) used on ≤10% of any product surface.",
+      "Typographic hierarchy carries the system. Public Sans across roles, JetBrains Mono for tool traces and metric values.",
+      "Flat by default. Hairlines (1px) separate content; shadows appear only as a response to state.",
+      "Generous radii on containers (32px cards, full pills on buttons and badges) keep the system feeling crafted, not clinical.",
+      "Two registers, one component vocabulary. A button looks the same on the landing page and inside the canvas toolbar."
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "Operator Emerald is used on ≤10% of any given screen. Its rarity is the point.", "section": "colors" },
+      { "name": "The Tinted Neutral Rule", "body": "No #000 and no #fff raw. Every neutral is zinc-tinted (chroma ~0.005).", "section": "colors" },
+      { "name": "The Semantic Reuse Rule", "body": "Success and Operator Emerald share a hue family. The product equates 'primary action' and 'successful state' by design.", "section": "colors" },
+      { "name": "The Eyebrow Rule", "body": "Section eyebrows are rendered in Label scale at neutral-400/500. Never colored, never emerald, never bolder. They are the system's whisper.", "section": "typography" },
+      { "name": "The Single Family Rule", "body": "No display/serif pairing. Public Sans across the entire scale. Hierarchy comes from weight and size.", "section": "typography" },
+      { "name": "The Mono For Truth Rule", "body": "JetBrains Mono is reserved for things the system reports, not things the system says. Latencies, IDs, paths, code. Never running prose, never headings.", "section": "typography" },
+      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. Reach for hairlines or tonal layering before shadow.", "section": "elevation" },
+      { "name": "The Hairline First Rule", "body": "Separation is hairline before tonal layering, and tonal layering before shadow. Walk the ladder.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Operator Emerald on primary actions, current selection, and system-status indicators only.",
+      "Do keep the accent on ≤10% of any given screen.",
+      "Do use hairlines (1px solid var(--hairline)) as the default separator.",
+      "Do render every interactive element with all seven states: default, hover, focus-visible, active, disabled, loading, error.",
+      "Do use full-pill radii for buttons and badges, generous (32px) radii for cards.",
+      "Do use Public Sans for everything that speaks; use JetBrains Mono for everything the system reports.",
+      "Do put a quiet inline system-status indicator in the footer (marketing) or rail (product), never a floating chrome.",
+      "Do place navigation in the footer on marketing surfaces and in a standard top-bar or rail in product surfaces.",
+      "Do make tool traces selectable, plain-prose-shaped, and free of decorative badges.",
+      "Do respect prefers-reduced-motion: strip animation, keep opacity fades only."
+    ],
+    "donts": [
+      "Don't use SaaS-cream clichés: purple/blue gradient heroes, hero-metric-with-sparkline cards, identical icon-and-heading card grids.",
+      "Don't ship AI-product slop: neon glows, gradient text, sparkle decoration, robot mascot avatars, animated orbs.",
+      "Don't apply enterprise heaviness: Salesforce/Jira density, nested tabs of nested tabs, dropdowns with 30 options.",
+      "Don't use #000 or #fff raw. Every neutral is zinc-tinted.",
+      "Don't use border-left or border-right greater than 1px as a colored stripe.",
+      "Don't use background-clip: text with a gradient.",
+      "Don't use blur or glassmorphism as a default.",
+      "Don't wrap everything in a card. Nested cards are always wrong.",
+      "Don't orchestrate page-load entrance sequences in product surfaces.",
+      "Don't decorate empty space.",
+      "Don't use em dashes anywhere in copy or UI text.",
+      "Don't use loading spinners where a skeleton or optimistic update would do.",
+      "Don't build a modal as a first thought."
+    ]
+  }
+}
