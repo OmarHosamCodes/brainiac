@@ -8,11 +8,11 @@ async function handleUpgrade() {
 
 <template>
   <div
-    class="flex min-h-[60vh] items-center justify-center rounded-3xl border border-dashed border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-zinc-950/40 to-zinc-950/60 p-8 backdrop-blur-sm"
+    class="flex min-h-[60vh] items-center justify-center rounded-3xl border border-dashed border-primary/30 bg-elevated p-8"
   >
     <div class="max-w-md text-center">
       <div
-        class="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/20"
+        class="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/20"
       >
         <UIcon name="i-lucide-sparkles" class="size-7" />
       </div>

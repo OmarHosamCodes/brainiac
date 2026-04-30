@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
+import { formatDuration } from "~/utils/format-duration";
 import { getErrorMessage } from "~/utils/get-error-message";
 
 const props = defineProps<{
@@ -194,18 +195,6 @@ function setPageSize(value: string | number | undefined) {
   page.value = 1;
 }
 
-function formatDuration(seconds: number) {
-  const safeSeconds = Math.max(0, Math.round(seconds));
-  const hours = Math.floor(safeSeconds / 3_600)
-    .toString()
-    .padStart(2, "0");
-  const minutes = Math.floor((safeSeconds % 3_600) / 60)
-    .toString()
-    .padStart(2, "0");
-
-  return `${hours}:${minutes}`;
-}
-
 function formatDateTime(value: string) {
   const parsed = new Date(value);
 
@@ -335,14 +324,14 @@ function toggleGroup(key: string) {
           <div class="text-right">
             <p class="text-[10px] uppercase tracking-[0.16em] text-muted">Today</p>
             <p class="font-mono text-sm font-semibold tabular-nums text-highlighted">
-              {{ formatDuration(todaySeconds) }}
+              {{ formatDuration(todaySeconds, "short") }}
             </p>
           </div>
           <div class="h-6 w-px bg-muted/20" />
           <div class="text-right">
             <p class="text-[10px] uppercase tracking-[0.16em] text-muted">This week</p>
             <p class="font-mono text-sm font-semibold tabular-nums text-primary">
-              {{ formatDuration(weekSummary?.totalSeconds ?? 0) }}
+              {{ formatDuration(weekSummary?.totalSeconds ?? 0, "short") }}
             </p>
           </div>
         </div>
@@ -455,7 +444,7 @@ function toggleGroup(key: string) {
           <div class="flex shrink-0 items-center gap-1.5">
             <div class="text-right">
               <UBadge color="primary" variant="soft" class="font-mono tabular-nums">
-                {{ formatDuration(group.totalSeconds) }}
+                {{ formatDuration(group.totalSeconds, "short") }}
               </UBadge>
               <p v-if="group.entries.length > 1" class="mt-0.5 text-[10px] text-muted">
                 {{ group.entries.length }} entries
@@ -507,7 +496,7 @@ function toggleGroup(key: string) {
               </span>
               <div class="flex shrink-0 items-center gap-1.5">
                 <span class="font-mono text-[10px] tabular-nums text-muted">
-                  {{ formatDuration(entry.durationSeconds) }}
+                  {{ formatDuration(entry.durationSeconds, "short") }}
                 </span>
                 <UButton
                   icon="i-lucide-trash-2"

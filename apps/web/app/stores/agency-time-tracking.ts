@@ -3,6 +3,7 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
 import { getErrorMessage } from "~/utils/get-error-message";
+import { formatDuration } from "~/utils/format-duration";
 import { normalizeAgencyLinkUrl } from "~/utils/normalize-agency-link-url";
 
 type AgencyTag = {
@@ -810,21 +811,6 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
       seenIds.add(entry.id);
       return true;
     });
-  }
-
-  function formatDuration(seconds: number) {
-    const safeSeconds = Math.max(0, Math.round(seconds));
-    const hours = Math.floor(safeSeconds / 3_600)
-      .toString()
-      .padStart(2, "0");
-    const minutes = Math.floor((safeSeconds % 3_600) / 60)
-      .toString()
-      .padStart(2, "0");
-    const secs = Math.floor(safeSeconds % 60)
-      .toString()
-      .padStart(2, "0");
-
-    return `${hours}:${minutes}:${secs}`;
   }
 
   return {

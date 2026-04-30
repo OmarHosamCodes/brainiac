@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useQuery } from "@tanstack/vue-query";
 
+import { formatDuration } from "~/utils/format-duration";
+
 const props = defineProps<{
   teamId: string;
 }>();
@@ -137,13 +139,11 @@ function formatHours(seconds: number) {
 <template>
   <div class="space-y-6">
     <!-- Filter bar -->
-    <div
-      class="space-y-4 rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
-    >
+    <UCard>
       <!-- Date preset -->
       <div>
         <label
-          class="mb-2 block text-xs font-semibold uppercase tracking-widest text-zinc-600 dark:text-zinc-400"
+          class="mb-2 block text-xs font-semibold uppercase tracking-widest text-muted"
         >
           Period
         </label>
@@ -235,79 +235,73 @@ function formatHours(seconds: number) {
               class="rounded-full"
               @click="toggleTag(tag.id)"
             />
-            <span v-if="tags.length > 3" class="text-xs text-zinc-500">
+            <span v-if="tags.length > 3" class="text-xs text-muted">
               +{{ tags.length - 3 }} more
             </span>
           </div>
-          <p v-else class="text-xs text-zinc-500">No tags yet</p>
+          <p v-else class="text-xs text-muted">No tags yet</p>
         </UFormField>
       </div>
-    </div>
+    </UCard>
 
     <!-- Summary stats -->
     <div v-if="summaryData" class="grid gap-4 md:grid-cols-3">
-      <div
-        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
-      >
-        <p class="text-xs font-semibold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
+      <UCard>
+        <p class="text-xs font-semibold uppercase tracking-widest text-muted">
           Total hours
         </p>
-        <p class="mt-2 text-2xl font-bold text-zinc-100">
+        <p class="mt-2 text-2xl font-bold text-highlighted">
           {{ formatHours(summaryData.totalSeconds) }}
         </p>
-      </div>
+      </UCard>
 
-      <div
-        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
-      >
-        <p class="text-xs font-semibold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
+      <UCard>
+        <p class="text-xs font-semibold uppercase tracking-widest text-muted">
           Active timers
         </p>
-        <p class="mt-2 text-2xl font-bold text-emerald-500">
+        <p class="mt-2 text-2xl font-bold text-primary">
           {{ summaryData.activeCount ?? 0 }}
         </p>
-      </div>
+      </UCard>
 
-      <div
-        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
-      >
-        <p class="text-xs font-semibold uppercase tracking-widest text-zinc-600 dark:text-zinc-400">
+      <UCard>
+        <p class="text-xs font-semibold uppercase tracking-widest text-muted">
           Team members
         </p>
-        <p class="mt-2 text-2xl font-bold text-zinc-100">
+        <p class="mt-2 text-2xl font-bold text-highlighted">
           {{ summaryData.teamMembers?.length ?? 0 }}
         </p>
-      </div>
+      </UCard>
     </div>
 
     <!-- Team activity table -->
     <div
       v-if="summaryData?.teamMembers && summaryData.teamMembers.length > 0"
-      class="overflow-hidden rounded-2xl border border-zinc-200/30 bg-zinc-950/40 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
+      class="overflow-hidden rounded-2xl border border-default bg-elevated"
     >
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
-          <thead class="border-b border-zinc-200/20 bg-zinc-900/50 dark:border-zinc-800/50">
+          <thead class="border-b border-default bg-elevated/50">
             <tr>
-              <th class="px-4 py-3 text-left font-semibold text-zinc-300">Member</th>
-              <th class="px-4 py-3 text-left font-semibold text-zinc-300">Latest Activity</th>
-              <th class="px-4 py-3 text-right font-semibold text-zinc-300">Hours</th>
+              <th class="px-4 py-3 text-left font-semibold text-muted">Member</th>
+              <th class="px-4 py-3 text-left font-semibold text-muted">Latest Activity</th>
+              <th class="px-4 py-3 text-right font-semibold text-muted">Hours</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-zinc-200/10 dark:divide-zinc-800/30">
+          <tbody class="divide-y divide-default">
             <tr
               v-for="member in summaryData.teamMembers"
               :key="member.id"
-              class="transition-colors hover:bg-zinc-800/30"
+              class="transition-colors hover:bg-elevated/50"
             >
               <td class="px-4 py-3">
                 <div class="flex items-center gap-2">
                   <UAvatar :src="member.avatar ?? undefined" :alt="member.name" size="sm" />
                   <div class="min-w-0">
-                    <p class="font-medium text-zinc-100">
+                    <p class="font-medium text-highlighted">
                       {{ member.name }}
                     </p>
-                    <p class="truncate text-xs text-zinc-500">
+                    <p class="truncate text-xs text-muted">
                       {{ member.email }}
                     </p>
                   </div>
@@ -318,23 +312,23 @@ function formatHours(seconds: number) {
                   <div class="flex items-center gap-2">
                     <span
                       v-if="member.isActive"
-                      class="inline-block size-2 animate-pulse rounded-full bg-emerald-500"
+                      class="inline-block size-2 animate-pulse rounded-full bg-primary"
                     />
-                    <p class="text-sm text-zinc-300">
+                    <p class="text-sm text-muted">
                       {{ member.latestEntry.projectName }}
                     </p>
                   </div>
                   <p
                     v-if="member.latestEntry.description"
-                    class="mt-1 truncate text-xs text-zinc-500"
+                    class="mt-1 truncate text-xs text-muted"
                   >
                     {{ member.latestEntry.description }}
                   </p>
                 </div>
-                <p v-else class="text-xs text-zinc-500">No activity</p>
+                <p v-else class="text-xs text-muted">No activity</p>
               </td>
               <td class="px-4 py-3 text-right">
-                <p class="font-mono font-semibold text-zinc-100">
+                <p class="font-mono font-semibold text-highlighted">
                   {{ formatHours(member.totalSeconds) }}
                 </p>
               </td>
@@ -347,20 +341,20 @@ function formatHours(seconds: number) {
     <!-- Empty state -->
     <div
       v-else-if="!summaryQuery.isPending.value"
-      class="rounded-2xl border border-dashed border-zinc-400/30 p-8 text-center dark:border-zinc-700/30"
+      class="rounded-2xl border border-dashed border-muted/30 p-8 text-center"
     >
-      <UIcon name="i-lucide-inbox" class="mx-auto size-8 text-zinc-400" />
-      <p class="mt-4 font-medium text-zinc-400">No time tracked in this period</p>
-      <p class="mt-1 text-sm text-zinc-500">Try adjusting your filters or date range.</p>
+      <UIcon name="i-lucide-inbox" class="mx-auto size-8 text-muted" />
+      <p class="mt-4 font-medium text-muted">No time tracked in this period</p>
+      <p class="mt-1 text-sm text-dimmed">Try adjusting your filters or date range.</p>
     </div>
 
     <!-- Loading -->
     <div
       v-if="summaryQuery.isPending.value"
-      class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-8 text-center backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
+      class="rounded-2xl border border-default bg-elevated p-8 text-center"
     >
-      <UIcon name="i-lucide-loader-2" class="mx-auto size-6 animate-spin text-zinc-400" />
-      <p class="mt-4 text-sm text-zinc-400">Loading data...</p>
+      <UIcon name="i-lucide-loader-2" class="mx-auto size-6 animate-spin text-muted" />
+      <p class="mt-4 text-sm text-muted">Loading data...</p>
     </div>
   </div>
 </template>

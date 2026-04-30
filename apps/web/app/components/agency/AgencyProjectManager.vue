@@ -192,10 +192,8 @@ async function deleteTag(tagId: string) {
     <!-- Two-column layout: Clients | Projects -->
     <div class="grid gap-6 md:grid-cols-2">
       <!-- Clients panel -->
-      <div
-        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
-      >
-        <h3 class="mb-4 text-sm font-semibold text-zinc-100">Clients</h3>
+      <UCard>
+        <h3 class="mb-4 text-sm font-semibold text-highlighted">Clients</h3>
 
         <!-- Create client form -->
         <div class="mb-4 flex gap-2">
@@ -221,11 +219,11 @@ async function deleteTag(tagId: string) {
           <button
             v-for="client in clients"
             :key="client.id"
-            class="w-full rounded-lg border border-zinc-200/20 bg-zinc-900/50 px-3 py-2 text-left text-sm transition-colors hover:bg-zinc-800/50 dark:border-zinc-800/50 dark:bg-zinc-900/30 dark:hover:bg-zinc-900/70"
-            :class="selectedClientId === client.id ? 'border-emerald-500/50 bg-emerald-500/10' : ''"
+            class="w-full rounded-lg border border-default bg-elevated/50 px-3 py-2 text-left text-sm transition-colors hover:bg-elevated"
+            :class="selectedClientId === client.id ? 'border-primary/50 bg-primary/10' : ''"
             @click="selectedClientId = client.id"
           >
-            <p class="font-medium text-zinc-100">
+            <p class="font-medium text-highlighted">
               {{ client.name }}
             </p>
           </button>
@@ -234,19 +232,17 @@ async function deleteTag(tagId: string) {
         <!-- Empty state -->
         <div
           v-else
-          class="rounded-lg border border-dashed border-zinc-400/30 p-4 text-center dark:border-zinc-700/30"
+          class="rounded-lg border border-dashed border-muted/30 p-4 text-center"
         >
-          <p class="text-xs text-zinc-500">Add your first client to get started</p>
+          <p class="text-xs text-muted">Add your first client to get started</p>
         </div>
-      </div>
+      </UCard>
 
       <!-- Projects panel -->
-      <div
-        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
-      >
-        <h3 class="mb-4 text-sm font-semibold text-zinc-100">
+      <UCard>
+        <h3 class="mb-4 text-sm font-semibold text-highlighted">
           Projects
-          <span v-if="selectedClient" class="ml-1 text-xs font-normal text-zinc-500">
+          <span v-if="selectedClient" class="ml-1 text-xs font-normal text-muted">
             for {{ selectedClient.name }}
           </span>
         </h3>
@@ -275,9 +271,9 @@ async function deleteTag(tagId: string) {
           <div
             v-for="project in projects"
             :key="project.id"
-            class="rounded-lg border border-zinc-200/20 bg-zinc-900/50 px-3 py-2 text-sm dark:border-zinc-800/50 dark:bg-zinc-900/30"
+            class="rounded-lg border border-default bg-elevated/50 px-3 py-2 text-sm"
           >
-            <p class="font-medium text-zinc-100">
+            <p class="font-medium text-highlighted">
               {{ project.name }}
             </p>
           </div>
@@ -286,35 +282,33 @@ async function deleteTag(tagId: string) {
         <!-- Empty state -->
         <div
           v-else-if="selectedClientId"
-          class="rounded-lg border border-dashed border-zinc-400/30 p-4 text-center dark:border-zinc-700/30"
+          class="rounded-lg border border-dashed border-muted/30 p-4 text-center"
         >
-          <p class="text-xs text-zinc-500">No projects for this client yet</p>
+          <p class="text-xs text-muted">No projects for this client yet</p>
         </div>
 
         <!-- No client selected -->
         <div
           v-else
-          class="rounded-lg border border-dashed border-zinc-400/30 p-4 text-center dark:border-zinc-700/30"
+          class="rounded-lg border border-dashed border-muted/30 p-4 text-center"
         >
-          <p class="text-xs text-zinc-500">Select a client to see projects</p>
+          <p class="text-xs text-muted">Select a client to see projects</p>
         </div>
-      </div>
+      </UCard>
     </div>
 
     <!-- Tags Section -->
     <div v-if="effectiveTeamId">
       <div class="mb-4 flex items-center gap-3">
-        <UIcon name="i-lucide-tags" class="size-5 text-emerald-600 dark:text-emerald-400" />
+        <UIcon name="i-lucide-tags" class="size-5 text-primary" />
         <div>
-          <h3 class="font-semibold text-zinc-100">Tags</h3>
-          <p class="text-xs text-zinc-500">Organize time entries with team-wide tags.</p>
+          <h3 class="font-semibold text-highlighted">Tags</h3>
+          <p class="text-xs text-muted">Organize time entries with team-wide tags.</p>
         </div>
       </div>
 
       <!-- Create tag form -->
-      <div
-        class="mb-4 rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
-      >
+      <UCard class="mb-4">
         <div class="flex gap-2">
           <UInput
             v-model="newTagName"
@@ -332,22 +326,19 @@ async function deleteTag(tagId: string) {
             @click="createTag"
           />
         </div>
-      </div>
+      </UCard>
 
       <!-- Tags list -->
-      <div
-        v-if="tags.length > 0"
-        class="rounded-2xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50"
-      >
+      <UCard v-if="tags.length > 0">
         <div class="flex flex-wrap gap-2">
           <div
             v-for="tag in tags"
             :key="tag.id"
-            class="flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1.5 text-sm"
+            class="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-sm"
           >
-            <span class="text-emerald-100">{{ tag.name }}</span>
+            <span class="text-highlighted">{{ tag.name }}</span>
             <button
-              class="ml-auto text-emerald-500/60 transition-colors hover:text-emerald-400"
+              class="ml-auto text-primary/60 transition-colors hover:text-primary"
               :disabled="deleteTagMutation.isPending.value"
               @click="deleteTag(tag.id)"
             >
@@ -355,14 +346,14 @@ async function deleteTag(tagId: string) {
             </button>
           </div>
         </div>
-      </div>
+      </UCard>
 
       <!-- Empty state -->
       <div
         v-else
-        class="rounded-2xl border border-dashed border-zinc-400/30 p-4 text-center dark:border-zinc-700/30"
+        class="rounded-2xl border border-dashed border-muted/30 p-4 text-center"
       >
-        <p class="text-xs text-zinc-500">
+        <p class="text-xs text-muted">
           No tags yet — add your first tag to start categorizing time entries
         </p>
       </div>

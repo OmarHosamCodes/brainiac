@@ -63,7 +63,7 @@ function selectTeam(value: string | number | undefined) {
 
 <template>
   <aside
-    class="flex w-full shrink-0 flex-col gap-4 rounded-3xl border border-zinc-200/30 bg-zinc-950/40 p-4 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/50 md:w-64"
+    class="flex w-full shrink-0 flex-col gap-4 rounded-3xl border border-default bg-elevated p-4 md:w-64"
   >
     <div>
       <p class="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted">Team</p>
@@ -88,15 +88,15 @@ function selectTeam(value: string | number | undefined) {
         class="group flex items-start gap-3 rounded-xl border border-transparent px-3 py-2.5 text-left transition-colors"
         :class="
           section === item.value
-            ? 'border-emerald-500/30 bg-emerald-500/10 text-highlighted'
-            : 'text-muted hover:border-zinc-200/20 hover:bg-zinc-900/40 hover:text-highlighted dark:hover:border-zinc-800/50'
+            ? 'border-primary/30 bg-primary/10 text-highlighted'
+            : 'text-muted hover:bg-elevated/50 hover:text-highlighted'
         "
         @click="selectSection(item.value)"
       >
         <UIcon
           :name="item.icon"
           class="mt-0.5 size-4 shrink-0"
-          :class="section === item.value ? 'text-emerald-500' : ''"
+          :class="section === item.value ? 'text-primary' : ''"
         />
         <div class="min-w-0 flex-1">
           <p class="text-sm font-medium leading-tight">{{ item.label }}</p>

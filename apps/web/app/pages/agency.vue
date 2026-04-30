@@ -70,7 +70,7 @@ const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQue
 
 <template>
   <div class="h-full overflow-y-auto bg-default text-default">
-    <main class="mx-auto w-full max-w-7xl px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+    <main class="w-full px-4 pb-16 pt-8 sm:px-6 lg:px-8">
       <header class="mb-6 flex items-center gap-3">
         <div
           class="flex size-10 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-500 ring-1 ring-emerald-500/20"

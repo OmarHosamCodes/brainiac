@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
+import { formatDuration } from "~/utils/format-duration";
 import {
   getAgencyLinkUrlDisplayLabel,
   normalizeAgencyLinkUrl,
@@ -290,28 +291,6 @@ const discardMenuItems = computed(() => [
 onBeforeUnmount(() => {
   agencyTimeTrackingStore.unregisterActiveTimerQuery(activeTimerQueryKey.value);
 });
-
-function formatDuration(seconds: number) {
-  const safeSeconds = Math.max(0, Math.round(seconds));
-  const hours = Math.floor(safeSeconds / 3_600)
-    .toString()
-    .padStart(2, "0");
-  const minutes = Math.floor((safeSeconds % 3_600) / 60)
-    .toString()
-    .padStart(2, "0");
-  const secs = Math.floor(safeSeconds % 60)
-    .toString()
-    .padStart(2, "0");
-  return `${hours}:${minutes}:${secs}`;
-}
-
-function toggleTag(tagId: string) {
-  if (!effectiveTeamId.value) {
-    return;
-  }
-
-  agencyTimeTrackingStore.toggleTrackerTag(effectiveTeamId.value, tagId);
-}
 
 async function startTimer() {
   const teamId = effectiveTeamId.value;

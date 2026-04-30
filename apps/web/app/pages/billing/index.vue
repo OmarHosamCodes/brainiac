@@ -44,9 +44,9 @@ const limitItems = computed(() => [
 </script>
 
 <template>
-  <div class="h-full overflow-y-auto bg-white dark:bg-neutral-950">
-    <div class="max-w-3xl mx-auto px-6 pt-8 pb-24">
-      <h1 class="text-3xl font-bold text-neutral-900 dark:text-neutral-100 mb-8">Billing</h1>
+  <div class="h-full overflow-y-auto bg-default">
+    <div class="px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+      <h1 class="text-3xl font-bold text-highlighted mb-8">Billing</h1>
 
       <USkeleton v-if="billingQuery.isPending.value" class="h-48 w-full rounded-[32px]" />
 
@@ -56,7 +56,7 @@ const limitItems = computed(() => [
           <div class="flex items-center justify-between p-2">
             <div>
               <div class="flex items-center gap-3 mb-1">
-                <h2 class="text-xl font-bold text-neutral-900 dark:text-neutral-100">
+                <h2 class="text-xl font-bold text-highlighted">
                   {{ isPro ? "Pro" : "Free" }} Plan
                 </h2>
                 <UBadge :color="isPro ? 'primary' : 'neutral'" variant="subtle" size="sm">
@@ -64,12 +64,12 @@ const limitItems = computed(() => [
                 </UBadge>
               </div>
 
-              <p v-if="isLifetimeSubscription" class="text-sm text-neutral-500">Lifetime access</p>
-              <p v-else-if="subscription" class="text-sm text-neutral-500">
+              <p v-if="isLifetimeSubscription" class="text-sm text-muted">Lifetime access</p>
+              <p v-else-if="subscription" class="text-sm text-muted">
                 {{ subscription.status === "active" ? "Renews" : "Ends" }}
                 {{ formattedRenewalDate }}
               </p>
-              <p v-else class="text-sm text-neutral-500">No active subscription</p>
+              <p v-else class="text-sm text-muted">No active subscription</p>
             </div>
 
             <div class="flex gap-3">
@@ -84,7 +84,7 @@ const limitItems = computed(() => [
               <UButton
                 v-else-if="!isPro"
                 color="primary"
-                class="shadow-lg shadow-emerald-500/20"
+                class="shadow-lg shadow-primary/20"
                 @click="checkout('pro')"
               >
                 Upgrade to Pro
@@ -96,7 +96,7 @@ const limitItems = computed(() => [
         <!-- Plan Limits -->
         <UCard>
           <div class="p-2">
-            <h3 class="text-lg font-bold text-neutral-900 dark:text-neutral-100 mb-4">
+            <h3 class="text-lg font-bold text-highlighted mb-4">
               Your Plan Limits
             </h3>
 
@@ -104,14 +104,14 @@ const limitItems = computed(() => [
               <div
                 v-for="item in limitItems"
                 :key="item.label"
-                class="flex items-center gap-3 p-3 rounded-2xl bg-neutral-50 dark:bg-neutral-900"
+                class="flex items-center gap-3 p-3 rounded-2xl bg-elevated"
               >
-                <div class="flex items-center justify-center size-9 rounded-xl bg-emerald-500/10">
-                  <UIcon :name="item.icon" class="size-4 text-emerald-500" />
+                <div class="flex items-center justify-center size-9 rounded-xl bg-primary/10">
+                  <UIcon :name="item.icon" class="size-4 text-primary" />
                 </div>
                 <div>
-                  <p class="text-xs text-neutral-500">{{ item.label }}</p>
-                  <p class="text-sm font-bold text-neutral-900 dark:text-neutral-100">
+                  <p class="text-xs text-muted">{{ item.label }}</p>
+                  <p class="text-sm font-bold text-highlighted">
                     {{ item.value }}
                   </p>
                 </div>
