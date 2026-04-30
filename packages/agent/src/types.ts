@@ -49,7 +49,7 @@ export const agentToolCallSchema = z.object({
   input: z.unknown().optional(),
   output: z.unknown().optional(),
   status: z.enum(["completed", "error", "in_progress"]).default("completed"),
-  error: z.string().trim().max(500).nullable().default(null),
+  error: z.string().trim().max(4000).nullable().default(null),
   durationMs: z.number().int().nonnegative().optional(),
 });
 

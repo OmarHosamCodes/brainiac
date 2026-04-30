@@ -391,7 +391,7 @@ async function runToolEnabledPass(args: {
           }
 
           // Heuristic: detect tool errors when output payload has an `error` field.
-          const errorMessage =
+          const rawErrorMessage =
             parsedOutput &&
             typeof parsedOutput === "object" &&
             !Array.isArray(parsedOutput) &&
@@ -399,6 +399,10 @@ async function runToolEnabledPass(args: {
             typeof (parsedOutput as { error?: unknown }).error === "string"
               ? ((parsedOutput as { error?: string }).error?.trim() || null)
               : null;
+          const errorMessage =
+            rawErrorMessage && rawErrorMessage.length > 2000
+              ? `${rawErrorMessage.slice(0, 1999)}…`
+              : rawErrorMessage;
 
           if (!calls.has(callId)) {
             callOrder.push(callId);
