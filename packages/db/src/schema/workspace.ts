@@ -6,7 +6,18 @@ import { user } from "./auth";
 export type WorkspaceNodeRecord = WorkspaceNode;
 export type WorkspaceMarketplacePayloadRecord = WorkspaceMarketplacePayload;
 export type DashboardConversationMessageContextNodeTitlesRecord = string[];
-export type DashboardConversationMessageToolsCalledRecord = string[];
+export type DashboardConversationMessageToolCallRecord = {
+  id?: string;
+  name: string;
+  input?: unknown;
+  output?: unknown;
+  status?: "completed" | "error" | "in_progress";
+  error?: string | null;
+  durationMs?: number;
+};
+export type DashboardConversationMessageToolsCalledRecord = Array<
+  string | DashboardConversationMessageToolCallRecord
+>;
 export type DashboardConversationUsageLatestRecord = {
   modelId: string;
   contextLength: number | null;

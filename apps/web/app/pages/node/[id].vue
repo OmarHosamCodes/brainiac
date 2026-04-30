@@ -144,6 +144,23 @@ const node = computed(() => {
 
 const activeTabId = computed(() => node.value?.viewState.activeTabId ?? "");
 const isAgentChatVisible = ref(true);
+
+function handleAgentRailShortcut(event: KeyboardEvent) {
+  const isMac = typeof navigator !== "undefined" && /mac|iphone|ipad/i.test(navigator.platform);
+  const modifier = isMac ? event.metaKey : event.ctrlKey;
+  if (modifier && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "j") {
+    event.preventDefault();
+    isAgentChatVisible.value = !isAgentChatVisible.value;
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", handleAgentRailShortcut);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleAgentRailShortcut);
+});
 const agentContextTargets = ref<AgentContextTarget[]>([]);
 const {
   activeTeamMembership,

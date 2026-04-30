@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import type { DashboardAgentToolPreset, DashboardConversationMessage } from "@brainiac/agent";
+import type {
+  AgentToolCall,
+  AgentToolCallEntry,
+  DashboardAgentToolPreset,
+  DashboardConversationMessage,
+} from "@brainiac/agent";
 import type { WorkspaceNode } from "@brainiac/workspace";
-import { computed, ref, toRef } from "vue";
+import { computed, reactive, ref, toRef } from "vue";
 
 import { renderSimpleMarkdown } from "~/utils/render-simple-markdown";
 
@@ -343,6 +348,315 @@ function renderAssistantMessage(content: string) {
   return renderSimpleMarkdown(content);
 }
 
+type NormalizedToolCall = {
+  key: string;
+  name: string;
+  label: string;
+  summary: string;
+  status: "completed" | "error" | "in_progress";
+  error: string | null;
+  input: unknown;
+  output: unknown;
+  hasDetails: boolean;
+  linkCard: FetchedLinkCard | null;
+};
+
+interface FetchedLinkCard {
+  url: string;
+  finalUrl: string;
+  host: string;
+  title: string | null;
+  excerpt: string | null;
+  truncated: boolean;
+  faviconUrl: string;
+}
+
+function extractFetchedLinkCard(
+  name: string,
+  status: NormalizedToolCall["status"],
+  input: unknown,
+  output: unknown,
+): FetchedLinkCard | null {
+  if (name !== "fetch_web_page" || status === "error") {
+    return null;
+  }
+
+  const inputObj =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? (input as Record<string, unknown>)
+      : null;
+  const outputObj =
+    output && typeof output === "object" && !Array.isArray(output)
+      ? (output as Record<string, unknown>)
+      : null;
+
+  if (outputObj && typeof outputObj.error === "string" && outputObj.error.length > 0) {
+    return null;
+  }
+
+  const url =
+    (outputObj?.url as string | undefined) ?? (inputObj?.url as string | undefined) ?? "";
+  const finalUrl = (outputObj?.finalUrl as string | undefined) ?? url;
+
+  if (!url && !finalUrl) {
+    return null;
+  }
+
+  let host = "";
+  try {
+    const parsed = new URL(finalUrl || url);
+    host = parsed.hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+
+  const title = (outputObj?.title as string | null | undefined) ?? null;
+  const rawExcerpt = (outputObj?.excerpt as string | null | undefined) ?? null;
+  const excerpt =
+    rawExcerpt && rawExcerpt.trim().length > 0 ? truncateString(rawExcerpt, 220) : null;
+
+  return {
+    url: url || finalUrl,
+    finalUrl: finalUrl || url,
+    host,
+    title: title && title.trim().length > 0 ? title : null,
+    excerpt,
+    truncated: Boolean(outputObj?.truncated),
+    faviconUrl: `https://www.google.com/s2/favicons?domain=${host}&sz=64`,
+  };
+}
+
+const TOOL_LABELS: Record<string, string> = {
+  list_dashboard_nodes: "Listed dashboard nodes",
+  search_dashboard: "Searched the workspace",
+  list_marketplace_items: "Listed marketplace items",
+  search_marketplace: "Searched the marketplace",
+  get_node_details: "Inspected a node",
+  get_tab_details: "Inspected a tab",
+  get_block_details: "Inspected a block",
+  get_marketplace_item_details: "Inspected a marketplace item",
+  create_node: "Created a node",
+  replace_node: "Replaced a node",
+  delete_node: "Deleted a node",
+  create_tab: "Created a tab",
+  replace_tab: "Replaced a tab",
+  delete_tab: "Deleted a tab",
+  create_block: "Created a block",
+  patch_block: "Patched a block",
+  replace_block: "Replaced a block",
+  delete_block: "Deleted a block",
+  fetch_web_page: "Fetched a web page",
+  get_current_time: "Checked the current time",
+};
+
+function humanizeToolName(name: string) {
+  if (TOOL_LABELS[name]) {
+    return TOOL_LABELS[name];
+  }
+
+  return name
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function truncateString(value: string, max = 80) {
+  const collapsed = value.replace(/\s+/g, " ").trim();
+  return collapsed.length > max ? `${collapsed.slice(0, max - 1)}…` : collapsed;
+}
+
+function summarizeToolCall(name: string, input: unknown, output: unknown): string {
+  const inputObj =
+    input && typeof input === "object" && !Array.isArray(input)
+      ? (input as Record<string, unknown>)
+      : null;
+  const outputObj =
+    output && typeof output === "object" && !Array.isArray(output)
+      ? (output as Record<string, unknown>)
+      : null;
+
+  switch (name) {
+    case "fetch_web_page": {
+      const url = (inputObj?.url as string | undefined) ?? "";
+      const title = outputObj?.title as string | null | undefined;
+      try {
+        const host = url ? new URL(url).hostname.replace(/^www\./, "") : "";
+        return title ? `${truncateString(title, 60)} · ${host}` : host || "web page";
+      } catch {
+        return title ? truncateString(title, 60) : url || "web page";
+      }
+    }
+    case "search_dashboard":
+    case "search_marketplace": {
+      const query = (inputObj?.query as string | undefined) ?? "";
+      return query ? `“${truncateString(query, 60)}”` : "results";
+    }
+    case "get_node_details":
+    case "get_tab_details":
+    case "get_block_details":
+    case "get_marketplace_item_details": {
+      const summary = outputObj?.summary as Record<string, unknown> | null | undefined;
+      const title =
+        (summary?.title as string | undefined) ??
+        (outputObj?.title as string | undefined) ??
+        "";
+      return title ? truncateString(title, 70) : "";
+    }
+    case "create_block":
+    case "patch_block":
+    case "replace_block":
+    case "delete_block": {
+      const blockType =
+        (inputObj?.blockType as string | undefined) ??
+        (inputObj?.type as string | undefined) ??
+        "";
+      const title =
+        (inputObj?.title as string | undefined) ??
+        ((inputObj?.block as Record<string, unknown> | undefined)?.title as string | undefined) ??
+        "";
+      const parts = [blockType, title].filter(Boolean).map((part) => truncateString(part, 40));
+      return parts.join(" · ");
+    }
+    case "create_node":
+    case "replace_node":
+    case "delete_node": {
+      const title = (inputObj?.title as string | undefined) ?? "";
+      return title ? truncateString(title, 60) : "";
+    }
+    case "create_tab":
+    case "replace_tab":
+    case "delete_tab": {
+      const title =
+        (inputObj?.title as string | undefined) ??
+        ((inputObj?.tab as Record<string, unknown> | undefined)?.title as string | undefined) ??
+        "";
+      return title ? truncateString(title, 60) : "";
+    }
+    case "list_dashboard_nodes": {
+      const nodes = outputObj?.nodes;
+      if (Array.isArray(nodes)) {
+        return `${nodes.length} node${nodes.length === 1 ? "" : "s"}`;
+      }
+      return "";
+    }
+    default:
+      return "";
+  }
+}
+
+function normalizeToolCall(entry: AgentToolCallEntry, index: number): NormalizedToolCall {
+  if (typeof entry === "string") {
+    return {
+      key: `${index}:${entry}`,
+      name: entry,
+      label: humanizeToolName(entry),
+      summary: "",
+      status: "completed",
+      error: null,
+      input: undefined,
+      output: undefined,
+      hasDetails: false,
+      linkCard: null,
+    };
+  }
+
+  const call = entry as AgentToolCall;
+  const summary = summarizeToolCall(call.name, call.input, call.output);
+  const hasDetails =
+    call.input !== undefined || call.output !== undefined || Boolean(call.error);
+
+  return {
+    key: `${index}:${call.id ?? call.name}`,
+    name: call.name,
+    label: humanizeToolName(call.name),
+    summary,
+    status: call.status,
+    error: call.error ?? null,
+    input: call.input,
+    output: call.output,
+    hasDetails,
+    linkCard: extractFetchedLinkCard(call.name, call.status, call.input, call.output),
+  };
+}
+
+function getMessageToolCalls(message: DashboardConversationMessage): NormalizedToolCall[] {
+  const entries = (message.toolsCalled ?? []) as AgentToolCallEntry[];
+  return entries.map((entry, index) => normalizeToolCall(entry, index));
+}
+
+function getToolStatusIcon(call: NormalizedToolCall) {
+  if (call.status === "error") {
+    return "i-lucide-circle-alert";
+  }
+  if (call.status === "in_progress") {
+    return "i-lucide-loader-circle";
+  }
+  return getToolIcon(call.name);
+}
+
+function getToolIcon(name: string) {
+  if (name === "fetch_web_page") {
+    return "i-lucide-globe";
+  }
+  if (name.startsWith("search_") || name === "list_dashboard_nodes" || name === "list_marketplace_items") {
+    return "i-lucide-search";
+  }
+  if (name.startsWith("get_")) {
+    return "i-lucide-eye";
+  }
+  if (name.startsWith("create_")) {
+    return "i-lucide-plus";
+  }
+  if (name.startsWith("delete_")) {
+    return "i-lucide-trash-2";
+  }
+  if (name.startsWith("patch_") || name.startsWith("replace_")) {
+    return "i-lucide-pencil-line";
+  }
+  if (name === "get_current_time") {
+    return "i-lucide-clock";
+  }
+  return "i-lucide-wrench";
+}
+
+function formatToolPayload(value: unknown) {
+  if (value === undefined) {
+    return "";
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
+}
+
+interface FetchedLinkCard {
+  url: string;
+  finalUrl: string;
+  host: string;
+  title: string | null;
+  excerpt: string | null;
+  truncated: boolean;
+  faviconUrl: string;
+}
+
+const expandedToolCalls = reactive<Set<string>>(new Set());
+
+function isToolCallExpanded(messageId: string, key: string) {
+  return expandedToolCalls.has(`${messageId}::${key}`);
+}
+
+function toggleToolCallExpanded(messageId: string, key: string) {
+  const id = `${messageId}::${key}`;
+  if (expandedToolCalls.has(id)) {
+    expandedToolCalls.delete(id);
+  } else {
+    expandedToolCalls.add(id);
+  }
+}
+
 function inspectToolResponse(
   isOpen: boolean,
   message: DashboardConversationMessage,
@@ -581,25 +895,132 @@ function closeToolResponsePreview() {
               v-html="renderAssistantMessage(message.content)"
             />
 
-            <div v-if="message.toolsCalled?.length" class="mt-3 flex flex-wrap gap-2">
-              <template v-for="tool in message.toolsCalled" :key="tool">
-                <UChatTool
-                  v-if="canInspectToolResponses"
-                  :text="tool"
-                  variant="card"
-                  size="sm"
-                  icon="i-lucide-wrench"
-                  :open="false"
-                  :ui="{
-                    trigger: 'cursor-pointer',
-                    trailingIcon: 'hidden',
-                  }"
-                  @update:open="(open) => inspectToolResponse(open, message, tool)"
+            <div
+              v-if="getMessageToolCalls(message).length"
+              class="mt-3 flex flex-col gap-1.5"
+            >
+              <div
+                v-for="call in getMessageToolCalls(message)"
+                :key="call.key"
+                class="rounded-lg border border-neutral-200/70 bg-neutral-50/60 text-xs dark:border-neutral-800/70 dark:bg-neutral-900/40"
+                :class="{
+                  'border-rose-200/80 bg-rose-50/60 dark:border-rose-900/60 dark:bg-rose-950/30':
+                    call.status === 'error',
+                }"
+              >
+                <button
+                  type="button"
+                  class="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-neutral-100/70 dark:hover:bg-neutral-900/60 disabled:cursor-default disabled:hover:bg-transparent"
+                  :disabled="!call.hasDetails"
+                  :aria-expanded="isToolCallExpanded(message.id, call.key)"
+                  @click="call.hasDetails && toggleToolCallExpanded(message.id, call.key)"
                 >
-                  <span />
-                </UChatTool>
-                <UChatTool v-else :text="tool" variant="card" size="sm" icon="i-lucide-wrench" />
-              </template>
+                  <UIcon
+                    :name="getToolStatusIcon(call)"
+                    class="size-3.5 shrink-0"
+                    :class="{
+                      'text-rose-500 dark:text-rose-400': call.status === 'error',
+                      'text-neutral-500 dark:text-neutral-400': call.status !== 'error',
+                      'animate-spin': call.status === 'in_progress',
+                    }"
+                  />
+                  <span
+                    class="font-medium text-neutral-700 dark:text-neutral-200"
+                  >
+                    {{ call.label }}
+                  </span>
+                  <span
+                    v-if="call.summary"
+                    class="min-w-0 flex-1 truncate text-neutral-500 dark:text-neutral-400"
+                  >
+                    {{ call.summary }}
+                  </span>
+                  <span v-else class="flex-1" />
+                  <UIcon
+                    v-if="call.hasDetails"
+                    name="i-lucide-chevron-down"
+                    class="size-3.5 shrink-0 text-neutral-400 transition-transform"
+                    :class="{ 'rotate-180': isToolCallExpanded(message.id, call.key) }"
+                  />
+                </button>
+                <a
+                  v-if="call.linkCard"
+                  :href="call.linkCard.finalUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="group/link mx-2 mb-2 mt-0.5 flex gap-2.5 rounded-md border border-neutral-200/60 bg-white/70 p-2.5 transition hover:border-neutral-300 hover:bg-white dark:border-neutral-800/60 dark:bg-neutral-950/40 dark:hover:border-neutral-700 dark:hover:bg-neutral-950/70"
+                >
+                  <img
+                    :src="call.linkCard.faviconUrl"
+                    :alt="`${call.linkCard.host} favicon`"
+                    width="16"
+                    height="16"
+                    class="mt-0.5 size-4 shrink-0 rounded-sm bg-neutral-100 object-contain dark:bg-neutral-900"
+                    loading="lazy"
+                    @error="($event.target as HTMLImageElement).style.visibility = 'hidden'"
+                  />
+                  <div class="min-w-0 flex-1">
+                    <div
+                      class="truncate text-[12px] font-semibold text-neutral-800 group-hover/link:text-neutral-950 dark:text-neutral-200 dark:group-hover/link:text-neutral-50"
+                    >
+                      {{ call.linkCard.title || call.linkCard.host }}
+                    </div>
+                    <div
+                      class="mt-0.5 flex items-center gap-1.5 text-[10px] font-medium text-neutral-500 dark:text-neutral-400"
+                    >
+                      <UIcon name="i-lucide-link" class="size-3 shrink-0" />
+                      <span class="truncate">{{ call.linkCard.host }}</span>
+                      <span
+                        v-if="call.linkCard.truncated"
+                        class="ml-auto shrink-0 rounded-sm bg-neutral-200/70 px-1 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-neutral-500 dark:bg-neutral-800/70 dark:text-neutral-400"
+                      >
+                        truncated
+                      </span>
+                    </div>
+                    <p
+                      v-if="call.linkCard.excerpt"
+                      class="mt-1.5 line-clamp-2 text-[11px] leading-relaxed text-neutral-600 dark:text-neutral-400"
+                    >
+                      {{ call.linkCard.excerpt }}
+                    </p>
+                  </div>
+                  <UIcon
+                    name="i-lucide-arrow-up-right"
+                    class="mt-0.5 size-3.5 shrink-0 text-neutral-400 transition group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 group-hover/link:text-neutral-600 dark:group-hover/link:text-neutral-200"
+                  />
+                </a>
+                <div
+                  v-if="call.hasDetails && isToolCallExpanded(message.id, call.key)"
+                  class="border-t border-neutral-200/60 px-3 py-2.5 text-[11px] dark:border-neutral-800/60"
+                >
+                  <p
+                    v-if="call.error"
+                    class="mb-2 rounded-md bg-rose-100/70 px-2 py-1 font-medium text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                  >
+                    {{ call.error }}
+                  </p>
+                  <div v-if="call.input !== undefined" class="mb-2">
+                    <div
+                      class="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400"
+                    >
+                      Input
+                    </div>
+                    <pre
+                      class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md bg-neutral-100/70 px-2 py-1.5 font-mono text-[11px] leading-relaxed text-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300"
+                    >{{ formatToolPayload(call.input) }}</pre>
+                  </div>
+                  <div v-if="call.output !== undefined">
+                    <div
+                      class="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400"
+                    >
+                      Result
+                    </div>
+                    <pre
+                      class="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md bg-neutral-100/70 px-2 py-1.5 font-mono text-[11px] leading-relaxed text-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300"
+                    >{{ formatToolPayload(call.output) }}</pre>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div v-if="message.contextNodeTitles?.length" class="mt-3 flex flex-wrap gap-1.5">

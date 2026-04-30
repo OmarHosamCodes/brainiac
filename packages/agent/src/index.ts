@@ -13,6 +13,7 @@ import {
   DEFAULT_AGENT_MODEL,
   type AgentChatResponse,
   type AgentMessage,
+  type AgentToolCall,
   type DashboardAgentConfig,
   type DashboardAgentToolPreset,
   type DashboardAgentWorkspaceContext,
@@ -343,7 +344,8 @@ async function runToolEnabledPass(args: {
     args.workspace.marketplaceItems ?? [],
     args.toolPreset,
   );
-  const calledTools = new Set<string>();
+  const calls = new Map<string, AgentToolCall>();
+  const callOrder: string[] = [];
   const result = createOpenRouterClient().callModel({
     model: args.model,
     instructions: args.instructions,
@@ -354,23 +356,88 @@ async function runToolEnabledPass(args: {
     ...(args.maxOutputTokens === undefined ? {} : { maxOutputTokens: args.maxOutputTokens }),
   });
 
-  const collectToolNames = (async () => {
-    for await (const event of result.getFullResponsesStream()) {
-      if (event.type === "response.function_call_arguments.done") {
-        calledTools.add(event.name);
+  const recordToolStream = (async () => {
+    try {
+      for await (const message of result.getNewMessagesStream()) {
+        if (message.type === "function_call") {
+          const callId = message.callId ?? message.id ?? `call_${callOrder.length}`;
+          let parsedInput: unknown = message.arguments;
+          try {
+            parsedInput = JSON.parse(message.arguments);
+          } catch {
+            // keep raw string if not JSON
+          }
+          if (!calls.has(callId)) {
+            callOrder.push(callId);
+          }
+          const existing = calls.get(callId);
+          calls.set(callId, {
+            id: callId,
+            name: message.name,
+            input: parsedInput,
+            output: existing?.output,
+            status: existing?.status === "error" ? "error" : "in_progress",
+            error: existing?.error ?? null,
+          });
+        } else if (message.type === "function_call_output") {
+          const callId = message.callId;
+          let parsedOutput: unknown = message.output;
+          if (typeof message.output === "string") {
+            try {
+              parsedOutput = JSON.parse(message.output);
+            } catch {
+              parsedOutput = message.output;
+            }
+          }
+
+          // Heuristic: detect tool errors when output payload has an `error` field.
+          const errorMessage =
+            parsedOutput &&
+            typeof parsedOutput === "object" &&
+            !Array.isArray(parsedOutput) &&
+            "error" in parsedOutput &&
+            typeof (parsedOutput as { error?: unknown }).error === "string"
+              ? ((parsedOutput as { error?: string }).error?.trim() || null)
+              : null;
+
+          if (!calls.has(callId)) {
+            callOrder.push(callId);
+            calls.set(callId, {
+              id: callId,
+              name: "unknown_tool",
+              output: parsedOutput,
+              status: errorMessage ? "error" : "completed",
+              error: errorMessage,
+            });
+          } else {
+            const existing = calls.get(callId)!;
+            calls.set(callId, {
+              ...existing,
+              output: parsedOutput,
+              status: errorMessage ? "error" : "completed",
+              error: errorMessage,
+            });
+          }
+        }
       }
+    } catch {
+      // streaming errors are surfaced by getResponse rejection below
     }
   })();
 
   const [responseText, response] = await Promise.all([
     result.getText(),
     result.getResponse(),
-    collectToolNames,
+    recordToolStream,
   ]);
+
+  const orderedCalls = callOrder
+    .map((id) => calls.get(id))
+    .filter((call): call is AgentToolCall => Boolean(call));
 
   return {
     responseText: responseText.trim(),
-    calledTools: [...calledTools],
+    toolCalls: orderedCalls,
     usage: normalizeUsage(response.usage, args.model, args.contextLength),
   };
 }
@@ -402,7 +469,7 @@ export async function runDashboardAgent(
   config: DashboardAgentConfig = {},
 ): Promise<AgentChatResponse> {
   const client = createOpenRouterClient();
-  const calledTools = new Set<string>();
+  const toolCalls: AgentToolCall[] = [];
   const normalizedMessages = normalizeMessages(messages);
   const workspaceRuntime = createDashboardAgentWorkspaceRuntime({
     nodes: workspace.nodes,
@@ -434,13 +501,11 @@ export async function runDashboardAgent(
 
       responseText = initialPass.responseText;
       usage = initialPass.usage;
-      for (const toolName of initialPass.calledTools) {
-        calledTools.add(toolName);
-      }
+      toolCalls.push(...initialPass.toolCalls);
 
       if (
         executionConfig.shouldRetryForInspection &&
-        calledTools.size === 0 &&
+        toolCalls.length === 0 &&
         workspace.nodes.length > 0
       ) {
         const retryPass = await runToolEnabledPass({
@@ -464,20 +529,18 @@ export async function runDashboardAgent(
           usage = retryPass.usage;
         }
 
-        for (const toolName of retryPass.calledTools) {
-          calledTools.add(toolName);
-        }
+        toolCalls.push(...retryPass.toolCalls);
       }
     } catch {
       responseText = "";
-      calledTools.clear();
+      toolCalls.length = 0;
     }
   }
 
   let finalResponse = responseText.trim();
 
   if (!finalResponse) {
-    const toolsWereCalled = calledTools.size > 0;
+    const toolsWereCalled = toolCalls.length > 0;
     const runtimeHasChanges = workspaceRuntime.hasChanges();
     const fallbackMaxOutputTokens = executionConfig.maxOutputTokens ?? config.maxOutputTokens;
 
@@ -512,7 +575,7 @@ export async function runDashboardAgent(
     response: finalResponse || "I couldn't generate a response.",
     messagesCount: normalizedMessages.length + 1,
     model,
-    toolsCalled: [...calledTools],
+    toolsCalled: toolCalls,
     workspaceNodeCount: workspaceRuntime.getNodes().length,
     usage,
     workspaceSnapshot: workspaceRuntime.hasChanges() ? workspaceRuntime.toSnapshot() : null,

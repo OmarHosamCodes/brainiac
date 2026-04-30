@@ -43,6 +43,21 @@ export const dashboardConversationUsageSummarySchema = z.object({
   }),
 });
 
+export const agentToolCallSchema = z.object({
+  id: z.string().trim().min(1).max(160).optional(),
+  name: z.string().trim().min(1).max(120),
+  input: z.unknown().optional(),
+  output: z.unknown().optional(),
+  status: z.enum(["completed", "error", "in_progress"]).default("completed"),
+  error: z.string().trim().max(500).nullable().default(null),
+  durationMs: z.number().int().nonnegative().optional(),
+});
+
+export const agentToolCallEntrySchema = z.union([
+  z.string().trim().min(1).max(120),
+  agentToolCallSchema,
+]);
+
 export const agentMessageRoleSchema = z.enum(["user", "assistant", "system"]);
 export const dashboardConversationMessageRoleSchema = z.enum(["user", "assistant"]);
 export const dashboardAgentCanonicalToolPresetSchema = z.enum(["ask", "agent"]);
@@ -83,7 +98,7 @@ export const agentChatResponseSchema = z.object({
   response: z.string(),
   messagesCount: z.number().int().nonnegative(),
   model: z.string(),
-  toolsCalled: z.array(z.string()),
+  toolsCalled: z.array(agentToolCallEntrySchema).max(48),
   workspaceNodeCount: z.number().int().nonnegative(),
   usage: dashboardConversationUsageLatestSchema.nullable().default(null),
   workspaceSnapshot: z
@@ -123,7 +138,7 @@ export const dashboardConversationMessageSchema = z.object({
   content: z.string().trim().min(1).max(20_000),
   contextNodeTitles: z.array(z.string().trim().min(1).max(120)).max(24).default([]),
   model: z.string().trim().min(1).nullable(),
-  toolsCalled: z.array(z.string().trim().min(1).max(120)).max(24).default([]),
+  toolsCalled: z.array(agentToolCallEntrySchema).max(48).default([]),
   createdAt: z.string().datetime(),
 });
 
@@ -172,6 +187,8 @@ export const agentChatTurnResponseSchema = z.object({
 
 export type AgentMessage = z.infer<typeof agentMessageSchema>;
 export type AgentChatResponse = z.infer<typeof agentChatResponseSchema>;
+export type AgentToolCall = z.infer<typeof agentToolCallSchema>;
+export type AgentToolCallEntry = z.infer<typeof agentToolCallEntrySchema>;
 export type DashboardAgentToolPreset = z.infer<typeof dashboardAgentToolPresetSchema>;
 export type DashboardConversationUsageLatest = z.infer<
   typeof dashboardConversationUsageLatestSchema

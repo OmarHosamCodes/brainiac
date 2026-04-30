@@ -130,6 +130,28 @@ function toggleSelectedNodeSharing() {
 
   shareSelectedNode();
 }
+
+function handleAgentRailShortcut(event: KeyboardEvent) {
+  const isMac = typeof navigator !== "undefined" && /mac|iphone|ipad/i.test(navigator.platform);
+  const modifier = isMac ? event.metaKey : event.ctrlKey;
+  if (modifier && !event.shiftKey && !event.altKey && event.key.toLowerCase() === "j") {
+    event.preventDefault();
+    isChatVisible.value = !isChatVisible.value;
+  }
+}
+
+const shortcutLabel = ref("Ctrl+J");
+
+onMounted(() => {
+  if (typeof navigator !== "undefined" && /mac|iphone|ipad/i.test(navigator.platform)) {
+    shortcutLabel.value = "⌘J";
+  }
+  window.addEventListener("keydown", handleAgentRailShortcut);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleAgentRailShortcut);
+});
 </script>
 
 <template>
@@ -326,29 +348,38 @@ function toggleSelectedNodeSharing() {
       @remove-member="removeMember"
     />
 
-    <div
-      class="pointer-events-none fixed bottom-4 right-3 top-24 z-40 flex w-[min(26rem,calc(100vw-1.5rem))] flex-col sm:bottom-6 sm:right-6"
+    <aside
+      class="agent-rail fixed bottom-4 right-3 top-24 z-40 flex flex-col overflow-hidden transition-[width] duration-300 ease-out sm:bottom-6 sm:right-6"
+      :class="
+        isChatVisible
+          ? 'w-[min(28rem,calc(100vw-1.5rem))]'
+          : 'w-12 rounded-[1.75rem] border border-neutral-200/70 bg-white/85 shadow-2xl shadow-black/10 backdrop-blur-xl hover:border-neutral-300 dark:border-neutral-800/70 dark:bg-neutral-950/85 dark:hover:border-neutral-700'
+      "
+      :aria-label="isChatVisible ? 'Agent rail (expanded)' : 'Agent rail (collapsed)'"
     >
-      <Transition
-        enter-active-class="transition-all duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)]"
-        enter-from-class="translate-x-12 opacity-0"
-        leave-active-class="transition-all duration-300 ease-in"
-        leave-to-class="translate-x-12 opacity-0"
+      <button
+        v-if="!isChatVisible"
+        type="button"
+        class="group flex h-full w-full flex-col items-center justify-between gap-3 px-1.5 py-4 text-neutral-500 transition hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+        aria-label="Open agent rail"
+        :title="`Agent rail · ${shortcutLabel}`"
+        @click="isChatVisible = true"
       >
-        <div v-if="isChatVisible" class="pointer-events-auto min-h-0 flex-1">
-          <LazyDashboardAgentChatPanel :nodes="nodes" @close="isChatVisible = false" />
-        </div>
-      </Transition>
-    </div>
+        <UIcon name="i-lucide-sparkles" class="size-4" />
+        <span class="text-[10px] font-bold uppercase tracking-[0.32em] [writing-mode:vertical-rl]">
+          Agent
+        </span>
+        <span
+          class="hidden rounded-md border border-neutral-200/70 px-1 py-0.5 text-[9px] font-semibold tracking-wider text-neutral-400 dark:border-neutral-800/70 sm:inline-flex"
+        >
+          {{ shortcutLabel }}
+        </span>
+      </button>
 
-    <button
-      v-if="!isChatVisible"
-      type="button"
-      class="fixed bottom-8 right-8 z-50 flex size-14 items-center justify-center rounded-2xl bg-neutral-900 text-white shadow-2xl shadow-black/20 ring-1 ring-white/10 transition-all duration-300 hover:scale-110 active:scale-95 dark:bg-neutral-100 dark:text-neutral-900"
-      @click="isChatVisible = true"
-    >
-      <UIcon name="i-lucide-sparkles" class="size-6" />
-    </button>
+      <div v-else class="flex h-full min-h-0 flex-1 flex-col">
+        <LazyDashboardAgentChatPanel :nodes="nodes" @close="isChatVisible = false" />
+      </div>
+    </aside>
 
     <div class="fixed left-6 bottom-6 z-50 flex flex-col gap-3">
       <WorkspaceBoardStatus

@@ -3311,6 +3311,188 @@ export function buildDashboardAgentTools(
       },
     }),
     tool({
+      name: "fetch_web_page",
+      description: [
+        "Fetch a public web page and return its readable text plus title.",
+        "Use when the user shares a URL, asks you to read or summarize a link, research a topic, or import structured info into a node.",
+        "Only public HTTP/HTTPS URLs are allowed. Auth-walled, internal, or private addresses are rejected.",
+        "Output is truncated for large pages — request a specific section by passing a more specific URL when possible.",
+      ].join(" "),
+      inputSchema: z.object({
+        url: z.string().trim().url(),
+        maxCharacters: z
+          .number()
+          .int()
+          .min(500)
+          .max(20_000)
+          .default(8_000)
+          .describe("Maximum characters of extracted text to return."),
+      }),
+      outputSchema: z.object({
+        url: z.string(),
+        finalUrl: z.string(),
+        title: z.string().nullable(),
+        excerpt: z.string().nullable(),
+        contentType: z.string().nullable(),
+        text: z.string(),
+        truncated: z.boolean(),
+        error: z.string().nullable(),
+      }),
+      execute: async ({ url, maxCharacters }) => {
+        const empty = (error: string) => ({
+          url,
+          finalUrl: url,
+          title: null,
+          excerpt: null,
+          contentType: null,
+          text: "",
+          truncated: false,
+          error,
+        });
+
+        let parsed: URL;
+        try {
+          parsed = new URL(url);
+        } catch {
+          return empty("Invalid URL.");
+        }
+
+        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+          return empty("Only http and https URLs are supported.");
+        }
+
+        const host = parsed.hostname.toLowerCase();
+        const blockedHostPatterns = [
+          /^localhost$/,
+          /^127\./,
+          /^10\./,
+          /^192\.168\./,
+          /^172\.(1[6-9]|2\d|3[0-1])\./,
+          /^169\.254\./,
+          /^0\.0\.0\.0$/,
+          /^::1$/,
+          /\.local$/,
+          /\.internal$/,
+        ];
+        if (blockedHostPatterns.some((pattern) => pattern.test(host))) {
+          return empty("Refusing to fetch private or internal hosts.");
+        }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10_000);
+
+        let response: Response;
+        try {
+          response = await fetch(parsed.toString(), {
+            method: "GET",
+            redirect: "follow",
+            signal: controller.signal,
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (compatible; BrainiacAgent/1.0; +https://brainiac.app/agent)",
+              Accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5",
+              "Accept-Language": "en-US,en;q=0.8",
+            },
+          });
+        } catch (caught) {
+          clearTimeout(timeout);
+          const message =
+            caught instanceof Error
+              ? caught.name === "AbortError"
+                ? "Request timed out after 10s."
+                : caught.message
+              : "Failed to fetch URL.";
+          return empty(message);
+        }
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          return {
+            ...empty(`HTTP ${response.status} ${response.statusText || ""}`.trim()),
+            finalUrl: response.url || url,
+            contentType: response.headers.get("content-type"),
+          };
+        }
+
+        const contentType = response.headers.get("content-type");
+        if (contentType && !/^(text\/|application\/(xhtml|json|xml))/i.test(contentType)) {
+          return {
+            ...empty(`Unsupported content-type: ${contentType}`),
+            finalUrl: response.url || url,
+            contentType,
+          };
+        }
+
+        let raw: string;
+        try {
+          raw = await response.text();
+        } catch (caught) {
+          return empty(caught instanceof Error ? caught.message : "Failed to read response body.");
+        }
+
+        // Cap input to avoid pathological pages.
+        const capped = raw.slice(0, 750_000);
+
+        const titleMatch = capped.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+        const ogTitleMatch = capped.match(
+          /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
+        );
+        const descMatch = capped.match(
+          /<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i,
+        );
+        const ogDescMatch = capped.match(
+          /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i,
+        );
+
+        const decodeEntities = (input: string) =>
+          input
+            .replace(/&nbsp;/gi, " ")
+            .replace(/&amp;/gi, "&")
+            .replace(/&lt;/gi, "<")
+            .replace(/&gt;/gi, ">")
+            .replace(/&quot;/gi, '"')
+            .replace(/&#39;|&apos;/gi, "'")
+            .replace(/&#(\d+);/g, (_match, code) => String.fromCharCode(Number(code)));
+
+        const cleanTitle = (value: string | undefined | null) =>
+          value ? decodeEntities(value).replace(/\s+/g, " ").trim() || null : null;
+
+        const title =
+          cleanTitle(ogTitleMatch?.[1]) ?? cleanTitle(titleMatch?.[1]);
+        const excerpt =
+          cleanTitle(ogDescMatch?.[1]) ?? cleanTitle(descMatch?.[1]);
+
+        const stripped = capped
+          .replace(/<script[\s\S]*?<\/script>/gi, " ")
+          .replace(/<style[\s\S]*?<\/style>/gi, " ")
+          .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+          .replace(/<!--([\s\S]*?)-->/g, " ")
+          .replace(/<\/(p|div|li|h[1-6]|tr|br|section|article)>/gi, "\n")
+          .replace(/<br\s*\/?>(?=)/gi, "\n")
+          .replace(/<[^>]+>/g, " ");
+
+        const text = decodeEntities(stripped)
+          .replace(/[ \t\f\v]+/g, " ")
+          .replace(/\n{3,}/g, "\n\n")
+          .replace(/^[ \t]+|[ \t]+$/gm, "")
+          .trim();
+
+        const truncated = text.length > maxCharacters;
+        const finalText = truncated ? `${text.slice(0, maxCharacters)}…` : text;
+
+        return {
+          url,
+          finalUrl: response.url || url,
+          title,
+          excerpt,
+          contentType,
+          text: finalText,
+          truncated,
+          error: null,
+        };
+      },
+    }),
+    tool({
       name: "get_current_time",
       description: "Get the current ISO timestamp for time-sensitive planning questions.",
       inputSchema: z.object({}),
