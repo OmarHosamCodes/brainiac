@@ -178,6 +178,63 @@ const messageStatus = computed(() => {
 
   return "ready";
 });
+
+const PROGRESS_PHASES: { label: string; afterMs: number }[] = [
+  { label: "Thinking", afterMs: 0 },
+  { label: "Reading your workspace", afterMs: 1800 },
+  { label: "Working through it", afterMs: 5000 },
+  { label: "Composing response", afterMs: 9000 },
+  { label: "Almost there", afterMs: 16000 },
+];
+
+const progressPhaseStartedAt = ref<number | null>(null);
+const progressPhaseTick = ref(0);
+let progressPhaseInterval: ReturnType<typeof setInterval> | null = null;
+
+watch(
+  isPending,
+  (pending) => {
+    if (pending) {
+      progressPhaseStartedAt.value = Date.now();
+      progressPhaseTick.value = 0;
+      if (progressPhaseInterval) clearInterval(progressPhaseInterval);
+      progressPhaseInterval = setInterval(() => {
+        progressPhaseTick.value += 1;
+      }, 750);
+    } else {
+      progressPhaseStartedAt.value = null;
+      if (progressPhaseInterval) {
+        clearInterval(progressPhaseInterval);
+        progressPhaseInterval = null;
+      }
+    }
+  },
+  { immediate: true },
+);
+
+onBeforeUnmount(() => {
+  if (progressPhaseInterval) {
+    clearInterval(progressPhaseInterval);
+    progressPhaseInterval = null;
+  }
+});
+
+const progressPhaseLabel = computed(() => {
+  // Reactive on the tick so the label refreshes as elapsed time crosses thresholds.
+  void progressPhaseTick.value;
+  const startedAt = progressPhaseStartedAt.value;
+  if (!startedAt) return PROGRESS_PHASES[0]!.label;
+  const elapsed = Date.now() - startedAt;
+  let active = PROGRESS_PHASES[0]!;
+  for (const phase of PROGRESS_PHASES) {
+    if (elapsed >= phase.afterMs) {
+      active = phase;
+    } else {
+      break;
+    }
+  }
+  return active.label;
+});
 const composerSupportText = computed(
   () => modelError.value ?? accountStatusError.value ?? modelHint.value,
 );
@@ -1061,6 +1118,40 @@ function closeToolResponsePreview() {
         </UChatMessages>
       </template>
     </main>
+
+    <Transition
+      enter-active-class="transition-all duration-200 ease-out"
+      enter-from-class="opacity-0 translate-y-1"
+      leave-active-class="transition-all duration-150 ease-in"
+      leave-to-class="opacity-0 translate-y-1"
+    >
+      <div
+        v-if="activePane === 'chat' && isPending"
+        class="agent-progress shrink-0 border-t border-neutral-200/60 bg-white/78 px-4 py-2 dark:border-neutral-800/60 dark:bg-neutral-950/78"
+        role="status"
+        aria-live="polite"
+      >
+        <div class="flex items-center gap-2.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400">
+          <span class="agent-progress-pulse relative flex size-1.5 shrink-0">
+            <span
+              class="absolute inline-flex h-full w-full animate-ping rounded-full bg-neutral-400/60 opacity-75 dark:bg-neutral-500/60"
+            />
+            <span class="relative inline-flex size-1.5 rounded-full bg-neutral-500 dark:bg-neutral-400" />
+          </span>
+          <Transition
+            mode="out-in"
+            enter-active-class="transition-opacity duration-200"
+            enter-from-class="opacity-0"
+            leave-active-class="transition-opacity duration-150"
+            leave-to-class="opacity-0"
+          >
+            <span :key="progressPhaseLabel" class="tabular-nums">
+              {{ progressPhaseLabel }}<span class="agent-progress-dots" aria-hidden="true">…</span>
+            </span>
+          </Transition>
+        </div>
+      </div>
+    </Transition>
 
     <footer
       v-if="activePane === 'chat'"
