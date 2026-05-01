@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { useQuery } from "@tanstack/vue-query";
 
-import AgencyDashboard from "~/components/agency/AgencyDashboard.vue";
-import AgencyManagement from "~/components/agency/AgencyManagement.vue";
+import AgencyClientsSurface from "~/components/agency/AgencyClientsSurface.vue";
 import AgencyPlaceholderSurface from "~/components/agency/AgencyPlaceholderSurface.vue";
 import AgencyProjectsTable from "~/components/agency/AgencyProjectsTable.vue";
 import AgencyProUpsell from "~/components/agency/AgencyProUpsell.vue";
+import AgencyReportsSurface from "~/components/agency/AgencyReportsSurface.vue";
+import AgencySettingsSurface from "~/components/agency/AgencySettingsSurface.vue";
 import AgencyTimeWeekGrid from "~/components/agency/AgencyTimeWeekGrid.vue";
 import AgencyTopBar from "~/components/agency/AgencyTopBar.vue";
 import {
@@ -136,9 +137,9 @@ const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQue
 
         <AgencyProjectsTable v-else-if="segment === 'projects'" :team-id="selectedTeamId" />
 
-        <AgencyManagement v-else-if="segment === 'clients'" :team-id="selectedTeamId" />
+        <AgencyClientsSurface v-else-if="segment === 'clients'" :team-id="selectedTeamId" />
 
-        <AgencyDashboard v-else-if="segment === 'reports'" :team-id="selectedTeamId" />
+        <AgencyReportsSurface v-else-if="segment === 'reports'" :team-id="selectedTeamId" />
 
         <AgencyPlaceholderSurface
           v-else-if="segment === 'resourcing'"
@@ -164,18 +165,7 @@ const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQue
           ]"
         />
 
-        <AgencyPlaceholderSurface
-          v-else-if="segment === 'settings'"
-          icon="i-lucide-settings"
-          title="Settings live here soon."
-          body="Tags, member rates, integrations, and project hue overrides will be grouped into a left-rail subnav. For now, project and tag editing happens in Clients."
-          :hints="[
-            'Tags and rates per member.',
-            'Member roles and removal.',
-            'Integrations (Slack, calendar, exports).',
-            'Override the auto-assigned project hue.',
-          ]"
-        />
+        <AgencySettingsSurface v-else-if="segment === 'settings'" :team-id="selectedTeamId" />
       </div>
     </main>
   </div>
