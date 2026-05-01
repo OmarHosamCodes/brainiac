@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/vue-query";
 
 import AgencyClientsSurface from "~/components/agency/AgencyClientsSurface.vue";
 import AgencyPlaceholderSurface from "~/components/agency/AgencyPlaceholderSurface.vue";
+import AgencyProjectDetail from "~/components/agency/AgencyProjectDetail.vue";
 import AgencyProjectsTable from "~/components/agency/AgencyProjectsTable.vue";
 import AgencyProUpsell from "~/components/agency/AgencyProUpsell.vue";
 import AgencyReportsSurface from "~/components/agency/AgencyReportsSurface.vue";
@@ -52,6 +53,30 @@ const segment = ref<AgencySegmentId>(
 watch(segment, (next) => {
   if (route.query.section === next) return;
   router.replace({ query: { ...route.query, section: next } });
+});
+
+// Project drill-down: deep-linkable via `?project=<id>`.
+const selectedProjectId = computed(() =>
+  typeof route.query.project === "string" ? route.query.project : "",
+);
+
+function openProject(projectId: string) {
+  router.push({ query: { ...route.query, section: "projects", project: projectId } });
+}
+
+function closeProject() {
+  const next = { ...route.query };
+  delete next.project;
+  router.push({ query: next });
+}
+
+// Clearing the project drill-down whenever the segment leaves "projects" keeps
+// the URL state honest — drilling into a project then jumping to "Time" should
+// not leave a stale ?project= behind.
+watch(segment, (next) => {
+  if (next !== "projects" && selectedProjectId.value) {
+    closeProject();
+  }
 });
 
 watch(
@@ -135,7 +160,15 @@ const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQue
 
         <AgencyTimeWeekGrid v-if="segment === 'time'" :team-id="selectedTeamId" />
 
-        <AgencyProjectsTable v-else-if="segment === 'projects'" :team-id="selectedTeamId" />
+        <template v-else-if="segment === 'projects'">
+          <AgencyProjectDetail
+            v-if="selectedProjectId"
+            :team-id="selectedTeamId"
+            :project-id="selectedProjectId"
+            @back="closeProject"
+          />
+          <AgencyProjectsTable v-else :team-id="selectedTeamId" @select="openProject" />
+        </template>
 
         <AgencyClientsSurface v-else-if="segment === 'clients'" :team-id="selectedTeamId" />
 

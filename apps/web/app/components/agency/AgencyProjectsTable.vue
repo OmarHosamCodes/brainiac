@@ -20,6 +20,10 @@ const props = defineProps<{
   teamId: string;
 }>();
 
+const emit = defineEmits<{
+  select: [projectId: string];
+}>();
+
 const orpc = useOrpc();
 const queryClient = useQueryClient();
 const toast = useToast();
@@ -293,7 +297,11 @@ async function createProject() {
           <tr
             v-for="project in filteredProjects"
             :key="project.id"
-            class="border-b border-default last:border-b-0 transition-colors hover:bg-elevated/40"
+            class="cursor-pointer border-b border-default last:border-b-0 transition-colors hover:bg-elevated/40"
+            tabindex="0"
+            @click="emit('select', project.id)"
+            @keydown.enter.prevent="emit('select', project.id)"
+            @keydown.space.prevent="emit('select', project.id)"
           >
             <td class="px-4 py-3">
               <div class="flex min-w-0 items-center gap-2">
