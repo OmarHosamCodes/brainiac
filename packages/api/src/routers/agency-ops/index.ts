@@ -416,4 +416,184 @@ export const agencyOpsRouter = {
         );
       }),
   },
+  // Phase 4 stubs.
+  //
+  // Each surface below ships with an honest, empty-but-shaped response.
+  // Schemas define the eventual record shape so client surfaces can wire
+  // directly today and only need to gain populated rows once the data
+  // model lands. No DB writes; no derived numbers.
+  budgets: {
+    list: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          projectId: z.string().min(1).optional(),
+        }),
+      )
+      .handler(async () => {
+        return z
+          .object({
+            items: z.array(
+              z.object({
+                projectId: z.string().min(1),
+                currency: z.string().min(1),
+                hoursBudget: z.number().nonnegative().nullable(),
+                costBudgetCents: z.number().int().nonnegative().nullable(),
+                hoursLogged: z.number().nonnegative(),
+                costLoggedCents: z.number().int().nonnegative(),
+                periodStart: z.string().datetime().nullable(),
+                periodEnd: z.string().datetime().nullable(),
+              }),
+            ),
+          })
+          .parse({ items: [] });
+      }),
+  },
+  rates: {
+    list: protectedProProcedure
+      .input(teamScopedInputSchema)
+      .handler(async () => {
+        return z
+          .object({
+            items: z.array(
+              z.object({
+                userId: z.string().min(1),
+                userName: z.string().min(1),
+                userEmail: z.email(),
+                costRateCents: z.number().int().nonnegative().nullable(),
+                billableRateCents: z.number().int().nonnegative().nullable(),
+                currency: z.string().min(1),
+                effectiveFrom: z.string().datetime().nullable(),
+              }),
+            ),
+          })
+          .parse({ items: [] });
+      }),
+  },
+  capacity: {
+    list: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          weekStart: z.string().datetime(),
+          weeks: z.number().int().min(1).max(12),
+        }),
+      )
+      .handler(async () => {
+        return z
+          .object({
+            weeks: z.array(
+              z.object({
+                weekStart: z.string().datetime(),
+                members: z.array(
+                  z.object({
+                    userId: z.string().min(1),
+                    userName: z.string().min(1),
+                    capacitySeconds: z.number().int().nonnegative(),
+                    bookedSeconds: z.number().int().nonnegative(),
+                    loggedSeconds: z.number().int().nonnegative(),
+                  }),
+                ),
+              }),
+            ),
+          })
+          .parse({ weeks: [] });
+      }),
+  },
+  invoices: {
+    summary: protectedProProcedure
+      .input(teamScopedInputSchema)
+      .handler(async () => {
+        return z
+          .object({
+            draftCount: z.number().int().nonnegative(),
+            sentCount: z.number().int().nonnegative(),
+            paidCount: z.number().int().nonnegative(),
+            outstandingCents: z.number().int().nonnegative(),
+            currency: z.string().min(1),
+          })
+          .parse({
+            draftCount: 0,
+            sentCount: 0,
+            paidCount: 0,
+            outstandingCents: 0,
+            currency: "USD",
+          });
+      }),
+    list: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          status: z.enum(["draft", "sent", "paid"]).optional(),
+        }),
+      )
+      .handler(async () => {
+        return z
+          .object({
+            items: z.array(
+              z.object({
+                id: z.string().min(1),
+                clientId: z.string().min(1),
+                clientName: z.string().min(1),
+                number: z.string().min(1),
+                status: z.enum(["draft", "sent", "paid"]),
+                amountCents: z.number().int().nonnegative(),
+                currency: z.string().min(1),
+                periodStart: z.string().datetime(),
+                periodEnd: z.string().datetime(),
+                issuedAt: z.string().datetime().nullable(),
+                paidAt: z.string().datetime().nullable(),
+              }),
+            ),
+          })
+          .parse({ items: [] });
+      }),
+  },
+  integrations: {
+    list: protectedProProcedure
+      .input(teamScopedInputSchema)
+      .handler(async () => {
+        return z
+          .object({
+            items: z.array(
+              z.object({
+                id: z.enum(["slack", "calendar", "quickbooks", "webhooks"]),
+                name: z.string().min(1),
+                description: z.string().min(1),
+                status: z.enum(["available", "connected"]),
+                connectedAt: z.string().datetime().nullable(),
+              }),
+            ),
+          })
+          .parse({
+            items: [
+              {
+                id: "slack",
+                name: "Slack",
+                description: "Daily totals and budget warnings in your channel.",
+                status: "available",
+                connectedAt: null,
+              },
+              {
+                id: "calendar",
+                name: "Calendar",
+                description: "Suggest time entries from Google or Outlook events.",
+                status: "available",
+                connectedAt: null,
+              },
+              {
+                id: "quickbooks",
+                name: "QuickBooks · Xero",
+                description: "Send invoices straight to your books.",
+                status: "available",
+                connectedAt: null,
+              },
+              {
+                id: "webhooks",
+                name: "Webhooks",
+                description: "Stream entries into anything you already script.",
+                status: "available",
+                connectedAt: null,
+              },
+            ],
+          });
+      }),
+  },
 };

@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { useQuery } from "@tanstack/vue-query";
 
+import AgencyBillingSurface from "~/components/agency/AgencyBillingSurface.vue";
 import AgencyClientsSurface from "~/components/agency/AgencyClientsSurface.vue";
-import AgencyPlaceholderSurface from "~/components/agency/AgencyPlaceholderSurface.vue";
 import AgencyProjectDetail from "~/components/agency/AgencyProjectDetail.vue";
 import AgencyProjectsTable from "~/components/agency/AgencyProjectsTable.vue";
 import AgencyProUpsell from "~/components/agency/AgencyProUpsell.vue";
 import AgencyReportsSurface from "~/components/agency/AgencyReportsSurface.vue";
+import AgencyResourcingSurface from "~/components/agency/AgencyResourcingSurface.vue";
 import AgencySettingsSurface from "~/components/agency/AgencySettingsSurface.vue";
 import AgencyTimeWeekGrid from "~/components/agency/AgencyTimeWeekGrid.vue";
 import AgencyTopBar from "~/components/agency/AgencyTopBar.vue";
@@ -174,28 +175,14 @@ const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQue
 
         <AgencyReportsSurface v-else-if="segment === 'reports'" :team-id="selectedTeamId" />
 
-        <AgencyPlaceholderSurface
+        <AgencyResourcingSurface
           v-else-if="segment === 'resourcing'"
-          icon="i-lucide-calendar-range"
-          title="Resourcing isn't set up yet."
-          body="Capacity planning lives here once weekly hours per member are configured. You'll see utilization heatmaps across the team and forecast next week's load."
-          :hints="[
-            'Member × week heatmap, color-scaled by utilization.',
-            'Drill into a week to rebalance assignments without leaving the page.',
-            'Forecast hours alongside committed project budgets.',
-          ]"
+          :team-id="selectedTeamId"
         />
 
-        <AgencyPlaceholderSurface
+        <AgencyBillingSurface
           v-else-if="segment === 'billing'"
-          icon="i-lucide-receipt"
-          title="No invoices yet."
-          body="Bill your first period from a closed week. Invoices flow through draft, sent, and paid lanes; the period-close checklist guides each cycle."
-          :hints="[
-            'Pipeline view: draft, sent, paid.',
-            'Period-close checklist with reconciliation hooks.',
-            'Export PDFs or push to your accounting tool.',
-          ]"
+          :team-id="selectedTeamId"
         />
 
         <AgencySettingsSurface v-else-if="segment === 'settings'" :team-id="selectedTeamId" />

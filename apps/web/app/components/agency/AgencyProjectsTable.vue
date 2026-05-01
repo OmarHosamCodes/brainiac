@@ -62,6 +62,43 @@ const entriesQuery = useQuery(
   })),
 );
 
+// Phase 4 stub: budgets.list ships shaped-but-empty so the in-row budget bar
+// can be wired today. Once rows arrive, each project's bar fills based on
+// hoursLogged/hoursBudget (or cost-based if hours aren't budgeted).
+const budgetsQuery = useQuery(
+  computed(() => ({
+    ...orpc.agencyOps.budgets.list.queryOptions({ input: { teamId: teamId.value } }),
+    enabled: Boolean(teamId.value),
+  })),
+);
+
+const budgetsByProject = computed(() => {
+  const map = new Map<string, NonNullable<typeof budgetsQuery.data.value>["items"][number]>();
+  for (const entry of budgetsQuery.data.value?.items ?? []) {
+    map.set(entry.projectId, entry);
+  }
+  return map;
+});
+
+function budgetPctFor(projectId: string): number {
+  const budget = budgetsByProject.value.get(projectId);
+  if (!budget) return 0;
+  if (budget.hoursBudget && budget.hoursBudget > 0) {
+    return Math.min(100, Math.round((budget.hoursLogged / budget.hoursBudget) * 100));
+  }
+  if (budget.costBudgetCents && budget.costBudgetCents > 0) {
+    return Math.min(100, Math.round((budget.costLoggedCents / budget.costBudgetCents) * 100));
+  }
+  return 0;
+}
+
+function budgetToneFor(projectId: string): string {
+  const pct = budgetPctFor(projectId);
+  if (pct >= 100) return "bg-error";
+  if (pct >= 85) return "bg-warning";
+  return "bg-primary";
+}
+
 const projects = computed(() => projectsQuery.data.value?.items ?? []);
 const clients = computed(() => clientsQuery.data.value?.items ?? []);
 const entries = computed(() => entriesQuery.data.value?.items ?? []);
@@ -321,13 +358,28 @@ async function createProject() {
               <span class="text-dimmed">—</span>
             </td>
             <td class="px-3 py-3">
-              <!-- Aspirational budget bar: Phase 4 wires the budgets endpoint.
-                   Until then, render a quiet "Not set" instead of a fake bar. -->
+              <!-- Budget bar wired to budgets.list (Phase 4 stub returns
+                   shaped-empty data; the bar fills once rows exist). -->
               <div class="flex items-center gap-2">
                 <div class="h-1.5 flex-1 rounded-full bg-elevated">
-                  <div class="h-full w-0 rounded-full bg-muted" />
+                  <div
+                    class="h-full rounded-full transition-[width] duration-200 ease-out"
+                    :class="budgetsByProject.get(project.id) ? budgetToneFor(project.id) : 'bg-muted'"
+                    :style="{
+                      width: budgetsByProject.get(project.id) ? `${budgetPctFor(project.id)}%` : '0%',
+                    }"
+                  />
                 </div>
-                <span class="text-[11px] text-dimmed">Not set</span>
+                <span
+                  class="text-[11px]"
+                  :class="budgetsByProject.get(project.id) ? 'text-muted font-mono tabular-nums' : 'text-dimmed'"
+                >
+                  {{
+                    budgetsByProject.get(project.id)
+                      ? `${budgetPctFor(project.id)}%`
+                      : "Not set"
+                  }}
+                </span>
               </div>
             </td>
             <td class="px-3 py-3 text-right">

@@ -85,6 +85,40 @@ const entriesQuery = useQuery(
   })),
 );
 
+// Phase 4 stub: budgets.list returns shaped-but-empty data today. The bar
+// below renders a real burn percentage once a row appears for this project.
+const budgetsQuery = useQuery(
+  computed(() => ({
+    ...orpc.agencyOps.budgets.list.queryOptions({
+      input: { teamId: teamId.value, projectId: projectId.value },
+    }),
+    enabled: Boolean(teamId.value) && Boolean(projectId.value),
+  })),
+);
+
+const projectBudget = computed(
+  () => budgetsQuery.data.value?.items.find((entry) => entry.projectId === projectId.value) ?? null,
+);
+
+const budgetPct = computed(() => {
+  const budget = projectBudget.value;
+  if (!budget) return 0;
+  if (budget.hoursBudget && budget.hoursBudget > 0) {
+    return Math.min(100, Math.round((budget.hoursLogged / budget.hoursBudget) * 100));
+  }
+  if (budget.costBudgetCents && budget.costBudgetCents > 0) {
+    return Math.min(100, Math.round((budget.costLoggedCents / budget.costBudgetCents) * 100));
+  }
+  return 0;
+});
+
+const budgetTone = computed(() => {
+  const pct = budgetPct.value;
+  if (pct >= 100) return "bg-error";
+  if (pct >= 85) return "bg-warning";
+  return "bg-primary";
+});
+
 const entries = computed(() => entriesQuery.data.value?.items ?? []);
 
 const weekStartIso = computed(() => startOfWeekUtcIso());
@@ -242,16 +276,30 @@ const isError = computed(
           </div>
         </div>
 
-        <!-- Aspirational budget bar -->
+        <!-- Budget bar — populated when a row exists for this project, honest
+             "Not set" otherwise. -->
         <div class="mt-5 border-t border-default pt-4">
           <div class="flex items-center justify-between">
             <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
               Budget burn
             </p>
-            <p class="text-[11px] text-dimmed">Not set · configure rates in Settings</p>
+            <p
+              class="text-[11px]"
+              :class="projectBudget ? 'text-muted' : 'text-dimmed'"
+            >
+              {{
+                projectBudget
+                  ? `${budgetPct}% used`
+                  : "Not set · configure rates in Settings"
+              }}
+            </p>
           </div>
           <div class="mt-2 h-1.5 rounded-full bg-elevated">
-            <div class="h-full w-0 rounded-full bg-muted" />
+            <div
+              class="h-full rounded-full transition-[width] duration-200 ease-out"
+              :class="projectBudget ? budgetTone : 'bg-muted'"
+              :style="{ width: `${projectBudget ? budgetPct : 0}%` }"
+            />
           </div>
         </div>
       </div>

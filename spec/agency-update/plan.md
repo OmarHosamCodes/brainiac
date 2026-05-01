@@ -1,6 +1,6 @@
 # Agency Surface — Design Brief & Craft Plan
 
-Status: shape complete, craft Phase 1 in progress.
+Status: phases 1–4 shipped at the impeccable production bar.
 Owner: design + frontend.
 Anchors: Productive.io (IA, project page, KPI discipline) + Toggl Track (week-grid timesheet UX, keyboard cadence) + Harvest (calmer time entry, in-row budget bar).
 Anti-anchors: Salesforce/Jira density, AI-product slop, hero-metric-with-sparkline cards, gradient tints.
@@ -119,11 +119,15 @@ The full brief is multi-PR. Each phase is its own craft pass at the impeccable p
 - Resourcing surface: aspirational empty state + heatmap composition once capacity data lands.
 - Billing surface: aspirational empty state + invoice pipeline composition once invoice primitives land.
 
-### Phase 4
+### Phase 4 — shipped
 
-- Backend: oRPC stubs for budgets, billable rates, capacity, invoices.
-- Wiring aspirational surfaces to real data; promoting empty states to live.
-- Integrations (Slack, calendar, exports).
+- oRPC stubs added under `agencyOps`: `budgets.list`, `rates.list`, `capacity.list`, `invoices.summary`, `invoices.list`, `integrations.list`. Each returns shaped-but-empty data so the surfaces below render the production composition with honest empty states (no fake numbers).
+- Resourcing: `AgencyResourcingSurface.vue` reads `capacity.list` and renders a member × week heatmap shell. Empty rows fall through to a teach-the-shape state inside the grid; once capacity rows arrive each cell colors green / amber / red by `(logged + booked) / capacity`.
+- Billing: `AgencyBillingSurface.vue` reads `invoices.summary` + `invoices.list` and renders a 4-card summary band over a Draft / Sent / Paid pipeline. Period-close hint hangs below the empty pipeline.
+- Settings: rates and integrations promoted from aspirational copy to live stubs. Rates section renders a table that fills as rows arrive. Integrations section renders Slack / Calendar / QuickBooks · Xero / Webhooks with status pills and Connect / Manage actions.
+- Project surfaces: `AgencyProjectsTable.vue` and `AgencyProjectDetail.vue` budget bars now read `budgets.list` and tween a real percentage with seven-state coloring (primary < 85% < warning < 100% < error). Falls back to honest "Not set" when no row exists.
+- `AgencyPlaceholderSurface.vue` retired from `pages/agency.vue` (kept in repo as a primitive in case future segments need it).
+- Type-check (`vue-tsc --noEmit`) and lint (`oxlint`) clean.
 
 ---
 

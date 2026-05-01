@@ -33,6 +33,35 @@ const sections: { id: SettingsSection; label: string; icon: string; status: "liv
   { id: "hues", label: "Project colors", icon: "i-lucide-palette", status: "soon" },
 ];
 
+// Phase 4 stubs: rates and integrations now read from real oRPC procedures.
+// Both return shaped-but-empty data today so the surfaces render their
+// production composition with honest empty states.
+const ratesQuery = useQuery(
+  computed(() => ({
+    ...orpc.agencyOps.rates.list.queryOptions({ input: { teamId: teamId.value } }),
+    enabled: Boolean(teamId.value) && section.value === "rates",
+  })),
+);
+
+const integrationsQuery = useQuery(
+  computed(() => ({
+    ...orpc.agencyOps.integrations.list.queryOptions({ input: { teamId: teamId.value } }),
+    enabled: Boolean(teamId.value) && section.value === "integrations",
+  })),
+);
+
+const rates = computed(() => ratesQuery.data.value?.items ?? []);
+const integrations = computed(() => integrationsQuery.data.value?.items ?? []);
+
+function formatRate(cents: number | null, currency: string): string {
+  if (cents === null) return "Not set";
+  return new Intl.NumberFormat(undefined, {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(cents / 100);
+}
+
 // --- Tags ---------------------------------------------------------------
 
 const tagsQuery = useQuery(
@@ -178,59 +207,121 @@ async function deleteTag(tagId: string, tagName: string) {
         </div>
       </div>
 
-      <!-- Member rates (aspirational) -->
+      <!-- Member rates (live, empty-shaped) -->
       <div
         v-else-if="section === 'rates'"
-        class="rounded-2xl border border-dashed border-default bg-muted/20 p-8"
+        class="rounded-2xl border border-default bg-default"
       >
-        <UIcon name="i-lucide-dollar-sign" class="size-6 text-muted" />
-        <h2 class="mt-3 text-base font-bold text-highlighted">Member rates</h2>
-        <p class="mt-1 text-xs text-muted">
-          Set hourly rates per member to power budget burn and invoicing. Rates apply going
-          forward, never retroactively.
-        </p>
-        <ul class="mt-5 space-y-2 text-xs text-muted">
-          <li class="flex items-start gap-2">
-            <UIcon name="i-lucide-corner-down-right" class="size-3.5 shrink-0 text-dimmed mt-0.5" />
-            <span>One internal rate (cost) and one billable rate per member.</span>
-          </li>
-          <li class="flex items-start gap-2">
-            <UIcon name="i-lucide-corner-down-right" class="size-3.5 shrink-0 text-dimmed mt-0.5" />
-            <span>Override per project when a client negotiates a special rate.</span>
-          </li>
-          <li class="flex items-start gap-2">
-            <UIcon name="i-lucide-corner-down-right" class="size-3.5 shrink-0 text-dimmed mt-0.5" />
-            <span>Effective dates so historical reports stay accurate.</span>
-          </li>
-        </ul>
+        <header class="flex items-baseline justify-between border-b border-default px-5 py-4">
+          <div>
+            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+              Member rates
+            </p>
+            <h2 class="mt-1 text-base font-bold text-highlighted">
+              Cost and billable rates per member
+            </h2>
+            <p class="mt-1 text-[11px] text-muted">
+              Rates apply going forward, never retroactively. Override per project when a
+              client negotiates a special rate.
+            </p>
+          </div>
+        </header>
+
+        <div v-if="ratesQuery.isPending.value" class="px-5 py-6">
+          <div class="h-4 animate-pulse rounded-md bg-elevated/60" />
+        </div>
+
+        <div v-else-if="rates.length === 0" class="px-5 py-10 text-center">
+          <UIcon name="i-lucide-dollar-sign" class="mx-auto size-6 text-muted" />
+          <p class="mt-3 text-sm font-bold text-highlighted">No rates set yet.</p>
+          <p class="mx-auto mt-1 max-w-md text-xs text-muted">
+            Once a rate is set for each member, budget burn and invoicing turn on across
+            Projects and Billing.
+          </p>
+        </div>
+
+        <table v-else class="w-full text-xs">
+          <thead class="bg-muted text-left text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+            <tr>
+              <th class="px-5 py-2.5 font-bold">Member</th>
+              <th class="px-3 py-2.5 font-bold text-right">Cost rate</th>
+              <th class="px-3 py-2.5 font-bold text-right">Billable rate</th>
+              <th class="px-5 py-2.5 font-bold">Effective from</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="rate in rates"
+              :key="rate.userId"
+              class="border-b border-default last:border-b-0"
+            >
+              <td class="px-5 py-3">
+                <p class="truncate font-bold text-highlighted">{{ rate.userName }}</p>
+                <p class="truncate text-[11px] text-muted">{{ rate.userEmail }}</p>
+              </td>
+              <td class="px-3 py-3 text-right font-mono tabular-nums text-muted">
+                {{ formatRate(rate.costRateCents, rate.currency) }}
+              </td>
+              <td class="px-3 py-3 text-right font-mono tabular-nums text-highlighted">
+                {{ formatRate(rate.billableRateCents, rate.currency) }}
+              </td>
+              <td class="px-5 py-3 text-muted">
+                {{ rate.effectiveFrom ? new Date(rate.effectiveFrom).toLocaleDateString() : "—" }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <!-- Integrations (aspirational) -->
+      <!-- Integrations (live, empty-shaped) -->
       <div
         v-else-if="section === 'integrations'"
-        class="rounded-2xl border border-dashed border-default bg-muted/20 p-8"
+        class="rounded-2xl border border-default bg-default"
       >
-        <UIcon name="i-lucide-plug" class="size-6 text-muted" />
-        <h2 class="mt-3 text-base font-bold text-highlighted">Integrations</h2>
-        <p class="mt-1 text-xs text-muted">
-          Push time and budgets out to where your team already works.
-        </p>
-        <ul class="mt-5 grid gap-2 text-xs sm:grid-cols-2">
-          <li class="rounded-xl border border-default bg-default px-3 py-3">
-            <p class="font-bold text-highlighted">Slack</p>
-            <p class="mt-1 text-muted">Daily totals and budget warnings in your channel.</p>
-          </li>
-          <li class="rounded-xl border border-default bg-default px-3 py-3">
-            <p class="font-bold text-highlighted">Calendar</p>
-            <p class="mt-1 text-muted">Suggest entries from Google or Outlook events.</p>
-          </li>
-          <li class="rounded-xl border border-default bg-default px-3 py-3">
-            <p class="font-bold text-highlighted">QuickBooks · Xero</p>
-            <p class="mt-1 text-muted">Send invoices straight to your books.</p>
-          </li>
-          <li class="rounded-xl border border-default bg-default px-3 py-3">
-            <p class="font-bold text-highlighted">Webhooks</p>
-            <p class="mt-1 text-muted">Stream entries into anything you already script.</p>
+        <header class="border-b border-default px-5 py-4">
+          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+            Integrations
+          </p>
+          <h2 class="mt-1 text-base font-bold text-highlighted">
+            Push time and budgets to where your team works
+          </h2>
+        </header>
+
+        <div v-if="integrationsQuery.isPending.value" class="px-5 py-6">
+          <div class="h-4 animate-pulse rounded-md bg-elevated/60" />
+        </div>
+
+        <ul v-else class="grid gap-px bg-default/40 sm:grid-cols-2">
+          <li
+            v-for="integration in integrations"
+            :key="integration.id"
+            class="bg-default p-4"
+          >
+            <div class="flex items-baseline justify-between gap-3">
+              <p class="truncate text-sm font-bold text-highlighted">
+                {{ integration.name }}
+              </p>
+              <span
+                class="inline-flex items-center gap-1.5 rounded-full border border-default bg-muted px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.16em]"
+                :class="integration.status === 'connected' ? 'text-success' : 'text-dimmed'"
+              >
+                <span
+                  class="inline-block size-1.5 rounded-full"
+                  :class="integration.status === 'connected' ? 'bg-success' : 'bg-muted'"
+                  aria-hidden="true"
+                />
+                {{ integration.status === "connected" ? "Connected" : "Available" }}
+              </span>
+            </div>
+            <p class="mt-1 text-[11px] text-muted">{{ integration.description }}</p>
+            <UButton
+              :label="integration.status === 'connected' ? 'Manage' : 'Connect'"
+              color="neutral"
+              variant="soft"
+              size="xs"
+              class="mt-3"
+              :disabled="integration.status !== 'connected'"
+            />
           </li>
         </ul>
       </div>
