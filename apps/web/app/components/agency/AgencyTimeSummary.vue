@@ -142,9 +142,7 @@ function formatHours(seconds: number) {
     <UCard>
       <!-- Date preset -->
       <div>
-        <label
-          class="mb-2 block text-xs font-semibold uppercase tracking-widest text-muted"
-        >
+        <label class="mb-2 block text-xs font-semibold uppercase tracking-widest text-muted">
           Period
         </label>
         <div class="flex flex-wrap gap-2">
@@ -247,27 +245,21 @@ function formatHours(seconds: number) {
     <!-- Summary stats -->
     <div v-if="summaryData" class="grid gap-4 md:grid-cols-3">
       <UCard>
-        <p class="text-xs font-semibold uppercase tracking-widest text-muted">
-          Total hours
-        </p>
+        <p class="text-xs font-semibold uppercase tracking-widest text-muted">Total hours</p>
         <p class="mt-2 text-2xl font-bold text-highlighted">
           {{ formatHours(summaryData.totalSeconds) }}
         </p>
       </UCard>
 
       <UCard>
-        <p class="text-xs font-semibold uppercase tracking-widest text-muted">
-          Active timers
-        </p>
+        <p class="text-xs font-semibold uppercase tracking-widest text-muted">Active timers</p>
         <p class="mt-2 text-2xl font-bold text-primary">
           {{ summaryData.activeCount ?? 0 }}
         </p>
       </UCard>
 
       <UCard>
-        <p class="text-xs font-semibold uppercase tracking-widest text-muted">
-          Team members
-        </p>
+        <p class="text-xs font-semibold uppercase tracking-widest text-muted">Team members</p>
         <p class="mt-2 text-2xl font-bold text-highlighted">
           {{ summaryData.teamMembers?.length ?? 0 }}
         </p>
@@ -318,10 +310,7 @@ function formatHours(seconds: number) {
                       {{ member.latestEntry.projectName }}
                     </p>
                   </div>
-                  <p
-                    v-if="member.latestEntry.description"
-                    class="mt-1 truncate text-xs text-muted"
-                  >
+                  <p v-if="member.latestEntry.description" class="mt-1 truncate text-xs text-muted">
                     {{ member.latestEntry.description }}
                   </p>
                 </div>

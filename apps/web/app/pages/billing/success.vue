@@ -21,15 +21,11 @@ onMounted(() => {
     class="flex h-full items-start justify-center overflow-y-auto bg-default px-4 pt-12 sm:px-6 lg:px-8"
   >
     <div class="max-w-md w-full px-6 text-center">
-      <div
-        class="mx-auto mb-6 flex items-center justify-center size-16 rounded-full bg-primary/10"
-      >
+      <div class="mx-auto mb-6 flex items-center justify-center size-16 rounded-full bg-primary/10">
         <UIcon name="i-lucide-check-circle" class="size-8 text-primary" />
       </div>
 
-      <h1 class="text-2xl font-bold text-highlighted mb-2">
-        Welcome to Pro!
-      </h1>
+      <h1 class="text-2xl font-bold text-highlighted mb-2">Welcome to Pro!</h1>
       <p class="text-muted mb-8">
         Your subscription is now active. Enjoy the full power of Brainiac Studio.
       </p>

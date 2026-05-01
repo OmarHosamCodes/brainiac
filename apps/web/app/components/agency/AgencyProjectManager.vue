@@ -230,10 +230,7 @@ async function deleteTag(tagId: string) {
         </div>
 
         <!-- Empty state -->
-        <div
-          v-else
-          class="rounded-lg border border-dashed border-muted/30 p-4 text-center"
-        >
+        <div v-else class="rounded-lg border border-dashed border-muted/30 p-4 text-center">
           <p class="text-xs text-muted">Add your first client to get started</p>
         </div>
       </UCard>
@@ -288,10 +285,7 @@ async function deleteTag(tagId: string) {
         </div>
 
         <!-- No client selected -->
-        <div
-          v-else
-          class="rounded-lg border border-dashed border-muted/30 p-4 text-center"
-        >
+        <div v-else class="rounded-lg border border-dashed border-muted/30 p-4 text-center">
           <p class="text-xs text-muted">Select a client to see projects</p>
         </div>
       </UCard>
@@ -349,10 +343,7 @@ async function deleteTag(tagId: string) {
       </UCard>
 
       <!-- Empty state -->
-      <div
-        v-else
-        class="rounded-2xl border border-dashed border-muted/30 p-4 text-center"
-      >
+      <div v-else class="rounded-2xl border border-dashed border-muted/30 p-4 text-center">
         <p class="text-xs text-muted">
           No tags yet — add your first tag to start categorizing time entries
         </p>

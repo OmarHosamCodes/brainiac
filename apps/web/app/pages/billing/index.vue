@@ -96,9 +96,7 @@ const limitItems = computed(() => [
         <!-- Plan Limits -->
         <UCard>
           <div class="p-2">
-            <h3 class="text-lg font-bold text-highlighted mb-4">
-              Your Plan Limits
-            </h3>
+            <h3 class="text-lg font-bold text-highlighted mb-4">Your Plan Limits</h3>
 
             <div class="grid sm:grid-cols-2 gap-4">
               <div

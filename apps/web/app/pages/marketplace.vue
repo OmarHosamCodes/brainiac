@@ -130,20 +130,14 @@ function onImported(payload: { kind: string; nodeId?: string }) {
 </script>
 
 <template>
-  <div
-    class="flex h-full flex-col overflow-y-auto bg-default"
-  >
+  <div class="flex h-full flex-col overflow-y-auto bg-default">
     <main class="flex flex-1 flex-col px-4 pb-16 pt-8 sm:px-6 lg:px-8">
       <div class="flex flex-1 flex-col gap-6">
         <!-- Sticky header section -->
-        <section
-          class="sticky top-0 z-30 rounded-[2rem] border border-default bg-elevated p-6"
-        >
+        <section class="sticky top-0 z-30 rounded-[2rem] border border-default bg-elevated p-6">
           <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="space-y-2">
-              <p
-                class="text-xs font-bold uppercase tracking-[0.2em] text-muted"
-              >
+              <p class="text-xs font-bold uppercase tracking-[0.2em] text-muted">
                 Team Marketplace
               </p>
               <h1 class="text-3xl font-semibold tracking-tight text-highlighted">

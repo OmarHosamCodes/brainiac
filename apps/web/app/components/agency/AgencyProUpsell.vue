@@ -25,7 +25,7 @@ async function handleUpgrade() {
         <UButton color="primary" size="md" icon="i-lucide-zap" @click="handleUpgrade">
           Upgrade to Pro
         </UButton>
-        <UButton color="neutral" variant="ghost" size="md" to="/pricing"> See pricing </UButton>
+        <UButton color="neutral" variant="ghost" size="md" to="/#pricing"> See pricing </UButton>
       </div>
     </div>
   </div>
