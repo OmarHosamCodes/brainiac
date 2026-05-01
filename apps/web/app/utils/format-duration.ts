@@ -1,7 +1,4 @@
-export function formatDuration(
-  seconds: number,
-  style: "clock" | "short" = "clock",
-) {
+export function formatDuration(seconds: number, style: "clock" | "short" = "clock") {
   const safeSeconds = Math.max(0, Math.round(seconds));
   const hours = Math.floor(safeSeconds / 3_600)
     .toString()

@@ -11,8 +11,11 @@ export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
   const rpcUrl = `${config.public.serverUrl}/rpc`;
 
+  const cookie = import.meta.server ? useRequestHeaders(["cookie"]).cookie : undefined;
+
   const rpcLink = new RPCLink({
     url: rpcUrl,
+    headers: cookie ? { cookie } : undefined,
     fetch(request, init) {
       // Cap any single RPC call so a hung server can never wedge a Vue Query
       // request indefinitely. Default Vue Query retry would otherwise compound

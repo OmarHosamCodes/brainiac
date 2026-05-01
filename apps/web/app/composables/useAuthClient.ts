@@ -36,10 +36,7 @@ export function useAuthClient() {
  * accessing `.value.data.user`, `.value.isPending`, etc.
  */
 export function useAuthSession(): Ref<AuthSessionState> {
-  const initial = useState<AuthSessionData | undefined>(
-    "auth-session-initial",
-    () => undefined,
-  );
+  const initial = useState<AuthSessionData | undefined>("auth-session-initial", () => undefined);
 
   if (import.meta.server) {
     return computed<AuthSessionState>(() => ({
