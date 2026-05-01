@@ -296,6 +296,8 @@ onBeforeUnmount(() => {
       <div class="app-shell__topbar-right">
         <div id="app-shell-actions" class="flex items-center gap-2" />
 
+        <AppShellAgencyTimer />
+
         <UButton
           color="neutral"
           :variant="agentDockOpen ? 'soft' : 'ghost'"
