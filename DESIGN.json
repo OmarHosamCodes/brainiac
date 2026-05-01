@@ -273,14 +273,46 @@
       "Two registers, one component vocabulary. A button looks the same on the landing page and inside the canvas toolbar."
     ],
     "rules": [
-      { "name": "The One Voice Rule", "body": "Operator Emerald is used on ≤10% of any given screen. Its rarity is the point.", "section": "colors" },
-      { "name": "The Tinted Neutral Rule", "body": "No #000 and no #fff raw. Every neutral is zinc-tinted (chroma ~0.005).", "section": "colors" },
-      { "name": "The Semantic Reuse Rule", "body": "Success and Operator Emerald share a hue family. The product equates 'primary action' and 'successful state' by design.", "section": "colors" },
-      { "name": "The Eyebrow Rule", "body": "Section eyebrows are rendered in Label scale at neutral-400/500. Never colored, never emerald, never bolder. They are the system's whisper.", "section": "typography" },
-      { "name": "The Single Family Rule", "body": "No display/serif pairing. Public Sans across the entire scale. Hierarchy comes from weight and size.", "section": "typography" },
-      { "name": "The Mono For Truth Rule", "body": "JetBrains Mono is reserved for things the system reports, not things the system says. Latencies, IDs, paths, code. Never running prose, never headings.", "section": "typography" },
-      { "name": "The Flat-By-Default Rule", "body": "Surfaces are flat at rest. Reach for hairlines or tonal layering before shadow.", "section": "elevation" },
-      { "name": "The Hairline First Rule", "body": "Separation is hairline before tonal layering, and tonal layering before shadow. Walk the ladder.", "section": "elevation" }
+      {
+        "name": "The One Voice Rule",
+        "body": "Operator Emerald is used on ≤10% of any given screen. Its rarity is the point.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tinted Neutral Rule",
+        "body": "No #000 and no #fff raw. Every neutral is zinc-tinted (chroma ~0.005).",
+        "section": "colors"
+      },
+      {
+        "name": "The Semantic Reuse Rule",
+        "body": "Success and Operator Emerald share a hue family. The product equates 'primary action' and 'successful state' by design.",
+        "section": "colors"
+      },
+      {
+        "name": "The Eyebrow Rule",
+        "body": "Section eyebrows are rendered in Label scale at neutral-400/500. Never colored, never emerald, never bolder. They are the system's whisper.",
+        "section": "typography"
+      },
+      {
+        "name": "The Single Family Rule",
+        "body": "No display/serif pairing. Public Sans across the entire scale. Hierarchy comes from weight and size.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono For Truth Rule",
+        "body": "JetBrains Mono is reserved for things the system reports, not things the system says. Latencies, IDs, paths, code. Never running prose, never headings.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "Surfaces are flat at rest. Reach for hairlines or tonal layering before shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Hairline First Rule",
+        "body": "Separation is hairline before tonal layering, and tonal layering before shadow. Walk the ladder.",
+        "section": "elevation"
+      }
     ],
     "dos": [
       "Do use Operator Emerald on primary actions, current selection, and system-status indicators only.",

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+definePageMeta({ layout: "marketing" });
+
 const effectiveDate = "March 28, 2026";
 
 useSeoMeta({
@@ -96,11 +98,109 @@ const sections = [
 </script>
 
 <template>
-  <LegalPageShell
-    title="Privacy Policy"
-    summary="A plain-language overview of what Brainiac collects, why it is processed, who may receive it, and what choices users have."
-    :effective-date="effectiveDate"
-    :last-updated="effectiveDate"
-    :sections="sections"
-  />
+  <MarketingPageShell>
+    <div class="max-w-6xl mx-auto px-6 md:px-10 lg:px-16 pt-20 md:pt-28 pb-20 md:pb-28">
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-y-8 md:gap-x-10">
+        <div class="md:col-span-4">
+          <div
+            class="text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-400 dark:text-neutral-500 mb-4"
+          >
+            Legal
+          </div>
+          <h1 class="text-4xl md:text-6xl font-bold tracking-tight leading-[1.02]">
+            Privacy Policy
+          </h1>
+          <p
+            class="mt-6 text-base md:text-lg text-neutral-600 dark:text-neutral-400 max-w-sm leading-relaxed"
+          >
+            A plain-language overview of what Brainiac collects, why it is processed, who may
+            receive it, and what choices users have.
+          </p>
+
+          <div
+            class="mt-8 text-[11px] font-bold uppercase tracking-[0.16em] text-neutral-400 dark:text-neutral-500"
+          >
+            Effective {{ effectiveDate }}
+          </div>
+
+          <nav class="mt-10 hidden md:block">
+            <div
+              class="text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-400 dark:text-neutral-500 mb-4"
+            >
+              On this page
+            </div>
+            <ul class="space-y-2">
+              <li v-for="section in sections" :key="section.id">
+                <a
+                  :href="`#${section.id}`"
+                  class="text-sm text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
+                >
+                  {{ section.title }}
+                </a>
+              </li>
+            </ul>
+          </nav>
+        </div>
+
+        <div
+          class="md:col-span-7 md:col-start-6 border-t border-neutral-200 dark:border-neutral-800/80"
+        >
+          <section
+            v-for="section in sections"
+            :id="section.id"
+            :key="section.id"
+            class="scroll-mt-28 py-10 border-b border-neutral-200 dark:border-neutral-800/80 first:pt-0"
+          >
+            <h2
+              class="text-xl md:text-2xl font-bold tracking-tight text-neutral-950 dark:text-white"
+            >
+              {{ section.title }}
+            </h2>
+
+            <p
+              v-if="section.intro"
+              class="mt-4 text-base leading-relaxed text-neutral-600 dark:text-neutral-300 max-w-2xl"
+            >
+              {{ section.intro }}
+            </p>
+
+            <div
+              v-if="section.paragraphs?.length"
+              class="mt-4 space-y-4 text-sm md:text-[15px] leading-7 text-neutral-600 dark:text-neutral-300 max-w-2xl"
+            >
+              <p v-for="paragraph in section.paragraphs" :key="paragraph">
+                {{ paragraph }}
+              </p>
+            </div>
+
+            <ul
+              v-if="section.bullets?.length"
+              class="mt-5 space-y-3 text-sm md:text-[15px] leading-7 text-neutral-700 dark:text-neutral-200 max-w-2xl"
+            >
+              <li v-for="bullet in section.bullets" :key="bullet" class="flex gap-3">
+                <span class="mt-2 size-1.5 shrink-0 rounded-full bg-primary-500" />
+                <span>{{ bullet }}</span>
+              </li>
+            </ul>
+          </section>
+
+          <div class="py-10 flex items-center gap-6 text-sm">
+            <ULink
+              to="/terms"
+              class="text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
+            >
+              Terms of Service
+            </ULink>
+            <span class="text-neutral-300 dark:text-neutral-700">/</span>
+            <ULink
+              to="/"
+              class="text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-100 transition-colors"
+            >
+              Home
+            </ULink>
+          </div>
+        </div>
+      </div>
+    </div>
+  </MarketingPageShell>
 </template>
