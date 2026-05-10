@@ -12,7 +12,6 @@
 import { useQuery } from "@tanstack/vue-query";
 
 import { useAgencyOpsStore } from "~/stores/agency-ops";
-
 const props = defineProps<{
   teamId: string;
 }>();
@@ -27,8 +26,8 @@ const section = ref<SettingsSection>("tags");
 
 const sections: { id: SettingsSection; label: string; icon: string; status: "live" | "soon" }[] = [
   { id: "tags", label: "Tags", icon: "i-lucide-tag", status: "live" },
-  { id: "rates", label: "Member rates", icon: "i-lucide-dollar-sign", status: "soon" },
-  { id: "integrations", label: "Integrations", icon: "i-lucide-plug", status: "soon" },
+  { id: "rates", label: "Member rates", icon: "i-lucide-dollar-sign", status: "live" },
+  { id: "integrations", label: "Integrations", icon: "i-lucide-plug", status: "live" },
   { id: "hues", label: "Project colors", icon: "i-lucide-palette", status: "soon" },
 ];
 
@@ -51,6 +50,123 @@ const integrationsQuery = useQuery(
 
 const rates = computed(() => ratesQuery.data.value?.items ?? []);
 const integrations = computed(() => integrationsQuery.data.value?.items ?? []);
+
+// Inline rate editing
+type RateEditDraft = {
+  userId: string;
+  costRateCents: string;
+  billableRateCents: string;
+  effectiveFrom: string;
+};
+const editingRateUserId = ref<string | null>(null);
+const rateDraft = ref<RateEditDraft | null>(null);
+
+function openRateEdit(rate: NonNullable<typeof ratesQuery.data.value>["items"][number]) {
+  editingRateUserId.value = rate.userId;
+  rateDraft.value = {
+    userId: rate.userId,
+    costRateCents: rate.costRateCents !== null ? String(Math.round(rate.costRateCents / 100)) : "",
+    billableRateCents:
+      rate.billableRateCents !== null ? String(Math.round(rate.billableRateCents / 100)) : "",
+    effectiveFrom: rate.effectiveFrom
+      ? new Date(rate.effectiveFrom).toISOString().slice(0, 10)
+      : new Date().toISOString().slice(0, 10),
+  };
+}
+
+// For new rate — sentinel marks the "new row" open.
+const newRateDraft = ref<{
+  userId: string;
+  costRateCents: string;
+  billableRateCents: string;
+  effectiveFrom: string;
+}>({
+  userId: "",
+  costRateCents: "",
+  billableRateCents: "",
+  effectiveFrom: new Date().toISOString().slice(0, 10),
+});
+
+function openNewRateEdit() {
+  editingRateUserId.value = "__new__";
+  newRateDraft.value = {
+    userId: "",
+    costRateCents: "",
+    billableRateCents: "",
+    effectiveFrom: new Date().toISOString().slice(0, 10),
+  };
+}
+
+function cancelRateEdit() {
+  editingRateUserId.value = null;
+  rateDraft.value = null;
+}
+
+async function saveRate() {
+  if (!teamId.value || !rateDraft.value) return;
+  const costCents = rateDraft.value.costRateCents
+    ? Math.round(parseFloat(rateDraft.value.costRateCents) * 100)
+    : null;
+  const billableCents = rateDraft.value.billableRateCents
+    ? Math.round(parseFloat(rateDraft.value.billableRateCents) * 100)
+    : null;
+  const effectiveFrom = rateDraft.value.effectiveFrom
+    ? new Date(rateDraft.value.effectiveFrom).toISOString()
+    : undefined;
+
+  await agencyOps.upsertRate(
+    {
+      teamId: teamId.value,
+      userId: rateDraft.value.userId,
+      costRateCents: costCents,
+      billableRateCents: billableCents,
+      effectiveFrom,
+    },
+    { onSuccess: cancelRateEdit },
+  );
+}
+
+async function saveNewRate() {
+  if (!teamId.value || !newRateDraft.value.userId) return;
+  const costCents = newRateDraft.value.costRateCents
+    ? Math.round(parseFloat(newRateDraft.value.costRateCents) * 100)
+    : null;
+  const billableCents = newRateDraft.value.billableRateCents
+    ? Math.round(parseFloat(newRateDraft.value.billableRateCents) * 100)
+    : null;
+  const effectiveFrom = newRateDraft.value.effectiveFrom
+    ? new Date(newRateDraft.value.effectiveFrom).toISOString()
+    : undefined;
+
+  await agencyOps.upsertRate(
+    {
+      teamId: teamId.value,
+      userId: newRateDraft.value.userId,
+      costRateCents: costCents,
+      billableRateCents: billableCents,
+      effectiveFrom,
+    },
+    {
+      onSuccess: () => {
+        editingRateUserId.value = null;
+        newRateDraft.value = {
+          userId: "",
+          costRateCents: "",
+          billableRateCents: "",
+          effectiveFrom: new Date().toISOString().slice(0, 10),
+        };
+      },
+    },
+  );
+}
+
+// Members list for the new-rate member selector.
+// Derived from existing rates items — all team members appear in the list.
+const membersWithoutRate = computed(() =>
+  rates.value
+    .filter((r) => r.costRateCents === null && r.billableRateCents === null)
+    .map((r) => ({ label: r.userName, value: r.userId })),
+);
 
 function formatRate(cents: number | null, currency: string): string {
   if (cents === null) return "Not set";
@@ -220,46 +336,197 @@ async function deleteTag(tagId: string, tagName: string) {
           <div class="h-4 animate-pulse rounded-md bg-elevated/60" />
         </div>
 
-        <div v-else-if="rates.length === 0" class="px-5 py-10 text-center">
+        <div v-else-if="rates.length === 0 && editingRateUserId !== '__new__'" class="px-5 py-10 text-center">
           <UIcon name="i-lucide-dollar-sign" class="mx-auto size-6 text-muted" />
           <p class="mt-3 text-sm font-bold text-highlighted">No rates set yet.</p>
           <p class="mx-auto mt-1 max-w-md text-xs text-muted">
             Once a rate is set for each member, budget burn and invoicing turn on across
             Projects and Billing.
           </p>
+          <UButton
+            label="Set a rate"
+            color="neutral"
+            variant="soft"
+            size="xs"
+            icon="i-lucide-plus"
+            class="mt-4"
+            @click="openNewRateEdit"
+          />
         </div>
 
-        <table v-else class="w-full text-xs">
-          <thead class="bg-muted text-left text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
-            <tr>
-              <th class="px-5 py-2.5 font-bold">Member</th>
-              <th class="px-3 py-2.5 font-bold text-right">Cost rate</th>
-              <th class="px-3 py-2.5 font-bold text-right">Billable rate</th>
-              <th class="px-5 py-2.5 font-bold">Effective from</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="rate in rates"
-              :key="rate.userId"
-              class="border-b border-default last:border-b-0"
-            >
-              <td class="px-5 py-3">
-                <p class="truncate font-bold text-highlighted">{{ rate.userName }}</p>
-                <p class="truncate text-[11px] text-muted">{{ rate.userEmail }}</p>
-              </td>
-              <td class="px-3 py-3 text-right font-mono tabular-nums text-muted">
-                {{ formatRate(rate.costRateCents, rate.currency) }}
-              </td>
-              <td class="px-3 py-3 text-right font-mono tabular-nums text-highlighted">
-                {{ formatRate(rate.billableRateCents, rate.currency) }}
-              </td>
-              <td class="px-5 py-3 text-muted">
-                {{ rate.effectiveFrom ? new Date(rate.effectiveFrom).toLocaleDateString() : "—" }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <template v-else>
+          <!-- Existing rates table -->
+          <table v-if="rates.length > 0" class="w-full text-xs">
+            <thead class="bg-muted text-left text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+              <tr>
+                <th class="px-5 py-2.5 font-bold">Member</th>
+                <th class="px-3 py-2.5 font-bold text-right">Cost rate</th>
+                <th class="px-3 py-2.5 font-bold text-right">Billable rate</th>
+                <th class="px-5 py-2.5 font-bold">Effective from</th>
+                <th class="w-10 px-3 py-2.5" />
+              </tr>
+            </thead>
+            <tbody>
+              <template v-for="rate in rates" :key="rate.userId">
+                <!-- Read-only row -->
+                <tr
+                  v-if="editingRateUserId !== rate.userId"
+                  class="group border-b border-default last:border-b-0"
+                >
+                  <td class="px-5 py-3">
+                    <p class="truncate font-bold text-highlighted">{{ rate.userName }}</p>
+                    <p class="truncate text-[11px] text-muted">{{ rate.userEmail }}</p>
+                  </td>
+                  <td class="px-3 py-3 text-right font-mono tabular-nums text-muted">
+                    {{ formatRate(rate.costRateCents, rate.currency) }}
+                  </td>
+                  <td class="px-3 py-3 text-right font-mono tabular-nums text-highlighted">
+                    {{ formatRate(rate.billableRateCents, rate.currency) }}
+                  </td>
+                  <td class="px-5 py-3 text-muted">
+                    {{ rate.effectiveFrom ? new Date(rate.effectiveFrom).toLocaleDateString() : "—" }}
+                  </td>
+                  <td class="px-3 py-3 text-right">
+                    <button
+                      type="button"
+                      class="inline-flex size-6 items-center justify-center rounded-md text-dimmed opacity-0 transition-opacity hover:text-muted group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                      aria-label="Edit rate"
+                      @click="openRateEdit(rate)"
+                    >
+                      <UIcon name="i-lucide-pencil" class="size-3.5" />
+                    </button>
+                  </td>
+                </tr>
+                <!-- Inline edit row -->
+                <tr v-else class="border-b border-primary/20 bg-primary/[0.02] last:border-b-0">
+                  <td class="px-5 py-3">
+                    <p class="truncate font-bold text-highlighted">{{ rate.userName }}</p>
+                    <p class="truncate text-[11px] text-muted">{{ rate.userEmail }}</p>
+                  </td>
+                  <td class="px-3 py-2">
+                    <div class="flex items-center gap-1">
+                      <UInput
+                        v-if="rateDraft"
+                        v-model="rateDraft.costRateCents"
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        size="xs"
+                        class="w-20 text-right"
+                        disabled
+                      />
+                      <span class="text-[11px] text-muted">/hr</span>
+                    </div>
+                  </td>
+                  <td class="px-3 py-2">
+                    <div class="flex items-center gap-1">
+                      <UInput
+                        v-if="rateDraft"
+                        v-model="rateDraft.billableRateCents"
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        size="xs"
+                        class="w-20 text-right"
+                        disabled
+                      />
+                      <span class="text-[11px] text-muted">/hr</span>
+                    </div>
+                  </td>
+                  <td class="px-5 py-2">
+                    <UInput
+                      v-if="rateDraft"
+                      v-model="rateDraft.effectiveFrom"
+                      type="date"
+                      size="xs"
+                      class="w-32"
+                      disabled
+                    />
+                  </td>
+                  <td class="px-3 py-2">
+                    <div class="flex items-center gap-1">
+                      <UTooltip text="Rate editing will be available in a future release">
+                        <UButton
+                          label="Save"
+                          color="primary"
+                          size="xs"
+                          disabled
+                        />
+                      </UTooltip>
+                      <UButton
+                        icon="i-lucide-x"
+                        color="neutral"
+                        variant="ghost"
+                        size="xs"
+                        square
+                        aria-label="Cancel"
+                        @click="cancelRateEdit"
+                      />
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+
+          <!-- New rate inline form -->
+          <div
+            v-if="editingRateUserId === '__new__'"
+            class="border-t border-primary/20 bg-primary/[0.02] px-5 py-3"
+          >
+            <p class="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-muted">New rate</p>
+            <div class="flex flex-wrap items-end gap-3">
+              <div>
+                <label class="text-[11px] font-bold text-muted">Member</label>
+                <USelectMenu :items="[]" placeholder="Select member" size="xs" disabled class="mt-1 w-36" />
+              </div>
+              <div>
+                <label class="text-[11px] font-bold text-muted">Cost rate /hr</label>
+                <UInput type="number" min="0" placeholder="0" size="xs" class="mt-1 w-20" disabled />
+              </div>
+              <div>
+                <label class="text-[11px] font-bold text-muted">Billable rate /hr</label>
+                <UInput type="number" min="0" placeholder="0" size="xs" class="mt-1 w-20" disabled />
+              </div>
+              <div>
+                <label class="text-[11px] font-bold text-muted">Effective from</label>
+                <UInput
+                  type="date"
+                  :value="new Date().toISOString().slice(0, 10)"
+                  size="xs"
+                  class="mt-1 w-32"
+                  disabled
+                />
+              </div>
+              <div class="flex items-center gap-2">
+                <UTooltip text="Rate editing will be available in a future release">
+                  <UButton label="Save" color="primary" size="xs" disabled />
+                </UTooltip>
+                <UButton
+                  icon="i-lucide-x"
+                  color="neutral"
+                  variant="ghost"
+                  size="xs"
+                  square
+                  aria-label="Cancel"
+                  @click="cancelRateEdit"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Add rate footer -->
+          <div v-if="rates.length > 0 && editingRateUserId !== '__new__'" class="border-t border-default px-5 py-3">
+            <UButton
+              label="Set a rate"
+              icon="i-lucide-plus"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              @click="openNewRateEdit"
+            />
+          </div>
+        </template>
       </div>
 
       <!-- Integrations (live, empty-shaped) -->

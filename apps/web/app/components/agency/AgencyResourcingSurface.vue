@@ -1,13 +1,6 @@
 <script setup lang="ts">
 /**
  * Agency Resourcing — member × week capacity heatmap.
- *
- * Reads the `capacity.list` stub for the next 4 weeks. Today the stub
- * returns an empty array so the surface lands on its empty state. The
- * grid composition below is the production shape: when capacity rows
- * arrive each cell colors by utilization (logged + booked / capacity)
- * on a state-success → state-warning → state-error scale. Anchor:
- * Productive.io Resourcing without the Salesforce density.
  */
 import { useQuery } from "@tanstack/vue-query";
 
@@ -19,6 +12,7 @@ const props = defineProps<{
 }>();
 
 const orpc = useOrpc();
+const agencyOps = useAgencyOpsStore();
 
 const teamId = computed(() => props.teamId);
 
@@ -58,7 +52,7 @@ const capacityQuery = useQuery(
 const weeks = computed(() => capacityQuery.data.value?.weeks ?? []);
 
 // Aggregate to member rows so the same dataset renders as a heatmap once
-// the stub returns data. Today this collapses to an empty array.
+// the stub returns data.
 type MemberRow = {
   userId: string;
   userName: string;
@@ -105,6 +99,61 @@ function utilizationTone(pct: number): string {
   if (pct < 95) return "bg-warning/20 text-warning";
   return "bg-error/20 text-error";
 }
+
+// Cell popover: shows utilization breakdown + capacity edit input.
+const activeCellPopover = ref<{ userId: string; weekStart: string } | null>(null);
+// Local draft hours value (hours as string) for the capacity input.
+const capacityDraftHours = ref<string>("");
+
+function openCellPopover(userId: string, weekStart: string, currentCapacitySeconds: number) {
+  if (
+    activeCellPopover.value?.userId === userId &&
+    activeCellPopover.value?.weekStart === weekStart
+  ) {
+    activeCellPopover.value = null;
+    return;
+  }
+  activeCellPopover.value = { userId, weekStart };
+  capacityDraftHours.value = currentCapacitySeconds > 0
+    ? String(Math.round(currentCapacitySeconds / 3600))
+    : "";
+}
+
+function closeCellPopover() {
+  activeCellPopover.value = null;
+}
+
+async function saveCapacity(userId: string, weekStart: string) {
+  const hours = parseFloat(capacityDraftHours.value);
+  if (isNaN(hours) || hours < 0) return;
+
+  // Snap weekStart to the nearest Monday (UTC) — the server requires it.
+  const d = new Date(weekStart);
+  const diff = (d.getUTCDay() + 6) % 7;
+  d.setUTCDate(d.getUTCDate() - diff);
+  const mondayIso = d.toISOString();
+
+  await agencyOps.setCapacity(
+    {
+      teamId: teamId.value,
+      userId,
+      weekStart: mondayIso,
+      capacitySeconds: Math.round(hours * 3600),
+    },
+    { onSuccess: closeCellPopover },
+  );
+}
+
+function getCell(
+  row: MemberRow,
+  weekStart: string,
+): MemberRow["cells"][number] | undefined {
+  return row.cells.find((cell) => cell.weekStart === weekStart);
+}
+
+const emit = defineEmits<{
+  "update:segment": [value: string];
+}>();
 </script>
 
 <template>
@@ -166,34 +215,19 @@ function utilizationTone(pct: number): string {
                 <p class="mt-3 text-sm font-bold text-highlighted">
                   Capacity isn't set.
                 </p>
-                <p class="mx-auto mt-1 max-w-md text-xs text-muted">
-                  Add weekly hours per member in Settings · Member rates to
-                  see utilization across the team. Once set, this grid colors
-                  each cell by how much of a member's week is committed.
+                <p class="mx-auto mt-1 max-w-sm text-xs text-muted">
+                  Add weekly hours per member in Settings to see utilization across the team.
+                  Once set, this grid colors each cell by how much of a member's week is committed.
                 </p>
-                <ul class="mx-auto mt-5 max-w-md space-y-1.5 text-left text-[11px] text-muted">
-                  <li class="flex items-start gap-2">
-                    <UIcon
-                      name="i-lucide-corner-down-right"
-                      class="mt-0.5 size-3.5 shrink-0 text-dimmed"
-                    />
-                    <span>Green under 70%, amber 70–94%, red at or over 95%.</span>
-                  </li>
-                  <li class="flex items-start gap-2">
-                    <UIcon
-                      name="i-lucide-corner-down-right"
-                      class="mt-0.5 size-3.5 shrink-0 text-dimmed"
-                    />
-                    <span>Click a cell to rebalance assignments without leaving the page.</span>
-                  </li>
-                  <li class="flex items-start gap-2">
-                    <UIcon
-                      name="i-lucide-corner-down-right"
-                      class="mt-0.5 size-3.5 shrink-0 text-dimmed"
-                    />
-                    <span>Forecast next week alongside committed project budgets.</span>
-                  </li>
-                </ul>
+                <UButton
+                  label="Go to Settings"
+                  color="neutral"
+                  variant="soft"
+                  size="xs"
+                  icon="i-lucide-settings"
+                  class="mt-4"
+                  @click="emit('update:segment', 'settings')"
+                />
               </td>
             </tr>
 
@@ -206,25 +240,107 @@ function utilizationTone(pct: number): string {
                 <span class="truncate font-bold text-highlighted">{{ row.userName }}</span>
               </td>
               <td
-                v-for="cell in row.cells"
-                :key="cell.weekStart"
+                v-for="(weekStart, colIndex) in upcomingWeekStarts"
+                :key="weekStart.toISOString()"
                 class="px-2 py-2"
               >
-                <div
-                  class="flex h-12 flex-col items-center justify-center rounded-xl text-[11px] font-bold"
-                  :class="utilizationTone(utilizationPct(cell))"
+                <UPopover
+                  :open="
+                    activeCellPopover?.userId === row.userId &&
+                    activeCellPopover?.weekStart === weekStart.toISOString()
+                  "
+                  :content="{ align: 'center' }"
+                  @update:open="(open) => { if (!open) closeCellPopover(); }"
                 >
-                  <span class="font-mono tabular-nums">{{ utilizationPct(cell) }}%</span>
-                  <span class="font-mono text-[10px] tabular-nums opacity-70">
-                    {{ formatDuration(cell.logged + cell.booked, "short") }}
-                    /
-                    {{ formatDuration(cell.capacity, "short") }}
-                  </span>
-                </div>
+                  <button
+                    type="button"
+                    class="flex h-12 w-full flex-col items-center justify-center rounded-xl text-[11px] font-bold transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    :class="utilizationTone(utilizationPct(getCell(row, weekStart.toISOString()) ?? { weekStart: weekStart.toISOString(), capacity: 0, logged: 0, booked: 0 }))"
+                    :aria-label="`${row.userName}, ${colIndex === 0 ? 'this week' : formatWeekLabel(weekStart.toISOString())}: ${utilizationPct(getCell(row, weekStart.toISOString()) ?? { weekStart: weekStart.toISOString(), capacity: 0, logged: 0, booked: 0 })}% utilized`"
+                   @click="openCellPopover(row.userId, weekStart.toISOString(), getCell(row, weekStart.toISOString())?.capacity ?? 0)"
+                  >
+                    <span class="font-mono tabular-nums">
+                      {{ utilizationPct(getCell(row, weekStart.toISOString()) ?? { weekStart: weekStart.toISOString(), capacity: 0, logged: 0, booked: 0 }) }}%
+                    </span>
+                    <span class="font-mono text-[10px] tabular-nums opacity-70">
+                      {{ formatDuration((getCell(row, weekStart.toISOString())?.logged ?? 0) + (getCell(row, weekStart.toISOString())?.booked ?? 0), "short") }}
+                      /
+                      {{ formatDuration(getCell(row, weekStart.toISOString())?.capacity ?? 0, "short") }}
+                    </span>
+                  </button>
+                  <template #content>
+                    <div class="w-52 p-3 text-xs">
+                      <p class="font-bold uppercase tracking-[0.16em] text-muted" style="font-size: 10px;">
+                        {{ colIndex === 0 ? "This week" : formatWeekLabel(weekStart.toISOString()) }}
+                      </p>
+                      <ul class="mt-2 space-y-1.5">
+                        <li class="flex items-center justify-between gap-4">
+                          <span class="text-muted">Logged</span>
+                          <span class="font-mono tabular-nums text-highlighted">
+                            {{ formatDuration(getCell(row, weekStart.toISOString())?.logged ?? 0, "short") }}
+                          </span>
+                        </li>
+                        <li class="flex items-center justify-between gap-4">
+                          <span class="text-muted">Booked</span>
+                          <span class="font-mono tabular-nums text-highlighted">
+                            {{ formatDuration(getCell(row, weekStart.toISOString())?.booked ?? 0, "short") }}
+                          </span>
+                        </li>
+                        <li class="flex items-center justify-between gap-4 border-t border-default pt-1.5">
+                          <span class="text-muted">Capacity</span>
+                          <span class="font-mono tabular-nums text-highlighted">
+                            {{ formatDuration(getCell(row, weekStart.toISOString())?.capacity ?? 0, "short") }}
+                          </span>
+                        </li>
+                      </ul>
+                      <div class="mt-3 border-t border-default pt-3">
+                        <label class="text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+                          Set capacity (hours)
+                        </label>
+                        <div class="mt-1.5 flex items-center gap-2">
+                          <UInput
+                            v-model="capacityDraftHours"
+                            type="number"
+                            min="0"
+                            step="1"
+                            size="xs"
+                            class="flex-1"
+                            placeholder="e.g. 40"
+                            @keydown.enter="saveCapacity(row.userId, weekStart.toISOString())"
+                          />
+                          <UButton
+                            label="Save"
+                            color="primary"
+                            size="xs"
+                            :loading="agencyOps.isCapacityMutationPending"
+                            @click="saveCapacity(row.userId, weekStart.toISOString())"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </template>
+                </UPopover>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Legend (shown only when there's data) -->
+      <div v-if="memberRows.length > 0" class="flex flex-wrap items-center gap-4 px-1 text-[11px] text-muted">
+        <span class="font-bold uppercase tracking-[0.16em]">Utilization</span>
+        <span class="inline-flex items-center gap-1.5">
+          <span class="inline-block size-2.5 rounded-sm bg-success/40" aria-hidden="true" />
+          Under 70%
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <span class="inline-block size-2.5 rounded-sm bg-warning/40" aria-hidden="true" />
+          70–94%
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <span class="inline-block size-2.5 rounded-sm bg-error/40" aria-hidden="true" />
+          95% or over
+        </span>
       </div>
     </template>
   </div>

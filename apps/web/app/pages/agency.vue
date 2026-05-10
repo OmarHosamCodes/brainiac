@@ -176,7 +176,7 @@ const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQue
 
         <AgencyReportsSurface v-else-if="segment === 'reports'" :team-id="selectedTeamId" />
 
-        <AgencyResourcingSurface v-else-if="segment === 'resourcing'" :team-id="selectedTeamId" />
+        <AgencyResourcingSurface v-else-if="segment === 'resourcing'" :team-id="selectedTeamId" @update:segment="segment = $event as AgencySegmentId" />
 
         <AgencyBillingSurface v-else-if="segment === 'billing'" :team-id="selectedTeamId" />
 

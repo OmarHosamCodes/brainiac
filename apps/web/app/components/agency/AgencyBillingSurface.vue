@@ -1,11 +1,6 @@
 <script setup lang="ts">
 /**
  * Agency Billing — invoice pipeline (draft → sent → paid) + summary band.
- *
- * Reads `invoices.summary` and `invoices.list` stubs. Both return empty
- * shapes today; the surface lands on its honest empty state with the
- * production composition rehearsed in three lanes. Anchor: Harvest's
- * calmer invoice rhythm + Productive's lane discipline.
  */
 import { useQuery } from "@tanstack/vue-query";
 
@@ -16,6 +11,7 @@ const props = defineProps<{
 }>();
 
 const orpc = useOrpc();
+const agencyOps = useAgencyOpsStore();
 
 const teamId = computed(() => props.teamId);
 
@@ -37,8 +33,21 @@ const invoicesQuery = useQuery(
   })),
 );
 
+const clientsQuery = useQuery(
+  computed(() => ({
+    ...orpc.agencyOps.clients.list.queryOptions({
+      input: { teamId: teamId.value, page: 1, pageSize: 200 },
+    }),
+    enabled: Boolean(teamId.value),
+  })),
+);
+
 const summary = computed(() => summaryQuery.data.value ?? null);
 const invoices = computed(() => invoicesQuery.data.value?.items ?? []);
+
+const clientItems = computed(() =>
+  (clientsQuery.data.value?.items ?? []).map((c) => ({ label: c.name, value: c.id })),
+);
 
 type LaneId = "draft" | "sent" | "paid";
 
@@ -103,6 +112,80 @@ const isError = computed(
 );
 
 const anyInvoices = computed(() => invoices.value.length > 0);
+
+// ---------------------------------------------------------------------------
+// Invoice creation panel
+// ---------------------------------------------------------------------------
+
+const createPanelOpen = ref(false);
+
+// selectedClientId stores the id; selectedClientLabel for display
+const selectedClientId = ref<string>("");
+const periodStart = ref("");
+const periodEnd = ref("");
+
+const createFormValid = computed(
+  () =>
+    Boolean(selectedClientId.value) &&
+    Boolean(periodStart.value) &&
+    Boolean(periodEnd.value) &&
+    periodEnd.value >= periodStart.value,
+);
+
+function openCreatePanel() {
+  selectedClientId.value = "";
+  periodStart.value = "";
+  periodEnd.value = "";
+  createPanelOpen.value = true;
+}
+
+function closeCreatePanel() {
+  createPanelOpen.value = false;
+}
+
+async function generateDraft() {
+  if (!createFormValid.value) return;
+
+  const client = clientsQuery.data.value?.items.find(
+    (c) => c.id === selectedClientId.value,
+  );
+
+  await agencyOps.createInvoice(
+    {
+      teamId: teamId.value,
+      clientId: selectedClientId.value,
+      clientName: client?.name ?? "",
+      periodStart: new Date(periodStart.value).toISOString(),
+      periodEnd: new Date(periodEnd.value).toISOString(),
+    },
+    { onSuccess: closeCreatePanel },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Lane status transitions
+// ---------------------------------------------------------------------------
+
+const pendingStatusInvoiceId = ref<string | null>(null);
+
+async function advanceInvoiceStatus(
+  invoiceId: string,
+  currentStatus: LaneId,
+) {
+  const nextStatus = currentStatus === "draft" ? "sent" : "paid";
+  pendingStatusInvoiceId.value = invoiceId;
+
+  await agencyOps.updateInvoiceStatus(
+    { teamId: teamId.value, invoiceId, status: nextStatus },
+    {
+      onSuccess: () => {
+        pendingStatusInvoiceId.value = null;
+      },
+    },
+  );
+
+  pendingStatusInvoiceId.value = null;
+}
 </script>
 
 <template>
@@ -189,19 +272,31 @@ const anyInvoices = computed(() => invoices.value.length > 0);
           :key="lane.id"
           class="rounded-2xl border border-default bg-default"
         >
-          <header class="flex items-baseline justify-between border-b border-default px-4 py-3">
-            <div>
+          <header class="flex items-center justify-between gap-3 border-b border-default px-4 py-3">
+            <div class="min-w-0">
               <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
                 {{ lane.label }}
               </p>
               <p class="mt-0.5 text-[11px] text-muted">{{ lane.copy }}</p>
             </div>
-            <span
-              class="font-mono text-[11px] font-bold tabular-nums"
-              :class="laneCount(lane.id) > 0 ? 'text-highlighted' : 'text-dimmed'"
-            >
-              {{ laneCount(lane.id) }}
-            </span>
+            <div class="flex shrink-0 items-center gap-2">
+              <span
+                class="font-mono text-[11px] font-bold tabular-nums"
+                :class="laneCount(lane.id) > 0 ? 'text-highlighted' : 'text-dimmed'"
+              >
+                {{ laneCount(lane.id) }}
+              </span>
+              <UButton
+                v-if="lane.id === 'draft'"
+                icon="i-lucide-plus"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                square
+                aria-label="New invoice"
+                @click="openCreatePanel"
+              />
+            </div>
           </header>
 
           <ul v-if="laneItems(lane.id).length > 0" class="divide-y divide-default">
@@ -222,6 +317,17 @@ const anyInvoices = computed(() => invoices.value.length > 0);
               <p class="mt-1 truncate text-[11px] text-dimmed">
                 {{ formatPeriod(invoice.periodStart, invoice.periodEnd) }}
               </p>
+              <div v-if="lane.id !== 'paid'" class="mt-2">
+                <UButton
+                  :label="lane.id === 'draft' ? 'Mark sent' : 'Mark paid'"
+                  color="neutral"
+                  variant="soft"
+                  size="xs"
+                  :loading="pendingStatusInvoiceId === invoice.id"
+                  :disabled="agencyOps.isInvoiceMutationPending"
+                  @click="advanceInvoiceStatus(invoice.id, lane.id)"
+                />
+              </div>
             </li>
           </ul>
 
@@ -230,6 +336,95 @@ const anyInvoices = computed(() => invoices.value.length > 0);
           </div>
         </article>
       </div>
+
+      <!-- Invoice creation panel (slides in below lanes) -->
+      <Transition
+        enter-active-class="transition-[opacity,transform] duration-200 ease-out"
+        leave-active-class="transition-[opacity,transform] duration-150 ease-in"
+        enter-from-class="opacity-0 -translate-y-1"
+        enter-to-class="opacity-100 translate-y-0"
+        leave-from-class="opacity-100 translate-y-0"
+        leave-to-class="opacity-0 -translate-y-1"
+      >
+        <div
+          v-if="createPanelOpen"
+          class="rounded-2xl border border-default bg-default"
+        >
+          <div class="flex items-center justify-between border-b border-default px-5 py-4">
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">New invoice</p>
+              <h3 class="mt-1 text-sm font-bold text-highlighted">Draft from a closed period</h3>
+            </div>
+            <UButton
+              icon="i-lucide-x"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              square
+              aria-label="Close"
+              @click="closeCreatePanel"
+            />
+          </div>
+
+          <div class="grid gap-4 p-5 sm:grid-cols-2">
+            <div>
+              <label class="text-[11px] font-bold text-muted">Client</label>
+              <USelectMenu
+                v-model="selectedClientId"
+                :items="clientItems"
+                value-key="value"
+                placeholder="Select client"
+                size="sm"
+                class="mt-1"
+              />
+            </div>
+            <div>
+              <label class="text-[11px] font-bold text-muted">Billing period</label>
+              <div class="mt-1 flex items-center gap-2">
+                <UInput
+                  v-model="periodStart"
+                  type="date"
+                  size="sm"
+                  class="flex-1"
+                />
+                <span class="text-[11px] text-muted">to</span>
+                <UInput
+                  v-model="periodEnd"
+                  type="date"
+                  size="sm"
+                  class="flex-1"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="border-t border-default px-5 py-4">
+            <div class="flex items-start gap-3 rounded-xl bg-muted/30 px-4 py-3">
+              <UIcon name="i-lucide-info" class="mt-0.5 size-4 shrink-0 text-muted" aria-hidden="true" />
+              <p class="text-[11px] text-muted">
+                Line items are generated from approved time entries in the selected period.
+              </p>
+            </div>
+            <div class="mt-4 flex items-center gap-3">
+              <UButton
+                label="Generate draft"
+                color="primary"
+                size="sm"
+                :disabled="!createFormValid"
+                :loading="agencyOps.isInvoiceMutationPending"
+                @click="generateDraft"
+              />
+              <UButton
+                label="Cancel"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                @click="closeCreatePanel"
+              />
+            </div>
+          </div>
+        </div>
+      </Transition>
 
       <!-- Period-close hint when fully empty -->
       <div

@@ -16,7 +16,6 @@ import { useQuery } from "@tanstack/vue-query";
 import { formatDuration } from "~/utils/format-duration";
 import { projectHueStyle } from "~/utils/project-palette";
 import { useAgencyOpsStore } from "~/stores/agency-ops";
-
 const props = defineProps<{
   teamId: string;
 }>();
@@ -33,6 +32,12 @@ const renameOpen = ref(false);
 const newClientOpen = ref(false);
 const newClientName = ref("");
 const newProjectName = ref("");
+
+// Contact form state
+const contactName = ref("");
+const contactEmail = ref("");
+const contactPhone = ref("");
+const contactDirty = ref(false);
 
 const clientsQuery = useQuery(
   computed(() => ({
@@ -52,6 +57,14 @@ const entriesQuery = useQuery(
       input: { teamId: teamId.value, page: 1, pageSize: 100 },
     }),
     enabled: Boolean(teamId.value),
+  })),
+);
+const contactQuery = useQuery(
+  computed(() => ({
+    ...orpc.agencyOps.contacts.get.queryOptions({
+      input: { teamId: teamId.value, clientId: selectedClientId.value },
+    }),
+    enabled: Boolean(teamId.value) && Boolean(selectedClientId.value),
   })),
 );
 
@@ -200,6 +213,53 @@ watch(renameOpen, (open) => {
 const isLoading = computed(
   () => clientsQuery.isPending.value || projectsQuery.isPending.value,
 );
+
+// Populate contact form fields whenever the selected client changes.
+watch(
+  () => contactQuery.data.value,
+  (contact) => {
+    if (contact) {
+      contactName.value = contact.name;
+      contactEmail.value = contact.email;
+      contactPhone.value = contact.phone;
+    } else {
+      contactName.value = "";
+      contactEmail.value = "";
+      contactPhone.value = "";
+    }
+    contactDirty.value = false;
+  },
+  { immediate: true },
+);
+
+// Reset dirty flag when switching clients.
+watch(selectedClientId, () => {
+  contactDirty.value = false;
+});
+
+async function saveContact() {
+  if (!teamId.value || !selectedClientId.value) return;
+  await agencyOps.upsertContact(
+    {
+      teamId: teamId.value,
+      clientId: selectedClientId.value,
+      name: contactName.value.trim(),
+      email: contactEmail.value.trim(),
+      phone: contactPhone.value.trim(),
+    },
+    { onSuccess: () => { contactDirty.value = false; } },
+  );
+}
+
+async function archiveClient() {
+  if (!selectedClient.value || !teamId.value) return;
+  await agencyOps.archiveClient({
+    teamId: teamId.value,
+    clientId: selectedClient.value.id,
+    clientName: selectedClient.value.name,
+  });
+  selectedClientId.value = "";
+}
 </script>
 
 <template>
@@ -413,26 +473,79 @@ const isLoading = computed(
           </form>
         </div>
 
-        <!-- Aspirational: contact + archive -->
-        <div class="grid gap-3 sm:grid-cols-2">
-          <div class="rounded-2xl border border-dashed border-default bg-muted/20 p-4">
-            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-              Primary contact
-            </p>
-            <p class="mt-2 text-xs text-muted">
-              Phase 2 wires a single contact per client. For now, keep contact details in your
-              CRM.
-            </p>
+          <!-- Primary contact + archive -->
+          <div class="space-y-0 divide-y divide-default overflow-hidden rounded-2xl border border-default bg-default">
+            <!-- Primary contact -->
+            <section class="px-5 py-4">
+              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                Primary contact
+              </p>
+              <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label class="text-[11px] font-bold text-muted">Name</label>
+                  <UInput
+                    v-model="contactName"
+                    placeholder="Contact name"
+                    size="sm"
+                    class="mt-1"
+                    @input="contactDirty = true"
+                  />
+                </div>
+                <div>
+                  <label class="text-[11px] font-bold text-muted">Email</label>
+                  <UInput
+                    v-model="contactEmail"
+                    type="email"
+                    placeholder="contact@example.com"
+                    size="sm"
+                    class="mt-1"
+                    @input="contactDirty = true"
+                  />
+                </div>
+                <div>
+                  <label class="text-[11px] font-bold text-muted">Phone</label>
+                  <UInput
+                    v-model="contactPhone"
+                    type="tel"
+                    placeholder="+1 555 000 0000"
+                    size="sm"
+                    class="mt-1"
+                    @input="contactDirty = true"
+                  />
+                </div>
+              </div>
+              <div class="mt-3 flex items-center gap-3">
+                <UButton
+                  label="Save contact"
+                  color="primary"
+                  size="xs"
+                  :loading="agencyOps.isContactMutationPending"
+                  :disabled="!contactDirty"
+                  @click="saveContact"
+                />
+              </div>
+            </section>
+
+            <!-- Archive -->
+            <section class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+              <div class="min-w-0">
+                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Archive</p>
+                <p class="mt-1 text-xs text-muted">
+                  Archive {{ selectedClient?.name ?? "this client" }} to remove them from active
+                  filters and billing without losing their history.
+                </p>
+              </div>
+              <UButton
+                label="Archive client"
+                color="neutral"
+                variant="ghost"
+                size="xs"
+                icon="i-lucide-archive"
+                :loading="agencyOps.isClientMutationPending"
+                @click="archiveClient"
+              />
+            </section>
           </div>
-          <div class="rounded-2xl border border-dashed border-default bg-muted/20 p-4">
-            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-              Archive
-            </p>
-            <p class="mt-2 text-xs text-muted">
-              Archiving hides finished clients without losing their history. Coming next.
-            </p>
-          </div>
-        </div>
       </section>
     </div>
   </div>

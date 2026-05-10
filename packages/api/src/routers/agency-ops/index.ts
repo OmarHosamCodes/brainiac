@@ -2,8 +2,10 @@ import { z } from "zod";
 
 import { protectedProProcedure } from "../../procedures";
 import {
+  archiveAgencyClient,
   createAgencyClient,
   createAgencyProject,
+  createInvoice,
   createManualAgencyTimeEntry,
   createTag,
   deleteMyAgencyTimeEntry,
@@ -12,17 +14,27 @@ import {
   getAgencyActiveTimer,
   getAgencyReportsSummary,
   getAgencyTimeSummary,
+  getClientContact,
+  getInvoiceSummary,
   listAgencyClients,
   listAgencyProjects,
   listAllAgencyTimeEntries,
+  listInvoices,
+  listMemberCapacity,
+  listMemberRates,
   listMyAgencyTimeEntries,
   listTags,
+  setMemberCapacity,
   startAgencyTimer,
   stopAgencyTimer,
+  unarchiveAgencyClient,
   updateAgencyClient,
   updateAgencyProject,
   updateAnyAgencyTimeEntry,
+  updateInvoiceStatus,
   updateMyAgencyTimeEntry,
+  upsertClientContact,
+  upsertMemberRate,
 } from "./service";
 
 const agencyTimeEntrySourceSchema = z.enum(["timer", "manual"]);
@@ -152,7 +164,9 @@ const timeSummarySchema = z.object({
 
 export const agencyOpsRouter = {
   clients: {
-    list: protectedProProcedure.input(teamScopedInputSchema).handler(async ({ context, input }) => {
+    list: protectedProProcedure.input(teamScopedInputSchema.extend({
+      includeArchived: z.boolean().optional(),
+    })).handler(async ({ context, input }) => {
       return z
         .object({ items: z.array(agencyClientSchema) })
         .parse(await listAgencyClients(context.session.user.id, input));
@@ -175,6 +189,20 @@ export const agencyOpsRouter = {
       )
       .handler(async ({ context, input }) => {
         return agencyClientSchema.parse(await updateAgencyClient(context.session.user.id, input));
+      }),
+    archive: protectedProProcedure
+      .input(teamScopedInputSchema.extend({ clientId: z.string().min(1) }))
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ clientId: z.string().min(1), archived: z.boolean() })
+          .parse(await archiveAgencyClient(context.session.user.id, input));
+      }),
+    unarchive: protectedProProcedure
+      .input(teamScopedInputSchema.extend({ clientId: z.string().min(1) }))
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ clientId: z.string().min(1), archived: z.boolean() })
+          .parse(await unarchiveAgencyClient(context.session.user.id, input));
       }),
   },
   projects: {
@@ -209,6 +237,45 @@ export const agencyOpsRouter = {
       )
       .handler(async ({ context, input }) => {
         return agencyProjectSchema.parse(await updateAgencyProject(context.session.user.id, input));
+      }),
+  },
+  contacts: {
+    get: protectedProProcedure
+      .input(teamScopedInputSchema.extend({ clientId: z.string().min(1) }))
+      .handler(async ({ context, input }) => {
+        const contactSchema = z.object({
+          id: z.string().min(1),
+          teamId: z.string().min(1),
+          clientId: z.string().min(1),
+          name: z.string(),
+          email: z.string(),
+          phone: z.string(),
+          createdAt: z.string().datetime(),
+          updatedAt: z.string().datetime(),
+        }).nullable();
+        return contactSchema.parse(await getClientContact(context.session.user.id, input));
+      }),
+    upsert: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          clientId: z.string().min(1),
+          name: z.string().trim().max(200).optional(),
+          email: z.string().trim().email().or(z.literal("")).optional(),
+          phone: z.string().trim().max(50).optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        const contactSchema = z.object({
+          id: z.string().min(1),
+          teamId: z.string().min(1),
+          clientId: z.string().min(1),
+          name: z.string(),
+          email: z.string(),
+          phone: z.string(),
+          createdAt: z.string().datetime(),
+          updatedAt: z.string().datetime(),
+        });
+        return contactSchema.parse(await upsertClientContact(context.session.user.id, input));
       }),
   },
   tags: {
@@ -453,7 +520,7 @@ export const agencyOpsRouter = {
   rates: {
     list: protectedProProcedure
       .input(teamScopedInputSchema)
-      .handler(async () => {
+      .handler(async ({ context, input }) => {
         return z
           .object({
             items: z.array(
@@ -468,7 +535,30 @@ export const agencyOpsRouter = {
               }),
             ),
           })
-          .parse({ items: [] });
+          .parse(await listMemberRates(context.session.user.id, input));
+      }),
+    upsert: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          userId: z.string().min(1),
+          costRateCents: z.number().int().nonnegative().nullable().optional(),
+          billableRateCents: z.number().int().nonnegative().nullable().optional(),
+          currency: z.string().min(1).max(3).optional(),
+          effectiveFrom: z.string().datetime().optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            userId: z.string().min(1),
+            userName: z.string().min(1),
+            userEmail: z.email(),
+            costRateCents: z.number().int().nonnegative().nullable(),
+            billableRateCents: z.number().int().nonnegative().nullable(),
+            currency: z.string().min(1),
+            effectiveFrom: z.string().datetime().nullable(),
+          })
+          .parse(await upsertMemberRate(context.session.user.id, input));
       }),
   },
   capacity: {
@@ -479,7 +569,7 @@ export const agencyOpsRouter = {
           weeks: z.number().int().min(1).max(12),
         }),
       )
-      .handler(async () => {
+      .handler(async ({ context, input }) => {
         return z
           .object({
             weeks: z.array(
@@ -497,13 +587,30 @@ export const agencyOpsRouter = {
               }),
             ),
           })
-          .parse({ weeks: [] });
+          .parse(await listMemberCapacity(context.session.user.id, input));
+      }),
+    set: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          userId: z.string().min(1),
+          weekStart: z.string().datetime(),
+          capacitySeconds: z.number().int().nonnegative(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            userId: z.string().min(1),
+            weekStart: z.string().datetime(),
+            capacitySeconds: z.number().int().nonnegative(),
+          })
+          .parse(await setMemberCapacity(context.session.user.id, input));
       }),
   },
   invoices: {
     summary: protectedProProcedure
       .input(teamScopedInputSchema)
-      .handler(async () => {
+      .handler(async ({ context, input }) => {
         return z
           .object({
             draftCount: z.number().int().nonnegative(),
@@ -512,13 +619,7 @@ export const agencyOpsRouter = {
             outstandingCents: z.number().int().nonnegative(),
             currency: z.string().min(1),
           })
-          .parse({
-            draftCount: 0,
-            sentCount: 0,
-            paidCount: 0,
-            outstandingCents: 0,
-            currency: "USD",
-          });
+          .parse(await getInvoiceSummary(context.session.user.id, input));
       }),
     list: protectedProProcedure
       .input(
@@ -526,7 +627,7 @@ export const agencyOpsRouter = {
           status: z.enum(["draft", "sent", "paid"]).optional(),
         }),
       )
-      .handler(async () => {
+      .handler(async ({ context, input }) => {
         return z
           .object({
             items: z.array(
@@ -545,7 +646,57 @@ export const agencyOpsRouter = {
               }),
             ),
           })
-          .parse({ items: [] });
+          .parse(await listInvoices(context.session.user.id, input));
+      }),
+    create: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          clientId: z.string().min(1),
+          periodStart: z.string().datetime(),
+          periodEnd: z.string().datetime(),
+          currency: z.string().min(1).max(3).optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            id: z.string().min(1),
+            clientId: z.string().min(1),
+            clientName: z.string().min(1),
+            number: z.string().min(1),
+            status: z.enum(["draft", "sent", "paid"]),
+            amountCents: z.number().int().nonnegative(),
+            currency: z.string().min(1),
+            periodStart: z.string().datetime(),
+            periodEnd: z.string().datetime(),
+            issuedAt: z.string().datetime().nullable(),
+            paidAt: z.string().datetime().nullable(),
+          })
+          .parse(await createInvoice(context.session.user.id, input));
+      }),
+    updateStatus: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          invoiceId: z.string().min(1),
+          status: z.enum(["sent", "paid"]),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            id: z.string().min(1),
+            clientId: z.string().min(1),
+            clientName: z.string().min(1),
+            number: z.string().min(1),
+            status: z.enum(["draft", "sent", "paid"]),
+            amountCents: z.number().int().nonnegative(),
+            currency: z.string().min(1),
+            periodStart: z.string().datetime(),
+            periodEnd: z.string().datetime(),
+            issuedAt: z.string().datetime().nullable(),
+            paidAt: z.string().datetime().nullable(),
+          })
+          .parse(await updateInvoiceStatus(context.session.user.id, input));
       }),
   },
   integrations: {
