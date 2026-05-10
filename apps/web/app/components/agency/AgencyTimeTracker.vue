@@ -246,13 +246,18 @@ const elapsedSeconds = computed(() => {
 });
 
 const canStartTimer = computed(() =>
-  Boolean(effectiveTeamId.value && selectedProject.value && !activeTimer.value),
+  Boolean(
+    effectiveTeamId.value &&
+    selectedProject.value &&
+    selectedTagIds.value.length > 0 &&
+    !activeTimer.value,
+  ),
 );
 const canStopTimer = computed(() =>
   Boolean(activeTimer.value && selectedProjectId.value && selectedTagIds.value.length > 0),
 );
-const stopValidationHint = computed(() => {
-  if (!activeTimer.value || canStopTimer.value) {
+const timerValidationHint = computed(() => {
+  if (activeTimer.value ? canStopTimer.value : canStartTimer.value) {
     return "";
   }
 
@@ -270,7 +275,7 @@ const stopValidationHint = computed(() => {
     return "";
   }
 
-  return `Select ${missingRequirements.join(" and ")} to stop and save this timer.`;
+  return `Select ${missingRequirements.join(" and ")} to ${activeTimer.value ? "stop and save" : "start"} this timer.`;
 });
 
 const trackerBusy = computed(() => isTimerMutationPending.value);
@@ -342,6 +347,14 @@ async function discardTimer() {
     discard: true,
   });
 }
+
+function toggleTag(tagId: string) {
+  if (!effectiveTeamId.value || trackerBusy.value) {
+    return;
+  }
+
+  agencyTimeTrackingStore.toggleTrackerTag(effectiveTeamId.value, tagId);
+}
 </script>
 
 <template>
@@ -375,45 +388,49 @@ async function discardTimer() {
         :disabled="!effectiveTeamId || projectsQuery.isPending.value || Boolean(activeTimer)"
       />
 
-      <div v-if="tags.length > 0" class="shrink-0">
-        <UPopover :content="{ align: 'end' }">
-          <UButton
-            icon="i-lucide-tag"
-            size="xs"
-            variant="ghost"
-            :color="selectedTagIds.length > 0 ? 'primary' : 'neutral'"
-          />
+      <UPopover :content="{ align: 'end' }">
+        <UButton
+          icon="i-lucide-tag"
+          size="xs"
+          variant="ghost"
+          :color="selectedTagIds.length > 0 ? 'primary' : 'neutral'"
+          :disabled="trackerBusy || !effectiveTeamId || tagsQuery.isPending.value"
+          aria-label="Select timer tags"
+        />
 
-          <template #content>
-            <div class="w-64 space-y-2 p-2">
-              <UInput
-                v-model="tagSearch"
-                icon="i-lucide-search"
-                placeholder="Search tags"
+        <template #content>
+          <div class="w-64 space-y-2 p-2">
+            <UInput
+              v-model="tagSearch"
+              icon="i-lucide-search"
+              placeholder="Search tags"
+              size="xs"
+              :disabled="tags.length === 0"
+            />
+
+            <div class="flex max-h-52 flex-wrap gap-1 overflow-y-auto">
+              <UButton
+                v-for="tag in filteredTags"
+                :key="tag.id"
+                :variant="selectedTagIds.includes(tag.id) ? 'soft' : 'ghost'"
+                :color="selectedTagIds.includes(tag.id) ? 'primary' : 'neutral'"
                 size="xs"
-              />
+                class="rounded-full"
+                @click="toggleTag(tag.id)"
+              >
+                {{ tag.name }}
+              </UButton>
 
-              <div class="flex max-h-52 flex-wrap gap-1 overflow-y-auto">
-                <UButton
-                  v-for="tag in filteredTags"
-                  :key="tag.id"
-                  :variant="selectedTagIds.includes(tag.id) ? 'soft' : 'ghost'"
-                  :color="selectedTagIds.includes(tag.id) ? 'primary' : 'neutral'"
-                  size="xs"
-                  class="rounded-full"
-                  @click="toggleTag(tag.id)"
-                >
-                  {{ tag.name }}
-                </UButton>
-
-                <div v-if="filteredTags.length === 0" class="px-1 py-2 text-xs text-muted">
-                  No matching tags.
-                </div>
+              <div v-if="tags.length === 0" class="px-1 py-2 text-xs text-muted">
+                No tags yet. Add tags in Agency settings.
+              </div>
+              <div v-else-if="filteredTags.length === 0" class="px-1 py-2 text-xs text-muted">
+                No matching tags.
               </div>
             </div>
-          </template>
-        </UPopover>
-      </div>
+          </div>
+        </template>
+      </UPopover>
 
       <div class="shrink-0">
         <UPopover :content="{ align: 'end' }">
@@ -502,8 +519,8 @@ async function discardTimer() {
       </UBadge>
     </div>
 
-    <p v-if="stopValidationHint" class="text-xs text-warning">
-      {{ stopValidationHint }}
+    <p v-if="timerValidationHint" class="text-xs text-warning">
+      {{ timerValidationHint }}
     </p>
   </div>
 </template>

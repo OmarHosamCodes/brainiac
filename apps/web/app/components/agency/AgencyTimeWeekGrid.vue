@@ -193,9 +193,7 @@ const dailyTotals = computed(() => {
   return totals;
 });
 
-const weekTotalSeconds = computed(() =>
-  grid.value.reduce((sum, row) => sum + row.totalSeconds, 0),
-);
+const weekTotalSeconds = computed(() => grid.value.reduce((sum, row) => sum + row.totalSeconds, 0));
 
 // --- Add row picker -----------------------------------------------------
 
@@ -455,10 +453,7 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
     </div>
 
     <!-- Loading -->
-    <div
-      v-if="isLoading"
-      class="overflow-hidden rounded-2xl border border-default bg-default"
-    >
+    <div v-if="isLoading" class="overflow-hidden rounded-2xl border border-default bg-default">
       <div class="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_5rem]">
         <div
           v-for="cellIndex in 9 * 4"
@@ -471,10 +466,7 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
     </div>
 
     <!-- Error -->
-    <div
-      v-else-if="isError"
-      class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center"
-    >
+    <div v-else-if="isError" class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center">
       <UIcon name="i-lucide-alert-triangle" class="mx-auto size-5 text-error" />
       <p class="mt-3 text-sm font-bold text-highlighted">Couldn't load this week.</p>
       <p class="mt-1 text-xs text-muted">
@@ -494,7 +486,9 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
     <div v-else class="overflow-x-auto rounded-2xl border border-default bg-default">
       <div class="agency-time-grid__inner min-w-[64rem]">
         <!-- Header row -->
-        <div class="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_5rem] border-b border-default bg-muted">
+        <div
+          class="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_5rem] border-b border-default bg-muted"
+        >
           <div class="px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
             Project
           </div>
@@ -522,18 +516,17 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
         </div>
 
         <!-- Empty state -->
-        <div
-          v-if="fullGrid.length === 0"
-          class="px-6 py-12 text-center"
-        >
+        <div v-if="fullGrid.length === 0" class="px-6 py-12 text-center">
           <UIcon name="i-lucide-clock" class="mx-auto size-6 text-muted" />
-          <p class="mt-3 text-sm font-bold text-highlighted">
-            No entries yet this week.
-          </p>
+          <p class="mt-3 text-sm font-bold text-highlighted">No entries yet this week.</p>
           <p class="mt-1 text-xs text-muted">
-            Start a timer from the header, or pick a project to add hours.
+            Start a tagged timer above, or pick a project to add hours.
           </p>
-          <UPopover v-if="projects.length > 0" v-model:open="addRowOpen" :content="{ align: 'center' }">
+          <UPopover
+            v-if="projects.length > 0"
+            v-model:open="addRowOpen"
+            :content="{ align: 'center' }"
+          >
             <UButton
               label="Add a project row"
               color="primary"
@@ -598,20 +591,29 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
               class="agency-time-grid__cell relative flex h-12 items-center justify-center border-l border-default px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
               :class="[
                 day.isToday ? 'bg-primary/[0.03]' : '',
-                getCellSeconds(row, day.key) > 0 ? 'text-highlighted' : 'text-dimmed hover:text-muted hover:bg-elevated/50',
+                getCellSeconds(row, day.key) > 0
+                  ? 'text-highlighted'
+                  : 'text-dimmed hover:text-muted hover:bg-elevated/50',
                 isRunningCell(row, day.key) ? 'agency-time-grid__cell--running' : '',
               ]"
               @click="openCellEditor(row.projectId, day.key)"
               @keydown="handleCellKeydown($event, row.projectId, day.key)"
             >
-              <span v-if="getCellSeconds(row, day.key) > 0" class="font-mono font-bold tabular-nums">
+              <span
+                v-if="getCellSeconds(row, day.key) > 0"
+                class="font-mono font-bold tabular-nums"
+              >
                 {{ formatDuration(getCellSeconds(row, day.key), "short") }}
               </span>
               <span v-else class="text-base leading-none opacity-40">·</span>
 
               <!-- Inline cell editor popover, anchored to this cell -->
               <span
-                v-if="editingCell && editingCell.projectId === row.projectId && editingCell.dateKey === day.key"
+                v-if="
+                  editingCell &&
+                  editingCell.projectId === row.projectId &&
+                  editingCell.dateKey === day.key
+                "
                 class="absolute left-1/2 top-full z-30 mt-1 w-64 -translate-x-1/2 rounded-2xl border border-default bg-default p-3 text-left shadow-xl"
                 @click.stop
                 @keydown.stop
@@ -675,7 +677,9 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
           </div>
 
           <!-- Daily totals row -->
-          <div class="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_5rem] border-t-2 border-default bg-muted/40">
+          <div
+            class="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_5rem] border-t-2 border-default bg-muted/40"
+          >
             <div class="px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
               Daily total
             </div>
@@ -719,7 +723,9 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
             </p>
             <USelectMenu
               v-model="addRowProjectId"
-              :items="projectsNotInGrid.map((project) => ({ label: project.name, value: project.id }))"
+              :items="
+                projectsNotInGrid.map((project) => ({ label: project.name, value: project.id }))
+              "
               value-key="value"
               size="sm"
               placeholder="Project"
@@ -758,8 +764,13 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
 }
 
 @keyframes agency-time-cell-pulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -9,12 +9,10 @@ import AgencyProUpsell from "~/components/agency/AgencyProUpsell.vue";
 import AgencyReportsSurface from "~/components/agency/AgencyReportsSurface.vue";
 import AgencyResourcingSurface from "~/components/agency/AgencyResourcingSurface.vue";
 import AgencySettingsSurface from "~/components/agency/AgencySettingsSurface.vue";
+import AgencyTimeTracker from "~/components/agency/AgencyTimeTracker.vue";
 import AgencyTimeWeekGrid from "~/components/agency/AgencyTimeWeekGrid.vue";
 import AgencyTopBar from "~/components/agency/AgencyTopBar.vue";
-import {
-  AGENCY_SEGMENTS,
-  type AgencySegmentId,
-} from "~/components/agency/agency-segments";
+import { AGENCY_SEGMENTS, type AgencySegmentId } from "~/components/agency/agency-segments";
 import { useCurrentAgencyTeam } from "~/composables/usePersistentTimer";
 
 definePageMeta({
@@ -159,7 +157,10 @@ const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQue
           </div>
         </header>
 
-        <AgencyTimeWeekGrid v-if="segment === 'time'" :team-id="selectedTeamId" />
+        <div v-if="segment === 'time'" class="space-y-4">
+          <AgencyTimeTracker :team-id="selectedTeamId" />
+          <AgencyTimeWeekGrid :team-id="selectedTeamId" />
+        </div>
 
         <template v-else-if="segment === 'projects'">
           <AgencyProjectDetail
@@ -175,15 +176,9 @@ const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQue
 
         <AgencyReportsSurface v-else-if="segment === 'reports'" :team-id="selectedTeamId" />
 
-        <AgencyResourcingSurface
-          v-else-if="segment === 'resourcing'"
-          :team-id="selectedTeamId"
-        />
+        <AgencyResourcingSurface v-else-if="segment === 'resourcing'" :team-id="selectedTeamId" />
 
-        <AgencyBillingSurface
-          v-else-if="segment === 'billing'"
-          :team-id="selectedTeamId"
-        />
+        <AgencyBillingSurface v-else-if="segment === 'billing'" :team-id="selectedTeamId" />
 
         <AgencySettingsSurface v-else-if="segment === 'settings'" :team-id="selectedTeamId" />
       </div>
