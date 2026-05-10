@@ -1318,6 +1318,7 @@ export async function updateMyAgencyTimeEntry(
   input: {
     teamId: string;
     entryId: string;
+    projectId?: string;
     startAt?: string;
     endAt?: string;
     description?: string;
@@ -1347,6 +1348,10 @@ export async function updateMyAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
+  if (input.projectId) {
+    await getProjectByIdForTeam(input.teamId, input.projectId);
+  }
+
   const nextStartedAt = input.startAt
     ? parseIsoDateTime(input.startAt, "startAt")
     : current.startedAt;
@@ -1361,6 +1366,7 @@ export async function updateMyAgencyTimeEntry(
     const [timeEntry] = await tx
       .update(agencyOpsTimeEntry)
       .set({
+        ...(input.projectId ? { projectId: input.projectId } : {}),
         startedAt: nextStartedAt,
         endedAt: nextEndedAt,
         durationSeconds,
@@ -1959,6 +1965,10 @@ export async function updateAnyAgencyTimeEntry(
 
   if (!current) {
     throw new ORPCError("NOT_FOUND");
+  }
+
+  if (input.projectId) {
+    await getProjectByIdForTeam(input.teamId, input.projectId);
   }
 
   const nextStartedAt = input.startAt

@@ -332,10 +332,12 @@ export const agencyOpsRouter = {
       .input(
         teamScopedInputSchema.extend({
           entryId: z.string().min(1),
+          projectId: z.string().min(1).optional(),
           startAt: z.string().datetime().optional(),
           endAt: z.string().datetime().optional(),
           description: z.string().max(2_000).optional(),
           linkUrl: z.string().max(2_048).nullable().optional(),
+          tagIds: z.array(z.string().min(1)).optional(),
         }),
       )
       .handler(async ({ context, input }) => {

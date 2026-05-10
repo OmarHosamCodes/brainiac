@@ -9,8 +9,8 @@ import AgencyProUpsell from "~/components/agency/AgencyProUpsell.vue";
 import AgencyReportsSurface from "~/components/agency/AgencyReportsSurface.vue";
 import AgencyResourcingSurface from "~/components/agency/AgencyResourcingSurface.vue";
 import AgencySettingsSurface from "~/components/agency/AgencySettingsSurface.vue";
+import AgencyTimeEntriesSurface from "~/components/agency/AgencyTimeEntriesSurface.vue";
 import AgencyTimeTracker from "~/components/agency/AgencyTimeTracker.vue";
-import AgencyTimeWeekGrid from "~/components/agency/AgencyTimeWeekGrid.vue";
 import AgencyTopBar from "~/components/agency/AgencyTopBar.vue";
 import { AGENCY_SEGMENTS, type AgencySegmentId } from "~/components/agency/agency-segments";
 import { useCurrentAgencyTeam } from "~/composables/usePersistentTimer";
@@ -159,7 +159,7 @@ const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQue
 
         <div v-if="segment === 'time'" class="space-y-4">
           <AgencyTimeTracker :team-id="selectedTeamId" />
-          <AgencyTimeWeekGrid :team-id="selectedTeamId" />
+          <AgencyTimeEntriesSurface :team-id="selectedTeamId" />
         </div>
 
         <template v-else-if="segment === 'projects'">
