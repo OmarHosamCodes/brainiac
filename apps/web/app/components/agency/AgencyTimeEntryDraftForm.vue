@@ -2,189 +2,275 @@
 import type { SelectMenuItem } from "@nuxt/ui";
 
 type Draft = {
-  projectId: string;
-  date: string;
-  startTime: string;
-  endTime: string;
-  durationInput: string;
-  description: string;
-  linkUrl: string;
-  tagIds: string[];
+    projectId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    durationInput: string;
+    description: string;
+    linkUrl: string;
+    tagIds: string[];
 };
 
 type Tag = {
-  id: string;
-  name: string;
+    id: string;
+    name: string;
 };
 
-defineProps<{
-  draft: Draft;
-  projectItems: SelectMenuItem[];
-  tags: Tag[];
-  error: string | null;
-  saving: boolean;
+const props = defineProps<{
+    draft: Draft;
+    projectItems: SelectMenuItem[];
+    tags: Tag[];
+    error: string | null;
+    saving: boolean;
 }>();
 
 const emit = defineEmits<{
-  save: [];
-  cancel: [];
-  toggleTag: [tagId: string];
-  updateDuration: [value: string | number | undefined];
-  updateEndTime: [value: string | number | undefined];
+    save: [];
+    cancel: [];
+    toggleTag: [tagId: string];
+    updateDuration: [value: string | number | undefined];
+    updateEndTime: [value: string | number | undefined];
 }>();
+
+const projectSearchTerm = ref("");
+const tagSearchTerm = ref("");
+
+const filteredTags = computed(() => {
+    const query = tagSearchTerm.value.trim().toLowerCase();
+
+    if (!query) {
+        return props.tags;
+    }
+
+    return props.tags.filter((tag) => tag.name.toLowerCase().includes(query));
+});
+
+const selectedTags = computed(() => {
+    const selectedIds = new Set(props.draft.tagIds);
+
+    return props.tags.filter((tag) => selectedIds.has(tag.id));
+});
 </script>
 
 <template>
-  <form class="space-y-2" @submit.prevent="emit('save')">
-    <!-- Primary row: mirrors the tracker bar layout -->
-    <div class="flex flex-wrap items-center gap-2">
-      <UInput
-        v-model="draft.description"
-        placeholder="What did you work on?"
-        size="sm"
-        class="min-w-0 flex-1"
-      />
-
-      <USelectMenu
-        v-model="draft.projectId"
-        :items="projectItems"
-        value-key="value"
-        placeholder="Project"
-        size="sm"
-        class="w-40 shrink-0"
-        :content="{ align: 'start' }"
-        :ui="{
-          content: 'max-h-72 overflow-hidden',
-          viewport: 'max-h-72 overflow-y-auto',
-        }"
-      />
-
-      <UInput
-        v-model="draft.date"
-        type="date"
-        size="sm"
-        class="w-32 shrink-0"
-      />
-
-      <div class="flex shrink-0 items-center gap-1">
-        <UInput
-          v-model="draft.startTime"
-          type="time"
-          size="sm"
-          class="w-24 font-mono"
-          @update:model-value="emit('updateDuration', draft.durationInput)"
-        />
-        <span class="text-xs text-muted">to</span>
-        <UInput
-          :model-value="draft.endTime"
-          type="time"
-          size="sm"
-          class="w-24 font-mono"
-          @update:model-value="emit('updateEndTime', $event as string | number | undefined)"
-        />
-      </div>
-
-      <UInput
-        :model-value="draft.durationInput"
-        size="sm"
-        class="w-20 shrink-0 font-mono"
-        placeholder="1:00"
-        @update:model-value="emit('updateDuration', $event as string | number | undefined)"
-      />
-
-      <!-- Tags popover -->
-      <UPopover v-if="tags.length > 0" :content="{ align: 'end' }">
-        <UButton
-          icon="i-lucide-tag"
-          size="xs"
-          variant="ghost"
-          :color="draft.tagIds.length > 0 ? 'primary' : 'neutral'"
-          :aria-label="`Tags${draft.tagIds.length > 0 ? ` (${draft.tagIds.length} selected)` : ''}`"
-        />
-        <template #content>
-          <div class="w-56 space-y-2 p-2">
-            <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-muted">Tags</p>
-            <div class="flex flex-wrap gap-1">
-              <button
-                v-for="tag in tags"
-                :key="tag.id"
-                type="button"
-                class="rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                :class="
-                  draft.tagIds.includes(tag.id)
-                    ? 'border-primary/30 bg-primary/10 text-primary'
-                    : 'border-default bg-transparent text-muted hover:border-muted/60 hover:text-highlighted'
-                "
-                @click="emit('toggleTag', tag.id)"
-              >
-                {{ tag.name }}
-              </button>
-            </div>
-          </div>
-        </template>
-      </UPopover>
-
-      <!-- Link popover -->
-      <UPopover :content="{ align: 'end' }">
-        <UButton
-          icon="i-lucide-link"
-          size="xs"
-          variant="ghost"
-          :color="draft.linkUrl ? 'primary' : 'neutral'"
-          aria-label="Link URL"
-        />
-        <template #content>
-          <div class="w-72 space-y-2 p-2">
+    <form class="space-y-2" @submit.prevent="emit('save')">
+        <div class="flex flex-wrap items-center gap-2">
             <UInput
-              v-model="draft.linkUrl"
-              icon="i-lucide-link"
-              placeholder="Task, ticket, or brief URL"
-              size="xs"
+                v-model="draft.description"
+                aria-label="Time entry description"
+                placeholder="What did you work on?"
+                size="sm"
+                class="min-w-64 flex-1 basis-64"
+                :disabled="saving"
             />
-            <div class="flex justify-end">
-              <UButton
-                label="Clear"
+
+            <USelectMenu
+                v-model="draft.projectId"
+                v-model:search-term="projectSearchTerm"
+                :items="projectItems"
+                value-key="value"
+                placeholder="Project"
+                :search-input="{
+                    placeholder: 'Search projects or clients',
+                }"
+                size="sm"
+                class="w-44 shrink-0 max-sm:w-full"
+                :content="{ align: 'start' }"
+                :ui="{
+                    content: 'max-h-72 overflow-hidden',
+                    viewport: 'max-h-72 overflow-y-auto',
+                }"
+                aria-label="Project"
+                :disabled="saving"
+            />
+
+            <div class="flex flex-wrap items-center gap-2">
+                <UInput
+                    v-model="draft.date"
+                    type="date"
+                    size="sm"
+                    class="w-36 shrink-0"
+                    aria-label="Entry date"
+                    :disabled="saving"
+                />
+
+                <div class="flex shrink-0 items-center gap-1">
+                    <UInput
+                        v-model="draft.startTime"
+                        type="time"
+                        size="sm"
+                        class="w-24 font-mono tabular-nums"
+                        aria-label="Start time"
+                        :disabled="saving"
+                        @update:model-value="
+                            emit('updateDuration', draft.durationInput)
+                        "
+                    />
+                    <span class="text-xs text-muted">to</span>
+                    <UInput
+                        :model-value="draft.endTime"
+                        type="time"
+                        size="sm"
+                        class="w-24 font-mono tabular-nums"
+                        aria-label="End time"
+                        :disabled="saving"
+                        @update:model-value="
+                            emit(
+                                'updateEndTime',
+                                $event as string | number | undefined,
+                            )
+                        "
+                    />
+                </div>
+
+                <UInput
+                    :model-value="draft.durationInput"
+                    size="sm"
+                    class="w-20 shrink-0 font-mono tabular-nums"
+                    placeholder="1:00"
+                    aria-label="Duration"
+                    :disabled="saving"
+                    @update:model-value="
+                        emit(
+                            'updateDuration',
+                            $event as string | number | undefined,
+                        )
+                    "
+                />
+            </div>
+
+            <div class="flex items-center gap-2">
+            <UPopover
+                v-if="tags.length > 0"
+                :content="{ align: 'end' }"
+            >
+                <UButton
+                    icon="i-lucide-tag"
+                    size="sm"
+                    variant="ghost"
+                    :color="draft.tagIds.length > 0 ? 'primary' : 'neutral'"
+                    class="max-sm:min-h-11 max-sm:min-w-11"
+                    :disabled="saving"
+                    :aria-label="`Tags${draft.tagIds.length > 0 ? ` (${draft.tagIds.length} selected)` : ''}`"
+                />
+                <template #content>
+                    <div class="w-64 space-y-2 p-2">
+                        <UInput
+                            v-model="tagSearchTerm"
+                            icon="i-lucide-search"
+                            placeholder="Search tags"
+                            size="xs"
+                        />
+                        <div
+                            class="flex max-h-52 flex-wrap gap-1 overflow-y-auto"
+                        >
+                            <UButton
+                                v-for="tag in filteredTags"
+                                :key="tag.id"
+                                type="button"
+                                :variant="
+                                    draft.tagIds.includes(tag.id)
+                                        ? 'soft'
+                                        : 'ghost'
+                                "
+                                :color="
+                                    draft.tagIds.includes(tag.id)
+                                        ? 'primary'
+                                        : 'neutral'
+                                "
+                                size="xs"
+                                class="rounded-full"
+                                :disabled="saving"
+                                @click="emit('toggleTag', tag.id)"
+                            >
+                                {{ tag.name }}
+                            </UButton>
+
+                            <div
+                                v-if="filteredTags.length === 0"
+                                class="px-1 py-2 text-xs text-muted"
+                            >
+                                No matching tags.
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </UPopover>
+
+            <UPopover :content="{ align: 'end' }">
+                <UButton
+                    icon="i-lucide-link"
+                    size="sm"
+                    variant="ghost"
+                    :color="draft.linkUrl ? 'primary' : 'neutral'"
+                    class="max-sm:min-h-11 max-sm:min-w-11"
+                    :disabled="saving"
+                    aria-label="Link URL"
+                />
+                <template #content>
+                    <div class="w-72 space-y-2 p-2">
+                        <UInput
+                            v-model="draft.linkUrl"
+                            icon="i-lucide-link"
+                            placeholder="Task, ticket, or brief URL"
+                            size="xs"
+                            :disabled="saving"
+                        />
+                        <div class="flex justify-end">
+                            <UButton
+                                label="Clear"
+                                color="neutral"
+                                variant="ghost"
+                                size="xs"
+                                :disabled="saving || !draft.linkUrl"
+                                @click="draft.linkUrl = ''"
+                            />
+                        </div>
+                    </div>
+                </template>
+            </UPopover>
+
+            <UButton
+                type="submit"
+                label="Save"
+                color="primary"
+                size="sm"
+                class="shrink-0 font-bold"
+                :loading="saving"
+                :disabled="saving"
+            />
+
+            <UButton
+                type="button"
+                icon="i-lucide-x"
                 color="neutral"
                 variant="ghost"
-                size="xs"
-                :disabled="!draft.linkUrl"
-                @click="draft.linkUrl = ''"
-              />
+                size="sm"
+                square
+                aria-label="Cancel"
+                :disabled="saving"
+                @click="emit('cancel')"
+            />
             </div>
-          </div>
-        </template>
-      </UPopover>
+        </div>
 
-      <UButton
-        type="submit"
-        label="Save"
-        color="primary"
-        size="sm"
-        class="shrink-0 font-bold"
-        :loading="saving"
-      />
+        <div
+            v-if="selectedTags.length > 0"
+            class="flex flex-wrap items-center gap-1.5 pl-0.5"
+        >
+            <UBadge
+                v-for="tag in selectedTags"
+                :key="tag.id"
+                color="primary"
+                variant="soft"
+                size="sm"
+                class="rounded-full"
+            >
+                {{ tag.name }}
+            </UBadge>
+        </div>
 
-      <UButton
-        type="button"
-        icon="i-lucide-x"
-        color="neutral"
-        variant="ghost"
-        size="sm"
-        square
-        aria-label="Cancel"
-        @click="emit('cancel')"
-      />
-    </div>
-
-    <!-- Tag pills (selected, shown inline below bar) -->
-    <div v-if="draft.tagIds.length > 0" class="flex flex-wrap items-center gap-1.5 pl-0.5">
-      <span
-        v-for="tag in tags.filter(t => draft.tagIds.includes(t.id))"
-        :key="tag.id"
-        class="rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary"
-      >{{ tag.name }}</span>
-    </div>
-
-    <p v-if="error" class="text-xs text-error">{{ error }}</p>
-  </form>
+        <p v-if="error" class="text-xs text-error" role="alert">{{ error }}</p>
+    </form>
 </template>
