@@ -17,7 +17,7 @@ import {
 } from "@brainiac/db/schema";
 import { createWorkspaceId, type WorkspaceTeamRole } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
-import { and, asc, desc, eq, gte, inArray, isNull, lte, sql, sum } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lt, lte, sql, sum } from "drizzle-orm";
 
 const TEAM_ROLE_WEIGHT: Record<WorkspaceTeamRole, number> = {
   viewer: 1,
@@ -465,6 +465,7 @@ export async function listAgencyClients(
       id: agencyOpsClient.id,
       teamId: agencyOpsClient.teamId,
       name: agencyOpsClient.name,
+      archivedAt: agencyOpsClient.archivedAt,
       createdAt: agencyOpsClient.createdAt,
       updatedAt: agencyOpsClient.updatedAt,
     })
@@ -473,7 +474,10 @@ export async function listAgencyClients(
     .orderBy(asc(agencyOpsClient.name));
 
   return {
-    items: rows.map(mapClientRow),
+    items: rows.map((row) => ({
+      ...mapClientRow(row),
+      archivedAt: row.archivedAt?.toISOString() ?? null,
+    })),
   };
 }
 
@@ -498,6 +502,7 @@ export async function createAgencyClient(
       id: agencyOpsClient.id,
       teamId: agencyOpsClient.teamId,
       name: agencyOpsClient.name,
+      archivedAt: agencyOpsClient.archivedAt,
       createdAt: agencyOpsClient.createdAt,
       updatedAt: agencyOpsClient.updatedAt,
     });
@@ -506,7 +511,7 @@ export async function createAgencyClient(
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
 
-  return mapClientRow(created);
+  return { ...mapClientRow(created), archivedAt: created.archivedAt?.toISOString() ?? null };
 }
 
 export async function updateAgencyClient(
@@ -544,6 +549,7 @@ export async function updateAgencyClient(
       id: agencyOpsClient.id,
       teamId: agencyOpsClient.teamId,
       name: agencyOpsClient.name,
+      archivedAt: agencyOpsClient.archivedAt,
       createdAt: agencyOpsClient.createdAt,
       updatedAt: agencyOpsClient.updatedAt,
     });
@@ -552,7 +558,7 @@ export async function updateAgencyClient(
     throw new ORPCError("NOT_FOUND");
   }
 
-  return mapClientRow(updated);
+  return { ...mapClientRow(updated), archivedAt: updated.archivedAt?.toISOString() ?? null };
 }
 
 export async function listAgencyProjects(
@@ -1131,15 +1137,15 @@ export async function listMyAgencyTimeEntries(
         clientId: row.clientId,
         clientName: row.clientName,
         tags: tags.map(mapTagRow),
-    source: row.source,
-    description: row.description,
-    linkUrl: row.linkUrl,
-    startedAt: row.startedAt.toISOString(),
-    endedAt: row.endedAt.toISOString(),
-    durationSeconds: row.durationSeconds,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  } satisfies AgencyTimeEntryRecord;
+        source: row.source,
+        description: row.description,
+        linkUrl: row.linkUrl,
+        startedAt: row.startedAt.toISOString(),
+        endedAt: row.endedAt.toISOString(),
+        durationSeconds: row.durationSeconds,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+      } satisfies AgencyTimeEntryRecord;
     }),
   );
 
@@ -1161,7 +1167,7 @@ export async function listMyAgencyTimeEntries(
   const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
 
   // Compute week summary for the anchor date (or current week)
-  const anchor = input.anchorDate ? new Date(input.anchorDate) : new Date();
+  const anchor = input.anchorDate ? parseIsoDateTime(input.anchorDate, "anchorDate") : new Date();
   const weekStart = getWeekStartUtc(anchor);
   const weekEnd = addDaysUtc(weekStart, 6);
   weekEnd.setUTCHours(23, 59, 59, 999);
@@ -1319,38 +1325,11 @@ export async function upsertClientContact(
   await getClientByIdForTeam(input.teamId, input.clientId);
 
   const now = new Date();
-  const existing = await getClientContact(actorUserId, {
-    teamId: input.teamId,
-    clientId: input.clientId,
-  });
 
-  if (existing) {
-    const [updated] = await db
-      .update(agencyOpsClientContact)
-      .set({
-        name: input.name ?? existing.name,
-        email: input.email ?? existing.email,
-        phone: input.phone ?? existing.phone,
-        updatedAt: now,
-      })
-      .where(eq(agencyOpsClientContact.id, existing.id))
-      .returning();
-
-    if (!updated) throw new ORPCError("INTERNAL_SERVER_ERROR");
-
-    return {
-      id: updated.id,
-      teamId: updated.teamId,
-      clientId: updated.clientId,
-      name: updated.name,
-      email: updated.email,
-      phone: updated.phone,
-      createdAt: updated.createdAt.toISOString(),
-      updatedAt: updated.updatedAt.toISOString(),
-    };
-  }
-
-  const [created] = await db
+  // Use a single upsert to avoid a TOCTOU race between the existence check
+  // and the insert (two concurrent callers could both see no row and both try
+  // to insert, hitting the unique constraint).
+  const [upserted] = await db
     .insert(agencyOpsClientContact)
     .values({
       id: createWorkspaceId("agency-contact"),
@@ -1362,19 +1341,28 @@ export async function upsertClientContact(
       createdAt: now,
       updatedAt: now,
     })
+    .onConflictDoUpdate({
+      target: [agencyOpsClientContact.clientId],
+      set: {
+        name: input.name !== undefined ? input.name : sql`${agencyOpsClientContact.name}`,
+        email: input.email !== undefined ? input.email : sql`${agencyOpsClientContact.email}`,
+        phone: input.phone !== undefined ? input.phone : sql`${agencyOpsClientContact.phone}`,
+        updatedAt: now,
+      },
+    })
     .returning();
 
-  if (!created) throw new ORPCError("INTERNAL_SERVER_ERROR");
+  if (!upserted) throw new ORPCError("INTERNAL_SERVER_ERROR");
 
   return {
-    id: created.id,
-    teamId: created.teamId,
-    clientId: created.clientId,
-    name: created.name,
-    email: created.email,
-    phone: created.phone,
-    createdAt: created.createdAt.toISOString(),
-    updatedAt: created.updatedAt.toISOString(),
+    id: upserted.id,
+    teamId: upserted.teamId,
+    clientId: upserted.clientId,
+    name: upserted.name,
+    email: upserted.email,
+    phone: upserted.phone,
+    createdAt: upserted.createdAt.toISOString(),
+    updatedAt: upserted.updatedAt.toISOString(),
   };
 }
 
@@ -1487,10 +1475,18 @@ export async function upsertMemberRate(
     .onConflictDoUpdate({
       target: [agencyOpsMemberRate.teamId, agencyOpsMemberRate.userId],
       set: {
-        costRateCents: input.costRateCents ?? null,
-        billableRateCents: input.billableRateCents ?? null,
-        currency: input.currency ?? "USD",
-        effectiveFrom,
+        // Only overwrite a field when the caller explicitly provided it;
+        // otherwise keep the existing value via COALESCE.
+        costRateCents:
+          input.costRateCents !== undefined
+            ? input.costRateCents
+            : sql`COALESCE(${agencyOpsMemberRate.costRateCents}, ${agencyOpsMemberRate.costRateCents})`,
+        billableRateCents:
+          input.billableRateCents !== undefined
+            ? input.billableRateCents
+            : sql`COALESCE(${agencyOpsMemberRate.billableRateCents}, ${agencyOpsMemberRate.billableRateCents})`,
+        currency: input.currency !== undefined ? input.currency : sql`${agencyOpsMemberRate.currency}`,
+        effectiveFrom: input.effectiveFrom !== undefined ? effectiveFrom : sql`${agencyOpsMemberRate.effectiveFrom}`,
         updatedAt: now,
       },
     })
@@ -1536,7 +1532,11 @@ export async function listMemberCapacity(
 ): Promise<{ weeks: AgencyCapacityWeek[] }> {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
-  const weekStartDate = parseIsoDateTime(input.weekStart, "weekStart");
+  const weekStartRaw = parseIsoDateTime(input.weekStart, "weekStart");
+  // Normalize to exact UTC midnight so map keys are consistent with date_trunc output.
+  const weekStartDate = new Date(
+    Date.UTC(weekStartRaw.getUTCFullYear(), weekStartRaw.getUTCMonth(), weekStartRaw.getUTCDate()),
+  );
 
   const weekStarts: Date[] = Array.from({ length: input.weeks }, (_, i) => {
     const d = new Date(weekStartDate);
@@ -1578,7 +1578,7 @@ export async function listMemberCapacity(
   const loggedRows = await db
     .select({
       userId: agencyOpsTimeEntry.userId,
-      weekStart: sql<string>`date_trunc('week', ${agencyOpsTimeEntry.startedAt} AT TIME ZONE 'UTC')`.as("week_start"),
+      weekStart: sql<Date>`date_trunc('week', ${agencyOpsTimeEntry.startedAt} AT TIME ZONE 'UTC')`.as("week_start"),
       loggedSeconds: sum(agencyOpsTimeEntry.durationSeconds).as("logged_seconds"),
     })
     .from(agencyOpsTimeEntry)
@@ -1588,7 +1588,7 @@ export async function listMemberCapacity(
         isNull(agencyOpsTimeEntry.deletedAt),
         inArray(agencyOpsTimeEntry.userId, userIds),
         gte(agencyOpsTimeEntry.startedAt, weekStarts[0]!),
-        lte(agencyOpsTimeEntry.startedAt, lastWeekEnd),
+        lt(agencyOpsTimeEntry.startedAt, lastWeekEnd),
       ),
     )
     .groupBy(agencyOpsTimeEntry.userId, sql`date_trunc('week', ${agencyOpsTimeEntry.startedAt} AT TIME ZONE 'UTC')`);
@@ -1636,6 +1636,18 @@ export async function setMemberCapacity(
     throw new ORPCError("BAD_REQUEST", { message: "weekStart must be a Monday (UTC)." });
   }
 
+  // Require exact midnight so keys join correctly with listing functions.
+  if (
+    weekStartDate.getUTCHours() !== 0 ||
+    weekStartDate.getUTCMinutes() !== 0 ||
+    weekStartDate.getUTCSeconds() !== 0 ||
+    weekStartDate.getUTCMilliseconds() !== 0
+  ) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "weekStart must be at exactly midnight UTC (e.g. 2025-05-12T00:00:00.000Z).",
+    });
+  }
+
   const now = new Date();
   const [upserted] = await db
     .insert(agencyOpsMemberCapacity)
@@ -1681,13 +1693,14 @@ type AgencyInvoiceRecord = {
   paidAt: string | null;
 };
 
-async function getNextInvoiceNumber(teamId: string): Promise<string> {
-  const [last] = await db
+async function getNextInvoiceNumber(teamId: string, tx: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db): Promise<string> {
+  const [last] = await tx
     .select({ number: agencyOpsInvoice.number })
     .from(agencyOpsInvoice)
     .where(eq(agencyOpsInvoice.teamId, teamId))
     .orderBy(desc(agencyOpsInvoice.createdAt))
-    .limit(1);
+    .limit(1)
+    .for("update");
 
   if (!last) return "INV-0001";
   const match = last.number.match(/INV-(\d+)$/);
@@ -1745,27 +1758,38 @@ export async function getInvoiceSummary(
   const rows = await db
     .select({
       status: agencyOpsInvoice.status,
+      currency: agencyOpsInvoice.currency,
       amountCents: sum(agencyOpsInvoice.amountCents).as("total"),
       count: sql<number>`count(*)`.as("count"),
     })
     .from(agencyOpsInvoice)
     .where(eq(agencyOpsInvoice.teamId, input.teamId))
-    .groupBy(agencyOpsInvoice.status);
+    .groupBy(agencyOpsInvoice.status, agencyOpsInvoice.currency);
 
   let draftCount = 0;
   let sentCount = 0;
   let paidCount = 0;
-  let outstandingCents = 0;
+  // Outstanding amounts keyed by currency (sent invoices only).
+  const outstandingByCurrency: Record<string, number> = {};
 
   for (const row of rows) {
     const count = Number(row.count ?? 0);
     const amount = Number(row.amountCents ?? 0);
-    if (row.status === "draft") draftCount = count;
-    else if (row.status === "sent") { sentCount = count; outstandingCents = amount; }
-    else if (row.status === "paid") paidCount = count;
+    if (row.status === "draft") draftCount += count;
+    else if (row.status === "sent") {
+      sentCount += count;
+      outstandingByCurrency[row.currency] = (outstandingByCurrency[row.currency] ?? 0) + amount;
+    } else if (row.status === "paid") paidCount += count;
   }
 
-  return { draftCount, sentCount, paidCount, outstandingCents, currency: "USD" };
+  // For backward-compat convenience: also expose the USD outstanding total
+  // (or the single currency if the team uses only one).
+  const currencies = Object.keys(outstandingByCurrency);
+  const outstandingCents =
+    currencies.length === 1 ? (outstandingByCurrency[currencies[0]!] ?? 0) : (outstandingByCurrency["USD"] ?? 0);
+  const currency = currencies.length === 1 ? currencies[0]! : "USD";
+
+  return { draftCount, sentCount, paidCount, outstandingCents, currency, outstandingByCurrency };
 }
 
 export async function createInvoice(
@@ -1799,6 +1823,7 @@ export async function createInvoice(
 
   const entries = await db
     .select({
+      userId: agencyOpsTimeEntry.userId,
       projectId: agencyOpsTimeEntry.projectId,
       projectName: agencyOpsProject.name,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1815,83 +1840,101 @@ export async function createInvoice(
       ),
     );
 
-  const memberRates = await db
-    .select({ billableRateCents: agencyOpsMemberRate.billableRateCents })
+  // Fetch per-user billable rates so each user's work is priced correctly.
+  const memberRateRows = await db
+    .select({ userId: agencyOpsMemberRate.userId, billableRateCents: agencyOpsMemberRate.billableRateCents })
     .from(agencyOpsMemberRate)
     .where(eq(agencyOpsMemberRate.teamId, input.teamId));
 
-  const defaultRateCents =
-    memberRates.find((r) => r.billableRateCents !== null)?.billableRateCents ?? 0;
+  const rateByUserId = new Map(memberRateRows.map((r) => [r.userId, r.billableRateCents]));
 
-  const byProject = new Map<string, { projectName: string; seconds: number }>();
+  // Check that every user who logged time has a rate set.
+  const userIdsWithEntries = [...new Set(entries.map((e) => e.userId))];
+  const usersWithoutRate = userIdsWithEntries.filter((uid) => (rateByUserId.get(uid) ?? null) === null);
+  if (usersWithoutRate.length > 0) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: `The following team members have no billable rate set: ${usersWithoutRate.join(", ")}. Set rates before creating an invoice.`,
+    });
+  }
+
+  type ProjectBucket = { projectName: string; seconds: number; rateCents: number };
+  const byProject = new Map<string, ProjectBucket>();
   for (const entry of entries) {
+    const rateCents = rateByUserId.get(entry.userId) ?? 0;
     const existing = byProject.get(entry.projectId) ?? {
       projectName: entry.projectName,
       seconds: 0,
+      rateCents,
     };
     existing.seconds += entry.durationSeconds;
     byProject.set(entry.projectId, existing);
   }
 
   const now = new Date();
-  const invoiceNumber = await getNextInvoiceNumber(input.teamId);
 
-  const [invoice] = await db
-    .insert(agencyOpsInvoice)
-    .values({
-      id: createWorkspaceId("agency-inv"),
-      teamId: input.teamId,
-      clientId: input.clientId,
-      number: invoiceNumber,
-      status: "draft",
-      amountCents: 0,
-      currency: input.currency ?? "USD",
-      periodStart,
-      periodEnd,
-      createdByUserId: actorUserId,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning();
+  const { invoice, totalCents } = await db.transaction(async (tx) => {
+    const invoiceNumber = await getNextInvoiceNumber(input.teamId, tx);
 
-  if (!invoice) throw new ORPCError("INTERNAL_SERVER_ERROR");
+    const [inv] = await tx
+      .insert(agencyOpsInvoice)
+      .values({
+        id: createWorkspaceId("agency-inv"),
+        teamId: input.teamId,
+        clientId: input.clientId,
+        number: invoiceNumber,
+        status: "draft",
+        amountCents: 0,
+        currency: input.currency ?? "USD",
+        periodStart,
+        periodEnd,
+        createdByUserId: actorUserId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
 
-  let totalCents = 0;
+    if (!inv) throw new ORPCError("INTERNAL_SERVER_ERROR");
 
-  if (byProject.size > 0) {
-    for (const [projectId, { projectName, seconds }] of byProject) {
-      const amountCents = Math.round((seconds / 3600) * defaultRateCents);
-      totalCents += amountCents;
-      await db.insert(agencyOpsInvoiceLineItem).values({
+    let total = 0;
+
+    if (byProject.size > 0) {
+      const lineItems = [...byProject.entries()].map(([projectId, { projectName, seconds, rateCents }]) => {
+        const amountCents = Math.round((seconds / 3600) * rateCents);
+        total += amountCents;
+        return {
+          id: createWorkspaceId("agency-li"),
+          invoiceId: inv.id,
+          description: projectName,
+          projectId,
+          durationSeconds: seconds,
+          rateCents,
+          amountCents,
+          fromTimeEntries: true,
+          createdAt: now,
+        };
+      });
+      await tx.insert(agencyOpsInvoiceLineItem).values(lineItems);
+    } else {
+      await tx.insert(agencyOpsInvoiceLineItem).values({
         id: createWorkspaceId("agency-li"),
-        invoiceId: invoice.id,
-        description: projectName,
-        projectId,
-        hours: seconds,
-        rateCents: defaultRateCents,
-        amountCents,
-        fromTimeEntries: true,
+        invoiceId: inv.id,
+        description: "Services",
+        projectId: null,
+        durationSeconds: 0,
+        rateCents: 0,
+        amountCents: 0,
+        fromTimeEntries: false,
         createdAt: now,
       });
     }
-  } else {
-    await db.insert(agencyOpsInvoiceLineItem).values({
-      id: createWorkspaceId("agency-li"),
-      invoiceId: invoice.id,
-      description: "Services",
-      projectId: null,
-      hours: 0,
-      rateCents: 0,
-      amountCents: 0,
-      fromTimeEntries: false,
-      createdAt: now,
-    });
-  }
 
-  await db
-    .update(agencyOpsInvoice)
-    .set({ amountCents: totalCents, updatedAt: now })
-    .where(eq(agencyOpsInvoice.id, invoice.id));
+    await tx
+      .update(agencyOpsInvoice)
+      .set({ amountCents: total, updatedAt: now })
+      .where(eq(agencyOpsInvoice.id, inv.id));
+
+    return { invoice: inv, totalCents: total };
+  });
 
   return mapInvoiceRow({ ...invoice, amountCents: totalCents }, clientRow.name);
 }

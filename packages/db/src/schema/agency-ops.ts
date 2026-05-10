@@ -336,8 +336,8 @@ export const agencyOpsInvoiceLineItem = pgTable(
     description: text("description").notNull().default(""),
     /** For time-derived items: the project name + date range. */
     projectId: text("project_id").references(() => agencyOpsProject.id, { onDelete: "set null" }),
-    /** Quantity in hours (stored as fractional seconds / 3600). */
-    hours: integer("hours_seconds").notNull().default(0),
+    /** Duration in seconds (stored as integer seconds; divide by 3600 to get hours). */
+    durationSeconds: integer("hours_seconds").notNull().default(0),
     rateCents: integer("rate_cents").notNull().default(0),
     amountCents: integer("amount_cents").notNull().default(0),
     /** Whether this line item was auto-generated from time entries. */

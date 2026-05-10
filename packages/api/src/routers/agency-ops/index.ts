@@ -47,6 +47,7 @@ const agencyClientSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
   name: z.string().min(1),
+  archivedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -543,7 +544,7 @@ export const agencyOpsRouter = {
           userId: z.string().min(1),
           costRateCents: z.number().int().nonnegative().nullable().optional(),
           billableRateCents: z.number().int().nonnegative().nullable().optional(),
-          currency: z.string().min(1).max(3).optional(),
+          currency: z.string().length(3).optional(),
           effectiveFrom: z.string().datetime().optional(),
         }),
       )
@@ -618,6 +619,7 @@ export const agencyOpsRouter = {
             paidCount: z.number().int().nonnegative(),
             outstandingCents: z.number().int().nonnegative(),
             currency: z.string().min(1),
+            outstandingByCurrency: z.record(z.string(), z.number().int().nonnegative()),
           })
           .parse(await getInvoiceSummary(context.session.user.id, input));
       }),
@@ -654,7 +656,7 @@ export const agencyOpsRouter = {
           clientId: z.string().min(1),
           periodStart: z.string().datetime(),
           periodEnd: z.string().datetime(),
-          currency: z.string().min(1).max(3).optional(),
+          currency: z.string().length(3).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
