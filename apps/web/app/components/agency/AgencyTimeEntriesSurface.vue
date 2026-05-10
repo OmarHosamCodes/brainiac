@@ -666,18 +666,10 @@ async function restartEntry(entry: EntryRow) {
         </div>
       </div>
 
-      <div
-        v-else-if="viewMode === 'day'"
-        class="space-y-3 rounded-2xl border border-default bg-default p-4"
-      >
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Day focus</p>
-            <h3 class="mt-1 text-base font-bold text-highlighted">
-              {{ selectedDay.weekday }} {{ selectedDay.dayNumber }}
-            </h3>
-          </div>
-          <div class="flex items-center gap-2">
+      <!-- Day view -->
+      <div v-else-if="viewMode === 'day'" class="rounded-2xl border border-default bg-default">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-default px-4 py-3">
+          <div class="flex items-center gap-3">
             <UButton
               icon="i-lucide-chevron-left"
               color="neutral"
@@ -687,14 +679,12 @@ async function restartEntry(entry: EntryRow) {
               aria-label="Previous day"
               @click="goPrevDay"
             />
-            <UButton
-              icon="i-lucide-calendar-days"
-              color="neutral"
-              variant="soft"
-              size="xs"
-              :label="formatDuration(selectedDayTotalSeconds, 'short')"
-              class="font-mono tabular-nums"
-            />
+            <div>
+              <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-muted">Day focus</p>
+              <h3 class="mt-0.5 text-sm font-bold text-highlighted">
+                {{ selectedDay.weekday }}, {{ selectedDay.dayNumber }}
+              </h3>
+            </div>
             <UButton
               icon="i-lucide-chevron-right"
               color="neutral"
@@ -704,6 +694,12 @@ async function restartEntry(entry: EntryRow) {
               aria-label="Next day"
               @click="goNextDay"
             />
+          </div>
+          <div class="flex items-center gap-3">
+            <span
+              v-if="selectedDayTotalSeconds > 0"
+              class="font-mono text-sm font-bold tabular-nums text-highlighted"
+            >{{ formatDuration(selectedDayTotalSeconds, "short") }}</span>
             <UButton
               label="Add time"
               color="primary"
@@ -716,20 +712,57 @@ async function restartEntry(entry: EntryRow) {
 
         <div
           v-if="selectedDayEntries.length === 0"
-          class="rounded-2xl border border-dashed border-muted/30 p-6 text-center text-sm text-muted"
+          class="px-4 py-10 text-center"
         >
-          No entries on this day.
+          <p class="text-sm text-muted">No entries on this day.</p>
+          <UButton
+            label="Add time"
+            color="primary"
+            variant="soft"
+            size="xs"
+            icon="i-lucide-plus"
+            class="mt-3"
+            @click="openAdd('', selectedDayKey)"
+          />
         </div>
-        <div v-else class="divide-y divide-default rounded-2xl border border-default">
-          <div v-for="entry in selectedDayEntries" :key="entry.id" class="p-3">
-            <div class="flex flex-wrap items-start justify-between gap-3">
-              <div class="min-w-0">
-                <p class="truncate text-sm font-bold text-highlighted">{{ entry.projectName }}</p>
-                <p class="mt-0.5 text-xs text-muted">
-                  {{ timeKey(entry.startedAt) }} to {{ timeKey(entry.endedAt) }} ·
-                  {{ entry.description || "No description" }}
-                </p>
+
+        <div v-else>
+          <div
+            v-for="entry in selectedDayEntries"
+            :key="entry.id"
+            class="border-b border-default last:border-b-0"
+          >
+            <div class="flex flex-wrap items-start gap-3 px-4 py-3">
+              <!-- Left: color dot + info -->
+              <div class="flex min-w-0 flex-1 items-start gap-2.5">
+                <span
+                  class="mt-1 inline-block size-2 shrink-0 rounded-full"
+                  aria-hidden="true"
+                  :style="projectHueStyle(entry.projectId)"
+                />
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-bold text-highlighted">{{ entry.projectName }}</p>
+                  <p class="mt-0.5 text-xs text-muted">
+                    <span class="font-mono tabular-nums">{{ timeKey(entry.startedAt) }}</span>
+                    <span class="mx-1 opacity-40">to</span>
+                    <span class="font-mono tabular-nums">{{ timeKey(entry.endedAt) }}</span>
+                    <span class="mx-1.5 opacity-30">·</span>
+                    <span>{{ formatDuration(entry.durationSeconds, "short") }}</span>
+                    <template v-if="entry.description">
+                      <span class="mx-1.5 opacity-30">·</span>
+                      <span>{{ entry.description }}</span>
+                    </template>
+                  </p>
+                  <div v-if="entry.tags?.length > 0" class="mt-1.5 flex flex-wrap gap-1">
+                    <span
+                      v-for="tag in entry.tags"
+                      :key="tag.id"
+                      class="rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary"
+                    >{{ tag.name }}</span>
+                  </div>
+                </div>
               </div>
+              <!-- Right: actions -->
               <AgencyTimeEntryActions
                 :entry="entry"
                 :deleting="deletingEntryIds.includes(entry.id)"
@@ -738,28 +771,44 @@ async function restartEntry(entry: EntryRow) {
                 @delete="deleteEntry(entry)"
               />
             </div>
-            <AgencyTimeEntryDraftForm
-              v-if="activeDraft?.entryId === entry.id"
-              :draft="activeDraft"
-              :project-items="projectSelectItems"
-              :tags="tags"
-              :error="draftError"
-              :saving="isSaving"
-              @save="saveDraft"
-              @cancel="closeDraft"
-              @toggle-tag="toggleDraftTag"
-              @update-duration="setDraftDuration"
-              @update-end-time="setDraftEndTime"
-            />
+
+            <!-- Inline edit form -->
+            <Transition
+              enter-active-class="transition-opacity duration-200 ease-out"
+              leave-active-class="transition-opacity duration-150 ease-in"
+              enter-from-class="opacity-0"
+              enter-to-class="opacity-100"
+              leave-from-class="opacity-100"
+              leave-to-class="opacity-0"
+            >
+              <div
+                v-if="activeDraft?.entryId === entry.id"
+                class="border-t border-primary/15 bg-primary/[0.02] px-4 py-3"
+              >
+                <AgencyTimeEntryDraftForm
+                  :draft="activeDraft"
+                  :project-items="projectSelectItems"
+                  :tags="tags"
+                  :error="draftError"
+                  :saving="isSaving"
+                  @save="saveDraft"
+                  @cancel="closeDraft"
+                  @toggle-tag="toggleDraftTag"
+                  @update-duration="setDraftDuration"
+                  @update-end-time="setDraftEndTime"
+                />
+              </div>
+            </Transition>
           </div>
         </div>
       </div>
 
-      <div v-else class="space-y-3 rounded-2xl border border-default bg-default p-4">
-        <div class="flex flex-wrap items-center justify-between gap-3">
+      <!-- Log view -->
+      <div v-else class="rounded-2xl border border-default bg-default">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-default px-4 py-3">
           <div>
-            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Entry log</p>
-            <h3 class="mt-1 text-base font-bold text-highlighted">Individual entries</h3>
+            <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-muted">Entry log</p>
+            <h3 class="mt-0.5 text-sm font-bold text-highlighted">All entries this week</h3>
           </div>
           <UButton
             label="Add time"
@@ -772,25 +821,54 @@ async function restartEntry(entry: EntryRow) {
 
         <div
           v-if="logEntries.length === 0"
-          class="rounded-2xl border border-dashed border-muted/30 p-6 text-center text-sm text-muted"
+          class="px-4 py-10 text-center"
         >
-          No time entries yet. Start a timer or add time manually.
+          <p class="text-sm text-muted">No time entries yet.</p>
+          <p class="mt-1 text-xs text-muted">Start a timer or add time manually.</p>
         </div>
-        <div v-else class="divide-y divide-default rounded-2xl border border-default">
-          <div v-for="entry in logEntries" :key="entry.id" class="p-3">
-            <div class="grid gap-3 md:grid-cols-[1fr_auto] md:items-center">
-              <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2">
-                  <p class="truncate text-sm font-bold text-highlighted">{{ entry.projectName }}</p>
-                  <UBadge color="neutral" variant="soft" class="font-mono tabular-nums">{{
-                    formatDuration(entry.durationSeconds, "short")
-                  }}</UBadge>
+
+        <div v-else>
+          <div
+            v-for="entry in logEntries"
+            :key="entry.id"
+            class="border-b border-default last:border-b-0"
+          >
+            <div class="flex flex-wrap items-start gap-3 px-4 py-3">
+              <!-- Color dot + info -->
+              <div class="flex min-w-0 flex-1 items-start gap-2.5">
+                <span
+                  class="mt-1 inline-block size-2 shrink-0 rounded-full"
+                  aria-hidden="true"
+                  :style="projectHueStyle(entry.projectId)"
+                />
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-baseline gap-2">
+                    <p class="truncate text-sm font-bold text-highlighted">{{ entry.projectName }}</p>
+                    <span class="font-mono text-xs font-bold tabular-nums text-highlighted">
+                      {{ formatDuration(entry.durationSeconds, "short") }}
+                    </span>
+                  </div>
+                  <p class="mt-0.5 text-xs text-muted">
+                    <span>{{ entry.startedAt.slice(0, 10) }}</span>
+                    <span class="mx-1.5 opacity-30">·</span>
+                    <span class="font-mono tabular-nums">{{ timeKey(entry.startedAt) }}</span>
+                    <span class="mx-1 opacity-40">to</span>
+                    <span class="font-mono tabular-nums">{{ timeKey(entry.endedAt) }}</span>
+                    <template v-if="entry.description">
+                      <span class="mx-1.5 opacity-30">·</span>
+                      <span>{{ entry.description }}</span>
+                    </template>
+                  </p>
+                  <div v-if="entry.tags?.length > 0" class="mt-1.5 flex flex-wrap gap-1">
+                    <span
+                      v-for="tag in entry.tags"
+                      :key="tag.id"
+                      class="rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary"
+                    >{{ tag.name }}</span>
+                  </div>
                 </div>
-                <p class="mt-1 truncate text-xs text-muted">
-                  {{ entry.startedAt.slice(0, 10) }} · {{ timeKey(entry.startedAt) }} to
-                  {{ timeKey(entry.endedAt) }} · {{ entry.description || "No description" }}
-                </p>
               </div>
+              <!-- Actions -->
               <AgencyTimeEntryActions
                 :entry="entry"
                 :deleting="deletingEntryIds.includes(entry.id)"
@@ -799,52 +877,65 @@ async function restartEntry(entry: EntryRow) {
                 @delete="deleteEntry(entry)"
               />
             </div>
-            <AgencyTimeEntryDraftForm
-              v-if="activeDraft?.entryId === entry.id"
-              :draft="activeDraft"
-              :project-items="projectSelectItems"
-              :tags="tags"
-              :error="draftError"
-              :saving="isSaving"
-              @save="saveDraft"
-              @cancel="closeDraft"
-              @toggle-tag="toggleDraftTag"
-              @update-duration="setDraftDuration"
-              @update-end-time="setDraftEndTime"
-            />
+
+            <!-- Inline edit form -->
+            <Transition
+              enter-active-class="transition-opacity duration-200 ease-out"
+              leave-active-class="transition-opacity duration-150 ease-in"
+              enter-from-class="opacity-0"
+              enter-to-class="opacity-100"
+              leave-from-class="opacity-100"
+              leave-to-class="opacity-0"
+            >
+              <div
+                v-if="activeDraft?.entryId === entry.id"
+                class="border-t border-primary/15 bg-primary/[0.02] px-4 py-3"
+              >
+                <AgencyTimeEntryDraftForm
+                  :draft="activeDraft"
+                  :project-items="projectSelectItems"
+                  :tags="tags"
+                  :error="draftError"
+                  :saving="isSaving"
+                  @save="saveDraft"
+                  @cancel="closeDraft"
+                  @toggle-tag="toggleDraftTag"
+                  @update-duration="setDraftDuration"
+                  @update-end-time="setDraftEndTime"
+                />
+              </div>
+            </Transition>
           </div>
         </div>
       </div>
 
-      <div
-        v-if="activeDraft?.mode === 'create'"
-        class="rounded-2xl border border-default bg-default p-4"
+      <!-- Create draft panel -->
+      <Transition
+        enter-active-class="transition-opacity duration-200 ease-out"
+        leave-active-class="transition-opacity duration-150 ease-in"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
       >
-        <div class="mb-3 flex items-center justify-between gap-2">
-          <h3 class="text-sm font-bold text-highlighted">Add time</h3>
-          <UButton
-            icon="i-lucide-x"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            square
-            aria-label="Close add time"
-            @click="closeDraft"
+        <div
+          v-if="activeDraft?.mode === 'create'"
+          class="rounded-2xl border border-default bg-default px-4 py-3"
+        >
+          <AgencyTimeEntryDraftForm
+            :draft="activeDraft"
+            :project-items="projectSelectItems"
+            :tags="tags"
+            :error="draftError"
+            :saving="isSaving"
+            @save="saveDraft"
+            @cancel="closeDraft"
+            @toggle-tag="toggleDraftTag"
+            @update-duration="setDraftDuration"
+            @update-end-time="setDraftEndTime"
           />
         </div>
-        <AgencyTimeEntryDraftForm
-          :draft="activeDraft"
-          :project-items="projectSelectItems"
-          :tags="tags"
-          :error="draftError"
-          :saving="isSaving"
-          @save="saveDraft"
-          @cancel="closeDraft"
-          @toggle-tag="toggleDraftTag"
-          @update-duration="setDraftDuration"
-          @update-end-time="setDraftEndTime"
-        />
-      </div>
+      </Transition>
     </template>
   </section>
 </template>

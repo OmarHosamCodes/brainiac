@@ -479,8 +479,8 @@ function toggleTag(tagId: string) {
       <UButton
         :label="activeTimer ? formatDuration(elapsedSeconds) : 'Start'"
         :color="activeTimer ? 'warning' : 'primary'"
-        size="sm"
-        class="min-w-24 shrink-0 font-mono tabular-nums"
+        size="md"
+        class="min-w-28 shrink-0 font-mono tabular-nums font-bold"
         :disabled="activeTimer ? !canStopTimer : !canStartTimer"
         :loading="trackerBusy"
         @click="activeTimer ? stopTimer() : startTimer()"
