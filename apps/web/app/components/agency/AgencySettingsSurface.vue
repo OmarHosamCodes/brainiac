@@ -9,17 +9,16 @@
  * subnav. This surface rehearses that pattern from day one so it doesn't
  * have to be re-architected when more sections come online.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import { useQuery } from "@tanstack/vue-query";
 
-import { getErrorMessage } from "~/utils/get-error-message";
+import { useAgencyOpsStore } from "~/stores/agency-ops";
 
 const props = defineProps<{
   teamId: string;
 }>();
 
 const orpc = useOrpc();
-const queryClient = useQueryClient();
-const toast = useToast();
+const agencyOps = useAgencyOpsStore();
 
 const teamId = computed(() => props.teamId);
 
@@ -74,45 +73,35 @@ const tagsQuery = useQuery(
 const tags = computed(() => tagsQuery.data.value?.items ?? []);
 
 const newTagName = ref("");
-const createTagMutation = useMutation(orpc.agencyOps.tags.create.mutationOptions());
-const deleteTagMutation = useMutation(orpc.agencyOps.tags.delete.mutationOptions());
+
+// Register tags query with the store for optimistic patches.
+const tagsQueryKey = computed(
+  () => orpc.agencyOps.tags.list.queryOptions({ input: { teamId: teamId.value } }).queryKey,
+);
+
+watch(
+  tagsQueryKey,
+  (next, prev) => {
+    if (prev) agencyOps.unregisterTagsQuery(prev);
+    if (teamId.value) agencyOps.registerTagsQuery({ queryKey: next, teamId: teamId.value });
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  agencyOps.unregisterTagsQuery(tagsQueryKey.value);
+});
 
 async function createTag() {
   const name = newTagName.value.trim();
   if (!name || !teamId.value) return;
-  try {
-    await createTagMutation.mutateAsync({ teamId: teamId.value, name });
-    newTagName.value = "";
-    await queryClient.invalidateQueries({
-      queryKey: orpc.agencyOps.tags.list.queryOptions({ input: { teamId: teamId.value } })
-        .queryKey,
-    });
-    toast.add({ title: "Tag created", description: name, color: "success" });
-  } catch (error) {
-    toast.add({
-      title: "Couldn't create tag",
-      description: getErrorMessage(error, "Try again."),
-      color: "error",
-    });
-  }
+  newTagName.value = "";
+  await agencyOps.createTag({ teamId: teamId.value, name });
 }
 
 async function deleteTag(tagId: string, tagName: string) {
   if (!teamId.value) return;
-  try {
-    await deleteTagMutation.mutateAsync({ teamId: teamId.value, tagId });
-    await queryClient.invalidateQueries({
-      queryKey: orpc.agencyOps.tags.list.queryOptions({ input: { teamId: teamId.value } })
-        .queryKey,
-    });
-    toast.add({ title: "Tag removed", description: tagName, color: "success" });
-  } catch (error) {
-    toast.add({
-      title: "Couldn't remove tag",
-      description: getErrorMessage(error, "Try again."),
-      color: "error",
-    });
-  }
+  await agencyOps.deleteTag({ teamId: teamId.value, tagId, tagName });
 }
 </script>
 
@@ -171,7 +160,7 @@ async function deleteTag(tagId: string, tagName: string) {
             label="Add tag"
             color="primary"
             size="xs"
-            :loading="createTagMutation.isPending.value"
+            :loading="agencyOps.isTagMutationPending"
             :disabled="!newTagName.trim()"
           />
         </form>

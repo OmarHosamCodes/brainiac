@@ -10,11 +10,12 @@
  * stub (no rates/budgets backend yet) and renders an honest aspirational state
  * — never a fake percentage.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import { useQuery } from "@tanstack/vue-query";
 
 import { formatDuration } from "~/utils/format-duration";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { projectHueStyle } from "~/utils/project-palette";
+import { useAgencyOpsStore } from "~/stores/agency-ops";
 
 const props = defineProps<{
   teamId: string;
@@ -25,8 +26,7 @@ const emit = defineEmits<{
 }>();
 
 const orpc = useOrpc();
-const queryClient = useQueryClient();
-const toast = useToast();
+const agencyOps = useAgencyOpsStore();
 
 const teamId = computed(() => props.teamId);
 
@@ -71,6 +71,24 @@ const budgetsQuery = useQuery(
     enabled: Boolean(teamId.value),
   })),
 );
+
+// Register queries with the store for optimistic patches.
+const projectsQueryKey = computed(
+  () => orpc.agencyOps.projects.list.queryOptions({ input: { teamId: teamId.value } }).queryKey,
+);
+
+watch(
+  projectsQueryKey,
+  (next, prev) => {
+    if (prev) agencyOps.unregisterProjectsQuery(prev);
+    if (teamId.value) agencyOps.registerProjectsQuery({ queryKey: next, teamId: teamId.value });
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  agencyOps.unregisterProjectsQuery(projectsQueryKey.value);
+});
 
 const budgetsByProject = computed(() => {
   const map = new Map<string, NonNullable<typeof budgetsQuery.data.value>["items"][number]>();
@@ -143,7 +161,6 @@ const isError = computed(() => Boolean(projectsQuery.error.value));
 const newProjectOpen = ref(false);
 const newProjectName = ref("");
 const newProjectClientId = ref("");
-const createProjectMutation = useMutation(orpc.agencyOps.projects.create.mutationOptions());
 
 watch(newProjectOpen, (open) => {
   if (open && !newProjectClientId.value && clients.value[0]) {
@@ -154,26 +171,15 @@ watch(newProjectOpen, (open) => {
 async function createProject() {
   const name = newProjectName.value.trim();
   if (!name || !newProjectClientId.value || !teamId.value) return;
-  try {
-    await createProjectMutation.mutateAsync({
-      teamId: teamId.value,
-      clientId: newProjectClientId.value,
-      name,
-    });
-    newProjectName.value = "";
-    newProjectOpen.value = false;
-    await queryClient.invalidateQueries({
-      queryKey: orpc.agencyOps.projects.list.queryOptions({ input: { teamId: teamId.value } })
-        .queryKey,
-    });
-    toast.add({ title: "Project created", description: name, color: "success" });
-  } catch (error) {
-    toast.add({
-      title: "Couldn't create project",
-      description: getErrorMessage(error, "Try again."),
-      color: "error",
-    });
-  }
+  const client = clients.value.find((c) => c.id === newProjectClientId.value);
+  newProjectName.value = "";
+  newProjectOpen.value = false;
+  await agencyOps.createProject({
+    teamId: teamId.value,
+    clientId: newProjectClientId.value,
+    clientName: client?.name ?? "",
+    name,
+  });
 }
 </script>
 
@@ -236,7 +242,7 @@ async function createProject() {
                 color="primary"
                 size="xs"
                 block
-                :loading="createProjectMutation.isPending.value"
+                :loading="agencyOps.isProjectMutationPending"
                 :disabled="!newProjectName.trim() || !newProjectClientId"
               />
             </form>

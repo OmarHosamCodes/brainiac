@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useQuery } from "@tanstack/vue-query";
 
-import { getErrorMessage } from "~/utils/get-error-message";
+import { useAgencyOpsStore } from "~/stores/agency-ops";
 
 const props = defineProps<{
   teamId: string;
 }>();
 
 const orpc = useOrpc();
-const toast = useToast();
+const agencyOps = useAgencyOpsStore();
 
 const selectedClientId = ref("");
 const newClientName = ref("");
@@ -64,126 +64,104 @@ const tagsQuery = useQuery(
 
 const tags = computed(() => tagsQuery.data.value?.items ?? []);
 
-const createClientMutation = useMutation(orpc.agencyOps.clients.create.mutationOptions());
-const createProjectMutation = useMutation(orpc.agencyOps.projects.create.mutationOptions());
-const createTagMutation = useMutation(orpc.agencyOps.tags.create.mutationOptions());
-const deleteTagMutation = useMutation(orpc.agencyOps.tags.delete.mutationOptions());
+// Register queries with the store for optimistic patches.
+const clientsQueryKey = computed(
+  () =>
+    orpc.agencyOps.clients.list.queryOptions({ input: { teamId: effectiveTeamId.value } })
+      .queryKey,
+);
+const projectsQueryKey = computed(
+  () =>
+    orpc.agencyOps.projects.list.queryOptions({
+      input: { teamId: effectiveTeamId.value, clientId: selectedClientId.value || undefined },
+    }).queryKey,
+);
+const tagsQueryKey = computed(
+  () =>
+    orpc.agencyOps.tags.list.queryOptions({ input: { teamId: effectiveTeamId.value } }).queryKey,
+);
+
+watch(
+  clientsQueryKey,
+  (next, prev) => {
+    if (prev) agencyOps.unregisterClientsQuery(prev);
+    if (effectiveTeamId.value)
+      agencyOps.registerClientsQuery({ queryKey: next, teamId: effectiveTeamId.value });
+  },
+  { immediate: true },
+);
+
+watch(
+  projectsQueryKey,
+  (next, prev) => {
+    if (prev) agencyOps.unregisterProjectsQuery(prev);
+    if (effectiveTeamId.value)
+      agencyOps.registerProjectsQuery({
+        queryKey: next,
+        teamId: effectiveTeamId.value,
+        clientId: selectedClientId.value || undefined,
+      });
+  },
+  { immediate: true },
+);
+
+watch(
+  tagsQueryKey,
+  (next, prev) => {
+    if (prev) agencyOps.unregisterTagsQuery(prev);
+    if (effectiveTeamId.value)
+      agencyOps.registerTagsQuery({ queryKey: next, teamId: effectiveTeamId.value });
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  agencyOps.unregisterClientsQuery(clientsQueryKey.value);
+  agencyOps.unregisterProjectsQuery(projectsQueryKey.value);
+  agencyOps.unregisterTagsQuery(tagsQueryKey.value);
+});
 
 async function createClient() {
   const name = newClientName.value.trim();
-
-  if (!name || !effectiveTeamId.value) {
-    return;
-  }
-
-  try {
-    await createClientMutation.mutateAsync({
-      teamId: effectiveTeamId.value,
-      name,
-    });
-
-    newClientName.value = "";
-    await clientsQuery.refetch();
-
-    toast.add({
-      title: "Client created",
-      description: name,
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Unable to create client",
-      description: getErrorMessage(error, "Please try again."),
-      color: "error",
-    });
-  }
+  if (!name || !effectiveTeamId.value) return;
+  newClientName.value = "";
+  await agencyOps.createClient(
+    { teamId: effectiveTeamId.value, name },
+    {
+      onSuccess: (clientId) => {
+        selectedClientId.value = clientId;
+      },
+    },
+  );
 }
 
 async function createProject() {
   const name = newProjectName.value.trim();
-
-  if (!name || !selectedClientId.value || !effectiveTeamId.value) {
-    return;
-  }
-
-  try {
-    await createProjectMutation.mutateAsync({
-      teamId: effectiveTeamId.value,
-      clientId: selectedClientId.value,
-      name,
-    });
-
-    newProjectName.value = "";
-    await projectsQuery.refetch();
-
-    toast.add({
-      title: "Project created",
-      description: name,
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Unable to create project",
-      description: getErrorMessage(error, "Please try again."),
-      color: "error",
-    });
-  }
+  if (!name || !selectedClientId.value || !effectiveTeamId.value) return;
+  newProjectName.value = "";
+  await agencyOps.createProject({
+    teamId: effectiveTeamId.value,
+    clientId: selectedClientId.value,
+    clientName: selectedClient.value?.name ?? "",
+    name,
+  });
 }
 
 async function createTag() {
   const name = newTagName.value.trim();
-
-  if (!name || !effectiveTeamId.value) {
-    return;
-  }
-
-  try {
-    await createTagMutation.mutateAsync({
-      teamId: effectiveTeamId.value,
-      name,
-    });
-
-    newTagName.value = "";
-    await tagsQuery.refetch();
-
-    toast.add({
-      title: "Tag created",
-      description: name,
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Unable to create tag",
-      description: getErrorMessage(error, "Please try again."),
-      color: "error",
-    });
-  }
+  if (!name || !effectiveTeamId.value) return;
+  newTagName.value = "";
+  await agencyOps.createTag({ teamId: effectiveTeamId.value, name });
 }
 
 async function deleteTag(tagId: string) {
-  if (!effectiveTeamId.value) {
-    return;
-  }
-
-  try {
-    await deleteTagMutation.mutateAsync({
-      teamId: effectiveTeamId.value,
-      tagId,
-    });
-
-    await tagsQuery.refetch();
-
-    toast.add({
-      title: "Tag deleted",
-      color: "success",
-    });
-  } catch (error) {
-    toast.add({
-      title: "Unable to delete tag",
-      description: getErrorMessage(error, "Please try again."),
-      color: "error",
-    });
-  }
+  if (!effectiveTeamId.value) return;
+  const tag = tags.value.find((t) => t.id === tagId);
+  await agencyOps.deleteTag({
+    teamId: effectiveTeamId.value,
+    tagId,
+    tagName: tag?.name ?? "",
+  });
 }
 </script>
 
@@ -201,14 +179,14 @@ async function deleteTag(tagId: string) {
             v-model="newClientName"
             placeholder="Client name"
             size="sm"
-            :disabled="!effectiveTeamId || createClientMutation.isPending.value"
+            :disabled="!effectiveTeamId || agencyOps.isClientMutationPending"
             @keyup.enter="createClient"
           />
           <UButton
             label="Add"
             size="sm"
             color="primary"
-            :loading="createClientMutation.isPending.value"
+            :loading="agencyOps.isClientMutationPending"
             :disabled="!newClientName.trim() || !effectiveTeamId"
             @click="createClient"
           />
@@ -250,14 +228,14 @@ async function deleteTag(tagId: string) {
             v-model="newProjectName"
             placeholder="Project name"
             size="sm"
-            :disabled="createProjectMutation.isPending.value"
+            :disabled="agencyOps.isProjectMutationPending"
             @keyup.enter="createProject"
           />
           <UButton
             label="Add"
             size="sm"
             color="primary"
-            :loading="createProjectMutation.isPending.value"
+            :loading="agencyOps.isProjectMutationPending"
             :disabled="!newProjectName.trim()"
             @click="createProject"
           />
@@ -308,14 +286,14 @@ async function deleteTag(tagId: string) {
             v-model="newTagName"
             placeholder="Tag name"
             size="sm"
-            :disabled="createTagMutation.isPending.value"
+            :disabled="agencyOps.isTagMutationPending"
             @keyup.enter="createTag"
           />
           <UButton
             label="Add"
             size="sm"
             color="primary"
-            :loading="createTagMutation.isPending.value"
+            :loading="agencyOps.isTagMutationPending"
             :disabled="!newTagName.trim()"
             @click="createTag"
           />
@@ -333,7 +311,7 @@ async function deleteTag(tagId: string) {
             <span class="text-highlighted">{{ tag.name }}</span>
             <button
               class="ml-auto text-primary/60 transition-colors hover:text-primary"
-              :disabled="deleteTagMutation.isPending.value"
+              :disabled="agencyOps.deletingTagIds.includes(tag.id)"
               @click="deleteTag(tag.id)"
             >
               <UIcon name="i-lucide-x" class="size-3.5" />

@@ -11,19 +11,18 @@
  * dominant motion. A two-column layout makes that motion one click instead of
  * a tab round-trip.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
+import { useQuery } from "@tanstack/vue-query";
 
 import { formatDuration } from "~/utils/format-duration";
-import { getErrorMessage } from "~/utils/get-error-message";
 import { projectHueStyle } from "~/utils/project-palette";
+import { useAgencyOpsStore } from "~/stores/agency-ops";
 
 const props = defineProps<{
   teamId: string;
 }>();
 
 const orpc = useOrpc();
-const queryClient = useQueryClient();
-const toast = useToast();
+const agencyOps = useAgencyOpsStore();
 
 const teamId = computed(() => props.teamId);
 
@@ -55,6 +54,37 @@ const entriesQuery = useQuery(
     enabled: Boolean(teamId.value),
   })),
 );
+
+// Register queries with the store so optimistic patches reach this component.
+const clientsQueryKey = computed(
+  () => orpc.agencyOps.clients.list.queryOptions({ input: { teamId: teamId.value } }).queryKey,
+);
+const projectsQueryKey = computed(
+  () => orpc.agencyOps.projects.list.queryOptions({ input: { teamId: teamId.value } }).queryKey,
+);
+
+watch(
+  clientsQueryKey,
+  (next, prev) => {
+    if (prev) agencyOps.unregisterClientsQuery(prev);
+    if (teamId.value) agencyOps.registerClientsQuery({ queryKey: next, teamId: teamId.value });
+  },
+  { immediate: true },
+);
+
+watch(
+  projectsQueryKey,
+  (next, prev) => {
+    if (prev) agencyOps.unregisterProjectsQuery(prev);
+    if (teamId.value) agencyOps.registerProjectsQuery({ queryKey: next, teamId: teamId.value });
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  agencyOps.unregisterClientsQuery(clientsQueryKey.value);
+  agencyOps.unregisterProjectsQuery(projectsQueryKey.value);
+});
 
 const clients = computed(() => clientsQuery.data.value?.items ?? []);
 const projects = computed(() => projectsQuery.data.value?.items ?? []);
@@ -117,32 +147,21 @@ const selectedClientProjects = computed(() =>
   projectsByClient.value.get(selectedClientId.value) ?? [],
 );
 
-// --- Mutations ---------------------------------------------------------
-
-const createClientMutation = useMutation(orpc.agencyOps.clients.create.mutationOptions());
-const updateClientMutation = useMutation(orpc.agencyOps.clients.update.mutationOptions());
-const createProjectMutation = useMutation(orpc.agencyOps.projects.create.mutationOptions());
+// --- Mutations (via store for optimistic updates) -----------------------
 
 async function createClient() {
   const name = newClientName.value.trim();
   if (!name || !teamId.value) return;
-  try {
-    const created = await createClientMutation.mutateAsync({ teamId: teamId.value, name });
-    newClientName.value = "";
-    newClientOpen.value = false;
-    selectedClientId.value = created.id;
-    await queryClient.invalidateQueries({
-      queryKey: orpc.agencyOps.clients.list.queryOptions({ input: { teamId: teamId.value } })
-        .queryKey,
-    });
-    toast.add({ title: "Client created", description: name, color: "success" });
-  } catch (error) {
-    toast.add({
-      title: "Couldn't create client",
-      description: getErrorMessage(error, "Try again."),
-      color: "error",
-    });
-  }
+  newClientName.value = "";
+  newClientOpen.value = false;
+  await agencyOps.createClient(
+    { teamId: teamId.value, name },
+    {
+      onSuccess: (clientId) => {
+        selectedClientId.value = clientId;
+      },
+    },
+  );
 }
 
 async function renameClient() {
@@ -152,49 +171,24 @@ async function renameClient() {
     renameOpen.value = false;
     return;
   }
-  try {
-    await updateClientMutation.mutateAsync({
-      teamId: teamId.value,
-      clientId: selectedClient.value.id,
-      name,
-    });
-    renameOpen.value = false;
-    await queryClient.invalidateQueries({
-      queryKey: orpc.agencyOps.clients.list.queryOptions({ input: { teamId: teamId.value } })
-        .queryKey,
-    });
-    toast.add({ title: "Renamed", description: name, color: "success" });
-  } catch (error) {
-    toast.add({
-      title: "Couldn't rename",
-      description: getErrorMessage(error, "Try again."),
-      color: "error",
-    });
-  }
+  renameOpen.value = false;
+  await agencyOps.updateClient({
+    teamId: teamId.value,
+    clientId: selectedClient.value.id,
+    name,
+  });
 }
 
 async function createProject() {
   const name = newProjectName.value.trim();
   if (!name || !teamId.value || !selectedClient.value) return;
-  try {
-    await createProjectMutation.mutateAsync({
-      teamId: teamId.value,
-      clientId: selectedClient.value.id,
-      name,
-    });
-    newProjectName.value = "";
-    await queryClient.invalidateQueries({
-      queryKey: orpc.agencyOps.projects.list.queryOptions({ input: { teamId: teamId.value } })
-        .queryKey,
-    });
-    toast.add({ title: "Project added", description: name, color: "success" });
-  } catch (error) {
-    toast.add({
-      title: "Couldn't add project",
-      description: getErrorMessage(error, "Try again."),
-      color: "error",
-    });
-  }
+  newProjectName.value = "";
+  await agencyOps.createProject({
+    teamId: teamId.value,
+    clientId: selectedClient.value.id,
+    clientName: selectedClient.value.name,
+    name,
+  });
 }
 
 watch(renameOpen, (open) => {
@@ -249,7 +243,7 @@ const isLoading = computed(
               color="primary"
               size="xs"
               block
-              :loading="createClientMutation.isPending.value"
+              :loading="agencyOps.isClientMutationPending"
               :disabled="!newClientName.trim()"
             />
           </form>
@@ -288,7 +282,7 @@ const isLoading = computed(
                   color="primary"
                   size="xs"
                   block
-                  :loading="createClientMutation.isPending.value"
+                  :loading="agencyOps.isClientMutationPending"
                   :disabled="!newClientName.trim()"
                 />
               </form>
@@ -359,7 +353,7 @@ const isLoading = computed(
                     color="primary"
                     size="xs"
                     block
-                    :loading="updateClientMutation.isPending.value"
+                    :loading="agencyOps.isClientMutationPending"
                     :disabled="!renameDraft.trim()"
                   />
                 </form>
@@ -413,7 +407,7 @@ const isLoading = computed(
               label="Add"
               color="primary"
               size="xs"
-              :loading="createProjectMutation.isPending.value"
+              :loading="agencyOps.isProjectMutationPending"
               :disabled="!newProjectName.trim()"
             />
           </form>
