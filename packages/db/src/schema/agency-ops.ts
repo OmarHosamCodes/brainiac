@@ -65,6 +65,33 @@ export const agencyOpsProject = pgTable(
   ],
 );
 
+export const agencyOpsProjectTask = pgTable(
+  "agency_ops_project_task",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => agencyOpsProject.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_project_task_team_idx").on(table.teamId),
+    index("agency_ops_project_task_team_project_idx").on(table.teamId, table.projectId),
+    index("agency_ops_project_task_project_created_idx").on(table.projectId, table.createdAt),
+  ],
+);
+
 export const agencyOpsTag = pgTable(
   "agency_ops_tag",
   {
@@ -344,7 +371,5 @@ export const agencyOpsInvoiceLineItem = pgTable(
     fromTimeEntries: boolean("from_time_entries").notNull().default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [
-    index("agency_ops_invoice_line_item_invoice_idx").on(table.invoiceId),
-  ],
+  (table) => [index("agency_ops_invoice_line_item_invoice_idx").on(table.invoiceId)],
 );

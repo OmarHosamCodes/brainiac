@@ -16,6 +16,7 @@
  */
 import { useQuery } from "@tanstack/vue-query";
 
+import AgencyProjectTasks from "~/components/agency/AgencyProjectTasks.vue";
 import { formatDuration } from "~/utils/format-duration";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { projectHueStyle } from "~/utils/project-palette";
@@ -47,9 +48,7 @@ const range = computed(() => {
   const now = new Date();
   // 30-day window for the activity log; "this week" totals are derived
   // client-side from the same dataset.
-  const start = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29),
-  );
+  const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29));
   const end = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
   );
@@ -66,7 +65,8 @@ const projectsQuery = useQuery(
 );
 
 const project = computed(
-  () => (projectsQuery.data.value?.items ?? []).find((entry) => entry.id === projectId.value) ?? null,
+  () =>
+    (projectsQuery.data.value?.items ?? []).find((entry) => entry.id === projectId.value) ?? null,
 );
 
 const entriesQuery = useQuery(
@@ -170,9 +170,7 @@ function formatEntryTime(iso: string): string {
   return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
-const isLoading = computed(
-  () => projectsQuery.isPending.value || entriesQuery.isPending.value,
-);
+const isLoading = computed(() => projectsQuery.isPending.value || entriesQuery.isPending.value);
 const isError = computed(
   () => Boolean(projectsQuery.error.value) || Boolean(entriesQuery.error.value),
 );
@@ -202,14 +200,13 @@ const isError = computed(
     </div>
 
     <!-- Error -->
-    <div
-      v-else-if="isError"
-      class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center"
-    >
+    <div v-else-if="isError" class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center">
       <UIcon name="i-lucide-alert-triangle" class="mx-auto size-5 text-error" />
       <p class="mt-3 text-sm font-bold text-highlighted">Couldn't load this project.</p>
       <p class="mt-1 text-xs text-muted">
-        {{ getErrorMessage(entriesQuery.error.value ?? projectsQuery.error.value, "Try refreshing.") }}
+        {{
+          getErrorMessage(entriesQuery.error.value ?? projectsQuery.error.value, "Try refreshing.")
+        }}
       </p>
       <UButton
         label="Retry"
@@ -252,9 +249,7 @@ const isError = computed(
           </div>
           <div class="flex items-center gap-6">
             <div>
-              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                This week
-              </p>
+              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">This week</p>
               <p
                 class="mt-1 font-mono text-xl font-bold tabular-nums"
                 :class="totalsThisWeek > 0 ? 'text-highlighted' : 'text-dimmed'"
@@ -280,18 +275,9 @@ const isError = computed(
              "Not set" otherwise. -->
         <div class="mt-5 border-t border-default pt-4">
           <div class="flex items-center justify-between">
-            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-              Budget burn
-            </p>
-            <p
-              class="text-[11px]"
-              :class="projectBudget ? 'text-muted' : 'text-dimmed'"
-            >
-              {{
-                projectBudget
-                  ? `${budgetPct}% used`
-                  : "Not set · configure rates in Settings"
-              }}
+            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Budget burn</p>
+            <p class="text-[11px]" :class="projectBudget ? 'text-muted' : 'text-dimmed'">
+              {{ projectBudget ? `${budgetPct}% used` : "Not set · configure rates in Settings" }}
             </p>
           </div>
           <div class="mt-2 h-1.5 rounded-full bg-elevated">
@@ -303,6 +289,8 @@ const isError = computed(
           </div>
         </div>
       </div>
+
+      <AgencyProjectTasks :team-id="teamId" :project-id="projectId" :project-name="project.name" />
 
       <div class="grid gap-4 lg:grid-cols-[20rem,1fr]">
         <!-- Hours by member -->
@@ -324,9 +312,10 @@ const isError = computed(
                 <div
                   class="agency-project-detail__hue-bar h-full rounded-full"
                   :style="{
-                    width: memberSecondsMax > 0
-                      ? `${Math.round((row.seconds / memberSecondsMax) * 100)}%`
-                      : '0%',
+                    width:
+                      memberSecondsMax > 0
+                        ? `${Math.round((row.seconds / memberSecondsMax) * 100)}%`
+                        : '0%',
                     ...projectHueStyle(project.id),
                   }"
                 />

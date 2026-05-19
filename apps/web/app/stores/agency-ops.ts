@@ -36,6 +36,15 @@ type AgencyProject = {
   updatedAt: string;
 };
 
+type AgencyProjectTask = {
+  id: string;
+  teamId: string;
+  projectId: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type AgencyTag = {
   id: string;
   teamId: string;
@@ -56,6 +65,10 @@ type AgencyProjectsListQueryData = {
   page: number;
   pageSize: number;
   total: number;
+};
+
+type AgencyProjectTasksListQueryData = {
+  items: AgencyProjectTask[];
 };
 
 type AgencyTagsListQueryData = {
@@ -84,6 +97,12 @@ type RegisteredProjectsQuery = {
   clientId?: string;
 };
 
+type RegisteredProjectTasksQuery = {
+  queryKey: QueryKey;
+  teamId: string;
+  projectId: string;
+};
+
 type RegisteredTagsQuery = {
   queryKey: QueryKey;
   teamId: string;
@@ -110,6 +129,18 @@ type CreateProjectPayload = {
   /** Used to fill the optimistic row's clientName field. */
   clientName: string;
   name: string;
+};
+
+type CreateProjectTaskPayload = {
+  teamId: string;
+  projectId: string;
+  title: string;
+};
+
+type DeleteProjectTaskPayload = {
+  teamId: string;
+  taskId: string;
+  taskTitle: string;
 };
 
 type CreateTagPayload = {
@@ -176,7 +207,9 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
   // Pending-mutation counters exposed so components can disable buttons.
   const clientMutationCount = ref(0);
   const projectMutationCount = ref(0);
+  const taskMutationCount = ref(0);
   const tagMutationCount = ref(0);
+  const deletingTaskIds = ref<string[]>([]);
   const deletingTagIds = ref<string[]>([]);
   const contactMutationCount = ref(0);
   const rateMutationCount = ref(0);
@@ -185,6 +218,7 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
 
   const isClientMutationPending = computed(() => clientMutationCount.value > 0);
   const isProjectMutationPending = computed(() => projectMutationCount.value > 0);
+  const isTaskMutationPending = computed(() => taskMutationCount.value > 0);
   const isTagMutationPending = computed(() => tagMutationCount.value > 0);
   const isContactMutationPending = computed(() => contactMutationCount.value > 0);
   const isRateMutationPending = computed(() => rateMutationCount.value > 0);
@@ -197,6 +231,7 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
   type RefCounted<T> = { payload: T; count: number };
   const clientsQueryRegistry = new Map<string, RefCounted<RegisteredClientsQuery>>();
   const projectsQueryRegistry = new Map<string, RefCounted<RegisteredProjectsQuery>>();
+  const projectTasksQueryRegistry = new Map<string, RefCounted<RegisteredProjectTasksQuery>>();
   const tagsQueryRegistry = new Map<string, RefCounted<RegisteredTagsQuery>>();
 
   // Mutations
@@ -204,13 +239,21 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
   const updateClientMutation = useMutation(orpc.agencyOps.clients.update.mutationOptions());
   const archiveClientMutation = useMutation(orpc.agencyOps.clients.archive.mutationOptions());
   const createProjectMutation = useMutation(orpc.agencyOps.projects.create.mutationOptions());
+  const createProjectTaskMutation = useMutation(
+    orpc.agencyOps.projectTasks.create.mutationOptions(),
+  );
+  const deleteProjectTaskMutation = useMutation(
+    orpc.agencyOps.projectTasks.delete.mutationOptions(),
+  );
   const createTagMutation = useMutation(orpc.agencyOps.tags.create.mutationOptions());
   const deleteTagMutation = useMutation(orpc.agencyOps.tags.delete.mutationOptions());
   const upsertContactMutation = useMutation(orpc.agencyOps.contacts.upsert.mutationOptions());
   const upsertRateMutation = useMutation(orpc.agencyOps.rates.upsert.mutationOptions());
   const setCapacityMutation = useMutation(orpc.agencyOps.capacity.set.mutationOptions());
   const createInvoiceMutation = useMutation(orpc.agencyOps.invoices.create.mutationOptions());
-  const updateInvoiceStatusMutation = useMutation(orpc.agencyOps.invoices.updateStatus.mutationOptions());
+  const updateInvoiceStatusMutation = useMutation(
+    orpc.agencyOps.invoices.updateStatus.mutationOptions(),
+  );
 
   // ---------------------------------------------------------------------------
   // Registry helpers
@@ -220,11 +263,7 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     return JSON.stringify(queryKey);
   }
 
-  function registerInto<T>(
-    registry: Map<string, RefCounted<T>>,
-    key: string,
-    payload: T,
-  ) {
+  function registerInto<T>(registry: Map<string, RefCounted<T>>, key: string, payload: T) {
     const existing = registry.get(key);
     if (existing) {
       existing.count += 1;
@@ -260,6 +299,14 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
 
   function unregisterProjectsQuery(queryKey: QueryKey) {
     unregisterFrom(projectsQueryRegistry, registryKey(queryKey));
+  }
+
+  function registerProjectTasksQuery(payload: RegisteredProjectTasksQuery) {
+    registerInto(projectTasksQueryRegistry, registryKey(payload.queryKey), payload);
+  }
+
+  function unregisterProjectTasksQuery(queryKey: QueryKey) {
+    unregisterFrom(projectTasksQueryRegistry, registryKey(queryKey));
   }
 
   function registerTagsQuery(payload: RegisteredTagsQuery) {
@@ -345,17 +392,14 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
       // If the registry entry is scoped to a specific clientId, only patch
       // if it matches (or if it's a catch-all listing all clients).
       if (reg.clientId && reg.clientId !== project.clientId) return;
-      queryClient.setQueryData<AgencyProjectsListQueryData | undefined>(
-        reg.queryKey,
-        (current) => {
-          if (!current) return current;
-          return {
-            ...current,
-            items: [project, ...current.items],
-            total: current.total + 1,
-          };
-        },
-      );
+      queryClient.setQueryData<AgencyProjectsListQueryData | undefined>(reg.queryKey, (current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          items: [project, ...current.items],
+          total: current.total + 1,
+        };
+      });
     });
   }
 
@@ -363,6 +407,56 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     await queryClient.invalidateQueries({
       queryKey: orpc.agencyOps.projects.list.key({ input: { teamId } }),
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Project tasks cache patchers
+  // ---------------------------------------------------------------------------
+
+  function patchInsertedProjectTask(teamId: string, task: AgencyProjectTask) {
+    projectTasksQueryRegistry.forEach(({ payload: reg }) => {
+      if (reg.teamId !== teamId || reg.projectId !== task.projectId) return;
+      queryClient.setQueryData<AgencyProjectTasksListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            items: [task, ...current.items],
+          };
+        },
+      );
+    });
+  }
+
+  function patchDeletedProjectTask(teamId: string, taskId: string) {
+    projectTasksQueryRegistry.forEach(({ payload: reg }) => {
+      if (reg.teamId !== teamId) return;
+      queryClient.setQueryData<AgencyProjectTasksListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            items: current.items.filter((task) => task.id !== taskId),
+          };
+        },
+      );
+    });
+  }
+
+  async function invalidateProjectTasksQuery(teamId: string, projectId: string) {
+    await queryClient.invalidateQueries({
+      queryKey: orpc.agencyOps.projectTasks.list.key({ input: { teamId, projectId } }),
+    });
+  }
+
+  async function invalidateRegisteredProjectTasksQueries(teamId: string) {
+    await Promise.all(
+      registryPayloads(projectTasksQueryRegistry)
+        .filter((reg) => reg.teamId === teamId)
+        .map((reg) => queryClient.invalidateQueries({ queryKey: reg.queryKey })),
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -527,6 +621,76 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
       });
     } finally {
       projectMutationCount.value = Math.max(0, projectMutationCount.value - 1);
+    }
+  }
+
+  async function createProjectTask(payload: CreateProjectTaskPayload) {
+    const title = payload.title.trim();
+    if (!payload.teamId || !payload.projectId || !title) return;
+
+    const snapshots = snapshotQueries(registryPayloads(projectTasksQueryRegistry));
+    const nowIso = new Date().toISOString();
+    const optimisticTask: AgencyProjectTask = {
+      id: optimisticId("agency-project-task"),
+      teamId: payload.teamId,
+      projectId: payload.projectId,
+      title,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    taskMutationCount.value += 1;
+
+    try {
+      patchInsertedProjectTask(payload.teamId, optimisticTask);
+
+      await createProjectTaskMutation.mutateAsync({
+        teamId: payload.teamId,
+        projectId: payload.projectId,
+        title,
+      });
+
+      await invalidateProjectTasksQuery(payload.teamId, payload.projectId);
+
+      toast.add({ title: "Task added", description: title, color: "success" });
+    } catch (error) {
+      restoreQuerySnapshots(snapshots);
+      toast.add({
+        title: "Couldn't add task",
+        description: getErrorMessage(error, "Try again."),
+        color: "error",
+      });
+    } finally {
+      taskMutationCount.value = Math.max(0, taskMutationCount.value - 1);
+    }
+  }
+
+  async function deleteProjectTask(payload: DeleteProjectTaskPayload) {
+    if (!payload.teamId || !payload.taskId) return;
+
+    const snapshots = snapshotQueries(registryPayloads(projectTasksQueryRegistry));
+    deletingTaskIds.value = [...new Set([...deletingTaskIds.value, payload.taskId])];
+
+    try {
+      patchDeletedProjectTask(payload.teamId, payload.taskId);
+
+      await deleteProjectTaskMutation.mutateAsync({
+        teamId: payload.teamId,
+        taskId: payload.taskId,
+      });
+
+      await invalidateRegisteredProjectTasksQueries(payload.teamId);
+
+      toast.add({ title: "Task deleted", description: payload.taskTitle, color: "success" });
+    } catch (error) {
+      restoreQuerySnapshots(snapshots);
+      toast.add({
+        title: "Couldn't delete task",
+        description: getErrorMessage(error, "Try again."),
+        color: "error",
+      });
+    } finally {
+      deletingTaskIds.value = deletingTaskIds.value.filter((id) => id !== payload.taskId);
     }
   }
 
@@ -696,10 +860,7 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
   // Rates upsert
   // ---------------------------------------------------------------------------
 
-  async function upsertRate(
-    payload: UpsertRatePayload,
-    callbacks?: { onSuccess?: () => void },
-  ) {
+  async function upsertRate(payload: UpsertRatePayload, callbacks?: { onSuccess?: () => void }) {
     if (!payload.teamId || !payload.userId) return;
 
     rateMutationCount.value += 1;
@@ -735,10 +896,7 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
   // Capacity set
   // ---------------------------------------------------------------------------
 
-  async function setCapacity(
-    payload: SetCapacityPayload,
-    callbacks?: { onSuccess?: () => void },
-  ) {
+  async function setCapacity(payload: SetCapacityPayload, callbacks?: { onSuccess?: () => void }) {
     if (!payload.teamId || !payload.userId) return;
 
     capacityMutationCount.value += 1;
@@ -851,17 +1009,21 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     // State
     isClientMutationPending,
     isProjectMutationPending,
+    isTaskMutationPending,
     isTagMutationPending,
     isContactMutationPending,
     isRateMutationPending,
     isCapacityMutationPending,
     isInvoiceMutationPending,
+    deletingTaskIds,
     deletingTagIds,
     // Registry
     registerClientsQuery,
     unregisterClientsQuery,
     registerProjectsQuery,
     unregisterProjectsQuery,
+    registerProjectTasksQuery,
+    unregisterProjectTasksQuery,
     registerTagsQuery,
     unregisterTagsQuery,
     // Actions
@@ -869,6 +1031,8 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     updateClient,
     archiveClient,
     createProject,
+    createProjectTask,
+    deleteProjectTask,
     createTag,
     deleteTag,
     upsertContact,

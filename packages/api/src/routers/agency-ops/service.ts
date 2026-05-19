@@ -9,6 +9,7 @@ import {
   agencyOpsMemberCapacity,
   agencyOpsMemberRate,
   agencyOpsProject,
+  agencyOpsProjectTask,
   agencyOpsTag,
   agencyOpsTimeEntry,
   agencyOpsTimeEntryTag,
@@ -41,6 +42,15 @@ type AgencyProjectRecord = {
   clientId: string;
   clientName: string;
   name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type AgencyProjectTaskRecord = {
+  id: string;
+  teamId: string;
+  projectId: string;
+  title: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -256,6 +266,24 @@ function mapProjectRow(row: {
     clientId: row.clientId,
     clientName: row.clientName,
     name: row.name,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+function mapProjectTaskRow(row: {
+  id: string;
+  teamId: string;
+  projectId: string;
+  title: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): AgencyProjectTaskRecord {
+  return {
+    id: row.id,
+    teamId: row.teamId,
+    projectId: row.projectId,
+    title: row.title,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -690,6 +718,113 @@ export async function updateAgencyProject(
     ...updated,
     clientName: client?.name ?? "Unknown",
   });
+}
+
+export async function listAgencyProjectTasks(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
+
+  const rows = await db
+    .select({
+      id: agencyOpsProjectTask.id,
+      teamId: agencyOpsProjectTask.teamId,
+      projectId: agencyOpsProjectTask.projectId,
+      title: agencyOpsProjectTask.title,
+      createdAt: agencyOpsProjectTask.createdAt,
+      updatedAt: agencyOpsProjectTask.updatedAt,
+    })
+    .from(agencyOpsProjectTask)
+    .where(
+      and(
+        eq(agencyOpsProjectTask.teamId, input.teamId),
+        eq(agencyOpsProjectTask.projectId, input.projectId),
+      ),
+    )
+    .orderBy(desc(agencyOpsProjectTask.createdAt));
+
+  return {
+    items: rows.map(mapProjectTaskRow),
+  };
+}
+
+export async function createAgencyProjectTask(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+    title: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
+
+  const title = input.title.trim();
+  if (!title) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Task title is required.",
+    });
+  }
+
+  const now = new Date();
+  const [created] = await db
+    .insert(agencyOpsProjectTask)
+    .values({
+      id: createWorkspaceId("agency-project-task"),
+      teamId: input.teamId,
+      projectId: input.projectId,
+      title,
+      createdByUserId: actorUserId,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning({
+      id: agencyOpsProjectTask.id,
+      teamId: agencyOpsProjectTask.teamId,
+      projectId: agencyOpsProjectTask.projectId,
+      title: agencyOpsProjectTask.title,
+      createdAt: agencyOpsProjectTask.createdAt,
+      updatedAt: agencyOpsProjectTask.updatedAt,
+    });
+
+  if (!created) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
+  }
+
+  return mapProjectTaskRow(created);
+}
+
+export async function deleteAgencyProjectTask(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    taskId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+  const [deleted] = await db
+    .delete(agencyOpsProjectTask)
+    .where(
+      and(eq(agencyOpsProjectTask.teamId, input.teamId), eq(agencyOpsProjectTask.id, input.taskId)),
+    )
+    .returning({ id: agencyOpsProjectTask.id });
+
+  if (!deleted) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Task was not found.",
+    });
+  }
+
+  return {
+    taskId: deleted.id,
+    deleted: true,
+  };
 }
 
 export async function listTags(actorUserId: string, input: { teamId: string }) {
@@ -1405,7 +1540,10 @@ export async function listMemberRates(
     .select()
     .from(agencyOpsMemberRate)
     .where(
-      and(eq(agencyOpsMemberRate.teamId, input.teamId), inArray(agencyOpsMemberRate.userId, userIds)),
+      and(
+        eq(agencyOpsMemberRate.teamId, input.teamId),
+        inArray(agencyOpsMemberRate.userId, userIds),
+      ),
     );
 
   const rateByUserId = new Map(rateRows.map((r) => [r.userId, r]));
@@ -1485,8 +1623,12 @@ export async function upsertMemberRate(
           input.billableRateCents !== undefined
             ? input.billableRateCents
             : sql`COALESCE(${agencyOpsMemberRate.billableRateCents}, ${agencyOpsMemberRate.billableRateCents})`,
-        currency: input.currency !== undefined ? input.currency : sql`${agencyOpsMemberRate.currency}`,
-        effectiveFrom: input.effectiveFrom !== undefined ? effectiveFrom : sql`${agencyOpsMemberRate.effectiveFrom}`,
+        currency:
+          input.currency !== undefined ? input.currency : sql`${agencyOpsMemberRate.currency}`,
+        effectiveFrom:
+          input.effectiveFrom !== undefined
+            ? effectiveFrom
+            : sql`${agencyOpsMemberRate.effectiveFrom}`,
         updatedAt: now,
       },
     })
@@ -1578,7 +1720,10 @@ export async function listMemberCapacity(
   const loggedRows = await db
     .select({
       userId: agencyOpsTimeEntry.userId,
-      weekStart: sql<Date>`date_trunc('week', ${agencyOpsTimeEntry.startedAt} AT TIME ZONE 'UTC')`.as("week_start"),
+      weekStart:
+        sql<Date>`date_trunc('week', ${agencyOpsTimeEntry.startedAt} AT TIME ZONE 'UTC')`.as(
+          "week_start",
+        ),
       loggedSeconds: sum(agencyOpsTimeEntry.durationSeconds).as("logged_seconds"),
     })
     .from(agencyOpsTimeEntry)
@@ -1591,7 +1736,10 @@ export async function listMemberCapacity(
         lt(agencyOpsTimeEntry.startedAt, lastWeekEnd),
       ),
     )
-    .groupBy(agencyOpsTimeEntry.userId, sql`date_trunc('week', ${agencyOpsTimeEntry.startedAt} AT TIME ZONE 'UTC')`);
+    .groupBy(
+      agencyOpsTimeEntry.userId,
+      sql`date_trunc('week', ${agencyOpsTimeEntry.startedAt} AT TIME ZONE 'UTC')`,
+    );
 
   const capacityKey = (userId: string, weekIso: string) => `${userId}:${weekIso}`;
   const capacityMap = new Map<string, number>();
@@ -1661,7 +1809,11 @@ export async function setMemberCapacity(
       updatedAt: now,
     })
     .onConflictDoUpdate({
-      target: [agencyOpsMemberCapacity.teamId, agencyOpsMemberCapacity.userId, agencyOpsMemberCapacity.weekStart],
+      target: [
+        agencyOpsMemberCapacity.teamId,
+        agencyOpsMemberCapacity.userId,
+        agencyOpsMemberCapacity.weekStart,
+      ],
       set: { capacitySeconds: input.capacitySeconds, updatedAt: now },
     })
     .returning();
@@ -1693,7 +1845,10 @@ type AgencyInvoiceRecord = {
   paidAt: string | null;
 };
 
-async function getNextInvoiceNumber(teamId: string, tx: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db): Promise<string> {
+async function getNextInvoiceNumber(
+  teamId: string,
+  tx: typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0] = db,
+): Promise<string> {
   const [last] = await tx
     .select({ number: agencyOpsInvoice.number })
     .from(agencyOpsInvoice)
@@ -1749,10 +1904,7 @@ export async function listInvoices(
   return { items: rows.map((r) => mapInvoiceRow(r.invoice, r.clientName)) };
 }
 
-export async function getInvoiceSummary(
-  actorUserId: string,
-  input: { teamId: string },
-) {
+export async function getInvoiceSummary(actorUserId: string, input: { teamId: string }) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const rows = await db
@@ -1786,7 +1938,9 @@ export async function getInvoiceSummary(
   // (or the single currency if the team uses only one).
   const currencies = Object.keys(outstandingByCurrency);
   const outstandingCents =
-    currencies.length === 1 ? (outstandingByCurrency[currencies[0]!] ?? 0) : (outstandingByCurrency["USD"] ?? 0);
+    currencies.length === 1
+      ? (outstandingByCurrency[currencies[0]!] ?? 0)
+      : (outstandingByCurrency["USD"] ?? 0);
   const currency = currencies.length === 1 ? currencies[0]! : "USD";
 
   return { draftCount, sentCount, paidCount, outstandingCents, currency, outstandingByCurrency };
@@ -1842,7 +1996,10 @@ export async function createInvoice(
 
   // Fetch per-user billable rates so each user's work is priced correctly.
   const memberRateRows = await db
-    .select({ userId: agencyOpsMemberRate.userId, billableRateCents: agencyOpsMemberRate.billableRateCents })
+    .select({
+      userId: agencyOpsMemberRate.userId,
+      billableRateCents: agencyOpsMemberRate.billableRateCents,
+    })
     .from(agencyOpsMemberRate)
     .where(eq(agencyOpsMemberRate.teamId, input.teamId));
 
@@ -1850,7 +2007,9 @@ export async function createInvoice(
 
   // Check that every user who logged time has a rate set.
   const userIdsWithEntries = [...new Set(entries.map((e) => e.userId))];
-  const usersWithoutRate = userIdsWithEntries.filter((uid) => (rateByUserId.get(uid) ?? null) === null);
+  const usersWithoutRate = userIdsWithEntries.filter(
+    (uid) => (rateByUserId.get(uid) ?? null) === null,
+  );
   if (usersWithoutRate.length > 0) {
     throw new ORPCError("BAD_REQUEST", {
       message: `The following team members have no billable rate set: ${usersWithoutRate.join(", ")}. Set rates before creating an invoice.`,
@@ -1898,21 +2057,23 @@ export async function createInvoice(
     let total = 0;
 
     if (byProject.size > 0) {
-      const lineItems = [...byProject.entries()].map(([projectId, { projectName, seconds, rateCents }]) => {
-        const amountCents = Math.round((seconds / 3600) * rateCents);
-        total += amountCents;
-        return {
-          id: createWorkspaceId("agency-li"),
-          invoiceId: inv.id,
-          description: projectName,
-          projectId,
-          durationSeconds: seconds,
-          rateCents,
-          amountCents,
-          fromTimeEntries: true,
-          createdAt: now,
-        };
-      });
+      const lineItems = [...byProject.entries()].map(
+        ([projectId, { projectName, seconds, rateCents }]) => {
+          const amountCents = Math.round((seconds / 3600) * rateCents);
+          total += amountCents;
+          return {
+            id: createWorkspaceId("agency-li"),
+            invoiceId: inv.id,
+            description: projectName,
+            projectId,
+            durationSeconds: seconds,
+            rateCents,
+            amountCents,
+            fromTimeEntries: true,
+            createdAt: now,
+          };
+        },
+      );
       await tx.insert(agencyOpsInvoiceLineItem).values(lineItems);
     } else {
       await tx.insert(agencyOpsInvoiceLineItem).values({
@@ -1969,7 +2130,10 @@ export async function updateInvoiceStatus(
   }
 
   const now = new Date();
-  const patch: Partial<typeof agencyOpsInvoice.$inferInsert> = { status: input.status, updatedAt: now };
+  const patch: Partial<typeof agencyOpsInvoice.$inferInsert> = {
+    status: input.status,
+    updatedAt: now,
+  };
   if (input.status === "sent") patch.issuedAt = now;
   if (input.status === "paid") patch.paidAt = now;
 

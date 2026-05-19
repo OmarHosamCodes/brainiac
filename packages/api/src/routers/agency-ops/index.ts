@@ -5,8 +5,10 @@ import {
   archiveAgencyClient,
   createAgencyClient,
   createAgencyProject,
+  createAgencyProjectTask,
   createInvoice,
   createManualAgencyTimeEntry,
+  deleteAgencyProjectTask,
   createTag,
   deleteMyAgencyTimeEntry,
   deleteTag,
@@ -18,6 +20,7 @@ import {
   getInvoiceSummary,
   listAgencyClients,
   listAgencyProjects,
+  listAgencyProjectTasks,
   listAllAgencyTimeEntries,
   listInvoices,
   listMemberCapacity,
@@ -58,6 +61,15 @@ const agencyProjectSchema = z.object({
   clientId: z.string().min(1),
   clientName: z.string().min(1),
   name: z.string().min(1),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+const agencyProjectTaskSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  projectId: z.string().min(1),
+  title: z.string().min(1),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -165,13 +177,17 @@ const timeSummarySchema = z.object({
 
 export const agencyOpsRouter = {
   clients: {
-    list: protectedProProcedure.input(teamScopedInputSchema.extend({
-      includeArchived: z.boolean().optional(),
-    })).handler(async ({ context, input }) => {
-      return z
-        .object({ items: z.array(agencyClientSchema) })
-        .parse(await listAgencyClients(context.session.user.id, input));
-    }),
+    list: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          includeArchived: z.boolean().optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ items: z.array(agencyClientSchema) })
+          .parse(await listAgencyClients(context.session.user.id, input));
+      }),
     create: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
@@ -240,20 +256,61 @@ export const agencyOpsRouter = {
         return agencyProjectSchema.parse(await updateAgencyProject(context.session.user.id, input));
       }),
   },
+  projectTasks: {
+    list: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          projectId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ items: z.array(agencyProjectTaskSchema) })
+          .parse(await listAgencyProjectTasks(context.session.user.id, input));
+      }),
+    create: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          projectId: z.string().min(1),
+          title: z.string().trim().min(1).max(240),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return agencyProjectTaskSchema.parse(
+          await createAgencyProjectTask(context.session.user.id, input),
+        );
+      }),
+    delete: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          taskId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            taskId: z.string().min(1),
+            deleted: z.boolean(),
+          })
+          .parse(await deleteAgencyProjectTask(context.session.user.id, input));
+      }),
+  },
   contacts: {
     get: protectedProProcedure
       .input(teamScopedInputSchema.extend({ clientId: z.string().min(1) }))
       .handler(async ({ context, input }) => {
-        const contactSchema = z.object({
-          id: z.string().min(1),
-          teamId: z.string().min(1),
-          clientId: z.string().min(1),
-          name: z.string(),
-          email: z.string(),
-          phone: z.string(),
-          createdAt: z.string().datetime(),
-          updatedAt: z.string().datetime(),
-        }).nullable();
+        const contactSchema = z
+          .object({
+            id: z.string().min(1),
+            teamId: z.string().min(1),
+            clientId: z.string().min(1),
+            name: z.string(),
+            email: z.string(),
+            phone: z.string(),
+            createdAt: z.string().datetime(),
+            updatedAt: z.string().datetime(),
+          })
+          .nullable();
         return contactSchema.parse(await getClientContact(context.session.user.id, input));
       }),
     upsert: protectedProProcedure
@@ -519,25 +576,23 @@ export const agencyOpsRouter = {
       }),
   },
   rates: {
-    list: protectedProProcedure
-      .input(teamScopedInputSchema)
-      .handler(async ({ context, input }) => {
-        return z
-          .object({
-            items: z.array(
-              z.object({
-                userId: z.string().min(1),
-                userName: z.string().min(1),
-                userEmail: z.email(),
-                costRateCents: z.number().int().nonnegative().nullable(),
-                billableRateCents: z.number().int().nonnegative().nullable(),
-                currency: z.string().min(1),
-                effectiveFrom: z.string().datetime().nullable(),
-              }),
-            ),
-          })
-          .parse(await listMemberRates(context.session.user.id, input));
-      }),
+    list: protectedProProcedure.input(teamScopedInputSchema).handler(async ({ context, input }) => {
+      return z
+        .object({
+          items: z.array(
+            z.object({
+              userId: z.string().min(1),
+              userName: z.string().min(1),
+              userEmail: z.email(),
+              costRateCents: z.number().int().nonnegative().nullable(),
+              billableRateCents: z.number().int().nonnegative().nullable(),
+              currency: z.string().min(1),
+              effectiveFrom: z.string().datetime().nullable(),
+            }),
+          ),
+        })
+        .parse(await listMemberRates(context.session.user.id, input));
+    }),
     upsert: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
@@ -702,53 +757,51 @@ export const agencyOpsRouter = {
       }),
   },
   integrations: {
-    list: protectedProProcedure
-      .input(teamScopedInputSchema)
-      .handler(async () => {
-        return z
-          .object({
-            items: z.array(
-              z.object({
-                id: z.enum(["slack", "calendar", "quickbooks", "webhooks"]),
-                name: z.string().min(1),
-                description: z.string().min(1),
-                status: z.enum(["available", "connected"]),
-                connectedAt: z.string().datetime().nullable(),
-              }),
-            ),
-          })
-          .parse({
-            items: [
-              {
-                id: "slack",
-                name: "Slack",
-                description: "Daily totals and budget warnings in your channel.",
-                status: "available",
-                connectedAt: null,
-              },
-              {
-                id: "calendar",
-                name: "Calendar",
-                description: "Suggest time entries from Google or Outlook events.",
-                status: "available",
-                connectedAt: null,
-              },
-              {
-                id: "quickbooks",
-                name: "QuickBooks · Xero",
-                description: "Send invoices straight to your books.",
-                status: "available",
-                connectedAt: null,
-              },
-              {
-                id: "webhooks",
-                name: "Webhooks",
-                description: "Stream entries into anything you already script.",
-                status: "available",
-                connectedAt: null,
-              },
-            ],
-          });
-      }),
+    list: protectedProProcedure.input(teamScopedInputSchema).handler(async () => {
+      return z
+        .object({
+          items: z.array(
+            z.object({
+              id: z.enum(["slack", "calendar", "quickbooks", "webhooks"]),
+              name: z.string().min(1),
+              description: z.string().min(1),
+              status: z.enum(["available", "connected"]),
+              connectedAt: z.string().datetime().nullable(),
+            }),
+          ),
+        })
+        .parse({
+          items: [
+            {
+              id: "slack",
+              name: "Slack",
+              description: "Daily totals and budget warnings in your channel.",
+              status: "available",
+              connectedAt: null,
+            },
+            {
+              id: "calendar",
+              name: "Calendar",
+              description: "Suggest time entries from Google or Outlook events.",
+              status: "available",
+              connectedAt: null,
+            },
+            {
+              id: "quickbooks",
+              name: "QuickBooks · Xero",
+              description: "Send invoices straight to your books.",
+              status: "available",
+              connectedAt: null,
+            },
+            {
+              id: "webhooks",
+              name: "Webhooks",
+              description: "Stream entries into anything you already script.",
+              status: "available",
+              connectedAt: null,
+            },
+          ],
+        });
+    }),
   },
 };
