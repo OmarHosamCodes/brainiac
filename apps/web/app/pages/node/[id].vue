@@ -115,6 +115,7 @@ const toast = useToast();
 const orpc = useOrpc();
 const workspaceStore = useWorkspaceStore();
 const {
+  hasWorkspaceLoaded,
   isWorkspaceInitialLoading,
   isWorkspaceRefreshing,
   nodes: draftNodes,
@@ -146,7 +147,7 @@ const node = computed(() => {
 const activeTabId = computed(() => node.value?.viewState.activeTabId ?? "");
 const { setAgentDockOpen } = useAppShell();
 useAppShellCustomDock();
-useAppShellPageTitle(computed(() => node.value?.title ?? "Node"));
+useAppShellPageTitle(computed(() => node.value?.title ?? null));
 const agentContextTargets = ref<AgentContextTarget[]>([]);
 const {
   activeTeamMembership,
@@ -2629,7 +2630,10 @@ provide(workspaceNodeEditorContextKey, {
       />
     </div>
 
-    <div v-else-if="isWorkspaceInitialLoading" class="flex h-full w-full gap-0 overflow-hidden">
+    <div
+      v-else-if="isWorkspaceInitialLoading || !hasWorkspaceLoaded"
+      class="flex h-full w-full gap-0 overflow-hidden"
+    >
       <!-- Sidebar Skeleton -->
       <div class="w-80 border-r border-muted/30 bg-default/40 p-6 space-y-8">
         <div class="space-y-4">

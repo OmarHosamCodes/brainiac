@@ -98,6 +98,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
   const isWorkspaceRefreshing = computed(
     () => loadApplied.value && (workspaceQuery.isRefetching.value || isPreloadingWorkspace.value),
   );
+  const hasWorkspaceLoaded = computed(() => loadApplied.value);
   const isDraftValid = computed(() => nodeDraft.title.trim().length > 0);
   const editorBlockOptions = computed<WorkspaceNodeDashboardSelectableBlock[]>(() => {
     if (!activeNodeId.value) {
@@ -645,6 +646,7 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     workspaceQuery,
     preloadWorkspace,
     workspaceReadyForEdits,
+    hasWorkspaceLoaded,
     isWorkspaceInitialLoading,
     isWorkspaceRefreshing,
     nodes,
