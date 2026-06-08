@@ -1,6 +1,6 @@
 import { db } from "@brainiac/db";
 import * as schema from "@brainiac/db/schema/auth";
-import { env } from "@brainiac/env/server";
+import { corsOrigins, env, primaryCorsOrigin } from "@brainiac/env/server";
 import { checkout, polar, portal, webhooks } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import { betterAuth } from "better-auth";
@@ -17,7 +17,7 @@ export const auth = betterAuth({
 
     schema: schema,
   }),
-  trustedOrigins: [env.CORS_ORIGIN],
+  trustedOrigins: corsOrigins,
   emailAndPassword: {
     enabled: true,
   },
@@ -54,10 +54,10 @@ export const auth = betterAuth({
           ],
           successUrl: "/billing/success?checkout_id={CHECKOUT_ID}",
           authenticatedUsersOnly: true,
-          returnUrl: new URL("/pricing", env.CORS_ORIGIN).toString(),
+          returnUrl: new URL("/pricing", primaryCorsOrigin).toString(),
         }),
         portal({
-          returnUrl: new URL("/dashboard", env.CORS_ORIGIN).toString(),
+          returnUrl: new URL("/dashboard", primaryCorsOrigin).toString(),
         }),
         webhooks({
           secret: env.POLAR_WEBHOOK_SECRET,

@@ -2,6 +2,27 @@ import "dotenv/config";
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
+function parseOriginList(value: string) {
+  return value
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+}
+
+const corsOriginSchema = z.string().refine(
+  (value) =>
+    parseOriginList(value).length > 0 &&
+    parseOriginList(value).every((origin) => {
+      try {
+        new URL(origin);
+        return true;
+      } catch {
+        return false;
+      }
+    }),
+  "CORS_ORIGIN must be one or more comma-separated URLs (e.g., http://localhost:7001,http://localhost:7002)",
+);
+
 /**
  * Server environment validation
  *
@@ -20,7 +41,7 @@ export const env = createEnv({
         "BETTER_AUTH_SECRET must be at least 32 characters (generate with: openssl rand -hex 16)",
       ),
     BETTER_AUTH_URL: z.url("BETTER_AUTH_URL must be a valid URL (e.g., http://localhost:7000)"),
-    CORS_ORIGIN: z.url("CORS_ORIGIN must be a valid URL (e.g., http://localhost:7001)"),
+    CORS_ORIGIN: corsOriginSchema,
     OPENROUTER_API_KEY: z
       .string()
       .min(1, "OPENROUTER_API_KEY is required. Get one from https://openrouter.ai/keys"),
@@ -36,3 +57,6 @@ export const env = createEnv({
   emptyStringAsUndefined: true,
   skipValidation: true,
 });
+
+export const corsOrigins = parseOriginList(env.CORS_ORIGIN);
+export const primaryCorsOrigin = corsOrigins[0] ?? env.CORS_ORIGIN;
