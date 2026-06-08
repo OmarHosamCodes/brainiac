@@ -46,7 +46,8 @@
     "react-dom": "latest",
     "tailwind-merge": "^3",
     "tailwindcss": "^4.2.1",
-    "zod": "catalog:"
+    "zod": "catalog:",
+    "zustand": "^4.5.5"
   },
   "devDependencies": {
     "@tanstack/router-plugin": "latest",
