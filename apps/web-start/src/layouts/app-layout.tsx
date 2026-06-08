@@ -71,43 +71,43 @@ export function useAppShell(): AppShellContextValue {
 }
 
 export function useAppShellPageTitle(title: string): void {
-  const shell = useAppShell();
+  const { setTitle } = useAppShell();
   React.useEffect(() => {
-    shell.setTitle(title);
-    return () => shell.setTitle("Workspace");
-  }, [shell, title]);
+    setTitle(title);
+    return () => setTitle("Workspace");
+  }, [setTitle, title]);
 }
 
 export function useAppShellActions(node: React.ReactNode): void {
-  const shell = useAppShell();
+  const { setActions } = useAppShell();
   React.useEffect(() => {
-    shell.setActions(node);
-    return () => shell.setActions(null);
-  }, [shell, node]);
+    setActions(node);
+    return () => setActions(null);
+  }, [setActions, node]);
 }
 
 export function useAppShellContext(node: React.ReactNode): void {
-  const shell = useAppShell();
+  const { setContext } = useAppShell();
   React.useEffect(() => {
-    shell.setContext(node);
-    return () => shell.setContext(null);
-  }, [shell, node]);
+    setContext(node);
+    return () => setContext(null);
+  }, [setContext, node]);
 }
 
 export function useAppShellDockContent(node: React.ReactNode): void {
-  const shell = useAppShell();
+  const { setDockContent } = useAppShell();
   React.useEffect(() => {
-    shell.setDockContent(node);
-    return () => shell.setDockContent(null);
-  }, [shell, node]);
+    setDockContent(node);
+    return () => setDockContent(null);
+  }, [setDockContent, node]);
 }
 
 export function useAppShellCustomDock(): void {
-  const shell = useAppShell();
+  const { setCustomDock } = useAppShell();
   React.useEffect(() => {
-    shell.setCustomDock(true);
-    return () => shell.setCustomDock(false);
-  }, [shell]);
+    setCustomDock(true);
+    return () => setCustomDock(false);
+  }, [setCustomDock]);
 }
 
 const navigationItems = [

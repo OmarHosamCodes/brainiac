@@ -3,11 +3,13 @@ import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 import { useAppShellActions, useAppShellCustomDock, useAppShellDockContent, useAppShellPageTitle } from "@/hooks/use-app-shell";
 import { useTeamSelection } from "@/hooks/use-team-selection";
-import { useWorkspaceSnapshot } from "@/hooks/use-workspace";
 import { useDashboard } from "@/stores/dashboard";
 import { useWorkspaceState } from "@/hooks/useWorkspaceState";
+import { orpc } from "@/lib/orpc";
+import { getErrorMessage } from "@/utils/get-error-message";
 import { DashboardWorkspaceSidebar } from "./dashboard-workspace-sidebar";
 import { InfiniteCanvas } from "./infinite-canvas";
 import { WorkspaceEditorModal } from "../workspace/workspace-editor-modal";
@@ -17,74 +19,42 @@ export function DashboardSurface() {
   useAppShellPageTitle("Dashboard");
   useAppShellCustomDock();
 
-  const workspaceQuery = useWorkspaceSnapshot();
   const teamSelection = useTeamSelection();
   const workspaceState = useWorkspaceState();
+  const workspaceQuery = workspaceState.workspaceQuery;
   
   // Dashboard UI state
   const dashboardState = useDashboard();
   const [sidebarCompact, setSidebarCompact] = React.useState(false);
   const [selectedTeamId, setSelectedTeamId] = React.useState(teamSelection.selectedTeamId || "");
-  const [isCreateMode, setIsCreateMode] = React.useState(false);
   
-  const nodes = workspaceQuery.data?.nodes ?? [];
+  const nodes = workspaceState.nodes;
   const teams = teamSelection.teams ?? [];
 
-  // Modal state
-  const [modalOpen, setModalOpen] = React.useState(false);
-  const [editingNodeId, setEditingNodeId] = React.useState<string | null>(null);
-  const [formData, setFormData] = React.useState({
-    title: "",
-    content: "",
-    nodeType: "standard" as const,
-    tint: "neutral" as const,
-    featuredBlocks: [] as Array<{ tabId: string; blockId: string }>,
-  });
-
   const handleCreateNode = React.useCallback(() => {
-    setIsCreateMode(true);
-    setEditingNodeId(null);
-    setFormData({
-      title: "",
-      content: "",
-      nodeType: "standard",
-      tint: "neutral",
-      featuredBlocks: [],
+    const { translateX, translateY, scale } = dashboardState.viewState;
+    workspaceState.openCreateNode({
+      x: (360 - translateX) / scale,
+      y: (220 - translateY) / scale,
     });
-    setModalOpen(true);
-  }, []);
+  }, [dashboardState.viewState, workspaceState]);
 
   const handleEditNode = React.useCallback((nodeId: string) => {
-    const node = nodes.find((n) => n.id === nodeId);
-    if (!node) return;
-
-    setIsCreateMode(false);
-    setEditingNodeId(nodeId);
-    setFormData({
-      title: node.title,
-      content: node.content,
-      nodeType: node.nodeType,
-      tint: node.dashboard.tint,
-      featuredBlocks: node.dashboard.featuredBlocks,
-    });
-    setModalOpen(true);
-  }, [nodes]);
+    workspaceState.openEditNode({ nodeId });
+  }, [workspaceState]);
 
   const handleDeleteNode = React.useCallback((nodeId: string) => {
-    // TODO: implement delete mutation
-    console.log("Delete node:", nodeId);
-  }, []);
+    const node = nodes.find((entry) => entry.id === nodeId);
+    if (!node) return;
 
-  const handleSubmitModal = React.useCallback(async () => {
-    if (isCreateMode) {
-      // TODO: implement create mutation
-      console.log("Create node:", formData);
-    } else {
-      // TODO: implement update mutation
-      console.log("Update node:", editingNodeId, formData);
+    if (window.confirm(`Delete node "${node.title || "Untitled node"}"?`)) {
+      workspaceState.removeNode({ nodeId });
     }
-    setModalOpen(false);
-  }, [formData, isCreateMode, editingNodeId]);
+  }, [nodes, workspaceState]);
+
+  const handleSubmitModal = React.useCallback(() => {
+    workspaceState.submitNodeEditor();
+  }, [workspaceState]);
 
   const shellActions = React.useMemo(
     () => (
@@ -112,6 +82,56 @@ export function DashboardSurface() {
   useAppShellDockContent(dockContent);
 
   const selectedNode = nodes.find((n) => dashboardState.selectedNodeId === n.id);
+  const selectedNodeTeamRole =
+    selectedNode?.visibility === "team" && selectedNode.teamId
+      ? teams.find((team) => team.id === selectedNode.teamId)?.role
+      : teams.find((team) => team.id === selectedTeamId)?.role;
+  const canManageSelectedNodeSharing = selectedNodeTeamRole === "owner";
+
+  const toggleSelectedNodeSharing = React.useCallback(async () => {
+    if (!selectedNode) {
+      return;
+    }
+
+    if (!canManageSelectedNodeSharing) {
+      toast({
+        title: "Owner role required",
+        description: "Only team owners can change node sharing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      if (selectedNode.visibility === "team") {
+        await orpc.workspace.unshareNode.call({ nodeId: selectedNode.id });
+        toast({ title: "Node unshared" });
+      } else {
+        if (!selectedTeamId) {
+          toast({
+            title: "Select a team",
+            description: "Choose a team before sharing this node.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        await orpc.workspace.shareNode.call({
+          nodeId: selectedNode.id,
+          teamId: selectedTeamId,
+        });
+        toast({ title: "Node shared" });
+      }
+
+      await workspaceQuery.refetch();
+    } catch (error) {
+      toast({
+        title: "Sharing update failed",
+        description: getErrorMessage(error, "Please try again."),
+        variant: "destructive",
+      });
+    }
+  }, [canManageSelectedNodeSharing, selectedNode, selectedTeamId, workspaceQuery]);
 
   return (
     <div className="flex h-full">
@@ -124,19 +144,17 @@ export function DashboardSurface() {
         onSelectedTeamChange={setSelectedTeamId}
         teams={teams.map((t) => ({ id: t.id, name: t.name }))}
         onCreateTeam={(name) => {
-          // TODO: implement create team mutation
-          console.log("Create team:", name);
+          toast({
+            title: "Team creation unavailable here",
+            description: `${name} was not created. Use team settings for membership changes.`,
+          });
         }}
         selectedNodeTitle={selectedNode?.title ?? null}
         isSelectedNodeShared={selectedNode?.visibility === "team"}
-        canManageSharing={true} // TODO: check actual permission
-        onToggleNodeSharing={() => {
-          // TODO: implement share mutation
-          console.log("Toggle sharing for node:", selectedNode?.id);
-        }}
+        canManageSharing={canManageSelectedNodeSharing}
+        onToggleNodeSharing={() => void toggleSelectedNodeSharing()}
         onOpenTeamSettings={() => {
-          // TODO: open team settings modal
-          console.log("Open team settings");
+          toast({ title: "Team settings are available from the team surface." });
         }}
       />
 
@@ -177,7 +195,7 @@ export function DashboardSurface() {
               selectedNodeIds={dashboardState.selectedNodeId ? [dashboardState.selectedNodeId] : []}
               onNodeSelect={(nodeId) => dashboardState.setSelectedNodeId(nodeId)}
               onCanvasClick={(x, y) => {
-                handleCreateNode();
+                workspaceState.openCreateNode({ x, y });
               }}
               onNodeEdit={handleEditNode}
               onNodeDelete={handleDeleteNode}
@@ -190,21 +208,23 @@ export function DashboardSurface() {
 
       {/* Editor Modal */}
       <WorkspaceEditorModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        mode={isCreateMode ? "create" : "edit"}
-        title={formData.title}
-        onTitleChange={(title) => setFormData((prev) => ({ ...prev, title }))}
-        content={formData.content}
-        onContentChange={(content) => setFormData((prev) => ({ ...prev, content }))}
-        nodeType={formData.nodeType}
-        onNodeTypeChange={(nodeType) => setFormData((prev) => ({ ...prev, nodeType }))}
-        tint={formData.tint}
-        onTintChange={(tint) => setFormData((prev) => ({ ...prev, tint }))}
-        featuredBlocks={formData.featuredBlocks}
-        onFeaturedBlocksChange={(blocks) => setFormData((prev) => ({ ...prev, featuredBlocks: blocks }))}
-        availableBlocks={selectedNode?.dashboard.availableBlocks ?? []}
-        valid={formData.title.trim().length > 0}
+        open={workspaceState.editorOpen}
+        onOpenChange={(open) => {
+          if (!open) workspaceState.closeEditor();
+        }}
+        mode={workspaceState.editorMode}
+        title={workspaceState.nodeDraft.title}
+        onTitleChange={workspaceState.updateNodeDraftTitle}
+        content={workspaceState.nodeDraft.content}
+        onContentChange={workspaceState.updateNodeDraftContent}
+        nodeType={workspaceState.nodeDraft.nodeType}
+        onNodeTypeChange={workspaceState.updateNodeDraftNodeType}
+        tint={workspaceState.nodeDraft.tint}
+        onTintChange={workspaceState.updateNodeDraftTint}
+        featuredBlocks={workspaceState.nodeDraft.featuredBlocks}
+        onFeaturedBlocksChange={workspaceState.updateNodeDraftFeaturedBlocks}
+        availableBlocks={workspaceState.editorBlockOptions}
+        valid={workspaceState.isDraftValid}
         onSubmit={handleSubmitModal}
       />
     </div>

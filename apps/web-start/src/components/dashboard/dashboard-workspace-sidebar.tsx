@@ -9,8 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 
 type DashboardWorkspaceSidebarProps = {
@@ -108,7 +106,6 @@ export function DashboardWorkspaceSidebar({
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleCreateTeam();
               }}
-              size="sm"
               className="flex-1 h-9"
             />
             <Button
@@ -128,7 +125,7 @@ export function DashboardWorkspaceSidebar({
             Share Target
           </Label>
           <Select value={selectedTeamId} onValueChange={onSelectedTeamChange}>
-            <SelectTrigger size="sm">
+            <SelectTrigger className="h-9">
               <SelectValue placeholder="Select a team" />
             </SelectTrigger>
             <SelectContent>
@@ -142,7 +139,7 @@ export function DashboardWorkspaceSidebar({
         </div>
 
         {/* Team Management */}
-        <Card className="p-3">
+        <section className="rounded-2xl border bg-background p-3">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
             Team Management
           </p>
@@ -150,7 +147,6 @@ export function DashboardWorkspaceSidebar({
             Open the dedicated team settings modal to manage members and access rules.
           </p>
           <Button
-            block
             size="sm"
             onClick={onOpenTeamSettings}
             disabled={!selectedTeamId}
@@ -158,10 +154,10 @@ export function DashboardWorkspaceSidebar({
           >
             Manage Team
           </Button>
-        </Card>
+        </section>
 
         {/* Selected Node */}
-        <Card className="p-3">
+        <section className="rounded-2xl border bg-background p-3">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
             Selected Node
           </p>
@@ -178,7 +174,6 @@ export function DashboardWorkspaceSidebar({
 
           {canManageSharing && selectedNodeTitle && (
             <Button
-              block
               size="sm"
               variant={isSelectedNodeShared ? "outline" : "default"}
               onClick={onToggleNodeSharing}
@@ -187,7 +182,7 @@ export function DashboardWorkspaceSidebar({
               {isSelectedNodeShared ? "Unshare Node" : "Share Node"}
             </Button>
           )}
-        </Card>
+        </section>
       </div>
     </aside>
   );

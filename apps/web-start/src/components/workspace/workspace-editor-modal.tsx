@@ -51,28 +51,28 @@ type WorkspaceEditorModalProps = {
 const TINT_OPTIONS: WorkspaceNodeTint[] = [
   "neutral",
   "emerald",
-  "blue",
+  "sky",
   "amber",
-  "red",
-  "purple",
+  "rose",
+  "indigo",
 ];
 
 const TINT_LABELS: Record<WorkspaceNodeTint, string> = {
   neutral: "Neutral",
   emerald: "Emerald",
-  blue: "Blue",
+  sky: "Sky",
   amber: "Amber",
-  red: "Red",
-  purple: "Purple",
+  rose: "Rose",
+  indigo: "Indigo",
 };
 
 const TINT_COLORS: Record<WorkspaceNodeTint, string> = {
   neutral: "bg-zinc-200",
   emerald: "bg-emerald-200",
-  blue: "bg-blue-200",
+  sky: "bg-sky-200",
   amber: "bg-amber-200",
-  red: "bg-red-200",
-  purple: "bg-purple-200",
+  rose: "bg-rose-200",
+  indigo: "bg-indigo-200",
 };
 
 export function WorkspaceEditorModal({
@@ -188,7 +188,6 @@ export function WorkspaceEditorModal({
     [featuredBlocks, isFeaturedBlockSelected, onFeaturedBlocksChange, selectionLimitReached],
   );
 
-  const nodeTypeLabel = nodeType === "orchestrator" ? "Orchestrator" : "Standard";
   const nodeTypeDescription =
     nodeType === "orchestrator"
       ? "Can connect to standard nodes and coordinate work across the workspace."

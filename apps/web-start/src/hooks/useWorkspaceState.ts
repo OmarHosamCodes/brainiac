@@ -1,17 +1,28 @@
 import { useShallow } from "zustand/react/shallow";
-import { useCallback } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useWorkspaceStore } from "@/stores/workspace";
 import { orpc } from "@/lib/orpc";
 import type { WorkspaceNodeDashboardFeaturedBlock } from "@brainiac/workspace";
+import { useSession } from "@/lib/auth-client";
 
 /**
  * Hook for workspace node management.
  * Provides access to workspace state and mutations.
  */
-export function useWorkspaceState(authSessionExists: boolean) {
+export function useWorkspaceState(authSessionExistsInput?: boolean) {
+  const session = useSession();
+  const authSessionExists = authSessionExistsInput ?? Boolean(session.data?.user);
   const queryClient = useQueryClient();
+  const workspaceQueryOptions = useMemo(() => orpc.workspace.get.queryOptions(), []);
+  const workspaceQuery = useQuery({
+    ...workspaceQueryOptions,
+    enabled: authSessionExists,
+    staleTime: 30_000,
+    refetchOnReconnect: true,
+    refetchOnWindowFocus: false,
+  });
 
   const {
     nodes,
@@ -63,6 +74,40 @@ export function useWorkspaceState(authSessionExists: boolean) {
   const submitNodeEditor = useWorkspaceStore((state) => state.submitNodeEditor);
   const findNode = useWorkspaceStore((state) => state.findNode);
   const updateNodes = useWorkspaceStore((state) => state.updateNodes);
+  const handleRemoteWorkspace = useWorkspaceStore((state) => state.handleRemoteWorkspace);
+  const resetWorkspaceState = useWorkspaceStore((state) => state.resetWorkspaceState);
+  const setWorkspaceQueryContext = useWorkspaceStore((state) => state.setWorkspaceQueryContext);
+
+  useEffect(() => {
+    setWorkspaceQueryContext({
+      queryClient,
+      queryKey: workspaceQueryOptions.queryKey,
+    });
+  }, [queryClient, setWorkspaceQueryContext, workspaceQueryOptions.queryKey]);
+
+  useEffect(() => {
+    if (!authSessionExists) {
+      resetWorkspaceState();
+      return;
+    }
+
+    void useWorkspaceStore
+      .getState()
+      .preloadWorkspace(authSessionExists, queryClient)
+      .catch(() => {
+        // Query error state is exposed by workspaceQuery.
+      });
+  }, [authSessionExists, queryClient, resetWorkspaceState]);
+
+  // Only sync remote workspace when data first loads or updatedAt changes
+  // This prevents infinite loops from query refetches
+  const remoteWorkspaceKey = workspaceQuery.data ? `${workspaceQuery.data.updatedAt}-${workspaceQuery.data.nodes.length}` : null;
+  useEffect(() => {
+    if (!workspaceQuery.data) {
+      return;
+    }
+    handleRemoteWorkspace(workspaceQuery.data);
+  }, [handleRemoteWorkspace, remoteWorkspaceKey]);
 
   // Handle node draft updates
   const updateNodeDraftTitle = useCallback((title: string) => {
@@ -108,9 +153,7 @@ export function useWorkspaceState(authSessionExists: boolean) {
     useWorkspaceStore.setState({ isPreloadingWorkspace: true });
 
     try {
-      const data = await queryClient.ensureQueryData(
-        orpc.workspace.get.queryOptions(),
-      );
+      const data = await queryClient.ensureQueryData(workspaceQueryOptions);
 
       if (data && !store.loadApplied) {
         useWorkspaceStore.getState().applyRemoteSnapshot(data.nodes, data.updatedAt);
@@ -120,7 +163,7 @@ export function useWorkspaceState(authSessionExists: boolean) {
     } finally {
       useWorkspaceStore.setState({ isPreloadingWorkspace: false });
     }
-  }, [authSessionExists, queryClient]);
+  }, [authSessionExists, queryClient, workspaceQueryOptions]);
 
   return {
     // State
@@ -156,6 +199,7 @@ export function useWorkspaceState(authSessionExists: boolean) {
     findNode,
     updateNodes,
     preloadWorkspace,
+    workspaceQuery,
 
     // Draft updates
     updateNodeDraftTitle,

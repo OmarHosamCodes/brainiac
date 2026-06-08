@@ -7,8 +7,8 @@ import { useShallow } from "zustand/react/shallow";
  */
 export function useDashboard() {
   const {
-    canvasViewState,
-    setCanvasViewState,
+    viewState,
+    setViewState,
     setCanvasTranslate,
     setCanvasScale,
     resetCanvasView,
@@ -19,8 +19,8 @@ export function useDashboard() {
     reset,
   } = useDashboardStore(
     useShallow((state) => ({
-      canvasViewState: state.canvasViewState,
-      setCanvasViewState: state.setCanvasViewState,
+      viewState: state.viewState,
+      setViewState: state.setViewState,
       setCanvasTranslate: state.setCanvasTranslate,
       setCanvasScale: state.setCanvasScale,
       resetCanvasView: state.resetCanvasView,
@@ -34,8 +34,8 @@ export function useDashboard() {
 
   return {
     // Canvas
-    canvasViewState,
-    setCanvasViewState,
+    canvasViewState: viewState,
+    setCanvasViewState: setViewState,
     setCanvasTranslate,
     setCanvasScale,
     resetCanvasView,

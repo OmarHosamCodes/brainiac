@@ -13,8 +13,11 @@ import {
   type WorkspaceNodeTint,
   type WorkspaceNodeType,
 } from "@brainiac/workspace";
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
 import { create } from "zustand";
 
+import { orpc } from "@/lib/orpc";
+import { getErrorMessage } from "@/utils/get-error-message";
 import { sanitizeConnections } from "@/utils/workspace-node-connections";
 
 type EditorMode = "create" | "edit";
@@ -44,6 +47,8 @@ type WorkspaceStore = {
   isPreloadingWorkspace: boolean;
   localRevision: number;
   syncedRevision: number;
+  queryClient: QueryClient | null;
+  workspaceQueryKey: QueryKey | null;
   nodeDraft: {
     title: string;
     content: string;
@@ -77,6 +82,22 @@ type WorkspaceStore = {
     remoteNodes: WorkspaceNode[],
     updatedAt: string | null,
   ) => void;
+  preloadWorkspace: (
+    authSessionExists: boolean,
+    queryClient: QueryClient,
+  ) => Promise<void>;
+  persistWorkspace: (
+    snapshot: WorkspaceNode[],
+    revision: number,
+  ) => Promise<void>;
+  scheduleWorkspaceSave: (delay?: number) => void;
+  setWorkspaceQueryContext: (payload: {
+    queryClient: QueryClient;
+    queryKey: QueryKey;
+  }) => void;
+  handleRemoteWorkspace: (
+    remoteWorkspace: { nodes: WorkspaceNode[]; updatedAt: string | null } | null | undefined,
+  ) => void;
   findNode: (nodeId: string) => WorkspaceNode | null;
   updateNodes: (mutator: (draft: WorkspaceNode[]) => void) => void;
   openCreateNode: (payload: NodePosition) => void;
@@ -109,6 +130,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   isPreloadingWorkspace: false,
   localRevision: 0,
   syncedRevision: 0,
+  queryClient: null,
+  workspaceQueryKey: null,
   nodeDraft: {
     title: "",
     content: "",
@@ -188,6 +211,13 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   _setSaveTimer: (timer) => set({ _saveTimer: timer }),
   _setRetryTimer: (timer) => set({ _retryTimer: timer }),
 
+  setWorkspaceQueryContext: ({ queryClient, queryKey }) => {
+    set({
+      queryClient,
+      workspaceQueryKey: queryKey,
+    });
+  },
+
   resetDraft: () =>
     set({
       nodeDraft: {
@@ -258,8 +288,150 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const state = get();
     if (state._saveTimer) clearTimeout(state._saveTimer);
     if (state._retryTimer) clearTimeout(state._retryTimer);
+    if (state.queryClient && state.workspaceQueryKey) {
+      state.queryClient.setQueryData(state.workspaceQueryKey, {
+        nodes: remoteNodes,
+        updatedAt,
+      });
+    }
 
     get().applyRemoteSnapshot(remoteNodes, updatedAt);
+  },
+
+  handleRemoteWorkspace: (remoteWorkspace) => {
+    if (!remoteWorkspace) {
+      return;
+    }
+
+    const state = get();
+
+    if (!state.loadApplied) {
+      get().applyRemoteSnapshot(remoteWorkspace.nodes, remoteWorkspace.updatedAt);
+      return;
+    }
+
+    if (remoteWorkspace.updatedAt === state.syncedAt) {
+      return;
+    }
+
+    if (state.hasPendingLocalChanges()) {
+      return;
+    }
+
+    get().applyRemoteSnapshot(remoteWorkspace.nodes, remoteWorkspace.updatedAt);
+  },
+
+  preloadWorkspace: async (authSessionExists, queryClient) => {
+    if (!authSessionExists) {
+      return;
+    }
+
+    const state = get();
+    if (state.isPreloadingWorkspace) {
+      return;
+    }
+
+    const queryOptions = orpc.workspace.get.queryOptions();
+    get().setWorkspaceQueryContext({
+      queryClient,
+      queryKey: queryOptions.queryKey,
+    });
+    set({ isPreloadingWorkspace: true });
+
+    try {
+      const snapshot = await queryClient.ensureQueryData({
+        ...queryOptions,
+        staleTime: 30_000,
+      });
+
+      if (snapshot && !get().loadApplied) {
+        get().applyRemoteSnapshot(snapshot.nodes, snapshot.updatedAt);
+      }
+    } finally {
+      set({ isPreloadingWorkspace: false });
+    }
+  },
+
+  persistWorkspace: async (snapshot, revision) => {
+    try {
+      const response = await orpc.workspace.save.call({
+        nodes: snapshot,
+      });
+
+      const state = get();
+      set({
+        syncedRevision: Math.max(state.syncedRevision, revision),
+        syncedAt: response.updatedAt,
+      });
+
+      if (revision < get().localRevision) {
+        set({ saveState: "saving" });
+        return;
+      }
+
+      set({
+        saveState: "saved",
+        saveError: null,
+      });
+
+      const nextState = get();
+      if (nextState.queryClient && nextState.workspaceQueryKey) {
+        await nextState.queryClient.invalidateQueries({
+          queryKey: nextState.workspaceQueryKey,
+        });
+      }
+    } catch (error) {
+      if (revision < get().localRevision) {
+        return;
+      }
+
+      set({
+        saveState: "error",
+        saveError: getErrorMessage(error, "Failed to sync workspace"),
+      });
+
+      const retryTimer = get()._retryTimer;
+      if (retryTimer) clearTimeout(retryTimer);
+
+      const nextRetryTimer = setTimeout(() => {
+        get()._setRetryTimer(null);
+
+        if (!get().workspaceReadyForEdits(true) || !get().hasPendingLocalChanges()) {
+          return;
+        }
+
+        get().scheduleWorkspaceSave(0);
+      }, 2_000);
+
+      get()._setRetryTimer(nextRetryTimer);
+    }
+  },
+
+  scheduleWorkspaceSave: (delay = 250) => {
+    if (!get().workspaceReadyForEdits(true)) {
+      return;
+    }
+
+    const saveTimer = get()._saveTimer;
+    const retryTimer = get()._retryTimer;
+    if (saveTimer) clearTimeout(saveTimer);
+    if (retryTimer) clearTimeout(retryTimer);
+
+    set({
+      saveState: "saving",
+      saveError: null,
+      _saveTimer: null,
+      _retryTimer: null,
+    });
+
+    const revision = get().localRevision;
+    const snapshot = cloneWorkspaceNodes(get().nodes);
+    const nextSaveTimer = setTimeout(() => {
+      get()._setSaveTimer(null);
+      void get().persistWorkspace(snapshot, revision);
+    }, delay);
+
+    get()._setSaveTimer(nextSaveTimer);
   },
 
   findNode: (nodeId: string) => {
@@ -282,6 +454,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       ),
       localRevision: state.localRevision + 1,
     });
+    get().scheduleWorkspaceSave();
   },
 
   openCreateNode: (payload: NodePosition) => {
@@ -361,8 +534,19 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       draftNodes.splice(0, draftNodes.length, ...nextNodes);
     });
 
-    // Note: actual delete mutation should be handled by the parent component
-    // using React Query mutation and passing nodeId to server
+    void orpc.workspace.deleteNode
+      .call({
+        nodeId: payload.nodeId,
+        ownerUserId: node.ownerUserId ?? undefined,
+      })
+      .catch(() => {
+        const state = get();
+        if (state.queryClient && state.workspaceQueryKey) {
+          void state.queryClient.invalidateQueries({
+            queryKey: state.workspaceQueryKey,
+          });
+        }
+      });
   },
 
   connectNodePair: (payload: WorkspaceConnectionPair) => {
@@ -564,8 +748,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     set({
       nodes: [...state.nodes, nextNode],
       selectedNodeIds: [nextNode.id],
+      localRevision: state.localRevision + 1,
     });
     get().closeEditor();
+    get().scheduleWorkspaceSave();
   },
 }));
 

@@ -9,7 +9,10 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PricingRouteImport } from './routes/pricing'
+import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AgencyRouteImport } from './routes/agency'
@@ -17,9 +20,24 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as NodeIdRouteImport } from './routes/node.$id'
 import { Route as BillingSuccessRouteImport } from './routes/billing.success'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PricingRoute = PricingRouteImport.update({
   id: '/pricing',
   path: '/pricing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceRoute = MarketplaceRouteImport.update({
+  id: '/marketplace',
+  path: '/marketplace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -58,7 +76,10 @@ export interface FileRoutesByFullPath {
   '/agency': typeof AgencyRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/marketplace': typeof MarketplaceRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/billing/success': typeof BillingSuccessRoute
   '/node/$id': typeof NodeIdRoute
 }
@@ -67,7 +88,10 @@ export interface FileRoutesByTo {
   '/agency': typeof AgencyRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/marketplace': typeof MarketplaceRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/billing/success': typeof BillingSuccessRoute
   '/node/$id': typeof NodeIdRoute
 }
@@ -77,7 +101,10 @@ export interface FileRoutesById {
   '/agency': typeof AgencyRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/marketplace': typeof MarketplaceRoute
   '/pricing': typeof PricingRoute
+  '/privacy': typeof PrivacyRoute
+  '/terms': typeof TermsRoute
   '/billing/success': typeof BillingSuccessRoute
   '/node/$id': typeof NodeIdRoute
 }
@@ -88,7 +115,10 @@ export interface FileRouteTypes {
     | '/agency'
     | '/dashboard'
     | '/login'
+    | '/marketplace'
     | '/pricing'
+    | '/privacy'
+    | '/terms'
     | '/billing/success'
     | '/node/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -97,7 +127,10 @@ export interface FileRouteTypes {
     | '/agency'
     | '/dashboard'
     | '/login'
+    | '/marketplace'
     | '/pricing'
+    | '/privacy'
+    | '/terms'
     | '/billing/success'
     | '/node/$id'
   id:
@@ -106,7 +139,10 @@ export interface FileRouteTypes {
     | '/agency'
     | '/dashboard'
     | '/login'
+    | '/marketplace'
     | '/pricing'
+    | '/privacy'
+    | '/terms'
     | '/billing/success'
     | '/node/$id'
   fileRoutesById: FileRoutesById
@@ -116,18 +152,42 @@ export interface RootRouteChildren {
   AgencyRoute: typeof AgencyRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  MarketplaceRoute: typeof MarketplaceRoute
   PricingRoute: typeof PricingRoute
+  PrivacyRoute: typeof PrivacyRoute
+  TermsRoute: typeof TermsRoute
   BillingSuccessRoute: typeof BillingSuccessRoute
   NodeIdRoute: typeof NodeIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pricing': {
       id: '/pricing'
       path: '/pricing'
       fullPath: '/pricing'
       preLoaderRoute: typeof PricingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketplace': {
+      id: '/marketplace'
+      path: '/marketplace'
+      fullPath: '/marketplace'
+      preLoaderRoute: typeof MarketplaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -180,7 +240,10 @@ const rootRouteChildren: RootRouteChildren = {
   AgencyRoute: AgencyRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  MarketplaceRoute: MarketplaceRoute,
   PricingRoute: PricingRoute,
+  PrivacyRoute: PrivacyRoute,
+  TermsRoute: TermsRoute,
   BillingSuccessRoute: BillingSuccessRoute,
   NodeIdRoute: NodeIdRoute,
 }
