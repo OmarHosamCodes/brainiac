@@ -1,6 +1,13 @@
 {
+  "ignoreFiles": [
+    ".agents/skills/impeccable/scripts/**",
+    "packages/env/src/helpers.ts",
+    "packages/workspace/src/tasks.test.ts"
+  ],
   "ignoreIssues": {
-    "apps/web/app/components/workspace/node/context.ts": ["exports", "types"]
+    "apps/web/app/components/workspace/node/context.ts": ["exports", "types"],
+    "apps/web/app/components/agency/agency-segments.ts": ["types"],
+    "apps/web-start/src/layouts/app-layout.tsx": ["types"]
   },
   "workspaces": {
     "apps/web": {
@@ -17,6 +24,26 @@
       ],
       "project": ["app/**/*.{ts,vue}"],
       "ignoreDependencies": ["@iconify-json/lucide", "@iconify-json/simple-icons"]
+    },
+    "apps/web-start": {
+      "entry": [
+        "vite.config.ts",
+        "src/router.tsx",
+        "src/routes/**/*.tsx",
+        "src/components/**/*.tsx",
+        "src/hooks/**/*.ts",
+        "src/lib/**/*.ts",
+        "src/providers/**/*.tsx",
+        "src/stores/**/*.ts",
+        "src/utils/**/*.ts"
+      ],
+      "project": ["src/**/*.{ts,tsx}", "vite.config.ts"],
+      "ignoreDependencies": [
+        "@brainiac/agent",
+        "@tanstack/router-plugin",
+        "tailwindcss",
+        "vinxi"
+      ]
     },
     "apps/server": {
       "entry": ["src/index.ts", "src/seed.ts", "tsdown.config.ts"],
