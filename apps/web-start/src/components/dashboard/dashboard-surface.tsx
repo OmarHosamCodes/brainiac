@@ -1,13 +1,17 @@
-import { Link } from "@tanstack/react-router";
 import { Plus, RefreshCw } from "lucide-react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useAppShellActions, useAppShellCustomDock, useAppShellDockContent, useAppShellPageTitle } from "@/hooks/use-app-shell";
 import { useTeamSelection } from "@/hooks/use-team-selection";
 import { useWorkspaceSnapshot } from "@/hooks/use-workspace";
+import { useDashboard } from "@/stores/dashboard";
+import { useWorkspaceState } from "@/hooks/useWorkspaceState";
+import { DashboardWorkspaceSidebar } from "./dashboard-workspace-sidebar";
+import { InfiniteCanvas } from "./infinite-canvas";
+import { WorkspaceEditorModal } from "../workspace/workspace-editor-modal";
+import { WorkspaceBoardStatus } from "../workspace/workspace-board-status";
 
 export function DashboardSurface() {
   useAppShellPageTitle("Dashboard");
@@ -15,85 +19,194 @@ export function DashboardSurface() {
 
   const workspaceQuery = useWorkspaceSnapshot();
   const teamSelection = useTeamSelection();
+  const workspaceState = useWorkspaceState();
+  
+  // Dashboard UI state
+  const dashboardState = useDashboard();
+  const [sidebarCompact, setSidebarCompact] = React.useState(false);
+  const [selectedTeamId, setSelectedTeamId] = React.useState(teamSelection.selectedTeamId || "");
+  const [isCreateMode, setIsCreateMode] = React.useState(false);
+  
   const nodes = workspaceQuery.data?.nodes ?? [];
+  const teams = teamSelection.teams ?? [];
+
+  // Modal state
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [editingNodeId, setEditingNodeId] = React.useState<string | null>(null);
+  const [formData, setFormData] = React.useState({
+    title: "",
+    content: "",
+    nodeType: "standard" as const,
+    tint: "neutral" as const,
+    featuredBlocks: [] as Array<{ tabId: string; blockId: string }>,
+  });
+
+  const handleCreateNode = React.useCallback(() => {
+    setIsCreateMode(true);
+    setEditingNodeId(null);
+    setFormData({
+      title: "",
+      content: "",
+      nodeType: "standard",
+      tint: "neutral",
+      featuredBlocks: [],
+    });
+    setModalOpen(true);
+  }, []);
+
+  const handleEditNode = React.useCallback((nodeId: string) => {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+
+    setIsCreateMode(false);
+    setEditingNodeId(nodeId);
+    setFormData({
+      title: node.title,
+      content: node.content,
+      nodeType: node.nodeType,
+      tint: node.dashboard.tint,
+      featuredBlocks: node.dashboard.featuredBlocks,
+    });
+    setModalOpen(true);
+  }, [nodes]);
+
+  const handleDeleteNode = React.useCallback((nodeId: string) => {
+    // TODO: implement delete mutation
+    console.log("Delete node:", nodeId);
+  }, []);
+
+  const handleSubmitModal = React.useCallback(async () => {
+    if (isCreateMode) {
+      // TODO: implement create mutation
+      console.log("Create node:", formData);
+    } else {
+      // TODO: implement update mutation
+      console.log("Update node:", editingNodeId, formData);
+    }
+    setModalOpen(false);
+  }, [formData, isCreateMode, editingNodeId]);
 
   const shellActions = React.useMemo(
     () => (
-    <Button type="button" size="sm">
-      <Plus className="size-4" />
-      Add
-    </Button>
+      <Button type="button" size="sm" onClick={handleCreateNode}>
+        <Plus className="size-4" />
+        Add Node
+      </Button>
     ),
-    [],
+    [handleCreateNode],
   );
+
   const dockContent = React.useMemo(
     () => (
-    <div className="flex h-full flex-col p-5">
-      <h2 className="text-sm font-bold">Workspace agent</h2>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        The full agent chat port will attach here. Current workspace nodes available: {nodes.length}.
-      </p>
-    </div>
+      <div className="flex h-full flex-col p-5">
+        <h2 className="text-sm font-bold">Workspace agent</h2>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          The full agent chat port will attach here. Current workspace nodes available: {nodes.length}.
+        </p>
+      </div>
     ),
     [nodes.length],
   );
+
   useAppShellActions(shellActions);
   useAppShellDockContent(dockContent);
 
-  return (
-    <section className="min-h-full bg-background">
-      <div className="flex items-center justify-between border-b px-4 py-3 md:px-6">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">Canvas</p>
-          <h2 className="text-xl font-bold">Workspace map</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="outline">{teamSelection.selectedTeam?.name ?? "Team"}</Badge>
-          <Button type="button" variant="outline" size="sm" onClick={() => void workspaceQuery.refetch()}>
-            <RefreshCw className="size-4" />
-            Refresh
-          </Button>
-        </div>
-      </div>
+  const selectedNode = nodes.find((n) => dashboardState.selectedNodeId === n.id);
 
-      {workspaceQuery.isLoading ? (
-        <div className="grid gap-4 p-4 md:grid-cols-3 md:p-6">
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
-          <Skeleton className="h-40" />
-        </div>
-      ) : (
-        <div className="relative min-h-[calc(100vh-9rem)] overflow-hidden p-4 md:p-6">
-          <div className="absolute inset-0 opacity-60 [background-image:radial-gradient(circle_at_1px_1px,oklch(0.55_0.005_285/0.22)_1px,transparent_0)] [background-size:24px_24px]" />
-          <div className="relative grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {nodes.length > 0 ? (
-              nodes.map((node) => (
-                <Link
-                  key={node.id}
-                  to="/node/$id"
-                  params={{ id: node.id }}
-                  className="rounded-[2rem] border bg-card p-5 text-card-foreground transition-colors hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="truncate text-base font-bold">{node.title}</h3>
-                    <Badge variant="muted">{node.nodeType}</Badge>
-                  </div>
-                  <p className="mt-3 line-clamp-3 text-sm leading-6 text-muted-foreground">
-                    {node.content || "No description yet."}
-                  </p>
-                </Link>
-              ))
-            ) : (
-              <div className="rounded-[2rem] border bg-card p-8">
-                <h3 className="text-lg font-bold">No nodes yet</h3>
-                <p className="mt-2 max-w-prose text-sm leading-6 text-muted-foreground">
-                  The React canvas shell is connected to the workspace query. Node creation and infinite canvas interactions are the next dashboard parity layer.
-                </p>
-              </div>
-            )}
+  return (
+    <div className="flex h-full">
+      {/* Sidebar */}
+      <DashboardWorkspaceSidebar
+        compact={sidebarCompact}
+        onCompactChange={setSidebarCompact}
+        teamsCount={teams.length}
+        selectedTeamId={selectedTeamId}
+        onSelectedTeamChange={setSelectedTeamId}
+        teams={teams.map((t) => ({ id: t.id, name: t.name }))}
+        onCreateTeam={(name) => {
+          // TODO: implement create team mutation
+          console.log("Create team:", name);
+        }}
+        selectedNodeTitle={selectedNode?.title ?? null}
+        isSelectedNodeShared={selectedNode?.visibility === "team"}
+        canManageSharing={true} // TODO: check actual permission
+        onToggleNodeSharing={() => {
+          // TODO: implement share mutation
+          console.log("Toggle sharing for node:", selectedNode?.id);
+        }}
+        onOpenTeamSettings={() => {
+          // TODO: open team settings modal
+          console.log("Open team settings");
+        }}
+      />
+
+      {/* Main canvas area */}
+      <section className="flex-1 flex flex-col bg-background">
+        <div className="flex items-center justify-between border-b px-4 py-3 md:px-6">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              Canvas
+            </p>
+            <h2 className="text-xl font-bold">Workspace map</h2>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline">
+              {teamSelection.selectedTeam?.name ?? "Team"}
+            </Badge>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void workspaceQuery.refetch()}
+            >
+              <RefreshCw className="size-4" />
+              Refresh
+            </Button>
           </div>
         </div>
-      )}
-    </section>
+
+        {/* Canvas */}
+        <div className="flex-1 relative overflow-hidden">
+          {workspaceQuery.isLoading ? (
+            <WorkspaceBoardStatus isLoading />
+          ) : nodes.length === 0 ? (
+            <WorkspaceBoardStatus isEmpty />
+          ) : (
+            <InfiniteCanvas
+              nodes={nodes}
+              selectedNodeIds={dashboardState.selectedNodeId ? [dashboardState.selectedNodeId] : []}
+              onNodeSelect={(nodeId) => dashboardState.setSelectedNodeId(nodeId)}
+              onCanvasClick={(x, y) => {
+                handleCreateNode();
+              }}
+              onNodeEdit={handleEditNode}
+              onNodeDelete={handleDeleteNode}
+              viewState={dashboardState.viewState}
+              onViewStateChange={(state) => dashboardState.setViewState(state)}
+            />
+          )}
+        </div>
+      </section>
+
+      {/* Editor Modal */}
+      <WorkspaceEditorModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        mode={isCreateMode ? "create" : "edit"}
+        title={formData.title}
+        onTitleChange={(title) => setFormData((prev) => ({ ...prev, title }))}
+        content={formData.content}
+        onContentChange={(content) => setFormData((prev) => ({ ...prev, content }))}
+        nodeType={formData.nodeType}
+        onNodeTypeChange={(nodeType) => setFormData((prev) => ({ ...prev, nodeType }))}
+        tint={formData.tint}
+        onTintChange={(tint) => setFormData((prev) => ({ ...prev, tint }))}
+        featuredBlocks={formData.featuredBlocks}
+        onFeaturedBlocksChange={(blocks) => setFormData((prev) => ({ ...prev, featuredBlocks: blocks }))}
+        availableBlocks={selectedNode?.dashboard.availableBlocks ?? []}
+        valid={formData.title.trim().length > 0}
+        onSubmit={handleSubmitModal}
+      />
+    </div>
   );
 }

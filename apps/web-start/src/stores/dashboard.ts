@@ -8,11 +8,15 @@ export type CanvasViewState = {
 
 export type DashboardStore = {
   // Canvas state
-  canvasViewState: CanvasViewState;
-  setCanvasViewState: (state: CanvasViewState) => void;
+  viewState: CanvasViewState;
+  setViewState: (state: CanvasViewState) => void;
   setCanvasTranslate: (x: number, y: number) => void;
   setCanvasScale: (scale: number) => void;
   resetCanvasView: () => void;
+
+  // Selection state
+  selectedNodeId: string | null;
+  setSelectedNodeId: (nodeId: string | null) => void;
 
   // UI state
   isAgentDockOpen: boolean;
@@ -32,16 +36,16 @@ const DEFAULT_CANVAS_VIEW: CanvasViewState = {
   scale: 1,
 };
 
-export const useDashboardStore = create<DashboardStore>((set) => ({
+export const useDashboard = create<DashboardStore>((set) => ({
   // Canvas state
-  canvasViewState: DEFAULT_CANVAS_VIEW,
+  viewState: DEFAULT_CANVAS_VIEW,
 
-  setCanvasViewState: (state) => set({ canvasViewState: state }),
+  setViewState: (state) => set({ viewState: state }),
 
   setCanvasTranslate: (x, y) =>
     set((state) => ({
-      canvasViewState: {
-        ...state.canvasViewState,
+      viewState: {
+        ...state.viewState,
         translateX: x,
         translateY: y,
       },
@@ -49,13 +53,17 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
 
   setCanvasScale: (scale) =>
     set((state) => ({
-      canvasViewState: {
-        ...state.canvasViewState,
+      viewState: {
+        ...state.viewState,
         scale,
       },
     })),
 
-  resetCanvasView: () => set({ canvasViewState: DEFAULT_CANVAS_VIEW }),
+  resetCanvasView: () => set({ viewState: DEFAULT_CANVAS_VIEW }),
+
+  // Selection state
+  selectedNodeId: null,
+  setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
 
   // UI state
   isAgentDockOpen: false,
@@ -68,9 +76,13 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   // Reset
   reset: () => {
     set({
-      canvasViewState: DEFAULT_CANVAS_VIEW,
+      viewState: DEFAULT_CANVAS_VIEW,
+      selectedNodeId: null,
       isAgentDockOpen: false,
       showTeamSettingsModal: false,
     });
   },
 }));
+
+// For backward compatibility
+export const useDashboardStore = useDashboard;
