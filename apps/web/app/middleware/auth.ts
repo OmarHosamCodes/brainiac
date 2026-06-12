@@ -4,8 +4,8 @@ export default defineNuxtRouteMiddleware(async () => {
   }
 
   // Single-flight: resolves once on the first navigation after the session
-  // has been determined (via SSR hydration or the client's first
-  // getSession). Subsequent navigations are a no-op.
+  // has been determined by the client's first getSession. Subsequent
+  // navigations are a no-op.
   await whenAuthSessionReady();
 
   const session = useAuthSession();

@@ -17,29 +17,17 @@ export default defineNuxtPlugin(() => {
     },
   });
 
-  // Single-flight promise that resolves the first time the session has been
-  // determined (either via the SSR-hydrated payload or the client's first
-  // `getSession` round-trip). Route middleware awaits this once instead of
-  // re-firing `getSession()` on every navigation.
+  // Single-flight promise that resolves the first time the client session has
+  // been determined. Route middleware awaits this once instead of re-firing
+  // `getSession()` on every navigation.
   let resolveReady: (() => void) | undefined;
   const sessionReady = new Promise<void>((resolve) => {
     resolveReady = resolve;
   });
 
   if (import.meta.server) {
-    // SSR has already determined the session via the server plugin; the
-    // session payload (or null) is in `useState('auth-session-initial')`.
     resolveReady?.();
   } else {
-    const initial = useState<unknown>("auth-session-initial", () => undefined);
-
-    if (initial.value !== undefined) {
-      // Server hydrated a session decision into the payload; trust it and
-      // unblock middleware immediately. Better Auth's `useSession()` will
-      // still subscribe in the background and overwrite once it resolves.
-      resolveReady?.();
-    }
-
     const session = authClient.useSession();
     const stop = watch(
       () => session.value?.isPending,

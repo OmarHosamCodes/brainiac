@@ -24,6 +24,14 @@ export default defineNuxtConfig({
   },
   modules: ["@pinia/nuxt", "@nuxt/ui"],
   css: ["~/assets/css/main.css"],
+  routeRules: {
+    "/agency": { ssr: false },
+    "/billing": { ssr: false },
+    "/billing/**": { ssr: false },
+    "/dashboard": { ssr: false },
+    "/marketplace": { ssr: false },
+    "/node/**": { ssr: false },
+  },
   devServer: {
     port: 7001, // Routed through Traefik proxy
   },
