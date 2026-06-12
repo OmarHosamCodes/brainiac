@@ -20,17 +20,28 @@ const toast = useToast();
 const content = ref("");
 const isDragging = ref(false);
 const fileInput = ref<HTMLInputElement | null>(null);
-const pendingAttachments = ref<
-  Array<{
-    fileName: string;
-    mimeType: string;
-    storageKey: string;
-    sizeBytes: number;
-    url: string;
-    uploadToken: string;
-    durationSeconds: number | null;
-  }>
->([]);
+
+type PendingAttachment = {
+  fileName: string;
+  mimeType: string;
+  storageKey: string;
+  sizeBytes: number;
+  url: string;
+  uploadToken: string;
+  durationSeconds: number | null;
+  metadata?: {
+    imageWidth?: number;
+    imageHeight?: number;
+    videoWidth?: number;
+    videoHeight?: number;
+    durationSeconds?: number;
+    fileExtension?: string;
+    lastModified?: string;
+    mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other";
+  };
+};
+
+const pendingAttachments = ref<PendingAttachment[]>([]);
 
 const createMessageMutation = useMutation(
   orpc.agencyOps.taskThreads.messages.create.mutationOptions({
@@ -83,11 +94,22 @@ async function send() {
   const text = content.value.trim();
   if (!text && pendingAttachments.value.length === 0) return;
 
-  if (props.agentEnabled && pendingAttachments.value.length === 0) {
+  if (props.agentEnabled) {
     await askAgentMutation.mutateAsync({
       teamId: props.teamId,
       taskId: props.taskId,
       content: text || "What do you think?",
+      attachments: pendingAttachments.value.length > 0
+        ? pendingAttachments.value.map((a) => ({
+            fileName: a.fileName,
+            mimeType: a.mimeType,
+            storageKey: a.storageKey,
+            sizeBytes: a.sizeBytes,
+            durationSeconds: a.durationSeconds ?? undefined,
+            uploadToken: a.uploadToken,
+            metadata: a.metadata,
+          }))
+        : undefined,
     });
     return;
   }
@@ -110,6 +132,7 @@ async function send() {
       sizeBytes: a.sizeBytes,
       durationSeconds: a.durationSeconds ?? undefined,
       uploadToken: a.uploadToken,
+      metadata: a.metadata,
     })),
   });
 }
@@ -130,9 +153,105 @@ function onFileSelect(event: Event) {
   target.value = "";
 }
 
+async function captureFileMetadata(file: File): Promise<{
+  imageWidth?: number;
+  imageHeight?: number;
+  videoWidth?: number;
+  videoHeight?: number;
+  durationSeconds?: number;
+  fileExtension?: string;
+  lastModified?: string;
+  mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other";
+}> {
+  const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+  const meta: Record<string, unknown> = {
+    fileExtension: ext,
+    lastModified: new Date(file.lastModified).toISOString(),
+  };
+
+  if (file.type.startsWith("image/")) {
+    meta.mediaKind = "image";
+    try {
+      const data = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("Failed to load image"));
+        };
+        img.src = url;
+      });
+      meta.imageWidth = data.width;
+      meta.imageHeight = data.height;
+    } catch {
+      // metadata capture failed, proceed without it
+    }
+  } else if (file.type.startsWith("video/")) {
+    meta.mediaKind = "video";
+    try {
+      const data = await new Promise<{
+        width: number;
+        height: number;
+        duration: number;
+      }>((resolve, reject) => {
+        const video = document.createElement("video");
+        video.preload = "metadata";
+        const url = URL.createObjectURL(file);
+        video.onloadedmetadata = () => {
+          URL.revokeObjectURL(url);
+          resolve({
+            width: video.videoWidth,
+            height: video.videoHeight,
+            duration: video.duration,
+          });
+        };
+        video.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("Failed to load video metadata"));
+        };
+        video.src = url;
+      });
+      meta.videoWidth = data.width;
+      meta.videoHeight = data.height;
+      meta.durationSeconds = data.duration;
+    } catch {
+      // metadata capture failed
+    }
+  } else if (file.type.startsWith("audio/")) {
+    meta.mediaKind = "audio";
+  } else if (
+    ["zip", "rar", "7z", "tar", "gz", "bz2"].includes(ext)
+  ) {
+    meta.mediaKind = "archive";
+  } else {
+    meta.mediaKind = "document";
+  }
+
+  return meta as typeof meta & {
+    imageWidth?: number;
+    imageHeight?: number;
+    videoWidth?: number;
+    videoHeight?: number;
+    durationSeconds?: number;
+    fileExtension?: string;
+    lastModified?: string;
+    mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other";
+  };
+}
+
 async function uploadFiles(files: File[], options: { durationSeconds?: number | null } = {}) {
   for (const file of files) {
     try {
+      const metadata = await captureFileMetadata(file);
+      if (options.durationSeconds != null) {
+        metadata.durationSeconds = options.durationSeconds;
+        metadata.mediaKind = "audio";
+      }
+
       const result = await createAttachmentMutation.mutateAsync({
         teamId: props.teamId,
         taskId: props.taskId,
@@ -161,6 +280,7 @@ async function uploadFiles(files: File[], options: { durationSeconds?: number | 
         url: result.publicUrl,
         uploadToken: result.uploadToken,
         durationSeconds: options.durationSeconds ?? null,
+        metadata,
       });
     } catch (error) {
       toast.add({
@@ -256,7 +376,7 @@ defineExpose({ uploadFiles });
       </div>
 
       <UButton
-        :icon="agentEnabled ? 'i-lucide-sparkles' : 'i-lucide-send'"
+        :icon="agentEnabled ? 'i-lucide-bot' : 'i-lucide-send'"
         color="primary"
         size="sm"
         :loading="isBusy"

@@ -137,3 +137,50 @@ export async function deleteTaskAttachmentFromStorage(storageKey: string) {
     }),
   );
 }
+
+// ---------------------------------------------------------------------------
+// User avatar helpers
+// ---------------------------------------------------------------------------
+
+export async function uploadUserAvatarBuffer(args: {
+  userId: string;
+  buffer: Buffer;
+  mimeType: string;
+}) {
+  const extension = args.mimeType.split("/").pop() ?? "jpg";
+  const timestamp = Date.now();
+  const storageKey = `user-avatars/${args.userId}/${timestamp}.${extension}`;
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: storageKey,
+      Body: args.buffer,
+      ContentType: args.mimeType,
+      ContentLength: args.buffer.byteLength,
+    }),
+  );
+  return { storageKey };
+}
+
+export async function getUserAvatarStream(storageKey: string) {
+  const response = await s3Client.send(
+    new GetObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: storageKey,
+    }),
+  );
+  return {
+    body: response.Body as ReadableStream,
+    contentType: response.ContentType ?? "application/octet-stream",
+    contentLength: response.ContentLength,
+  };
+}
+
+export async function deleteUserAvatarFromStorage(storageKey: string) {
+  await s3Client.send(
+    new DeleteObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: storageKey,
+    }),
+  );
+}

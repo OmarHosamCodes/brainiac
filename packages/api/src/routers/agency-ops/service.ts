@@ -1,3 +1,4 @@
+import { env } from "@brainiac/env/server";
 import { db } from "@brainiac/db";
 import {
   agencyOpsActiveTimer,
@@ -30,6 +31,16 @@ import {
   getTaskAttachmentReadUrl,
   verifyTaskAttachmentUploadToken,
 } from "../../storage";
+
+const AVATAR_KEY_PREFIX = "user-avatars/";
+
+function formatAvatarUrl(image: string | null): string | null {
+  if (!image || !image.startsWith(AVATAR_KEY_PREFIX)) return image;
+  const parts = image.split("/");
+  const userId = parts[1];
+  if (!userId) return null;
+  return `${env.BETTER_AUTH_URL}/api/user-avatars/${userId}`;
+}
 
 const TEAM_ROLE_WEIGHT: Record<WorkspaceTeamRole, number> = {
   viewer: 1,
@@ -86,6 +97,17 @@ type AgencyTaskMessageRecord = {
   attachments: AgencyTaskAttachmentRecord[];
 };
 
+type AttachmentMetadata = {
+  imageWidth?: number;
+  imageHeight?: number;
+  videoWidth?: number;
+  videoHeight?: number;
+  durationSeconds?: number;
+  fileExtension?: string;
+  lastModified?: string;
+  mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other";
+};
+
 type AgencyTaskAttachmentRecord = {
   id: string;
   teamId: string;
@@ -95,6 +117,7 @@ type AgencyTaskAttachmentRecord = {
   storageKey: string;
   sizeBytes: number;
   durationSeconds: number | null;
+  metadata: AttachmentMetadata | null;
   createdAt: string;
   url: string | null;
 };
@@ -847,7 +870,7 @@ export async function listAgencyProjectTasks(
       mapProjectTaskRow({
         ...row,
         assigneeName: row.assigneeName ?? null,
-        assigneeAvatar: row.assigneeAvatar ?? null,
+        assigneeAvatar: formatAvatarUrl(row.assigneeAvatar) ?? null,
       }),
     ),
   };
@@ -1030,7 +1053,7 @@ export async function updateAgencyProjectTask(
   return mapProjectTaskRow({
     ...updated,
     assigneeName: assignee?.name ?? null,
-    assigneeAvatar: assignee?.image ?? null,
+    assigneeAvatar: formatAvatarUrl(assignee?.image ?? null),
   });
 }
 
@@ -1141,6 +1164,7 @@ async function mapTaskMessageRow(row: {
       storageKey: agencyOpsTaskAttachment.storageKey,
       sizeBytes: agencyOpsTaskAttachment.sizeBytes,
       durationSeconds: agencyOpsTaskAttachment.durationSeconds,
+      metadata: agencyOpsTaskAttachment.metadata,
       createdAt: agencyOpsTaskAttachment.createdAt,
       deletedAt: agencyOpsTaskAttachment.deletedAt,
     })
@@ -1155,7 +1179,7 @@ async function mapTaskMessageRow(row: {
     threadId: row.threadId,
     userId: row.userId,
     userName: row.senderType === "agent" ? "Agent" : (row.userName ?? "Unknown"),
-    userAvatar: row.senderType === "agent" ? null : (row.userAvatar ?? null),
+    userAvatar: row.senderType === "agent" ? null : formatAvatarUrl(row.userAvatar),
     content: row.content,
     type: row.type,
     senderType: row.senderType,
@@ -1171,6 +1195,7 @@ async function mapTaskMessageRow(row: {
         storageKey: a.storageKey,
         sizeBytes: a.sizeBytes,
         durationSeconds: a.durationSeconds,
+        metadata: a.metadata as AttachmentMetadata | null,
         createdAt: a.createdAt.toISOString(),
         url: await getTaskAttachmentReadUrl(a.storageKey),
       })),
@@ -1262,6 +1287,7 @@ export async function createTaskThreadMessage(
       sizeBytes: number;
       durationSeconds?: number | null;
       uploadToken: string;
+      metadata?: AttachmentMetadata | null;
     }>;
   },
 ) {
@@ -1336,6 +1362,7 @@ export async function createTaskThreadMessage(
           storageKey: attachment.storageKey,
           sizeBytes: attachment.sizeBytes,
           durationSeconds: attachment.durationSeconds ?? null,
+          metadata: attachment.metadata ?? null,
           createdAt: now,
         })),
       );
@@ -1474,7 +1501,7 @@ export async function listTaskThreadMembers(
     items: members.map((m) => ({
       userId: m.userId,
       userName: m.userName ?? "Unknown",
-      userAvatar: m.userAvatar ?? null,
+      userAvatar: formatAvatarUrl(m.userAvatar),
     })),
   };
 }
@@ -3479,7 +3506,7 @@ export async function getAgencyTimeSummary(
         const activeTimer = activeTimerByUser.get(member.id);
         return {
           id: member.id,
-          avatar: member.image ?? null,
+          avatar: formatAvatarUrl(member.image),
           name: member.name ?? "Unknown",
           email: member.email,
           isActive: activeTimerByUser.has(member.id),

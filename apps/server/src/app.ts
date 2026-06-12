@@ -21,6 +21,7 @@ import { logger } from "hono/logger";
 import { handleAppRouterRequest } from "./lib/handlers";
 import { logStartup } from "./lib/startup";
 import { registerTaskAttachmentUploadRoute } from "./lib/task-attachments";
+import { registerUserAvatarRoutes } from "./lib/user-avatar";
 
 function getRpcDebugResponse(error: unknown, path: string) {
   /**
@@ -105,6 +106,7 @@ function createApp() {
   });
 
   registerTaskAttachmentUploadRoute(app);
+  registerUserAvatarRoutes(app);
 
   app.use("/*", async (context, next) => {
     const requestContext = await createContext({ context });

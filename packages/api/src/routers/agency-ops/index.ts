@@ -88,6 +88,20 @@ const agencyProjectTaskSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
+const attachmentMetadataSchema = z
+  .object({
+    imageWidth: z.number().int().positive().optional(),
+    imageHeight: z.number().int().positive().optional(),
+    videoWidth: z.number().int().positive().optional(),
+    videoHeight: z.number().int().positive().optional(),
+    durationSeconds: z.number().nonnegative().optional(),
+    fileExtension: z.string().optional(),
+    lastModified: z.string().optional(),
+    mediaKind: z.enum(["image", "video", "audio", "document", "archive", "other"]).optional(),
+  })
+  .nullable()
+  .optional();
+
 const agencyTaskMessageAttachmentSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
@@ -97,6 +111,7 @@ const agencyTaskMessageAttachmentSchema = z.object({
   storageKey: z.string().min(1),
   sizeBytes: z.number().int().nonnegative(),
   durationSeconds: z.number().int().nonnegative().nullable(),
+  metadata: attachmentMetadataSchema,
   createdAt: z.string().datetime(),
   url: z.string().nullable(),
 });
@@ -401,6 +416,20 @@ export const agencyOpsRouter = {
                   sizeBytes: z.number().int().nonnegative(),
                   durationSeconds: z.number().int().nonnegative().optional(),
                   uploadToken: z.string().min(1),
+                  metadata: z
+                    .object({
+                      imageWidth: z.number().int().positive().optional(),
+                      imageHeight: z.number().int().positive().optional(),
+                      videoWidth: z.number().int().positive().optional(),
+                      videoHeight: z.number().int().positive().optional(),
+                      durationSeconds: z.number().nonnegative().optional(),
+                      fileExtension: z.string().optional(),
+                      lastModified: z.string().optional(),
+                      mediaKind: z
+                        .enum(["image", "video", "audio", "document", "archive", "other"])
+                        .optional(),
+                    })
+                    .optional(),
                 }),
               )
               .optional(),
@@ -496,6 +525,39 @@ export const agencyOpsRouter = {
           taskId: z.string().min(1),
           content: z.string().trim().min(1).max(10_000),
           model: z.string().trim().min(1).optional(),
+          attachments: z
+            .array(
+              z.object({
+                fileName: z.string().min(1),
+                mimeType: z.string().min(1),
+                storageKey: z.string().min(1),
+                sizeBytes: z.number().int().nonnegative(),
+                durationSeconds: z.number().int().nonnegative().optional(),
+                uploadToken: z.string().min(1),
+                metadata: z
+                  .object({
+                    imageWidth: z.number().int().positive().optional(),
+                    imageHeight: z.number().int().positive().optional(),
+                    videoWidth: z.number().int().positive().optional(),
+                    videoHeight: z.number().int().positive().optional(),
+                    durationSeconds: z.number().nonnegative().optional(),
+                    fileExtension: z.string().optional(),
+                    lastModified: z.string().optional(),
+                    mediaKind: z
+                      .enum([
+                        "image",
+                        "video",
+                        "audio",
+                        "document",
+                        "archive",
+                        "other",
+                      ])
+                      .optional(),
+                  })
+                  .optional(),
+              }),
+            )
+            .optional(),
         }),
       )
       .handler(async ({ context, input }) => {

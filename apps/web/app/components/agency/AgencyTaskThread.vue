@@ -222,7 +222,11 @@ function onDrop(event: DragEvent) {
           class="flex gap-3"
           :class="message.senderType === 'agent' ? 'rounded-xl bg-primary/5 p-3' : ''"
         >
+          <div v-if="message.senderType === 'agent'" class="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+            <UIcon name="i-lucide-bot" class="size-4 text-primary" />
+          </div>
           <UAvatar
+            v-else
             :src="message.userAvatar ?? undefined"
             :alt="message.userName"
             size="xs"

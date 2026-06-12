@@ -2,6 +2,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -16,6 +17,17 @@ export type AgencyOpsTimeEntrySource = "timer" | "manual";
 export type AgencyOpsProjectTaskStatus = "open" | "in_progress" | "done" | "archived";
 export type AgencyOpsTaskMessageType = "text" | "voice" | "attachment";
 export type AgencyOpsTaskMessageSenderType = "user" | "agent";
+
+export type AttachmentMetadata = {
+  imageWidth?: number;
+  imageHeight?: number;
+  videoWidth?: number;
+  videoHeight?: number;
+  durationSeconds?: number;
+  fileExtension?: string;
+  lastModified?: string;
+  mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other";
+};
 
 export const agencyOpsClient = pgTable(
   "agency_ops_client",
@@ -171,6 +183,7 @@ export const agencyOpsTaskAttachment = pgTable(
     storageKey: text("storage_key").notNull(),
     sizeBytes: integer("size_bytes").notNull().default(0),
     durationSeconds: integer("duration_seconds"),
+    metadata: jsonb("metadata").$type<AttachmentMetadata | null>().default(null),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     deletedAt: timestamp("deleted_at"),
   },
