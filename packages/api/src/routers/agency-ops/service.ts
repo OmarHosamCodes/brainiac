@@ -27,7 +27,7 @@ import {
   createTaskAttachmentUploadToken,
   createTaskAttachmentPresignedUploadUrl,
   deleteTaskAttachmentFromStorage,
-  getTaskAttachmentPublicUrl,
+  getTaskAttachmentReadUrl,
   verifyTaskAttachmentUploadToken,
 } from "../../storage";
 
@@ -1161,18 +1161,20 @@ async function mapTaskMessageRow(row: {
     senderType: row.senderType,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
-    attachments: attachments.map((a) => ({
-      id: a.id,
-      teamId: a.teamId,
-      messageId: a.messageId,
-      fileName: a.fileName,
-      mimeType: a.mimeType,
-      storageKey: a.storageKey,
-      sizeBytes: a.sizeBytes,
-      durationSeconds: a.durationSeconds,
-      createdAt: a.createdAt.toISOString(),
-      url: getTaskAttachmentPublicUrl(a.storageKey),
-    })),
+    attachments: await Promise.all(
+      attachments.map(async (a) => ({
+        id: a.id,
+        teamId: a.teamId,
+        messageId: a.messageId,
+        fileName: a.fileName,
+        mimeType: a.mimeType,
+        storageKey: a.storageKey,
+        sizeBytes: a.sizeBytes,
+        durationSeconds: a.durationSeconds,
+        createdAt: a.createdAt.toISOString(),
+        url: await getTaskAttachmentReadUrl(a.storageKey),
+      })),
+    ),
   };
 }
 

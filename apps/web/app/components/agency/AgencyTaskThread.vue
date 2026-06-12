@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/vue-query";
 
 import AgencyAttachmentGrid from "~/components/agency/AgencyAttachmentGrid.vue";
 import AgencyTaskComposer from "~/components/agency/AgencyTaskComposer.vue";
+import AgencyTaskMediaPlayer from "~/components/agency/AgencyTaskMediaPlayer.vue";
 import AgencyMiniTimer from "~/components/agency/AgencyMiniTimer.vue";
 import { getErrorMessage } from "~/utils/get-error-message";
 
@@ -70,14 +71,6 @@ watch(messagesQuery.data, () => {
     }
   });
 });
-
-function isImage(mimeType: string) {
-  return mimeType.startsWith("image/");
-}
-
-function isVideo(mimeType: string) {
-  return mimeType.startsWith("video/");
-}
 
 function isAudio(mimeType: string) {
   return mimeType.startsWith("audio/");
@@ -240,12 +233,12 @@ function onDrop(event: DragEvent) {
               "
               class="mt-2"
             >
-              <audio
+              <AgencyTaskMediaPlayer
                 v-for="attachment in message.attachments.filter((a) => isAudio(a.mimeType))"
                 :key="attachment.id"
-                controls
                 :src="attachment.url ?? undefined"
-                class="w-full"
+                :mime-type="attachment.mimeType"
+                :file-name="attachment.fileName"
               />
             </div>
 

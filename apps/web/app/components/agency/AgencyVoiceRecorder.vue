@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AgencyTaskMediaPlayer from "~/components/agency/AgencyTaskMediaPlayer.vue";
+
 const props = defineProps<{
   disabled?: boolean;
 }>();
@@ -108,7 +110,12 @@ onBeforeUnmount(() => {
     </template>
 
     <template v-else-if="recordedUrl">
-      <audio controls :src="recordedUrl" class="h-6 w-32" />
+      <AgencyTaskMediaPlayer
+        :src="recordedUrl"
+        mime-type="audio/webm"
+        file-name="Recorded voice message"
+        compact
+      />
       <UButton
         icon="i-lucide-send"
         color="primary"

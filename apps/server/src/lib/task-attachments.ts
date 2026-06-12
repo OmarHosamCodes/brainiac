@@ -1,7 +1,7 @@
 import { createContext, type Context } from "@brainiac/api/context";
 import {
   createTaskAttachmentUploadToken,
-  getTaskAttachmentPublicUrl,
+  getTaskAttachmentReadUrl,
   uploadTaskAttachmentBuffer,
 } from "@brainiac/api/storage";
 import { db } from "@brainiac/db";
@@ -86,7 +86,7 @@ export function registerTaskAttachmentUploadRoute(app: Hono) {
     return c.json(
       {
         storageKey,
-        publicUrl: getTaskAttachmentPublicUrl(storageKey),
+        publicUrl: await getTaskAttachmentReadUrl(storageKey),
         uploadToken: createTaskAttachmentUploadToken({
           teamId,
           taskId,

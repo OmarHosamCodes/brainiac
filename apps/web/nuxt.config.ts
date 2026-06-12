@@ -24,6 +24,12 @@ export default defineNuxtConfig({
   },
   modules: ["@pinia/nuxt", "@nuxt/ui"],
   css: ["~/assets/css/main.css"],
+  vue: {
+    compilerOptions: {
+      isCustomElement: (tag) =>
+        ["audio-player", "audio-skin", "video-player", "video-skin", "hls-video"].includes(tag),
+    },
+  },
   routeRules: {
     "/agency": { ssr: false },
     "/billing": { ssr: false },

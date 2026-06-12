@@ -1,5 +1,10 @@
 import { env } from "@brainiac/env/server";
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
@@ -15,9 +20,13 @@ const s3Client = new S3Client({
   forcePathStyle: true,
 });
 
-export function getTaskAttachmentPublicUrl(storageKey: string) {
-  const endpoint = env.S3_ENDPOINT.replace(/\/$/, "");
-  return `${endpoint}/${env.S3_BUCKET}/${storageKey}`;
+export async function getTaskAttachmentReadUrl(storageKey: string) {
+  const command = new GetObjectCommand({
+    Bucket: env.S3_BUCKET,
+    Key: storageKey,
+  });
+
+  return getSignedUrl(s3Client, command, { expiresIn: 60 * 60 });
 }
 
 export async function createTaskAttachmentPresignedUploadUrl(args: {
@@ -36,7 +45,7 @@ export async function createTaskAttachmentPresignedUploadUrl(args: {
 
   return {
     uploadUrl,
-    publicUrl: getTaskAttachmentPublicUrl(args.storageKey),
+    publicUrl: await getTaskAttachmentReadUrl(args.storageKey),
   };
 }
 
@@ -116,7 +125,7 @@ export async function uploadTaskAttachmentBuffer(args: {
   );
 
   return {
-    publicUrl: getTaskAttachmentPublicUrl(args.storageKey),
+    publicUrl: await getTaskAttachmentReadUrl(args.storageKey),
   };
 }
 

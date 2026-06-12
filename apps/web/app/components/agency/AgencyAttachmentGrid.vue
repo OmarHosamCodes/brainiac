@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AgencyTaskMediaPlayer from "~/components/agency/AgencyTaskMediaPlayer.vue";
+
 const props = defineProps<{
   attachments: Array<{
     id: string;
@@ -20,6 +22,21 @@ function isVideo(mimeType: string) {
 
 function isAudio(mimeType: string) {
   return mimeType.startsWith("audio/");
+}
+
+function isHls(attachment: (typeof props.attachments)[number]) {
+  const source = fileUrl(attachment).toLowerCase().split(/[?#]/, 1)[0] ?? "";
+  const mimeType = attachment.mimeType.toLowerCase();
+
+  return (
+    source.endsWith(".m3u8") ||
+    mimeType === "application/vnd.apple.mpegurl" ||
+    mimeType === "application/x-mpegurl"
+  );
+}
+
+function isPlayableMedia(attachment: (typeof props.attachments)[number]) {
+  return isAudio(attachment.mimeType) || isVideo(attachment.mimeType) || isHls(attachment);
 }
 
 function fileIcon(mimeType: string) {
@@ -58,17 +75,23 @@ function fileUrl(attachment: (typeof props.attachments)[number]): string {
         />
       </a>
 
-      <a
-        v-else-if="isVideo(attachment.mimeType)"
-        :href="fileUrl(attachment)"
-        target="_blank"
-        rel="noreferrer"
-        class="flex items-center gap-2 rounded-lg border border-default bg-muted px-3 py-2 text-xs"
-      >
-        <UIcon :name="fileIcon(attachment.mimeType)" class="size-4 text-muted" />
-        <span class="max-w-[8rem] truncate">{{ attachment.fileName }}</span>
-        <span class="text-muted">{{ formatSize(attachment.sizeBytes) }}</span>
-      </a>
+      <div v-else-if="isPlayableMedia(attachment)" class="w-full max-w-sm space-y-1.5">
+        <AgencyTaskMediaPlayer
+          :src="fileUrl(attachment)"
+          :mime-type="attachment.mimeType"
+          :file-name="attachment.fileName"
+        />
+        <a
+          :href="fileUrl(attachment)"
+          target="_blank"
+          rel="noreferrer"
+          class="flex items-center gap-2 text-xs text-muted hover:text-default"
+        >
+          <UIcon :name="fileIcon(attachment.mimeType)" class="size-4 shrink-0" />
+          <span class="truncate">{{ attachment.fileName }}</span>
+          <span class="shrink-0">{{ formatSize(attachment.sizeBytes) }}</span>
+        </a>
+      </div>
 
       <a
         v-else
