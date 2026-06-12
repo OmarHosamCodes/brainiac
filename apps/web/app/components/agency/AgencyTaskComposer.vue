@@ -71,6 +71,10 @@ const askAgentMutation = useMutation(
   }),
 );
 
+const createAttachmentMutation = useMutation(
+  orpc.agencyOps.taskThreads.attachments.create.mutationOptions(),
+);
+
 const isBusy = computed(
   () => createMessageMutation.isPending.value || askAgentMutation.isPending.value,
 );
@@ -129,7 +133,7 @@ function onFileSelect(event: Event) {
 async function uploadFiles(files: File[], options: { durationSeconds?: number | null } = {}) {
   for (const file of files) {
     try {
-      const result = await orpc.agencyOps.taskThreads.attachments.create.mutate({
+      const result = await createAttachmentMutation.mutateAsync({
         teamId: props.teamId,
         taskId: props.taskId,
         fileName: file.name,
