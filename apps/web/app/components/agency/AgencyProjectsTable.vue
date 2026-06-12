@@ -136,10 +136,7 @@ const hoursThisWeekByProject = computed(() => {
   for (const entry of entries.value) {
     const startedAtMs = new Date(entry.startedAt).getTime();
     if (startedAtMs < weekStartMs) continue;
-    totals.set(
-      entry.projectId,
-      (totals.get(entry.projectId) ?? 0) + entry.durationSeconds,
-    );
+    totals.set(entry.projectId, (totals.get(entry.projectId) ?? 0) + entry.durationSeconds);
   }
   return totals;
 });
@@ -252,20 +249,18 @@ async function createProject() {
     </div>
 
     <!-- Loading -->
-    <div
-      v-if="isLoading"
-      class="overflow-hidden rounded-2xl border border-default bg-default"
-    >
-      <div v-for="rowIndex in 6" :key="rowIndex" class="border-b border-default last:border-b-0 px-4 py-4">
+    <div v-if="isLoading" class="overflow-hidden rounded-2xl border border-default bg-default">
+      <div
+        v-for="rowIndex in 6"
+        :key="rowIndex"
+        class="border-b border-default last:border-b-0 px-4 py-4"
+      >
         <div class="h-4 animate-pulse rounded-md bg-elevated/60" />
       </div>
     </div>
 
     <!-- Error -->
-    <div
-      v-else-if="isError"
-      class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center"
-    >
+    <div v-else-if="isError" class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center">
       <UIcon name="i-lucide-alert-triangle" class="mx-auto size-5 text-error" />
       <p class="mt-3 text-sm font-bold text-highlighted">Couldn't load projects.</p>
       <p class="mt-1 text-xs text-muted">
@@ -288,9 +283,7 @@ async function createProject() {
     >
       <UIcon name="i-lucide-building-2" class="mx-auto size-6 text-muted" />
       <p class="mt-3 text-sm font-bold text-highlighted">No clients yet.</p>
-      <p class="mt-1 text-xs text-muted">
-        Add a client first, then their projects show up here.
-      </p>
+      <p class="mt-1 text-xs text-muted">Add a client first, then their projects show up here.</p>
     </div>
 
     <!-- Empty: clients exist, no projects -->
@@ -370,20 +363,26 @@ async function createProject() {
                 <div class="h-1.5 flex-1 rounded-full bg-elevated">
                   <div
                     class="h-full rounded-full transition-[width] duration-200 ease-out"
-                    :class="budgetsByProject.get(project.id) ? budgetToneFor(project.id) : 'bg-muted'"
+                    :class="
+                      budgetsByProject.get(project.id) ? budgetToneFor(project.id) : 'bg-muted'
+                    "
                     :style="{
-                      width: budgetsByProject.get(project.id) ? `${budgetPctFor(project.id)}%` : '0%',
+                      width: budgetsByProject.get(project.id)
+                        ? `${budgetPctFor(project.id)}%`
+                        : '0%',
                     }"
                   />
                 </div>
                 <span
                   class="text-[11px]"
-                  :class="budgetsByProject.get(project.id) ? 'text-muted font-mono tabular-nums' : 'text-dimmed'"
+                  :class="
+                    budgetsByProject.get(project.id)
+                      ? 'text-muted font-mono tabular-nums'
+                      : 'text-dimmed'
+                  "
                 >
                   {{
-                    budgetsByProject.get(project.id)
-                      ? `${budgetPctFor(project.id)}%`
-                      : "Not set"
+                    budgetsByProject.get(project.id) ? `${budgetPctFor(project.id)}%` : "Not set"
                   }}
                 </span>
               </div>
@@ -391,7 +390,11 @@ async function createProject() {
             <td class="px-3 py-3 text-right">
               <span
                 class="font-mono font-bold tabular-nums"
-                :class="(hoursThisWeekByProject.get(project.id) ?? 0) > 0 ? 'text-highlighted' : 'text-dimmed'"
+                :class="
+                  (hoursThisWeekByProject.get(project.id) ?? 0) > 0
+                    ? 'text-highlighted'
+                    : 'text-dimmed'
+                "
               >
                 {{ formatDuration(hoursThisWeekByProject.get(project.id) ?? 0, "short") }}
               </span>
@@ -400,10 +403,7 @@ async function createProject() {
               <span
                 class="inline-flex items-center gap-1.5 rounded-full border border-default bg-muted px-2 py-0.5 text-[11px] font-bold text-muted"
               >
-                <span
-                  class="inline-block size-1.5 rounded-full bg-success"
-                  aria-hidden="true"
-                />
+                <span class="inline-block size-1.5 rounded-full bg-success" aria-hidden="true" />
                 Active
               </span>
             </td>

@@ -39,15 +39,7 @@ function startOfWeekUtc(): Date {
 const range = computed(() => {
   const now = new Date();
   const endIso = new Date(
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate(),
-      23,
-      59,
-      59,
-      999,
-    ),
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
   ).toISOString();
 
   if (rangePreset.value === "month") {
@@ -55,7 +47,9 @@ const range = computed(() => {
     return { from: start.toISOString(), to: endIso };
   }
   if (rangePreset.value === "last30") {
-    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29));
+    const start = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29),
+    );
     return { from: start.toISOString(), to: endIso };
   }
   return { from: startOfWeekUtc().toISOString(), to: endIso };
@@ -134,7 +128,7 @@ function formatHours(value: number): string {
     <div class="flex flex-wrap items-center gap-2">
       <div class="inline-flex rounded-full border border-default bg-elevated p-1">
         <button
-          v-for="preset in (['week', 'month', 'last30'] as const)"
+          v-for="preset in ['week', 'month', 'last30'] as const"
           :key="preset"
           type="button"
           class="rounded-full px-3 py-1 text-[11px] font-bold transition-colors"
@@ -169,10 +163,7 @@ function formatHours(value: number): string {
     </div>
 
     <!-- Error -->
-    <div
-      v-else-if="isError"
-      class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center"
-    >
+    <div v-else-if="isError" class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center">
       <UIcon name="i-lucide-alert-triangle" class="mx-auto size-5 text-error" />
       <p class="mt-3 text-sm font-bold text-highlighted">Couldn't load reports.</p>
       <p class="mt-1 text-xs text-muted">
@@ -214,9 +205,7 @@ function formatHours(value: number): string {
           </p>
         </div>
         <div class="rounded-2xl border border-default bg-default p-4">
-          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-            Active members
-          </p>
+          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Active members</p>
           <p class="mt-1 font-mono text-2xl font-bold tabular-nums text-highlighted">
             {{ summary.teamActivity.length }}
           </p>
@@ -239,7 +228,9 @@ function formatHours(value: number): string {
               class="px-4 py-3"
             >
               <div class="flex items-baseline justify-between gap-3">
-                <span class="truncate text-xs font-bold text-highlighted">{{ row.clientName }}</span>
+                <span class="truncate text-xs font-bold text-highlighted">{{
+                  row.clientName
+                }}</span>
                 <span class="font-mono text-[11px] tabular-nums text-muted">
                   {{ formatHours(row.hours) }}
                 </span>
@@ -316,11 +307,7 @@ function formatHours(value: number): string {
             </p>
           </header>
           <ul class="divide-y divide-default">
-            <li
-              v-for="row in summary.teamActivity"
-              :key="row.userId"
-              class="px-4 py-3"
-            >
+            <li v-for="row in summary.teamActivity" :key="row.userId" class="px-4 py-3">
               <div class="flex items-baseline justify-between gap-3">
                 <span class="truncate text-xs font-bold text-highlighted">{{ row.userName }}</span>
                 <span class="font-mono text-[11px] tabular-nums text-muted">

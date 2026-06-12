@@ -22,11 +22,7 @@ defineProps<{
       v-if="hints && hints.length > 0"
       class="mx-auto mt-6 max-w-md space-y-2 text-left text-xs text-muted"
     >
-      <li
-        v-for="(hint, index) in hints"
-        :key="index"
-        class="flex items-start gap-2"
-      >
+      <li v-for="(hint, index) in hints" :key="index" class="flex items-start gap-2">
         <UIcon name="i-lucide-corner-down-right" class="size-3.5 shrink-0 text-dimmed mt-0.5" />
         <span>{{ hint }}</span>
       </li>

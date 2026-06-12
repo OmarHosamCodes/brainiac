@@ -64,7 +64,10 @@ function handleKeydown(event: KeyboardEvent) {
     return;
   }
   const target = event.target as HTMLElement | null;
-  if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)) {
+  if (
+    target &&
+    (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable)
+  ) {
     clearPrefix();
     return;
   }
@@ -102,11 +105,7 @@ onBeforeUnmount(() => {
 <template>
   <div class="agency-topbar flex flex-wrap items-center gap-3 border-b border-default pb-3">
     <!-- Team badge / selector. Read-only badge when single team. -->
-    <UPopover
-      v-if="isMultiTeam"
-      v-model:open="teamSelectorOpen"
-      :content="{ align: 'start' }"
-    >
+    <UPopover v-if="isMultiTeam" v-model:open="teamSelectorOpen" :content="{ align: 'start' }">
       <button
         type="button"
         class="inline-flex items-center gap-2 rounded-full border border-default bg-muted px-3 py-1.5 text-xs font-bold text-highlighted transition-colors hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
@@ -127,11 +126,7 @@ onBeforeUnmount(() => {
             @click="selectTeam(team.id)"
           >
             <span class="truncate">{{ team.name }}</span>
-            <UIcon
-              v-if="team.id === teamId"
-              name="i-lucide-check"
-              class="size-3.5 shrink-0"
-            />
+            <UIcon v-if="team.id === teamId" name="i-lucide-check" class="size-3.5 shrink-0" />
           </button>
         </div>
       </template>
@@ -169,11 +164,7 @@ onBeforeUnmount(() => {
     </nav>
 
     <!-- Segmented section nav, narrow: popover. -->
-    <UPopover
-      v-model:open="segmentPopoverOpen"
-      :content="{ align: 'start' }"
-      class="lg:hidden"
-    >
+    <UPopover v-model:open="segmentPopoverOpen" :content="{ align: 'start' }" class="lg:hidden">
       <button
         type="button"
         class="inline-flex flex-1 items-center justify-between gap-2 rounded-full border border-default bg-default px-3 py-1.5 text-xs font-bold text-highlighted transition-colors hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"

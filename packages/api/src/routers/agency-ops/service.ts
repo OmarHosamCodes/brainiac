@@ -11,6 +11,9 @@ import {
   agencyOpsProject,
   agencyOpsProjectTask,
   agencyOpsTag,
+  agencyOpsTaskAttachment,
+  agencyOpsTaskMessage,
+  agencyOpsTaskThread,
   agencyOpsTimeEntry,
   agencyOpsTimeEntryTag,
   user,
@@ -19,6 +22,14 @@ import {
 import { createWorkspaceId, type WorkspaceTeamRole } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, gte, inArray, isNull, lt, lte, sql, sum } from "drizzle-orm";
+
+import {
+  createTaskAttachmentUploadToken,
+  createTaskAttachmentPresignedUploadUrl,
+  deleteTaskAttachmentFromStorage,
+  getTaskAttachmentPublicUrl,
+  verifyTaskAttachmentUploadToken,
+} from "../../storage";
 
 const TEAM_ROLE_WEIGHT: Record<WorkspaceTeamRole, number> = {
   viewer: 1,
@@ -51,8 +62,41 @@ type AgencyProjectTaskRecord = {
   teamId: string;
   projectId: string;
   title: string;
+  status: "open" | "in_progress" | "done" | "archived";
+  assigneeUserId: string | null;
+  assigneeName: string | null;
+  assigneeAvatar: string | null;
+  dueDate: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+type AgencyTaskMessageRecord = {
+  id: string;
+  teamId: string;
+  threadId: string;
+  userId: string;
+  userName: string;
+  userAvatar: string | null;
+  content: string;
+  type: "text" | "voice" | "attachment";
+  senderType: "user" | "agent";
+  createdAt: string;
+  updatedAt: string;
+  attachments: AgencyTaskAttachmentRecord[];
+};
+
+type AgencyTaskAttachmentRecord = {
+  id: string;
+  teamId: string;
+  messageId: string;
+  fileName: string;
+  mimeType: string;
+  storageKey: string;
+  sizeBytes: number;
+  durationSeconds: number | null;
+  createdAt: string;
+  url: string | null;
 };
 
 type AgencyTagRecord = {
@@ -69,6 +113,7 @@ type AgencyTimeEntryRecord = {
   userId: string;
   userName: string;
   projectId: string;
+  taskId: string | null;
   projectName: string;
   clientId: string;
   clientName: string;
@@ -88,6 +133,7 @@ type AgencyActiveTimerRecord = {
   teamId: string;
   userId: string;
   projectId: string;
+  taskId: string | null;
   projectName: string;
   tags: AgencyTagRecord[];
   description: string;
@@ -124,7 +170,7 @@ function hasRoleAtLeast(role: WorkspaceTeamRole, required: WorkspaceTeamRole) {
   return TEAM_ROLE_WEIGHT[role] >= TEAM_ROLE_WEIGHT[required];
 }
 
-async function requireTeamMembership(
+export async function requireTeamMembership(
   actorUserId: string,
   teamId: string,
   requiredRole: WorkspaceTeamRole = "viewer",
@@ -276,6 +322,11 @@ function mapProjectTaskRow(row: {
   teamId: string;
   projectId: string;
   title: string;
+  status: "open" | "in_progress" | "done" | "archived";
+  assigneeUserId: string | null;
+  assigneeName: string | null;
+  assigneeAvatar: string | null;
+  dueDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }): AgencyProjectTaskRecord {
@@ -284,6 +335,11 @@ function mapProjectTaskRow(row: {
     teamId: row.teamId,
     projectId: row.projectId,
     title: row.title,
+    status: row.status,
+    assigneeUserId: row.assigneeUserId,
+    assigneeName: row.assigneeName,
+    assigneeAvatar: row.assigneeAvatar,
+    dueDate: row.dueDate?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -312,6 +368,7 @@ async function getActiveTimerByUser(userId: string) {
       teamId: agencyOpsActiveTimer.teamId,
       userId: agencyOpsActiveTimer.userId,
       projectId: agencyOpsActiveTimer.projectId,
+      taskId: agencyOpsActiveTimer.taskId,
       projectName: agencyOpsProject.name,
       description: agencyOpsActiveTimer.description,
       linkUrl: agencyOpsActiveTimer.linkUrl,
@@ -345,6 +402,7 @@ async function getActiveTimerByUser(userId: string) {
     teamId: timer.teamId,
     userId: timer.userId,
     projectId: timer.projectId,
+    taskId: timer.taskId,
     projectName: timer.projectName,
     tags: tags.map(mapTagRow),
     description: timer.description,
@@ -372,6 +430,18 @@ async function getProjectByIdForTeam(teamId: string, projectId: string) {
   }
 
   return project;
+}
+
+async function resolveTaskProjectId(teamId: string, taskId: string) {
+  const [task] = await db
+    .select({ projectId: agencyOpsProjectTask.projectId })
+    .from(agencyOpsProjectTask)
+    .where(and(eq(agencyOpsProjectTask.id, taskId), eq(agencyOpsProjectTask.teamId, teamId)))
+    .limit(1);
+  if (!task) {
+    throw new ORPCError("NOT_FOUND", { message: "Task was not found." });
+  }
+  return task.projectId;
 }
 
 async function getClientByIdForTeam(teamId: string, clientId: string) {
@@ -442,6 +512,7 @@ async function getReportRows(
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
       projectId: agencyOpsProject.id,
+      taskId: agencyOpsTimeEntry.taskId,
       projectName: agencyOpsProject.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
@@ -724,11 +795,33 @@ export async function listAgencyProjectTasks(
   actorUserId: string,
   input: {
     teamId: string;
-    projectId: string;
+    projectId?: string;
+    status?: "open" | "in_progress" | "done" | "archived";
+    assigneeUserId?: string;
+    search?: string;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
-  await getProjectByIdForTeam(input.teamId, input.projectId);
+
+  if (input.projectId) {
+    await getProjectByIdForTeam(input.teamId, input.projectId);
+  }
+
+  const searchTerm = input.search?.trim().toLowerCase();
+  const filters = [eq(agencyOpsProjectTask.teamId, input.teamId)];
+
+  if (input.projectId) {
+    filters.push(eq(agencyOpsProjectTask.projectId, input.projectId));
+  }
+  if (input.status) {
+    filters.push(eq(agencyOpsProjectTask.status, input.status));
+  }
+  if (input.assigneeUserId) {
+    filters.push(eq(agencyOpsProjectTask.assigneeUserId, input.assigneeUserId));
+  }
+  if (searchTerm) {
+    filters.push(sql`lower(${agencyOpsProjectTask.title}) like ${`%${searchTerm}%`}`);
+  }
 
   const rows = await db
     .select({
@@ -736,21 +829,54 @@ export async function listAgencyProjectTasks(
       teamId: agencyOpsProjectTask.teamId,
       projectId: agencyOpsProjectTask.projectId,
       title: agencyOpsProjectTask.title,
+      status: agencyOpsProjectTask.status,
+      assigneeUserId: agencyOpsProjectTask.assigneeUserId,
+      assigneeName: user.name,
+      assigneeAvatar: user.image,
+      dueDate: agencyOpsProjectTask.dueDate,
       createdAt: agencyOpsProjectTask.createdAt,
       updatedAt: agencyOpsProjectTask.updatedAt,
     })
     .from(agencyOpsProjectTask)
-    .where(
-      and(
-        eq(agencyOpsProjectTask.teamId, input.teamId),
-        eq(agencyOpsProjectTask.projectId, input.projectId),
-      ),
-    )
+    .leftJoin(user, eq(user.id, agencyOpsProjectTask.assigneeUserId))
+    .where(and(...filters))
     .orderBy(desc(agencyOpsProjectTask.createdAt));
 
   return {
-    items: rows.map(mapProjectTaskRow),
+    items: rows.map((row) =>
+      mapProjectTaskRow({
+        ...row,
+        assigneeName: row.assigneeName ?? null,
+        assigneeAvatar: row.assigneeAvatar ?? null,
+      }),
+    ),
   };
+}
+
+async function getTaskByIdForTeam(teamId: string, taskId: string) {
+  const [task] = await db
+    .select({
+      id: agencyOpsProjectTask.id,
+      teamId: agencyOpsProjectTask.teamId,
+      projectId: agencyOpsProjectTask.projectId,
+      title: agencyOpsProjectTask.title,
+      status: agencyOpsProjectTask.status,
+      assigneeUserId: agencyOpsProjectTask.assigneeUserId,
+      dueDate: agencyOpsProjectTask.dueDate,
+      createdAt: agencyOpsProjectTask.createdAt,
+      updatedAt: agencyOpsProjectTask.updatedAt,
+    })
+    .from(agencyOpsProjectTask)
+    .where(and(eq(agencyOpsProjectTask.id, taskId), eq(agencyOpsProjectTask.teamId, teamId)))
+    .limit(1);
+
+  if (!task) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Task was not found.",
+    });
+  }
+
+  return task;
 }
 
 export async function createAgencyProjectTask(
@@ -759,6 +885,9 @@ export async function createAgencyProjectTask(
     teamId: string;
     projectId: string;
     title: string;
+    status?: "open" | "in_progress" | "done" | "archived";
+    assigneeUserId?: string | null;
+    dueDate?: string | null;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -771,32 +900,138 @@ export async function createAgencyProjectTask(
     });
   }
 
+  if (input.assigneeUserId) {
+    await requireTeamMember(input.teamId, input.assigneeUserId);
+  }
+
   const now = new Date();
-  const [created] = await db
-    .insert(agencyOpsProjectTask)
-    .values({
-      id: createWorkspaceId("agency-project-task"),
-      teamId: input.teamId,
-      projectId: input.projectId,
-      title,
-      createdByUserId: actorUserId,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning({
-      id: agencyOpsProjectTask.id,
-      teamId: agencyOpsProjectTask.teamId,
-      projectId: agencyOpsProjectTask.projectId,
-      title: agencyOpsProjectTask.title,
-      createdAt: agencyOpsProjectTask.createdAt,
-      updatedAt: agencyOpsProjectTask.updatedAt,
-    });
+  const taskId = createWorkspaceId("agency-project-task");
+  const dueDate = input.dueDate ? parseIsoDateTime(input.dueDate, "dueDate") : null;
+
+  const [created] = await db.transaction(async (tx) => {
+    const [task] = await tx
+      .insert(agencyOpsProjectTask)
+      .values({
+        id: taskId,
+        teamId: input.teamId,
+        projectId: input.projectId,
+        title,
+        status: input.status ?? "open",
+        assigneeUserId: input.assigneeUserId ?? null,
+        dueDate,
+        createdByUserId: actorUserId,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({
+        id: agencyOpsProjectTask.id,
+        teamId: agencyOpsProjectTask.teamId,
+        projectId: agencyOpsProjectTask.projectId,
+        title: agencyOpsProjectTask.title,
+        status: agencyOpsProjectTask.status,
+        assigneeUserId: agencyOpsProjectTask.assigneeUserId,
+        dueDate: agencyOpsProjectTask.dueDate,
+        createdAt: agencyOpsProjectTask.createdAt,
+        updatedAt: agencyOpsProjectTask.updatedAt,
+      });
+
+    if (task) {
+      await tx.insert(agencyOpsTaskThread).values({
+        id: createWorkspaceId("agency-task-thread"),
+        teamId: input.teamId,
+        taskId: task.id,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    return [task];
+  });
 
   if (!created) {
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
 
-  return mapProjectTaskRow(created);
+  return mapProjectTaskRow({
+    ...created,
+    assigneeName: null,
+    assigneeAvatar: null,
+  });
+}
+
+export async function updateAgencyProjectTask(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    taskId: string;
+    title?: string;
+    status?: "open" | "in_progress" | "done" | "archived";
+    assigneeUserId?: string | null;
+    dueDate?: string | null;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+  const current = await getTaskByIdForTeam(input.teamId, input.taskId);
+
+  if (input.assigneeUserId) {
+    await requireTeamMember(input.teamId, input.assigneeUserId);
+  }
+
+  const title = input.title?.trim();
+  if (title === "") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Task title cannot be empty.",
+    });
+  }
+
+  const dueDate =
+    input.dueDate !== undefined
+      ? input.dueDate
+        ? parseIsoDateTime(input.dueDate, "dueDate")
+        : null
+      : current.dueDate;
+
+  const now = new Date();
+  const [updated] = await db
+    .update(agencyOpsProjectTask)
+    .set({
+      ...(title ? { title } : {}),
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.assigneeUserId !== undefined ? { assigneeUserId: input.assigneeUserId } : {}),
+      dueDate,
+      updatedAt: now,
+    })
+    .where(
+      and(eq(agencyOpsProjectTask.teamId, input.teamId), eq(agencyOpsProjectTask.id, input.taskId)),
+    )
+    .returning({
+      id: agencyOpsProjectTask.id,
+      teamId: agencyOpsProjectTask.teamId,
+      projectId: agencyOpsProjectTask.projectId,
+      title: agencyOpsProjectTask.title,
+      status: agencyOpsProjectTask.status,
+      assigneeUserId: agencyOpsProjectTask.assigneeUserId,
+      dueDate: agencyOpsProjectTask.dueDate,
+      createdAt: agencyOpsProjectTask.createdAt,
+      updatedAt: agencyOpsProjectTask.updatedAt,
+    });
+
+  if (!updated) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  const [assignee] = await db
+    .select({ name: user.name, image: user.image })
+    .from(user)
+    .where(eq(user.id, updated.assigneeUserId ?? ""))
+    .limit(1);
+
+  return mapProjectTaskRow({
+    ...updated,
+    assigneeName: assignee?.name ?? null,
+    assigneeAvatar: assignee?.image ?? null,
+  });
 }
 
 export async function deleteAgencyProjectTask(
@@ -824,6 +1059,490 @@ export async function deleteAgencyProjectTask(
   return {
     taskId: deleted.id,
     deleted: true,
+  };
+}
+
+async function requireTeamMember(teamId: string, userId: string) {
+  const [membership] = await db
+    .select({ userId: workspaceTeamMember.userId })
+    .from(workspaceTeamMember)
+    .where(and(eq(workspaceTeamMember.teamId, teamId), eq(workspaceTeamMember.userId, userId)))
+    .limit(1);
+
+  if (!membership) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Selected user is not a member of this team.",
+    });
+  }
+}
+
+async function getThreadByTaskId(teamId: string, taskId: string) {
+  const [thread] = await db
+    .select({
+      id: agencyOpsTaskThread.id,
+      teamId: agencyOpsTaskThread.teamId,
+      taskId: agencyOpsTaskThread.taskId,
+    })
+    .from(agencyOpsTaskThread)
+    .where(and(eq(agencyOpsTaskThread.teamId, teamId), eq(agencyOpsTaskThread.taskId, taskId)))
+    .limit(1);
+
+  if (!thread) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Task thread was not found.",
+    });
+  }
+
+  return thread;
+}
+
+async function mapTaskMessageRow(row: {
+  id: string;
+  teamId: string;
+  threadId: string;
+  userId: string;
+  userName: string | null;
+  userAvatar: string | null;
+  content: string;
+  type: "text" | "voice" | "attachment";
+  senderType: "user" | "agent";
+  createdAt: Date;
+  updatedAt: Date;
+}): Promise<AgencyTaskMessageRecord> {
+  const attachments = await db
+    .select({
+      id: agencyOpsTaskAttachment.id,
+      teamId: agencyOpsTaskAttachment.teamId,
+      messageId: agencyOpsTaskAttachment.messageId,
+      fileName: agencyOpsTaskAttachment.fileName,
+      mimeType: agencyOpsTaskAttachment.mimeType,
+      storageKey: agencyOpsTaskAttachment.storageKey,
+      sizeBytes: agencyOpsTaskAttachment.sizeBytes,
+      durationSeconds: agencyOpsTaskAttachment.durationSeconds,
+      createdAt: agencyOpsTaskAttachment.createdAt,
+      deletedAt: agencyOpsTaskAttachment.deletedAt,
+    })
+    .from(agencyOpsTaskAttachment)
+    .where(
+      and(eq(agencyOpsTaskAttachment.messageId, row.id), isNull(agencyOpsTaskAttachment.deletedAt)),
+    );
+
+  return {
+    id: row.id,
+    teamId: row.teamId,
+    threadId: row.threadId,
+    userId: row.userId,
+    userName: row.senderType === "agent" ? "Agent" : (row.userName ?? "Unknown"),
+    userAvatar: row.senderType === "agent" ? null : (row.userAvatar ?? null),
+    content: row.content,
+    type: row.type,
+    senderType: row.senderType,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    attachments: attachments.map((a) => ({
+      id: a.id,
+      teamId: a.teamId,
+      messageId: a.messageId,
+      fileName: a.fileName,
+      mimeType: a.mimeType,
+      storageKey: a.storageKey,
+      sizeBytes: a.sizeBytes,
+      durationSeconds: a.durationSeconds,
+      createdAt: a.createdAt.toISOString(),
+      url: getTaskAttachmentPublicUrl(a.storageKey),
+    })),
+  };
+}
+
+export async function listTaskThreadMessages(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    taskId: string;
+    page?: number;
+    pageSize?: number;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  await getTaskByIdForTeam(input.teamId, input.taskId);
+  const thread = await getThreadByTaskId(input.teamId, input.taskId);
+
+  const page = Math.max(1, input.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 25));
+  const offset = (page - 1) * pageSize;
+
+  const rows = await db
+    .select({
+      id: agencyOpsTaskMessage.id,
+      teamId: agencyOpsTaskMessage.teamId,
+      threadId: agencyOpsTaskMessage.threadId,
+      userId: agencyOpsTaskMessage.userId,
+      userName: user.name,
+      userAvatar: user.image,
+      content: agencyOpsTaskMessage.content,
+      type: agencyOpsTaskMessage.type,
+      senderType: agencyOpsTaskMessage.senderType,
+      createdAt: agencyOpsTaskMessage.createdAt,
+      updatedAt: agencyOpsTaskMessage.updatedAt,
+    })
+    .from(agencyOpsTaskMessage)
+    .leftJoin(user, eq(user.id, agencyOpsTaskMessage.userId))
+    .where(
+      and(eq(agencyOpsTaskMessage.threadId, thread.id), isNull(agencyOpsTaskMessage.deletedAt)),
+    )
+    .orderBy(desc(agencyOpsTaskMessage.createdAt))
+    .limit(pageSize)
+    .offset(offset);
+
+  const items = await Promise.all(
+    rows.map((row) =>
+      mapTaskMessageRow({
+        ...row,
+        userName: row.userName ?? null,
+        userAvatar: row.userAvatar ?? null,
+        type: row.type as "text" | "voice" | "attachment",
+        senderType: row.senderType as "user" | "agent",
+      }),
+    ),
+  );
+
+  const [countRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(agencyOpsTaskMessage)
+    .where(
+      and(eq(agencyOpsTaskMessage.threadId, thread.id), isNull(agencyOpsTaskMessage.deletedAt)),
+    );
+
+  const parsedTotal = Number(countRow?.count ?? 0);
+  const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
+
+  return {
+    items,
+    page,
+    pageSize,
+    total,
+  };
+}
+
+export async function createTaskThreadMessage(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    taskId: string;
+    content: string;
+    type?: "text" | "voice" | "attachment";
+    attachments?: Array<{
+      fileName: string;
+      mimeType: string;
+      storageKey: string;
+      sizeBytes: number;
+      durationSeconds?: number | null;
+      uploadToken: string;
+    }>;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  await getTaskByIdForTeam(input.teamId, input.taskId);
+  const thread = await getThreadByTaskId(input.teamId, input.taskId);
+
+  const type = input.type ?? "text";
+  const content = input.content.trim();
+
+  if (type === "text" && !content) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Message content is required.",
+    });
+  }
+
+  for (const attachment of input.attachments ?? []) {
+    const expectedPrefix = `task-attachments/${input.teamId}/${input.taskId}/`;
+    if (
+      !attachment.storageKey.startsWith(expectedPrefix) ||
+      !verifyTaskAttachmentUploadToken(attachment.uploadToken, {
+        teamId: input.teamId,
+        taskId: input.taskId,
+        fileName: attachment.fileName,
+        mimeType: attachment.mimeType,
+        storageKey: attachment.storageKey,
+        sizeBytes: attachment.sizeBytes,
+      })
+    ) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Attachment upload reference is invalid or expired.",
+      });
+    }
+  }
+
+  const now = new Date();
+  const messageId = createWorkspaceId("agency-task-message");
+
+  const [created] = await db.transaction(async (tx) => {
+    const [message] = await tx
+      .insert(agencyOpsTaskMessage)
+      .values({
+        id: messageId,
+        teamId: input.teamId,
+        threadId: thread.id,
+        userId: actorUserId,
+        content,
+        type,
+        senderType: "user",
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({
+        id: agencyOpsTaskMessage.id,
+        teamId: agencyOpsTaskMessage.teamId,
+        threadId: agencyOpsTaskMessage.threadId,
+        userId: agencyOpsTaskMessage.userId,
+        content: agencyOpsTaskMessage.content,
+        type: agencyOpsTaskMessage.type,
+        createdAt: agencyOpsTaskMessage.createdAt,
+        updatedAt: agencyOpsTaskMessage.updatedAt,
+      });
+
+    if (input.attachments && input.attachments.length > 0 && message) {
+      await tx.insert(agencyOpsTaskAttachment).values(
+        input.attachments.map((attachment) => ({
+          id: createWorkspaceId("agency-task-attachment"),
+          teamId: input.teamId,
+          messageId: message.id,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          storageKey: attachment.storageKey,
+          sizeBytes: attachment.sizeBytes,
+          durationSeconds: attachment.durationSeconds ?? null,
+          createdAt: now,
+        })),
+      );
+    }
+
+    return [message];
+  });
+
+  if (!created) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
+  }
+
+  await db
+    .update(agencyOpsTaskThread)
+    .set({ updatedAt: now })
+    .where(eq(agencyOpsTaskThread.id, thread.id));
+
+  return mapTaskMessageRow({
+    ...created,
+    userName: null,
+    userAvatar: null,
+    type: created.type as "text" | "voice" | "attachment",
+    senderType: "user",
+  });
+}
+
+export async function createTaskAttachmentPresignedUrl(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    taskId: string;
+    fileName: string;
+    mimeType: string;
+    sizeBytes: number;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  await getTaskByIdForTeam(input.teamId, input.taskId);
+
+  const extension = input.fileName.split(".").pop() ?? "";
+  const storageKey = `task-attachments/${input.teamId}/${input.taskId}/${createWorkspaceId("upload")}${extension ? `.${extension}` : ""}`;
+
+  const { uploadUrl, publicUrl } = await createTaskAttachmentPresignedUploadUrl({
+    storageKey,
+    mimeType: input.mimeType,
+    sizeBytes: input.sizeBytes,
+  });
+
+  return {
+    storageKey,
+    publicUrl,
+    uploadUrl,
+    uploadToken: createTaskAttachmentUploadToken({
+      teamId: input.teamId,
+      taskId: input.taskId,
+      fileName: input.fileName,
+      mimeType: input.mimeType,
+      storageKey,
+      sizeBytes: input.sizeBytes,
+    }),
+  };
+}
+
+export async function deleteTaskAttachment(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    attachmentId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+  const [attachment] = await db
+    .select({
+      id: agencyOpsTaskAttachment.id,
+      teamId: agencyOpsTaskAttachment.teamId,
+      storageKey: agencyOpsTaskAttachment.storageKey,
+      deletedAt: agencyOpsTaskAttachment.deletedAt,
+    })
+    .from(agencyOpsTaskAttachment)
+    .where(
+      and(
+        eq(agencyOpsTaskAttachment.id, input.attachmentId),
+        eq(agencyOpsTaskAttachment.teamId, input.teamId),
+      ),
+    )
+    .limit(1);
+
+  if (!attachment) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Attachment was not found.",
+    });
+  }
+
+  if (attachment.deletedAt) {
+    return {
+      attachmentId: attachment.id,
+      deleted: true,
+    };
+  }
+
+  const now = new Date();
+
+  await deleteTaskAttachmentFromStorage(attachment.storageKey);
+  await db
+    .update(agencyOpsTaskAttachment)
+    .set({ deletedAt: now })
+    .where(eq(agencyOpsTaskAttachment.id, attachment.id));
+
+  return {
+    attachmentId: attachment.id,
+    deleted: true,
+  };
+}
+
+export async function listTaskThreadMembers(
+  actorUserId: string,
+  input: {
+    teamId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const members = await db
+    .select({
+      userId: workspaceTeamMember.userId,
+      userName: user.name,
+      userAvatar: user.image,
+    })
+    .from(workspaceTeamMember)
+    .leftJoin(user, eq(user.id, workspaceTeamMember.userId))
+    .where(eq(workspaceTeamMember.teamId, input.teamId))
+    .orderBy(asc(user.name));
+
+  return {
+    items: members.map((m) => ({
+      userId: m.userId,
+      userName: m.userName ?? "Unknown",
+      userAvatar: m.userAvatar ?? null,
+    })),
+  };
+}
+
+export async function getTaskThreadContext(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    taskId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const [context] = await db
+    .select({
+      taskId: agencyOpsProjectTask.id,
+      taskTitle: agencyOpsProjectTask.title,
+      taskStatus: agencyOpsProjectTask.status,
+      projectId: agencyOpsProject.id,
+      projectName: agencyOpsProject.name,
+      clientId: agencyOpsClient.id,
+      clientName: agencyOpsClient.name,
+      assigneeName: user.name,
+    })
+    .from(agencyOpsProjectTask)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(user, eq(user.id, agencyOpsProjectTask.assigneeUserId))
+    .where(
+      and(eq(agencyOpsProjectTask.id, input.taskId), eq(agencyOpsProjectTask.teamId, input.teamId)),
+    )
+    .limit(1);
+
+  if (!context) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Task was not found.",
+    });
+  }
+
+  return context;
+}
+
+export async function listRecentTaskThreadMessages(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    taskId: string;
+    limit?: number;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  await getTaskByIdForTeam(input.teamId, input.taskId);
+  const thread = await getThreadByTaskId(input.teamId, input.taskId);
+
+  const limit = Math.min(50, Math.max(1, input.limit ?? 20));
+
+  const rows = await db
+    .select({
+      id: agencyOpsTaskMessage.id,
+      teamId: agencyOpsTaskMessage.teamId,
+      threadId: agencyOpsTaskMessage.threadId,
+      userId: agencyOpsTaskMessage.userId,
+      userName: user.name,
+      userAvatar: user.image,
+      content: agencyOpsTaskMessage.content,
+      type: agencyOpsTaskMessage.type,
+      senderType: agencyOpsTaskMessage.senderType,
+      createdAt: agencyOpsTaskMessage.createdAt,
+      updatedAt: agencyOpsTaskMessage.updatedAt,
+    })
+    .from(agencyOpsTaskMessage)
+    .leftJoin(user, eq(user.id, agencyOpsTaskMessage.userId))
+    .where(
+      and(eq(agencyOpsTaskMessage.threadId, thread.id), isNull(agencyOpsTaskMessage.deletedAt)),
+    )
+    .orderBy(desc(agencyOpsTaskMessage.createdAt))
+    .limit(limit);
+
+  const items = await Promise.all(
+    rows.map((row) =>
+      mapTaskMessageRow({
+        ...row,
+        userName: row.userName ?? null,
+        userAvatar: row.userAvatar ?? null,
+        type: row.type as "text" | "voice" | "attachment",
+        senderType: row.senderType as "user" | "agent",
+      }),
+    ),
+  );
+
+  return {
+    items: items.reverse(),
   };
 }
 
@@ -925,7 +1644,8 @@ export async function startAgencyTimer(
   actorUserId: string,
   input: {
     teamId: string;
-    projectId: string;
+    projectId?: string;
+    taskId?: string;
     tagIds?: string[];
     description?: string;
     linkUrl?: string | null;
@@ -933,7 +1653,22 @@ export async function startAgencyTimer(
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
-  await getProjectByIdForTeam(input.teamId, input.projectId);
+  let projectId = input.projectId;
+  if (input.taskId) {
+    const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
+    if (projectId && projectId !== taskProjectId) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "taskId does not belong to the provided projectId.",
+      });
+    }
+    projectId = taskProjectId;
+  } else if (!projectId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "projectId or taskId is required.",
+    });
+  }
+
+  await getProjectByIdForTeam(input.teamId, projectId);
   const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
   const now = new Date();
@@ -943,6 +1678,7 @@ export async function startAgencyTimer(
       id: agencyOpsActiveTimer.id,
       teamId: agencyOpsActiveTimer.teamId,
       projectId: agencyOpsActiveTimer.projectId,
+      taskId: agencyOpsActiveTimer.taskId,
       description: agencyOpsActiveTimer.description,
       linkUrl: agencyOpsActiveTimer.linkUrl,
       startedAt: agencyOpsActiveTimer.startedAt,
@@ -961,6 +1697,7 @@ export async function startAgencyTimer(
           id: createWorkspaceId("agency-time"),
           teamId: existing.teamId,
           projectId: existing.projectId,
+          taskId: existing.taskId,
           userId: actorUserId,
           source: "timer",
           description: existing.description,
@@ -998,7 +1735,8 @@ export async function startAgencyTimer(
       .values({
         id: createWorkspaceId("agency-active-timer"),
         teamId: input.teamId,
-        projectId: input.projectId,
+        projectId,
+        taskId: input.taskId ?? null,
         userId: actorUserId,
         description: input.description?.trim() ?? "",
         linkUrl: normalizedLinkUrl ?? null,
@@ -1040,6 +1778,7 @@ export async function stopAgencyTimer(
       id: agencyOpsActiveTimer.id,
       teamId: agencyOpsActiveTimer.teamId,
       projectId: agencyOpsActiveTimer.projectId,
+      taskId: agencyOpsActiveTimer.taskId,
       description: agencyOpsActiveTimer.description,
       linkUrl: agencyOpsActiveTimer.linkUrl,
       startedAt: agencyOpsActiveTimer.startedAt,
@@ -1085,6 +1824,7 @@ export async function stopAgencyTimer(
         id: createWorkspaceId("agency-time"),
         teamId: active.teamId,
         projectId: active.projectId,
+        taskId: active.taskId,
         userId: actorUserId,
         source: "timer",
         description,
@@ -1139,6 +1879,7 @@ export async function stopAgencyTimer(
       userId: agencyOpsTimeEntry.userId,
       userName: user.name,
       projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -1177,6 +1918,7 @@ export async function stopAgencyTimer(
         userId: row.userId,
         userName: row.userName ?? "Unknown",
         projectId: row.projectId,
+        taskId: row.taskId ?? null,
         projectName: row.projectName,
         clientId: row.clientId,
         clientName: row.clientName,
@@ -1220,6 +1962,7 @@ export async function listMyAgencyTimeEntries(
       userId: agencyOpsTimeEntry.userId,
       userName: user.name,
       projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -1268,6 +2011,7 @@ export async function listMyAgencyTimeEntries(
         userId: row.userId,
         userName: row.userName ?? "Unknown",
         projectId: row.projectId,
+        taskId: row.taskId ?? null,
         projectName: row.projectName,
         clientId: row.clientId,
         clientName: row.clientName,
@@ -2152,7 +2896,8 @@ export async function createManualAgencyTimeEntry(
   actorUserId: string,
   input: {
     teamId: string;
-    projectId: string;
+    projectId?: string;
+    taskId?: string;
     startAt: string;
     endAt: string;
     description?: string;
@@ -2162,7 +2907,22 @@ export async function createManualAgencyTimeEntry(
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
-  await getProjectByIdForTeam(input.teamId, input.projectId);
+  let projectId = input.projectId;
+  if (input.taskId) {
+    const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
+    if (projectId && projectId !== taskProjectId) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "taskId does not belong to the provided projectId.",
+      });
+    }
+    projectId = taskProjectId;
+  } else if (!projectId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "projectId or taskId is required.",
+    });
+  }
+
+  await getProjectByIdForTeam(input.teamId, projectId);
 
   const startAt = parseIsoDateTime(input.startAt, "startAt");
   const endAt = parseIsoDateTime(input.endAt, "endAt");
@@ -2178,7 +2938,8 @@ export async function createManualAgencyTimeEntry(
       .values({
         id: createWorkspaceId("agency-time"),
         teamId: input.teamId,
-        projectId: input.projectId,
+        projectId,
+        taskId: input.taskId ?? null,
         userId: actorUserId,
         source: "manual",
         description: input.description?.trim() ?? "",
@@ -2214,6 +2975,7 @@ export async function createManualAgencyTimeEntry(
       userId: agencyOpsTimeEntry.userId,
       userName: user.name,
       projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -2255,6 +3017,7 @@ export async function createManualAgencyTimeEntry(
     userId: row.userId,
     userName: row.userName ?? "Unknown",
     projectId: row.projectId,
+    taskId: row.taskId ?? null,
     projectName: row.projectName,
     clientId: row.clientId,
     clientName: row.clientName,
@@ -2276,6 +3039,7 @@ export async function updateMyAgencyTimeEntry(
     teamId: string;
     entryId: string;
     projectId?: string;
+    taskId?: string | null;
     startAt?: string;
     endAt?: string;
     description?: string;
@@ -2289,6 +3053,8 @@ export async function updateMyAgencyTimeEntry(
     .select({
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
     })
     .from(agencyOpsTimeEntry)
     .where(
@@ -2309,6 +3075,25 @@ export async function updateMyAgencyTimeEntry(
     await getProjectByIdForTeam(input.teamId, input.projectId);
   }
 
+  let resolvedProjectId = input.projectId;
+  let taskIdUpdate: { taskId: string | null } | undefined;
+  if (input.taskId !== undefined) {
+    if (input.taskId === null) {
+      taskIdUpdate = { taskId: null };
+    } else {
+      const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
+      if (resolvedProjectId && resolvedProjectId !== taskProjectId) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "taskId does not belong to the provided projectId.",
+        });
+      }
+      resolvedProjectId = taskProjectId;
+      taskIdUpdate = { taskId: input.taskId };
+    }
+  } else if (input.projectId && input.projectId !== current.projectId && current.taskId) {
+    taskIdUpdate = { taskId: null };
+  }
+
   const nextStartedAt = input.startAt
     ? parseIsoDateTime(input.startAt, "startAt")
     : current.startedAt;
@@ -2323,7 +3108,8 @@ export async function updateMyAgencyTimeEntry(
     const [timeEntry] = await tx
       .update(agencyOpsTimeEntry)
       .set({
-        ...(input.projectId ? { projectId: input.projectId } : {}),
+        ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
+        ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
         startedAt: nextStartedAt,
         endedAt: nextEndedAt,
         durationSeconds,
@@ -2370,6 +3156,7 @@ export async function updateMyAgencyTimeEntry(
       userId: agencyOpsTimeEntry.userId,
       userName: user.name,
       projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -2411,6 +3198,7 @@ export async function updateMyAgencyTimeEntry(
     userId: row.userId,
     userName: row.userName ?? "Unknown",
     projectId: row.projectId,
+    taskId: row.taskId ?? null,
     projectName: row.projectName,
     clientId: row.clientId,
     clientName: row.clientName,
@@ -2808,6 +3596,7 @@ export async function listAllAgencyTimeEntries(
       userId: agencyOpsTimeEntry.userId,
       userName: user.name,
       projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -2852,6 +3641,7 @@ export async function listAllAgencyTimeEntries(
         userId: row.userId,
         userName: row.userName ?? "Unknown",
         projectId: row.projectId,
+        taskId: row.taskId ?? null,
         projectName: row.projectName,
         clientId: row.clientId,
         clientName: row.clientName,
@@ -2900,6 +3690,7 @@ export async function updateAnyAgencyTimeEntry(
     description?: string;
     linkUrl?: string | null;
     projectId?: string;
+    taskId?: string | null;
     tagIds?: string[];
   },
 ) {
@@ -2909,6 +3700,8 @@ export async function updateAnyAgencyTimeEntry(
     .select({
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
     })
     .from(agencyOpsTimeEntry)
     .where(
@@ -2928,6 +3721,25 @@ export async function updateAnyAgencyTimeEntry(
     await getProjectByIdForTeam(input.teamId, input.projectId);
   }
 
+  let resolvedProjectId = input.projectId;
+  let taskIdUpdate: { taskId: string | null } | undefined;
+  if (input.taskId !== undefined) {
+    if (input.taskId === null) {
+      taskIdUpdate = { taskId: null };
+    } else {
+      const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
+      if (resolvedProjectId && resolvedProjectId !== taskProjectId) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "taskId does not belong to the provided projectId.",
+        });
+      }
+      resolvedProjectId = taskProjectId;
+      taskIdUpdate = { taskId: input.taskId };
+    }
+  } else if (input.projectId && input.projectId !== current.projectId && current.taskId) {
+    taskIdUpdate = { taskId: null };
+  }
+
   const nextStartedAt = input.startAt
     ? parseIsoDateTime(input.startAt, "startAt")
     : current.startedAt;
@@ -2942,7 +3754,8 @@ export async function updateAnyAgencyTimeEntry(
     const [timeEntry] = await tx
       .update(agencyOpsTimeEntry)
       .set({
-        ...(input.projectId ? { projectId: input.projectId } : {}),
+        ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
+        ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
         startedAt: nextStartedAt,
         endedAt: nextEndedAt,
         durationSeconds,
@@ -2988,6 +3801,7 @@ export async function updateAnyAgencyTimeEntry(
       userId: agencyOpsTimeEntry.userId,
       userName: user.name,
       projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -3029,6 +3843,7 @@ export async function updateAnyAgencyTimeEntry(
     userId: row.userId,
     userName: row.userName ?? "Unknown",
     projectId: row.projectId,
+    taskId: row.taskId ?? null,
     projectName: row.projectName,
     clientId: row.clientId,
     clientName: row.clientName,

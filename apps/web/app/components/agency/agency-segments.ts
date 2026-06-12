@@ -5,7 +5,7 @@
  * the `g X` chord (Time = `g t`, Projects = `g p`, …).
  */
 export type AgencySegmentId =
-  | "time"
+  | "work"
   | "projects"
   | "clients"
   | "reports"
@@ -24,11 +24,11 @@ export type AgencySegment = {
 
 export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
   {
-    id: "time",
-    label: "Time",
-    icon: "i-lucide-clock",
-    shortcutKey: "t",
-    subtitle: "Log hours across projects this week.",
+    id: "work",
+    label: "Work",
+    icon: "i-lucide-briefcase",
+    shortcutKey: "w",
+    subtitle: "Tasks, threads, and time in one place.",
   },
   {
     id: "projects",

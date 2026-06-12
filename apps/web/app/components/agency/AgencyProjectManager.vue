@@ -67,8 +67,7 @@ const tags = computed(() => tagsQuery.data.value?.items ?? []);
 // Register queries with the store for optimistic patches.
 const clientsQueryKey = computed(
   () =>
-    orpc.agencyOps.clients.list.queryOptions({ input: { teamId: effectiveTeamId.value } })
-      .queryKey,
+    orpc.agencyOps.clients.list.queryOptions({ input: { teamId: effectiveTeamId.value } }).queryKey,
 );
 const projectsQueryKey = computed(
   () =>

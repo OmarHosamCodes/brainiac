@@ -9,9 +9,8 @@ import AgencyProUpsell from "~/components/agency/AgencyProUpsell.vue";
 import AgencyReportsSurface from "~/components/agency/AgencyReportsSurface.vue";
 import AgencyResourcingSurface from "~/components/agency/AgencyResourcingSurface.vue";
 import AgencySettingsSurface from "~/components/agency/AgencySettingsSurface.vue";
-import AgencyTimeEntriesSurface from "~/components/agency/AgencyTimeEntriesSurface.vue";
-import AgencyTimeTracker from "~/components/agency/AgencyTimeTracker.vue";
 import AgencyTopBar from "~/components/agency/AgencyTopBar.vue";
+import AgencyWorkSurface from "~/components/agency/AgencyWorkSurface.vue";
 import { AGENCY_SEGMENTS, type AgencySegmentId } from "~/components/agency/agency-segments";
 import { useCurrentAgencyTeam } from "~/composables/usePersistentTimer";
 
@@ -45,7 +44,7 @@ const selectedTeamId = ref("");
 const segment = ref<AgencySegmentId>(
   AGENCY_SEGMENTS.some((entry) => entry.id === route.query.section)
     ? (route.query.section as AgencySegmentId)
-    : "time",
+    : "work",
 );
 
 // Sync segment to URL `?section=` so deep links and back/forward work.
@@ -157,10 +156,11 @@ const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQue
           </div>
         </header>
 
-        <div v-if="segment === 'time'" class="space-y-4">
-          <AgencyTimeTracker :team-id="selectedTeamId" />
-          <AgencyTimeEntriesSurface :team-id="selectedTeamId" />
-        </div>
+        <AgencyWorkSurface
+          v-if="segment === 'work'"
+          :team-id="selectedTeamId"
+          @select-project="openProject"
+        />
 
         <template v-else-if="segment === 'projects'">
           <AgencyProjectDetail
@@ -176,7 +176,11 @@ const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQue
 
         <AgencyReportsSurface v-else-if="segment === 'reports'" :team-id="selectedTeamId" />
 
-        <AgencyResourcingSurface v-else-if="segment === 'resourcing'" :team-id="selectedTeamId" @update:segment="segment = $event as AgencySegmentId" />
+        <AgencyResourcingSurface
+          v-else-if="segment === 'resourcing'"
+          :team-id="selectedTeamId"
+          @update:segment="segment = $event as AgencySegmentId"
+        />
 
         <AgencyBillingSurface v-else-if="segment === 'billing'" :team-id="selectedTeamId" />
 

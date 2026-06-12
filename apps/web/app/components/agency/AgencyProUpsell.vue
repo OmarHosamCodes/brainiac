@@ -63,27 +63,11 @@ async function handleUpgrade() {
 
       <!-- Right: action -->
       <div class="flex shrink-0 flex-col items-start gap-3 sm:items-end sm:pt-1">
-        <UButton
-          color="primary"
-          size="md"
-          :loading="isLoading"
-          @click="handleUpgrade"
-        >
+        <UButton color="primary" size="md" :loading="isLoading" @click="handleUpgrade">
           Upgrade to Pro
         </UButton>
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          to="/#pricing"
-        >
-          View pricing
-        </UButton>
-        <p
-          v-if="upgradeError"
-          class="text-[11px] text-error"
-          role="alert"
-        >
+        <UButton color="neutral" variant="ghost" size="sm" to="/#pricing"> View pricing </UButton>
+        <p v-if="upgradeError" class="text-[11px] text-error" role="alert">
           {{ upgradeError }}
         </p>
       </div>

@@ -156,8 +156,8 @@ watch(
 const selectedClient = computed(
   () => clients.value.find((client) => client.id === selectedClientId.value) ?? null,
 );
-const selectedClientProjects = computed(() =>
-  projectsByClient.value.get(selectedClientId.value) ?? [],
+const selectedClientProjects = computed(
+  () => projectsByClient.value.get(selectedClientId.value) ?? [],
 );
 
 // --- Mutations (via store for optimistic updates) -----------------------
@@ -210,9 +210,7 @@ watch(renameOpen, (open) => {
   }
 });
 
-const isLoading = computed(
-  () => clientsQuery.isPending.value || projectsQuery.isPending.value,
-);
+const isLoading = computed(() => clientsQuery.isPending.value || projectsQuery.isPending.value);
 
 // Populate contact form fields whenever the selected client changes.
 watch(
@@ -247,7 +245,11 @@ async function saveContact() {
       email: contactEmail.value.trim(),
       phone: contactPhone.value.trim(),
     },
-    { onSuccess: () => { contactDirty.value = false; } },
+    {
+      onSuccess: () => {
+        contactDirty.value = false;
+      },
+    },
   );
 }
 
@@ -293,9 +295,7 @@ async function archiveClient() {
         />
         <template #content>
           <form class="w-72 space-y-2 p-3" @submit.prevent="createClient">
-            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-              New client
-            </p>
+            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">New client</p>
             <UInput v-model="newClientName" placeholder="Client name" size="sm" autofocus />
             <UButton
               type="submit"
@@ -375,10 +375,7 @@ async function archiveClient() {
           </li>
         </ul>
 
-        <p
-          v-if="filteredClients.length === 0"
-          class="px-3 py-4 text-center text-xs text-muted"
-        >
+        <p v-if="filteredClients.length === 0" class="px-3 py-4 text-center text-xs text-muted">
           No matches.
         </p>
       </aside>
@@ -425,9 +422,7 @@ async function archiveClient() {
         <!-- Projects under this client -->
         <div class="rounded-2xl border border-default bg-default">
           <div class="flex items-center justify-between border-b border-default px-4 py-3">
-            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-              Projects
-            </p>
+            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Projects</p>
           </div>
 
           <ul v-if="selectedClientProjects.length > 0">
@@ -456,12 +451,7 @@ async function archiveClient() {
             class="flex items-center gap-2 border-t border-default px-4 py-3"
             @submit.prevent="createProject"
           >
-            <UInput
-              v-model="newProjectName"
-              placeholder="Add a project"
-              size="sm"
-              class="flex-1"
-            />
+            <UInput v-model="newProjectName" placeholder="Add a project" size="sm" class="flex-1" />
             <UButton
               type="submit"
               label="Add"
@@ -473,79 +463,81 @@ async function archiveClient() {
           </form>
         </div>
 
-          <!-- Primary contact + archive -->
-          <div class="space-y-0 divide-y divide-default overflow-hidden rounded-2xl border border-default bg-default">
-            <!-- Primary contact -->
-            <section class="px-5 py-4">
-              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                Primary contact
-              </p>
-              <div class="mt-3 grid gap-3 sm:grid-cols-3">
-                <div>
-                  <label class="text-[11px] font-bold text-muted">Name</label>
-                  <UInput
-                    v-model="contactName"
-                    placeholder="Contact name"
-                    size="sm"
-                    class="mt-1"
-                    @input="contactDirty = true"
-                  />
-                </div>
-                <div>
-                  <label class="text-[11px] font-bold text-muted">Email</label>
-                  <UInput
-                    v-model="contactEmail"
-                    type="email"
-                    placeholder="contact@example.com"
-                    size="sm"
-                    class="mt-1"
-                    @input="contactDirty = true"
-                  />
-                </div>
-                <div>
-                  <label class="text-[11px] font-bold text-muted">Phone</label>
-                  <UInput
-                    v-model="contactPhone"
-                    type="tel"
-                    placeholder="+1 555 000 0000"
-                    size="sm"
-                    class="mt-1"
-                    @input="contactDirty = true"
-                  />
-                </div>
-              </div>
-              <div class="mt-3 flex items-center gap-3">
-                <UButton
-                  label="Save contact"
-                  color="primary"
-                  size="xs"
-                  :loading="agencyOps.isContactMutationPending"
-                  :disabled="!contactDirty"
-                  @click="saveContact"
+        <!-- Primary contact + archive -->
+        <div
+          class="space-y-0 divide-y divide-default overflow-hidden rounded-2xl border border-default bg-default"
+        >
+          <!-- Primary contact -->
+          <section class="px-5 py-4">
+            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+              Primary contact
+            </p>
+            <div class="mt-3 grid gap-3 sm:grid-cols-3">
+              <div>
+                <label class="text-[11px] font-bold text-muted">Name</label>
+                <UInput
+                  v-model="contactName"
+                  placeholder="Contact name"
+                  size="sm"
+                  class="mt-1"
+                  @input="contactDirty = true"
                 />
               </div>
-            </section>
-
-            <!-- Archive -->
-            <section class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-              <div class="min-w-0">
-                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Archive</p>
-                <p class="mt-1 text-xs text-muted">
-                  Archive {{ selectedClient?.name ?? "this client" }} to remove them from active
-                  filters and billing without losing their history.
-                </p>
+              <div>
+                <label class="text-[11px] font-bold text-muted">Email</label>
+                <UInput
+                  v-model="contactEmail"
+                  type="email"
+                  placeholder="contact@example.com"
+                  size="sm"
+                  class="mt-1"
+                  @input="contactDirty = true"
+                />
               </div>
+              <div>
+                <label class="text-[11px] font-bold text-muted">Phone</label>
+                <UInput
+                  v-model="contactPhone"
+                  type="tel"
+                  placeholder="+1 555 000 0000"
+                  size="sm"
+                  class="mt-1"
+                  @input="contactDirty = true"
+                />
+              </div>
+            </div>
+            <div class="mt-3 flex items-center gap-3">
               <UButton
-                label="Archive client"
-                color="neutral"
-                variant="ghost"
+                label="Save contact"
+                color="primary"
                 size="xs"
-                icon="i-lucide-archive"
-                :loading="agencyOps.isClientMutationPending"
-                @click="archiveClient"
+                :loading="agencyOps.isContactMutationPending"
+                :disabled="!contactDirty"
+                @click="saveContact"
               />
-            </section>
-          </div>
+            </div>
+          </section>
+
+          <!-- Archive -->
+          <section class="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+            <div class="min-w-0">
+              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Archive</p>
+              <p class="mt-1 text-xs text-muted">
+                Archive {{ selectedClient?.name ?? "this client" }} to remove them from active
+                filters and billing without losing their history.
+              </p>
+            </div>
+            <UButton
+              label="Archive client"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              icon="i-lucide-archive"
+              :loading="agencyOps.isClientMutationPending"
+              @click="archiveClient"
+            />
+          </section>
+        </div>
       </section>
     </div>
   </div>

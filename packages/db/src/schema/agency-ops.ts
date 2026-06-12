@@ -13,6 +13,9 @@ import { user } from "./auth";
 import { workspaceTeam } from "./team";
 
 export type AgencyOpsTimeEntrySource = "timer" | "manual";
+export type AgencyOpsProjectTaskStatus = "open" | "in_progress" | "done" | "archived";
+export type AgencyOpsTaskMessageType = "text" | "voice" | "attachment";
+export type AgencyOpsTaskMessageSenderType = "user" | "agent";
 
 export const agencyOpsClient = pgTable(
   "agency_ops_client",
@@ -76,6 +79,9 @@ export const agencyOpsProjectTask = pgTable(
       .notNull()
       .references(() => agencyOpsProject.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
+    status: text("status").$type<AgencyOpsProjectTaskStatus>().notNull().default("open"),
+    assigneeUserId: text("assignee_user_id").references(() => user.id, { onDelete: "set null" }),
+    dueDate: timestamp("due_date"),
     createdByUserId: text("created_by_user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -89,6 +95,88 @@ export const agencyOpsProjectTask = pgTable(
     index("agency_ops_project_task_team_idx").on(table.teamId),
     index("agency_ops_project_task_team_project_idx").on(table.teamId, table.projectId),
     index("agency_ops_project_task_project_created_idx").on(table.projectId, table.createdAt),
+    index("agency_ops_project_task_assignee_idx").on(table.assigneeUserId),
+    index("agency_ops_project_task_status_idx").on(table.teamId, table.status),
+    index("agency_ops_project_task_due_date_idx").on(table.dueDate),
+  ],
+);
+
+export const agencyOpsTaskThread = pgTable(
+  "agency_ops_task_thread",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => agencyOpsProjectTask.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_task_thread_team_idx").on(table.teamId),
+    uniqueIndex("agency_ops_task_thread_task_unique").on(table.taskId),
+  ],
+);
+
+export const agencyOpsTaskMessage = pgTable(
+  "agency_ops_task_message",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    threadId: text("thread_id")
+      .notNull()
+      .references(() => agencyOpsTaskThread.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    content: text("content").notNull().default(""),
+    type: text("type").$type<AgencyOpsTaskMessageType>().notNull().default("text"),
+    senderType: text("sender_type")
+      .$type<AgencyOpsTaskMessageSenderType>()
+      .notNull()
+      .default("user"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+    deletedAt: timestamp("deleted_at"),
+  },
+  (table) => [
+    index("agency_ops_task_message_team_idx").on(table.teamId),
+    index("agency_ops_task_message_thread_created_idx").on(table.threadId, table.createdAt),
+    index("agency_ops_task_message_user_idx").on(table.userId),
+  ],
+);
+
+export const agencyOpsTaskAttachment = pgTable(
+  "agency_ops_task_attachment",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    messageId: text("message_id")
+      .notNull()
+      .references(() => agencyOpsTaskMessage.id, { onDelete: "cascade" }),
+    fileName: text("file_name").notNull(),
+    mimeType: text("mime_type").notNull(),
+    storageKey: text("storage_key").notNull(),
+    sizeBytes: integer("size_bytes").notNull().default(0),
+    durationSeconds: integer("duration_seconds"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    deletedAt: timestamp("deleted_at"),
+  },
+  (table) => [
+    index("agency_ops_task_attachment_team_idx").on(table.teamId),
+    index("agency_ops_task_attachment_message_idx").on(table.messageId),
   ],
 );
 
@@ -125,6 +213,7 @@ export const agencyOpsTimeEntry = pgTable(
     projectId: text("project_id")
       .notNull()
       .references(() => agencyOpsProject.id, { onDelete: "cascade" }),
+    taskId: text("task_id").references(() => agencyOpsProjectTask.id, { onDelete: "set null" }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -145,6 +234,7 @@ export const agencyOpsTimeEntry = pgTable(
     index("agency_ops_time_entry_team_idx").on(table.teamId),
     index("agency_ops_time_entry_team_started_idx").on(table.teamId, table.startedAt),
     index("agency_ops_time_entry_team_project_idx").on(table.teamId, table.projectId),
+    index("agency_ops_time_entry_team_task_idx").on(table.teamId, table.taskId),
     index("agency_ops_time_entry_team_user_idx").on(table.teamId, table.userId),
     index("agency_ops_time_entry_user_started_idx").on(table.userId, table.startedAt),
     index("agency_ops_time_entry_team_deleted_idx").on(table.teamId, table.deletedAt),
@@ -178,6 +268,7 @@ export const agencyOpsActiveTimer = pgTable(
     projectId: text("project_id")
       .notNull()
       .references(() => agencyOpsProject.id, { onDelete: "cascade" }),
+    taskId: text("task_id").references(() => agencyOpsProjectTask.id, { onDelete: "set null" }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -194,6 +285,7 @@ export const agencyOpsActiveTimer = pgTable(
     uniqueIndex("agency_ops_active_timer_user_unique").on(table.userId),
     index("agency_ops_active_timer_team_idx").on(table.teamId),
     index("agency_ops_active_timer_team_user_idx").on(table.teamId, table.userId),
+    index("agency_ops_active_timer_task_idx").on(table.taskId),
   ],
 );
 

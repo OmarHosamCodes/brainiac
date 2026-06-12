@@ -114,9 +114,8 @@ function openCellPopover(userId: string, weekStart: string, currentCapacitySecon
     return;
   }
   activeCellPopover.value = { userId, weekStart };
-  capacityDraftHours.value = currentCapacitySeconds > 0
-    ? String(Math.round(currentCapacitySeconds / 3600))
-    : "";
+  capacityDraftHours.value =
+    currentCapacitySeconds > 0 ? String(Math.round(currentCapacitySeconds / 3600)) : "";
 }
 
 function closeCellPopover() {
@@ -144,10 +143,7 @@ async function saveCapacity(userId: string, weekStart: string) {
   );
 }
 
-function getCell(
-  row: MemberRow,
-  weekStart: string,
-): MemberRow["cells"][number] | undefined {
+function getCell(row: MemberRow, weekStart: string): MemberRow["cells"][number] | undefined {
   return row.cells.find((cell) => cell.weekStart === weekStart);
 }
 
@@ -165,10 +161,7 @@ const emit = defineEmits<{
     </div>
 
     <!-- Error -->
-    <div
-      v-else-if="isError"
-      class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center"
-    >
+    <div v-else-if="isError" class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center">
       <UIcon name="i-lucide-alert-triangle" class="mx-auto size-5 text-error" />
       <p class="mt-3 text-sm font-bold text-highlighted">Couldn't load capacity.</p>
       <p class="mt-1 text-xs text-muted">
@@ -204,20 +197,12 @@ const emit = defineEmits<{
 
           <tbody>
             <tr v-if="memberRows.length === 0">
-              <td
-                :colspan="upcomingWeekStarts.length + 1"
-                class="px-4 py-12 text-center"
-              >
-                <UIcon
-                  name="i-lucide-calendar-range"
-                  class="mx-auto size-6 text-muted"
-                />
-                <p class="mt-3 text-sm font-bold text-highlighted">
-                  Capacity isn't set.
-                </p>
+              <td :colspan="upcomingWeekStarts.length + 1" class="px-4 py-12 text-center">
+                <UIcon name="i-lucide-calendar-range" class="mx-auto size-6 text-muted" />
+                <p class="mt-3 text-sm font-bold text-highlighted">Capacity isn't set.</p>
                 <p class="mx-auto mt-1 max-w-sm text-xs text-muted">
-                  Add weekly hours per member in Settings to see utilization across the team.
-                  Once set, this grid colors each cell by how much of a member's week is committed.
+                  Add weekly hours per member in Settings to see utilization across the team. Once
+                  set, this grid colors each cell by how much of a member's week is committed.
                 </p>
                 <UButton
                   label="Go to Settings"
@@ -250,46 +235,109 @@ const emit = defineEmits<{
                     activeCellPopover?.weekStart === weekStart.toISOString()
                   "
                   :content="{ align: 'center' }"
-                  @update:open="(open) => { if (!open) closeCellPopover(); }"
+                  @update:open="
+                    (open) => {
+                      if (!open) closeCellPopover();
+                    }
+                  "
                 >
                   <button
                     type="button"
                     class="flex h-12 w-full flex-col items-center justify-center rounded-xl text-[11px] font-bold transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                    :class="utilizationTone(utilizationPct(getCell(row, weekStart.toISOString()) ?? { weekStart: weekStart.toISOString(), capacity: 0, logged: 0, booked: 0 }))"
+                    :class="
+                      utilizationTone(
+                        utilizationPct(
+                          getCell(row, weekStart.toISOString()) ?? {
+                            weekStart: weekStart.toISOString(),
+                            capacity: 0,
+                            logged: 0,
+                            booked: 0,
+                          },
+                        ),
+                      )
+                    "
                     :aria-label="`${row.userName}, ${colIndex === 0 ? 'this week' : formatWeekLabel(weekStart.toISOString())}: ${utilizationPct(getCell(row, weekStart.toISOString()) ?? { weekStart: weekStart.toISOString(), capacity: 0, logged: 0, booked: 0 })}% utilized`"
-                   @click="openCellPopover(row.userId, weekStart.toISOString(), getCell(row, weekStart.toISOString())?.capacity ?? 0)"
+                    @click="
+                      openCellPopover(
+                        row.userId,
+                        weekStart.toISOString(),
+                        getCell(row, weekStart.toISOString())?.capacity ?? 0,
+                      )
+                    "
                   >
                     <span class="font-mono tabular-nums">
-                      {{ utilizationPct(getCell(row, weekStart.toISOString()) ?? { weekStart: weekStart.toISOString(), capacity: 0, logged: 0, booked: 0 }) }}%
+                      {{
+                        utilizationPct(
+                          getCell(row, weekStart.toISOString()) ?? {
+                            weekStart: weekStart.toISOString(),
+                            capacity: 0,
+                            logged: 0,
+                            booked: 0,
+                          },
+                        )
+                      }}%
                     </span>
                     <span class="font-mono text-[10px] tabular-nums opacity-70">
-                      {{ formatDuration((getCell(row, weekStart.toISOString())?.logged ?? 0) + (getCell(row, weekStart.toISOString())?.booked ?? 0), "short") }}
+                      {{
+                        formatDuration(
+                          (getCell(row, weekStart.toISOString())?.logged ?? 0) +
+                            (getCell(row, weekStart.toISOString())?.booked ?? 0),
+                          "short",
+                        )
+                      }}
                       /
-                      {{ formatDuration(getCell(row, weekStart.toISOString())?.capacity ?? 0, "short") }}
+                      {{
+                        formatDuration(
+                          getCell(row, weekStart.toISOString())?.capacity ?? 0,
+                          "short",
+                        )
+                      }}
                     </span>
                   </button>
                   <template #content>
                     <div class="w-52 p-3 text-xs">
-                      <p class="font-bold uppercase tracking-[0.16em] text-muted" style="font-size: 10px;">
-                        {{ colIndex === 0 ? "This week" : formatWeekLabel(weekStart.toISOString()) }}
+                      <p
+                        class="font-bold uppercase tracking-[0.16em] text-muted"
+                        style="font-size: 10px"
+                      >
+                        {{
+                          colIndex === 0 ? "This week" : formatWeekLabel(weekStart.toISOString())
+                        }}
                       </p>
                       <ul class="mt-2 space-y-1.5">
                         <li class="flex items-center justify-between gap-4">
                           <span class="text-muted">Logged</span>
                           <span class="font-mono tabular-nums text-highlighted">
-                            {{ formatDuration(getCell(row, weekStart.toISOString())?.logged ?? 0, "short") }}
+                            {{
+                              formatDuration(
+                                getCell(row, weekStart.toISOString())?.logged ?? 0,
+                                "short",
+                              )
+                            }}
                           </span>
                         </li>
                         <li class="flex items-center justify-between gap-4">
                           <span class="text-muted">Booked</span>
                           <span class="font-mono tabular-nums text-highlighted">
-                            {{ formatDuration(getCell(row, weekStart.toISOString())?.booked ?? 0, "short") }}
+                            {{
+                              formatDuration(
+                                getCell(row, weekStart.toISOString())?.booked ?? 0,
+                                "short",
+                              )
+                            }}
                           </span>
                         </li>
-                        <li class="flex items-center justify-between gap-4 border-t border-default pt-1.5">
+                        <li
+                          class="flex items-center justify-between gap-4 border-t border-default pt-1.5"
+                        >
                           <span class="text-muted">Capacity</span>
                           <span class="font-mono tabular-nums text-highlighted">
-                            {{ formatDuration(getCell(row, weekStart.toISOString())?.capacity ?? 0, "short") }}
+                            {{
+                              formatDuration(
+                                getCell(row, weekStart.toISOString())?.capacity ?? 0,
+                                "short",
+                              )
+                            }}
                           </span>
                         </li>
                       </ul>
@@ -327,7 +375,10 @@ const emit = defineEmits<{
       </div>
 
       <!-- Legend (shown only when there's data) -->
-      <div v-if="memberRows.length > 0" class="flex flex-wrap items-center gap-4 px-1 text-[11px] text-muted">
+      <div
+        v-if="memberRows.length > 0"
+        class="flex flex-wrap items-center gap-4 px-1 text-[11px] text-muted"
+      >
         <span class="font-bold uppercase tracking-[0.16em]">Utilization</span>
         <span class="inline-flex items-center gap-1.5">
           <span class="inline-block size-2.5 rounded-sm bg-success/40" aria-hidden="true" />

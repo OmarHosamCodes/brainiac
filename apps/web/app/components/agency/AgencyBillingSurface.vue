@@ -104,9 +104,7 @@ function formatPeriod(start: string, end: string): string {
   return `${startLabel} to ${endLabel}`;
 }
 
-const isLoading = computed(
-  () => summaryQuery.isPending.value || invoicesQuery.isPending.value,
-);
+const isLoading = computed(() => summaryQuery.isPending.value || invoicesQuery.isPending.value);
 const isError = computed(
   () => Boolean(summaryQuery.error.value) || Boolean(invoicesQuery.error.value),
 );
@@ -146,9 +144,7 @@ function closeCreatePanel() {
 async function generateDraft() {
   if (!createFormValid.value) return;
 
-  const client = clientsQuery.data.value?.items.find(
-    (c) => c.id === selectedClientId.value,
-  );
+  const client = clientsQuery.data.value?.items.find((c) => c.id === selectedClientId.value);
 
   await agencyOps.createInvoice(
     {
@@ -168,10 +164,7 @@ async function generateDraft() {
 
 const pendingStatusInvoiceId = ref<string | null>(null);
 
-async function advanceInvoiceStatus(
-  invoiceId: string,
-  currentStatus: LaneId,
-) {
+async function advanceInvoiceStatus(invoiceId: string, currentStatus: LaneId) {
   const nextStatus = currentStatus === "draft" ? "sent" : "paid";
   pendingStatusInvoiceId.value = invoiceId;
 
@@ -201,14 +194,13 @@ async function advanceInvoiceStatus(
     </div>
 
     <!-- Error -->
-    <div
-      v-else-if="isError"
-      class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center"
-    >
+    <div v-else-if="isError" class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center">
       <UIcon name="i-lucide-alert-triangle" class="mx-auto size-5 text-error" />
       <p class="mt-3 text-sm font-bold text-highlighted">Couldn't load billing.</p>
       <p class="mt-1 text-xs text-muted">
-        {{ getErrorMessage(summaryQuery.error.value ?? invoicesQuery.error.value, "Try refreshing.") }}
+        {{
+          getErrorMessage(summaryQuery.error.value ?? invoicesQuery.error.value, "Try refreshing.")
+        }}
       </p>
       <UButton
         label="Retry"
@@ -216,7 +208,10 @@ async function advanceInvoiceStatus(
         variant="soft"
         size="xs"
         class="mt-3"
-        @click="summaryQuery.refetch(); invoicesQuery.refetch()"
+        @click="
+          summaryQuery.refetch();
+          invoicesQuery.refetch();
+        "
       />
     </div>
 
@@ -224,9 +219,7 @@ async function advanceInvoiceStatus(
       <!-- Summary band -->
       <div v-if="summary" class="grid gap-3 sm:grid-cols-4">
         <div class="rounded-2xl border border-default bg-default p-4">
-          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-            Outstanding
-          </p>
+          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Outstanding</p>
           <p
             class="mt-1 font-mono text-2xl font-bold tabular-nums"
             :class="summary.outstandingCents > 0 ? 'text-highlighted' : 'text-dimmed'"
@@ -300,11 +293,7 @@ async function advanceInvoiceStatus(
           </header>
 
           <ul v-if="laneItems(lane.id).length > 0" class="divide-y divide-default">
-            <li
-              v-for="invoice in laneItems(lane.id)"
-              :key="invoice.id"
-              class="px-4 py-3"
-            >
+            <li v-for="invoice in laneItems(lane.id)" :key="invoice.id" class="px-4 py-3">
               <div class="flex items-baseline justify-between gap-3">
                 <span class="truncate text-xs font-bold text-highlighted">
                   {{ invoice.number }}
@@ -346,13 +335,12 @@ async function advanceInvoiceStatus(
         leave-from-class="opacity-100 translate-y-0"
         leave-to-class="opacity-0 -translate-y-1"
       >
-        <div
-          v-if="createPanelOpen"
-          class="rounded-2xl border border-default bg-default"
-        >
+        <div v-if="createPanelOpen" class="rounded-2xl border border-default bg-default">
           <div class="flex items-center justify-between border-b border-default px-5 py-4">
             <div>
-              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">New invoice</p>
+              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                New invoice
+              </p>
               <h3 class="mt-1 text-sm font-bold text-highlighted">Draft from a closed period</h3>
             </div>
             <UButton
@@ -381,26 +369,20 @@ async function advanceInvoiceStatus(
             <div>
               <label class="text-[11px] font-bold text-muted">Billing period</label>
               <div class="mt-1 flex items-center gap-2">
-                <UInput
-                  v-model="periodStart"
-                  type="date"
-                  size="sm"
-                  class="flex-1"
-                />
+                <UInput v-model="periodStart" type="date" size="sm" class="flex-1" />
                 <span class="text-[11px] text-muted">to</span>
-                <UInput
-                  v-model="periodEnd"
-                  type="date"
-                  size="sm"
-                  class="flex-1"
-                />
+                <UInput v-model="periodEnd" type="date" size="sm" class="flex-1" />
               </div>
             </div>
           </div>
 
           <div class="border-t border-default px-5 py-4">
             <div class="flex items-start gap-3 rounded-xl bg-muted/30 px-4 py-3">
-              <UIcon name="i-lucide-info" class="mt-0.5 size-4 shrink-0 text-muted" aria-hidden="true" />
+              <UIcon
+                name="i-lucide-info"
+                class="mt-0.5 size-4 shrink-0 text-muted"
+                aria-hidden="true"
+              />
               <p class="text-[11px] text-muted">
                 Line items are generated from approved time entries in the selected period.
               </p>
@@ -436,8 +418,8 @@ async function advanceInvoiceStatus(
           <div>
             <p class="text-sm font-bold text-highlighted">No invoices yet.</p>
             <p class="mt-1 text-xs text-muted">
-              Bill your first period from a closed week. Invoices flow through draft, sent,
-              and paid lanes; the period-close checklist guides each cycle.
+              Bill your first period from a closed week. Invoices flow through draft, sent, and paid
+              lanes; the period-close checklist guides each cycle.
             </p>
             <ul class="mt-4 space-y-1.5 text-[11px] text-muted">
               <li class="flex items-start gap-2">

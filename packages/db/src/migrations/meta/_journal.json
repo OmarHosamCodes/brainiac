@@ -43,6 +43,13 @@
       "when": 1779148800000,
       "tag": "0005_agency_project_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1779753600000,
+      "tag": "0006_agency_task_threads",
+      "breakpoints": true
     }
   ]
 }

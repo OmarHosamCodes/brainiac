@@ -8,16 +8,20 @@ import {
   createAgencyProjectTask,
   createInvoice,
   createManualAgencyTimeEntry,
+  createTaskAttachmentPresignedUrl,
+  createTaskThreadMessage,
   deleteAgencyProjectTask,
   createTag,
   deleteMyAgencyTimeEntry,
   deleteTag,
+  deleteTaskAttachment,
   exportAgencyReportsCsv,
   getAgencyActiveTimer,
   getAgencyReportsSummary,
   getAgencyTimeSummary,
   getClientContact,
   getInvoiceSummary,
+  getTaskThreadContext,
   listAgencyClients,
   listAgencyProjects,
   listAgencyProjectTasks,
@@ -26,19 +30,24 @@ import {
   listMemberCapacity,
   listMemberRates,
   listMyAgencyTimeEntries,
+  listRecentTaskThreadMessages,
   listTags,
+  listTaskThreadMembers,
+  listTaskThreadMessages,
   setMemberCapacity,
   startAgencyTimer,
   stopAgencyTimer,
   unarchiveAgencyClient,
   updateAgencyClient,
   updateAgencyProject,
+  updateAgencyProjectTask,
   updateAnyAgencyTimeEntry,
   updateInvoiceStatus,
   updateMyAgencyTimeEntry,
   upsertClientContact,
   upsertMemberRate,
 } from "./service";
+import { askTaskAgent } from "./task-agent";
 
 const agencyTimeEntrySourceSchema = z.enum(["timer", "manual"]);
 
@@ -70,8 +79,47 @@ const agencyProjectTaskSchema = z.object({
   teamId: z.string().min(1),
   projectId: z.string().min(1),
   title: z.string().min(1),
+  status: z.enum(["open", "in_progress", "done", "archived"]),
+  assigneeUserId: z.string().nullable(),
+  assigneeName: z.string().nullable(),
+  assigneeAvatar: z.string().nullable(),
+  dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+});
+
+const agencyTaskMessageAttachmentSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  messageId: z.string().min(1),
+  fileName: z.string().min(1),
+  mimeType: z.string().min(1),
+  storageKey: z.string().min(1),
+  sizeBytes: z.number().int().nonnegative(),
+  durationSeconds: z.number().int().nonnegative().nullable(),
+  createdAt: z.string().datetime(),
+  url: z.string().nullable(),
+});
+
+const agencyTaskMessageSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  threadId: z.string().min(1),
+  userId: z.string().min(1),
+  userName: z.string().min(1),
+  userAvatar: z.string().nullable(),
+  content: z.string(),
+  type: z.enum(["text", "voice", "attachment"]),
+  senderType: z.enum(["user", "agent"]),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  attachments: z.array(agencyTaskMessageAttachmentSchema),
+});
+
+const agencyTaskThreadMemberSchema = z.object({
+  userId: z.string().min(1),
+  userName: z.string().min(1),
+  userAvatar: z.string().nullable(),
 });
 
 const agencyTagSchema = z.object({
@@ -88,6 +136,7 @@ const agencyTimeEntrySchema = z.object({
   userId: z.string().min(1),
   userName: z.string().min(1),
   projectId: z.string().min(1),
+  taskId: z.string().nullable(),
   projectName: z.string().min(1),
   clientId: z.string().min(1),
   clientName: z.string().min(1),
@@ -107,6 +156,7 @@ const agencyActiveTimerSchema = z.object({
   teamId: z.string().min(1),
   userId: z.string().min(1),
   projectId: z.string().min(1),
+  taskId: z.string().nullable(),
   projectName: z.string().min(1),
   tags: z.array(agencyTagSchema),
   description: z.string(),
@@ -260,7 +310,10 @@ export const agencyOpsRouter = {
     list: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
-          projectId: z.string().min(1),
+          projectId: z.string().min(1).optional(),
+          status: z.enum(["open", "in_progress", "done", "archived"]).optional(),
+          assigneeUserId: z.string().min(1).optional(),
+          search: z.string().optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -273,11 +326,29 @@ export const agencyOpsRouter = {
         teamScopedInputSchema.extend({
           projectId: z.string().min(1),
           title: z.string().trim().min(1).max(240),
+          status: z.enum(["open", "in_progress", "done", "archived"]).optional(),
+          assigneeUserId: z.string().min(1).optional(),
+          dueDate: z.string().datetime().optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         return agencyProjectTaskSchema.parse(
           await createAgencyProjectTask(context.session.user.id, input),
+        );
+      }),
+    update: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          taskId: z.string().min(1),
+          title: z.string().trim().min(1).max(240).optional(),
+          status: z.enum(["open", "in_progress", "done", "archived"]).optional(),
+          assigneeUserId: z.string().min(1).nullable().optional(),
+          dueDate: z.string().datetime().nullable().optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return agencyProjectTaskSchema.parse(
+          await updateAgencyProjectTask(context.session.user.id, input),
         );
       }),
     delete: protectedProProcedure
@@ -293,6 +364,147 @@ export const agencyOpsRouter = {
             deleted: z.boolean(),
           })
           .parse(await deleteAgencyProjectTask(context.session.user.id, input));
+      }),
+  },
+  taskThreads: {
+    messages: {
+      list: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            taskId: z.string().min(1),
+            page: z.number().int().min(1).optional(),
+            pageSize: z.number().int().min(1).max(100).optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({
+              items: z.array(agencyTaskMessageSchema),
+              page: z.number().int().min(1),
+              pageSize: z.number().int().min(1),
+              total: z.number().int().nonnegative(),
+            })
+            .parse(await listTaskThreadMessages(context.session.user.id, input));
+        }),
+      create: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            taskId: z.string().min(1),
+            content: z.string().max(10_000),
+            type: z.enum(["text", "voice", "attachment"]).optional(),
+            attachments: z
+              .array(
+                z.object({
+                  fileName: z.string().min(1),
+                  mimeType: z.string().min(1),
+                  storageKey: z.string().min(1),
+                  sizeBytes: z.number().int().nonnegative(),
+                  durationSeconds: z.number().int().nonnegative().optional(),
+                  uploadToken: z.string().min(1),
+                }),
+              )
+              .optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return agencyTaskMessageSchema.parse(
+            await createTaskThreadMessage(context.session.user.id, input),
+          );
+        }),
+    },
+    attachments: {
+      create: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            taskId: z.string().min(1),
+            fileName: z.string().min(1).max(260),
+            mimeType: z.string().min(1).max(120),
+            sizeBytes: z.number().int().nonnegative(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({
+              storageKey: z.string().min(1),
+              publicUrl: z.string().min(1),
+              uploadUrl: z.string().min(1),
+              uploadToken: z.string().min(1),
+            })
+            .parse(await createTaskAttachmentPresignedUrl(context.session.user.id, input));
+        }),
+      delete: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            attachmentId: z.string().min(1),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({
+              attachmentId: z.string().min(1),
+              deleted: z.boolean(),
+            })
+            .parse(await deleteTaskAttachment(context.session.user.id, input));
+        }),
+    },
+    members: {
+      list: protectedProProcedure
+        .input(teamScopedInputSchema)
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ items: z.array(agencyTaskThreadMemberSchema) })
+            .parse(await listTaskThreadMembers(context.session.user.id, input));
+        }),
+    },
+    context: {
+      get: protectedProProcedure
+        .input(teamScopedInputSchema.extend({ taskId: z.string().min(1) }))
+        .handler(async ({ context, input }) => {
+          return z
+            .object({
+              taskId: z.string().min(1),
+              taskTitle: z.string().min(1),
+              taskStatus: z.enum(["open", "in_progress", "done", "archived"]),
+              projectId: z.string().min(1),
+              projectName: z.string().min(1),
+              clientId: z.string().min(1),
+              clientName: z.string().min(1),
+              assigneeName: z.string().nullable(),
+            })
+            .parse(await getTaskThreadContext(context.session.user.id, input));
+        }),
+    },
+    recentMessages: {
+      list: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            taskId: z.string().min(1),
+            limit: z.number().int().min(1).max(50).optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ items: z.array(agencyTaskMessageSchema) })
+            .parse(await listRecentTaskThreadMessages(context.session.user.id, input));
+        }),
+    },
+  },
+  taskAgent: {
+    ask: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          taskId: z.string().min(1),
+          content: z.string().trim().min(1).max(10_000),
+          model: z.string().trim().min(1).optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            response: z.string(),
+            model: z.string(),
+          })
+          .parse(await askTaskAgent(context.session.user.id, input));
       }),
   },
   contacts: {
@@ -377,7 +589,8 @@ export const agencyOpsRouter = {
     start: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
-          projectId: z.string().min(1),
+          projectId: z.string().min(1).optional(),
+          taskId: z.string().min(1).optional(),
           description: z.string().max(2_000).optional(),
           linkUrl: z.string().max(2_048).nullable().optional(),
           tagIds: z.array(z.string().min(1)).optional(),
@@ -440,7 +653,8 @@ export const agencyOpsRouter = {
     createManual: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
-          projectId: z.string().min(1),
+          projectId: z.string().min(1).optional(),
+          taskId: z.string().min(1).optional(),
           startAt: z.string().datetime(),
           endAt: z.string().datetime(),
           description: z.string().max(2_000).optional(),
@@ -458,6 +672,7 @@ export const agencyOpsRouter = {
         teamScopedInputSchema.extend({
           entryId: z.string().min(1),
           projectId: z.string().min(1).optional(),
+          taskId: z.string().min(1).nullable().optional(),
           startAt: z.string().datetime().optional(),
           endAt: z.string().datetime().optional(),
           description: z.string().max(2_000).optional(),
@@ -534,6 +749,7 @@ export const agencyOpsRouter = {
           description: z.string().max(2_000).optional(),
           linkUrl: z.string().max(2_048).nullable().optional(),
           projectId: z.string().min(1).optional(),
+          taskId: z.string().min(1).nullable().optional(),
           tagIds: z.array(z.string().min(1)).optional(),
         }),
       )

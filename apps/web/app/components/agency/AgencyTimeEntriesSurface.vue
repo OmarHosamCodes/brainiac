@@ -668,7 +668,9 @@ async function restartEntry(entry: EntryRow) {
 
       <!-- Day view -->
       <div v-else-if="viewMode === 'day'" class="rounded-2xl border border-default bg-default">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-default px-4 py-3">
+        <div
+          class="flex flex-wrap items-center justify-between gap-3 border-b border-default px-4 py-3"
+        >
           <div class="flex items-center gap-3">
             <UButton
               icon="i-lucide-chevron-left"
@@ -699,7 +701,8 @@ async function restartEntry(entry: EntryRow) {
             <span
               v-if="selectedDayTotalSeconds > 0"
               class="font-mono text-sm font-bold tabular-nums text-highlighted"
-            >{{ formatDuration(selectedDayTotalSeconds, "short") }}</span>
+              >{{ formatDuration(selectedDayTotalSeconds, "short") }}</span
+            >
             <UButton
               label="Add time"
               color="primary"
@@ -710,10 +713,7 @@ async function restartEntry(entry: EntryRow) {
           </div>
         </div>
 
-        <div
-          v-if="selectedDayEntries.length === 0"
-          class="px-4 py-10 text-center"
-        >
+        <div v-if="selectedDayEntries.length === 0" class="px-4 py-10 text-center">
           <p class="text-sm text-muted">No entries on this day.</p>
           <UButton
             label="Add time"
@@ -758,7 +758,8 @@ async function restartEntry(entry: EntryRow) {
                       v-for="tag in entry.tags"
                       :key="tag.id"
                       class="rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary"
-                    >{{ tag.name }}</span>
+                      >{{ tag.name }}</span
+                    >
                   </div>
                 </div>
               </div>
@@ -805,7 +806,9 @@ async function restartEntry(entry: EntryRow) {
 
       <!-- Log view -->
       <div v-else class="rounded-2xl border border-default bg-default">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-default px-4 py-3">
+        <div
+          class="flex flex-wrap items-center justify-between gap-3 border-b border-default px-4 py-3"
+        >
           <div>
             <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-muted">Entry log</p>
             <h3 class="mt-0.5 text-sm font-bold text-highlighted">All entries this week</h3>
@@ -819,10 +822,7 @@ async function restartEntry(entry: EntryRow) {
           />
         </div>
 
-        <div
-          v-if="logEntries.length === 0"
-          class="px-4 py-10 text-center"
-        >
+        <div v-if="logEntries.length === 0" class="px-4 py-10 text-center">
           <p class="text-sm text-muted">No time entries yet.</p>
           <p class="mt-1 text-xs text-muted">Start a timer or add time manually.</p>
         </div>
@@ -843,7 +843,9 @@ async function restartEntry(entry: EntryRow) {
                 />
                 <div class="min-w-0">
                   <div class="flex flex-wrap items-baseline gap-2">
-                    <p class="truncate text-sm font-bold text-highlighted">{{ entry.projectName }}</p>
+                    <p class="truncate text-sm font-bold text-highlighted">
+                      {{ entry.projectName }}
+                    </p>
                     <span class="font-mono text-xs font-bold tabular-nums text-highlighted">
                       {{ formatDuration(entry.durationSeconds, "short") }}
                     </span>
@@ -864,7 +866,8 @@ async function restartEntry(entry: EntryRow) {
                       v-for="tag in entry.tags"
                       :key="tag.id"
                       class="rounded-full border border-primary/20 bg-primary/8 px-2 py-0.5 text-[10px] font-medium text-primary"
-                    >{{ tag.name }}</span>
+                      >{{ tag.name }}</span
+                    >
                   </div>
                 </div>
               </div>

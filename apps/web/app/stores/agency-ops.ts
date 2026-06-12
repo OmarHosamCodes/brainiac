@@ -41,6 +41,11 @@ type AgencyProjectTask = {
   teamId: string;
   projectId: string;
   title: string;
+  status: "open" | "in_progress" | "done" | "archived";
+  assigneeUserId: string | null;
+  assigneeName: string | null;
+  assigneeAvatar: string | null;
+  dueDate: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -135,6 +140,9 @@ type CreateProjectTaskPayload = {
   teamId: string;
   projectId: string;
   title: string;
+  status?: "open" | "in_progress" | "done" | "archived";
+  assigneeUserId?: string;
+  dueDate?: string;
 };
 
 type DeleteProjectTaskPayload = {
@@ -635,6 +643,11 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
       teamId: payload.teamId,
       projectId: payload.projectId,
       title,
+      status: payload.status ?? "open",
+      assigneeUserId: payload.assigneeUserId ?? null,
+      assigneeName: null,
+      assigneeAvatar: null,
+      dueDate: payload.dueDate ?? null,
       createdAt: nowIso,
       updatedAt: nowIso,
     };
@@ -648,6 +661,9 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
         teamId: payload.teamId,
         projectId: payload.projectId,
         title,
+        status: payload.status,
+        assigneeUserId: payload.assigneeUserId,
+        dueDate: payload.dueDate,
       });
 
       await invalidateProjectTasksQuery(payload.teamId, payload.projectId);

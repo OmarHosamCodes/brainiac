@@ -20,6 +20,7 @@ import { logger } from "hono/logger";
 
 import { handleAppRouterRequest } from "./lib/handlers";
 import { logStartup } from "./lib/startup";
+import { registerTaskAttachmentUploadRoute } from "./lib/task-attachments";
 
 function getRpcDebugResponse(error: unknown, path: string) {
   /**
@@ -102,6 +103,8 @@ function createApp() {
     url.search = new URL(context.req.url).search;
     return context.redirect(url.toString(), 302);
   });
+
+  registerTaskAttachmentUploadRoute(app);
 
   app.use("/*", async (context, next) => {
     const requestContext = await createContext({ context });
