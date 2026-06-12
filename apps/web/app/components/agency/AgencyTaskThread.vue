@@ -103,6 +103,21 @@ function retryThread() {
   void messagesQuery.refetch();
 }
 
+function handleKeydown(event: KeyboardEvent) {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    emit("back");
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", handleKeydown);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleKeydown);
+});
+
 function onDragOver(event: DragEvent) {
   event.preventDefault();
   if (event.dataTransfer?.types.includes("Files")) {
@@ -146,7 +161,6 @@ function onDrop(event: DragEvent) {
           color="neutral"
           variant="ghost"
           size="sm"
-          class="lg:hidden"
           @click="emit('back')"
         />
         <div class="min-w-0 flex-1">
