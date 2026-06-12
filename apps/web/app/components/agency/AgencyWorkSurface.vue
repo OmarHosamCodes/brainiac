@@ -42,26 +42,33 @@ function handleSelectProject(projectId: string) {
 </script>
 
 <template>
-  <div class="grid h-[calc(100vh-14rem)] grid-cols-1 gap-4 lg:grid-cols-[minmax(20rem,28rem),1fr]">
-    <AgencyTaskList
-      :team-id="teamId"
-      :projects="projects"
-      :selected-task-id="selectedTaskId"
-      @select="selectTask"
-      @select-project="handleSelectProject"
-    />
+  <div class="flex h-[calc(100vh-14rem)] min-h-0 flex-col gap-4 lg:flex-row">
+    <div
+      class="h-full min-h-0 min-w-0 lg:w-[28rem] lg:max-w-[28rem] lg:flex-none"
+      :class="selectedTaskId ? 'hidden lg:block' : ''"
+    >
+      <AgencyTaskList
+        :team-id="teamId"
+        :projects="projects"
+        :selected-task-id="selectedTaskId"
+        @select="selectTask"
+        @select-project="handleSelectProject"
+      />
+    </div>
 
-    <AgencyTaskThread
-      v-if="selectedTaskId"
-      :team-id="teamId"
-      :task-id="selectedTaskId"
-      :projects="projects"
-      @back="clearTask"
-    />
+    <div v-if="selectedTaskId" class="h-full min-h-0 min-w-0 flex-1">
+      <AgencyTaskThread
+        :key="selectedTaskId"
+        :team-id="teamId"
+        :task-id="selectedTaskId"
+        :projects="projects"
+        @back="clearTask"
+      />
+    </div>
 
     <div
       v-else
-      class="hidden flex-col items-center justify-center rounded-2xl border border-dashed border-default bg-muted/20 lg:flex"
+      class="hidden h-full min-h-0 min-w-0 flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-default bg-muted/20 lg:flex"
     >
       <UIcon name="i-lucide-briefcase" class="size-10 text-muted" />
       <p class="mt-4 text-sm font-bold text-highlighted">Select a task to view its thread.</p>

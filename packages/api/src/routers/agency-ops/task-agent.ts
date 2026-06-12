@@ -12,7 +12,7 @@ import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, isNull } from "drizzle-orm";
 
-import { requireTeamMembership } from "./service";
+import { ensureTaskThreadByTaskId, requireTeamMembership } from "./service";
 
 export async function askTaskAgent(
   actorUserId: string,
@@ -48,40 +48,29 @@ export async function askTaskAgent(
     });
   }
 
-  const [thread] = await db
-    .select({ id: agencyOpsTaskThread.id })
-    .from(agencyOpsTaskThread)
-    .where(
-      and(
-        eq(agencyOpsTaskThread.taskId, input.taskId),
-        eq(agencyOpsTaskThread.teamId, input.teamId),
-      ),
-    )
-    .limit(1);
+  const thread = await ensureTaskThreadByTaskId(input.teamId, input.taskId);
 
   let recentMessages: Array<{ role: "user" | "assistant"; content: string }> = [];
 
-  if (thread) {
-    const rows = await db
-      .select({
-        content: agencyOpsTaskMessage.content,
-        type: agencyOpsTaskMessage.type,
-        senderType: agencyOpsTaskMessage.senderType,
-      })
-      .from(agencyOpsTaskMessage)
-      .where(
-        and(eq(agencyOpsTaskMessage.threadId, thread.id), isNull(agencyOpsTaskMessage.deletedAt)),
-      )
-      .orderBy(desc(agencyOpsTaskMessage.createdAt))
-      .limit(10);
+  const rows = await db
+    .select({
+      content: agencyOpsTaskMessage.content,
+      type: agencyOpsTaskMessage.type,
+      senderType: agencyOpsTaskMessage.senderType,
+    })
+    .from(agencyOpsTaskMessage)
+    .where(
+      and(eq(agencyOpsTaskMessage.threadId, thread.id), isNull(agencyOpsTaskMessage.deletedAt)),
+    )
+    .orderBy(desc(agencyOpsTaskMessage.createdAt))
+    .limit(10);
 
-    recentMessages = rows
-      .map((row) => ({
-        role: (row.senderType === "agent" ? "assistant" : "user") as "user" | "assistant",
-        content: row.type === "text" ? row.content : `[${row.type}]`,
-      }))
-      .reverse();
-  }
+  recentMessages = rows
+    .map((row) => ({
+      role: (row.senderType === "agent" ? "assistant" : "user") as "user" | "assistant",
+      content: row.type === "text" ? row.content : `[${row.type}]`,
+    }))
+    .reverse();
 
   const result = await runTaskAgent(
     [{ role: "user", content: input.content }],
@@ -96,39 +85,37 @@ export async function askTaskAgent(
     { model: input.model },
   );
 
-  if (thread) {
-    const now = new Date();
-    await db.transaction(async (tx) => {
-      await tx.insert(agencyOpsTaskMessage).values([
-        {
-          id: createWorkspaceId("agency-task-message"),
-          teamId: input.teamId,
-          threadId: thread.id,
-          userId: actorUserId,
-          content: input.content.trim(),
-          type: "text",
-          senderType: "user",
-          createdAt: now,
-          updatedAt: now,
-        },
-        {
-          id: createWorkspaceId("agency-task-message"),
-          teamId: input.teamId,
-          threadId: thread.id,
-          userId: actorUserId,
-          content: result.response,
-          type: "text",
-          senderType: "agent",
-          createdAt: now,
-          updatedAt: now,
-        },
-      ]);
-      await tx
-        .update(agencyOpsTaskThread)
-        .set({ updatedAt: now })
-        .where(eq(agencyOpsTaskThread.id, thread.id));
-    });
-  }
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    await tx.insert(agencyOpsTaskMessage).values([
+      {
+        id: createWorkspaceId("agency-task-message"),
+        teamId: input.teamId,
+        threadId: thread.id,
+        userId: actorUserId,
+        content: input.content.trim(),
+        type: "text",
+        senderType: "user",
+        createdAt: now,
+        updatedAt: now,
+      },
+      {
+        id: createWorkspaceId("agency-task-message"),
+        teamId: input.teamId,
+        threadId: thread.id,
+        userId: actorUserId,
+        content: result.response,
+        type: "text",
+        senderType: "agent",
+        createdAt: now,
+        updatedAt: now,
+      },
+    ]);
+    await tx
+      .update(agencyOpsTaskThread)
+      .set({ updatedAt: now })
+      .where(eq(agencyOpsTaskThread.id, thread.id));
+  });
 
   return {
     response: result.response,

@@ -1076,8 +1076,8 @@ async function requireTeamMember(teamId: string, userId: string) {
   }
 }
 
-async function getThreadByTaskId(teamId: string, taskId: string) {
-  const [thread] = await db
+export async function ensureTaskThreadByTaskId(teamId: string, taskId: string) {
+  const [existingThread] = await db
     .select({
       id: agencyOpsTaskThread.id,
       teamId: agencyOpsTaskThread.teamId,
@@ -1087,10 +1087,32 @@ async function getThreadByTaskId(teamId: string, taskId: string) {
     .where(and(eq(agencyOpsTaskThread.teamId, teamId), eq(agencyOpsTaskThread.taskId, taskId)))
     .limit(1);
 
-  if (!thread) {
-    throw new ORPCError("NOT_FOUND", {
-      message: "Task thread was not found.",
+  if (existingThread) {
+    return existingThread;
+  }
+
+  const now = new Date();
+  const [thread] = await db
+    .insert(agencyOpsTaskThread)
+    .values({
+      id: createWorkspaceId("agency-task-thread"),
+      teamId,
+      taskId,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [agencyOpsTaskThread.taskId],
+      set: { updatedAt: sql`${agencyOpsTaskThread.updatedAt}` },
+    })
+    .returning({
+      id: agencyOpsTaskThread.id,
+      teamId: agencyOpsTaskThread.teamId,
+      taskId: agencyOpsTaskThread.taskId,
     });
+
+  if (!thread || thread.teamId !== teamId) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
 
   return thread;
@@ -1165,7 +1187,7 @@ export async function listTaskThreadMessages(
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
   await getTaskByIdForTeam(input.teamId, input.taskId);
-  const thread = await getThreadByTaskId(input.teamId, input.taskId);
+  const thread = await ensureTaskThreadByTaskId(input.teamId, input.taskId);
 
   const page = Math.max(1, input.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 25));
@@ -1243,7 +1265,7 @@ export async function createTaskThreadMessage(
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
   await getTaskByIdForTeam(input.teamId, input.taskId);
-  const thread = await getThreadByTaskId(input.teamId, input.taskId);
+  const thread = await ensureTaskThreadByTaskId(input.teamId, input.taskId);
 
   const type = input.type ?? "text";
   const content = input.content.trim();
@@ -1503,7 +1525,7 @@ export async function listRecentTaskThreadMessages(
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
   await getTaskByIdForTeam(input.teamId, input.taskId);
-  const thread = await getThreadByTaskId(input.teamId, input.taskId);
+  const thread = await ensureTaskThreadByTaskId(input.teamId, input.taskId);
 
   const limit = Math.min(50, Math.max(1, input.limit ?? 20));
 

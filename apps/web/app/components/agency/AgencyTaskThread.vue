@@ -55,7 +55,8 @@ const context = computed(() => contextQuery.data.value);
 const isThreadLoading = computed(
   () => contextQuery.isPending.value || messagesQuery.isPending.value,
 );
-const isThreadError = computed(() => messagesQuery.isError.value);
+const isThreadError = computed(() => contextQuery.isError.value || messagesQuery.isError.value);
+const threadError = computed(() => contextQuery.error.value ?? messagesQuery.error.value);
 
 const project = computed(() => props.projects.find((p) => p.id === context.value?.projectId));
 
@@ -101,6 +102,11 @@ function sameDay(left: string, right: string) {
 }
 
 function onMessageSent() {
+  void messagesQuery.refetch();
+}
+
+function retryThread() {
+  void contextQuery.refetch();
   void messagesQuery.refetch();
 }
 
@@ -180,8 +186,16 @@ function onDrop(event: DragEvent) {
       <UIcon name="i-lucide-alert-triangle" class="size-5 text-error" />
       <p class="mt-3 text-sm font-bold text-highlighted">Couldn't load thread.</p>
       <p class="mt-1 text-xs text-muted">
-        {{ getErrorMessage(messagesQuery.error.value, "Try refreshing.") }}
+        {{ getErrorMessage(threadError, "Try refreshing.") }}
       </p>
+      <UButton
+        label="Retry"
+        color="neutral"
+        variant="soft"
+        size="xs"
+        class="mt-3"
+        @click="retryThread"
+      />
     </div>
 
     <div v-else ref="threadContainer" class="flex-1 space-y-4 overflow-y-auto p-4">
