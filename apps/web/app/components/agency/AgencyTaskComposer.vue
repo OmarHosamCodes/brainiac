@@ -99,17 +99,18 @@ async function send() {
       teamId: props.teamId,
       taskId: props.taskId,
       content: text || "What do you think?",
-      attachments: pendingAttachments.value.length > 0
-        ? pendingAttachments.value.map((a) => ({
-            fileName: a.fileName,
-            mimeType: a.mimeType,
-            storageKey: a.storageKey,
-            sizeBytes: a.sizeBytes,
-            durationSeconds: a.durationSeconds ?? undefined,
-            uploadToken: a.uploadToken,
-            metadata: a.metadata,
-          }))
-        : undefined,
+      attachments:
+        pendingAttachments.value.length > 0
+          ? pendingAttachments.value.map((a) => ({
+              fileName: a.fileName,
+              mimeType: a.mimeType,
+              storageKey: a.storageKey,
+              sizeBytes: a.sizeBytes,
+              durationSeconds: a.durationSeconds ?? undefined,
+              uploadToken: a.uploadToken,
+              metadata: a.metadata,
+            }))
+          : undefined,
     });
     return;
   }
@@ -223,9 +224,7 @@ async function captureFileMetadata(file: File): Promise<{
     }
   } else if (file.type.startsWith("audio/")) {
     meta.mediaKind = "audio";
-  } else if (
-    ["zip", "rar", "7z", "tar", "gz", "bz2"].includes(ext)
-  ) {
+  } else if (["zip", "rar", "7z", "tar", "gz", "bz2"].includes(ext)) {
     meta.mediaKind = "archive";
   } else {
     meta.mediaKind = "document";

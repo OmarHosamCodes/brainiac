@@ -820,6 +820,7 @@ export async function listAgencyProjectTasks(
     teamId: string;
     projectId?: string;
     status?: "open" | "in_progress" | "done" | "archived";
+    statuses?: ("open" | "in_progress" | "done" | "archived")[];
     assigneeUserId?: string;
     search?: string;
   },
@@ -836,7 +837,9 @@ export async function listAgencyProjectTasks(
   if (input.projectId) {
     filters.push(eq(agencyOpsProjectTask.projectId, input.projectId));
   }
-  if (input.status) {
+  if (input.statuses && input.statuses.length > 0) {
+    filters.push(inArray(agencyOpsProjectTask.status, input.statuses));
+  } else if (input.status) {
     filters.push(eq(agencyOpsProjectTask.status, input.status));
   }
   if (input.assigneeUserId) {

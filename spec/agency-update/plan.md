@@ -33,15 +33,15 @@ Drop the left sidebar. Promote a single agency top-bar inside the existing app l
 
 Seven segments, ranked by daily traffic:
 
-| # | Segment    | Replaces                | Anatomy                                                                                              | Backend status              |
-| - | ---------- | ----------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------- |
-| 1 | Time       | Overview                | Week grid (Mon–Sun) × project rows, inline cells, total column. Running cell mirrors chrome timer.   | Wired                       |
-| 2 | Projects   | Mgmt → projects         | Dense table: hue dot + name, client, members, in-row budget bar, hours this period, status pill.    | Partially wired (no budget) |
-| 3 | Clients    | Mgmt → clients          | Two-pane: client list (left, collapsed), client detail (right) with project sub-list + totals.       | Wired                       |
-| 4 | Reports    | Dashboard               | KPI strip (4 mono numerals) → filter rail → chart → breakdown table. No sparklines.                  | Wired (existing summary)    |
-| 5 | Resourcing | new                     | Member × week capacity heatmap. Empty-state teaches the capacity model.                              | Aspirational                |
-| 6 | Billing    | new                     | Invoice pipeline (draft / sent / paid) + period-close checklist. Empty-state teaches the model.      | Aspirational                |
-| 7 | Settings   | Mgmt → tags + new slots | Left-rail subnav: Tags, Rates, Members, Integrations, Project hue overrides.                         | Mixed                       |
+| #   | Segment    | Replaces                | Anatomy                                                                                            | Backend status              |
+| --- | ---------- | ----------------------- | -------------------------------------------------------------------------------------------------- | --------------------------- |
+| 1   | Time       | Overview                | Week grid (Mon–Sun) × project rows, inline cells, total column. Running cell mirrors chrome timer. | Wired                       |
+| 2   | Projects   | Mgmt → projects         | Dense table: hue dot + name, client, members, in-row budget bar, hours this period, status pill.   | Partially wired (no budget) |
+| 3   | Clients    | Mgmt → clients          | Two-pane: client list (left, collapsed), client detail (right) with project sub-list + totals.     | Wired                       |
+| 4   | Reports    | Dashboard               | KPI strip (4 mono numerals) → filter rail → chart → breakdown table. No sparklines.                | Wired (existing summary)    |
+| 5   | Resourcing | new                     | Member × week capacity heatmap. Empty-state teaches the capacity model.                            | Aspirational                |
+| 6   | Billing    | new                     | Invoice pipeline (draft / sent / paid) + period-close checklist. Empty-state teaches the model.    | Aspirational                |
+| 7   | Settings   | Mgmt → tags + new slots | Left-rail subnav: Tags, Rates, Members, Integrations, Project hue overrides.                       | Mixed                       |
 
 Page rhythm: 24px outer padding, 36–40px row height for tables, 32px between sections. No nested cards. No 3xl card frame around the workspace.
 

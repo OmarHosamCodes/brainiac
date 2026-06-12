@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/vue-query";
 import AgencyTaskList from "~/components/agency/AgencyTaskList.vue";
 import AgencyTaskThread from "~/components/agency/AgencyTaskThread.vue";
 import AgencyTimeEntriesLog from "~/components/agency/AgencyTimeEntriesLog.vue";
+import AgencyTimeTracker from "~/components/agency/AgencyTimeTracker.vue";
 
 const props = defineProps<{
   teamId: string;
@@ -71,7 +72,8 @@ function handleSelectProject(projectId: string) {
       v-else
       class="hidden h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto rounded-2xl border border-default bg-default p-4 lg:flex"
     >
-      <AgencyTimeEntriesLog :team-id="teamId" />
+      <AgencyTimeTracker :team-id="teamId" />
+      <AgencyTimeEntriesLog :team-id="teamId" class="mt-6" />
     </div>
   </div>
 </template>

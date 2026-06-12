@@ -4,6 +4,8 @@ import type { SelectMenuItem } from "@nuxt/ui";
 
 import { getErrorMessage } from "~/utils/get-error-message";
 import { useAgencyOpsStore } from "~/stores/agency-ops";
+import { useAuthSession } from "~/composables/useAuthClient";
+import AgencyMiniTimer from "~/components/agency/AgencyMiniTimer.vue";
 
 type Project = {
   id: string;
@@ -25,7 +27,6 @@ type AgencyProjectTask = {
 
 type TaskStatus = AgencyProjectTask["status"];
 
-const ALL_STATUSES_VALUE = "__all_statuses__";
 const ALL_ASSIGNEES_VALUE = "__all_assignees__";
 const ALL_PROJECTS_VALUE = "__all_projects__";
 const UNASSIGNED_ASSIGNEE_VALUE = "__unassigned__";
@@ -44,9 +45,11 @@ const emit = defineEmits<{
 const orpc = useOrpc();
 const agencyOps = useAgencyOpsStore();
 const toast = useToast();
+const authSession = useAuthSession();
 
 const teamId = computed(() => props.teamId);
-const statusFilter = ref<TaskStatus | typeof ALL_STATUSES_VALUE>(ALL_STATUSES_VALUE);
+const currentUserId = computed(() => authSession.value?.data?.user?.id ?? "");
+const statusFilter = ref<TaskStatus[]>(["open", "in_progress"]);
 const assigneeFilter = ref(ALL_ASSIGNEES_VALUE);
 const projectFilter = ref(ALL_PROJECTS_VALUE);
 const search = ref("");
@@ -54,10 +57,20 @@ const titleDraft = ref("");
 const selectedProjectIdForCreate = ref("");
 
 const selectedStatusFilter = computed(() =>
-  statusFilter.value === ALL_STATUSES_VALUE ? undefined : statusFilter.value,
+  statusFilter.value.length > 0 ? statusFilter.value : undefined,
 );
 const selectedAssigneeFilter = computed(() =>
   assigneeFilter.value === ALL_ASSIGNEES_VALUE ? undefined : assigneeFilter.value,
+);
+
+watch(
+  currentUserId,
+  (id) => {
+    if (id && assigneeFilter.value === ALL_ASSIGNEES_VALUE) {
+      assigneeFilter.value = id;
+    }
+  },
+  { immediate: true },
 );
 
 const membersQuery = useQuery(
@@ -76,7 +89,7 @@ const tasksQuery = useQuery(
     ...orpc.agencyOps.projectTasks.list.queryOptions({
       input: {
         teamId: teamId.value,
-        status: selectedStatusFilter.value,
+        statuses: selectedStatusFilter.value,
         assigneeUserId: selectedAssigneeFilter.value,
         search: search.value || undefined,
       },
@@ -100,16 +113,11 @@ const isMembersLoading = computed(() => membersQuery.isPending.value);
 const isTaskUpdatePending = computed(() => updateTaskMutation.isPending.value);
 
 const statusOptions: SelectMenuItem[] = [
-  { label: "All statuses", value: ALL_STATUSES_VALUE },
   { label: "Open", value: "open" },
   { label: "In progress", value: "in_progress" },
   { label: "Done", value: "done" },
   { label: "Archived", value: "archived" },
 ];
-
-const rowStatusOptions = computed<SelectMenuItem[]>(() =>
-  statusOptions.filter((option) => option.value !== ALL_STATUSES_VALUE),
-);
 
 const assigneeOptions = computed<SelectMenuItem[]>(() => [
   { label: "All assignees", value: ALL_ASSIGNEES_VALUE },
@@ -263,8 +271,9 @@ function getProjectHue(projectId: string) {
           v-model="statusFilter"
           :items="statusOptions"
           size="sm"
-          class="w-28"
+          class="w-36"
           value-key="value"
+          multiple
         />
         <USelectMenu
           v-model="assigneeFilter"
@@ -376,10 +385,10 @@ function getProjectHue(projectId: string) {
                 · {{ formatDueDate(task.dueDate) }}
               </span>
             </div>
-            <div class="mt-2 grid grid-cols-3 gap-1" @click.stop>
+            <div class="mt-2 grid grid-cols-4 gap-1" @click.stop>
               <USelectMenu
                 :model-value="task.status"
-                :items="rowStatusOptions"
+                :items="statusOptions"
                 size="xs"
                 value-key="value"
                 :disabled="isTaskUpdatePending"
@@ -404,6 +413,13 @@ function getProjectHue(projectId: string) {
                 :disabled="isTaskUpdatePending"
                 @update:model-value="updateTask(task, { dueDate: toDueDateIso(String($event)) })"
               />
+              <div @click.stop>
+                <AgencyMiniTimer
+                  :team-id="teamId"
+                  :task-id="task.id"
+                  :project-id="task.projectId"
+                />
+              </div>
             </div>
           </div>
         </div>

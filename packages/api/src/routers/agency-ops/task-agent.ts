@@ -114,7 +114,15 @@ export async function askTaskAgent(
 
   const messageIds = messageRows.map((r) => r.id);
 
-  let attachmentMap = new Map<string, Array<{ fileName: string; mimeType: string; sizeBytes: number; metadata: AttachmentMetadata | null }>>();
+  let attachmentMap = new Map<
+    string,
+    Array<{
+      fileName: string;
+      mimeType: string;
+      sizeBytes: number;
+      metadata: AttachmentMetadata | null;
+    }>
+  >();
   if (messageIds.length > 0) {
     const attachmentRows = await db
       .select({
@@ -154,9 +162,7 @@ export async function askTaskAgent(
         content = "[voice message]";
       } else {
         const summary = formatAttachmentSummary(attachments);
-        content = row.content
-          ? `${row.content}\n${summary}`
-          : summary || "[attachment]";
+        content = row.content ? `${row.content}\n${summary}` : summary || "[attachment]";
       }
       return {
         role: (row.senderType === "agent" ? "assistant" : "user") as "user" | "assistant",
@@ -176,9 +182,7 @@ export async function askTaskAgent(
         metadata: a.metadata ?? null,
       })),
     );
-    userContent = userContent
-      ? `${userContent}\n${summary}`
-      : summary;
+    userContent = userContent ? `${userContent}\n${summary}` : summary;
   }
 
   const result = await runTaskAgent(

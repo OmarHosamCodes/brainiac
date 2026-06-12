@@ -156,11 +156,13 @@ function getTintOptionStyle(value: WorkspaceNodeTint) {
             />
           </UFormField>
 
-          <hr class="border-muted/20">
+          <hr class="border-muted/20" />
 
           <div>
             <p class="mb-2 text-sm font-semibold text-highlighted">Node Type</p>
-            <div class="flex overflow-hidden rounded-full border border-muted/60 bg-elevated/40 p-0.5">
+            <div
+              class="flex overflow-hidden rounded-full border border-muted/60 bg-elevated/40 p-0.5"
+            >
               <button
                 type="button"
                 class="rounded-full px-3 py-1 text-xs font-semibold transition"
@@ -188,7 +190,7 @@ function getTintOptionStyle(value: WorkspaceNodeTint) {
             </div>
           </div>
 
-          <hr class="border-muted/20">
+          <hr class="border-muted/20" />
 
           <div>
             <p class="mb-2 text-sm font-semibold text-highlighted">Tint</p>
@@ -243,11 +245,13 @@ function getTintOptionStyle(value: WorkspaceNodeTint) {
               />
             </UFormField>
 
-            <hr class="border-muted/20">
+            <hr class="border-muted/20" />
 
             <div>
               <p class="mb-2 text-sm font-semibold text-highlighted">Node Type</p>
-              <div class="flex overflow-hidden rounded-full border border-muted/60 bg-elevated/40 p-0.5">
+              <div
+                class="flex overflow-hidden rounded-full border border-muted/60 bg-elevated/40 p-0.5"
+              >
                 <button
                   type="button"
                   class="rounded-full px-3 py-1 text-xs font-semibold transition"
@@ -275,7 +279,7 @@ function getTintOptionStyle(value: WorkspaceNodeTint) {
               </div>
             </div>
 
-            <hr class="border-muted/20">
+            <hr class="border-muted/20" />
 
             <div>
               <p class="mb-2 text-sm font-semibold text-highlighted">Tint</p>
@@ -327,10 +331,7 @@ function getTintOptionStyle(value: WorkspaceNodeTint) {
 
               <template v-else>
                 <div class="max-h-[24rem] space-y-3 overflow-y-auto pr-1">
-                  <section
-                    v-for="group in groupedBlockOptions"
-                    :key="group.tabId"
-                  >
+                  <section v-for="group in groupedBlockOptions" :key="group.tabId">
                     <p class="mb-2 text-[0.65rem] font-bold uppercase tracking-[0.18em] text-muted">
                       {{ group.tabTitle }}
                     </p>

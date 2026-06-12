@@ -189,13 +189,7 @@ async function handleSignOut() {
     </button>
   </UDropdownMenu>
 
-  <input
-    ref="fileInput"
-    type="file"
-    accept="image/*"
-    class="hidden"
-    @change="handleFileSelect"
-  />
+  <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="handleFileSelect" />
 </template>
 
 <style scoped>

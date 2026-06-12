@@ -327,6 +327,7 @@ export const agencyOpsRouter = {
         teamScopedInputSchema.extend({
           projectId: z.string().min(1).optional(),
           status: z.enum(["open", "in_progress", "done", "archived"]).optional(),
+          statuses: z.array(z.enum(["open", "in_progress", "done", "archived"])).optional(),
           assigneeUserId: z.string().min(1).optional(),
           search: z.string().optional(),
         }),
@@ -544,14 +545,7 @@ export const agencyOpsRouter = {
                     fileExtension: z.string().optional(),
                     lastModified: z.string().optional(),
                     mediaKind: z
-                      .enum([
-                        "image",
-                        "video",
-                        "audio",
-                        "document",
-                        "archive",
-                        "other",
-                      ])
+                      .enum(["image", "video", "audio", "document", "archive", "other"])
                       .optional(),
                   })
                   .optional(),
