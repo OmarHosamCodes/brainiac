@@ -137,6 +137,7 @@ type AgencyTimeEntryRecord = {
   userName: string;
   projectId: string;
   taskId: string | null;
+  taskTitle: string | null;
   projectName: string;
   clientId: string;
   clientName: string;
@@ -157,6 +158,7 @@ type AgencyActiveTimerRecord = {
   userId: string;
   projectId: string;
   taskId: string | null;
+  taskTitle: string | null;
   projectName: string;
   tags: AgencyTagRecord[];
   description: string;
@@ -392,6 +394,7 @@ async function getActiveTimerByUser(userId: string) {
       userId: agencyOpsActiveTimer.userId,
       projectId: agencyOpsActiveTimer.projectId,
       taskId: agencyOpsActiveTimer.taskId,
+      taskTitle: agencyOpsProjectTask.title,
       projectName: agencyOpsProject.name,
       description: agencyOpsActiveTimer.description,
       linkUrl: agencyOpsActiveTimer.linkUrl,
@@ -401,6 +404,7 @@ async function getActiveTimerByUser(userId: string) {
     })
     .from(agencyOpsActiveTimer)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsActiveTimer.taskId))
     .where(eq(agencyOpsActiveTimer.userId, userId))
     .limit(1);
 
@@ -426,6 +430,7 @@ async function getActiveTimerByUser(userId: string) {
     userId: timer.userId,
     projectId: timer.projectId,
     taskId: timer.taskId,
+    taskTitle: timer.taskTitle ?? null,
     projectName: timer.projectName,
     tags: tags.map(mapTagRow),
     description: timer.description,
@@ -1934,6 +1939,7 @@ export async function stopAgencyTimer(
       userName: user.name,
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -1949,6 +1955,7 @@ export async function stopAgencyTimer(
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
     .where(eq(agencyOpsTimeEntry.id, entry.id))
     .limit(1);
@@ -1973,6 +1980,7 @@ export async function stopAgencyTimer(
         userName: row.userName ?? "Unknown",
         projectId: row.projectId,
         taskId: row.taskId ?? null,
+        taskTitle: row.taskTitle ?? null,
         projectName: row.projectName,
         clientId: row.clientId,
         clientName: row.clientName,
@@ -2017,6 +2025,7 @@ export async function listMyAgencyTimeEntries(
       userName: user.name,
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -2032,6 +2041,7 @@ export async function listMyAgencyTimeEntries(
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
     .where(
       and(
@@ -2066,6 +2076,7 @@ export async function listMyAgencyTimeEntries(
         userName: row.userName ?? "Unknown",
         projectId: row.projectId,
         taskId: row.taskId ?? null,
+        taskTitle: row.taskTitle ?? null,
         projectName: row.projectName,
         clientId: row.clientId,
         clientName: row.clientName,
@@ -3030,6 +3041,7 @@ export async function createManualAgencyTimeEntry(
       userName: user.name,
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -3045,6 +3057,7 @@ export async function createManualAgencyTimeEntry(
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
     .where(eq(agencyOpsTimeEntry.id, created.id))
     .limit(1);
@@ -3072,6 +3085,7 @@ export async function createManualAgencyTimeEntry(
     userName: row.userName ?? "Unknown",
     projectId: row.projectId,
     taskId: row.taskId ?? null,
+    taskTitle: row.taskTitle ?? null,
     projectName: row.projectName,
     clientId: row.clientId,
     clientName: row.clientName,
@@ -3211,6 +3225,7 @@ export async function updateMyAgencyTimeEntry(
       userName: user.name,
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -3226,6 +3241,7 @@ export async function updateMyAgencyTimeEntry(
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
     .where(eq(agencyOpsTimeEntry.id, updated.id))
     .limit(1);
@@ -3253,6 +3269,7 @@ export async function updateMyAgencyTimeEntry(
     userName: row.userName ?? "Unknown",
     projectId: row.projectId,
     taskId: row.taskId ?? null,
+    taskTitle: row.taskTitle ?? null,
     projectName: row.projectName,
     clientId: row.clientId,
     clientName: row.clientName,
@@ -3651,6 +3668,7 @@ export async function listAllAgencyTimeEntries(
       userName: user.name,
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -3666,6 +3684,7 @@ export async function listAllAgencyTimeEntries(
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
     .where(and(...filters))
     .orderBy(desc(agencyOpsTimeEntry.startedAt))
@@ -3696,6 +3715,7 @@ export async function listAllAgencyTimeEntries(
         userName: row.userName ?? "Unknown",
         projectId: row.projectId,
         taskId: row.taskId ?? null,
+        taskTitle: row.taskTitle ?? null,
         projectName: row.projectName,
         clientId: row.clientId,
         clientName: row.clientName,
@@ -3856,6 +3876,7 @@ export async function updateAnyAgencyTimeEntry(
       userName: user.name,
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -3871,6 +3892,7 @@ export async function updateAnyAgencyTimeEntry(
     .from(agencyOpsTimeEntry)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
     .where(eq(agencyOpsTimeEntry.id, updated.id))
     .limit(1);
@@ -3898,6 +3920,7 @@ export async function updateAnyAgencyTimeEntry(
     userName: row.userName ?? "Unknown",
     projectId: row.projectId,
     taskId: row.taskId ?? null,
+    taskTitle: row.taskTitle ?? null,
     projectName: row.projectName,
     clientId: row.clientId,
     clientName: row.clientName,

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { SelectMenuItem } from "@nuxt/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
@@ -24,7 +23,7 @@ type ViewMode = "week" | "day" | "log";
 type EntryDraft = {
   mode: "create" | "update";
   entryId: string | null;
-  projectId: string;
+  taskId: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -168,6 +167,14 @@ const projectsQuery = useQuery(
     enabled: Boolean(teamId.value),
   })),
 );
+const tasksQuery = useQuery(
+  computed(() => ({
+    ...orpc.agencyOps.projectTasks.list.queryOptions({
+      input: { teamId: teamId.value, statuses: ["open", "in_progress"] },
+    }),
+    enabled: Boolean(teamId.value),
+  })),
+);
 const tagsQuery = useQuery(
   computed(() => ({
     ...orpc.agencyOps.tags.list.queryOptions({ input: { teamId: teamId.value } }),
@@ -187,24 +194,23 @@ const createManualMutation = useMutation(orpc.agencyOps.timeEntries.createManual
 const updateEntryMutation = useMutation(orpc.agencyOps.timeEntries.updateMine.mutationOptions());
 
 const projects = computed(() => projectsQuery.data.value?.items ?? []);
+const tasks = computed(() => tasksQuery.data.value?.items ?? []);
 const tags = computed(() => tagsQuery.data.value?.items ?? []);
 const activeTimer = computed(() => activeTimerQuery.data.value?.timer ?? null);
 const entries = computed(() => entriesQuery.data.value?.items ?? []);
 type EntryRow = (typeof entries.value)[number];
-const isLoading = computed(() => entriesQuery.isPending.value || projectsQuery.isPending.value);
+const isLoading = computed(
+  () => entriesQuery.isPending.value || projectsQuery.isPending.value || tasksQuery.isPending.value,
+);
 const isError = computed(() => Boolean(entriesQuery.error.value));
 const isSaving = computed(
   () => createManualMutation.isPending.value || updateEntryMutation.isPending.value,
 );
 
-const projectSelectItems = computed<SelectMenuItem[]>(() =>
-  projects.value.map((project) => ({
-    label: `${project.name} (${project.clientName})`,
-    value: project.id,
-  })),
-);
-
-type ProjectRow = {
+type TaskRow = {
+  rowKey: string;
+  taskId: string | null;
+  taskTitle: string;
   projectId: string;
   projectName: string;
   clientName: string;
@@ -212,24 +218,28 @@ type ProjectRow = {
   perDay: Map<string, number>;
 };
 
-const grid = computed<ProjectRow[]>(() => {
-  const rowMap = new Map<string, ProjectRow>();
+const grid = computed<TaskRow[]>(() => {
+  const rowMap = new Map<string, TaskRow>();
   for (const entry of entries.value) {
+    const rowKey = entry.taskId ?? `project-only:${entry.projectId}`;
     const existing =
-      rowMap.get(entry.projectId) ??
+      rowMap.get(rowKey) ??
       ({
+        rowKey,
+        taskId: entry.taskId ?? null,
+        taskTitle: entry.taskTitle ?? "Project-only entry",
         projectId: entry.projectId,
         projectName: entry.projectName,
         clientName: entry.clientName,
         totalSeconds: 0,
         perDay: new Map<string, number>(),
-      } satisfies ProjectRow);
+      } satisfies TaskRow);
     const key = entry.startedAt.slice(0, 10);
     existing.totalSeconds += entry.durationSeconds;
     existing.perDay.set(key, (existing.perDay.get(key) ?? 0) + entry.durationSeconds);
-    rowMap.set(entry.projectId, existing);
+    rowMap.set(rowKey, existing);
   }
-  return [...rowMap.values()].sort((a, b) => a.projectName.localeCompare(b.projectName));
+  return [...rowMap.values()].sort((a, b) => a.taskTitle.localeCompare(b.taskTitle));
 });
 
 const dailyTotals = computed(() => {
@@ -289,29 +299,21 @@ function goNextDay() {
   weekAnchor.value = getWeekStartUtc(next);
 }
 
-function getCellSeconds(row: ProjectRow, day: string): number {
+function getCellSeconds(row: TaskRow, day: string): number {
   return row.perDay.get(day) ?? 0;
 }
 
-function getCellEntries(projectId: string, day: string) {
-  return entries.value
-    .filter((entry) => entry.projectId === projectId && entry.startedAt.slice(0, 10) === day)
-    .sort((a, b) => a.startedAt.localeCompare(b.startedAt));
-}
-
-function isRunningCell(row: ProjectRow, day: string): boolean {
+function isRunningCell(row: TaskRow, day: string): boolean {
   if (!activeTimer.value) return false;
-  return (
-    activeTimer.value.projectId === row.projectId &&
-    activeTimer.value.startedAt.slice(0, 10) === day
-  );
+  const runningKey = activeTimer.value.taskId ?? `project-only:${activeTimer.value.projectId}`;
+  return runningKey === row.rowKey && activeTimer.value.startedAt.slice(0, 10) === day;
 }
 
-function createBlankDraft(projectId = "", day = selectedDayKey.value): EntryDraft {
+function createBlankDraft(taskId = "", day = selectedDayKey.value): EntryDraft {
   return {
     mode: "create",
     entryId: null,
-    projectId,
+    taskId,
     date: day,
     startTime: "09:00",
     endTime: "10:00",
@@ -322,8 +324,8 @@ function createBlankDraft(projectId = "", day = selectedDayKey.value): EntryDraf
   };
 }
 
-function openAdd(projectId = "", day = selectedDayKey.value) {
-  activeDraft.value = createBlankDraft(projectId, day);
+function openAdd(taskId = "", day = selectedDayKey.value) {
+  activeDraft.value = createBlankDraft(taskId, day);
   selectedDayKey.value = day;
   draftError.value = null;
 }
@@ -332,7 +334,7 @@ function openEdit(entry: EntryRow) {
   activeDraft.value = {
     mode: "update",
     entryId: entry.id,
-    projectId: entry.projectId,
+    taskId: entry.taskId ?? "",
     date: entry.startedAt.slice(0, 10),
     startTime: timeKey(entry.startedAt),
     endTime: timeKey(entry.endedAt),
@@ -383,7 +385,7 @@ function setDraftEndTime(value: string | number | undefined) {
 function validateDraft() {
   const draft = activeDraft.value;
   if (!draft) return null;
-  if (!draft.projectId) return "Select a project.";
+  if (!draft.taskId) return "Select a task.";
   const startAt = combineDateTime(draft.date, draft.startTime);
   if (!startAt) return "Enter a valid start time.";
   const durationSeconds = parseDurationToSeconds(draft.durationInput);
@@ -411,7 +413,7 @@ async function saveDraft() {
     if (draft.mode === "create") {
       await createManualMutation.mutateAsync({
         teamId: teamId.value,
-        projectId: draft.projectId,
+        taskId: draft.taskId,
         startAt: startAt.toISOString(),
         endAt: endAt.toISOString(),
         description: draft.description.trim() || undefined,
@@ -422,7 +424,7 @@ async function saveDraft() {
       await updateEntryMutation.mutateAsync({
         teamId: teamId.value,
         entryId: draft.entryId,
-        projectId: draft.projectId,
+        taskId: draft.taskId,
         startAt: startAt.toISOString(),
         endAt: endAt.toISOString(),
         description: draft.description.trim(),
@@ -446,10 +448,11 @@ async function deleteEntry(entry: EntryRow) {
 
 async function restartEntry(entry: EntryRow) {
   const project = projects.value.find((projectEntry) => projectEntry.id === entry.projectId);
-  if (!project) return;
+  if (!project || !entry.taskId || !entry.taskTitle) return;
   await agencyTimeTrackingStore.restartEntry({
     teamId: teamId.value,
     project,
+    task: { id: entry.taskId, title: entry.taskTitle },
     description: entry.description,
     linkUrl: entry.linkUrl,
     tags: entry.tags,
@@ -541,7 +544,7 @@ async function restartEntry(entry: EntryRow) {
             class="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_5rem] border-b border-default bg-muted"
           >
             <div class="px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-              Project
+              Task
             </div>
             <button
               v-for="day in weekDays"
@@ -587,7 +590,7 @@ async function restartEntry(entry: EntryRow) {
           <template v-else>
             <div
               v-for="row in grid"
-              :key="row.projectId"
+              :key="row.rowKey"
               class="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_5rem] border-b border-default last:border-b-0"
             >
               <div class="flex min-w-0 items-center gap-2 px-4 py-3">
@@ -597,13 +600,15 @@ async function restartEntry(entry: EntryRow) {
                   :style="projectHueStyle(row.projectId)"
                 />
                 <div class="min-w-0">
-                  <p class="truncate text-xs font-bold text-highlighted">{{ row.projectName }}</p>
-                  <p class="truncate text-[11px] text-muted">{{ row.clientName }}</p>
+                  <p class="truncate text-xs font-bold text-highlighted">{{ row.taskTitle }}</p>
+                  <p class="truncate text-[11px] text-muted">
+                    {{ row.clientName }} · {{ row.projectName }}
+                  </p>
                 </div>
               </div>
               <button
                 v-for="day in weekDays"
-                :key="`${row.projectId}-${day.key}`"
+                :key="`${row.rowKey}-${day.key}`"
                 type="button"
                 class="agency-time-entries__cell relative flex h-12 items-center justify-center border-l border-default px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
                 :class="[
@@ -617,7 +622,7 @@ async function restartEntry(entry: EntryRow) {
                   selectedDayKey = day.key;
                   getCellSeconds(row, day.key) > 0
                     ? (viewMode = 'day')
-                    : openAdd(row.projectId, day.key);
+                    : openAdd(row.taskId ?? '', day.key);
                 "
               >
                 <span
@@ -741,8 +746,12 @@ async function restartEntry(entry: EntryRow) {
                   :style="projectHueStyle(entry.projectId)"
                 />
                 <div class="min-w-0">
-                  <p class="truncate text-sm font-bold text-highlighted">{{ entry.projectName }}</p>
+                  <p class="truncate text-sm font-bold text-highlighted">
+                    {{ entry.taskTitle ?? "Project-only entry" }}
+                  </p>
                   <p class="mt-0.5 text-xs text-muted">
+                    <span>{{ entry.clientName }} · {{ entry.projectName }}</span>
+                    <span class="mx-1.5 opacity-30">·</span>
                     <span class="font-mono tabular-nums">{{ timeKey(entry.startedAt) }}</span>
                     <span class="mx-1 opacity-40">to</span>
                     <span class="font-mono tabular-nums">{{ timeKey(entry.endedAt) }}</span>
@@ -766,6 +775,7 @@ async function restartEntry(entry: EntryRow) {
               <!-- Right: actions -->
               <AgencyTimeEntryActions
                 :entry="entry"
+                :can-restart="Boolean(entry.taskId)"
                 :deleting="deletingEntryIds.includes(entry.id)"
                 @edit="openEdit(entry)"
                 @restart="restartEntry(entry)"
@@ -788,7 +798,8 @@ async function restartEntry(entry: EntryRow) {
               >
                 <AgencyTimeEntryDraftForm
                   :draft="activeDraft"
-                  :project-items="projectSelectItems"
+                  :projects="projects"
+                  :tasks="tasks"
                   :tags="tags"
                   :error="draftError"
                   :saving="isSaving"
@@ -844,13 +855,15 @@ async function restartEntry(entry: EntryRow) {
                 <div class="min-w-0">
                   <div class="flex flex-wrap items-baseline gap-2">
                     <p class="truncate text-sm font-bold text-highlighted">
-                      {{ entry.projectName }}
+                      {{ entry.taskTitle ?? "Project-only entry" }}
                     </p>
                     <span class="font-mono text-xs font-bold tabular-nums text-highlighted">
                       {{ formatDuration(entry.durationSeconds, "short") }}
                     </span>
                   </div>
                   <p class="mt-0.5 text-xs text-muted">
+                    <span>{{ entry.clientName }} · {{ entry.projectName }}</span>
+                    <span class="mx-1.5 opacity-30">·</span>
                     <span>{{ entry.startedAt.slice(0, 10) }}</span>
                     <span class="mx-1.5 opacity-30">·</span>
                     <span class="font-mono tabular-nums">{{ timeKey(entry.startedAt) }}</span>
@@ -874,6 +887,7 @@ async function restartEntry(entry: EntryRow) {
               <!-- Actions -->
               <AgencyTimeEntryActions
                 :entry="entry"
+                :can-restart="Boolean(entry.taskId)"
                 :deleting="deletingEntryIds.includes(entry.id)"
                 @edit="openEdit(entry)"
                 @restart="restartEntry(entry)"
@@ -896,7 +910,8 @@ async function restartEntry(entry: EntryRow) {
               >
                 <AgencyTimeEntryDraftForm
                   :draft="activeDraft"
-                  :project-items="projectSelectItems"
+                  :projects="projects"
+                  :tasks="tasks"
                   :tags="tags"
                   :error="draftError"
                   :saving="isSaving"
@@ -927,7 +942,8 @@ async function restartEntry(entry: EntryRow) {
         >
           <AgencyTimeEntryDraftForm
             :draft="activeDraft"
-            :project-items="projectSelectItems"
+            :projects="projects"
+            :tasks="tasks"
             :tags="tags"
             :error="draftError"
             :saving="isSaving"

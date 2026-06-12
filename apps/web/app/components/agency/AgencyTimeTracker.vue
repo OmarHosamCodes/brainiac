@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { SelectMenuItem } from "@nuxt/ui";
 import { useQuery } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
+import AgencyTaskChooser from "~/components/agency/AgencyTaskChooser.vue";
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
 import { formatDuration } from "~/utils/format-duration";
 import {
@@ -20,7 +20,6 @@ const { draftByTeam, isTimerMutationPending } = storeToRefs(agencyTimeTrackingSt
 
 const now = ref(Date.now());
 const tagSearch = ref("");
-const projectSearchTerm = ref("");
 
 let tickerHandle: ReturnType<typeof setInterval> | null = null;
 
@@ -51,43 +50,20 @@ const projectsQuery = useQuery(
 );
 
 const projects = computed(() => projectsQuery.data.value?.items ?? []);
-const projectSelectItems = computed<SelectMenuItem[]>(() => {
-  const query = projectSearchTerm.value.trim().toLowerCase();
-  const filteredProjects = query
-    ? projects.value.filter((project) => {
-        const searchableText = `${project.name} ${project.clientName}`.toLowerCase();
-        return searchableText.includes(query);
-      })
-    : projects.value;
-  const groupedProjects = new Map<string, typeof projects.value>();
 
-  for (const project of filteredProjects) {
-    const existingProjects = groupedProjects.get(project.clientName);
-
-    if (existingProjects) {
-      existingProjects.push(project);
-      continue;
-    }
-
-    groupedProjects.set(project.clientName, [project]);
-  }
-
-  return [...groupedProjects.entries()]
-    .sort(([leftClient], [rightClient]) => leftClient.localeCompare(rightClient))
-    .flatMap(([clientName, clientProjects]) => [
-      {
-        type: "label" as const,
-        label: clientName,
+const tasksQuery = useQuery(
+  computed(() => ({
+    ...orpc.agencyOps.projectTasks.list.queryOptions({
+      input: {
+        teamId: effectiveTeamId.value,
+        statuses: ["open", "in_progress"],
       },
-      ...[...clientProjects]
-        .sort((leftProject, rightProject) => leftProject.name.localeCompare(rightProject.name))
-        .map((project) => ({
-          label: project.name,
-          value: project.id,
-          clientName,
-        })),
-    ]);
-});
+    }),
+    enabled: Boolean(effectiveTeamId.value),
+  })),
+);
+
+const tasks = computed(() => tasksQuery.data.value?.items ?? []);
 
 const tagsQuery = useQuery(
   computed(() => ({
@@ -144,14 +120,14 @@ const timerDescription = computed({
     agencyTimeTrackingStore.setTrackerDescription(effectiveTeamId.value, value);
   },
 });
-const selectedProjectId = computed({
-  get: () => trackerDraft.value?.projectId ?? "",
+const selectedTaskId = computed({
+  get: () => trackerDraft.value?.taskId ?? "",
   set: (value: string) => {
     if (!effectiveTeamId.value) {
       return;
     }
 
-    agencyTimeTrackingStore.setTrackerProjectId(effectiveTeamId.value, value || "");
+    agencyTimeTrackingStore.setTrackerTaskId(effectiveTeamId.value, value || "");
   },
 });
 const selectedTagIds = computed({
@@ -174,8 +150,13 @@ const timerLinkUrl = computed({
     agencyTimeTrackingStore.setTrackerLinkUrl(effectiveTeamId.value, value);
   },
 });
-const selectedProject = computed(
-  () => projects.value.find((project) => project.id === selectedProjectId.value) ?? null,
+const selectedTask = computed(
+  () => tasks.value.find((task) => task.id === selectedTaskId.value) ?? null,
+);
+const selectedProject = computed(() =>
+  selectedTask.value
+    ? (projects.value.find((project) => project.id === selectedTask.value?.projectId) ?? null)
+    : null,
 );
 const selectedTags = computed(() => {
   const selectedIds = new Set(selectedTagIds.value);
@@ -248,14 +229,13 @@ const elapsedSeconds = computed(() => {
 const canStartTimer = computed(() =>
   Boolean(
     effectiveTeamId.value &&
+    selectedTask.value &&
     selectedProject.value &&
     selectedTagIds.value.length > 0 &&
     !activeTimer.value,
   ),
 );
-const canStopTimer = computed(() =>
-  Boolean(activeTimer.value && selectedProjectId.value && selectedTagIds.value.length > 0),
-);
+const canStopTimer = computed(() => Boolean(activeTimer.value && selectedTagIds.value.length > 0));
 const timerValidationHint = computed(() => {
   if (activeTimer.value ? canStopTimer.value : canStartTimer.value) {
     return "";
@@ -263,8 +243,8 @@ const timerValidationHint = computed(() => {
 
   const missingRequirements: string[] = [];
 
-  if (!selectedProjectId.value) {
-    missingRequirements.push("a project");
+  if (!activeTimer.value && !selectedTask.value) {
+    missingRequirements.push("a task");
   }
 
   if (selectedTagIds.value.length === 0) {
@@ -300,14 +280,16 @@ onBeforeUnmount(() => {
 async function startTimer() {
   const teamId = effectiveTeamId.value;
   const project = selectedProject.value;
+  const task = selectedTask.value;
 
-  if (!teamId || !project) {
+  if (!teamId || !project || !task) {
     return;
   }
 
   await agencyTimeTrackingStore.startTimer({
     teamId,
     project,
+    task,
     tagIds: [...selectedTagIds.value],
     selectedTags: [...selectedTags.value],
     description: timerDescription.value,
@@ -368,24 +350,19 @@ function toggleTag(tagId: string) {
         :disabled="trackerBusy || !effectiveTeamId"
       />
 
-      <USelectMenu
-        v-model="selectedProjectId"
-        v-model:search-term="projectSearchTerm"
-        :items="projectSelectItems"
-        :placeholder="!effectiveTeamId ? 'Team first' : 'Project'"
-        :search-input="{
-          placeholder: 'Search projects or clients',
-        }"
-        :content="{ align: 'start' }"
-        size="sm"
-        class="w-40 shrink-0"
-        ignore-filter
-        value-key="value"
-        :ui="{
-          content: 'max-h-72 overflow-hidden',
-          viewport: 'max-h-72 overflow-y-auto',
-        }"
-        :disabled="!effectiveTeamId || projectsQuery.isPending.value || Boolean(activeTimer)"
+      <AgencyTaskChooser
+        v-model="selectedTaskId"
+        :projects="projects"
+        :tasks="tasks"
+        :placeholder="!effectiveTeamId ? 'Team first' : 'Task'"
+        class="w-64 shrink-0 max-sm:w-full"
+        :loading="projectsQuery.isPending.value || tasksQuery.isPending.value"
+        :disabled="
+          !effectiveTeamId ||
+          projectsQuery.isPending.value ||
+          tasksQuery.isPending.value ||
+          Boolean(activeTimer)
+        "
       />
 
       <UPopover :content="{ align: 'end' }">

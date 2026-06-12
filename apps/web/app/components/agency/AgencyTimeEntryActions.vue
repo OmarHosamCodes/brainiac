@@ -1,8 +1,17 @@
 <script setup lang="ts">
-defineProps<{
-  entry: { id: string; projectName: string };
-  deleting?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    entry: { id: string; projectName: string; taskTitle?: string | null };
+    canRestart?: boolean;
+    deleting?: boolean;
+  }>(),
+  {
+    canRestart: true,
+    deleting: false,
+  },
+);
+
+const entryLabel = computed(() => props.entry.taskTitle || props.entry.projectName);
 
 const emit = defineEmits<{
   edit: [];
@@ -18,7 +27,7 @@ const emit = defineEmits<{
       variant="ghost"
       size="xs"
       icon="i-lucide-pencil"
-      :aria-label="`Edit ${entry.projectName} entry`"
+      :aria-label="`Edit ${entryLabel} entry`"
       @click="emit('edit')"
     />
     <UButton
@@ -26,7 +35,8 @@ const emit = defineEmits<{
       variant="ghost"
       size="xs"
       icon="i-lucide-play"
-      :aria-label="`Restart timer for ${entry.projectName}`"
+      :disabled="!props.canRestart"
+      :aria-label="`Restart timer for ${entryLabel}`"
       @click="emit('restart')"
     />
     <UButton
@@ -34,8 +44,8 @@ const emit = defineEmits<{
       variant="ghost"
       size="xs"
       icon="i-lucide-trash-2"
-      :loading="deleting"
-      :aria-label="`Delete ${entry.projectName} entry`"
+      :loading="props.deleting"
+      :aria-label="`Delete ${entryLabel} entry`"
       @click="emit('delete')"
     />
   </div>

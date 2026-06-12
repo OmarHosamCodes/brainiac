@@ -9,6 +9,8 @@ const props = defineProps<{
   teamId: string;
   taskId: string;
   projectId?: string;
+  taskTitle?: string;
+  projectName?: string;
 }>();
 
 const orpc = useOrpc();
@@ -54,7 +56,7 @@ const elapsedSeconds = computed(() => {
 });
 
 async function toggleTimer() {
-  if (!props.teamId || !props.projectId) return;
+  if (!props.teamId || !props.projectId || !props.taskId) return;
 
   if (isRunningForThisTask.value && activeTimer.value) {
     await agencyTimeTrackingStore.stopTimer({
@@ -69,8 +71,8 @@ async function toggleTimer() {
 
   await agencyTimeTrackingStore.startTimer({
     teamId: props.teamId,
-    project: { id: props.projectId, name: "" },
-    task: { id: props.taskId, title: "" },
+    project: { id: props.projectId, name: props.projectName ?? "" },
+    task: { id: props.taskId, title: props.taskTitle ?? "" },
     description: "",
     linkUrl: "",
     tagIds: [],
@@ -87,7 +89,7 @@ async function toggleTimer() {
     :variant="isRunningForThisTask ? 'soft' : 'solid'"
     size="xs"
     class="tabular-nums"
-    :disabled="!projectId || isTimerMutationPending"
+    :disabled="!projectId || !taskId || isTimerMutationPending"
     :loading="isTimerMutationPending"
     @click="toggleTimer"
   >

@@ -40,6 +40,7 @@ type AgencyActiveTimer = {
   userId: string;
   projectId: string;
   taskId: string | null;
+  taskTitle: string | null;
   projectName: string;
   tags: AgencyTag[];
   description: string;
@@ -56,6 +57,7 @@ type AgencyTimeEntry = {
   userName: string;
   projectId: string;
   taskId: string | null;
+  taskTitle: string | null;
   projectName: string;
   clientId: string;
   clientName: string;
@@ -122,7 +124,7 @@ type QuerySnapshot = {
 type StartTimerPayload = {
   teamId: string;
   project: Pick<AgencyProjectSummary, "id" | "name">;
-  task?: Pick<AgencyProjectTask, "id" | "title"> | null;
+  task: Pick<AgencyProjectTask, "id" | "title">;
   description: string;
   linkUrl: string;
   tagIds: string[];
@@ -143,7 +145,7 @@ type StopTimerPayload = {
 type RestartEntryPayload = {
   teamId: string;
   project: Pick<AgencyProjectSummary, "id" | "name">;
-  task?: Pick<AgencyProjectTask, "id" | "title"> | null;
+  task: Pick<AgencyProjectTask, "id" | "title">;
   description: string;
   linkUrl: string | null;
   tags: AgencyTag[];
@@ -366,14 +368,14 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
 
       draft.description = optimisticTimer.description;
       draft.projectId = optimisticTimer.projectId;
+      draft.taskId = optimisticTimer.taskId ?? "";
       draft.selectedTagIds = payload.tagIds;
       draft.linkUrl = normalizedUrl ?? "";
       draft.syncedTimerId = optimisticTimer.id;
 
       const result = (await startTimerMutation.mutateAsync({
         teamId: payload.teamId,
-        projectId: payload.project.id,
-        taskId: payload.task?.id,
+        taskId: payload.task.id,
         description: payload.description.trim(),
         linkUrl: normalizedUrl,
         tagIds: payload.tagIds,
@@ -612,7 +614,7 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
   function createOptimisticTimer(payload: {
     teamId: string;
     project: Pick<AgencyProjectSummary, "id" | "name">;
-    task?: Pick<AgencyProjectTask, "id" | "title"> | null;
+    task: Pick<AgencyProjectTask, "id" | "title">;
     description: string;
     linkUrl: string;
     tags: AgencyTag[];
@@ -625,7 +627,8 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
       teamId: payload.teamId,
       userId: getCurrentUserId(),
       projectId: payload.project.id,
-      taskId: payload.task?.id ?? null,
+      taskId: payload.task.id,
+      taskTitle: payload.task.title,
       projectName: payload.project.name,
       tags: [...payload.tags],
       description: payload.description.trim(),
@@ -653,6 +656,8 @@ export const useAgencyTimeTrackingStore = defineStore("agency-time-tracking", ()
       userId: timer.userId,
       userName: OPTIMISTIC_USER_NAME,
       projectId: timer.projectId,
+      taskId: timer.taskId,
+      taskTitle: timer.taskTitle,
       projectName: timer.projectName,
       clientId: overrides.clientId ?? OPTIMISTIC_CLIENT_ID,
       clientName: overrides.clientName ?? OPTIMISTIC_CLIENT_NAME,

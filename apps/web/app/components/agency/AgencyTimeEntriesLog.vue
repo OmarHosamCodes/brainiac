@@ -65,7 +65,10 @@ type EntryRow = NonNullable<typeof entriesQuery.data.value>["items"][number];
 type GroupedEntry = {
   key: string;
   projectId: string;
+  taskId: string | null;
+  taskTitle: string;
   projectName: string;
+  clientName: string;
   description: string;
   linkUrl: string | null;
   tags: EntryRow["tags"];
@@ -89,7 +92,8 @@ const groupedEntries = computed<GroupedEntry[]>(() => {
       .sort((a, b) => a.id.localeCompare(b.id))
       .map((t) => t.id)
       .join(",");
-    const key = `${entry.projectId}||${entry.description ?? ""}||${entry.linkUrl ?? ""}||${tagKey}`;
+    const taskKey = entry.taskId ?? `project-only:${entry.projectId}`;
+    const key = `${taskKey}||${entry.description ?? ""}||${entry.linkUrl ?? ""}||${tagKey}`;
 
     const existing = map.get(key);
 
@@ -105,7 +109,10 @@ const groupedEntries = computed<GroupedEntry[]>(() => {
       map.set(key, {
         key,
         projectId: entry.projectId,
+        taskId: entry.taskId ?? null,
+        taskTitle: entry.taskTitle ?? "Project-only entry",
         projectName: entry.projectName,
+        clientName: entry.clientName,
         description: entry.description ?? "",
         linkUrl: entry.linkUrl ?? null,
         tags: entry.tags,
@@ -237,13 +244,14 @@ async function restartEntry(group: GroupedEntry) {
   const teamId = effectiveTeamId.value;
   const project = projects.value.find((projectEntry) => projectEntry.id === group.projectId);
 
-  if (!teamId || !project) {
+  if (!teamId || !project || !group.taskId) {
     return;
   }
 
   await agencyTimeTrackingStore.restartEntry({
     teamId,
     project,
+    task: { id: group.taskId, title: group.taskTitle },
     description: group.description,
     linkUrl: group.linkUrl,
     tags: group.tags,
@@ -369,7 +377,10 @@ function toggleGroup(key: string) {
           </button>
 
           <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-medium text-highlighted">{{ group.projectName }}</p>
+            <p class="truncate text-sm font-medium text-highlighted">{{ group.taskTitle }}</p>
+            <p class="mt-0.5 truncate text-xs text-muted">
+              {{ group.clientName }} · {{ group.projectName }}
+            </p>
             <p v-if="group.description" class="mt-0.5 truncate text-xs text-muted">
               {{ group.description }}
             </p>
@@ -457,8 +468,8 @@ function toggleGroup(key: string) {
               variant="ghost"
               size="xs"
               :loading="isTimerMutationPending"
-              :disabled="!effectiveTeamId"
-              :aria-label="`Restart timer for ${group.projectName}`"
+              :disabled="!effectiveTeamId || !group.taskId"
+              :aria-label="`Restart timer for ${group.taskTitle}`"
               @click="restartEntry(group)"
             />
 
@@ -468,7 +479,7 @@ function toggleGroup(key: string) {
                 color="neutral"
                 variant="ghost"
                 size="xs"
-                :aria-label="`Options for ${group.projectName} entries`"
+                :aria-label="`Options for ${group.taskTitle} entries`"
               />
             </UDropdownMenu>
           </div>

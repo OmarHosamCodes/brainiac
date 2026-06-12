@@ -172,7 +172,13 @@ function onDrop(event: DragEvent) {
           </p>
         </div>
         <div class="flex items-center gap-2">
-          <AgencyMiniTimer :team-id="teamId" :task-id="taskId" :project-id="context?.projectId" />
+          <AgencyMiniTimer
+            :team-id="teamId"
+            :task-id="taskId"
+            :project-id="context?.projectId"
+            :task-title="context?.taskTitle"
+            :project-name="context?.projectName"
+          />
           <USwitch v-model="agentEnabled" label="Agent" size="sm" />
         </div>
       </div>

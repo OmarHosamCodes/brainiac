@@ -418,6 +418,8 @@ function getProjectHue(projectId: string) {
                   :team-id="teamId"
                   :task-id="task.id"
                   :project-id="task.projectId"
+                  :task-title="task.title"
+                  :project-name="projects.find((p) => p.id === task.projectId)?.name"
                 />
               </div>
             </div>

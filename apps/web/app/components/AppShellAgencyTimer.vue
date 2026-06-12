@@ -29,6 +29,12 @@ function goToAgency() {
 const projectStyle = computed(() =>
   activeTimer.value ? projectHueStyle(activeTimer.value.projectId) : {},
 );
+
+const timerLabel = computed(() => {
+  const timer = activeTimer.value;
+  if (!timer) return "";
+  return timer.description || timer.taskTitle || timer.projectName;
+});
 </script>
 
 <template>
@@ -39,12 +45,12 @@ const projectStyle = computed(() =>
     class="inline-flex min-w-0 items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-left text-xs text-primary transition-colors hover:bg-primary/15 hover:text-highlighted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
     :class="state === 'running' ? 'agency-timer--running' : ''"
     :style="projectStyle"
-    :title="`Timer running on ${activeTimer.projectName}`"
+    :title="`Timer running on ${activeTimer.taskTitle || activeTimer.projectName}`"
     @click="goToAgency"
   >
     <span class="agency-timer__dot inline-block size-2 shrink-0 rounded-full" aria-hidden="true" />
     <span class="truncate font-bold max-w-[12rem]">
-      {{ activeTimer.description || activeTimer.projectName }}
+      {{ timerLabel }}
     </span>
     <span class="font-mono font-bold tabular-nums text-highlighted">
       {{ formatDuration(elapsedSeconds) }}

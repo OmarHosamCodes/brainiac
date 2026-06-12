@@ -50,6 +50,8 @@ type AgencyActiveTimer = {
   teamId: string;
   userId: string;
   projectId: string;
+  taskId: string | null;
+  taskTitle: string | null;
   projectName: string;
   tags: AgencyTag[];
   description: string;
@@ -65,6 +67,8 @@ type AgencyTimeEntry = {
   userId: string;
   userName: string;
   projectId: string;
+  taskId: string | null;
+  taskTitle: string | null;
   projectName: string;
   clientId: string;
   clientName: string;
@@ -98,6 +102,7 @@ type AgencyTimeEntriesListQueryData = {
 type TrackerDraft = {
   description: string;
   projectId: string;
+  taskId: string;
   selectedTagIds: string[];
   linkUrl: string;
   syncedTimerId: string | null;
@@ -109,6 +114,7 @@ type AgencyTimeTrackingStore = {
   deletingEntryIds: { value: string[] };
   ensureTrackerDraft: (teamId: string) => TrackerDraft | null;
   setTrackerProjectId: (teamId: string, projectId: string) => void;
+  setTrackerTaskId: (teamId: string, taskId: string) => void;
   setTrackerDescription: (teamId: string, description: string) => void;
   setTrackerSelectedTagIds: (teamId: string, tagIds: string[]) => void;
   setTrackerLinkUrl: (teamId: string, linkUrl: string) => void;
@@ -121,6 +127,7 @@ type AgencyTimeTrackingStore = {
   startTimer: (payload: {
     teamId: string;
     project: { id: string; name: string };
+    task: { id: string; title: string };
     description: string;
     linkUrl: string;
     tagIds: string[];
@@ -137,6 +144,7 @@ type AgencyTimeTrackingStore = {
   restartEntry: (payload: {
     teamId: string;
     project: { id: string; name: string };
+    task: { id: string; title: string };
     description: string;
     linkUrl: string | null;
     tags: AgencyTag[];
@@ -214,6 +222,8 @@ function createActiveTimer(overrides: Partial<AgencyActiveTimer> = {}): AgencyAc
     teamId: "team-1",
     userId: "user-1",
     projectId: "project-1",
+    taskId: "task-1",
+    taskTitle: "Current task",
     projectName: "Current project",
     tags: [createTag("tag-1", "Billable")],
     description: "Current work",
@@ -232,6 +242,8 @@ function createTimeEntry(overrides: Partial<AgencyTimeEntry> = {}): AgencyTimeEn
     userId: "user-1",
     userName: "You",
     projectId: "project-1",
+    taskId: "task-1",
+    taskTitle: "Current task",
     projectName: "Current project",
     clientId: "client-1",
     clientName: "Acme",
@@ -316,6 +328,8 @@ describe("useAgencyTimeTrackingStore", () => {
     const serverTimer = createActiveTimer({
       id: "timer-2",
       projectId: "project-2",
+      taskId: "task-2",
+      taskTitle: "Next task",
       projectName: "Next project",
       description: "Next task",
       linkUrl: "https://brainiac.test/next-task",
@@ -343,6 +357,10 @@ describe("useAgencyTimeTrackingStore", () => {
         id: "project-2",
         name: "Next project",
       },
+      task: {
+        id: "task-2",
+        title: "Next task",
+      },
       description: "Next task",
       linkUrl: "brainiac.test/next-task",
       tagIds: [nextTag.id],
@@ -360,10 +378,14 @@ describe("useAgencyTimeTrackingStore", () => {
 
     expect(cachedLog?.total).toBe(1);
     expect(cachedLog?.items[0]?.projectId).toBe(existingTimer.projectId);
+    expect(cachedLog?.items[0]?.taskId).toBe(existingTimer.taskId);
     expect(cachedLog?.items[0]?.description).toBe(existingTimer.description);
     expect(cachedLog?.items[0]?.linkUrl).toBe(existingTimer.linkUrl);
     expect(cachedTimer?.timer?.id).toBe(serverTimer.id);
     expect(cachedTimer?.timer?.projectId).toBe("project-2");
+    expect(cachedTimer?.timer?.taskId).toBe("task-2");
+    expect(startInput?.projectId).toBeUndefined();
+    expect(startInput?.taskId).toBe("task-2");
     expect(startInput?.linkUrl).toBe("https://brainiac.test/next-task");
     expect(runtime.toastEvents.at(-1)?.title).toBe("Timer started");
   });
@@ -394,6 +416,7 @@ describe("useAgencyTimeTrackingStore", () => {
     store.registerLogQuery({ teamId: "team-1", page: 1, queryKey: logQueryKey });
     store.ensureTrackerDraft("team-1");
     store.setTrackerProjectId("team-1", activeTimer.projectId);
+    store.setTrackerTaskId("team-1", activeTimer.taskId ?? "");
     store.setTrackerDescription("team-1", activeTimer.description);
     store.setTrackerSelectedTagIds(
       "team-1",
@@ -451,6 +474,8 @@ describe("useAgencyTimeTrackingStore", () => {
     const nextTimer = createActiveTimer({
       id: "timer-next",
       projectId: "project-2",
+      taskId: "task-2",
+      taskTitle: "Handle inbox",
       projectName: "Recovery",
       description: "Handle inbox",
       linkUrl: "https://brainiac.test/recovery",
@@ -475,6 +500,10 @@ describe("useAgencyTimeTrackingStore", () => {
         id: "project-2",
         name: "Recovery",
       },
+      task: {
+        id: "task-2",
+        title: "Handle inbox",
+      },
       description: "Handle inbox",
       linkUrl: "brainiac.test/recovery",
       tags: [nextTag],
@@ -490,10 +519,13 @@ describe("useAgencyTimeTrackingStore", () => {
     );
 
     expect(cachedLog?.items[0]?.projectId).toBe(currentTimer.projectId);
+    expect(cachedLog?.items[0]?.taskId).toBe(currentTimer.taskId);
     expect(cachedLog?.items[0]?.linkUrl).toBe(currentTimer.linkUrl);
     expect(cachedTimer?.timer?.projectId).toBe("project-2");
+    expect(cachedTimer?.timer?.taskId).toBe("task-2");
     expect(cachedTimer?.timer?.linkUrl).toBe("https://brainiac.test/recovery");
     expect(cachedTimer?.timer?.tags.map((tag) => tag.id)).toEqual([nextTag.id]);
+    expect(startInput?.taskId).toBe("task-2");
     expect(startInput?.linkUrl).toBe("https://brainiac.test/recovery");
     expect(runtime.toastEvents.at(-1)?.description).toBe("Tracking Handle inbox.");
   });

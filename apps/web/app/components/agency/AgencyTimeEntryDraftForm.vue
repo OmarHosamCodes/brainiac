@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { SelectMenuItem } from "@nuxt/ui";
+import AgencyTaskChooser from "~/components/agency/AgencyTaskChooser.vue";
 
 type Draft = {
-  projectId: string;
+  taskId: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -17,9 +17,25 @@ type Tag = {
   name: string;
 };
 
+type Project = {
+  id: string;
+  clientName: string;
+  name: string;
+};
+
+type Task = {
+  id: string;
+  projectId: string;
+  title: string;
+  status: "open" | "in_progress" | "done" | "archived";
+  assigneeName: string | null;
+  dueDate: string | null;
+};
+
 const props = defineProps<{
   draft: Draft;
-  projectItems: SelectMenuItem[];
+  projects: Project[];
+  tasks: Task[];
   tags: Tag[];
   error: string | null;
   saving: boolean;
@@ -33,7 +49,6 @@ const emit = defineEmits<{
   updateEndTime: [value: string | number | undefined];
 }>();
 
-const projectSearchTerm = ref("");
 const tagSearchTerm = ref("");
 
 const filteredTags = computed(() => {
@@ -65,23 +80,12 @@ const selectedTags = computed(() => {
         :disabled="saving"
       />
 
-      <USelectMenu
-        v-model="draft.projectId"
-        v-model:search-term="projectSearchTerm"
-        :items="projectItems"
-        value-key="value"
-        placeholder="Project"
-        :search-input="{
-          placeholder: 'Search projects or clients',
-        }"
-        size="sm"
-        class="w-44 shrink-0 max-sm:w-full"
-        :content="{ align: 'start' }"
-        :ui="{
-          content: 'max-h-72 overflow-hidden',
-          viewport: 'max-h-72 overflow-y-auto',
-        }"
-        aria-label="Project"
+      <AgencyTaskChooser
+        v-model="draft.taskId"
+        :projects="projects"
+        :tasks="tasks"
+        placeholder="Task"
+        class="w-64 shrink-0 max-sm:w-full"
         :disabled="saving"
       />
 

@@ -15,6 +15,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
+import AgencyTaskChooser from "~/components/agency/AgencyTaskChooser.vue";
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
 import { formatDuration } from "~/utils/format-duration";
 import { getErrorMessage } from "~/utils/get-error-message";
@@ -117,6 +118,16 @@ const projectsQuery = useQuery(
 );
 const projects = computed(() => projectsQuery.data.value?.items ?? []);
 
+const tasksQuery = useQuery(
+  computed(() => ({
+    ...orpc.agencyOps.projectTasks.list.queryOptions({
+      input: { teamId: teamId.value, statuses: ["open", "in_progress"] },
+    }),
+    enabled: Boolean(teamId.value),
+  })),
+);
+const tasks = computed(() => tasksQuery.data.value?.items ?? []);
+
 // Page through entries large enough to cover one user's typical week.
 const entriesPageSize = 100;
 const entriesQuery = useQuery(
@@ -143,8 +154,11 @@ const activeTimerQuery = useQuery(
 );
 const activeTimer = computed(() => activeTimerQuery.data.value?.timer ?? null);
 
-// Filter entries to the visible week and group by project × dateKey.
-type ProjectRow = {
+// Filter entries to the visible week and group by task × dateKey.
+type TaskRow = {
+  rowKey: string;
+  taskId: string | null;
+  taskTitle: string;
   projectId: string;
   projectName: string;
   clientName: string;
@@ -157,30 +171,34 @@ const grid = computed(() => {
   const items = entriesQuery.data.value?.items ?? [];
   const weekStartMs = weekStart.value.getTime();
   const weekEndMs = addDaysUtc(weekStart.value, 7).getTime();
-  const rowMap = new Map<string, ProjectRow>();
+  const rowMap = new Map<string, TaskRow>();
 
   for (const entry of items) {
     const startedAtMs = new Date(entry.startedAt).getTime();
     if (Number.isNaN(startedAtMs)) continue;
     if (startedAtMs < weekStartMs || startedAtMs >= weekEndMs) continue;
 
+    const rowKey = entry.taskId ?? `project-only:${entry.projectId}`;
     const existing =
-      rowMap.get(entry.projectId) ??
+      rowMap.get(rowKey) ??
       ({
+        rowKey,
+        taskId: entry.taskId ?? null,
+        taskTitle: entry.taskTitle ?? "Project-only entry",
         projectId: entry.projectId,
         projectName: entry.projectName,
         clientName: entry.clientName,
         totalSeconds: 0,
         perDay: new Map<string, number>(),
-      } satisfies ProjectRow);
+      } satisfies TaskRow);
 
     existing.totalSeconds += entry.durationSeconds;
     const key = entry.startedAt.slice(0, 10);
     existing.perDay.set(key, (existing.perDay.get(key) ?? 0) + entry.durationSeconds);
-    rowMap.set(entry.projectId, existing);
+    rowMap.set(rowKey, existing);
   }
 
-  return [...rowMap.values()].sort((a, b) => a.projectName.localeCompare(b.projectName));
+  return [...rowMap.values()].sort((a, b) => a.taskTitle.localeCompare(b.taskTitle));
 });
 
 const dailyTotals = computed(() => {
@@ -198,24 +216,28 @@ const weekTotalSeconds = computed(() => grid.value.reduce((sum, row) => sum + ro
 // --- Add row picker -----------------------------------------------------
 
 const addRowOpen = ref(false);
-const addRowProjectId = ref("");
+const addRowTaskId = ref("");
 
-const projectsNotInGrid = computed(() => {
-  const used = new Set(grid.value.map((row) => row.projectId));
-  return projects.value.filter((project) => !used.has(project.id));
+const tasksNotInGrid = computed(() => {
+  const used = new Set(grid.value.map((row) => row.taskId).filter(Boolean));
+  return tasks.value.filter((task) => !used.has(task.id));
 });
 
-// Allow grid to render rows for projects with zero entries this week, once the
+// Allow grid to render rows for tasks with zero entries this week, once the
 // user opts them in via "Add row" picker.
-const pinnedProjectIds = ref<string[]>([]);
+const pinnedTaskIds = ref<string[]>([]);
 
-const fullGrid = computed<ProjectRow[]>(() => {
-  const existing = new Map(grid.value.map((row) => [row.projectId, row]));
-  for (const projectId of pinnedProjectIds.value) {
-    if (!existing.has(projectId)) {
-      const project = projects.value.find((entry) => entry.id === projectId);
-      if (!project) continue;
-      existing.set(projectId, {
+const fullGrid = computed<TaskRow[]>(() => {
+  const existing = new Map(grid.value.map((row) => [row.rowKey, row]));
+  for (const taskId of pinnedTaskIds.value) {
+    if (!existing.has(taskId)) {
+      const task = tasks.value.find((entry) => entry.id === taskId);
+      const project = task ? projects.value.find((entry) => entry.id === task.projectId) : null;
+      if (!task || !project) continue;
+      existing.set(taskId, {
+        rowKey: task.id,
+        taskId: task.id,
+        taskTitle: task.title,
         projectId: project.id,
         projectName: project.name,
         clientName: project.clientName,
@@ -224,36 +246,41 @@ const fullGrid = computed<ProjectRow[]>(() => {
       });
     }
   }
-  return [...existing.values()].sort((a, b) => a.projectName.localeCompare(b.projectName));
+  return [...existing.values()].sort((a, b) => a.taskTitle.localeCompare(b.taskTitle));
 });
 
-function pinProject() {
-  if (!addRowProjectId.value) return;
-  if (!pinnedProjectIds.value.includes(addRowProjectId.value)) {
-    pinnedProjectIds.value = [...pinnedProjectIds.value, addRowProjectId.value];
+function pinTask() {
+  if (!addRowTaskId.value) return;
+  if (!pinnedTaskIds.value.includes(addRowTaskId.value)) {
+    pinnedTaskIds.value = [...pinnedTaskIds.value, addRowTaskId.value];
   }
-  addRowProjectId.value = "";
+  addRowTaskId.value = "";
   addRowOpen.value = false;
 }
 
 // --- Inline cell entry --------------------------------------------------
 
-const editingCell = ref<{ projectId: string; dateKey: string } | null>(null);
+const editingCell = ref<{ taskId: string; dateKey: string } | null>(null);
 const editDurationInput = ref(""); // "1:30" or "0:45"
 const editDescription = ref("");
 const editError = ref<string | null>(null);
 
 const createManualMutation = useMutation(orpc.agencyOps.timeEntries.createManual.mutationOptions());
 
-function openCellEditor(projectId: string, day: string) {
-  editingCell.value = { projectId, dateKey: day };
+function openCellEditor(taskId: string | null, day: string) {
+  if (!taskId) {
+    editError.value = "Select a task row before adding time.";
+    return;
+  }
+
+  editingCell.value = { taskId, dateKey: day };
   editDurationInput.value = "";
   editDescription.value = "";
   editError.value = null;
   // Focus the duration input after the popover/cell renders.
   nextTick(() => {
     const input = document.querySelector<HTMLInputElement>(
-      `[data-time-grid-cell-editor="${projectId}__${day}"] input[name="duration"]`,
+      `[data-time-grid-cell-editor="${taskId}__${day}"] input[name="duration"]`,
     );
     input?.focus();
     input?.select();
@@ -312,7 +339,7 @@ async function commitCellEdit() {
   try {
     await createManualMutation.mutateAsync({
       teamId: teamId.value,
-      projectId: cell.projectId,
+      taskId: cell.taskId,
       startAt: startAt.toISOString(),
       endAt: endAt.toISOString(),
       description: editDescription.value.trim() || undefined,
@@ -330,7 +357,7 @@ async function commitCellEdit() {
     toast.add({
       title: "Time logged",
       description: `${formatDuration(durationSeconds, "short")} on ${
-        fullGrid.value.find((row) => row.projectId === cell.projectId)?.projectName ?? "project"
+        fullGrid.value.find((row) => row.taskId === cell.taskId)?.taskTitle ?? "task"
       }.`,
       color: "success",
     });
@@ -345,20 +372,20 @@ async function commitCellEdit() {
 const focusedCellKey = ref<string | null>(null);
 const cellRefs = new Map<string, HTMLElement>();
 
-function setCellRef(projectId: string, day: string, element: HTMLElement | null) {
-  const key = `${projectId}__${day}`;
+function setCellRef(rowKey: string, day: string, element: HTMLElement | null) {
+  const key = `${rowKey}__${day}`;
   if (element) cellRefs.set(key, element);
   else cellRefs.delete(key);
 }
 
-function focusCell(projectId: string, day: string) {
-  const key = `${projectId}__${day}`;
+function focusCell(rowKey: string, day: string) {
+  const key = `${rowKey}__${day}`;
   focusedCellKey.value = key;
   cellRefs.get(key)?.focus();
 }
 
-function handleCellKeydown(event: KeyboardEvent, projectId: string, day: string) {
-  const projectIndex = fullGrid.value.findIndex((row) => row.projectId === projectId);
+function handleCellKeydown(event: KeyboardEvent, rowKey: string, day: string) {
+  const projectIndex = fullGrid.value.findIndex((row) => row.rowKey === rowKey);
   const dayIndex = weekDays.value.findIndex((entry) => entry.key === day);
   if (projectIndex < 0 || dayIndex < 0) return;
 
@@ -379,7 +406,7 @@ function handleCellKeydown(event: KeyboardEvent, projectId: string, day: string)
       break;
     case "Enter":
       event.preventDefault();
-      openCellEditor(projectId, day);
+      openCellEditor(fullGrid.value[projectIndex]?.taskId ?? null, day);
       return;
     default:
       return;
@@ -388,23 +415,25 @@ function handleCellKeydown(event: KeyboardEvent, projectId: string, day: string)
   event.preventDefault();
   const targetRow = fullGrid.value[nextProjectIndex]!;
   const targetDay = weekDays.value[nextDayIndex]!;
-  focusCell(targetRow.projectId, targetDay.key);
+  focusCell(targetRow.rowKey, targetDay.key);
 }
 
 // --- Derived helpers ----------------------------------------------------
 
-const isLoading = computed(() => entriesQuery.isPending.value || projectsQuery.isPending.value);
+const isLoading = computed(
+  () => entriesQuery.isPending.value || projectsQuery.isPending.value || tasksQuery.isPending.value,
+);
 const isError = computed(() => Boolean(entriesQuery.error.value));
 const hasAnyEntries = computed(() => grid.value.length > 0);
 
-function getCellSeconds(row: ProjectRow, day: string): number {
+function getCellSeconds(row: TaskRow, day: string): number {
   return row.perDay.get(day) ?? 0;
 }
 
-function isRunningCell(row: ProjectRow, day: string): boolean {
+function isRunningCell(row: TaskRow, day: string): boolean {
   if (!activeTimer.value) return false;
-  if (activeTimer.value.projectId !== row.projectId) return false;
-  return activeTimer.value.startedAt.slice(0, 10) === day;
+  const runningKey = activeTimer.value.taskId ?? `project-only:${activeTimer.value.projectId}`;
+  return runningKey === row.rowKey && activeTimer.value.startedAt.slice(0, 10) === day;
 }
 </script>
 
@@ -490,7 +519,7 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
           class="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_5rem] border-b border-default bg-muted"
         >
           <div class="px-4 py-2.5 text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-            Project
+            Task
           </div>
           <div
             v-for="day in weekDays"
@@ -520,15 +549,15 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
           <UIcon name="i-lucide-clock" class="mx-auto size-6 text-muted" />
           <p class="mt-3 text-sm font-bold text-highlighted">No entries yet this week.</p>
           <p class="mt-1 text-xs text-muted">
-            Start a tagged timer above, or pick a project to add hours.
+            Start a tagged timer above, or pick a task to add hours.
           </p>
           <UPopover
-            v-if="projects.length > 0"
+            v-if="tasks.length > 0"
             v-model:open="addRowOpen"
             :content="{ align: 'center' }"
           >
             <UButton
-              label="Add a project row"
+              label="Add a task row"
               color="primary"
               variant="soft"
               size="xs"
@@ -538,36 +567,35 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
             <template #content>
               <div class="w-72 space-y-2 p-3">
                 <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                  Pick a project
+                  Pick a task
                 </p>
-                <USelectMenu
-                  v-model="addRowProjectId"
-                  :items="projects.map((project) => ({ label: project.name, value: project.id }))"
-                  value-key="value"
-                  size="sm"
-                  placeholder="Project"
+                <AgencyTaskChooser
+                  v-model="addRowTaskId"
+                  :projects="projects"
+                  :tasks="tasks"
+                  placeholder="Task"
                 />
                 <UButton
                   label="Add row"
                   color="primary"
                   size="xs"
                   block
-                  :disabled="!addRowProjectId"
-                  @click="pinProject"
+                  :disabled="!addRowTaskId"
+                  @click="pinTask"
                 />
               </div>
             </template>
           </UPopover>
         </div>
 
-        <!-- Project rows -->
+        <!-- Task rows -->
         <div v-else>
           <div
             v-for="row in fullGrid"
-            :key="row.projectId"
+            :key="row.rowKey"
             class="grid grid-cols-[12rem_repeat(7,minmax(0,1fr))_5rem] border-b border-default last:border-b-0"
           >
-            <!-- Project cell -->
+            <!-- Task cell -->
             <div class="flex min-w-0 items-center gap-2 px-4 py-3">
               <span
                 class="agency-time-grid__dot inline-block size-2 shrink-0 rounded-full"
@@ -575,19 +603,21 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
                 :style="projectHueStyle(row.projectId)"
               />
               <div class="min-w-0">
-                <p class="truncate text-xs font-bold text-highlighted">{{ row.projectName }}</p>
-                <p class="truncate text-[11px] text-muted">{{ row.clientName }}</p>
+                <p class="truncate text-xs font-bold text-highlighted">{{ row.taskTitle }}</p>
+                <p class="truncate text-[11px] text-muted">
+                  {{ row.clientName }} · {{ row.projectName }}
+                </p>
               </div>
             </div>
 
             <!-- Day cells -->
             <button
               v-for="day in weekDays"
-              :key="`${row.projectId}__${day.key}`"
+              :key="`${row.rowKey}__${day.key}`"
               type="button"
               tabindex="0"
-              :ref="(element) => setCellRef(row.projectId, day.key, element as HTMLElement | null)"
-              :data-time-grid-cell-editor="`${row.projectId}__${day.key}`"
+              :ref="(element) => setCellRef(row.rowKey, day.key, element as HTMLElement | null)"
+              :data-time-grid-cell-editor="`${row.taskId ?? row.rowKey}__${day.key}`"
               class="agency-time-grid__cell relative flex h-12 items-center justify-center border-l border-default px-2 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/40"
               :class="[
                 day.isToday ? 'bg-primary/[0.03]' : '',
@@ -596,8 +626,8 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
                   : 'text-dimmed hover:text-muted hover:bg-elevated/50',
                 isRunningCell(row, day.key) ? 'agency-time-grid__cell--running' : '',
               ]"
-              @click="openCellEditor(row.projectId, day.key)"
-              @keydown="handleCellKeydown($event, row.projectId, day.key)"
+              @click="openCellEditor(row.taskId, day.key)"
+              @keydown="handleCellKeydown($event, row.rowKey, day.key)"
             >
               <span
                 v-if="getCellSeconds(row, day.key) > 0"
@@ -611,7 +641,7 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
               <span
                 v-if="
                   editingCell &&
-                  editingCell.projectId === row.projectId &&
+                  editingCell.taskId === row.taskId &&
                   editingCell.dateKey === day.key
                 "
                 class="absolute left-1/2 top-full z-30 mt-1 w-64 -translate-x-1/2 rounded-2xl border border-default bg-default p-3 text-left shadow-xl"
@@ -707,10 +737,10 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
     </div>
 
     <!-- Add row affordance below grid -->
-    <div v-if="fullGrid.length > 0 && projectsNotInGrid.length > 0" class="flex justify-end">
+    <div v-if="fullGrid.length > 0 && tasksNotInGrid.length > 0" class="flex justify-end">
       <UPopover v-model:open="addRowOpen" :content="{ align: 'end' }">
         <UButton
-          label="Add a project row"
+          label="Add a task row"
           color="neutral"
           variant="ghost"
           size="xs"
@@ -718,25 +748,20 @@ function isRunningCell(row: ProjectRow, day: string): boolean {
         />
         <template #content>
           <div class="w-72 space-y-2 p-3">
-            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-              Pick a project
-            </p>
-            <USelectMenu
-              v-model="addRowProjectId"
-              :items="
-                projectsNotInGrid.map((project) => ({ label: project.name, value: project.id }))
-              "
-              value-key="value"
-              size="sm"
-              placeholder="Project"
+            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Pick a task</p>
+            <AgencyTaskChooser
+              v-model="addRowTaskId"
+              :projects="projects"
+              :tasks="tasksNotInGrid"
+              placeholder="Task"
             />
             <UButton
               label="Add row"
               color="primary"
               size="xs"
               block
-              :disabled="!addRowProjectId"
-              @click="pinProject"
+              :disabled="!addRowTaskId"
+              @click="pinTask"
             />
           </div>
         </template>
