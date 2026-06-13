@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { dashboardErrorAlertClass, dashboardStatusBadgeClass } from "~/utils/dashboard-ui";
+
 definePageMeta({
   layout: "app",
   middleware: ["auth", "workspace"],
@@ -28,7 +30,9 @@ const {
   workspaceQuery,
 } = useWorkspaceBoard();
 
-const canvasRef = ref<{ fitAllNodes: () => void } | null>(null);
+const canvasRef = ref<{ fitAllNodes: () => void; createNodeAtViewportCenter: () => void } | null>(
+  null,
+);
 
 const stopAutoFit = watch(
   () => [isWorkspaceInitialLoading.value, canvasRef.value] as const,
@@ -106,8 +110,15 @@ const isNodeShareActionPending = computed(
   () => shareNodeMutation.isPending.value || unshareNodeMutation.isPending.value,
 );
 const nodeShareActionLabel = computed(() =>
-  isSelectedNodeShared.value ? "Unshare Node" : "Share Node",
+  isSelectedNodeShared.value ? "Unshare node" : "Share node",
 );
+
+const selectedTeamName = computed(() => {
+  const team = selectedTeam.value as { name?: string } | null;
+  if (team?.name) return team.name;
+  const match = teamItems.value.find((item) => item.value === selectedTeamId.value);
+  return match?.label.split(" (")[0] ?? "";
+});
 const nodeShareActionDisabled = computed(() => {
   if (
     !selectedNode.value ||
@@ -124,6 +135,10 @@ const nodeShareActionDisabled = computed(() => {
   return !selectedTeamId.value || teamListQuery.isLoading.value;
 });
 
+function handleAddNode() {
+  canvasRef.value?.createNodeAtViewportCenter();
+}
+
 function toggleSelectedNodeSharing() {
   if (isSelectedNodeShared.value) {
     unshareSelectedNode();
@@ -135,16 +150,13 @@ function toggleSelectedNodeSharing() {
 </script>
 
 <template>
-  <div
-    class="relative h-full w-full overflow-hidden bg-neutral-50 dark:bg-neutral-950 selection:bg-blue-500/30"
-  >
+  <div class="relative h-full w-full overflow-hidden bg-default selection:bg-primary/30">
     <Teleport to="#app-shell-actions" defer>
       <div class="flex items-center gap-2">
         <UButton
           :icon="isTeamAsideCompact ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
           color="neutral"
           variant="ghost"
-          class="rounded-2xl"
           @click="isTeamAsideCompact = !isTeamAsideCompact"
         >
           <span class="hidden lg:inline">Workspace</span>
@@ -154,8 +166,7 @@ function toggleSelectedNodeSharing() {
           icon="i-lucide-plus"
           color="neutral"
           variant="soft"
-          class="rounded-2xl"
-          @click="openCreateNode()"
+          @click="handleAddNode"
         />
       </div>
     </Teleport>
@@ -186,7 +197,9 @@ function toggleSelectedNodeSharing() {
           :compact="isTeamAsideCompact"
           :teams-count="teams.length"
           :new-team-name="newTeamName"
+          :create-team-pending="createTeamMutation.isPending.value"
           :selected-team-id="selectedTeamId"
+          :selected-team-name="selectedTeamName"
           :team-items="teamItems"
           :selected-team="selectedTeam"
           :selected-node="selectedNode"
@@ -256,36 +269,42 @@ function toggleSelectedNodeSharing() {
     <div
       class="pointer-events-none absolute left-4 bottom-4 z-30 flex max-w-xs flex-col gap-3 md:left-6 md:bottom-6"
     >
+      <div class="pointer-events-auto flex flex-wrap items-center gap-2">
+        <span :class="[dashboardStatusBadgeClass, saveBadge.className]">
+          {{ saveBadge.label }}
+        </span>
+        <UBadge
+          v-if="isWorkspaceRefreshing && saveBadge.label !== 'Syncing'"
+          color="primary"
+          variant="soft"
+          class="gap-1.5"
+        >
+          <UIcon name="i-lucide-loader-2" class="size-3 animate-spin" aria-hidden="true" />
+          Refreshing
+        </UBadge>
+      </div>
+
       <UAlert
         v-if="saveError"
         color="error"
         variant="soft"
         icon="i-lucide-cloud-off"
-        title="Save Failed"
+        title="Couldn't save"
         :description="saveError"
-        class="pointer-events-auto max-w-xs border-red-500/20 bg-red-500/10"
+        :class="dashboardErrorAlertClass"
+        role="alert"
       />
 
       <UAlert
         v-if="workspaceQuery.status === 'error'"
         color="error"
+        variant="soft"
         icon="i-lucide-alert-circle"
-        title="Workspace Error"
+        title="Couldn't load workspace"
         :description="workspaceQuery.error?.message"
-        class="pointer-events-auto max-w-xs border-red-500/20 bg-red-500/10"
+        :class="dashboardErrorAlertClass"
+        role="alert"
       />
-    </div>
-
-    <div
-      v-if="isWorkspaceRefreshing"
-      class="pointer-events-none absolute right-4 top-4 z-30 md:right-6 md:top-6"
-    >
-      <div
-        class="pointer-events-auto flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:border-blue-400/20 dark:bg-blue-400/10 dark:text-blue-400"
-      >
-        <UIcon name="i-lucide-loader-2" class="size-3 animate-spin" />
-        Syncing
-      </div>
     </div>
 
     <LazyWorkspaceEditorModal

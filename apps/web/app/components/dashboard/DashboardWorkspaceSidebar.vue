@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { dashboardLabelClass, dashboardPanelClass } from "~/utils/dashboard-ui";
+
 type TeamOption = {
   label: string;
   value: string;
@@ -14,7 +16,9 @@ const props = defineProps<{
   compact: boolean;
   teamsCount: number;
   newTeamName: string;
+  createTeamPending?: boolean;
   selectedTeamId: string;
+  selectedTeamName: string;
   teamItems: TeamOption[];
   selectedTeam: unknown;
   selectedNode: DashboardSelectedNode | null;
@@ -37,13 +41,33 @@ const emit = defineEmits<{
 }>();
 
 const sidebarClass = computed(() =>
-  props.compact ? "w-14" : "w-[22rem] overflow-y-auto px-4 py-4 xl:w-[23rem]",
+  props.compact ? "dashboard-sidebar-compact w-14" : "w-[22rem] overflow-y-auto px-4 py-4 xl:w-[23rem]",
 );
+
+const canCreateTeam = computed(
+  () => props.newTeamName.trim().length > 0 && !props.createTeamPending,
+);
+
+const nodeShareStatus = computed(() => {
+  if (!props.selectedNode) {
+    return "Click a node on the canvas to share it.";
+  }
+
+  if (props.selectedNode.visibility === "team") {
+    if (props.canManageSelectedNodeSharing) {
+      const teamLabel = props.selectedTeamName || "team";
+      return `Shared to ${teamLabel}`;
+    }
+    return "Team-shared node";
+  }
+
+  return "Private node";
+});
 </script>
 
 <template>
   <aside
-    class="border-r border-neutral-200/80 bg-white/96 transition-[width] duration-200 ease-out dark:border-neutral-800/80 dark:bg-neutral-950/92"
+    class="dashboard-sidebar border-r border-default bg-elevated"
     :class="sidebarClass"
   >
     <div v-if="compact" class="flex h-full flex-col items-center gap-3 py-4">
@@ -53,12 +77,11 @@ const sidebarClass = computed(() =>
         color="neutral"
         size="md"
         square
-        class="rounded-2xl"
         aria-label="Expand workspace sidebar"
         @click="emit('update:compact', false)"
       />
       <span
-        class="text-[10px] font-semibold uppercase tracking-[0.22em] text-neutral-500 [writing-mode:vertical-rl]"
+        class="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted [writing-mode:vertical-rl]"
       >
         Team
       </span>
@@ -66,16 +89,15 @@ const sidebarClass = computed(() =>
 
     <template v-else>
       <div class="flex items-center justify-between gap-3">
-        <h2 class="text-xs font-semibold uppercase tracking-[0.2em] text-neutral-500">Workspace</h2>
+        <h2 :class="dashboardLabelClass">Workspace</h2>
         <div class="flex items-center gap-2">
-          <span class="text-[11px] font-medium text-neutral-500">{{ teamsCount }} total</span>
+          <span class="text-[11px] font-medium text-muted">{{ teamsCount }} total</span>
           <UButton
             icon="i-lucide-panel-left-close"
             variant="ghost"
             color="neutral"
             size="sm"
             square
-            class="rounded-xl"
             aria-label="Compact workspace sidebar"
             @click="emit('update:compact', true)"
           />
@@ -90,23 +112,21 @@ const sidebarClass = computed(() =>
           size="sm"
           class="flex-1"
           @update:model-value="emit('update:newTeamName', String($event ?? ''))"
-          @keydown.enter.prevent="emit('createTeam')"
+          @keydown.enter.prevent="canCreateTeam && emit('createTeam')"
         />
         <UButton
           label="Create"
           color="neutral"
           variant="soft"
           size="sm"
+          :loading="createTeamPending"
+          :disabled="!canCreateTeam"
           @click="emit('createTeam')"
         />
       </div>
 
       <div class="mt-4">
-        <label
-          class="mb-1 block text-[11px] font-semibold uppercase tracking-[0.15em] text-neutral-500"
-        >
-          Share Target
-        </label>
+        <label :class="['mb-1 block', dashboardLabelClass]"> Team for sharing </label>
         <USelectMenu
           :model-value="selectedTeamId"
           :items="teamItems"
@@ -117,21 +137,18 @@ const sidebarClass = computed(() =>
           :search-input="{ placeholder: 'Find team' }"
           @update:model-value="emit('update:selectedTeamId', String($event ?? ''))"
         />
+        <p class="mt-1.5 text-xs text-muted">Nodes you share will appear in this team.</p>
       </div>
 
-      <div
-        class="mt-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70"
-      >
-        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
-          Team Management
-        </p>
+      <section :class="dashboardPanelClass">
+        <p :class="dashboardLabelClass">Team management</p>
 
-        <p class="mt-2 text-xs text-neutral-500">
-          Open the dedicated team settings modal to manage members and access rules.
+        <p class="mt-2 text-xs text-muted">
+          Open team settings to manage members and access rules.
         </p>
 
         <UButton
-          label="Manage Team"
+          label="Manage team"
           color="primary"
           variant="solid"
           block
@@ -142,43 +159,26 @@ const sidebarClass = computed(() =>
         />
 
         <div v-if="selectedTeam && !canInvite" class="mt-3 flex items-center gap-2">
-          <UBadge color="neutral" variant="subtle" size="sm">Requires Owner</UBadge>
-          <p class="text-xs text-neutral-500">
-            Owner role is required for member and role changes.
-          </p>
+          <UBadge color="neutral" variant="subtle" size="sm">Requires owner</UBadge>
+          <p class="text-xs text-muted">Owner role is required for member and role changes.</p>
         </div>
-      </div>
+      </section>
 
-      <div
-        class="mt-4 rounded-2xl border border-neutral-200/80 bg-neutral-50/80 p-3 dark:border-neutral-800/80 dark:bg-neutral-900/70"
-      >
-        <p class="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
-          Selected Node
-        </p>
-        <p class="mt-1 truncate text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+      <section :class="dashboardPanelClass">
+        <p :class="dashboardLabelClass">Selected node</p>
+        <p class="mt-1 truncate text-sm font-semibold text-highlighted">
           {{ selectedNode?.title ?? "No node selected" }}
         </p>
-        <p class="mt-1 text-xs text-neutral-500">
-          {{
-            selectedNode
-              ? selectedNode.visibility === "team"
-                ? canManageSelectedNodeSharing
-                  ? `Shared to ${selectedNode.teamId}`
-                  : "Team-shared node"
-                : "Private node"
-              : "Click a node on canvas to share it."
-          }}
+        <p class="mt-1 text-xs text-muted">
+          {{ nodeShareStatus }}
         </p>
-        <p
-          v-if="selectedNode && !canManageSelectedNodeSharing"
-          class="mt-1 text-xs text-neutral-500"
-        >
-          Role {{ selectedNodeTeamRole ?? "viewer" }} can edit content, but only owners can access
-          sharing actions and team IDs.
+        <p v-if="selectedNode && !canManageSelectedNodeSharing" class="mt-1 text-xs text-muted">
+          Role {{ selectedNodeTeamRole ?? "viewer" }} can edit content, but only owners can change
+          sharing.
         </p>
-      </div>
+      </section>
 
-      <div v-if="canManageSelectedNodeSharing" class="mt-3">
+      <div v-if="canManageSelectedNodeSharing" class="mt-4">
         <UButton
           :label="nodeShareActionLabel"
           block
@@ -187,9 +187,22 @@ const sidebarClass = computed(() =>
           :variant="isSelectedNodeShared ? 'outline' : 'solid'"
           :loading="isNodeShareActionPending"
           :disabled="nodeShareActionDisabled"
+          :aria-busy="isNodeShareActionPending"
           @click="emit('toggleSelectedNodeSharing')"
         />
       </div>
     </template>
   </aside>
 </template>
+
+<style scoped>
+.dashboard-sidebar {
+  transition: width 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-sidebar {
+    transition: none;
+  }
+}
+</style>

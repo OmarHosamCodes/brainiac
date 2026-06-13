@@ -64,8 +64,7 @@ const nodeTypeMeta = computed(() => {
   return {
     label: "Standard",
     icon: "i-lucide-square-stack",
-    accentClass:
-      "border-neutral-200/80 bg-white/70 text-neutral-700 dark:border-neutral-800/80 dark:bg-neutral-900/70 dark:text-neutral-200",
+    accentClass: "border-default bg-elevated text-toned",
     detail: label,
     footer: label,
   };
@@ -78,27 +77,17 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
 
 <template>
   <div
-    class="node-card group relative flex h-full flex-col p-6 transition-all duration-300 rounded-[2rem]"
+    class="node-card group relative flex h-full flex-col rounded-[2rem] p-6 transition-colors duration-200"
+    :class="selected ? 'ring-2 ring-primary/40' : ''"
     :style="tintStyle"
   >
-    <!-- Tinted Background Layer -->
-    <div class="absolute inset-0 rounded-[2rem] bg-neutral-50/50 dark:bg-neutral-950/50 -z-20" />
+    <div class="absolute inset-0 -z-20 rounded-[2rem] bg-default/50" />
     <div
       v-if="workspaceNode.nodeType === 'orchestrator'"
-      class="absolute inset-0 rounded-[2rem] bg-[radial-gradient(circle_at_top_right,rgb(var(--workspace-node-rgb)/0.18),transparent_48%),linear-gradient(140deg,rgb(var(--workspace-node-rgb)/0.12),transparent_60%)] -z-20"
+      class="absolute inset-0 -z-10 rounded-[2rem] bg-[radial-gradient(circle_at_top_right,rgb(var(--workspace-node-rgb)/0.14),transparent_55%)]"
     />
     <div
-      class="absolute inset-0 rounded-[2rem] bg-[rgb(var(--workspace-node-rgb)/0.05)] dark:bg-[rgb(var(--workspace-node-rgb)/0.1)] border border-[rgb(var(--workspace-node-rgb)/0.2)] dark:border-[rgb(var(--workspace-node-rgb)/0.3)] -z-10"
-    />
-    <div
-      v-if="workspaceNode.nodeType === 'orchestrator'"
-      class="absolute inset-3 rounded-[1.55rem] border border-[rgb(var(--workspace-node-rgb)/0.18)] bg-[linear-gradient(120deg,rgb(var(--workspace-node-rgb)/0.08),transparent_48%)] -z-10"
-    />
-
-    <!-- Selection Glow -->
-    <div
-      v-if="selected"
-      class="absolute -inset-[2px] rounded-[2.1rem] bg-primary-500/50 -z-10 opacity-50 blur-[2px]"
+      class="absolute inset-0 -z-10 rounded-[2rem] border border-[rgb(var(--workspace-node-rgb)/0.2)] bg-[rgb(var(--workspace-node-rgb)/0.05)] dark:bg-[rgb(var(--workspace-node-rgb)/0.08)]"
     />
 
     <div class="mb-4 flex items-start justify-between gap-2.5">
@@ -112,9 +101,6 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
 
         <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2">
-            <span class="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
-              {{ selected ? "Active" : "Saved" }}
-            </span>
             <span
               class="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em]"
               :class="nodeTypeMeta.accentClass"
@@ -123,7 +109,7 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
             </span>
           </div>
 
-          <p class="mt-2 text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+          <p class="mt-2 text-xs font-semibold text-toned">
             {{ nodeTypeMeta.detail }}
           </p>
         </div>
@@ -131,69 +117,58 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
 
       <div class="flex items-center gap-1.5">
         <div
-          class="px-2 py-0.5 rounded-md bg-[rgb(var(--workspace-node-rgb)/0.1)] text-[9px] font-bold text-[rgb(var(--workspace-node-rgb))] uppercase tracking-wider"
+          class="rounded-md bg-[rgb(var(--workspace-node-rgb)/0.1)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[rgb(var(--workspace-node-rgb))]"
         >
           {{ stats.blocksCount }} blks
         </div>
         <div
           v-if="stats.overdueTasks > 0"
-          class="px-2 py-0.5 rounded-md bg-red-500/10 text-[9px] font-bold text-red-500 uppercase tracking-wider"
+          class="rounded-md bg-warning/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-warning"
         >
-          Alert
+          Overdue
         </div>
       </div>
     </div>
 
-    <div class="flex-1 min-h-0 space-y-3 overflow-y-auto pr-1 custom-scrollbar">
-      <p
-        class="text-sm font-medium leading-relaxed text-neutral-700 dark:text-neutral-300 whitespace-pre-wrap"
-      >
+    <div class="custom-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
+      <p class="whitespace-pre-wrap text-sm font-medium leading-relaxed text-toned">
         {{ preview }}
       </p>
 
-      <div v-if="featuredDetails.length > 0" class="space-y-2.5">
+      <div v-if="featuredDetails.length > 0" class="space-y-2">
         <div
           v-for="detail in featuredDetails"
           :key="`${detail.tabId}-${detail.blockId}`"
-          class="relative border-l-2 border-primary-500/20 pl-3 py-1.5"
+          class="rounded-lg bg-primary/5 px-3 py-2"
         >
-          <div class="flex items-center justify-between mb-1">
-            <div class="flex items-center gap-1.5">
-              <UIcon
-                :name="getDetailEntry(detail.blockType).icon"
-                class="size-3 text-primary-500"
-              />
-              <span
-                class="text-[10px] font-bold text-neutral-900 dark:text-neutral-100 truncate max-w-[120px]"
-              >
+          <div class="mb-1 flex items-center justify-between">
+            <div class="flex min-w-0 items-center gap-1.5">
+              <UIcon :name="getDetailEntry(detail.blockType).icon" class="size-3 shrink-0 text-primary" />
+              <span class="max-w-[120px] truncate text-[10px] font-bold text-highlighted">
                 {{ detail.blockTitle }}
               </span>
             </div>
-            <span class="text-[8px] font-bold uppercase tracking-widest text-neutral-400">
+            <span class="text-[8px] font-bold uppercase tracking-widest text-muted">
               {{ detail.tabTitle }}
             </span>
           </div>
 
-          <p
-            class="text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400 line-clamp-2"
-          >
+          <p class="line-clamp-2 text-[11px] leading-relaxed text-muted">
             {{ detail.summary }}
           </p>
         </div>
       </div>
     </div>
 
-    <div
-      class="mt-6 pt-3 border-t border-neutral-200/30 dark:border-neutral-800/30 flex items-center justify-between"
-    >
+    <div class="mt-6 flex items-center justify-between border-t border-default pt-3">
       <div class="flex items-center gap-2">
-        <div class="w-12 h-1 rounded-full bg-neutral-200 dark:bg-neutral-800 overflow-hidden">
+        <div class="h-1 w-12 overflow-hidden rounded-full bg-muted">
           <div
-            class="h-full bg-primary-500 transition-all duration-500"
+            class="h-full bg-primary transition-all duration-500"
             :style="{ width: `${(stats.completedTasks / (stats.totalTasks || 1)) * 100}%` }"
           />
         </div>
-        <span class="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">
+        <span class="text-[9px] font-bold uppercase tracking-widest text-muted">
           {{ stats.completedTasks }}/{{ stats.totalTasks }}
         </span>
       </div>

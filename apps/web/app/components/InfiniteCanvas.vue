@@ -23,6 +23,7 @@ import {
   getCanonicalConnectionPair,
   getEligibleConnectionTargetIds,
 } from "~/utils/workspace-node-connections";
+import { dashboardEmptyPanelClass, dashboardFocusRingClass } from "~/utils/dashboard-ui";
 
 type ResizeHandle = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
@@ -311,10 +312,6 @@ function fitAllNodes() {
 
   resetView();
 }
-
-defineExpose({
-  fitAllNodes,
-});
 
 function getNodeCenter(node: CanvasNodeModel): CanvasPoint {
   return {
@@ -1180,8 +1177,24 @@ const viewportClasses = computed(() => ({
   "is-grab-ready": !isPanning.value && isSpacePressed.value,
 }));
 
-const controlButtonClass =
-  "inline-flex size-10 items-center justify-center rounded-2xl border border-muted/70 bg-elevated/90 text-highlighted transition hover:border-primary/60 hover:bg-default focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50";
+const controlButtonClass = [
+  "inline-flex size-10 items-center justify-center rounded-2xl border border-default bg-elevated text-highlighted transition hover:border-primary/60 hover:bg-default disabled:opacity-50",
+  dashboardFocusRingClass,
+].join(" ");
+
+function createNodeAtViewportCenter() {
+  const viewport = viewportRef.value;
+  if (!viewport) return;
+
+  const rect = viewport.getBoundingClientRect();
+  const worldPoint = screenToWorld(rect.left + rect.width / 2, rect.top + rect.height / 2);
+  if (!worldPoint) return;
+
+  emit("create-node", {
+    x: worldPoint.x,
+    y: worldPoint.y,
+  });
+}
 
 function focusNode(nodeId: string) {
   const node = props.nodes.find((item) => item.id === nodeId);
@@ -1327,6 +1340,11 @@ onMounted(() => {
   syncFullscreenState();
 });
 
+defineExpose({
+  fitAllNodes,
+  createNodeAtViewportCenter,
+});
+
 onBeforeUnmount(() => {
   document.removeEventListener("fullscreenchange", syncFullscreenState);
   window.removeEventListener("keydown", onWindowKeyDown);
@@ -1345,7 +1363,7 @@ onBeforeUnmount(() => {
       <div
         ref="viewportRef"
         class="canvas-viewport absolute inset-0"
-        :class="[viewportClasses, props.loading ? 'pointer-events-none opacity-60' : '']"
+        :class="[viewportClasses, props.loading ? 'canvas-viewport-loading pointer-events-none' : '']"
         :style="backgroundStyle"
         @contextmenu.capture="captureContextMenu"
         @mousedown="onViewportMouseDown"
@@ -1467,14 +1485,14 @@ onBeforeUnmount(() => {
 
     <div
       v-if="props.loading"
-      class="pointer-events-none absolute inset-0 flex items-center justify-center px-6 bg-white/50 dark:bg-neutral-950/50 backdrop-blur-sm z-50"
+      class="pointer-events-none absolute inset-0 z-50 flex items-end justify-center pb-8"
+      role="status"
+      aria-live="polite"
+      aria-label="Loading workspace"
     >
-      <div class="flex flex-col items-center gap-4">
-        <UIcon name="i-lucide-loader-2" class="size-8 animate-spin text-primary-500" />
-        <p class="text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-500">
-          Loading Workspace
-        </p>
-      </div>
+      <span class="rounded-full border border-default bg-elevated px-3 py-1.5 text-[11px] font-bold text-muted">
+        Loading workspace…
+      </span>
     </div>
 
     <div
@@ -1482,14 +1500,12 @@ onBeforeUnmount(() => {
       class="pointer-events-none absolute left-1/2 top-6 z-40 -translate-x-1/2 px-4"
     >
       <div
-        class="flex items-center gap-3 rounded-full border border-neutral-200/70 bg-white/88 px-4 py-2 text-xs font-medium text-neutral-700 shadow-xl backdrop-blur-xl dark:border-neutral-800/70 dark:bg-neutral-950/88 dark:text-neutral-200"
+        class="flex items-center gap-3 rounded-full border border-default bg-elevated px-4 py-2 text-xs font-medium text-highlighted"
       >
-        <span
-          class="inline-flex size-2.5 rounded-full bg-primary-500 shadow-[0_0_14px_rgba(59,130,246,0.55)]"
-        />
+        <span class="inline-flex size-2.5 rounded-full bg-primary" />
         <span>{{ connectModeInstruction }}</span>
         <span
-          class="rounded-full border border-neutral-200/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400 dark:border-neutral-800/80"
+          class="rounded-full border border-default px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted"
         >
           Esc
         </span>
@@ -1500,20 +1516,21 @@ onBeforeUnmount(() => {
       v-if="!props.loading && !props.nodes.length"
       class="pointer-events-none absolute inset-0 flex items-center justify-center px-6"
     >
-      <div
-        class="max-w-md rounded-[2.5rem] border border-dashed border-neutral-300 dark:border-neutral-700 p-12 text-center"
-      >
-        <div
-          class="mx-auto inline-flex size-16 items-center justify-center rounded-[1.5rem] bg-neutral-900 dark:bg-neutral-100 text-white dark:text-neutral-900 shadow-2xl mb-6"
-        >
-          <UIcon name="i-lucide-plus" class="size-8" />
-        </div>
-        <h3 class="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
-          Empty Canvas
-        </h3>
-        <p class="mt-4 text-sm leading-relaxed text-neutral-500 max-w-xs mx-auto">
-          Right-click anywhere to begin. Your nodes will appear here in your infinite workspace.
+      <div :class="[dashboardEmptyPanelClass, 'pointer-events-auto max-w-sm']">
+        <UIcon name="i-lucide-layout-grid" class="mx-auto size-7 text-muted" />
+        <h3 class="mt-4 text-lg font-bold text-highlighted">No nodes yet</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          Right-click the canvas to add a node, or use the button below.
         </p>
+        <UButton
+          label="Add node"
+          icon="i-lucide-plus"
+          color="primary"
+          variant="soft"
+          size="sm"
+          class="mt-4"
+          @click="createNodeAtViewportCenter"
+        />
       </div>
     </div>
 
@@ -1522,27 +1539,32 @@ onBeforeUnmount(() => {
       class="pointer-events-none absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3"
     >
       <div
-        class="pointer-events-auto flex items-center gap-1.5 p-1.5 rounded-full border border-neutral-200/50 dark:border-neutral-800/50 bg-white/70 dark:bg-neutral-950/70 backdrop-blur-xl shadow-2xl"
+        class="pointer-events-auto flex items-center gap-1.5 rounded-full border border-default bg-elevated p-1.5"
       >
-        <button type="button" :class="controlButtonClass" @click="zoomOut">
+        <button type="button" :class="controlButtonClass" aria-label="Zoom out" @click="zoomOut">
           <UIcon name="i-lucide-minus" class="size-4" />
         </button>
 
-        <div class="px-3 text-xs font-bold text-neutral-500 w-12 text-center tabular-nums">
+        <div class="w-12 px-3 text-center text-xs font-bold tabular-nums text-muted">
           {{ zoomPercent }}%
         </div>
 
-        <button type="button" :class="controlButtonClass" @click="zoomIn">
+        <button type="button" :class="controlButtonClass" aria-label="Zoom in" @click="zoomIn">
           <UIcon name="i-lucide-plus" class="size-4" />
         </button>
 
-        <div class="w-px h-4 bg-neutral-200 dark:bg-neutral-800 mx-1" />
+        <div class="mx-1 h-4 w-px bg-default" />
 
-        <button type="button" :class="controlButtonClass" @click="fitAllNodes">
+        <button type="button" :class="controlButtonClass" aria-label="Fit all nodes" @click="fitAllNodes">
           <UIcon name="i-lucide-scan" class="size-4" />
         </button>
 
-        <button type="button" :class="controlButtonClass" @click="toggleFullscreen">
+        <button
+          type="button"
+          :class="controlButtonClass"
+          :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+          @click="toggleFullscreen"
+        >
           <UIcon :name="isFullscreen ? 'i-lucide-minimize' : 'i-lucide-expand'" class="size-4" />
         </button>
       </div>
@@ -1550,7 +1572,7 @@ onBeforeUnmount(() => {
 
     <!-- Mini-map -->
     <div
-      class="pointer-events-none absolute top-24 right-6 overflow-hidden rounded-3xl border border-neutral-200/50 dark:border-neutral-800/50 bg-white/55 dark:bg-neutral-950/60 backdrop-blur-xl transition-all duration-300 hover:opacity-100 opacity-75 group/minimap"
+      class="pointer-events-none absolute top-24 right-6 overflow-hidden rounded-2xl border border-default bg-elevated group/minimap md:right-6"
     >
       <div
         class="minimap-surface relative overflow-hidden"
@@ -1607,9 +1629,32 @@ onBeforeUnmount(() => {
   pointer-events: stroke;
 }
 
+.canvas-viewport-loading {
+  opacity: 0.72;
+  animation: canvas-grid-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes canvas-grid-pulse {
+  0%,
+  100% {
+    opacity: 0.72;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-viewport-loading {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
 .canvas-connection-preview {
   fill: none;
-  stroke: rgb(59 130 246 / 0.9);
+  stroke: var(--ui-primary);
   stroke-width: 2.5px;
   stroke-dasharray: 8 8;
   stroke-linecap: round;
@@ -1622,7 +1667,7 @@ onBeforeUnmount(() => {
 
 .canvas-node-shell {
   transition:
-    transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 0.2s cubic-bezier(0.25, 1, 0.5, 1),
     box-shadow 0.2s ease,
     opacity 0.2s ease,
     filter 0.2s ease,
@@ -1631,6 +1676,21 @@ onBeforeUnmount(() => {
 
 .canvas-node.is-selected .canvas-node-shell {
   transform: scale(1.02);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas-node-shell {
+    transition:
+      box-shadow 0.2s ease,
+      opacity 0.2s ease,
+      filter 0.2s ease,
+      border-color 0.2s ease;
+  }
+
+  .canvas-node.is-selected .canvas-node-shell,
+  .canvas-node-shell.is-hovered-target {
+    transform: none;
+  }
 }
 
 .canvas-node-shell.is-orchestrator {

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+import { dashboardEmptyPanelClass, dashboardLabelClass } from "~/utils/dashboard-ui";
+
 type CreatorFilterOption = {
   creatorId: string;
   creatorLabel: string;
@@ -99,31 +101,19 @@ const toolsOnlyValue = computed({
   >
     <template #body>
       <div class="grid max-h-[70vh] gap-0 md:grid-cols-[17rem_minmax(0,1fr)]">
-        <aside
-          class="border-b border-neutral-200/70 bg-neutral-50/50 p-5 md:border-b-0 md:border-r dark:border-neutral-800/70 dark:bg-neutral-950/50 rounded-2xl"
-        >
+        <aside class="border-b border-default bg-elevated p-5 md:border-b-0 md:border-r">
           <div class="space-y-6">
-            <!-- Account Balance Card -->
-            <div
-              class="relative overflow-hidden rounded-[1.5rem] border border-neutral-200/80 bg-white p-5 shadow-sm dark:border-neutral-800/80 dark:bg-neutral-900"
-            >
-              <div
-                class="absolute -right-4 -top-4 size-24 rounded-full bg-primary-500/5 blur-3xl"
-              />
-              <div class="relative">
-                <p
-                  class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500"
-                >
-                  Account balance
-                </p>
+            <div class="rounded-2xl border border-default bg-default p-5">
+              <div>
+                <p :class="dashboardLabelClass">Account balance</p>
                 <div class="mt-2.5 flex items-baseline gap-1">
                   <p
-                    class="text-2xl font-bold tracking-tight text-neutral-950 dark:text-neutral-50"
+                    class="text-2xl font-bold tracking-tight text-highlighted"
                   >
                     {{ accountBalanceLabel }}
                   </p>
                 </div>
-                <p class="mt-1 text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">
+                <p class="mt-1 text-[11px] leading-relaxed text-muted">
                   {{ accountUsageLabel }}
                 </p>
 
@@ -140,11 +130,7 @@ const toolsOnlyValue = computed({
             <!-- Filters Section -->
             <div class="space-y-3">
               <div class="flex items-center justify-between px-1">
-                <p
-                  class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500"
-                >
-                  Filters
-                </p>
+                <p :class="dashboardLabelClass">Filters</p>
                 <UButton
                   variant="link"
                   color="neutral"
@@ -240,7 +226,7 @@ const toolsOnlyValue = computed({
           </div>
         </aside>
 
-        <section class="min-h-0 bg-white/50 p-4 sm:p-6 dark:bg-neutral-900/50">
+        <section class="min-h-0 bg-default p-4 sm:p-6">
           <div class="space-y-5">
             <div class="flex items-center gap-3">
               <UInput
@@ -416,14 +402,14 @@ const toolsOnlyValue = computed({
                 </p>
                 <div
                   v-if="filteredModelOptions.length === 0"
-                  class="flex flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-neutral-200 bg-neutral-50/50 px-6 py-12 text-center dark:border-neutral-800 dark:bg-neutral-900/30"
+                  :class="dashboardEmptyPanelClass"
                 >
                   <div
-                    class="flex size-12 items-center justify-center rounded-2xl bg-neutral-100 dark:bg-neutral-800"
+                    class="flex size-12 items-center justify-center rounded-2xl bg-elevated"
                   >
-                    <UIcon name="i-lucide-search-x" class="size-6 text-neutral-400" />
+                    <UIcon name="i-lucide-search-x" class="size-6 text-muted" />
                   </div>
-                  <p class="mt-4 text-sm font-bold text-neutral-900 dark:text-neutral-50">
+                  <p class="mt-4 text-sm font-bold text-highlighted">
                     No models found
                   </p>
                   <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">

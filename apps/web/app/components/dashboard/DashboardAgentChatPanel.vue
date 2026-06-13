@@ -9,6 +9,7 @@ import type { WorkspaceNode } from "@brainiac/workspace";
 import { computed, reactive, ref, toRef } from "vue";
 
 import { renderSimpleMarkdown } from "~/utils/render-simple-markdown";
+import { dashboardEmptyPanelClass, dashboardLabelClass } from "~/utils/dashboard-ui";
 
 type DashboardToolResponsePreview = {
   toolName: string;
@@ -731,13 +732,8 @@ function closeToolResponsePreview() {
 </script>
 
 <template>
-  <section
-    class="relative flex h-full min-h-0 w-full flex-col overflow-hidden border border-neutral-200/70 bg-white/92 shadow-2xl shadow-black/10 backdrop-blur-xl dark:border-neutral-800/70 dark:bg-neutral-950/94"
-    :class="compact ? 'rounded-[1.5rem]' : 'rounded-[2rem]'"
-  >
-    <header
-      class="shrink-0 border-b border-neutral-200/60 bg-white/75 dark:border-neutral-800/60 dark:bg-neutral-950/70"
-    >
+  <section class="relative flex h-full min-h-0 w-full flex-col overflow-hidden border-l border-default bg-default">
+    <header class="shrink-0 border-b border-default bg-elevated">
       <UDashboardNavbar
         :title="panelTitle"
         :description="panelDescription"
@@ -749,10 +745,10 @@ function closeToolResponsePreview() {
       >
         <template #leading>
           <div
-            class="flex shrink-0 items-center justify-center rounded-2xl bg-neutral-950 text-white shadow-md dark:bg-white dark:text-neutral-950"
+            class="flex shrink-0 items-center justify-center rounded-2xl border border-default bg-elevated text-highlighted"
             :class="compact ? 'size-8' : 'size-10'"
           >
-            <UIcon name="i-lucide-sparkles" :class="compact ? 'size-3.5' : 'size-4.5'" />
+            <UIcon name="i-lucide-bot" :class="compact ? 'size-3.5' : 'size-4.5'" />
           </div>
         </template>
 
@@ -813,22 +809,16 @@ function closeToolResponsePreview() {
       </UDashboardNavbar>
     </header>
 
-    <main
-      class="relative min-h-0 flex-1 overflow-hidden bg-gradient-to-b from-transparent via-neutral-50/35 to-neutral-50/60 dark:via-neutral-950/15 dark:to-neutral-900/45"
-    >
+    <main class="relative min-h-0 flex-1 overflow-hidden bg-default">
       <div
         v-if="activePane === 'history'"
         class="absolute inset-0 flex min-h-0 flex-col overflow-hidden"
       >
-        <div class="shrink-0 px-4 py-4 sm:px-5">
-          <div
-            class="flex items-center justify-between gap-3 rounded-[1.5rem] border border-neutral-200/70 bg-white/80 p-4 shadow-sm dark:border-neutral-800/70 dark:bg-neutral-900/70"
-          >
+        <div class="shrink-0 border-b border-default px-4 py-4 sm:px-5">
+          <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">
-              <p class="text-[10px] font-bold uppercase tracking-[0.22em] text-neutral-400">
-                Past threads
-              </p>
-              <p class="mt-1 text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+              <p :class="dashboardLabelClass">Past threads</p>
+              <p class="mt-1 text-sm font-semibold text-highlighted">
                 Re-open a previous conversation or start fresh.
               </p>
             </div>
@@ -848,27 +838,23 @@ function closeToolResponsePreview() {
         <div class="min-h-0 flex-1 overflow-y-auto px-4 pb-5 sm:px-5 sm:pb-6">
           <div
             v-if="!hasConversations"
-            class="flex h-full flex-col items-center justify-center rounded-[1.75rem] border border-dashed border-neutral-300/70 bg-white/50 px-6 py-10 text-center dark:border-neutral-700/70 dark:bg-neutral-900/35"
+            :class="[dashboardEmptyPanelClass, 'flex h-full flex-col items-center justify-center']"
           >
-            <UIcon name="i-lucide-message-square-dashed" class="size-8 text-neutral-400/80" />
-            <p class="mt-4 text-sm font-semibold text-neutral-950 dark:text-neutral-50">
-              No history yet
-            </p>
-            <p class="mt-1 max-w-xs text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+            <UIcon name="i-lucide-message-square-dashed" class="size-8 text-muted" />
+            <p class="mt-4 text-sm font-semibold text-highlighted">No history yet</p>
+            <p class="mt-1 max-w-xs text-xs leading-relaxed text-muted">
               Your previous agent conversations will appear here once you start chatting.
             </p>
           </div>
 
-          <div v-else class="space-y-2.5">
+          <div v-else class="divide-y divide-default">
             <button
               v-for="conversation in visibleHistory"
               :key="conversation.id"
               type="button"
-              class="w-full rounded-[1.35rem] border p-4 text-left transition-all"
+              class="w-full px-1 py-4 text-left transition-colors hover:bg-elevated/50 focus-visible:bg-elevated/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 focus-visible:ring-inset"
               :class="
-                conversation.id === activeConversationId
-                  ? 'border-neutral-950 bg-neutral-950 text-white shadow-lg dark:border-white dark:bg-white dark:text-neutral-950'
-                  : 'border-neutral-200/70 bg-white/80 shadow-sm hover:border-neutral-300 dark:border-neutral-800/70 dark:bg-neutral-900/55 dark:hover:border-neutral-700'
+                conversation.id === activeConversationId ? 'bg-primary/5' : ''
               "
               @click="handleSelectConversation(conversation.id)"
             >
@@ -877,10 +863,10 @@ function closeToolResponsePreview() {
                   <p class="truncate text-sm font-semibold">
                     {{ conversation.label }}
                   </p>
-                  <p class="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] opacity-60">
+                  <p class="mt-1 text-[10px] font-bold uppercase tracking-[0.18em] text-muted">
                     {{ conversation.meta }}
                   </p>
-                  <p class="mt-2 line-clamp-2 text-xs leading-relaxed opacity-80">
+                  <p class="mt-2 line-clamp-2 text-xs leading-relaxed text-toned">
                     {{ conversation.preview }}
                   </p>
                 </div>
@@ -923,10 +909,9 @@ function closeToolResponsePreview() {
           :should-scroll-to-bottom="true"
           :compact="compact"
           :assistant="{
-            icon: 'i-lucide-sparkles',
+            icon: 'i-lucide-bot',
             ui: {
-              leadingIcon:
-                'mt-1 size-5 rounded-full bg-neutral-100 p-1 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-300',
+              leadingIcon: 'mt-1 size-5 rounded-full bg-elevated p-1 text-muted',
             },
           }"
           class="chat-panel-messages absolute inset-0"
@@ -938,7 +923,7 @@ function closeToolResponsePreview() {
           <template #content="{ message }">
             <div
               v-if="message.role === 'user'"
-              class="whitespace-pre-wrap text-sm leading-6 text-neutral-950 dark:text-neutral-50"
+              class="whitespace-pre-wrap text-sm leading-6 text-highlighted"
             >
               {{ message.content }}
             </div>
@@ -952,15 +937,14 @@ function closeToolResponsePreview() {
               <div
                 v-for="call in getMessageToolCalls(message)"
                 :key="call.key"
-                class="rounded-lg border border-neutral-200/70 bg-neutral-50/60 text-xs dark:border-neutral-800/70 dark:bg-neutral-900/40"
+                class="rounded-lg border border-default bg-elevated/60 text-xs"
                 :class="{
-                  'border-rose-200/80 bg-rose-50/60 dark:border-rose-900/60 dark:bg-rose-950/30':
-                    call.status === 'error',
+                  'border-error/30 bg-error/5': call.status === 'error',
                 }"
               >
                 <button
                   type="button"
-                  class="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-neutral-100/70 dark:hover:bg-neutral-900/60 disabled:cursor-default disabled:hover:bg-transparent"
+                  class="flex w-full items-center gap-2 border-b border-default px-3 py-2 text-left transition hover:bg-muted/30 disabled:cursor-default disabled:hover:bg-transparent"
                   :disabled="!call.hasDetails"
                   :aria-expanded="isToolCallExpanded(message.id, call.key)"
                   @click="call.hasDetails && toggleToolCallExpanded(message.id, call.key)"
@@ -969,25 +953,23 @@ function closeToolResponsePreview() {
                     :name="getToolStatusIcon(call)"
                     class="size-3.5 shrink-0"
                     :class="{
-                      'text-rose-500 dark:text-rose-400': call.status === 'error',
-                      'text-neutral-500 dark:text-neutral-400': call.status !== 'error',
+                      'text-error': call.status === 'error',
+                      'text-primary': call.status === 'in_progress',
+                      'text-muted': call.status !== 'error' && call.status !== 'in_progress',
                       'animate-spin': call.status === 'in_progress',
                     }"
                   />
-                  <span class="font-medium text-neutral-700 dark:text-neutral-200">
+                  <span class="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-muted">
                     {{ call.label }}
                   </span>
-                  <span
-                    v-if="call.summary"
-                    class="min-w-0 flex-1 truncate text-neutral-500 dark:text-neutral-400"
-                  >
+                  <span v-if="call.summary" class="min-w-0 flex-1 truncate font-mono text-[11px] text-toned">
                     {{ call.summary }}
                   </span>
                   <span v-else class="flex-1" />
                   <UIcon
                     v-if="call.hasDetails"
                     name="i-lucide-chevron-down"
-                    class="size-3.5 shrink-0 text-neutral-400 transition-transform"
+                    class="size-3.5 shrink-0 text-muted transition-transform"
                     :class="{ 'rotate-180': isToolCallExpanded(message.id, call.key) }"
                   />
                 </button>
@@ -1039,33 +1021,25 @@ function closeToolResponsePreview() {
                 </a>
                 <div
                   v-if="call.hasDetails && isToolCallExpanded(message.id, call.key)"
-                  class="border-t border-neutral-200/60 px-3 py-2.5 text-[11px] dark:border-neutral-800/60"
+                  class="border-t border-default px-3 py-2.5 text-[11px]"
                 >
                   <p
                     v-if="call.error"
-                    class="mb-2 rounded-md bg-rose-100/70 px-2 py-1 font-medium text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                    class="mb-2 rounded-md bg-error/10 px-2 py-1 font-medium text-error"
                   >
                     {{ call.error }}
                   </p>
                   <div v-if="call.input !== undefined" class="mb-2">
-                    <div
-                      class="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400"
-                    >
-                      Input
-                    </div>
+                    <div :class="['mb-1', dashboardLabelClass]">Input</div>
                     <pre
-                      class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md bg-neutral-100/70 px-2 py-1.5 font-mono text-[11px] leading-relaxed text-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300"
+                      class="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/30 px-2 py-1.5 font-mono text-[11px] leading-relaxed text-toned"
                       >{{ formatToolPayload(call.input) }}</pre
                     >
                   </div>
                   <div v-if="call.output !== undefined">
-                    <div
-                      class="mb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-400"
-                    >
-                      Result
-                    </div>
+                    <div :class="['mb-1', dashboardLabelClass]">Result</div>
                     <pre
-                      class="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md bg-neutral-100/70 px-2 py-1.5 font-mono text-[11px] leading-relaxed text-neutral-700 dark:bg-neutral-900/60 dark:text-neutral-300"
+                      class="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/30 px-2 py-1.5 font-mono text-[11px] leading-relaxed text-toned"
                       >{{ formatToolPayload(call.output) }}</pre
                     >
                   </div>
@@ -1077,7 +1051,7 @@ function closeToolResponsePreview() {
               <span
                 v-for="title in message.contextNodeTitles"
                 :key="title"
-                class="rounded-full bg-neutral-100 px-2.5 py-1 text-[10px] font-semibold text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400"
+                class="rounded-full bg-elevated px-2.5 py-1 text-[10px] font-semibold text-muted"
               >
                 {{ title }}
               </span>
@@ -1087,7 +1061,7 @@ function closeToolResponsePreview() {
           <template #footer="{ message }">
             <div
               v-if="message.role === 'assistant' && message.model"
-              class="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-neutral-400"
+              class="mt-2 font-mono text-[10px] font-medium text-muted"
             >
               {{ message.model }}
             </div>
@@ -1100,7 +1074,7 @@ function closeToolResponsePreview() {
                   v-for="prompt in promptSuggestions"
                   :key="prompt"
                   type="button"
-                  class="rounded-[1.15rem] border border-neutral-200/70 bg-white px-4 py-3 text-left text-sm font-medium text-neutral-700 transition hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-800/70 dark:bg-neutral-950/70 dark:text-neutral-300 dark:hover:border-neutral-700"
+                  class="rounded-2xl border border-default bg-elevated px-4 py-3 text-left text-sm font-medium text-toned transition hover:border-primary/30 hover:bg-muted/30"
                   @click="handlePromptClick(prompt)"
                 >
                   {{ prompt }}
@@ -1120,20 +1094,18 @@ function closeToolResponsePreview() {
     >
       <div
         v-if="activePane === 'chat' && isPending"
-        class="agent-progress shrink-0 border-t border-neutral-200/60 bg-white/78 px-4 py-2 dark:border-neutral-800/60 dark:bg-neutral-950/78"
+        class="agent-progress shrink-0 border-t border-default bg-elevated px-4 py-2"
         role="status"
         aria-live="polite"
       >
         <div
-          class="flex items-center gap-2.5 text-[11px] font-medium text-neutral-500 dark:text-neutral-400"
+          class="flex items-center gap-2.5 text-[11px] font-medium text-muted"
         >
           <span class="agent-progress-pulse relative flex size-1.5 shrink-0">
             <span
-              class="absolute inline-flex h-full w-full animate-ping rounded-full bg-neutral-400/60 opacity-75 dark:bg-neutral-500/60"
+              class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40 opacity-75"
             />
-            <span
-              class="relative inline-flex size-1.5 rounded-full bg-neutral-500 dark:bg-neutral-400"
-            />
+            <span class="relative inline-flex size-1.5 rounded-full bg-primary" />
           </span>
           <Transition
             mode="out-in"
@@ -1152,7 +1124,7 @@ function closeToolResponsePreview() {
 
     <footer
       v-if="activePane === 'chat'"
-      class="shrink-0 border-t border-neutral-200/60 bg-white/78 p-4 dark:border-neutral-800/60 dark:bg-neutral-950/78"
+      class="shrink-0 border-t border-default bg-elevated p-4"
     >
       <div class="space-y-3">
         <slot name="scope-badges" />
@@ -1196,7 +1168,7 @@ function closeToolResponsePreview() {
           color="error"
           variant="soft"
           icon="i-lucide-circle-alert"
-          title="Message failed"
+          title="Couldn't send message"
           :description="error"
           class="rounded-[1.25rem]"
         />
@@ -1207,9 +1179,9 @@ function closeToolResponsePreview() {
           :rows="1"
           :maxrows="8"
           autoresize
-          class="shadow-sm"
+          class=""
           :ui="{
-            root: 'gap-3 rounded-[1.7rem] border border-neutral-200/80 bg-white px-3 py-3 ring-1 ring-black/5 dark:border-neutral-800/80 dark:bg-neutral-950 dark:ring-white/5',
+            root: 'gap-3 rounded-2xl border border-default bg-default px-3 py-3',
             footer: 'flex-col items-stretch gap-3',
           }"
           @submit.prevent="handleSubmit"
