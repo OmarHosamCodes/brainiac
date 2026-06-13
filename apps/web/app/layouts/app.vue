@@ -6,7 +6,6 @@ import {
   shellFocusRingClass,
   shellRailLinkActiveClass,
   shellRailLinkBaseClass,
-  shellSearchIconButtonClass,
   shellSearchPillClass,
   shellActionsSlotClass,
   shellBreadcrumbCurrentClass,
@@ -14,7 +13,6 @@ import {
   shellBreadcrumbSeparatorClass,
   shellContextSlotClass,
   shellTopbarBaseClass,
-  shellTopbarControlClass,
   shellTopbarExecutionClass,
   shellTopbarSpatialClass,
   shellUtilityClusterClass,
@@ -241,14 +239,10 @@ onBeforeUnmount(() => {
       role="banner"
     >
       <div class="app-shell__topbar-left">
-        <UButton
+        <ShellTopbarIconButton
           icon="i-lucide-menu"
-          color="neutral"
-          variant="ghost"
-          square
-          size="sm"
-          :class="['shrink-0 md:hidden', shellTopbarControlClass]"
           aria-label="Open navigation"
+          class="md:hidden"
           @click="isMobileNavOpen = true"
         />
 
@@ -303,33 +297,27 @@ onBeforeUnmount(() => {
 
         <AppShellAgencyTimer />
 
-        <button
+        <ShellTopbarIconButton
           v-if="showSearchIcon"
-          type="button"
-          :class="[shellSearchIconButtonClass, shellFocusRingClass]"
-          :title="`Quick jump (${commandShortcutLabel})`"
+          icon="i-lucide-search"
           :aria-label="`Quick jump (${commandShortcutLabel})`"
+          :title="`Quick jump (${commandShortcutLabel})`"
+          variant="soft"
+          bordered
           @click="openCommandMenu"
-        >
-          <UIcon name="i-lucide-search" class="size-4" />
-        </button>
+        />
 
-        <UButton
-          color="neutral"
-          size="sm"
-          :variant="agentDockOpen ? 'soft' : 'ghost'"
-          icon="i-lucide-panel-right-open"
-          :class="[
-            shellTopbarControlClass,
-            'border border-default',
-            agentDockOpen ? 'bg-primary/10 text-primary' : '',
-          ]"
+        <ShellTopbarActionButton
+          :icon="agentDockOpen ? 'i-lucide-panel-right-close' : 'i-lucide-panel-right-open'"
           :aria-label="agentDockOpen ? 'Close agent dock' : 'Open agent dock'"
           :title="`Agent dock (${shellShortcutLabel})`"
+          :variant="agentDockOpen ? 'soft' : 'ghost'"
+          :active="agentDockOpen"
+          bordered
           @click="setAgentDockOpen(!agentDockOpen)"
         >
-          <span class="hidden sm:inline">Agent</span>
-        </UButton>
+          <span class="hidden sm:inline">{{ agentDockOpen ? "Close" : "Agent" }}</span>
+        </ShellTopbarActionButton>
       </div>
     </header>
 

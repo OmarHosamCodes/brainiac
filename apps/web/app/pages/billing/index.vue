@@ -56,19 +56,17 @@ const limitItems = computed(() => [
   <div class="h-full overflow-y-auto bg-default">
     <Teleport to="#app-shell-actions" defer>
       <div :class="shellActionsSlotClass">
-        <UButton
+        <ShellTopbarActionButton
           v-if="showManageSubscription"
           label="Manage subscription"
-          color="neutral"
           variant="soft"
-          size="sm"
           @click="openPortal"
         />
-        <UButton
+        <ShellTopbarActionButton
           v-else-if="showUpgrade"
           label="Upgrade to Pro"
           color="primary"
-          size="sm"
+          variant="solid"
           @click="checkout('pro')"
         />
       </div>

@@ -28,13 +28,25 @@ export const shellTopbarSpatialClass = "app-shell__topbar--spatial";
 
 export const shellTopbarExecutionClass = "app-shell__topbar--execution";
 
-export const shellTopbarControlClass = "rounded-xl";
+/** Shared geometry for all topbar controls: sm buttons, rounded-xl, 36px icon targets. */
+export const shellTopbarControlClass = "shrink-0 rounded-xl";
+
+export const shellTopbarIconButtonClass = shellTopbarControlClass;
+
+export const shellTopbarActionButtonClass = shellTopbarControlClass;
+
+export const shellTopbarChipClass =
+  "inline-flex h-9 min-w-0 items-center gap-1.5 rounded-xl border border-default bg-muted px-2.5 text-xs font-semibold text-highlighted transition-colors hover:bg-elevated";
+
+export const shellTopbarFieldClass = "h-9 min-w-0";
 
 export const shellSearchPillClass =
-  "flex w-full max-w-sm items-center justify-between gap-3 rounded-xl border border-default bg-muted px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-elevated hover:text-highlighted";
+  "flex h-9 w-full max-w-sm items-center justify-between gap-3 rounded-xl border border-default bg-muted px-3 text-left text-sm text-muted transition-colors hover:bg-elevated hover:text-highlighted";
 
-export const shellSearchIconButtonClass =
-  "inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-default bg-muted text-muted transition-colors hover:bg-elevated hover:text-highlighted";
+export const shellSearchIconButtonClass = [
+  shellTopbarControlClass,
+  "inline-flex size-9 items-center justify-center border border-default bg-muted text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+].join(" ");
 
 export const shellContextSlotClass = "app-shell__context min-w-0 flex-1";
 

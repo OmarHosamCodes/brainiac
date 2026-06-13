@@ -143,21 +143,19 @@ function panelIdFor(segmentId: AgencySegmentId) {
 
     <Teleport to="#app-shell-actions" defer>
       <div :class="shellActionsSlotClass">
-        <UButton
+        <ShellTopbarActionButton
           v-if="segment === 'projects' && !selectedProjectId"
           label="New project"
           icon="i-lucide-plus"
           color="primary"
-          size="sm"
+          variant="solid"
           @click="projectsTableRef?.openNewProject()"
         />
-        <UButton
+        <ShellTopbarActionButton
           v-if="segment === 'reports'"
           label="Export CSV"
           icon="i-lucide-download"
-          color="neutral"
           variant="soft"
-          size="sm"
           :loading="reportsSurfaceRef?.isExporting"
           :disabled="!reportsSurfaceRef?.canExport"
           @click="reportsSurfaceRef?.downloadCsv()"

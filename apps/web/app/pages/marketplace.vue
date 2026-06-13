@@ -6,6 +6,7 @@ import {
   shellPageBodyClass,
   shellPageClass,
   shellPageIntroClass,
+  shellTopbarFieldClass,
 } from "~/utils/app-shell-ui";
 
 definePageMeta({
@@ -151,10 +152,15 @@ function onImported(payload: { kind: string; nodeId?: string }) {
           v-model="searchInput"
           icon="i-lucide-search"
           placeholder="Search..."
-          class="hidden w-36 lg:block xl:w-44"
+          :class="['hidden w-36 lg:block xl:w-44', shellTopbarFieldClass]"
           size="sm"
         />
-        <UBadge color="neutral" variant="soft" size="sm" class="hidden sm:inline-flex">
+        <UBadge
+          color="neutral"
+          variant="soft"
+          size="sm"
+          class="hidden h-9 sm:inline-flex"
+        >
           {{ totalLoaded }}
         </UBadge>
         <UBadge
@@ -162,7 +168,7 @@ function onImported(payload: { kind: string; nodeId?: string }) {
           color="primary"
           variant="soft"
           size="sm"
-          class="gap-1"
+          class="inline-flex h-9 gap-1"
         >
           <UIcon name="i-lucide-loader-2" class="size-3 animate-spin" aria-hidden="true" />
         </UBadge>

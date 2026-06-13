@@ -107,7 +107,6 @@ import {
 import {
   shellBreadcrumbCurrentClass,
   shellContextDividerClass,
-  shellTopbarControlClass,
 } from "~/utils/app-shell-ui";
 
 definePageMeta({
@@ -2577,13 +2576,9 @@ provide(workspaceNodeEditorContextKey, {
   <div class="relative h-full w-full overflow-hidden">
     <Teleport to="#app-shell-context" defer>
       <div class="hidden min-w-0 items-center gap-2 md:flex">
-        <UButton
+        <ShellTopbarIconButton
           to="/dashboard"
-          color="neutral"
-          variant="ghost"
           icon="i-lucide-arrow-left"
-          size="sm"
-          :class="['shrink-0', shellTopbarControlClass]"
           aria-label="Back to dashboard"
         />
         <span :class="shellContextDividerClass" aria-hidden="true" />

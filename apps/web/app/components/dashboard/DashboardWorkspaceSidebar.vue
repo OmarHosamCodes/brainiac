@@ -6,7 +6,7 @@ import {
   dashboardLabelClass,
   dashboardSectionClass,
 } from "~/utils/dashboard-ui";
-import { shellFocusRingClass, shellTopbarControlClass } from "~/utils/app-shell-ui";
+import { shellFocusRingClass } from "~/utils/app-shell-ui";
 
 type TeamRole = "owner" | "editor" | "viewer";
 
@@ -122,13 +122,8 @@ function handleCreateTeam() {
 <template>
   <aside class="dashboard-sidebar flex flex-col border-r border-default bg-default" :class="sidebarClass">
     <div v-if="compact" class="flex h-full flex-col items-center gap-2 py-3">
-      <UButton
+      <ShellTopbarIconButton
         icon="i-lucide-panel-left-open"
-        variant="ghost"
-        color="neutral"
-        size="sm"
-        square
-        :class="shellTopbarControlClass"
         aria-label="Expand team panel"
         @click="emit('update:compact', false)"
       />
@@ -158,13 +153,8 @@ function handleCreateTeam() {
             {{ selectedTeamName || "No team selected" }}
           </p>
         </div>
-        <UButton
+        <ShellTopbarIconButton
           icon="i-lucide-panel-left-close"
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          square
-          :class="shellTopbarControlClass"
           aria-label="Collapse team panel"
           @click="emit('update:compact', true)"
         />

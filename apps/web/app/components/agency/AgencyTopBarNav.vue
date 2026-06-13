@@ -11,8 +11,8 @@ import {
   shellBreadcrumbCurrentClass,
   shellBreadcrumbMutedClass,
   shellBreadcrumbSeparatorClass,
-  shellChipClass,
   shellFocusRingClass,
+  shellTopbarChipClass,
 } from "~/utils/app-shell-ui";
 
 const props = defineProps<{
@@ -145,7 +145,7 @@ onBeforeUnmount(() => {
     <span :class="shellBreadcrumbSeparatorClass" aria-hidden="true">/</span>
 
     <UPopover v-if="isMultiTeam" v-model:open="teamSelectorOpen" :content="{ align: 'start' }">
-      <button type="button" :class="[shellChipClass, shellFocusRingClass, 'max-w-[9rem]']">
+      <button type="button" :class="[shellTopbarChipClass, shellFocusRingClass, 'max-w-[9rem]']">
         <UIcon name="i-lucide-users" class="size-3.5 shrink-0 text-muted" />
         <span class="truncate">{{ currentTeam?.name ?? "Team" }}</span>
         <UIcon name="i-lucide-chevron-down" class="size-3 shrink-0 text-muted" />
@@ -170,7 +170,7 @@ onBeforeUnmount(() => {
 
     <div
       v-else-if="currentTeam"
-      :class="[shellChipClass, 'max-w-[9rem]']"
+      :class="[shellTopbarChipClass, 'max-w-[9rem]']"
       :title="`Team · ${currentTeam.name}`"
     >
       <UIcon name="i-lucide-users" class="size-3.5 shrink-0 text-muted" />
