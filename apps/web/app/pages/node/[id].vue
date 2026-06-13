@@ -104,6 +104,11 @@ import {
   formatWorkspaceRelativeTaskMeta,
   getWorkspaceTaskPriorityBadgeClass,
 } from "~/utils/workspace-node-formatters";
+import {
+  shellBreadcrumbCurrentClass,
+  shellContextDividerClass,
+  shellTopbarControlClass,
+} from "~/utils/app-shell-ui";
 
 definePageMeta({
   layout: "app",
@@ -2578,11 +2583,13 @@ provide(workspaceNodeEditorContextKey, {
           variant="ghost"
           icon="i-lucide-arrow-left"
           size="sm"
-          class="shrink-0 rounded-xl"
+          :class="['shrink-0', shellTopbarControlClass]"
           aria-label="Back to dashboard"
         />
-        <span class="h-4 w-px shrink-0 bg-default" aria-hidden="true" />
-        <span class="max-w-[14rem] truncate text-sm font-semibold text-highlighted lg:max-w-[18rem]">
+        <span :class="shellContextDividerClass" aria-hidden="true" />
+        <span
+          :class="[shellBreadcrumbCurrentClass, 'max-w-[14rem] lg:max-w-[18rem]']"
+        >
           {{ node?.title ?? "Node" }}
         </span>
       </div>

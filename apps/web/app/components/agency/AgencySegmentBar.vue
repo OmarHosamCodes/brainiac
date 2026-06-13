@@ -5,7 +5,12 @@
  */
 import type { AgencySegmentId } from "./agency-segments";
 import { AGENCY_SEGMENTS } from "./agency-segments";
-import { agencyFocusRingClass } from "~/utils/agency-ui";
+import {
+  shellFocusRingClass,
+  shellInPageSubnavClass,
+  shellSegmentTabActiveClass,
+  shellSegmentTabClass,
+} from "~/utils/app-shell-ui";
 
 const props = defineProps<{
   segment: AgencySegmentId;
@@ -54,12 +59,10 @@ function handleTabKeydown(event: KeyboardEvent, index: number) {
 </script>
 
 <template>
-  <nav
-    class="agency-segment-bar -mx-6 border-b border-default px-6 lg:-mx-8 lg:px-8"
-    role="tablist"
-    aria-label="Agency sections"
-  >
-    <div class="flex items-center gap-1 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+  <nav :class="shellInPageSubnavClass" role="tablist" aria-label="Agency sections">
+    <div
+      class="flex items-center gap-1 overflow-x-auto py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
       <button
         v-for="(entry, index) in AGENCY_SEGMENTS"
         :id="tabIdFor(entry.id)"
@@ -70,9 +73,9 @@ function handleTabKeydown(event: KeyboardEvent, index: number) {
         :aria-controls="panelIdFor(entry.id)"
         :tabindex="entry.id === segment ? 0 : -1"
         :class="[
-          'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-highlighted',
-          agencyFocusRingClass,
-          entry.id === segment ? 'bg-primary/10 text-primary' : '',
+          shellSegmentTabClass,
+          shellFocusRingClass,
+          entry.id === segment ? shellSegmentTabActiveClass : '',
         ]"
         :title="`${entry.label} (g ${entry.shortcutKey})`"
         @click="selectSegment(entry.id)"

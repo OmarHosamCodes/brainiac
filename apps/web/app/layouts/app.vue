@@ -8,8 +8,13 @@ import {
   shellRailLinkBaseClass,
   shellSearchIconButtonClass,
   shellSearchPillClass,
+  shellActionsSlotClass,
+  shellBreadcrumbCurrentClass,
+  shellBreadcrumbMutedClass,
+  shellBreadcrumbSeparatorClass,
   shellContextSlotClass,
   shellTopbarBaseClass,
+  shellTopbarControlClass,
   shellTopbarExecutionClass,
   shellTopbarSpatialClass,
   shellUtilityClusterClass,
@@ -188,7 +193,10 @@ onBeforeUnmount(() => {
       <div class="flex flex-1 flex-col items-center gap-4 py-4">
         <ULink
           to="/dashboard"
-          class="flex size-10 items-center justify-center rounded-2xl border border-default bg-default text-highlighted transition-colors hover:bg-elevated"
+          :class="[
+            shellRailLinkBaseClass,
+            'border border-default bg-default text-highlighted hover:bg-elevated',
+          ]"
           aria-label="Open dashboard"
           title="Dashboard"
         >
@@ -238,7 +246,8 @@ onBeforeUnmount(() => {
           color="neutral"
           variant="ghost"
           square
-          class="shrink-0 rounded-xl md:hidden"
+          size="sm"
+          :class="['shrink-0 md:hidden', shellTopbarControlClass]"
           aria-label="Open navigation"
           @click="isMobileNavOpen = true"
         />
@@ -249,18 +258,18 @@ onBeforeUnmount(() => {
           <div class="flex min-w-0 items-center gap-2">
             <template v-for="(item, index) in breadcrumbItems" :key="`${item}-${index}`">
               <span
-                class="truncate text-sm whitespace-nowrap"
+                class="truncate whitespace-nowrap"
                 :class="
                   index === breadcrumbItems.length - 1
-                    ? 'font-semibold text-highlighted'
-                    : 'text-muted'
+                    ? shellBreadcrumbCurrentClass
+                    : shellBreadcrumbMutedClass
                 "
               >
                 {{ item }}
               </span>
               <span
                 v-if="index < breadcrumbItems.length - 1"
-                class="text-xs text-dimmed"
+                :class="shellBreadcrumbSeparatorClass"
                 aria-hidden="true"
               >
                 /
@@ -290,13 +299,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div :class="shellUtilityClusterClass">
-        <div id="app-shell-actions" class="flex items-center gap-1.5 sm:gap-2" />
-
-        <div
-          v-if="hasContextContent"
-          class="hidden h-5 w-px bg-default sm:block"
-          aria-hidden="true"
-        />
+        <div id="app-shell-actions" :class="shellActionsSlotClass" />
 
         <AppShellAgencyTimer />
 
@@ -313,10 +316,14 @@ onBeforeUnmount(() => {
 
         <UButton
           color="neutral"
+          size="sm"
           :variant="agentDockOpen ? 'soft' : 'ghost'"
           icon="i-lucide-panel-right-open"
-          class="rounded-xl border border-default"
-          :class="agentDockOpen ? 'bg-primary/10 text-primary' : ''"
+          :class="[
+            shellTopbarControlClass,
+            'border border-default',
+            agentDockOpen ? 'bg-primary/10 text-primary' : '',
+          ]"
           :aria-label="agentDockOpen ? 'Close agent dock' : 'Open agent dock'"
           :title="`Agent dock (${shellShortcutLabel})`"
           @click="setAgentDockOpen(!agentDockOpen)"
@@ -405,8 +412,12 @@ onBeforeUnmount(() => {
               v-for="item in APP_NAV_ITEMS"
               :key="item.to"
               :to="item.to"
-              class="flex items-center gap-3 rounded-[1.15rem] px-3 py-3 text-muted transition-colors hover:bg-elevated hover:text-highlighted"
-              :class="item.matches(route.path) ? 'bg-primary/10 text-primary' : ''"
+              :class="[
+                'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
+                item.matches(route.path)
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted hover:bg-elevated hover:text-highlighted',
+              ]"
               :aria-current="item.matches(route.path) ? 'page' : undefined"
               @click="isMobileNavOpen = false"
             >

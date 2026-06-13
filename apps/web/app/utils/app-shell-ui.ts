@@ -28,13 +28,43 @@ export const shellTopbarSpatialClass = "app-shell__topbar--spatial";
 
 export const shellTopbarExecutionClass = "app-shell__topbar--execution";
 
+export const shellTopbarControlClass = "rounded-xl";
+
 export const shellSearchPillClass =
-  "flex w-full max-w-md items-center justify-between gap-4 rounded-2xl border border-default bg-muted px-3.5 py-2.5 text-left text-muted transition-colors hover:bg-elevated hover:text-highlighted";
+  "flex w-full max-w-sm items-center justify-between gap-3 rounded-xl border border-default bg-muted px-3 py-2 text-left text-sm text-muted transition-colors hover:bg-elevated hover:text-highlighted";
 
 export const shellSearchIconButtonClass =
-  "inline-flex size-9 items-center justify-center rounded-xl border border-default bg-muted text-muted transition-colors hover:bg-elevated hover:text-highlighted";
+  "inline-flex size-9 shrink-0 items-center justify-center rounded-xl border border-default bg-muted text-muted transition-colors hover:bg-elevated hover:text-highlighted";
 
 export const shellContextSlotClass = "app-shell__context min-w-0 flex-1";
 
 export const shellUtilityClusterClass =
   "app-shell__utilities flex shrink-0 items-center gap-1.5 sm:gap-2";
+
+export const shellActionsSlotClass = "flex items-center gap-1.5 sm:gap-2";
+
+export const shellBreadcrumbMutedClass = "truncate text-sm text-muted";
+
+export const shellBreadcrumbCurrentClass = "truncate text-sm font-semibold text-highlighted";
+
+export const shellBreadcrumbSeparatorClass = "shrink-0 text-xs text-dimmed";
+
+export const shellContextDividerClass = "h-4 w-px shrink-0 bg-default";
+
+export const shellChipClass =
+  "inline-flex min-w-0 items-center gap-1.5 rounded-full border border-default bg-muted px-2.5 py-1 text-xs font-bold text-highlighted transition-colors hover:bg-elevated";
+
+export const shellSegmentTabClass =
+  "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-highlighted";
+
+export const shellSegmentTabActiveClass = "bg-primary/10 text-primary";
+
+export const shellPageClass =
+  "mx-auto flex h-full w-full max-w-[120rem] flex-col px-6 pb-16 lg:px-8";
+
+export const shellPageBodyClass = "flex min-h-0 flex-1 flex-col gap-4 pt-4";
+
+export const shellPageIntroClass = "text-sm text-muted";
+
+export const shellInPageSubnavClass =
+  "-mx-6 border-b border-default bg-default px-6 lg:-mx-8 lg:px-8";

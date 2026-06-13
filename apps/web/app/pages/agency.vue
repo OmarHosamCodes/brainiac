@@ -15,6 +15,12 @@ import AgencyWorkSurface from "~/components/agency/AgencyWorkSurface.vue";
 import { AGENCY_SEGMENTS, type AgencySegmentId } from "~/components/agency/agency-segments";
 import { useCurrentAgencyTeam } from "~/composables/usePersistentTimer";
 import { useAgencyLiveSync } from "~/composables/useAgencyLiveSync";
+import {
+  shellActionsSlotClass,
+  shellPageBodyClass,
+  shellPageClass,
+  shellPageIntroClass,
+} from "~/utils/app-shell-ui";
 
 definePageMeta({
   layout: "app",
@@ -136,13 +142,13 @@ function panelIdFor(segmentId: AgencySegmentId) {
     </Teleport>
 
     <Teleport to="#app-shell-actions" defer>
-      <div class="flex items-center gap-2">
+      <div :class="shellActionsSlotClass">
         <UButton
           v-if="segment === 'projects' && !selectedProjectId"
           label="New project"
           icon="i-lucide-plus"
           color="primary"
-          size="xs"
+          size="sm"
           @click="projectsTableRef?.openNewProject()"
         />
         <UButton
@@ -151,7 +157,7 @@ function panelIdFor(segmentId: AgencySegmentId) {
           icon="i-lucide-download"
           color="neutral"
           variant="soft"
-          size="xs"
+          size="sm"
           :loading="reportsSurfaceRef?.isExporting"
           :disabled="!reportsSurfaceRef?.canExport"
           @click="reportsSurfaceRef?.downloadCsv()"
@@ -159,7 +165,7 @@ function panelIdFor(segmentId: AgencySegmentId) {
       </div>
     </Teleport>
 
-    <main class="mx-auto flex h-full w-full max-w-[120rem] flex-col px-6 pb-16 lg:px-8">
+    <main :class="shellPageClass">
       <div v-if="isInitialLoading" class="space-y-4 pt-4">
         <USkeleton class="h-12 w-full rounded-2xl" />
         <USkeleton class="h-6 w-2/3 rounded-lg" />
@@ -179,8 +185,8 @@ function panelIdFor(segmentId: AgencySegmentId) {
       <div v-else class="flex min-h-0 flex-1 flex-col">
         <AgencySegmentBar :segment="segment" @update:segment="segment = $event" />
 
-        <div class="flex min-h-0 flex-1 flex-col gap-4 pt-4">
-          <p class="text-sm text-muted">{{ currentSegment.subtitle }}</p>
+        <div :class="shellPageBodyClass">
+          <p :class="shellPageIntroClass">{{ currentSegment.subtitle }}</p>
 
           <div
           :id="panelIdFor(segment)"

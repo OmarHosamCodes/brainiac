@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import type { WorkspaceMarketplaceItem } from "@brainiac/workspace";
 import { useInfiniteQuery } from "@tanstack/vue-query";
+import {
+  shellActionsSlotClass,
+  shellPageBodyClass,
+  shellPageClass,
+  shellPageIntroClass,
+} from "~/utils/app-shell-ui";
 
 definePageMeta({
   layout: "app",
@@ -140,7 +146,7 @@ function onImported(payload: { kind: string; nodeId?: string }) {
     </Teleport>
 
     <Teleport to="#app-shell-actions" defer>
-      <div class="flex items-center gap-1.5 sm:gap-2">
+      <div :class="shellActionsSlotClass">
         <UInput
           v-model="searchInput"
           icon="i-lucide-search"
@@ -163,9 +169,9 @@ function onImported(payload: { kind: string; nodeId?: string }) {
       </div>
     </Teleport>
 
-    <main class="flex flex-1 flex-col px-6 pb-16 pt-4 lg:px-8">
-      <div class="flex flex-1 flex-col gap-6">
-        <p class="text-sm text-muted">
+    <main :class="shellPageClass">
+      <div :class="shellPageBodyClass">
+        <p :class="shellPageIntroClass">
           Browse and import shared nodes, tabs, and blocks into your workspace.
           <span
             v-if="saveBadge.label"

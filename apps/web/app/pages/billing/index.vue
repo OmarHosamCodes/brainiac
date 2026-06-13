@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { shellActionsSlotClass, shellPageClass } from "~/utils/app-shell-ui";
+
 definePageMeta({
   layout: "app",
   middleware: ["auth"],
@@ -53,26 +55,26 @@ const limitItems = computed(() => [
 <template>
   <div class="h-full overflow-y-auto bg-default">
     <Teleport to="#app-shell-actions" defer>
-      <div class="flex items-center gap-2">
+      <div :class="shellActionsSlotClass">
         <UButton
           v-if="showManageSubscription"
           label="Manage subscription"
           color="neutral"
           variant="soft"
-          size="xs"
+          size="sm"
           @click="openPortal"
         />
         <UButton
           v-else-if="showUpgrade"
           label="Upgrade to Pro"
           color="primary"
-          size="xs"
+          size="sm"
           @click="checkout('pro')"
         />
       </div>
     </Teleport>
 
-    <div class="px-6 pb-16 pt-4 lg:px-8">
+    <div :class="[shellPageClass, 'pt-4']">
       <USkeleton v-if="billingQuery.isPending.value" class="h-48 w-full rounded-[32px]" />
 
       <template v-else>

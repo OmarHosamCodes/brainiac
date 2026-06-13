@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { dashboardErrorAlertClass, dashboardStatusBadgeClass } from "~/utils/dashboard-ui";
+import { shellActionsSlotClass, shellTopbarControlClass } from "~/utils/app-shell-ui";
 
 definePageMeta({
   layout: "app",
@@ -154,11 +155,13 @@ function toggleSelectedNodeSharing() {
 <template>
   <div class="relative h-full w-full overflow-hidden bg-default selection:bg-primary/30">
     <Teleport to="#app-shell-actions" defer>
-      <div class="flex items-center gap-2">
+      <div :class="shellActionsSlotClass">
         <UButton
           :icon="isTeamAsideCompact ? 'i-lucide-panel-left-open' : 'i-lucide-panel-left-close'"
           color="neutral"
           variant="ghost"
+          size="sm"
+          :class="shellTopbarControlClass"
           @click="isTeamAsideCompact = !isTeamAsideCompact"
         >
           <span class="hidden lg:inline">Workspace</span>
@@ -168,6 +171,8 @@ function toggleSelectedNodeSharing() {
           icon="i-lucide-plus"
           color="neutral"
           variant="soft"
+          size="sm"
+          :class="shellTopbarControlClass"
           @click="handleAddNode"
         />
       </div>

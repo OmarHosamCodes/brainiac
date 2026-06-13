@@ -1,13 +1,19 @@
 <script setup lang="ts">
 /**
- * Compact agency header for the app shell context slot: team + current section.
- * Full segment tabs live in AgencySegmentBar below the shell.
+ * Compact agency header for the app shell context slot.
+ * Team lives here; segment switching is handled by AgencySegmentBar in-page.
  */
 import type { AgencyLiveConnectionState } from "~/utils/agency-live-rpc";
 
 import type { AgencySegmentId } from "./agency-segments";
 import { AGENCY_SEGMENTS } from "./agency-segments";
-import { agencyFocusRingClass } from "~/utils/agency-ui";
+import {
+  shellBreadcrumbCurrentClass,
+  shellBreadcrumbMutedClass,
+  shellBreadcrumbSeparatorClass,
+  shellChipClass,
+  shellFocusRingClass,
+} from "~/utils/app-shell-ui";
 
 const props = defineProps<{
   segment: AgencySegmentId;
@@ -22,7 +28,6 @@ const emit = defineEmits<{
 }>();
 
 const teamSelectorOpen = ref(false);
-const segmentPopoverOpen = ref(false);
 
 const currentSegment = computed(
   () => AGENCY_SEGMENTS.find((entry) => entry.id === props.segment) ?? AGENCY_SEGMENTS[0]!,
@@ -70,7 +75,6 @@ const liveStatusDotClass = computed(() => {
 });
 
 function selectSegment(nextSegment: AgencySegmentId) {
-  segmentPopoverOpen.value = false;
   if (nextSegment === props.segment) return;
   emit("update:segment", nextSegment);
 }
@@ -137,14 +141,11 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="flex min-w-0 items-center gap-2">
+    <span :class="shellBreadcrumbMutedClass">Agency</span>
+    <span :class="shellBreadcrumbSeparatorClass" aria-hidden="true">/</span>
+
     <UPopover v-if="isMultiTeam" v-model:open="teamSelectorOpen" :content="{ align: 'start' }">
-      <button
-        type="button"
-        :class="[
-          'inline-flex max-w-[9rem] items-center gap-1.5 rounded-full border border-default bg-muted px-2.5 py-1 text-xs font-bold text-highlighted transition-colors hover:bg-elevated',
-          agencyFocusRingClass,
-        ]"
-      >
+      <button type="button" :class="[shellChipClass, shellFocusRingClass, 'max-w-[9rem]']">
         <UIcon name="i-lucide-users" class="size-3.5 shrink-0 text-muted" />
         <span class="truncate">{{ currentTeam?.name ?? "Team" }}</span>
         <UIcon name="i-lucide-chevron-down" class="size-3 shrink-0 text-muted" />
@@ -169,48 +170,20 @@ onBeforeUnmount(() => {
 
     <div
       v-else-if="currentTeam"
-      class="inline-flex max-w-[9rem] items-center gap-1.5 rounded-full border border-default bg-muted px-2.5 py-1 text-xs font-bold text-highlighted"
+      :class="[shellChipClass, 'max-w-[9rem]']"
       :title="`Team · ${currentTeam.name}`"
     >
       <UIcon name="i-lucide-users" class="size-3.5 shrink-0 text-muted" />
       <span class="truncate">{{ currentTeam.name }}</span>
     </div>
 
-    <span class="hidden text-dimmed sm:inline" aria-hidden="true">/</span>
+    <span :class="shellBreadcrumbSeparatorClass" aria-hidden="true">/</span>
 
-    <UPopover v-model:open="segmentPopoverOpen" :content="{ align: 'start' }">
-      <button
-        type="button"
-        :class="[
-          'inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-sm font-semibold text-highlighted transition-colors hover:bg-elevated',
-          agencyFocusRingClass,
-        ]"
-      >
-        <UIcon :name="currentSegment.icon" class="size-3.5 text-muted" />
-        <span>{{ currentSegment.label }}</span>
-        <UIcon name="i-lucide-chevron-down" class="size-3 text-muted" />
-      </button>
-
-      <template #content>
-        <div class="w-52 p-1">
-          <button
-            v-for="entry in AGENCY_SEGMENTS"
-            :key="entry.id"
-            type="button"
-            class="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-highlighted"
-            :class="entry.id === segment ? 'bg-primary/10 text-primary' : ''"
-            @click="selectSegment(entry.id)"
-          >
-            <UIcon :name="entry.icon" class="size-3.5" />
-            <span>{{ entry.label }}</span>
-          </button>
-        </div>
-      </template>
-    </UPopover>
+    <span :class="shellBreadcrumbCurrentClass">{{ currentSegment.label }}</span>
 
     <div
       v-if="connectionState"
-      class="ml-1 inline-flex shrink-0 items-center"
+      class="ml-0.5 inline-flex shrink-0 items-center"
       :title="liveStatusLabel"
       role="status"
       :aria-label="liveStatusLabel"
