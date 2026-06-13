@@ -47,6 +47,8 @@ const stopAutoFit = watch(
 const { setAgentDockOpen } = useAppShell();
 useAppShellPageTitle("Dashboard");
 useAppShellCustomDock();
+useAppShellContextSlot();
+useAppShellActionsSlot();
 const { isTeamAsideCompact } = useDashboardLayout();
 
 const teamSelection = useTeamSelection();
@@ -172,12 +174,11 @@ function toggleSelectedNodeSharing() {
     </Teleport>
 
     <Teleport to="#app-shell-context" defer>
-      <div class="hidden items-center gap-2 md:flex">
+      <div class="hidden w-full max-w-[11rem] md:block lg:max-w-[12rem]">
         <USelectMenu
           v-model="selectedTeamId"
           :items="teamItems"
           value-key="value"
-          class="w-52"
           size="sm"
           :search-input="{ placeholder: 'Find team' }"
           placeholder="Team"

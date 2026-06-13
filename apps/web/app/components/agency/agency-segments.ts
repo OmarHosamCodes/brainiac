@@ -60,7 +60,7 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
   },
   {
     id: "billing",
-    label: "Billing",
+    label: "Invoices",
     icon: "i-lucide-receipt",
     shortcutKey: "b",
     subtitle: "Invoices, draft to paid, and period close.",

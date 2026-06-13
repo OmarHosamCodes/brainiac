@@ -194,15 +194,3 @@ const nodeShareStatus = computed(() => {
     </template>
   </aside>
 </template>
-
-<style scoped>
-.dashboard-sidebar {
-  transition: width 0.2s ease-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dashboard-sidebar {
-    transition: none;
-  }
-}
-</style>

@@ -5,6 +5,7 @@ definePageMeta({
 });
 
 useAppShellPageTitle("Billing");
+useAppShellActionsSlot();
 
 const { isPro, subscription, limits, checkout, openPortal, billingQuery } = useBilling();
 
@@ -18,6 +19,12 @@ const formattedRenewalDate = computed(() => {
 });
 
 const isLifetimeSubscription = computed(() => Boolean(subscription.value?.isLifetime));
+
+const showManageSubscription = computed(
+  () => isPro.value && !isLifetimeSubscription.value && !billingQuery.isPending.value,
+);
+
+const showUpgrade = computed(() => !isPro.value && !billingQuery.isPending.value);
 
 const limitItems = computed(() => [
   { label: "Workspace Nodes", value: limits.value.workspaceNodes, icon: "i-lucide-layout-grid" },
@@ -45,9 +52,27 @@ const limitItems = computed(() => [
 
 <template>
   <div class="h-full overflow-y-auto bg-default">
-    <div class="px-4 pb-16 pt-8 sm:px-6 lg:px-8">
-      <h1 class="text-3xl font-bold text-highlighted mb-8">Billing</h1>
+    <Teleport to="#app-shell-actions" defer>
+      <div class="flex items-center gap-2">
+        <UButton
+          v-if="showManageSubscription"
+          label="Manage subscription"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          @click="openPortal"
+        />
+        <UButton
+          v-else-if="showUpgrade"
+          label="Upgrade to Pro"
+          color="primary"
+          size="xs"
+          @click="checkout('pro')"
+        />
+      </div>
+    </Teleport>
 
+    <div class="px-6 pb-16 pt-4 lg:px-8">
       <USkeleton v-if="billingQuery.isPending.value" class="h-48 w-full rounded-[32px]" />
 
       <template v-else>
@@ -55,7 +80,7 @@ const limitItems = computed(() => [
         <UCard class="mb-6">
           <div class="flex items-center justify-between p-2">
             <div>
-              <div class="flex items-center gap-3 mb-1">
+              <div class="mb-1 flex items-center gap-3">
                 <h2 class="text-xl font-bold text-highlighted">
                   {{ isPro ? "Pro" : "Free" }} Plan
                 </h2>
@@ -71,40 +96,21 @@ const limitItems = computed(() => [
               </p>
               <p v-else class="text-sm text-muted">No active subscription</p>
             </div>
-
-            <div class="flex gap-3">
-              <UButton
-                v-if="isPro && !isLifetimeSubscription"
-                variant="outline"
-                color="neutral"
-                @click="openPortal"
-              >
-                Manage Subscription
-              </UButton>
-              <UButton
-                v-else-if="!isPro"
-                color="primary"
-                class="shadow-lg shadow-primary/20"
-                @click="checkout('pro')"
-              >
-                Upgrade to Pro
-              </UButton>
-            </div>
           </div>
         </UCard>
 
         <!-- Plan Limits -->
         <UCard>
           <div class="p-2">
-            <h3 class="text-lg font-bold text-highlighted mb-4">Your Plan Limits</h3>
+            <h3 class="mb-4 text-lg font-bold text-highlighted">Your Plan Limits</h3>
 
-            <div class="grid sm:grid-cols-2 gap-4">
+            <div class="grid gap-4 sm:grid-cols-2">
               <div
                 v-for="item in limitItems"
                 :key="item.label"
-                class="flex items-center gap-3 p-3 rounded-2xl bg-elevated"
+                class="flex items-center gap-3 rounded-2xl bg-elevated p-3"
               >
-                <div class="flex items-center justify-center size-9 rounded-xl bg-primary/10">
+                <div class="flex size-9 items-center justify-center rounded-xl bg-primary/10">
                   <UIcon :name="item.icon" class="size-4 text-primary" />
                 </div>
                 <div>

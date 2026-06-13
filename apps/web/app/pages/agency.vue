@@ -9,7 +9,8 @@ import AgencyProUpsell from "~/components/agency/AgencyProUpsell.vue";
 import AgencyReportsSurface from "~/components/agency/AgencyReportsSurface.vue";
 import AgencyResourcingSurface from "~/components/agency/AgencyResourcingSurface.vue";
 import AgencySettingsSurface from "~/components/agency/AgencySettingsSurface.vue";
-import AgencyTopBar from "~/components/agency/AgencyTopBar.vue";
+import AgencySegmentBar from "~/components/agency/AgencySegmentBar.vue";
+import AgencyTopBarNav from "~/components/agency/AgencyTopBarNav.vue";
 import AgencyWorkSurface from "~/components/agency/AgencyWorkSurface.vue";
 import { AGENCY_SEGMENTS, type AgencySegmentId } from "~/components/agency/agency-segments";
 import { useCurrentAgencyTeam } from "~/composables/usePersistentTimer";
@@ -51,6 +52,8 @@ const currentSegment = computed(
 );
 
 useAppShellPageTitle(computed(() => currentSegment.value.label));
+useAppShellContextSlot();
+useAppShellActionsSlot();
 
 const projectsTableRef = ref<InstanceType<typeof AgencyProjectsTable> | null>(null);
 const reportsSurfaceRef = ref<InstanceType<typeof AgencyReportsSurface> | null>(null);
@@ -121,8 +124,43 @@ function panelIdFor(segmentId: AgencySegmentId) {
 
 <template>
   <div class="flex h-full flex-col overflow-hidden bg-default text-default">
-    <main class="mx-auto flex h-full w-full max-w-[120rem] flex-col px-6 pb-16 pt-6 lg:px-8">
-      <div v-if="isInitialLoading" class="space-y-4">
+    <Teleport to="#app-shell-context" defer>
+      <AgencyTopBarNav
+        :segment="segment"
+        :team-id="selectedTeamId"
+        :teams="teams"
+        :connection-state="connectionState"
+        @update:segment="segment = $event"
+        @update:team-id="selectedTeamId = $event"
+      />
+    </Teleport>
+
+    <Teleport to="#app-shell-actions" defer>
+      <div class="flex items-center gap-2">
+        <UButton
+          v-if="segment === 'projects' && !selectedProjectId"
+          label="New project"
+          icon="i-lucide-plus"
+          color="primary"
+          size="xs"
+          @click="projectsTableRef?.openNewProject()"
+        />
+        <UButton
+          v-if="segment === 'reports'"
+          label="Export CSV"
+          icon="i-lucide-download"
+          color="neutral"
+          variant="soft"
+          size="xs"
+          :loading="reportsSurfaceRef?.isExporting"
+          :disabled="!reportsSurfaceRef?.canExport"
+          @click="reportsSurfaceRef?.downloadCsv()"
+        />
+      </div>
+    </Teleport>
+
+    <main class="mx-auto flex h-full w-full max-w-[120rem] flex-col px-6 pb-16 lg:px-8">
+      <div v-if="isInitialLoading" class="space-y-4 pt-4">
         <USkeleton class="h-12 w-full rounded-2xl" />
         <USkeleton class="h-6 w-2/3 rounded-lg" />
         <USkeleton class="h-64 w-full rounded-[32px]" />
@@ -138,39 +176,13 @@ function panelIdFor(segmentId: AgencySegmentId) {
         :hints="['Open Dashboard and create or join a team from the team panel.']"
       />
 
-      <div v-else class="flex min-h-0 flex-1 flex-col gap-4">
-        <AgencyTopBar
-          :segment="segment"
-          :team-id="selectedTeamId"
-          :teams="teams"
-          :connection-state="connectionState"
-          @update:segment="segment = $event"
-          @update:team-id="selectedTeamId = $event"
-        >
-          <template #actions>
-            <UButton
-              v-if="segment === 'projects' && !selectedProjectId"
-              label="New project"
-              icon="i-lucide-plus"
-              color="primary"
-              size="xs"
-              @click="projectsTableRef?.openNewProject()"
-            />
-            <UButton
-              v-if="segment === 'reports'"
-              label="Export CSV"
-              icon="i-lucide-download"
-              color="neutral"
-              variant="soft"
-              size="xs"
-              :loading="reportsSurfaceRef?.isExporting"
-              :disabled="!reportsSurfaceRef?.canExport"
-              @click="reportsSurfaceRef?.downloadCsv()"
-            />
-          </template>
-        </AgencyTopBar>
+      <div v-else class="flex min-h-0 flex-1 flex-col">
+        <AgencySegmentBar :segment="segment" @update:segment="segment = $event" />
 
-        <div
+        <div class="flex min-h-0 flex-1 flex-col gap-4 pt-4">
+          <p class="text-sm text-muted">{{ currentSegment.subtitle }}</p>
+
+          <div
           :id="panelIdFor(segment)"
           class="min-h-0 flex-1"
           role="tabpanel"
@@ -216,6 +228,7 @@ function panelIdFor(segmentId: AgencySegmentId) {
           <AgencyBillingSurface v-else-if="segment === 'billing'" :team-id="selectedTeamId" />
 
           <AgencySettingsSurface v-else-if="segment === 'settings'" :team-id="selectedTeamId" />
+        </div>
         </div>
       </div>
     </main>

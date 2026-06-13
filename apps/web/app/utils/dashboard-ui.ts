@@ -1,7 +1,13 @@
 /** Shared Tailwind class strings for the Dashboard spatial register. */
 
-export const dashboardLabelClass =
-  "text-[11px] font-bold uppercase tracking-[0.18em] text-muted";
+import {
+  shellEmptyPanelClass,
+  shellErrorPanelClass,
+  shellFocusRingClass,
+  shellLabelClass,
+} from "~/utils/app-shell-ui";
+
+export const dashboardLabelClass = shellLabelClass;
 
 export const dashboardPanelClass = "border-t border-default pt-4 mt-4";
 
@@ -10,8 +16,6 @@ export const dashboardStatusBadgeClass =
 
 export const dashboardErrorAlertClass = "pointer-events-auto max-w-xs";
 
-export const dashboardFocusRingClass =
-  "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20";
+export const dashboardFocusRingClass = shellFocusRingClass;
 
-export const dashboardEmptyPanelClass =
-  "rounded-2xl border border-dashed border-default bg-muted/20 p-10 text-center";
+export const dashboardEmptyPanelClass = shellEmptyPanelClass;

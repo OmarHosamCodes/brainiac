@@ -1,5 +1,7 @@
 import { onScopeDispose, toValue, watch, type MaybeRefOrGetter } from "vue";
 
+import { resolveShellMode } from "~/utils/app-navigation";
+
 const DEFAULT_AGENT_DOCK_WIDTH = 384;
 const MIN_AGENT_DOCK_WIDTH = 320;
 const MAX_AGENT_DOCK_WIDTH = 640;
@@ -9,6 +11,8 @@ export function clampAgentDockWidth(width: number) {
 }
 
 export function useAppShell() {
+  const route = useRoute();
+
   const agentDockOpen = useState("app-shell-agent-open", () => false);
   const agentDockWidth = useState("app-shell-agent-width", () => DEFAULT_AGENT_DOCK_WIDTH);
   const pageTitle = useState<string | null>("app-shell-page-title", () => null);
@@ -16,7 +20,13 @@ export function useAppShell() {
   // briefly flip false during navigation when an old page disposes after a
   // new page mounts; counting keeps the flag true while any owner exists.
   const customDockOwnerCount = useState("app-shell-custom-dock-owners", () => 0);
+  const contextOwnerCount = useState("app-shell-context-owners", () => 0);
+  const actionsOwnerCount = useState("app-shell-actions-owners", () => 0);
+
   const hasCustomDockContent = computed(() => customDockOwnerCount.value > 0);
+  const hasContextContent = computed(() => contextOwnerCount.value > 0);
+  const hasActionsContent = computed(() => actionsOwnerCount.value > 0);
+  const shellMode = computed(() => resolveShellMode(route.path));
 
   function setAgentDockOpen(nextOpen: boolean) {
     agentDockOpen.value = nextOpen;
@@ -42,17 +52,40 @@ export function useAppShell() {
     customDockOwnerCount.value = Math.max(0, customDockOwnerCount.value - 1);
   }
 
+  function acquireContextSlot() {
+    contextOwnerCount.value += 1;
+  }
+
+  function releaseContextSlot() {
+    contextOwnerCount.value = Math.max(0, contextOwnerCount.value - 1);
+  }
+
+  function acquireActionsSlot() {
+    actionsOwnerCount.value += 1;
+  }
+
+  function releaseActionsSlot() {
+    actionsOwnerCount.value = Math.max(0, actionsOwnerCount.value - 1);
+  }
+
   return {
     agentDockOpen,
     agentDockWidth,
     pageTitle,
     hasCustomDockContent,
+    hasContextContent,
+    hasActionsContent,
+    shellMode,
     setAgentDockOpen,
     toggleAgentDock,
     setAgentDockWidth,
     setPageTitle,
     acquireCustomDock,
     releaseCustomDock,
+    acquireContextSlot,
+    releaseContextSlot,
+    acquireActionsSlot,
+    releaseActionsSlot,
   };
 }
 
@@ -92,5 +125,25 @@ export function useAppShellCustomDock() {
 
   onScopeDispose(() => {
     releaseCustomDock();
+  });
+}
+
+export function useAppShellContextSlot() {
+  const { acquireContextSlot, releaseContextSlot } = useAppShell();
+
+  acquireContextSlot();
+
+  onScopeDispose(() => {
+    releaseContextSlot();
+  });
+}
+
+export function useAppShellActionsSlot() {
+  const { acquireActionsSlot, releaseActionsSlot } = useAppShell();
+
+  acquireActionsSlot();
+
+  onScopeDispose(() => {
+    releaseActionsSlot();
   });
 }

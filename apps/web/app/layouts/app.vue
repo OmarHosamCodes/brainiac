@@ -1,8 +1,21 @@
 <script setup lang="ts">
 import { storeToRefs } from "pinia";
 
+import { APP_NAV_ITEMS, findActiveNavItem } from "~/utils/app-navigation";
+import {
+  shellFocusRingClass,
+  shellRailLinkActiveClass,
+  shellRailLinkBaseClass,
+  shellSearchIconButtonClass,
+  shellSearchPillClass,
+  shellContextSlotClass,
+  shellTopbarBaseClass,
+  shellTopbarExecutionClass,
+  shellTopbarSpatialClass,
+  shellUtilityClusterClass,
+} from "~/utils/app-shell-ui";
+
 const route = useRoute();
-const authSession = useAuthSession();
 const workspaceStore = useWorkspaceStore();
 const { nodes } = storeToRefs(workspaceStore);
 
@@ -16,11 +29,14 @@ const isWorkspaceRoute = computed(() => {
   }
   return middleware === "workspace";
 });
+
 const {
   agentDockOpen,
   agentDockWidth,
   pageTitle,
   hasCustomDockContent,
+  hasContextContent,
+  shellMode,
   setAgentDockOpen,
   toggleAgentDock,
   setAgentDockWidth,
@@ -32,38 +48,19 @@ const isResizingDock = ref(false);
 const shellShortcutLabel = ref("Ctrl+J");
 const commandShortcutLabel = ref("Ctrl+K");
 
-const navigationItems = [
-  {
-    label: "Dashboard",
-    to: "/dashboard",
-    icon: "i-lucide-layout-dashboard",
-    matches: (path: string) => path.startsWith("/dashboard") || path.startsWith("/node/"),
-  },
-  {
-    label: "Agency",
-    to: "/agency",
-    icon: "i-lucide-briefcase",
-    matches: (path: string) => path.startsWith("/agency"),
-  },
-  {
-    label: "Marketplace",
-    to: "/marketplace",
-    icon: "i-lucide-shopping-bag",
-    matches: (path: string) => path.startsWith("/marketplace"),
-  },
-  {
-    label: "Billing",
-    to: "/billing",
-    icon: "i-lucide-credit-card",
-    matches: (path: string) => path.startsWith("/billing"),
-  },
-] as const;
+const isSpatialMode = computed(() => shellMode.value === "spatial");
+
+const activeNavigationItem = computed(() => findActiveNavItem(route.path));
 
 const activeNavigationLabel = computed(
-  () => navigationItems.find((item) => item.matches(route.path))?.label ?? "Workspace",
+  () => activeNavigationItem.value?.label ?? "Workspace",
 );
 
 const breadcrumbItems = computed(() => {
+  if (isSpatialMode.value) {
+    return [];
+  }
+
   const items = [activeNavigationLabel.value];
   const detailTitle = pageTitle.value?.trim();
 
@@ -74,29 +71,29 @@ const breadcrumbItems = computed(() => {
   return items;
 });
 
-const workspaceLabel = computed(() => {
-  const rawName = authSession.value.data?.user?.name?.trim();
+const showBreadcrumbs = computed(
+  () => !isSpatialMode.value && breadcrumbItems.value.length > 0 && !hasContextContent.value,
+);
 
-  if (!rawName) {
-    return "Workspace";
-  }
+const isContextOwned = computed(() => hasContextContent.value);
 
-  const firstName = rawName.split(/\s+/)[0];
+const showSearchPill = computed(() => !isSpatialMode.value && !isContextOwned.value);
 
-  return firstName ? `${firstName}'s workspace` : "Workspace";
-});
+const showSearchIcon = computed(() => isSpatialMode.value || isContextOwned.value);
 
 const shellStyle = computed(() => ({
   "--app-shell-dock-width": agentDockOpen.value ? `${agentDockWidth.value}px` : "0px",
 }));
 
 const commandItems = computed(() => [
-  ...navigationItems.map((item) => ({
+  ...APP_NAV_ITEMS.map((item) => ({
     id: item.to,
     label: item.label,
     description: `Open ${item.label.toLowerCase()}`,
     icon: item.icon,
-    action: () => navigateTo(item.to),
+    action: () => {
+      void navigateTo(item.to);
+    },
   })),
   {
     id: "toggle-agent",
@@ -169,9 +166,6 @@ onMounted(() => {
   }
 
   window.addEventListener("keydown", handleShellShortcuts);
-
-  // Workspace preload is owned by the `workspace` route middleware. Calling
-  // it again here was redundant and added a second waterfall on first paint.
 });
 
 onBeforeUnmount(() => {
@@ -182,8 +176,15 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="app-shell bg-default text-default" :style="shellStyle">
-    <aside class="app-shell__rail hidden border-r border-default bg-muted md:flex">
+  <div
+    class="app-shell bg-default text-default"
+    :class="isSpatialMode ? 'app-shell--spatial' : 'app-shell--execution'"
+    :style="shellStyle"
+  >
+    <aside
+      class="app-shell__rail hidden border-r border-default bg-muted md:flex"
+      aria-label="Main navigation"
+    >
       <div class="flex flex-1 flex-col items-center gap-4 py-4">
         <ULink
           to="/dashboard"
@@ -194,16 +195,17 @@ onBeforeUnmount(() => {
           <UIcon name="i-lucide-brain-circuit" class="size-5" />
         </ULink>
 
-        <nav class="flex flex-1 flex-col items-center gap-2">
+        <nav class="flex flex-1 flex-col items-center gap-2" aria-label="Sections">
           <ULink
-            v-for="item in navigationItems"
+            v-for="item in APP_NAV_ITEMS"
             :key="item.to"
             :to="item.to"
-            class="flex size-10 items-center justify-center rounded-2xl text-muted transition-colors hover:bg-elevated hover:text-highlighted"
-            :class="
-              item.matches(route.path) ? 'bg-primary/10 text-primary border border-primary/30' : ''
-            "
+            :class="[
+              shellRailLinkBaseClass,
+              item.matches(route.path) ? shellRailLinkActiveClass : 'border border-transparent',
+            ]"
             :aria-label="item.label"
+            :aria-current="item.matches(route.path) ? 'page' : undefined"
             :title="item.label"
           >
             <UIcon :name="item.icon" class="size-4.5" />
@@ -211,16 +213,6 @@ onBeforeUnmount(() => {
         </nav>
 
         <div class="flex flex-col items-center gap-2">
-          <UButton
-            to="/billing"
-            color="neutral"
-            variant="ghost"
-            icon="i-lucide-credit-card"
-            square
-            class="rounded-2xl"
-            aria-label="Billing"
-            title="Billing"
-          />
           <UColorModeButton
             variant="ghost"
             size="sm"
@@ -231,25 +223,29 @@ onBeforeUnmount(() => {
       </div>
     </aside>
 
-    <header class="app-shell__topbar border-b border-default bg-default">
+    <header
+      class="app-shell__topbar"
+      :class="[
+        shellTopbarBaseClass,
+        isSpatialMode ? shellTopbarSpatialClass : shellTopbarExecutionClass,
+        isContextOwned ? 'app-shell__topbar--owned' : '',
+      ]"
+      role="banner"
+    >
       <div class="app-shell__topbar-left">
         <UButton
           icon="i-lucide-menu"
           color="neutral"
           variant="ghost"
           square
-          class="rounded-2xl md:hidden"
+          class="shrink-0 rounded-xl md:hidden"
           aria-label="Open navigation"
           @click="isMobileNavOpen = true"
         />
 
-        <div id="app-shell-context" class="contents" />
+        <div id="app-shell-context" :class="shellContextSlotClass" />
 
-        <div class="hidden min-w-0 items-center gap-2 md:flex">
-          <span class="truncate text-xs font-semibold uppercase tracking-[0.16em] text-muted">
-            {{ workspaceLabel }}
-          </span>
-          <span class="text-xs text-dimmed" aria-hidden="true">/</span>
+        <div v-if="showBreadcrumbs" class="hidden min-w-0 items-center md:flex">
           <div class="flex min-w-0 items-center gap-2">
             <template v-for="(item, index) in breadcrumbItems" :key="`${item}-${index}`">
               <span
@@ -274,10 +270,10 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="app-shell__topbar-center">
+      <div v-if="showSearchPill" class="app-shell__topbar-center">
         <button
           type="button"
-          class="flex w-full max-w-md items-center justify-between gap-4 rounded-2xl border border-default bg-muted px-3.5 py-2.5 text-left text-muted transition-colors hover:bg-elevated hover:text-highlighted"
+          :class="[shellSearchPillClass, shellFocusRingClass]"
           :title="`Quick jump (${commandShortcutLabel})`"
           @click="openCommandMenu"
         >
@@ -293,16 +289,33 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <div class="app-shell__topbar-right">
-        <div id="app-shell-actions" class="flex items-center gap-2" />
+      <div :class="shellUtilityClusterClass">
+        <div id="app-shell-actions" class="flex items-center gap-1.5 sm:gap-2" />
+
+        <div
+          v-if="hasContextContent"
+          class="hidden h-5 w-px bg-default sm:block"
+          aria-hidden="true"
+        />
 
         <AppShellAgencyTimer />
+
+        <button
+          v-if="showSearchIcon"
+          type="button"
+          :class="[shellSearchIconButtonClass, shellFocusRingClass]"
+          :title="`Quick jump (${commandShortcutLabel})`"
+          :aria-label="`Quick jump (${commandShortcutLabel})`"
+          @click="openCommandMenu"
+        >
+          <UIcon name="i-lucide-search" class="size-4" />
+        </button>
 
         <UButton
           color="neutral"
           :variant="agentDockOpen ? 'soft' : 'ghost'"
           icon="i-lucide-panel-right-open"
-          class="rounded-2xl border border-default"
+          class="rounded-xl border border-default"
           :class="agentDockOpen ? 'bg-primary/10 text-primary' : ''"
           :aria-label="agentDockOpen ? 'Close agent dock' : 'Open agent dock'"
           :title="`Agent dock (${shellShortcutLabel})`"
@@ -327,6 +340,8 @@ onBeforeUnmount(() => {
         isResizingDock ? 'app-shell__dock--resizing' : '',
       ]"
       :aria-hidden="!agentDockOpen"
+      role="complementary"
+      aria-label="Agent panel"
     >
       <div
         class="app-shell__dock-resize hidden lg:block"
@@ -372,9 +387,7 @@ onBeforeUnmount(() => {
           <div class="flex items-center justify-between gap-3">
             <div>
               <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Brainiac</p>
-              <p class="mt-1 text-sm font-medium text-highlighted">
-                {{ workspaceLabel }}
-              </p>
+              <p class="mt-1 text-sm font-medium text-highlighted">Workspace</p>
             </div>
             <UButton
               icon="i-lucide-x"
@@ -387,13 +400,14 @@ onBeforeUnmount(() => {
             />
           </div>
 
-          <nav class="mt-6 space-y-2">
+          <nav class="mt-6 space-y-2" aria-label="Sections">
             <ULink
-              v-for="item in navigationItems"
+              v-for="item in APP_NAV_ITEMS"
               :key="item.to"
               :to="item.to"
               class="flex items-center gap-3 rounded-[1.15rem] px-3 py-3 text-muted transition-colors hover:bg-elevated hover:text-highlighted"
               :class="item.matches(route.path) ? 'bg-primary/10 text-primary' : ''"
+              :aria-current="item.matches(route.path) ? 'page' : undefined"
               @click="isMobileNavOpen = false"
             >
               <UIcon :name="item.icon" class="size-4.5" />
@@ -401,11 +415,8 @@ onBeforeUnmount(() => {
             </ULink>
           </nav>
 
-          <div class="mt-6 flex items-center gap-2">
+          <div class="mt-6">
             <UColorModeButton variant="soft" color="neutral" class="rounded-2xl" />
-            <UButton to="/billing" color="neutral" variant="soft" class="rounded-2xl">
-              Billing
-            </UButton>
           </div>
         </div>
       </div>
@@ -421,6 +432,10 @@ onBeforeUnmount(() => {
   height: 100vh;
   overflow: hidden;
   grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 2.75rem minmax(0, 1fr);
+}
+
+.app-shell--execution {
   grid-template-rows: 3.5rem minmax(0, 1fr);
 }
 
@@ -438,10 +453,22 @@ onBeforeUnmount(() => {
   grid-column: 1 / -1;
   grid-row: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 32rem) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 28rem) auto;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   padding: 0 0.9rem;
+}
+
+.app-shell__topbar--spatial {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.app-shell__topbar--owned {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.app-shell__topbar--execution:not(.app-shell__topbar--owned) {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 28rem) auto;
 }
 
 @media (min-width: 768px) {
@@ -451,21 +478,31 @@ onBeforeUnmount(() => {
   }
 }
 
-.app-shell__topbar-left,
-.app-shell__topbar-right {
+.app-shell__topbar-left {
   display: flex;
   min-width: 0;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
-.app-shell__topbar-right {
-  justify-content: flex-end;
+.app-shell__context {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.app-shell__context:empty {
+  display: none;
 }
 
 .app-shell__topbar-center {
   display: flex;
+  min-width: 0;
   justify-content: center;
+}
+
+.app-shell__utilities {
+  justify-self: end;
 }
 
 .app-shell__main {
@@ -484,14 +521,18 @@ onBeforeUnmount(() => {
 
 .app-shell__mobile-backdrop {
   position: fixed;
-  inset: 3.5rem 0 0 0;
+  inset: 2.75rem 0 0 0;
   z-index: 45;
+}
+
+.app-shell--execution .app-shell__mobile-backdrop {
+  inset: 3.5rem 0 0 0;
 }
 
 .app-shell__dock {
   position: fixed;
   right: 0;
-  top: 3.5rem;
+  top: 2.75rem;
   bottom: 0;
   z-index: 50;
   width: min(100vw, 28rem);
@@ -499,6 +540,10 @@ onBeforeUnmount(() => {
   transition:
     transform 200ms cubic-bezier(0.25, 1, 0.5, 1),
     opacity 200ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.app-shell--execution .app-shell__dock {
+  top: 3.5rem;
 }
 
 @media (min-width: 768px) {

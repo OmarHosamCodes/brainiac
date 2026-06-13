@@ -147,6 +147,7 @@ const node = computed(() => {
 const activeTabId = computed(() => node.value?.viewState.activeTabId ?? "");
 const { setAgentDockOpen } = useAppShell();
 useAppShellCustomDock();
+useAppShellContextSlot();
 useAppShellPageTitle(computed(() => node.value?.title ?? null));
 const agentContextTargets = ref<AgentContextTarget[]>([]);
 const {
@@ -2569,6 +2570,24 @@ provide(workspaceNodeEditorContextKey, {
 
 <template>
   <div class="relative h-full w-full overflow-hidden">
+    <Teleport to="#app-shell-context" defer>
+      <div class="hidden min-w-0 items-center gap-2 md:flex">
+        <UButton
+          to="/dashboard"
+          color="neutral"
+          variant="ghost"
+          icon="i-lucide-arrow-left"
+          size="sm"
+          class="shrink-0 rounded-xl"
+          aria-label="Back to dashboard"
+        />
+        <span class="h-4 w-px shrink-0 bg-default" aria-hidden="true" />
+        <span class="max-w-[14rem] truncate text-sm font-semibold text-highlighted lg:max-w-[18rem]">
+          {{ node?.title ?? "Node" }}
+        </span>
+      </div>
+    </Teleport>
+
     <Teleport to="#app-shell-dock-content" defer>
       <div class="flex h-full min-h-0 flex-col">
         <DashboardAgentChatPanel

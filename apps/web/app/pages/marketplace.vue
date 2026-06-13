@@ -8,6 +8,8 @@ definePageMeta({
 });
 
 useAppShellPageTitle("Marketplace");
+useAppShellContextSlot();
+useAppShellActionsSlot();
 
 const {
   authSession,
@@ -131,53 +133,59 @@ function onImported(payload: { kind: string; nodeId?: string }) {
 
 <template>
   <div class="flex h-full flex-col overflow-y-auto bg-default">
-    <main class="flex flex-1 flex-col px-4 pb-16 pt-8 sm:px-6 lg:px-8">
+    <Teleport to="#app-shell-context" defer>
+      <div class="hidden md:block">
+        <UTabs v-model="selectedTabIndex" :items="filterTabs" variant="pill" size="sm" />
+      </div>
+    </Teleport>
+
+    <Teleport to="#app-shell-actions" defer>
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <UInput
+          v-model="searchInput"
+          icon="i-lucide-search"
+          placeholder="Search..."
+          class="hidden w-36 lg:block xl:w-44"
+          size="sm"
+        />
+        <UBadge color="neutral" variant="soft" size="sm" class="hidden sm:inline-flex">
+          {{ totalLoaded }}
+        </UBadge>
+        <UBadge
+          v-if="isWorkspaceRefreshing"
+          color="primary"
+          variant="soft"
+          size="sm"
+          class="gap-1"
+        >
+          <UIcon name="i-lucide-loader-2" class="size-3 animate-spin" aria-hidden="true" />
+        </UBadge>
+      </div>
+    </Teleport>
+
+    <main class="flex flex-1 flex-col px-6 pb-16 pt-4 lg:px-8">
       <div class="flex flex-1 flex-col gap-6">
-        <!-- Sticky header section -->
-        <section class="sticky top-0 z-30 rounded-[2rem] border border-default bg-elevated p-6">
-          <div class="flex flex-wrap items-start justify-between gap-4">
-            <div class="space-y-2">
-              <p class="text-xs font-bold uppercase tracking-[0.2em] text-muted">
-                Team Marketplace
-              </p>
-              <h1 class="text-3xl font-semibold tracking-tight text-highlighted">
-                Discover shared nodes, tabs, and blocks
-              </h1>
-              <p class="max-w-2xl text-sm text-muted">
-                Browse and import shared items into your workspace. Choose exactly where each item
-                should go.
-              </p>
-            </div>
+        <p class="text-sm text-muted">
+          Browse and import shared nodes, tabs, and blocks into your workspace.
+          <span
+            v-if="saveBadge.label"
+            class="ml-2 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.14em]"
+            :class="saveBadge.className"
+          >
+            {{ saveBadge.label }}
+          </span>
+        </p>
 
-            <div class="flex flex-wrap items-center gap-2">
-              <UBadge color="neutral" variant="soft"> {{ totalLoaded }} loaded </UBadge>
-              <UBadge v-if="isWorkspaceRefreshing" color="primary" variant="soft" class="gap-1.5">
-                <UIcon name="i-lucide-loader-2" class="size-3 animate-spin" />
-                Syncing
-              </UBadge>
-              <span
-                class="rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]"
-                :class="saveBadge.className"
-              >
-                {{ saveBadge.label }}
-              </span>
-            </div>
-          </div>
-
-          <div class="mt-6 flex flex-wrap items-center justify-between gap-4">
-            <UTabs v-model="selectedTabIndex" :items="filterTabs" variant="pill" />
-
-            <div class="flex w-full items-center gap-2 md:w-auto md:min-w-[320px]">
-              <UInput
-                v-model="searchInput"
-                icon="i-lucide-search"
-                placeholder="Search marketplace..."
-                class="flex-1"
-                size="md"
-              />
-            </div>
-          </div>
-        </section>
+        <!-- Mobile filters -->
+        <div class="flex flex-col gap-3 md:hidden">
+          <UTabs v-model="selectedTabIndex" :items="filterTabs" variant="pill" />
+          <UInput
+            v-model="searchInput"
+            icon="i-lucide-search"
+            placeholder="Search marketplace..."
+            size="sm"
+          />
+        </div>
 
         <!-- Error alerts -->
         <UAlert
