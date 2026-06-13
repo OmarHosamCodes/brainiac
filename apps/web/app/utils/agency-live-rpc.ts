@@ -11,6 +11,18 @@ function toWebSocketRpcUrl(serverUrl: string) {
 
 export type AgencyLiveConnectionState = "connecting" | "live" | "reconnecting" | "error";
 
+export function closeAgencyLiveWebSocket(
+  websocket: WebSocket,
+  reason = "subscription ended",
+) {
+  if (
+    websocket.readyState === WebSocket.OPEN ||
+    websocket.readyState === WebSocket.CONNECTING
+  ) {
+    websocket.close(1000, reason);
+  }
+}
+
 export function createAgencyLiveRpcClient(serverUrl: string): {
   client: AppRouterClient;
   websocket: WebSocket;

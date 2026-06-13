@@ -3,6 +3,7 @@ import type { AgencyLiveEvent } from "@brainiac/api/routers/agency-ops/live";
 import { useAgencyOpsStore } from "~/stores/agency-ops";
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
 import {
+  closeAgencyLiveWebSocket,
   createAgencyLiveRpcClient,
   type AgencyLiveConnectionState,
   waitForWebSocketOpen,
@@ -18,6 +19,7 @@ export function useAgencyLiveSync(teamId: Ref<string>) {
 
   const connectionState = ref<AgencyLiveConnectionState>("connecting");
   let abortController: AbortController | null = null;
+  let activeWebSocket: WebSocket | null = null;
   let reconnectAttempt = 0;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
@@ -27,6 +29,15 @@ export function useAgencyLiveSync(teamId: Ref<string>) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
+  }
+
+  function closeActiveWebSocket(reason = "subscription ended") {
+    if (!activeWebSocket) {
+      return;
+    }
+
+    closeAgencyLiveWebSocket(activeWebSocket, reason);
+    activeWebSocket = null;
   }
 
   function scheduleReconnect() {
@@ -46,7 +57,9 @@ export function useAgencyLiveSync(teamId: Ref<string>) {
 
   async function startSubscription(nextTeamId: string) {
     abortController?.abort();
+    closeActiveWebSocket("subscription replaced");
     abortController = new AbortController();
+    const subscriptionSignal = abortController.signal;
 
     if (!nextTeamId) {
       connectionState.value = "connecting";
@@ -55,33 +68,49 @@ export function useAgencyLiveSync(teamId: Ref<string>) {
 
     connectionState.value = reconnectAttempt > 0 ? "reconnecting" : "connecting";
 
+    let websocket: WebSocket | null = null;
+
     try {
-      const { client, websocket } = createAgencyLiveRpcClient(config.public.serverUrl);
+      const connection = createAgencyLiveRpcClient(config.public.serverUrl);
+      websocket = connection.websocket;
+      activeWebSocket = websocket;
+
       await waitForWebSocketOpen(websocket);
+
+      if (subscriptionSignal.aborted || disposed) {
+        return;
+      }
 
       connectionState.value = "live";
       reconnectAttempt = 0;
 
-      const iterator = await client.agencyOps.live.subscribe(
+      const iterator = await connection.client.agencyOps.live.subscribe(
         { teamId: nextTeamId },
-        { signal: abortController.signal },
+        { signal: subscriptionSignal },
       );
 
       for await (const event of iterator) {
+        if (subscriptionSignal.aborted || disposed) {
+          break;
+        }
         applyAgencyLiveEvent(event as AgencyLiveEvent);
       }
 
-      if (!abortController.signal.aborted && !disposed) {
+      if (!subscriptionSignal.aborted && !disposed) {
         scheduleReconnect();
       }
     } catch (error) {
-      if (abortController.signal.aborted || disposed) {
+      if (subscriptionSignal.aborted || disposed) {
         return;
       }
 
       console.error("[agency-live] subscription error", error);
       connectionState.value = "error";
       scheduleReconnect();
+    } finally {
+      if (websocket && activeWebSocket === websocket) {
+        closeActiveWebSocket("subscription ended");
+      }
     }
   }
 
@@ -104,6 +133,7 @@ export function useAgencyLiveSync(teamId: Ref<string>) {
     disposed = true;
     clearReconnectTimer();
     abortController?.abort();
+    closeActiveWebSocket("subscription disposed");
   });
 
   return {
