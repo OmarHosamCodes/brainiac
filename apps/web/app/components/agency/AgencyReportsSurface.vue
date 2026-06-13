@@ -14,9 +14,17 @@ import { useMutation, useQuery } from "@tanstack/vue-query";
 
 import { getErrorMessage } from "~/utils/get-error-message";
 import { projectHueStyle } from "~/utils/project-palette";
+import {
+  agencyLabelClass,
+  agencyMetricClass,
+  agencyErrorPanelClass,
+  agencyEmptyPanelClass,
+} from "~/utils/agency-ui";
 
 const props = defineProps<{
   teamId: string;
+  /** When true, export lives in the page top bar instead. */
+  hideToolbarExport?: boolean;
 }>();
 
 const orpc = useOrpc();
@@ -120,6 +128,17 @@ function formatHours(value: number): string {
   if (minutes === 0) return `${whole}h`;
   return `${whole}h ${String(minutes).padStart(2, "0")}m`;
 }
+
+const canExport = computed(
+  () => Boolean(summary.value && summary.value.totalEntries > 0 && !exportCsvMutation.isPending.value),
+);
+const isExporting = computed(() => exportCsvMutation.isPending.value);
+
+defineExpose({
+  downloadCsv,
+  canExport,
+  isExporting,
+});
 </script>
 
 <template>
@@ -134,16 +153,17 @@ function formatHours(value: number): string {
           class="rounded-full px-3 py-1 text-[11px] font-bold transition-colors"
           :class="
             rangePreset === preset
-              ? 'bg-default text-highlighted shadow-sm'
+              ? 'bg-default text-highlighted'
               : 'text-muted hover:text-highlighted'
           "
+          :aria-pressed="rangePreset === preset"
           @click="rangePreset = preset"
         >
           {{ presetLabel[preset] }}
         </button>
       </div>
 
-      <div class="ml-auto">
+      <div v-if="!hideToolbarExport" class="ml-auto">
         <UButton
           label="Export CSV"
           icon="i-lucide-download"
@@ -163,7 +183,7 @@ function formatHours(value: number): string {
     </div>
 
     <!-- Error -->
-    <div v-else-if="isError" class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center">
+    <div v-else-if="isError" :class="agencyErrorPanelClass" role="alert">
       <UIcon name="i-lucide-alert-triangle" class="mx-auto size-5 text-error" />
       <p class="mt-3 text-sm font-bold text-highlighted">Couldn't load reports.</p>
       <p class="mt-1 text-xs text-muted">
@@ -182,33 +202,29 @@ function formatHours(value: number): string {
     <!-- Empty -->
     <div
       v-else-if="!summary || summary.totalEntries === 0"
-      class="rounded-2xl border border-dashed border-default bg-muted/20 p-10 text-center"
+      :class="agencyEmptyPanelClass"
     >
       <UIcon name="i-lucide-bar-chart-2" class="mx-auto size-7 text-muted" />
       <p class="mt-4 text-sm font-bold text-highlighted">No time logged in this range.</p>
-      <p class="mt-1 text-xs text-muted">Track time on Time, then come back here.</p>
+      <p class="mt-1 text-xs text-muted">Track time on Work, then come back here.</p>
     </div>
 
     <div v-else class="space-y-4">
-      <!-- Header band -->
-      <div class="grid gap-3 sm:grid-cols-3">
-        <div class="rounded-2xl border border-default bg-default p-4">
-          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Total hours</p>
-          <p class="mt-1 font-mono text-2xl font-bold tabular-nums text-highlighted">
-            {{ formatHours(summary.totalHours) }}
-          </p>
+      <!-- Inline summary row -->
+      <div
+        class="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-default pb-3 text-xs"
+      >
+        <div>
+          <span :class="agencyLabelClass">Total hours</span>
+          <span :class="['ml-2', agencyMetricClass]">{{ formatHours(summary.totalHours) }}</span>
         </div>
-        <div class="rounded-2xl border border-default bg-default p-4">
-          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Entries</p>
-          <p class="mt-1 font-mono text-2xl font-bold tabular-nums text-highlighted">
-            {{ summary.totalEntries }}
-          </p>
+        <div>
+          <span :class="agencyLabelClass">Entries</span>
+          <span :class="['ml-2', agencyMetricClass]">{{ summary.totalEntries }}</span>
         </div>
-        <div class="rounded-2xl border border-default bg-default p-4">
-          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Active members</p>
-          <p class="mt-1 font-mono text-2xl font-bold tabular-nums text-highlighted">
-            {{ summary.teamActivity.length }}
-          </p>
+        <div>
+          <span :class="agencyLabelClass">Active members</span>
+          <span :class="['ml-2', agencyMetricClass]">{{ summary.teamActivity.length }}</span>
         </div>
       </div>
 

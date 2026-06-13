@@ -16,10 +16,13 @@ import { formatDuration } from "~/utils/format-duration";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { projectHueStyle } from "~/utils/project-palette";
 import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
+import { agencyLabelClass, agencyErrorPanelClass, agencyEmptyPanelClass } from "~/utils/agency-ui";
 import { useAgencyOpsStore } from "~/stores/agency-ops";
 
 const props = defineProps<{
   teamId: string;
+  /** When true, primary actions live in the page top bar instead. */
+  hideToolbarActions?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -32,7 +35,6 @@ const agencyOps = useAgencyOpsStore();
 const teamId = computed(() => props.teamId);
 
 const filterTerm = ref("");
-const showArchived = ref(false);
 
 const projectsQuery = useQuery(
   computed(() =>
@@ -185,6 +187,14 @@ async function createProject() {
     name,
   });
 }
+
+function openNewProject() {
+  newProjectOpen.value = true;
+}
+
+defineExpose({
+  openNewProject,
+});
 </script>
 
 <template>
@@ -198,15 +208,8 @@ async function createProject() {
         size="sm"
         class="w-64"
       />
-      <UButton
-        :label="showArchived ? 'Hide archived' : 'Show archived'"
-        color="neutral"
-        variant="ghost"
-        size="xs"
-        @click="showArchived = !showArchived"
-      />
 
-      <div class="ml-auto">
+      <div v-if="!hideToolbarActions" class="ml-auto">
         <UPopover v-model:open="newProjectOpen" :content="{ align: 'end' }">
           <UButton
             label="New project"
@@ -267,7 +270,7 @@ async function createProject() {
     </div>
 
     <!-- Error -->
-    <div v-else-if="isError" class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center">
+    <div v-else-if="isError" :class="agencyErrorPanelClass" role="alert">
       <UIcon name="i-lucide-alert-triangle" class="mx-auto size-5 text-error" />
       <p class="mt-3 text-sm font-bold text-highlighted">Couldn't load projects.</p>
       <p class="mt-1 text-xs text-muted">
@@ -286,7 +289,7 @@ async function createProject() {
     <!-- Empty: no clients yet -->
     <div
       v-else-if="clients.length === 0"
-      class="rounded-2xl border border-dashed border-default bg-muted/20 p-8 text-center"
+      :class="agencyEmptyPanelClass"
     >
       <UIcon name="i-lucide-building-2" class="mx-auto size-6 text-muted" />
       <p class="mt-3 text-sm font-bold text-highlighted">No clients yet.</p>
@@ -296,7 +299,7 @@ async function createProject() {
     <!-- Empty: clients exist, no projects -->
     <div
       v-else-if="projects.length === 0"
-      class="rounded-2xl border border-dashed border-default bg-muted/20 p-8 text-center"
+      :class="agencyEmptyPanelClass"
     >
       <UIcon name="i-lucide-folder-kanban" class="mx-auto size-6 text-muted" />
       <p class="mt-3 text-sm font-bold text-highlighted">No projects yet.</p>
@@ -325,15 +328,13 @@ async function createProject() {
 
     <!-- Table -->
     <div v-else class="overflow-x-auto rounded-2xl border border-default bg-default">
-      <table class="w-full min-w-[56rem] text-xs">
+      <table class="w-full min-w-[40rem] text-xs">
         <thead class="border-b border-default bg-muted">
-          <tr class="text-left text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
-            <th class="px-4 py-2.5 font-bold">Project</th>
-            <th class="px-3 py-2.5 font-bold">Client</th>
-            <th class="px-3 py-2.5 font-bold">Members</th>
-            <th class="px-3 py-2.5 font-bold">Budget</th>
-            <th class="px-3 py-2.5 font-bold text-right">Hours · this week</th>
-            <th class="px-4 py-2.5 font-bold text-right">Status</th>
+          <tr :class="agencyLabelClass">
+            <th scope="col" class="px-4 py-2.5 font-bold">Project</th>
+            <th scope="col" class="px-3 py-2.5 font-bold">Client</th>
+            <th scope="col" class="px-3 py-2.5 font-bold">Budget</th>
+            <th scope="col" class="px-3 py-2.5 text-right font-bold">Hours · this week</th>
           </tr>
         </thead>
         <tbody>
@@ -358,10 +359,6 @@ async function createProject() {
             </td>
             <td class="px-3 py-3 text-muted">
               <span class="truncate">{{ project.clientName }}</span>
-            </td>
-            <td class="px-3 py-3 text-muted">
-              <!-- Aspirational: members not yet exposed by API. Honest dash. -->
-              <span class="text-dimmed">—</span>
             </td>
             <td class="px-3 py-3">
               <!-- Budget bar wired to budgets.list (Phase 4 stub returns
@@ -404,14 +401,6 @@ async function createProject() {
                 "
               >
                 {{ formatDuration(hoursThisWeekByProject.get(project.id) ?? 0, "short") }}
-              </span>
-            </td>
-            <td class="px-4 py-3 text-right">
-              <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-default bg-muted px-2 py-0.5 text-[11px] font-bold text-muted"
-              >
-                <span class="inline-block size-1.5 rounded-full bg-success" aria-hidden="true" />
-                Active
               </span>
             </td>
           </tr>

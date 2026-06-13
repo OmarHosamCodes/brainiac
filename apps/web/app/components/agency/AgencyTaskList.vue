@@ -349,6 +349,7 @@ function getProjectHue(projectId: string) {
     <div
       v-else-if="isTasksError"
       class="flex flex-1 flex-col items-center justify-center p-6 text-center"
+      role="alert"
     >
       <UIcon name="i-lucide-alert-triangle" class="size-5 text-error" />
       <p class="mt-3 text-sm font-bold text-highlighted">Couldn't load tasks.</p>
@@ -373,13 +374,18 @@ function getProjectHue(projectId: string) {
       <p class="mt-3 text-xs text-muted">No tasks match your filters.</p>
     </div>
 
-    <ul v-else class="flex-1 divide-y divide-default overflow-y-auto">
+    <ul v-else class="flex-1 divide-y divide-default overflow-y-auto" role="listbox" aria-label="Tasks">
       <li
         v-for="task in tasks"
         :key="task.id"
-        class="cursor-pointer px-4 py-3 transition-colors hover:bg-elevated/50"
+        role="option"
+        :aria-selected="task.id === selectedTaskId"
+        class="cursor-pointer px-4 py-3 transition-colors hover:bg-elevated/50 focus-visible:bg-elevated/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 focus-visible:ring-inset"
         :class="task.id === selectedTaskId ? 'bg-primary/5' : ''"
+        tabindex="0"
         @click="selectTask(task.id)"
+        @keydown.enter.prevent="selectTask(task.id)"
+        @keydown.space.prevent="selectTask(task.id)"
       >
         <div class="flex items-start gap-3">
           <span

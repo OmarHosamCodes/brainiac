@@ -5,6 +5,7 @@
 import { useQuery } from "@tanstack/vue-query";
 
 import { getErrorMessage } from "~/utils/get-error-message";
+import { agencyLabelClass, agencyMetricClass, agencyErrorPanelClass } from "~/utils/agency-ui";
 
 const props = defineProps<{
   teamId: string;
@@ -194,7 +195,7 @@ async function advanceInvoiceStatus(invoiceId: string, currentStatus: LaneId) {
     </div>
 
     <!-- Error -->
-    <div v-else-if="isError" class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center">
+    <div v-else-if="isError" :class="agencyErrorPanelClass" role="alert">
       <UIcon name="i-lucide-alert-triangle" class="mx-auto size-5 text-error" />
       <p class="mt-3 text-sm font-bold text-highlighted">Couldn't load billing.</p>
       <p class="mt-1 text-xs text-muted">
@@ -216,45 +217,57 @@ async function advanceInvoiceStatus(invoiceId: string, currentStatus: LaneId) {
     </div>
 
     <template v-else>
-      <!-- Summary band -->
-      <div v-if="summary" class="grid gap-3 sm:grid-cols-4">
-        <div class="rounded-2xl border border-default bg-default p-4">
-          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Outstanding</p>
-          <p
-            class="mt-1 font-mono text-2xl font-bold tabular-nums"
-            :class="summary.outstandingCents > 0 ? 'text-highlighted' : 'text-dimmed'"
+      <!-- Summary row -->
+      <div
+        v-if="summary"
+        class="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-default pb-3 text-xs"
+      >
+        <div>
+          <span :class="agencyLabelClass">Outstanding</span>
+          <span
+            :class="[
+              'ml-2 font-mono tabular-nums font-bold',
+              summary.outstandingCents > 0 ? 'text-highlighted' : 'text-dimmed',
+            ]"
           >
             {{ formatCurrency(summary.outstandingCents, summary.currency) }}
-          </p>
+          </span>
         </div>
-        <div class="rounded-2xl border border-default bg-default p-4">
-          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Drafts</p>
-          <p
-            class="mt-1 font-mono text-2xl font-bold tabular-nums"
-            :class="summary.draftCount > 0 ? 'text-highlighted' : 'text-dimmed'"
+        <div>
+          <span :class="agencyLabelClass">Drafts</span>
+          <span
+            :class="[
+              'ml-2',
+              agencyMetricClass,
+              summary.draftCount > 0 ? '' : 'text-dimmed',
+            ]"
           >
             {{ summary.draftCount }}
-          </p>
+          </span>
         </div>
-        <div class="rounded-2xl border border-default bg-default p-4">
-          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Sent</p>
-          <p
-            class="mt-1 font-mono text-2xl font-bold tabular-nums"
-            :class="summary.sentCount > 0 ? 'text-highlighted' : 'text-dimmed'"
+        <div>
+          <span :class="agencyLabelClass">Sent</span>
+          <span
+            :class="[
+              'ml-2',
+              agencyMetricClass,
+              summary.sentCount > 0 ? '' : 'text-dimmed',
+            ]"
           >
             {{ summary.sentCount }}
-          </p>
+          </span>
         </div>
-        <div class="rounded-2xl border border-default bg-default p-4">
-          <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-            Paid · all time
-          </p>
-          <p
-            class="mt-1 font-mono text-2xl font-bold tabular-nums"
-            :class="summary.paidCount > 0 ? 'text-highlighted' : 'text-dimmed'"
+        <div>
+          <span :class="agencyLabelClass">Paid · all time</span>
+          <span
+            :class="[
+              'ml-2',
+              agencyMetricClass,
+              summary.paidCount > 0 ? '' : 'text-dimmed',
+            ]"
           >
             {{ summary.paidCount }}
-          </p>
+          </span>
         </div>
       </div>
 

@@ -2,7 +2,7 @@
  * Agency segments — single source of truth for the IA.
  *
  * Order is daily-traffic ranked. The shortcut key is the second letter of
- * the `g X` chord (Time = `g t`, Projects = `g p`, …).
+ * the `g X` chord (Work = `g w`, Projects = `g p`, …).
  */
 export type AgencySegmentId =
   | "work"

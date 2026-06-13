@@ -20,8 +20,6 @@ definePageMeta({
   middleware: ["auth"],
 });
 
-useAppShellPageTitle("Agency");
-
 const orpc = useOrpc();
 const authSession = useAuthSession();
 const authEnabled = computed(() => Boolean(authSession.value?.data?.user));
@@ -48,6 +46,15 @@ const segment = ref<AgencySegmentId>(
     : "work",
 );
 
+const currentSegment = computed(
+  () => AGENCY_SEGMENTS.find((entry) => entry.id === segment.value) ?? AGENCY_SEGMENTS[0]!,
+);
+
+useAppShellPageTitle(computed(() => currentSegment.value.label));
+
+const projectsTableRef = ref<InstanceType<typeof AgencyProjectsTable> | null>(null);
+const reportsSurfaceRef = ref<InstanceType<typeof AgencyReportsSurface> | null>(null);
+
 // Sync segment to URL `?section=` so deep links and back/forward work.
 watch(segment, (next) => {
   if (route.query.section === next) return;
@@ -69,9 +76,6 @@ function closeProject() {
   router.push({ query: next });
 }
 
-// Clearing the project drill-down whenever the segment leaves "projects" keeps
-// the URL state honest — drilling into a project then jumping to "Time" should
-// not leave a stale ?project= behind.
 watch(segment, (next) => {
   if (next !== "projects" && selectedProjectId.value) {
     closeProject();
@@ -93,8 +97,6 @@ watch(
   { immediate: true },
 );
 
-// Publish current team to the global app-shell state so the persistent timer
-// in the chrome resolves the right active-timer query.
 const { setCurrentAgencyTeamId } = useCurrentAgencyTeam();
 
 watch(
@@ -108,89 +110,113 @@ watch(
 const agencyLiveTeamId = computed(() =>
   agencyEnabled.value && selectedTeamId.value ? selectedTeamId.value : "",
 );
-useAgencyLiveSync(agencyLiveTeamId);
-
-onBeforeUnmount(() => {
-  // Keep the chrome timer alive while the user navigates within the agency
-  // surface; only clear on explicit team-removal (handled above).
-});
-
-const currentSegment = computed(
-  () => AGENCY_SEGMENTS.find((entry) => entry.id === segment.value) ?? AGENCY_SEGMENTS[0]!,
-);
+const { connectionState } = useAgencyLiveSync(agencyLiveTeamId);
 
 const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQuery.isPending.value);
+
+function panelIdFor(segmentId: AgencySegmentId) {
+  return `agency-panel-${segmentId}`;
+}
 </script>
 
 <template>
-  <div class="h-full overflow-y-auto bg-default text-default">
-    <main class="mx-auto w-full max-w-[120rem] px-6 pb-16 pt-6 lg:px-8">
-      <div v-if="isInitialLoading" class="flex items-center justify-center py-24">
-        <UIcon name="i-lucide-loader-2" class="size-6 animate-spin text-muted" />
+  <div class="flex h-full flex-col overflow-hidden bg-default text-default">
+    <main class="mx-auto flex h-full w-full max-w-[120rem] flex-col px-6 pb-16 pt-6 lg:px-8">
+      <div v-if="isInitialLoading" class="space-y-4">
+        <USkeleton class="h-12 w-full rounded-2xl" />
+        <USkeleton class="h-6 w-2/3 rounded-lg" />
+        <USkeleton class="h-64 w-full rounded-[32px]" />
       </div>
 
       <AgencyProUpsell v-else-if="!agencyEnabled" />
 
-      <div
+      <AgencyPlaceholderSurface
         v-else-if="teams.length === 0"
-        class="rounded-2xl border border-dashed border-default bg-muted/20 p-10 text-center"
-      >
-        <UIcon name="i-lucide-users" class="mx-auto size-8 text-muted" />
-        <p class="mt-4 text-sm font-bold text-highlighted">No team yet.</p>
-        <p class="mt-1 text-xs text-muted">
-          Create a team in your workspace to start using agency tools.
-        </p>
-      </div>
+        icon="i-lucide-users"
+        title="No team yet"
+        body="Create a team in your workspace to start using agency tools."
+        :hints="['Open Dashboard and create or join a team from the team panel.']"
+      />
 
-      <div v-else class="space-y-6">
+      <div v-else class="flex min-h-0 flex-1 flex-col gap-4">
         <AgencyTopBar
           :segment="segment"
           :team-id="selectedTeamId"
           :teams="teams"
+          :connection-state="connectionState"
           @update:segment="segment = $event"
           @update:team-id="selectedTeamId = $event"
-        />
+        >
+          <template #actions>
+            <UButton
+              v-if="segment === 'projects' && !selectedProjectId"
+              label="New project"
+              icon="i-lucide-plus"
+              color="primary"
+              size="xs"
+              @click="projectsTableRef?.openNewProject()"
+            />
+            <UButton
+              v-if="segment === 'reports'"
+              label="Export CSV"
+              icon="i-lucide-download"
+              color="neutral"
+              variant="soft"
+              size="xs"
+              :loading="reportsSurfaceRef?.isExporting"
+              :disabled="!reportsSurfaceRef?.canExport"
+              @click="reportsSurfaceRef?.downloadCsv()"
+            />
+          </template>
+        </AgencyTopBar>
 
-        <header class="flex flex-wrap items-baseline justify-between gap-2">
-          <div>
-            <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-              {{ currentSegment.label }}
-            </p>
-            <h1 class="mt-1 text-xl font-bold text-highlighted">
-              {{ currentSegment.subtitle }}
-            </h1>
-          </div>
-        </header>
-
-        <AgencyWorkSurface
-          v-if="segment === 'work'"
-          :team-id="selectedTeamId"
-          @select-project="openProject"
-        />
-
-        <template v-else-if="segment === 'projects'">
-          <AgencyProjectDetail
-            v-if="selectedProjectId"
+        <div
+          :id="panelIdFor(segment)"
+          class="min-h-0 flex-1"
+          role="tabpanel"
+          :aria-labelledby="`agency-tab-${segment}`"
+        >
+          <AgencyWorkSurface
+            v-if="segment === 'work'"
             :team-id="selectedTeamId"
-            :project-id="selectedProjectId"
-            @back="closeProject"
+            @select-project="openProject"
           />
-          <AgencyProjectsTable v-else :team-id="selectedTeamId" @select="openProject" />
-        </template>
 
-        <AgencyClientsSurface v-else-if="segment === 'clients'" :team-id="selectedTeamId" />
+          <template v-else-if="segment === 'projects'">
+            <AgencyProjectDetail
+              v-if="selectedProjectId"
+              :team-id="selectedTeamId"
+              :project-id="selectedProjectId"
+              @back="closeProject"
+            />
+            <AgencyProjectsTable
+              v-else
+              ref="projectsTableRef"
+              :team-id="selectedTeamId"
+              hide-toolbar-actions
+              @select="openProject"
+            />
+          </template>
 
-        <AgencyReportsSurface v-else-if="segment === 'reports'" :team-id="selectedTeamId" />
+          <AgencyClientsSurface v-else-if="segment === 'clients'" :team-id="selectedTeamId" />
 
-        <AgencyResourcingSurface
-          v-else-if="segment === 'resourcing'"
-          :team-id="selectedTeamId"
-          @update:segment="segment = $event as AgencySegmentId"
-        />
+          <AgencyReportsSurface
+            v-else-if="segment === 'reports'"
+            ref="reportsSurfaceRef"
+            :team-id="selectedTeamId"
+            hide-toolbar-export
+          />
 
-        <AgencyBillingSurface v-else-if="segment === 'billing'" :team-id="selectedTeamId" />
+          <AgencyResourcingSurface
+            v-else-if="segment === 'resourcing'"
+            :team-id="selectedTeamId"
+            @update:segment="segment = $event as AgencySegmentId"
+          />
 
-        <AgencySettingsSurface v-else-if="segment === 'settings'" :team-id="selectedTeamId" />
+          <AgencyBillingSurface v-else-if="segment === 'billing'" :team-id="selectedTeamId" />
+
+          <AgencySettingsSurface v-else-if="segment === 'settings'" :team-id="selectedTeamId" />
+        </div>
       </div>
     </main>
   </div>

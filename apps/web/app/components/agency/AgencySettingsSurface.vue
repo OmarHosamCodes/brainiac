@@ -380,7 +380,7 @@ async function deleteTag(tagId: string, tagName: string) {
                   </td>
                   <td class="px-5 py-3 text-muted">
                     {{
-                      rate.effectiveFrom ? new Date(rate.effectiveFrom).toLocaleDateString() : "—"
+                      rate.effectiveFrom ? new Date(rate.effectiveFrom).toLocaleDateString() : "Not set"
                     }}
                   </td>
                   <td class="px-3 py-3 text-right">

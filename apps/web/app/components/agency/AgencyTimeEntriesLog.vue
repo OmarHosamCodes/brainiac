@@ -6,6 +6,7 @@ import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
 import { formatDuration } from "~/utils/format-duration";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
+import { agencyLabelClass, agencyMetricClass } from "~/utils/agency-ui";
 
 const props = defineProps<{
   teamId: string;
@@ -330,31 +331,32 @@ function toggleGroup(key: string) {
       :description="getErrorMessage(logQueryError, 'Please refresh and try again.')"
     />
 
-    <section class="space-y-3 rounded-3xl border border-muted/20 bg-elevated/10 p-4">
+    <section class="space-y-3 border-t border-default pt-4">
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h3 class="text-sm font-semibold text-highlighted">My time entries</h3>
         <div class="flex items-center gap-3">
           <div class="text-right">
-            <p class="text-[10px] uppercase tracking-[0.16em] text-muted">Today</p>
-            <p class="font-mono text-sm font-semibold tabular-nums text-highlighted">
+            <p :class="agencyLabelClass">Today</p>
+            <p :class="['text-sm font-semibold', agencyMetricClass]">
               {{ formatDuration(todaySeconds, "short") }}
             </p>
           </div>
-          <div class="h-6 w-px bg-muted/20" />
+          <div class="h-6 w-px bg-default" />
           <div class="text-right">
-            <p class="text-[10px] uppercase tracking-[0.16em] text-muted">This week</p>
-            <p class="font-mono text-sm font-semibold tabular-nums text-primary">
+            <p :class="agencyLabelClass">This week</p>
+            <p :class="['text-sm font-semibold', agencyMetricClass]">
               {{ formatDuration(weekSummary?.totalSeconds ?? 0, "short") }}
             </p>
           </div>
         </div>
       </div>
 
-      <div
-        v-if="entriesQuery.isPending.value && entries.length === 0"
-        class="rounded-2xl border border-dashed border-muted/30 p-4 text-sm text-muted"
-      >
-        Loading time entries...
+      <div v-if="entriesQuery.isPending.value && entries.length === 0" class="space-y-2">
+        <div
+          v-for="rowIndex in 3"
+          :key="rowIndex"
+          class="h-14 animate-pulse rounded-xl bg-elevated/60"
+        />
       </div>
 
       <div
@@ -367,7 +369,7 @@ function toggleGroup(key: string) {
       <article
         v-for="group in groupedEntries"
         :key="group.key"
-        class="rounded-2xl border border-muted/20 bg-default/70 p-3"
+        class="border-b border-default py-3 last:border-b-0"
       >
         <div class="flex items-start gap-3">
           <button
@@ -391,7 +393,7 @@ function toggleGroup(key: string) {
             </p>
             <div v-if="group.entries.length === 1" class="mt-1.5">
               <span class="text-[10px] text-muted">
-                {{ formatDateTime(group.entries[0]!.startedAt) }} &ndash;
+                {{ formatDateTime(group.entries[0]!.startedAt) }} to
                 {{ formatDateTime(group.entries[0]!.endedAt) }}
               </span>
             </div>
@@ -508,7 +510,7 @@ function toggleGroup(key: string) {
               class="flex items-center justify-between gap-2"
             >
               <span class="text-[10px] text-muted">
-                {{ formatDateTime(entry.startedAt) }} &ndash; {{ formatDateTime(entry.endedAt) }}
+                {{ formatDateTime(entry.startedAt) }} to {{ formatDateTime(entry.endedAt) }}
               </span>
               <div class="flex shrink-0 items-center gap-1.5">
                 <span class="font-mono text-[10px] tabular-nums text-muted">

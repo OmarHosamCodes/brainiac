@@ -183,7 +183,9 @@ function onDrop(event: DragEvent) {
   >
     <div
       v-if="isDraggingFile"
-      class="pointer-events-none absolute inset-2 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-primary bg-primary/10 text-sm font-bold text-primary backdrop-blur-sm"
+      role="status"
+      aria-live="polite"
+      class="pointer-events-none absolute inset-2 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 text-sm font-bold text-highlighted"
     >
       Drop files to attach them to this task.
     </div>

@@ -322,7 +322,7 @@ async function deleteTag(tagId: string) {
       <!-- Empty state -->
       <div v-else class="rounded-2xl border border-dashed border-muted/30 p-4 text-center">
         <p class="text-xs text-muted">
-          No tags yet — add your first tag to start categorizing time entries
+          No tags yet. Add your first tag to start categorizing time entries.
         </p>
       </div>
     </div>

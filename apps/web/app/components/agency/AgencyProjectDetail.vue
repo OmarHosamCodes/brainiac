@@ -19,6 +19,12 @@ import { useQuery } from "@tanstack/vue-query";
 import AgencyProjectTasks from "~/components/agency/AgencyProjectTasks.vue";
 import { formatDuration } from "~/utils/format-duration";
 import { getErrorMessage } from "~/utils/get-error-message";
+import {
+  agencyLabelClass,
+  agencyMetricClass,
+  agencyErrorPanelClass,
+  agencyEmptyPanelClass,
+} from "~/utils/agency-ui";
 import { projectHueStyle } from "~/utils/project-palette";
 
 const props = defineProps<{
@@ -174,6 +180,11 @@ const isLoading = computed(() => projectsQuery.isPending.value || entriesQuery.i
 const isError = computed(
   () => Boolean(projectsQuery.error.value) || Boolean(entriesQuery.error.value),
 );
+
+function retryLoad() {
+  void projectsQuery.refetch();
+  void entriesQuery.refetch();
+}
 </script>
 
 <template>
@@ -200,7 +211,7 @@ const isError = computed(
     </div>
 
     <!-- Error -->
-    <div v-else-if="isError" class="rounded-2xl border border-error/30 bg-error/5 p-6 text-center">
+    <div v-else-if="isError" :class="agencyErrorPanelClass" role="alert">
       <UIcon name="i-lucide-alert-triangle" class="mx-auto size-5 text-error" />
       <p class="mt-3 text-sm font-bold text-highlighted">Couldn't load this project.</p>
       <p class="mt-1 text-xs text-muted">
@@ -214,14 +225,14 @@ const isError = computed(
         variant="soft"
         size="xs"
         class="mt-3"
-        @click="entriesQuery.refetch()"
+        @click="retryLoad"
       />
     </div>
 
     <!-- Project not found (e.g. stale link) -->
     <div
       v-else-if="!project"
-      class="rounded-2xl border border-dashed border-default bg-muted/20 p-10 text-center"
+      :class="agencyEmptyPanelClass"
     >
       <UIcon name="i-lucide-folder-x" class="mx-auto size-7 text-muted" />
       <p class="mt-4 text-sm font-bold text-highlighted">Project not found.</p>
@@ -247,26 +258,28 @@ const isError = computed(
               </span>
             </h2>
           </div>
-          <div class="flex items-center gap-6">
+          <div class="flex flex-wrap items-baseline gap-x-6 gap-y-2 text-xs">
             <div>
-              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">This week</p>
-              <p
-                class="mt-1 font-mono text-xl font-bold tabular-nums"
-                :class="totalsThisWeek > 0 ? 'text-highlighted' : 'text-dimmed'"
+              <span :class="agencyLabelClass">This week</span>
+              <span
+                :class="[
+                  'ml-2 font-mono tabular-nums font-bold',
+                  totalsThisWeek > 0 ? 'text-highlighted' : 'text-dimmed',
+                ]"
               >
                 {{ formatDuration(totalsThisWeek, "short") }}
-              </p>
+              </span>
             </div>
             <div>
-              <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                Last 30 days
-              </p>
-              <p
-                class="mt-1 font-mono text-xl font-bold tabular-nums"
-                :class="totalsLast30 > 0 ? 'text-highlighted' : 'text-dimmed'"
+              <span :class="agencyLabelClass">Last 30 days</span>
+              <span
+                :class="[
+                  'ml-2 font-mono tabular-nums font-bold',
+                  totalsLast30 > 0 ? 'text-highlighted' : 'text-dimmed',
+                ]"
               >
                 {{ formatDuration(totalsLast30, "short") }}
-              </p>
+              </span>
             </div>
           </div>
         </div>
@@ -352,7 +365,7 @@ const isError = computed(
               </span>
               <span class="truncate font-bold text-highlighted">{{ entry.userName }}</span>
               <span class="truncate text-muted">
-                {{ entry.description || "—" }}
+                {{ entry.description || "None" }}
               </span>
               <span class="text-right font-mono font-bold tabular-nums text-highlighted">
                 {{ formatDuration(entry.durationSeconds, "short") }}
