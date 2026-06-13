@@ -5,6 +5,7 @@ import AgencyTaskList from "~/components/agency/AgencyTaskList.vue";
 import AgencyTaskThread from "~/components/agency/AgencyTaskThread.vue";
 import AgencyTimeEntriesLog from "~/components/agency/AgencyTimeEntriesLog.vue";
 import AgencyTimeTracker from "~/components/agency/AgencyTimeTracker.vue";
+import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
 
 const props = defineProps<{
   teamId: string;
@@ -18,12 +19,14 @@ const orpc = useOrpc();
 const teamId = computed(() => props.teamId);
 
 const projectsQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.projects.list.queryOptions({
-      input: { teamId: teamId.value },
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.projects.list.queryOptions({
+        input: { teamId: teamId.value },
+      }),
+      enabled: Boolean(teamId.value),
     }),
-    enabled: Boolean(teamId.value),
-  })),
+  ),
 );
 
 const projects = computed(() => projectsQuery.data.value?.items ?? []);

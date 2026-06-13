@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/vue-query";
 import { storeToRefs } from "pinia";
 
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
+import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
 import { formatDuration } from "~/utils/format-duration";
 
 const props = defineProps<{
@@ -34,13 +35,14 @@ onBeforeUnmount(() => {
 });
 
 const activeTimerQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.timer.getActive.queryOptions({
-      input: { teamId: props.teamId || undefined },
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.timer.getActive.queryOptions({
+        input: { teamId: props.teamId || undefined },
+      }),
+      enabled: Boolean(props.teamId),
     }),
-    enabled: Boolean(props.teamId),
-    refetchInterval: 10_000,
-  })),
+  ),
 );
 
 const activeTimer = computed(() => activeTimerQuery.data.value?.timer ?? null);

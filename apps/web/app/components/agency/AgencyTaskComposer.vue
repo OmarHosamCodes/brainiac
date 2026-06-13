@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useMutation } from "@tanstack/vue-query";
 
+import { useAgencyOpsStore } from "~/stores/agency-ops";
 import AgencyVoiceRecorder from "~/components/agency/AgencyVoiceRecorder.vue";
 import { getErrorMessage } from "~/utils/get-error-message";
 
@@ -15,6 +16,7 @@ const emit = defineEmits<{
 }>();
 
 const orpc = useOrpc();
+const agencyOps = useAgencyOpsStore();
 const toast = useToast();
 
 const content = ref("");
@@ -42,23 +44,7 @@ type PendingAttachment = {
 };
 
 const pendingAttachments = ref<PendingAttachment[]>([]);
-
-const createMessageMutation = useMutation(
-  orpc.agencyOps.taskThreads.messages.create.mutationOptions({
-    onSuccess: () => {
-      content.value = "";
-      pendingAttachments.value = [];
-      emit("sent");
-    },
-    onError: (error) => {
-      toast.add({
-        title: "Couldn't send message",
-        description: getErrorMessage(error, "Try again."),
-        color: "error",
-      });
-    },
-  }),
-);
+const isSending = ref(false);
 
 const askAgentMutation = useMutation(
   orpc.agencyOps.taskAgent.ask.mutationOptions({
@@ -86,9 +72,7 @@ const createAttachmentMutation = useMutation(
   orpc.agencyOps.taskThreads.attachments.create.mutationOptions(),
 );
 
-const isBusy = computed(
-  () => createMessageMutation.isPending.value || askAgentMutation.isPending.value,
-);
+const isBusy = computed(() => isSending.value || askAgentMutation.isPending.value);
 
 async function send() {
   const text = content.value.trim();
@@ -115,27 +99,44 @@ async function send() {
     return;
   }
 
-  await createMessageMutation.mutateAsync({
-    teamId: props.teamId,
-    taskId: props.taskId,
-    content: text,
-    type:
-      pendingAttachments.value.length > 0 &&
-      pendingAttachments.value.every((a) => a.durationSeconds !== null)
-        ? "voice"
-        : pendingAttachments.value.length > 0
-          ? "attachment"
-          : "text",
-    attachments: pendingAttachments.value.map((a) => ({
-      fileName: a.fileName,
-      mimeType: a.mimeType,
-      storageKey: a.storageKey,
-      sizeBytes: a.sizeBytes,
-      durationSeconds: a.durationSeconds ?? undefined,
-      uploadToken: a.uploadToken,
-      metadata: a.metadata,
-    })),
-  });
+  isSending.value = true;
+  try {
+    await agencyOps.sendTaskMessage({
+      teamId: props.teamId,
+      taskId: props.taskId,
+      content: text,
+      type:
+        pendingAttachments.value.length > 0 &&
+        pendingAttachments.value.every((a) => a.durationSeconds !== null)
+          ? "voice"
+          : pendingAttachments.value.length > 0
+            ? "attachment"
+            : "text",
+      attachments:
+        pendingAttachments.value.length > 0
+          ? pendingAttachments.value.map((a) => ({
+              fileName: a.fileName,
+              mimeType: a.mimeType,
+              storageKey: a.storageKey,
+              sizeBytes: a.sizeBytes,
+              durationSeconds: a.durationSeconds ?? undefined,
+              uploadToken: a.uploadToken,
+              metadata: a.metadata,
+            }))
+          : undefined,
+    });
+    content.value = "";
+    pendingAttachments.value = [];
+    emit("sent");
+  } catch (error) {
+    toast.add({
+      title: "Couldn't send message",
+      description: getErrorMessage(error, "Try again."),
+      color: "error",
+    });
+  } finally {
+    isSending.value = false;
+  }
 }
 
 function onKeydown(event: KeyboardEvent) {

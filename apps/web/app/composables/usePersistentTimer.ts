@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/vue-query";
 import { computed, watch } from "vue";
 
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
+import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
 
 /**
  * Global "current agency team" state for the persistent timer.
@@ -51,15 +52,16 @@ export function usePersistentTimer() {
   const teamId = computed(() => currentAgencyTeamId.value);
 
   const activeTimerQuery = useQuery(
-    computed(() => ({
-      ...orpc.agencyOps.timer.getActive.queryOptions({
-        input: {
-          teamId: teamId.value || undefined,
-        },
+    computed(() =>
+      withAgencyLiveQueryOptions({
+        ...orpc.agencyOps.timer.getActive.queryOptions({
+          input: {
+            teamId: teamId.value || undefined,
+          },
+        }),
+        enabled: Boolean(teamId.value),
       }),
-      enabled: Boolean(teamId.value),
-      refetchInterval: 15_000,
-    })),
+    ),
   );
 
   const activeTimerQueryKey = computed(

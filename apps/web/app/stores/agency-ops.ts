@@ -9,6 +9,7 @@
  * and AgencyProjectsTable).
  */
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
+import type { AgencyLiveEvent } from "@brainiac/api/routers/agency-ops/live";
 import { defineStore } from "pinia";
 import { ref } from "vue";
 
@@ -105,10 +106,85 @@ type RegisteredProjectsQuery = {
 type RegisteredProjectTasksQuery = {
   queryKey: QueryKey;
   teamId: string;
-  projectId: string;
+  projectId?: string;
 };
 
 type RegisteredTagsQuery = {
+  queryKey: QueryKey;
+  teamId: string;
+};
+
+type AgencyTaskMessage = {
+  id: string;
+  teamId: string;
+  threadId: string;
+  userId: string;
+  userName: string;
+  userAvatar: string | null;
+  content: string;
+  type: "text" | "voice" | "attachment";
+  senderType: "user" | "agent";
+  createdAt: string;
+  updatedAt: string;
+  attachments: Array<{
+    id: string;
+    teamId: string;
+    messageId: string;
+    fileName: string;
+    mimeType: string;
+    storageKey: string;
+    sizeBytes: number;
+    durationSeconds: number | null;
+    metadata?: unknown;
+    createdAt: string;
+    url: string | null;
+  }>;
+};
+
+type AgencyTaskMessagesListQueryData = {
+  items: AgencyTaskMessage[];
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
+type AgencyContact = {
+  id: string;
+  teamId: string;
+  clientId: string;
+  name: string;
+  email: string;
+  phone: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type AgencyCapacityListQueryData = {
+  weeks: Array<{
+    weekStart: string;
+    members: Array<{
+      userId: string;
+      userName: string;
+      capacitySeconds: number;
+      bookedSeconds: number;
+      loggedSeconds: number;
+    }>;
+  }>;
+};
+
+type RegisteredTaskMessagesQuery = {
+  queryKey: QueryKey;
+  teamId: string;
+  taskId: string;
+};
+
+type RegisteredContactQuery = {
+  queryKey: QueryKey;
+  teamId: string;
+  clientId: string;
+};
+
+type RegisteredCapacityQuery = {
   queryKey: QueryKey;
   teamId: string;
 };
@@ -149,6 +225,31 @@ type DeleteProjectTaskPayload = {
   teamId: string;
   taskId: string;
   taskTitle: string;
+};
+
+type UpdateProjectTaskPayload = {
+  teamId: string;
+  taskId: string;
+  title?: string;
+  status?: AgencyProjectTask["status"];
+  assigneeUserId?: string | null;
+  dueDate?: string | null;
+};
+
+type SendTaskMessagePayload = {
+  teamId: string;
+  taskId: string;
+  content: string;
+  type?: "text" | "voice" | "attachment";
+  attachments?: Array<{
+    fileName: string;
+    mimeType: string;
+    storageKey: string;
+    sizeBytes: number;
+    durationSeconds?: number | null;
+    uploadToken: string;
+    metadata?: Record<string, unknown>;
+  }>;
 };
 
 type CreateTagPayload = {
@@ -241,6 +342,9 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
   const projectsQueryRegistry = new Map<string, RefCounted<RegisteredProjectsQuery>>();
   const projectTasksQueryRegistry = new Map<string, RefCounted<RegisteredProjectTasksQuery>>();
   const tagsQueryRegistry = new Map<string, RefCounted<RegisteredTagsQuery>>();
+  const taskMessagesQueryRegistry = new Map<string, RefCounted<RegisteredTaskMessagesQuery>>();
+  const contactsQueryRegistry = new Map<string, RefCounted<RegisteredContactQuery>>();
+  const capacityQueryRegistry = new Map<string, RefCounted<RegisteredCapacityQuery>>();
 
   // Mutations
   const createClientMutation = useMutation(orpc.agencyOps.clients.create.mutationOptions());
@@ -252,6 +356,12 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
   );
   const deleteProjectTaskMutation = useMutation(
     orpc.agencyOps.projectTasks.delete.mutationOptions(),
+  );
+  const updateProjectTaskMutation = useMutation(
+    orpc.agencyOps.projectTasks.update.mutationOptions(),
+  );
+  const createTaskMessageMutation = useMutation(
+    orpc.agencyOps.taskThreads.messages.create.mutationOptions(),
   );
   const createTagMutation = useMutation(orpc.agencyOps.tags.create.mutationOptions());
   const deleteTagMutation = useMutation(orpc.agencyOps.tags.delete.mutationOptions());
@@ -325,6 +435,30 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     unregisterFrom(tagsQueryRegistry, registryKey(queryKey));
   }
 
+  function registerTaskMessagesQuery(payload: RegisteredTaskMessagesQuery) {
+    registerInto(taskMessagesQueryRegistry, registryKey(payload.queryKey), payload);
+  }
+
+  function unregisterTaskMessagesQuery(queryKey: QueryKey) {
+    unregisterFrom(taskMessagesQueryRegistry, registryKey(queryKey));
+  }
+
+  function registerContactQuery(payload: RegisteredContactQuery) {
+    registerInto(contactsQueryRegistry, registryKey(payload.queryKey), payload);
+  }
+
+  function unregisterContactQuery(queryKey: QueryKey) {
+    unregisterFrom(contactsQueryRegistry, registryKey(queryKey));
+  }
+
+  function registerCapacityQuery(payload: RegisteredCapacityQuery) {
+    registerInto(capacityQueryRegistry, registryKey(payload.queryKey), payload);
+  }
+
+  function unregisterCapacityQuery(queryKey: QueryKey) {
+    unregisterFrom(capacityQueryRegistry, registryKey(queryKey));
+  }
+
   // ---------------------------------------------------------------------------
   // Snapshot / restore helpers
   // ---------------------------------------------------------------------------
@@ -360,6 +494,15 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
       if (reg.teamId !== teamId) return;
       queryClient.setQueryData<AgencyClientsListQueryData | undefined>(reg.queryKey, (current) => {
         if (!current) return current;
+        const exists = current.items.some((item) => item.id === client.id);
+        if (exists) {
+          return {
+            ...current,
+            items: current.items.map((item) =>
+              item.id === client.id ? { ...item, ...client } : item,
+            ),
+          };
+        }
         return {
           ...current,
           items: [client, ...current.items],
@@ -379,14 +522,6 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
           items: current.items.map((c) => (c.id === clientId ? { ...c, ...patch } : c)),
         };
       });
-    });
-  }
-
-  async function invalidateClientsQueries(teamId: string) {
-    // Use a partial-matching key so we also refresh queries that were cached
-    // but aren't currently registered (e.g. an unmounted-but-cached surface).
-    await queryClient.invalidateQueries({
-      queryKey: orpc.agencyOps.clients.list.key({ input: { teamId } }),
     });
   }
 
@@ -411,26 +546,52 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     });
   }
 
-  async function invalidateProjectsQueries(teamId: string) {
-    await queryClient.invalidateQueries({
-      queryKey: orpc.agencyOps.projects.list.key({ input: { teamId } }),
-    });
-  }
-
   // ---------------------------------------------------------------------------
   // Project tasks cache patchers
   // ---------------------------------------------------------------------------
 
   function patchInsertedProjectTask(teamId: string, task: AgencyProjectTask) {
     projectTasksQueryRegistry.forEach(({ payload: reg }) => {
-      if (reg.teamId !== teamId || reg.projectId !== task.projectId) return;
+      if (reg.teamId !== teamId) return;
+      if (reg.projectId && reg.projectId !== task.projectId) return;
       queryClient.setQueryData<AgencyProjectTasksListQueryData | undefined>(
         reg.queryKey,
         (current) => {
           if (!current) return current;
+          const exists = current.items.some((item) => item.id === task.id);
+          if (exists) {
+            return {
+              ...current,
+              items: current.items.map((item) => (item.id === task.id ? task : item)),
+            };
+          }
           return {
             ...current,
             items: [task, ...current.items],
+          };
+        },
+      );
+    });
+  }
+
+  function patchUpdatedProjectTask(teamId: string, task: AgencyProjectTask) {
+    projectTasksQueryRegistry.forEach(({ payload: reg }) => {
+      if (reg.teamId !== teamId) return;
+      if (reg.projectId && reg.projectId !== task.projectId) return;
+      queryClient.setQueryData<AgencyProjectTasksListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          const index = current.items.findIndex((item) => item.id === task.id);
+          if (index === -1) {
+            return {
+              ...current,
+              items: [task, ...current.items],
+            };
+          }
+          return {
+            ...current,
+            items: current.items.map((item) => (item.id === task.id ? task : item)),
           };
         },
       );
@@ -453,18 +614,118 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     });
   }
 
-  async function invalidateProjectTasksQuery(teamId: string, projectId: string) {
-    await queryClient.invalidateQueries({
-      queryKey: orpc.agencyOps.projectTasks.list.key({ input: { teamId, projectId } }),
+  function patchInsertedTaskMessage(teamId: string, taskId: string, message: AgencyTaskMessage) {
+    taskMessagesQueryRegistry.forEach(({ payload: reg }) => {
+      if (reg.teamId !== teamId || reg.taskId !== taskId) return;
+      queryClient.setQueryData<AgencyTaskMessagesListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          if (current.items.some((item) => item.id === message.id)) {
+            return {
+              ...current,
+              items: current.items.map((item) => (item.id === message.id ? message : item)),
+            };
+          }
+          return {
+            ...current,
+            items: [...current.items, message],
+            total: current.total + 1,
+          };
+        },
+      );
     });
   }
 
-  async function invalidateRegisteredProjectTasksQueries(teamId: string) {
-    await Promise.all(
-      registryPayloads(projectTasksQueryRegistry)
-        .filter((reg) => reg.teamId === teamId)
-        .map((reg) => queryClient.invalidateQueries({ queryKey: reg.queryKey })),
-    );
+  function patchUpsertedContact(teamId: string, clientId: string, contact: AgencyContact) {
+    contactsQueryRegistry.forEach(({ payload: reg }) => {
+      if (reg.teamId !== teamId || reg.clientId !== clientId) return;
+      queryClient.setQueryData(reg.queryKey, contact);
+    });
+  }
+
+  function patchCapacityCell(
+    teamId: string,
+    userId: string,
+    weekStart: string,
+    capacitySeconds: number,
+  ) {
+    capacityQueryRegistry.forEach(({ payload: reg }) => {
+      if (reg.teamId !== teamId) return;
+      queryClient.setQueryData<AgencyCapacityListQueryData | undefined>(reg.queryKey, (current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          weeks: current.weeks.map((week) => {
+            if (week.weekStart !== weekStart) return week;
+            return {
+              ...week,
+              members: week.members.map((member) =>
+                member.userId === userId ? { ...member, capacitySeconds } : member,
+              ),
+            };
+          }),
+        };
+      });
+    });
+  }
+
+  function reconcileCreatedClient(teamId: string, optimisticIdValue: string, created: AgencyClient) {
+    clientsQueryRegistry.forEach(({ payload: reg }) => {
+      if (reg.teamId !== teamId) return;
+      queryClient.setQueryData<AgencyClientsListQueryData | undefined>(reg.queryKey, (current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          items: current.items.map((client) =>
+            client.id === optimisticIdValue ? created : client,
+          ),
+        };
+      });
+    });
+  }
+
+  function reconcileCreatedProject(
+    teamId: string,
+    optimisticIdValue: string,
+    created: AgencyProject,
+  ) {
+    projectsQueryRegistry.forEach(({ payload: reg }) => {
+      if (reg.teamId !== teamId) return;
+      if (reg.clientId && reg.clientId !== created.clientId) return;
+      queryClient.setQueryData<AgencyProjectsListQueryData | undefined>(reg.queryKey, (current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          items: current.items.map((project) =>
+            project.id === optimisticIdValue ? created : project,
+          ),
+        };
+      });
+    });
+  }
+
+  function reconcileCreatedTask(
+    teamId: string,
+    optimisticIdValue: string,
+    created: AgencyProjectTask,
+  ) {
+    projectTasksQueryRegistry.forEach(({ payload: reg }) => {
+      if (reg.teamId !== teamId) return;
+      if (reg.projectId && reg.projectId !== created.projectId) return;
+      queryClient.setQueryData<AgencyProjectTasksListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            items: current.items.map((task) =>
+              task.id === optimisticIdValue ? created : task,
+            ),
+          };
+        },
+      );
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -537,11 +798,8 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
         name: payload.name.trim(),
       })) as AgencyClient;
 
-      // Replace optimistic row with real data
-      patchUpdatedClient(payload.teamId, optimisticClient.id, { id: created.id });
+      reconcileCreatedClient(payload.teamId, optimisticClient.id, created);
       callbacks?.onSuccess?.(created.id);
-
-      await invalidateClientsQueries(payload.teamId);
 
       toast.add({ title: "Client created", description: payload.name.trim(), color: "success" });
     } catch (error) {
@@ -570,13 +828,13 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
         updatedAt: nowIso,
       });
 
-      await updateClientMutation.mutateAsync({
+      const updated = (await updateClientMutation.mutateAsync({
         teamId: payload.teamId,
         clientId: payload.clientId,
         name: payload.name.trim(),
-      });
+      })) as AgencyClient;
 
-      await invalidateClientsQueries(payload.teamId);
+      patchUpdatedClient(payload.teamId, payload.clientId, updated);
 
       toast.add({ title: "Renamed", description: payload.name.trim(), color: "success" });
     } catch (error) {
@@ -611,13 +869,13 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     try {
       patchInsertedProject(payload.teamId, optimisticProject);
 
-      await createProjectMutation.mutateAsync({
+      const created = (await createProjectMutation.mutateAsync({
         teamId: payload.teamId,
         clientId: payload.clientId,
         name: payload.name.trim(),
-      });
+      })) as AgencyProject;
 
-      await invalidateProjectsQueries(payload.teamId);
+      reconcileCreatedProject(payload.teamId, optimisticProject.id, created);
 
       toast.add({ title: "Project added", description: payload.name.trim(), color: "success" });
     } catch (error) {
@@ -657,16 +915,16 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     try {
       patchInsertedProjectTask(payload.teamId, optimisticTask);
 
-      await createProjectTaskMutation.mutateAsync({
+      const created = (await createProjectTaskMutation.mutateAsync({
         teamId: payload.teamId,
         projectId: payload.projectId,
         title,
         status: payload.status,
         assigneeUserId: payload.assigneeUserId,
         dueDate: payload.dueDate,
-      });
+      })) as AgencyProjectTask;
 
-      await invalidateProjectTasksQuery(payload.teamId, payload.projectId);
+      reconcileCreatedTask(payload.teamId, optimisticTask.id, created);
 
       toast.add({ title: "Task added", description: title, color: "success" });
     } catch (error) {
@@ -694,8 +952,6 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
         teamId: payload.teamId,
         taskId: payload.taskId,
       });
-
-      await invalidateRegisteredProjectTasksQueries(payload.teamId);
 
       toast.add({ title: "Task deleted", description: payload.taskTitle, color: "success" });
     } catch (error) {
@@ -812,8 +1068,6 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
         clientId: payload.clientId,
       });
 
-      await invalidateClientsQueries(payload.teamId);
-
       toast.add({
         title: "Client archived",
         description: `${payload.clientName} has been archived.`,
@@ -844,20 +1098,15 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     contactMutationCount.value += 1;
 
     try {
-      await upsertContactMutation.mutateAsync({
+      const contact = (await upsertContactMutation.mutateAsync({
         teamId: payload.teamId,
         clientId: payload.clientId,
         name: payload.name,
         email: payload.email,
         phone: payload.phone,
-      });
+      })) as AgencyContact;
 
-      // Invalidate the contacts query for this client.
-      await queryClient.invalidateQueries({
-        queryKey: orpc.agencyOps.contacts.get.key({
-          input: { teamId: payload.teamId, clientId: payload.clientId },
-        }),
-      });
+      patchUpsertedContact(payload.teamId, payload.clientId, contact);
 
       callbacks?.onSuccess?.();
       toast.add({ title: "Contact saved", color: "success" });
@@ -915,9 +1164,17 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
   async function setCapacity(payload: SetCapacityPayload, callbacks?: { onSuccess?: () => void }) {
     if (!payload.teamId || !payload.userId) return;
 
+    const snapshots = snapshotQueries(registryPayloads(capacityQueryRegistry));
     capacityMutationCount.value += 1;
 
     try {
+      patchCapacityCell(
+        payload.teamId,
+        payload.userId,
+        payload.weekStart,
+        payload.capacitySeconds,
+      );
+
       await setCapacityMutation.mutateAsync({
         teamId: payload.teamId,
         userId: payload.userId,
@@ -925,13 +1182,10 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
         capacitySeconds: payload.capacitySeconds,
       });
 
-      await queryClient.invalidateQueries({
-        queryKey: orpc.agencyOps.capacity.list.key({ input: { teamId: payload.teamId } }),
-      });
-
       callbacks?.onSuccess?.();
       toast.add({ title: "Capacity updated", color: "success" });
     } catch (error) {
+      restoreQuerySnapshots(snapshots);
       toast.add({
         title: "Couldn't update capacity",
         description: getErrorMessage(error, "Try again."),
@@ -939,6 +1193,187 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
       });
     } finally {
       capacityMutationCount.value = Math.max(0, capacityMutationCount.value - 1);
+    }
+  }
+
+  function getCachedProjectTask(teamId: string, taskId: string): AgencyProjectTask | null {
+    for (const { payload: reg } of projectTasksQueryRegistry.values()) {
+      if (reg.teamId !== teamId) continue;
+      const data = queryClient.getQueryData<AgencyProjectTasksListQueryData>(reg.queryKey);
+      const task = data?.items.find((item) => item.id === taskId);
+      if (task) return task;
+    }
+    return null;
+  }
+
+  async function updateProjectTask(payload: UpdateProjectTaskPayload) {
+    if (!payload.teamId || !payload.taskId) return;
+
+    const current = getCachedProjectTask(payload.teamId, payload.taskId);
+    if (!current) return;
+
+    const snapshots = snapshotQueries(registryPayloads(projectTasksQueryRegistry));
+    const nowIso = new Date().toISOString();
+    taskMutationCount.value += 1;
+
+    const optimisticTask: AgencyProjectTask = {
+      ...current,
+      title: payload.title ?? current.title,
+      status: payload.status ?? current.status,
+      assigneeUserId:
+        payload.assigneeUserId === undefined ? current.assigneeUserId : payload.assigneeUserId,
+      dueDate: payload.dueDate === undefined ? current.dueDate : payload.dueDate,
+      updatedAt: nowIso,
+    };
+
+    try {
+      patchUpdatedProjectTask(payload.teamId, optimisticTask);
+
+      const updated = (await updateProjectTaskMutation.mutateAsync({
+        teamId: payload.teamId,
+        taskId: payload.taskId,
+        title: payload.title,
+        status: payload.status,
+        assigneeUserId: payload.assigneeUserId,
+        dueDate: payload.dueDate,
+      })) as AgencyProjectTask;
+
+      patchUpdatedProjectTask(payload.teamId, updated);
+    } catch (error) {
+      restoreQuerySnapshots(snapshots);
+      toast.add({
+        title: "Couldn't update task",
+        description: getErrorMessage(error, "Try again."),
+        color: "error",
+      });
+      throw error;
+    } finally {
+      taskMutationCount.value = Math.max(0, taskMutationCount.value - 1);
+    }
+  }
+
+  async function sendTaskMessage(payload: SendTaskMessagePayload) {
+    if (!payload.teamId || !payload.taskId) return;
+
+    const snapshots = snapshotQueries(registryPayloads(taskMessagesQueryRegistry));
+    const nowIso = new Date().toISOString();
+    const optimisticMessage: AgencyTaskMessage = {
+      id: optimisticId("agency-task-message"),
+      teamId: payload.teamId,
+      threadId: payload.taskId,
+      userId: "",
+      userName: "You",
+      userAvatar: null,
+      content: payload.content,
+      type: payload.type ?? "text",
+      senderType: "user",
+      createdAt: nowIso,
+      updatedAt: nowIso,
+      attachments: [],
+    };
+
+    try {
+      patchInsertedTaskMessage(payload.teamId, payload.taskId, optimisticMessage);
+
+      const created = (await createTaskMessageMutation.mutateAsync({
+        teamId: payload.teamId,
+        taskId: payload.taskId,
+        content: payload.content,
+        type: payload.type,
+        attachments: payload.attachments,
+      })) as AgencyTaskMessage;
+
+      taskMessagesQueryRegistry.forEach(({ payload: reg }) => {
+        if (reg.teamId !== payload.teamId || reg.taskId !== payload.taskId) return;
+        queryClient.setQueryData<AgencyTaskMessagesListQueryData | undefined>(
+          reg.queryKey,
+          (current) => {
+            if (!current) return current;
+            return {
+              ...current,
+              items: current.items
+                .filter((item) => item.id !== optimisticMessage.id)
+                .concat(created),
+            };
+          },
+        );
+      });
+
+      return created;
+    } catch (error) {
+      restoreQuerySnapshots(snapshots);
+      throw error;
+    }
+  }
+
+  function applyLiveEvent(event: AgencyLiveEvent) {
+    switch (event.type) {
+      case "client.created":
+        patchInsertedClient(event.teamId, event.client);
+        break;
+      case "client.updated":
+        patchUpdatedClient(event.teamId, event.client.id, event.client);
+        break;
+      case "client.archived":
+        patchRemovedClient(event.teamId, event.clientId);
+        break;
+      case "client.unarchived":
+        patchInsertedClient(event.teamId, event.client);
+        break;
+      case "project.created":
+        patchInsertedProject(event.teamId, event.project);
+        break;
+      case "project.updated":
+        projectsQueryRegistry.forEach(({ payload: reg }) => {
+          if (reg.teamId !== event.teamId) return;
+          if (reg.clientId && reg.clientId !== event.project.clientId) return;
+          queryClient.setQueryData<AgencyProjectsListQueryData | undefined>(
+            reg.queryKey,
+            (current) => {
+              if (!current) return current;
+              return {
+                ...current,
+                items: current.items.map((project) =>
+                  project.id === event.project.id ? event.project : project,
+                ),
+              };
+            },
+          );
+        });
+        break;
+      case "projectTask.created":
+        patchInsertedProjectTask(event.teamId, event.task);
+        break;
+      case "projectTask.updated":
+        patchUpdatedProjectTask(event.teamId, event.task);
+        break;
+      case "projectTask.deleted":
+        patchDeletedProjectTask(event.teamId, event.taskId);
+        break;
+      case "taskMessage.created":
+        patchInsertedTaskMessage(event.teamId, event.taskId, event.message);
+        break;
+      case "contact.upserted":
+        patchUpsertedContact(event.teamId, event.clientId, event.contact);
+        break;
+      case "capacity.set":
+        patchCapacityCell(
+          event.teamId,
+          event.capacity.userId,
+          event.capacity.weekStart,
+          event.capacity.capacitySeconds,
+        );
+        break;
+      case "timer.started":
+      case "timer.stopped":
+      case "timeEntry.created":
+      case "timeEntry.updated":
+      case "timeEntry.deleted":
+        break;
+      default: {
+        const _exhaustive: never = event;
+        return _exhaustive;
+      }
     }
   }
 
@@ -1042,13 +1477,21 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     unregisterProjectTasksQuery,
     registerTagsQuery,
     unregisterTagsQuery,
+    registerTaskMessagesQuery,
+    unregisterTaskMessagesQuery,
+    registerContactQuery,
+    unregisterContactQuery,
+    registerCapacityQuery,
+    unregisterCapacityQuery,
     // Actions
     createClient,
     updateClient,
     archiveClient,
     createProject,
     createProjectTask,
+    updateProjectTask,
     deleteProjectTask,
+    sendTaskMessage,
     createTag,
     deleteTag,
     upsertContact,
@@ -1056,5 +1499,6 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     setCapacity,
     createInvoice,
     updateInvoiceStatus,
+    applyLiveEvent,
   };
 });

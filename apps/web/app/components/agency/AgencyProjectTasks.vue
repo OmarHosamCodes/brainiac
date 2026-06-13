@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/vue-query";
 
 import { getErrorMessage } from "~/utils/get-error-message";
+import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
 import { useAgencyOpsStore } from "~/stores/agency-ops";
 
 const props = defineProps<{
@@ -19,12 +20,14 @@ const projectId = computed(() => props.projectId);
 const titleDraft = ref("");
 
 const tasksQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.projectTasks.list.queryOptions({
-      input: { teamId: teamId.value, projectId: projectId.value },
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.projectTasks.list.queryOptions({
+        input: { teamId: teamId.value, projectId: projectId.value },
+      }),
+      enabled: Boolean(teamId.value) && Boolean(projectId.value),
     }),
-    enabled: Boolean(teamId.value) && Boolean(projectId.value),
-  })),
+  ),
 );
 
 const tasksQueryKey = computed(

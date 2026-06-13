@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { protectedProProcedure } from "../../procedures";
+import { agencyLivePublisher, liveUpdatedAt, publishAgencyLiveEvent } from "./live";
 import {
   archiveAgencyClient,
   createAgencyClient,
@@ -34,6 +35,7 @@ import {
   listTags,
   listTaskThreadMembers,
   listTaskThreadMessages,
+  requireTeamMembership,
   setMemberCapacity,
   startAgencyTimer,
   stopAgencyTimer,
@@ -262,7 +264,16 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return agencyClientSchema.parse(await createAgencyClient(context.session.user.id, input));
+        const client = agencyClientSchema.parse(
+          await createAgencyClient(context.session.user.id, input),
+        );
+        publishAgencyLiveEvent(input.teamId, {
+          type: "client.created",
+          teamId: input.teamId,
+          updatedAt: client.updatedAt,
+          client,
+        });
+        return client;
       }),
     update: protectedProProcedure
       .input(
@@ -272,21 +283,50 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return agencyClientSchema.parse(await updateAgencyClient(context.session.user.id, input));
+        const client = agencyClientSchema.parse(
+          await updateAgencyClient(context.session.user.id, input),
+        );
+        publishAgencyLiveEvent(input.teamId, {
+          type: "client.updated",
+          teamId: input.teamId,
+          updatedAt: client.updatedAt,
+          client,
+        });
+        return client;
       }),
     archive: protectedProProcedure
       .input(teamScopedInputSchema.extend({ clientId: z.string().min(1) }))
       .handler(async ({ context, input }) => {
-        return z
+        const result = z
           .object({ clientId: z.string().min(1), archived: z.boolean() })
           .parse(await archiveAgencyClient(context.session.user.id, input));
+        publishAgencyLiveEvent(input.teamId, {
+          type: "client.archived",
+          teamId: input.teamId,
+          updatedAt: liveUpdatedAt(new Date()),
+          clientId: result.clientId,
+        });
+        return result;
       }),
     unarchive: protectedProProcedure
       .input(teamScopedInputSchema.extend({ clientId: z.string().min(1) }))
       .handler(async ({ context, input }) => {
-        return z
+        const result = z
           .object({ clientId: z.string().min(1), archived: z.boolean() })
           .parse(await unarchiveAgencyClient(context.session.user.id, input));
+        const clients = await listAgencyClients(context.session.user.id, {
+          teamId: input.teamId,
+        });
+        const client = clients.items.find((item) => item.id === result.clientId);
+        if (client) {
+          publishAgencyLiveEvent(input.teamId, {
+            type: "client.unarchived",
+            teamId: input.teamId,
+            updatedAt: client.updatedAt,
+            client: agencyClientSchema.parse(client),
+          });
+        }
+        return result;
       }),
   },
   projects: {
@@ -309,7 +349,16 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return agencyProjectSchema.parse(await createAgencyProject(context.session.user.id, input));
+        const project = agencyProjectSchema.parse(
+          await createAgencyProject(context.session.user.id, input),
+        );
+        publishAgencyLiveEvent(input.teamId, {
+          type: "project.created",
+          teamId: input.teamId,
+          updatedAt: project.updatedAt,
+          project,
+        });
+        return project;
       }),
     update: protectedProProcedure
       .input(
@@ -320,7 +369,16 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return agencyProjectSchema.parse(await updateAgencyProject(context.session.user.id, input));
+        const project = agencyProjectSchema.parse(
+          await updateAgencyProject(context.session.user.id, input),
+        );
+        publishAgencyLiveEvent(input.teamId, {
+          type: "project.updated",
+          teamId: input.teamId,
+          updatedAt: project.updatedAt,
+          project,
+        });
+        return project;
       }),
   },
   projectTasks: {
@@ -350,9 +408,16 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return agencyProjectTaskSchema.parse(
+        const task = agencyProjectTaskSchema.parse(
           await createAgencyProjectTask(context.session.user.id, input),
         );
+        publishAgencyLiveEvent(input.teamId, {
+          type: "projectTask.created",
+          teamId: input.teamId,
+          updatedAt: task.updatedAt,
+          task,
+        });
+        return task;
       }),
     update: protectedProProcedure
       .input(
@@ -365,9 +430,16 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return agencyProjectTaskSchema.parse(
+        const task = agencyProjectTaskSchema.parse(
           await updateAgencyProjectTask(context.session.user.id, input),
         );
+        publishAgencyLiveEvent(input.teamId, {
+          type: "projectTask.updated",
+          teamId: input.teamId,
+          updatedAt: task.updatedAt,
+          task,
+        });
+        return task;
       }),
     delete: protectedProProcedure
       .input(
@@ -376,12 +448,19 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return z
+        const result = z
           .object({
             taskId: z.string().min(1),
             deleted: z.boolean(),
           })
           .parse(await deleteAgencyProjectTask(context.session.user.id, input));
+        publishAgencyLiveEvent(input.teamId, {
+          type: "projectTask.deleted",
+          teamId: input.teamId,
+          updatedAt: liveUpdatedAt(new Date()),
+          taskId: result.taskId,
+        });
+        return result;
       }),
   },
   taskThreads: {
@@ -439,9 +518,17 @@ export const agencyOpsRouter = {
           }),
         )
         .handler(async ({ context, input }) => {
-          return agencyTaskMessageSchema.parse(
+          const message = agencyTaskMessageSchema.parse(
             await createTaskThreadMessage(context.session.user.id, input),
           );
+          publishAgencyLiveEvent(input.teamId, {
+            type: "taskMessage.created",
+            teamId: input.teamId,
+            updatedAt: message.updatedAt,
+            taskId: input.taskId,
+            message,
+          });
+          return message;
         }),
     },
     attachments: {
@@ -603,7 +690,17 @@ export const agencyOpsRouter = {
           createdAt: z.string().datetime(),
           updatedAt: z.string().datetime(),
         });
-        return contactSchema.parse(await upsertClientContact(context.session.user.id, input));
+        const contact = contactSchema.parse(
+          await upsertClientContact(context.session.user.id, input),
+        );
+        publishAgencyLiveEvent(input.teamId, {
+          type: "contact.upserted",
+          teamId: input.teamId,
+          updatedAt: contact.updatedAt,
+          clientId: input.clientId,
+          contact,
+        });
+        return contact;
       }),
   },
   tags: {
@@ -655,9 +752,17 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return z
+        const result = z
           .object({ timer: agencyActiveTimerSchema.nullable() })
           .parse(await startAgencyTimer(context.session.user.id, input));
+        publishAgencyLiveEvent(input.teamId, {
+          type: "timer.started",
+          teamId: input.teamId,
+          updatedAt: liveUpdatedAt(new Date()),
+          userId: context.session.user.id,
+          timer: result.timer,
+        });
+        return result;
       }),
     stop: protectedProProcedure
       .input(
@@ -670,12 +775,24 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return z
+        const result = z
           .object({
             timer: agencyActiveTimerSchema.nullable(),
             createdEntry: agencyTimeEntrySchema.nullable(),
           })
           .parse(await stopAgencyTimer(context.session.user.id, input));
+        const teamId = input.teamId ?? result.createdEntry?.teamId ?? result.timer?.teamId;
+        if (teamId) {
+          publishAgencyLiveEvent(teamId, {
+            type: "timer.stopped",
+            teamId,
+            updatedAt: liveUpdatedAt(new Date()),
+            userId: context.session.user.id,
+            timer: result.timer,
+            createdEntry: result.createdEntry,
+          });
+        }
+        return result;
       }),
   },
   timeEntries: {
@@ -721,9 +838,16 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return agencyTimeEntrySchema.parse(
+        const entry = agencyTimeEntrySchema.parse(
           await createManualAgencyTimeEntry(context.session.user.id, input),
         );
+        publishAgencyLiveEvent(input.teamId, {
+          type: "timeEntry.created",
+          teamId: input.teamId,
+          updatedAt: entry.updatedAt,
+          entry,
+        });
+        return entry;
       }),
     updateMine: protectedProProcedure
       .input(
@@ -739,19 +863,34 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return agencyTimeEntrySchema.parse(
+        const entry = agencyTimeEntrySchema.parse(
           await updateMyAgencyTimeEntry(context.session.user.id, input),
         );
+        publishAgencyLiveEvent(input.teamId, {
+          type: "timeEntry.updated",
+          teamId: input.teamId,
+          updatedAt: entry.updatedAt,
+          entry,
+        });
+        return entry;
       }),
     deleteMine: protectedProProcedure
       .input(teamScopedInputSchema.extend({ entryId: z.string().min(1) }))
       .handler(async ({ context, input }) => {
-        return z
+        const result = z
           .object({
             entryId: z.string().min(1),
             deleted: z.boolean(),
           })
           .parse(await deleteMyAgencyTimeEntry(context.session.user.id, input));
+        publishAgencyLiveEvent(input.teamId, {
+          type: "timeEntry.deleted",
+          teamId: input.teamId,
+          updatedAt: liveUpdatedAt(new Date()),
+          entryId: result.entryId,
+          userId: context.session.user.id,
+        });
+        return result;
       }),
   },
   summary: {
@@ -928,13 +1067,20 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return z
+        const result = z
           .object({
             userId: z.string().min(1),
             weekStart: z.string().datetime(),
             capacitySeconds: z.number().int().nonnegative(),
           })
           .parse(await setMemberCapacity(context.session.user.id, input));
+        publishAgencyLiveEvent(input.teamId, {
+          type: "capacity.set",
+          teamId: input.teamId,
+          updatedAt: liveUpdatedAt(new Date()),
+          capacity: result,
+        });
+        return result;
       }),
   },
   invoices: {
@@ -1077,5 +1223,16 @@ export const agencyOpsRouter = {
           ],
         });
     }),
+  },
+  live: {
+    subscribe: protectedProProcedure
+      .input(teamScopedInputSchema)
+      .handler(async function* ({ context, input, signal }) {
+        await requireTeamMembership(context.session.user.id, input.teamId, "viewer");
+
+        for await (const event of agencyLivePublisher.subscribe(input.teamId, signal)) {
+          yield event;
+        }
+      }),
   },
 };

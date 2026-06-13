@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/vue-query";
 
 import { formatDuration } from "~/utils/format-duration";
 import { getErrorMessage } from "~/utils/get-error-message";
+import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
 
 const props = defineProps<{
   teamId: string;
@@ -37,17 +38,45 @@ const upcomingWeekStarts = computed(() => {
 });
 
 const capacityQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.capacity.list.queryOptions({
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.capacity.list.queryOptions({
+        input: {
+          teamId: teamId.value,
+          weekStart: weekStartIso.value,
+          weeks: WEEKS_AHEAD,
+        },
+      }),
+      enabled: Boolean(teamId.value),
+    }),
+  ),
+);
+
+const capacityQueryKey = computed(
+  () =>
+    orpc.agencyOps.capacity.list.queryOptions({
       input: {
         teamId: teamId.value,
         weekStart: weekStartIso.value,
         weeks: WEEKS_AHEAD,
       },
-    }),
-    enabled: Boolean(teamId.value),
-  })),
+    }).queryKey,
 );
+
+watch(
+  capacityQueryKey,
+  (next, prev) => {
+    if (prev) agencyOps.unregisterCapacityQuery(prev);
+    if (teamId.value) {
+      agencyOps.registerCapacityQuery({ queryKey: next, teamId: teamId.value });
+    }
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  agencyOps.unregisterCapacityQuery(capacityQueryKey.value);
+});
 
 const weeks = computed(() => capacityQuery.data.value?.weeks ?? []);
 

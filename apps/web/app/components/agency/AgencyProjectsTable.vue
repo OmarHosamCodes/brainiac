@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/vue-query";
 import { formatDuration } from "~/utils/format-duration";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { projectHueStyle } from "~/utils/project-palette";
+import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
 import { useAgencyOpsStore } from "~/stores/agency-ops";
 
 const props = defineProps<{
@@ -34,32 +35,38 @@ const filterTerm = ref("");
 const showArchived = ref(false);
 
 const projectsQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId: teamId.value } }),
-    enabled: Boolean(teamId.value),
-  })),
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId: teamId.value } }),
+      enabled: Boolean(teamId.value),
+    }),
+  ),
 );
 const clientsQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.clients.list.queryOptions({ input: { teamId: teamId.value } }),
-    enabled: Boolean(teamId.value),
-  })),
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.clients.list.queryOptions({ input: { teamId: teamId.value } }),
+      enabled: Boolean(teamId.value),
+    }),
+  ),
 );
 
 // Pull a generous window of recent entries to compute "hours this week" per
 // project. Honest: capped at pageSize=100 — large agencies will eventually
 // need a server aggregate (Phase 4 stub).
 const entriesQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.timeEntries.listMine.queryOptions({
-      input: {
-        teamId: teamId.value,
-        page: 1,
-        pageSize: 100,
-      },
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.timeEntries.listMine.queryOptions({
+        input: {
+          teamId: teamId.value,
+          page: 1,
+          pageSize: 100,
+        },
+      }),
+      enabled: Boolean(teamId.value),
     }),
-    enabled: Boolean(teamId.value),
-  })),
+  ),
 );
 
 // Phase 4 stub: budgets.list ships shaped-but-empty so the in-row budget bar

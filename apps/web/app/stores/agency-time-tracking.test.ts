@@ -393,7 +393,9 @@ describe("useAgencyTimeTrackingStore", () => {
   test("stopTimer clears the active timer and inserts an optimistic log entry", async () => {
     const runtime = getGlobalRuntime();
     const activeTimer = createActiveTimer();
-    const createdEntry = createTimeEntry();
+    const createdEntry = createTimeEntry({
+      linkUrl: "https://brainiac.test/stopped-entry",
+    });
     let stopInput: Record<string, unknown> | undefined;
     const activeTimerQueryKey = ["agencyOps", "timer", "getActive", { teamId: "team-1" }];
     const logQueryKey = [
@@ -571,5 +573,34 @@ describe("useAgencyTimeTrackingStore", () => {
     expect(cachedLog?.items.map((item) => item.id)).toEqual([entry.id]);
     expect(store.deletingEntryIds.value).toEqual([]);
     expect(runtime.toastEvents.at(-1)?.title).toBe("Unable to delete entry");
+  });
+
+  test("applyLiveEvent patches the active timer for the current user", async () => {
+    const runtime = getGlobalRuntime();
+    const activeTimerQueryKey = ["agencyOps", "timer", "getActive", { teamId: "team-1" }];
+    const store = await createStore();
+    const remoteTimer = createActiveTimer({
+      id: "timer-remote",
+      description: "Remote work",
+    });
+
+    setCachedQuery(runtime.queryCache, activeTimerQueryKey, { timer: null });
+    store.registerActiveTimerQuery({ teamId: "team-1", queryKey: activeTimerQueryKey });
+
+    store.applyLiveEvent({
+      type: "timer.started",
+      teamId: "team-1",
+      updatedAt: new Date().toISOString(),
+      userId: "user-1",
+      timer: remoteTimer,
+    });
+
+    const cachedTimer = getCachedQuery<{ timer: AgencyActiveTimer | null }>(
+      runtime.queryCache,
+      activeTimerQueryKey,
+    );
+
+    expect(cachedTimer?.timer?.id).toBe("timer-remote");
+    expect(cachedTimer?.timer?.description).toBe("Remote work");
   });
 });

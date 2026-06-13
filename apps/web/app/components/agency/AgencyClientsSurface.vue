@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/vue-query";
 
 import { formatDuration } from "~/utils/format-duration";
 import { projectHueStyle } from "~/utils/project-palette";
+import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
 import { useAgencyOpsStore } from "~/stores/agency-ops";
 const props = defineProps<{
   teamId: string;
@@ -40,32 +41,40 @@ const contactPhone = ref("");
 const contactDirty = ref(false);
 
 const clientsQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.clients.list.queryOptions({ input: { teamId: teamId.value } }),
-    enabled: Boolean(teamId.value),
-  })),
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.clients.list.queryOptions({ input: { teamId: teamId.value } }),
+      enabled: Boolean(teamId.value),
+    }),
+  ),
 );
 const projectsQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId: teamId.value } }),
-    enabled: Boolean(teamId.value),
-  })),
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId: teamId.value } }),
+      enabled: Boolean(teamId.value),
+    }),
+  ),
 );
 const entriesQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.timeEntries.listMine.queryOptions({
-      input: { teamId: teamId.value, page: 1, pageSize: 100 },
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.timeEntries.listMine.queryOptions({
+        input: { teamId: teamId.value, page: 1, pageSize: 100 },
+      }),
+      enabled: Boolean(teamId.value),
     }),
-    enabled: Boolean(teamId.value),
-  })),
+  ),
 );
 const contactQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.contacts.get.queryOptions({
-      input: { teamId: teamId.value, clientId: selectedClientId.value },
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.contacts.get.queryOptions({
+        input: { teamId: teamId.value, clientId: selectedClientId.value },
+      }),
+      enabled: Boolean(teamId.value) && Boolean(selectedClientId.value),
     }),
-    enabled: Boolean(teamId.value) && Boolean(selectedClientId.value),
-  })),
+  ),
 );
 
 // Register queries with the store so optimistic patches reach this component.
@@ -74,6 +83,27 @@ const clientsQueryKey = computed(
 );
 const projectsQueryKey = computed(
   () => orpc.agencyOps.projects.list.queryOptions({ input: { teamId: teamId.value } }).queryKey,
+);
+const contactQueryKey = computed(
+  () =>
+    orpc.agencyOps.contacts.get.queryOptions({
+      input: { teamId: teamId.value, clientId: selectedClientId.value },
+    }).queryKey,
+);
+
+watch(
+  contactQueryKey,
+  (next, prev) => {
+    if (prev) agencyOps.unregisterContactQuery(prev);
+    if (teamId.value && selectedClientId.value) {
+      agencyOps.registerContactQuery({
+        queryKey: next,
+        teamId: teamId.value,
+        clientId: selectedClientId.value,
+      });
+    }
+  },
+  { immediate: true },
 );
 
 watch(
@@ -97,6 +127,7 @@ watch(
 onUnmounted(() => {
   agencyOps.unregisterClientsQuery(clientsQueryKey.value);
   agencyOps.unregisterProjectsQuery(projectsQueryKey.value);
+  agencyOps.unregisterContactQuery(contactQueryKey.value);
 });
 
 const clients = computed(() => clientsQuery.data.value?.items ?? []);

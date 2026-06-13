@@ -5,6 +5,7 @@ import { storeToRefs } from "pinia";
 import { useAgencyTimeTrackingStore } from "~/stores/agency-time-tracking";
 import { formatDuration } from "~/utils/format-duration";
 import { getErrorMessage } from "~/utils/get-error-message";
+import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
 
 const props = defineProps<{
   teamId: string;
@@ -27,26 +28,30 @@ const page = ref(1);
 const pageSize = ref(20);
 
 const entriesQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.timeEntries.listMine.queryOptions({
-      input: {
-        teamId: effectiveTeamId.value,
-        page: page.value,
-        pageSize: pageSize.value,
-      },
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.timeEntries.listMine.queryOptions({
+        input: {
+          teamId: effectiveTeamId.value,
+          page: page.value,
+          pageSize: pageSize.value,
+        },
+      }),
+      enabled: Boolean(effectiveTeamId.value),
     }),
-    enabled: Boolean(effectiveTeamId.value),
-  })),
+  ),
 );
 const projectsQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.projects.list.queryOptions({
-      input: {
-        teamId: effectiveTeamId.value,
-      },
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.projects.list.queryOptions({
+        input: {
+          teamId: effectiveTeamId.value,
+        },
+      }),
+      enabled: Boolean(effectiveTeamId.value),
     }),
-    enabled: Boolean(effectiveTeamId.value),
-  })),
+  ),
 );
 const entriesQueryKey = computed(
   () =>

@@ -147,7 +147,41 @@ if (env.NODE_ENV === "development") {
  * To disable Traefik proxy and run on actual ports (3000/3001), use:
  *   bun run dev:portless
  */
+import {
+  authenticateWebSocket,
+  handleWebSocketClose,
+  handleWebSocketMessage,
+  type AgencyWebSocketData,
+} from "./lib/ws-handler";
+
 export default {
   port: 7000, // Proxied via Traefik (actual dev server is on 3000)
-  fetch: app.fetch,
+  fetch(request: Request, server: Bun.Server<AgencyWebSocketData>) {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/rpc/ws") {
+      const upgraded = server.upgrade(request, {
+        data: { request },
+      });
+
+      if (upgraded) {
+        return undefined;
+      }
+
+      return new Response("WebSocket upgrade failed", { status: 500 });
+    }
+
+    return app.fetch(request, server);
+  },
+  websocket: {
+    async open(ws: Bun.ServerWebSocket<AgencyWebSocketData>) {
+      await authenticateWebSocket(ws, ws.data.request);
+    },
+    message(ws: Bun.ServerWebSocket<AgencyWebSocketData>, message: string | Buffer) {
+      handleWebSocketMessage(ws, message);
+    },
+    close(ws: Bun.ServerWebSocket<AgencyWebSocketData>) {
+      handleWebSocketClose(ws);
+    },
+  },
 };

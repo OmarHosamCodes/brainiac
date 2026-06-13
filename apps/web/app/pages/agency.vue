@@ -13,6 +13,7 @@ import AgencyTopBar from "~/components/agency/AgencyTopBar.vue";
 import AgencyWorkSurface from "~/components/agency/AgencyWorkSurface.vue";
 import { AGENCY_SEGMENTS, type AgencySegmentId } from "~/components/agency/agency-segments";
 import { useCurrentAgencyTeam } from "~/composables/usePersistentTimer";
+import { useAgencyLiveSync } from "~/composables/useAgencyLiveSync";
 
 definePageMeta({
   layout: "app",
@@ -103,6 +104,11 @@ watch(
   },
   { immediate: true },
 );
+
+const agencyLiveTeamId = computed(() =>
+  agencyEnabled.value && selectedTeamId.value ? selectedTeamId.value : "",
+);
+useAgencyLiveSync(agencyLiveTeamId);
 
 onBeforeUnmount(() => {
   // Keep the chrome timer alive while the user navigates within the agency

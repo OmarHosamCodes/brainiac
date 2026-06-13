@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { useMutation, useQuery } from "@tanstack/vue-query";
+import { useQuery } from "@tanstack/vue-query";
 import type { SelectMenuItem } from "@nuxt/ui";
 
 import { getErrorMessage } from "~/utils/get-error-message";
+import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
 import { useAgencyOpsStore } from "~/stores/agency-ops";
 import { useAuthSession } from "~/composables/useAuthClient";
 import AgencyMiniTimer from "~/components/agency/AgencyMiniTimer.vue";
@@ -44,7 +45,6 @@ const emit = defineEmits<{
 
 const orpc = useOrpc();
 const agencyOps = useAgencyOpsStore();
-const toast = useToast();
 const authSession = useAuthSession();
 
 const teamId = computed(() => props.teamId);
@@ -74,29 +74,58 @@ watch(
 );
 
 const membersQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.taskThreads.members.list.queryOptions({
-      input: { teamId: teamId.value },
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.taskThreads.members.list.queryOptions({
+        input: { teamId: teamId.value },
+      }),
+      enabled: Boolean(teamId.value),
     }),
-    enabled: Boolean(teamId.value),
-  })),
+  ),
 );
 
-const updateTaskMutation = useMutation(orpc.agencyOps.projectTasks.update.mutationOptions());
-
 const tasksQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.projectTasks.list.queryOptions({
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.projectTasks.list.queryOptions({
+        input: {
+          teamId: teamId.value,
+          statuses: selectedStatusFilter.value,
+          assigneeUserId: selectedAssigneeFilter.value,
+          search: search.value || undefined,
+        },
+      }),
+      enabled: Boolean(teamId.value),
+    }),
+  ),
+);
+
+const tasksQueryKey = computed(
+  () =>
+    orpc.agencyOps.projectTasks.list.queryOptions({
       input: {
         teamId: teamId.value,
         statuses: selectedStatusFilter.value,
         assigneeUserId: selectedAssigneeFilter.value,
         search: search.value || undefined,
       },
-    }),
-    enabled: Boolean(teamId.value),
-  })),
+    }).queryKey,
 );
+
+watch(
+  tasksQueryKey,
+  (next, prev) => {
+    if (prev) agencyOps.unregisterProjectTasksQuery(prev);
+    if (teamId.value) {
+      agencyOps.registerProjectTasksQuery({ queryKey: next, teamId: teamId.value });
+    }
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  agencyOps.unregisterProjectTasksQuery(tasksQueryKey.value);
+});
 
 const tasks = computed(() => {
   let items = tasksQuery.data.value?.items ?? [];
@@ -110,7 +139,7 @@ const members = computed(() => membersQuery.data.value?.items ?? []);
 const isTasksLoading = computed(() => tasksQuery.isPending.value);
 const isTasksError = computed(() => tasksQuery.isError.value);
 const isMembersLoading = computed(() => membersQuery.isPending.value);
-const isTaskUpdatePending = computed(() => updateTaskMutation.isPending.value);
+const isTaskUpdatePending = computed(() => agencyOps.isTaskMutationPending);
 
 const statusOptions: SelectMenuItem[] = [
   { label: "Open", value: "open" },
@@ -214,7 +243,6 @@ async function createTask() {
     projectId,
     title,
   });
-  await tasksQuery.refetch();
 }
 
 function selectTask(taskId: string) {
@@ -226,18 +254,13 @@ async function updateTask(
   patch: Partial<Pick<AgencyProjectTask, "status" | "assigneeUserId" | "dueDate">>,
 ) {
   try {
-    await updateTaskMutation.mutateAsync({
+    await agencyOps.updateProjectTask({
       teamId: teamId.value,
       taskId: task.id,
       ...patch,
     });
-    await tasksQuery.refetch();
-  } catch (error) {
-    toast.add({
-      title: "Couldn't update task",
-      description: getErrorMessage(error, "Try again."),
-      color: "error",
-    });
+  } catch {
+    // Store surfaces the toast.
   }
 }
 

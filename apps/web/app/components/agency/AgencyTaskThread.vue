@@ -6,6 +6,8 @@ import AgencyTaskComposer from "~/components/agency/AgencyTaskComposer.vue";
 import AgencyTaskMediaPlayer from "~/components/agency/AgencyTaskMediaPlayer.vue";
 import AgencyMiniTimer from "~/components/agency/AgencyMiniTimer.vue";
 import { getErrorMessage } from "~/utils/get-error-message";
+import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
+import { useAgencyOpsStore } from "~/stores/agency-ops";
 
 type Project = {
   id: string;
@@ -24,28 +26,59 @@ const emit = defineEmits<{
 }>();
 
 const orpc = useOrpc();
+const agencyOps = useAgencyOpsStore();
 const teamId = computed(() => props.teamId);
 const taskId = computed(() => props.taskId);
 const agentEnabled = ref(false);
 const isDraggingFile = ref(false);
 
 const contextQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.taskThreads.context.get.queryOptions({
-      input: { teamId: teamId.value, taskId: taskId.value },
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.taskThreads.context.get.queryOptions({
+        input: { teamId: teamId.value, taskId: taskId.value },
+      }),
+      enabled: Boolean(teamId.value) && Boolean(taskId.value),
     }),
-    enabled: Boolean(teamId.value) && Boolean(taskId.value),
-  })),
+  ),
 );
 
 const messagesQuery = useQuery(
-  computed(() => ({
-    ...orpc.agencyOps.taskThreads.messages.list.queryOptions({
-      input: { teamId: teamId.value, taskId: taskId.value, pageSize: 50 },
+  computed(() =>
+    withAgencyLiveQueryOptions({
+      ...orpc.agencyOps.taskThreads.messages.list.queryOptions({
+        input: { teamId: teamId.value, taskId: taskId.value, pageSize: 50 },
+      }),
+      enabled: Boolean(teamId.value) && Boolean(taskId.value),
     }),
-    enabled: Boolean(teamId.value) && Boolean(taskId.value),
-  })),
+  ),
 );
+
+const messagesQueryKey = computed(
+  () =>
+    orpc.agencyOps.taskThreads.messages.list.queryOptions({
+      input: { teamId: teamId.value, taskId: taskId.value, pageSize: 50 },
+    }).queryKey,
+);
+
+watch(
+  [teamId, taskId, messagesQueryKey],
+  ([nextTeamId, nextTaskId, nextKey], [_prevTeamId, _prevTaskId, prevKey]) => {
+    if (prevKey) agencyOps.unregisterTaskMessagesQuery(prevKey);
+    if (nextTeamId && nextTaskId) {
+      agencyOps.registerTaskMessagesQuery({
+        queryKey: nextKey,
+        teamId: nextTeamId,
+        taskId: nextTaskId,
+      });
+    }
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  agencyOps.unregisterTaskMessagesQuery(messagesQueryKey.value);
+});
 
 const messages = computed(() => {
   const items = messagesQuery.data.value?.items ?? [];
@@ -95,7 +128,7 @@ function sameDay(left: string, right: string) {
 }
 
 function onMessageSent() {
-  void messagesQuery.refetch();
+  // Messages arrive via optimistic patch + live sync.
 }
 
 function retryThread() {
