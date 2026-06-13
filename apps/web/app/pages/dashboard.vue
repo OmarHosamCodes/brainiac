@@ -116,6 +116,16 @@ const nodeShareActionLabel = computed(() =>
   isSelectedNodeShared.value ? "Unshare node" : "Share node",
 );
 
+const selectedTeamRole = computed(() => {
+  const team = selectedTeam.value as { role?: "owner" | "editor" | "viewer" } | null;
+  return team?.role ?? null;
+});
+
+const selectedTeamMemberCount = computed(() => {
+  const team = selectedTeam.value as { members?: unknown[] } | null;
+  return team?.members?.length ?? 0;
+});
+
 const selectedTeamName = computed(() => {
   const team = selectedTeam.value as { name?: string } | null;
   if (team?.name) return team.name;
@@ -179,14 +189,14 @@ function toggleSelectedNodeSharing() {
     </Teleport>
 
     <Teleport to="#app-shell-context" defer>
-      <div class="hidden w-full max-w-[11rem] md:block lg:max-w-[12rem]">
+      <div class="hidden min-w-0 md:block md:max-w-[12rem] lg:max-w-[14rem]">
         <USelectMenu
           v-model="selectedTeamId"
           :items="teamItems"
           value-key="value"
           size="sm"
           :search-input="{ placeholder: 'Find team' }"
-          placeholder="Team"
+          placeholder="Select team"
         />
       </div>
     </Teleport>
@@ -204,9 +214,9 @@ function toggleSelectedNodeSharing() {
           :teams-count="teams.length"
           :new-team-name="newTeamName"
           :create-team-pending="createTeamMutation.isPending.value"
-          :selected-team-id="selectedTeamId"
           :selected-team-name="selectedTeamName"
-          :team-items="teamItems"
+          :selected-team-role="selectedTeamRole"
+          :member-count="selectedTeamMemberCount"
           :selected-team="selectedTeam"
           :selected-node="selectedNode"
           :can-invite="canInvite"
@@ -218,7 +228,6 @@ function toggleSelectedNodeSharing() {
           :node-share-action-disabled="nodeShareActionDisabled"
           @update:compact="isTeamAsideCompact = $event"
           @update:new-team-name="newTeamName = $event"
-          @update:selected-team-id="selectedTeamId = $event"
           @create-team="createTeam"
           @open-team-settings="isTeamSettingsModalOpen = true"
           @toggle-selected-node-sharing="toggleSelectedNodeSharing"

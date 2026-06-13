@@ -9,6 +9,16 @@ import {
 
 export const dashboardLabelClass = shellLabelClass;
 
+export const dashboardSectionClass = "space-y-3";
+
+export const dashboardCardClass =
+  "rounded-2xl border border-default bg-muted/25 p-4";
+
+export const dashboardCardHeaderClass = "flex items-start gap-3";
+
+export const dashboardCardIconClass =
+  "flex size-10 shrink-0 items-center justify-center rounded-xl border border-default bg-default text-primary";
+
 export const dashboardPanelClass = "border-t border-default pt-4 mt-4";
 
 export const dashboardStatusBadgeClass =
