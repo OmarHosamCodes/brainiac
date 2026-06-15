@@ -287,20 +287,14 @@ defineExpose({
     </div>
 
     <!-- Empty: no clients yet -->
-    <div
-      v-else-if="clients.length === 0"
-      :class="agencyEmptyPanelClass"
-    >
+    <div v-else-if="clients.length === 0" :class="agencyEmptyPanelClass">
       <UIcon name="i-lucide-building-2" class="mx-auto size-6 text-muted" />
       <p class="mt-3 text-sm font-bold text-highlighted">No clients yet.</p>
       <p class="mt-1 text-xs text-muted">Add a client first, then their projects show up here.</p>
     </div>
 
     <!-- Empty: clients exist, no projects -->
-    <div
-      v-else-if="projects.length === 0"
-      :class="agencyEmptyPanelClass"
-    >
+    <div v-else-if="projects.length === 0" :class="agencyEmptyPanelClass">
       <UIcon name="i-lucide-folder-kanban" class="mx-auto size-6 text-muted" />
       <p class="mt-3 text-sm font-bold text-highlighted">No projects yet.</p>
       <p class="mt-1 text-xs text-muted">

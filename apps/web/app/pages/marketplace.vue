@@ -155,12 +155,7 @@ function onImported(payload: { kind: string; nodeId?: string }) {
           :class="['hidden w-36 lg:block xl:w-44', shellTopbarFieldClass]"
           size="sm"
         />
-        <UBadge
-          color="neutral"
-          variant="soft"
-          size="sm"
-          class="hidden h-9 sm:inline-flex"
-        >
+        <UBadge color="neutral" variant="soft" size="sm" class="hidden h-9 sm:inline-flex">
           {{ totalLoaded }}
         </UBadge>
         <UBadge

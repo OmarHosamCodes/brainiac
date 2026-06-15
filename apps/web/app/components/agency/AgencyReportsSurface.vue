@@ -129,8 +129,8 @@ function formatHours(value: number): string {
   return `${whole}h ${String(minutes).padStart(2, "0")}m`;
 }
 
-const canExport = computed(
-  () => Boolean(summary.value && summary.value.totalEntries > 0 && !exportCsvMutation.isPending.value),
+const canExport = computed(() =>
+  Boolean(summary.value && summary.value.totalEntries > 0 && !exportCsvMutation.isPending.value),
 );
 const isExporting = computed(() => exportCsvMutation.isPending.value);
 
@@ -200,10 +200,7 @@ defineExpose({
     </div>
 
     <!-- Empty -->
-    <div
-      v-else-if="!summary || summary.totalEntries === 0"
-      :class="agencyEmptyPanelClass"
-    >
+    <div v-else-if="!summary || summary.totalEntries === 0" :class="agencyEmptyPanelClass">
       <UIcon name="i-lucide-bar-chart-2" class="mx-auto size-7 text-muted" />
       <p class="mt-4 text-sm font-bold text-highlighted">No time logged in this range.</p>
       <p class="mt-1 text-xs text-muted">Track time on Work, then come back here.</p>

@@ -143,7 +143,10 @@ function getDetailEntry(type: WorkspaceBlock["type"]) {
         >
           <div class="mb-1 flex items-center justify-between">
             <div class="flex min-w-0 items-center gap-1.5">
-              <UIcon :name="getDetailEntry(detail.blockType).icon" class="size-3 shrink-0 text-primary" />
+              <UIcon
+                :name="getDetailEntry(detail.blockType).icon"
+                class="size-3 shrink-0 text-primary"
+              />
               <span class="max-w-[120px] truncate text-[10px] font-bold text-highlighted">
                 {{ detail.blockTitle }}
               </span>

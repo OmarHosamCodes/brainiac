@@ -235,37 +235,19 @@ async function advanceInvoiceStatus(invoiceId: string, currentStatus: LaneId) {
         </div>
         <div>
           <span :class="agencyLabelClass">Drafts</span>
-          <span
-            :class="[
-              'ml-2',
-              agencyMetricClass,
-              summary.draftCount > 0 ? '' : 'text-dimmed',
-            ]"
-          >
+          <span :class="['ml-2', agencyMetricClass, summary.draftCount > 0 ? '' : 'text-dimmed']">
             {{ summary.draftCount }}
           </span>
         </div>
         <div>
           <span :class="agencyLabelClass">Sent</span>
-          <span
-            :class="[
-              'ml-2',
-              agencyMetricClass,
-              summary.sentCount > 0 ? '' : 'text-dimmed',
-            ]"
-          >
+          <span :class="['ml-2', agencyMetricClass, summary.sentCount > 0 ? '' : 'text-dimmed']">
             {{ summary.sentCount }}
           </span>
         </div>
         <div>
           <span :class="agencyLabelClass">Paid · all time</span>
-          <span
-            :class="[
-              'ml-2',
-              agencyMetricClass,
-              summary.paidCount > 0 ? '' : 'text-dimmed',
-            ]"
-          >
+          <span :class="['ml-2', agencyMetricClass, summary.paidCount > 0 ? '' : 'text-dimmed']">
             {{ summary.paidCount }}
           </span>
         </div>

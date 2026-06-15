@@ -89,9 +89,7 @@ const groupedBlockOptions = computed(() => {
   return groups;
 });
 const submitLabel = computed(() => (props.mode === "create" ? "Create node" : "Save changes"));
-const submitIcon = computed(() =>
-  props.mode === "create" ? "i-lucide-plus" : "i-lucide-save",
-);
+const submitIcon = computed(() => (props.mode === "create" ? "i-lucide-plus" : "i-lucide-save"));
 const titleFieldError = computed(() => {
   if (!submitAttempted.value || props.valid || props.title.trim()) {
     return undefined;
@@ -197,12 +195,7 @@ function getTintOptionStyle(value: WorkspaceNodeTint) {
       >
         <div class="space-y-6">
           <section class="space-y-6">
-            <UFormField
-              label="Title"
-              name="title"
-              required
-              :error="titleFieldError"
-            >
+            <UFormField label="Title" name="title" required :error="titleFieldError">
               <UInput
                 :model-value="props.title"
                 placeholder="Strategy lane"
@@ -261,11 +254,7 @@ function getTintOptionStyle(value: WorkspaceNodeTint) {
               <p class="mt-1 text-sm text-muted">Color accent for this node on the canvas.</p>
             </div>
 
-            <div
-              class="flex flex-wrap gap-2"
-              role="radiogroup"
-              aria-label="Node tint"
-            >
+            <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Node tint">
               <button
                 v-for="option in workspaceNodeTintOptions"
                 :key="option.value"

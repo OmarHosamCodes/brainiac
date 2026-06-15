@@ -120,7 +120,10 @@ function handleCreateTeam() {
 </script>
 
 <template>
-  <aside class="dashboard-sidebar flex flex-col border-r border-default bg-default" :class="sidebarClass">
+  <aside
+    class="dashboard-sidebar flex flex-col border-r border-default bg-default"
+    :class="sidebarClass"
+  >
     <div v-if="compact" class="flex h-full flex-col items-center gap-2 py-3">
       <ShellTopbarIconButton
         icon="i-lucide-panel-left-open"
@@ -138,10 +141,7 @@ function handleCreateTeam() {
         class="flex size-9 items-center justify-center rounded-xl border border-default bg-muted/40 text-muted"
         :title="selectedNode.title ?? 'Selected node'"
       >
-        <UIcon
-          :name="isSelectedNodeShared ? 'i-lucide-globe' : 'i-lucide-lock'"
-          class="size-4"
-        />
+        <UIcon :name="isSelectedNodeShared ? 'i-lucide-globe' : 'i-lucide-lock'" class="size-4" />
       </div>
     </div>
 

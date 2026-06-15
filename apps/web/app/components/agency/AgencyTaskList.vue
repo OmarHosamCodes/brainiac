@@ -374,7 +374,12 @@ function getProjectHue(projectId: string) {
       <p class="mt-3 text-xs text-muted">No tasks match your filters.</p>
     </div>
 
-    <ul v-else class="flex-1 divide-y divide-default overflow-y-auto" role="listbox" aria-label="Tasks">
+    <ul
+      v-else
+      class="flex-1 divide-y divide-default overflow-y-auto"
+      role="listbox"
+      aria-label="Tasks"
+    >
       <li
         v-for="task in tasks"
         :key="task.id"

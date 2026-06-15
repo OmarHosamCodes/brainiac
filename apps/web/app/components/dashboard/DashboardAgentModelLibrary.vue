@@ -107,9 +107,7 @@ const toolsOnlyValue = computed({
               <div>
                 <p :class="dashboardLabelClass">Account balance</p>
                 <div class="mt-2.5 flex items-baseline gap-1">
-                  <p
-                    class="text-2xl font-bold tracking-tight text-highlighted"
-                  >
+                  <p class="text-2xl font-bold tracking-tight text-highlighted">
                     {{ accountBalanceLabel }}
                   </p>
                 </div>
@@ -400,18 +398,11 @@ const toolsOnlyValue = computed({
                 >
                   All available models
                 </p>
-                <div
-                  v-if="filteredModelOptions.length === 0"
-                  :class="dashboardEmptyPanelClass"
-                >
-                  <div
-                    class="flex size-12 items-center justify-center rounded-2xl bg-elevated"
-                  >
+                <div v-if="filteredModelOptions.length === 0" :class="dashboardEmptyPanelClass">
+                  <div class="flex size-12 items-center justify-center rounded-2xl bg-elevated">
                     <UIcon name="i-lucide-search-x" class="size-6 text-muted" />
                   </div>
-                  <p class="mt-4 text-sm font-bold text-highlighted">
-                    No models found
-                  </p>
+                  <p class="mt-4 text-sm font-bold text-highlighted">No models found</p>
                   <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
                     Try adjusting your filters or search terms.
                   </p>

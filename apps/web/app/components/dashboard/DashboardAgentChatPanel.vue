@@ -732,7 +732,9 @@ function closeToolResponsePreview() {
 </script>
 
 <template>
-  <section class="relative flex h-full min-h-0 w-full flex-col overflow-hidden border-l border-default bg-default">
+  <section
+    class="relative flex h-full min-h-0 w-full flex-col overflow-hidden border-l border-default bg-default"
+  >
     <header class="shrink-0 border-b border-default bg-elevated">
       <UDashboardNavbar
         :title="panelTitle"
@@ -853,9 +855,7 @@ function closeToolResponsePreview() {
               :key="conversation.id"
               type="button"
               class="w-full px-1 py-4 text-left transition-colors hover:bg-elevated/50 focus-visible:bg-elevated/50 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20 focus-visible:ring-inset"
-              :class="
-                conversation.id === activeConversationId ? 'bg-primary/5' : ''
-              "
+              :class="conversation.id === activeConversationId ? 'bg-primary/5' : ''"
               @click="handleSelectConversation(conversation.id)"
             >
               <div class="flex items-start justify-between gap-3">
@@ -959,10 +959,15 @@ function closeToolResponsePreview() {
                       'animate-spin': call.status === 'in_progress',
                     }"
                   />
-                  <span class="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-muted">
+                  <span
+                    class="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-muted"
+                  >
                     {{ call.label }}
                   </span>
-                  <span v-if="call.summary" class="min-w-0 flex-1 truncate font-mono text-[11px] text-toned">
+                  <span
+                    v-if="call.summary"
+                    class="min-w-0 flex-1 truncate font-mono text-[11px] text-toned"
+                  >
                     {{ call.summary }}
                   </span>
                   <span v-else class="flex-1" />
@@ -1098,9 +1103,7 @@ function closeToolResponsePreview() {
         role="status"
         aria-live="polite"
       >
-        <div
-          class="flex items-center gap-2.5 text-[11px] font-medium text-muted"
-        >
+        <div class="flex items-center gap-2.5 text-[11px] font-medium text-muted">
           <span class="agent-progress-pulse relative flex size-1.5 shrink-0">
             <span
               class="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/40 opacity-75"
@@ -1122,10 +1125,7 @@ function closeToolResponsePreview() {
       </div>
     </Transition>
 
-    <footer
-      v-if="activePane === 'chat'"
-      class="shrink-0 border-t border-default bg-elevated p-4"
-    >
+    <footer v-if="activePane === 'chat'" class="shrink-0 border-t border-default bg-elevated p-4">
       <div class="space-y-3">
         <slot name="scope-badges" />
 

@@ -230,10 +230,7 @@ function retryLoad() {
     </div>
 
     <!-- Project not found (e.g. stale link) -->
-    <div
-      v-else-if="!project"
-      :class="agencyEmptyPanelClass"
-    >
+    <div v-else-if="!project" :class="agencyEmptyPanelClass">
       <UIcon name="i-lucide-folder-x" class="mx-auto size-7 text-muted" />
       <p class="mt-4 text-sm font-bold text-highlighted">Project not found.</p>
       <p class="mt-1 text-xs text-muted">It may have been removed or moved to another team.</p>

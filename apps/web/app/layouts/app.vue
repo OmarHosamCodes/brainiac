@@ -55,9 +55,7 @@ const isSpatialMode = computed(() => shellMode.value === "spatial");
 
 const activeNavigationItem = computed(() => findActiveNavItem(route.path));
 
-const activeNavigationLabel = computed(
-  () => activeNavigationItem.value?.label ?? "Workspace",
-);
+const activeNavigationLabel = computed(() => activeNavigationItem.value?.label ?? "Workspace");
 
 const breadcrumbItems = computed(() => {
   if (isSpatialMode.value) {

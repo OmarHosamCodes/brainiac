@@ -1363,7 +1363,10 @@ onBeforeUnmount(() => {
       <div
         ref="viewportRef"
         class="canvas-viewport absolute inset-0"
-        :class="[viewportClasses, props.loading ? 'canvas-viewport-loading pointer-events-none' : '']"
+        :class="[
+          viewportClasses,
+          props.loading ? 'canvas-viewport-loading pointer-events-none' : '',
+        ]"
         :style="backgroundStyle"
         @contextmenu.capture="captureContextMenu"
         @mousedown="onViewportMouseDown"
@@ -1490,7 +1493,9 @@ onBeforeUnmount(() => {
       aria-live="polite"
       aria-label="Loading workspace"
     >
-      <span class="rounded-full border border-default bg-elevated px-3 py-1.5 text-[11px] font-bold text-muted">
+      <span
+        class="rounded-full border border-default bg-elevated px-3 py-1.5 text-[11px] font-bold text-muted"
+      >
         Loading workspace…
       </span>
     </div>
@@ -1555,7 +1560,12 @@ onBeforeUnmount(() => {
 
         <div class="mx-1 h-4 w-px bg-default" />
 
-        <button type="button" :class="controlButtonClass" aria-label="Fit all nodes" @click="fitAllNodes">
+        <button
+          type="button"
+          :class="controlButtonClass"
+          aria-label="Fit all nodes"
+          @click="fitAllNodes"
+        >
           <UIcon name="i-lucide-scan" class="size-4" />
         </button>
 

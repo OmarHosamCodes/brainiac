@@ -7,11 +7,7 @@ import AgencyTimeEntriesLog from "~/components/agency/AgencyTimeEntriesLog.vue";
 import AgencyTimeTracker from "~/components/agency/AgencyTimeTracker.vue";
 import { getErrorMessage } from "~/utils/get-error-message";
 import { withAgencyLiveQueryOptions } from "~/utils/agency-query-options";
-import {
-  agencyEmptyPanelClass,
-  agencyErrorPanelClass,
-  agencyPanelClass,
-} from "~/utils/agency-ui";
+import { agencyEmptyPanelClass, agencyErrorPanelClass, agencyPanelClass } from "~/utils/agency-ui";
 
 const props = defineProps<{
   teamId: string;
@@ -77,10 +73,7 @@ function handleSelectProject(projectId: string) {
     />
   </div>
 
-  <div
-    v-else-if="projects.length === 0"
-    :class="agencyEmptyPanelClass"
-  >
+  <div v-else-if="projects.length === 0" :class="agencyEmptyPanelClass">
     <UIcon name="i-lucide-briefcase" class="mx-auto size-7 text-muted" />
     <p class="mt-4 text-sm font-bold text-highlighted">No projects yet.</p>
     <p class="mt-1 text-xs text-muted">Add a client and project to start tracking work and time.</p>

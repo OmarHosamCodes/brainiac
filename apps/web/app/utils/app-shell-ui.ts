@@ -5,8 +5,7 @@ export const SHELL_Z_MOBILE_NAV = 70;
 export const SHELL_Z_DOCK = 50;
 export const SHELL_Z_BACKDROP = 45;
 
-export const shellLabelClass =
-  "text-[11px] font-bold uppercase tracking-[0.18em] text-muted";
+export const shellLabelClass = "text-[11px] font-bold uppercase tracking-[0.18em] text-muted";
 
 export const shellFocusRingClass =
   "focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20";
@@ -14,8 +13,7 @@ export const shellFocusRingClass =
 export const shellEmptyPanelClass =
   "rounded-2xl border border-dashed border-default bg-muted/20 p-10 text-center";
 
-export const shellErrorPanelClass =
-  "rounded-2xl border border-error/30 bg-error/5 p-6 text-center";
+export const shellErrorPanelClass = "rounded-2xl border border-error/30 bg-error/5 p-6 text-center";
 
 export const shellRailLinkBaseClass =
   "flex size-10 items-center justify-center rounded-2xl text-muted transition-colors hover:bg-elevated hover:text-highlighted";
