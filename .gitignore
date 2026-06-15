@@ -6,6 +6,7 @@ node_modules
 # Build outputs
 dist
 build
+.nuxt
 *.tsbuildinfo
 
 # Environment variables
