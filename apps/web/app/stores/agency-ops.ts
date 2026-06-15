@@ -670,7 +670,11 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     });
   }
 
-  function reconcileCreatedClient(teamId: string, optimisticIdValue: string, created: AgencyClient) {
+  function reconcileCreatedClient(
+    teamId: string,
+    optimisticIdValue: string,
+    created: AgencyClient,
+  ) {
     clientsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
       queryClient.setQueryData<AgencyClientsListQueryData | undefined>(reg.queryKey, (current) => {
@@ -719,9 +723,7 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
           if (!current) return current;
           return {
             ...current,
-            items: current.items.map((task) =>
-              task.id === optimisticIdValue ? created : task,
-            ),
+            items: current.items.map((task) => (task.id === optimisticIdValue ? created : task)),
           };
         },
       );
@@ -1168,12 +1170,7 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     capacityMutationCount.value += 1;
 
     try {
-      patchCapacityCell(
-        payload.teamId,
-        payload.userId,
-        payload.weekStart,
-        payload.capacitySeconds,
-      );
+      patchCapacityCell(payload.teamId, payload.userId, payload.weekStart, payload.capacitySeconds);
 
       await setCapacityMutation.mutateAsync({
         teamId: payload.teamId,
@@ -1306,6 +1303,26 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
     }
   }
 
+  async function invalidateTenureQueries(teamId: string) {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: orpc.agencyOps.tenure.policy.get.key({ input: { teamId } }),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: orpc.agencyOps.tenure.summary.list.key({ input: { teamId } }),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: orpc.agencyOps.tenure.exemptions.list.key({ input: { teamId } }),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: orpc.agencyOps.tenure.profiles.list.key({ input: { teamId } }),
+      }),
+      queryClient.invalidateQueries({
+        queryKey: orpc.agencyOps.tenure.member.get.key({ input: { teamId } }),
+      }),
+    ]);
+  }
+
   function applyLiveEvent(event: AgencyLiveEvent) {
     switch (event.type) {
       case "client.created":
@@ -1363,6 +1380,13 @@ export const useAgencyOpsStore = defineStore("agency-ops", () => {
           event.capacity.weekStart,
           event.capacity.capacitySeconds,
         );
+        break;
+      case "tenure.policy.updated":
+      case "tenure.profile.updated":
+      case "tenure.exemption.updated":
+      case "tenure.exemption.deleted":
+      case "tenure.recomputed":
+        void invalidateTenureQueries(event.teamId);
         break;
       case "timer.started":
       case "timer.stopped":

@@ -478,3 +478,107 @@ export const agencyOpsInvoiceLineItem = pgTable(
   },
   (table) => [index("agency_ops_invoice_line_item_invoice_idx").on(table.invoiceId)],
 );
+
+// ---------------------------------------------------------------------------
+// Member tenure (agency time)
+// ---------------------------------------------------------------------------
+
+export const agencyOpsTenurePolicy = pgTable(
+  "agency_ops_tenure_policy",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    /** Calendar month (1–12) when the fiscal year starts, e.g. 4 = April. */
+    fiscalYearStartMonth: integer("fiscal_year_start_month").notNull().default(1),
+    /** Day of month when each fiscal month/year begins (e.g. 26 → periods run 26th–25th). */
+    fiscalYearStartDay: integer("fiscal_year_start_day").notNull().default(1),
+    quarterlyMinHours: integer("quarterly_min_hours").notNull().default(525),
+    penaltyMonths: integer("penalty_months").notNull().default(6),
+    internDurationMonths: integer("intern_duration_months").notNull().default(4),
+    internDurationWeeks: integer("intern_duration_weeks").notNull().default(0),
+    policyEffectiveFrom: timestamp("policy_effective_from").notNull(),
+    enabled: boolean("enabled").notNull().default(true),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [uniqueIndex("agency_ops_tenure_policy_team_unique").on(table.teamId)],
+);
+
+export const agencyOpsMemberTenureProfile = pgTable(
+  "agency_ops_member_tenure_profile",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** Manual override; when null, derived from first tracked time + policy duration. */
+    internStart: timestamp("intern_start"),
+    internEnd: timestamp("intern_end"),
+    internCountsTowardTenure: boolean("intern_counts_toward_tenure").notNull().default(false),
+    internExemptFromQuarterMin: boolean("intern_exempt_from_quarter_min").notNull().default(true),
+    notes: text("notes"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("agency_ops_member_tenure_profile_team_user_unique").on(table.teamId, table.userId),
+    index("agency_ops_member_tenure_profile_team_idx").on(table.teamId),
+  ],
+);
+
+export type AgencyOpsTenureExemptionType =
+  | "team_holiday"
+  | "member_waiver"
+  | "member_reduced_min"
+  | "member_frozen_month";
+
+export const agencyOpsTenureQuarterExemption = pgTable(
+  "agency_ops_tenure_quarter_exemption",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    type: text("type").$type<AgencyOpsTenureExemptionType>().notNull(),
+    fiscalYear: integer("fiscal_year").notNull(),
+    fiscalQuarter: integer("fiscal_quarter").notNull(),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    reducedMinHours: integer("reduced_min_hours"),
+    /** Calendar month (1–12) within the fiscal quarter for frozen-month exemptions. */
+    frozenMonth: integer("frozen_month"),
+    reason: text("reason"),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_tenure_quarter_exemption_team_idx").on(table.teamId),
+    index("agency_ops_tenure_quarter_exemption_team_quarter_idx").on(
+      table.teamId,
+      table.fiscalYear,
+      table.fiscalQuarter,
+    ),
+    index("agency_ops_tenure_quarter_exemption_team_user_quarter_idx").on(
+      table.teamId,
+      table.userId,
+      table.fiscalYear,
+      table.fiscalQuarter,
+    ),
+  ],
+);

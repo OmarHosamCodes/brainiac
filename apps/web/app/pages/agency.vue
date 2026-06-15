@@ -126,6 +126,8 @@ const isInitialLoading = computed(() => billingQuery.isPending.value || teamsQue
 function panelIdFor(segmentId: AgencySegmentId) {
   return `agency-panel-${segmentId}`;
 }
+
+const panelClass = "min-h-0 flex-1 overflow-y-auto overscroll-contain";
 </script>
 
 <template>
@@ -184,55 +186,57 @@ function panelIdFor(segmentId: AgencySegmentId) {
         <AgencySegmentBar :segment="segment" @update:segment="segment = $event" />
 
         <div :class="shellPageBodyClass">
-          <p :class="shellPageIntroClass">{{ currentSegment.subtitle }}</p>
+          <p v-if="segment !== 'settings'" :class="shellPageIntroClass">
+            {{ currentSegment.subtitle }}
+          </p>
 
           <div
-          :id="panelIdFor(segment)"
-          class="min-h-0 flex-1"
-          role="tabpanel"
-          :aria-labelledby="`agency-tab-${segment}`"
-        >
-          <AgencyWorkSurface
-            v-if="segment === 'work'"
-            :team-id="selectedTeamId"
-            @select-project="openProject"
-          />
-
-          <template v-else-if="segment === 'projects'">
-            <AgencyProjectDetail
-              v-if="selectedProjectId"
+            :id="panelIdFor(segment)"
+            :class="panelClass"
+            role="tabpanel"
+            :aria-labelledby="`agency-tab-${segment}`"
+          >
+            <AgencyWorkSurface
+              v-if="segment === 'work'"
               :team-id="selectedTeamId"
-              :project-id="selectedProjectId"
-              @back="closeProject"
+              @select-project="openProject"
             />
-            <AgencyProjectsTable
-              v-else
-              ref="projectsTableRef"
+
+            <template v-else-if="segment === 'projects'">
+              <AgencyProjectDetail
+                v-if="selectedProjectId"
+                :team-id="selectedTeamId"
+                :project-id="selectedProjectId"
+                @back="closeProject"
+              />
+              <AgencyProjectsTable
+                v-else
+                ref="projectsTableRef"
+                :team-id="selectedTeamId"
+                hide-toolbar-actions
+                @select="openProject"
+              />
+            </template>
+
+            <AgencyClientsSurface v-else-if="segment === 'clients'" :team-id="selectedTeamId" />
+
+            <AgencyReportsSurface
+              v-else-if="segment === 'reports'"
+              ref="reportsSurfaceRef"
               :team-id="selectedTeamId"
-              hide-toolbar-actions
-              @select="openProject"
+              hide-toolbar-export
             />
-          </template>
 
-          <AgencyClientsSurface v-else-if="segment === 'clients'" :team-id="selectedTeamId" />
+            <AgencyResourcingSurface
+              v-else-if="segment === 'resourcing'"
+              :team-id="selectedTeamId"
+              @update:segment="segment = $event as AgencySegmentId"
+            />
 
-          <AgencyReportsSurface
-            v-else-if="segment === 'reports'"
-            ref="reportsSurfaceRef"
-            :team-id="selectedTeamId"
-            hide-toolbar-export
-          />
+            <AgencyBillingSurface v-else-if="segment === 'billing'" :team-id="selectedTeamId" />
 
-          <AgencyResourcingSurface
-            v-else-if="segment === 'resourcing'"
-            :team-id="selectedTeamId"
-            @update:segment="segment = $event as AgencySegmentId"
-          />
-
-          <AgencyBillingSurface v-else-if="segment === 'billing'" :team-id="selectedTeamId" />
-
-          <AgencySettingsSurface v-else-if="segment === 'settings'" :team-id="selectedTeamId" />
-        </div>
+            <AgencySettingsSurface v-else-if="segment === 'settings'" :team-id="selectedTeamId" />
+          </div>
         </div>
       </div>
     </main>

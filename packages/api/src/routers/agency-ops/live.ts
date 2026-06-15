@@ -236,6 +236,34 @@ export const agencyLiveEventSchema = z.discriminatedUnion("type", [
     updatedAt: z.string().datetime(),
     capacity: agencyCapacitySetLiveSchema,
   }),
+  z.object({
+    type: z.literal("tenure.policy.updated"),
+    teamId: z.string().min(1),
+    updatedAt: z.string().datetime(),
+  }),
+  z.object({
+    type: z.literal("tenure.profile.updated"),
+    teamId: z.string().min(1),
+    updatedAt: z.string().datetime(),
+    userId: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal("tenure.exemption.updated"),
+    teamId: z.string().min(1),
+    updatedAt: z.string().datetime(),
+    exemptionId: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal("tenure.exemption.deleted"),
+    teamId: z.string().min(1),
+    updatedAt: z.string().datetime(),
+    exemptionId: z.string().min(1),
+  }),
+  z.object({
+    type: z.literal("tenure.recomputed"),
+    teamId: z.string().min(1),
+    updatedAt: z.string().datetime(),
+  }),
 ]);
 
 export type AgencyLiveEvent = z.infer<typeof agencyLiveEventSchema>;

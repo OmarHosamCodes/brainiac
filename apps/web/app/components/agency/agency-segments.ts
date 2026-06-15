@@ -70,6 +70,6 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
     label: "Settings",
     icon: "i-lucide-settings",
     shortcutKey: "s",
-    subtitle: "Tags, rates, members, integrations.",
+    subtitle: "Team configuration for time, rates, and tenure.",
   },
 ] as const;

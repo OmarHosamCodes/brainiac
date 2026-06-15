@@ -17,6 +17,10 @@ export const agencyFocusRingClass = shellFocusRingClass;
 
 export const agencyPanelClass = "rounded-2xl border border-default bg-default";
 
+export const agencyFormFieldClass = "flex w-full min-w-0 flex-col gap-1.5";
+
+export const agencyFormLabelClass = "block text-sm font-semibold text-muted";
+
 export const agencyErrorPanelClass = shellErrorPanelClass;
 
 export const agencyEmptyPanelClass = shellEmptyPanelClass;
