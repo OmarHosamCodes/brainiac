@@ -235,6 +235,32 @@ function getSaveBadge(saveState: SaveState): WorkspaceSaveBadge {
   }
 }
 
+function workspaceNodesSignature(nodes: WorkspaceNode[]): string {
+  return nodes
+    .map((node) => {
+      const connectionTargets =
+        node.nodeType === "orchestrator"
+          ? [...(node.connections ?? [])]
+              .map((connection) => connection.targetNodeId)
+              .sort()
+              .join(",")
+          : "";
+
+      return [
+        node.id,
+        node.x,
+        node.y,
+        node.width,
+        node.height,
+        node.nodeType,
+        node.title,
+        connectionTargets,
+      ].join(":");
+    })
+    .sort()
+    .join("\n");
+}
+
 export function useWorkspaceQuery() {
   const session = authClient.useSession();
   const queryClient = useQueryClient();
@@ -246,6 +272,7 @@ export function useWorkspaceQuery() {
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedStateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousNodesRef = useRef<WorkspaceNode[] | null>(null);
   const previousUserIdRef = useRef<string | null>(null);
   const isApplyingRemoteRef = useRef(false);
@@ -316,6 +343,26 @@ export function useWorkspaceQuery() {
     clearTimeout(retryTimerRef.current);
     retryTimerRef.current = null;
   }, []);
+
+  const clearSavedStateTimer = useCallback(() => {
+    if (!savedStateTimerRef.current) {
+      return;
+    }
+
+    clearTimeout(savedStateTimerRef.current);
+    savedStateTimerRef.current = null;
+  }, []);
+
+  const scheduleSavedStateReset = useCallback(() => {
+    clearSavedStateTimer();
+    savedStateTimerRef.current = setTimeout(() => {
+      savedStateTimerRef.current = null;
+
+      if (useWorkspaceStore.getState().saveState === "saved") {
+        setSaveState("idle");
+      }
+    }, 2_000);
+  }, [clearSavedStateTimer, setSaveState]);
 
   const workspaceReadyForEdits = authEnabled && loadApplied && !isHydratingWorkspace;
   const isWorkspaceInitialLoading =
@@ -400,7 +447,11 @@ export function useWorkspaceQuery() {
 
         setSaveState("saved");
         setSaveError(null);
-        void workspaceQuery.refetch();
+        queryClient.setQueryData(workspaceGetQueryOptions.queryKey, {
+          nodes: snapshot.map(normalizeWorkspaceNode),
+          updatedAt: response.updatedAt,
+        });
+        scheduleSavedStateReset();
       } catch (error) {
         if (revision < useWorkspaceStore.getState().localRevision) {
           return;
@@ -428,13 +479,15 @@ export function useWorkspaceQuery() {
     [
       authEnabled,
       clearRetryTimer,
+      queryClient,
       saveWorkspace,
+      scheduleSavedStateReset,
       setSaveError,
       setSaveState,
       setSyncedAt,
       setSyncedRevision,
       syncedRevision,
-      workspaceQuery,
+      workspaceGetQueryOptions.queryKey,
     ],
   );
 
@@ -449,6 +502,7 @@ export function useWorkspaceQuery() {
 
       clearSaveTimer();
       clearRetryTimer();
+      clearSavedStateTimer();
       setSaveState("saving");
       setSaveError(null);
 
@@ -460,7 +514,7 @@ export function useWorkspaceQuery() {
         void persistWorkspace(snapshot, revision);
       }, delay);
     },
-    [authEnabled, clearRetryTimer, clearSaveTimer, persistWorkspace, setSaveError, setSaveState],
+    [authEnabled, clearRetryTimer, clearSaveTimer, clearSavedStateTimer, persistWorkspace, setSaveError, setSaveState],
   );
 
   scheduleWorkspaceSaveRef.current = scheduleWorkspaceSave;
@@ -812,6 +866,16 @@ export function useWorkspaceQuery() {
       return;
     }
 
+    const normalizedRemote = remoteWorkspace.nodes.map(normalizeWorkspaceNode);
+    const normalizedLocal = state.nodes.map(normalizeWorkspaceNode);
+
+    if (workspaceNodesSignature(normalizedRemote) === workspaceNodesSignature(normalizedLocal)) {
+      if (remoteWorkspace.updatedAt !== state.syncedAt) {
+        setSyncedAt(remoteWorkspace.updatedAt);
+      }
+      return;
+    }
+
     if (remoteWorkspace.updatedAt === state.syncedAt) {
       return;
     }
@@ -829,6 +893,7 @@ export function useWorkspaceQuery() {
   }, [
     applyRemoteSnapshot,
     saveWorkspace.isPending,
+    setSyncedAt,
     workspaceQuery.data,
   ]);
 
@@ -862,8 +927,9 @@ export function useWorkspaceQuery() {
     () => () => {
       clearSaveTimer();
       clearRetryTimer();
+      clearSavedStateTimer();
     },
-    [clearRetryTimer, clearSaveTimer],
+    [clearRetryTimer, clearSaveTimer, clearSavedStateTimer],
   );
 
   useEffect(() => {

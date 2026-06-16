@@ -12,7 +12,6 @@ import { useTeamManagement } from "@/hooks/use-team-management";
 import { useTeamSelection } from "@/hooks/use-team-selection";
 import {
   useAppShellActionsSlot,
-  useAppShellContextSlot,
   useAppShellCustomDock,
   useAppShellPageTitle,
 } from "@/hooks/use-app-shell";
@@ -26,7 +25,6 @@ import { cn } from "@/lib/utils";
 export function DashboardPage() {
   useAppShellPageTitle("Dashboard");
   useAppShellCustomDock();
-  useAppShellContextSlot();
   useAppShellActionsSlot();
 
   const canvasRef = useRef<InfiniteCanvasHandle | null>(null);
@@ -53,9 +51,11 @@ export function DashboardPage() {
   const isNodeShareActionPending = false;
 
   useEffect(() => {
-    if (board.isWorkspaceInitialLoading || !canvasRef.current) return;
+    if (board.isWorkspaceInitialLoading || !canvasRef.current || board.nodes.length === 0) {
+      return;
+    }
     canvasRef.current.fitAllNodes();
-  }, [board.isWorkspaceInitialLoading]);
+  }, [board.isWorkspaceInitialLoading, board.nodes.length]);
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-default selection:bg-primary/30">
@@ -103,7 +103,7 @@ export function DashboardPage() {
             onToggleSelectedNodeSharing={() => {}}
           />
 
-          <div className="min-w-0 flex-1">
+          <div className="min-h-0 min-w-0 flex-1 h-full">
             <InfiniteCanvas
               ref={canvasRef}
               nodes={board.nodes}

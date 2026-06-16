@@ -8,7 +8,7 @@ import {
 import { Layers, Waypoints } from "lucide-react";
 import { useMemo } from "react";
 
-import type { CanvasNodeModel } from "@/hooks/use-canvas";
+import type { CanvasNodeModel } from "@/lib/canvas/canvas-types";
 import { getWorkspaceBlockRegistryEntry } from "@/lib/utils/workspace-block-registry";
 import { getWorkspaceNodeTintStyle } from "@/lib/utils/workspace-node-dashboard";
 import { cn } from "@/lib/utils";
@@ -19,7 +19,7 @@ type WorkspaceNodeCardProps = {
   allNodes?: CanvasNodeModel[];
 };
 
-export function WorkspaceNodeCard({ node, selected, allNodes = [] }: WorkspaceNodeCardProps) {
+export function WorkspaceNodeCard({ node, selected: _selected, allNodes = [] }: WorkspaceNodeCardProps) {
   const workspaceNode = node as WorkspaceNode;
   const allWorkspaceNodes = allNodes as WorkspaceNode[];
 
@@ -81,17 +81,14 @@ export function WorkspaceNodeCard({ node, selected, allNodes = [] }: WorkspaceNo
 
   return (
     <div
-      className={cn(
-        "node-card group relative flex h-full flex-col rounded-[2rem] p-6 transition-colors duration-200",
-        selected && "ring-2 ring-primary/40",
-      )}
+      className="node-card group relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1.5rem] p-4 transition-colors duration-200"
       style={tintStyle}
     >
-      <div className="absolute inset-0 -z-20 rounded-[2rem] bg-background/50" />
+      <div className="absolute inset-0 -z-20 rounded-[1.5rem] bg-background/50" />
       {workspaceNode.nodeType === "orchestrator" ? (
-        <div className="absolute inset-0 -z-10 rounded-[2rem] bg-[radial-gradient(circle_at_top_right,rgb(var(--workspace-node-rgb)/0.14),transparent_55%)]" />
+        <div className="absolute inset-0 -z-10 rounded-[1.5rem] bg-[radial-gradient(circle_at_top_right,rgb(var(--workspace-node-rgb)/0.14),transparent_55%)]" />
       ) : null}
-      <div className="absolute inset-0 -z-10 rounded-[2rem] border border-[rgb(var(--workspace-node-rgb)/0.2)] bg-[rgb(var(--workspace-node-rgb)/0.05)] dark:bg-[rgb(var(--workspace-node-rgb)/0.08)]" />
+      <div className="absolute inset-0 -z-10 rounded-[1.5rem] border border-[rgb(var(--workspace-node-rgb)/0.2)] bg-[rgb(var(--workspace-node-rgb)/0.05)] dark:bg-[rgb(var(--workspace-node-rgb)/0.08)]" />
 
       <div className="mb-4 flex items-start justify-between gap-2.5">
         <div className="flex min-w-0 items-start gap-2.5">
