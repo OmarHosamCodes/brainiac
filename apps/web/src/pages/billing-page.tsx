@@ -13,13 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AppShellHeaderActions } from "@/components/app-shell-header-slots";
 import {
   useAppShellActionsSlot,
   useAppShellPageTitle,
 } from "@/hooks/use-app-shell";
-import { AppShellPortal } from "@/hooks/use-app-shell-portal";
 import { useBilling } from "@/hooks/use-billing";
-import { shellActionsSlotClass, shellPageClass } from "@/lib/utils/app-shell-ui";
+import { shellPageClass } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 
 export function BillingPage() {
@@ -66,19 +66,17 @@ export function BillingPage() {
 
   return (
     <div className="h-full overflow-y-auto bg-default">
-      <AppShellPortal targetId="app-shell-actions">
-        <div className={shellActionsSlotClass}>
-          {showManageSubscription ? (
-            <Button variant="secondary" size="sm" onClick={() => void openPortal()}>
-              Manage subscription
-            </Button>
-          ) : showUpgrade ? (
-            <Button size="sm" onClick={() => void checkout("pro")}>
-              Upgrade to Pro
-            </Button>
-          ) : null}
-        </div>
-      </AppShellPortal>
+      <AppShellHeaderActions>
+        {showManageSubscription ? (
+          <Button variant="secondary" size="sm" onClick={() => void openPortal()}>
+            Manage subscription
+          </Button>
+        ) : showUpgrade ? (
+          <Button size="sm" onClick={() => void checkout("pro")}>
+            Upgrade to Pro
+          </Button>
+        ) : null}
+      </AppShellHeaderActions>
 
       <div className={cn(shellPageClass, "pt-4")}>
         {billingQuery.isPending ? (

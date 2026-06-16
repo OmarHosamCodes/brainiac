@@ -43,7 +43,7 @@ export function WorkspaceNodeBlockRenderer({ block, tabId }: WorkspaceNodeBlockR
   const searchMatches = getBlockSearchMatches(block);
 
   return (
-    <div className="group relative flex flex-col gap-5 rounded-[32px] border border-muted/40 bg-background/50 p-6 transition-all duration-300 hover:border-primary/30 hover:bg-background/80 hover:shadow-xl hover:shadow-black/5 focus-within:border-primary/30 focus-within:bg-background/80 focus-within:shadow-xl focus-within:shadow-black/5">
+    <div className="group relative flex flex-col gap-5 rounded-[32px] border border-default bg-default p-6 transition-all duration-200 hover:border-primary/30 hover:bg-elevated/20 focus-within:border-primary/30 focus-within:bg-elevated/20">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-muted/60 bg-elevated/50 text-toned transition-colors group-hover:border-primary/40 group-hover:text-primary">

@@ -54,7 +54,7 @@ function kindIconClass(kind: WorkspaceMarketplaceItem["payload"]["kind"] | null)
     case "block":
       return "bg-warning/10 text-warning";
     default:
-      return "bg-muted text-muted-foreground";
+      return "bg-muted text-muted";
   }
 }
 
@@ -341,7 +341,7 @@ export function MarketplaceImportModal({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => (nextOpen ? onOpenChange(true) : close())}>
-      <DialogContent className="max-w-lg rounded-[28px] p-0">
+      <DialogContent className="max-w-lg rounded-2xl p-0">
         <DialogHeader className="space-y-1 px-6 pt-6 text-left">
           <DialogTitle>{modalTitle}</DialogTitle>
           {item ? (

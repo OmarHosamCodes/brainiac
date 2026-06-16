@@ -25,15 +25,17 @@ export function BillingSuccessPage() {
           <CheckCircle className="size-8 text-primary" />
         </div>
 
-        <h1 className="mb-2 text-2xl font-bold text-highlighted">Welcome to Pro!</h1>
-        <p className="mb-8 text-muted-foreground">
-          Your subscription is now active. Enjoy the full power of Brainiac Studio.
-        </p>
+        <h1 className="mb-2 text-2xl font-bold text-highlighted">Pro is active</h1>
+        <p className="mb-8 text-muted">Your subscription is active and billing has been updated.</p>
 
-        {checkoutId ? <p className="mb-6 text-xs text-muted-foreground/70">Checkout ID: {checkoutId}</p> : null}
+        {checkoutId ? (
+          <p className="mb-6 text-xs text-muted">
+            Checkout ID: <span className="font-mono">{checkoutId}</span>
+          </p>
+        ) : null}
 
         <div className="flex flex-col gap-3">
-          <Button asChild size="lg" className="shadow-lg shadow-primary/20">
+          <Button asChild size="lg">
             <Link to="/dashboard">Go to Dashboard</Link>
           </Button>
           <Button asChild size="lg" variant="outline">

@@ -22,8 +22,21 @@ import {
 } from "@/stores/app-shell";
 import { APP_NAV_ITEMS, findActiveNavItem } from "@/lib/utils/app-navigation";
 import {
-  shellActionsSlotClass,
+  shellBreadcrumbCurrentClass,
+  shellBreadcrumbMutedClass,
+  shellBreadcrumbSeparatorClass,
+  shellBreadcrumbTrailClass,
   shellContextSlotClass,
+  shellFocusRingClass,
+  shellHeaderActionsRegionClass,
+  shellHeaderContextRegionClass,
+  shellHeaderUtilityActionClass,
+  shellHeaderUtilityButtonClass,
+  shellMobileNavClass,
+  shellMobileNavInnerClass,
+  shellMobileNavLinkActiveClass,
+  shellMobileNavLinkClass,
+  shellMobileNavLinkIdleClass,
   shellRailLinkActiveClass,
   shellRailLinkBaseClass,
   shellTopbarBaseClass,
@@ -99,6 +112,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             to="/dashboard"
             className={cn(
               shellRailLinkBaseClass,
+              shellFocusRingClass,
               "border border-default bg-default text-highlighted hover:bg-elevated",
             )}
             aria-label="Open dashboard"
@@ -115,7 +129,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <Link
                   key={item.to}
                   to={item.to}
-                  className={cn(shellRailLinkBaseClass, active ? shellRailLinkActiveClass : "border border-transparent")}
+                  className={cn(
+                    shellRailLinkBaseClass,
+                    shellFocusRingClass,
+                    active ? shellRailLinkActiveClass : "border border-transparent",
+                  )}
                   aria-label={item.label}
                   aria-current={active ? "page" : undefined}
                   title={item.label}
@@ -135,43 +153,44 @@ export function AppShell({ children }: { children: ReactNode }) {
           hasContextContent ? "app-shell__topbar--owned" : "",
         )}
         role="banner"
+        aria-label="Application header"
       >
-        <div className="app-shell__topbar-left">
+        <div className={shellHeaderContextRegionClass}>
           <div id="app-shell-context" className={shellContextSlotClass} />
           {showBreadcrumbs ? (
-            <div className="hidden min-w-0 items-center md:flex">
-              <div className="flex min-w-0 items-center gap-2">
+            <nav className="hidden min-w-0 md:flex" aria-label="Breadcrumb">
+              <ol className={shellBreadcrumbTrailClass}>
                 {breadcrumbItems.map((item, index) => (
-                  <span key={`${item}-${index}`} className="flex min-w-0 items-center gap-2">
+                  <li key={`${item}-${index}`} className="flex min-w-0 items-center gap-2">
                     <span
                       className={cn(
                         "truncate whitespace-nowrap",
                         index === breadcrumbItems.length - 1
-                          ? "text-sm font-semibold text-highlighted"
-                          : "truncate text-sm text-muted",
+                          ? shellBreadcrumbCurrentClass
+                          : shellBreadcrumbMutedClass,
                       )}
                     >
                       {item}
                     </span>
                     {index < breadcrumbItems.length - 1 ? (
-                      <span className="shrink-0 text-xs text-dimmed" aria-hidden="true">
+                      <span className={shellBreadcrumbSeparatorClass} aria-hidden="true">
                         /
                       </span>
                     ) : null}
-                  </span>
+                  </li>
                 ))}
-              </div>
-            </div>
+              </ol>
+            </nav>
           ) : null}
         </div>
 
         <div className={shellUtilityClusterClass}>
-          <div id="app-shell-actions" className={shellActionsSlotClass} />
+          <div id="app-shell-actions" className={shellHeaderActionsRegionClass} />
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="size-9 rounded-xl"
+            className={shellHeaderUtilityButtonClass}
             aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
             onClick={toggleTheme}
           >
@@ -181,8 +200,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             type="button"
             variant={agentDockOpen ? "secondary" : "ghost"}
             size="sm"
-            className="rounded-xl"
+            className={shellHeaderUtilityActionClass}
             aria-label={agentDockOpen ? "Close agent dock" : "Open agent dock"}
+            aria-keyshortcuts="Control+J Meta+J"
             onClick={() => setAgentDockOpen(!agentDockOpen)}
           >
             {agentDockOpen ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
@@ -212,6 +232,29 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div id="app-shell-dock-content" className="min-h-0 flex-1" />
         </div>
       </aside>
+
+      <nav className={shellMobileNavClass} aria-label="Mobile navigation">
+        <div className={shellMobileNavInnerClass}>
+          {APP_NAV_ITEMS.map((item) => {
+            const Icon = NAV_ICONS[item.to as keyof typeof NAV_ICONS] ?? LayoutDashboard;
+            const active = item.matches(location.pathname);
+            return (
+              <Link
+                key={`mobile-${item.to}`}
+                to={item.to}
+                className={cn(
+                  shellMobileNavLinkClass,
+                  active ? shellMobileNavLinkActiveClass : shellMobileNavLinkIdleClass,
+                )}
+                aria-current={active ? "page" : undefined}
+              >
+                <Icon className="size-4 shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
 
       <main className="app-shell__main">{children}</main>
     </div>

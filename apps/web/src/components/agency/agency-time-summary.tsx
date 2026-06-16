@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Inbox, Loader2 } from "lucide-react";
+import { Inbox } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Card } from "@/components/ui/card";
@@ -309,9 +309,14 @@ export function AgencyTimeSummary({ teamId }: AgencyTimeSummaryProps) {
       ) : null}
 
       {summaryQuery.isPending ? (
-        <div className="rounded-2xl border border-default bg-elevated p-8 text-center">
-          <Loader2 className="mx-auto size-6 animate-spin text-muted" />
-          <p className="mt-4 text-sm text-muted">Loading data...</p>
+        <div className="rounded-2xl border border-default bg-elevated p-6">
+          <div className="h-4 w-32 animate-pulse rounded bg-muted/50" />
+          <div className="mt-4 grid gap-3 md:grid-cols-3">
+            {[1, 2, 3].map((item) => (
+              <div key={item} className="h-20 animate-pulse rounded-xl bg-muted/40" />
+            ))}
+          </div>
+          <div className="mt-4 h-44 animate-pulse rounded-xl bg-muted/30" />
         </div>
       ) : null}
     </div>

@@ -97,7 +97,7 @@ function isOverdue(iso: string | null): boolean {
 
 function getProjectHue(projectId: string, projects: Project[]) {
   const index = projects.findIndex((p) => p.id === projectId);
-  if (index === -1) return "bg-neutral-400";
+  if (index === -1) return "bg-muted";
   const hues = [
     "bg-rose-400",
     "bg-amber-400",

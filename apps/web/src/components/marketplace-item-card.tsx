@@ -46,7 +46,7 @@ function kindIconClass(kind: WorkspaceMarketplaceItem["payload"]["kind"]) {
     case "block":
       return "bg-warning/10 text-warning";
     default:
-      return "bg-muted text-muted-foreground";
+      return "bg-muted text-muted";
   }
 }
 
@@ -98,7 +98,7 @@ export function MarketplaceItemCard({
         <div className="flex items-center justify-between gap-3 pt-2">
           <div className="flex min-w-0 items-center gap-2">
             <span
-              className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground ring-1 ring-muted/30"
+              className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted ring-1 ring-muted/30"
               aria-hidden="true"
             >
               {avatarInitials(item.createdByName)}
@@ -108,7 +108,7 @@ export function MarketplaceItemCard({
 
           <time
             dateTime={item.createdAt}
-            className="text-[10px] tracking-tighter whitespace-nowrap text-muted-foreground/60 uppercase"
+            className="text-[10px] tracking-tighter whitespace-nowrap text-muted uppercase"
           >
             {formatDateTime(item.createdAt)}
           </time>
