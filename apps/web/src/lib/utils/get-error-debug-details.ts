@@ -20,7 +20,7 @@ type ErrorWithDebugData = {
 };
 
 export function getErrorDebugDetails(error: unknown) {
-  if (!import.meta.dev) {
+  if (!import.meta.env.DEV) {
     return null;
   }
 

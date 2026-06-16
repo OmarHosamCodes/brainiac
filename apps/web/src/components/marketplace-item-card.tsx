@@ -108,7 +108,7 @@ export function MarketplaceItemCard({
 
           <time
             dateTime={item.createdAt}
-            className="text-[10px] tracking-tighter whitespace-nowrap text-muted/60 uppercase"
+            className="text-[10px] tracking-tighter whitespace-nowrap text-muted-foreground/60 uppercase"
           >
             {formatDateTime(item.createdAt)}
           </time>

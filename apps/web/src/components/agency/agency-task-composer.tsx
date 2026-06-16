@@ -42,7 +42,9 @@ export type AgencyTaskComposerHandle = {
   uploadFiles: (files: File[], options?: { durationSeconds?: number | null }) => Promise<void>;
 };
 
-async function captureFileMetadata(file: File): Promise<PendingAttachment["metadata"]> {
+async function captureFileMetadata(
+  file: File,
+): Promise<NonNullable<PendingAttachment["metadata"]>> {
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
   const meta: NonNullable<PendingAttachment["metadata"]> = {
     fileExtension: ext,

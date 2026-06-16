@@ -107,7 +107,7 @@ export function useWorkspaceNodeSharing(options: UseWorkspaceNodeSharingOptions)
     }
 
     if (!node.ownerUserId || node.ownerUserId === currentUserId) {
-      return "border-primary-300/60 bg-primary-100/80 text-primary-700 dark:border-primary-800/70 dark:bg-primary-950/50 dark:text-primary-300";
+      return "border-emerald-300/60 bg-emerald-100/80 text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-950/50 dark:text-emerald-300";
     }
 
     return "border-emerald-300/60 bg-emerald-100/80 text-emerald-700 dark:border-emerald-800/70 dark:bg-emerald-950/50 dark:text-emerald-300";

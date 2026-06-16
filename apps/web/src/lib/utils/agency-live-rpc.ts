@@ -23,7 +23,7 @@ export function createAgencyLiveRpcClient(serverUrl: string): {
 } {
   const websocket = new WebSocket(toWebSocketRpcUrl(serverUrl));
   const link = new WebSocketRPCLink({ websocket });
-  const client = createORPCClient(link);
+  const client = createORPCClient<AppRouterClient>(link);
   return { client, websocket };
 }
 

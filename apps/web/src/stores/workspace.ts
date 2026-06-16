@@ -81,12 +81,18 @@ type WorkspaceStoreState = {
   patchNodeDraft: (patch: Partial<NodeDraft>) => void;
   resetDraft: () => void;
   resetWorkspaceState: () => void;
-  applyWorkspaceSnapshotFn: ((nodes: WorkspaceNode[], updatedAt: string | null) => void) | null;
-  registerApplyWorkspaceSnapshot: (
-    fn: (nodes: WorkspaceNode[], updatedAt: string | null) => void,
-  ) => void;
   applyWorkspaceSnapshot: (nodes: WorkspaceNode[], updatedAt: string | null) => void;
 };
+
+let applyWorkspaceSnapshotHandler:
+  | ((nodes: WorkspaceNode[], updatedAt: string | null) => void)
+  | null = null;
+
+export function bindApplyWorkspaceSnapshotHandler(
+  handler: ((nodes: WorkspaceNode[], updatedAt: string | null) => void) | null,
+) {
+  applyWorkspaceSnapshotHandler = handler;
+}
 
 const defaultNodeDraft = (): NodeDraft => ({
   title: "",
@@ -150,10 +156,8 @@ export const useWorkspaceStore = create<WorkspaceStoreState>((set, get) => ({
       syncedRevision: 0,
       nodeDraft: defaultNodeDraft(),
     }),
-  applyWorkspaceSnapshotFn: null,
-  registerApplyWorkspaceSnapshot: (fn) => set({ applyWorkspaceSnapshotFn: fn }),
   applyWorkspaceSnapshot: (nodes, updatedAt) => {
-    get().applyWorkspaceSnapshotFn?.(nodes, updatedAt);
+    applyWorkspaceSnapshotHandler?.(nodes, updatedAt);
   },
 }));
 
@@ -234,10 +238,15 @@ function getSaveBadge(saveState: SaveState): WorkspaceSaveBadge {
 export function useWorkspaceQuery() {
   const session = authClient.useSession();
   const queryClient = useQueryClient();
-  const workspaceGetQueryOptions = orpc.workspace.get.queryOptions();
+  // Memoize so the options object (and the callbacks/effects that depend on it)
+  // keep a stable identity across renders. Recreating it every render makes
+  // `preloadWorkspace` change identity, which re-fires the preload effect in
+  // `useWorkspaceBoard` on every render → setState → infinite render loop.
+  const workspaceGetQueryOptions = useMemo(() => orpc.workspace.get.queryOptions(), []);
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousNodesRef = useRef<WorkspaceNode[] | null>(null);
   const previousUserIdRef = useRef<string | null>(null);
   const isApplyingRemoteRef = useRef(false);
   const scheduleWorkspaceSaveRef = useRef<(delay?: number) => void>(() => {});
@@ -252,7 +261,6 @@ export function useWorkspaceQuery() {
     saveError,
     syncedAt,
     isPreloadingWorkspace,
-    localRevision,
     syncedRevision,
     activeNodeId,
     editorOpen,
@@ -276,8 +284,6 @@ export function useWorkspaceQuery() {
     setPendingNodePosition,
     patchNodeDraft,
   } = store;
-
-  const registerApplyWorkspaceSnapshot = useWorkspaceStore((s) => s.registerApplyWorkspaceSnapshot);
 
   const authEnabled = Boolean(session.data?.user);
   const userId = session.data?.user?.id ?? null;
@@ -331,33 +337,24 @@ export function useWorkspaceQuery() {
     return node ? getWorkspaceNodeDashboardSelectableBlocks(node) : [];
   }, [activeNodeId, nodes]);
 
-  const hasPendingLocalChanges =
-    localRevision > syncedRevision || Boolean(saveTimerRef.current) || saveWorkspace.isPending;
-
   const saveBadge = getSaveBadge(saveState);
 
   const applyRemoteSnapshot = useCallback(
     (remoteNodes: WorkspaceNode[], updatedAt: string | null) => {
+      const state = useWorkspaceStore.getState();
       isApplyingRemoteRef.current = true;
       setIsHydratingWorkspace(true);
       setNodes(remoteNodes.map(normalizeWorkspaceNode));
       setSelectedNodeIds(
-        selectedNodeIds.filter((nodeId) => remoteNodes.some((node) => node.id === nodeId)),
+        state.selectedNodeIds.filter((nodeId) => remoteNodes.some((node) => node.id === nodeId)),
       );
       setLoadApplied(true);
       setSyncedAt(updatedAt);
-      setSyncedRevision(localRevision);
+      setSyncedRevision(state.localRevision);
       setSaveState("idle");
       setSaveError(null);
-
-      queueMicrotask(() => {
-        setIsHydratingWorkspace(false);
-        isApplyingRemoteRef.current = false;
-      });
     },
     [
-      localRevision,
-      selectedNodeIds,
       setIsHydratingWorkspace,
       setLoadApplied,
       setNodes,
@@ -836,13 +833,30 @@ export function useWorkspaceQuery() {
   ]);
 
   useEffect(() => {
-    if (!workspaceReadyForEdits || isHydratingWorkspace || isApplyingRemoteRef.current) {
+    if (isApplyingRemoteRef.current) {
+      isApplyingRemoteRef.current = false;
+      // Sync the baseline to the freshly hydrated nodes so the readiness
+      // transition below doesn't look like a user edit.
+      previousNodesRef.current = nodes;
+      setIsHydratingWorkspace(false);
+      return;
+    }
+
+    // Only autosave when the nodes reference actually changed (a real edit).
+    // Readiness/hydration transitions must not trigger a spurious save.
+    if (previousNodesRef.current === nodes) {
+      return;
+    }
+
+    previousNodesRef.current = nodes;
+
+    if (!workspaceReadyForEdits || isHydratingWorkspace) {
       return;
     }
 
     incrementLocalRevision();
     scheduleWorkspaceSaveRef.current();
-  }, [nodes, workspaceReadyForEdits, isHydratingWorkspace, incrementLocalRevision]);
+  }, [nodes, workspaceReadyForEdits, isHydratingWorkspace, incrementLocalRevision, setIsHydratingWorkspace]);
 
   useEffect(
     () => () => {
@@ -853,9 +867,9 @@ export function useWorkspaceQuery() {
   );
 
   useEffect(() => {
-    registerApplyWorkspaceSnapshot(applyWorkspaceSnapshot);
-    return () => registerApplyWorkspaceSnapshot(() => {});
-  }, [applyWorkspaceSnapshot, registerApplyWorkspaceSnapshot]);
+    bindApplyWorkspaceSnapshotHandler(applyWorkspaceSnapshot);
+    return () => bindApplyWorkspaceSnapshotHandler(null);
+  }, [applyWorkspaceSnapshot]);
 
   return {
     workspaceQuery,

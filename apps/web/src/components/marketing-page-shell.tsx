@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { BrainCircuit, Moon, Sun } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/hooks/use-theme";
 import { orpc } from "@/lib/orpc";
 import { cn } from "@/lib/utils";
 
@@ -20,13 +21,7 @@ const footerLegal = [
 ];
 
 function ThemeToggle() {
-  const [dark, setDark] = useState(() =>
-    typeof document !== "undefined" ? document.documentElement.classList.contains("dark") : false,
-  );
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", dark);
-  }, [dark]);
+  const { isDark, toggle } = useTheme();
 
   return (
     <Button
@@ -34,10 +29,10 @@ function ThemeToggle() {
       variant="ghost"
       size="sm"
       className="-ml-2 rounded-full"
-      aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-      onClick={() => setDark((value) => !value)}
+      aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+      onClick={toggle}
     >
-      {dark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+      {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
     </Button>
   );
 }

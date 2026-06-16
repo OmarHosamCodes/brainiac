@@ -315,7 +315,7 @@ type AgencyOpsState = {
 
 function createAgencyOpsActions(
   set: (partial: Partial<AgencyOpsState> | ((state: AgencyOpsState) => Partial<AgencyOpsState>)) => void,
-  get: () => AgencyOpsState,
+  _get: () => AgencyOpsState,
 ) {
   // Pending-mutation counters exposed so components can disable buttons.
 

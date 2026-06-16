@@ -110,7 +110,7 @@ export function NodePage() {
 
       {page.isWorkspaceRefreshing ? (
         <div className="pointer-events-none absolute right-4 top-4 z-30 md:right-6 md:top-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-muted/70 bg-default/95 px-3 py-2 text-xs font-medium text-toned">
+          <div className="inline-flex items-center gap-2 rounded-full border border-muted/70 bg-background/95 px-3 py-2 text-xs font-medium text-toned">
             <Loader2 className="size-3.5 animate-spin text-primary" />
             Refreshing workspace
           </div>
