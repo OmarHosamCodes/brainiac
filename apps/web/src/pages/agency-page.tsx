@@ -21,6 +21,7 @@ import { AgencySegmentBar } from "@/components/agency/agency-segment-bar";
 import { AgencySettingsSurface } from "@/components/agency/agency-settings-surface";
 import { AgencyTopBarNav } from "@/components/agency/agency-top-bar-nav";
 import { AgencyWorkSurface } from "@/components/agency/agency-work-surface";
+import { AppShellHeaderActions, AppShellHeaderContext } from "@/components/app-shell-header-slots";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -35,8 +36,6 @@ import { AGENCY_SEGMENTS, type AgencySegmentId } from "@/lib/agency-segments";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import {
-  shellActionsSlotClass,
-  shellContextSlotClass,
   shellPageBodyClass,
   shellPageClass,
   shellPageIntroClass,
@@ -137,7 +136,7 @@ export function AgencyPage() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-default text-default">
-      <div className={shellContextSlotClass}>
+      <AppShellHeaderContext>
         <AgencyTopBarNav
           segment={segment}
           teamId={selectedTeamId}
@@ -146,9 +145,9 @@ export function AgencyPage() {
           onSegmentChange={handleSegmentChange}
           onTeamIdChange={setSelectedTeamId}
         />
-      </div>
+      </AppShellHeaderContext>
 
-      <div className={shellActionsSlotClass}>
+      <AppShellHeaderActions>
         {segment === "projects" && !selectedProjectId ? (
           <Button size="sm" onClick={() => projectsTableRef.current?.openNewProject()}>
             <Plus className="size-4" />
@@ -166,7 +165,7 @@ export function AgencyPage() {
             {reportsExportState.isExporting ? "Exporting…" : "Export CSV"}
           </Button>
         ) : null}
-      </div>
+      </AppShellHeaderActions>
 
       <main className={shellPageClass}>
         {isInitialLoading ? (

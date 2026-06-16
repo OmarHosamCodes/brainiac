@@ -45,7 +45,7 @@ export function DashboardAgentModelLibrary({
   }
 
   return (
-    <div className="absolute inset-x-0 top-0 z-20 border-b border-default bg-background/95 p-4 backdrop-blur-md">
+    <div className="absolute inset-x-0 top-0 z-20 border-b border-default bg-default p-4">
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
           <p className={dashboardLabelClass}>Model library</p>

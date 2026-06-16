@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 
 import { DashboardAgentChatPanel } from "@/components/dashboard/dashboard-agent-chat-panel";
+import { AppShellHeaderContext } from "@/components/app-shell-header-slots";
 import { WorkspaceNodeEditorProvider } from "@/components/workspace/node/context";
 import { WorkspaceNodeShell } from "@/components/workspace/node/workspace-node-shell";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +13,11 @@ import {
   useAppShellCustomDock,
 } from "@/hooks/use-app-shell";
 import { useAppShellStore } from "@/stores/app-shell";
-import { shellBreadcrumbCurrentClass, shellContextDividerClass } from "@/lib/utils/app-shell-ui";
+import {
+  shellBreadcrumbCurrentClass,
+  shellContextDividerClass,
+  shellLoadingPanelClass,
+} from "@/lib/utils/app-shell-ui";
 import { Loader2 } from "lucide-react";
 
 export function NodePage() {
@@ -23,15 +28,13 @@ export function NodePage() {
 
   return (
     <div className="relative h-full w-full overflow-hidden">
-      <AppShellPortal targetId="app-shell-context">
-        <div className="hidden min-w-0 items-center gap-2 md:flex">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/dashboard">Back</Link>
-          </Button>
-          <span className={shellContextDividerClass} aria-hidden="true" />
-          <span className={shellBreadcrumbCurrentClass}>{page.node?.title ?? "Node"}</span>
-        </div>
-      </AppShellPortal>
+      <AppShellHeaderContext>
+        <Button variant="ghost" size="sm" className="shrink-0" asChild>
+          <Link to="/dashboard">Back</Link>
+        </Button>
+        <span className={shellContextDividerClass} aria-hidden="true" />
+        <span className={shellBreadcrumbCurrentClass}>{page.node?.title ?? "Node"}</span>
+      </AppShellHeaderContext>
 
       <AppShellPortal targetId="app-shell-dock-content">
         {page.node ? (
@@ -64,9 +67,12 @@ export function NodePage() {
       ) : null}
 
       {page.isWorkspaceInitialLoading || !page.hasWorkspaceLoaded ? (
-        <div className="flex h-full items-center justify-center text-sm text-muted">
-          <Loader2 className="mr-2 size-4 animate-spin" />
-          Loading node…
+        <div className="h-full p-6 sm:p-8">
+          <div className={shellLoadingPanelClass}>
+            <div className="h-8 w-48 animate-pulse rounded bg-muted/50" />
+            <div className="mt-4 h-5 w-32 animate-pulse rounded bg-muted/40" />
+            <div className="mt-6 h-36 animate-pulse rounded-2xl bg-muted/40" />
+          </div>
         </div>
       ) : null}
 

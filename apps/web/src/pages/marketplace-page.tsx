@@ -15,6 +15,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { MarketplaceImportModal } from "@/components/marketplace-import-modal";
 import { MarketplaceItemCard } from "@/components/marketplace-item-card";
+import { AppShellHeaderActions, AppShellHeaderContext } from "@/components/app-shell-header-slots";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,11 +25,9 @@ import {
   useAppShellContextSlot,
   useAppShellPageTitle,
 } from "@/hooks/use-app-shell";
-import { AppShellPortal } from "@/hooks/use-app-shell-portal";
 import { useWorkspaceBoard } from "@/hooks/use-workspace-board";
 import { orpc } from "@/lib/orpc";
 import {
-  shellActionsSlotClass,
   shellPageBodyClass,
   shellPageClass,
   shellPageIntroClass,
@@ -145,7 +144,7 @@ export function MarketplacePage() {
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-default">
-      <AppShellPortal targetId="app-shell-context">
+      <AppShellHeaderContext>
         <div className="hidden md:block">
           <Tabs
             value={activeKind}
@@ -164,29 +163,27 @@ export function MarketplacePage() {
             </TabsList>
           </Tabs>
         </div>
-      </AppShellPortal>
+      </AppShellHeaderContext>
 
-      <AppShellPortal targetId="app-shell-actions">
-        <div className={shellActionsSlotClass}>
-          <div className={cn("relative hidden w-36 lg:block xl:w-44", shellTopbarFieldClass)}>
-            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchInput}
-              placeholder="Search..."
-              className="h-9 pl-8"
-              onChange={(event) => setSearchInput(event.target.value)}
-            />
-          </div>
-          <Badge variant="secondary" className="hidden h-9 sm:inline-flex">
-            {totalLoaded}
-          </Badge>
-          {isWorkspaceRefreshing ? (
-            <Badge variant="default" className="inline-flex h-9 gap-1">
-              <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-            </Badge>
-          ) : null}
+      <AppShellHeaderActions>
+        <div className={cn("relative hidden w-36 lg:block xl:w-44", shellTopbarFieldClass)}>
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
+          <Input
+            value={searchInput}
+            placeholder="Search..."
+            className="h-9 pl-8"
+            onChange={(event) => setSearchInput(event.target.value)}
+          />
         </div>
-      </AppShellPortal>
+        <Badge variant="secondary" className="hidden h-9 sm:inline-flex">
+          {totalLoaded}
+        </Badge>
+        {isWorkspaceRefreshing ? (
+          <Badge variant="default" className="inline-flex h-9 gap-1">
+            <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+          </Badge>
+        ) : null}
+      </AppShellHeaderActions>
 
       <main className={shellPageClass}>
         <div className={shellPageBodyClass}>
@@ -222,7 +219,7 @@ export function MarketplacePage() {
               </TabsList>
             </Tabs>
             <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
               <Input
                 value={searchInput}
                 placeholder="Search marketplace..."

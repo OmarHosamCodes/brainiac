@@ -15,16 +15,35 @@ export const shellEmptyPanelClass =
 
 export const shellErrorPanelClass = "rounded-2xl border border-error/30 bg-error/5 p-6 text-center";
 
+export const shellLoadingPanelClass = "rounded-2xl border border-default bg-muted/20 p-6";
+
 export const shellRailLinkBaseClass =
   "flex size-10 items-center justify-center rounded-2xl text-muted transition-colors hover:bg-elevated hover:text-highlighted";
 
 export const shellRailLinkActiveClass = "bg-primary/10 text-primary border border-primary/30";
 
-export const shellTopbarBaseClass = "border-b border-default bg-default";
+/** Topbar shell frame (paired with `.app-shell__topbar` in index.css). */
+export const shellTopbarBaseClass = "app-shell__topbar border-b border-default bg-default";
 
 export const shellTopbarSpatialClass = "app-shell__topbar--spatial";
 
 export const shellTopbarExecutionClass = "app-shell__topbar--execution";
+
+export const shellHeaderContextRegionClass = "app-shell__topbar-left min-w-0 flex-1";
+
+export const shellHeaderContextInnerClass = "flex min-w-0 items-center gap-2";
+
+export const shellHeaderActionsRegionClass = "flex min-w-0 items-center gap-1.5 sm:gap-2";
+
+export const shellHeaderUtilityButtonClass = [
+  "size-9 shrink-0 rounded-xl",
+  shellFocusRingClass,
+].join(" ");
+
+export const shellHeaderUtilityActionClass = [
+  "shrink-0 rounded-xl",
+  shellFocusRingClass,
+].join(" ");
 
 /** Shared geometry for all topbar controls: sm buttons, rounded-xl, 36px icon targets. */
 export const shellTopbarControlClass = "shrink-0 rounded-xl";
@@ -51,7 +70,9 @@ export const shellContextSlotClass = "app-shell__context min-w-0 flex-1";
 export const shellUtilityClusterClass =
   "app-shell__utilities flex shrink-0 items-center gap-1.5 sm:gap-2";
 
-export const shellActionsSlotClass = "flex items-center gap-1.5 sm:gap-2";
+export const shellActionsSlotClass = shellHeaderActionsRegionClass;
+
+export const shellBreadcrumbTrailClass = "flex min-w-0 items-center gap-2";
 
 export const shellBreadcrumbMutedClass = "truncate text-sm text-muted";
 
@@ -59,7 +80,7 @@ export const shellBreadcrumbCurrentClass = "truncate text-sm font-semibold text-
 
 export const shellBreadcrumbSeparatorClass = "shrink-0 text-xs text-dimmed";
 
-export const shellContextDividerClass = "h-4 w-px shrink-0 bg-default";
+export const shellContextDividerClass = "h-4 w-px shrink-0 bg-border";
 
 export const shellChipClass =
   "inline-flex min-w-0 items-center gap-1.5 rounded-full border border-default bg-muted px-2.5 py-1 text-xs font-bold text-highlighted transition-colors hover:bg-elevated";
@@ -68,6 +89,20 @@ export const shellSegmentTabClass =
   "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-highlighted";
 
 export const shellSegmentTabActiveClass = "bg-primary/10 text-primary";
+
+export const shellMobileNavClass =
+  "app-shell__mobile-nav fixed inset-x-0 bottom-0 border-t border-default bg-default md:hidden";
+
+export const shellMobileNavInnerClass = "mx-auto flex max-w-md items-center justify-around p-2";
+
+export const shellMobileNavLinkClass = [
+  "inline-flex h-10 min-w-[4.5rem] items-center justify-center gap-1.5 rounded-xl px-2 text-xs font-semibold transition-colors",
+  shellFocusRingClass,
+].join(" ");
+
+export const shellMobileNavLinkActiveClass = "bg-primary/10 text-primary";
+
+export const shellMobileNavLinkIdleClass = "text-muted hover:bg-elevated hover:text-highlighted";
 
 export const shellPageClass =
   "mx-auto flex h-full w-full max-w-[120rem] flex-col px-6 pb-16 lg:px-8";
