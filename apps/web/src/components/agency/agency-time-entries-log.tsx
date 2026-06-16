@@ -48,7 +48,7 @@ type GroupedEntry = {
   clientName: string;
   description: string;
   linkUrl: string | null;
-  tags: Array<{ id: string; name: string }>;
+  tags: Array<{ id: string; name: string; teamId: string; createdAt: string; updatedAt: string }>;
   totalSeconds: number;
   entries: Array<{
     id: string;

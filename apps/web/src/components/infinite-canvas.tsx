@@ -9,13 +9,15 @@ import {
   type ReactNode,
 } from "react";
 import {
-  Expand,
   LayoutGrid,
-  Minimize,
+  Link2,
   Minus,
+  Pencil,
   Plus,
   Scan,
   ScanSearch,
+  Trash2,
+  Unlink,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -25,10 +27,7 @@ import {
   getCanonicalConnectionPair,
   getEligibleConnectionTargetIds,
 } from "@/lib/utils/workspace-node-connections";
-import {
-  getWorkspaceNodeTintOption,
-  getWorkspaceNodeTintStyle,
-} from "@/lib/utils/workspace-node-dashboard";
+import { getWorkspaceNodeTintStyle } from "@/lib/utils/workspace-node-dashboard";
 import { cn } from "@/lib/utils";
 
 type InfiniteCanvasProps = {
@@ -80,6 +79,48 @@ export const InfiniteCanvas = forwardRef<InfiniteCanvasHandle, InfiniteCanvasPro
 
     const selectedSet = useMemo(() => new Set(selectedNodeIds), [selectedNodeIds]);
     const nodeById = useMemo(() => new Map(nodes.map((node) => [node.id, node])), [nodes]);
+
+    const connectionSegments = useMemo(() => {
+      const segments: {
+        orchestratorNodeId: string;
+        standardNodeId: string;
+        x1: number;
+        y1: number;
+        x2: number;
+        y2: number;
+      }[] = [];
+
+      for (const node of nodes) {
+        if (node.nodeType !== "orchestrator" || !node.connections?.length) continue;
+        const x1 = node.x + node.width / 2;
+        const y1 = node.y + node.height / 2;
+        for (const connection of node.connections) {
+          const target = nodeById.get(connection.targetNodeId);
+          if (!target) continue;
+          segments.push({
+            orchestratorNodeId: node.id,
+            standardNodeId: target.id,
+            x1,
+            y1,
+            x2: target.x + target.width / 2,
+            y2: target.y + target.height / 2,
+          });
+        }
+      }
+
+      return segments;
+    }, [nodes, nodeById]);
+
+    const connectCandidate = useMemo(() => {
+      if (selectedNodeIds.length !== 2) return null;
+      const [first, second] = selectedNodeIds;
+      const sourceNode = first ? nodeById.get(first) : undefined;
+      const targetNode = second ? nodeById.get(second) : undefined;
+      const pair = getCanonicalConnectionPair(sourceNode, targetNode);
+      if (!pair) return null;
+      const eligible = getEligibleConnectionTargetIds(nodes, pair.orchestratorNodeId);
+      return eligible.includes(pair.standardNodeId) ? pair : null;
+    }, [nodes, nodeById, selectedNodeIds]);
 
     const [activeInteraction, setActiveInteraction] = useState<{
       mode: "drag" | "resize";
@@ -271,6 +312,49 @@ export const InfiniteCanvas = forwardRef<InfiniteCanvasHandle, InfiniteCanvasPro
           onLostPointerCapture={() => canvas.onLostPointerCapture()}
         >
           <div className="canvas-plane absolute inset-0 origin-top-left" style={canvas.canvasStyle}>
+            {connectionSegments.length > 0 ? (
+              <svg
+                className="pointer-events-none absolute inset-0 overflow-visible"
+                style={{ width: 1, height: 1 }}
+                aria-hidden="true"
+              >
+                {connectionSegments.map((segment) => (
+                  <line
+                    key={`${segment.orchestratorNodeId}:${segment.standardNodeId}`}
+                    x1={segment.x1}
+                    y1={segment.y1}
+                    x2={segment.x2}
+                    y2={segment.y2}
+                    stroke="var(--color-primary)"
+                    strokeWidth={2}
+                    strokeOpacity={0.5}
+                    strokeDasharray="6 6"
+                  />
+                ))}
+              </svg>
+            ) : null}
+
+            {connectionSegments.map((segment) => (
+              <button
+                key={`disconnect:${segment.orchestratorNodeId}:${segment.standardNodeId}`}
+                type="button"
+                className="absolute z-10 inline-flex size-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-default bg-default text-muted shadow-sm transition hover:border-error/60 hover:text-error"
+                style={{ left: (segment.x1 + segment.x2) / 2, top: (segment.y1 + segment.y2) / 2 }}
+                aria-label="Remove connection"
+                title="Remove connection"
+                onPointerDown={(event) => event.stopPropagation()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDisconnectNodePair({
+                    orchestratorNodeId: segment.orchestratorNodeId,
+                    standardNodeId: segment.standardNodeId,
+                  });
+                }}
+              >
+                <Unlink className="size-3" />
+              </button>
+            ))}
+
             {nodes.map((node) => (
               <article
                 key={node.id}
@@ -314,17 +398,47 @@ export const InfiniteCanvas = forwardRef<InfiniteCanvasHandle, InfiniteCanvasPro
                     <h3 className="min-w-0 flex-1 truncate text-[13px] font-bold uppercase tracking-widest text-neutral-900 dark:text-neutral-100">
                       {node.title?.trim() || node.label?.trim() || "Untitled node"}
                     </h3>
-                    <button
-                      type="button"
-                      className="inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 transition hover:bg-neutral-100 hover:text-primary dark:border-neutral-800 dark:hover:bg-neutral-800"
-                      onPointerDown={(event) => event.stopPropagation()}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        canvas.fitToRect(node, FIT_PADDING);
-                      }}
-                    >
-                      <ScanSearch className="size-4" />
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button
+                        type="button"
+                        className="inline-flex size-8 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 transition hover:bg-neutral-100 hover:text-primary dark:border-neutral-800 dark:hover:bg-neutral-800"
+                        aria-label="Edit node"
+                        title="Edit node"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onEditNode({ nodeId: node.id });
+                        }}
+                      >
+                        <Pencil className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex size-8 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 transition hover:bg-neutral-100 hover:text-error dark:border-neutral-800 dark:hover:bg-neutral-800"
+                        aria-label="Delete node"
+                        title="Delete node"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onRemoveNode({ nodeId: node.id });
+                        }}
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex size-8 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 transition hover:bg-neutral-100 hover:text-primary dark:border-neutral-800 dark:hover:bg-neutral-800"
+                        aria-label="Focus node"
+                        title="Focus node"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          canvas.fitToRect(node, FIT_PADDING);
+                        }}
+                      >
+                        <ScanSearch className="size-4" />
+                      </button>
+                    </div>
                   </div>
                   <div className="canvas-node-content min-h-0 flex-1 overflow-hidden">
                     {renderNode(node, selectedSet.has(node.id), nodes)}
@@ -356,6 +470,20 @@ export const InfiniteCanvas = forwardRef<InfiniteCanvasHandle, InfiniteCanvasPro
                 Add node
               </Button>
             </div>
+          </div>
+        ) : null}
+
+        {connectCandidate ? (
+          <div className="pointer-events-none absolute bottom-24 left-1/2 flex -translate-x-1/2 items-center">
+            <Button
+              variant="default"
+              size="sm"
+              className="pointer-events-auto rounded-full shadow-lg"
+              onClick={() => onConnectNodePair(connectCandidate)}
+            >
+              <Link2 className="size-4" />
+              Connect nodes
+            </Button>
           </div>
         ) : null}
 

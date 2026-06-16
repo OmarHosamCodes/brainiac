@@ -26,7 +26,6 @@ type AgencyTimeTrackerProps = {
 export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
   const isTimerMutationPending = useAgencyTimeTrackingStore(selectIsTimerMutationPending);
-  const draftByTeam = useAgencyTimeTrackingStore((s) => s.draftByTeam);
   const [now, setNow] = useState(Date.now());
   const [tagSearch, setTagSearch] = useState("");
 
@@ -69,7 +68,7 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
   const tasks = tasksQuery.data?.items ?? [];
   const tags = tagsQuery.data?.items ?? [];
   const activeTimer = activeTimerQuery.data?.timer ?? null;
-  const trackerDraft = teamId ? (draftByTeam[teamId] ?? null) : null;
+  const trackerDraft = teamId ? agencyTimeTrackingStore.getDraft(teamId) : null;
 
   const filteredTags = useMemo(() => {
     const query = tagSearch.trim().toLowerCase();

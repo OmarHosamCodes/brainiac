@@ -1,5 +1,4 @@
 import {
-  createDefaultWorkspaceTab,
   createWorkspaceNotesBlock,
   createWorkspaceTaskListBlock,
   normalizeWorkspaceNode,

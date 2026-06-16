@@ -336,7 +336,7 @@ export function WorkspaceEditorModal({
                                     ? "border-primary/40 bg-primary/10"
                                     : isDisabled
                                       ? "cursor-not-allowed border-muted/40 bg-elevated/20 opacity-60"
-                                      : "border-muted/60 bg-default/80 hover:border-primary/30 hover:bg-default",
+                                      : "border-muted/60 bg-background/80 hover:border-primary/30 hover:bg-default",
                                 )}
                                 aria-pressed={isSelected}
                                 disabled={isDisabled}

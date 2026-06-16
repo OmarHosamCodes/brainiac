@@ -1,6 +1,7 @@
-import { BrainCircuit } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { BrainCircuit, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Navigate, Link, useLocation } from "react-router-dom";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,9 +9,14 @@ import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
+type AuthMode = "sign-in" | "sign-up";
+
 export function LoginPage() {
   const session = authClient.useSession();
   const location = useLocation();
+
+  const [mode, setMode] = useState<AuthMode>("sign-in");
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -18,79 +24,173 @@ export function LoginPage() {
 
   const redirectTo = (location.state as { from?: string } | null)?.from ?? "/dashboard";
 
-  useEffect(() => {
-    if (!session.isPending && session.data) {
-      // Handled by Navigate below.
-    }
-  }, [session.data, session.isPending]);
-
   if (!session.isPending && session.data) {
     return <Navigate to={redirectTo} replace />;
   }
 
-  async function handleSignIn(event: React.FormEvent) {
+  const isSignUp = mode === "sign-up";
+
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setPending(true);
     setError(null);
 
     try {
-      const result = await authClient.signIn.email({
-        email: email.trim(),
-        password,
-      });
+      if (isSignUp) {
+        const result = await authClient.signUp.email({
+          name: name.trim() || email.trim().split("@")[0] || "User",
+          email: email.trim(),
+          password,
+        });
 
-      if (result.error) {
-        setError(result.error.message ?? "Sign in failed.");
+        if (result.error) {
+          setError(result.error.message ?? "Sign up failed.");
+          return;
+        }
+
+        toast.success("Welcome to Brainiac", { description: "Your workspace is ready." });
+      } else {
+        const result = await authClient.signIn.email({
+          email: email.trim(),
+          password,
+        });
+
+        if (result.error) {
+          setError(result.error.message ?? "Sign in failed.");
+          return;
+        }
       }
-    } catch (signInError) {
-      setError(getErrorMessage(signInError, "Sign in failed."));
+    } catch (submitError) {
+      setError(getErrorMessage(submitError, isSignUp ? "Sign up failed." : "Sign in failed."));
     } finally {
       setPending(false);
     }
   }
 
+  function switchMode(nextMode: AuthMode) {
+    setMode(nextMode);
+    setError(null);
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-6">
-      <div className="w-full max-w-md space-y-8">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex size-14 items-center justify-center rounded-3xl bg-foreground text-background">
-            <BrainCircuit className="size-8" />
+    <div className="flex min-h-screen">
+      <aside className="relative hidden flex-1 flex-col justify-between overflow-hidden border-r border-border bg-muted/40 p-12 lg:flex xl:p-16">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-40"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 2px 2px, var(--border) 1px, transparent 0)",
+            backgroundSize: "24px 24px",
+          }}
+        />
+        <Link to="/" className="relative z-10 flex items-center gap-3">
+          <div className="flex size-12 items-center justify-center rounded-2xl bg-foreground text-background">
+            <BrainCircuit className="size-7" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Sign in to Brainiac</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Access your infinite workspace.</p>
+            <p className="text-xl font-bold tracking-tight">Brainiac</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+              The infinite workspace
+            </p>
           </div>
+        </Link>
+
+        <div className="relative z-10 max-w-lg">
+          <h2 className="text-4xl font-bold leading-tight tracking-tight xl:text-5xl">
+            Reimagine the way you <span className="text-primary italic">think</span>.
+          </h2>
+          <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
+            Your mind isn&apos;t a grid. It&apos;s a canvas. Brainiac organizes chaos into clarity
+            with an infinite spatial interface powered by an embedded agent.
+          </p>
         </div>
 
-        <form className="space-y-4" onSubmit={(event) => void handleSignIn(event)}>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
+        <div className="relative z-10 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          &copy; 2026 Brainiac
+        </div>
+      </aside>
+
+      <main className="flex flex-1 items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md space-y-8">
+          <div className="flex flex-col items-center gap-3 text-center lg:items-start lg:text-left">
+            <div className="flex size-12 items-center justify-center rounded-2xl bg-foreground text-background lg:hidden">
+              <BrainCircuit className="size-7" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                {isSignUp ? "Create your account" : "Welcome back"}
+              </h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {isSignUp
+                  ? "Start building your infinite workspace."
+                  : "Sign in to access your infinite workspace."}
+              </p>
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
-          </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? "Signing in…" : "Sign in"}
-          </Button>
-        </form>
-      </div>
+
+          <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
+            {isSignUp ? (
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  autoComplete="name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Jane Doe"
+                />
+              </div>
+            ) : null}
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                autoComplete={isSignUp ? "new-password" : "current-password"}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                minLength={8}
+                required
+              />
+              {isSignUp ? (
+                <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+              ) : null}
+            </div>
+
+            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+            <Button type="submit" className="w-full" disabled={pending}>
+              {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+              {isSignUp ? "Create account" : "Sign in"}
+            </Button>
+          </form>
+
+          <p className="text-center text-sm text-muted-foreground">
+            {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+            <button
+              type="button"
+              className="font-semibold text-primary hover:underline"
+              onClick={() => switchMode(isSignUp ? "sign-in" : "sign-up")}
+            >
+              {isSignUp ? "Sign in" : "Sign up"}
+            </button>
+          </p>
+        </div>
+      </main>
     </div>
   );
 }

@@ -2,7 +2,6 @@
 
 import {
   shellEmptyPanelClass,
-  shellErrorPanelClass,
   shellFocusRingClass,
   shellLabelClass,
 } from "@/lib/utils/app-shell-ui";

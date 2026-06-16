@@ -1,24 +1,18 @@
 import type {
   DashboardAgentToolPreset,
-  DashboardConversationDetail,
   DashboardConversationMessage,
-  DashboardConversationSummary,
-  DashboardConversationUsageSummary,
-  OpenRouterCatalogModel,
 } from "@brainiac/agent";
 import type { WorkspaceNode } from "@brainiac/workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import { useWorkspaceStore } from "@/stores/workspace";
 import {
   getActiveDashboardNodeMention,
-  getDashboardNodeMentionSuggestions,
   stripActiveDashboardNodeMention,
 } from "@/lib/utils/dashboard-agent-mentions";
-import { getErrorDebugDetails } from "@/lib/utils/get-error-debug-details";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 
@@ -69,7 +63,28 @@ export function useDashboardAgentChat(nodes: WorkspaceNode[], activeTabId?: stri
     () => nodes.filter((node) => selectedNodeIds.includes(node.id)),
     [nodes, selectedNodeIds],
   );
-  const modelOptions = modelCatalogQuery.data?.models ?? [];
+  const modelOptions = useMemo(() => {
+    const rawModels = modelCatalogQuery.data?.models ?? [];
+
+    return rawModels.map((model) => {
+      if (model.isFree) {
+        return { ...model, label: model.name, pricingLabel: "Free", compactPricingLabel: "Free" };
+      }
+
+      const promptPerMillion = Number(model.pricing?.prompt ?? 0) * 1_000_000;
+      const completionPerMillion = Number(model.pricing?.completion ?? 0) * 1_000_000;
+      const hasPricing = Number.isFinite(promptPerMillion) && promptPerMillion > 0;
+
+      return {
+        ...model,
+        label: model.name,
+        pricingLabel: hasPricing
+          ? `$${promptPerMillion.toFixed(2)}/M in · $${completionPerMillion.toFixed(2)}/M out`
+          : "Pricing unavailable",
+        compactPricingLabel: hasPricing ? `$${promptPerMillion.toFixed(2)}/M` : "—",
+      };
+    });
+  }, [modelCatalogQuery.data?.models]);
   const selectedModelId = conversationDraftModelId ?? modelCatalogQuery.data?.defaultModel ?? modelOptions[0]?.id;
   const canSend = draft.trim().length > 0 && !chatTurnMutation.isPending;
 

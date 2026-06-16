@@ -2,10 +2,152 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme inline {
-  --font-sans: "Public Sans", system-ui, -apple-system, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+:root {
+  /* Light theme - "paper". Zinc-tinted neutrals (hue 285), Operator Emerald accent (hue 162). */
+  --background: oklch(0.98 0.002 285);
+  --foreground: oklch(0.21 0.006 285);
+  --card: oklch(0.995 0.001 285);
+  --card-foreground: oklch(0.21 0.006 285);
+  --popover: oklch(0.995 0.001 285);
+  --popover-foreground: oklch(0.21 0.006 285);
+  --primary: oklch(0.72 0.17 162);
+  --primary-foreground: oklch(0.99 0.01 162);
+  --secondary: oklch(0.96 0.003 285);
+  --secondary-foreground: oklch(0.21 0.006 285);
+  --muted: oklch(0.9 0.004 285);
+  --muted-foreground: oklch(0.5 0.012 285);
+  --accent: oklch(0.96 0.003 285);
+  --accent-foreground: oklch(0.21 0.006 285);
+  --destructive: oklch(0.637 0.208 25.33);
+  --destructive-foreground: oklch(0.99 0.005 285);
+  --border: oklch(0.9 0.004 285);
+  --input: oklch(0.9 0.004 285);
+  --ring: oklch(0.72 0.17 162);
 
+  /* Extended semantic tokens (nuxt-ui parity) */
+  --toned: oklch(0.32 0.008 285);
+  --dimmed: oklch(0.62 0.012 285);
+  --elevated: oklch(0.94 0.004 285);
+  --elevated-foreground: oklch(0.21 0.006 285);
+  --accented: oklch(0.88 0.005 285);
+  --inverted: oklch(0.21 0.006 285);
+  --inverted-foreground: oklch(0.98 0.002 285);
+  --success: oklch(0.72 0.17 162);
+  --success-foreground: oklch(0.99 0.01 162);
+  --warning: oklch(0.78 0.16 70);
+  --warning-foreground: oklch(0.27 0.04 70);
+  --error: oklch(0.637 0.208 25.33);
+  --error-foreground: oklch(0.99 0.005 285);
+  --info: oklch(0.62 0.18 252);
+  --info-foreground: oklch(0.99 0.005 285);
+
+  --chart-1: oklch(0.72 0.17 162);
+  --chart-2: oklch(0.62 0.18 252);
+  --chart-3: oklch(0.78 0.16 70);
+  --chart-4: oklch(0.637 0.208 25.33);
+  --chart-5: oklch(0.55 0.1 300);
+  --sidebar: oklch(0.965 0.003 285);
+  --sidebar-foreground: oklch(0.21 0.006 285);
+  --sidebar-primary: oklch(0.72 0.17 162);
+  --sidebar-primary-foreground: oklch(0.99 0.01 162);
+  --sidebar-accent: oklch(0.94 0.004 285);
+  --sidebar-accent-foreground: oklch(0.21 0.006 285);
+  --sidebar-border: oklch(0.9 0.004 285);
+  --sidebar-ring: oklch(0.72 0.17 162);
+  --font-sans: "Public Sans", system-ui, -apple-system, sans-serif;
+  --font-serif: "Public Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --radius: 1.25rem;
+  --shadow-x: 2px;
+  --shadow-y: 2px;
+  --shadow-blur: 10px;
+  --shadow-spread: 4px;
+  --shadow-opacity: 0.18;
+  --shadow-color: hsl(240 4% 60%);
+  --shadow-2xs: 2px 2px 10px 4px hsl(240 4% 60% / 0.09);
+  --shadow-xs: 2px 2px 10px 4px hsl(240 4% 60% / 0.09);
+  --shadow-sm: 2px 2px 10px 4px hsl(240 4% 60% / 0.18), 2px 1px 2px 3px hsl(240 4% 60% / 0.18);
+  --shadow: 2px 2px 10px 4px hsl(240 4% 60% / 0.18), 2px 1px 2px 3px hsl(240 4% 60% / 0.18);
+  --shadow-md: 2px 2px 10px 4px hsl(240 4% 60% / 0.18), 2px 2px 4px 3px hsl(240 4% 60% / 0.18);
+  --shadow-lg: 2px 2px 10px 4px hsl(240 4% 60% / 0.18), 2px 4px 6px 3px hsl(240 4% 60% / 0.18);
+  --shadow-xl: 2px 2px 10px 4px hsl(240 4% 60% / 0.18), 2px 8px 10px 3px hsl(240 4% 60% / 0.18);
+  --shadow-2xl: 2px 2px 10px 4px hsl(240 4% 60% / 0.45);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+}
+
+.dark {
+  /* Dark theme - "paper inverted". */
+  --background: oklch(0.16 0.005 285);
+  --foreground: oklch(0.97 0.002 285);
+  --card: oklch(0.19 0.006 285);
+  --card-foreground: oklch(0.97 0.002 285);
+  --popover: oklch(0.19 0.006 285);
+  --popover-foreground: oklch(0.97 0.002 285);
+  --primary: oklch(0.74 0.16 162);
+  --primary-foreground: oklch(0.16 0.02 162);
+  --secondary: oklch(0.24 0.006 285);
+  --secondary-foreground: oklch(0.97 0.002 285);
+  --muted: oklch(0.3 0.007 285);
+  --muted-foreground: oklch(0.7 0.012 285);
+  --accent: oklch(0.26 0.006 285);
+  --accent-foreground: oklch(0.97 0.002 285);
+  --destructive: oklch(0.65 0.2 25.33);
+  --destructive-foreground: oklch(0.97 0.002 285);
+  --border: oklch(0.3 0.006 285);
+  --input: oklch(0.3 0.006 285);
+  --ring: oklch(0.74 0.16 162);
+
+  --toned: oklch(0.86 0.008 285);
+  --dimmed: oklch(0.58 0.012 285);
+  --elevated: oklch(0.24 0.006 285);
+  --elevated-foreground: oklch(0.97 0.002 285);
+  --accented: oklch(0.32 0.007 285);
+  --inverted: oklch(0.97 0.002 285);
+  --inverted-foreground: oklch(0.16 0.005 285);
+  --success: oklch(0.74 0.16 162);
+  --success-foreground: oklch(0.16 0.02 162);
+  --warning: oklch(0.8 0.15 70);
+  --warning-foreground: oklch(0.2 0.04 70);
+  --error: oklch(0.7 0.19 25.33);
+  --error-foreground: oklch(0.16 0.005 285);
+  --info: oklch(0.68 0.16 252);
+  --info-foreground: oklch(0.16 0.005 285);
+
+  --chart-1: oklch(0.74 0.16 162);
+  --chart-2: oklch(0.68 0.16 252);
+  --chart-3: oklch(0.8 0.15 70);
+  --chart-4: oklch(0.7 0.19 25.33);
+  --chart-5: oklch(0.6 0.1 300);
+  --sidebar: oklch(0.19 0.006 285);
+  --sidebar-foreground: oklch(0.97 0.002 285);
+  --sidebar-primary: oklch(0.74 0.16 162);
+  --sidebar-primary-foreground: oklch(0.16 0.02 162);
+  --sidebar-accent: oklch(0.26 0.006 285);
+  --sidebar-accent-foreground: oklch(0.97 0.002 285);
+  --sidebar-border: oklch(0.3 0.006 285);
+  --sidebar-ring: oklch(0.74 0.16 162);
+  --font-sans: "Public Sans", system-ui, -apple-system, sans-serif;
+  --font-serif: "Public Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --radius: 1.25rem;
+  --shadow-x: 2px;
+  --shadow-y: 2px;
+  --shadow-blur: 10px;
+  --shadow-spread: 4px;
+  --shadow-opacity: 0.18;
+  --shadow-color: hsl(0 0% 0%);
+  --shadow-2xs: 2px 2px 10px 4px hsl(0 0% 0% / 0.09);
+  --shadow-xs: 2px 2px 10px 4px hsl(0 0% 0% / 0.09);
+  --shadow-sm: 2px 2px 10px 4px hsl(0 0% 0% / 0.18), 2px 1px 2px 3px hsl(0 0% 0% / 0.18);
+  --shadow: 2px 2px 10px 4px hsl(0 0% 0% / 0.18), 2px 1px 2px 3px hsl(0 0% 0% / 0.18);
+  --shadow-md: 2px 2px 10px 4px hsl(0 0% 0% / 0.18), 2px 2px 4px 3px hsl(0 0% 0% / 0.18);
+  --shadow-lg: 2px 2px 10px 4px hsl(0 0% 0% / 0.18), 2px 4px 6px 3px hsl(0 0% 0% / 0.18);
+  --shadow-xl: 2px 2px 10px 4px hsl(0 0% 0% / 0.18), 2px 8px 10px 3px hsl(0 0% 0% / 0.18);
+  --shadow-2xl: 2px 2px 10px 4px hsl(0 0% 0% / 0.45);
+}
+
+@theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -21,68 +163,97 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --color-default: var(--background);
-  --color-elevated: var(--card);
-  --color-highlighted: var(--foreground);
-  --color-toned: var(--muted-foreground);
-  --color-dimmed: var(--muted-foreground);
-  --color-inverted: var(--foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-error: var(--error);
+  --color-error-foreground: var(--error-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-elevated: var(--elevated);
+  --color-elevated-foreground: var(--elevated-foreground);
+  --color-accented: var(--accented);
+  --color-inverted: var(--inverted);
+  --color-inverted-foreground: var(--inverted-foreground);
 
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-error: #ef4444;
-  --color-info: #3b82f6;
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
 
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 24px;
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
 }
 
-:root {
-  --background: #fafafa;
-  --foreground: #18181b;
-  --card: #ffffff;
-  --card-foreground: #18181b;
-  --popover: #ffffff;
-  --popover-foreground: #18181b;
-  --primary: #10b981;
-  --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
-  --accent: #f4f4f5;
-  --accent-foreground: #18181b;
-  --destructive: #ef4444;
-  --border: #e4e4e7;
-  --input: #e4e4e7;
-  --ring: #10b981;
+/*
+ * nuxt-ui semantic class aliases.
+ * The original @nuxt/ui markup uses names like `default`, `highlighted`, `toned`,
+ * and `dimmed` that have no @theme color token, so registering them as custom
+ * utilities here is enough. (Names that DO collide with a --color-* token, like
+ * `muted` and `inverted`, are handled by the unlayered overrides at the end of
+ * this file, because Tailwind's token-generated utilities win over @utility.)
+ */
+@utility bg-default {
+  background-color: var(--color-background);
+}
+@utility text-default {
+  color: var(--color-foreground);
+}
+@utility text-highlighted {
+  color: var(--color-foreground);
+}
+@utility text-toned {
+  color: var(--toned);
+}
+@utility text-dimmed {
+  color: var(--dimmed);
+}
+@utility border-default {
+  border-color: var(--color-border);
+}
+@utility divide-default {
+  & > :not([hidden]) ~ :not([hidden]) {
+    border-color: var(--color-border);
+  }
 }
 
-.dark {
-  --background: #09090b;
-  --foreground: #fafafa;
-  --card: #18181b;
-  --card-foreground: #fafafa;
-  --popover: #18181b;
-  --popover-foreground: #fafafa;
-  --primary: #10b981;
-  --primary-foreground: #ffffff;
-  --secondary: #27272a;
-  --secondary-foreground: #fafafa;
-  --muted: #27272a;
-  --muted-foreground: #a1a1aa;
-  --accent: #27272a;
-  --accent-foreground: #fafafa;
-  --destructive: #ef4444;
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #10b981;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
 @layer base {
@@ -230,4 +401,19 @@
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
+}
+
+/*
+ * Token-name collisions. `muted` and `inverted` exist as @theme color tokens
+ * (needed so the bg and border utilities and their opacity modifiers work), which makes
+ * Tailwind generate `text-muted`/`text-inverted` from the surface color and win
+ * the cascade over an @utility of the same name. These UNLAYERED rules override
+ * Tailwind's layered utilities to pin the correct text role. Opacity variants
+ * (text-muted/NN) are rewritten to text-muted-foreground/NN in the markup.
+ */
+:where(html) .text-muted {
+  color: var(--color-muted-foreground);
+}
+:where(html) .text-inverted {
+  color: var(--color-inverted-foreground);
 }

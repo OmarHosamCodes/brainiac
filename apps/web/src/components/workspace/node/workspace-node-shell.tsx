@@ -116,7 +116,7 @@ export function WorkspaceNodeShell({
     <div className="flex h-full w-full gap-0 overflow-hidden">
       <aside
         className={cn(
-          "flex flex-col border-r border-muted/30 bg-default/40 backdrop-blur-xl transition-all duration-300",
+          "flex flex-col border-r border-muted/30 bg-background/40 backdrop-blur-xl transition-all duration-300",
           isSidebarOpen ? "w-80" : "w-0 opacity-0",
         )}
       >
@@ -132,7 +132,7 @@ export function WorkspaceNodeShell({
             <Badge className={saveBadge.className}>{saveBadge.label}</Badge>
             <h1 className="text-2xl font-bold tracking-tight text-highlighted">{node.title}</h1>
 
-            <div className="rounded-2xl border border-muted/40 bg-default/70 p-3 backdrop-blur-sm">
+            <div className="rounded-2xl border border-muted/40 bg-background/70 p-3 backdrop-blur-sm">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">Node Access</p>
@@ -182,7 +182,7 @@ export function WorkspaceNodeShell({
           </div>
 
           <div className="mb-8 space-y-1">
-            <p className="mb-2 px-2 text-[11px] font-bold uppercase tracking-widest text-muted/60">Workspaces</p>
+            <p className="mb-2 px-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground/60">Workspaces</p>
             {node.tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -227,7 +227,7 @@ export function WorkspaceNodeShell({
       </aside>
 
       <main className="relative flex flex-1 flex-col overflow-hidden bg-elevated/5">
-        <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-muted/20 bg-default/40 px-4 py-4 backdrop-blur-md sm:px-6">
+        <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-muted/20 bg-background/40 px-4 py-4 backdrop-blur-md sm:px-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen((open) => !open)}>
               {isSidebarOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
@@ -244,7 +244,7 @@ export function WorkspaceNodeShell({
         </header>
 
         {addBlockLauncherOpen ? (
-          <div className="border-b border-default bg-default/80 px-4 py-4 sm:px-6">
+          <div className="border-b border-default bg-background/80 px-4 py-4 sm:px-6">
             <Input
               value={launcherSearch}
               placeholder="Search blocks"

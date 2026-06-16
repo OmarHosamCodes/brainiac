@@ -3,15 +3,18 @@ import {
   Briefcase,
   CreditCard,
   LayoutDashboard,
+  Moon,
   PanelRightClose,
   PanelRightOpen,
   ShoppingBag,
+  Sun,
 } from "lucide-react";
 import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { useAppShellPathSync } from "@/hooks/use-app-shell";
+import { useTheme } from "@/hooks/use-theme";
 import {
   useAppShellStore,
   useHasContextContent,
@@ -44,6 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const shellMode = useShellMode();
   const hasContextContent = useHasContextContent();
 
+  const { isDark, toggle: toggleTheme } = useTheme();
   const agentDockOpen = useAppShellStore((s) => s.agentDockOpen);
   const agentDockWidth = useAppShellStore((s) => s.agentDockWidth);
   const pageTitle = useAppShellStore((s) => s.pageTitle);
@@ -163,6 +167,16 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className={shellUtilityClusterClass}>
           <div id="app-shell-actions" className={shellActionsSlotClass} />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-9 rounded-xl"
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            onClick={toggleTheme}
+          >
+            {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+          </Button>
           <Button
             type="button"
             variant={agentDockOpen ? "secondary" : "ghost"}

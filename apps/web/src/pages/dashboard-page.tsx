@@ -109,7 +109,22 @@ export function DashboardPage() {
               nodes={board.nodes}
               selectedNodeIds={board.selectedNodeIds}
               loading={board.isWorkspaceInitialLoading}
-              onNodesChange={board.updateNodes}
+              onNodesChange={(nextNodes) =>
+                board.updateNodes((draft) => {
+                  const positionById = new Map(nextNodes.map((node) => [node.id, node]));
+                  draft.forEach((node, index) => {
+                    const updated = positionById.get(node.id);
+                    if (!updated) return;
+                    draft[index] = {
+                      ...node,
+                      x: updated.x,
+                      y: updated.y,
+                      width: updated.width,
+                      height: updated.height,
+                    };
+                  });
+                })
+              }
               onSelectedNodeIdsChange={board.setSelectedNodeIds}
               onCreateNode={board.openCreateNode}
               onEditNode={board.openEditNode}

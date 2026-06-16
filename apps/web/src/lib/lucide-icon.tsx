@@ -17,7 +17,7 @@ export function LucideIcon({
   className?: string;
 }) {
   const componentName = toLucideComponentName(name);
-  const Icon = (LucideIcons as Record<string, ComponentType<SVGProps<SVGSVGElement>>>)[
+  const Icon = (LucideIcons as unknown as Record<string, ComponentType<SVGProps<SVGSVGElement>>>)[
     componentName
   ];
   if (!Icon) {

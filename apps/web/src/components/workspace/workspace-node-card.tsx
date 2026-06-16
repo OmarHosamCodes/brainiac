@@ -87,7 +87,7 @@ export function WorkspaceNodeCard({ node, selected, allNodes = [] }: WorkspaceNo
       )}
       style={tintStyle}
     >
-      <div className="absolute inset-0 -z-20 rounded-[2rem] bg-default/50" />
+      <div className="absolute inset-0 -z-20 rounded-[2rem] bg-background/50" />
       {workspaceNode.nodeType === "orchestrator" ? (
         <div className="absolute inset-0 -z-10 rounded-[2rem] bg-[radial-gradient(circle_at_top_right,rgb(var(--workspace-node-rgb)/0.14),transparent_55%)]" />
       ) : null}
