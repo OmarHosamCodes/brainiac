@@ -12,6 +12,7 @@ import {
 import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+import { AppShellAccountMenu } from "@/components/app-shell-account-menu";
 import { Button } from "@/components/ui/button";
 import { useAppShellPathSync } from "@/hooks/use-app-shell";
 import { useTheme } from "@/hooks/use-theme";
@@ -186,6 +187,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className={shellUtilityClusterClass}>
           <div id="app-shell-actions" className={shellHeaderActionsRegionClass} />
+          <AppShellAccountMenu />
           <Button
             type="button"
             variant="ghost"
