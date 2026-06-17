@@ -1,10 +1,4 @@
-import {
-  createWorkspaceNotesBlock,
-  createWorkspaceTaskListBlock,
-  normalizeWorkspaceNode,
-  type WorkspaceBlock,
-  type WorkspaceNode,
-} from "@brainiac/workspace";
+import { normalizeWorkspaceNode, type WorkspaceBlock, type WorkspaceNode } from "@brainiac/workspace";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
@@ -15,6 +9,11 @@ import {
   useAppShellCustomDock,
   useAppShellPageTitle,
 } from "@/hooks/use-app-shell";
+import {
+  createWorkspaceBlockByType,
+  createWorkspaceBlocksFromPreset,
+} from "@/lib/utils/create-workspace-block";
+import type { WorkspaceBlockPresetId } from "@/lib/utils/workspace-block-presets";
 import { useWorkspaceQuery } from "@/stores/workspace";
 
 export function useWorkspaceNodePage() {
@@ -92,19 +91,34 @@ export function useWorkspaceNodePage() {
     deleteActiveTab() {},
     saveNodeToMarketplace() {},
     saveActiveTabToMarketplace() {},
-    addBlockToActiveTab(type: WorkspaceBlock["type"]) {
-      if (!activeTab || !sharing.canEditNodeContent) return;
-      let nextBlock: WorkspaceBlock | null = null;
-      if (type === "task-list") nextBlock = createWorkspaceTaskListBlock();
-      if (type === "notes") nextBlock = createWorkspaceNotesBlock();
-      if (!nextBlock) return;
+    addBlockToActiveTab(type: WorkspaceBlock["type"], options?: { title?: string }) {
+      if (!activeTab || !sharing.canEditNodeContent) return null;
+
+      const nextBlock = createWorkspaceBlockByType(type, options);
+      if (!nextBlock) return null;
+
       mutateCurrentNode((entry) => {
         const tab = entry.tabs.find((candidate) => candidate.id === activeTab.id);
         if (!tab) return;
-        tab.blocks.unshift(nextBlock!);
+        tab.blocks.unshift(nextBlock);
       });
+
+      return nextBlock.id;
     },
-    addBlockPresetToActiveTab() {},
+    addBlockPresetToActiveTab(presetId: WorkspaceBlockPresetId) {
+      if (!activeTab || !sharing.canEditNodeContent) return [];
+
+      const nextBlocks = createWorkspaceBlocksFromPreset(presetId);
+      if (nextBlocks.length === 0) return [];
+
+      mutateCurrentNode((entry) => {
+        const tab = entry.tabs.find((candidate) => candidate.id === activeTab.id);
+        if (!tab) return;
+        tab.blocks.unshift(...nextBlocks);
+      });
+
+      return nextBlocks.map((block) => block.id);
+    },
     removeBlock(tabId: string, blockId: string) {
       mutateCurrentNode((entry) => {
         const tab = entry.tabs.find((candidate) => candidate.id === tabId);

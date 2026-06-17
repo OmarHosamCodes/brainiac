@@ -9,7 +9,6 @@ import {
   Blocks,
   Folder,
   FolderOpen,
-  LayoutTemplate,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -19,22 +18,18 @@ import {
   Trash2,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { WorkspaceNodeBlockRenderer } from "@/components/workspace/node/workspace-node-block-renderer";
+import {
+  WorkspaceAddBlockCommand,
+  type WorkspaceAddBlockCommandView,
+} from "@/components/workspace/node/workspace-add-block-command";
+import { WorkspaceNodeEmptyState } from "@/components/workspace/node/workspace-node-empty-state";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
 import type { WorkspaceSaveBadge } from "@/components/workspace/node/context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  workspaceBlockPresets,
-  type WorkspaceBlockPresetId,
-} from "@/lib/utils/workspace-block-presets";
-import {
-  getWorkspaceBlockRegistryEntry,
-  workspacePrimaryBlockTypes,
-} from "@/lib/utils/workspace-block-registry";
 import { cn } from "@/lib/utils";
 
 type WorkspaceTeamSummary = {
@@ -93,14 +88,54 @@ export function WorkspaceNodeShell({
     openTabEditor,
     deleteActiveTab,
     saveActiveTabToMarketplace,
-    addBlockToActiveTab,
-    addBlockPresetToActiveTab,
     getDisplayTabTitle,
   } = useWorkspaceNodeEditorContext();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [addBlockLauncherOpen, setAddBlockLauncherOpen] = useState(false);
-  const [launcherSearch, setLauncherSearch] = useState("");
+  const [addBlockCommandOpen, setAddBlockCommandOpen] = useState(false);
+  const [addBlockCommandView, setAddBlockCommandView] = useState<WorkspaceAddBlockCommandView>("search");
+  const [pendingFocusBlockId, setPendingFocusBlockId] = useState<string | null>(null);
+
+  const handleBlockInserted = useCallback((blockIds: string[]) => {
+    const firstBlockId = blockIds[0];
+    if (firstBlockId) {
+      setPendingFocusBlockId(firstBlockId);
+    }
+  }, []);
+
+  const handleFocusHandled = useCallback((blockId: string) => {
+    setPendingFocusBlockId((current) => (current === blockId ? null : current));
+  }, []);
+
+  const openAddBlockCommand = useCallback((view: WorkspaceAddBlockCommandView = "search") => {
+    setAddBlockCommandView(view);
+    setAddBlockCommandOpen(true);
+  }, []);
+
+  useEffect(() => {
+    if (!canEditNodeContent) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT")
+      ) {
+        return;
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setAddBlockCommandOpen((open) => !open);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canEditNodeContent]);
 
   const isNodeSharedWithTeam = node.visibility === "team";
   const isShareTogglePending = sharePending || unsharePending;
@@ -237,61 +272,22 @@ export function WorkspaceNodeShell({
               <p className="text-xs text-muted">{visibleBlocks.length} blocks</p>
             </div>
           </div>
-          <Button disabled={!canEditNodeContent} onClick={() => setAddBlockLauncherOpen((open) => !open)}>
+          <Button disabled={!canEditNodeContent} onClick={() => openAddBlockCommand("search")}>
             <Blocks className="size-4" />
             Add block
+            <kbd className="ml-1 hidden rounded-md border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline">
+              ⌘K
+            </kbd>
           </Button>
         </header>
 
-        {addBlockLauncherOpen ? (
-          <div className="border-b border-default bg-muted/20 px-4 py-4 sm:px-6">
-            <Input
-              value={launcherSearch}
-              placeholder="Search blocks"
-              className="mb-3"
-              onChange={(event) => setLauncherSearch(event.target.value)}
-            />
-            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {workspacePrimaryBlockTypes.map((type) => {
-                const entry = getWorkspaceBlockRegistryEntry(type);
-                const Icon = entry.icon;
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    className="flex items-center gap-2 rounded-xl border border-muted/60 px-3 py-2 text-left hover:border-primary/30"
-                    onClick={() => {
-                      addBlockToActiveTab(type);
-                      setAddBlockLauncherOpen(false);
-                    }}
-                  >
-                    <Icon className="size-4" />
-                    {entry.label}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              {workspaceBlockPresets.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className="rounded-xl border border-muted/60 px-3 py-2 text-left hover:border-primary/30"
-                  onClick={() => {
-                    addBlockPresetToActiveTab(preset.id as WorkspaceBlockPresetId);
-                    setAddBlockLauncherOpen(false);
-                  }}
-                >
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <LayoutTemplate className="size-4" />
-                    {preset.label}
-                  </div>
-                  <p className="mt-1 text-xs text-muted">{preset.description}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        <WorkspaceAddBlockCommand
+          open={addBlockCommandOpen}
+          canEdit={canEditNodeContent}
+          initialView={addBlockCommandView}
+          onOpenChange={setAddBlockCommandOpen}
+          onInserted={handleBlockInserted}
+        />
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-8">
           {saveError ? (
@@ -302,12 +298,24 @@ export function WorkspaceNodeShell({
 
           <div className="mx-auto flex max-w-5xl flex-col gap-6">
             {visibleBlocks.map((block) => (
-              <WorkspaceNodeBlockRenderer key={block.id} block={block} tabId={activeTabId} />
+              <WorkspaceNodeBlockRenderer
+                key={block.id}
+                block={block}
+                tabId={activeTabId}
+                pendingFocusBlockId={pendingFocusBlockId}
+                onFocusHandled={handleFocusHandled}
+              />
             ))}
             {visibleBlocks.length === 0 ? (
-              <div className="rounded-[32px] border border-dashed border-muted/40 px-6 py-16 text-center text-sm text-muted">
-                No blocks in this workspace yet. Add one from the toolbar.
-              </div>
+              <WorkspaceNodeEmptyState
+                canEdit={canEditNodeContent}
+                onQuickAdd={(_type, blockId) => {
+                  if (blockId) {
+                    setPendingFocusBlockId(blockId);
+                  }
+                }}
+                onBrowseAll={(view) => openAddBlockCommand(view)}
+              />
             ) : null}
           </div>
         </div>
