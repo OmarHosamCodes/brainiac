@@ -62,8 +62,8 @@ export type WorkspaceNodeEditorContextValue = {
   deleteActiveTab(): void;
   saveNodeToMarketplace(): MaybePromise;
   saveActiveTabToMarketplace(): MaybePromise;
-  addBlockToActiveTab(type: WorkspaceBlock["type"]): void;
-  addBlockPresetToActiveTab(presetId: WorkspaceBlockPresetId): void;
+  addBlockToActiveTab(type: WorkspaceBlock["type"], options?: { title?: string }): string | null;
+  addBlockPresetToActiveTab(presetId: WorkspaceBlockPresetId): string[];
   removeBlock(tabId: string, blockId: string): void;
   updateBlockTitle(tabId: string, blockId: string, value: string): void;
   toggleAgentContextBlock(tabId: string, blockId: string): void;
