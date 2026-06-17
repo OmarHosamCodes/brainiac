@@ -163,6 +163,22 @@ type DeleteEntriesPayload = {
   entries: Array<Pick<AgencyTimeEntry, "id" | "startedAt" | "durationSeconds">>;
 };
 
+type UpdateEntryPayload = {
+  teamId: string;
+  entryId: string;
+  projectId: string;
+  taskId: string | null;
+  task: Pick<AgencyProjectTask, "id" | "title"> | null;
+  project: Pick<AgencyProjectSummary, "id" | "name" | "clientId" | "clientName">;
+  description: string;
+  linkUrl: string | null;
+  tagIds: string[];
+  selectedTags: AgencyTag[];
+  startAt: string;
+  endAt: string;
+  durationSeconds: number;
+};
+
 const OPTIMISTIC_CLIENT_ID = "optimistic-client";
 const OPTIMISTIC_CLIENT_NAME = "Unknown client";
 const OPTIMISTIC_USER_NAME = "You";
@@ -189,6 +205,7 @@ type AgencyTimeTrackingState = {
   timerStartCount: number;
   timerStopCount: number;
   deletingEntryIds: string[];
+  updatingEntryIds: string[];
   getDraft: (teamId: string) => TrackerDraft | null;
 } & AgencyTimeTrackingActions;
 
@@ -953,6 +970,132 @@ function createAgencyTimeTrackingActions(
     });
   }
 
+  function patchUpdatedEntry(teamId: string, previous: AgencyTimeEntry, next: AgencyTimeEntry) {
+    optimistic().upsertTimeEntry(teamId, next);
+
+    logQueryRegistry.forEach(({ payload: registeredQuery }) => {
+      if (registeredQuery.teamId !== teamId) {
+        return;
+      }
+
+      getQueryClient().setQueryData<AgencyTimeEntriesListQueryData | undefined>(
+        registeredQuery.queryKey,
+        (current) => {
+          if (!current) {
+            return current;
+          }
+
+          const hasEntry = current.items.some((item) => item.id === next.id);
+          if (!hasEntry) {
+            return current;
+          }
+
+          return {
+            ...current,
+            items: current.items.map((item) => (item.id === next.id ? next : item)),
+            weekSummary: updateWeekSummary(
+              updateWeekSummary(current.weekSummary, previous, -1),
+              next,
+              1,
+            ),
+          };
+        },
+      );
+    });
+  }
+
+  function createOptimisticUpdatedEntry(
+    payload: UpdateEntryPayload,
+    previous: AgencyTimeEntry,
+  ): AgencyTimeEntry {
+    const { normalizedUrl } = normalizeAgencyLinkUrl(payload.linkUrl ?? "");
+
+    return {
+      ...previous,
+      projectId: payload.project.id,
+      projectName: payload.project.name,
+      clientId: payload.project.clientId,
+      clientName: payload.project.clientName,
+      taskId: payload.taskId,
+      taskTitle: payload.task?.title ?? null,
+      description: payload.description.trim(),
+      linkUrl: normalizedUrl,
+      tags: [...payload.selectedTags],
+      startedAt: payload.startAt,
+      endedAt: payload.endAt,
+      durationSeconds: payload.durationSeconds,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+
+  async function updateEntry(payload: UpdateEntryPayload) {
+    const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([payload.teamId])));
+    const entryOverlaySnapshot = optimistic().snapshotTimeEntries(payload.teamId);
+    const previousUpdatingIds = [...get().updatingEntryIds];
+
+    const previousEntry = (() => {
+      for (const { payload: registeredQuery } of logQueryRegistry.values()) {
+        if (registeredQuery.teamId !== payload.teamId) continue;
+        const cached = getQueryClient().getQueryData<AgencyTimeEntriesListQueryData>(
+          registeredQuery.queryKey,
+        );
+        const found = cached?.items.find((item) => item.id === payload.entryId);
+        if (found) return found;
+      }
+      return null;
+    })();
+
+    if (!previousEntry) {
+      toast.error("Unable to update entry", { description: "Entry not found." });
+      return;
+    }
+
+    const { normalizedUrl, error: linkError } = normalizeAgencyLinkUrl(payload.linkUrl ?? "");
+    if (linkError) {
+      toast.error("Unable to update entry", { description: linkError });
+      return;
+    }
+
+    const optimisticEntry = createOptimisticUpdatedEntry(
+      { ...payload, linkUrl: normalizedUrl },
+      previousEntry,
+    );
+
+    set((s) => ({
+      ...s,
+      updatingEntryIds: [...new Set([...s.updatingEntryIds, payload.entryId])],
+    }));
+
+    try {
+      patchUpdatedEntry(payload.teamId, previousEntry, optimisticEntry);
+
+      const updated = (await orpcClient.agencyOps.timeEntries.updateMine({
+        teamId: payload.teamId,
+        entryId: payload.entryId,
+        projectId: payload.project.id,
+        taskId: payload.taskId,
+        description: payload.description.trim(),
+        linkUrl: normalizedUrl,
+        tagIds: payload.tagIds,
+        startAt: payload.startAt,
+        endAt: payload.endAt,
+      })) as AgencyTimeEntry;
+
+      patchUpdatedEntry(payload.teamId, optimisticEntry, updated);
+    } catch (error) {
+      restoreQuerySnapshots(logSnapshots);
+      optimistic().restoreTimeEntries(payload.teamId, entryOverlaySnapshot);
+      toast.error("Unable to update entry", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+    } finally {
+      set((s) => ({
+        ...s,
+        updatingEntryIds: previousUpdatingIds,
+      }));
+    }
+  }
+
   function dedupeEntries(entries: DeleteEntriesPayload["entries"]) {
     const seenIds = new Set<string>();
 
@@ -984,6 +1127,7 @@ function createAgencyTimeTrackingActions(
     restartEntry,
     stopTimer,
     deleteEntries,
+    updateEntry,
   };
 
 }
@@ -992,6 +1136,7 @@ export const useAgencyTimeTrackingStore = create<AgencyTimeTrackingState>((set, 
   timerStartCount: 0,
   timerStopCount: 0,
   deletingEntryIds: [],
+  updatingEntryIds: [],
   ...createAgencyTimeTrackingActions(
     (fn) => set((state) => fn(state as AgencyTimeTrackingState)),
     () => get() as AgencyTimeTrackingState,

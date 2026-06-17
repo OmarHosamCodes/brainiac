@@ -1,9 +1,9 @@
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 
+import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot";
 import { AgencyMiniTimer } from "@/components/agency/agency-mini-timer";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useTheme } from "@/hooks/use-theme";
 import {
   agencyFocusRingClass,
   agencyMetricClass,
@@ -11,7 +11,6 @@ import {
   agencyTaskRowDoneClass,
   agencyTaskRowSelectedClass,
 } from "@/lib/utils/agency-ui";
-import { projectHueFor } from "@/lib/utils/project-palette";
 import { cn } from "@/lib/utils";
 import { selectIsTaskRowPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
@@ -102,19 +101,6 @@ function isDueWithinDays(iso: string | null, days: number): boolean {
 function shouldShowDueDate(iso: string | null): boolean {
   if (!iso) return false;
   return isOverdue(iso) || isDueWithinDays(iso, 7);
-}
-
-function ProjectHueDot({ projectId, className }: { projectId: string; className?: string }) {
-  const { isDark } = useTheme();
-  const hue = projectHueFor(projectId);
-
-  return (
-    <span
-      className={cn("inline-block size-1.5 shrink-0 rounded-full", className)}
-      style={{ backgroundColor: isDark ? hue.dark : hue.light }}
-      aria-hidden
-    />
-  );
 }
 
 type AgencyTaskStatusPillProps = {
@@ -222,7 +208,7 @@ export function AgencyTaskRow({
       )}
     >
       <div className="flex items-center gap-2 px-3 py-2.5">
-        <ProjectHueDot projectId={task.projectId} className="mt-0.5 self-start" />
+        <AgencyProjectHueDot projectId={task.projectId} className="mt-0.5 self-start" />
 
         <button
           type="button"

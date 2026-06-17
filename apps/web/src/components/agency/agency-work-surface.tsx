@@ -10,7 +10,7 @@ import { useAgencyProjectsQuery } from "@/hooks/use-agency-queries";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
-  agencyPanelClass,
+  agencyTimePaneClass,
 } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
@@ -124,13 +124,13 @@ export function AgencyWorkSurface({ teamId, onSelectProject }: AgencyWorkSurface
       ) : (
         <div
           className={[
-            agencyPanelClass,
-            "flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto p-4",
+            agencyTimePaneClass,
+            "min-h-0 min-w-0 flex-1",
             mobilePane !== "time" ? "hidden lg:flex" : "flex",
           ].join(" ")}
         >
           <AgencyTimeTracker teamId={teamId} />
-          <AgencyTimeEntriesLog teamId={teamId} className="mt-6" />
+          <AgencyTimeEntriesLog teamId={teamId} />
         </div>
       )}
     </div>
