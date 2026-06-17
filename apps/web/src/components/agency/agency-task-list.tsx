@@ -1,42 +1,42 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ChevronDown, ListChecks, Plus } from "lucide-react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { AlertTriangle, ChevronDown, ListChecks } from "lucide-react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
-import { AgencyMiniTimer } from "@/components/agency/agency-mini-timer";
+import {
+  AgencyTaskCreateInline,
+  UNASSIGNED_ASSIGNEE_VALUE,
+} from "@/components/agency/agency-task-create-inline";
+import {
+  AgencyTaskRowWithPending,
+  type AgencyProjectTask,
+  type TaskStatus,
+} from "@/components/agency/agency-task-row";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAgencyProjectTasksQuery } from "@/hooks/use-agency-queries";
+import {
+  useAgencyActiveTimerQuery,
+  useAgencyProjectTasksQuery,
+} from "@/hooks/use-agency-queries";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
-import { agencyFocusRingClass, agencyLabelClass, agencyMetricClass } from "@/lib/utils/agency-ui";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
 import {
-  selectIsCreatingTask,
-  selectIsTaskRowPending,
-  useAgencyOpsStore,
-} from "@/stores/agency-ops";
+  agencyFocusRingClass,
+  agencyMetricClass,
+  agencyTaskRailClass,
+  agencyTaskRailCountPillClass,
+  agencyTaskRailHeaderClass,
+  agencyTaskRailTrackingStripClass,
+} from "@/lib/utils/agency-ui";
+import { formatDuration } from "@/lib/utils/format-duration";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { selectIsCreatingTask, useAgencyOpsStore } from "@/stores/agency-ops";
 
 type Project = {
   id: string;
   clientName: string;
   name: string;
 };
-
-type AgencyProjectTask = {
-  id: string;
-  teamId: string;
-  projectId: string;
-  title: string;
-  status: "open" | "in_progress" | "done" | "archived";
-  assigneeUserId: string | null;
-  assigneeName: string | null;
-  assigneeAvatar: string | null;
-  dueDate: string | null;
-};
-
-type TaskStatus = AgencyProjectTask["status"];
 
 type AgencyTaskListProps = {
   teamId: string;
@@ -46,455 +46,31 @@ type AgencyTaskListProps = {
   onSelectProject: (projectId: string) => void;
 };
 
-const UNASSIGNED_ASSIGNEE_VALUE = "__unassigned__";
-
-type CreateStep = "project" | "name" | "assignee" | "confirm";
-
-type TeamMember = {
-  userId: string;
-  userName: string;
-};
-
-const CREATE_STEP_LABELS: Record<CreateStep, string> = {
-  project: "Task",
-  name: "Name",
-  assignee: "Assignee",
-  confirm: "Confirm",
-};
-
-function createStepOrder(skipProject: boolean): CreateStep[] {
-  return skipProject
-    ? ["name", "assignee", "confirm"]
-    : ["project", "name", "assignee", "confirm"];
-}
-
-function firstCreateStep(skipProject: boolean): CreateStep {
-  return skipProject ? "name" : "project";
-}
-
-const ACTIVE_STATUS_OPTIONS: Array<{ label: string; value: TaskStatus }> = [
-  { label: "Open", value: "open" },
-  { label: "In progress", value: "in_progress" },
-  { label: "Done", value: "done" },
-];
-
-const agencySelectClass =
-  "h-8 min-w-0 flex-1 rounded-md border border-default bg-background px-2 text-xs";
-
-const rowInteractiveClass = [
-  "w-full rounded-md px-1 py-0.5 text-left transition-colors",
-  "hover:bg-elevated/40",
-  agencyFocusRingClass,
-  "motion-reduce:transition-none",
-].join(" ");
-
-function statusDotColor(status: TaskStatus) {
-  switch (status) {
-    case "open":
-      return "bg-muted";
-    case "in_progress":
-      return "bg-primary";
-    case "done":
-      return "bg-success";
-    case "archived":
-      return "bg-muted";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
-
-function statusLabel(status: TaskStatus) {
-  switch (status) {
-    case "open":
-      return "Open";
-    case "in_progress":
-      return "In progress";
-    case "done":
-      return "Done";
-    case "archived":
-      return "Archived";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
-
-function formatDueDate(iso: string | null): string {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
-
-function isOverdue(iso: string | null): boolean {
-  if (!iso) return false;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return false;
-  return date.setHours(23, 59, 59, 999) < Date.now();
-}
-
-function getProjectHue(projectId: string, projects: Project[]) {
-  const index = projects.findIndex((p) => p.id === projectId);
-  if (index === -1) return "bg-muted";
-  const hues = [
-    "bg-rose-400",
-    "bg-amber-400",
-    "bg-emerald-400",
-    "bg-sky-400",
-    "bg-violet-400",
-    "bg-fuchsia-400",
-  ];
-  return hues[index % hues.length];
-}
-
-function AgencyTaskSectionHeader({
-  label,
-  count,
-}: {
-  label: string;
-  count: number | null;
-}) {
-  return (
-    <div className="flex shrink-0 items-center justify-between border-b border-default px-4 py-2">
-      <p className={agencyLabelClass}>{label}</p>
-      <span className={[agencyMetricClass, "text-xs text-muted"].join(" ")}>
-        {count === null ? "—" : count}
-      </span>
-    </div>
-  );
-}
-
-type AgencyTaskRowProps = {
-  task: AgencyProjectTask;
-  projects: Project[];
-  teamId: string;
-  selectedTaskId: string;
-  readOnly?: boolean;
-  isRowPending: boolean;
-  onSelect: (taskId: string) => void;
-  onStatusChange?: (task: AgencyProjectTask, status: TaskStatus) => void;
-};
-
-function AgencyTaskRow({
-  task,
-  projects,
-  teamId,
-  selectedTaskId,
-  readOnly = false,
-  isRowPending,
-  onSelect,
-  onStatusChange,
-}: AgencyTaskRowProps) {
-  const projectName = projects.find((p) => p.id === task.projectId)?.name ?? "Project";
-  const isSelected = task.id === selectedTaskId;
-
-  return (
-    <li
-      className={[
-        "border-b border-default last:border-b-0",
-        isSelected ? "bg-primary/5" : "",
-      ].join(" ")}
-    >
-      <div className="flex items-start gap-3 px-4 py-3">
-        <span
-          className={["mt-1.5 size-2 shrink-0 rounded-full", statusDotColor(task.status)].join(" ")}
-          aria-hidden
-        />
-        <div className="min-w-0 flex-1">
-          <button
-            type="button"
-            className={rowInteractiveClass}
-            aria-current={isSelected ? "true" : undefined}
-            onClick={() => onSelect(task.id)}
-          >
-            <p className="truncate text-sm font-bold text-highlighted">{task.title}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
-              <span className="inline-flex items-center gap-1">
-                <span
-                  className={["size-1.5 rounded-full", getProjectHue(task.projectId, projects)].join(
-                    " ",
-                  )}
-                  aria-hidden
-                />
-                {projectName}
-              </span>
-              {task.dueDate ? (
-                <span className={isOverdue(task.dueDate) ? "text-error" : ""}>
-                  · Due {formatDueDate(task.dueDate)}
-                </span>
-              ) : null}
-            </div>
-          </button>
-          {!readOnly ? (
-            <div className="mt-2 flex items-center gap-2">
-              <select
-                value={task.status}
-                disabled={isRowPending}
-                onChange={(e) =>
-                  onStatusChange?.(task, e.target.value as AgencyProjectTask["status"])
-                }
-                className={agencySelectClass}
-                aria-label={`Status for ${task.title}`}
-              >
-                {ACTIVE_STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <AgencyMiniTimer
-                teamId={teamId}
-                taskId={task.id}
-                projectId={task.projectId}
-                taskTitle={task.title}
-                projectName={projectName}
-              />
-            </div>
-          ) : (
-            <p className="mt-1 text-xs text-muted">{statusLabel(task.status)}</p>
-          )}
-        </div>
-      </div>
-    </li>
-  );
-}
-
-type AgencyTaskCreateZoneProps = {
-  expanded: boolean;
-  step: CreateStep;
-  skipProjectStep: boolean;
-  projects: Project[];
-  members: TeamMember[];
-  titleDraft: string;
-  selectedProjectId: string;
-  selectedAssigneeId: string;
-  disabled: boolean;
-  isCreatingTask: boolean;
-  onExpand: () => void;
-  onCollapse: () => void;
-  onStepChange: (step: CreateStep) => void;
-  onTitleChange: (value: string) => void;
-  onProjectChange: (value: string) => void;
-  onAssigneeChange: (value: string) => void;
-  onSubmit: () => void;
-};
-
-function AgencyTaskCreateZone({
-  expanded,
-  step,
-  skipProjectStep,
-  projects,
-  members,
-  titleDraft,
-  selectedProjectId,
-  selectedAssigneeId,
-  disabled,
-  isCreatingTask,
-  onExpand,
-  onCollapse,
-  onStepChange,
-  onTitleChange,
-  onProjectChange,
-  onAssigneeChange,
-  onSubmit,
-}: AgencyTaskCreateZoneProps) {
-  const projectSelectRef = useRef<HTMLSelectElement>(null);
-  const titleInputRef = useRef<HTMLInputElement>(null);
-  const zoneId = useId();
-
-  const steps = createStepOrder(skipProjectStep);
-  const stepIndex = steps.indexOf(step);
-  const selectedProject = projects.find((project) => project.id === selectedProjectId);
-  const assigneeLabel =
-    selectedAssigneeId === UNASSIGNED_ASSIGNEE_VALUE
-      ? "Unassigned"
-      : (members.find((member) => member.userId === selectedAssigneeId)?.userName ?? "You");
-
-  useEffect(() => {
-    if (!expanded) return;
-
-    if (step === "project") {
-      projectSelectRef.current?.focus();
-    } else if (step === "name") {
-      titleInputRef.current?.focus();
-    }
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        onCollapse();
-      }
-    }
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [expanded, step, onCollapse]);
-
-  function goBack() {
-    if (stepIndex <= 0) {
-      onCollapse();
-      return;
-    }
-    onStepChange(steps[stepIndex - 1]!);
-  }
-
-  function goNext() {
-    if (step === "project" && !selectedProjectId) return;
-    if (step === "name" && !titleDraft.trim()) return;
-    if (step === "confirm") {
-      onSubmit();
-      return;
-    }
-    onStepChange(steps[stepIndex + 1]!);
-  }
-
-  const canAdvance =
-    step === "project"
-      ? Boolean(selectedProjectId)
-      : step === "name"
-        ? Boolean(titleDraft.trim())
-        : true;
-
-  if (!expanded) {
-    return (
-      <div className="shrink-0 border-y border-default">
-        <button
-          type="button"
-          className={[
-            "flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold text-muted",
-            "transition-colors hover:bg-elevated/50 hover:text-highlighted",
-            agencyFocusRingClass,
-            "motion-reduce:transition-none",
-          ].join(" ")}
-          onClick={onExpand}
-          disabled={disabled}
-          aria-controls={zoneId}
-          aria-expanded={false}
-        >
-          <Plus className="size-4 shrink-0" aria-hidden />
-          New task
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      id={zoneId}
-      role="region"
-      aria-label="New task"
-      className="shrink-0 border-y border-default px-4 py-3"
-    >
-      <p className={agencyLabelClass}>
-        Step {stepIndex + 1} of {steps.length} · {CREATE_STEP_LABELS[step]}
-      </p>
-
-      <div className="mt-3 space-y-3">
-        {step === "project" ? (
-          <select
-            ref={projectSelectRef}
-            value={selectedProjectId}
-            onChange={(e) => onProjectChange(e.target.value)}
-            className="h-9 w-full rounded-md border border-default bg-background px-2 text-xs"
-            aria-label="Project"
-          >
-            <option value="">Choose a project</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.clientName} · {project.name}
-              </option>
-            ))}
-          </select>
-        ) : null}
-
-        {step === "name" ? (
-          <Input
-            ref={titleInputRef}
-            value={titleDraft}
-            onChange={(e) => onTitleChange(e.target.value)}
-            placeholder="What needs doing?"
-            aria-label="Task name"
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && titleDraft.trim()) {
-                event.preventDefault();
-                goNext();
-              }
-            }}
-          />
-        ) : null}
-
-        {step === "assignee" ? (
-          <select
-            value={selectedAssigneeId}
-            onChange={(e) => onAssigneeChange(e.target.value)}
-            className="h-9 w-full rounded-md border border-default bg-background px-2 text-xs"
-            aria-label="Assignee"
-          >
-            <option value={UNASSIGNED_ASSIGNEE_VALUE}>Unassigned</option>
-            {members.map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {member.userName}
-              </option>
-            ))}
-          </select>
-        ) : null}
-
-        {step === "confirm" ? (
-          <dl className="space-y-2 rounded-lg border border-default bg-elevated/30 px-3 py-2 text-xs">
-            <div className="flex justify-between gap-3">
-              <dt className="text-muted">Task</dt>
-              <dd className="truncate text-right font-semibold text-highlighted">
-                {selectedProject
-                  ? `${selectedProject.clientName} · ${selectedProject.name}`
-                  : "—"}
-              </dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-muted">Name</dt>
-              <dd className="truncate text-right font-semibold text-highlighted">{titleDraft}</dd>
-            </div>
-            <div className="flex justify-between gap-3">
-              <dt className="text-muted">Assignee</dt>
-              <dd className="truncate text-right font-semibold text-highlighted">{assigneeLabel}</dd>
-            </div>
-          </dl>
-        ) : null}
-      </div>
-
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <Button type="button" variant="ghost" size="sm" className="text-xs text-muted" onClick={goBack}>
-          {stepIndex === 0 ? "Cancel" : "Back"}
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          disabled={
-            !canAdvance ||
-            isCreatingTask ||
-            disabled ||
-            (step === "confirm" && (!titleDraft.trim() || !selectedProjectId))
-          }
-          onClick={goNext}
-        >
-          {step === "confirm" ? (isCreatingTask ? "Adding…" : "Create task") : "Next"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function AgencyTaskRowWithPending({
-  task,
-  ...props
-}: Omit<AgencyTaskRowProps, "isRowPending">) {
-  const isRowPending = useAgencyOpsStore(selectIsTaskRowPending(task.id));
-  return <AgencyTaskRow {...props} task={task} isRowPending={isRowPending} />;
-}
-
 const ACTIVE_TASK_STATUSES: TaskStatus[] = ["open", "in_progress"];
 const DONE_TASK_STATUSES: TaskStatus[] = ["done"];
+
+function AgencyTaskRailHeader({
+  count,
+  trackingLabel,
+}: {
+  count: number | null;
+  trackingLabel: string | null;
+}) {
+  return (
+    <>
+      <div className={agencyTaskRailHeaderClass}>
+        <h2 className="text-sm font-semibold text-highlighted">My tasks</h2>
+        <span className={agencyTaskRailCountPillClass}>{count === null ? "—" : count}</span>
+      </div>
+      {trackingLabel ? (
+        <div className={agencyTaskRailTrackingStripClass}>
+          <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+          <span className="font-mono tabular-nums">{trackingLabel}</span>
+        </div>
+      ) : null}
+    </>
+  );
+}
 
 export function AgencyTaskList({
   teamId,
@@ -509,11 +85,11 @@ export function AgencyTaskList({
   const donePanelId = useId();
 
   const [createExpanded, setCreateExpanded] = useState(false);
-  const [createStep, setCreateStep] = useState<CreateStep>("project");
   const [doneExpanded, setDoneExpanded] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [selectedProjectIdForCreate, setSelectedProjectIdForCreate] = useState("");
   const [selectedAssigneeIdForCreate, setSelectedAssigneeIdForCreate] = useState("");
+  const [trackingNow, setTrackingNow] = useState(Date.now());
 
   const skipProjectStep = projects.length === 1;
 
@@ -539,15 +115,31 @@ export function AgencyTaskList({
     statuses: DONE_TASK_STATUSES,
   });
 
+  const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
+  const activeTimer = activeTimerQuery.data?.timer ?? null;
+
   const activeTasks = activeTasksQuery.data?.items ?? [];
   const doneTasks = doneTasksQuery.data?.items ?? [];
 
   const activeCount = activeTasksQuery.isPending ? null : activeTasks.length;
   const doneCount = doneTasksQuery.isPending ? null : doneTasks.length;
 
+  const trackingLabel = useMemo(() => {
+    if (!activeTimer || activeTimer.teamId !== teamId) return null;
+    const startedAt = new Date(activeTimer.startedAt).getTime();
+    if (Number.isNaN(startedAt)) return null;
+    const elapsedSeconds = Math.max(0, Math.floor((trackingNow - startedAt) / 1_000));
+    return `Tracking · ${formatDuration(elapsedSeconds)}`;
+  }, [activeTimer, teamId, trackingNow]);
+
+  useEffect(() => {
+    if (!activeTimer || activeTimer.teamId !== teamId) return;
+    const tickerHandle = setInterval(() => setTrackingNow(Date.now()), 1_000);
+    return () => clearInterval(tickerHandle);
+  }, [activeTimer, teamId]);
+
   const collapseCreate = useCallback(() => {
     setCreateExpanded(false);
-    setCreateStep(firstCreateStep(skipProjectStep));
     setTitleDraft("");
     setSelectedProjectIdForCreate(skipProjectStep ? (projects[0]?.id ?? "") : "");
     setSelectedAssigneeIdForCreate(currentUserId);
@@ -555,7 +147,6 @@ export function AgencyTaskList({
 
   function expandCreate() {
     setCreateExpanded(true);
-    setCreateStep(firstCreateStep(skipProjectStep));
     setSelectedAssigneeIdForCreate(currentUserId);
     if (skipProjectStep) {
       setSelectedProjectIdForCreate(projects[0]!.id);
@@ -604,7 +195,7 @@ export function AgencyTaskList({
 
   if (!currentUserId) {
     return (
-      <section className="flex h-full flex-col rounded-2xl border border-default bg-default">
+      <section className={agencyTaskRailClass}>
         <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
           <ListChecks className="size-6 text-muted" aria-hidden />
           <p className="mt-3 text-xs text-muted">Sign in to view your tasks.</p>
@@ -614,13 +205,13 @@ export function AgencyTaskList({
   }
 
   return (
-    <section className="flex h-full flex-col rounded-2xl border border-default bg-default">
-      <AgencyTaskSectionHeader label="My tasks" count={activeCount} />
+    <section className={agencyTaskRailClass}>
+      <AgencyTaskRailHeader count={activeCount} trackingLabel={trackingLabel} />
 
       {activeTasksQuery.isPending ? (
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
           {[1, 2, 3, 4].map((rowIndex) => (
-            <Skeleton key={rowIndex} className="h-16 rounded-xl" />
+            <Skeleton key={rowIndex} className="h-14 rounded-lg" />
           ))}
         </div>
       ) : activeTasksQuery.isError ? (
@@ -664,9 +255,8 @@ export function AgencyTaskList({
         </ul>
       )}
 
-      <AgencyTaskCreateZone
+      <AgencyTaskCreateInline
         expanded={createExpanded}
-        step={createStep}
         skipProjectStep={skipProjectStep}
         projects={projects}
         members={members}
@@ -677,7 +267,6 @@ export function AgencyTaskList({
         isCreatingTask={isCreatingTask}
         onExpand={expandCreate}
         onCollapse={collapseCreate}
-        onStepChange={setCreateStep}
         onTitleChange={setTitleDraft}
         onProjectChange={setSelectedProjectIdForCreate}
         onAssigneeChange={setSelectedAssigneeIdForCreate}
@@ -688,7 +277,7 @@ export function AgencyTaskList({
         <button
           type="button"
           className={[
-            "flex w-full items-center justify-between px-4 py-2 transition-colors hover:bg-elevated/50",
+            "flex w-full items-center justify-between px-4 py-2 text-xs transition-colors hover:bg-default/60",
             agencyFocusRingClass,
             "motion-reduce:transition-none",
           ].join(" ")}
@@ -696,14 +285,14 @@ export function AgencyTaskList({
           aria-controls={donePanelId}
           onClick={() => setDoneExpanded((open) => !open)}
         >
-          <span className={agencyLabelClass}>Done</span>
-          <span className="flex items-center gap-2">
-            <span className={[agencyMetricClass, "text-xs text-muted"].join(" ")}>
+          <span className="font-semibold text-muted">Done</span>
+          <span className="flex items-center gap-1.5">
+            <span className={[agencyMetricClass, "text-[11px] text-muted"].join(" ")}>
               {doneCount === null ? "—" : doneCount}
             </span>
             <ChevronDown
               className={[
-                "size-4 text-muted",
+                "size-3.5 text-muted",
                 doneExpanded
                   ? "rotate-180 motion-safe:transition-transform motion-safe:duration-200"
                   : "motion-safe:transition-transform motion-safe:duration-200",
@@ -716,13 +305,13 @@ export function AgencyTaskList({
         {doneExpanded ? (
           <div id={donePanelId}>
             {doneTasksQuery.isPending ? (
-              <div className="space-y-2 border-t border-default px-4 py-3">
+              <div className="space-y-2 border-t border-default px-3 py-2">
                 {[1, 2].map((rowIndex) => (
-                  <Skeleton key={rowIndex} className="h-12 rounded-xl" />
+                  <Skeleton key={rowIndex} className="h-12 rounded-lg" />
                 ))}
               </div>
             ) : doneTasksQuery.isError ? (
-              <div className="border-t border-default px-4 py-4 text-center" role="alert">
+              <div className="border-t border-default px-4 py-3 text-center" role="alert">
                 <p className="text-xs text-muted">
                   {getErrorMessage(doneTasksQuery.error, "Couldn't load done tasks.")}
                 </p>
@@ -736,7 +325,7 @@ export function AgencyTaskList({
                 </Button>
               </div>
             ) : doneTasks.length === 0 ? (
-              <div className="border-t border-default px-4 py-4 text-center">
+              <div className="border-t border-default px-4 py-3 text-center">
                 <p className="text-xs text-muted">Nothing completed yet.</p>
               </div>
             ) : (
