@@ -1,8 +1,12 @@
-import type { AgencyLiveEvent } from "@brainiac/api/routers/agency-ops/live";
 import { create } from "zustand";
 import { toast } from "sonner";
 
 import { getQueryClient } from "@/lib/query-client";
+import {
+  patchActiveTimerInCache,
+  refetchAgencyActiveTimerQueries,
+  refetchAgencyTimeEntriesListQueries,
+} from "@/lib/utils/agency-query-cache";
 import { orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { normalizeAgencyLinkUrl } from "@/lib/utils/normalize-agency-link-url";
@@ -168,6 +172,10 @@ export function setAgencyTimeTrackingUserId(userId: string | null) {
   cachedUserId = userId ?? "unknown-user";
 }
 
+export function getAgencyTimeTrackingUserId() {
+  return cachedUserId;
+}
+
 function getCurrentUserId() {
   return cachedUserId;
 }
@@ -188,8 +196,25 @@ function createAgencyTimeTrackingActions(
 ) {
   const draftByTeam: Record<string, TrackerDraft> = {};
 
-  const activeTimerQueryRegistry = new Map<string, RegisteredActiveTimerQuery>();
-  const logQueryRegistry = new Map<string, RegisteredLogQuery>();
+  const activeTimerQueryRegistry = new Map<string, { payload: RegisteredActiveTimerQuery; count: number }>();
+  const logQueryRegistry = new Map<string, { payload: RegisteredLogQuery; count: number }>();
+
+  function registerInto<T>(registry: Map<string, { payload: T; count: number }>, key: string, payload: T) {
+    const existing = registry.get(key);
+    if (existing) {
+      existing.count += 1;
+      existing.payload = payload;
+    } else {
+      registry.set(key, { payload, count: 1 });
+    }
+  }
+
+  function unregisterFrom<T>(registry: Map<string, { payload: T; count: number }>, key: string) {
+    const existing = registry.get(key);
+    if (!existing) return;
+    existing.count -= 1;
+    if (existing.count <= 0) registry.delete(key);
+  }
 
   function ensureTrackerDraft(teamId: string) {
     if (!teamId) {
@@ -306,26 +331,28 @@ function createAgencyTimeTrackingActions(
   }
 
   function registerActiveTimerQuery(payload: RegisteredActiveTimerQuery) {
-    activeTimerQueryRegistry.set(getRegistryKey(payload.queryKey), payload);
+    registerInto(activeTimerQueryRegistry, getRegistryKey(payload.queryKey), payload);
   }
 
   function unregisterActiveTimerQuery(queryKey: QueryKey) {
-    activeTimerQueryRegistry.delete(getRegistryKey(queryKey));
+    unregisterFrom(activeTimerQueryRegistry, getRegistryKey(queryKey));
   }
 
   function registerLogQuery(payload: RegisteredLogQuery) {
-    logQueryRegistry.set(getRegistryKey(payload.queryKey), payload);
+    registerInto(logQueryRegistry, getRegistryKey(payload.queryKey), payload);
   }
 
   function unregisterLogQuery(queryKey: QueryKey) {
-    logQueryRegistry.delete(getRegistryKey(queryKey));
+    unregisterFrom(logQueryRegistry, getRegistryKey(queryKey));
   }
 
   async function startTimer(payload: StartTimerPayload) {
     const previousDraft = getTrackerDraftSnapshot(payload.teamId);
     const previousActiveTimer = getCachedActiveTimer();
     const affectedLogTeams = new Set<string>([payload.teamId]);
-    const timerSnapshots = snapshotQueries(activeTimerQueryRegistry.values());
+    const timerSnapshots = snapshotQueries(
+      [...activeTimerQueryRegistry.values()].map((entry) => entry.payload),
+    );
 
     if (previousActiveTimer) {
       affectedLogTeams.add(previousActiveTimer.teamId);
@@ -363,6 +390,9 @@ function createAgencyTimeTrackingActions(
     set((s) => ({ ...s, timerStartCount: s.timerStartCount + 1 }));
 
     try {
+      await cancelQueries([...activeTimerQueryRegistry.values()].map((entry) => entry.payload));
+      await cancelQueries(getRegisteredLogQueries(affectedLogTeams));
+
       if (optimisticPreviousEntry) {
         patchInsertedEntry(optimisticPreviousEntry.teamId, optimisticPreviousEntry);
       }
@@ -386,6 +416,9 @@ function createAgencyTimeTrackingActions(
 
       patchActiveTimerCaches(result.timer);
       syncDraftFromActiveTimer(payload.teamId, result.timer);
+
+      void refetchAgencyActiveTimerQueries(payload.teamId);
+      void refetchAgencyTimeEntriesListQueries(payload.teamId);
 
       toast.success("Timer started", { description: payload.successDescription });
     } catch (error) {
@@ -420,7 +453,9 @@ function createAgencyTimeTrackingActions(
     }
 
     const previousDraft = getTrackerDraftSnapshot(payload.teamId);
-    const timerSnapshots = snapshotQueries(activeTimerQueryRegistry.values());
+    const timerSnapshots = snapshotQueries(
+      [...activeTimerQueryRegistry.values()].map((entry) => entry.payload),
+    );
     const affectedLogTeams = new Set<string>([activeTimer.teamId]);
     const logSnapshots = snapshotQueries(getRegisteredLogQueries(affectedLogTeams));
     const description = payload.description.trim();
@@ -453,6 +488,9 @@ function createAgencyTimeTrackingActions(
     set((s) => ({ ...s, timerStopCount: s.timerStopCount + 1 }));
 
     try {
+      await cancelQueries([...activeTimerQueryRegistry.values()].map((entry) => entry.payload));
+      await cancelQueries(getRegisteredLogQueries(affectedLogTeams));
+
       if (optimisticEntry) {
         patchInsertedEntry(activeTimer.teamId, optimisticEntry);
       }
@@ -481,6 +519,11 @@ function createAgencyTimeTrackingActions(
         reconcileCreatedEntry(activeTimer.teamId, optimisticEntry.id, result.createdEntry);
       } else if (optimisticEntry && !result.createdEntry) {
         patchDeletedEntries(activeTimer.teamId, [optimisticEntry]);
+      }
+
+      void refetchAgencyActiveTimerQueries(activeTimer.teamId);
+      if (!payload.discard) {
+        void refetchAgencyTimeEntriesListQueries(activeTimer.teamId);
       }
 
       toast.success(payload.discard ? "Timer discarded" : "Timer stopped");
@@ -532,9 +575,14 @@ function createAgencyTimeTrackingActions(
   }
 
   function getCachedActiveTimer() {
-    for (const registeredQuery of activeTimerQueryRegistry.values()) {
-      const cached = getQueryClient().getQueryData<AgencyActiveTimerQueryData>(registeredQuery.queryKey);
+    const queryClient = getQueryClient();
 
+    for (const query of queryClient.getQueryCache().findAll()) {
+      const path = query.queryKey[0];
+      if (!Array.isArray(path) || path[0] !== "agencyOps" || path[1] !== "timer" || path[2] !== "getActive") {
+        continue;
+      }
+      const cached = queryClient.getQueryData<AgencyActiveTimerQueryData>(query.queryKey);
       if (cached?.timer) {
         return cached.timer;
       }
@@ -662,26 +710,47 @@ function createAgencyTimeTrackingActions(
     });
   }
 
-  function getRegisteredLogQueries(teamIds: Set<string>) {
-    return [...logQueryRegistry.values()].filter((registeredQuery) =>
-      teamIds.has(registeredQuery.teamId),
+  async function cancelQueries(queries: Iterable<{ queryKey: QueryKey }>) {
+    await Promise.all(
+      [...queries].map((query) => getQueryClient().cancelQueries({ queryKey: query.queryKey })),
     );
   }
 
+  function emptyTimeEntriesList(page: number, pageSize = 20): AgencyTimeEntriesListQueryData {
+    return {
+      items: [],
+      page,
+      pageSize,
+      total: 0,
+      weekSummary: {
+        startDate: new Date().toISOString(),
+        endDate: new Date().toISOString(),
+        totalSeconds: 0,
+        daily: [],
+      },
+    };
+  }
+
+  function getRegisteredLogQueries(teamIds: Set<string>) {
+    return [...logQueryRegistry.values()]
+      .map((entry) => entry.payload)
+      .filter((registeredQuery) => teamIds.has(registeredQuery.teamId));
+  }
+
   function patchActiveTimerCaches(timer: AgencyActiveTimer | null) {
-    activeTimerQueryRegistry.forEach((registeredQuery) => {
-      getQueryClient().setQueryData<AgencyActiveTimerQueryData | undefined>(
-        registeredQuery.queryKey,
-        (current) => ({
-          ...(current ?? { timer: null }),
-          timer: timer && registeredQuery.teamId === timer.teamId ? timer : null,
-        }),
-      );
-    });
+    const teamId = timer?.teamId;
+    if (teamId) {
+      patchActiveTimerInCache(teamId, timer);
+      return;
+    }
+
+    for (const { payload: registeredQuery } of activeTimerQueryRegistry.values()) {
+      patchActiveTimerInCache(registeredQuery.teamId, null);
+    }
   }
 
   function patchInsertedEntry(teamId: string, entry: AgencyTimeEntry) {
-    logQueryRegistry.forEach((registeredQuery) => {
+    logQueryRegistry.forEach(({ payload: registeredQuery }) => {
       if (registeredQuery.teamId !== teamId) {
         return;
       }
@@ -689,18 +758,17 @@ function createAgencyTimeTrackingActions(
       getQueryClient().setQueryData<AgencyTimeEntriesListQueryData | undefined>(
         registeredQuery.queryKey,
         (current) => {
-          if (!current) {
-            return current;
-          }
+          const base =
+            current ?? emptyTimeEntriesList(registeredQuery.page);
 
           return {
-            ...current,
+            ...base,
             items:
               registeredQuery.page === 1
-                ? [entry, ...current.items].slice(0, current.pageSize)
-                : current.items,
-            total: current.total + 1,
-            weekSummary: updateWeekSummary(current.weekSummary, entry, 1),
+                ? [entry, ...base.items].slice(0, base.pageSize)
+                : base.items,
+            total: base.total + 1,
+            weekSummary: updateWeekSummary(base.weekSummary, entry, 1),
           };
         },
       );
@@ -713,7 +781,7 @@ function createAgencyTimeTrackingActions(
   ) {
     const deletedIds = new Set(entries.map((entry) => entry.id));
 
-    logQueryRegistry.forEach((registeredQuery) => {
+    logQueryRegistry.forEach(({ payload: registeredQuery }) => {
       if (registeredQuery.teamId !== teamId) {
         return;
       }
@@ -786,92 +854,43 @@ function createAgencyTimeTrackingActions(
     };
   }
 
-  function patchUpdatedEntry(teamId: string, entry: AgencyTimeEntry) {
-    logQueryRegistry.forEach((registeredQuery) => {
-      if (registeredQuery.teamId !== teamId) return;
-
-      getQueryClient().setQueryData<AgencyTimeEntriesListQueryData | undefined>(
-        registeredQuery.queryKey,
-        (current) => {
-          if (!current) return current;
-          const exists = current.items.some((item) => item.id === entry.id);
-          if (!exists) {
-            return {
-              ...current,
-              items:
-                registeredQuery.page === 1
-                  ? [entry, ...current.items].slice(0, current.pageSize)
-                  : current.items,
-              total: current.total + 1,
-              weekSummary: updateWeekSummary(current.weekSummary, entry, 1),
-            };
-          }
-          return {
-            ...current,
-            items: current.items.map((item) => (item.id === entry.id ? entry : item)),
-          };
-        },
-      );
-    });
-  }
-
   function reconcileCreatedEntry(
     teamId: string,
     optimisticIdValue: string,
     created: AgencyTimeEntry,
   ) {
-    logQueryRegistry.forEach((registeredQuery) => {
+    logQueryRegistry.forEach(({ payload: registeredQuery }) => {
       if (registeredQuery.teamId !== teamId) return;
       getQueryClient().setQueryData<AgencyTimeEntriesListQueryData | undefined>(
         registeredQuery.queryKey,
         (current) => {
-          if (!current) return current;
+          const base =
+            current ?? emptyTimeEntriesList(registeredQuery.page);
+          const hasOptimistic = base.items.some((item) => item.id === optimisticIdValue);
+          if (hasOptimistic) {
+            return {
+              ...base,
+              items: base.items.map((item) => (item.id === optimisticIdValue ? created : item)),
+            };
+          }
+          if (base.items.some((item) => item.id === created.id)) {
+            return {
+              ...base,
+              items: base.items.map((item) => (item.id === created.id ? created : item)),
+            };
+          }
           return {
-            ...current,
-            items: current.items.map((item) => (item.id === optimisticIdValue ? created : item)),
+            ...base,
+            items:
+              registeredQuery.page === 1
+                ? [created, ...base.items].slice(0, base.pageSize)
+                : base.items,
+            total: base.total + 1,
+            weekSummary: updateWeekSummary(base.weekSummary, created, 1),
           };
         },
       );
     });
-  }
-
-  function applyLiveEvent(event: AgencyLiveEvent) {
-    const currentUserId = getCurrentUserId();
-
-    switch (event.type) {
-      case "timer.started":
-        if (event.userId === currentUserId) {
-          patchActiveTimerCaches(event.timer);
-        }
-        break;
-      case "timer.stopped":
-        if (event.userId === currentUserId) {
-          patchActiveTimerCaches(event.timer);
-        }
-        if (event.createdEntry && event.createdEntry.userId === currentUserId) {
-          patchInsertedEntry(event.teamId, event.createdEntry);
-        }
-        break;
-      case "timeEntry.created":
-        if (event.entry.userId === currentUserId) {
-          patchInsertedEntry(event.teamId, event.entry);
-        }
-        break;
-      case "timeEntry.updated":
-        if (event.entry.userId === currentUserId) {
-          patchUpdatedEntry(event.teamId, event.entry);
-        }
-        break;
-      case "timeEntry.deleted":
-        if (event.userId === currentUserId) {
-          patchDeletedEntries(event.teamId, [
-            { id: event.entryId, startedAt: event.updatedAt, durationSeconds: 0 },
-          ]);
-        }
-        break;
-      default:
-        break;
-    }
   }
 
   function dedupeEntries(entries: DeleteEntriesPayload["entries"]) {
@@ -905,7 +924,6 @@ function createAgencyTimeTrackingActions(
     restartEntry,
     stopTimer,
     deleteEntries,
-    applyLiveEvent,
   };
 
 }

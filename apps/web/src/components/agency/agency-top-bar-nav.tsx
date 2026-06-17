@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { AgencySegmentId } from "@/lib/agency-segments";
 import { AGENCY_SEGMENTS } from "@/lib/agency-segments";
-import type { AgencyLiveConnectionState } from "@/lib/utils/agency-live-rpc";
+import type { AgencySyncState } from "@/hooks/use-agency-sync-status";
 import {
   shellBreadcrumbCurrentClass,
   shellBreadcrumbMutedClass,
@@ -17,7 +17,7 @@ type AgencyTopBarNavProps = {
   segment: AgencySegmentId;
   teamId: string;
   teams: Array<{ id: string; name: string }>;
-  connectionState?: AgencyLiveConnectionState;
+  syncState?: AgencySyncState;
   onSegmentChange: (segment: AgencySegmentId) => void;
   onTeamIdChange: (teamId: string) => void;
 };
@@ -26,7 +26,7 @@ export function AgencyTopBarNav({
   segment,
   teamId,
   teams,
-  connectionState,
+  syncState,
   onSegmentChange,
   onTeamIdChange,
 }: AgencyTopBarNavProps) {
@@ -42,40 +42,40 @@ export function AgencyTopBarNav({
   );
   const isMultiTeam = teams.length > 1;
 
-  const liveStatusLabel = useMemo(() => {
-    if (!connectionState) return "";
-    switch (connectionState) {
-      case "live":
-        return "Live sync";
-      case "reconnecting":
-        return "Reconnecting";
+  const syncStatusLabel = useMemo(() => {
+    if (!syncState) return "";
+    switch (syncState) {
+      case "synced":
+        return "Synced";
+      case "syncing":
+        return "Syncing…";
       case "error":
         return "Sync interrupted";
-      case "connecting":
-        return "Connecting";
+      case "loading":
+        return "Loading";
       default: {
-        const _exhaustive: never = connectionState;
+        const _exhaustive: never = syncState;
         return _exhaustive;
       }
     }
-  }, [connectionState]);
+  }, [syncState]);
 
-  const liveStatusDotClass = useMemo(() => {
-    if (!connectionState) return "bg-muted";
-    switch (connectionState) {
-      case "live":
+  const syncStatusDotClass = useMemo(() => {
+    if (!syncState) return "bg-muted";
+    switch (syncState) {
+      case "synced":
         return "bg-success";
       case "error":
         return "bg-error";
-      case "reconnecting":
-      case "connecting":
+      case "syncing":
+      case "loading":
         return "bg-muted";
       default: {
-        const _exhaustive: never = connectionState;
+        const _exhaustive: never = syncState;
         return _exhaustive;
       }
     }
-  }, [connectionState]);
+  }, [syncState]);
 
   function selectSegment(nextSegment: AgencySegmentId) {
     if (nextSegment === segment) return;
@@ -194,16 +194,16 @@ export function AgencyTopBarNav({
 
       <span className={shellBreadcrumbCurrentClass}>{currentSegment.label}</span>
 
-      {connectionState ? (
+      {syncState ? (
         <div
           className="ml-0.5 inline-flex shrink-0 items-center"
-          title={liveStatusLabel}
+          title={syncStatusLabel}
           role="status"
-          aria-label={liveStatusLabel}
-          aria-live={connectionState === "error" ? "assertive" : "polite"}
+          aria-label={syncStatusLabel}
+          aria-live={syncState === "error" ? "assertive" : "polite"}
         >
           <span
-            className={["inline-block size-1.5 rounded-full", liveStatusDotClass].join(" ")}
+            className={["inline-block size-1.5 rounded-full", syncStatusDotClass].join(" ")}
             aria-hidden="true"
           />
         </div>

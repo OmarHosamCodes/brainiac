@@ -3,12 +3,12 @@ import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";
 
-import { getServerUrl } from "@/lib/env";
+import { getRpcBaseUrl } from "@/lib/env";
 
 const RPC_REQUEST_TIMEOUT_MS = 6_000;
 
 const rpcLink = new RPCLink({
-  url: `${getServerUrl()}/rpc`,
+  url: `${getRpcBaseUrl()}/rpc`,
   fetch(request, init) {
     const timeoutSignal = AbortSignal.timeout(RPC_REQUEST_TIMEOUT_MS);
     const signal = request.signal

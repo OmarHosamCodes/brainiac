@@ -6,3 +6,11 @@ const serverUrl =
 export function getServerUrl(): string {
   return serverUrl;
 }
+
+/** In dev, route RPC through the Vite proxy so WS and HTTP share the page origin. */
+export function getRpcBaseUrl(): string {
+  if (typeof window !== "undefined" && import.meta.env.DEV) {
+    return window.location.origin;
+  }
+  return getServerUrl();
+}

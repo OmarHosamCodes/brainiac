@@ -1,15 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, ListChecks, ListPlus, Plus, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { orpc } from "@/lib/orpc";
-import { withAgencyLiveQueryOptions } from "@/lib/utils/agency-query-options";
+import { useAgencyProjectTasksQuery } from "@/hooks/use-agency-queries";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import {
-  selectIsTaskMutationPending,
+  selectIsCreatingTask,
   useAgencyOpsStore,
 } from "@/stores/agency-ops";
 
@@ -21,28 +19,11 @@ type AgencyProjectTasksProps = {
 
 export function AgencyProjectTasks({ teamId, projectId, projectName }: AgencyProjectTasksProps) {
   const agencyOps = useAgencyOpsStore();
-  const isTaskMutationPending = useAgencyOpsStore(selectIsTaskMutationPending);
+  const isCreatingTask = useAgencyOpsStore(selectIsCreatingTask);
   const deletingTaskIds = useAgencyOpsStore((s) => s.deletingTaskIds);
   const [titleDraft, setTitleDraft] = useState("");
 
-  const tasksQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.projectTasks.list.queryOptions({
-        input: { teamId, projectId },
-      }),
-      enabled: Boolean(teamId) && Boolean(projectId),
-    }),
-  );
-
-  const tasksQueryKey = orpc.agencyOps.projectTasks.list.queryOptions({
-    input: { teamId, projectId },
-  }).queryKey;
-
-  useEffect(() => {
-    if (!teamId || !projectId) return;
-    agencyOps.registerProjectTasksQuery({ queryKey: tasksQueryKey, teamId, projectId });
-    return () => agencyOps.unregisterProjectTasksQuery(tasksQueryKey);
-  }, [teamId, projectId, tasksQueryKey, agencyOps]);
+  const tasksQuery = useAgencyProjectTasksQuery(teamId, { projectId });
 
   const tasks = tasksQuery.data?.items ?? [];
 
@@ -97,7 +78,7 @@ export function AgencyProjectTasks({ teamId, projectId, projectName }: AgencyPro
             type="submit"
             size="sm"
             aria-label="Add task"
-            disabled={!titleDraft.trim() || isTaskMutationPending}
+            disabled={!titleDraft.trim() || isCreatingTask}
           >
             <Plus />
           </Button>

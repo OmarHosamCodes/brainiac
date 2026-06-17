@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link, MoreVertical, Search, Tag, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -7,8 +6,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { orpc } from "@/lib/orpc";
-import { withAgencyLiveQueryOptions } from "@/lib/utils/agency-query-options";
+import {
+  useAgencyActiveTimerQuery,
+  useAgencyProjectTasksQuery,
+  useAgencyProjectsQuery,
+  useAgencyTagsQuery,
+  type AgencyProjectTaskStatus,
+} from "@/hooks/use-agency-queries";
 import { formatDuration } from "@/lib/utils/format-duration";
 import {
   getAgencyLinkUrlDisplayLabel,
@@ -23,6 +27,8 @@ type AgencyTimeTrackerProps = {
   teamId: string;
 };
 
+const OPEN_TASK_STATUSES: AgencyProjectTaskStatus[] = ["open", "in_progress"];
+
 export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
   const isTimerMutationPending = useAgencyTimeTrackingStore(selectIsTimerMutationPending);
@@ -34,35 +40,15 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
     return () => clearInterval(tickerHandle);
   }, []);
 
-  const projectsQuery = useQuery({
-    ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
-    enabled: Boolean(teamId),
+  const projectsQuery = useAgencyProjectsQuery(teamId);
+
+  const tasksQuery = useAgencyProjectTasksQuery(teamId, {
+    statuses: OPEN_TASK_STATUSES,
   });
 
-  const tasksQuery = useQuery({
-    ...orpc.agencyOps.projectTasks.list.queryOptions({
-      input: { teamId, statuses: ["open", "in_progress"] },
-    }),
-    enabled: Boolean(teamId),
-  });
+  const tagsQuery = useAgencyTagsQuery(teamId);
 
-  const tagsQuery = useQuery({
-    ...orpc.agencyOps.tags.list.queryOptions({ input: { teamId } }),
-    enabled: Boolean(teamId),
-  });
-
-  const activeTimerQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.timer.getActive.queryOptions({
-        input: { teamId: teamId || undefined },
-      }),
-      enabled: Boolean(teamId),
-    }),
-  );
-
-  const activeTimerQueryKey = orpc.agencyOps.timer.getActive.queryOptions({
-    input: { teamId: teamId || undefined },
-  }).queryKey;
+  const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
 
   const projects = projectsQuery.data?.items ?? [];
   const tasks = tasksQuery.data?.items ?? [];
@@ -100,12 +86,6 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
     agencyTimeTrackingStore.syncDraftFromActiveTimer(teamId, activeTimer);
   }, [teamId, activeTimer, agencyTimeTrackingStore]);
 
-  useEffect(() => {
-    if (!teamId) return;
-    agencyTimeTrackingStore.registerActiveTimerQuery({ teamId, queryKey: activeTimerQueryKey });
-    return () => agencyTimeTrackingStore.unregisterActiveTimerQuery(activeTimerQueryKey);
-  }, [teamId, activeTimerQueryKey, agencyTimeTrackingStore]);
-
   const elapsedSeconds = useMemo(() => {
     if (!activeTimer) return 0;
     const startedAt = new Date(activeTimer.startedAt).getTime();
@@ -113,21 +93,18 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
     return Math.max(0, Math.floor((now - startedAt) / 1_000));
   }, [activeTimer, now]);
 
-  const canStartTimer = Boolean(
-    teamId && selectedTask && selectedProject && selectedTagIds.length > 0 && !activeTimer,
-  );
-  const canStopTimer = Boolean(activeTimer && selectedTagIds.length > 0);
+  const canStartTimer = Boolean(teamId && selectedTask && selectedProject && !activeTimer);
+  const canStopTimer = Boolean(activeTimer);
 
   const timerValidationHint = useMemo(() => {
     if (activeTimer ? canStopTimer : canStartTimer) return "";
 
-    const missingRequirements: string[] = [];
-    if (!activeTimer && !selectedTask) missingRequirements.push("a task");
-    if (selectedTagIds.length === 0) missingRequirements.push("at least one tag");
+    if (!activeTimer && !selectedTask) {
+      return "Select a task to start this timer.";
+    }
 
-    if (missingRequirements.length === 0) return "";
-    return `Select ${missingRequirements.join(" and ")} to ${activeTimer ? "stop and save" : "start"} this timer.`;
-  }, [activeTimer, canStartTimer, canStopTimer, selectedTagIds.length, selectedTask]);
+    return "";
+  }, [activeTimer, canStartTimer, canStopTimer, selectedTask]);
 
   async function startTimer() {
     if (!teamId || !selectedProject || !selectedTask) return;

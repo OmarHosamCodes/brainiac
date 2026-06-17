@@ -1,13 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Building2, FolderKanban, Plus, Search } from "lucide-react";
-import { useEffect, useImperativeHandle, useMemo, useState, forwardRef } from "react";
+import { useImperativeHandle, useMemo, useState, forwardRef, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useAgencyClientsQuery,
+  useAgencyProjectsQuery,
+  useAgencyTimeEntriesQuery,
+} from "@/hooks/use-agency-queries";
 import { orpc } from "@/lib/orpc";
-import { withAgencyLiveQueryOptions } from "@/lib/utils/agency-query-options";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
@@ -56,41 +60,14 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
   const [newProjectName, setNewProjectName] = useState("");
   const [newProjectClientId, setNewProjectClientId] = useState("");
 
-  const projectsQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
-      enabled: Boolean(teamId),
-    }),
-  );
-
-  const clientsQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.clients.list.queryOptions({ input: { teamId } }),
-      enabled: Boolean(teamId),
-    }),
-  );
-
-  const entriesQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.timeEntries.listMine.queryOptions({
-        input: { teamId, page: 1, pageSize: 100 },
-      }),
-      enabled: Boolean(teamId),
-    }),
-  );
+  const projectsQuery = useAgencyProjectsQuery(teamId);
+  const clientsQuery = useAgencyClientsQuery(teamId);
+  const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
 
   const budgetsQuery = useQuery({
     ...orpc.agencyOps.budgets.list.queryOptions({ input: { teamId } }),
     enabled: Boolean(teamId),
   });
-
-  const projectsQueryKey = orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }).queryKey;
-
-  useEffect(() => {
-    if (!teamId) return;
-    agencyOps.registerProjectsQuery({ queryKey: projectsQueryKey, teamId });
-    return () => agencyOps.unregisterProjectsQuery(projectsQueryKey);
-  }, [teamId, projectsQueryKey, agencyOps]);
 
   const budgetsByProject = useMemo(() => {
     const map = new Map<string, NonNullable<typeof budgetsQuery.data>["items"][number]>();
