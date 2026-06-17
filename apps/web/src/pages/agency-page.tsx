@@ -29,7 +29,11 @@ import {
   useAppShellContextSlot,
   useAppShellPageTitle,
 } from "@/hooks/use-app-shell";
-import { useAgencyLiveSync } from "@/hooks/use-agency-live-sync";
+import { useAgencySyncStatus } from "@/hooks/use-agency-sync-status";
+import {
+  prefetchAgencyWorkQueries,
+  useAgencyActiveTimerQuery,
+} from "@/hooks/use-agency-queries";
 import { useBilling } from "@/hooks/use-billing";
 import { useCurrentAgencyTeam } from "@/hooks/use-persistent-timer";
 import { AGENCY_SEGMENTS, type AgencySegmentId } from "@/lib/agency-segments";
@@ -40,6 +44,7 @@ import {
   shellPageClass,
   shellPageIntroClass,
 } from "@/lib/utils/app-shell-ui";
+import { setAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
 
 function isAgencySegmentId(value: string | null): value is AgencySegmentId {
   return AGENCY_SEGMENTS.some((entry) => entry.id === value);
@@ -50,6 +55,11 @@ function panelIdFor(segmentId: AgencySegmentId) {
 }
 
 const panelClass = "min-h-0 flex-1 overflow-y-auto overscroll-contain";
+const hiddenPanelClass = "hidden";
+
+function segmentPanelClass(segmentId: AgencySegmentId, activeSegment: AgencySegmentId) {
+  return segmentId === activeSegment ? panelClass : hiddenPanelClass;
+}
 
 export function AgencyPage() {
   useAppShellContextSlot();
@@ -57,9 +67,12 @@ export function AgencyPage() {
 
   const session = authClient.useSession();
   const authEnabled = Boolean(session.data?.user);
+  const currentUserId = session.data?.user?.id ?? "";
 
   const { limits, billingQuery } = useBilling();
   const agencyEnabled = Boolean(limits.agencyOps);
+  const billingGatePending = billingQuery.isPending;
+  const showAgencyUpsell = !billingGatePending && !agencyEnabled;
 
   const teamsQuery = useQuery({
     ...orpc.team.list.queryOptions(),
@@ -116,10 +129,20 @@ export function AgencyPage() {
     setCurrentAgencyTeamId(selectedTeamId || null);
   }, [selectedTeamId, setCurrentAgencyTeamId]);
 
-  const agencyLiveTeamId = agencyEnabled && selectedTeamId ? selectedTeamId : "";
-  const { connectionState } = useAgencyLiveSync(agencyLiveTeamId);
+  useEffect(() => {
+    setAgencyTimeTrackingUserId(currentUserId || null);
+  }, [currentUserId]);
 
-  const isInitialLoading = billingQuery.isPending || teamsQuery.isPending;
+  const agencySyncTeamId = agencyEnabled && selectedTeamId ? selectedTeamId : "";
+  useAgencyActiveTimerQuery(agencySyncTeamId);
+  const syncState = useAgencySyncStatus(agencySyncTeamId);
+
+  useEffect(() => {
+    if (!agencyEnabled || !selectedTeamId || !currentUserId) return;
+    prefetchAgencyWorkQueries(selectedTeamId, currentUserId);
+  }, [agencyEnabled, selectedTeamId, currentUserId]);
+
+  const isInitialLoading = teamsQuery.isPending;
 
   function openProject(projectId: string) {
     const next = new URLSearchParams(searchParams);
@@ -141,7 +164,7 @@ export function AgencyPage() {
           segment={segment}
           teamId={selectedTeamId}
           teams={teams}
-          connectionState={connectionState}
+          syncState={syncState}
           onSegmentChange={handleSegmentChange}
           onTeamIdChange={setSelectedTeamId}
         />
@@ -174,7 +197,13 @@ export function AgencyPage() {
             <Skeleton className="h-6 w-2/3 rounded-lg" />
             <Skeleton className="h-64 w-full rounded-[32px]" />
           </div>
-        ) : !agencyEnabled ? (
+        ) : billingGatePending ? (
+          <div className="space-y-4 pt-4">
+            <Skeleton className="h-12 w-full rounded-2xl" />
+            <Skeleton className="h-6 w-2/3 rounded-lg" />
+            <Skeleton className="h-64 w-full rounded-[32px]" />
+          </div>
+        ) : showAgencyUpsell ? (
           <AgencyProUpsell />
         ) : teams.length === 0 ? (
           <AgencyPlaceholderSurface
@@ -198,12 +227,12 @@ export function AgencyPage() {
                 role="tabpanel"
                 aria-labelledby={`agency-tab-${segment}`}
               >
-                {segment === "work" ? (
+                <div className={segmentPanelClass("work", segment)}>
                   <AgencyWorkSurface teamId={selectedTeamId} onSelectProject={openProject} />
-                ) : null}
+                </div>
 
-                {segment === "projects" ? (
-                  selectedProjectId ? (
+                <div className={segmentPanelClass("projects", segment)}>
+                  {selectedProjectId ? (
                     <AgencyProjectDetail
                       teamId={selectedTeamId}
                       projectId={selectedProjectId}
@@ -216,12 +245,12 @@ export function AgencyPage() {
                       hideToolbarActions
                       onSelect={openProject}
                     />
-                  )
-                ) : null}
+                  )}
+                </div>
 
-                {segment === "clients" ? (
+                <div className={segmentPanelClass("clients", segment)}>
                   <AgencyClientsSurface teamId={selectedTeamId} />
-                ) : null}
+                </div>
 
                 {segment === "reports" ? (
                   <AgencyReportsSurface

@@ -1,13 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CalendarRange, Settings } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { orpc } from "@/lib/orpc";
-import { withAgencyLiveQueryOptions } from "@/lib/utils/agency-query-options";
+import { useAgencyCapacityQuery } from "@/hooks/use-agency-queries";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import {
@@ -52,24 +50,7 @@ export function AgencyResourcingSurface({ teamId, onSegmentChange }: AgencyResou
     });
   }, []);
 
-  const capacityQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.capacity.list.queryOptions({
-        input: { teamId, weekStart: weekStartIso, weeks: WEEKS_AHEAD },
-      }),
-      enabled: Boolean(teamId),
-    }),
-  );
-
-  const capacityQueryKey = orpc.agencyOps.capacity.list.queryOptions({
-    input: { teamId, weekStart: weekStartIso, weeks: WEEKS_AHEAD },
-  }).queryKey;
-
-  useEffect(() => {
-    if (!teamId) return;
-    agencyOps.registerCapacityQuery({ queryKey: capacityQueryKey, teamId });
-    return () => agencyOps.unregisterCapacityQuery(capacityQueryKey);
-  }, [teamId, capacityQueryKey, agencyOps]);
+  const capacityQuery = useAgencyCapacityQuery(teamId, weekStartIso, WEEKS_AHEAD);
 
   const weeks = capacityQuery.data?.weeks ?? [];
 

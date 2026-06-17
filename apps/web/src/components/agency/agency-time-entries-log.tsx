@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ChevronLeft,
@@ -17,8 +16,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { orpc } from "@/lib/orpc";
-import { withAgencyLiveQueryOptions } from "@/lib/utils/agency-query-options";
+import {
+  useAgencyProjectsQuery,
+  useAgencyTimeEntriesQuery,
+} from "@/hooks/use-agency-queries";
 import { agencyLabelClass, agencyMetricClass } from "@/lib/utils/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
@@ -66,25 +67,8 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
   const [pageSize, setPageSize] = useState(20);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  const entriesQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.timeEntries.listMine.queryOptions({
-        input: { teamId, page, pageSize },
-      }),
-      enabled: Boolean(teamId),
-    }),
-  );
-
-  const projectsQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
-      enabled: Boolean(teamId),
-    }),
-  );
-
-  const entriesQueryKey = orpc.agencyOps.timeEntries.listMine.queryOptions({
-    input: { teamId, page, pageSize },
-  }).queryKey;
+  const entriesQuery = useAgencyTimeEntriesQuery(teamId, page, pageSize);
+  const projectsQuery = useAgencyProjectsQuery(teamId);
 
   const entries = entriesQuery.data?.items ?? [];
   const totalEntries = entriesQuery.data?.total ?? 0;
@@ -158,12 +142,6 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
   useEffect(() => {
     setPage(1);
   }, [teamId]);
-
-  useEffect(() => {
-    if (!teamId) return;
-    agencyTimeTrackingStore.registerLogQuery({ teamId, page, queryKey: entriesQueryKey });
-    return () => agencyTimeTrackingStore.unregisterLogQuery(entriesQueryKey);
-  }, [teamId, page, entriesQueryKey, agencyTimeTrackingStore]);
 
   const logRefreshing = entriesQuery.isFetching || projectsQuery.isFetching;
   const logQueryError = entriesQuery.error ?? projectsQuery.error ?? null;

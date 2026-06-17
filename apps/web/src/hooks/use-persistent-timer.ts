@@ -1,12 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
 import { create } from "zustand";
 import { useEffect, useMemo, useState } from "react";
 
+import { useAgencyActiveTimerQuery } from "@/hooks/use-agency-queries";
 import { authClient } from "@/lib/auth-client";
-import { orpc } from "@/lib/orpc";
 import { setAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
 import { useAgencyTimeTrackingStore, selectIsTimerMutationPending } from "@/stores/agency-time-tracking";
-import { withAgencyLiveQueryOptions } from "@/lib/utils/agency-query-options";
 
 type CurrentAgencyTeamState = {
   currentAgencyTeamId: string | null;
@@ -37,41 +35,7 @@ export function usePersistentTimer() {
     setAgencyTimeTrackingUserId(session.data?.user?.id ?? null);
   }, [session.data?.user?.id]);
 
-  const activeTimerQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.timer.getActive.queryOptions({
-        input: {
-          teamId: teamId || undefined,
-        },
-      }),
-      enabled: Boolean(teamId),
-    }),
-  );
-
-  const activeTimerQueryKey = useMemo(
-    () =>
-      orpc.agencyOps.timer.getActive.queryOptions({
-        input: {
-          teamId: teamId || undefined,
-        },
-      }).queryKey,
-    [teamId],
-  );
-
-  useEffect(() => {
-    if (!teamId) {
-      return;
-    }
-
-    agencyStore.registerActiveTimerQuery({
-      teamId,
-      queryKey: activeTimerQueryKey,
-    });
-
-    return () => {
-      agencyStore.unregisterActiveTimerQuery(activeTimerQueryKey);
-    };
-  }, [teamId, activeTimerQueryKey, agencyStore]);
+  const activeTimerQuery = useAgencyActiveTimerQuery(teamId ?? "");
 
   const [now, setNow] = useState(() => Date.now());
 

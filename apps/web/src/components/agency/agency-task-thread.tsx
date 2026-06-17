@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, AlertTriangle, Bot } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -12,10 +11,11 @@ import { AgencyTaskMediaPlayer } from "@/components/agency/agency-task-media-pla
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { orpc } from "@/lib/orpc";
-import { withAgencyLiveQueryOptions } from "@/lib/utils/agency-query-options";
+import {
+  useAgencyTaskMessagesQuery,
+  useAgencyTaskThreadContextQuery,
+} from "@/hooks/use-agency-queries";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { useAgencyOpsStore } from "@/stores/agency-ops";
 
 type Project = {
   id: string;
@@ -53,39 +53,13 @@ function sameDay(left: string, right: string) {
 }
 
 export function AgencyTaskThread({ teamId, taskId, projects, onBack }: AgencyTaskThreadProps) {
-  const agencyOps = useAgencyOpsStore();
   const [agentEnabled, setAgentEnabled] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const threadContainerRef = useRef<HTMLDivElement | null>(null);
   const composerRef = useRef<AgencyTaskComposerHandle | null>(null);
 
-  const contextQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.taskThreads.context.get.queryOptions({
-        input: { teamId, taskId },
-      }),
-      enabled: Boolean(teamId) && Boolean(taskId),
-    }),
-  );
-
-  const messagesQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.taskThreads.messages.list.queryOptions({
-        input: { teamId, taskId, pageSize: 50 },
-      }),
-      enabled: Boolean(teamId) && Boolean(taskId),
-    }),
-  );
-
-  const messagesQueryKey = orpc.agencyOps.taskThreads.messages.list.queryOptions({
-    input: { teamId, taskId, pageSize: 50 },
-  }).queryKey;
-
-  useEffect(() => {
-    if (!teamId || !taskId) return;
-    agencyOps.registerTaskMessagesQuery({ queryKey: messagesQueryKey, teamId, taskId });
-    return () => agencyOps.unregisterTaskMessagesQuery(messagesQueryKey);
-  }, [teamId, taskId, messagesQueryKey, agencyOps]);
+  const contextQuery = useAgencyTaskThreadContextQuery(teamId, taskId);
+  const messagesQuery = useAgencyTaskMessagesQuery(teamId, taskId);
 
   const messages = [...(messagesQuery.data?.items ?? [])].reverse();
   const context = contextQuery.data;

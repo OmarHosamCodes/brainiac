@@ -1,10 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
 import { Play, Square } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { orpc } from "@/lib/orpc";
-import { withAgencyLiveQueryOptions } from "@/lib/utils/agency-query-options";
+import { useAgencyActiveTimerQuery } from "@/hooks/use-agency-queries";
 import { formatDuration } from "@/lib/utils/format-duration";
 import {
   selectIsTimerMutationPending,
@@ -35,15 +33,7 @@ export function AgencyMiniTimer({
     return () => clearInterval(tickerHandle);
   }, []);
 
-  const activeTimerQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.timer.getActive.queryOptions({
-        input: { teamId: teamId || undefined },
-      }),
-      enabled: Boolean(teamId),
-    }),
-  );
-
+  const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
   const activeTimer = activeTimerQuery.data?.timer ?? null;
   const isRunningForThisTask =
     activeTimer?.taskId === taskId && activeTimer.teamId === teamId;

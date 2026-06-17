@@ -1,12 +1,21 @@
 /**
  * Agency Ops Store — optimistic updates for clients, projects, and tags.
  */
-import type { AgencyLiveEvent } from "@brainiac/api/routers/agency-ops/live";
 import { create } from "zustand";
 import { toast } from "sonner";
 
 import { getQueryClient } from "@/lib/query-client";
 import { orpc, orpcClient } from "@/lib/orpc";
+import {
+  cancelAgencyProjectTaskListQueries,
+  findProjectTaskInCache,
+  patchDeletedProjectTaskInCache,
+  patchInsertedProjectTaskInCache,
+  patchUpdatedProjectTaskInCache,
+  reconcileCreatedProjectTaskInCache,
+  refetchAgencyProjectTaskListQueries,
+} from "@/lib/utils/agency-query-cache";
+import { getAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 // Shared types (mirrored from API shapes — keep in sync with oRPC output)
@@ -66,10 +75,6 @@ type AgencyProjectsListQueryData = {
   total: number;
 };
 
-type AgencyProjectTasksListQueryData = {
-  items: AgencyProjectTask[];
-};
-
 type AgencyTagsListQueryData = {
   items: AgencyTag[];
   page: number;
@@ -100,6 +105,8 @@ type RegisteredProjectTasksQuery = {
   queryKey: QueryKey;
   teamId: string;
   projectId?: string;
+  assigneeUserId?: string;
+  statuses?: AgencyProjectTask["status"][];
 };
 
 type RegisteredTagsQuery = {
@@ -303,7 +310,8 @@ type AgencyOpsActions = ReturnType<typeof createAgencyOpsActions>;
 type AgencyOpsState = {
   clientMutationCount: number;
   projectMutationCount: number;
-  taskMutationCount: number;
+  isCreatingTask: boolean;
+  pendingTaskIds: string[];
   tagMutationCount: number;
   deletingTaskIds: string[];
   deletingTagIds: string[];
@@ -510,67 +518,23 @@ function createAgencyOpsActions(
   // ---------------------------------------------------------------------------
 
   function patchInsertedProjectTask(teamId: string, task: AgencyProjectTask) {
-    projectTasksQueryRegistry.forEach(({ payload: reg }) => {
-      if (reg.teamId !== teamId) return;
-      if (reg.projectId && reg.projectId !== task.projectId) return;
-      getQueryClient().setQueryData<AgencyProjectTasksListQueryData | undefined>(
-        reg.queryKey,
-        (current) => {
-          if (!current) return current;
-          const exists = current.items.some((item) => item.id === task.id);
-          if (exists) {
-            return {
-              ...current,
-              items: current.items.map((item) => (item.id === task.id ? task : item)),
-            };
-          }
-          return {
-            ...current,
-            items: [task, ...current.items],
-          };
-        },
-      );
-    });
+    patchInsertedProjectTaskInCache(teamId, task);
   }
 
   function patchUpdatedProjectTask(teamId: string, task: AgencyProjectTask) {
-    projectTasksQueryRegistry.forEach(({ payload: reg }) => {
-      if (reg.teamId !== teamId) return;
-      if (reg.projectId && reg.projectId !== task.projectId) return;
-      getQueryClient().setQueryData<AgencyProjectTasksListQueryData | undefined>(
-        reg.queryKey,
-        (current) => {
-          if (!current) return current;
-          const index = current.items.findIndex((item) => item.id === task.id);
-          if (index === -1) {
-            return {
-              ...current,
-              items: [task, ...current.items],
-            };
-          }
-          return {
-            ...current,
-            items: current.items.map((item) => (item.id === task.id ? task : item)),
-          };
-        },
-      );
-    });
+    patchUpdatedProjectTaskInCache(teamId, task);
   }
 
   function patchDeletedProjectTask(teamId: string, taskId: string) {
-    projectTasksQueryRegistry.forEach(({ payload: reg }) => {
-      if (reg.teamId !== teamId) return;
-      getQueryClient().setQueryData<AgencyProjectTasksListQueryData | undefined>(
-        reg.queryKey,
-        (current) => {
-          if (!current) return current;
-          return {
-            ...current,
-            items: current.items.filter((task) => task.id !== taskId),
-          };
-        },
-      );
-    });
+    patchDeletedProjectTaskInCache(teamId, taskId);
+  }
+
+  async function syncProjectTaskQueriesAfterMutation(teamId: string) {
+    const userId = getAgencyTimeTrackingUserId();
+    await refetchAgencyProjectTaskListQueries(
+      teamId,
+      userId !== "unknown-user" ? userId : undefined,
+    );
   }
 
   function patchInsertedTaskMessage(teamId: string, taskId: string, message: AgencyTaskMessage) {
@@ -673,20 +637,7 @@ function createAgencyOpsActions(
     optimisticIdValue: string,
     created: AgencyProjectTask,
   ) {
-    projectTasksQueryRegistry.forEach(({ payload: reg }) => {
-      if (reg.teamId !== teamId) return;
-      if (reg.projectId && reg.projectId !== created.projectId) return;
-      getQueryClient().setQueryData<AgencyProjectTasksListQueryData | undefined>(
-        reg.queryKey,
-        (current) => {
-          if (!current) return current;
-          return {
-            ...current,
-            items: current.items.map((task) => (task.id === optimisticIdValue ? created : task)),
-          };
-        },
-      );
-    });
+    reconcileCreatedProjectTaskInCache(teamId, optimisticIdValue, created);
   }
 
   // ---------------------------------------------------------------------------
@@ -839,9 +790,9 @@ function createAgencyOpsActions(
     }
   }
 
-  async function createProjectTask(payload: CreateProjectTaskPayload) {
+  async function createProjectTask(payload: CreateProjectTaskPayload): Promise<boolean> {
     const title = payload.title.trim();
-    if (!payload.teamId || !payload.projectId || !title) return;
+    if (!payload.teamId || !payload.projectId || !title) return false;
 
     const snapshots = snapshotQueries(registryPayloads(projectTasksQueryRegistry));
     const nowIso = new Date().toISOString();
@@ -859,9 +810,10 @@ function createAgencyOpsActions(
       updatedAt: nowIso,
     };
 
-    set((state) => ({ ...state, taskMutationCount: state.taskMutationCount + 1 }));
+    set((state) => ({ ...state, isCreatingTask: true }));
 
     try {
+      await cancelAgencyProjectTaskListQueries(payload.teamId);
       patchInsertedProjectTask(payload.teamId, optimisticTask);
 
       const created = (await orpcClient.agencyOps.projectTasks.create({
@@ -876,11 +828,14 @@ function createAgencyOpsActions(
       reconcileCreatedTask(payload.teamId, optimisticTask.id, created);
 
       toast.success("Task added", { description: title });
+      await syncProjectTaskQueriesAfterMutation(payload.teamId);
+      return true;
     } catch (error) {
       restoreQuerySnapshots(snapshots);
       toast.error("Couldn't add task", { description: getErrorMessage(error, "Try again.") });
+      return false;
     } finally {
-      set((state) => ({ ...state, taskMutationCount: Math.max(0, state.taskMutationCount - 1) }));
+      set((state) => ({ ...state, isCreatingTask: false }));
     }
   }
 
@@ -891,6 +846,7 @@ function createAgencyOpsActions(
     set((state) => ({ ...state, deletingTaskIds: [...new Set([...state.deletingTaskIds, payload.taskId])] }));
 
     try {
+      await cancelAgencyProjectTaskListQueries(payload.teamId);
       patchDeletedProjectTask(payload.teamId, payload.taskId);
 
       await orpcClient.agencyOps.projectTasks.delete({
@@ -899,6 +855,7 @@ function createAgencyOpsActions(
       });
 
       toast.success("Task deleted", { description: payload.taskTitle });
+      await syncProjectTaskQueriesAfterMutation(payload.teamId);
     } catch (error) {
       restoreQuerySnapshots(snapshots);
       toast.error("Couldn't delete task", { description: getErrorMessage(error, "Try again.") });
@@ -1105,24 +1062,46 @@ function createAgencyOpsActions(
   }
 
   function getCachedProjectTask(teamId: string, taskId: string): AgencyProjectTask | null {
-    for (const { payload: reg } of projectTasksQueryRegistry.values()) {
-      if (reg.teamId !== teamId) continue;
-      const data = getQueryClient().getQueryData<AgencyProjectTasksListQueryData>(reg.queryKey);
-      const task = data?.items.find((item) => item.id === taskId);
-      if (task) return task;
-    }
-    return null;
+    return findProjectTaskInCache(teamId, taskId);
   }
 
   async function updateProjectTask(payload: UpdateProjectTaskPayload) {
     if (!payload.teamId || !payload.taskId) return;
 
     const current = getCachedProjectTask(payload.teamId, payload.taskId);
-    if (!current) return;
-
     const snapshots = snapshotQueries(registryPayloads(projectTasksQueryRegistry));
     const nowIso = new Date().toISOString();
-    set((state) => ({ ...state, taskMutationCount: state.taskMutationCount + 1 }));
+
+    set((state) => ({
+      ...state,
+      pendingTaskIds: [...new Set([...state.pendingTaskIds, payload.taskId])],
+    }));
+
+    if (!current) {
+      try {
+        await cancelAgencyProjectTaskListQueries(payload.teamId);
+        const updated = (await orpcClient.agencyOps.projectTasks.update({
+          teamId: payload.teamId,
+          taskId: payload.taskId,
+          title: payload.title,
+          status: payload.status,
+          assigneeUserId: payload.assigneeUserId,
+          dueDate: payload.dueDate,
+        })) as AgencyProjectTask;
+
+        patchUpdatedProjectTask(payload.teamId, updated);
+        await syncProjectTaskQueriesAfterMutation(payload.teamId);
+      } catch (error) {
+        toast.error("Couldn't update task", { description: getErrorMessage(error, "Try again.") });
+        throw error;
+      } finally {
+        set((state) => ({
+          ...state,
+          pendingTaskIds: state.pendingTaskIds.filter((id) => id !== payload.taskId),
+        }));
+      }
+      return;
+    }
 
     const optimisticTask: AgencyProjectTask = {
       ...current,
@@ -1135,6 +1114,7 @@ function createAgencyOpsActions(
     };
 
     try {
+      await cancelAgencyProjectTaskListQueries(payload.teamId);
       patchUpdatedProjectTask(payload.teamId, optimisticTask);
 
       const updated = (await orpcClient.agencyOps.projectTasks.update({
@@ -1147,12 +1127,16 @@ function createAgencyOpsActions(
       })) as AgencyProjectTask;
 
       patchUpdatedProjectTask(payload.teamId, updated);
+      await syncProjectTaskQueriesAfterMutation(payload.teamId);
     } catch (error) {
       restoreQuerySnapshots(snapshots);
       toast.error("Couldn't update task", { description: getErrorMessage(error, "Try again.") });
       throw error;
     } finally {
-      set((state) => ({ ...state, taskMutationCount: Math.max(0, state.taskMutationCount - 1) }));
+      set((state) => ({
+        ...state,
+        pendingTaskIds: state.pendingTaskIds.filter((id) => id !== payload.taskId),
+      }));
     }
   }
 
@@ -1209,104 +1193,6 @@ function createAgencyOpsActions(
     } catch (error) {
       restoreQuerySnapshots(snapshots);
       throw error;
-    }
-  }
-
-  async function invalidateTenureQueries(teamId: string) {
-    await Promise.all([
-      getQueryClient().invalidateQueries({
-        queryKey: orpc.agencyOps.tenure.policy.get.key({ input: { teamId } }),
-      }),
-      getQueryClient().invalidateQueries({
-        queryKey: orpc.agencyOps.tenure.summary.list.key({ input: { teamId } }),
-      }),
-      getQueryClient().invalidateQueries({
-        queryKey: orpc.agencyOps.tenure.exemptions.list.key({ input: { teamId } }),
-      }),
-      getQueryClient().invalidateQueries({
-        queryKey: orpc.agencyOps.tenure.profiles.list.key({ input: { teamId } }),
-      }),
-      getQueryClient().invalidateQueries({
-        queryKey: orpc.agencyOps.tenure.member.get.key({ input: { teamId } }),
-      }),
-    ]);
-  }
-
-  function applyLiveEvent(event: AgencyLiveEvent) {
-    switch (event.type) {
-      case "client.created":
-        patchInsertedClient(event.teamId, event.client);
-        break;
-      case "client.updated":
-        patchUpdatedClient(event.teamId, event.client.id, event.client);
-        break;
-      case "client.archived":
-        patchRemovedClient(event.teamId, event.clientId);
-        break;
-      case "client.unarchived":
-        patchInsertedClient(event.teamId, event.client);
-        break;
-      case "project.created":
-        patchInsertedProject(event.teamId, event.project);
-        break;
-      case "project.updated":
-        projectsQueryRegistry.forEach(({ payload: reg }) => {
-          if (reg.teamId !== event.teamId) return;
-          if (reg.clientId && reg.clientId !== event.project.clientId) return;
-          getQueryClient().setQueryData<AgencyProjectsListQueryData | undefined>(
-            reg.queryKey,
-            (current) => {
-              if (!current) return current;
-              return {
-                ...current,
-                items: current.items.map((project) =>
-                  project.id === event.project.id ? event.project : project,
-                ),
-              };
-            },
-          );
-        });
-        break;
-      case "projectTask.created":
-        patchInsertedProjectTask(event.teamId, event.task);
-        break;
-      case "projectTask.updated":
-        patchUpdatedProjectTask(event.teamId, event.task);
-        break;
-      case "projectTask.deleted":
-        patchDeletedProjectTask(event.teamId, event.taskId);
-        break;
-      case "taskMessage.created":
-        patchInsertedTaskMessage(event.teamId, event.taskId, event.message);
-        break;
-      case "contact.upserted":
-        patchUpsertedContact(event.teamId, event.clientId, event.contact);
-        break;
-      case "capacity.set":
-        patchCapacityCell(
-          event.teamId,
-          event.capacity.userId,
-          event.capacity.weekStart,
-          event.capacity.capacitySeconds,
-        );
-        break;
-      case "tenure.policy.updated":
-      case "tenure.profile.updated":
-      case "tenure.exemption.updated":
-      case "tenure.exemption.deleted":
-      case "tenure.recomputed":
-        void invalidateTenureQueries(event.teamId);
-        break;
-      case "timer.started":
-      case "timer.stopped":
-      case "timeEntry.created":
-      case "timeEntry.updated":
-      case "timeEntry.deleted":
-        break;
-      default: {
-        const _exhaustive: never = event;
-        return _exhaustive;
-      }
     }
   }
 
@@ -1408,14 +1294,14 @@ function createAgencyOpsActions(
     setCapacity,
     createInvoice,
     updateInvoiceStatus,
-    applyLiveEvent,
   };
 }
 
 export const useAgencyOpsStore = create<AgencyOpsState>((set, get) => ({
   clientMutationCount: 0,
   projectMutationCount: 0,
-  taskMutationCount: 0,
+  isCreatingTask: false,
+  pendingTaskIds: [],
   tagMutationCount: 0,
   deletingTaskIds: [],
   deletingTagIds: [],
@@ -1428,7 +1314,11 @@ export const useAgencyOpsStore = create<AgencyOpsState>((set, get) => ({
 
 export const selectIsClientMutationPending = (s: AgencyOpsState) => s.clientMutationCount > 0;
 export const selectIsProjectMutationPending = (s: AgencyOpsState) => s.projectMutationCount > 0;
-export const selectIsTaskMutationPending = (s: AgencyOpsState) => s.taskMutationCount > 0;
+export const selectIsCreatingTask = (s: AgencyOpsState) => s.isCreatingTask;
+export const selectIsTaskRowPending = (taskId: string) => (s: AgencyOpsState) =>
+  s.pendingTaskIds.includes(taskId);
+export const selectIsTaskMutationPending = (s: AgencyOpsState) =>
+  s.isCreatingTask || s.pendingTaskIds.length > 0;
 export const selectIsTagMutationPending = (s: AgencyOpsState) => s.tagMutationCount > 0;
 export const selectIsContactMutationPending = (s: AgencyOpsState) => s.contactMutationCount > 0;
 export const selectIsRateMutationPending = (s: AgencyOpsState) => s.rateMutationCount > 0;

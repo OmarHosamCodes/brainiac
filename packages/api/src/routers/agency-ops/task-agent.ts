@@ -16,10 +16,8 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import {
   ensureTaskThreadByTaskId,
-  listRecentTaskThreadMessages,
   requireTeamMembership,
 } from "./service";
-import { publishAgencyLiveEvent } from "./live";
 
 function formatAttachmentSummary(
   attachments: Array<{
@@ -257,22 +255,6 @@ export async function askTaskAgent(
       .set({ updatedAt: now })
       .where(eq(agencyOpsTaskThread.id, thread.id));
   });
-
-  const recent = await listRecentTaskThreadMessages(actorUserId, {
-    teamId: input.teamId,
-    taskId: input.taskId,
-    limit: 2,
-  });
-
-  for (const message of recent.items) {
-    publishAgencyLiveEvent(input.teamId, {
-      type: "taskMessage.created",
-      teamId: input.teamId,
-      updatedAt: message.updatedAt,
-      taskId: input.taskId,
-      message,
-    });
-  }
 
   return {
     response: result.response,

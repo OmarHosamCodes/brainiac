@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Briefcase } from "lucide-react";
 import { useState } from "react";
 
@@ -7,9 +6,7 @@ import { AgencyTaskThread } from "@/components/agency/agency-task-thread";
 import { AgencyTimeEntriesLog } from "@/components/agency/agency-time-entries-log";
 import { AgencyTimeTracker } from "@/components/agency/agency-time-tracker";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { orpc } from "@/lib/orpc";
-import { withAgencyLiveQueryOptions } from "@/lib/utils/agency-query-options";
+import { useAgencyProjectsQuery } from "@/hooks/use-agency-queries";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
@@ -26,23 +23,10 @@ export function AgencyWorkSurface({ teamId, onSelectProject }: AgencyWorkSurface
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const [mobilePane, setMobilePane] = useState<"tasks" | "time">("tasks");
 
-  const projectsQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
-      enabled: Boolean(teamId),
-    }),
-  );
-
+  const projectsQuery = useAgencyProjectsQuery(teamId);
   const projects = projectsQuery.data?.items ?? [];
-
-  if (projectsQuery.isPending) {
-    return (
-      <div className="space-y-3">
-        <Skeleton className="h-12 rounded-2xl" />
-        <Skeleton className="h-96 rounded-2xl" />
-      </div>
-    );
-  }
+  const showEmptyProjects =
+    projectsQuery.isSuccess && projects.length === 0 && !projectsQuery.isFetching;
 
   if (projectsQuery.isError) {
     return (
@@ -64,7 +48,7 @@ export function AgencyWorkSurface({ teamId, onSelectProject }: AgencyWorkSurface
     );
   }
 
-  if (projects.length === 0) {
+  if (showEmptyProjects) {
     return (
       <div className={agencyEmptyPanelClass}>
         <Briefcase className="mx-auto size-7 text-muted" />

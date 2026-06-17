@@ -26,7 +26,6 @@ import {
   type TenurePolicyInput,
   type TenureQuarterStatus,
 } from "./tenure-engine";
-import { publishAgencyLiveEvent } from "./live";
 import { requireTeamMembership } from "./service";
 
 type TenurePolicyRecord = {
@@ -419,11 +418,6 @@ export async function upsertTenurePolicy(
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
 
-  publishAgencyLiveEvent(input.teamId, {
-    type: "tenure.policy.updated",
-    teamId: input.teamId,
-    updatedAt: now.toISOString(),
-  });
 
   return {
     policy: {
@@ -576,12 +570,6 @@ export async function upsertTenureProfile(
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
 
-  publishAgencyLiveEvent(input.teamId, {
-    type: "tenure.profile.updated",
-    teamId: input.teamId,
-    updatedAt: now.toISOString(),
-    userId: input.userId,
-  });
 
   const policyRow = await loadPolicyRow(input.teamId);
   const policy = policyRow ? toPolicyInput(policyRow) : defaultPolicyInput();
@@ -792,12 +780,6 @@ export async function upsertTenureExemption(
     ? await db.select({ name: user.name }).from(user).where(eq(user.id, upserted.userId)).limit(1)
     : [];
 
-  publishAgencyLiveEvent(input.teamId, {
-    type: "tenure.exemption.updated",
-    teamId: input.teamId,
-    updatedAt: now.toISOString(),
-    exemptionId: upserted.id,
-  });
 
   return {
     exemption: {
@@ -830,12 +812,6 @@ export async function deleteTenureExemption(
       ),
     );
 
-  publishAgencyLiveEvent(input.teamId, {
-    type: "tenure.exemption.deleted",
-    teamId: input.teamId,
-    updatedAt: new Date().toISOString(),
-    exemptionId: input.exemptionId,
-  });
 
   return { ok: true };
 }
@@ -955,12 +931,4 @@ export async function getTenureMember(
         }
       : null,
   };
-}
-
-export function publishTenureInvalidation(teamId: string) {
-  publishAgencyLiveEvent(teamId, {
-    type: "tenure.recomputed",
-    teamId,
-    updatedAt: new Date().toISOString(),
-  });
 }

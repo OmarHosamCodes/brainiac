@@ -15,7 +15,7 @@ import { AgencySettingsTenureRoster } from "@/components/agency/settings/agency-
 import { Skeleton } from "@/components/ui/skeleton";
 import { orpc } from "@/lib/orpc";
 import type { FiscalMonth } from "@/lib/tenure-utils";
-import { withAgencyLiveQueryOptions } from "@/lib/utils/agency-query-options";
+import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
 import { agencySectionTitleClass } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
@@ -35,24 +35,33 @@ export function AgencySettingsTenurePane({ teamId, active }: AgencySettingsTenur
   const isOwner = teamQuery.data?.role === "owner";
 
   const policyQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.tenure.policy.get.queryOptions({ input: { teamId } }),
-      enabled: Boolean(teamId) && active,
-    }),
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.tenure.policy.get.queryOptions({ input: { teamId } }),
+        enabled: Boolean(teamId) && active,
+      },
+      "cold",
+    ),
   );
 
   const summaryQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.tenure.summary.list.queryOptions({ input: { teamId } }),
-      enabled: Boolean(teamId) && active,
-    }),
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.tenure.summary.list.queryOptions({ input: { teamId } }),
+        enabled: Boolean(teamId) && active,
+      },
+      "cold",
+    ),
   );
 
   const exemptionsQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.tenure.exemptions.list.queryOptions({ input: { teamId } }),
-      enabled: Boolean(teamId) && active,
-    }),
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.tenure.exemptions.list.queryOptions({ input: { teamId } }),
+        enabled: Boolean(teamId) && active,
+      },
+      "cold",
+    ),
   );
 
   const policy = policyQuery.data?.policy ?? null;
@@ -95,12 +104,15 @@ export function AgencySettingsTenurePane({ teamId, active }: AgencySettingsTenur
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
   const memberDetailQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.tenure.member.get.queryOptions({
-        input: { teamId, userId: selectedUserId ?? "" },
-      }),
-      enabled: Boolean(teamId && selectedUserId && active),
-    }),
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.tenure.member.get.queryOptions({
+          input: { teamId, userId: selectedUserId ?? "" },
+        }),
+        enabled: Boolean(teamId && selectedUserId && active),
+      },
+      "cold",
+    ),
   );
 
   const memberDetail = memberDetailQuery.data?.member ?? null;

@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { Archive, Building2, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -6,8 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { orpc } from "@/lib/orpc";
-import { withAgencyLiveQueryOptions } from "@/lib/utils/agency-query-options";
+import {
+  useAgencyClientsQuery,
+  useAgencyContactQuery,
+  useAgencyProjectsQuery,
+  useAgencyTimeEntriesQuery,
+} from "@/hooks/use-agency-queries";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { projectHueStyle } from "@/lib/utils/project-palette";
 import {
@@ -48,61 +51,10 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
   const [contactPhone, setContactPhone] = useState("");
   const [contactDirty, setContactDirty] = useState(false);
 
-  const clientsQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.clients.list.queryOptions({ input: { teamId } }),
-      enabled: Boolean(teamId),
-    }),
-  );
-
-  const projectsQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
-      enabled: Boolean(teamId),
-    }),
-  );
-
-  const entriesQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.timeEntries.listMine.queryOptions({
-        input: { teamId, page: 1, pageSize: 100 },
-      }),
-      enabled: Boolean(teamId),
-    }),
-  );
-
-  const contactQuery = useQuery(
-    withAgencyLiveQueryOptions({
-      ...orpc.agencyOps.contacts.get.queryOptions({
-        input: { teamId, clientId: selectedClientId },
-      }),
-      enabled: Boolean(teamId) && Boolean(selectedClientId),
-    }),
-  );
-
-  const clientsQueryKey = orpc.agencyOps.clients.list.queryOptions({ input: { teamId } }).queryKey;
-  const projectsQueryKey = orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }).queryKey;
-  const contactQueryKey = orpc.agencyOps.contacts.get.queryOptions({
-    input: { teamId, clientId: selectedClientId },
-  }).queryKey;
-
-  useEffect(() => {
-    if (!teamId || !selectedClientId) return;
-    agencyOps.registerContactQuery({ queryKey: contactQueryKey, teamId, clientId: selectedClientId });
-    return () => agencyOps.unregisterContactQuery(contactQueryKey);
-  }, [teamId, selectedClientId, contactQueryKey, agencyOps]);
-
-  useEffect(() => {
-    if (!teamId) return;
-    agencyOps.registerClientsQuery({ queryKey: clientsQueryKey, teamId });
-    return () => agencyOps.unregisterClientsQuery(clientsQueryKey);
-  }, [teamId, clientsQueryKey, agencyOps]);
-
-  useEffect(() => {
-    if (!teamId) return;
-    agencyOps.registerProjectsQuery({ queryKey: projectsQueryKey, teamId });
-    return () => agencyOps.unregisterProjectsQuery(projectsQueryKey);
-  }, [teamId, projectsQueryKey, agencyOps]);
+  const clientsQuery = useAgencyClientsQuery(teamId);
+  const projectsQuery = useAgencyProjectsQuery(teamId);
+  const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
+  const contactQuery = useAgencyContactQuery(teamId, selectedClientId);
 
   const clients = clientsQuery.data?.items ?? [];
   const projects = projectsQuery.data?.items ?? [];
