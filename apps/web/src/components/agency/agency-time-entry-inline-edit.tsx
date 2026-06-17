@@ -1,23 +1,13 @@
-import { Link, Search, Tag, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { X } from "lucide-react";
 
 import { AgencyTaskChooser } from "@/components/agency/agency-task-chooser";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
 import {
   applyDurationToDraft,
   applyEndTimeToDraft,
   type TimeEntryDraft,
 } from "@/lib/utils/time-entry-draft";
-import { cn } from "@/lib/utils";
-
-type Tag = {
-  id: string;
-  name: string;
-};
 
 type Project = {
   id: string;
@@ -39,12 +29,10 @@ type AgencyTimeEntryInlineEditProps = {
   onDraftChange: (draft: TimeEntryDraft) => void;
   projects: Project[];
   tasks: Task[];
-  tags: Tag[];
   error: string | null;
   saving: boolean;
   onSave: () => void;
   onCancel: () => void;
-  onToggleTag: (tagId: string) => void;
 };
 
 export function AgencyTimeEntryInlineEdit({
@@ -52,26 +40,11 @@ export function AgencyTimeEntryInlineEdit({
   onDraftChange,
   projects,
   tasks,
-  tags,
   error,
   saving,
   onSave,
   onCancel,
-  onToggleTag,
 }: AgencyTimeEntryInlineEditProps) {
-  const [tagSearchTerm, setTagSearchTerm] = useState("");
-
-  const filteredTags = useMemo(() => {
-    const query = tagSearchTerm.trim().toLowerCase();
-    if (!query) return tags;
-    return tags.filter((tag) => tag.name.toLowerCase().includes(query));
-  }, [tagSearchTerm, tags]);
-
-  const selectedTags = useMemo(() => {
-    const selectedIds = new Set(draft.tagIds);
-    return tags.filter((tag) => selectedIds.has(tag.id));
-  }, [draft.tagIds, tags]);
-
   return (
     <form
       className="space-y-2 border-t border-default bg-primary/5 px-4 py-3"
@@ -142,81 +115,6 @@ export function AgencyTimeEntryInlineEdit({
           disabled={saving}
         />
 
-        {tags.length > 0 ? (
-          <Popover>
-            <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn("max-sm:min-h-11 max-sm:min-w-11", agencyFocusRingClass)}
-                  disabled={saving}
-                  aria-label={`Tags${draft.tagIds.length > 0 ? ` (${draft.tagIds.length} selected)` : ""}`}
-                >
-                <Tag className={draft.tagIds.length > 0 ? "text-primary" : ""} />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-64 space-y-2 p-2">
-              <div className="relative">
-                <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />
-                <Input
-                  value={tagSearchTerm}
-                  onChange={(e) => setTagSearchTerm(e.target.value)}
-                  placeholder="Search tags"
-                  className="h-8 pl-8 text-xs"
-                />
-              </div>
-              <div className="flex max-h-52 flex-wrap gap-1 overflow-y-auto">
-                {filteredTags.map((tag) => (
-                  <Button
-                    key={tag.id}
-                    type="button"
-                    variant={draft.tagIds.includes(tag.id) ? "secondary" : "ghost"}
-                    size="sm"
-                    className="rounded-full"
-                    disabled={saving}
-                    onClick={() => onToggleTag(tag.id)}
-                  >
-                    {tag.name}
-                  </Button>
-                ))}
-                {filteredTags.length === 0 ? (
-                  <div className="px-1 py-2 text-xs text-muted">No matching tags.</div>
-                ) : null}
-              </div>
-            </PopoverContent>
-          </Popover>
-        ) : null}
-
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" className={agencyFocusRingClass} disabled={saving} aria-label="Link URL">
-              <Link className={draft.linkUrl ? "text-primary" : ""} />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-72 space-y-2 p-2">
-            <div className="relative">
-              <Link className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />
-              <Input
-                value={draft.linkUrl}
-                onChange={(e) => onDraftChange({ ...draft, linkUrl: e.target.value })}
-                placeholder="Task, ticket, or brief URL"
-                className="h-8 pl-8 text-xs"
-                disabled={saving}
-              />
-            </div>
-            <div className="flex justify-end">
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={saving || !draft.linkUrl}
-                onClick={() => onDraftChange({ ...draft, linkUrl: "" })}
-              >
-                Clear
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
-
         <Button type="submit" size="sm" className="shrink-0 font-bold" disabled={saving}>
           {saving ? "Saving…" : "Save"}
         </Button>
@@ -232,16 +130,6 @@ export function AgencyTimeEntryInlineEdit({
           <X />
         </Button>
       </div>
-
-      {selectedTags.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {selectedTags.map((tag) => (
-            <Badge key={tag.id} variant="secondary" className="rounded-full">
-              {tag.name}
-            </Badge>
-          ))}
-        </div>
-      ) : null}
 
       {error ? (
         <p className="text-xs text-error" role="alert">

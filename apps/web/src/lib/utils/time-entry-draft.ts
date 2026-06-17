@@ -5,8 +5,6 @@ export type TimeEntryDraft = {
   endTime: string;
   durationInput: string;
   description: string;
-  linkUrl: string;
-  tagIds: string[];
 };
 
 type DraftEntrySource = {
@@ -15,8 +13,6 @@ type DraftEntrySource = {
   endedAt: string;
   durationSeconds: number;
   description: string;
-  linkUrl: string | null;
-  tags: Array<{ id: string }>;
 };
 
 function pad2(value: number) {
@@ -83,8 +79,6 @@ export function entryToDraft(entry: DraftEntrySource): TimeEntryDraft {
     endTime: toTimeInputValue(end),
     durationInput: formatDurationInput(entry.durationSeconds),
     description: entry.description,
-    linkUrl: entry.linkUrl ?? "",
-    tagIds: entry.tags.map((tag) => tag.id),
   };
 }
 

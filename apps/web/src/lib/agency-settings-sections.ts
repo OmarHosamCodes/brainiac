@@ -1,7 +1,7 @@
 /**
  * Agency settings panes — single source of truth for settings IA.
  */
-export type AgencySettingsPaneId = "tags" | "rates" | "tenure" | "integrations" | "colors";
+export type AgencySettingsPaneId = "rates" | "tenure" | "integrations" | "colors";
 
 export type AgencySettingsPane = {
   id: AgencySettingsPaneId;
@@ -11,7 +11,6 @@ export type AgencySettingsPane = {
 };
 
 export const AGENCY_SETTINGS_PANES: readonly AgencySettingsPane[] = [
-  { id: "tags", label: "Tags", icon: "i-lucide-tag" },
   { id: "rates", label: "Rates", icon: "i-lucide-dollar-sign" },
   { id: "tenure", label: "Tenure", icon: "i-lucide-users" },
   { id: "integrations", label: "Integrations", icon: "i-lucide-plug" },

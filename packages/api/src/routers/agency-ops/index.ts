@@ -11,9 +11,7 @@ import {
   createTaskAttachmentPresignedUrl,
   createTaskThreadMessage,
   deleteAgencyProjectTask,
-  createTag,
   deleteMyAgencyTimeEntry,
-  deleteTag,
   deleteTaskAttachment,
   exportAgencyReportsCsv,
   getAgencyActiveTimer,
@@ -31,7 +29,6 @@ import {
   listMemberRates,
   listMyAgencyTimeEntries,
   listRecentTaskThreadMessages,
-  listTags,
   listTaskThreadMembers,
   listTaskThreadMessages,
   setMemberCapacity,
@@ -148,14 +145,6 @@ const agencyTaskThreadMemberSchema = z.object({
   userAvatar: z.string().nullable(),
 });
 
-const agencyTagSchema = z.object({
-  id: z.string().min(1),
-  teamId: z.string().min(1),
-  name: z.string().min(1),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
 const agencyTimeEntrySchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
@@ -167,10 +156,8 @@ const agencyTimeEntrySchema = z.object({
   projectName: z.string().min(1),
   clientId: z.string().min(1),
   clientName: z.string().min(1),
-  tags: z.array(agencyTagSchema),
   source: agencyTimeEntrySourceSchema,
   description: z.string(),
-  linkUrl: z.string().url().nullable(),
   startedAt: z.string().datetime(),
   endedAt: z.string().datetime(),
   durationSeconds: z.number().int().positive(),
@@ -186,9 +173,7 @@ const agencyActiveTimerSchema = z.object({
   taskId: z.string().nullable(),
   taskTitle: z.string().nullable(),
   projectName: z.string().min(1),
-  tags: z.array(agencyTagSchema),
   description: z.string(),
-  linkUrl: z.string().url().nullable(),
   startedAt: z.string().datetime(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -229,7 +214,6 @@ const reportsInputSchema = teamScopedInputSchema.extend({
   clientId: z.string().min(1).optional(),
   projectId: z.string().min(1).optional(),
   memberUserId: z.string().min(1).optional(),
-  tagIds: z.array(z.string().min(1)).optional(),
 });
 
 const timeSummarySchema = z.object({
@@ -644,36 +628,6 @@ export const agencyOpsRouter = {
         return contact;
       }),
   },
-  tags: {
-    list: protectedProProcedure.input(teamScopedInputSchema).handler(async ({ context, input }) => {
-      return z
-        .object({ items: z.array(agencyTagSchema) })
-        .parse(await listTags(context.session.user.id, input));
-    }),
-    create: protectedProProcedure
-      .input(
-        teamScopedInputSchema.extend({
-          name: z.string().trim().min(1).max(50),
-        }),
-      )
-      .handler(async ({ context, input }) => {
-        return agencyTagSchema.parse(await createTag(context.session.user.id, input));
-      }),
-    delete: protectedProProcedure
-      .input(
-        teamScopedInputSchema.extend({
-          tagId: z.string().min(1),
-        }),
-      )
-      .handler(async ({ context, input }) => {
-        return z
-          .object({
-            tagId: z.string().min(1),
-            deleted: z.boolean(),
-          })
-          .parse(await deleteTag(context.session.user.id, input));
-      }),
-  },
   timer: {
     getActive: protectedProProcedure
       .input(z.object({ teamId: z.string().min(1).optional() }))
@@ -688,8 +642,6 @@ export const agencyOpsRouter = {
           projectId: z.string().min(1).optional(),
           taskId: z.string().min(1).optional(),
           description: z.string().max(2_000).optional(),
-          linkUrl: z.string().max(2_048).nullable().optional(),
-          tagIds: z.array(z.string().min(1)).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -703,8 +655,6 @@ export const agencyOpsRouter = {
         z.object({
           teamId: z.string().min(1).optional(),
           description: z.string().max(2_000).optional(),
-          linkUrl: z.string().max(2_048).nullable().optional(),
-          tagIds: z.array(z.string().min(1)).optional(),
           discard: z.boolean().optional(),
         }),
       )
@@ -761,8 +711,6 @@ export const agencyOpsRouter = {
           startAt: z.string().datetime(),
           endAt: z.string().datetime(),
           description: z.string().max(2_000).optional(),
-          linkUrl: z.string().max(2_048).nullable().optional(),
-          tagIds: z.array(z.string().min(1)).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -780,8 +728,6 @@ export const agencyOpsRouter = {
           startAt: z.string().datetime().optional(),
           endAt: z.string().datetime().optional(),
           description: z.string().max(2_000).optional(),
-          linkUrl: z.string().max(2_048).nullable().optional(),
-          tagIds: z.array(z.string().min(1)).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -853,10 +799,8 @@ export const agencyOpsRouter = {
           startAt: z.string().datetime().optional(),
           endAt: z.string().datetime().optional(),
           description: z.string().max(2_000).optional(),
-          linkUrl: z.string().max(2_048).nullable().optional(),
           projectId: z.string().min(1).optional(),
           taskId: z.string().min(1).nullable().optional(),
-          tagIds: z.array(z.string().min(1)).optional(),
         }),
       )
       .handler(async ({ context, input }) => {

@@ -20,17 +20,11 @@ type Task = {
   dueDate?: string | null;
 };
 
-type Tag = {
-  id: string;
-  name: string;
-};
-
 type AgencyTimeEntryDayGroupProps = {
   day: TimeEntryDayGroup;
   teamId: string;
   projects: Project[];
   tasks: Task[];
-  tags: Tag[];
   expandedGroupKeys: Set<string>;
   editingEntryId: string | null;
   isTimerMutationPending: boolean;
@@ -50,7 +44,6 @@ export function AgencyTimeEntryDayGroup({
   teamId,
   projects,
   tasks,
-  tags,
   expandedGroupKeys,
   editingEntryId,
   isTimerMutationPending,
@@ -81,7 +74,6 @@ export function AgencyTimeEntryDayGroup({
                 teamId={teamId}
                 projects={projects}
                 tasks={tasks}
-                tags={tags}
                 expanded={expandedGroupKeys.has(group.collapseKey)}
                 editing={editingEntryId === primaryEntryId}
                 isTimerMutationPending={isTimerMutationPending}

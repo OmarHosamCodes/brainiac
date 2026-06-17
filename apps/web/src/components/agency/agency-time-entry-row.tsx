@@ -1,10 +1,7 @@
 import {
   ChevronRight,
-  ExternalLink,
-  Link,
   MoreVertical,
   Play,
-  Tag,
   Trash2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -51,11 +48,6 @@ type Task = {
   dueDate?: string | null;
 };
 
-type Tag = {
-  id: string;
-  name: string;
-};
-
 function formatTimeRange(startedAt: string, endedAt: string) {
   const start = new Date(startedAt);
   const end = new Date(endedAt);
@@ -73,7 +65,6 @@ type AgencyTimeEntryRowProps = {
   teamId: string;
   projects: Project[];
   tasks: Task[];
-  tags: Tag[];
   expanded: boolean;
   editing: boolean;
   isTimerMutationPending: boolean;
@@ -93,7 +84,6 @@ export function AgencyTimeEntryRow({
   teamId,
   projects,
   tasks,
-  tags,
   expanded,
   editing,
   isTimerMutationPending,
@@ -209,59 +199,6 @@ export function AgencyTimeEntryRow({
           ) : null}
         </button>
 
-        <div className="hidden shrink-0 items-center gap-1 sm:flex">
-          {group.tags.length > 0 ? (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={agencyFocusRingClass}
-                  aria-label="View tags"
-                >
-                  <Tag className="size-3.5" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="flex max-w-56 flex-wrap gap-1 p-2">
-                {group.tags.map((tag) => (
-                  <Badge key={tag.id} variant="secondary" className="rounded-full">
-                    {tag.name}
-                  </Badge>
-                ))}
-              </PopoverContent>
-            </Popover>
-          ) : null}
-
-          {group.linkUrl ? (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={agencyFocusRingClass}
-                  aria-label="View linked URL"
-                >
-                  <Link className="size-3.5" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-72 space-y-2 p-2">
-                <div className="flex items-center gap-2">
-                  <Link className="size-3.5 shrink-0 text-muted" />
-                  <p className="truncate text-xs text-muted">{group.linkUrl}</p>
-                </div>
-                <div className="flex justify-end">
-                  <Button variant="ghost" size="sm" asChild>
-                    <a href={group.linkUrl} target="_blank" rel="noreferrer">
-                      <ExternalLink />
-                      Open link
-                    </a>
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-          ) : null}
-        </div>
-
         <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
           {(!isMulti || expanded) && timeRange ? (
             <span className="hidden shrink-0 text-xs text-muted md:inline">{timeRange}</span>
@@ -367,19 +304,10 @@ export function AgencyTimeEntryRow({
           onDraftChange={setDraft}
           projects={projects}
           tasks={tasks}
-          tags={tags}
           error={editError}
           saving={saving || rowUpdating}
           onSave={() => void handleSave()}
           onCancel={onCancelEdit}
-          onToggleTag={(tagId) =>
-            setDraft((current) => ({
-              ...current,
-              tagIds: current.tagIds.includes(tagId)
-                ? current.tagIds.filter((id) => id !== tagId)
-                : [...current.tagIds, tagId],
-            }))
-          }
         />
       ) : null}
     </div>

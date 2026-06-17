@@ -4,7 +4,6 @@ import {
   integer,
   jsonb,
   pgTable,
-  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -193,29 +192,6 @@ export const agencyOpsTaskAttachment = pgTable(
   ],
 );
 
-export const agencyOpsTag = pgTable(
-  "agency_ops_tag",
-  {
-    id: text("id").primaryKey(),
-    teamId: text("team_id")
-      .notNull()
-      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    createdByUserId: text("created_by_user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [
-    index("agency_ops_tag_team_idx").on(table.teamId),
-    index("agency_ops_tag_team_name_idx").on(table.teamId, table.name),
-  ],
-);
-
 export const agencyOpsTimeEntry = pgTable(
   "agency_ops_time_entry",
   {
@@ -232,7 +208,6 @@ export const agencyOpsTimeEntry = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     source: text("source").$type<AgencyOpsTimeEntrySource>().notNull().default("timer"),
     description: text("description").notNull().default(""),
-    linkUrl: text("link_url"),
     startedAt: timestamp("started_at").notNull(),
     endedAt: timestamp("ended_at").notNull(),
     durationSeconds: integer("duration_seconds").notNull(),
@@ -254,23 +229,6 @@ export const agencyOpsTimeEntry = pgTable(
   ],
 );
 
-export const agencyOpsTimeEntryTag = pgTable(
-  "agency_ops_time_entry_tag",
-  {
-    timeEntryId: text("time_entry_id")
-      .notNull()
-      .references(() => agencyOpsTimeEntry.id, { onDelete: "cascade" }),
-    tagId: text("tag_id")
-      .notNull()
-      .references(() => agencyOpsTag.id, { onDelete: "cascade" }),
-  },
-  (table) => [
-    primaryKey({ columns: [table.timeEntryId, table.tagId] }),
-    index("agency_ops_time_entry_tag_entry_idx").on(table.timeEntryId),
-    index("agency_ops_time_entry_tag_tag_idx").on(table.tagId),
-  ],
-);
-
 export const agencyOpsActiveTimer = pgTable(
   "agency_ops_active_timer",
   {
@@ -286,7 +244,6 @@ export const agencyOpsActiveTimer = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     description: text("description").notNull().default(""),
-    linkUrl: text("link_url"),
     startedAt: timestamp("started_at").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
@@ -299,23 +256,6 @@ export const agencyOpsActiveTimer = pgTable(
     index("agency_ops_active_timer_team_idx").on(table.teamId),
     index("agency_ops_active_timer_team_user_idx").on(table.teamId, table.userId),
     index("agency_ops_active_timer_task_idx").on(table.taskId),
-  ],
-);
-
-export const agencyOpsActiveTimerTag = pgTable(
-  "agency_ops_active_timer_tag",
-  {
-    activeTimerId: text("active_timer_id")
-      .notNull()
-      .references(() => agencyOpsActiveTimer.id, { onDelete: "cascade" }),
-    tagId: text("tag_id")
-      .notNull()
-      .references(() => agencyOpsTag.id, { onDelete: "cascade" }),
-  },
-  (table) => [
-    primaryKey({ columns: [table.activeTimerId, table.tagId] }),
-    index("agency_ops_active_timer_tag_timer_idx").on(table.activeTimerId),
-    index("agency_ops_active_timer_tag_tag_idx").on(table.tagId),
   ],
 );
 

@@ -13,7 +13,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   useAgencyProjectTasksQuery,
   useAgencyProjectsQuery,
-  useAgencyTagsQuery,
   useAgencyTimeEntriesQuery,
   type AgencyProjectTaskStatus,
 } from "@/hooks/use-agency-queries";
@@ -59,13 +58,10 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, page, pageSize);
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const tasksQuery = useAgencyProjectTasksQuery(teamId, { statuses: OPEN_TASK_STATUSES });
-  const tagsQuery = useAgencyTagsQuery(teamId);
-
   const entries = entriesQuery.data?.items ?? [];
   const totalEntries = entriesQuery.data?.total ?? 0;
   const projects = projectsQuery.data?.items ?? [];
   const tasks = tasksQuery.data?.items ?? [];
-  const tags = tagsQuery.data?.items ?? [];
   const weekSummary = entriesQuery.data?.weekSummary ?? null;
 
   const dayGroups = useMemo(() => groupEntriesByDay(entries), [entries]);
@@ -125,14 +121,6 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
       project,
       task: { id: group.taskId, title: group.taskTitle },
       description: group.description,
-      linkUrl: group.linkUrl,
-      tags: group.tags.map((tag) => ({
-        id: tag.id,
-        name: tag.name,
-        teamId: tag.teamId ?? teamId,
-        createdAt: tag.createdAt ?? new Date().toISOString(),
-        updatedAt: tag.updatedAt ?? new Date().toISOString(),
-      })),
     });
   }
 
@@ -149,8 +137,6 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
 
     if (!teamId || !entry || !task || !project) return;
 
-    const selectedTags = tags.filter((tag) => draft.tagIds.includes(tag.id));
-
     await agencyTimeTrackingStore.updateEntry({
       teamId,
       entryId,
@@ -159,9 +145,6 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
       task,
       project,
       description: draft.description,
-      linkUrl: draft.linkUrl || null,
-      tagIds: draft.tagIds,
-      selectedTags,
       startAt: range.startAt,
       endAt: range.endAt,
       durationSeconds: range.durationSeconds,
@@ -249,7 +232,6 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
               teamId={teamId}
               projects={projects}
               tasks={tasks}
-              tags={tags}
               expandedGroupKeys={expandedGroupKeys}
               editingEntryId={editingEntryId}
               isTimerMutationPending={isTimerMutationPending}

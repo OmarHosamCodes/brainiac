@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { Tags, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,6 @@ import { orpc } from "@/lib/orpc";
 import {
   selectIsClientMutationPending,
   selectIsProjectMutationPending,
-  selectIsTagMutationPending,
   useAgencyOpsStore,
 } from "@/stores/agency-ops";
 
@@ -21,13 +19,10 @@ export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
   const agencyOps = useAgencyOpsStore();
   const isClientMutationPending = useAgencyOpsStore(selectIsClientMutationPending);
   const isProjectMutationPending = useAgencyOpsStore(selectIsProjectMutationPending);
-  const isTagMutationPending = useAgencyOpsStore(selectIsTagMutationPending);
-  const deletingTagIds = useAgencyOpsStore((s) => s.deletingTagIds);
 
   const [selectedClientId, setSelectedClientId] = useState("");
   const [newClientName, setNewClientName] = useState("");
   const [newProjectName, setNewProjectName] = useState("");
-  const [newTagName, setNewTagName] = useState("");
 
   useEffect(() => {
     setSelectedClientId("");
@@ -45,16 +40,10 @@ export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
     enabled: Boolean(teamId),
   });
 
-  const tagsQuery = useQuery({
-    ...orpc.agencyOps.tags.list.queryOptions({ input: { teamId } }),
-    enabled: Boolean(teamId),
-  });
-
   const clientsQueryKey = orpc.agencyOps.clients.list.queryOptions({ input: { teamId } }).queryKey;
   const projectsQueryKey = orpc.agencyOps.projects.list.queryOptions({
     input: { teamId, clientId: selectedClientId || undefined },
   }).queryKey;
-  const tagsQueryKey = orpc.agencyOps.tags.list.queryOptions({ input: { teamId } }).queryKey;
 
   useEffect(() => {
     if (!teamId) return;
@@ -72,15 +61,8 @@ export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
     return () => agencyOps.unregisterProjectsQuery(projectsQueryKey);
   }, [teamId, selectedClientId, projectsQueryKey, agencyOps]);
 
-  useEffect(() => {
-    if (!teamId) return;
-    agencyOps.registerTagsQuery({ queryKey: tagsQueryKey, teamId });
-    return () => agencyOps.unregisterTagsQuery(tagsQueryKey);
-  }, [teamId, tagsQueryKey, agencyOps]);
-
   const clients = clientsQuery.data?.items ?? [];
   const projects = projectsQuery.data?.items ?? [];
-  const tags = tagsQuery.data?.items ?? [];
   const selectedClient = clients.find((c) => c.id === selectedClientId) ?? null;
 
   async function createClient() {
@@ -100,19 +82,6 @@ export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
       clientName: selectedClient?.name ?? "",
       name,
     });
-  }
-
-  async function createTag() {
-    const name = newTagName.trim();
-    if (!name || !teamId) return;
-    setNewTagName("");
-    await agencyOps.createTag({ teamId, name });
-  }
-
-  async function deleteTag(tagId: string) {
-    if (!teamId) return;
-    const tag = tags.find((t) => t.id === tagId);
-    await agencyOps.deleteTag({ teamId, tagId, tagName: tag?.name ?? "" });
   }
 
   return (
@@ -210,68 +179,6 @@ export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
           )}
         </Card>
       </div>
-
-      {teamId ? (
-        <div>
-          <div className="mb-4 flex items-center gap-3">
-            <Tags className="size-5 text-primary" />
-            <div>
-              <h3 className="font-semibold text-highlighted">Tags</h3>
-              <p className="text-xs text-muted">Organize time entries with team-wide tags.</p>
-            </div>
-          </div>
-
-          <Card className="mb-4 p-4">
-            <div className="flex gap-2">
-              <Input
-                value={newTagName}
-                onChange={(e) => setNewTagName(e.target.value)}
-                placeholder="Tag name"
-                disabled={isTagMutationPending}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void createTag();
-                }}
-              />
-              <Button
-                size="sm"
-                disabled={!newTagName.trim() || isTagMutationPending}
-                onClick={() => void createTag()}
-              >
-                Add
-              </Button>
-            </div>
-          </Card>
-
-          {tags.length > 0 ? (
-            <Card className="p-4">
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <div
-                    key={tag.id}
-                    className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-sm"
-                  >
-                    <span className="text-highlighted">{tag.name}</span>
-                    <button
-                      type="button"
-                      className="ml-auto text-primary/60 transition-colors hover:text-primary"
-                      disabled={deletingTagIds.includes(tag.id)}
-                      onClick={() => void deleteTag(tag.id)}
-                    >
-                      <X className="size-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          ) : (
-            <div className="rounded-2xl border border-dashed border-muted/30 p-4 text-center">
-              <p className="text-xs text-muted">
-                No tags yet. Add your first tag to start categorizing time entries.
-              </p>
-            </div>
-          )}
-        </div>
-      ) : null}
     </div>
   );
 }
