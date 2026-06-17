@@ -1,5 +1,5 @@
 /**
- * Agency Ops Store — optimistic updates for clients, projects, and tags.
+ * Agency Ops Store — optimistic updates for clients and projects.
  */
 import { create } from "zustand";
 import { toast } from "sonner";
@@ -54,14 +54,6 @@ type AgencyProjectTask = {
   updatedAt: string;
 };
 
-type AgencyTag = {
-  id: string;
-  teamId: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
 type AgencyClientsListQueryData = {
   items: AgencyClient[];
   page: number;
@@ -71,13 +63,6 @@ type AgencyClientsListQueryData = {
 
 type AgencyProjectsListQueryData = {
   items: AgencyProject[];
-  page: number;
-  pageSize: number;
-  total: number;
-};
-
-type AgencyTagsListQueryData = {
-  items: AgencyTag[];
   page: number;
   pageSize: number;
   total: number;
@@ -108,11 +93,6 @@ type RegisteredProjectTasksQuery = {
   projectId?: string;
   assigneeUserId?: string;
   statuses?: AgencyProjectTask["status"][];
-};
-
-type RegisteredTagsQuery = {
-  queryKey: QueryKey;
-  teamId: string;
 };
 
 type AgencyTaskMessage = {
@@ -253,19 +233,6 @@ type SendTaskMessagePayload = {
   }>;
 };
 
-type CreateTagPayload = {
-  teamId: string;
-  name: string;
-};
-
-type DeleteTagPayload = {
-  teamId: string;
-  tagId: string;
-  tagName: string;
-};
-
-// Phase 4 payload types
-
 type ArchiveClientPayload = {
   teamId: string;
   clientId: string;
@@ -313,9 +280,7 @@ type AgencyOpsState = {
   projectMutationCount: number;
   isCreatingTask: boolean;
   pendingTaskIds: string[];
-  tagMutationCount: number;
   deletingTaskIds: string[];
-  deletingTagIds: string[];
   contactMutationCount: number;
   rateMutationCount: number;
   capacityMutationCount: number;
@@ -335,7 +300,6 @@ function createAgencyOpsActions(
   const clientsQueryRegistry = new Map<string, RefCounted<RegisteredClientsQuery>>();
   const projectsQueryRegistry = new Map<string, RefCounted<RegisteredProjectsQuery>>();
   const projectTasksQueryRegistry = new Map<string, RefCounted<RegisteredProjectTasksQuery>>();
-  const tagsQueryRegistry = new Map<string, RefCounted<RegisteredTagsQuery>>();
   const taskMessagesQueryRegistry = new Map<string, RefCounted<RegisteredTaskMessagesQuery>>();
   const contactsQueryRegistry = new Map<string, RefCounted<RegisteredContactQuery>>();
   const capacityQueryRegistry = new Map<string, RefCounted<RegisteredCapacityQuery>>();
@@ -396,14 +360,6 @@ function createAgencyOpsActions(
 
   function unregisterProjectTasksQuery(queryKey: QueryKey) {
     unregisterFrom(projectTasksQueryRegistry, registryKey(queryKey));
-  }
-
-  function registerTagsQuery(payload: RegisteredTagsQuery) {
-    registerInto(tagsQueryRegistry, registryKey(payload.queryKey), payload);
-  }
-
-  function unregisterTagsQuery(queryKey: QueryKey) {
-    unregisterFrom(tagsQueryRegistry, registryKey(queryKey));
   }
 
   function registerTaskMessagesQuery(payload: RegisteredTaskMessagesQuery) {
@@ -657,46 +613,6 @@ function createAgencyOpsActions(
   }
 
   // ---------------------------------------------------------------------------
-  // Tags cache patchers
-  // ---------------------------------------------------------------------------
-
-  function patchInsertedTag(teamId: string, tag: AgencyTag) {
-    optimistic().upsertTag(teamId, tag);
-    tagsQueryRegistry.forEach(({ payload: reg }) => {
-      if (reg.teamId !== teamId) return;
-      getQueryClient().setQueryData<AgencyTagsListQueryData | undefined>(reg.queryKey, (current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          items: [...current.items, tag],
-          total: current.total + 1,
-        };
-      });
-    });
-  }
-
-  function patchDeletedTag(teamId: string, tagId: string) {
-    optimistic().deleteTag(teamId, tagId);
-    tagsQueryRegistry.forEach(({ payload: reg }) => {
-      if (reg.teamId !== teamId) return;
-      getQueryClient().setQueryData<AgencyTagsListQueryData | undefined>(reg.queryKey, (current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          items: current.items.filter((t) => t.id !== tagId),
-          total: Math.max(0, current.total - 1),
-        };
-      });
-    });
-  }
-
-  async function invalidateTagsQueries(teamId: string) {
-    await getQueryClient().invalidateQueries({
-      queryKey: orpc.agencyOps.tags.list.key({ input: { teamId } }),
-    });
-  }
-
-  // ---------------------------------------------------------------------------
   // Public actions
   // ---------------------------------------------------------------------------
 
@@ -889,72 +805,6 @@ function createAgencyOpsActions(
       toast.error("Couldn't delete task", { description: getErrorMessage(error, "Try again.") });
     } finally {
       set((state) => ({ ...state, deletingTaskIds: state.deletingTaskIds.filter((id) => id !== payload.taskId) }));
-    }
-  }
-
-  async function createTag(payload: CreateTagPayload) {
-    if (!payload.teamId || !payload.name.trim()) return;
-
-    const snapshots = snapshotQueries(registryPayloads(tagsQueryRegistry));
-    const optimisticSnapshot = optimistic().snapshotTags(payload.teamId);
-    const nowIso = new Date().toISOString();
-    const optimisticTag: AgencyTag = {
-      id: optimisticId("tag"),
-      teamId: payload.teamId,
-      name: payload.name.trim(),
-      createdAt: nowIso,
-      updatedAt: nowIso,
-    };
-
-    set((state) => ({ ...state, tagMutationCount: state.tagMutationCount + 1 }));
-
-    try {
-      patchInsertedTag(payload.teamId, optimisticTag);
-
-      await orpcClient.agencyOps.tags.create({
-        teamId: payload.teamId,
-        name: payload.name.trim(),
-      });
-
-      await invalidateTagsQueries(payload.teamId);
-
-      toast.success("Tag created", { description: payload.name.trim() });
-    } catch (error) {
-      restoreQuerySnapshots(snapshots);
-      optimistic().restoreTags(payload.teamId, optimisticSnapshot);
-      toast.error("Couldn't create tag", { description: getErrorMessage(error, "Try again.") });
-    } finally {
-      set((state) => ({ ...state, tagMutationCount: Math.max(0, state.tagMutationCount - 1) }));
-    }
-  }
-
-  async function deleteTag(payload: DeleteTagPayload) {
-    if (!payload.teamId) return;
-
-    const snapshots = snapshotQueries(registryPayloads(tagsQueryRegistry));
-    const optimisticSnapshot = optimistic().snapshotTags(payload.teamId);
-
-    set((state) => ({ ...state, deletingTagIds: [...new Set([...state.deletingTagIds, payload.tagId])] }));
-
-    try {
-      patchDeletedTag(payload.teamId, payload.tagId);
-
-      await orpcClient.agencyOps.tags.delete({
-        teamId: payload.teamId,
-        tagId: payload.tagId,
-      });
-
-      await invalidateTagsQueries(payload.teamId);
-
-      toast.success("Tag removed", { description: payload.tagName });
-    } catch (error) {
-      restoreQuerySnapshots(snapshots);
-      optimistic().restoreTags(payload.teamId, optimisticSnapshot);
-      toast.error("Couldn't remove tag", { description: getErrorMessage(error, "Try again.") });
-    } finally {
-      // Filter the specific id rather than restoring a pre-call snapshot, so
-      // concurrent deletes of other tags aren't clobbered.
-      set((state) => ({ ...state, deletingTagIds: state.deletingTagIds.filter((id) => id !== payload.tagId) }));
     }
   }
 
@@ -1331,8 +1181,6 @@ function createAgencyOpsActions(
     unregisterProjectsQuery,
     registerProjectTasksQuery,
     unregisterProjectTasksQuery,
-    registerTagsQuery,
-    unregisterTagsQuery,
     registerTaskMessagesQuery,
     unregisterTaskMessagesQuery,
     registerContactQuery,
@@ -1347,8 +1195,6 @@ function createAgencyOpsActions(
     updateProjectTask,
     deleteProjectTask,
     sendTaskMessage,
-    createTag,
-    deleteTag,
     upsertContact,
     upsertRate,
     setCapacity,
@@ -1362,9 +1208,7 @@ export const useAgencyOpsStore = create<AgencyOpsState>((set, get) => ({
   projectMutationCount: 0,
   isCreatingTask: false,
   pendingTaskIds: [],
-  tagMutationCount: 0,
   deletingTaskIds: [],
-  deletingTagIds: [],
   contactMutationCount: 0,
   rateMutationCount: 0,
   capacityMutationCount: 0,
@@ -1379,7 +1223,6 @@ export const selectIsTaskRowPending = (taskId: string) => (s: AgencyOpsState) =>
   s.pendingTaskIds.includes(taskId);
 export const selectIsTaskMutationPending = (s: AgencyOpsState) =>
   s.isCreatingTask || s.pendingTaskIds.length > 0;
-export const selectIsTagMutationPending = (s: AgencyOpsState) => s.tagMutationCount > 0;
 export const selectIsContactMutationPending = (s: AgencyOpsState) => s.contactMutationCount > 0;
 export const selectIsRateMutationPending = (s: AgencyOpsState) => s.rateMutationCount > 0;
 export const selectIsCapacityMutationPending = (s: AgencyOpsState) => s.capacityMutationCount > 0;

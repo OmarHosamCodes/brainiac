@@ -25,7 +25,6 @@ export function AgencyTimeSummary({ teamId }: AgencyTimeSummaryProps) {
   const [selectedClientId, setSelectedClientId] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedMemberUserId, setSelectedMemberUserId] = useState("");
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   const dateRange = useMemo(() => {
     const now = new Date();
@@ -79,11 +78,6 @@ export function AgencyTimeSummary({ teamId }: AgencyTimeSummaryProps) {
     enabled: Boolean(teamId),
   });
 
-  const tagsQuery = useQuery({
-    ...orpc.agencyOps.tags.list.queryOptions({ input: { teamId } }),
-    enabled: Boolean(teamId),
-  });
-
   const summaryQuery = useQuery({
     ...orpc.agencyOps.summary.list.queryOptions({
       input: {
@@ -93,7 +87,6 @@ export function AgencyTimeSummary({ teamId }: AgencyTimeSummaryProps) {
         clientId: selectedClientId || undefined,
         projectId: selectedProjectId || undefined,
         memberUserId: selectedMemberUserId || undefined,
-        tagIds: selectedTagIds.length > 0 ? selectedTagIds : undefined,
       },
     }),
     enabled: Boolean(teamId),
@@ -101,14 +94,7 @@ export function AgencyTimeSummary({ teamId }: AgencyTimeSummaryProps) {
 
   const clients = clientsQuery.data?.items ?? [];
   const projects = projectsQuery.data?.items ?? [];
-  const tags = tagsQuery.data?.items ?? [];
   const summaryData = summaryQuery.data?.summary ?? null;
-
-  function toggleTag(tagId: string) {
-    setSelectedTagIds((current) =>
-      current.includes(tagId) ? current.filter((id) => id !== tagId) : [...current, tagId],
-    );
-  }
 
   const presets: Array<{ label: string; value: DatePreset }> = [
     { label: "This week", value: "this-week" },
@@ -152,7 +138,7 @@ export function AgencyTimeSummary({ teamId }: AgencyTimeSummaryProps) {
           </div>
         ) : null}
 
-        <div className="grid gap-3 md:grid-cols-4">
+        <div className="grid gap-3 md:grid-cols-3">
           <div>
             <Label className="text-xs">Client</Label>
             <select
@@ -197,29 +183,6 @@ export function AgencyTimeSummary({ teamId }: AgencyTimeSummaryProps) {
                 </option>
               ))}
             </select>
-          </div>
-          <div>
-            <Label className="text-xs">Tags</Label>
-            {tags.length > 0 ? (
-              <div className="mt-1 flex flex-wrap gap-2">
-                {tags.slice(0, 3).map((tag) => (
-                  <Button
-                    key={tag.id}
-                    size="sm"
-                    variant={selectedTagIds.includes(tag.id) ? "secondary" : "ghost"}
-                    className="rounded-full"
-                    onClick={() => toggleTag(tag.id)}
-                  >
-                    {tag.name}
-                  </Button>
-                ))}
-                {tags.length > 3 ? (
-                  <span className="text-xs text-muted">+{tags.length - 3} more</span>
-                ) : null}
-              </div>
-            ) : (
-              <p className="mt-1 text-xs text-muted">No tags yet</p>
-            )}
           </div>
         </div>
       </Card>

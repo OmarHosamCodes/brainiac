@@ -7,12 +7,10 @@ import {
   Blocks,
   Blinds,
   BookOpen,
-  BriefcaseBusiness,
   CalendarDays,
   CalendarRange,
   ChartArea,
   ChartColumn,
-  ChartPie,
   CircleDollarSign,
   Columns3,
   FlaskConical,
@@ -26,11 +24,9 @@ import {
   LayoutTemplate,
   ListChecks,
   ListOrdered,
-  Logs,
   Megaphone,
   NotebookTabs,
   Quote,
-  Receipt,
   ReceiptText,
   Repeat,
   Scale,
@@ -38,7 +34,6 @@ import {
   Sparkles,
   Table,
   Target,
-  Timer,
   Users,
   Wallet,
   Waypoints,
@@ -224,10 +219,6 @@ const WorkspacePricingSimulatorBlockEditor = lazyBlockEditor(
 const WorkspaceCollectionsTrackerBlockEditor = lazyBlockEditor(
   () => import("@/components/workspace/node/blocks/workspace-collections-tracker-block-editor"),
   "WorkspaceCollectionsTrackerBlockEditor",
-);
-const WorkspaceAgencyDeprecatedBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-agency-deprecated-block-editor"),
-  "WorkspaceAgencyDeprecatedBlockEditor",
 );
 const WorkspaceCustomBlockEditor = lazyBlockEditor(
   () => import("@/components/workspace/node/blocks/workspace-custom-block-editor"),
@@ -487,42 +478,6 @@ export const workspaceBlockRegistry = {
     label: "Collections tracker",
     icon: ReceiptText,
     addGroup: "secondary",
-  },
-  "agency-project-manager": {
-    component: WorkspaceAgencyDeprecatedBlockEditor,
-    label: "Agency project manager (moved)",
-    icon: BriefcaseBusiness,
-    addGroup: null,
-  },
-  "agency-time-tracker": {
-    component: WorkspaceAgencyDeprecatedBlockEditor,
-    label: "Agency time tracker (moved)",
-    icon: Timer,
-    addGroup: null,
-  },
-  "agency-time-entries-log": {
-    component: WorkspaceAgencyDeprecatedBlockEditor,
-    label: "Agency time entries log (moved)",
-    icon: Logs,
-    addGroup: null,
-  },
-  "agency-time-summary": {
-    component: WorkspaceAgencyDeprecatedBlockEditor,
-    label: "Agency time summary (moved)",
-    icon: ChartPie,
-    addGroup: null,
-  },
-  "agency-billing-report": {
-    component: WorkspaceAgencyDeprecatedBlockEditor,
-    label: "Agency billing report (moved)",
-    icon: Receipt,
-    addGroup: null,
-  },
-  "agency-settings": {
-    component: WorkspaceAgencyDeprecatedBlockEditor,
-    label: "Agency settings (moved)",
-    icon: CalendarRange,
-    addGroup: null,
   },
   custom: {
     component: WorkspaceCustomBlockEditor,

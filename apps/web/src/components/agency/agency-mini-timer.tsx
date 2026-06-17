@@ -55,10 +55,8 @@ export function AgencyMiniTimer({
     if (isRunningForThisTask && activeTimer) {
       await agencyTimeTrackingStore.stopTimer({
         teamId,
+        activeTimer,
         description: activeTimer.description,
-        linkUrl: activeTimer.linkUrl ?? "",
-        tagIds: activeTimer.tags.map((t) => t.id),
-        selectedTags: activeTimer.tags,
       });
       return;
     }
@@ -68,9 +66,6 @@ export function AgencyMiniTimer({
       project: { id: projectId, name: projectName ?? "" },
       task: { id: taskId, title: taskTitle ?? "" },
       description: "",
-      linkUrl: "",
-      tagIds: [],
-      selectedTags: [],
       successDescription: "Timer started for this task.",
     });
   }

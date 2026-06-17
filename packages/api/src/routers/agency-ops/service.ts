@@ -2,7 +2,6 @@ import { env } from "@brainiac/env/server";
 import { db } from "@brainiac/db";
 import {
   agencyOpsActiveTimer,
-  agencyOpsActiveTimerTag,
   agencyOpsClient,
   agencyOpsClientContact,
   agencyOpsInvoice,
@@ -11,12 +10,10 @@ import {
   agencyOpsMemberRate,
   agencyOpsProject,
   agencyOpsProjectTask,
-  agencyOpsTag,
   agencyOpsTaskAttachment,
   agencyOpsTaskMessage,
   agencyOpsTaskThread,
   agencyOpsTimeEntry,
-  agencyOpsTimeEntryTag,
   user,
   workspaceTeamMember,
 } from "@brainiac/db/schema";
@@ -122,14 +119,6 @@ type AgencyTaskAttachmentRecord = {
   url: string | null;
 };
 
-type AgencyTagRecord = {
-  id: string;
-  teamId: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
 type AgencyTimeEntryRecord = {
   id: string;
   teamId: string;
@@ -141,10 +130,8 @@ type AgencyTimeEntryRecord = {
   projectName: string;
   clientId: string;
   clientName: string;
-  tags: AgencyTagRecord[];
   source: AgencyTimeEntrySource;
   description: string;
-  linkUrl: string | null;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
@@ -160,9 +147,7 @@ type AgencyActiveTimerRecord = {
   taskId: string | null;
   taskTitle: string | null;
   projectName: string;
-  tags: AgencyTagRecord[];
   description: string;
-  linkUrl: string | null;
   startedAt: string;
   createdAt: string;
   updatedAt: string;
@@ -227,40 +212,6 @@ function parseIsoDateTime(value: string, fieldName: string) {
   }
 
   return parsed;
-}
-
-function normalizeAgencyLinkUrl(value: string | null | undefined) {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  const trimmedValue = value?.trim() ?? "";
-
-  if (!trimmedValue) {
-    return null;
-  }
-
-  const candidate = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmedValue)
-    ? trimmedValue
-    : `https://${trimmedValue}`;
-
-  let parsed: URL;
-
-  try {
-    parsed = new URL(candidate);
-  } catch {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Invalid link URL.",
-    });
-  }
-
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Link URL must use http or https.",
-    });
-  }
-
-  return parsed.toString();
 }
 
 function validateDateRange(startedAt: Date, endedAt: Date) {
@@ -370,22 +321,6 @@ function mapProjectTaskRow(row: {
   };
 }
 
-function mapTagRow(row: {
-  id: string;
-  teamId: string;
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
-}): AgencyTagRecord {
-  return {
-    id: row.id,
-    teamId: row.teamId,
-    name: row.name,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
-}
-
 async function getActiveTimerByUser(userId: string) {
   const [timer] = await db
     .select({
@@ -397,7 +332,6 @@ async function getActiveTimerByUser(userId: string) {
       taskTitle: agencyOpsProjectTask.title,
       projectName: agencyOpsProject.name,
       description: agencyOpsActiveTimer.description,
-      linkUrl: agencyOpsActiveTimer.linkUrl,
       startedAt: agencyOpsActiveTimer.startedAt,
       createdAt: agencyOpsActiveTimer.createdAt,
       updatedAt: agencyOpsActiveTimer.updatedAt,
@@ -412,18 +346,6 @@ async function getActiveTimerByUser(userId: string) {
     return null;
   }
 
-  const tags = await db
-    .select({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    })
-    .from(agencyOpsActiveTimerTag)
-    .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsActiveTimerTag.tagId))
-    .where(eq(agencyOpsActiveTimerTag.activeTimerId, timer.id));
-
   return {
     id: timer.id,
     teamId: timer.teamId,
@@ -432,9 +354,7 @@ async function getActiveTimerByUser(userId: string) {
     taskId: timer.taskId,
     taskTitle: timer.taskTitle ?? null,
     projectName: timer.projectName,
-    tags: tags.map(mapTagRow),
     description: timer.description,
-    linkUrl: timer.linkUrl,
     startedAt: timer.startedAt.toISOString(),
     createdAt: timer.createdAt.toISOString(),
     updatedAt: timer.updatedAt.toISOString(),
@@ -1605,78 +1525,6 @@ export async function listRecentTaskThreadMessages(
   };
 }
 
-export async function listTags(actorUserId: string, input: { teamId: string }) {
-  await requireTeamMembership(actorUserId, input.teamId, "viewer");
-
-  const rows = await db
-    .select({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    })
-    .from(agencyOpsTag)
-    .where(eq(agencyOpsTag.teamId, input.teamId))
-    .orderBy(asc(agencyOpsTag.name));
-
-  return {
-    items: rows.map(mapTagRow),
-  };
-}
-
-export async function createTag(actorUserId: string, input: { teamId: string; name: string }) {
-  await requireTeamMembership(actorUserId, input.teamId, "owner");
-
-  const now = new Date();
-  const [created] = await db
-    .insert(agencyOpsTag)
-    .values({
-      id: createWorkspaceId("agency-tag"),
-      teamId: input.teamId,
-      name: input.name.trim(),
-      createdByUserId: actorUserId,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    });
-
-  if (!created) {
-    throw new ORPCError("INTERNAL_SERVER_ERROR");
-  }
-
-  return mapTagRow(created);
-}
-
-export async function deleteTag(actorUserId: string, input: { teamId: string; tagId: string }) {
-  await requireTeamMembership(actorUserId, input.teamId, "owner");
-
-  const [tag] = await db
-    .select({ id: agencyOpsTag.id })
-    .from(agencyOpsTag)
-    .where(and(eq(agencyOpsTag.id, input.tagId), eq(agencyOpsTag.teamId, input.teamId)))
-    .limit(1);
-
-  if (!tag) {
-    throw new ORPCError("NOT_FOUND", {
-      message: "Tag was not found.",
-    });
-  }
-
-  await db.delete(agencyOpsTag).where(eq(agencyOpsTag.id, input.tagId));
-
-  return {
-    tagId: input.tagId,
-    deleted: true,
-  };
-}
-
 export async function getAgencyActiveTimer(actorUserId: string, input: { teamId?: string }) {
   const timer = await getActiveTimerByUser(actorUserId);
 
@@ -1705,9 +1553,7 @@ export async function startAgencyTimer(
     teamId: string;
     projectId?: string;
     taskId?: string;
-    tagIds?: string[];
     description?: string;
-    linkUrl?: string | null;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -1728,7 +1574,6 @@ export async function startAgencyTimer(
   }
 
   await getProjectByIdForTeam(input.teamId, projectId);
-  const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
   const now = new Date();
 
@@ -1739,7 +1584,6 @@ export async function startAgencyTimer(
       projectId: agencyOpsActiveTimer.projectId,
       taskId: agencyOpsActiveTimer.taskId,
       description: agencyOpsActiveTimer.description,
-      linkUrl: agencyOpsActiveTimer.linkUrl,
       startedAt: agencyOpsActiveTimer.startedAt,
     })
     .from(agencyOpsActiveTimer)
@@ -1750,69 +1594,35 @@ export async function startAgencyTimer(
     if (existing) {
       const durationSeconds = getDurationSeconds(existing.startedAt, now);
 
-      const [timeEntry] = await tx
-        .insert(agencyOpsTimeEntry)
-        .values({
-          id: createWorkspaceId("agency-time"),
-          teamId: existing.teamId,
-          projectId: existing.projectId,
-          taskId: existing.taskId,
-          userId: actorUserId,
-          source: "timer",
-          description: existing.description,
-          linkUrl: existing.linkUrl,
-          startedAt: existing.startedAt,
-          endedAt: now,
-          durationSeconds,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .returning({ id: agencyOpsTimeEntry.id });
-
-      // Copy tags from active timer to time entry
-      if (timeEntry) {
-        const existingTags = await tx
-          .select({ tagId: agencyOpsActiveTimerTag.tagId })
-          .from(agencyOpsActiveTimerTag)
-          .where(eq(agencyOpsActiveTimerTag.activeTimerId, existing.id));
-
-        if (existingTags.length > 0) {
-          await tx.insert(agencyOpsTimeEntryTag).values(
-            existingTags.map((tag) => ({
-              timeEntryId: timeEntry.id,
-              tagId: tag.tagId,
-            })),
-          );
-        }
-      }
+      await tx.insert(agencyOpsTimeEntry).values({
+        id: createWorkspaceId("agency-time"),
+        teamId: existing.teamId,
+        projectId: existing.projectId,
+        taskId: existing.taskId,
+        userId: actorUserId,
+        source: "timer",
+        description: existing.description,
+        startedAt: existing.startedAt,
+        endedAt: now,
+        durationSeconds,
+        createdAt: now,
+        updatedAt: now,
+      });
 
       await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, existing.id));
     }
 
-    const [newTimer] = await tx
-      .insert(agencyOpsActiveTimer)
-      .values({
-        id: createWorkspaceId("agency-active-timer"),
-        teamId: input.teamId,
-        projectId,
-        taskId: input.taskId ?? null,
-        userId: actorUserId,
-        description: input.description?.trim() ?? "",
-        linkUrl: normalizedLinkUrl ?? null,
-        startedAt: now,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning({ id: agencyOpsActiveTimer.id });
-
-    if (newTimer && input.tagIds && input.tagIds.length > 0) {
-      await tx.insert(agencyOpsActiveTimerTag).values(
-        input.tagIds.map((tagId) => ({
-          activeTimerId: newTimer.id,
-          tagId,
-        })),
-      );
-    }
+    await tx.insert(agencyOpsActiveTimer).values({
+      id: createWorkspaceId("agency-active-timer"),
+      teamId: input.teamId,
+      projectId,
+      taskId: input.taskId ?? null,
+      userId: actorUserId,
+      description: input.description?.trim() ?? "",
+      startedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
   });
 
   const timer = await getActiveTimerByUser(actorUserId);
@@ -1827,8 +1637,6 @@ export async function stopAgencyTimer(
   input: {
     teamId?: string;
     description?: string;
-    linkUrl?: string | null;
-    tagIds?: string[];
     discard?: boolean;
   },
 ) {
@@ -1839,7 +1647,6 @@ export async function stopAgencyTimer(
       projectId: agencyOpsActiveTimer.projectId,
       taskId: agencyOpsActiveTimer.taskId,
       description: agencyOpsActiveTimer.description,
-      linkUrl: agencyOpsActiveTimer.linkUrl,
       startedAt: agencyOpsActiveTimer.startedAt,
     })
     .from(agencyOpsActiveTimer)
@@ -1863,8 +1670,6 @@ export async function stopAgencyTimer(
 
   const now = new Date();
   const description = input.description?.trim() ?? active.description;
-  const normalizedLinkUrl = input.discard ? null : normalizeAgencyLinkUrl(input.linkUrl);
-  const resolvedLinkUrl = normalizedLinkUrl === undefined ? active.linkUrl : normalizedLinkUrl;
   const durationSeconds = getDurationSeconds(active.startedAt, now);
 
   if (input.discard) {
@@ -1887,7 +1692,6 @@ export async function stopAgencyTimer(
         userId: actorUserId,
         source: "timer",
         description,
-        linkUrl: resolvedLinkUrl,
         startedAt: active.startedAt,
         endedAt: now,
         durationSeconds,
@@ -1895,31 +1699,6 @@ export async function stopAgencyTimer(
         updatedAt: now,
       })
       .returning({ id: agencyOpsTimeEntry.id });
-
-    // Copy tags from active timer to time entry or use provided tags
-    if (created) {
-      let tagsToInsert: Array<{ tagId: string }> = [];
-
-      if (input.tagIds && input.tagIds.length > 0) {
-        tagsToInsert = input.tagIds.map((tagId) => ({ tagId }));
-      } else {
-        const existingTags = await tx
-          .select({ tagId: agencyOpsActiveTimerTag.tagId })
-          .from(agencyOpsActiveTimerTag)
-          .where(eq(agencyOpsActiveTimerTag.activeTimerId, active.id));
-
-        tagsToInsert = existingTags;
-      }
-
-      if (tagsToInsert.length > 0) {
-        await tx.insert(agencyOpsTimeEntryTag).values(
-          tagsToInsert.map((tag) => ({
-            timeEntryId: created.id,
-            tagId: tag.tagId,
-          })),
-        );
-      }
-    }
 
     await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, active.id));
 
@@ -1930,7 +1709,6 @@ export async function stopAgencyTimer(
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
 
-  // Fetch the complete time entry with tags
   const [row] = await db
     .select({
       id: agencyOpsTimeEntry.id,
@@ -1945,7 +1723,6 @@ export async function stopAgencyTimer(
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
-      linkUrl: agencyOpsTimeEntry.linkUrl,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1960,18 +1737,6 @@ export async function stopAgencyTimer(
     .where(eq(agencyOpsTimeEntry.id, entry.id))
     .limit(1);
 
-  const tags = await db
-    .select({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    })
-    .from(agencyOpsTimeEntryTag)
-    .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-    .where(eq(agencyOpsTimeEntryTag.timeEntryId, entry.id));
-
   const createdEntry = row
     ? ({
         id: row.id,
@@ -1984,10 +1749,8 @@ export async function stopAgencyTimer(
         projectName: row.projectName,
         clientId: row.clientId,
         clientName: row.clientName,
-        tags: tags.map(mapTagRow),
         source: row.source,
         description: row.description,
-        linkUrl: row.linkUrl,
         startedAt: row.startedAt.toISOString(),
         endedAt: row.endedAt.toISOString(),
         durationSeconds: row.durationSeconds,
@@ -2031,7 +1794,6 @@ export async function listMyAgencyTimeEntries(
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
-      linkUrl: agencyOpsTimeEntry.linkUrl,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -2054,44 +1816,25 @@ export async function listMyAgencyTimeEntries(
     .limit(pageSize)
     .offset(offset);
 
-  // Fetch tags for each entry
-  const entriesWithTags = await Promise.all(
-    rows.map(async (row) => {
-      const tags = await db
-        .select({
-          id: agencyOpsTag.id,
-          teamId: agencyOpsTag.teamId,
-          name: agencyOpsTag.name,
-          createdAt: agencyOpsTag.createdAt,
-          updatedAt: agencyOpsTag.updatedAt,
-        })
-        .from(agencyOpsTimeEntryTag)
-        .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-        .where(eq(agencyOpsTimeEntryTag.timeEntryId, row.id));
-
-      return {
-        id: row.id,
-        teamId: row.teamId,
-        userId: row.userId,
-        userName: row.userName ?? "Unknown",
-        projectId: row.projectId,
-        taskId: row.taskId ?? null,
-        taskTitle: row.taskTitle ?? null,
-        projectName: row.projectName,
-        clientId: row.clientId,
-        clientName: row.clientName,
-        tags: tags.map(mapTagRow),
-        source: row.source,
-        description: row.description,
-        linkUrl: row.linkUrl,
-        startedAt: row.startedAt.toISOString(),
-        endedAt: row.endedAt.toISOString(),
-        durationSeconds: row.durationSeconds,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      } satisfies AgencyTimeEntryRecord;
-    }),
-  );
+  const items = rows.map((row) => ({
+    id: row.id,
+    teamId: row.teamId,
+    userId: row.userId,
+    userName: row.userName ?? "Unknown",
+    projectId: row.projectId,
+    taskId: row.taskId ?? null,
+    taskTitle: row.taskTitle ?? null,
+    projectName: row.projectName,
+    clientId: row.clientId,
+    clientName: row.clientName,
+    source: row.source,
+    description: row.description,
+    startedAt: row.startedAt.toISOString(),
+    endedAt: row.endedAt.toISOString(),
+    durationSeconds: row.durationSeconds,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  } satisfies AgencyTimeEntryRecord));
 
   // Count total for pagination
   const [countRow] = await db
@@ -2152,7 +1895,7 @@ export async function listMyAgencyTimeEntries(
   };
 
   return {
-    items: entriesWithTags,
+    items,
     page,
     pageSize,
     total,
@@ -2966,8 +2709,6 @@ export async function createManualAgencyTimeEntry(
     startAt: string;
     endAt: string;
     description?: string;
-    linkUrl?: string | null;
-    tagIds?: string[];
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -2992,42 +2733,27 @@ export async function createManualAgencyTimeEntry(
   const startAt = parseIsoDateTime(input.startAt, "startAt");
   const endAt = parseIsoDateTime(input.endAt, "endAt");
   validateDateRange(startAt, endAt);
-  const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
   const now = new Date();
   const durationSeconds = getDurationSeconds(startAt, endAt);
 
-  const [created] = await db.transaction(async (tx) => {
-    const [timeEntry] = await tx
-      .insert(agencyOpsTimeEntry)
-      .values({
-        id: createWorkspaceId("agency-time"),
-        teamId: input.teamId,
-        projectId,
-        taskId: input.taskId ?? null,
-        userId: actorUserId,
-        source: "manual",
-        description: input.description?.trim() ?? "",
-        linkUrl: normalizedLinkUrl ?? null,
-        startedAt: startAt,
-        endedAt: endAt,
-        durationSeconds,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning({ id: agencyOpsTimeEntry.id });
-
-    if (timeEntry && input.tagIds && input.tagIds.length > 0) {
-      await tx.insert(agencyOpsTimeEntryTag).values(
-        input.tagIds.map((tagId) => ({
-          timeEntryId: timeEntry.id,
-          tagId,
-        })),
-      );
-    }
-
-    return [timeEntry];
-  });
+  const [created] = await db
+    .insert(agencyOpsTimeEntry)
+    .values({
+      id: createWorkspaceId("agency-time"),
+      teamId: input.teamId,
+      projectId,
+      taskId: input.taskId ?? null,
+      userId: actorUserId,
+      source: "manual",
+      description: input.description?.trim() ?? "",
+      startedAt: startAt,
+      endedAt: endAt,
+      durationSeconds,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning({ id: agencyOpsTimeEntry.id });
 
   if (!created) {
     throw new ORPCError("INTERNAL_SERVER_ERROR");
@@ -3047,7 +2773,6 @@ export async function createManualAgencyTimeEntry(
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
-      linkUrl: agencyOpsTimeEntry.linkUrl,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -3066,18 +2791,6 @@ export async function createManualAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  const tags = await db
-    .select({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    })
-    .from(agencyOpsTimeEntryTag)
-    .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-    .where(eq(agencyOpsTimeEntryTag.timeEntryId, created.id));
-
   return {
     id: row.id,
     teamId: row.teamId,
@@ -3089,10 +2802,8 @@ export async function createManualAgencyTimeEntry(
     projectName: row.projectName,
     clientId: row.clientId,
     clientName: row.clientName,
-    tags: tags.map(mapTagRow),
     source: row.source,
     description: row.description,
-    linkUrl: row.linkUrl,
     startedAt: row.startedAt.toISOString(),
     endedAt: row.endedAt.toISOString(),
     durationSeconds: row.durationSeconds,
@@ -3111,8 +2822,6 @@ export async function updateMyAgencyTimeEntry(
     startAt?: string;
     endAt?: string;
     description?: string;
-    linkUrl?: string | null;
-    tagIds?: string[];
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -3167,51 +2876,30 @@ export async function updateMyAgencyTimeEntry(
     : current.startedAt;
   const nextEndedAt = input.endAt ? parseIsoDateTime(input.endAt, "endAt") : current.endedAt;
   validateDateRange(nextStartedAt, nextEndedAt);
-  const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
   const now = new Date();
   const durationSeconds = getDurationSeconds(nextStartedAt, nextEndedAt);
 
-  const [updated] = await db.transaction(async (tx) => {
-    const [timeEntry] = await tx
-      .update(agencyOpsTimeEntry)
-      .set({
-        ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
-        ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
-        startedAt: nextStartedAt,
-        endedAt: nextEndedAt,
-        durationSeconds,
-        description: input.description?.trim(),
-        ...(normalizedLinkUrl !== undefined ? { linkUrl: normalizedLinkUrl } : {}),
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(agencyOpsTimeEntry.id, input.entryId),
-          eq(agencyOpsTimeEntry.teamId, input.teamId),
-          eq(agencyOpsTimeEntry.userId, actorUserId),
-          isNull(agencyOpsTimeEntry.deletedAt),
-        ),
-      )
-      .returning({ id: agencyOpsTimeEntry.id });
-
-    if (input.tagIds !== undefined && timeEntry) {
-      await tx
-        .delete(agencyOpsTimeEntryTag)
-        .where(eq(agencyOpsTimeEntryTag.timeEntryId, timeEntry.id));
-
-      if (input.tagIds.length > 0) {
-        await tx.insert(agencyOpsTimeEntryTag).values(
-          input.tagIds.map((tagId) => ({
-            timeEntryId: timeEntry.id,
-            tagId,
-          })),
-        );
-      }
-    }
-
-    return [timeEntry];
-  });
+  const [updated] = await db
+    .update(agencyOpsTimeEntry)
+    .set({
+      ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
+      ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
+      startedAt: nextStartedAt,
+      endedAt: nextEndedAt,
+      durationSeconds,
+      description: input.description?.trim(),
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.id, input.entryId),
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        eq(agencyOpsTimeEntry.userId, actorUserId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .returning({ id: agencyOpsTimeEntry.id });
 
   if (!updated) {
     throw new ORPCError("NOT_FOUND");
@@ -3231,7 +2919,6 @@ export async function updateMyAgencyTimeEntry(
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
-      linkUrl: agencyOpsTimeEntry.linkUrl,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -3250,18 +2937,6 @@ export async function updateMyAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  const tags = await db
-    .select({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    })
-    .from(agencyOpsTimeEntryTag)
-    .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-    .where(eq(agencyOpsTimeEntryTag.timeEntryId, updated.id));
-
   return {
     id: row.id,
     teamId: row.teamId,
@@ -3273,10 +2948,8 @@ export async function updateMyAgencyTimeEntry(
     projectName: row.projectName,
     clientId: row.clientId,
     clientName: row.clientName,
-    tags: tags.map(mapTagRow),
     source: row.source,
     description: row.description,
-    linkUrl: row.linkUrl,
     startedAt: row.startedAt.toISOString(),
     endedAt: row.endedAt.toISOString(),
     durationSeconds: row.durationSeconds,
@@ -3425,7 +3098,6 @@ export async function getAgencyTimeSummary(
     clientId?: string;
     projectId?: string;
     memberUserId?: string;
-    tagIds?: string[];
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -3475,17 +3147,6 @@ export async function getAgencyTimeSummary(
   }
   if (input.memberUserId) {
     entryFilters.push(eq(agencyOpsTimeEntry.userId, input.memberUserId));
-  }
-  if (input.tagIds && input.tagIds.length > 0) {
-    entryFilters.push(
-      inArray(
-        agencyOpsTimeEntry.id,
-        db
-          .select({ timeEntryId: agencyOpsTimeEntryTag.timeEntryId })
-          .from(agencyOpsTimeEntryTag)
-          .where(inArray(agencyOpsTimeEntryTag.tagId, input.tagIds)),
-      ),
-    );
   }
 
   const entries = await db
@@ -3623,7 +3284,6 @@ export async function listAllAgencyTimeEntries(
     clientId?: string;
     projectId?: string;
     memberUserId?: string;
-    tagIds?: string[];
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "editor");
@@ -3674,7 +3334,6 @@ export async function listAllAgencyTimeEntries(
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
-      linkUrl: agencyOpsTimeEntry.linkUrl,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -3691,50 +3350,25 @@ export async function listAllAgencyTimeEntries(
     .limit(pageSize)
     .offset(offset);
 
-  // Filter by tagIds if provided (post-query, since tags are in a join table)
-  const tagFilter = input.tagIds && input.tagIds.length > 0 ? new Set(input.tagIds) : null;
-
-  const entriesWithTags = await Promise.all(
-    rows.map(async (row) => {
-      const tags = await db
-        .select({
-          id: agencyOpsTag.id,
-          teamId: agencyOpsTag.teamId,
-          name: agencyOpsTag.name,
-          createdAt: agencyOpsTag.createdAt,
-          updatedAt: agencyOpsTag.updatedAt,
-        })
-        .from(agencyOpsTimeEntryTag)
-        .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-        .where(eq(agencyOpsTimeEntryTag.timeEntryId, row.id));
-
-      return {
-        id: row.id,
-        teamId: row.teamId,
-        userId: row.userId,
-        userName: row.userName ?? "Unknown",
-        projectId: row.projectId,
-        taskId: row.taskId ?? null,
-        taskTitle: row.taskTitle ?? null,
-        projectName: row.projectName,
-        clientId: row.clientId,
-        clientName: row.clientName,
-        tags: tags.map(mapTagRow),
-        source: row.source,
-        description: row.description,
-        linkUrl: row.linkUrl,
-        startedAt: row.startedAt.toISOString(),
-        endedAt: row.endedAt.toISOString(),
-        durationSeconds: row.durationSeconds,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      } satisfies AgencyTimeEntryRecord;
-    }),
-  );
-
-  const filteredEntries = tagFilter
-    ? entriesWithTags.filter((e) => e.tags.some((t) => tagFilter.has(t.id)))
-    : entriesWithTags;
+  const items = rows.map((row) => ({
+    id: row.id,
+    teamId: row.teamId,
+    userId: row.userId,
+    userName: row.userName ?? "Unknown",
+    projectId: row.projectId,
+    taskId: row.taskId ?? null,
+    taskTitle: row.taskTitle ?? null,
+    projectName: row.projectName,
+    clientId: row.clientId,
+    clientName: row.clientName,
+    source: row.source,
+    description: row.description,
+    startedAt: row.startedAt.toISOString(),
+    endedAt: row.endedAt.toISOString(),
+    durationSeconds: row.durationSeconds,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  } satisfies AgencyTimeEntryRecord));
 
   const [countRow] = await db
     .select({ count: sql<number>`count(*)` })
@@ -3747,7 +3381,7 @@ export async function listAllAgencyTimeEntries(
   const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
 
   return {
-    items: filteredEntries,
+    items,
     page,
     pageSize,
     total,
@@ -3762,10 +3396,8 @@ export async function updateAnyAgencyTimeEntry(
     startAt?: string;
     endAt?: string;
     description?: string;
-    linkUrl?: string | null;
     projectId?: string;
     taskId?: string | null;
-    tagIds?: string[];
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -3819,50 +3451,29 @@ export async function updateAnyAgencyTimeEntry(
     : current.startedAt;
   const nextEndedAt = input.endAt ? parseIsoDateTime(input.endAt, "endAt") : current.endedAt;
   validateDateRange(nextStartedAt, nextEndedAt);
-  const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
   const now = new Date();
   const durationSeconds = getDurationSeconds(nextStartedAt, nextEndedAt);
 
-  const [updated] = await db.transaction(async (tx) => {
-    const [timeEntry] = await tx
-      .update(agencyOpsTimeEntry)
-      .set({
-        ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
-        ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
-        startedAt: nextStartedAt,
-        endedAt: nextEndedAt,
-        durationSeconds,
-        description: input.description?.trim(),
-        ...(normalizedLinkUrl !== undefined ? { linkUrl: normalizedLinkUrl } : {}),
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(agencyOpsTimeEntry.id, input.entryId),
-          eq(agencyOpsTimeEntry.teamId, input.teamId),
-          isNull(agencyOpsTimeEntry.deletedAt),
-        ),
-      )
-      .returning({ id: agencyOpsTimeEntry.id });
-
-    if (input.tagIds !== undefined && timeEntry) {
-      await tx
-        .delete(agencyOpsTimeEntryTag)
-        .where(eq(agencyOpsTimeEntryTag.timeEntryId, timeEntry.id));
-
-      if (input.tagIds.length > 0) {
-        await tx.insert(agencyOpsTimeEntryTag).values(
-          input.tagIds.map((tagId) => ({
-            timeEntryId: timeEntry.id,
-            tagId,
-          })),
-        );
-      }
-    }
-
-    return [timeEntry];
-  });
+  const [updated] = await db
+    .update(agencyOpsTimeEntry)
+    .set({
+      ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
+      ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
+      startedAt: nextStartedAt,
+      endedAt: nextEndedAt,
+      durationSeconds,
+      description: input.description?.trim(),
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.id, input.entryId),
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .returning({ id: agencyOpsTimeEntry.id });
 
   if (!updated) {
     throw new ORPCError("NOT_FOUND");
@@ -3882,7 +3493,6 @@ export async function updateAnyAgencyTimeEntry(
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
-      linkUrl: agencyOpsTimeEntry.linkUrl,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -3901,18 +3511,6 @@ export async function updateAnyAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  const tags = await db
-    .select({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    })
-    .from(agencyOpsTimeEntryTag)
-    .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-    .where(eq(agencyOpsTimeEntryTag.timeEntryId, updated.id));
-
   return {
     id: row.id,
     teamId: row.teamId,
@@ -3924,10 +3522,8 @@ export async function updateAnyAgencyTimeEntry(
     projectName: row.projectName,
     clientId: row.clientId,
     clientName: row.clientName,
-    tags: tags.map(mapTagRow),
     source: row.source,
     description: row.description,
-    linkUrl: row.linkUrl,
     startedAt: row.startedAt.toISOString(),
     endedAt: row.endedAt.toISOString(),
     durationSeconds: row.durationSeconds,

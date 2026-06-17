@@ -15,7 +15,6 @@ import {
   type AgencyOptimisticClient,
   type AgencyOptimisticContact,
   type AgencyOptimisticProject,
-  type AgencyOptimisticTag,
   type AgencyOptimisticTask,
   type AgencyOptimisticTaskMessage,
   type AgencyOptimisticTimeEntry,
@@ -94,19 +93,6 @@ export function useMergedAgencyProjectsQuery<TData extends ListQueryData<AgencyO
     teamId,
     prune: pruneProjects,
     matches,
-  });
-}
-
-export function useMergedAgencyTagsQuery<TData extends ListQueryData<AgencyOptimisticTag>>(
-  query: UseQueryResult<TData, Error>,
-  teamId: string,
-) {
-  const overlay = useAgencyOptimisticStore((state) => state.tags[teamId] ?? EMPTY_LIST_OVERLAY);
-  const pruneTags = useAgencyOptimisticStore((state) => state.pruneTags);
-
-  return useMergedAgencyListQuery(query, overlay, {
-    teamId,
-    prune: pruneTags,
   });
 }
 

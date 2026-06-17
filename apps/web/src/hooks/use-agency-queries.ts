@@ -8,7 +8,6 @@ import {
   useMergedAgencyContactQuery,
   useMergedAgencyProjectTasksQuery,
   useMergedAgencyProjectsQuery,
-  useMergedAgencyTagsQuery,
   useMergedAgencyTaskMessagesQuery,
   useMergedAgencyTimeEntriesQuery,
 } from "@/hooks/use-agency-optimistic-query";
@@ -160,32 +159,6 @@ export function useAgencyClientsQuery(teamId: string) {
   }, [teamId, queryKey, registerClientsQuery, unregisterClientsQuery]);
 
   return useMergedAgencyClientsQuery(query, teamId);
-}
-
-export function useAgencyTagsQuery(teamId: string) {
-  const registerTagsQuery = useAgencyOpsStore((s) => s.registerTagsQuery);
-  const unregisterTagsQuery = useAgencyOpsStore((s) => s.unregisterTagsQuery);
-
-  const queryKey = orpc.agencyOps.tags.list.queryOptions({ input: { teamId } }).queryKey;
-
-  const query = useQuery(
-    withAgencySyncQueryOptions(
-      {
-        ...orpc.agencyOps.tags.list.queryOptions({ input: { teamId } }),
-        enabled: Boolean(teamId),
-        placeholderData: keepPreviousData,
-      },
-      "warm",
-    ),
-  );
-
-  useEffect(() => {
-    if (!teamId) return;
-    registerTagsQuery({ queryKey, teamId });
-    return () => unregisterTagsQuery(queryKey);
-  }, [teamId, queryKey, registerTagsQuery, unregisterTagsQuery]);
-
-  return useMergedAgencyTagsQuery(query, teamId);
 }
 
 export function useAgencyContactQuery(teamId: string, clientId: string) {

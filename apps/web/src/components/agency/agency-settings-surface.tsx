@@ -4,7 +4,6 @@ import { useSearchParams } from "react-router-dom";
 import { AgencySettingsColorsPane } from "@/components/agency/settings/agency-settings-colors-pane";
 import { AgencySettingsIntegrationsPane } from "@/components/agency/settings/agency-settings-integrations-pane";
 import { AgencySettingsRatesPane } from "@/components/agency/settings/agency-settings-rates-pane";
-import { AgencySettingsTagsPane } from "@/components/agency/settings/agency-settings-tags-pane";
 import { AgencySettingsTenurePane } from "@/components/agency/settings/agency-settings-tenure-pane";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +23,7 @@ export function AgencySettingsSurface({ teamId }: AgencySettingsSurfaceProps) {
 
   const paneFromRoute: AgencySettingsPaneId = isAgencySettingsPaneId(searchParams.get("pane"))
     ? (searchParams.get("pane") as AgencySettingsPaneId)
-    : "tags";
+    : "rates";
 
   const activePane = paneFromRoute;
 
@@ -32,7 +31,7 @@ export function AgencySettingsSurface({ teamId }: AgencySettingsSurfaceProps) {
     const section = searchParams.get("section");
     if (section === "settings" && !isAgencySettingsPaneId(searchParams.get("pane"))) {
       const next = new URLSearchParams(searchParams);
-      next.set("pane", "tags");
+      next.set("pane", "rates");
       setSearchParams(next, { replace: true });
       return;
     }
@@ -72,9 +71,6 @@ export function AgencySettingsSurface({ teamId }: AgencySettingsSurfaceProps) {
         </TabsList>
 
         <div className="min-h-0 flex-1 pb-4">
-          <TabsContent value="tags">
-            <AgencySettingsTagsPane teamId={teamId} active={activePane === "tags"} />
-          </TabsContent>
           <TabsContent value="rates">
             <AgencySettingsRatesPane teamId={teamId} active={activePane === "rates"} />
           </TabsContent>

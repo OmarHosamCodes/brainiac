@@ -9,17 +9,8 @@ import {
 } from "@/lib/utils/agency-query-cache";
 import { orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { normalizeAgencyLinkUrl } from "@/lib/utils/normalize-agency-link-url";
 import { type AgencyListOverlay } from "@/lib/utils/agency-optimistic-merge";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
-
-type AgencyTag = {
-  id: string;
-  teamId: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-};
 
 type AgencyProjectTask = {
   id: string;
@@ -49,9 +40,7 @@ type AgencyActiveTimer = {
   taskId: string | null;
   taskTitle: string | null;
   projectName: string;
-  tags: AgencyTag[];
   description: string;
-  linkUrl: string | null;
   startedAt: string;
   createdAt: string;
   updatedAt: string;
@@ -68,10 +57,8 @@ type AgencyTimeEntry = {
   projectName: string;
   clientId: string;
   clientName: string;
-  tags: AgencyTag[];
   source: "timer" | "manual";
   description: string;
-  linkUrl: string | null;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
@@ -107,8 +94,6 @@ type TrackerDraft = {
   description: string;
   projectId: string;
   taskId: string;
-  selectedTagIds: string[];
-  linkUrl: string;
   syncedTimerId: string | null;
 };
 
@@ -133,18 +118,12 @@ type StartTimerPayload = {
   project: Pick<AgencyProjectSummary, "id" | "name">;
   task: Pick<AgencyProjectTask, "id" | "title">;
   description: string;
-  linkUrl: string;
-  tagIds: string[];
-  selectedTags: AgencyTag[];
   successDescription?: string;
 };
 
 type StopTimerPayload = {
   teamId: string;
   description: string;
-  linkUrl: string;
-  tagIds: string[];
-  selectedTags: AgencyTag[];
   discard?: boolean;
   activeTimer?: AgencyActiveTimer | null;
 };
@@ -154,8 +133,6 @@ type RestartEntryPayload = {
   project: Pick<AgencyProjectSummary, "id" | "name">;
   task: Pick<AgencyProjectTask, "id" | "title">;
   description: string;
-  linkUrl: string | null;
-  tags: AgencyTag[];
 };
 
 type DeleteEntriesPayload = {
@@ -171,9 +148,6 @@ type UpdateEntryPayload = {
   task: Pick<AgencyProjectTask, "id" | "title"> | null;
   project: Pick<AgencyProjectSummary, "id" | "name" | "clientId" | "clientName">;
   description: string;
-  linkUrl: string | null;
-  tagIds: string[];
-  selectedTags: AgencyTag[];
   startAt: string;
   endAt: string;
   durationSeconds: number;
@@ -254,8 +228,6 @@ function createAgencyTimeTrackingActions(
       description: "",
       projectId: "",
       taskId: "",
-      selectedTagIds: [],
-      linkUrl: "",
       syncedTimerId: null,
     };
 
@@ -294,41 +266,6 @@ function createAgencyTimeTrackingActions(
     draft.taskId = taskId;
   }
 
-  function setTrackerSelectedTagIds(teamId: string, tagIds: string[]) {
-    const draft = ensureTrackerDraft(teamId);
-
-    if (!draft) {
-      return;
-    }
-
-    draft.selectedTagIds = [...tagIds];
-  }
-
-  function setTrackerLinkUrl(teamId: string, linkUrl: string) {
-    const draft = ensureTrackerDraft(teamId);
-
-    if (!draft) {
-      return;
-    }
-
-    draft.linkUrl = linkUrl;
-  }
-
-  function toggleTrackerTag(teamId: string, tagId: string) {
-    const draft = ensureTrackerDraft(teamId);
-
-    if (!draft) {
-      return;
-    }
-
-    if (draft.selectedTagIds.includes(tagId)) {
-      draft.selectedTagIds = draft.selectedTagIds.filter((id) => id !== tagId);
-      return;
-    }
-
-    draft.selectedTagIds = [...draft.selectedTagIds, tagId];
-  }
-
   function syncDraftFromActiveTimer(teamId: string, timer: AgencyActiveTimer | null) {
     const draft = ensureTrackerDraft(teamId);
 
@@ -348,8 +285,6 @@ function createAgencyTimeTrackingActions(
     draft.description = timer.description;
     draft.projectId = timer.projectId;
     draft.taskId = timer.taskId ?? "";
-    draft.selectedTagIds = timer.tags.map((tag) => tag.id);
-    draft.linkUrl = timer.linkUrl ?? "";
     draft.syncedTimerId = timer.id;
   }
 
@@ -420,8 +355,6 @@ function createAgencyTimeTrackingActions(
       project: payload.project,
       task: payload.task,
       description: payload.description,
-      linkUrl: payload.linkUrl,
-      tags: payload.selectedTags,
       startedAt: nowIso,
     });
     const optimisticPreviousEntry = previousActiveTimer
@@ -432,13 +365,6 @@ function createAgencyTimeTrackingActions(
     const draft = ensureTrackerDraft(payload.teamId);
 
     if (!draft) {
-      return;
-    }
-
-    const { normalizedUrl, error } = normalizeAgencyLinkUrl(payload.linkUrl);
-
-    if (error) {
-      toast.error("Unable to start timer", { description: error });
       return;
     }
 
@@ -457,16 +383,12 @@ function createAgencyTimeTrackingActions(
       draft.description = optimisticTimer.description;
       draft.projectId = optimisticTimer.projectId;
       draft.taskId = optimisticTimer.taskId ?? "";
-      draft.selectedTagIds = payload.tagIds;
-      draft.linkUrl = normalizedUrl ?? "";
       draft.syncedTimerId = optimisticTimer.id;
 
       const result = (await orpcClient.agencyOps.timer.start({
         teamId: payload.teamId,
         taskId: payload.task.id,
         description: payload.description.trim(),
-        linkUrl: normalizedUrl,
-        tagIds: payload.tagIds,
       })) as AgencyActiveTimerQueryData;
 
       patchActiveTimerCaches(result.timer);
@@ -495,9 +417,6 @@ function createAgencyTimeTrackingActions(
       project: payload.project,
       task: payload.task,
       description: payload.description,
-      linkUrl: payload.linkUrl ?? "",
-      tagIds: payload.tags.map((tag) => tag.id),
-      selectedTags: payload.tags,
       successDescription: `Tracking ${payload.description || "time"}.`,
     });
   }
@@ -518,29 +437,15 @@ function createAgencyTimeTrackingActions(
     const timerOverlaySnapshots = captureTimerOverlaySnapshots([activeTimer.teamId]);
     const entryOverlaySnapshots = captureEntryOverlaySnapshots(affectedLogTeams);
     const description = payload.description.trim();
-    const { normalizedUrl, error } = payload.discard
-      ? {
-          normalizedUrl: null,
-          error: null,
-        }
-      : normalizeAgencyLinkUrl(payload.linkUrl);
-    const nextTags = payload.tagIds.length > 0 ? payload.selectedTags : activeTimer.tags;
     const optimisticEntry = payload.discard
       ? null
       : createOptimisticEntryFromTimer(activeTimer, {
           endedAt: new Date().toISOString(),
           description: description || activeTimer.description,
-          linkUrl: normalizedUrl,
-          tags: nextTags,
         });
     const draft = ensureTrackerDraft(payload.teamId);
 
     if (!draft) {
-      return;
-    }
-
-    if (error) {
-      toast.error(payload.discard ? "Unable to discard timer" : "Unable to stop timer", { description: error });
       return;
     }
 
@@ -557,15 +462,11 @@ function createAgencyTimeTrackingActions(
       patchActiveTimerCaches(null);
 
       draft.description = "";
-      draft.selectedTagIds = [];
-      draft.linkUrl = "";
       draft.syncedTimerId = null;
 
       const result = (await orpcClient.agencyOps.timer.stop({
         teamId: payload.teamId,
         description,
-        linkUrl: normalizedUrl,
-        tagIds: payload.tagIds,
         discard: payload.discard,
       })) as {
         timer: AgencyActiveTimer | null;
@@ -668,10 +569,7 @@ function createAgencyTimeTrackingActions(
       return null;
     }
 
-    return {
-      ...existingDraft,
-      selectedTagIds: [...existingDraft.selectedTagIds],
-    } satisfies TrackerDraft;
+    return { ...existingDraft } satisfies TrackerDraft;
   }
 
   function restoreTrackerDraft(teamId: string, snapshot: TrackerDraft | null) {
@@ -680,10 +578,7 @@ function createAgencyTimeTrackingActions(
       return;
     }
 
-    draftByTeam[teamId] = {
-      ...snapshot,
-      selectedTagIds: [...snapshot.selectedTagIds],
-    };
+    draftByTeam[teamId] = { ...snapshot };
   }
 
   function createOptimisticId(prefix: string) {
@@ -699,12 +594,8 @@ function createAgencyTimeTrackingActions(
     project: Pick<AgencyProjectSummary, "id" | "name">;
     task: Pick<AgencyProjectTask, "id" | "title">;
     description: string;
-    linkUrl: string;
-    tags: AgencyTag[];
     startedAt: string;
   }) {
-    const { normalizedUrl } = normalizeAgencyLinkUrl(payload.linkUrl);
-
     return {
       id: createOptimisticId("agency-active-timer"),
       teamId: payload.teamId,
@@ -713,9 +604,7 @@ function createAgencyTimeTrackingActions(
       taskId: payload.task.id,
       taskTitle: payload.task.title,
       projectName: payload.project.name,
-      tags: [...payload.tags],
       description: payload.description.trim(),
-      linkUrl: normalizedUrl,
       startedAt: payload.startedAt,
       createdAt: payload.startedAt,
       updatedAt: payload.startedAt,
@@ -727,8 +616,6 @@ function createAgencyTimeTrackingActions(
     overrides: {
       endedAt: string;
       description?: string;
-      linkUrl?: string | null;
-      tags?: AgencyTag[];
       clientId?: string;
       clientName?: string;
     },
@@ -744,10 +631,8 @@ function createAgencyTimeTrackingActions(
       projectName: timer.projectName,
       clientId: overrides.clientId ?? OPTIMISTIC_CLIENT_ID,
       clientName: overrides.clientName ?? OPTIMISTIC_CLIENT_NAME,
-      tags: [...(overrides.tags ?? timer.tags)],
       source: "timer",
       description: overrides.description ?? timer.description,
-      linkUrl: overrides.linkUrl !== undefined ? overrides.linkUrl : timer.linkUrl,
       startedAt: timer.startedAt,
       endedAt: overrides.endedAt,
       durationSeconds: getDurationSeconds(timer.startedAt, overrides.endedAt),
@@ -1008,8 +893,6 @@ function createAgencyTimeTrackingActions(
     payload: UpdateEntryPayload,
     previous: AgencyTimeEntry,
   ): AgencyTimeEntry {
-    const { normalizedUrl } = normalizeAgencyLinkUrl(payload.linkUrl ?? "");
-
     return {
       ...previous,
       projectId: payload.project.id,
@@ -1019,8 +902,6 @@ function createAgencyTimeTrackingActions(
       taskId: payload.taskId,
       taskTitle: payload.task?.title ?? null,
       description: payload.description.trim(),
-      linkUrl: normalizedUrl,
-      tags: [...payload.selectedTags],
       startedAt: payload.startAt,
       endedAt: payload.endAt,
       durationSeconds: payload.durationSeconds,
@@ -1050,16 +931,7 @@ function createAgencyTimeTrackingActions(
       return;
     }
 
-    const { normalizedUrl, error: linkError } = normalizeAgencyLinkUrl(payload.linkUrl ?? "");
-    if (linkError) {
-      toast.error("Unable to update entry", { description: linkError });
-      return;
-    }
-
-    const optimisticEntry = createOptimisticUpdatedEntry(
-      { ...payload, linkUrl: normalizedUrl },
-      previousEntry,
-    );
+    const optimisticEntry = createOptimisticUpdatedEntry(payload, previousEntry);
 
     set((s) => ({
       ...s,
@@ -1075,8 +947,6 @@ function createAgencyTimeTrackingActions(
         projectId: payload.project.id,
         taskId: payload.taskId,
         description: payload.description.trim(),
-        linkUrl: normalizedUrl,
-        tagIds: payload.tagIds,
         startAt: payload.startAt,
         endAt: payload.endAt,
       })) as AgencyTimeEntry;
@@ -1115,9 +985,6 @@ function createAgencyTimeTrackingActions(
     setTrackerDescription,
     setTrackerProjectId,
     setTrackerTaskId,
-    setTrackerSelectedTagIds,
-    setTrackerLinkUrl,
-    toggleTrackerTag,
     syncDraftFromActiveTimer,
     registerActiveTimerQuery,
     unregisterActiveTimerQuery,

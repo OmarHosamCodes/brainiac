@@ -67,10 +67,7 @@ export function usePersistentTimer() {
     await agencyStore.stopTimer({
       teamId,
       activeTimer,
-      tagIds: activeTimer.tags.map((tag) => tag.id),
-      selectedTags: activeTimer.tags,
       description: activeTimer.description,
-      linkUrl: activeTimer.linkUrl ?? "",
     });
   }
 
@@ -79,10 +76,7 @@ export function usePersistentTimer() {
     await agencyStore.stopTimer({
       teamId,
       activeTimer,
-      tagIds: [],
-      selectedTags: [],
       description: "",
-      linkUrl: "",
       discard: true,
     });
   }

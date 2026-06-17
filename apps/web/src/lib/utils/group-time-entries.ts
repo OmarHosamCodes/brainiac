@@ -1,13 +1,5 @@
 import { localDateKeyFromIso } from "@/lib/utils/format-agency-day-label";
 
-export type TimeEntryTag = {
-  id: string;
-  name: string;
-  teamId?: string;
-  createdAt?: string;
-  updatedAt?: string;
-};
-
 export type TimeEntryRecord = {
   id: string;
   teamId: string;
@@ -19,10 +11,8 @@ export type TimeEntryRecord = {
   projectName: string;
   clientId: string;
   clientName: string;
-  tags: TimeEntryTag[];
   source: "timer" | "manual";
   description: string;
-  linkUrl: string | null;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
@@ -38,8 +28,6 @@ export type CollapsedEntryGroup = {
   projectName: string;
   clientName: string;
   description: string;
-  linkUrl: string | null;
-  tags: TimeEntryTag[];
   totalSeconds: number;
   entries: TimeEntryRecord[];
 };
@@ -51,12 +39,8 @@ export type TimeEntryDayGroup = {
 };
 
 function collapseKeyFor(entry: TimeEntryRecord): string {
-  const tagKey = [...entry.tags]
-    .sort((a, b) => a.id.localeCompare(b.id))
-    .map((tag) => tag.id)
-    .join(",");
   const taskKey = entry.taskId ?? `project-only:${entry.projectId}`;
-  return `${taskKey}||${entry.description ?? ""}||${entry.linkUrl ?? ""}||${tagKey}`;
+  return `${taskKey}||${entry.description ?? ""}`;
 }
 
 export function collapseDuplicatesWithinDay(entries: TimeEntryRecord[]): CollapsedEntryGroup[] {
@@ -78,8 +62,6 @@ export function collapseDuplicatesWithinDay(entries: TimeEntryRecord[]): Collaps
         projectName: entry.projectName,
         clientName: entry.clientName,
         description: entry.description,
-        linkUrl: entry.linkUrl,
-        tags: entry.tags,
         totalSeconds: entry.durationSeconds,
         entries: [entry],
       });

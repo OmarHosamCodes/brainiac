@@ -39,14 +39,6 @@ export type AgencyOptimisticTask = {
   updatedAt: string;
 };
 
-export type AgencyOptimisticTag = {
-  id: string;
-  teamId: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
 export type AgencyOptimisticTaskMessage = {
   id: string;
   teamId: string;
@@ -85,10 +77,8 @@ export type AgencyOptimisticTimeEntry = {
   projectName: string;
   clientId: string;
   clientName: string;
-  tags: AgencyOptimisticTag[];
   source: "timer" | "manual";
   description: string;
-  linkUrl: string | null;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
@@ -104,9 +94,7 @@ export type AgencyOptimisticActiveTimer = {
   taskId: string | null;
   taskTitle: string | null;
   projectName: string;
-  tags: AgencyOptimisticTag[];
   description: string;
-  linkUrl: string | null;
   startedAt: string;
   createdAt: string;
   updatedAt: string;
@@ -129,7 +117,6 @@ type AgencyOptimisticState = {
   clients: Record<string, AgencyListOverlay<AgencyOptimisticClient>>;
   projects: Record<string, AgencyListOverlay<AgencyOptimisticProject>>;
   tasks: Record<string, AgencyListOverlay<AgencyOptimisticTask>>;
-  tags: Record<string, AgencyListOverlay<AgencyOptimisticTag>>;
   timeEntries: Record<string, AgencyListOverlay<AgencyOptimisticTimeEntry>>;
   taskMessages: Record<string, AgencyListOverlay<AgencyOptimisticTaskMessage>>;
   activeTimers: Record<string, AgencyOptimisticActiveTimer | null | undefined>;
@@ -158,12 +145,6 @@ type AgencyOptimisticState = {
   snapshotTasks: (teamId: string) => AgencyListOverlay<AgencyOptimisticTask>;
   restoreTasks: (teamId: string, snapshot: AgencyListOverlay<AgencyOptimisticTask>) => void;
   findTask: (teamId: string, taskId: string) => AgencyOptimisticTask | null;
-
-  upsertTag: (teamId: string, tag: AgencyOptimisticTag) => void;
-  deleteTag: (teamId: string, tagId: string) => void;
-  pruneTags: (teamId: string, serverItems: AgencyOptimisticTag[]) => void;
-  snapshotTags: (teamId: string) => AgencyListOverlay<AgencyOptimisticTag>;
-  restoreTags: (teamId: string, snapshot: AgencyListOverlay<AgencyOptimisticTag>) => void;
 
   upsertTimeEntry: (teamId: string, entry: AgencyOptimisticTimeEntry) => void;
   deleteTimeEntries: (teamId: string, entryIds: string[]) => void;
@@ -311,7 +292,6 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
   clients: {},
   projects: {},
   tasks: {},
-  tags: {},
   timeEntries: {},
   taskMessages: {},
   activeTimers: {},
@@ -453,26 +433,6 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
     }
     return null;
   },
-
-  upsertTag: (teamId, tag) =>
-    set((state) => ({
-      tags: setListOverlay(state.tags, teamId, upsertListItem(getListOverlay(state.tags, teamId), tag)),
-    })),
-
-  deleteTag: (teamId, tagId) =>
-    set((state) => ({
-      tags: setListOverlay(state.tags, teamId, deleteListItem(getListOverlay(state.tags, teamId), tagId)),
-    })),
-
-  pruneTags: (teamId, serverItems) =>
-    set((state) => {
-      const pruned = pruneListOverlay(getListOverlay(state.tags, teamId), serverItems);
-      return { tags: setListOverlay(state.tags, teamId, pruned) };
-    }),
-
-  snapshotTags: (teamId) => structuredClone(getListOverlay(get().tags, teamId)),
-  restoreTags: (teamId, snapshot) =>
-    set((state) => ({ tags: setListOverlay(state.tags, teamId, snapshot) })),
 
   upsertTimeEntry: (teamId, entry) =>
     set((state) => ({
@@ -624,13 +584,11 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
       const nextClients = { ...state.clients };
       const nextProjects = { ...state.projects };
       const nextTasks = { ...state.tasks };
-      const nextTags = { ...state.tags };
       const nextEntries = { ...state.timeEntries };
       const nextTimers = { ...state.activeTimers };
       delete nextClients[teamId];
       delete nextProjects[teamId];
       delete nextTasks[teamId];
-      delete nextTags[teamId];
       delete nextEntries[teamId];
       delete nextTimers[teamId];
 
@@ -659,7 +617,6 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
         clients: nextClients,
         projects: nextProjects,
         tasks: nextTasks,
-        tags: nextTags,
         timeEntries: nextEntries,
         taskMessages: nextMessages,
         activeTimers: nextTimers,

@@ -961,59 +961,6 @@ export const workspaceCollectionsTrackerBlockSchema = workspaceBlockBaseSchema.e
     .default([]),
 });
 
-export const workspaceAgencyProjectManagerBlockSchema = workspaceBlockBaseSchema.extend({
-  type: z.literal("agency-project-manager"),
-  teamId: z.string().min(1).nullable().optional(),
-});
-
-export const workspaceAgencyTimeTrackerBlockSchema = workspaceBlockBaseSchema.extend({
-  type: z.literal("agency-time-tracker"),
-  teamId: z.string().min(1).nullable().optional(),
-  selectedTagIds: z.array(z.string().min(1)).default([]),
-});
-
-export const workspaceAgencyTimeEntriesLogBlockSchema = workspaceBlockBaseSchema.extend({
-  type: z.literal("agency-time-entries-log"),
-  teamId: z.string().min(1).nullable().optional(),
-  pageSize: z.number().int().min(5).max(100).default(25),
-  selectedClientId: z.string().min(1).nullable().optional(),
-  selectedProjectId: z.string().min(1).nullable().optional(),
-  selectedMemberUserId: z.string().min(1).nullable().optional(),
-  selectedTagIds: z.array(z.string().min(1)).default([]),
-});
-
-export const workspaceAgencyTimeSummaryBlockSchema = workspaceBlockBaseSchema.extend({
-  type: z.literal("agency-time-summary"),
-  teamId: z.string().min(1).nullable().optional(),
-  datePreset: z.enum(["this-week", "last-month", "year-to-date", "custom"]).default("this-week"),
-  fromDate: isoDateSchema.nullable().optional(),
-  toDate: isoDateSchema.nullable().optional(),
-  selectedClientId: z.string().min(1).nullable().optional(),
-  selectedProjectId: z.string().min(1).nullable().optional(),
-  selectedMemberUserId: z.string().min(1).nullable().optional(),
-  selectedTagIds: z.array(z.string().min(1)).default([]),
-});
-
-export const workspaceAgencySettingsBlockSchema = workspaceBlockBaseSchema.extend({
-  type: z.literal("agency-settings"),
-  teamId: z.string().min(1).nullable().optional(),
-  billingPeriodStartDay: z.number().int().min(1).max(28).default(1),
-  billingPeriodEndDay: z.number().int().min(1).max(28).default(28),
-});
-
-export const workspaceAgencyBillingReportBlockSchema = workspaceBlockBaseSchema.extend({
-  type: z.literal("agency-billing-report"),
-  teamId: z.string().min(1).nullable().optional(),
-  periodOffset: z.number().int().default(0),
-  billingPeriodStartDay: z.number().int().min(1).max(28).default(1),
-  billingPeriodEndDay: z.number().int().min(1).max(28).default(28),
-  reviewedEntryIds: z.array(z.string().min(1)).default([]),
-  pageSize: z.number().int().min(5).max(100).default(25),
-  selectedClientId: z.string().min(1).nullable().optional(),
-  selectedProjectId: z.string().min(1).nullable().optional(),
-  selectedMemberUserId: z.string().min(1).nullable().optional(),
-});
-
 export const workspaceCustomBlockSchema = workspaceBlockBaseSchema.extend({
   type: z.literal("custom"),
   definitionId: z.string().min(1),
@@ -1065,12 +1012,6 @@ export const workspaceBlockSchema = z.discriminatedUnion("type", [
   workspaceProfitabilityCashFlowBlockSchema,
   workspacePricingSimulatorBlockSchema,
   workspaceCollectionsTrackerBlockSchema,
-  workspaceAgencyProjectManagerBlockSchema,
-  workspaceAgencyTimeTrackerBlockSchema,
-  workspaceAgencyTimeEntriesLogBlockSchema,
-  workspaceAgencyTimeSummaryBlockSchema,
-  workspaceAgencySettingsBlockSchema,
-  workspaceAgencyBillingReportBlockSchema,
   workspaceCustomBlockSchema,
 ]);
 
