@@ -1,6 +1,17 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
+import {
+  useMergedAgencyActiveTimerQuery,
+  useMergedAgencyCapacityQuery,
+  useMergedAgencyClientsQuery,
+  useMergedAgencyContactQuery,
+  useMergedAgencyProjectTasksQuery,
+  useMergedAgencyProjectsQuery,
+  useMergedAgencyTagsQuery,
+  useMergedAgencyTaskMessagesQuery,
+  useMergedAgencyTimeEntriesQuery,
+} from "@/hooks/use-agency-optimistic-query";
 import { getQueryClient } from "@/lib/query-client";
 import { orpc } from "@/lib/orpc";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
@@ -122,7 +133,7 @@ export function useAgencyProjectsQuery(teamId: string, clientId?: string) {
     return () => unregisterProjectsQuery(queryKey);
   }, [teamId, clientId, queryKey, registerProjectsQuery, unregisterProjectsQuery]);
 
-  return query;
+  return useMergedAgencyProjectsQuery(query, teamId, clientId);
 }
 
 export function useAgencyClientsQuery(teamId: string) {
@@ -148,7 +159,7 @@ export function useAgencyClientsQuery(teamId: string) {
     return () => unregisterClientsQuery(queryKey);
   }, [teamId, queryKey, registerClientsQuery, unregisterClientsQuery]);
 
-  return query;
+  return useMergedAgencyClientsQuery(query, teamId);
 }
 
 export function useAgencyTagsQuery(teamId: string) {
@@ -174,7 +185,7 @@ export function useAgencyTagsQuery(teamId: string) {
     return () => unregisterTagsQuery(queryKey);
   }, [teamId, queryKey, registerTagsQuery, unregisterTagsQuery]);
 
-  return query;
+  return useMergedAgencyTagsQuery(query, teamId);
 }
 
 export function useAgencyContactQuery(teamId: string, clientId: string) {
@@ -204,7 +215,7 @@ export function useAgencyContactQuery(teamId: string, clientId: string) {
     return () => unregisterContactQuery(queryKey);
   }, [teamId, clientId, queryKey, registerContactQuery, unregisterContactQuery]);
 
-  return query;
+  return useMergedAgencyContactQuery(query, teamId, clientId);
 }
 
 export function useAgencyCapacityQuery(teamId: string, weekStart: string, weeks: number) {
@@ -235,7 +246,7 @@ export function useAgencyCapacityQuery(teamId: string, weekStart: string, weeks:
     return () => unregisterCapacityQuery(queryKey);
   }, [teamId, queryKey, registerCapacityQuery, unregisterCapacityQuery]);
 
-  return query;
+  return useMergedAgencyCapacityQuery(query, teamId);
 }
 
 export function useAgencyTaskThreadContextQuery(teamId: string, taskId: string) {
@@ -281,7 +292,7 @@ export function useAgencyTaskMessagesQuery(teamId: string, taskId: string, pageS
     return () => unregisterTaskMessagesQuery(queryKey);
   }, [teamId, taskId, queryKey, registerTaskMessagesQuery, unregisterTaskMessagesQuery]);
 
-  return query;
+  return useMergedAgencyTaskMessagesQuery(query, teamId, taskId);
 }
 
 export function useAgencyProjectTasksQuery(teamId: string, filters: AgencyProjectTasksFilters = {}) {
@@ -351,7 +362,7 @@ export function useAgencyProjectTasksQuery(teamId: string, filters: AgencyProjec
     unregisterProjectTasksQuery,
   ]);
 
-  return query;
+  return useMergedAgencyProjectTasksQuery(query, teamId, stableFilters);
 }
 
 export function useAgencyActiveTimerQuery(teamId: string) {
@@ -381,7 +392,7 @@ export function useAgencyActiveTimerQuery(teamId: string) {
     return () => unregisterActiveTimerQuery(queryKey);
   }, [teamId, queryKey, registerActiveTimerQuery, unregisterActiveTimerQuery]);
 
-  return query;
+  return useMergedAgencyActiveTimerQuery(query, teamId);
 }
 
 export function useAgencyTimeEntriesQuery(teamId: string, page: number, pageSize: number) {
@@ -411,5 +422,5 @@ export function useAgencyTimeEntriesQuery(teamId: string, page: number, pageSize
     return () => unregisterLogQuery(queryKey);
   }, [teamId, page, queryKey, registerLogQuery, unregisterLogQuery]);
 
-  return query;
+  return useMergedAgencyTimeEntriesQuery(query, teamId);
 }

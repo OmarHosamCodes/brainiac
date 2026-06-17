@@ -16,6 +16,7 @@ import {
   refetchAgencyProjectTaskListQueries,
 } from "@/lib/utils/agency-query-cache";
 import { getAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
+import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 // Shared types (mirrored from API shapes — keep in sync with oRPC output)
@@ -339,6 +340,9 @@ function createAgencyOpsActions(
   const contactsQueryRegistry = new Map<string, RefCounted<RegisteredContactQuery>>();
   const capacityQueryRegistry = new Map<string, RefCounted<RegisteredCapacityQuery>>();
 
+  function optimistic() {
+    return useAgencyOptimisticStore.getState();
+  }
 
   // ---------------------------------------------------------------------------
   // Registry helpers
@@ -457,6 +461,7 @@ function createAgencyOpsActions(
   // ---------------------------------------------------------------------------
 
   function patchInsertedClient(teamId: string, client: AgencyClient) {
+    optimistic().upsertClient(teamId, client);
     clientsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
       getQueryClient().setQueryData<AgencyClientsListQueryData | undefined>(reg.queryKey, (current) => {
@@ -480,6 +485,7 @@ function createAgencyOpsActions(
   }
 
   function patchUpdatedClient(teamId: string, clientId: string, patch: Partial<AgencyClient>) {
+    optimistic().updateClient(teamId, clientId, patch);
     clientsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
       getQueryClient().setQueryData<AgencyClientsListQueryData | undefined>(reg.queryKey, (current) => {
@@ -497,6 +503,7 @@ function createAgencyOpsActions(
   // ---------------------------------------------------------------------------
 
   function patchInsertedProject(teamId: string, project: AgencyProject) {
+    optimistic().upsertProject(teamId, project);
     projectsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
       // If the registry entry is scoped to a specific clientId, only patch
@@ -518,14 +525,17 @@ function createAgencyOpsActions(
   // ---------------------------------------------------------------------------
 
   function patchInsertedProjectTask(teamId: string, task: AgencyProjectTask) {
+    optimistic().upsertTask(teamId, task);
     patchInsertedProjectTaskInCache(teamId, task);
   }
 
   function patchUpdatedProjectTask(teamId: string, task: AgencyProjectTask) {
+    optimistic().upsertTask(teamId, task);
     patchUpdatedProjectTaskInCache(teamId, task);
   }
 
   function patchDeletedProjectTask(teamId: string, taskId: string) {
+    optimistic().deleteTask(teamId, taskId);
     patchDeletedProjectTaskInCache(teamId, taskId);
   }
 
@@ -538,6 +548,7 @@ function createAgencyOpsActions(
   }
 
   function patchInsertedTaskMessage(teamId: string, taskId: string, message: AgencyTaskMessage) {
+    optimistic().upsertTaskMessage(teamId, taskId, message);
     taskMessagesQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId || reg.taskId !== taskId) return;
       getQueryClient().setQueryData<AgencyTaskMessagesListQueryData | undefined>(
@@ -561,6 +572,7 @@ function createAgencyOpsActions(
   }
 
   function patchUpsertedContact(teamId: string, clientId: string, contact: AgencyContact) {
+    optimistic().setContact(teamId, clientId, contact);
     contactsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId || reg.clientId !== clientId) return;
       getQueryClient().setQueryData(reg.queryKey, contact);
@@ -573,6 +585,7 @@ function createAgencyOpsActions(
     weekStart: string,
     capacitySeconds: number,
   ) {
+    optimistic().setCapacityCell(teamId, weekStart, userId, capacitySeconds);
     capacityQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
       getQueryClient().setQueryData<AgencyCapacityListQueryData | undefined>(reg.queryKey, (current) => {
@@ -598,6 +611,7 @@ function createAgencyOpsActions(
     optimisticIdValue: string,
     created: AgencyClient,
   ) {
+    optimistic().reconcileClient(teamId, optimisticIdValue, created);
     clientsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
       getQueryClient().setQueryData<AgencyClientsListQueryData | undefined>(reg.queryKey, (current) => {
@@ -617,6 +631,7 @@ function createAgencyOpsActions(
     optimisticIdValue: string,
     created: AgencyProject,
   ) {
+    optimistic().reconcileProject(teamId, optimisticIdValue, created);
     projectsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
       if (reg.clientId && reg.clientId !== created.clientId) return;
@@ -637,6 +652,7 @@ function createAgencyOpsActions(
     optimisticIdValue: string,
     created: AgencyProjectTask,
   ) {
+    optimistic().reconcileTask(teamId, optimisticIdValue, created);
     reconcileCreatedProjectTaskInCache(teamId, optimisticIdValue, created);
   }
 
@@ -645,6 +661,7 @@ function createAgencyOpsActions(
   // ---------------------------------------------------------------------------
 
   function patchInsertedTag(teamId: string, tag: AgencyTag) {
+    optimistic().upsertTag(teamId, tag);
     tagsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
       getQueryClient().setQueryData<AgencyTagsListQueryData | undefined>(reg.queryKey, (current) => {
@@ -659,6 +676,7 @@ function createAgencyOpsActions(
   }
 
   function patchDeletedTag(teamId: string, tagId: string) {
+    optimistic().deleteTag(teamId, tagId);
     tagsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
       getQueryClient().setQueryData<AgencyTagsListQueryData | undefined>(reg.queryKey, (current) => {
@@ -691,6 +709,7 @@ function createAgencyOpsActions(
     if (!payload.teamId || !payload.name.trim()) return;
 
     const snapshots = snapshotQueries(registryPayloads(clientsQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotClients(payload.teamId);
     const nowIso = new Date().toISOString();
     const optimisticClient: AgencyClient = {
       id: optimisticId("client"),
@@ -716,6 +735,7 @@ function createAgencyOpsActions(
       toast.success("Client created", { description: payload.name.trim() });
     } catch (error) {
       restoreQuerySnapshots(snapshots);
+      optimistic().restoreClients(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't create client", { description: getErrorMessage(error, "Try again.") });
     } finally {
       set((state) => ({ ...state, clientMutationCount: Math.max(0, state.clientMutationCount - 1) }));
@@ -726,6 +746,7 @@ function createAgencyOpsActions(
     if (!payload.teamId || !payload.name.trim()) return;
 
     const snapshots = snapshotQueries(registryPayloads(clientsQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotClients(payload.teamId);
     const nowIso = new Date().toISOString();
 
     set((state) => ({ ...state, clientMutationCount: state.clientMutationCount + 1 }));
@@ -747,6 +768,7 @@ function createAgencyOpsActions(
       toast.success("Renamed", { description: payload.name.trim() });
     } catch (error) {
       restoreQuerySnapshots(snapshots);
+      optimistic().restoreClients(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't rename", { description: getErrorMessage(error, "Try again.") });
     } finally {
       set((state) => ({ ...state, clientMutationCount: Math.max(0, state.clientMutationCount - 1) }));
@@ -757,6 +779,7 @@ function createAgencyOpsActions(
     if (!payload.teamId || !payload.clientId || !payload.name.trim()) return;
 
     const snapshots = snapshotQueries(registryPayloads(projectsQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotProjects(payload.teamId);
     const nowIso = new Date().toISOString();
     const optimisticProject: AgencyProject = {
       id: optimisticId("project"),
@@ -784,6 +807,7 @@ function createAgencyOpsActions(
       toast.success("Project added", { description: payload.name.trim() });
     } catch (error) {
       restoreQuerySnapshots(snapshots);
+      optimistic().restoreProjects(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't add project", { description: getErrorMessage(error, "Try again.") });
     } finally {
       set((state) => ({ ...state, projectMutationCount: Math.max(0, state.projectMutationCount - 1) }));
@@ -795,6 +819,7 @@ function createAgencyOpsActions(
     if (!payload.teamId || !payload.projectId || !title) return false;
 
     const snapshots = snapshotQueries(registryPayloads(projectTasksQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotTasks(payload.teamId);
     const nowIso = new Date().toISOString();
     const optimisticTask: AgencyProjectTask = {
       id: optimisticId("agency-project-task"),
@@ -832,6 +857,7 @@ function createAgencyOpsActions(
       return true;
     } catch (error) {
       restoreQuerySnapshots(snapshots);
+      optimistic().restoreTasks(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't add task", { description: getErrorMessage(error, "Try again.") });
       return false;
     } finally {
@@ -843,6 +869,7 @@ function createAgencyOpsActions(
     if (!payload.teamId || !payload.taskId) return;
 
     const snapshots = snapshotQueries(registryPayloads(projectTasksQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotTasks(payload.teamId);
     set((state) => ({ ...state, deletingTaskIds: [...new Set([...state.deletingTaskIds, payload.taskId])] }));
 
     try {
@@ -858,6 +885,7 @@ function createAgencyOpsActions(
       await syncProjectTaskQueriesAfterMutation(payload.teamId);
     } catch (error) {
       restoreQuerySnapshots(snapshots);
+      optimistic().restoreTasks(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't delete task", { description: getErrorMessage(error, "Try again.") });
     } finally {
       set((state) => ({ ...state, deletingTaskIds: state.deletingTaskIds.filter((id) => id !== payload.taskId) }));
@@ -868,6 +896,7 @@ function createAgencyOpsActions(
     if (!payload.teamId || !payload.name.trim()) return;
 
     const snapshots = snapshotQueries(registryPayloads(tagsQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotTags(payload.teamId);
     const nowIso = new Date().toISOString();
     const optimisticTag: AgencyTag = {
       id: optimisticId("tag"),
@@ -892,6 +921,7 @@ function createAgencyOpsActions(
       toast.success("Tag created", { description: payload.name.trim() });
     } catch (error) {
       restoreQuerySnapshots(snapshots);
+      optimistic().restoreTags(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't create tag", { description: getErrorMessage(error, "Try again.") });
     } finally {
       set((state) => ({ ...state, tagMutationCount: Math.max(0, state.tagMutationCount - 1) }));
@@ -902,6 +932,7 @@ function createAgencyOpsActions(
     if (!payload.teamId) return;
 
     const snapshots = snapshotQueries(registryPayloads(tagsQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotTags(payload.teamId);
 
     set((state) => ({ ...state, deletingTagIds: [...new Set([...state.deletingTagIds, payload.tagId])] }));
 
@@ -918,6 +949,7 @@ function createAgencyOpsActions(
       toast.success("Tag removed", { description: payload.tagName });
     } catch (error) {
       restoreQuerySnapshots(snapshots);
+      optimistic().restoreTags(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't remove tag", { description: getErrorMessage(error, "Try again.") });
     } finally {
       // Filter the specific id rather than restoring a pre-call snapshot, so
@@ -931,6 +963,7 @@ function createAgencyOpsActions(
   // ---------------------------------------------------------------------------
 
   function patchRemovedClient(teamId: string, clientId: string) {
+    optimistic().deleteClient(teamId, clientId);
     clientsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
       getQueryClient().setQueryData<AgencyClientsListQueryData | undefined>(reg.queryKey, (current) => {
@@ -948,6 +981,7 @@ function createAgencyOpsActions(
     if (!payload.teamId || !payload.clientId) return;
 
     const snapshots = snapshotQueries(registryPayloads(clientsQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotClients(payload.teamId);
     set((state) => ({ ...state, clientMutationCount: state.clientMutationCount + 1 }));
 
     try {
@@ -961,6 +995,7 @@ function createAgencyOpsActions(
       toast.success("Client archived", { description: `${payload.clientName} has been archived.` });
     } catch (error) {
       restoreQuerySnapshots(snapshots);
+      optimistic().restoreClients(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't archive client", { description: getErrorMessage(error, "Try again.") });
     } finally {
       set((state) => ({ ...state, clientMutationCount: Math.max(0, state.clientMutationCount - 1) }));
@@ -991,6 +1026,7 @@ function createAgencyOpsActions(
       patchUpsertedContact(payload.teamId, payload.clientId, contact);
 
       callbacks?.onSuccess?.();
+      optimistic().clearContact(payload.teamId, payload.clientId);
       toast.success("Contact saved");
     } catch (error) {
       toast.error("Couldn't save contact", { description: getErrorMessage(error, "Try again.") });
@@ -1039,6 +1075,8 @@ function createAgencyOpsActions(
     if (!payload.teamId || !payload.userId) return;
 
     const snapshots = snapshotQueries(registryPayloads(capacityQueryRegistry));
+    const capacityCellKey = `${payload.teamId}:${payload.weekStart}:${payload.userId}`;
+    const previousCapacitySeconds = useAgencyOptimisticStore.getState().capacityCells[capacityCellKey];
     set((state) => ({ ...state, capacityMutationCount: state.capacityMutationCount + 1 }));
 
     try {
@@ -1052,9 +1090,20 @@ function createAgencyOpsActions(
       });
 
       callbacks?.onSuccess?.();
+      optimistic().clearCapacityCell(payload.teamId, payload.weekStart, payload.userId);
       toast.success("Capacity updated");
     } catch (error) {
       restoreQuerySnapshots(snapshots);
+      if (previousCapacitySeconds === undefined) {
+        optimistic().clearCapacityCell(payload.teamId, payload.weekStart, payload.userId);
+      } else {
+        optimistic().setCapacityCell(
+          payload.teamId,
+          payload.weekStart,
+          payload.userId,
+          previousCapacitySeconds,
+        );
+      }
       toast.error("Couldn't update capacity", { description: getErrorMessage(error, "Try again.") });
     } finally {
       set((state) => ({ ...state, capacityMutationCount: Math.max(0, state.capacityMutationCount - 1) }));
@@ -1062,7 +1111,7 @@ function createAgencyOpsActions(
   }
 
   function getCachedProjectTask(teamId: string, taskId: string): AgencyProjectTask | null {
-    return findProjectTaskInCache(teamId, taskId);
+    return optimistic().findTask(teamId, taskId) ?? findProjectTaskInCache(teamId, taskId);
   }
 
   async function updateProjectTask(payload: UpdateProjectTaskPayload) {
@@ -1070,6 +1119,7 @@ function createAgencyOpsActions(
 
     const current = getCachedProjectTask(payload.teamId, payload.taskId);
     const snapshots = snapshotQueries(registryPayloads(projectTasksQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotTasks(payload.teamId);
     const nowIso = new Date().toISOString();
 
     set((state) => ({
@@ -1130,6 +1180,7 @@ function createAgencyOpsActions(
       await syncProjectTaskQueriesAfterMutation(payload.teamId);
     } catch (error) {
       restoreQuerySnapshots(snapshots);
+      optimistic().restoreTasks(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't update task", { description: getErrorMessage(error, "Try again.") });
       throw error;
     } finally {
@@ -1144,6 +1195,7 @@ function createAgencyOpsActions(
     if (!payload.teamId || !payload.taskId) return;
 
     const snapshots = snapshotQueries(registryPayloads(taskMessagesQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotTaskMessages(payload.teamId, payload.taskId);
     const nowIso = new Date().toISOString();
     const optimisticMessage: AgencyTaskMessage = {
       id: optimisticId("agency-task-message"),
@@ -1173,6 +1225,13 @@ function createAgencyOpsActions(
         >[0]["attachments"],
       })) as AgencyTaskMessage;
 
+      optimistic().reconcileTaskMessage(
+        payload.teamId,
+        payload.taskId,
+        optimisticMessage.id,
+        created,
+      );
+
       taskMessagesQueryRegistry.forEach(({ payload: reg }) => {
         if (reg.teamId !== payload.teamId || reg.taskId !== payload.taskId) return;
         getQueryClient().setQueryData<AgencyTaskMessagesListQueryData | undefined>(
@@ -1192,6 +1251,7 @@ function createAgencyOpsActions(
       return created;
     } catch (error) {
       restoreQuerySnapshots(snapshots);
+      optimistic().restoreTaskMessages(payload.teamId, payload.taskId, optimisticSnapshot);
       throw error;
     }
   }

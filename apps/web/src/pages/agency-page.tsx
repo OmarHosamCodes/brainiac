@@ -45,6 +45,7 @@ import {
   shellPageIntroClass,
 } from "@/lib/utils/app-shell-ui";
 import { setAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
+import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 
 function isAgencySegmentId(value: string | null): value is AgencySegmentId {
   return AGENCY_SEGMENTS.some((entry) => entry.id === value);
@@ -132,6 +133,15 @@ export function AgencyPage() {
   useEffect(() => {
     setAgencyTimeTrackingUserId(currentUserId || null);
   }, [currentUserId]);
+
+  const previousTeamIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const previousTeamId = previousTeamIdRef.current;
+    if (previousTeamId && previousTeamId !== selectedTeamId) {
+      useAgencyOptimisticStore.getState().resetTeam(previousTeamId);
+    }
+    previousTeamIdRef.current = selectedTeamId || null;
+  }, [selectedTeamId]);
 
   const agencySyncTeamId = agencyEnabled && selectedTeamId ? selectedTeamId : "";
   useAgencyActiveTimerQuery(agencySyncTeamId);
