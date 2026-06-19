@@ -15,9 +15,11 @@ import {
 import { useAppShellStore } from "@/stores/app-shell";
 import {
   shellBreadcrumbCurrentClass,
+  shellContentInClass,
   shellContextDividerClass,
   shellLoadingPanelClass,
 } from "@/lib/utils/app-shell-ui";
+import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 export function NodePage() {
@@ -77,8 +79,9 @@ export function NodePage() {
       ) : null}
 
       {page.node && page.activeTab && page.editorContext ? (
-        <WorkspaceNodeEditorProvider value={page.editorContext}>
-          <WorkspaceNodeShell
+        <div className={cn("h-full", shellContentInClass)}>
+          <WorkspaceNodeEditorProvider value={page.editorContext}>
+            <WorkspaceNodeShell
             node={page.node}
             activeTab={page.activeTab}
             activeTabId={page.activeTabId}
@@ -100,11 +103,12 @@ export function NodePage() {
             onShareNode={() => void page.shareCurrentNodeToTeam()}
             onUnshareNode={() => void page.unshareCurrentNodeFromTeam()}
           />
-        </WorkspaceNodeEditorProvider>
+          </WorkspaceNodeEditorProvider>
+        </div>
       ) : null}
 
       {!page.isWorkspaceInitialLoading && page.hasWorkspaceLoaded && !page.node ? (
-        <div className="mx-auto flex max-w-xl flex-col gap-4 px-6 py-16">
+        <div className={cn("mx-auto flex max-w-xl flex-col gap-4 px-6 py-16", shellContentInClass)}>
           <div className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-sm">
             Node not found. It may have been removed or the link is invalid.
           </div>

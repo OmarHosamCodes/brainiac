@@ -19,7 +19,7 @@ import {
   useAppShellPageTitle,
 } from "@/hooks/use-app-shell";
 import { useBilling } from "@/hooks/use-billing";
-import { shellPageClass } from "@/lib/utils/app-shell-ui";
+import { shellContentInClass, shellPageClass, shellStaggerItemClass } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 
 export function BillingPage() {
@@ -82,7 +82,7 @@ export function BillingPage() {
         {billingQuery.isPending ? (
           <Skeleton className="h-48 w-full rounded-[32px]" />
         ) : (
-          <>
+          <div className={shellContentInClass}>
             <Card className="mb-6">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
@@ -111,12 +111,16 @@ export function BillingPage() {
                 <h3 className="mb-4 text-lg font-bold text-highlighted">Your Plan Limits</h3>
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {limitItems.map((item) => {
+                  {limitItems.map((item, index) => {
                     const Icon = item.icon;
                     return (
                       <div
                         key={item.label}
-                        className="flex items-center gap-3 rounded-2xl bg-elevated p-3"
+                        className={cn(
+                          "flex items-center gap-3 rounded-2xl bg-elevated p-3",
+                          index < 7 && shellStaggerItemClass,
+                        )}
+                        style={index < 7 ? ({ "--stagger-i": index } as React.CSSProperties) : undefined}
                       >
                         <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10">
                           <Icon className="size-4 text-primary" />
@@ -131,7 +135,7 @@ export function BillingPage() {
                 </div>
               </CardContent>
             </Card>
-          </>
+          </div>
         )}
       </div>
     </div>

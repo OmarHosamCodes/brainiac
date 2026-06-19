@@ -40,10 +40,15 @@ import { AGENCY_SEGMENTS, type AgencySegmentId } from "@/lib/agency-segments";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import {
+  shellContentInClass,
   shellPageBodyClass,
   shellPageClass,
   shellPageIntroClass,
+  shellPanelActiveClass,
+  shellPanelClass,
+  shellPanelStackClass,
 } from "@/lib/utils/app-shell-ui";
+import { cn } from "@/lib/utils";
 import { setAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 
@@ -55,11 +60,8 @@ function panelIdFor(segmentId: AgencySegmentId) {
   return `agency-panel-${segmentId}`;
 }
 
-const panelClass = "min-h-0 flex-1 overflow-y-auto overscroll-contain";
-const hiddenPanelClass = "hidden";
-
-function segmentPanelClass(segmentId: AgencySegmentId, activeSegment: AgencySegmentId) {
-  return segmentId === activeSegment ? panelClass : hiddenPanelClass;
+function animatedPanelClass(segmentId: AgencySegmentId, activeSegment: AgencySegmentId) {
+  return cn(shellPanelClass, segmentId === activeSegment && shellPanelActiveClass);
 }
 
 export function AgencyPage() {
@@ -214,34 +216,46 @@ export function AgencyPage() {
             <Skeleton className="h-64 w-full rounded-[32px]" />
           </div>
         ) : showAgencyUpsell ? (
-          <AgencyProUpsell />
+          <div className={shellContentInClass}>
+            <AgencyProUpsell />
+          </div>
         ) : teams.length === 0 ? (
-          <AgencyPlaceholderSurface
-            icon="i-lucide-users"
-            title="No team yet"
-            body="Create a team in your workspace to start using agency tools."
-            hints={["Open Dashboard and create or join a team from the team panel."]}
-          />
+          <div className={shellContentInClass}>
+            <AgencyPlaceholderSurface
+              icon="i-lucide-users"
+              title="No team yet"
+              body="Create a team in your workspace to start using agency tools."
+              hints={["Open Dashboard and create or join a team from the team panel."]}
+            />
+          </div>
         ) : (
           <div className="flex min-h-0 flex-1 flex-col">
             <AgencySegmentBar segment={segment} onSegmentChange={handleSegmentChange} />
 
             <div className={shellPageBodyClass}>
               {segment !== "settings" ? (
-                <p className={shellPageIntroClass}>{currentSegment.subtitle}</p>
+                <p key={segment} className={cn(shellPageIntroClass, shellContentInClass)}>
+                  {currentSegment.subtitle}
+                </p>
               ) : null}
 
               <div
-                id={panelIdFor(segment)}
-                className={panelClass}
+                className={shellPanelStackClass}
                 role="tabpanel"
+                id={panelIdFor(segment)}
                 aria-labelledby={`agency-tab-${segment}`}
               >
-                <div className={segmentPanelClass("work", segment)}>
+                <div
+                  className={animatedPanelClass("work", segment)}
+                  aria-hidden={segment !== "work"}
+                >
                   <AgencyWorkSurface teamId={selectedTeamId} onSelectProject={openProject} />
                 </div>
 
-                <div className={segmentPanelClass("projects", segment)}>
+                <div
+                  className={animatedPanelClass("projects", segment)}
+                  aria-hidden={segment !== "projects"}
+                >
                   {selectedProjectId ? (
                     <AgencyProjectDetail
                       teamId={selectedTeamId}
@@ -258,33 +272,48 @@ export function AgencyPage() {
                   )}
                 </div>
 
-                <div className={segmentPanelClass("clients", segment)}>
+                <div
+                  className={animatedPanelClass("clients", segment)}
+                  aria-hidden={segment !== "clients"}
+                >
                   <AgencyClientsSurface teamId={selectedTeamId} />
                 </div>
 
-                {segment === "reports" ? (
+                <div
+                  className={animatedPanelClass("reports", segment)}
+                  aria-hidden={segment !== "reports"}
+                >
                   <AgencyReportsSurface
                     ref={reportsSurfaceRef}
                     teamId={selectedTeamId}
                     hideToolbarExport
                     onExportStateChange={setReportsExportState}
                   />
-                ) : null}
+                </div>
 
-                {segment === "resourcing" ? (
+                <div
+                  className={animatedPanelClass("resourcing", segment)}
+                  aria-hidden={segment !== "resourcing"}
+                >
                   <AgencyResourcingSurface
                     teamId={selectedTeamId}
                     onSegmentChange={(next) => handleSegmentChange(next as AgencySegmentId)}
                   />
-                ) : null}
+                </div>
 
-                {segment === "billing" ? (
+                <div
+                  className={animatedPanelClass("billing", segment)}
+                  aria-hidden={segment !== "billing"}
+                >
                   <AgencyBillingSurface teamId={selectedTeamId} />
-                ) : null}
+                </div>
 
-                {segment === "settings" ? (
+                <div
+                  className={animatedPanelClass("settings", segment)}
+                  aria-hidden={segment !== "settings"}
+                >
                   <AgencySettingsSurface teamId={selectedTeamId} />
-                ) : null}
+                </div>
               </div>
             </div>
           </div>

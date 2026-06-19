@@ -107,129 +107,134 @@ export function DashboardWorkspaceSidebar({
     };
   }, [canManageSelectedNodeSharing, selectedNode, selectedTeamName]);
 
-  if (compact) {
-    return (
-      <aside className="dashboard-sidebar-compact flex w-14 shrink-0 flex-col items-center gap-2 border-r border-default bg-default py-3">
-        <Button variant="ghost" size="icon" aria-label="Expand team panel" onClick={() => onCompactChange(false)}>
-          <PanelLeftOpen className="size-4" />
-        </Button>
-        <div
-          className="flex size-9 items-center justify-center rounded-xl border border-default bg-muted/40 text-muted"
-          title={selectedTeamName || "Team"}
-        >
-          <Users className="size-4" />
-        </div>
-        {selectedNode ? (
+  return (
+    <aside
+      className={cn(
+        "shrink-0 flex flex-col border-r border-default bg-default",
+        compact ? "dashboard-sidebar-compact w-14 items-center gap-2 py-3" : "dashboard-sidebar w-72 xl:w-80",
+      )}
+    >
+      {compact ? (
+        <>
+          <Button variant="ghost" size="icon" aria-label="Expand team panel" onClick={() => onCompactChange(false)}>
+            <PanelLeftOpen className="size-4" />
+          </Button>
           <div
             className="flex size-9 items-center justify-center rounded-xl border border-default bg-muted/40 text-muted"
-            title={selectedNode.title ?? "Selected node"}
+            title={selectedTeamName || "Team"}
           >
-            {isSelectedNodeShared ? <Globe className="size-4" /> : <Lock className="size-4" />}
+            <Users className="size-4" />
           </div>
-        ) : null}
-      </aside>
-    );
-  }
-
-  return (
-    <aside className="dashboard-sidebar flex w-72 shrink-0 flex-col overflow-y-auto border-r border-default bg-default xl:w-80">
-      <header className="flex items-center justify-between gap-2 border-b border-default px-4 py-3">
-        <div className="min-w-0">
-          <p className={dashboardLabelClass}>Team</p>
-          <p className="truncate text-sm font-semibold text-highlighted">
-            {selectedTeamName || "No team selected"}
-          </p>
-        </div>
-        <Button variant="ghost" size="icon" aria-label="Collapse team panel" onClick={() => onCompactChange(true)}>
-          <PanelLeftClose className="size-4" />
-        </Button>
-      </header>
-
-      <div className="flex flex-1 flex-col gap-4 p-4">
-        {selectedTeamName ? (
-          <section className={dashboardSectionClass}>
-            <div className={dashboardCardClass}>
-              <div className={dashboardCardHeaderClass}>
-                <div className={dashboardCardIconClass}>
-                  <Users className="size-4.5" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-highlighted">{selectedTeamName}</p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    {roleLabel ? <Badge variant="secondary">{roleLabel}</Badge> : null}
-                    <span className="text-xs text-muted">
-                      {memberCount} {memberCount === 1 ? "member" : "members"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <p className="mt-3 text-xs leading-relaxed text-muted">
-                {canInvite
-                  ? "Manage members, roles, and who can access shared nodes."
-                  : "View team details. Owner role is required to manage members."}
-              </p>
-              <Button variant="secondary" size="sm" className="mt-3 w-full" onClick={onOpenTeamSettings}>
-                <Settings2 className="size-4" />
-                Team settings
-              </Button>
-            </div>
-          </section>
-        ) : null}
-
-        <section className={dashboardSectionClass}>
-          <div className={dashboardCardClass}>
-            <p className={dashboardLabelClass}>Create team</p>
-            {createTeamOpen ? (
-              <div className="mt-3 space-y-2">
-                <Input
-                  value={newTeamName}
-                  placeholder="Team name"
-                  onChange={(event) => onNewTeamNameChange(event.target.value)}
-                />
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    size="sm"
-                    disabled={!canCreateTeam}
-                    onClick={() => {
-                      onCreateTeam();
-                      setCreateTeamOpen(false);
-                    }}
-                  >
-                    Create
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={() => setCreateTeamOpen(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button variant="secondary" size="sm" className="mt-3 w-full" onClick={() => setCreateTeamOpen(true)}>
-                <Plus className="size-4" />
-                New team
-              </Button>
-            )}
-            <p className="mt-2 text-xs text-muted">{teamsCount} teams available</p>
-          </div>
-        </section>
-
-        <section className={dashboardSectionClass}>
-          <div className={dashboardCardClass}>
-            <p className={dashboardLabelClass}>Node sharing</p>
-            <p className="mt-2 text-sm font-semibold text-highlighted">{nodeShareStatus.label}</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted">{nodeShareStatus.hint}</p>
-            <Button
-              variant="secondary"
-              size="sm"
-              className={cn("mt-3 w-full", shellFocusRingClass)}
-              disabled={nodeShareActionDisabled}
-              onClick={onToggleSelectedNodeSharing}
+          {selectedNode ? (
+            <div
+              className="flex size-9 items-center justify-center rounded-xl border border-default bg-muted/40 text-muted"
+              title={selectedNode.title ?? "Selected node"}
             >
-              {isNodeShareActionPending ? <Loader2 className="size-4 animate-spin" /> : null}
-              {nodeShareActionLabel}
+              {isSelectedNodeShared ? <Globe className="size-4" /> : <Lock className="size-4" />}
+            </div>
+          ) : null}
+        </>
+      ) : (
+        <>
+          <header className="flex w-full items-center justify-between gap-2 border-b border-default px-4 py-3">
+            <div className="min-w-0">
+              <p className={dashboardLabelClass}>Team</p>
+              <p className="truncate text-sm font-semibold text-highlighted">
+                {selectedTeamName || "No team selected"}
+              </p>
+            </div>
+            <Button variant="ghost" size="icon" aria-label="Collapse team panel" onClick={() => onCompactChange(true)}>
+              <PanelLeftClose className="size-4" />
             </Button>
+          </header>
+
+          <div className="flex w-full flex-1 flex-col gap-4 overflow-y-auto p-4">
+            {selectedTeamName ? (
+              <section className={dashboardSectionClass}>
+                <div className={dashboardCardClass}>
+                  <div className={dashboardCardHeaderClass}>
+                    <div className={dashboardCardIconClass}>
+                      <Users className="size-4.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-highlighted">{selectedTeamName}</p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        {roleLabel ? <Badge variant="secondary">{roleLabel}</Badge> : null}
+                        <span className="text-xs text-muted">
+                          {memberCount} {memberCount === 1 ? "member" : "members"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs leading-relaxed text-muted">
+                    {canInvite
+                      ? "Manage members, roles, and who can access shared nodes."
+                      : "View team details. Owner role is required to manage members."}
+                  </p>
+                  <Button variant="secondary" size="sm" className="mt-3 w-full" onClick={onOpenTeamSettings}>
+                    <Settings2 className="size-4" />
+                    Team settings
+                  </Button>
+                </div>
+              </section>
+            ) : null}
+
+            <section className={dashboardSectionClass}>
+              <div className={dashboardCardClass}>
+                <p className={dashboardLabelClass}>Create team</p>
+                {createTeamOpen ? (
+                  <div className="mt-3 space-y-2">
+                    <Input
+                      value={newTeamName}
+                      placeholder="Team name"
+                      onChange={(event) => onNewTeamNameChange(event.target.value)}
+                    />
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        size="sm"
+                        disabled={!canCreateTeam}
+                        onClick={() => {
+                          onCreateTeam();
+                          setCreateTeamOpen(false);
+                        }}
+                      >
+                        Create
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setCreateTeamOpen(false)}>
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button variant="secondary" size="sm" className="mt-3 w-full" onClick={() => setCreateTeamOpen(true)}>
+                    <Plus className="size-4" />
+                    New team
+                  </Button>
+                )}
+                <p className="mt-2 text-xs text-muted">{teamsCount} teams available</p>
+              </div>
+            </section>
+
+            <section className={dashboardSectionClass}>
+              <div className={dashboardCardClass}>
+                <p className={dashboardLabelClass}>Node sharing</p>
+                <p className="mt-2 text-sm font-semibold text-highlighted">{nodeShareStatus.label}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted">{nodeShareStatus.hint}</p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className={cn("mt-3 w-full", shellFocusRingClass)}
+                  disabled={nodeShareActionDisabled}
+                  onClick={onToggleSelectedNodeSharing}
+                >
+                  {isNodeShareActionPending ? <Loader2 className="size-4 animate-spin" /> : null}
+                  {nodeShareActionLabel}
+                </Button>
+              </div>
+            </section>
           </div>
-        </section>
-      </div>
+        </>
+      )}
     </aside>
   );
 }

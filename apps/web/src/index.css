@@ -4,6 +4,10 @@
 
 
 :root {
+  --motion-duration-fast: 120ms;
+  --motion-duration-base: 180ms;
+  --motion-duration-panel: 220ms;
+  --motion-ease-out: cubic-bezier(0.25, 1, 0.5, 1);
   --background: #f2f4f7;
   --foreground: #4a4a4a;
   --card: #f5f5f5;
@@ -306,6 +310,13 @@ body {
   gap: 0.75rem;
   min-height: var(--app-shell-topbar-height);
   padding: 0 0.9rem;
+  transition: min-height var(--motion-duration-panel) var(--motion-ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell__topbar {
+    transition: none;
+  }
 }
 
 .app-shell__topbar--owned {
@@ -420,6 +431,124 @@ body {
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
+}
+
+@keyframes shell-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shell-content-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shell-confirm-in {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.shell-page-enter {
+  animation: shell-page-enter var(--motion-duration-base) var(--motion-ease-out) both;
+}
+
+.shell-content-in {
+  animation: shell-content-in var(--motion-duration-fast) var(--motion-ease-out) both;
+}
+
+.shell-stagger-item {
+  animation: shell-page-enter var(--motion-duration-base) var(--motion-ease-out) both;
+  animation-delay: calc(var(--stagger-i, 0) * 40ms);
+}
+
+.shell-confirm-in {
+  animation: shell-confirm-in var(--motion-duration-panel) var(--motion-ease-out) both;
+}
+
+.shell-panel-stack {
+  position: relative;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.shell-panel {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  opacity: 0;
+  transform: translateY(6px);
+  pointer-events: none;
+  transition:
+    opacity var(--motion-duration-base) var(--motion-ease-out),
+    transform var(--motion-duration-base) var(--motion-ease-out);
+}
+
+.shell-panel--active {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.dashboard-sidebar {
+  transition: width var(--motion-duration-panel) var(--motion-ease-out);
+  overflow: hidden;
+}
+
+.dashboard-sidebar-compact {
+  transition: width var(--motion-duration-panel) var(--motion-ease-out);
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-page-enter,
+  .shell-content-in,
+  .shell-stagger-item,
+  .shell-confirm-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .shell-panel {
+    transition: none;
+    opacity: 1;
+    transform: none;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .shell-panel--active {
+    pointer-events: auto;
+    visibility: visible;
+  }
+
+  .dashboard-sidebar,
+  .dashboard-sidebar-compact {
+    transition: none;
+  }
 }
 
 /*
