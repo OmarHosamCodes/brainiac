@@ -1,6 +1,7 @@
 import { AlertCircle, Loader2, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { AppShellHeaderActions, AppShellHeaderContext } from "@/components/app-shell-header-slots";
 import { DashboardAgentChatPanel } from "@/components/dashboard/dashboard-agent-chat-panel";
 import { DashboardWorkspaceSidebar } from "@/components/dashboard/dashboard-workspace-sidebar";
 import { InfiniteCanvas, type InfiniteCanvasHandle } from "@/components/infinite-canvas";
@@ -12,6 +13,7 @@ import { useTeamManagement } from "@/hooks/use-team-management";
 import { useTeamSelection } from "@/hooks/use-team-selection";
 import {
   useAppShellActionsSlot,
+  useAppShellContextSlot,
   useAppShellCustomDock,
   useAppShellPageTitle,
 } from "@/hooks/use-app-shell";
@@ -19,12 +21,17 @@ import { useWorkspaceBoard } from "@/hooks/use-workspace-board";
 import { AppShellPortal } from "@/hooks/use-app-shell-portal";
 import { useAppShellStore } from "@/stores/app-shell";
 import { dashboardErrorAlertClass, dashboardStatusBadgeClass } from "@/lib/utils/dashboard-ui";
-import { shellActionsSlotClass } from "@/lib/utils/app-shell-ui";
+import {
+  shellBreadcrumbCurrentClass,
+  shellContentInClass,
+  shellContextDividerClass,
+} from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 
 export function DashboardPage() {
   useAppShellPageTitle("Dashboard");
   useAppShellCustomDock();
+  useAppShellContextSlot();
   useAppShellActionsSlot();
 
   const canvasRef = useRef<InfiniteCanvasHandle | null>(null);
@@ -59,18 +66,31 @@ export function DashboardPage() {
 
   return (
     <div className="relative h-full w-full overflow-hidden bg-default selection:bg-primary/30">
-      <AppShellPortal targetId="app-shell-actions">
-        <div className={shellActionsSlotClass}>
-          <Button variant="ghost" size="sm" onClick={() => setIsTeamAsideCompact((value) => !value)}>
-            {isTeamAsideCompact ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
-            <span className="hidden lg:inline">Workspace</span>
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => canvasRef.current?.createNodeAtViewportCenter()}>
-            <Plus className="size-4" />
-            Add
-          </Button>
-        </div>
-      </AppShellPortal>
+      <AppShellHeaderContext>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="shrink-0"
+          aria-expanded={!isTeamAsideCompact}
+          onClick={() => setIsTeamAsideCompact((value) => !value)}
+        >
+          {isTeamAsideCompact ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+          <span className="hidden lg:inline">Workspace</span>
+        </Button>
+        {selectedTeamName ? (
+          <>
+            <span className={shellContextDividerClass} aria-hidden="true" />
+            <span className={cn(shellBreadcrumbCurrentClass, "truncate")}>{selectedTeamName}</span>
+          </>
+        ) : null}
+      </AppShellHeaderContext>
+
+      <AppShellHeaderActions>
+        <Button variant="secondary" size="sm" onClick={() => canvasRef.current?.createNodeAtViewportCenter()}>
+          <Plus className="size-4" />
+          Add
+        </Button>
+      </AppShellHeaderActions>
 
       <AppShellPortal targetId="app-shell-dock-content">
         <div className="flex h-full min-h-0 flex-col">
@@ -144,7 +164,7 @@ export function DashboardPage() {
         <div className="pointer-events-auto flex flex-wrap items-center gap-2">
           <span className={cn(dashboardStatusBadgeClass, board.saveBadge.className)}>{board.saveBadge.label}</span>
           {board.isWorkspaceRefreshing && board.saveBadge.label !== "Syncing" ? (
-            <Badge variant="secondary" className="gap-1.5">
+            <Badge key="refreshing" variant="secondary" className={cn("gap-1.5", shellContentInClass)}>
               <Loader2 className="size-3 animate-spin" />
               Refreshing
             </Badge>
@@ -152,13 +172,27 @@ export function DashboardPage() {
         </div>
 
         {board.saveError ? (
-          <div className={cn(dashboardErrorAlertClass, "rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive")}>
+          <div
+            key={board.saveError}
+            className={cn(
+              dashboardErrorAlertClass,
+              shellContentInClass,
+              "pointer-events-auto rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive",
+            )}
+          >
             {board.saveError}
           </div>
         ) : null}
 
         {board.workspaceQuery.status === "error" ? (
-          <div className={cn(dashboardErrorAlertClass, "rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive")}>
+          <div
+            key={board.workspaceQuery.error?.message ?? "workspace-error"}
+            className={cn(
+              dashboardErrorAlertClass,
+              shellContentInClass,
+              "pointer-events-auto rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive",
+            )}
+          >
             <div className="flex items-center gap-2 font-semibold">
               <AlertCircle className="size-4" />
               Couldn&apos;t load workspace

@@ -18,7 +18,7 @@ export const shellErrorPanelClass = "rounded-2xl border border-error/30 bg-error
 export const shellLoadingPanelClass = "rounded-2xl border border-default bg-muted/20 p-6";
 
 export const shellRailLinkBaseClass =
-  "flex size-10 items-center justify-center rounded-2xl text-muted transition-colors hover:bg-elevated hover:text-highlighted";
+  "flex size-10 items-center justify-center rounded-2xl text-muted transition-[background-color,border-color,color] duration-200 hover:bg-elevated hover:text-highlighted";
 
 export const shellRailLinkActiveClass = "bg-primary/10 text-primary border border-primary/30";
 
@@ -113,3 +113,18 @@ export const shellPageIntroClass = "text-sm text-muted";
 
 export const shellInPageSubnavClass =
   "-mx-6 border-b border-default bg-default px-6 lg:-mx-8 lg:px-8";
+
+/** Motion utilities (see index.css for keyframes and reduced-motion guards). */
+export const shellPageEnterClass = "shell-page-enter";
+
+export const shellContentInClass = "shell-content-in";
+
+export const shellStaggerItemClass = "shell-stagger-item";
+
+export const shellConfirmInClass = "shell-confirm-in";
+
+export const shellPanelStackClass = "shell-panel-stack";
+
+export const shellPanelClass = "shell-panel";
+
+export const shellPanelActiveClass = "shell-panel--active";

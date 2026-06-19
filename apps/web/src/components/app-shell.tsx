@@ -29,6 +29,8 @@ import {
   shellBreadcrumbTrailClass,
   shellContextSlotClass,
   shellFocusRingClass,
+  shellContextDividerClass,
+  shellContentInClass,
   shellHeaderActionsRegionClass,
   shellHeaderContextRegionClass,
   shellHeaderUtilityActionClass,
@@ -67,6 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pageTitle = useAppShellStore((s) => s.pageTitle);
   const setAgentDockOpen = useAppShellStore((s) => s.setAgentDockOpen);
   const toggleAgentDock = useAppShellStore((s) => s.toggleAgentDock);
+  const hasPageActions = useAppShellStore((s) => s.actionsOwnerCount > 0);
 
   const isSpatialMode = shellMode === "spatial";
   const activeNavigationItem = useMemo(() => findActiveNavItem(location.pathname), [location.pathname]);
@@ -159,7 +162,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className={shellHeaderContextRegionClass}>
           <div id="app-shell-context" className={shellContextSlotClass} />
           {showBreadcrumbs ? (
-            <nav className="hidden min-w-0 md:flex" aria-label="Breadcrumb">
+            <nav
+              key={`${location.pathname}-${pageTitle ?? ""}`}
+              className={cn("hidden min-w-0 md:flex", shellContentInClass)}
+              aria-label="Breadcrumb"
+            >
               <ol className={shellBreadcrumbTrailClass}>
                 {breadcrumbItems.map((item, index) => (
                   <li key={`${item}-${index}`} className="flex min-w-0 items-center gap-2">
@@ -187,6 +194,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         <div className={shellUtilityClusterClass}>
           <div id="app-shell-actions" className={shellHeaderActionsRegionClass} />
+          {hasPageActions ? <span className={shellContextDividerClass} aria-hidden="true" /> : null}
           <AppShellAccountMenu />
           <Button
             type="button"

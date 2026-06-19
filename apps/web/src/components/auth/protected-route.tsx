@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { authClient, whenAuthSessionReady } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
 import {
+  shellContentInClass,
   shellHeaderActionsRegionClass,
   shellHeaderContextRegionClass,
   shellLoadingPanelClass,
@@ -58,5 +59,9 @@ export function ProtectedRoute() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  return <Outlet />;
+  return (
+    <div className={cn(shellContentInClass, "h-full min-h-0")}>
+      <Outlet />
+    </div>
+  );
 }

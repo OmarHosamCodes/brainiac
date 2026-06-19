@@ -28,9 +28,11 @@ import {
 import { useWorkspaceBoard } from "@/hooks/use-workspace-board";
 import { orpc } from "@/lib/orpc";
 import {
+  shellContentInClass,
   shellPageBodyClass,
   shellPageClass,
   shellPageIntroClass,
+  shellStaggerItemClass,
   shellTopbarFieldClass,
 } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
@@ -69,6 +71,16 @@ export function MarketplacePage() {
   const [importItem, setImportItem] = useState<WorkspaceMarketplaceItem | null>(null);
 
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const isFirstFilterEffect = useRef(true);
+  const [gridGeneration, setGridGeneration] = useState(0);
+
+  useEffect(() => {
+    if (isFirstFilterEffect.current) {
+      isFirstFilterEffect.current = false;
+      return;
+    }
+    setGridGeneration((value) => value + 1);
+  }, [activeKind, debouncedSearch]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(searchInput), 300);
@@ -230,7 +242,7 @@ export function MarketplacePage() {
           </div>
 
           {workspaceQuery.status === "error" ? (
-            <div className="flex gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
+            <div className={cn("flex gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4", shellContentInClass)}>
               <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
               <div>
                 <p className="font-semibold text-highlighted">Workspace unavailable</p>
@@ -242,7 +254,7 @@ export function MarketplacePage() {
           ) : null}
 
           {saveError ? (
-            <div className="flex gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4">
+            <div className={cn("flex gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4", shellContentInClass)}>
               <CloudOff className="mt-0.5 size-5 shrink-0 text-destructive" />
               <div>
                 <p className="font-semibold text-highlighted">Unable to persist workspace</p>
@@ -258,7 +270,7 @@ export function MarketplacePage() {
               ))}
             </div>
           ) : !isInitialLoading && allItems.length === 0 && !marketplaceQuery.isFetchingNextPage ? (
-            <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-muted/40 py-20 text-center">
+            <div className={cn("flex flex-col items-center justify-center rounded-3xl border border-dashed border-muted/40 py-20 text-center", shellContentInClass)}>
               <SearchX className="mb-4 size-10 text-muted-foreground" />
               <h3 className="text-lg font-semibold text-highlighted">No items found</h3>
               <p className="mt-2 max-w-md text-sm text-muted-foreground">
@@ -267,14 +279,29 @@ export function MarketplacePage() {
             </div>
           ) : (
             <>
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {allItems.map((item) => (
-                  <MarketplaceItemCard
+              <div
+                key={gridGeneration}
+                className={cn(
+                  "grid gap-4 sm:grid-cols-2 xl:grid-cols-3",
+                  gridGeneration > 0 && shellContentInClass,
+                )}
+              >
+                {allItems.map((item, index) => (
+                  <div
                     key={item.id}
-                    item={item}
-                    loading={isWorkspaceInitialLoading}
-                    onInsert={openImportModal}
-                  />
+                    className={cn(gridGeneration === 0 && index < 8 && shellStaggerItemClass)}
+                    style={
+                      gridGeneration === 0 && index < 8
+                        ? ({ "--stagger-i": index } as React.CSSProperties)
+                        : undefined
+                    }
+                  >
+                    <MarketplaceItemCard
+                      item={item}
+                      loading={isWorkspaceInitialLoading}
+                      onInsert={openImportModal}
+                    />
+                  </div>
                 ))}
               </div>
 

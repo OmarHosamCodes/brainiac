@@ -5,6 +5,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useAppShellPageTitle } from "@/hooks/use-app-shell";
 import { useBilling } from "@/hooks/use-billing";
+import { shellConfirmInClass, shellContentInClass, shellStaggerItemClass } from "@/lib/utils/app-shell-ui";
+import { cn } from "@/lib/utils";
 
 export function BillingSuccessPage() {
   useAppShellPageTitle("Billing");
@@ -21,7 +23,7 @@ export function BillingSuccessPage() {
   return (
     <div className="flex h-full items-start justify-center overflow-y-auto bg-default px-4 pt-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md px-6 text-center">
-        <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-full bg-primary/10">
+        <div className={cn("mx-auto mb-6 flex size-16 items-center justify-center rounded-full bg-primary/10", shellConfirmInClass)}>
           <CheckCircle className="size-8 text-primary" />
         </div>
 
@@ -34,11 +36,17 @@ export function BillingSuccessPage() {
           </p>
         ) : null}
 
-        <div className="flex flex-col gap-3">
+        <div className={cn("flex flex-col gap-3", shellContentInClass)}>
           <Button asChild size="lg">
             <Link to="/dashboard">Go to Dashboard</Link>
           </Button>
-          <Button asChild size="lg" variant="outline">
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className={shellStaggerItemClass}
+            style={{ "--stagger-i": 1 } as React.CSSProperties}
+          >
             <Link to="/billing">View Billing Details</Link>
           </Button>
         </div>

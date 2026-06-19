@@ -1,6 +1,7 @@
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "@/components/app-shell";
+import { ShellPageTransition } from "@/components/shell/shell-page-transition";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AgencyPage } from "@/pages/agency-page";
 import { BillingPage } from "@/pages/billing-page";
@@ -16,7 +17,7 @@ import { TermsPage } from "@/pages/terms-page";
 function ShellLayout() {
   return (
     <AppShell>
-      <Outlet />
+      <ShellPageTransition />
     </AppShell>
   );
 }
