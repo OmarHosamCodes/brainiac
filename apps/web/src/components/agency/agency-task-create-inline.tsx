@@ -223,13 +223,7 @@ export function AgencyTaskCreateInline({
           >
             Cancel
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            className="h-8"
-            disabled={!canSubmit}
-            onClick={onSubmit}
-          >
+          <Button type="button" size="sm" className="h-8" disabled={!canSubmit} onClick={onSubmit}>
             {isCreatingTask ? "Adding…" : "Create"}
           </Button>
         </div>

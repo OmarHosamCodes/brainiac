@@ -46,9 +46,7 @@ function toRhythm(value: string): WorkspaceLeadershipRhythm {
   return value === "weekly" || value === "monthly" || value === "quarterly" ? value : "weekly";
 }
 
-function getMeetingClasses(
-  meeting: WorkspaceLeadershipRhythmPlannerBlock["meetings"][number],
-) {
+function getMeetingClasses(meeting: WorkspaceLeadershipRhythmPlannerBlock["meetings"][number]) {
   if (meeting.status === "done") {
     return "border-success/30 bg-success/5";
   }
@@ -93,7 +91,8 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
   );
 
   function getFilterCount(filter: WorkspaceLeadershipRhythmFilter) {
-    return block.meetings.filter((meeting) => matchesLeadershipRhythmFilter(meeting, filter)).length;
+    return block.meetings.filter((meeting) => matchesLeadershipRhythmFilter(meeting, filter))
+      .length;
   }
 
   function addMeeting() {
@@ -153,7 +152,13 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
             </p>
           </div>
 
-          <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={addMeeting}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="rounded-full"
+            onClick={addMeeting}
+          >
             <Plus />
             Add Meeting
           </Button>
@@ -170,7 +175,9 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
           </div>
 
           <div className="rounded-2xl border border-success/10 bg-success/5 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/60">Upcoming</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/60">
+              Upcoming
+            </p>
             <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
               {summary.upcomingCount}
             </p>
@@ -186,7 +193,9 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
           </div>
 
           <div className="rounded-2xl border border-secondary/10 bg-secondary/5 p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/60">Total</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/60">
+              Total
+            </p>
             <p className="mt-2 text-xl font-black tracking-tight text-secondary sm:text-2xl">
               {summary.totalMeetings}
             </p>
@@ -233,7 +242,9 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted-foreground/30">
             <Calendar className="size-6" />
           </div>
-          <p className="mt-3 text-xs font-bold text-muted-foreground">No meetings match this filter</p>
+          <p className="mt-3 text-xs font-bold text-muted-foreground">
+            No meetings match this filter
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -377,7 +388,10 @@ export function WorkspaceLeadershipRhythmPlannerBlockEditor({
                         mutateMeeting(meeting.id, (entry) => {
                           entry.durationMinutes = Math.min(
                             480,
-                            Math.max(15, Math.round(Number(event.target.value || entry.durationMinutes))),
+                            Math.max(
+                              15,
+                              Math.round(Number(event.target.value || entry.durationMinutes)),
+                            ),
                           );
                         })
                       }

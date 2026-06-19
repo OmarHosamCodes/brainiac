@@ -28,9 +28,7 @@ export function DashboardAgentMessage({ message }: DashboardAgentMessageProps) {
       aria-label={isUser ? "Your message" : "Agent message"}
     >
       <div className="flex items-center gap-2 px-1">
-        <span className="text-[11px] font-semibold text-muted">
-          {isUser ? "You" : "Agent"}
-        </span>
+        <span className="text-[11px] font-semibold text-muted">{isUser ? "You" : "Agent"}</span>
         <time className="text-[11px] text-muted" dateTime={message.createdAt}>
           {formatMessageTime(message.createdAt)}
         </time>

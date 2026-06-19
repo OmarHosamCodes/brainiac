@@ -1,10 +1,4 @@
-import {
-  Handle,
-  NodeResizer,
-  Position,
-  type Node,
-  type NodeProps,
-} from "@xyflow/react";
+import { Handle, NodeResizer, Position, type Node, type NodeProps } from "@xyflow/react";
 import { Pencil, ScanSearch, Trash2 } from "lucide-react";
 import { memo } from "react";
 
@@ -64,7 +58,9 @@ function WorkspaceFlowNodeComponent({ id, selected, data }: NodeProps<WorkspaceF
         style={getWorkspaceNodeTintStyle(data.tint)}
       >
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-default bg-muted/20 px-4 py-3">
-          <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-highlighted">{title}</h3>
+          <h3 className="min-w-0 flex-1 truncate text-sm font-semibold text-highlighted">
+            {title}
+          </h3>
           <div className="flex shrink-0 items-center gap-1">
             <button
               type="button"

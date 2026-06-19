@@ -654,6 +654,7 @@ export const agencyOpsRouter = {
       .input(
         z.object({
           teamId: z.string().min(1).optional(),
+          taskId: z.string().min(1).optional(),
           description: z.string().max(2_000).optional(),
           discard: z.boolean().optional(),
         }),
@@ -1415,5 +1416,5 @@ export const agencyOpsRouter = {
             .parse(await getTenureMember(context.session.user.id, input));
         }),
     },
-  }
+  },
 };

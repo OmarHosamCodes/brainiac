@@ -5,6 +5,7 @@ import { getQueryClient } from "@/lib/query-client";
 import {
   patchActiveTimerInCache,
   refetchAgencyActiveTimerQueries,
+  refetchAgencyProjectTaskListQueries,
   refetchAgencyTimeEntriesListQueries,
 } from "@/lib/utils/agency-query-cache";
 import { orpcClient } from "@/lib/orpc";
@@ -126,6 +127,7 @@ type StopTimerPayload = {
   description: string;
   discard?: boolean;
   activeTimer?: AgencyActiveTimer | null;
+  task?: Pick<AgencyProjectTask, "id" | "title"> | null;
 };
 
 type RestartEntryPayload = {
@@ -157,7 +159,6 @@ const OPTIMISTIC_CLIENT_ID = "optimistic-client";
 const OPTIMISTIC_CLIENT_NAME = "Unknown client";
 const OPTIMISTIC_USER_NAME = "You";
 
-
 let cachedUserId = "unknown-user";
 
 export function setAgencyTimeTrackingUserId(userId: string | null) {
@@ -171,7 +172,6 @@ export function getAgencyTimeTrackingUserId() {
 function getCurrentUserId() {
   return cachedUserId;
 }
-
 
 type AgencyTimeTrackingActions = ReturnType<typeof createAgencyTimeTrackingActions>;
 
@@ -189,14 +189,21 @@ function createAgencyTimeTrackingActions(
 ) {
   const draftByTeam: Record<string, TrackerDraft> = {};
 
-  const activeTimerQueryRegistry = new Map<string, { payload: RegisteredActiveTimerQuery; count: number }>();
+  const activeTimerQueryRegistry = new Map<
+    string,
+    { payload: RegisteredActiveTimerQuery; count: number }
+  >();
   const logQueryRegistry = new Map<string, { payload: RegisteredLogQuery; count: number }>();
 
   function optimistic() {
     return useAgencyOptimisticStore.getState();
   }
 
-  function registerInto<T>(registry: Map<string, { payload: T; count: number }>, key: string, payload: T) {
+  function registerInto<T>(
+    registry: Map<string, { payload: T; count: number }>,
+    key: string,
+    payload: T,
+  ) {
     const existing = registry.get(key);
     if (existing) {
       existing.count += 1;
@@ -312,7 +319,9 @@ function createAgencyTimeTrackingActions(
     return snapshots;
   }
 
-  function restoreTimerOverlaySnapshots(snapshots: Map<string, AgencyActiveTimer | null | undefined>) {
+  function restoreTimerOverlaySnapshots(
+    snapshots: Map<string, AgencyActiveTimer | null | undefined>,
+  ) {
     for (const [teamId, snapshot] of snapshots) {
       optimistic().restoreActiveTimer(teamId, snapshot);
     }
@@ -326,7 +335,9 @@ function createAgencyTimeTrackingActions(
     return snapshots;
   }
 
-  function restoreEntryOverlaySnapshots(snapshots: Map<string, AgencyListOverlay<AgencyTimeEntry>>) {
+  function restoreEntryOverlaySnapshots(
+    snapshots: Map<string, AgencyListOverlay<AgencyTimeEntry>>,
+  ) {
     for (const [teamId, snapshot] of snapshots) {
       optimistic().restoreTimeEntries(teamId, snapshot);
     }
@@ -395,6 +406,10 @@ function createAgencyTimeTrackingActions(
       syncDraftFromActiveTimer(payload.teamId, result.timer);
 
       void refetchAgencyActiveTimerQueries(payload.teamId);
+      void refetchAgencyProjectTaskListQueries(
+        payload.teamId,
+        getCurrentUserId() !== "unknown-user" ? getCurrentUserId() : undefined,
+      );
       void refetchAgencyTimeEntriesListQueries(payload.teamId);
 
       toast.success("Timer started", { description: payload.successDescription });
@@ -405,7 +420,9 @@ function createAgencyTimeTrackingActions(
       restoreEntryOverlaySnapshots(entryOverlaySnapshots);
       restoreTrackerDraft(payload.teamId, previousDraft);
 
-      toast.error("Unable to start timer", { description: getErrorMessage(error, "Please try again.") });
+      toast.error("Unable to start timer", {
+        description: getErrorMessage(error, "Please try again."),
+      });
     } finally {
       set((s) => ({ ...s, timerStartCount: Math.max(0, s.timerStartCount - 1) }));
     }
@@ -437,11 +454,14 @@ function createAgencyTimeTrackingActions(
     const timerOverlaySnapshots = captureTimerOverlaySnapshots([activeTimer.teamId]);
     const entryOverlaySnapshots = captureEntryOverlaySnapshots(affectedLogTeams);
     const description = payload.description.trim();
+    const selectedTask = payload.task ?? null;
     const optimisticEntry = payload.discard
       ? null
       : createOptimisticEntryFromTimer(activeTimer, {
           endedAt: new Date().toISOString(),
           description: description || activeTimer.description,
+          taskId: selectedTask?.id ?? activeTimer.taskId,
+          taskTitle: selectedTask?.title ?? activeTimer.taskTitle,
         });
     const draft = ensureTrackerDraft(payload.teamId);
 
@@ -462,10 +482,13 @@ function createAgencyTimeTrackingActions(
       patchActiveTimerCaches(null);
 
       draft.description = "";
+      draft.projectId = "";
+      draft.taskId = "";
       draft.syncedTimerId = null;
 
       const result = (await orpcClient.agencyOps.timer.stop({
         teamId: payload.teamId,
+        taskId: selectedTask?.id,
         description,
         discard: payload.discard,
       })) as {
@@ -482,6 +505,10 @@ function createAgencyTimeTrackingActions(
       }
 
       void refetchAgencyActiveTimerQueries(activeTimer.teamId);
+      void refetchAgencyProjectTaskListQueries(
+        activeTimer.teamId,
+        getCurrentUserId() !== "unknown-user" ? getCurrentUserId() : undefined,
+      );
       if (!payload.discard) {
         void refetchAgencyTimeEntriesListQueries(activeTimer.teamId);
       }
@@ -494,7 +521,9 @@ function createAgencyTimeTrackingActions(
       restoreEntryOverlaySnapshots(entryOverlaySnapshots);
       restoreTrackerDraft(payload.teamId, previousDraft);
 
-      toast.error(payload.discard ? "Unable to discard timer" : "Unable to stop timer", { description: getErrorMessage(error, "Please try again.") });
+      toast.error(payload.discard ? "Unable to discard timer" : "Unable to stop timer", {
+        description: getErrorMessage(error, "Please try again."),
+      });
     } finally {
       set((s) => ({ ...s, timerStopCount: Math.max(0, s.timerStopCount - 1) }));
     }
@@ -528,7 +557,9 @@ function createAgencyTimeTrackingActions(
       restoreQuerySnapshots(logSnapshots);
       optimistic().restoreTimeEntries(payload.teamId, entryOverlaySnapshot);
 
-      toast.error(ids.length > 1 ? "Unable to delete entries" : "Unable to delete entry", { description: getErrorMessage(error, "Please try again.") });
+      toast.error(ids.length > 1 ? "Unable to delete entries" : "Unable to delete entry", {
+        description: getErrorMessage(error, "Please try again."),
+      });
     } finally {
       set((s) => ({ ...s, deletingEntryIds: previousDeletingIds }));
     }
@@ -550,7 +581,12 @@ function createAgencyTimeTrackingActions(
 
     for (const query of queryClient.getQueryCache().findAll()) {
       const path = query.queryKey[0];
-      if (!Array.isArray(path) || path[0] !== "agencyOps" || path[1] !== "timer" || path[2] !== "getActive") {
+      if (
+        !Array.isArray(path) ||
+        path[0] !== "agencyOps" ||
+        path[1] !== "timer" ||
+        path[2] !== "getActive"
+      ) {
         continue;
       }
       const cached = queryClient.getQueryData<AgencyActiveTimerQueryData>(query.queryKey);
@@ -618,6 +654,8 @@ function createAgencyTimeTrackingActions(
       description?: string;
       clientId?: string;
       clientName?: string;
+      taskId?: string | null;
+      taskTitle?: string | null;
     },
   ) {
     return {
@@ -626,8 +664,8 @@ function createAgencyTimeTrackingActions(
       userId: timer.userId,
       userName: OPTIMISTIC_USER_NAME,
       projectId: timer.projectId,
-      taskId: timer.taskId,
-      taskTitle: timer.taskTitle,
+      taskId: overrides.taskId ?? timer.taskId,
+      taskTitle: overrides.taskTitle ?? timer.taskTitle,
       projectName: timer.projectName,
       clientId: overrides.clientId ?? OPTIMISTIC_CLIENT_ID,
       clientName: overrides.clientName ?? OPTIMISTIC_CLIENT_NAME,
@@ -715,8 +753,7 @@ function createAgencyTimeTrackingActions(
       getQueryClient().setQueryData<AgencyTimeEntriesListQueryData | undefined>(
         registeredQuery.queryKey,
         (current) => {
-          const base =
-            current ?? emptyTimeEntriesList(registeredQuery.page);
+          const base = current ?? emptyTimeEntriesList(registeredQuery.page);
 
           return {
             ...base,
@@ -826,8 +863,7 @@ function createAgencyTimeTrackingActions(
       getQueryClient().setQueryData<AgencyTimeEntriesListQueryData | undefined>(
         registeredQuery.queryKey,
         (current) => {
-          const base =
-            current ?? emptyTimeEntriesList(registeredQuery.page);
+          const base = current ?? emptyTimeEntriesList(registeredQuery.page);
           const hasOptimistic = base.items.some((item) => item.id === optimisticIdValue);
           if (hasOptimistic) {
             return {
@@ -996,7 +1032,6 @@ function createAgencyTimeTrackingActions(
     deleteEntries,
     updateEntry,
   };
-
 }
 
 export const useAgencyTimeTrackingStore = create<AgencyTimeTrackingState>((set, get) => ({

@@ -22,11 +22,7 @@ export function WorkspaceDecisionBlockEditor({
 
   const summary = useMemo(() => getDecisionSummary(block), [block]);
 
-  function updateDecisionItemText(
-    list: "pros" | "cons",
-    itemId: string,
-    value: string,
-  ) {
+  function updateDecisionItemText(list: "pros" | "cons", itemId: string, value: string) {
     mutateDecisionItem(tabId, block.id, itemId, list, (entry) => {
       entry.text = value.slice(0, 240);
     });
@@ -122,7 +118,9 @@ export function WorkspaceDecisionBlockEditor({
                     value={item.text}
                     placeholder="Add a pro point..."
                     className="flex-1 border-0 bg-transparent px-2 py-1 text-sm font-medium shadow-none focus-visible:ring-0"
-                    onChange={(event) => updateDecisionItemText("pros", item.id, event.target.value)}
+                    onChange={(event) =>
+                      updateDecisionItemText("pros", item.id, event.target.value)
+                    }
                   />
                   <Button
                     type="button"
@@ -188,7 +186,9 @@ export function WorkspaceDecisionBlockEditor({
                     value={item.text}
                     placeholder="Add a con point..."
                     className="flex-1 border-0 bg-transparent px-2 py-1 text-sm font-medium shadow-none focus-visible:ring-0"
-                    onChange={(event) => updateDecisionItemText("cons", item.id, event.target.value)}
+                    onChange={(event) =>
+                      updateDecisionItemText("cons", item.id, event.target.value)
+                    }
                   />
                   <Button
                     type="button"

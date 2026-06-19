@@ -46,9 +46,7 @@ export function DashboardAgentMessageList({ chat, scopeKind }: DashboardAgentMes
           onSelectSuggestion={(suggestion) => void chat.sendMessage(suggestion)}
         />
       ) : (
-        chat.messages.map((message) => (
-          <DashboardAgentMessage key={message.id} message={message} />
-        ))
+        chat.messages.map((message) => <DashboardAgentMessage key={message.id} message={message} />)
       )}
 
       {chat.isPending ? (

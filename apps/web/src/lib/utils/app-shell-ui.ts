@@ -40,10 +40,7 @@ export const shellHeaderUtilityButtonClass = [
   shellFocusRingClass,
 ].join(" ");
 
-export const shellHeaderUtilityActionClass = [
-  "shrink-0 rounded-xl",
-  shellFocusRingClass,
-].join(" ");
+export const shellHeaderUtilityActionClass = ["shrink-0 rounded-xl", shellFocusRingClass].join(" ");
 
 /** Shared geometry for all topbar controls: sm buttons, rounded-xl, 36px icon targets. */
 export const shellTopbarControlClass = "shrink-0 rounded-xl";

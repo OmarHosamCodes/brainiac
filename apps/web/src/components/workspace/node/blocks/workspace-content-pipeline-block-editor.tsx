@@ -179,7 +179,10 @@ export function WorkspaceContentPipelineBlockEditor({
 
   function canMoveItem(itemStatus: WorkspaceContentPipelineStatus, offset: -1 | 1) {
     const currentIndex = WORKSPACE_CONTENT_PIPELINE_STATUSES.indexOf(itemStatus);
-    return currentIndex + offset >= 0 && currentIndex + offset < WORKSPACE_CONTENT_PIPELINE_STATUSES.length;
+    return (
+      currentIndex + offset >= 0 &&
+      currentIndex + offset < WORKSPACE_CONTENT_PIPELINE_STATUSES.length
+    );
   }
 
   function clearDragState() {
@@ -194,7 +197,10 @@ export function WorkspaceContentPipelineBlockEditor({
     event.dataTransfer.setData("text/plain", itemId);
   }
 
-  function onColumnDragOver(status: WorkspaceContentPipelineStatus, event: React.DragEvent<HTMLElement>) {
+  function onColumnDragOver(
+    status: WorkspaceContentPipelineStatus,
+    event: React.DragEvent<HTMLElement>,
+  ) {
     if (!draggingItemId) {
       return;
     }
@@ -204,7 +210,10 @@ export function WorkspaceContentPipelineBlockEditor({
     setDragOverStatus(status);
   }
 
-  function onColumnDragLeave(status: WorkspaceContentPipelineStatus, event: React.DragEvent<HTMLElement>) {
+  function onColumnDragLeave(
+    status: WorkspaceContentPipelineStatus,
+    event: React.DragEvent<HTMLElement>,
+  ) {
     const currentTarget = event.currentTarget;
     const nextTarget = event.relatedTarget;
 
@@ -221,7 +230,10 @@ export function WorkspaceContentPipelineBlockEditor({
     }
   }
 
-  function onColumnDrop(status: WorkspaceContentPipelineStatus, event: React.DragEvent<HTMLElement>) {
+  function onColumnDrop(
+    status: WorkspaceContentPipelineStatus,
+    event: React.DragEvent<HTMLElement>,
+  ) {
     event.preventDefault();
     const itemId =
       draggingItemId || event.dataTransfer.getData("application/x-workspace-content-item") || "";
@@ -258,7 +270,9 @@ export function WorkspaceContentPipelineBlockEditor({
               <Layers className="size-5 text-primary" />
             </div>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground/60">Active items in pipeline</p>
+          <p className="mt-4 text-xs leading-relaxed text-muted-foreground/60">
+            Active items in pipeline
+          </p>
         </div>
 
         <div className="group relative overflow-hidden rounded-[24px] border border-muted/10 bg-muted/5 p-5 transition-all hover:bg-muted/10">
@@ -292,7 +306,9 @@ export function WorkspaceContentPipelineBlockEditor({
               <Rocket className="size-5 text-success" />
             </div>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground/60">Live content pieces</p>
+          <p className="mt-4 text-xs leading-relaxed text-muted-foreground/60">
+            Live content pieces
+          </p>
         </div>
 
         <div className="group relative overflow-hidden rounded-[24px] border border-muted/10 bg-muted/5 p-5 transition-all hover:bg-muted/10">
@@ -309,7 +325,9 @@ export function WorkspaceContentPipelineBlockEditor({
               <TopPlatformIcon className="size-5 text-secondary" />
             </div>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground/60">{getTopPlatformLabel()}</p>
+          <p className="mt-4 text-xs leading-relaxed text-muted-foreground/60">
+            {getTopPlatformLabel()}
+          </p>
         </div>
       </div>
 

@@ -186,7 +186,10 @@ export function WorkspaceTableBlockEditor({
           <tbody>
             {block.rows.map((row, rowIndex) => (
               <tr key={row.id}>
-                <th scope="row" className="px-2 align-middle text-sm font-bold text-muted-foreground/60">
+                <th
+                  scope="row"
+                  className="px-2 align-middle text-sm font-bold text-muted-foreground/60"
+                >
                   <div className="space-y-1">
                     <p>Row {rowIndex + 1}</p>
                     <p className="text-[9px] font-bold uppercase tracking-widest text-muted-foreground/40">

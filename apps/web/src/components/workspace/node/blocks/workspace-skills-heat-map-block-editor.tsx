@@ -39,7 +39,10 @@ export function WorkspaceSkillsHeatMapBlockEditor({
   const { mutateTypedBlock } = useWorkspaceNodeEditorContext();
 
   const summary = useMemo(() => getSkillsHeatMapSummary(block), [block]);
-  const dimensionIds = useMemo(() => block.dimensions.map((dimension) => dimension.id), [block.dimensions]);
+  const dimensionIds = useMemo(
+    () => block.dimensions.map((dimension) => dimension.id),
+    [block.dimensions],
+  );
   const canAddDimension = block.dimensions.length < WORKSPACE_SKILLS_HEAT_MAP_DIMENSIONS_LIMIT;
 
   const strongestDimensionLabel = useMemo(() => {
@@ -277,7 +280,9 @@ export function WorkspaceSkillsHeatMapBlockEditor({
 
       {block.dimensions.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
-          <p className="text-sm font-semibold text-muted-foreground">No skill dimensions added yet.</p>
+          <p className="text-sm font-semibold text-muted-foreground">
+            No skill dimensions added yet.
+          </p>
           <p className="mt-2 text-sm text-muted-foreground/80">
             Start with a default set or add custom skills for your team.
           </p>

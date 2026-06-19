@@ -465,8 +465,7 @@ export function useWorkspaceQuery() {
 
           const state = useWorkspaceStore.getState();
           const ready = authEnabled && state.loadApplied && !state.isHydratingWorkspace;
-          const pending =
-            state.localRevision > state.syncedRevision || saveWorkspace.isPending;
+          const pending = state.localRevision > state.syncedRevision || saveWorkspace.isPending;
 
           if (!ready || !pending) {
             return;
@@ -514,7 +513,15 @@ export function useWorkspaceQuery() {
         void persistWorkspace(snapshot, revision);
       }, delay);
     },
-    [authEnabled, clearRetryTimer, clearSaveTimer, clearSavedStateTimer, persistWorkspace, setSaveError, setSaveState],
+    [
+      authEnabled,
+      clearRetryTimer,
+      clearSaveTimer,
+      clearSavedStateTimer,
+      persistWorkspace,
+      setSaveError,
+      setSaveState,
+    ],
   );
 
   scheduleWorkspaceSaveRef.current = scheduleWorkspaceSave;
@@ -890,12 +897,7 @@ export function useWorkspaceQuery() {
     }
 
     applyRemoteSnapshot(remoteWorkspace.nodes, remoteWorkspace.updatedAt);
-  }, [
-    applyRemoteSnapshot,
-    saveWorkspace.isPending,
-    setSyncedAt,
-    workspaceQuery.data,
-  ]);
+  }, [applyRemoteSnapshot, saveWorkspace.isPending, setSyncedAt, workspaceQuery.data]);
 
   useEffect(() => {
     if (isApplyingRemoteRef.current) {
@@ -921,7 +923,13 @@ export function useWorkspaceQuery() {
 
     incrementLocalRevision();
     scheduleWorkspaceSaveRef.current();
-  }, [nodes, workspaceReadyForEdits, isHydratingWorkspace, incrementLocalRevision, setIsHydratingWorkspace]);
+  }, [
+    nodes,
+    workspaceReadyForEdits,
+    isHydratingWorkspace,
+    incrementLocalRevision,
+    setIsHydratingWorkspace,
+  ]);
 
   useEffect(
     () => () => {

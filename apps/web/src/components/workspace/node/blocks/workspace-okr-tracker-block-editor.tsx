@@ -95,7 +95,9 @@ export function WorkspaceOkrTrackerBlockEditor({
       if (!objective) {
         return;
       }
-      objective.keyResults = objective.keyResults.filter((keyResult) => keyResult.id !== keyResultId);
+      objective.keyResults = objective.keyResults.filter(
+        (keyResult) => keyResult.id !== keyResultId,
+      );
     });
   }
 
@@ -138,7 +140,13 @@ export function WorkspaceOkrTrackerBlockEditor({
           </p>
         </div>
 
-        <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={addObjective}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="rounded-full"
+          onClick={addObjective}
+        >
           <Plus />
           New Objective
         </Button>

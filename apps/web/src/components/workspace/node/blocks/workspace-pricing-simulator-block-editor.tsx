@@ -1,4 +1,7 @@
-import { getPricingSimulatorSummary, type WorkspacePricingSimulatorBlock } from "@brainiac/workspace";
+import {
+  getPricingSimulatorSummary,
+  type WorkspacePricingSimulatorBlock,
+} from "@brainiac/workspace";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
@@ -76,7 +79,9 @@ export function WorkspacePricingSimulatorBlockEditor({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-sm font-black tracking-tight text-foreground">Pricing Simulator</h2>
-            <p className="text-xs text-muted-foreground">Monthly retainer model for executive decisions.</p>
+            <p className="text-xs text-muted-foreground">
+              Monthly retainer model for executive decisions.
+            </p>
           </div>
 
           <div className="rounded-xl border border-primary/10 bg-primary/5 px-4 py-2.5 text-right">
@@ -128,10 +133,7 @@ export function WorkspacePricingSimulatorBlockEditor({
         </div>
 
         {controls.map((control) => (
-          <article
-            key={control.key}
-            className="rounded-xl border border-muted/20 bg-muted/10 p-3"
-          >
+          <article key={control.key} className="rounded-xl border border-muted/20 bg-muted/10 p-3">
             <div className="mb-2 flex items-center justify-between gap-3">
               <label
                 htmlFor={control.key}
@@ -143,7 +145,9 @@ export function WorkspacePricingSimulatorBlockEditor({
                 <span className="text-lg font-black tracking-tight text-foreground sm:text-xl">
                   {block[control.key]}
                 </span>
-                <span className="text-xs font-semibold text-muted-foreground">{control.suffix}</span>
+                <span className="text-xs font-semibold text-muted-foreground">
+                  {control.suffix}
+                </span>
               </div>
             </div>
 

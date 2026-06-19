@@ -1,9 +1,4 @@
-import {
-  ChevronRight,
-  MoreVertical,
-  Play,
-  Trash2,
-} from "lucide-react";
+import { ChevronRight, MoreVertical, Play, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot";
@@ -181,9 +176,14 @@ export function AgencyTimeEntryRow({
           }}
         >
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="truncate text-sm font-medium text-highlighted">{displayTitle(group)}</span>
+            <span className="truncate text-sm font-medium text-highlighted">
+              {displayTitle(group)}
+            </span>
             {isMulti && !expanded ? (
-              <Badge variant="secondary" className="rounded-full font-mono tabular-nums text-[10px]">
+              <Badge
+                variant="secondary"
+                className="rounded-full font-mono tabular-nums text-[10px]"
+              >
                 {group.entries.length}
               </Badge>
             ) : null}

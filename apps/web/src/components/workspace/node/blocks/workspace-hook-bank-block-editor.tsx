@@ -160,7 +160,9 @@ export function WorkspaceHookBankBlockEditor({
           </p>
         </div>
         <div className="rounded-2xl border border-warning/10 bg-warning/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/60">Avg Score</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/60">
+            Avg Score
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
             {summary.averageScore}/10
           </p>
@@ -189,7 +191,13 @@ export function WorkspaceHookBankBlockEditor({
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={addHook}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="rounded-full"
+            onClick={addHook}
+          >
             <Plus />
             Add Hook
           </Button>
@@ -213,7 +221,13 @@ export function WorkspaceHookBankBlockEditor({
             <Link className="size-6" />
           </div>
           <p className="mt-3 text-xs font-bold text-muted-foreground">No hooks stored yet</p>
-          <Button type="button" variant="secondary" size="sm" className="mt-3 rounded-full" onClick={addHook}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="mt-3 rounded-full"
+            onClick={addHook}
+          >
             <Plus />
             Add first hook
           </Button>

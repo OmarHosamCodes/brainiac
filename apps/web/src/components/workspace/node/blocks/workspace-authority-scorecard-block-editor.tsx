@@ -112,7 +112,9 @@ export function WorkspaceAuthorityScorecardBlockEditor({
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">On Target</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">
+            On Target
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
             {summary.atTargetCount}/{summary.metricCount}
           </p>
@@ -128,7 +130,9 @@ export function WorkspaceAuthorityScorecardBlockEditor({
         </div>
 
         <div className="rounded-2xl border border-success/20 bg-success/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">Strongest</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">
+            Strongest
+          </p>
           <p className="mt-2 text-lg font-black tracking-tight text-success sm:text-xl">
             {summary.strongestMetric
               ? workspaceAuthorityScoreMetricLabels[summary.strongestMetric]

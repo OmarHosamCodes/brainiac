@@ -35,7 +35,9 @@ type ProjectTasksListInput = {
 };
 
 function pathsEqual(path: string[], expected: string[]) {
-  return path.length === expected.length && path.every((segment, index) => segment === expected[index]);
+  return (
+    path.length === expected.length && path.every((segment, index) => segment === expected[index])
+  );
 }
 
 function getOrpcQueryMeta(queryKey: QueryKey): OrpcQueryMeta | undefined {

@@ -128,7 +128,10 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
     if (!name || !teamId) return;
     setNewClientName("");
     setNewClientOpen(false);
-    await agencyOps.createClient({ teamId, name }, { onSuccess: (clientId) => setSelectedClientId(clientId) });
+    await agencyOps.createClient(
+      { teamId, name },
+      { onSuccess: (clientId) => setSelectedClientId(clientId) },
+    );
   }
 
   async function renameClient() {
@@ -195,7 +198,9 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
         <div className="rounded-2xl border border-dashed border-default bg-muted/20 p-10 text-center">
           <Building2 className="mx-auto size-7 text-muted" />
           <p className="mt-4 text-sm font-bold text-highlighted">No clients yet.</p>
-          <p className="mt-1 text-xs text-muted">Add your first client to start grouping projects and time.</p>
+          <p className="mt-1 text-xs text-muted">
+            Add your first client to start grouping projects and time.
+          </p>
           <Popover open={newClientOpen} onOpenChange={setNewClientOpen}>
             <PopoverTrigger asChild>
               <Button variant="secondary" size="sm" className="mt-4">
@@ -210,7 +215,9 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
                   void createClient();
                 }}
               >
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">New client</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                  New client
+                </p>
                 <Input
                   value={newClientName}
                   onChange={(e) => setNewClientName(e.target.value)}
@@ -256,7 +263,9 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
                       void createClient();
                     }}
                   >
-                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">New client</p>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                      New client
+                    </p>
                     <Input
                       value={newClientName}
                       onChange={(e) => setNewClientName(e.target.value)}
@@ -313,11 +322,15 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
             <section className="space-y-4">
               <div className="flex flex-wrap items-baseline justify-between gap-3 rounded-2xl border border-default bg-default p-5">
                 <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Client</p>
-                  <h2 className="mt-1 truncate text-lg font-bold text-highlighted">{selectedClient.name}</h2>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                    Client
+                  </p>
+                  <h2 className="mt-1 truncate text-lg font-bold text-highlighted">
+                    {selectedClient.name}
+                  </h2>
                   <p className="mt-1 font-mono text-[11px] tabular-nums text-muted">
-                    {formatDuration(weekHoursByClient.get(selectedClient.id) ?? 0, "short")} this week ·{" "}
-                    {selectedClientProjects.length} projects
+                    {formatDuration(weekHoursByClient.get(selectedClient.id) ?? 0, "short")} this
+                    week · {selectedClientProjects.length} projects
                   </p>
                 </div>
                 <Popover open={renameOpen} onOpenChange={setRenameOpen}>
@@ -357,7 +370,9 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
 
               <div className="rounded-2xl border border-default bg-default">
                 <div className="border-b border-default px-4 py-3">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Projects</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                    Projects
+                  </p>
                 </div>
                 {selectedClientProjects.length > 0 ? (
                   <ul>
@@ -464,10 +479,12 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
 
                 <section className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Archive</p>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                      Archive
+                    </p>
                     <p className="mt-1 text-xs text-muted">
-                      Archive {selectedClient.name} to remove them from active filters and billing without
-                      losing their history.
+                      Archive {selectedClient.name} to remove them from active filters and billing
+                      without losing their history.
                     </p>
                   </div>
                   <Button

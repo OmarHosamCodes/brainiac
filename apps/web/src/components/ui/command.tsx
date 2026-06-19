@@ -45,7 +45,10 @@ function CommandDialog({
   );
 }
 
-function CommandInput({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Input>) {
+function CommandInput({
+  className,
+  ...props
+}: React.ComponentProps<typeof CommandPrimitive.Input>) {
   return (
     <div className="flex items-center border-b border-border px-3" cmdk-input-wrapper="">
       <Search className="mr-2 size-4 shrink-0 text-muted-foreground" />
@@ -70,10 +73,15 @@ function CommandList({ className, ...props }: React.ComponentProps<typeof Comman
 }
 
 function CommandEmpty({ ...props }: React.ComponentProps<typeof CommandPrimitive.Empty>) {
-  return <CommandPrimitive.Empty className="py-6 text-center text-sm text-muted-foreground" {...props} />;
+  return (
+    <CommandPrimitive.Empty className="py-6 text-center text-sm text-muted-foreground" {...props} />
+  );
 }
 
-function CommandGroup({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Group>) {
+function CommandGroup({
+  className,
+  ...props
+}: React.ComponentProps<typeof CommandPrimitive.Group>) {
   return (
     <CommandPrimitive.Group
       className={cn(
@@ -89,7 +97,9 @@ function CommandSeparator({
   className,
   ...props
 }: React.ComponentProps<typeof CommandPrimitive.Separator>) {
-  return <CommandPrimitive.Separator className={cn("-mx-1 h-px bg-border", className)} {...props} />;
+  return (
+    <CommandPrimitive.Separator className={cn("-mx-1 h-px bg-border", className)} {...props} />
+  );
 }
 
 function CommandItem({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Item>) {
@@ -107,7 +117,10 @@ function CommandItem({ className, ...props }: React.ComponentProps<typeof Comman
 function CommandShortcut({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
-      className={cn("ml-auto font-mono text-[11px] tracking-widest text-muted-foreground", className)}
+      className={cn(
+        "ml-auto font-mono text-[11px] tracking-widest text-muted-foreground",
+        className,
+      )}
       {...props}
     />
   );

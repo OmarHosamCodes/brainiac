@@ -49,12 +49,15 @@ export function WorkspaceProcessBlockEditor({
           </div>
         </div>
         <div className="w-full max-w-xs">
-          <BlockProgressBar
-            value={summary.completedSteps}
-            max={Math.max(summary.totalSteps, 1)}
-          />
+          <BlockProgressBar value={summary.completedSteps} max={Math.max(summary.totalSteps, 1)} />
         </div>
-        <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={addStep}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="rounded-full"
+          onClick={addStep}
+        >
           <Plus />
           Add Step
         </Button>
@@ -186,7 +189,9 @@ export function WorkspaceProcessBlockEditor({
               <ListChecks className="size-6" />
             </div>
             <p className="mt-3 text-xs font-bold text-muted-foreground">No steps yet</p>
-            <p className="mt-1 text-[11px] text-muted-foreground/60">Add steps to build your process</p>
+            <p className="mt-1 text-[11px] text-muted-foreground/60">
+              Add steps to build your process
+            </p>
           </div>
         ) : null}
       </div>

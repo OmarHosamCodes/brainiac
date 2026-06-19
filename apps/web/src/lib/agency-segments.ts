@@ -2,16 +2,11 @@
  * Agency segments — single source of truth for the IA.
  *
  * Order is daily-traffic ranked. The shortcut key is the second letter of
- * the `g X` chord (Work = `g w`, Projects = `g p`, …).
+ * the `g X` chord (Work = `g w`, Clients = `g c`, …).
  */
-export type AgencySegmentId =
-  | "work"
-  | "projects"
-  | "clients"
-  | "reports"
-  | "resourcing"
-  | "billing"
-  | "settings";
+export type AgencySegmentId = "work" | "clients" | "reports" | "management" | "settings";
+
+export type LegacyAgencySegmentId = "projects" | "resourcing" | "billing";
 
 export type AgencySegment = {
   id: AgencySegmentId;
@@ -31,13 +26,6 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
     subtitle: "Tasks, threads, and time in one place.",
   },
   {
-    id: "projects",
-    label: "Projects",
-    icon: "i-lucide-folder-kanban",
-    shortcutKey: "p",
-    subtitle: "Every project, with budgets and hours this period.",
-  },
-  {
     id: "clients",
     label: "Clients",
     icon: "i-lucide-building-2",
@@ -52,24 +40,27 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
     subtitle: "Hours and breakdowns across teams and clients.",
   },
   {
-    id: "resourcing",
-    label: "Resourcing",
-    icon: "i-lucide-calendar-range",
-    shortcutKey: "u",
-    subtitle: "Member capacity and utilization, week by week.",
-  },
-  {
-    id: "billing",
-    label: "Invoices",
-    icon: "i-lucide-receipt",
-    shortcutKey: "b",
-    subtitle: "Invoices, draft to paid, and period close.",
+    id: "management",
+    label: "Management",
+    icon: "i-lucide-sliders-horizontal",
+    shortcutKey: "m",
+    subtitle: "Capacity, invoices, rates, and tenure policy.",
   },
   {
     id: "settings",
     label: "Settings",
     icon: "i-lucide-settings",
     shortcutKey: "s",
-    subtitle: "Team configuration for time, rates, and tenure.",
+    subtitle: "Workspace preferences and operational defaults.",
   },
 ] as const;
+
+export const LEGACY_AGENCY_SEGMENT_MAP = {
+  projects: "work",
+  resourcing: "management",
+  billing: "management",
+} as const satisfies Record<LegacyAgencySegmentId, AgencySegmentId>;
+
+export function isLegacyAgencySegmentId(value: string | null): value is LegacyAgencySegmentId {
+  return value === "projects" || value === "resourcing" || value === "billing";
+}

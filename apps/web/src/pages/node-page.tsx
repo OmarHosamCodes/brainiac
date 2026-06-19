@@ -8,10 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useWorkspaceNodePage } from "@/hooks/use-workspace-node-page";
 import { AppShellPortal } from "@/hooks/use-app-shell-portal";
-import {
-  useAppShellContextSlot,
-  useAppShellCustomDock,
-} from "@/hooks/use-app-shell";
+import { useAppShellContextSlot, useAppShellCustomDock } from "@/hooks/use-app-shell";
 import { useAppShellStore } from "@/stores/app-shell";
 import {
   shellBreadcrumbCurrentClass,
@@ -82,27 +79,27 @@ export function NodePage() {
         <div className={cn("h-full", shellContentInClass)}>
           <WorkspaceNodeEditorProvider value={page.editorContext}>
             <WorkspaceNodeShell
-            node={page.node}
-            activeTab={page.activeTab}
-            activeTabId={page.activeTabId}
-            saveBadge={page.saveBadge}
-            saveError={page.saveError}
-            visibleBlocks={page.visibleBlocks}
-            nodeVisibilityLabel={page.nodeVisibilityLabel}
-            nodeVisibilityBadgeClass={page.nodeVisibilityBadgeClass}
-            nodeOwnerLabel={page.nodeOwnerLabel}
-            nodeTeamName={page.canManageNodeSharing ? page.nodeTeamName : null}
-            activeTeamRole={page.activeTeamRole}
-            canEditNodeContent={page.canEditNodeContent}
-            teams={page.teams}
-            nodeShareTeamId={page.nodeShareTeamId}
-            canManageNodeSharing={page.canManageNodeSharing}
-            sharePending={page.shareNodeMutation.isPending}
-            unsharePending={page.unshareNodeMutation.isPending}
-            onNodeShareTeamIdChange={page.setNodeShareTeamId}
-            onShareNode={() => void page.shareCurrentNodeToTeam()}
-            onUnshareNode={() => void page.unshareCurrentNodeFromTeam()}
-          />
+              node={page.node}
+              activeTab={page.activeTab}
+              activeTabId={page.activeTabId}
+              saveBadge={page.saveBadge}
+              saveError={page.saveError}
+              visibleBlocks={page.visibleBlocks}
+              nodeVisibilityLabel={page.nodeVisibilityLabel}
+              nodeVisibilityBadgeClass={page.nodeVisibilityBadgeClass}
+              nodeOwnerLabel={page.nodeOwnerLabel}
+              nodeTeamName={page.canManageNodeSharing ? page.nodeTeamName : null}
+              activeTeamRole={page.activeTeamRole}
+              canEditNodeContent={page.canEditNodeContent}
+              teams={page.teams}
+              nodeShareTeamId={page.nodeShareTeamId}
+              canManageNodeSharing={page.canManageNodeSharing}
+              sharePending={page.shareNodeMutation.isPending}
+              unsharePending={page.unshareNodeMutation.isPending}
+              onNodeShareTeamIdChange={page.setNodeShareTeamId}
+              onShareNode={() => void page.shareCurrentNodeToTeam()}
+              onUnshareNode={() => void page.unshareCurrentNodeFromTeam()}
+            />
           </WorkspaceNodeEditorProvider>
         </div>
       ) : null}

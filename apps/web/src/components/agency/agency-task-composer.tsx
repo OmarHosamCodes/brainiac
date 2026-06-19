@@ -147,10 +147,7 @@ export const AgencyTaskComposer = forwardRef<AgencyTaskComposerHandle, AgencyTas
 
     const isBusy = isSending || askAgentMutation.isPending;
 
-    async function uploadFiles(
-      files: File[],
-      options: { durationSeconds?: number | null } = {},
-    ) {
+    async function uploadFiles(files: File[], options: { durationSeconds?: number | null } = {}) {
       for (const file of files) {
         try {
           const metadata = await captureFileMetadata(file);

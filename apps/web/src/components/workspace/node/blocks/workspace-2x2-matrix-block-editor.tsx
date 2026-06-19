@@ -14,10 +14,22 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const quadrants = [
-  { key: "topLeft" as const, tone: "border-emerald-300/40 bg-emerald-500/5", accent: "text-emerald-500" },
+  {
+    key: "topLeft" as const,
+    tone: "border-emerald-300/40 bg-emerald-500/5",
+    accent: "text-emerald-500",
+  },
   { key: "topRight" as const, tone: "border-sky-300/40 bg-sky-500/5", accent: "text-sky-500" },
-  { key: "bottomLeft" as const, tone: "border-amber-300/40 bg-amber-500/5", accent: "text-amber-500" },
-  { key: "bottomRight" as const, tone: "border-rose-300/40 bg-rose-500/5", accent: "text-rose-500" },
+  {
+    key: "bottomLeft" as const,
+    tone: "border-amber-300/40 bg-amber-500/5",
+    accent: "text-amber-500",
+  },
+  {
+    key: "bottomRight" as const,
+    tone: "border-rose-300/40 bg-rose-500/5",
+    accent: "text-rose-500",
+  },
 ];
 
 type MatrixField =
@@ -57,7 +69,8 @@ export function Workspace2x2MatrixBlockEditor({
               Decision Matrix
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Compare ideas across four quadrants with clearer axis labels and easier item management.
+              Compare ideas across four quadrants with clearer axis labels and easier item
+              management.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -87,10 +100,7 @@ export function Workspace2x2MatrixBlockEditor({
           ].map(([label, value, extra]) => (
             <div
               key={String(label)}
-              className={cn(
-                "rounded-3xl border border-muted/20 bg-muted/10 p-5",
-                extra,
-              )}
+              className={cn("rounded-3xl border border-muted/20 bg-muted/10 p-5", extra)}
             >
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                 {label}
@@ -160,7 +170,9 @@ export function Workspace2x2MatrixBlockEditor({
                   aria-label={`Add item to ${block.quadrants[quadrant.key].name || "quadrant"}`}
                   onClick={() =>
                     mutateTypedBlock(tabId, block.id, "2x2-matrix", (entry) => {
-                      entry.quadrants[quadrant.key].items.push(createWorkspace2x2MatrixItem({ text: "" }));
+                      entry.quadrants[quadrant.key].items.push(
+                        createWorkspace2x2MatrixItem({ text: "" }),
+                      );
                     })
                   }
                 >

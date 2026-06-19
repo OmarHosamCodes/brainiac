@@ -200,17 +200,29 @@ export function WorkspaceContentQualityRadarBlockEditor({
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
             Average
           </p>
-          <p className={cn("mt-2 text-2xl font-black tracking-tight sm:text-3xl", averageToneClasses)}>
+          <p
+            className={cn(
+              "mt-2 text-2xl font-black tracking-tight sm:text-3xl",
+              averageToneClasses,
+            )}
+          >
             {summary.averageScore}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Live average across all 10 quality dimensions</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Live average across all 10 quality dimensions
+          </p>
         </div>
 
         <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
             Quality band
           </p>
-          <p className={cn("mt-2 text-2xl font-black tracking-tight sm:text-3xl", averageToneClasses)}>
+          <p
+            className={cn(
+              "mt-2 text-2xl font-black tracking-tight sm:text-3xl",
+              averageToneClasses,
+            )}
+          >
             {qualityBand.label}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">{qualityBand.interpretation}</p>
@@ -225,7 +237,9 @@ export function WorkspaceContentQualityRadarBlockEditor({
               ? workspaceContentQualityDimensionLabels[summary.strongestDimension]
               : "None"}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">The highest-performing quality pillar</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            The highest-performing quality pillar
+          </p>
         </div>
 
         <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
@@ -237,7 +251,9 @@ export function WorkspaceContentQualityRadarBlockEditor({
               ? workspaceContentQualityDimensionLabels[summary.weakestDimension]
               : "None"}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Priority area for the next content iteration</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Priority area for the next content iteration
+          </p>
         </div>
       </div>
 
@@ -247,8 +263,8 @@ export function WorkspaceContentQualityRadarBlockEditor({
             <div>
               <p className="text-sm font-semibold text-foreground">Radar view</p>
               <p className="text-sm text-muted-foreground">
-                The filled shape expands where content quality is strong and collapses where execution
-                needs work.
+                The filled shape expands where content quality is strong and collapses where
+                execution needs work.
               </p>
             </div>
 
@@ -256,7 +272,9 @@ export function WorkspaceContentQualityRadarBlockEditor({
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                 Score
               </p>
-              <p className={cn("text-2xl font-black tracking-tight sm:text-3xl", averageToneClasses)}>
+              <p
+                className={cn("text-2xl font-black tracking-tight sm:text-3xl", averageToneClasses)}
+              >
                 {summary.averageScore}
               </p>
             </div>
@@ -333,12 +351,17 @@ export function WorkspaceContentQualityRadarBlockEditor({
                       {workspaceContentQualityDimensionLabels[dimension]}
                     </p>
                     <span
-                      className={cn("text-xs font-black", getScoreToneClasses(block.scores[dimension]))}
+                      className={cn(
+                        "text-xs font-black",
+                        getScoreToneClasses(block.scores[dimension]),
+                      )}
                     >
                       {block.scores[dimension]}/10
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{dimensionPlaybook[dimension]}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {dimensionPlaybook[dimension]}
+                  </p>
                 </article>
               ))}
             </div>
@@ -349,8 +372,8 @@ export function WorkspaceContentQualityRadarBlockEditor({
           <div className="mb-5">
             <p className="text-sm font-semibold text-foreground">Dimension controls</p>
             <p className="text-sm text-muted-foreground">
-              Score each pillar from 1 to 10. Use the benchmark note to decide what to improve before
-              publishing.
+              Score each pillar from 1 to 10. Use the benchmark note to decide what to improve
+              before publishing.
             </p>
           </div>
 
@@ -365,7 +388,10 @@ export function WorkspaceContentQualityRadarBlockEditor({
                     {workspaceContentQualityDimensionLabels[dimension]}
                   </p>
                   <span
-                    className={cn("text-sm font-black", getScoreToneClasses(block.scores[dimension]))}
+                    className={cn(
+                      "text-sm font-black",
+                      getScoreToneClasses(block.scores[dimension]),
+                    )}
                   >
                     {block.scores[dimension]}
                   </span>

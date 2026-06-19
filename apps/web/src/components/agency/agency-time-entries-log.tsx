@@ -1,10 +1,4 @@
-import {
-  AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  MoreVertical,
-} from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight, Loader2, MoreVertical } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AgencyTimeEntryDayGroup } from "@/components/agency/agency-time-entry-day-group";
@@ -153,46 +147,66 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
 
   return (
     <div className={["flex min-h-0 flex-1 flex-col", className].filter(Boolean).join(" ")}>
-      {(logRefreshing || entries.length > 0) ? (
-        <div className="flex shrink-0 items-center justify-end gap-2 border-b border-default px-4 py-1.5">
-          {logRefreshing ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-              <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
-              Syncing
-            </span>
-          ) : null}
+      {logRefreshing || entries.length > 0 || weekSummary ? (
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-default px-4 py-2">
+          <span className="sr-only">Time totals</span>
+          <div className="flex items-center gap-4">
+            <div>
+              <p className={agencyLabelClass}>Today</p>
+              <p className={agencyTimeFooterMetricClass}>{formatDuration(todaySeconds, "short")}</p>
+            </div>
+            <div className="h-6 w-px bg-default" aria-hidden />
+            <div>
+              <p className={agencyLabelClass}>Week total</p>
+              <p className={agencyTimeFooterMetricClass}>
+                {formatDuration(weekSummary?.totalSeconds ?? 0, "clock")}
+              </p>
+            </div>
+          </div>
 
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" aria-label="Log options">
-                <MoreVertical className="size-3.5" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-48 space-y-2 p-3">
-              <p className="text-xs font-semibold text-muted">Page size</p>
-              <div className="flex flex-wrap gap-1">
-                {[20, 50, 100].map((size) => (
-                  <Button
-                    key={size}
-                    variant={pageSize === size ? "secondary" : "ghost"}
-                    size="sm"
-                    className="rounded-full font-mono tabular-nums"
-                    onClick={() => {
-                      setPageSize(size);
-                      setPage(1);
-                    }}
-                  >
-                    {size}
-                  </Button>
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
+          <div className="ml-auto flex items-center gap-2">
+            {logRefreshing ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted">
+                <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
+                Syncing
+              </span>
+            ) : null}
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="ghost" size="sm" aria-label="Log options">
+                  <MoreVertical className="size-3.5" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-48 space-y-2 p-3">
+                <p className="text-xs font-semibold text-muted">Page size</p>
+                <div className="flex flex-wrap gap-1">
+                  {[20, 50, 100].map((size) => (
+                    <Button
+                      key={size}
+                      variant={pageSize === size ? "secondary" : "ghost"}
+                      size="sm"
+                      className="rounded-full font-mono tabular-nums"
+                      onClick={() => {
+                        setPageSize(size);
+                        setPage(1);
+                      }}
+                    >
+                      {size}
+                    </Button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       ) : null}
 
       {logQueryError ? (
-        <div className="mx-4 mt-4 rounded-xl border border-error/30 bg-error/5 p-4 text-sm" role="alert">
+        <div
+          className="mx-4 mt-4 rounded-xl border border-error/30 bg-error/5 p-4 text-sm"
+          role="alert"
+        >
           <div className="flex items-start gap-2">
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-error" />
             <div className="min-w-0 flex-1">
@@ -247,50 +261,33 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
             />
           ))
         )}
-
-        {entries.length > 0 && maxPage > 1 ? (
-          <div className="flex items-center justify-between gap-2 border-t border-default px-4 py-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage(Math.max(1, page - 1))}
-            >
-              <ChevronLeft />
-              Previous
-            </Button>
-            <p className="text-xs text-muted">
-              Page {page} / {maxPage}
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={page >= maxPage}
-              onClick={() => setPage(Math.min(maxPage, page + 1))}
-            >
-              Next
-              <ChevronRight />
-            </Button>
-          </div>
-        ) : null}
       </div>
 
-      <footer className={agencyTimeWeekFooterClass}>
-        <span className="sr-only">Time totals</span>
-        <div className="ml-auto flex items-center gap-4">
-          <div className="text-right">
-            <p className={agencyLabelClass}>Today</p>
-            <p className={agencyTimeFooterMetricClass}>{formatDuration(todaySeconds, "short")}</p>
-          </div>
-          <div className="h-6 w-px bg-default" aria-hidden />
-          <div className="text-right">
-            <p className={agencyLabelClass}>Week total</p>
-            <p className={agencyTimeFooterMetricClass}>
-              {formatDuration(weekSummary?.totalSeconds ?? 0, "clock")}
-            </p>
-          </div>
+      {entries.length > 0 && maxPage > 1 ? (
+        <div className={agencyTimeWeekFooterClass}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={page <= 1}
+            onClick={() => setPage(Math.max(1, page - 1))}
+          >
+            <ChevronLeft />
+            Previous
+          </Button>
+          <p className="font-mono text-xs font-semibold tabular-nums text-muted">
+            Page {page} / {maxPage}
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={page >= maxPage}
+            onClick={() => setPage(Math.min(maxPage, page + 1))}
+          >
+            Next
+            <ChevronRight />
+          </Button>
         </div>
-      </footer>
+      ) : null}
     </div>
   );
 }

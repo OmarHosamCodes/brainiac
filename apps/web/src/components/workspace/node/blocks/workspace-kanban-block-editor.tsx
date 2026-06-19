@@ -1,12 +1,5 @@
 import type { WorkspaceKanbanBlock } from "@brainiac/workspace";
-import {
-  Calendar,
-  ChevronUp,
-  Expand,
-  Plus,
-  Trash2,
-  User,
-} from "lucide-react";
+import { Calendar, ChevronUp, Expand, Plus, Trash2, User } from "lucide-react";
 import { useMemo, useState, type DragEvent } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
@@ -122,7 +115,9 @@ export function WorkspaceKanbanBlockEditor({
       <div className="space-y-4 rounded-3xl border border-muted/20 bg-muted/10 p-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <h3 className="text-sm font-bold tracking-wider text-foreground uppercase">Flow Board</h3>
+            <h3 className="text-sm font-bold tracking-wider text-foreground uppercase">
+              Flow Board
+            </h3>
             <p className="mt-1 text-xs text-muted-foreground">Drag cards to advance workflow</p>
           </div>
           <Button
@@ -154,15 +149,15 @@ export function WorkspaceKanbanBlockEditor({
         </div>
       </div>
 
-      <div
-        className="-mx-2 flex gap-4 overflow-x-auto px-2 pb-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-      >
+      <div className="-mx-2 flex gap-4 overflow-x-auto px-2 pb-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         {block.columns.map((column) => (
           <section
             key={column.id}
             className={cn(
               "flex min-w-[300px] max-w-[300px] flex-col rounded-3xl border border-muted/20 bg-background/40 p-4 transition-all duration-300",
-              dragOverColumnId === column.id ? "bg-primary/5 ring-2 ring-primary/20 brightness-105" : "",
+              dragOverColumnId === column.id
+                ? "bg-primary/5 ring-2 ring-primary/20 brightness-105"
+                : "",
             )}
             onDragOver={(event) => onColumnDragOver(column.id, event)}
             onDragLeave={(event) => onColumnDragLeave(column.id, event)}
@@ -215,7 +210,9 @@ export function WorkspaceKanbanBlockEditor({
                     draggingCardId === card.id
                       ? "pointer-events-none scale-95 opacity-40 grayscale"
                       : "cursor-grab active:cursor-grabbing",
-                    expandedCardId === card.id ? "bg-muted/5 shadow-inner ring-2 ring-primary/20" : "",
+                    expandedCardId === card.id
+                      ? "bg-muted/5 shadow-inner ring-2 ring-primary/20"
+                      : "",
                   )}
                   onDragStart={(event) => onCardDragStart(card.id, event)}
                   onDragEnd={clearDragState}

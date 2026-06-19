@@ -14,12 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppShellHeaderActions } from "@/components/app-shell-header-slots";
-import {
-  useAppShellActionsSlot,
-  useAppShellPageTitle,
-} from "@/hooks/use-app-shell";
+import { useAppShellActionsSlot, useAppShellPageTitle } from "@/hooks/use-app-shell";
 import { useBilling } from "@/hooks/use-billing";
-import { shellContentInClass, shellPageClass, shellStaggerItemClass } from "@/lib/utils/app-shell-ui";
+import {
+  shellContentInClass,
+  shellPageClass,
+  shellStaggerItemClass,
+} from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 
 export function BillingPage() {
@@ -37,8 +38,7 @@ export function BillingPage() {
     : null;
 
   const isLifetimeSubscription = Boolean(subscription?.isLifetime);
-  const showManageSubscription =
-    isPro && !isLifetimeSubscription && !billingQuery.isPending;
+  const showManageSubscription = isPro && !isLifetimeSubscription && !billingQuery.isPending;
   const showUpgrade = !isPro && !billingQuery.isPending;
 
   const limitItems = [
@@ -88,15 +88,20 @@ export function BillingPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="mb-1 flex items-center gap-3">
-                      <h2 className="text-xl font-bold text-highlighted">{isPro ? "Pro" : "Free"} Plan</h2>
-                      <Badge variant={isPro ? "default" : "secondary"}>{isPro ? "Active" : "Current"}</Badge>
+                      <h2 className="text-xl font-bold text-highlighted">
+                        {isPro ? "Pro" : "Free"} Plan
+                      </h2>
+                      <Badge variant={isPro ? "default" : "secondary"}>
+                        {isPro ? "Active" : "Current"}
+                      </Badge>
                     </div>
 
                     {isLifetimeSubscription ? (
                       <p className="text-sm text-muted-foreground">Lifetime access</p>
                     ) : subscription ? (
                       <p className="text-sm text-muted-foreground">
-                        {subscription.status === "active" ? "Renews" : "Ends"} {formattedRenewalDate}
+                        {subscription.status === "active" ? "Renews" : "Ends"}{" "}
+                        {formattedRenewalDate}
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground">No active subscription</p>
@@ -120,7 +125,9 @@ export function BillingPage() {
                           "flex items-center gap-3 rounded-2xl bg-elevated p-3",
                           index < 7 && shellStaggerItemClass,
                         )}
-                        style={index < 7 ? ({ "--stagger-i": index } as React.CSSProperties) : undefined}
+                        style={
+                          index < 7 ? ({ "--stagger-i": index } as React.CSSProperties) : undefined
+                        }
                       >
                         <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10">
                           <Icon className="size-4 text-primary" />

@@ -129,11 +129,19 @@ export function AgencyTimeSummary({ teamId }: AgencyTimeSummaryProps) {
           <div className="grid gap-3 md:grid-cols-2">
             <div>
               <Label className="text-xs">From</Label>
-              <Input type="date" value={customFromDate} onChange={(e) => setCustomFromDate(e.target.value)} />
+              <Input
+                type="date"
+                value={customFromDate}
+                onChange={(e) => setCustomFromDate(e.target.value)}
+              />
             </div>
             <div>
               <Label className="text-xs">To</Label>
-              <Input type="date" value={customToDate} onChange={(e) => setCustomToDate(e.target.value)} />
+              <Input
+                type="date"
+                value={customToDate}
+                onChange={(e) => setCustomToDate(e.target.value)}
+              />
             </div>
           </div>
         ) : null}
@@ -190,17 +198,23 @@ export function AgencyTimeSummary({ teamId }: AgencyTimeSummaryProps) {
       {summaryData ? (
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="p-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted">Total hours</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+              Total hours
+            </p>
             <p className="mt-2 text-2xl font-bold text-highlighted">
               {formatHours(summaryData.totalSeconds)}
             </p>
           </Card>
           <Card className="p-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted">Active timers</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+              Active timers
+            </p>
             <p className="mt-2 text-2xl font-bold text-primary">{summaryData.activeCount ?? 0}</p>
           </Card>
           <Card className="p-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted">Team members</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted">
+              Team members
+            </p>
             <p className="mt-2 text-2xl font-bold text-highlighted">
               {summaryData.teamMembers?.length ?? 0}
             </p>

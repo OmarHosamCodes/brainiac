@@ -1,4 +1,4 @@
-import { MoreVertical, Trash2 } from "lucide-react";
+import { ListChecks, MoreVertical, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { AgencyTaskChooser } from "@/components/agency/agency-task-chooser";
@@ -11,7 +11,11 @@ import {
   useAgencyProjectsQuery,
   type AgencyProjectTaskStatus,
 } from "@/hooks/use-agency-queries";
-import { agencyFocusRingClass, agencyMetricClass, agencyTimeTrackerBarClass } from "@/lib/utils/agency-ui";
+import {
+  agencyFocusRingClass,
+  agencyMetricClass,
+  agencyTimeTrackerBarClass,
+} from "@/lib/utils/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { cn } from "@/lib/utils";
 import {
@@ -29,6 +33,8 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
   const isTimerMutationPending = useAgencyTimeTrackingStore(selectIsTimerMutationPending);
   const [now, setNow] = useState(Date.now());
+  const [taskChooserVisible, setTaskChooserVisible] = useState(false);
+  const [taskAttentionKey, setTaskAttentionKey] = useState(0);
 
   useEffect(() => {
     const tickerHandle = setInterval(() => setNow(Date.now()), 1_000);
@@ -51,6 +57,12 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
   const selectedProject = selectedTask
     ? (projects.find((project) => project.id === selectedTask.projectId) ?? null)
     : null;
+  const activeTimerTaskLabel = activeTimer?.taskTitle ?? "Task attached";
+  const activeTimerHasTask = Boolean(activeTimer?.taskId);
+  const tasksForChooser =
+    activeTimer && !activeTimer.taskId
+      ? tasks.filter((task) => task.projectId === activeTimer.projectId)
+      : tasks;
 
   useEffect(() => {
     if (!teamId) return;
@@ -69,17 +81,41 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
     return Math.max(0, Math.floor((now - startedAt) / 1_000));
   }, [activeTimer, now]);
 
-  const canStartTimer = Boolean(teamId && selectedTask && selectedProject && !activeTimer);
-  const canStopTimer = Boolean(activeTimer);
+  const canStartTimer = Boolean(teamId && !activeTimer);
+  const canStopTimer = Boolean(activeTimer && (activeTimerHasTask || selectedTask));
+  const showTaskChoice = taskChooserVisible || Boolean(selectedTaskId && !activeTimerHasTask);
 
   const timerValidationHint = useMemo(() => {
-    if (activeTimer ? canStopTimer : canStartTimer) return "";
-    if (!activeTimer && !selectedTask) return "Select a task to start this timer.";
+    if (!taskChooserVisible) return "";
+    if (!activeTimer && !selectedTask) return "Choose a task before starting this timer.";
+    if (activeTimer && !activeTimerHasTask && !selectedTask) {
+      return "Choose a task before stopping this timer.";
+    }
     return "";
-  }, [activeTimer, canStartTimer, canStopTimer, selectedTask]);
+  }, [activeTimer, activeTimerHasTask, selectedTask, taskChooserVisible]);
+
+  useEffect(() => {
+    if (selectedTaskId || activeTimerHasTask) {
+      setTaskChooserVisible(false);
+    }
+  }, [activeTimerHasTask, selectedTaskId]);
+
+  useEffect(() => {
+    setTaskChooserVisible(false);
+    setTaskAttentionKey(0);
+  }, [teamId]);
+
+  function revealTaskChooser() {
+    setTaskChooserVisible(true);
+    setTaskAttentionKey((current) => current + 1);
+  }
 
   async function startTimer() {
-    if (!teamId || !selectedProject || !selectedTask) return;
+    if (!teamId || activeTimer) return;
+    if (!selectedProject || !selectedTask) {
+      revealTaskChooser();
+      return;
+    }
 
     await agencyTimeTrackingStore.startTimer({
       teamId,
@@ -90,13 +126,21 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
   }
 
   async function stopTimer(discard = false) {
-    if (!teamId || !activeTimer || (!discard && !canStopTimer)) return;
+    if (!teamId || !activeTimer) return;
+    if (!discard && !canStopTimer) {
+      revealTaskChooser();
+      return;
+    }
 
     await agencyTimeTrackingStore.stopTimer({
       teamId,
       activeTimer,
       description: timerDescription,
       discard,
+      task:
+        !activeTimerHasTask && selectedTask
+          ? { id: selectedTask.id, title: selectedTask.title }
+          : null,
     });
   }
 
@@ -121,23 +165,33 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
           />
 
           <div className="flex w-full flex-wrap items-center gap-2 sm:ml-0 sm:w-auto sm:flex-nowrap">
-            <AgencyTaskChooser
-              value={selectedTaskId}
-              onValueChange={(value) =>
-                teamId && agencyTimeTrackingStore.setTrackerTaskId(teamId, value || "")
-              }
-              projects={projects}
-              tasks={tasks}
-              placeholder="+ Task"
-              className="w-auto max-w-44 shrink-0"
-              loading={projectsQuery.isPending || tasksQuery.isPending}
-              disabled={
-                !teamId ||
-                projectsQuery.isPending ||
-                tasksQuery.isPending ||
-                Boolean(activeTimer)
-              }
-            />
+            {activeTimerHasTask ? (
+              <span className="inline-flex h-9 max-w-56 shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 text-xs font-bold text-primary">
+                <ListChecks className="size-3.5" />
+                <span className="truncate">{activeTimerTaskLabel}</span>
+              </span>
+            ) : showTaskChoice ? (
+              <div
+                key={taskAttentionKey}
+                className={cn(
+                  "agency-task-choice-wrap rounded-full",
+                  taskChooserVisible && "agency-task-choice-wrap--attention",
+                )}
+              >
+                <AgencyTaskChooser
+                  value={selectedTaskId}
+                  onValueChange={(value) =>
+                    teamId && agencyTimeTrackingStore.setTrackerTaskId(teamId, value || "")
+                  }
+                  projects={projects}
+                  tasks={tasksForChooser}
+                  placeholder="Choose task"
+                  className="w-auto max-w-56 shrink-0 border-warning/40 bg-warning/10 text-highlighted"
+                  loading={projectsQuery.isPending || tasksQuery.isPending}
+                  disabled={!teamId || projectsQuery.isPending || tasksQuery.isPending}
+                />
+              </div>
+            ) : null}
 
             {activeTimer ? (
               <span
@@ -157,11 +211,14 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
               <Button
                 variant="destructive"
                 size="sm"
-                className="shrink-0 rounded-md font-bold"
-                disabled={!canStopTimer || isTimerMutationPending}
+                className={cn(
+                  "shrink-0 rounded-md font-bold",
+                  !canStopTimer && "ring-2 ring-warning/30 ring-offset-1 ring-offset-background",
+                )}
+                disabled={isTimerMutationPending || !teamId}
                 onClick={() => void stopTimer()}
               >
-                {isTimerMutationPending ? "…" : "Stop"}
+                {isTimerMutationPending ? "…" : canStopTimer ? "Stop" : "Choose task to stop"}
               </Button>
             ) : (
               <Button
@@ -202,9 +259,7 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
           </div>
         </div>
 
-        {timerValidationHint ? (
-          <p className="text-xs text-warning">{timerValidationHint}</p>
-        ) : null}
+        {timerValidationHint ? <p className="text-xs text-warning">{timerValidationHint}</p> : null}
       </div>
     </div>
   );

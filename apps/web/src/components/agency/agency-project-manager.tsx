@@ -69,7 +69,10 @@ export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
     const name = newClientName.trim();
     if (!name || !teamId) return;
     setNewClientName("");
-    await agencyOps.createClient({ teamId, name }, { onSuccess: (clientId) => setSelectedClientId(clientId) });
+    await agencyOps.createClient(
+      { teamId, name },
+      { onSuccess: (clientId) => setSelectedClientId(clientId) },
+    );
   }
 
   async function createProject() {

@@ -174,7 +174,9 @@ export function WorkspaceCourseRoadmapBlockEditor({
           <Badge variant="secondary" className="rounded-2xl">
             {totalOutcomeCount} outcomes
           </Badge>
-          <Badge className="rounded-2xl">{summary.averageCompletionPercent}% average completion</Badge>
+          <Badge className="rounded-2xl">
+            {summary.averageCompletionPercent}% average completion
+          </Badge>
         </div>
       </div>
 
@@ -294,11 +296,7 @@ export function WorkspaceCourseRoadmapBlockEditor({
                               : "border-muted/20 bg-muted/10",
                           )}
                         >
-                          {lesson.recorded ? (
-                            <Check className="size-3.5" />
-                          ) : (
-                            lessonIndex + 1
-                          )}
+                          {lesson.recorded ? <Check className="size-3.5" /> : lessonIndex + 1}
                         </span>
                         <span className="truncate text-sm font-semibold">
                           {lesson.title.trim() || `Lesson ${lessonIndex + 1}`}
@@ -319,7 +317,8 @@ export function WorkspaceCourseRoadmapBlockEditor({
                           variant={lesson.recorded ? "secondary" : "outline"}
                           className={cn(
                             "rounded-full",
-                            lesson.recorded && "border-success/40 bg-success/10 text-success hover:bg-success/15",
+                            lesson.recorded &&
+                              "border-success/40 bg-success/10 text-success hover:bg-success/15",
                           )}
                           onClick={() => toggleLesson(course.id, lesson.id)}
                         >

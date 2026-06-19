@@ -195,7 +195,9 @@ export function WorkspaceNodeEditorProvider({
   children: ReactNode;
 }) {
   return (
-    <WorkspaceNodeEditorContext.Provider value={value}>{children}</WorkspaceNodeEditorContext.Provider>
+    <WorkspaceNodeEditorContext.Provider value={value}>
+      {children}
+    </WorkspaceNodeEditorContext.Provider>
   );
 }
 

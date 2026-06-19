@@ -128,9 +128,7 @@ export function WorkspaceDealScoringMatrixBlockEditor({
   const sortedDeals = useMemo(() => sortDealScoringDeals(block.deals), [block.deals]);
   const advancedStageCount = useMemo(
     () =>
-      summary.stageCounts.proposal +
-      summary.stageCounts.negotiation +
-      summary.stageCounts.closed,
+      summary.stageCounts.proposal + summary.stageCounts.negotiation + summary.stageCounts.closed,
     [summary.stageCounts],
   );
   const topDeal = sortedDeals[0] ?? null;
@@ -246,7 +244,10 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-3">
                     <span
-                      className={cn("size-2.5 shrink-0 rounded-full", getTemperatureDotClasses(deal.temperature))}
+                      className={cn(
+                        "size-2.5 shrink-0 rounded-full",
+                        getTemperatureDotClasses(deal.temperature),
+                      )}
                     />
                     <Input
                       value={deal.clientName}
@@ -291,7 +292,9 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                     >
                       {deal.score}
                     </p>
-                    <p className={cn("mt-1 text-xs font-semibold", getScoreTextClasses(deal.score))}>
+                    <p
+                      className={cn("mt-1 text-xs font-semibold", getScoreTextClasses(deal.score))}
+                    >
                       {getPriorityLabel(deal.score)}
                     </p>
                   </div>
@@ -388,7 +391,9 @@ export function WorkspaceDealScoringMatrixBlockEditor({
               <div className="mt-5 space-y-3">
                 <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                   <span>Priority Score</span>
-                  <span className={getScoreTextClasses(deal.score)}>{getPriorityLabel(deal.score)}</span>
+                  <span className={getScoreTextClasses(deal.score)}>
+                    {getPriorityLabel(deal.score)}
+                  </span>
                 </div>
 
                 <BlockProgressBar value={deal.score} max={100} className="h-1.5" />
@@ -432,7 +437,9 @@ export function WorkspaceDealScoringMatrixBlockEditor({
                   <p className="mt-2 text-sm font-semibold text-foreground">
                     {workspaceSalesPipelineStageLabels[deal.stage]}
                   </p>
-                  <p className="mt-1 text-sm text-muted-foreground">{getPrioritySummary(deal.score)}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {getPrioritySummary(deal.score)}
+                  </p>
                 </div>
               </div>
 

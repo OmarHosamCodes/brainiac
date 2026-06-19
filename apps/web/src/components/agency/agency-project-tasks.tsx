@@ -6,10 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAgencyProjectTasksQuery } from "@/hooks/use-agency-queries";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import {
-  selectIsCreatingTask,
-  useAgencyOpsStore,
-} from "@/stores/agency-ops";
+import { selectIsCreatingTask, useAgencyOpsStore } from "@/stores/agency-ops";
 
 type AgencyProjectTasksProps = {
   teamId: string;
@@ -100,7 +97,12 @@ export function AgencyProjectTasks({ teamId, projectId, projectName }: AgencyPro
           <p className="mt-1 text-xs text-muted">
             {getErrorMessage(tasksQuery.error, "Try refreshing.")}
           </p>
-          <Button variant="secondary" size="sm" className="mt-3" onClick={() => void tasksQuery.refetch()}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="mt-3"
+            onClick={() => void tasksQuery.refetch()}
+          >
             Retry
           </Button>
         </div>

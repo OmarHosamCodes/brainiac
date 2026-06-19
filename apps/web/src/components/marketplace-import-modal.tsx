@@ -117,7 +117,9 @@ export function MarketplaceImportModal({
 
   const canSubmit =
     Boolean(item) &&
-    (kind === "node" || (kind === "tab" && selectedNodeId) || (kind === "block" && selectedNodeId && selectedTabId));
+    (kind === "node" ||
+      (kind === "tab" && selectedNodeId) ||
+      (kind === "block" && selectedNodeId && selectedTabId));
 
   function reset() {
     setSelectedNodeId("");
@@ -141,7 +143,9 @@ export function MarketplaceImportModal({
 
     const node = nodes.find((entry) => entry.id === nodeId);
     const tabs = node?.tabs ?? [];
-    setSelectedTabId((current) => (tabs.some((tab) => tab.id === current) ? current : (tabs[0]?.id ?? "")));
+    setSelectedTabId((current) =>
+      tabs.some((tab) => tab.id === current) ? current : (tabs[0]?.id ?? ""),
+    );
   }
 
   function initDefaults() {
@@ -278,7 +282,9 @@ export function MarketplaceImportModal({
 
     if (!inserted) return;
 
-    toast.success("Tab inserted", { description: `${item.title} was added to ${targetNodeTitle}.` });
+    toast.success("Tab inserted", {
+      description: `${item.title} was added to ${targetNodeTitle}.`,
+    });
     onImported({ kind: "tab", nodeId: selectedNodeId });
     close();
   }
@@ -313,7 +319,9 @@ export function MarketplaceImportModal({
 
     if (!inserted) return;
 
-    toast.success("Block inserted", { description: `${item.title} was added to ${targetTabTitle}.` });
+    toast.success("Block inserted", {
+      description: `${item.title} was added to ${targetTabTitle}.`,
+    });
     onImported({ kind: "block", nodeId: selectedNodeId });
     close();
   }
@@ -372,7 +380,9 @@ export function MarketplaceImportModal({
             <div className="rounded-2xl border border-dashed border-muted/30 p-4">
               <div className="flex items-center gap-2 text-sm text-muted">
                 <Info className="size-4 shrink-0" />
-                <p>This node will be added to your dashboard canvas, positioned near your last node.</p>
+                <p>
+                  This node will be added to your dashboard canvas, positioned near your last node.
+                </p>
               </div>
             </div>
           ) : null}

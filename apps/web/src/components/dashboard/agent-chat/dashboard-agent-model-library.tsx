@@ -116,7 +116,9 @@ export function DashboardAgentModelLibrary({
                   variant="ghost"
                   size="icon"
                   className="shrink-0"
-                  aria-label={isFavoriteModel(model.id) ? "Remove from favorites" : "Add to favorites"}
+                  aria-label={
+                    isFavoriteModel(model.id) ? "Remove from favorites" : "Add to favorites"
+                  }
                   onClick={(event) => {
                     event.stopPropagation();
                     onToggleFavorite(model.id);

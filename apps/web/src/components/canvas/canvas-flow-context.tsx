@@ -9,10 +9,7 @@ export type CanvasFlowContextValue = {
   onRemoveNode: (payload: { nodeId: string }) => void;
   onOpenNode: (payload: { nodeId: string }) => void;
   onFitNode: (nodeId: string) => void;
-  onDisconnectNodePair: (payload: {
-    orchestratorNodeId: string;
-    standardNodeId: string;
-  }) => void;
+  onDisconnectNodePair: (payload: { orchestratorNodeId: string; standardNodeId: string }) => void;
 };
 
 const CanvasFlowContext = createContext<CanvasFlowContextValue | null>(null);

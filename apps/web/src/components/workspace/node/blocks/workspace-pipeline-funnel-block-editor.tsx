@@ -164,11 +164,21 @@ export function WorkspacePipelineFunnelBlockEditor({
 
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">Sales Pipeline Funnel</h2>
-          <p className="text-xs text-muted-foreground">Track deal progression and conversion at each stage.</p>
+          <h2 className="text-sm font-black tracking-tight text-foreground">
+            Sales Pipeline Funnel
+          </h2>
+          <p className="text-xs text-muted-foreground">
+            Track deal progression and conversion at each stage.
+          </p>
         </div>
 
-        <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={addDeal}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="rounded-full"
+          onClick={addDeal}
+        >
           <Plus />
           Add Deal
         </Button>
@@ -179,7 +189,10 @@ export function WorkspacePipelineFunnelBlockEditor({
           {summary.stageSummaries.map((stage) => (
             <div key={stage.stage} className="flex justify-center">
               <div
-                className={cn("w-full rounded-xl border px-4 py-3 transition-colors", getStageRowClasses(stage.stage))}
+                className={cn(
+                  "w-full rounded-xl border px-4 py-3 transition-colors",
+                  getStageRowClasses(stage.stage),
+                )}
                 style={{ width: `${stage.widthPercent}%` }}
               >
                 <div className="flex items-center justify-between gap-3">
@@ -205,7 +218,9 @@ export function WorkspacePipelineFunnelBlockEditor({
       <div>
         <div className="mb-3 px-1">
           <h3 className="text-sm font-black tracking-tight text-foreground">Deals</h3>
-          <p className="text-xs text-muted-foreground">Update stage and value directly from the list.</p>
+          <p className="text-xs text-muted-foreground">
+            Update stage and value directly from the list.
+          </p>
         </div>
 
         {sortedDeals.length === 0 ? (
@@ -226,7 +241,10 @@ export function WorkspacePipelineFunnelBlockEditor({
                   <div className="min-w-0">
                     <div className="flex items-center gap-2.5">
                       <span
-                        className={cn("size-2 shrink-0 rounded-full", getTemperatureDotClasses(deal.temperature))}
+                        className={cn(
+                          "size-2 shrink-0 rounded-full",
+                          getTemperatureDotClasses(deal.temperature),
+                        )}
                       />
                       <Input
                         value={deal.clientName}
@@ -237,7 +255,9 @@ export function WorkspacePipelineFunnelBlockEditor({
                             if (entry.type !== "pipeline-funnel") {
                               return;
                             }
-                            const target = entry.deals.find((candidate) => candidate.id === deal.id);
+                            const target = entry.deals.find(
+                              (candidate) => candidate.id === deal.id,
+                            );
                             if (!target) {
                               return;
                             }

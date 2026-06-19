@@ -78,7 +78,9 @@ export function MarketplaceItemCard({
               <Icon className="size-5" />
             </div>
             <div className="min-w-0">
-              <h3 className="truncate leading-tight font-semibold text-highlighted">{item.title}</h3>
+              <h3 className="truncate leading-tight font-semibold text-highlighted">
+                {item.title}
+              </h3>
               <p className="mt-0.5 text-xs font-medium tracking-wider text-muted uppercase">
                 {getMarketplacePayloadTypeLabel(item.payload)}
               </p>

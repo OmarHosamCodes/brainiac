@@ -87,12 +87,14 @@ export function LandingPage() {
 
           <h1 className="max-w-4xl text-[2.5rem] leading-[1.02] font-bold tracking-tight sm:text-6xl md:text-7xl lg:text-[5.5rem]">
             A spatial workspace{" "}
-            <span className="text-neutral-400 dark:text-neutral-500">for the way you actually think.</span>
+            <span className="text-neutral-400 dark:text-neutral-500">
+              for the way you actually think.
+            </span>
           </h1>
 
           <p className="mt-8 max-w-xl text-lg leading-relaxed text-neutral-600 md:mt-10 md:text-xl dark:text-neutral-400">
-            Brainiac gives every piece of your work a place on an infinite canvas, then puts an AI agent next to
-            you that can read and reshape it in real time.
+            Brainiac gives every piece of your work a place on an infinite canvas, then puts an AI
+            agent next to you that can read and reshape it in real time.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-3 md:mt-12">
@@ -151,7 +153,10 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="pricing" className="w-full scroll-mt-8 border-t border-neutral-200 dark:border-neutral-800/80">
+      <section
+        id="pricing"
+        className="w-full scroll-mt-8 border-t border-neutral-200 dark:border-neutral-800/80"
+      >
         <div className="mx-auto max-w-6xl px-6 py-20 md:px-10 md:py-28 lg:px-16">
           <div className="grid grid-cols-1 gap-y-8 md:grid-cols-12 md:gap-x-10">
             <div className="md:col-span-4">
@@ -160,11 +165,13 @@ export function LandingPage() {
               </div>
               <h2 className="text-3xl leading-[1.1] font-bold tracking-tight md:text-5xl">
                 Free to try.{" "}
-                <span className="text-neutral-400 dark:text-neutral-500">Pro when you need the room.</span>
+                <span className="text-neutral-400 dark:text-neutral-500">
+                  Pro when you need the room.
+                </span>
               </h2>
               <p className="mt-5 max-w-sm text-base leading-relaxed text-neutral-600 md:text-lg dark:text-neutral-400">
-                Start with 10 nodes, 6 blocks per tab, and the AI agent. Upgrade for 200 nodes, agency ops, and
-                marketplace publishing.
+                Start with 10 nodes, 6 blocks per tab, and the AI agent. Upgrade for 200 nodes,
+                agency ops, and marketplace publishing.
               </p>
 
               <div className="mt-8 flex flex-col gap-4">
@@ -208,7 +215,9 @@ export function LandingPage() {
                     >
                       <div className="flex items-center gap-3">
                         <Icon className="size-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
-                        <span className="text-sm text-neutral-700 dark:text-neutral-300">{feature.label}</span>
+                        <span className="text-sm text-neutral-700 dark:text-neutral-300">
+                          {feature.label}
+                        </span>
                       </div>
                       <span
                         className={cn(

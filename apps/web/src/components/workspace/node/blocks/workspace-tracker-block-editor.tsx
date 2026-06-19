@@ -36,7 +36,9 @@ export function WorkspaceTrackerBlockEditor({
       return 0;
     }
     return Number(
-      (block.entries.reduce((sum, entry) => sum + entry.value, 0) / block.entries.length).toFixed(1),
+      (block.entries.reduce((sum, entry) => sum + entry.value, 0) / block.entries.length).toFixed(
+        1,
+      ),
     );
   }, [block.entries]);
 
@@ -98,7 +100,9 @@ export function WorkspaceTrackerBlockEditor({
             {block.entries.length} entries
           </Badge>
           <Badge variant="secondary" className="rounded-2xl">
-            {block.goal === null || block.goal === undefined ? "No goal" : formatStatValue(block.goal)}
+            {block.goal === null || block.goal === undefined
+              ? "No goal"
+              : formatStatValue(block.goal)}
           </Badge>
           <Badge variant="secondary" className="rounded-2xl">
             {latestEntry?.label || "No entries yet"}

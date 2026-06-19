@@ -109,7 +109,8 @@ const WorkspaceCourseRoadmapBlockEditor = lazyBlockEditor(
   "WorkspaceCourseRoadmapBlockEditor",
 );
 const WorkspaceLearningOutcomesMatrixBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-learning-outcomes-matrix-block-editor"),
+  () =>
+    import("@/components/workspace/node/blocks/workspace-learning-outcomes-matrix-block-editor"),
   "WorkspaceLearningOutcomesMatrixBlockEditor",
 );
 const WorkspaceTimeOrchestratorBlockEditor = lazyBlockEditor(
@@ -125,7 +126,8 @@ const WorkspaceEisenhowerMatrixBlockEditor = lazyBlockEditor(
   "WorkspaceEisenhowerMatrixBlockEditor",
 );
 const WorkspaceLeadershipRhythmPlannerBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-leadership-rhythm-planner-block-editor"),
+  () =>
+    import("@/components/workspace/node/blocks/workspace-leadership-rhythm-planner-block-editor"),
   "WorkspaceLeadershipRhythmPlannerBlockEditor",
 );
 const WorkspaceKanbanBlockEditor = lazyBlockEditor(
@@ -161,7 +163,8 @@ const WorkspacePipelineFunnelBlockEditor = lazyBlockEditor(
   "WorkspacePipelineFunnelBlockEditor",
 );
 const WorkspaceForecastConfidenceBoardBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-forecast-confidence-board-block-editor"),
+  () =>
+    import("@/components/workspace/node/blocks/workspace-forecast-confidence-board-block-editor"),
   "WorkspaceForecastConfidenceBoardBlockEditor",
 );
 const WorkspaceContentPipelineBlockEditor = lazyBlockEditor(

@@ -4,7 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useAgencyActiveTimerQuery } from "@/hooks/use-agency-queries";
 import { authClient } from "@/lib/auth-client";
 import { setAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
-import { useAgencyTimeTrackingStore, selectIsTimerMutationPending } from "@/stores/agency-time-tracking";
+import {
+  useAgencyTimeTrackingStore,
+  selectIsTimerMutationPending,
+} from "@/stores/agency-time-tracking";
 
 type CurrentAgencyTeamState = {
   currentAgencyTeamId: string | null;

@@ -114,8 +114,7 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
           block.deals
             .filter((deal) => deal.bucket === bucket)
             .sort(
-              (left, right) =>
-                right.confidence - left.confidence || right.valueEgp - left.valueEgp,
+              (left, right) => right.confidence - left.confidence || right.valueEgp - left.valueEgp,
             ),
         ]),
       ) as Record<WorkspaceSalesForecastBucket, WorkspaceForecastConfidenceBoardBlock["deals"]>,
@@ -184,7 +183,9 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
 
   function canMoveDeal(bucket: WorkspaceSalesForecastBucket, offset: -1 | 1) {
     const currentIndex = WORKSPACE_SALES_FORECAST_BUCKETS.indexOf(bucket);
-    return currentIndex + offset >= 0 && currentIndex + offset < WORKSPACE_SALES_FORECAST_BUCKETS.length;
+    return (
+      currentIndex + offset >= 0 && currentIndex + offset < WORKSPACE_SALES_FORECAST_BUCKETS.length
+    );
   }
 
   function getBucketSummary(bucket: WorkspaceSalesForecastBucket) {
@@ -303,7 +304,11 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
             />
           </div>
 
-          <Button type="button" className="rounded-full px-5 py-2.5 font-bold shadow-lg shadow-primary/20" onClick={addDeal}>
+          <Button
+            type="button"
+            className="rounded-full px-5 py-2.5 font-bold shadow-lg shadow-primary/20"
+            onClick={addDeal}
+          >
             <Plus />
             Add Deal
           </Button>
@@ -322,7 +327,9 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                 className={cn(
                   "flex w-[320px] shrink-0 snap-start flex-col rounded-[32px] border p-4 transition-all duration-300",
                   bucketClasses.column,
-                  dragOverBucket === bucket ? "shadow-xl ring-2 ring-primary/30 brightness-110" : "",
+                  dragOverBucket === bucket
+                    ? "shadow-xl ring-2 ring-primary/30 brightness-110"
+                    : "",
                 )}
                 onDragOver={(event) => {
                   if (!draggingDealId) {
@@ -408,7 +415,10 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                           return;
                         }
                         event.dataTransfer.effectAllowed = "move";
-                        event.dataTransfer.setData("application/x-workspace-forecast-deal", deal.id);
+                        event.dataTransfer.setData(
+                          "application/x-workspace-forecast-deal",
+                          deal.id,
+                        );
                         event.dataTransfer.setData("text/plain", deal.id);
                       }}
                       onDragEnd={clearDragState}
@@ -429,7 +439,9 @@ export function WorkspaceForecastConfidenceBoardBlockEditor({
                             <Badge variant="secondary" className="rounded-full">
                               {workspaceSalesForecastBucketLabels[deal.bucket]}
                             </Badge>
-                            <span>Weighted {formatCurrency(getForecastDealWeightedValue(deal))}</span>
+                            <span>
+                              Weighted {formatCurrency(getForecastDealWeightedValue(deal))}
+                            </span>
                           </div>
                         </div>
 

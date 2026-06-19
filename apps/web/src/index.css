@@ -2,7 +2,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-
 :root {
   --motion-duration-fast: 120ms;
   --motion-duration-base: 180ms;
@@ -52,25 +51,15 @@
   --shadow-color: #000000;
   --shadow-2xs: 0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.05);
   --shadow-xs: 0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.05);
-  --shadow-sm:
-    0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.1),
-    0.5px 1px 2px -9.5px hsl(0 0% 0% / 0.1);
-  --shadow:
-    0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.1),
-    0.5px 1px 2px -9.5px hsl(0 0% 0% / 0.1);
-  --shadow-md:
-    0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.1),
-    0.5px 2px 4px -9.5px hsl(0 0% 0% / 0.1);
-  --shadow-lg:
-    0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.1),
-    0.5px 4px 6px -9.5px hsl(0 0% 0% / 0.1);
+  --shadow-sm: 0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.1), 0.5px 1px 2px -9.5px hsl(0 0% 0% / 0.1);
+  --shadow: 0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.1), 0.5px 1px 2px -9.5px hsl(0 0% 0% / 0.1);
+  --shadow-md: 0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.1), 0.5px 2px 4px -9.5px hsl(0 0% 0% / 0.1);
+  --shadow-lg: 0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.1), 0.5px 4px 6px -9.5px hsl(0 0% 0% / 0.1);
   --shadow-xl:
-    0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.1),
-    0.5px 8px 10px -9.5px hsl(0 0% 0% / 0.1);
+    0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.1), 0.5px 8px 10px -9.5px hsl(0 0% 0% / 0.1);
   --shadow-2xl: 0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.25);
   --tracking-normal: 0.025em;
   --spacing: 0.3rem;
-
 }
 
 .dark {
@@ -467,6 +456,48 @@ body {
   }
 }
 
+@keyframes agency-task-choice-attention {
+  0% {
+    transform: translateY(2px) scale(0.98);
+    filter: saturate(1);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--chart-4) 34%, transparent);
+  }
+
+  34% {
+    transform: translateY(-1px) scale(1.012);
+    filter: saturate(1.18);
+    box-shadow:
+      0 0 0 5px color-mix(in oklab, var(--chart-4) 18%, transparent),
+      0 8px 18px color-mix(in oklab, var(--chart-4) 14%, transparent);
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+    filter: saturate(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes agency-task-row-complete {
+  0% {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.985);
+    background: color-mix(in oklab, var(--primary) 14%, transparent);
+  }
+
+  55% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    background: color-mix(in oklab, var(--primary) 10%, transparent);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    background: transparent;
+  }
+}
+
 .shell-page-enter {
   animation: shell-page-enter var(--motion-duration-base) var(--motion-ease-out) both;
 }
@@ -482,6 +513,14 @@ body {
 
 .shell-confirm-in {
   animation: shell-confirm-in var(--motion-duration-panel) var(--motion-ease-out) both;
+}
+
+.agency-task-choice-wrap--attention {
+  animation: agency-task-choice-attention 720ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.agency-task-row-complete {
+  animation: agency-task-row-complete 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .shell-panel-stack {
@@ -526,7 +565,9 @@ body {
   .shell-page-enter,
   .shell-content-in,
   .shell-stagger-item,
-  .shell-confirm-in {
+  .shell-confirm-in,
+  .agency-task-choice-wrap--attention,
+  .agency-task-row-complete {
     animation: none;
     opacity: 1;
     transform: none;

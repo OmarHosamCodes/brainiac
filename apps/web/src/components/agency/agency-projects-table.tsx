@@ -20,10 +20,7 @@ import {
 import { formatDuration } from "@/lib/utils/format-duration";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { projectHueStyle } from "@/lib/utils/project-palette";
-import {
-  selectIsProjectMutationPending,
-  useAgencyOpsStore,
-} from "@/stores/agency-ops";
+import { selectIsProjectMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
 export type AgencyProjectsTableHandle = {
   openNewProject: () => void;
@@ -45,310 +42,323 @@ function getWeekStartUtc(): Date {
 }
 
 export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyProjectsTableProps>(
-  function AgencyProjectsTable(
-    { teamId, hideToolbarActions = false, onSelect },
-    ref,
-  ) {
-  const agencyOps = useAgencyOpsStore();
-  const isProjectMutationPending = useAgencyOpsStore(selectIsProjectMutationPending);
-  const [filterTerm, setFilterTerm] = useState("");
-  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  function AgencyProjectsTable({ teamId, hideToolbarActions = false, onSelect }, ref) {
+    const agencyOps = useAgencyOpsStore();
+    const isProjectMutationPending = useAgencyOpsStore(selectIsProjectMutationPending);
+    const [filterTerm, setFilterTerm] = useState("");
+    const [newProjectOpen, setNewProjectOpen] = useState(false);
 
-  useImperativeHandle(ref, () => ({
-    openNewProject: () => setNewProjectOpen(true),
-  }));
-  const [newProjectName, setNewProjectName] = useState("");
-  const [newProjectClientId, setNewProjectClientId] = useState("");
+    useImperativeHandle(ref, () => ({
+      openNewProject: () => setNewProjectOpen(true),
+    }));
+    const [newProjectName, setNewProjectName] = useState("");
+    const [newProjectClientId, setNewProjectClientId] = useState("");
 
-  const projectsQuery = useAgencyProjectsQuery(teamId);
-  const clientsQuery = useAgencyClientsQuery(teamId);
-  const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
+    const projectsQuery = useAgencyProjectsQuery(teamId);
+    const clientsQuery = useAgencyClientsQuery(teamId);
+    const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
 
-  const budgetsQuery = useQuery({
-    ...orpc.agencyOps.budgets.list.queryOptions({ input: { teamId } }),
-    enabled: Boolean(teamId),
-  });
-
-  const budgetsByProject = useMemo(() => {
-    const map = new Map<string, NonNullable<typeof budgetsQuery.data>["items"][number]>();
-    for (const entry of budgetsQuery.data?.items ?? []) {
-      map.set(entry.projectId, entry);
-    }
-    return map;
-  }, [budgetsQuery.data?.items]);
-
-  const projects = projectsQuery.data?.items ?? [];
-  const clients = clientsQuery.data?.items ?? [];
-  const entries = entriesQuery.data?.items ?? [];
-
-  const hoursThisWeekByProject = useMemo(() => {
-    const weekStartMs = getWeekStartUtc().getTime();
-    const totals = new Map<string, number>();
-    for (const entry of entries) {
-      const startedAtMs = new Date(entry.startedAt).getTime();
-      if (startedAtMs < weekStartMs) continue;
-      totals.set(entry.projectId, (totals.get(entry.projectId) ?? 0) + entry.durationSeconds);
-    }
-    return totals;
-  }, [entries]);
-
-  const filteredProjects = useMemo(() => {
-    const term = filterTerm.trim().toLowerCase();
-    if (!term) return projects;
-    return projects.filter((project) =>
-      `${project.name} ${project.clientName}`.toLowerCase().includes(term),
-    );
-  }, [filterTerm, projects]);
-
-  function budgetPctFor(projectId: string): number {
-    const budget = budgetsByProject.get(projectId);
-    if (!budget) return 0;
-    if (budget.hoursBudget && budget.hoursBudget > 0) {
-      return Math.min(100, Math.round((budget.hoursLogged / budget.hoursBudget) * 100));
-    }
-    if (budget.costBudgetCents && budget.costBudgetCents > 0) {
-      return Math.min(100, Math.round((budget.costLoggedCents / budget.costBudgetCents) * 100));
-    }
-    return 0;
-  }
-
-  function budgetToneFor(projectId: string): string {
-    const pct = budgetPctFor(projectId);
-    if (pct >= 100) return "bg-error";
-    if (pct >= 85) return "bg-warning";
-    return "bg-primary";
-  }
-
-  useEffect(() => {
-    if (newProjectOpen && !newProjectClientId && clients[0]) {
-      setNewProjectClientId(clients[0].id);
-    }
-  }, [newProjectOpen, newProjectClientId, clients]);
-
-  async function createProject() {
-    const name = newProjectName.trim();
-    if (!name || !newProjectClientId || !teamId) return;
-    const client = clients.find((c) => c.id === newProjectClientId);
-    setNewProjectName("");
-    setNewProjectOpen(false);
-    await agencyOps.createProject({
-      teamId,
-      clientId: newProjectClientId,
-      clientName: client?.name ?? "",
-      name,
+    const budgetsQuery = useQuery({
+      ...orpc.agencyOps.budgets.list.queryOptions({ input: { teamId } }),
+      enabled: Boolean(teamId),
     });
-  }
 
-  const isLoading = projectsQuery.isPending || clientsQuery.isPending;
-  const isError = projectsQuery.isError;
+    const budgetsByProject = useMemo(() => {
+      const map = new Map<string, NonNullable<typeof budgetsQuery.data>["items"][number]>();
+      for (const entry of budgetsQuery.data?.items ?? []) {
+        map.set(entry.projectId, entry);
+      }
+      return map;
+    }, [budgetsQuery.data?.items]);
 
-  return (
-    <div className="agency-projects space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative w-64">
-          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
-          <Input
-            value={filterTerm}
-            onChange={(e) => setFilterTerm(e.target.value)}
-            placeholder="Filter projects or clients"
-            className="pl-9"
-          />
-        </div>
+    const projects = projectsQuery.data?.items ?? [];
+    const clients = clientsQuery.data?.items ?? [];
+    const entries = entriesQuery.data?.items ?? [];
 
-        {!hideToolbarActions ? (
-          <div className="ml-auto">
-            <Popover open={newProjectOpen} onOpenChange={setNewProjectOpen}>
-              <PopoverTrigger asChild>
-                <Button size="sm" disabled={!teamId || clients.length === 0}>
-                  <Plus />
-                  New project
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-72 space-y-2 p-3">
-                <form
-                  className="space-y-2"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void createProject();
-                  }}
-                >
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                    New project
-                  </p>
-                  <div>
-                    <label className="text-[11px] font-bold text-muted">Client</label>
-                    <select
-                      value={newProjectClientId}
-                      onChange={(e) => setNewProjectClientId(e.target.value)}
-                      className="mt-1 h-9 w-full rounded-md border border-default bg-background px-2 text-sm"
-                    >
-                      {clients.map((client) => (
-                        <option key={client.id} value={client.id}>
-                          {client.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-muted">Name</label>
-                    <Input
-                      value={newProjectName}
-                      onChange={(e) => setNewProjectName(e.target.value)}
-                      placeholder="Project name"
-                      className="mt-1"
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    className="w-full"
-                    disabled={!newProjectName.trim() || !newProjectClientId || isProjectMutationPending}
-                  >
-                    Create project
-                  </Button>
-                </form>
-              </PopoverContent>
-            </Popover>
+    const hoursThisWeekByProject = useMemo(() => {
+      const weekStartMs = getWeekStartUtc().getTime();
+      const totals = new Map<string, number>();
+      for (const entry of entries) {
+        const startedAtMs = new Date(entry.startedAt).getTime();
+        if (startedAtMs < weekStartMs) continue;
+        totals.set(entry.projectId, (totals.get(entry.projectId) ?? 0) + entry.durationSeconds);
+      }
+      return totals;
+    }, [entries]);
+
+    const filteredProjects = useMemo(() => {
+      const term = filterTerm.trim().toLowerCase();
+      if (!term) return projects;
+      return projects.filter((project) =>
+        `${project.name} ${project.clientName}`.toLowerCase().includes(term),
+      );
+    }, [filterTerm, projects]);
+
+    function budgetPctFor(projectId: string): number {
+      const budget = budgetsByProject.get(projectId);
+      if (!budget) return 0;
+      if (budget.hoursBudget && budget.hoursBudget > 0) {
+        return Math.min(100, Math.round((budget.hoursLogged / budget.hoursBudget) * 100));
+      }
+      if (budget.costBudgetCents && budget.costBudgetCents > 0) {
+        return Math.min(100, Math.round((budget.costLoggedCents / budget.costBudgetCents) * 100));
+      }
+      return 0;
+    }
+
+    function budgetToneFor(projectId: string): string {
+      const pct = budgetPctFor(projectId);
+      if (pct >= 100) return "bg-error";
+      if (pct >= 85) return "bg-warning";
+      return "bg-primary";
+    }
+
+    useEffect(() => {
+      if (newProjectOpen && !newProjectClientId && clients[0]) {
+        setNewProjectClientId(clients[0].id);
+      }
+    }, [newProjectOpen, newProjectClientId, clients]);
+
+    async function createProject() {
+      const name = newProjectName.trim();
+      if (!name || !newProjectClientId || !teamId) return;
+      const client = clients.find((c) => c.id === newProjectClientId);
+      setNewProjectName("");
+      setNewProjectOpen(false);
+      await agencyOps.createProject({
+        teamId,
+        clientId: newProjectClientId,
+        clientName: client?.name ?? "",
+        name,
+      });
+    }
+
+    const isLoading = projectsQuery.isPending || clientsQuery.isPending;
+    const isError = projectsQuery.isError;
+
+    return (
+      <div className="agency-projects space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-64">
+            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
+            <Input
+              value={filterTerm}
+              onChange={(e) => setFilterTerm(e.target.value)}
+              placeholder="Filter projects or clients"
+              className="pl-9"
+            />
           </div>
-        ) : null}
-      </div>
 
-      {isLoading ? (
-        <div className="overflow-hidden rounded-2xl border border-default bg-default">
-          {[1, 2, 3, 4, 5, 6].map((rowIndex) => (
-            <div key={rowIndex} className="border-b border-default px-4 py-4 last:border-b-0">
-              <Skeleton className="h-4 w-full" />
-            </div>
-          ))}
-        </div>
-      ) : isError ? (
-        <div className={agencyErrorPanelClass} role="alert">
-          <AlertTriangle className="mx-auto size-5 text-error" />
-          <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load projects.</p>
-          <p className="mt-1 text-xs text-muted">
-            {getErrorMessage(projectsQuery.error, "Try refreshing.")}
-          </p>
-          <Button variant="secondary" size="sm" className="mt-3" onClick={() => void projectsQuery.refetch()}>
-            Retry
-          </Button>
-        </div>
-      ) : clients.length === 0 ? (
-        <div className={agencyEmptyPanelClass}>
-          <Building2 className="mx-auto size-6 text-muted" />
-          <p className="mt-3 text-sm font-bold text-highlighted">No clients yet.</p>
-          <p className="mt-1 text-xs text-muted">Add a client first, then their projects show up here.</p>
-        </div>
-      ) : projects.length === 0 ? (
-        <div className={agencyEmptyPanelClass}>
-          <FolderKanban className="mx-auto size-6 text-muted" />
-          <p className="mt-3 text-sm font-bold text-highlighted">No projects yet.</p>
-          <p className="mt-1 text-xs text-muted">
-            Create your first project to start tracking time and budgets.
-          </p>
-          <Button variant="secondary" size="sm" className="mt-4" onClick={() => setNewProjectOpen(true)}>
-            <Plus />
-            New project
-          </Button>
-        </div>
-      ) : filteredProjects.length === 0 ? (
-        <div className="rounded-2xl border border-default bg-default p-8 text-center">
-          <p className="text-sm font-bold text-highlighted">No projects match.</p>
-          <p className="mt-1 text-xs text-muted">Try a different search.</p>
-        </div>
-      ) : (
-        <div className="overflow-x-auto rounded-2xl border border-default bg-default">
-          <table className="w-full min-w-[40rem] text-xs">
-            <thead className="border-b border-default bg-muted">
-              <tr className={agencyLabelClass}>
-                <th scope="col" className="px-4 py-2.5 font-bold">
-                  Project
-                </th>
-                <th scope="col" className="px-3 py-2.5 font-bold">
-                  Client
-                </th>
-                <th scope="col" className="px-3 py-2.5 font-bold">
-                  Budget
-                </th>
-                <th scope="col" className="px-3 py-2.5 text-right font-bold">
-                  Hours · this week
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredProjects.map((project) => (
-                <tr
-                  key={project.id}
-                  className="cursor-pointer border-b border-default last:border-b-0 transition-colors hover:bg-elevated/40"
-                  tabIndex={0}
-                  onClick={() => onSelect(project.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      onSelect(project.id);
-                    }
-                  }}
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span
-                        className="agency-projects__dot inline-block size-2 shrink-0 rounded-full"
-                        aria-hidden="true"
-                        style={projectHueStyle(project.id)}
-                      />
-                      <span className="truncate font-bold text-highlighted">{project.name}</span>
+          {!hideToolbarActions ? (
+            <div className="ml-auto">
+              <Popover open={newProjectOpen} onOpenChange={setNewProjectOpen}>
+                <PopoverTrigger asChild>
+                  <Button size="sm" disabled={!teamId || clients.length === 0}>
+                    <Plus />
+                    New project
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-72 space-y-2 p-3">
+                  <form
+                    className="space-y-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void createProject();
+                    }}
+                  >
+                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                      New project
+                    </p>
+                    <div>
+                      <label className="text-[11px] font-bold text-muted">Client</label>
+                      <select
+                        value={newProjectClientId}
+                        onChange={(e) => setNewProjectClientId(e.target.value)}
+                        className="mt-1 h-9 w-full rounded-md border border-default bg-background px-2 text-sm"
+                      >
+                        {clients.map((client) => (
+                          <option key={client.id} value={client.id}>
+                            {client.name}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  </td>
-                  <td className="px-3 py-3 text-muted">
-                    <span className="truncate">{project.clientName}</span>
-                  </td>
-                  <td className="px-3 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="h-1.5 flex-1 rounded-full bg-elevated">
-                        <div
-                          className={[
-                            "h-full rounded-full transition-[width] duration-200 ease-out",
-                            budgetsByProject.get(project.id) ? budgetToneFor(project.id) : "bg-muted",
-                          ].join(" ")}
-                          style={{
-                            width: budgetsByProject.get(project.id)
-                              ? `${budgetPctFor(project.id)}%`
-                              : "0%",
-                          }}
+                    <div>
+                      <label className="text-[11px] font-bold text-muted">Name</label>
+                      <Input
+                        value={newProjectName}
+                        onChange={(e) => setNewProjectName(e.target.value)}
+                        placeholder="Project name"
+                        className="mt-1"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      size="sm"
+                      className="w-full"
+                      disabled={
+                        !newProjectName.trim() || !newProjectClientId || isProjectMutationPending
+                      }
+                    >
+                      Create project
+                    </Button>
+                  </form>
+                </PopoverContent>
+              </Popover>
+            </div>
+          ) : null}
+        </div>
+
+        {isLoading ? (
+          <div className="overflow-hidden rounded-2xl border border-default bg-default">
+            {[1, 2, 3, 4, 5, 6].map((rowIndex) => (
+              <div key={rowIndex} className="border-b border-default px-4 py-4 last:border-b-0">
+                <Skeleton className="h-4 w-full" />
+              </div>
+            ))}
+          </div>
+        ) : isError ? (
+          <div className={agencyErrorPanelClass} role="alert">
+            <AlertTriangle className="mx-auto size-5 text-error" />
+            <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load projects.</p>
+            <p className="mt-1 text-xs text-muted">
+              {getErrorMessage(projectsQuery.error, "Try refreshing.")}
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-3"
+              onClick={() => void projectsQuery.refetch()}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : clients.length === 0 ? (
+          <div className={agencyEmptyPanelClass}>
+            <Building2 className="mx-auto size-6 text-muted" />
+            <p className="mt-3 text-sm font-bold text-highlighted">No clients yet.</p>
+            <p className="mt-1 text-xs text-muted">
+              Add a client first, then their projects show up here.
+            </p>
+          </div>
+        ) : projects.length === 0 ? (
+          <div className={agencyEmptyPanelClass}>
+            <FolderKanban className="mx-auto size-6 text-muted" />
+            <p className="mt-3 text-sm font-bold text-highlighted">No projects yet.</p>
+            <p className="mt-1 text-xs text-muted">
+              Create your first project to start tracking time and budgets.
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-4"
+              onClick={() => setNewProjectOpen(true)}
+            >
+              <Plus />
+              New project
+            </Button>
+          </div>
+        ) : filteredProjects.length === 0 ? (
+          <div className="rounded-2xl border border-default bg-default p-8 text-center">
+            <p className="text-sm font-bold text-highlighted">No projects match.</p>
+            <p className="mt-1 text-xs text-muted">Try a different search.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-default bg-default">
+            <table className="w-full min-w-[40rem] text-xs">
+              <thead className="border-b border-default bg-muted">
+                <tr className={agencyLabelClass}>
+                  <th scope="col" className="px-4 py-2.5 font-bold">
+                    Project
+                  </th>
+                  <th scope="col" className="px-3 py-2.5 font-bold">
+                    Client
+                  </th>
+                  <th scope="col" className="px-3 py-2.5 font-bold">
+                    Budget
+                  </th>
+                  <th scope="col" className="px-3 py-2.5 text-right font-bold">
+                    Hours · this week
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProjects.map((project) => (
+                  <tr
+                    key={project.id}
+                    className="cursor-pointer border-b border-default last:border-b-0 transition-colors hover:bg-elevated/40"
+                    tabIndex={0}
+                    onClick={() => onSelect(project.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onSelect(project.id);
+                      }
+                    }}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span
+                          className="agency-projects__dot inline-block size-2 shrink-0 rounded-full"
+                          aria-hidden="true"
+                          style={projectHueStyle(project.id)}
                         />
+                        <span className="truncate font-bold text-highlighted">{project.name}</span>
                       </div>
+                    </td>
+                    <td className="px-3 py-3 text-muted">
+                      <span className="truncate">{project.clientName}</span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-1.5 flex-1 rounded-full bg-elevated">
+                          <div
+                            className={[
+                              "h-full rounded-full transition-[width] duration-200 ease-out",
+                              budgetsByProject.get(project.id)
+                                ? budgetToneFor(project.id)
+                                : "bg-muted",
+                            ].join(" ")}
+                            style={{
+                              width: budgetsByProject.get(project.id)
+                                ? `${budgetPctFor(project.id)}%`
+                                : "0%",
+                            }}
+                          />
+                        </div>
+                        <span
+                          className={[
+                            "text-[11px]",
+                            budgetsByProject.get(project.id)
+                              ? "font-mono tabular-nums text-muted"
+                              : "text-dimmed",
+                          ].join(" ")}
+                        >
+                          {budgetsByProject.get(project.id)
+                            ? `${budgetPctFor(project.id)}%`
+                            : "Not set"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-right">
                       <span
                         className={[
-                          "text-[11px]",
-                          budgetsByProject.get(project.id)
-                            ? "font-mono tabular-nums text-muted"
+                          "font-mono font-bold tabular-nums",
+                          (hoursThisWeekByProject.get(project.id) ?? 0) > 0
+                            ? "text-highlighted"
                             : "text-dimmed",
                         ].join(" ")}
                       >
-                        {budgetsByProject.get(project.id)
-                          ? `${budgetPctFor(project.id)}%`
-                          : "Not set"}
+                        {formatDuration(hoursThisWeekByProject.get(project.id) ?? 0, "short")}
                       </span>
-                    </div>
-                  </td>
-                  <td className="px-3 py-3 text-right">
-                    <span
-                      className={[
-                        "font-mono font-bold tabular-nums",
-                        (hoursThisWeekByProject.get(project.id) ?? 0) > 0
-                          ? "text-highlighted"
-                          : "text-dimmed",
-                      ].join(" ")}
-                    >
-                      {formatDuration(hoursThisWeekByProject.get(project.id) ?? 0, "short")}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-},
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  },
 );

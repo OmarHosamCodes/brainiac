@@ -27,10 +27,7 @@ type ListQueryData<T> = {
   total?: number;
 };
 
-export function useMergedAgencyListQuery<
-  T extends { id: string },
-  TData extends ListQueryData<T>,
->(
+export function useMergedAgencyListQuery<T extends { id: string }, TData extends ListQueryData<T>>(
   query: UseQueryResult<TData, Error>,
   overlay: AgencyListOverlay<T>,
   options: {
@@ -107,7 +104,10 @@ export function useMergedAgencyProjectTasksQuery<TData extends ListQueryData<Age
 ) {
   const overlay = useAgencyOptimisticStore((state) => state.tasks[teamId] ?? EMPTY_LIST_OVERLAY);
   const pruneTasks = useAgencyOptimisticStore((state) => state.pruneTasks);
-  const matches = useMemo(() => (task: AgencyOptimisticTask) => taskMatchesAgencyFilters(task, filters), [filters]);
+  const matches = useMemo(
+    () => (task: AgencyOptimisticTask) => taskMatchesAgencyFilters(task, filters),
+    [filters],
+  );
 
   return useMergedAgencyListQuery(query, overlay, {
     teamId,
@@ -116,11 +116,12 @@ export function useMergedAgencyProjectTasksQuery<TData extends ListQueryData<Age
   });
 }
 
-export function useMergedAgencyTimeEntriesQuery<TData extends ListQueryData<AgencyOptimisticTimeEntry>>(
-  query: UseQueryResult<TData, Error>,
-  teamId: string,
-) {
-  const overlay = useAgencyOptimisticStore((state) => state.timeEntries[teamId] ?? EMPTY_LIST_OVERLAY);
+export function useMergedAgencyTimeEntriesQuery<
+  TData extends ListQueryData<AgencyOptimisticTimeEntry>,
+>(query: UseQueryResult<TData, Error>, teamId: string) {
+  const overlay = useAgencyOptimisticStore(
+    (state) => state.timeEntries[teamId] ?? EMPTY_LIST_OVERLAY,
+  );
   const pruneTimeEntries = useAgencyOptimisticStore((state) => state.pruneTimeEntries);
 
   return useMergedAgencyListQuery(query, overlay, {
@@ -129,13 +130,13 @@ export function useMergedAgencyTimeEntriesQuery<TData extends ListQueryData<Agen
   });
 }
 
-export function useMergedAgencyTaskMessagesQuery<TData extends ListQueryData<AgencyOptimisticTaskMessage>>(
-  query: UseQueryResult<TData, Error>,
-  teamId: string,
-  taskId: string,
-) {
+export function useMergedAgencyTaskMessagesQuery<
+  TData extends ListQueryData<AgencyOptimisticTaskMessage>,
+>(query: UseQueryResult<TData, Error>, teamId: string, taskId: string) {
   const overlayKey = `${teamId}:${taskId}`;
-  const overlay = useAgencyOptimisticStore((state) => state.taskMessages[overlayKey] ?? EMPTY_LIST_OVERLAY);
+  const overlay = useAgencyOptimisticStore(
+    (state) => state.taskMessages[overlayKey] ?? EMPTY_LIST_OVERLAY,
+  );
   const pruneTaskMessages = useAgencyOptimisticStore((state) => state.pruneTaskMessages);
 
   return useMergedAgencyListQuery(query, overlay, {

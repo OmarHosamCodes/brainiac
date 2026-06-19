@@ -3,7 +3,10 @@ import { Blocks } from "lucide-react";
 
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
 import { Button } from "@/components/ui/button";
-import { getWorkspaceBlockRegistryEntry, workspacePrimaryBlockTypes } from "@/lib/utils/workspace-block-registry";
+import {
+  getWorkspaceBlockRegistryEntry,
+  workspacePrimaryBlockTypes,
+} from "@/lib/utils/workspace-block-registry";
 import type { WorkspaceAddBlockCommandView } from "@/components/workspace/node/workspace-add-block-command";
 
 type WorkspaceNodeEmptyStateProps = {
@@ -34,7 +37,8 @@ export function WorkspaceNodeEmptyState({
       </div>
       <h2 className="mt-4 text-lg font-semibold text-highlighted">Start this workspace</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-        Add a block to capture tasks, notes, or decisions. You can always add more from the full catalog.
+        Add a block to capture tasks, notes, or decisions. You can always add more from the full
+        catalog.
       </p>
 
       <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
@@ -61,7 +65,13 @@ export function WorkspaceNodeEmptyState({
         })}
       </div>
 
-      <Button type="button" variant="ghost" size="sm" className="mt-4" onClick={() => onBrowseAll("browse")}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="mt-4"
+        onClick={() => onBrowseAll("browse")}
+      >
         Browse all blocks
       </Button>
     </div>

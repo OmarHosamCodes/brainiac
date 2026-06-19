@@ -470,7 +470,8 @@ export function WorkspaceOrchestratorSourcesModal({
                               )}
                             >
                               {item.task.priority
-                                ? item.task.priority.charAt(0).toUpperCase() + item.task.priority.slice(1)
+                                ? item.task.priority.charAt(0).toUpperCase() +
+                                  item.task.priority.slice(1)
                                 : "—"}
                             </span>
                           </div>
@@ -484,7 +485,8 @@ export function WorkspaceOrchestratorSourcesModal({
                             title="Priority is derived from content pipeline status and cannot be changed here."
                           >
                             {item.task.priority
-                              ? item.task.priority.charAt(0).toUpperCase() + item.task.priority.slice(1)
+                              ? item.task.priority.charAt(0).toUpperCase() +
+                                item.task.priority.slice(1)
                               : "Derived"}
                           </Button>
                         )}
@@ -520,7 +522,12 @@ export function WorkspaceOrchestratorSourcesModal({
         </section>
 
         <div className="flex justify-end pt-2">
-          <Button type="button" variant="ghost" className="rounded-xl" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="ghost"
+            className="rounded-xl"
+            onClick={() => onOpenChange(false)}
+          >
             Close
           </Button>
         </div>

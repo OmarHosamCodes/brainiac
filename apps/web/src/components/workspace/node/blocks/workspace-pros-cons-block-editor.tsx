@@ -71,7 +71,9 @@ export function WorkspaceProsConsBlockEditor({
     return (
       <section className="space-y-4">
         <div className="flex items-center justify-between px-2">
-          <div className={cn("flex items-center gap-2", isPros ? "text-success" : "text-destructive")}>
+          <div
+            className={cn("flex items-center gap-2", isPros ? "text-success" : "text-destructive")}
+          >
             {isPros ? <PlusCircle className="size-5" /> : <MinusCircle className="size-5" />}
             <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
               {title}

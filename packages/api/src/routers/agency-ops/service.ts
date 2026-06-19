@@ -1623,6 +1623,19 @@ export async function startAgencyTimer(
       createdAt: now,
       updatedAt: now,
     });
+
+    if (input.taskId) {
+      await tx
+        .update(agencyOpsProjectTask)
+        .set({ status: "in_progress", updatedAt: now })
+        .where(
+          and(
+            eq(agencyOpsProjectTask.id, input.taskId),
+            eq(agencyOpsProjectTask.teamId, input.teamId),
+            eq(agencyOpsProjectTask.status, "open"),
+          ),
+        );
+    }
   });
 
   const timer = await getActiveTimerByUser(actorUserId);
@@ -1636,6 +1649,7 @@ export async function stopAgencyTimer(
   actorUserId: string,
   input: {
     teamId?: string;
+    taskId?: string;
     description?: string;
     discard?: boolean;
   },
@@ -1668,6 +1682,23 @@ export async function stopAgencyTimer(
     });
   }
 
+  let taskId = active.taskId ?? null;
+  if (input.taskId) {
+    const taskProjectId = await resolveTaskProjectId(active.teamId, input.taskId);
+    if (taskProjectId !== active.projectId) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Task must belong to the active timer project.",
+      });
+    }
+    taskId = active.taskId ?? input.taskId;
+  }
+
+  if (!input.discard && !taskId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Choose a task before stopping this timer.",
+    });
+  }
+
   const now = new Date();
   const description = input.description?.trim() ?? active.description;
   const durationSeconds = getDurationSeconds(active.startedAt, now);
@@ -1688,7 +1719,7 @@ export async function stopAgencyTimer(
         id: createWorkspaceId("agency-time"),
         teamId: active.teamId,
         projectId: active.projectId,
-        taskId: active.taskId,
+        taskId,
         userId: actorUserId,
         source: "timer",
         description,
@@ -1701,6 +1732,19 @@ export async function stopAgencyTimer(
       .returning({ id: agencyOpsTimeEntry.id });
 
     await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, active.id));
+
+    if (taskId) {
+      await tx
+        .update(agencyOpsProjectTask)
+        .set({ status: "in_progress", updatedAt: now })
+        .where(
+          and(
+            eq(agencyOpsProjectTask.id, taskId),
+            eq(agencyOpsProjectTask.teamId, active.teamId),
+            eq(agencyOpsProjectTask.status, "open"),
+          ),
+        );
+    }
 
     return [created];
   });
@@ -1816,25 +1860,28 @@ export async function listMyAgencyTimeEntries(
     .limit(pageSize)
     .offset(offset);
 
-  const items = rows.map((row) => ({
-    id: row.id,
-    teamId: row.teamId,
-    userId: row.userId,
-    userName: row.userName ?? "Unknown",
-    projectId: row.projectId,
-    taskId: row.taskId ?? null,
-    taskTitle: row.taskTitle ?? null,
-    projectName: row.projectName,
-    clientId: row.clientId,
-    clientName: row.clientName,
-    source: row.source,
-    description: row.description,
-    startedAt: row.startedAt.toISOString(),
-    endedAt: row.endedAt.toISOString(),
-    durationSeconds: row.durationSeconds,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  } satisfies AgencyTimeEntryRecord));
+  const items = rows.map(
+    (row) =>
+      ({
+        id: row.id,
+        teamId: row.teamId,
+        userId: row.userId,
+        userName: row.userName ?? "Unknown",
+        projectId: row.projectId,
+        taskId: row.taskId ?? null,
+        taskTitle: row.taskTitle ?? null,
+        projectName: row.projectName,
+        clientId: row.clientId,
+        clientName: row.clientName,
+        source: row.source,
+        description: row.description,
+        startedAt: row.startedAt.toISOString(),
+        endedAt: row.endedAt.toISOString(),
+        durationSeconds: row.durationSeconds,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+      }) satisfies AgencyTimeEntryRecord,
+  );
 
   // Count total for pagination
   const [countRow] = await db
@@ -3350,25 +3397,28 @@ export async function listAllAgencyTimeEntries(
     .limit(pageSize)
     .offset(offset);
 
-  const items = rows.map((row) => ({
-    id: row.id,
-    teamId: row.teamId,
-    userId: row.userId,
-    userName: row.userName ?? "Unknown",
-    projectId: row.projectId,
-    taskId: row.taskId ?? null,
-    taskTitle: row.taskTitle ?? null,
-    projectName: row.projectName,
-    clientId: row.clientId,
-    clientName: row.clientName,
-    source: row.source,
-    description: row.description,
-    startedAt: row.startedAt.toISOString(),
-    endedAt: row.endedAt.toISOString(),
-    durationSeconds: row.durationSeconds,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  } satisfies AgencyTimeEntryRecord));
+  const items = rows.map(
+    (row) =>
+      ({
+        id: row.id,
+        teamId: row.teamId,
+        userId: row.userId,
+        userName: row.userName ?? "Unknown",
+        projectId: row.projectId,
+        taskId: row.taskId ?? null,
+        taskTitle: row.taskTitle ?? null,
+        projectName: row.projectName,
+        clientId: row.clientId,
+        clientName: row.clientName,
+        source: row.source,
+        description: row.description,
+        startedAt: row.startedAt.toISOString(),
+        endedAt: row.endedAt.toISOString(),
+        durationSeconds: row.durationSeconds,
+        createdAt: row.createdAt.toISOString(),
+        updatedAt: row.updatedAt.toISOString(),
+      }) satisfies AgencyTimeEntryRecord,
+  );
 
   const [countRow] = await db
     .select({ count: sql<number>`count(*)` })

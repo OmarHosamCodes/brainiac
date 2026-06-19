@@ -50,7 +50,9 @@ export function WorkspaceAddBlockCommand({
 
   const [activeTab, setActiveTab] = useState<WorkspaceAddBlockCommandView>(initialView);
   const [mode, setMode] = useState<PaletteMode>("list");
-  const [browseCategoryId, setBrowseCategoryId] = useState(catalog.browseCategories[0]?.id ?? "essentials");
+  const [browseCategoryId, setBrowseCategoryId] = useState(
+    catalog.browseCategories[0]?.id ?? "essentials",
+  );
   const [pendingItem, setPendingItem] = useState<AddBlockCommandItem | null>(null);
   const [titleInput, setTitleInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -145,7 +147,11 @@ export function WorkspaceAddBlockCommand({
 
   function renderCommandItem(item: AddBlockCommandBlockItem) {
     return (
-      <CommandItem key={item.type} value={`${item.label} ${item.category} ${item.type}`} onSelect={() => beginConfirm(item)}>
+      <CommandItem
+        key={item.type}
+        value={`${item.label} ${item.category} ${item.type}`}
+        onSelect={() => beginConfirm(item)}
+      >
         {renderBlockIcon(item.type)}
         <span className="flex-1 truncate">{item.label}</span>
         <span className="text-xs text-muted-foreground">{item.category}</span>
@@ -199,7 +205,13 @@ export function WorkspaceAddBlockCommand({
       {mode === "confirm" && pendingItem ? (
         <div className="flex flex-col">
           <div className="flex items-center gap-2 border-b border-border px-3 py-3">
-            <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={returnToList}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2"
+              onClick={returnToList}
+            >
               <ArrowLeft className="size-4" />
               Back
             </Button>
@@ -211,7 +223,9 @@ export function WorkspaceAddBlockCommand({
           <div className="space-y-4 px-4 py-4">
             <div className="rounded-xl border border-border bg-muted/20 px-3 py-3">
               <p className="text-sm font-semibold text-highlighted">
-                {pendingItem.kind === "preset" ? pendingItem.label : getWorkspaceBlockRegistryEntry(pendingItem.type).label}
+                {pendingItem.kind === "preset"
+                  ? pendingItem.label
+                  : getWorkspaceBlockRegistryEntry(pendingItem.type).label}
               </p>
               {pendingItem.kind === "preset" ? (
                 <>
@@ -298,15 +312,21 @@ export function WorkspaceAddBlockCommand({
                 <CommandEmpty>No blocks match your search.</CommandEmpty>
 
                 {filteredEssentials.length > 0 ? (
-                  <CommandGroup heading="Essentials">{filteredEssentials.map(renderCommandItem)}</CommandGroup>
+                  <CommandGroup heading="Essentials">
+                    {filteredEssentials.map(renderCommandItem)}
+                  </CommandGroup>
                 ) : null}
 
                 {filteredPresets.length > 0 ? (
-                  <CommandGroup heading="Block packs">{filteredPresets.map(renderPresetItem)}</CommandGroup>
+                  <CommandGroup heading="Block packs">
+                    {filteredPresets.map(renderPresetItem)}
+                  </CommandGroup>
                 ) : null}
 
                 {filteredBlockItems.length > 0 ? (
-                  <CommandGroup heading="All blocks">{filteredBlockItems.map(renderCommandItem)}</CommandGroup>
+                  <CommandGroup heading="All blocks">
+                    {filteredBlockItems.map(renderCommandItem)}
+                  </CommandGroup>
                 ) : null}
               </CommandList>
             </>

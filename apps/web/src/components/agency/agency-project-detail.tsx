@@ -33,7 +33,9 @@ function startOfWeekUtcIso(): string {
 export function AgencyProjectDetail({ teamId, projectId, onBack }: AgencyProjectDetailProps) {
   const range = useMemo(() => {
     const now = new Date();
-    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29));
+    const start = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29),
+    );
     const end = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
     );
@@ -74,7 +76,10 @@ export function AgencyProjectDetail({ teamId, projectId, onBack }: AgencyProject
   const budgetPct = useMemo(() => {
     if (!projectBudget) return 0;
     if (projectBudget.hoursBudget && projectBudget.hoursBudget > 0) {
-      return Math.min(100, Math.round((projectBudget.hoursLogged / projectBudget.hoursBudget) * 100));
+      return Math.min(
+        100,
+        Math.round((projectBudget.hoursLogged / projectBudget.hoursBudget) * 100),
+      );
     }
     if (projectBudget.costBudgetCents && projectBudget.costBudgetCents > 0) {
       return Math.min(
@@ -193,7 +198,9 @@ export function AgencyProjectDetail({ teamId, projectId, onBack }: AgencyProject
                     aria-hidden="true"
                     style={projectHueStyle(project.id)}
                   />
-                  <span className="truncate text-lg font-bold text-highlighted">{project.name}</span>
+                  <span className="truncate text-lg font-bold text-highlighted">
+                    {project.name}
+                  </span>
                 </h2>
               </div>
               <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 text-xs">
@@ -227,10 +234,12 @@ export function AgencyProjectDetail({ teamId, projectId, onBack }: AgencyProject
                 <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
                   Budget burn
                 </p>
-                <p className={["text-[11px]", projectBudget ? "text-muted" : "text-dimmed"].join(" ")}>
-                  {projectBudget
-                    ? `${budgetPct}% used`
-                    : "Not set · configure rates in Settings"}
+                <p
+                  className={["text-[11px]", projectBudget ? "text-muted" : "text-dimmed"].join(
+                    " ",
+                  )}
+                >
+                  {projectBudget ? `${budgetPct}% used` : "Not set · configure rates in Settings"}
                 </p>
               </div>
               <div className="mt-2 h-1.5 rounded-full bg-elevated">
@@ -259,7 +268,9 @@ export function AgencyProjectDetail({ teamId, projectId, onBack }: AgencyProject
                   {hoursByMemberThisWeek.map((row) => (
                     <li key={row.userId} className="px-4 py-3">
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="truncate text-xs font-bold text-highlighted">{row.name}</span>
+                        <span className="truncate text-xs font-bold text-highlighted">
+                          {row.name}
+                        </span>
                         <span className="font-mono text-[11px] tabular-nums text-muted">
                           {formatDuration(row.seconds, "short")}
                         </span>

@@ -75,7 +75,10 @@ export function WorkspaceSwotBlockEditor({
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.2em]">
                   {quadrant.label}
                 </h3>
-                <Badge variant={filled ? "success" : "secondary"} className="rounded-lg px-2 py-0.5">
+                <Badge
+                  variant={filled ? "success" : "secondary"}
+                  className="rounded-lg px-2 py-0.5"
+                >
                   {filled ? "Filled" : "Empty"}
                 </Badge>
               </div>

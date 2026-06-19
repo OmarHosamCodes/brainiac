@@ -196,7 +196,9 @@ export function WorkspaceAssumptionTrackerBlockEditor({
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">Tracked</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">
+            Tracked
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
             {summary.total}
           </p>
@@ -223,13 +225,21 @@ export function WorkspaceAssumptionTrackerBlockEditor({
 
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">Strategic Assumptions</h2>
+          <h2 className="text-sm font-black tracking-tight text-foreground">
+            Strategic Assumptions
+          </h2>
           <p className="text-xs text-muted-foreground">
             Track bets behind the strategy and surface risks.
           </p>
         </div>
 
-        <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={addAssumption}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="rounded-full"
+          onClick={addAssumption}
+        >
           <Plus />
           New Assumption
         </Button>
@@ -262,14 +272,19 @@ export function WorkspaceAssumptionTrackerBlockEditor({
           <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted/10 text-muted-foreground/30">
             <Activity className="size-6" />
           </div>
-          <p className="mt-3 text-xs font-bold text-muted-foreground">No assumptions in this filter</p>
+          <p className="mt-3 text-xs font-bold text-muted-foreground">
+            No assumptions in this filter
+          </p>
         </div>
       ) : (
         <div className="space-y-3">
           {visibleAssumptions.map((assumption) => (
             <article
               key={assumption.id}
-              className={cn("rounded-2xl border p-4 transition-colors", getStatusClasses(assumption.status))}
+              className={cn(
+                "rounded-2xl border p-4 transition-colors",
+                getStatusClasses(assumption.status),
+              )}
             >
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">

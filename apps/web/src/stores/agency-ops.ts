@@ -272,7 +272,6 @@ type CreateInvoicePayload = {
   currency?: string;
 };
 
-
 type AgencyOpsActions = ReturnType<typeof createAgencyOpsActions>;
 
 type AgencyOpsState = {
@@ -288,7 +287,9 @@ type AgencyOpsState = {
 } & AgencyOpsActions;
 
 function createAgencyOpsActions(
-  set: (partial: Partial<AgencyOpsState> | ((state: AgencyOpsState) => Partial<AgencyOpsState>)) => void,
+  set: (
+    partial: Partial<AgencyOpsState> | ((state: AgencyOpsState) => Partial<AgencyOpsState>),
+  ) => void,
   _get: () => AgencyOpsState,
 ) {
   // Pending-mutation counters exposed so components can disable buttons.
@@ -420,23 +421,26 @@ function createAgencyOpsActions(
     optimistic().upsertClient(teamId, client);
     clientsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
-      getQueryClient().setQueryData<AgencyClientsListQueryData | undefined>(reg.queryKey, (current) => {
-        if (!current) return current;
-        const exists = current.items.some((item) => item.id === client.id);
-        if (exists) {
+      getQueryClient().setQueryData<AgencyClientsListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          const exists = current.items.some((item) => item.id === client.id);
+          if (exists) {
+            return {
+              ...current,
+              items: current.items.map((item) =>
+                item.id === client.id ? { ...item, ...client } : item,
+              ),
+            };
+          }
           return {
             ...current,
-            items: current.items.map((item) =>
-              item.id === client.id ? { ...item, ...client } : item,
-            ),
+            items: [client, ...current.items],
+            total: current.total + 1,
           };
-        }
-        return {
-          ...current,
-          items: [client, ...current.items],
-          total: current.total + 1,
-        };
-      });
+        },
+      );
     });
   }
 
@@ -444,13 +448,16 @@ function createAgencyOpsActions(
     optimistic().updateClient(teamId, clientId, patch);
     clientsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
-      getQueryClient().setQueryData<AgencyClientsListQueryData | undefined>(reg.queryKey, (current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          items: current.items.map((c) => (c.id === clientId ? { ...c, ...patch } : c)),
-        };
-      });
+      getQueryClient().setQueryData<AgencyClientsListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            items: current.items.map((c) => (c.id === clientId ? { ...c, ...patch } : c)),
+          };
+        },
+      );
     });
   }
 
@@ -465,14 +472,17 @@ function createAgencyOpsActions(
       // If the registry entry is scoped to a specific clientId, only patch
       // if it matches (or if it's a catch-all listing all clients).
       if (reg.clientId && reg.clientId !== project.clientId) return;
-      getQueryClient().setQueryData<AgencyProjectsListQueryData | undefined>(reg.queryKey, (current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          items: [project, ...current.items],
-          total: current.total + 1,
-        };
-      });
+      getQueryClient().setQueryData<AgencyProjectsListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            items: [project, ...current.items],
+            total: current.total + 1,
+          };
+        },
+      );
     });
   }
 
@@ -544,21 +554,24 @@ function createAgencyOpsActions(
     optimistic().setCapacityCell(teamId, weekStart, userId, capacitySeconds);
     capacityQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
-      getQueryClient().setQueryData<AgencyCapacityListQueryData | undefined>(reg.queryKey, (current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          weeks: current.weeks.map((week) => {
-            if (week.weekStart !== weekStart) return week;
-            return {
-              ...week,
-              members: week.members.map((member) =>
-                member.userId === userId ? { ...member, capacitySeconds } : member,
-              ),
-            };
-          }),
-        };
-      });
+      getQueryClient().setQueryData<AgencyCapacityListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            weeks: current.weeks.map((week) => {
+              if (week.weekStart !== weekStart) return week;
+              return {
+                ...week,
+                members: week.members.map((member) =>
+                  member.userId === userId ? { ...member, capacitySeconds } : member,
+                ),
+              };
+            }),
+          };
+        },
+      );
     });
   }
 
@@ -570,15 +583,18 @@ function createAgencyOpsActions(
     optimistic().reconcileClient(teamId, optimisticIdValue, created);
     clientsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
-      getQueryClient().setQueryData<AgencyClientsListQueryData | undefined>(reg.queryKey, (current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          items: current.items.map((client) =>
-            client.id === optimisticIdValue ? created : client,
-          ),
-        };
-      });
+      getQueryClient().setQueryData<AgencyClientsListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            items: current.items.map((client) =>
+              client.id === optimisticIdValue ? created : client,
+            ),
+          };
+        },
+      );
     });
   }
 
@@ -591,15 +607,18 @@ function createAgencyOpsActions(
     projectsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
       if (reg.clientId && reg.clientId !== created.clientId) return;
-      getQueryClient().setQueryData<AgencyProjectsListQueryData | undefined>(reg.queryKey, (current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          items: current.items.map((project) =>
-            project.id === optimisticIdValue ? created : project,
-          ),
-        };
-      });
+      getQueryClient().setQueryData<AgencyProjectsListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            items: current.items.map((project) =>
+              project.id === optimisticIdValue ? created : project,
+            ),
+          };
+        },
+      );
     });
   }
 
@@ -654,7 +673,10 @@ function createAgencyOpsActions(
       optimistic().restoreClients(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't create client", { description: getErrorMessage(error, "Try again.") });
     } finally {
-      set((state) => ({ ...state, clientMutationCount: Math.max(0, state.clientMutationCount - 1) }));
+      set((state) => ({
+        ...state,
+        clientMutationCount: Math.max(0, state.clientMutationCount - 1),
+      }));
     }
   }
 
@@ -687,7 +709,10 @@ function createAgencyOpsActions(
       optimistic().restoreClients(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't rename", { description: getErrorMessage(error, "Try again.") });
     } finally {
-      set((state) => ({ ...state, clientMutationCount: Math.max(0, state.clientMutationCount - 1) }));
+      set((state) => ({
+        ...state,
+        clientMutationCount: Math.max(0, state.clientMutationCount - 1),
+      }));
     }
   }
 
@@ -726,7 +751,10 @@ function createAgencyOpsActions(
       optimistic().restoreProjects(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't add project", { description: getErrorMessage(error, "Try again.") });
     } finally {
-      set((state) => ({ ...state, projectMutationCount: Math.max(0, state.projectMutationCount - 1) }));
+      set((state) => ({
+        ...state,
+        projectMutationCount: Math.max(0, state.projectMutationCount - 1),
+      }));
     }
   }
 
@@ -786,7 +814,10 @@ function createAgencyOpsActions(
 
     const snapshots = snapshotQueries(registryPayloads(projectTasksQueryRegistry));
     const optimisticSnapshot = optimistic().snapshotTasks(payload.teamId);
-    set((state) => ({ ...state, deletingTaskIds: [...new Set([...state.deletingTaskIds, payload.taskId])] }));
+    set((state) => ({
+      ...state,
+      deletingTaskIds: [...new Set([...state.deletingTaskIds, payload.taskId])],
+    }));
 
     try {
       await cancelAgencyProjectTaskListQueries(payload.teamId);
@@ -804,7 +835,10 @@ function createAgencyOpsActions(
       optimistic().restoreTasks(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't delete task", { description: getErrorMessage(error, "Try again.") });
     } finally {
-      set((state) => ({ ...state, deletingTaskIds: state.deletingTaskIds.filter((id) => id !== payload.taskId) }));
+      set((state) => ({
+        ...state,
+        deletingTaskIds: state.deletingTaskIds.filter((id) => id !== payload.taskId),
+      }));
     }
   }
 
@@ -816,14 +850,17 @@ function createAgencyOpsActions(
     optimistic().deleteClient(teamId, clientId);
     clientsQueryRegistry.forEach(({ payload: reg }) => {
       if (reg.teamId !== teamId) return;
-      getQueryClient().setQueryData<AgencyClientsListQueryData | undefined>(reg.queryKey, (current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          items: current.items.filter((c) => c.id !== clientId),
-          total: Math.max(0, current.total - 1),
-        };
-      });
+      getQueryClient().setQueryData<AgencyClientsListQueryData | undefined>(
+        reg.queryKey,
+        (current) => {
+          if (!current) return current;
+          return {
+            ...current,
+            items: current.items.filter((c) => c.id !== clientId),
+            total: Math.max(0, current.total - 1),
+          };
+        },
+      );
     });
   }
 
@@ -848,7 +885,10 @@ function createAgencyOpsActions(
       optimistic().restoreClients(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't archive client", { description: getErrorMessage(error, "Try again.") });
     } finally {
-      set((state) => ({ ...state, clientMutationCount: Math.max(0, state.clientMutationCount - 1) }));
+      set((state) => ({
+        ...state,
+        clientMutationCount: Math.max(0, state.clientMutationCount - 1),
+      }));
     }
   }
 
@@ -881,7 +921,10 @@ function createAgencyOpsActions(
     } catch (error) {
       toast.error("Couldn't save contact", { description: getErrorMessage(error, "Try again.") });
     } finally {
-      set((state) => ({ ...state, contactMutationCount: Math.max(0, state.contactMutationCount - 1) }));
+      set((state) => ({
+        ...state,
+        contactMutationCount: Math.max(0, state.contactMutationCount - 1),
+      }));
     }
   }
 
@@ -926,7 +969,8 @@ function createAgencyOpsActions(
 
     const snapshots = snapshotQueries(registryPayloads(capacityQueryRegistry));
     const capacityCellKey = `${payload.teamId}:${payload.weekStart}:${payload.userId}`;
-    const previousCapacitySeconds = useAgencyOptimisticStore.getState().capacityCells[capacityCellKey];
+    const previousCapacitySeconds =
+      useAgencyOptimisticStore.getState().capacityCells[capacityCellKey];
     set((state) => ({ ...state, capacityMutationCount: state.capacityMutationCount + 1 }));
 
     try {
@@ -954,9 +998,14 @@ function createAgencyOpsActions(
           previousCapacitySeconds,
         );
       }
-      toast.error("Couldn't update capacity", { description: getErrorMessage(error, "Try again.") });
+      toast.error("Couldn't update capacity", {
+        description: getErrorMessage(error, "Try again."),
+      });
     } finally {
-      set((state) => ({ ...state, capacityMutationCount: Math.max(0, state.capacityMutationCount - 1) }));
+      set((state) => ({
+        ...state,
+        capacityMutationCount: Math.max(0, state.capacityMutationCount - 1),
+      }));
     }
   }
 
@@ -1137,11 +1186,16 @@ function createAgencyOpsActions(
       ]);
 
       callbacks?.onSuccess?.();
-      toast.success("Invoice draft created", { description: `${payload.clientName} — draft added to Billing.` });
+      toast.success("Invoice draft created", {
+        description: `${payload.clientName} — draft added to Billing.`,
+      });
     } catch (error) {
       toast.error("Couldn't create invoice", { description: getErrorMessage(error, "Try again.") });
     } finally {
-      set((state) => ({ ...state, invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1) }));
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
     }
   }
 
@@ -1169,10 +1223,12 @@ function createAgencyOpsActions(
     } catch (error) {
       toast.error("Couldn't update invoice", { description: getErrorMessage(error, "Try again.") });
     } finally {
-      set((state) => ({ ...state, invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1) }));
+      set((state) => ({
+        ...state,
+        invoiceMutationCount: Math.max(0, state.invoiceMutationCount - 1),
+      }));
     }
   }
-
 
   return {
     registerClientsQuery,
