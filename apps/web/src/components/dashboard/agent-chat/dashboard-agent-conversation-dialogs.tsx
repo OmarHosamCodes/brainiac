@@ -16,10 +16,15 @@ type DashboardAgentConversationDialogsProps = {
   chat: DashboardAgentChatState;
 };
 
-export function DashboardAgentConversationDialogs({ chat }: DashboardAgentConversationDialogsProps) {
+export function DashboardAgentConversationDialogs({
+  chat,
+}: DashboardAgentConversationDialogsProps) {
   return (
     <>
-      <Dialog open={chat.isRenameDialogOpen} onOpenChange={(open) => !open && chat.closeRenameDialog()}>
+      <Dialog
+        open={chat.isRenameDialogOpen}
+        onOpenChange={(open) => !open && chat.closeRenameDialog()}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Rename conversation</DialogTitle>
@@ -55,7 +60,10 @@ export function DashboardAgentConversationDialogs({ chat }: DashboardAgentConver
         </DialogContent>
       </Dialog>
 
-      <Dialog open={chat.isDeleteDialogOpen} onOpenChange={(open) => !open && chat.closeDeleteDialog()}>
+      <Dialog
+        open={chat.isDeleteDialogOpen}
+        onOpenChange={(open) => !open && chat.closeDeleteDialog()}
+      >
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Delete conversation</DialogTitle>

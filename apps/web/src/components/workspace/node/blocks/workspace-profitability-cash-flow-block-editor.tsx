@@ -8,7 +8,17 @@ import {
   type WorkspaceFinancePaymentStatus,
   type WorkspaceProfitabilityCashFlowBlock,
 } from "@brainiac/workspace";
-import { Calculator, Percent, Plus, Receipt, Trash2, TrendingDown, TrendingUp, Users2, Wallet } from "lucide-react";
+import {
+  Calculator,
+  Percent,
+  Plus,
+  Receipt,
+  Trash2,
+  TrendingDown,
+  TrendingUp,
+  Users2,
+  Wallet,
+} from "lucide-react";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
@@ -210,7 +220,9 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-3 px-1">
           <div>
-            <h2 className="text-lg font-black tracking-tight text-foreground">Cash Flow Overview</h2>
+            <h2 className="text-lg font-black tracking-tight text-foreground">
+              Cash Flow Overview
+            </h2>
             <p className="text-xs text-muted-foreground">
               Real-time profitability and margin metrics across all clients.
             </p>
@@ -218,7 +230,13 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <div className={cn("rounded-3xl border p-5 transition-colors", revenueTone.bg, revenueTone.border)}>
+          <div
+            className={cn(
+              "rounded-3xl border p-5 transition-colors",
+              revenueTone.bg,
+              revenueTone.border,
+            )}
+          >
             <div className="flex items-center gap-2.5">
               <div
                 className={cn(
@@ -237,7 +255,13 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
             </p>
           </div>
 
-          <div className={cn("rounded-3xl border p-5 transition-colors", expenseTone.bg, expenseTone.border)}>
+          <div
+            className={cn(
+              "rounded-3xl border p-5 transition-colors",
+              expenseTone.bg,
+              expenseTone.border,
+            )}
+          >
             <div className="flex items-center gap-2.5">
               <div
                 className={cn(
@@ -256,9 +280,20 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
             </p>
           </div>
 
-          <div className={cn("rounded-3xl border p-5 transition-colors", profitTone.bg, profitTone.border)}>
+          <div
+            className={cn(
+              "rounded-3xl border p-5 transition-colors",
+              profitTone.bg,
+              profitTone.border,
+            )}
+          >
             <div className="flex items-center gap-2.5">
-              <div className={cn("flex size-8 items-center justify-center rounded-xl", profitTone.icon)}>
+              <div
+                className={cn(
+                  "flex size-8 items-center justify-center rounded-xl",
+                  profitTone.icon,
+                )}
+              >
                 <Wallet className="size-[18px]" />
               </div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
@@ -275,9 +310,20 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
             </p>
           </div>
 
-          <div className={cn("rounded-3xl border p-5 transition-colors", marginTone.bg, marginTone.border)}>
+          <div
+            className={cn(
+              "rounded-3xl border p-5 transition-colors",
+              marginTone.bg,
+              marginTone.border,
+            )}
+          >
             <div className="flex items-center gap-2.5">
-              <div className={cn("flex size-8 items-center justify-center rounded-xl", marginTone.icon)}>
+              <div
+                className={cn(
+                  "flex size-8 items-center justify-center rounded-xl",
+                  marginTone.icon,
+                )}
+              >
                 <Percent className="size-[18px]" />
               </div>
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
@@ -300,13 +346,21 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
         <section className="min-w-0 space-y-6">
           <div className="flex flex-col gap-3 px-1 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-black tracking-tight text-foreground">Client Portfolio</h2>
+              <h2 className="text-lg font-black tracking-tight text-foreground">
+                Client Portfolio
+              </h2>
               <p className="text-xs text-muted-foreground">
                 Track profitability, margins, and collection status per client.
               </p>
             </div>
 
-            <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={addClient}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="rounded-full"
+              onClick={addClient}
+            >
               <Plus />
               Add Client
             </Button>
@@ -455,11 +509,19 @@ export function WorkspaceProfitabilityCashFlowBlockEditor({
         <section className="flex flex-col gap-5 rounded-2xl border border-muted/20 bg-muted/5 p-6 lg:sticky lg:top-8 lg:h-fit">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-base font-black tracking-tight text-foreground">Monthly Overhead</h2>
+              <h2 className="text-base font-black tracking-tight text-foreground">
+                Monthly Overhead
+              </h2>
               <p className="mt-0.5 text-[11px] text-muted-foreground">Recurring operating costs.</p>
             </div>
 
-            <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={addExpense}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="rounded-full"
+              onClick={addExpense}
+            >
               <Plus />
               Add
             </Button>

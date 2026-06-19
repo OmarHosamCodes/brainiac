@@ -68,7 +68,9 @@ export function MarketingPageShell({ children }: { children: ReactNode }) {
                     healthCheck.isSuccess ? "bg-primary" : "bg-neutral-300 dark:bg-neutral-700",
                   )}
                 />
-                <span>{healthCheck.isSuccess ? "All systems operational" : "Status unavailable"}</span>
+                <span>
+                  {healthCheck.isSuccess ? "All systems operational" : "Status unavailable"}
+                </span>
                 {healthCheck.isSuccess ? (
                   <span className="text-neutral-300 dark:text-neutral-600">
                     · {String(healthCheck.data)}ms

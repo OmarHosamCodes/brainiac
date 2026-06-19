@@ -96,7 +96,9 @@ export function AgencySettingsTenurePane({ teamId, active }: AgencySettingsTenur
 
   const savePolicyMutation = useMutation(orpc.agencyOps.tenure.policy.upsert.mutationOptions());
   const saveProfileMutation = useMutation(orpc.agencyOps.tenure.profiles.upsert.mutationOptions());
-  const saveExemptionMutation = useMutation(orpc.agencyOps.tenure.exemptions.upsert.mutationOptions());
+  const saveExemptionMutation = useMutation(
+    orpc.agencyOps.tenure.exemptions.upsert.mutationOptions(),
+  );
   const deleteExemptionMutation = useMutation(
     orpc.agencyOps.tenure.exemptions.delete.mutationOptions(),
   );
@@ -202,8 +204,7 @@ export function AgencySettingsTenurePane({ teamId, active }: AgencySettingsTenur
   const memberExemptions = useMemo(() => {
     if (!selectedUserId) return [];
     return exemptions.filter(
-      (exemption) =>
-        exemption.type === "team_holiday" || exemption.userId === selectedUserId,
+      (exemption) => exemption.type === "team_holiday" || exemption.userId === selectedUserId,
     );
   }, [exemptions, selectedUserId]);
 
@@ -286,8 +287,7 @@ export function AgencySettingsTenurePane({ teamId, active }: AgencySettingsTenur
     return `Example fiscal year: ${fmt(start)} – ${fmt(endExclusive)} (UTC).`;
   }, [policyDraft.fiscalYearStartDay, policyDraft.fiscalYearStartMonth]);
 
-  const isLoading =
-    policyQuery.isPending || summaryQuery.isPending || teamQuery.isPending;
+  const isLoading = policyQuery.isPending || summaryQuery.isPending || teamQuery.isPending;
 
   return (
     <div className="space-y-4">

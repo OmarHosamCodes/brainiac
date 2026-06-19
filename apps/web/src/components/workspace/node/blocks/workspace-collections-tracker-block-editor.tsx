@@ -154,23 +154,33 @@ export function WorkspaceCollectionsTrackerBlockEditor({
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-3xl border border-primary/20 bg-primary/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">Outstanding</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">
+            Outstanding
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
             {formatCurrency(summary.totalOutstanding)}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">{block.invoices.length} tracked invoices</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {block.invoices.length} tracked invoices
+          </p>
         </div>
 
         <div className="rounded-3xl border border-destructive/20 bg-destructive/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-destructive/70">Overdue</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-destructive/70">
+            Overdue
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-destructive sm:text-2xl">
             {formatCurrency(summary.overdueAmount)}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">{overdueCount} invoices need follow-up</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {overdueCount} invoices need follow-up
+          </p>
         </div>
 
         <div className="rounded-3xl border border-warning/20 bg-warning/10 p-5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">Due This Week</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">
+            Due This Week
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
             {formatCurrency(summary.dueThisWeekAmount)}
           </p>
@@ -191,7 +201,9 @@ export function WorkspaceCollectionsTrackerBlockEditor({
       <div className="flex flex-wrap items-start justify-between gap-3 px-1">
         <div className="space-y-2">
           <div>
-            <p className="text-sm font-semibold text-foreground">Collections & receivables tracker</p>
+            <p className="text-sm font-semibold text-foreground">
+              Collections & receivables tracker
+            </p>
             <p className="text-sm text-muted-foreground">
               Risk is highlighted automatically from invoice size, status, and delay length so the
               team can focus follow-up where cash exposure is highest.

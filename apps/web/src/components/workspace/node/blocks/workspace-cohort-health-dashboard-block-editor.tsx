@@ -109,14 +109,18 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">Seats Sold</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">
+            Seats Sold
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
             {summary.totalSeatsSold}
           </p>
         </div>
 
         <div className="rounded-2xl border border-success/20 bg-success/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">Capacity Filled</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">
+            Capacity Filled
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
             {summary.fillPercent}%
           </p>
@@ -132,7 +136,9 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
         </div>
 
         <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-destructive/70">At Risk</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-destructive/70">
+            At Risk
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-destructive sm:text-2xl">
             {summary.atRiskCount}
           </p>
@@ -141,13 +147,21 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
 
       <div className="flex flex-wrap items-start justify-between gap-3 px-1">
         <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">Cohort Health Dashboard</h2>
+          <h2 className="text-sm font-black tracking-tight text-foreground">
+            Cohort Health Dashboard
+          </h2>
           <p className="text-xs text-muted-foreground">
             Track fill rate, revenue, and delivery risk per cohort.
           </p>
         </div>
 
-        <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={addCohort}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="rounded-full"
+          onClick={addCohort}
+        >
           <Plus />
           Add Cohort
         </Button>
@@ -204,7 +218,10 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                         <span>Fill Rate</span>
                         <span>{fillPercent}%</span>
                       </div>
-                      <BlockProgressBar value={cohort.seatsSold} max={Math.max(cohort.capacity, 1)} />
+                      <BlockProgressBar
+                        value={cohort.seatsSold}
+                        max={Math.max(cohort.capacity, 1)}
+                      />
                     </div>
                   </div>
 
@@ -259,7 +276,10 @@ export function WorkspaceCohortHealthDashboardBlockEditor({
                         className="rounded-xl font-mono"
                         onChange={(event) =>
                           mutateCohort(cohort.id, (entry) => {
-                            entry.capacity = Math.max(1, toPositiveInt(event.target.value, entry.capacity));
+                            entry.capacity = Math.max(
+                              1,
+                              toPositiveInt(event.target.value, entry.capacity),
+                            );
                             entry.seatsSold = Math.min(entry.seatsSold, entry.capacity);
                           })
                         }

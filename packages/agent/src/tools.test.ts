@@ -20,10 +20,7 @@ import {
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 
-import {
-  buildDashboardAgentTools,
-  createDashboardAgentWorkspaceRuntime,
-} from "./tools";
+import { buildDashboardAgentTools, createDashboardAgentWorkspaceRuntime } from "./tools";
 
 type ToolFunction = {
   name: string;

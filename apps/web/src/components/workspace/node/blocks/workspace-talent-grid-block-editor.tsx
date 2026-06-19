@@ -239,13 +239,21 @@ export function WorkspaceTalentGridBlockEditor({
 
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">Talent Development Grid</h2>
+          <h2 className="text-sm font-black tracking-tight text-foreground">
+            Talent Development Grid
+          </h2>
           <p className="text-xs text-muted-foreground">
             Assess performance (1-5) and growth potential to support team development.
           </p>
         </div>
 
-        <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={addMember}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="rounded-full"
+          onClick={addMember}
+        >
           <UserPlus />
           Add Member
         </Button>
@@ -345,10 +353,7 @@ export function WorkspaceTalentGridBlockEditor({
                   </div>
 
                   <div className="flex shrink-0 items-center gap-2">
-                    <Badge
-                      variant={getCellTone(boxKey)}
-                      className="rounded-full"
-                    >
+                    <Badge variant={getCellTone(boxKey)} className="rounded-full">
                       {workspaceTalentGridBoxLabels[boxKey]}
                     </Badge>
                     <Button
@@ -373,7 +378,9 @@ export function WorkspaceTalentGridBlockEditor({
                       >
                         Performance
                       </label>
-                      <span className="text-xs font-black text-primary">{member.performance}/5</span>
+                      <span className="text-xs font-black text-primary">
+                        {member.performance}/5
+                      </span>
                     </div>
                     <input
                       id={`performance-${member.id}`}
@@ -412,7 +419,9 @@ export function WorkspaceTalentGridBlockEditor({
 
                 {boxDescription ? (
                   <div className="mt-3 rounded-lg bg-muted/5 px-3 py-2">
-                    <p className="text-[10px] leading-snug text-muted-foreground/70">{boxDescription}</p>
+                    <p className="text-[10px] leading-snug text-muted-foreground/70">
+                      {boxDescription}
+                    </p>
                   </div>
                 ) : null}
               </article>

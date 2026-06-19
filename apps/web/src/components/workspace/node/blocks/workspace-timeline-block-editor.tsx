@@ -80,9 +80,13 @@ export function WorkspaceTimelineBlockEditor({
 
   const timelineSummary = useMemo(() => {
     const total = block.milestones.length;
-    const activeCount = block.milestones.filter((milestone) => milestone.status === "active").length;
+    const activeCount = block.milestones.filter(
+      (milestone) => milestone.status === "active",
+    ).length;
     const doneCount = block.milestones.filter((milestone) => milestone.status === "done").length;
-    const blockedCount = block.milestones.filter((milestone) => milestone.status === "blocked").length;
+    const blockedCount = block.milestones.filter(
+      (milestone) => milestone.status === "blocked",
+    ).length;
 
     return {
       total,
@@ -201,7 +205,9 @@ export function WorkspaceTimelineBlockEditor({
                     />
 
                     {milestone.note && !isExpanded ? (
-                      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{milestone.note}</p>
+                      <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                        {milestone.note}
+                      </p>
                     ) : null}
                   </div>
 

@@ -230,14 +230,16 @@ export function WorkspaceDelegationMatrixBlockEditor({
     <div className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {summaryCards.map((card) => (
-          <div
-            key={card.key}
-            className="rounded-3xl border border-muted/20 bg-muted/10 p-5"
-          >
+          <div key={card.key} className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
               {card.label}
             </p>
-            <p className={cn("mt-2 text-2xl font-black tracking-tight sm:text-3xl", card.accentClass)}>
+            <p
+              className={cn(
+                "mt-2 text-2xl font-black tracking-tight sm:text-3xl",
+                card.accentClass,
+              )}
+            >
               {card.value}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{card.supporting}</p>
@@ -255,26 +257,28 @@ export function WorkspaceDelegationMatrixBlockEditor({
             </p>
             {unassignedHandoffCount > 0 ? (
               <p className="mt-2 text-xs text-warning">
-                {unassignedHandoffCount} item{unassignedHandoffCount === 1 ? "" : "s"} still missing a
-                clear owner.
+                {unassignedHandoffCount} item{unassignedHandoffCount === 1 ? "" : "s"} still missing
+                a clear owner.
               </p>
             ) : null}
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            {(["all", ...statusOptions] as Array<"all" | WorkspaceDelegationStatus>).map((status) => (
-              <Button
-                key={status}
-                type="button"
-                variant={filterStatus === status ? "default" : "secondary"}
-                className="rounded-full px-4"
-                aria-label={`Filter by ${status === "all" ? "all statuses" : workspaceDelegationStatusLabels[status]}`}
-                onClick={() => setFilterStatus(status)}
-              >
-                {status === "all" ? "All" : workspaceDelegationStatusLabels[status]}
-                <span className="ml-1 text-xs opacity-80">{statusCounts[status]}</span>
-              </Button>
-            ))}
+            {(["all", ...statusOptions] as Array<"all" | WorkspaceDelegationStatus>).map(
+              (status) => (
+                <Button
+                  key={status}
+                  type="button"
+                  variant={filterStatus === status ? "default" : "secondary"}
+                  className="rounded-full px-4"
+                  aria-label={`Filter by ${status === "all" ? "all statuses" : workspaceDelegationStatusLabels[status]}`}
+                  onClick={() => setFilterStatus(status)}
+                >
+                  {status === "all" ? "All" : workspaceDelegationStatusLabels[status]}
+                  <span className="ml-1 text-xs opacity-80">{statusCounts[status]}</span>
+                </Button>
+              ),
+            )}
           </div>
         </div>
 
@@ -315,8 +319,8 @@ export function WorkspaceDelegationMatrixBlockEditor({
           </div>
 
           <div className="rounded-2xl border border-muted/20 bg-background/50 px-3 py-2 text-xs text-muted-foreground">
-            Currency values use the hourly rate context shown above. Update it before reviewing weekly
-            cost impact.
+            Currency values use the hourly rate context shown above. Update it before reviewing
+            weekly cost impact.
           </div>
 
           <Button
@@ -351,10 +355,16 @@ export function WorkspaceDelegationMatrixBlockEditor({
           {filteredItems.map((item) => (
             <article
               key={item.id}
-              className={cn("relative overflow-hidden rounded-3xl border p-5", getStatusCardClasses(item.status))}
+              className={cn(
+                "relative overflow-hidden rounded-3xl border p-5",
+                getStatusCardClasses(item.status),
+              )}
             >
               <div
-                className={cn("absolute inset-y-0 left-0 w-1.5", getStatusAccentClasses(item.status))}
+                className={cn(
+                  "absolute inset-y-0 left-0 w-1.5",
+                  getStatusAccentClasses(item.status),
+                )}
               />
 
               <div className="flex flex-wrap items-start justify-between gap-4 pl-2">

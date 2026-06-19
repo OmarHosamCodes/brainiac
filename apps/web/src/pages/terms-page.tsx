@@ -141,10 +141,12 @@ export function TermsPage() {
             <div className="mb-4 text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-400 dark:text-neutral-500">
               Legal
             </div>
-            <h1 className="text-4xl leading-[1.02] font-bold tracking-tight md:text-6xl">Terms of Service</h1>
+            <h1 className="text-4xl leading-[1.02] font-bold tracking-tight md:text-6xl">
+              Terms of Service
+            </h1>
             <p className="mt-6 max-w-sm text-base leading-relaxed text-neutral-600 md:text-lg dark:text-neutral-400">
-              Clear rules for using Brainiac, from account security and acceptable use to AI-assisted output,
-              billing, and service limits.
+              Clear rules for using Brainiac, from account security and acceptable use to
+              AI-assisted output, billing, and service limits.
             </p>
 
             <div className="mt-8 text-[11px] font-bold uppercase tracking-[0.16em] text-neutral-400 dark:text-neutral-500">

@@ -154,13 +154,21 @@ export function WorkspaceSeatPlannerBlockEditor({
 
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">Seat Ownership Planner</h2>
+          <h2 className="text-sm font-black tracking-tight text-foreground">
+            Seat Ownership Planner
+          </h2>
           <p className="text-xs text-muted-foreground">
             Clarify critical functions, fragile seats, and coverage gaps.
           </p>
         </div>
 
-        <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={addSeat}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="rounded-full"
+          onClick={addSeat}
+        >
           <Plus />
           Add Seat
         </Button>

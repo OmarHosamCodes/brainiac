@@ -1,5 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ChevronDown, ListChecks } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ListChecks,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
 import {
@@ -13,10 +19,7 @@ import {
 } from "@/components/agency/agency-task-row";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  useAgencyActiveTimerQuery,
-  useAgencyProjectTasksQuery,
-} from "@/hooks/use-agency-queries";
+import { useAgencyActiveTimerQuery, useAgencyProjectTasksQuery } from "@/hooks/use-agency-queries";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
@@ -42,7 +45,9 @@ type AgencyTaskListProps = {
   teamId: string;
   projects: Project[];
   selectedTaskId: string;
+  collapsed: boolean;
   onSelect: (taskId: string) => void;
+  onCollapsedChange: (collapsed: boolean) => void;
   onSelectProject: (projectId: string) => void;
 };
 
@@ -52,15 +57,31 @@ const DONE_TASK_STATUSES: TaskStatus[] = ["done"];
 function AgencyTaskRailHeader({
   count,
   trackingLabel,
+  onCollapse,
 }: {
   count: number | null;
   trackingLabel: string | null;
+  onCollapse: () => void;
 }) {
   return (
     <>
       <div className={agencyTaskRailHeaderClass}>
         <h2 className="text-sm font-semibold text-highlighted">My tasks</h2>
-        <span className={agencyTaskRailCountPillClass}>{count === null ? "—" : count}</span>
+        <div className="flex items-center gap-1.5">
+          <span className={agencyTaskRailCountPillClass}>{count === null ? "—" : count}</span>
+          <button
+            type="button"
+            className={[
+              "inline-flex size-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-default/70 hover:text-highlighted",
+              agencyFocusRingClass,
+              "motion-reduce:transition-none",
+            ].join(" ")}
+            aria-label="Collapse task list"
+            onClick={onCollapse}
+          >
+            <PanelLeftClose className="size-3.5" />
+          </button>
+        </div>
       </div>
       {trackingLabel ? (
         <div className={agencyTaskRailTrackingStripClass}>
@@ -76,7 +97,9 @@ export function AgencyTaskList({
   teamId,
   projects,
   selectedTaskId,
+  collapsed,
   onSelect,
+  onCollapsedChange,
 }: AgencyTaskListProps) {
   const agencyOps = useAgencyOpsStore();
   const isCreatingTask = useAgencyOpsStore(selectIsCreatingTask);
@@ -86,6 +109,7 @@ export function AgencyTaskList({
 
   const [createExpanded, setCreateExpanded] = useState(false);
   const [doneExpanded, setDoneExpanded] = useState(false);
+  const [recentlyCompletedTaskId, setRecentlyCompletedTaskId] = useState("");
   const [titleDraft, setTitleDraft] = useState("");
   const [selectedProjectIdForCreate, setSelectedProjectIdForCreate] = useState("");
   const [selectedAssigneeIdForCreate, setSelectedAssigneeIdForCreate] = useState("");
@@ -123,6 +147,7 @@ export function AgencyTaskList({
 
   const activeCount = activeTasksQuery.isPending ? null : activeTasks.length;
   const doneCount = doneTasksQuery.isPending ? null : doneTasks.length;
+  const compactCount = activeCount === null ? "—" : activeCount;
 
   const trackingLabel = useMemo(() => {
     if (!activeTimer || activeTimer.teamId !== teamId) return null;
@@ -137,6 +162,12 @@ export function AgencyTaskList({
     const tickerHandle = setInterval(() => setTrackingNow(Date.now()), 1_000);
     return () => clearInterval(tickerHandle);
   }, [activeTimer, teamId]);
+
+  useEffect(() => {
+    if (!recentlyCompletedTaskId) return;
+    const clearHandle = setTimeout(() => setRecentlyCompletedTaskId(""), 900);
+    return () => clearTimeout(clearHandle);
+  }, [recentlyCompletedTaskId]);
 
   const collapseCreate = useCallback(() => {
     setCreateExpanded(false);
@@ -180,14 +211,15 @@ export function AgencyTaskList({
 
   async function updateTaskStatus(task: AgencyProjectTask, status: TaskStatus) {
     try {
+      if (status === "done") {
+        setDoneExpanded(true);
+        setRecentlyCompletedTaskId(task.id);
+      }
       await agencyOps.updateProjectTask({
         teamId,
         taskId: task.id,
         status,
       });
-      if (status === "done") {
-        setDoneExpanded(true);
-      }
     } catch {
       // Store surfaces the toast.
     }
@@ -204,9 +236,44 @@ export function AgencyTaskList({
     );
   }
 
+  if (collapsed) {
+    return (
+      <section className={[agencyTaskRailClass, "items-center gap-3 px-2 py-3"].join(" ")}>
+        <button
+          type="button"
+          className={[
+            "flex size-11 items-center justify-center rounded-xl border border-default bg-default text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+            agencyFocusRingClass,
+            "motion-reduce:transition-none",
+          ].join(" ")}
+          aria-label="Expand task list"
+          onClick={() => onCollapsedChange(false)}
+        >
+          <PanelLeftOpen className="size-4" />
+        </button>
+
+        <div className="flex flex-col items-center gap-1" title="My tasks">
+          <ListChecks className="size-4 text-muted" aria-hidden />
+          <span className={agencyTaskRailCountPillClass}>{compactCount}</span>
+        </div>
+
+        {trackingLabel ? (
+          <div className="mt-auto flex flex-col items-center gap-1 pb-1" title={trackingLabel}>
+            <span className="size-2 rounded-full bg-primary" aria-hidden />
+            <span className="font-mono text-[10px] font-bold tabular-nums text-primary">Live</span>
+          </div>
+        ) : null}
+      </section>
+    );
+  }
+
   return (
     <section className={agencyTaskRailClass}>
-      <AgencyTaskRailHeader count={activeCount} trackingLabel={trackingLabel} />
+      <AgencyTaskRailHeader
+        count={activeCount}
+        trackingLabel={trackingLabel}
+        onCollapse={() => onCollapsedChange(true)}
+      />
 
       {activeTasksQuery.isPending ? (
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
@@ -340,6 +407,7 @@ export function AgencyTaskList({
                     projects={projects}
                     teamId={teamId}
                     selectedTaskId={selectedTaskId}
+                    highlight={recentlyCompletedTaskId === task.id}
                     readOnly
                     onSelect={onSelect}
                   />

@@ -82,10 +82,10 @@ describe("getFiscalQuarterRange", () => {
 
 describe("getFiscalQuarterForDate", () => {
   test("maps January to prior fiscal year when FY starts in April", () => {
-    const ref = getFiscalQuarterForDate(
-      new Date("2026-02-15T00:00:00.000Z"),
-      { fiscalYearStartMonth: 4, fiscalYearStartDay: 1 },
-    );
+    const ref = getFiscalQuarterForDate(new Date("2026-02-15T00:00:00.000Z"), {
+      fiscalYearStartMonth: 4,
+      fiscalYearStartDay: 1,
+    });
     expect(ref).toEqual({ fiscalYear: 2025, fiscalQuarter: 4 });
   });
 

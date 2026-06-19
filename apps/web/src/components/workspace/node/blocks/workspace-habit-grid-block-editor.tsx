@@ -213,7 +213,11 @@ export function WorkspaceHabitGridBlockEditor({
                         }
                       >
                         <span className="sr-only">{dayLabels[day]}</span>
-                        {habit.days[day] ? <Check className="size-3.5" /> : <Minus className="size-3.5" />}
+                        {habit.days[day] ? (
+                          <Check className="size-3.5" />
+                        ) : (
+                          <Minus className="size-3.5" />
+                        )}
                       </button>
                     </td>
                   ))}
@@ -248,7 +252,13 @@ export function WorkspaceHabitGridBlockEditor({
             <p className="mt-2 text-sm text-muted-foreground">
               Add the first habit to start logging daily consistency.
             </p>
-            <Button type="button" variant="secondary" size="sm" className="mt-4 rounded-full px-4" onClick={addHabit}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="mt-4 rounded-full px-4"
+              onClick={addHabit}
+            >
               <Plus />
               Add First Habit
             </Button>

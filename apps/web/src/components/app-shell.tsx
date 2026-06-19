@@ -1,26 +1,37 @@
 import {
+  BarChart3,
   BrainCircuit,
   Briefcase,
+  Building2,
   CreditCard,
+  FolderKanban,
   LayoutDashboard,
   Moon,
   PanelRightClose,
   PanelRightOpen,
+  Search,
+  Settings,
   ShoppingBag,
+  SlidersHorizontal,
   Sun,
 } from "lucide-react";
-import { useEffect, useMemo, type ReactNode } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { AppShellAccountMenu } from "@/components/app-shell-account-menu";
 import { Button } from "@/components/ui/button";
+import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { useAppShellPathSync } from "@/hooks/use-app-shell";
 import { useTheme } from "@/hooks/use-theme";
-import {
-  useAppShellStore,
-  useHasContextContent,
-  useShellMode,
-} from "@/stores/app-shell";
+import { useAppShellStore, useHasContextContent, useShellMode } from "@/stores/app-shell";
 import { APP_NAV_ITEMS, findActiveNavItem } from "@/lib/utils/app-navigation";
 import {
   shellBreadcrumbCurrentClass,
@@ -56,12 +67,53 @@ const NAV_ICONS = {
   "/billing": CreditCard,
 } as const;
 
+const AGENCY_COMMAND_ITEMS = [
+  {
+    label: "Work",
+    description: "Tasks, projects, and time",
+    to: "/agency?section=work",
+    icon: Briefcase,
+  },
+  {
+    label: "Projects",
+    description: "Project list under Work",
+    to: "/agency?section=work&view=projects",
+    icon: FolderKanban,
+  },
+  {
+    label: "Clients",
+    description: "Clients and contacts",
+    to: "/agency?section=clients",
+    icon: Building2,
+  },
+  {
+    label: "Reports",
+    description: "Hours and breakdowns",
+    to: "/agency?section=reports",
+    icon: BarChart3,
+  },
+  {
+    label: "Management",
+    description: "Resourcing, invoices, rates, tenure",
+    to: "/agency?section=management",
+    icon: SlidersHorizontal,
+  },
+  {
+    label: "Settings",
+    description: "Workspace preferences",
+    to: "/agency?section=settings",
+    icon: Settings,
+  },
+] as const;
+
 export function AppShell({ children }: { children: ReactNode }) {
   useAppShellPathSync();
 
   const location = useLocation();
+  const navigate = useNavigate();
   const shellMode = useShellMode();
   const hasContextContent = useHasContextContent();
+  const [commandOpen, setCommandOpen] = useState(false);
 
   const { isDark, toggle: toggleTheme } = useTheme();
   const agentDockOpen = useAppShellStore((s) => s.agentDockOpen);
@@ -72,7 +124,10 @@ export function AppShell({ children }: { children: ReactNode }) {
   const hasPageActions = useAppShellStore((s) => s.actionsOwnerCount > 0);
 
   const isSpatialMode = shellMode === "spatial";
-  const activeNavigationItem = useMemo(() => findActiveNavItem(location.pathname), [location.pathname]);
+  const activeNavigationItem = useMemo(
+    () => findActiveNavItem(location.pathname),
+    [location.pathname],
+  );
   const activeNavigationLabel = activeNavigationItem?.label ?? "Workspace";
 
   const breadcrumbItems = useMemo(() => {
@@ -86,6 +141,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   }, [activeNavigationLabel, isSpatialMode, pageTitle]);
 
   const showBreadcrumbs = !isSpatialMode && breadcrumbItems.length > 0 && !hasContextContent;
+
+  function runCommand(to: string) {
+    setCommandOpen(false);
+    navigate(to);
+  }
 
   useEffect(() => {
     function handleShellShortcuts(event: KeyboardEvent) {
@@ -108,9 +168,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         "app-shell bg-default text-default",
         isSpatialMode ? "app-shell--spatial" : "app-shell--execution",
       )}
-      style={{ "--app-shell-dock-width": agentDockOpen ? `${agentDockWidth}px` : "0px" } as React.CSSProperties}
+      style={
+        {
+          "--app-shell-dock-width": agentDockOpen ? `${agentDockWidth}px` : "0px",
+        } as React.CSSProperties
+      }
     >
-      <aside className="app-shell__rail hidden border-r border-default bg-muted md:flex" aria-label="Main navigation">
+      <aside
+        className="app-shell__rail hidden border-r border-default bg-muted md:flex"
+        aria-label="Main navigation"
+      >
         <div className="flex flex-1 flex-col items-center gap-4 py-4">
           <Link
             to="/dashboard"
@@ -124,6 +191,16 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <BrainCircuit className="size-5" />
           </Link>
+
+          <button
+            type="button"
+            className={cn(shellRailLinkBaseClass, shellFocusRingClass, "border border-transparent")}
+            aria-label="Search navigation"
+            title="Search"
+            onClick={() => setCommandOpen(true)}
+          >
+            <Search className="size-4.5" />
+          </button>
 
           <nav className="flex flex-1 flex-col items-center gap-2" aria-label="Sections">
             {APP_NAV_ITEMS.map((item) => {
@@ -149,6 +226,48 @@ export function AppShell({ children }: { children: ReactNode }) {
           </nav>
         </div>
       </aside>
+
+      <CommandDialog open={commandOpen} onOpenChange={setCommandOpen} title="Search navigation">
+        <Command>
+          <CommandInput placeholder="Search Brainiac" />
+          <CommandList>
+            <CommandEmpty>No matching destination.</CommandEmpty>
+            <CommandGroup heading="App">
+              {APP_NAV_ITEMS.map((item) => {
+                const Icon = NAV_ICONS[item.to as keyof typeof NAV_ICONS] ?? LayoutDashboard;
+                return (
+                  <CommandItem
+                    key={item.to}
+                    value={`app ${item.label}`}
+                    onSelect={() => runCommand(item.to)}
+                  >
+                    <Icon />
+                    <span>{item.label}</span>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+            <CommandGroup heading="Agency">
+              {AGENCY_COMMAND_ITEMS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <CommandItem
+                    key={item.to}
+                    value={`agency ${item.label} ${item.description}`}
+                    onSelect={() => runCommand(item.to)}
+                  >
+                    <Icon />
+                    <div className="min-w-0">
+                      <p className="truncate">{item.label}</p>
+                      <p className="truncate text-xs text-muted">{item.description}</p>
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </CommandDialog>
 
       <header
         className={cn(
@@ -215,7 +334,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-keyshortcuts="Control+J Meta+J"
             onClick={() => setAgentDockOpen(!agentDockOpen)}
           >
-            {agentDockOpen ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
+            {agentDockOpen ? (
+              <PanelRightClose className="size-4" />
+            ) : (
+              <PanelRightOpen className="size-4" />
+            )}
             <span className="hidden sm:inline">{agentDockOpen ? "Close" : "Agent"}</span>
           </Button>
         </div>

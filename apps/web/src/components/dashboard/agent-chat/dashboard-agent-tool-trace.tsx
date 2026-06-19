@@ -70,7 +70,9 @@ export function DashboardAgentToolTrace({ entry, className }: DashboardAgentTool
       {outputText ? (
         <div className="mt-2 border-t border-default pt-2">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted">Output</p>
-          <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-highlighted">{outputText}</pre>
+          <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-highlighted">
+            {outputText}
+          </pre>
         </div>
       ) : null}
 
@@ -99,9 +101,7 @@ export function DashboardAgentToolTraceList({
       {toolsCalled.map((entry, index) => (
         <DashboardAgentToolTrace
           key={
-            typeof entry === "string"
-              ? `${entry}-${index}`
-              : (entry.id ?? `${entry.name}-${index}`)
+            typeof entry === "string" ? `${entry}-${index}` : (entry.id ?? `${entry.name}-${index}`)
           }
           entry={entry}
         />

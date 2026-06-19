@@ -323,7 +323,10 @@ export function WorkspaceCustomBlockEditor({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="rounded-full border-warning/30 bg-warning/10 text-warning">
+              <Badge
+                variant="secondary"
+                className="rounded-full border-warning/30 bg-warning/10 text-warning"
+              >
                 Legacy block
               </Badge>
               <Badge variant="secondary" className="rounded-full">
@@ -340,7 +343,10 @@ export function WorkspaceCustomBlockEditor({
           </div>
 
           {operationState.pending ? (
-            <Badge variant="secondary" className="rounded-full border-primary/30 bg-primary/10 text-primary">
+            <Badge
+              variant="secondary"
+              className="rounded-full border-primary/30 bg-primary/10 text-primary"
+            >
               <span className="inline-flex items-center gap-1.5">
                 <Loader2 className="size-3.5 animate-spin" />
                 {operationState.label || "Running"}
@@ -352,14 +358,16 @@ export function WorkspaceCustomBlockEditor({
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => (
-          <div
-            key={card.key}
-            className="rounded-3xl border border-muted/20 bg-muted/10 p-5"
-          >
+          <div key={card.key} className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
               {card.label}
             </p>
-            <p className={cn("mt-2 text-2xl font-black tracking-tight sm:text-3xl", card.accentClass)}>
+            <p
+              className={cn(
+                "mt-2 text-2xl font-black tracking-tight sm:text-3xl",
+                card.accentClass,
+              )}
+            >
               {card.value}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">{card.supporting}</p>
@@ -483,11 +491,7 @@ export function WorkspaceCustomBlockEditor({
               disabled={operationState.pending}
               onClick={handleRunPrompt}
             >
-              {operationState.pending ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <Play />
-              )}
+              {operationState.pending ? <Loader2 className="animate-spin" /> : <Play />}
               {operationState.pending ? "Running" : "Run"}
             </Button>
           </div>

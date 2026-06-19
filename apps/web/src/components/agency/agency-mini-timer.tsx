@@ -39,8 +39,7 @@ export function AgencyMiniTimer({
 
   const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
   const activeTimer = activeTimerQuery.data?.timer ?? null;
-  const isRunningForThisTask =
-    activeTimer?.taskId === taskId && activeTimer.teamId === teamId;
+  const isRunningForThisTask = activeTimer?.taskId === taskId && activeTimer.teamId === teamId;
 
   const elapsedSeconds = useMemo(() => {
     if (!activeTimer || !isRunningForThisTask) return 0;

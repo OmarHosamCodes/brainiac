@@ -5,14 +5,7 @@ import {
   type WorkspaceTaskListBlock,
   type WorkspaceTaskPriority,
 } from "@brainiac/workspace";
-import {
-  Calendar,
-  ChevronUp,
-  Clock,
-  Plus,
-  Settings2,
-  Trash2,
-} from "lucide-react";
+import { Calendar, ChevronUp, Clock, Plus, Settings2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
@@ -169,7 +162,9 @@ export function WorkspaceTaskListBlockEditor({
                   variant="ghost"
                   size="sm"
                   className="rounded-lg"
-                  aria-label={expandedTaskId === task.id ? "Hide task details" : "Show task details"}
+                  aria-label={
+                    expandedTaskId === task.id ? "Hide task details" : "Show task details"
+                  }
                   onClick={() => toggleTask(task.id)}
                 >
                   {expandedTaskId === task.id ? <ChevronUp /> : <Settings2 />}

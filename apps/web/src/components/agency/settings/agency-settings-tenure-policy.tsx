@@ -163,7 +163,10 @@ export function AgencySettingsTenurePolicy({
                   value={policyDraft.internDurationMonths}
                   className="w-full max-w-[10rem]"
                   onChange={(event) =>
-                    onPolicyDraftChange({ ...policyDraft, internDurationMonths: event.target.value })
+                    onPolicyDraftChange({
+                      ...policyDraft,
+                      internDurationMonths: event.target.value,
+                    })
                   }
                 />
               </div>

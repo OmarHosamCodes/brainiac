@@ -66,7 +66,10 @@ export function WorkspaceMessageHouseBlockEditor({
       });
     } catch (error) {
       toast.error("Stress test failed", {
-        description: getErrorMessage(error, "The Brand agent could not stress-test the message house."),
+        description: getErrorMessage(
+          error,
+          "The Brand agent could not stress-test the message house.",
+        ),
       });
     } finally {
       setIsStressTesting(false);
@@ -84,14 +87,18 @@ export function WorkspaceMessageHouseBlockEditor({
         </div>
 
         <div className="rounded-2xl border border-secondary/10 bg-secondary/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/60">Pillars</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary/60">
+            Pillars
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-secondary sm:text-2xl">
             {summary.pillarCount}
           </p>
         </div>
 
         <div className="rounded-2xl border border-warning/10 bg-warning/5 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/60">Stress Test</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/60">
+            Stress Test
+          </p>
           <p className="mt-2 text-lg font-black tracking-tight text-warning sm:text-xl">
             {summary.latestStressTestAvailable ? "Saved" : "Pending"}
           </p>
@@ -232,8 +239,12 @@ export function WorkspaceMessageHouseBlockEditor({
       <section className="rounded-2xl border border-warning/20 bg-warning/5 p-4">
         <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-sm font-black tracking-tight text-foreground">Stress-Test Output</h2>
-            <p className="mt-0.5 text-xs text-muted-foreground">Finds gaps, contradictions, and weak proof.</p>
+            <h2 className="text-sm font-black tracking-tight text-foreground">
+              Stress-Test Output
+            </h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Finds gaps, contradictions, and weak proof.
+            </p>
           </div>
 
           {block.stressTestUpdatedAt ? (

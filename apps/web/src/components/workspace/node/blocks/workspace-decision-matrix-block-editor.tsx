@@ -97,7 +97,11 @@ export function WorkspaceDecisionMatrixBlockEditor({
     });
   }
 
-  function updateOptionScore(optionId: string, criterionId: string, value: string | number | undefined) {
+  function updateOptionScore(
+    optionId: string,
+    criterionId: string,
+    value: string | number | undefined,
+  ) {
     mutateTypedBlock(tabId, block.id, "decision-matrix", (entry) => {
       const target = entry.options.find((candidate) => candidate.id === optionId);
       if (!target) return;
@@ -162,7 +166,10 @@ export function WorkspaceDecisionMatrixBlockEditor({
             <Badge variant="secondary" className="rounded-2xl">
               {block.options.length} options
             </Badge>
-            <Badge variant="secondary" className="rounded-2xl border-primary/20 bg-primary/10 text-primary">
+            <Badge
+              variant="secondary"
+              className="rounded-2xl border-primary/20 bg-primary/10 text-primary"
+            >
               {summary.totalWeight} weight pts
             </Badge>
           </div>
@@ -247,15 +254,26 @@ export function WorkspaceDecisionMatrixBlockEditor({
         <div>
           <p className="text-sm font-semibold text-foreground">Weighted scoring matrix</p>
           <p className="text-sm text-muted-foreground">
-            Increase criterion weight when it matters more, then score each option against that criterion.
+            Increase criterion weight when it matters more, then score each option against that
+            criterion.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button type="button" variant="secondary" className="rounded-full px-4" onClick={addCriterion}>
+          <Button
+            type="button"
+            variant="secondary"
+            className="rounded-full px-4"
+            onClick={addCriterion}
+          >
             <Plus />
             Add Criterion
           </Button>
-          <Button type="button" variant="secondary" className="rounded-full px-4" onClick={addOption}>
+          <Button
+            type="button"
+            variant="secondary"
+            className="rounded-full px-4"
+            onClick={addOption}
+          >
             <Columns2 />
             Add Option
           </Button>
@@ -270,7 +288,9 @@ export function WorkspaceDecisionMatrixBlockEditor({
           aria-label="Decision matrix scoring grid"
         >
           <div className="flex flex-col justify-center bg-muted/10 p-4" role="columnheader">
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">Criteria</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+              Criteria
+            </p>
             <p className="mt-1 text-xs font-medium text-muted-foreground/70">
               {summary.criteriaCount} criteria, {summary.totalWeight} weight pts
             </p>
@@ -300,41 +320,41 @@ export function WorkspaceDecisionMatrixBlockEditor({
               className="flex flex-col justify-center space-y-3 bg-background/40 p-4"
               role="rowheader"
             >
-                <div className="flex items-start justify-between gap-3">
-                  <Input
-                    value={criterion.label}
-                    placeholder="Criterion name"
-                    aria-label={`Criterion label for ${criterion.label || "decision criterion"}`}
-                    className="flex-1 border-0 bg-transparent px-0 text-sm font-semibold text-foreground placeholder:text-muted-foreground/40 shadow-none focus-visible:ring-0"
-                    onChange={(event) => updateCriterionLabel(criterion.id, event.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-lg hover:text-destructive"
-                    disabled={block.criteria.length <= 1}
-                    aria-label={`Remove ${criterion.label || "decision"} criterion`}
-                    onClick={() => removeCriterion(criterion.id)}
-                  >
-                    <Trash2 />
-                  </Button>
+              <div className="flex items-start justify-between gap-3">
+                <Input
+                  value={criterion.label}
+                  placeholder="Criterion name"
+                  aria-label={`Criterion label for ${criterion.label || "decision criterion"}`}
+                  className="flex-1 border-0 bg-transparent px-0 text-sm font-semibold text-foreground placeholder:text-muted-foreground/40 shadow-none focus-visible:ring-0"
+                  onChange={(event) => updateCriterionLabel(criterion.id, event.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-lg hover:text-destructive"
+                  disabled={block.criteria.length <= 1}
+                  aria-label={`Remove ${criterion.label || "decision"} criterion`}
+                  onClick={() => removeCriterion(criterion.id)}
+                >
+                  <Trash2 />
+                </Button>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                  <span>Weight</span>
+                  <span>{criterion.weight}/10</span>
                 </div>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                    <span>Weight</span>
-                    <span>{criterion.weight}/10</span>
-                  </div>
-                  <input
-                    value={criterion.weight}
-                    type="range"
-                    min={1}
-                    max={10}
-                    className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted/20 accent-primary"
-                    aria-label={`Weight for ${criterion.label || "criterion"}`}
-                    onChange={(event) => updateCriterionWeight(criterion.id, event.target.value)}
-                  />
-                </div>
+                <input
+                  value={criterion.weight}
+                  type="range"
+                  min={1}
+                  max={10}
+                  className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted/20 accent-primary"
+                  aria-label={`Weight for ${criterion.label || "criterion"}`}
+                  onChange={(event) => updateCriterionWeight(criterion.id, event.target.value)}
+                />
+              </div>
             </div>,
             ...block.options.map((option) => (
               <div
@@ -342,27 +362,27 @@ export function WorkspaceDecisionMatrixBlockEditor({
                 className="flex flex-col justify-center bg-background/40 p-4"
                 role="cell"
               >
-                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
-                    <span>Score</span>
-                    <span>{option.scores[criterion.id] ?? 0}/10</span>
-                  </div>
-                  <input
-                    value={option.scores[criterion.id] ?? 0}
-                    type="range"
-                    min={0}
-                    max={10}
-                    className="mt-2 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted/20 accent-primary"
-                    aria-label={`Score for ${option.label || "option"} on ${criterion.label || "criterion"}`}
-                    onChange={(event) =>
-                      updateOptionScore(option.id, criterion.id, event.target.value)
-                    }
-                  />
-                  <div className="mt-3 flex justify-between text-xs font-medium text-muted-foreground/70">
-                    <span>Weighted</span>
-                    <span className="font-black text-foreground">
-                      {(option.scores[criterion.id] ?? 0) * criterion.weight}
-                    </span>
-                  </div>
+                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
+                  <span>Score</span>
+                  <span>{option.scores[criterion.id] ?? 0}/10</span>
+                </div>
+                <input
+                  value={option.scores[criterion.id] ?? 0}
+                  type="range"
+                  min={0}
+                  max={10}
+                  className="mt-2 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-muted/20 accent-primary"
+                  aria-label={`Score for ${option.label || "option"} on ${criterion.label || "criterion"}`}
+                  onChange={(event) =>
+                    updateOptionScore(option.id, criterion.id, event.target.value)
+                  }
+                />
+                <div className="mt-3 flex justify-between text-xs font-medium text-muted-foreground/70">
+                  <span>Weighted</span>
+                  <span className="font-black text-foreground">
+                    {(option.scores[criterion.id] ?? 0) * criterion.weight}
+                  </span>
+                </div>
               </div>
             )),
           ])}

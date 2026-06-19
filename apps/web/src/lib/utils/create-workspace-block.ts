@@ -151,7 +151,9 @@ export function createWorkspaceBlockByType(
   }
 }
 
-export function createWorkspaceBlocksFromPreset(presetId: WorkspaceBlockPresetId): WorkspaceBlock[] {
+export function createWorkspaceBlocksFromPreset(
+  presetId: WorkspaceBlockPresetId,
+): WorkspaceBlock[] {
   const preset = getWorkspaceBlockPreset(presetId);
   if (!preset) return [];
   return preset.createBlocks();

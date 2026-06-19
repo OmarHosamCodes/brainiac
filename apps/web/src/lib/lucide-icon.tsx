@@ -9,13 +9,7 @@ function toLucideComponentName(iconName: string) {
     .join("");
 }
 
-export function LucideIcon({
-  name,
-  className,
-}: {
-  name: string;
-  className?: string;
-}) {
+export function LucideIcon({ name, className }: { name: string; className?: string }) {
   const componentName = toLucideComponentName(name);
   const Icon = (LucideIcons as unknown as Record<string, ComponentType<SVGProps<SVGSVGElement>>>)[
     componentName

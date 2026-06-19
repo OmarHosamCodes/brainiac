@@ -6,21 +6,22 @@ p1_count: 2
 timestamp: 2026-06-16T18-23-25Z
 slug: pps-web-src-components-agency-agency-task-list-tsx
 ---
+
 ## Design Health Score
 
-| # | Heuristic | Score | Key Issue |
-|---|-----------|-------|-----------|
-| 1 | Visibility of System Status | 3 | Done count was hidden until expand; loading skeletons solid |
-| 2 | Match System / Real World | 4 | Plain task language, Clockify-adjacent structure |
-| 3 | User Control and Freedom | 3 | Create blur-dismiss was aggressive; fixed with Cancel |
-| 4 | Consistency and Standards | 4 | Matches Agency dense register and shared tokens |
-| 5 | Error Prevention | 3 | Project required before submit; single-project auto-select added |
-| 6 | Recognition Rather Than Recall | 3 | Three zones clear; done history tucked away by design |
-| 7 | Flexibility and Efficiency | 2 | No keyboard accelerators for new task or done toggle |
-| 8 | Aesthetic and Minimalist Design | 4 | Focused queue; filters removed successfully |
-| 9 | Error Recovery | 3 | Create collapsed before success check; fixed via boolean return |
-| 10 | Help and Documentation | 2 | Empty active state lacked next-step hint; fixed |
-| **Total** | | **31/40** | **Good** |
+| #         | Heuristic                       | Score     | Key Issue                                                        |
+| --------- | ------------------------------- | --------- | ---------------------------------------------------------------- |
+| 1         | Visibility of System Status     | 3         | Done count was hidden until expand; loading skeletons solid      |
+| 2         | Match System / Real World       | 4         | Plain task language, Clockify-adjacent structure                 |
+| 3         | User Control and Freedom        | 3         | Create blur-dismiss was aggressive; fixed with Cancel            |
+| 4         | Consistency and Standards       | 4         | Matches Agency dense register and shared tokens                  |
+| 5         | Error Prevention                | 3         | Project required before submit; single-project auto-select added |
+| 6         | Recognition Rather Than Recall  | 3         | Three zones clear; done history tucked away by design            |
+| 7         | Flexibility and Efficiency      | 2         | No keyboard accelerators for new task or done toggle             |
+| 8         | Aesthetic and Minimalist Design | 4         | Focused queue; filters removed successfully                      |
+| 9         | Error Recovery                  | 3         | Create collapsed before success check; fixed via boolean return  |
+| 10        | Help and Documentation          | 2         | Empty active state lacked next-step hint; fixed                  |
+| **Total** |                                 | **31/40** | **Good**                                                         |
 
 ## Anti-Patterns Verdict
 

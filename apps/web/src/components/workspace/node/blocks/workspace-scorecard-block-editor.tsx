@@ -85,12 +85,23 @@ export function WorkspaceScorecardBlockEditor({
         {[
           ["Total Metrics", summary.metricCount, "border-primary/10 bg-primary/5 text-primary"],
           ["At Target", summary.atTarget, "border-success/10 bg-success/5 text-success"],
-          ["Needs Attention", summary.behindTarget, "border-destructive/10 bg-destructive/5 text-destructive"],
-          ["Avg Progress", `${summary.avgProgress}%`, "border-warning/10 bg-warning/5 text-warning"],
+          [
+            "Needs Attention",
+            summary.behindTarget,
+            "border-destructive/10 bg-destructive/5 text-destructive",
+          ],
+          [
+            "Avg Progress",
+            `${summary.avgProgress}%`,
+            "border-warning/10 bg-warning/5 text-warning",
+          ],
         ].map(([label, value, className]) => (
           <div
             key={String(label)}
-            className={cn("flex flex-col items-center justify-center rounded-3xl border p-5 text-center", className)}
+            className={cn(
+              "flex flex-col items-center justify-center rounded-3xl border p-5 text-center",
+              className,
+            )}
           >
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
               {label}
@@ -177,7 +188,12 @@ export function WorkspaceScorecardBlockEditor({
                         Current vs Target
                       </p>
                       <div className="mt-2 flex items-end gap-2">
-                        <span className={cn("text-3xl font-black tracking-tight sm:text-4xl", status.textClass)}>
+                        <span
+                          className={cn(
+                            "text-3xl font-black tracking-tight sm:text-4xl",
+                            status.textClass,
+                          )}
+                        >
                           {metric.value}
                         </span>
                         <span className="pb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
@@ -198,18 +214,33 @@ export function WorkspaceScorecardBlockEditor({
                   <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
                     {(
                       [
-                        ["Current", String(metric.value), "number", (value: string) =>
-                          mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
-                            entry.value = toNumber(value, 0);
-                          })],
-                        ["Target", String(metric.target), "number", (value: string) =>
-                          mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
-                            entry.target = toNumber(value, 100);
-                          })],
-                        ["Unit", metric.unit, "text", (value: string) =>
-                          mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
-                            entry.unit = value.slice(0, 24);
-                          })],
+                        [
+                          "Current",
+                          String(metric.value),
+                          "number",
+                          (value: string) =>
+                            mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
+                              entry.value = toNumber(value, 0);
+                            }),
+                        ],
+                        [
+                          "Target",
+                          String(metric.target),
+                          "number",
+                          (value: string) =>
+                            mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
+                              entry.target = toNumber(value, 100);
+                            }),
+                        ],
+                        [
+                          "Unit",
+                          metric.unit,
+                          "text",
+                          (value: string) =>
+                            mutateScorecardMetric(tabId, block.id, metric.id, (entry) => {
+                              entry.unit = value.slice(0, 24);
+                            }),
+                        ],
                       ] as const
                     ).map(([label, value, type, onChange]) => (
                       <div key={label} className="space-y-1">

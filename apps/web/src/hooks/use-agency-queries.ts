@@ -195,10 +195,7 @@ export function useAgencyCapacityQuery(teamId: string, weekStart: string, weeks:
   const registerCapacityQuery = useAgencyOpsStore((s) => s.registerCapacityQuery);
   const unregisterCapacityQuery = useAgencyOpsStore((s) => s.unregisterCapacityQuery);
 
-  const input = useMemo(
-    () => ({ teamId, weekStart, weeks }),
-    [teamId, weekStart, weeks],
-  );
+  const input = useMemo(() => ({ teamId, weekStart, weeks }), [teamId, weekStart, weeks]);
 
   const queryKey = orpc.agencyOps.capacity.list.queryOptions({ input }).queryKey;
 
@@ -241,10 +238,7 @@ export function useAgencyTaskMessagesQuery(teamId: string, taskId: string, pageS
   const registerTaskMessagesQuery = useAgencyOpsStore((s) => s.registerTaskMessagesQuery);
   const unregisterTaskMessagesQuery = useAgencyOpsStore((s) => s.unregisterTaskMessagesQuery);
 
-  const input = useMemo(
-    () => ({ teamId, taskId, pageSize }),
-    [teamId, taskId, pageSize],
-  );
+  const input = useMemo(() => ({ teamId, taskId, pageSize }), [teamId, taskId, pageSize]);
 
   const queryKey = orpc.agencyOps.taskThreads.messages.list.queryOptions({ input }).queryKey;
 
@@ -268,7 +262,10 @@ export function useAgencyTaskMessagesQuery(teamId: string, taskId: string, pageS
   return useMergedAgencyTaskMessagesQuery(query, teamId, taskId);
 }
 
-export function useAgencyProjectTasksQuery(teamId: string, filters: AgencyProjectTasksFilters = {}) {
+export function useAgencyProjectTasksQuery(
+  teamId: string,
+  filters: AgencyProjectTasksFilters = {},
+) {
   const registerProjectTasksQuery = useAgencyOpsStore((s) => s.registerProjectTasksQuery);
   const unregisterProjectTasksQuery = useAgencyOpsStore((s) => s.unregisterProjectTasksQuery);
 
@@ -340,7 +337,9 @@ export function useAgencyProjectTasksQuery(teamId: string, filters: AgencyProjec
 
 export function useAgencyActiveTimerQuery(teamId: string) {
   const registerActiveTimerQuery = useAgencyTimeTrackingStore((s) => s.registerActiveTimerQuery);
-  const unregisterActiveTimerQuery = useAgencyTimeTrackingStore((s) => s.unregisterActiveTimerQuery);
+  const unregisterActiveTimerQuery = useAgencyTimeTrackingStore(
+    (s) => s.unregisterActiveTimerQuery,
+  );
 
   const queryKey = orpc.agencyOps.timer.getActive.queryOptions({
     input: { teamId: teamId || undefined },

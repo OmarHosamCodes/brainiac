@@ -308,7 +308,9 @@ export function WorkspaceLearningOutcomesMatrixBlockEditor({
       {block.outputHistory.length > 1 ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h3 className="text-sm font-black tracking-tight text-foreground">Previous Iterations</h3>
+            <h3 className="text-sm font-black tracking-tight text-foreground">
+              Previous Iterations
+            </h3>
             <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/40">
               {block.outputHistory.length - 1} saved
             </span>

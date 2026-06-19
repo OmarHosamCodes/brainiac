@@ -201,9 +201,7 @@ export function WorkspaceTimeOrchestratorBlockEditor({
     [summary, visibleQuadrants.length],
   );
 
-  function updateSettings(
-    mutator: (settings: WorkspaceTimeOrchestratorBlock["settings"]) => void,
-  ) {
+  function updateSettings(mutator: (settings: WorkspaceTimeOrchestratorBlock["settings"]) => void) {
     mutateTypedBlock(tabId, block.id, "time-orchestrator", (entry) => {
       const nextSettings = createWorkspaceTimeOrchestratorSettings(entry.settings);
       mutator(nextSettings);

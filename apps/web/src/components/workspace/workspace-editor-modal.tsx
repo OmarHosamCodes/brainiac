@@ -290,8 +290,8 @@ export function WorkspaceEditorModal({
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-highlighted">Dashboard card</p>
                     <p className="mt-1 text-sm text-muted">
-                      Choose up to {WORKSPACE_NODE_DASHBOARD_DETAIL_LIMIT} block summaries to show on
-                      this node&apos;s dashboard card.
+                      Choose up to {WORKSPACE_NODE_DASHBOARD_DETAIL_LIMIT} block summaries to show
+                      on this node&apos;s dashboard card.
                     </p>
                   </div>
                   <Badge variant="secondary" className="shrink-0">

@@ -1,7 +1,4 @@
-import type {
-  DashboardAgentToolPreset,
-  DashboardConversationMessage,
-} from "@brainiac/agent";
+import type { DashboardAgentToolPreset, DashboardConversationMessage } from "@brainiac/agent";
 import type { WorkspaceNode } from "@brainiac/workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -23,9 +20,7 @@ function loadFavoriteModelIds(): string[] {
     const raw = localStorage.getItem(FAVORITE_MODELS_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed)
-      ? parsed.filter((id): id is string => typeof id === "string")
-      : [];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
   } catch {
     return [];
   }
@@ -133,9 +128,7 @@ export function useDashboardAgentChat(nodes: WorkspaceNode[], activeTabId?: stri
         return true;
       }
 
-      const haystack = [model.name, model.id, model.creatorLabel ?? ""]
-        .join(" ")
-        .toLowerCase();
+      const haystack = [model.name, model.id, model.creatorLabel ?? ""].join(" ").toLowerCase();
 
       return haystack.includes(normalizedSearch);
     });
@@ -254,9 +247,7 @@ export function useDashboardAgentChat(nodes: WorkspaceNode[], activeTabId?: stri
 
   const toggleFavoriteModel = useCallback((modelId: string) => {
     setFavoriteModelIds((current) =>
-      current.includes(modelId)
-        ? current.filter((id) => id !== modelId)
-        : [...current, modelId],
+      current.includes(modelId) ? current.filter((id) => id !== modelId) : [...current, modelId],
     );
   }, []);
 

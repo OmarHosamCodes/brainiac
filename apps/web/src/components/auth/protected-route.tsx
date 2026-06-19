@@ -27,11 +27,17 @@ export function ProtectedRoute() {
         className="app-shell app-shell--execution bg-default text-default"
         style={{ "--app-shell-dock-width": "0px" } as React.CSSProperties}
       >
-        <aside className="app-shell__rail hidden border-r border-default bg-muted md:block" aria-hidden="true">
+        <aside
+          className="app-shell__rail hidden border-r border-default bg-muted md:block"
+          aria-hidden="true"
+        >
           <div className="py-4" />
         </aside>
 
-        <header className={cn(shellTopbarBaseClass, "app-shell__topbar--execution")} aria-hidden="true">
+        <header
+          className={cn(shellTopbarBaseClass, "app-shell__topbar--execution")}
+          aria-hidden="true"
+        >
           <div className={shellHeaderContextRegionClass}>
             <div className="h-4 w-32 animate-pulse rounded bg-muted/50" />
           </div>

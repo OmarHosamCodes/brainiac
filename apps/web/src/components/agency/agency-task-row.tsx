@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   agencyFocusRingClass,
   agencyMetricClass,
+  agencyTaskRowCompleteClass,
   agencyTaskRowClass,
   agencyTaskRowDoneClass,
   agencyTaskRowSelectedClass,
@@ -178,6 +179,7 @@ export type AgencyTaskRowProps = {
   teamId: string;
   selectedTaskId: string;
   readOnly?: boolean;
+  highlight?: boolean;
   isRowPending: boolean;
   onSelect: (taskId: string) => void;
   onStatusChange?: (task: AgencyProjectTask, status: TaskStatus) => void;
@@ -189,6 +191,7 @@ export function AgencyTaskRow({
   teamId,
   selectedTaskId,
   readOnly = false,
+  highlight = false,
   isRowPending,
   onSelect,
   onStatusChange,
@@ -205,6 +208,7 @@ export function AgencyTaskRow({
         agencyTaskRowClass,
         isSelected && agencyTaskRowSelectedClass,
         readOnly && agencyTaskRowDoneClass,
+        highlight && agencyTaskRowCompleteClass,
       )}
     >
       <div className="flex items-center gap-2 px-3 py-2.5">

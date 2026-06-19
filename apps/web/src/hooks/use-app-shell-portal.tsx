@@ -11,13 +11,7 @@ function usePortalTarget(targetId: string) {
   return target;
 }
 
-export function AppShellPortal({
-  targetId,
-  children,
-}: {
-  targetId: string;
-  children: ReactNode;
-}) {
+export function AppShellPortal({ targetId, children }: { targetId: string; children: ReactNode }) {
   const target = usePortalTarget(targetId);
   if (!target) {
     return null;

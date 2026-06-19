@@ -57,8 +57,10 @@ function formatHours(value: number): string {
   return `${whole}h ${String(minutes).padStart(2, "0")}m`;
 }
 
-export const AgencyReportsSurface = forwardRef<AgencyReportsSurfaceHandle, AgencyReportsSurfaceProps>(
-  function AgencyReportsSurface({ teamId, hideToolbarExport = false, onExportStateChange }, ref) {
+export const AgencyReportsSurface = forwardRef<
+  AgencyReportsSurfaceHandle,
+  AgencyReportsSurfaceProps
+>(function AgencyReportsSurface({ teamId, hideToolbarExport = false, onExportStateChange }, ref) {
   const [rangePreset, setRangePreset] = useState<RangePreset>("week");
 
   const range = useMemo(() => {
@@ -186,7 +188,12 @@ export const AgencyReportsSurface = forwardRef<AgencyReportsSurfaceHandle, Agenc
           <p className="mt-1 text-xs text-muted">
             {getErrorMessage(summaryQuery.error, "Try refreshing.")}
           </p>
-          <Button variant="secondary" size="sm" className="mt-3" onClick={() => void summaryQuery.refetch()}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="mt-3"
+            onClick={() => void summaryQuery.refetch()}
+          >
             Retry
           </Button>
         </div>
@@ -201,7 +208,9 @@ export const AgencyReportsSurface = forwardRef<AgencyReportsSurfaceHandle, Agenc
           <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-default pb-3 text-xs">
             <div>
               <span className={agencyLabelClass}>Total hours</span>
-              <span className={["ml-2", agencyMetricClass].join(" ")}>{formatHours(summary.totalHours)}</span>
+              <span className={["ml-2", agencyMetricClass].join(" ")}>
+                {formatHours(summary.totalHours)}
+              </span>
             </div>
             <div>
               <span className={agencyLabelClass}>Entries</span>
@@ -209,20 +218,26 @@ export const AgencyReportsSurface = forwardRef<AgencyReportsSurfaceHandle, Agenc
             </div>
             <div>
               <span className={agencyLabelClass}>Active members</span>
-              <span className={["ml-2", agencyMetricClass].join(" ")}>{summary.teamActivity.length}</span>
+              <span className={["ml-2", agencyMetricClass].join(" ")}>
+                {summary.teamActivity.length}
+              </span>
             </div>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
             <article className="rounded-2xl border border-default bg-default">
               <header className="border-b border-default px-4 py-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Hours by client</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                  Hours by client
+                </p>
               </header>
               <ul className="divide-y divide-default">
                 {summary.timeDistributionByClient.map((row) => (
                   <li key={row.clientId} className="px-4 py-3">
                     <div className="flex items-baseline justify-between gap-3">
-                      <span className="truncate text-xs font-bold text-highlighted">{row.clientName}</span>
+                      <span className="truncate text-xs font-bold text-highlighted">
+                        {row.clientName}
+                      </span>
                       <span className="font-mono text-[11px] tabular-nums text-muted">
                         {formatHours(row.hours)}
                       </span>
@@ -243,7 +258,9 @@ export const AgencyReportsSurface = forwardRef<AgencyReportsSurfaceHandle, Agenc
 
             <article className="rounded-2xl border border-default bg-default">
               <header className="border-b border-default px-4 py-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Hours by project</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                  Hours by project
+                </p>
               </header>
               <ul className="divide-y divide-default">
                 {summary.timeDistributionByProject.map((row) => (
@@ -255,7 +272,9 @@ export const AgencyReportsSurface = forwardRef<AgencyReportsSurfaceHandle, Agenc
                           aria-hidden="true"
                           style={projectHueStyle(row.projectId)}
                         />
-                        <span className="truncate text-xs font-bold text-highlighted">{row.projectName}</span>
+                        <span className="truncate text-xs font-bold text-highlighted">
+                          {row.projectName}
+                        </span>
                       </div>
                       <span className="font-mono text-[11px] tabular-nums text-muted">
                         {formatHours(row.hours)}
@@ -281,13 +300,17 @@ export const AgencyReportsSurface = forwardRef<AgencyReportsSurfaceHandle, Agenc
 
             <article className="rounded-2xl border border-default bg-default">
               <header className="border-b border-default px-4 py-3">
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">Team activity</p>
+                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                  Team activity
+                </p>
               </header>
               <ul className="divide-y divide-default">
                 {summary.teamActivity.map((row) => (
                   <li key={row.userId} className="px-4 py-3">
                     <div className="flex items-baseline justify-between gap-3">
-                      <span className="truncate text-xs font-bold text-highlighted">{row.userName}</span>
+                      <span className="truncate text-xs font-bold text-highlighted">
+                        {row.userName}
+                      </span>
                       <span className="font-mono text-[11px] tabular-nums text-muted">
                         {formatHours(row.hours)}
                       </span>
@@ -311,5 +334,4 @@ export const AgencyReportsSurface = forwardRef<AgencyReportsSurfaceHandle, Agenc
       )}
     </div>
   );
-},
-);
+});

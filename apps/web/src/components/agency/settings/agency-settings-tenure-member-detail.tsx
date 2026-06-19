@@ -260,7 +260,9 @@ export function AgencySettingsTenureMemberDetail({
               <div className="p-4 sm:p-5">
                 <TabsContent value="history">
                   {memberDetail.quarters.length === 0 ? (
-                    <div className="py-8 text-center text-sm text-muted">No quarter history yet.</div>
+                    <div className="py-8 text-center text-sm text-muted">
+                      No quarter history yet.
+                    </div>
                   ) : (
                     <ul className="divide-y divide-default">
                       {[...memberDetail.quarters].reverse().map((quarter) => (
@@ -284,7 +286,9 @@ export function AgencySettingsTenureMemberDetail({
                               {formatTenureHours(quarter.loggedHours)} /{" "}
                               {formatTenureHours(quarter.requiredHours)} h
                             </span>
-                            <span className={["font-bold", tenureStatusClass(quarter.status)].join(" ")}>
+                            <span
+                              className={["font-bold", tenureStatusClass(quarter.status)].join(" ")}
+                            >
                               {tenureStatusLabel(quarter.status)}
                             </span>
                             {quarter.penaltyMonthsApplied > 0 ? (
@@ -302,7 +306,8 @@ export function AgencySettingsTenureMemberDetail({
                 <TabsContent value="profile">
                   <div className="max-w-xl space-y-4">
                     <p className="text-sm text-muted">
-                      Override intern dates and how intern time affects tenure and quarterly minimums.
+                      Override intern dates and how intern time affects tenure and quarterly
+                      minimums.
                     </p>
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className={agencyFormFieldClass}>
@@ -311,7 +316,10 @@ export function AgencySettingsTenureMemberDetail({
                           type="date"
                           value={profileDraft.internStart}
                           onChange={(event) =>
-                            onProfileDraftChange({ ...profileDraft, internStart: event.target.value })
+                            onProfileDraftChange({
+                              ...profileDraft,
+                              internStart: event.target.value,
+                            })
                           }
                         />
                       </div>
@@ -506,8 +514,8 @@ export function AgencySettingsTenureMemberDetail({
                           >
                             <div className="min-w-0 text-sm text-highlighted">
                               <p className="font-semibold">
-                                FY{String(exemption.fiscalYear).slice(-2)} Q{exemption.fiscalQuarter}{" "}
-                                · {exemption.type.replaceAll("_", " ")}
+                                FY{String(exemption.fiscalYear).slice(-2)} Q
+                                {exemption.fiscalQuarter} · {exemption.type.replaceAll("_", " ")}
                               </p>
                               {exemption.type === "team_holiday" ? (
                                 <p className="text-xs text-muted">Applies to all members</p>

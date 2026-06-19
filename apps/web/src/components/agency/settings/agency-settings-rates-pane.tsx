@@ -32,8 +32,8 @@ export function AgencySettingsRatesPane({ teamId, active }: AgencySettingsRatesP
       <div>
         <h2 className={agencySectionTitleClass}>Cost and billable rates per member</h2>
         <p className="mt-1 text-sm text-muted">
-          Rates apply going forward, never retroactively. Override per project when a client negotiates
-          a special rate.
+          Rates apply going forward, never retroactively. Override per project when a client
+          negotiates a special rate.
         </p>
       </div>
 
@@ -48,8 +48,8 @@ export function AgencySettingsRatesPane({ teamId, active }: AgencySettingsRatesP
           <DollarSign className="mx-auto size-6 text-muted" />
           <p className="mt-3 text-sm font-bold text-highlighted">No rates set yet</p>
           <p className="mx-auto mt-1 max-w-md text-xs text-muted">
-            Once rates are configured for each member, budget burn and invoicing turn on across Projects
-            and Billing. Rate editing ships in a follow-up release.
+            Once rates are configured for each member, budget burn and invoicing turn on across
+            Projects and Billing. Rate editing ships in a follow-up release.
           </p>
         </div>
       ) : (
@@ -78,7 +78,9 @@ export function AgencySettingsRatesPane({ teamId, active }: AgencySettingsRatesP
                   </td>
                   <td className="py-3 pl-3 text-muted">
                     {rate.effectiveFrom
-                      ? new Date(rate.effectiveFrom).toLocaleDateString(undefined, { timeZone: "UTC" })
+                      ? new Date(rate.effectiveFrom).toLocaleDateString(undefined, {
+                          timeZone: "UTC",
+                        })
                       : "—"}
                   </td>
                 </tr>

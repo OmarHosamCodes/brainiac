@@ -80,7 +80,9 @@ const gridAreaClass: Record<string, string> = {
   revenue: "lg:[grid-area:revenue]",
 };
 
-function getReadinessLabel(readiness: ReturnType<typeof getBusinessModelCanvasSummary>["readiness"]) {
+function getReadinessLabel(
+  readiness: ReturnType<typeof getBusinessModelCanvasSummary>["readiness"],
+) {
   switch (readiness) {
     case "aligned":
       return "Aligned";
@@ -113,21 +115,27 @@ export function WorkspaceBusinessModelCanvasBlockEditor({
     <div className="space-y-5">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">Coverage</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">
+            Coverage
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
             {summary.filledCellCount}/9
           </p>
         </div>
 
         <div className="rounded-2xl border border-warning/20 bg-warning/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">Missing</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">
+            Missing
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
             {summary.missingCellCount}
           </p>
         </div>
 
         <div className="rounded-2xl border border-success/20 bg-success/10 p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">Readiness</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">
+            Readiness
+          </p>
           <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
             {getReadinessLabel(summary.readiness)}
           </p>
@@ -136,13 +144,21 @@ export function WorkspaceBusinessModelCanvasBlockEditor({
 
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <div>
-          <h2 className="text-sm font-black tracking-tight text-foreground">Business Model Canvas</h2>
+          <h2 className="text-sm font-black tracking-tight text-foreground">
+            Business Model Canvas
+          </h2>
           <p className="text-xs text-muted-foreground">
             Pressure-test how the model creates, delivers, and captures value.
           </p>
         </div>
 
-        <Button type="button" variant="secondary" size="sm" className="rounded-full" onClick={runAnalysis}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="rounded-full"
+          onClick={runAnalysis}
+        >
           <Sparkles />
           AI Analyze
         </Button>

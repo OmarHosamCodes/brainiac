@@ -242,7 +242,12 @@ export function MarketplacePage() {
           </div>
 
           {workspaceQuery.status === "error" ? (
-            <div className={cn("flex gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4", shellContentInClass)}>
+            <div
+              className={cn(
+                "flex gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4",
+                shellContentInClass,
+              )}
+            >
               <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
               <div>
                 <p className="font-semibold text-highlighted">Workspace unavailable</p>
@@ -254,7 +259,12 @@ export function MarketplacePage() {
           ) : null}
 
           {saveError ? (
-            <div className={cn("flex gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4", shellContentInClass)}>
+            <div
+              className={cn(
+                "flex gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4",
+                shellContentInClass,
+              )}
+            >
               <CloudOff className="mt-0.5 size-5 shrink-0 text-destructive" />
               <div>
                 <p className="font-semibold text-highlighted">Unable to persist workspace</p>
@@ -270,11 +280,17 @@ export function MarketplacePage() {
               ))}
             </div>
           ) : !isInitialLoading && allItems.length === 0 && !marketplaceQuery.isFetchingNextPage ? (
-            <div className={cn("flex flex-col items-center justify-center rounded-3xl border border-dashed border-muted/40 py-20 text-center", shellContentInClass)}>
+            <div
+              className={cn(
+                "flex flex-col items-center justify-center rounded-3xl border border-dashed border-muted/40 py-20 text-center",
+                shellContentInClass,
+              )}
+            >
               <SearchX className="mb-4 size-10 text-muted-foreground" />
               <h3 className="text-lg font-semibold text-highlighted">No items found</h3>
               <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                We couldn&apos;t find any marketplace items matching your current filters or search query.
+                We couldn&apos;t find any marketplace items matching your current filters or search
+                query.
               </p>
             </div>
           ) : (
@@ -312,7 +328,9 @@ export function MarketplacePage() {
                     Loading more items...
                   </div>
                 ) : !marketplaceQuery.hasNextPage && allItems.length > 0 ? (
-                  <p className="text-xs tracking-wider text-muted-foreground/60 uppercase">All items loaded</p>
+                  <p className="text-xs tracking-wider text-muted-foreground/60 uppercase">
+                    All items loaded
+                  </p>
                 ) : null}
               </div>
             </>

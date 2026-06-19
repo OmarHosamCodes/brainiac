@@ -157,7 +157,11 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
     const fitNode = useCallback(
       (nodeId: string) => {
         const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        void fitView({ nodes: [{ id: nodeId }], padding: FIT_PADDING, duration: reducedMotion ? 0 : 200 });
+        void fitView({
+          nodes: [{ id: nodeId }],
+          padding: FIT_PADDING,
+          duration: reducedMotion ? 0 : 200,
+        });
       },
       [fitView],
     );
@@ -248,9 +252,7 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
         const selectedSet = new Set(selectedNodeIds);
         onNodesChange(
           nodes.map((node) =>
-            selectedSet.has(node.id)
-              ? { ...node, x: node.x + deltaX, y: node.y + deltaY }
-              : node,
+            selectedSet.has(node.id) ? { ...node, x: node.x + deltaX, y: node.y + deltaY } : node,
           ),
         );
       },
@@ -336,7 +338,10 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
             edgesReconnectable={false}
             deleteKeyCode={null}
             proOptions={{ hideAttribution: true }}
-            className={cn("workspace-flow h-full w-full", loading && "pointer-events-none opacity-60")}
+            className={cn(
+              "workspace-flow h-full w-full",
+              loading && "pointer-events-none opacity-60",
+            )}
           >
             <Background
               variant={BackgroundVariant.Dots}
@@ -352,7 +357,9 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
                   className={controlButtonClass}
                   aria-label="Zoom out"
                   onClick={() => {
-                    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                    const reducedMotion = window.matchMedia(
+                      "(prefers-reduced-motion: reduce)",
+                    ).matches;
                     void zoomOut({ duration: reducedMotion ? 0 : 150 });
                   }}
                 >
@@ -366,7 +373,9 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
                   className={controlButtonClass}
                   aria-label="Zoom in"
                   onClick={() => {
-                    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                    const reducedMotion = window.matchMedia(
+                      "(prefers-reduced-motion: reduce)",
+                    ).matches;
                     void zoomIn({ duration: reducedMotion ? 0 : 150 });
                   }}
                 >
@@ -407,13 +416,20 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
 
           {!loading && nodes.length === 0 ? (
             <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center px-6">
-              <div className={cn(dashboardEmptyPanelClass, "pointer-events-auto max-w-sm text-center")}>
+              <div
+                className={cn(dashboardEmptyPanelClass, "pointer-events-auto max-w-sm text-center")}
+              >
                 <LayoutGrid className="mx-auto size-7 text-muted" />
                 <h3 className="mt-4 text-lg font-bold text-highlighted">No nodes yet</h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted">
                   Right-click the canvas to add a node, or use the button below.
                 </p>
-                <Button className="mt-4" variant="secondary" size="sm" onClick={createNodeAtViewportCenter}>
+                <Button
+                  className="mt-4"
+                  variant="secondary"
+                  size="sm"
+                  onClick={createNodeAtViewportCenter}
+                >
                   <Plus className="size-4" />
                   Add node
                 </Button>

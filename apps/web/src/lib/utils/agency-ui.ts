@@ -41,7 +41,7 @@ export const agencyTaskRailTrackingStripClass =
   "flex shrink-0 items-center gap-2 border-b border-default px-4 py-1.5 text-xs text-muted";
 
 export const agencyTaskRowClass = [
-  "border-b border-default last:border-b-0 transition-colors motion-reduce:transition-none",
+  "border-b border-default last:border-b-0 transition-[background-color,opacity,transform] duration-200 motion-reduce:transition-none",
   "hover:bg-default/60",
 ].join(" ");
 
@@ -49,13 +49,13 @@ export const agencyTaskRowSelectedClass = "bg-primary/10 hover:bg-primary/10";
 
 export const agencyTaskRowDoneClass = "opacity-80";
 
+export const agencyTaskRowCompleteClass = "agency-task-row-complete";
+
 /** Time pane — execution stack beside the task rail. */
 export const agencyTimePaneClass =
   "flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-default bg-elevated";
 
-export const agencyTimeTrackerBarClass = [
-  "shrink-0 border-b border-default px-4 py-3",
-].join(" ");
+export const agencyTimeTrackerBarClass = ["shrink-0 border-b border-default px-4 py-3"].join(" ");
 
 export const agencyTimeDayHeaderClass = [
   "flex shrink-0 items-center justify-between px-4 py-2",
@@ -74,10 +74,7 @@ export const agencyTimeWeekFooterClass = [
   "bg-default/40",
 ].join(" ");
 
-export const agencyTimeFooterMetricClass = [
-  "text-sm font-semibold",
-  agencyMetricClass,
-].join(" ");
+export const agencyTimeFooterMetricClass = ["text-sm font-semibold", agencyMetricClass].join(" ");
 
 export const agencyTimeLogSkeletonClass =
   "h-11 border-b border-default bg-elevated/40 motion-reduce:animate-none animate-pulse";

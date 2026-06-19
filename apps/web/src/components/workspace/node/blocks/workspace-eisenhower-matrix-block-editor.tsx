@@ -362,9 +362,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
     }));
   }, [openScopedTasks, block.settings.quadrants, summary.quadrants]);
 
-  function updateSettings(
-    mutator: (settings: WorkspaceEisenhowerMatrixBlock["settings"]) => void,
-  ) {
+  function updateSettings(mutator: (settings: WorkspaceEisenhowerMatrixBlock["settings"]) => void) {
     mutateTypedBlock(tabId, block.id, "eisenhower-matrix", (entry) => {
       const nextSettings = createWorkspaceTimeOrchestratorSettings(entry.settings);
       mutator(nextSettings);
@@ -532,7 +530,10 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
       });
     } catch (error) {
       toast.error("Prioritization failed", {
-        description: getErrorMessage(error, "The Orchestrator agent could not build a battle plan."),
+        description: getErrorMessage(
+          error,
+          "The Orchestrator agent could not build a battle plan.",
+        ),
       });
     }
   }
@@ -689,13 +690,14 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
         </div>
       </div>
 
-      <div
-        className={cn("grid gap-4", visibleQuadrants.length > 1 ? "xl:grid-cols-2" : "")}
-      >
+      <div className={cn("grid gap-4", visibleQuadrants.length > 1 ? "xl:grid-cols-2" : "")}>
         {visibleQuadrants.map((quadrant) => (
           <article
             key={quadrant.key}
-            className={cn("rounded-3xl border border-muted/20 p-5", getQuadrantClassName(quadrant.key))}
+            className={cn(
+              "rounded-3xl border border-muted/20 p-5",
+              getQuadrantClassName(quadrant.key),
+            )}
           >
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -850,11 +852,7 @@ export function WorkspaceEisenhowerMatrixBlockEditor({
               disabled={filteredCollectedTasks.length === 0 || operationState.pending}
               onClick={prioritizeWithAi}
             >
-              {operationState.pending ? (
-                <Loader2 className="animate-spin" />
-              ) : (
-                <Sparkles />
-              )}
+              {operationState.pending ? <Loader2 className="animate-spin" /> : <Sparkles />}
               {operationState.pending
                 ? operationState.label || "Running analysis"
                 : "AI Prioritize"}

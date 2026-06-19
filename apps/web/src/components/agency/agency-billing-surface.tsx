@@ -8,10 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { orpc } from "@/lib/orpc";
 import { agencyLabelClass, agencyMetricClass, agencyErrorPanelClass } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import {
-  selectIsInvoiceMutationPending,
-  useAgencyOpsStore,
-} from "@/stores/agency-ops";
+import { selectIsInvoiceMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
 type AgencyBillingSurfaceProps = {
   teamId: string;
@@ -183,19 +180,37 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
               </div>
               <div>
                 <span className={agencyLabelClass}>Drafts</span>
-                <span className={["ml-2", agencyMetricClass, summary.draftCount > 0 ? "" : "text-dimmed"].join(" ")}>
+                <span
+                  className={[
+                    "ml-2",
+                    agencyMetricClass,
+                    summary.draftCount > 0 ? "" : "text-dimmed",
+                  ].join(" ")}
+                >
                   {summary.draftCount}
                 </span>
               </div>
               <div>
                 <span className={agencyLabelClass}>Sent</span>
-                <span className={["ml-2", agencyMetricClass, summary.sentCount > 0 ? "" : "text-dimmed"].join(" ")}>
+                <span
+                  className={[
+                    "ml-2",
+                    agencyMetricClass,
+                    summary.sentCount > 0 ? "" : "text-dimmed",
+                  ].join(" ")}
+                >
                   {summary.sentCount}
                 </span>
               </div>
               <div>
                 <span className={agencyLabelClass}>Paid · all time</span>
-                <span className={["ml-2", agencyMetricClass, summary.paidCount > 0 ? "" : "text-dimmed"].join(" ")}>
+                <span
+                  className={[
+                    "ml-2",
+                    agencyMetricClass,
+                    summary.paidCount > 0 ? "" : "text-dimmed",
+                  ].join(" ")}
+                >
                   {summary.paidCount}
                 </span>
               </div>
@@ -207,7 +222,9 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
               <article key={lane.id} className="rounded-2xl border border-default bg-default">
                 <header className="flex items-center justify-between gap-3 border-b border-default px-4 py-3">
                   <div className="min-w-0">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">{lane.label}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                      {lane.label}
+                    </p>
                     <p className="mt-0.5 text-[11px] text-muted">{lane.copy}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -220,7 +237,12 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
                       {laneCount(lane.id)}
                     </span>
                     {lane.id === "draft" ? (
-                      <Button variant="ghost" size="sm" aria-label="New invoice" onClick={openCreatePanel}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        aria-label="New invoice"
+                        onClick={openCreatePanel}
+                      >
                         <Plus />
                       </Button>
                     ) : null}
@@ -232,7 +254,9 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
                     {laneItems(lane.id).map((invoice) => (
                       <li key={invoice.id} className="px-4 py-3">
                         <div className="flex items-baseline justify-between gap-3">
-                          <span className="truncate text-xs font-bold text-highlighted">{invoice.number}</span>
+                          <span className="truncate text-xs font-bold text-highlighted">
+                            {invoice.number}
+                          </span>
                           <span className="font-mono text-[11px] tabular-nums text-highlighted">
                             {formatCurrency(invoice.amountCents, invoice.currency)}
                           </span>
@@ -262,7 +286,9 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
                   </ul>
                 ) : (
                   <div className="px-4 py-8 text-center">
-                    <p className="text-[11px] text-dimmed">No {lane.label.toLowerCase()} invoices.</p>
+                    <p className="text-[11px] text-dimmed">
+                      No {lane.label.toLowerCase()} invoices.
+                    </p>
                   </div>
                 )}
               </article>
@@ -273,10 +299,19 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
             <div className="rounded-2xl border border-default bg-default">
               <div className="flex items-center justify-between border-b border-default px-5 py-4">
                 <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">New invoice</p>
-                  <h3 className="mt-1 text-sm font-bold text-highlighted">Draft from a closed period</h3>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                    New invoice
+                  </p>
+                  <h3 className="mt-1 text-sm font-bold text-highlighted">
+                    Draft from a closed period
+                  </h3>
                 </div>
-                <Button variant="ghost" size="sm" aria-label="Close" onClick={() => setCreatePanelOpen(false)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  aria-label="Close"
+                  onClick={() => setCreatePanelOpen(false)}
+                >
                   <X />
                 </Button>
               </div>
@@ -299,9 +334,19 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
                 <div>
                   <label className="text-[11px] font-bold text-muted">Billing period</label>
                   <div className="mt-1 flex items-center gap-2">
-                    <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} className="flex-1" />
+                    <Input
+                      type="date"
+                      value={periodStart}
+                      onChange={(e) => setPeriodStart(e.target.value)}
+                      className="flex-1"
+                    />
                     <span className="text-[11px] text-muted">to</span>
-                    <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} className="flex-1" />
+                    <Input
+                      type="date"
+                      value={periodEnd}
+                      onChange={(e) => setPeriodEnd(e.target.value)}
+                      className="flex-1"
+                    />
                   </div>
                 </div>
               </div>
@@ -313,7 +358,10 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
                   </p>
                 </div>
                 <div className="mt-4 flex items-center gap-3">
-                  <Button disabled={!createFormValid || isInvoiceMutationPending} onClick={() => void generateDraft()}>
+                  <Button
+                    disabled={!createFormValid || isInvoiceMutationPending}
+                    onClick={() => void generateDraft()}
+                  >
                     Generate draft
                   </Button>
                   <Button variant="ghost" onClick={() => setCreatePanelOpen(false)}>
@@ -331,8 +379,8 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
                 <div>
                   <p className="text-sm font-bold text-highlighted">No invoices yet.</p>
                   <p className="mt-1 text-xs text-muted">
-                    Bill your first period from a closed week. Invoices flow through draft, sent, and paid
-                    lanes; the period-close checklist guides each cycle.
+                    Bill your first period from a closed week. Invoices flow through draft, sent,
+                    and paid lanes; the period-close checklist guides each cycle.
                   </p>
                   <ul className="mt-4 space-y-1.5 text-[11px] text-muted">
                     <li className="flex items-start gap-2">
@@ -341,7 +389,9 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
                     </li>
                     <li className="flex items-start gap-2">
                       <CornerDownRight className="mt-0.5 size-3.5 shrink-0 text-dimmed" />
-                      <span>Send as PDF or push to QuickBooks · Xero from Settings · Integrations.</span>
+                      <span>
+                        Send as PDF or push to QuickBooks · Xero from Settings · Integrations.
+                      </span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CornerDownRight className="mt-0.5 size-3.5 shrink-0 text-dimmed" />

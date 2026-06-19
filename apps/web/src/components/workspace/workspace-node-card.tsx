@@ -19,7 +19,11 @@ type WorkspaceNodeCardProps = {
   allNodes?: CanvasNodeModel[];
 };
 
-export function WorkspaceNodeCard({ node, selected: _selected, allNodes = [] }: WorkspaceNodeCardProps) {
+export function WorkspaceNodeCard({
+  node,
+  selected: _selected,
+  allNodes = [],
+}: WorkspaceNodeCardProps) {
   const workspaceNode = node as WorkspaceNode;
   const allWorkspaceNodes = allNodes as WorkspaceNode[];
 
@@ -127,12 +131,16 @@ export function WorkspaceNodeCard({ node, selected: _selected, allNodes = [] }: 
       </div>
 
       <div className="custom-scrollbar min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-        <p className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-toned">{preview}</p>
+        <p className="whitespace-pre-wrap text-sm font-medium leading-relaxed text-toned">
+          {preview}
+        </p>
 
         {featuredDetails.length > 0 ? (
           <div className="space-y-2">
             {featuredDetails.map((detail) => {
-              const entry = getWorkspaceBlockRegistryEntry(detail.blockType as WorkspaceBlock["type"]);
+              const entry = getWorkspaceBlockRegistryEntry(
+                detail.blockType as WorkspaceBlock["type"],
+              );
               const DetailIcon = entry.icon;
 
               return (
@@ -151,7 +159,9 @@ export function WorkspaceNodeCard({ node, selected: _selected, allNodes = [] }: 
                       {detail.tabTitle}
                     </span>
                   </div>
-                  <p className="line-clamp-2 text-[11px] leading-relaxed text-muted">{detail.summary}</p>
+                  <p className="line-clamp-2 text-[11px] leading-relaxed text-muted">
+                    {detail.summary}
+                  </p>
                 </div>
               );
             })}

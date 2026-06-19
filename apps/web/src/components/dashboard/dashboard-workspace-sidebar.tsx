@@ -1,4 +1,13 @@
-import { Globe, Loader2, Lock, PanelLeftClose, PanelLeftOpen, Plus, Settings2, Users } from "lucide-react";
+import {
+  Globe,
+  Loader2,
+  Lock,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
+  Settings2,
+  Users,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -93,9 +102,7 @@ export function DashboardWorkspaceSidebar({
     if (selectedNode.visibility === "team") {
       return {
         label: `Shared with ${selectedTeamName || "team"}`,
-        hint: canManageSelectedNodeSharing
-          ? "Visible to all team members."
-          : "Team-shared node.",
+        hint: canManageSelectedNodeSharing ? "Visible to all team members." : "Team-shared node.",
       };
     }
 
@@ -111,12 +118,19 @@ export function DashboardWorkspaceSidebar({
     <aside
       className={cn(
         "shrink-0 flex flex-col border-r border-default bg-default",
-        compact ? "dashboard-sidebar-compact w-14 items-center gap-2 py-3" : "dashboard-sidebar w-72 xl:w-80",
+        compact
+          ? "dashboard-sidebar-compact w-14 items-center gap-2 py-3"
+          : "dashboard-sidebar w-72 xl:w-80",
       )}
     >
       {compact ? (
         <>
-          <Button variant="ghost" size="icon" aria-label="Expand team panel" onClick={() => onCompactChange(false)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Expand team panel"
+            onClick={() => onCompactChange(false)}
+          >
             <PanelLeftOpen className="size-4" />
           </Button>
           <div
@@ -143,7 +157,12 @@ export function DashboardWorkspaceSidebar({
                 {selectedTeamName || "No team selected"}
               </p>
             </div>
-            <Button variant="ghost" size="icon" aria-label="Collapse team panel" onClick={() => onCompactChange(true)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Collapse team panel"
+              onClick={() => onCompactChange(true)}
+            >
               <PanelLeftClose className="size-4" />
             </Button>
           </header>
@@ -157,7 +176,9 @@ export function DashboardWorkspaceSidebar({
                       <Users className="size-4.5" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-highlighted">{selectedTeamName}</p>
+                      <p className="truncate text-sm font-semibold text-highlighted">
+                        {selectedTeamName}
+                      </p>
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                         {roleLabel ? <Badge variant="secondary">{roleLabel}</Badge> : null}
                         <span className="text-xs text-muted">
@@ -171,7 +192,12 @@ export function DashboardWorkspaceSidebar({
                       ? "Manage members, roles, and who can access shared nodes."
                       : "View team details. Owner role is required to manage members."}
                   </p>
-                  <Button variant="secondary" size="sm" className="mt-3 w-full" onClick={onOpenTeamSettings}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="mt-3 w-full"
+                    onClick={onOpenTeamSettings}
+                  >
                     <Settings2 className="size-4" />
                     Team settings
                   </Button>
@@ -206,7 +232,12 @@ export function DashboardWorkspaceSidebar({
                     </div>
                   </div>
                 ) : (
-                  <Button variant="secondary" size="sm" className="mt-3 w-full" onClick={() => setCreateTeamOpen(true)}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="mt-3 w-full"
+                    onClick={() => setCreateTeamOpen(true)}
+                  >
                     <Plus className="size-4" />
                     New team
                   </Button>
@@ -218,7 +249,9 @@ export function DashboardWorkspaceSidebar({
             <section className={dashboardSectionClass}>
               <div className={dashboardCardClass}>
                 <p className={dashboardLabelClass}>Node sharing</p>
-                <p className="mt-2 text-sm font-semibold text-highlighted">{nodeShareStatus.label}</p>
+                <p className="mt-2 text-sm font-semibold text-highlighted">
+                  {nodeShareStatus.label}
+                </p>
                 <p className="mt-1 text-xs leading-relaxed text-muted">{nodeShareStatus.hint}</p>
                 <Button
                   variant="secondary"

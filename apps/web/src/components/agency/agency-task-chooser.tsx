@@ -186,7 +186,10 @@ export function AgencyTaskChooser({
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[34rem] min-w-[20rem] max-w-[calc(100vw-2rem)] p-0">
+      <PopoverContent
+        align="start"
+        className="w-[34rem] min-w-[20rem] max-w-[calc(100vw-2rem)] p-0"
+      >
         <div className="border-b border-default p-2">
           <div className="relative">
             <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />
@@ -201,9 +204,7 @@ export function AgencyTaskChooser({
         <div className="max-h-80 overflow-y-auto p-1">
           {groupedItems.length === 0 ? (
             <p className="p-4 text-xs text-muted">
-              {searchTerm.trim()
-                ? "No matching active tasks."
-                : "No open or in-progress tasks."}
+              {searchTerm.trim() ? "No matching active tasks." : "No open or in-progress tasks."}
             </p>
           ) : (
             groupedItems.map((item, index) => {
@@ -240,9 +241,10 @@ export function AgencyTaskChooser({
                   <div className="min-w-0">
                     <div className="flex min-w-0 items-center gap-2">
                       <span
-                        className={["size-1.5 shrink-0 rounded-full", statusDotClass(task.status)].join(
-                          " ",
-                        )}
+                        className={[
+                          "size-1.5 shrink-0 rounded-full",
+                          statusDotClass(task.status),
+                        ].join(" ")}
                       />
                       <span className="truncate text-sm font-semibold text-highlighted">
                         {task.title}

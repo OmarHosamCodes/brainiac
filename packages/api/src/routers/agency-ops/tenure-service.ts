@@ -418,7 +418,6 @@ export async function upsertTenurePolicy(
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
 
-
   return {
     policy: {
       fiscalYearStartMonth: upserted.fiscalYearStartMonth,
@@ -569,7 +568,6 @@ export async function upsertTenureProfile(
   if (!upserted) {
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
-
 
   const policyRow = await loadPolicyRow(input.teamId);
   const policy = policyRow ? toPolicyInput(policyRow) : defaultPolicyInput();
@@ -780,7 +778,6 @@ export async function upsertTenureExemption(
     ? await db.select({ name: user.name }).from(user).where(eq(user.id, upserted.userId)).limit(1)
     : [];
 
-
   return {
     exemption: {
       id: upserted.id,
@@ -811,7 +808,6 @@ export async function deleteTenureExemption(
         eq(agencyOpsTenureQuarterExemption.id, input.exemptionId),
       ),
     );
-
 
   return { ok: true };
 }

@@ -187,7 +187,8 @@ export function AgencyTaskThread({ teamId, taskId, projects, onBack }: AgencyTas
           ) : (
             messages.map((message, index) => (
               <div key={message.id}>
-                {index === 0 || !sameDay(message.createdAt, messages[index - 1]?.createdAt ?? "") ? (
+                {index === 0 ||
+                !sameDay(message.createdAt, messages[index - 1]?.createdAt ?? "") ? (
                   <div className="py-2 text-center text-[11px] font-bold uppercase tracking-wider text-muted">
                     {formatDate(message.createdAt)}
                   </div>
@@ -211,7 +212,9 @@ export function AgencyTaskThread({ teamId, taskId, projects, onBack }: AgencyTas
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xs font-bold text-highlighted">{message.userName}</span>
-                      <span className="text-[11px] text-muted">{formatTime(message.createdAt)}</span>
+                      <span className="text-[11px] text-muted">
+                        {formatTime(message.createdAt)}
+                      </span>
                     </div>
 
                     {message.type === "text" || message.content ? (

@@ -133,7 +133,11 @@ type AgencyOptimisticState = {
 
   upsertProject: (teamId: string, project: AgencyOptimisticProject) => void;
   deleteProject: (teamId: string, projectId: string) => void;
-  reconcileProject: (teamId: string, optimisticId: string, created: AgencyOptimisticProject) => void;
+  reconcileProject: (
+    teamId: string,
+    optimisticId: string,
+    created: AgencyOptimisticProject,
+  ) => void;
   pruneProjects: (teamId: string, serverItems: AgencyOptimisticProject[]) => void;
   snapshotProjects: (teamId: string) => AgencyListOverlay<AgencyOptimisticProject>;
   restoreProjects: (teamId: string, snapshot: AgencyListOverlay<AgencyOptimisticProject>) => void;
@@ -148,10 +152,17 @@ type AgencyOptimisticState = {
 
   upsertTimeEntry: (teamId: string, entry: AgencyOptimisticTimeEntry) => void;
   deleteTimeEntries: (teamId: string, entryIds: string[]) => void;
-  reconcileTimeEntry: (teamId: string, optimisticId: string, created: AgencyOptimisticTimeEntry) => void;
+  reconcileTimeEntry: (
+    teamId: string,
+    optimisticId: string,
+    created: AgencyOptimisticTimeEntry,
+  ) => void;
   pruneTimeEntries: (teamId: string, serverItems: AgencyOptimisticTimeEntry[]) => void;
   snapshotTimeEntries: (teamId: string) => AgencyListOverlay<AgencyOptimisticTimeEntry>;
-  restoreTimeEntries: (teamId: string, snapshot: AgencyListOverlay<AgencyOptimisticTimeEntry>) => void;
+  restoreTimeEntries: (
+    teamId: string,
+    snapshot: AgencyListOverlay<AgencyOptimisticTimeEntry>,
+  ) => void;
 
   upsertTaskMessage: (teamId: string, taskId: string, message: AgencyOptimisticTaskMessage) => void;
   reconcileTaskMessage: (
@@ -160,8 +171,15 @@ type AgencyOptimisticState = {
     optimisticId: string,
     created: AgencyOptimisticTaskMessage,
   ) => void;
-  pruneTaskMessages: (teamId: string, taskId: string, serverItems: AgencyOptimisticTaskMessage[]) => void;
-  snapshotTaskMessages: (teamId: string, taskId: string) => AgencyListOverlay<AgencyOptimisticTaskMessage>;
+  pruneTaskMessages: (
+    teamId: string,
+    taskId: string,
+    serverItems: AgencyOptimisticTaskMessage[],
+  ) => void;
+  snapshotTaskMessages: (
+    teamId: string,
+    taskId: string,
+  ) => AgencyListOverlay<AgencyOptimisticTaskMessage>;
   restoreTaskMessages: (
     teamId: string,
     taskId: string,
@@ -171,12 +189,20 @@ type AgencyOptimisticState = {
   setActiveTimer: (teamId: string, timer: AgencyOptimisticActiveTimer | null) => void;
   clearActiveTimer: (teamId: string) => void;
   snapshotActiveTimer: (teamId: string) => AgencyOptimisticActiveTimer | null | undefined;
-  restoreActiveTimer: (teamId: string, timer: AgencyOptimisticActiveTimer | null | undefined) => void;
+  restoreActiveTimer: (
+    teamId: string,
+    timer: AgencyOptimisticActiveTimer | null | undefined,
+  ) => void;
 
   setContact: (teamId: string, clientId: string, contact: AgencyOptimisticContact) => void;
   clearContact: (teamId: string, clientId: string) => void;
 
-  setCapacityCell: (teamId: string, weekStart: string, userId: string, capacitySeconds: number) => void;
+  setCapacityCell: (
+    teamId: string,
+    weekStart: string,
+    userId: string,
+    capacitySeconds: number,
+  ) => void;
   clearCapacityCell: (teamId: string, weekStart: string, userId: string) => void;
 
   resetTeam: (teamId: string) => void;
@@ -300,7 +326,11 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
 
   upsertClient: (teamId, client) =>
     set((state) => ({
-      clients: setListOverlay(state.clients, teamId, upsertListItem(getListOverlay(state.clients, teamId), client)),
+      clients: setListOverlay(
+        state.clients,
+        teamId,
+        upsertListItem(getListOverlay(state.clients, teamId), client),
+      ),
     })),
 
   updateClient: (teamId, clientId, patch) =>
@@ -323,7 +353,11 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
         };
       }
       return {
-        clients: setListOverlay(state.clients, teamId, updateListItem(overlay, clientId, patch, current)),
+        clients: setListOverlay(
+          state.clients,
+          teamId,
+          updateListItem(overlay, clientId, patch, current),
+        ),
       };
     }),
 
@@ -394,12 +428,20 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
 
   upsertTask: (teamId, task) =>
     set((state) => ({
-      tasks: setListOverlay(state.tasks, teamId, upsertListItem(getListOverlay(state.tasks, teamId), task)),
+      tasks: setListOverlay(
+        state.tasks,
+        teamId,
+        upsertListItem(getListOverlay(state.tasks, teamId), task),
+      ),
     })),
 
   deleteTask: (teamId, taskId) =>
     set((state) => ({
-      tasks: setListOverlay(state.tasks, teamId, deleteListItem(getListOverlay(state.tasks, teamId), taskId)),
+      tasks: setListOverlay(
+        state.tasks,
+        teamId,
+        deleteListItem(getListOverlay(state.tasks, teamId), taskId),
+      ),
     })),
 
   reconcileTask: (teamId, optimisticId, created) =>
@@ -474,7 +516,8 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
   upsertTaskMessage: (teamId, taskId, message) =>
     set((state) => {
       const key = taskMessagesKey(teamId, taskId);
-      const overlay = state.taskMessages[key] ?? createEmptyListOverlay<AgencyOptimisticTaskMessage>();
+      const overlay =
+        state.taskMessages[key] ?? createEmptyListOverlay<AgencyOptimisticTaskMessage>();
       return {
         taskMessages: {
           ...state.taskMessages,
@@ -486,7 +529,8 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
   reconcileTaskMessage: (teamId, taskId, optimisticId, created) =>
     set((state) => {
       const key = taskMessagesKey(teamId, taskId);
-      const overlay = state.taskMessages[key] ?? createEmptyListOverlay<AgencyOptimisticTaskMessage>();
+      const overlay =
+        state.taskMessages[key] ?? createEmptyListOverlay<AgencyOptimisticTaskMessage>();
       return {
         taskMessages: {
           ...state.taskMessages,
@@ -514,7 +558,9 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
     }),
 
   snapshotTaskMessages: (teamId, taskId) =>
-    structuredClone(get().taskMessages[taskMessagesKey(teamId, taskId)] ?? createEmptyListOverlay()),
+    structuredClone(
+      get().taskMessages[taskMessagesKey(teamId, taskId)] ?? createEmptyListOverlay(),
+    ),
 
   restoreTaskMessages: (teamId, taskId, snapshot) =>
     set((state) => ({
@@ -626,10 +672,7 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
     }),
 }));
 
-export function projectMatchesClientFilter(
-  project: AgencyOptimisticProject,
-  clientId?: string,
-) {
+export function projectMatchesClientFilter(project: AgencyOptimisticProject, clientId?: string) {
   if (!clientId) return true;
   return project.clientId === clientId;
 }

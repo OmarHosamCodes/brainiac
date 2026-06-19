@@ -140,10 +140,12 @@ export function PrivacyPage() {
             <div className="mb-4 text-[11px] font-bold uppercase tracking-[0.18em] text-neutral-400 dark:text-neutral-500">
               Legal
             </div>
-            <h1 className="text-4xl leading-[1.02] font-bold tracking-tight md:text-6xl">Privacy Policy</h1>
+            <h1 className="text-4xl leading-[1.02] font-bold tracking-tight md:text-6xl">
+              Privacy Policy
+            </h1>
             <p className="mt-6 max-w-sm text-base leading-relaxed text-neutral-600 md:text-lg dark:text-neutral-400">
-              A plain-language overview of what Brainiac collects, why it is processed, who may receive it, and
-              what choices users have.
+              A plain-language overview of what Brainiac collects, why it is processed, who may
+              receive it, and what choices users have.
             </p>
 
             <div className="mt-8 text-[11px] font-bold uppercase tracking-[0.16em] text-neutral-400 dark:text-neutral-500">

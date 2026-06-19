@@ -57,10 +57,7 @@ function clampInteger(value: string, min: number, max: number) {
 }
 
 function toPlatform(value: string): WorkspaceContentPlatform {
-  return value === "instagram" ||
-    value === "tiktok" ||
-    value === "linkedin" ||
-    value === "youtube"
+  return value === "instagram" || value === "tiktok" || value === "linkedin" || value === "youtube"
     ? value
     : "linkedin";
 }
@@ -105,16 +102,14 @@ export function WorkspaceContentRoiTrackerBlockEditor({
   const topItem = sortedItems[0] ?? null;
   const promisingCount = useMemo(
     () =>
-      block.items.filter(
-        (item) => getContentRoiStatus(getContentRoiScore(item)) === "promising",
-      ).length,
+      block.items.filter((item) => getContentRoiStatus(getContentRoiScore(item)) === "promising")
+        .length,
     [block.items],
   );
   const underperformingCount = useMemo(
     () =>
-      block.items.filter(
-        (item) => getContentRoiStatus(getContentRoiScore(item)) === "low-return",
-      ).length,
+      block.items.filter((item) => getContentRoiStatus(getContentRoiScore(item)) === "low-return")
+        .length,
     [block.items],
   );
 
@@ -157,7 +152,9 @@ export function WorkspaceContentRoiTrackerBlockEditor({
           <p className="mt-2 text-2xl font-black tracking-tight text-foreground sm:text-3xl">
             {summary.topPlatform ? workspaceContentPlatformLabels[summary.topPlatform] : "None"}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">Highest average ROI across current rows</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Highest average ROI across current rows
+          </p>
         </div>
 
         <div className="rounded-3xl border border-muted/20 bg-muted/10 p-5">
@@ -381,7 +378,9 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                       <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60">
                         Score
                       </span>
-                      <span className="text-sm font-black text-primary">{item.conversionInfluence}</span>
+                      <span className="text-sm font-black text-primary">
+                        {item.conversionInfluence}
+                      </span>
                     </div>
                     <input
                       type="range"
@@ -432,7 +431,8 @@ export function WorkspaceContentRoiTrackerBlockEditor({
                             {getPerformanceSummary(score)}
                           </p>
                           <p className="mt-2 text-xs leading-relaxed opacity-70">
-                            {item.leads} leads, sorted by {workspaceContentRoiSortLabels[block.sortBy]}
+                            {item.leads} leads, sorted by{" "}
+                            {workspaceContentRoiSortLabels[block.sortBy]}
                           </p>
                         </div>
 

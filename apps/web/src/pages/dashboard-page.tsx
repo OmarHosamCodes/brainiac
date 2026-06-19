@@ -74,7 +74,11 @@ export function DashboardPage() {
           aria-expanded={!isTeamAsideCompact}
           onClick={() => setIsTeamAsideCompact((value) => !value)}
         >
-          {isTeamAsideCompact ? <PanelLeftOpen className="size-4" /> : <PanelLeftClose className="size-4" />}
+          {isTeamAsideCompact ? (
+            <PanelLeftOpen className="size-4" />
+          ) : (
+            <PanelLeftClose className="size-4" />
+          )}
           <span className="hidden lg:inline">Workspace</span>
         </Button>
         {selectedTeamName ? (
@@ -86,7 +90,11 @@ export function DashboardPage() {
       </AppShellHeaderContext>
 
       <AppShellHeaderActions>
-        <Button variant="secondary" size="sm" onClick={() => canvasRef.current?.createNodeAtViewportCenter()}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => canvasRef.current?.createNodeAtViewportCenter()}
+        >
           <Plus className="size-4" />
           Add
         </Button>
@@ -162,9 +170,15 @@ export function DashboardPage() {
 
       <div className="pointer-events-none absolute bottom-4 left-4 z-30 flex max-w-xs flex-col gap-3 md:bottom-6 md:left-6">
         <div className="pointer-events-auto flex flex-wrap items-center gap-2">
-          <span className={cn(dashboardStatusBadgeClass, board.saveBadge.className)}>{board.saveBadge.label}</span>
+          <span className={cn(dashboardStatusBadgeClass, board.saveBadge.className)}>
+            {board.saveBadge.label}
+          </span>
           {board.isWorkspaceRefreshing && board.saveBadge.label !== "Syncing" ? (
-            <Badge key="refreshing" variant="secondary" className={cn("gap-1.5", shellContentInClass)}>
+            <Badge
+              key="refreshing"
+              variant="secondary"
+              className={cn("gap-1.5", shellContentInClass)}
+            >
               <Loader2 className="size-3 animate-spin" />
               Refreshing
             </Badge>

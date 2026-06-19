@@ -22,6 +22,7 @@ type AgencyWorkSurfaceProps = {
 export function AgencyWorkSurface({ teamId, onSelectProject }: AgencyWorkSurfaceProps) {
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const [mobilePane, setMobilePane] = useState<"tasks" | "time">("tasks");
+  const [taskRailCollapsed, setTaskRailCollapsed] = useState(false);
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const projects = projectsQuery.data?.items ?? [];
@@ -97,7 +98,8 @@ export function AgencyWorkSurface({ teamId, onSelectProject }: AgencyWorkSurface
 
       <div
         className={[
-          "min-h-0 min-w-0 lg:h-full lg:w-[28rem] lg:max-w-[28rem] lg:flex-none",
+          "min-h-0 min-w-0 transition-[width,max-width] duration-200 ease-out motion-reduce:transition-none lg:h-full lg:flex-none",
+          taskRailCollapsed ? "lg:w-[5.5rem] lg:max-w-[5.5rem]" : "lg:w-[28rem] lg:max-w-[28rem]",
           selectedTaskId ? "hidden lg:block" : "",
           !selectedTaskId && mobilePane !== "tasks" ? "hidden lg:block" : "",
         ].join(" ")}
@@ -106,7 +108,9 @@ export function AgencyWorkSurface({ teamId, onSelectProject }: AgencyWorkSurface
           teamId={teamId}
           projects={projects}
           selectedTaskId={selectedTaskId}
+          collapsed={taskRailCollapsed}
           onSelect={setSelectedTaskId}
+          onCollapsedChange={setTaskRailCollapsed}
           onSelectProject={onSelectProject}
         />
       </div>

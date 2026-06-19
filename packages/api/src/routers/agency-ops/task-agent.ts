@@ -14,10 +14,7 @@ import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
-import {
-  ensureTaskThreadByTaskId,
-  requireTeamMembership,
-} from "./service";
+import { ensureTaskThreadByTaskId, requireTeamMembership } from "./service";
 
 function formatAttachmentSummary(
   attachments: Array<{

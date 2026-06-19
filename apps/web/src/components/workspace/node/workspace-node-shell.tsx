@@ -93,7 +93,8 @@ export function WorkspaceNodeShell({
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [addBlockCommandOpen, setAddBlockCommandOpen] = useState(false);
-  const [addBlockCommandView, setAddBlockCommandView] = useState<WorkspaceAddBlockCommandView>("search");
+  const [addBlockCommandView, setAddBlockCommandView] =
+    useState<WorkspaceAddBlockCommandView>("search");
   const [pendingFocusBlockId, setPendingFocusBlockId] = useState<string | null>(null);
 
   const handleBlockInserted = useCallback((blockIds: string[]) => {
@@ -170,9 +171,16 @@ export function WorkspaceNodeShell({
             <div className="rounded-2xl border border-default bg-default p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">Node Access</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted">
+                    Node Access
+                  </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <span className={cn("inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase", nodeVisibilityBadgeClass)}>
+                    <span
+                      className={cn(
+                        "inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase",
+                        nodeVisibilityBadgeClass,
+                      )}
+                    >
                       {nodeVisibilityLabel}
                     </span>
                     <span className="text-[11px] text-muted">Owner: {nodeOwnerLabel}</span>
@@ -217,7 +225,9 @@ export function WorkspaceNodeShell({
           </div>
 
           <div className="mb-8 space-y-1">
-              <p className="mb-2 px-2 text-[11px] font-bold uppercase tracking-widest text-muted">Workspaces</p>
+            <p className="mb-2 px-2 text-[11px] font-bold uppercase tracking-widest text-muted">
+              Workspaces
+            </p>
             {node.tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -230,7 +240,11 @@ export function WorkspaceNodeShell({
                 )}
                 onClick={() => setActiveTab(tab.id)}
               >
-                {tab.id === activeTabId ? <FolderOpen className="size-4.5" /> : <Folder className="size-4.5" />}
+                {tab.id === activeTabId ? (
+                  <FolderOpen className="size-4.5" />
+                ) : (
+                  <Folder className="size-4.5" />
+                )}
                 <span className="flex-1 truncate text-left">{getDisplayTabTitle(tab)}</span>
               </button>
             ))}
@@ -245,15 +259,27 @@ export function WorkspaceNodeShell({
           </div>
 
           <div className="mt-auto space-y-1">
-            <Button variant="ghost" className="w-full justify-start rounded-2xl" onClick={() => void saveActiveTabToMarketplace()}>
+            <Button
+              variant="ghost"
+              className="w-full justify-start rounded-2xl"
+              onClick={() => void saveActiveTabToMarketplace()}
+            >
               <Store className="size-4" />
               Share template
             </Button>
-            <Button variant="ghost" className="w-full justify-start rounded-2xl" onClick={() => openTabEditor("rename")}>
+            <Button
+              variant="ghost"
+              className="w-full justify-start rounded-2xl"
+              onClick={() => openTabEditor("rename")}
+            >
               <Pencil className="size-4" />
               Rename
             </Button>
-            <Button variant="ghost" className="w-full justify-start rounded-2xl hover:text-error" onClick={() => deleteActiveTab()}>
+            <Button
+              variant="ghost"
+              className="w-full justify-start rounded-2xl hover:text-error"
+              onClick={() => deleteActiveTab()}
+            >
               <Trash2 className="size-4" />
               Delete
             </Button>
@@ -265,10 +291,16 @@ export function WorkspaceNodeShell({
         <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-default bg-default px-4 py-4 sm:px-6">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen((open) => !open)}>
-              {isSidebarOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+              {isSidebarOpen ? (
+                <PanelLeftClose className="size-4" />
+              ) : (
+                <PanelLeftOpen className="size-4" />
+              )}
             </Button>
             <div>
-              <p className="text-sm font-semibold text-highlighted">{getDisplayTabTitle(activeTab)}</p>
+              <p className="text-sm font-semibold text-highlighted">
+                {getDisplayTabTitle(activeTab)}
+              </p>
               <p className="text-xs text-muted">{visibleBlocks.length} blocks</p>
             </div>
           </div>

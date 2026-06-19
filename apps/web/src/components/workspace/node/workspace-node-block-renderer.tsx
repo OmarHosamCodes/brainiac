@@ -160,7 +160,12 @@ export function WorkspaceNodeBlockRenderer({
       {!normalizedBlockSearch ? (
         <div className="pointer-events-none absolute inset-x-6 bottom-6 opacity-0 transition-opacity group-hover:opacity-100">
           <div className="flex justify-end">
-            <Button type="button" variant="ghost" size="sm" className="pointer-events-auto rounded-full">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="pointer-events-auto rounded-full"
+            >
               <Plus className="size-4" />
             </Button>
           </div>

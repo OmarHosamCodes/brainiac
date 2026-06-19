@@ -20,7 +20,9 @@ export function useAgencySyncStatus(teamId: string): AgencySyncState {
     const queries = queryClient.getQueryCache().findAll({
       predicate: teamQueryPredicate(teamId),
     });
-    return queries.some((query) => query.state.fetchStatus === "idle" && query.state.status === "error");
+    return queries.some(
+      (query) => query.state.fetchStatus === "idle" && query.state.status === "error",
+    );
   }, [teamId, queryClient, isFetching]);
 
   const hasData = useMemo(() => {

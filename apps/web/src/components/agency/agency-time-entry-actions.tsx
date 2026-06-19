@@ -54,12 +54,7 @@ export function AgencyTimeEntryActions({
           </Button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-40 p-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="w-full justify-start"
-            onClick={onEdit}
-          >
+          <Button variant="ghost" size="sm" className="w-full justify-start" onClick={onEdit}>
             <Pencil className="size-3.5" />
             Edit
           </Button>

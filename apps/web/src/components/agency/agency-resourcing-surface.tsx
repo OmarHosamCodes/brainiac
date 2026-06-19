@@ -8,10 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAgencyCapacityQuery } from "@/hooks/use-agency-queries";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import {
-  selectIsCapacityMutationPending,
-  useAgencyOpsStore,
-} from "@/stores/agency-ops";
+import { selectIsCapacityMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
 import type { AgencySegmentId } from "@/lib/agency-segments";
 
@@ -98,10 +95,7 @@ export function AgencyResourcingSurface({ teamId, onSegmentChange }: AgencyResou
   }
 
   function openCellPopover(userId: string, weekStart: string, currentCapacitySeconds: number) {
-    if (
-      activeCellPopover?.userId === userId &&
-      activeCellPopover.weekStart === weekStart
-    ) {
+    if (activeCellPopover?.userId === userId && activeCellPopover.weekStart === weekStart) {
       setActiveCellPopover(null);
       return;
     }
@@ -149,7 +143,12 @@ export function AgencyResourcingSurface({ teamId, onSegmentChange }: AgencyResou
           <p className="mt-1 text-xs text-muted">
             {getErrorMessage(capacityQuery.error, "Try refreshing.")}
           </p>
-          <Button variant="secondary" size="sm" className="mt-3" onClick={() => void capacityQuery.refetch()}>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="mt-3"
+            onClick={() => void capacityQuery.refetch()}
+          >
             Retry
           </Button>
         </div>
@@ -174,8 +173,9 @@ export function AgencyResourcingSurface({ teamId, onSegmentChange }: AgencyResou
                       <CalendarRange className="mx-auto size-6 text-muted" />
                       <p className="mt-3 text-sm font-bold text-highlighted">Capacity isn't set.</p>
                       <p className="mx-auto mt-1 max-w-sm text-xs text-muted">
-                        Add weekly hours per member in Settings to see utilization across the team. Once
-                        set, this grid colors each cell by how much of a member's week is committed.
+                        Add weekly hours per member in Settings to see utilization across the team.
+                        Once set, this grid colors each cell by how much of a member's week is
+                        committed.
                       </p>
                       <Button
                         variant="secondary"
@@ -301,11 +301,17 @@ export function AgencyResourcingSurface({ teamId, onSegmentChange }: AgencyResou
             <div className="flex flex-wrap items-center gap-4 px-1 text-[11px] text-muted">
               <span className="font-bold uppercase tracking-[0.16em]">Utilization</span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="inline-block size-2.5 rounded-sm bg-success/40" aria-hidden="true" />
+                <span
+                  className="inline-block size-2.5 rounded-sm bg-success/40"
+                  aria-hidden="true"
+                />
                 Under 70%
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <span className="inline-block size-2.5 rounded-sm bg-warning/40" aria-hidden="true" />
+                <span
+                  className="inline-block size-2.5 rounded-sm bg-warning/40"
+                  aria-hidden="true"
+                />
                 70–94%
               </span>
               <span className="inline-flex items-center gap-1.5">
