@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAgencyProjectTasksQuery } from "@/hooks/use-agency-queries";
+import { useAgencyProjectTasksQuery } from "@/lib/queries/agency";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/stores/agency-ops";
 

@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   useAgencyTaskMessagesQuery,
   useAgencyTaskThreadContextQuery,
-} from "@/hooks/use-agency-queries";
+} from "@/lib/queries/agency";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 type Project = {

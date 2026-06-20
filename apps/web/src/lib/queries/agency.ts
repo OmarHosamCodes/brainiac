@@ -10,7 +10,7 @@ import {
   useMergedAgencyProjectsQuery,
   useMergedAgencyTaskMessagesQuery,
   useMergedAgencyTimeEntriesQuery,
-} from "@/hooks/use-agency-optimistic-query";
+} from "@/lib/queries/agency-optimistic";
 import { getQueryClient } from "@/lib/query-client";
 import { orpc } from "@/lib/orpc";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";

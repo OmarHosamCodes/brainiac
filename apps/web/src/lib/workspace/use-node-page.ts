@@ -7,12 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
 import type { WorkspaceNodeEditorContextValue } from "@/components/workspace/node/context";
-import { useWorkspaceNodeSharing } from "@/hooks/use-workspace-node-sharing";
-import {
-  useAppShellContextSlot,
-  useAppShellCustomDock,
-  useAppShellPageTitle,
-} from "@/hooks/use-app-shell";
+import { useWorkspaceNodeSharing } from "@/lib/workspace/use-node-sharing";
 import {
   createWorkspaceBlockByType,
   createWorkspaceBlocksFromPreset,
@@ -47,10 +42,6 @@ export function useWorkspaceNodePage() {
     () => node?.tabs.find((tab) => tab.id === activeTabId) ?? node?.tabs[0] ?? null,
     [activeTabId, node],
   );
-
-  useAppShellCustomDock();
-  useAppShellContextSlot();
-  useAppShellPageTitle(node?.title ?? null);
 
   const sharing = useWorkspaceNodeSharing({ node, workspaceQuery });
 

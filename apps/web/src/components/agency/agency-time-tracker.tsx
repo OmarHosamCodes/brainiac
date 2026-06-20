@@ -10,7 +10,7 @@ import {
   useAgencyProjectTasksQuery,
   useAgencyProjectsQuery,
   type AgencyProjectTaskStatus,
-} from "@/hooks/use-agency-queries";
+} from "@/lib/queries/agency";
 import {
   agencyFocusRingClass,
   agencyMetricClass,

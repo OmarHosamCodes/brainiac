@@ -10,7 +10,7 @@ import {
   useAgencyContactQuery,
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
-} from "@/hooks/use-agency-queries";
+} from "@/lib/queries/agency";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { projectHueStyle } from "@/lib/utils/project-palette";
 import {

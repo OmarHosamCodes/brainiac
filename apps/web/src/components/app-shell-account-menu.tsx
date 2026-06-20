@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useBilling } from "@/hooks/use-billing";
+import { useBilling } from "@/lib/queries/billing";
 import { authClient } from "@/lib/auth-client";
 import { getServerUrl } from "@/lib/env";
 import { getErrorMessage } from "@/lib/utils/get-error-message";

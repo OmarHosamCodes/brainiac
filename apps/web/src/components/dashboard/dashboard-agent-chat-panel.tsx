@@ -7,7 +7,7 @@ import { DashboardAgentConversationDialogs } from "@/components/dashboard/agent-
 import { DashboardAgentMessageList } from "@/components/dashboard/agent-chat/dashboard-agent-message-list";
 import { DashboardAgentModelLibrary } from "@/components/dashboard/agent-chat/dashboard-agent-model-library";
 import { DashboardAgentThreadRail } from "@/components/dashboard/agent-chat/dashboard-agent-thread-rail";
-import { useDashboardAgentChat } from "@/hooks/use-dashboard-agent-chat";
+import { useDashboardAgentChat } from "@/stores/dashboard-agent-chat";
 import { useAppShellStore } from "@/stores/app-shell";
 
 const NARROW_DOCK_WIDTH = 480;

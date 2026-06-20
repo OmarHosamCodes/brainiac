@@ -6,9 +6,9 @@ import { WorkspaceNodeEditorProvider } from "@/components/workspace/node/context
 import { WorkspaceNodeShell } from "@/components/workspace/node/workspace-node-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useWorkspaceNodePage } from "@/hooks/use-workspace-node-page";
-import { AppShellPortal } from "@/hooks/use-app-shell-portal";
-import { useAppShellContextSlot, useAppShellCustomDock } from "@/hooks/use-app-shell";
+import { AppShellPage } from "@/components/app-shell-page";
+import { AppShellPortal } from "@/components/app-shell-portal";
+import { useWorkspaceNodePage } from "@/lib/workspace/use-node-page";
 import { useAppShellStore } from "@/stores/app-shell";
 import {
   shellBreadcrumbCurrentClass,
@@ -20,13 +20,12 @@ import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 export function NodePage() {
-  useAppShellCustomDock();
-  useAppShellContextSlot();
   const setAgentDockOpen = useAppShellStore((s) => s.setAgentDockOpen);
   const page = useWorkspaceNodePage();
 
   return (
-    <div className="relative h-full w-full overflow-hidden">
+    <AppShellPage title={page.node?.title ?? "Node"} slots={["context", "dock"]}>
+      <div className="relative h-full w-full overflow-hidden">
       <AppShellHeaderContext>
         <Button variant="ghost" size="sm" className="shrink-0" asChild>
           <Link to="/dashboard">Back</Link>
@@ -123,6 +122,7 @@ export function NodePage() {
           </div>
         </div>
       ) : null}
-    </div>
+      </div>
+    </AppShellPage>
   );
 }

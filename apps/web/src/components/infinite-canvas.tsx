@@ -29,8 +29,8 @@ import { CanvasFlowProvider } from "@/components/canvas/canvas-flow-context";
 import { WorkspaceFlowEdge } from "@/components/canvas/workspace-flow-edge";
 import { WorkspaceFlowNode } from "@/components/canvas/workspace-flow-node";
 import { Button } from "@/components/ui/button";
-import { useCanvasKeyboard } from "@/hooks/use-canvas-keyboard";
-import { useTheme } from "@/hooks/use-theme";
+import { useCanvasKeyboard } from "@/lib/canvas/use-canvas-keyboard";
+import { useTheme } from "@/stores/theme";
 import type { CanvasNodeModel } from "@/lib/canvas/canvas-types";
 import {
   applyFlowChangesToWorkspaceNodes,
