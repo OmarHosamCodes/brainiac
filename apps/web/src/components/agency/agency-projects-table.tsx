@@ -10,7 +10,7 @@ import {
   useAgencyClientsQuery,
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
-} from "@/hooks/use-agency-queries";
+} from "@/lib/queries/agency";
 import { orpc } from "@/lib/orpc";
 import {
   agencyEmptyPanelClass,

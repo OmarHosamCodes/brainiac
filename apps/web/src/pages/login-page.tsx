@@ -1,12 +1,22 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import { BrainCircuit, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Navigate, Link, useLocation } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { signInFormSchema, signUpFormSchema, type SignInFormValues, type SignUpFormValues } from "@/lib/schemas/auth";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 type AuthMode = "sign-in" | "sign-up";
@@ -16,52 +26,68 @@ export function LoginPage() {
   const location = useLocation();
 
   const [mode, setMode] = useState<AuthMode>("sign-in");
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   const redirectTo = (location.state as { from?: string } | null)?.from ?? "/dashboard";
+  const isSignUp = mode === "sign-up";
+
+  const signInForm = useForm<SignInFormValues>({
+    resolver: zodResolver(signInFormSchema),
+    defaultValues: { email: "", password: "" },
+  });
+
+  const signUpForm = useForm<SignUpFormValues>({
+    resolver: zodResolver(signUpFormSchema),
+    defaultValues: { email: "", password: "", name: "" },
+  });
+
+  const form = isSignUp ? signUpForm : signInForm;
 
   if (!session.isPending && session.data) {
     return <Navigate to={redirectTo} replace />;
   }
 
-  const isSignUp = mode === "sign-up";
-
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  async function handleSignIn(values: SignInFormValues) {
     setPending(true);
     setError(null);
 
     try {
-      if (isSignUp) {
-        const result = await authClient.signUp.email({
-          name: name.trim() || email.trim().split("@")[0] || "User",
-          email: email.trim(),
-          password,
-        });
+      const result = await authClient.signIn.email({
+        email: values.email.trim(),
+        password: values.password,
+      });
 
-        if (result.error) {
-          setError(result.error.message ?? "Sign up failed.");
-          return;
-        }
-
-        toast.success("Welcome to Brainiac", { description: "Your workspace is ready." });
-      } else {
-        const result = await authClient.signIn.email({
-          email: email.trim(),
-          password,
-        });
-
-        if (result.error) {
-          setError(result.error.message ?? "Sign in failed.");
-          return;
-        }
+      if (result.error) {
+        setError(result.error.message ?? "Sign in failed.");
+        return;
       }
     } catch (submitError) {
-      setError(getErrorMessage(submitError, isSignUp ? "Sign up failed." : "Sign in failed."));
+      setError(getErrorMessage(submitError, "Sign in failed."));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function handleSignUp(values: SignUpFormValues) {
+    setPending(true);
+    setError(null);
+
+    try {
+      const result = await authClient.signUp.email({
+        name: values.name?.trim() || values.email.trim().split("@")[0] || "User",
+        email: values.email.trim(),
+        password: values.password,
+      });
+
+      if (result.error) {
+        setError(result.error.message ?? "Sign up failed.");
+        return;
+      }
+
+      toast.success("Welcome to Brainiac", { description: "Your workspace is ready." });
+    } catch (submitError) {
+      setError(getErrorMessage(submitError, "Sign up failed."));
     } finally {
       setPending(false);
     }
@@ -70,6 +96,8 @@ export function LoginPage() {
   function switchMode(nextMode: AuthMode) {
     setMode(nextMode);
     setError(null);
+    signInForm.reset();
+    signUpForm.reset();
   }
 
   return (
@@ -127,56 +155,72 @@ export function LoginPage() {
             </div>
           </div>
 
-          <form className="space-y-4" onSubmit={(event) => void handleSubmit(event)}>
-            {isSignUp ? (
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  autoComplete="name"
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="Jane Doe"
-                />
-              </div>
-            ) : null}
-
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete={isSignUp ? "new-password" : "current-password"}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                minLength={8}
-                required
-              />
+          <Form {...form}>
+            <form
+              className="space-y-4"
+              onSubmit={form.handleSubmit((values) =>
+                isSignUp ? handleSignUp(values as SignUpFormValues) : handleSignIn(values),
+              )}
+            >
               {isSignUp ? (
-                <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+                <FormField
+                  control={signUpForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Name</FormLabel>
+                      <FormControl>
+                        <Input type="text" autoComplete="name" placeholder="Jane Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               ) : null}
-            </div>
 
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" autoComplete="email" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            <Button type="submit" className="w-full" disabled={pending}>
-              {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-              {isSignUp ? "Create account" : "Sign in"}
-            </Button>
-          </form>
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        autoComplete={isSignUp ? "new-password" : "current-password"}
+                        {...field}
+                      />
+                    </FormControl>
+                    {isSignUp ? (
+                      <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+                    ) : null}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+              <Button type="submit" className="w-full" disabled={pending}>
+                {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+                {isSignUp ? "Create account" : "Sign in"}
+              </Button>
+            </form>
+          </Form>
 
           <p className="text-center text-sm text-muted-foreground">
             {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}

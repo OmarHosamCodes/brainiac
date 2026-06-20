@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { AppShellPage } from "@/components/app-shell-page";
 import { MarketplaceImportModal } from "@/components/marketplace-import-modal";
 import { MarketplaceItemCard } from "@/components/marketplace-item-card";
 import { AppShellHeaderActions, AppShellHeaderContext } from "@/components/app-shell-header-slots";
@@ -20,12 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  useAppShellActionsSlot,
-  useAppShellContextSlot,
-  useAppShellPageTitle,
-} from "@/hooks/use-app-shell";
-import { useWorkspaceBoard } from "@/hooks/use-workspace-board";
+import { authClient } from "@/lib/auth-client";
+import { useWorkspaceQuery } from "@/stores/workspace";
 import { orpc } from "@/lib/orpc";
 import {
   shellContentInClass,
@@ -47,12 +44,10 @@ const filterTabs = [
 ];
 
 export function MarketplacePage() {
-  useAppShellPageTitle("Marketplace");
-  useAppShellContextSlot();
-  useAppShellActionsSlot();
+  const authSession = authClient.useSession();
+  const workspace = useWorkspaceQuery();
 
   const {
-    authSession,
     isWorkspaceInitialLoading,
     isWorkspaceRefreshing,
     nodes,
@@ -61,7 +56,7 @@ export function MarketplacePage() {
     saveBadge,
     saveError,
     workspaceQuery,
-  } = useWorkspaceBoard();
+  } = workspace;
 
   const [activeKind, setActiveKind] = useState<(typeof filterTabs)[number]["kind"]>("all");
   const [searchInput, setSearchInput] = useState("");
@@ -155,7 +150,8 @@ export function MarketplacePage() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-y-auto bg-default">
+    <AppShellPage title="Marketplace" slots={["context", "actions"]}>
+      <div className="flex h-full flex-col overflow-y-auto bg-default">
       <AppShellHeaderContext>
         <div className="hidden md:block">
           <Tabs
@@ -346,6 +342,7 @@ export function MarketplacePage() {
         onOpenChange={setImportModalOpen}
         onImported={onImported}
       />
-    </div>
+      </div>
+    </AppShellPage>
   );
 }

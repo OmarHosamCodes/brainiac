@@ -15,7 +15,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { MarketingPageShell } from "@/components/marketing-page-shell";
 import { Button } from "@/components/ui/button";
-import { useBilling } from "@/hooks/use-billing";
+import { useBilling } from "@/lib/queries/billing";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import { cn } from "@/lib/utils";

@@ -3,8 +3,8 @@ import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { useAppShellPageTitle } from "@/hooks/use-app-shell";
-import { useBilling } from "@/hooks/use-billing";
+import { AppShellPage } from "@/components/app-shell-page";
+import { useBilling } from "@/lib/queries/billing";
 import {
   shellConfirmInClass,
   shellContentInClass,
@@ -13,8 +13,6 @@ import {
 import { cn } from "@/lib/utils";
 
 export function BillingSuccessPage() {
-  useAppShellPageTitle("Billing");
-
   const [searchParams] = useSearchParams();
   const { refreshBillingState } = useBilling();
 
@@ -25,7 +23,8 @@ export function BillingSuccessPage() {
   }, [refreshBillingState]);
 
   return (
-    <div className="flex h-full items-start justify-center overflow-y-auto bg-default px-4 pt-12 sm:px-6 lg:px-8">
+    <AppShellPage title="Billing">
+      <div className="flex h-full items-start justify-center overflow-y-auto bg-default px-4 pt-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md px-6 text-center">
         <div
           className={cn(
@@ -60,6 +59,7 @@ export function BillingSuccessPage() {
           </Button>
         </div>
       </div>
-    </div>
+      </div>
+    </AppShellPage>
   );
 }

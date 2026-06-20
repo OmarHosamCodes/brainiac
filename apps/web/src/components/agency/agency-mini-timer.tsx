@@ -2,7 +2,7 @@ import { Play, Square } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { useAgencyActiveTimerQuery } from "@/hooks/use-agency-queries";
+import { useAgencyActiveTimerQuery } from "@/lib/queries/agency";
 import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/utils/format-duration";

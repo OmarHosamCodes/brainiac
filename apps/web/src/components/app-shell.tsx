@@ -29,8 +29,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { useAppShellPathSync } from "@/hooks/use-app-shell";
-import { useTheme } from "@/hooks/use-theme";
+import { useTheme } from "@/stores/theme";
 import { useAppShellStore, useHasContextContent, useShellMode } from "@/stores/app-shell";
 import { APP_NAV_ITEMS, findActiveNavItem } from "@/lib/utils/app-navigation";
 import {
@@ -107,10 +106,9 @@ const AGENCY_COMMAND_ITEMS = [
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
-  useAppShellPathSync();
-
   const location = useLocation();
   const navigate = useNavigate();
+  const setCurrentPath = useAppShellStore((s) => s.setCurrentPath);
   const shellMode = useShellMode();
   const hasContextContent = useHasContextContent();
   const [commandOpen, setCommandOpen] = useState(false);
@@ -146,6 +144,10 @@ export function AppShell({ children }: { children: ReactNode }) {
     setCommandOpen(false);
     navigate(to);
   }
+
+  useEffect(() => {
+    setCurrentPath(location.pathname);
+  }, [location.pathname, setCurrentPath]);
 
   useEffect(() => {
     function handleShellShortcuts(event: KeyboardEvent) {

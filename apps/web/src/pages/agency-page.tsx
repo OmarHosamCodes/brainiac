@@ -23,15 +23,11 @@ import { AgencyWorkSurface } from "@/components/agency/agency-work-surface";
 import { AppShellHeaderActions, AppShellHeaderContext } from "@/components/app-shell-header-slots";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  useAppShellActionsSlot,
-  useAppShellContextSlot,
-  useAppShellPageTitle,
-} from "@/hooks/use-app-shell";
-import { useAgencySyncStatus } from "@/hooks/use-agency-sync-status";
-import { prefetchAgencyWorkQueries, useAgencyActiveTimerQuery } from "@/hooks/use-agency-queries";
-import { useBilling } from "@/hooks/use-billing";
-import { useCurrentAgencyTeam } from "@/hooks/use-persistent-timer";
+import { AppShellPage } from "@/components/app-shell-page";
+import { useAgencySyncStatus } from "@/lib/queries/agency-sync";
+import { prefetchAgencyWorkQueries, useAgencyActiveTimerQuery } from "@/lib/queries/agency";
+import { useBilling } from "@/lib/queries/billing";
+import { useCurrentAgencyTeam } from "@/stores/agency-timer";
 import {
   managementPaneForLegacySection,
   type AgencyManagementPaneId,
@@ -108,9 +104,6 @@ function AgencyWorkViewBar({
 }
 
 export function AgencyPage() {
-  useAppShellContextSlot();
-  useAppShellActionsSlot();
-
   const session = authClient.useSession();
   const authEnabled = Boolean(session.data?.user);
   const currentUserId = session.data?.user?.id ?? "";
@@ -141,8 +134,6 @@ export function AgencyPage() {
     () => AGENCY_SEGMENTS.find((entry) => entry.id === segment) ?? AGENCY_SEGMENTS[0]!,
     [segment],
   );
-
-  useAppShellPageTitle(currentSegment.label);
 
   const projectsTableRef = useRef<AgencyProjectsTableHandle | null>(null);
   const reportsSurfaceRef = useRef<AgencyReportsSurfaceHandle | null>(null);
@@ -259,7 +250,8 @@ export function AgencyPage() {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-default text-default">
+    <AppShellPage title={currentSegment.label} slots={["context", "actions"]}>
+      <div className="flex h-full flex-col overflow-hidden bg-default text-default">
       <AppShellHeaderContext>
         <AgencyTopBarNav
           segment={segment}
@@ -403,6 +395,7 @@ export function AgencyPage() {
           </div>
         )}
       </main>
-    </div>
+      </div>
+    </AppShellPage>
   );
 }

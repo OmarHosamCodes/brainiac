@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
-import { useBilling } from "@/hooks/use-billing";
+import { useBilling } from "@/lib/queries/billing";
 
 export function AgencyProUpsell() {
   const { checkout } = useBilling();

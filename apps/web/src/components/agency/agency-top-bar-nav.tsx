@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { AgencySegmentId } from "@/lib/agency-segments";
 import { AGENCY_SEGMENTS } from "@/lib/agency-segments";
-import type { AgencySyncState } from "@/hooks/use-agency-sync-status";
+import type { AgencySyncState } from "@/lib/queries/agency-sync";
 import {
   shellBreadcrumbCurrentClass,
   shellBreadcrumbMutedClass,

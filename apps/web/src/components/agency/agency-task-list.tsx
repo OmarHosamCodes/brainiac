@@ -19,7 +19,7 @@ import {
 } from "@/components/agency/agency-task-row";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAgencyActiveTimerQuery, useAgencyProjectTasksQuery } from "@/hooks/use-agency-queries";
+import { useAgencyActiveTimerQuery, useAgencyProjectTasksQuery } from "@/lib/queries/agency";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";

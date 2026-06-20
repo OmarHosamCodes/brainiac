@@ -1,4 +1,4 @@
-import { useTheme } from "@/hooks/use-theme";
+import { useTheme } from "@/stores/theme";
 import { projectHueFor } from "@/lib/utils/project-palette";
 import { cn } from "@/lib/utils";
 

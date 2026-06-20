@@ -8,11 +8,22 @@ import {
   Settings2,
   Users,
 } from "lucide-react";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { teamCreateFormSchema } from "@/lib/schemas";
 import {
   dashboardCardClass,
   dashboardCardHeaderClass,
@@ -34,7 +45,6 @@ type DashboardSelectedNode = {
 type DashboardWorkspaceSidebarProps = {
   compact: boolean;
   teamsCount: number;
-  newTeamName: string;
   createTeamPending?: boolean;
   selectedTeamName: string;
   selectedTeamRole: TeamRole | null;
@@ -42,14 +52,12 @@ type DashboardWorkspaceSidebarProps = {
   selectedNode: DashboardSelectedNode | null;
   canInvite: boolean;
   canManageSelectedNodeSharing: boolean;
-  selectedNodeTeamRole: string | null;
   isSelectedNodeShared: boolean;
   isNodeShareActionPending: boolean;
   nodeShareActionLabel: string;
   nodeShareActionDisabled: boolean;
   onCompactChange: (value: boolean) => void;
-  onNewTeamNameChange: (value: string) => void;
-  onCreateTeam: () => void;
+  onCreateTeam: (name: string) => Promise<void>;
   onOpenTeamSettings: () => void;
   onToggleSelectedNodeSharing: () => void;
 };
@@ -57,7 +65,6 @@ type DashboardWorkspaceSidebarProps = {
 export function DashboardWorkspaceSidebar({
   compact,
   teamsCount,
-  newTeamName,
   createTeamPending = false,
   selectedTeamName,
   selectedTeamRole,
@@ -70,13 +77,16 @@ export function DashboardWorkspaceSidebar({
   nodeShareActionLabel,
   nodeShareActionDisabled,
   onCompactChange,
-  onNewTeamNameChange,
   onCreateTeam,
   onOpenTeamSettings,
   onToggleSelectedNodeSharing,
 }: DashboardWorkspaceSidebarProps) {
   const [createTeamOpen, setCreateTeamOpen] = useState(false);
-  const canCreateTeam = newTeamName.trim().length > 0 && !createTeamPending;
+
+  const createTeamForm = useForm({
+    resolver: zodResolver(teamCreateFormSchema),
+    defaultValues: { name: "" },
+  });
 
   const roleLabel = useMemo(() => {
     switch (selectedTeamRole) {
@@ -209,28 +219,47 @@ export function DashboardWorkspaceSidebar({
               <div className={dashboardCardClass}>
                 <p className={dashboardLabelClass}>Create team</p>
                 {createTeamOpen ? (
-                  <div className="mt-3 space-y-2">
-                    <Input
-                      value={newTeamName}
-                      placeholder="Team name"
-                      onChange={(event) => onNewTeamNameChange(event.target.value)}
-                    />
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        size="sm"
-                        disabled={!canCreateTeam}
-                        onClick={() => {
-                          onCreateTeam();
-                          setCreateTeamOpen(false);
-                        }}
-                      >
-                        Create
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setCreateTeamOpen(false)}>
-                        Cancel
-                      </Button>
-                    </div>
-                  </div>
+                  <Form {...createTeamForm}>
+                    <form
+                      className="mt-3 space-y-2"
+                      onSubmit={createTeamForm.handleSubmit(async (values) => {
+                        await onCreateTeam(values.name);
+                        createTeamForm.reset();
+                        setCreateTeamOpen(false);
+                      })}
+                    >
+                      <FormField
+                        control={createTeamForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="sr-only">Team name</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Team name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex gap-2 pt-2">
+                        <Button size="sm" type="submit" disabled={createTeamPending}>
+                          {createTeamPending ? <Loader2 className="size-4 animate-spin" /> : null}
+                          Create
+                        </Button>
+                        <Button
+                          size="sm"
+                          type="button"
+                          variant="ghost"
+                          onClick={() => {
+                            createTeamForm.reset();
+                            setCreateTeamOpen(false);
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
                 ) : (
                   <Button
                     variant="secondary"

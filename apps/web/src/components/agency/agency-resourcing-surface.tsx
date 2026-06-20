@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAgencyCapacityQuery } from "@/hooks/use-agency-queries";
+import { useAgencyCapacityQuery } from "@/lib/queries/agency";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { selectIsCapacityMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";

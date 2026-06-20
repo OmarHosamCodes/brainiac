@@ -6,7 +6,7 @@ import { AgencyTaskThread } from "@/components/agency/agency-task-thread";
 import { AgencyTimeEntriesLog } from "@/components/agency/agency-time-entries-log";
 import { AgencyTimeTracker } from "@/components/agency/agency-time-tracker";
 import { Button } from "@/components/ui/button";
-import { useAgencyProjectsQuery } from "@/hooks/use-agency-queries";
+import { useAgencyProjectsQuery } from "@/lib/queries/agency";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,

@@ -1,4 +1,4 @@
-import type { DashboardAgentChatState } from "@/hooks/use-dashboard-agent-chat";
+import type { DashboardAgentChatState } from "@/stores/dashboard-agent-chat";
 
 import { Button } from "@/components/ui/button";
 import { agentChatLabelClass } from "@/lib/utils/dashboard-agent-ui";

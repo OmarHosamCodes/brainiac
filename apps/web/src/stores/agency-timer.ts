@@ -1,10 +1,10 @@
 import { create } from "zustand";
 import { useEffect, useMemo, useState } from "react";
 
-import { useAgencyActiveTimerQuery } from "@/hooks/use-agency-queries";
+import { useAgencyActiveTimerQuery } from "@/lib/queries/agency";
 import { authClient } from "@/lib/auth-client";
-import { setAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
 import {
+  setAgencyTimeTrackingUserId,
   useAgencyTimeTrackingStore,
   selectIsTimerMutationPending,
 } from "@/stores/agency-time-tracking";

@@ -1,4 +1,4 @@
-import type { AgencySyncState } from "@/hooks/use-agency-sync-status";
+import type { AgencySyncState } from "@/lib/queries/agency-sync";
 import type { AgencySegmentId } from "@/lib/agency-segments";
 
 import { AgencyTopBarNav } from "./agency-top-bar-nav";

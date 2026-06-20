@@ -13,9 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AppShellPage } from "@/components/app-shell-page";
 import { AppShellHeaderActions } from "@/components/app-shell-header-slots";
-import { useAppShellActionsSlot, useAppShellPageTitle } from "@/hooks/use-app-shell";
-import { useBilling } from "@/hooks/use-billing";
+import { useBilling } from "@/lib/queries/billing";
 import {
   shellContentInClass,
   shellPageClass,
@@ -24,9 +24,6 @@ import {
 import { cn } from "@/lib/utils";
 
 export function BillingPage() {
-  useAppShellPageTitle("Billing");
-  useAppShellActionsSlot();
-
   const { isPro, subscription, limits, checkout, openPortal, billingQuery } = useBilling();
 
   const formattedRenewalDate = subscription?.currentPeriodEnd
@@ -65,7 +62,8 @@ export function BillingPage() {
   ];
 
   return (
-    <div className="h-full overflow-y-auto bg-default">
+    <AppShellPage title="Billing" slots={["actions"]}>
+      <div className="h-full overflow-y-auto bg-default">
       <AppShellHeaderActions>
         {showManageSubscription ? (
           <Button variant="secondary" size="sm" onClick={() => void openPortal()}>
@@ -145,6 +143,7 @@ export function BillingPage() {
           </div>
         )}
       </div>
-    </div>
+      </div>
+    </AppShellPage>
   );
 }

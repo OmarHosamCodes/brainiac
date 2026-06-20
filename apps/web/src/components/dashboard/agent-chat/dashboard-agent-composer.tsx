@@ -1,4 +1,4 @@
-import type { DashboardAgentChatState } from "@/hooks/use-dashboard-agent-chat";
+import type { DashboardAgentChatState } from "@/stores/dashboard-agent-chat";
 
 import { DashboardAgentMentionMenu } from "@/components/dashboard/agent-chat/dashboard-agent-mention-menu";
 import { Badge } from "@/components/ui/badge";

@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useTheme } from "@/hooks/use-theme";
+import { useTheme } from "@/stores/theme";
 import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
 import { projectHueFor } from "@/lib/utils/project-palette";
 import { cn } from "@/lib/utils";
