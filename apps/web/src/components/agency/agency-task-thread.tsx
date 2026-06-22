@@ -11,10 +11,7 @@ import { AgencyTaskMediaPlayer } from "@/components/agency/agency-task-media-pla
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  useAgencyTaskMessagesQuery,
-  useAgencyTaskThreadContextQuery,
-} from "@/lib/queries/agency";
+import { useAgencyTaskMessagesQuery, useAgencyTaskThreadContextQuery } from "@/lib/queries/agency";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 type Project = {

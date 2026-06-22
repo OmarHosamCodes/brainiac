@@ -55,23 +55,24 @@ export const agencyTaskRowCompleteClass = "agency-task-row-complete";
 export const agencyTimePaneClass =
   "flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-default bg-elevated";
 
-export const agencyTimeTrackerBarClass = ["shrink-0 border-b border-default px-4 py-3"].join(" ");
+export const agencyTimeTrackerBarClass = [
+  "shrink-0 border-b border-default bg-default/75 px-4 py-2.5",
+].join(" ");
 
 export const agencyTimeDayHeaderClass = [
-  "flex shrink-0 items-center justify-between px-4 py-2",
-  "border-b border-default bg-default/40 text-xs",
+  "flex shrink-0 items-center justify-between border-y border-default bg-muted/55 px-4 py-2 text-xs",
 ].join(" ");
 
 export const agencyTimeEntryRowClass = [
-  "border-b border-default px-4 py-2.5 transition-colors motion-reduce:transition-none",
-  "hover:bg-default/60",
+  "border-b border-default bg-elevated px-4 py-2.5 transition-colors motion-reduce:transition-none",
+  "hover:bg-default/55",
 ].join(" ");
 
 export const agencyTimeEntryRowEditingClass = "bg-primary/5 hover:bg-primary/5";
 
 export const agencyTimeWeekFooterClass = [
   "flex shrink-0 items-center justify-between border-t border-default px-4 py-2.5",
-  "bg-default/40",
+  "bg-default/75",
 ].join(" ");
 
 export const agencyTimeFooterMetricClass = ["text-sm font-semibold", agencyMetricClass].join(" ");

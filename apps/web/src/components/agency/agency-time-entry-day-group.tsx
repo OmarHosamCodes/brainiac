@@ -2,6 +2,7 @@ import { AgencyTimeEntryRow } from "@/components/agency/agency-time-entry-row";
 import { agencyMetricClass, agencyTimeDayHeaderClass } from "@/lib/utils/agency-ui";
 import { formatAgencyDayLabel } from "@/lib/utils/format-agency-day-label";
 import { formatDuration } from "@/lib/utils/format-duration";
+import { cn } from "@/lib/utils";
 import type { CollapsedEntryGroup, TimeEntryDayGroup } from "@/lib/utils/group-time-entries";
 import type { TimeEntryDraft } from "@/lib/utils/time-entry-draft";
 
@@ -26,13 +27,10 @@ type AgencyTimeEntryDayGroupProps = {
   projects: Project[];
   tasks: Task[];
   expandedGroupKeys: Set<string>;
-  editingEntryId: string | null;
   isTimerMutationPending: boolean;
   deletingEntryIds: string[];
   updatingEntryIds: string[];
   onToggleGroupExpand: (collapseKey: string) => void;
-  onEditEntry: (entryId: string) => void;
-  onCancelEdit: () => void;
   onRestart: (group: CollapsedEntryGroup) => void;
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
@@ -45,13 +43,10 @@ export function AgencyTimeEntryDayGroup({
   projects,
   tasks,
   expandedGroupKeys,
-  editingEntryId,
   isTimerMutationPending,
   deletingEntryIds,
   updatingEntryIds,
   onToggleGroupExpand,
-  onEditEntry,
-  onCancelEdit,
   onRestart,
   onDeleteGroup,
   onDeleteEntry,
@@ -60,28 +55,30 @@ export function AgencyTimeEntryDayGroup({
   return (
     <section>
       <header className={agencyTimeDayHeaderClass}>
-        <span className="font-semibold text-highlighted">{formatAgencyDayLabel(day.dateKey)}</span>
-        <span className={agencyMetricClass}>{formatDuration(day.totalSeconds, "short")}</span>
+        <span className="font-medium text-muted">{formatAgencyDayLabel(day.dateKey)}</span>
+        <span className="inline-flex items-baseline gap-1.5 text-muted">
+          <span>Total:</span>
+          <span className={cn("text-base font-semibold", agencyMetricClass)}>
+            {formatDuration(day.totalSeconds, "clock")}
+          </span>
+        </span>
       </header>
 
       <ul>
         {day.groups.map((group) => {
-          const primaryEntryId = group.entries[0]!.id;
+          const groupExpandKey = `${day.dateKey}||${group.collapseKey}`;
           return (
-            <li key={group.collapseKey}>
+            <li key={groupExpandKey}>
               <AgencyTimeEntryRow
                 group={group}
                 teamId={teamId}
                 projects={projects}
                 tasks={tasks}
-                expanded={expandedGroupKeys.has(group.collapseKey)}
-                editing={editingEntryId === primaryEntryId}
+                expanded={expandedGroupKeys.has(groupExpandKey)}
                 isTimerMutationPending={isTimerMutationPending}
                 deletingEntryIds={deletingEntryIds}
                 updatingEntryIds={updatingEntryIds}
-                onToggleExpand={() => onToggleGroupExpand(group.collapseKey)}
-                onEdit={() => onEditEntry(primaryEntryId)}
-                onCancelEdit={onCancelEdit}
+                onToggleExpand={() => onToggleGroupExpand(groupExpandKey)}
                 onRestart={onRestart}
                 onDeleteGroup={onDeleteGroup}
                 onDeleteEntry={onDeleteEntry}
