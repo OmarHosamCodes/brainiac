@@ -180,15 +180,13 @@ type AgencyTimeTrackingState = {
   timerStopCount: number;
   deletingEntryIds: string[];
   updatingEntryIds: string[];
-  getDraft: (teamId: string) => TrackerDraft | null;
+  trackerDraftsByTeam: Record<string, TrackerDraft>;
 } & AgencyTimeTrackingActions;
 
 function createAgencyTimeTrackingActions(
   set: (fn: (state: AgencyTimeTrackingState) => AgencyTimeTrackingState) => void,
   get: () => AgencyTimeTrackingState,
 ) {
-  const draftByTeam: Record<string, TrackerDraft> = {};
-
   const activeTimerQueryRegistry = new Map<
     string,
     { payload: RegisteredActiveTimerQuery; count: number }
@@ -220,79 +218,146 @@ function createAgencyTimeTrackingActions(
     if (existing.count <= 0) registry.delete(key);
   }
 
-  function ensureTrackerDraft(teamId: string) {
-    if (!teamId) {
-      return null;
-    }
-
-    const existingDraft = draftByTeam[teamId];
-
-    if (existingDraft) {
-      return existingDraft;
-    }
-
-    const nextDraft: TrackerDraft = {
+  function emptyTrackerDraft(): TrackerDraft {
+    return {
       description: "",
       projectId: "",
       taskId: "",
       syncedTimerId: null,
     };
+  }
 
-    draftByTeam[teamId] = nextDraft;
+  function ensureTrackerDraft(teamId: string) {
+    if (!teamId) {
+      return null;
+    }
+
+    const existingDraft = get().trackerDraftsByTeam[teamId];
+
+    if (existingDraft) {
+      return existingDraft;
+    }
+
+    const nextDraft = emptyTrackerDraft();
+
+    set((s) => ({
+      ...s,
+      trackerDraftsByTeam: {
+        ...s.trackerDraftsByTeam,
+        [teamId]: nextDraft,
+      },
+    }));
 
     return nextDraft;
   }
 
   function setTrackerDescription(teamId: string, description: string) {
-    const draft = ensureTrackerDraft(teamId);
-
-    if (!draft) {
+    if (!teamId) {
       return;
     }
 
-    draft.description = description;
+    set((s) => {
+      const existing = s.trackerDraftsByTeam[teamId] ?? emptyTrackerDraft();
+      return {
+        ...s,
+        trackerDraftsByTeam: {
+          ...s.trackerDraftsByTeam,
+          [teamId]: { ...existing, description },
+        },
+      };
+    });
   }
 
   function setTrackerProjectId(teamId: string, projectId: string) {
-    const draft = ensureTrackerDraft(teamId);
-
-    if (!draft) {
+    if (!teamId) {
       return;
     }
 
-    draft.projectId = projectId;
+    set((s) => {
+      const existing = s.trackerDraftsByTeam[teamId] ?? emptyTrackerDraft();
+      return {
+        ...s,
+        trackerDraftsByTeam: {
+          ...s.trackerDraftsByTeam,
+          [teamId]: { ...existing, projectId },
+        },
+      };
+    });
   }
 
   function setTrackerTaskId(teamId: string, taskId: string) {
-    const draft = ensureTrackerDraft(teamId);
-
-    if (!draft) {
+    if (!teamId) {
       return;
     }
 
-    draft.taskId = taskId;
+    set((s) => {
+      const existing = s.trackerDraftsByTeam[teamId] ?? emptyTrackerDraft();
+      return {
+        ...s,
+        trackerDraftsByTeam: {
+          ...s.trackerDraftsByTeam,
+          [teamId]: { ...existing, taskId },
+        },
+      };
+    });
   }
 
   function syncDraftFromActiveTimer(teamId: string, timer: AgencyActiveTimer | null) {
-    const draft = ensureTrackerDraft(teamId);
-
-    if (!draft) {
+    if (!teamId) {
       return;
     }
 
-    if (!timer) {
-      draft.syncedTimerId = null;
+    set((s) => {
+      const draft = s.trackerDraftsByTeam[teamId] ?? emptyTrackerDraft();
+
+      if (!timer) {
+        if (draft.syncedTimerId === null) {
+          return s;
+        }
+
+        return {
+          ...s,
+          trackerDraftsByTeam: {
+            ...s.trackerDraftsByTeam,
+            [teamId]: { ...draft, syncedTimerId: null },
+          },
+        };
+      }
+
+      if (draft.syncedTimerId === timer.id) {
+        return s;
+      }
+
+      return {
+        ...s,
+        trackerDraftsByTeam: {
+          ...s.trackerDraftsByTeam,
+          [teamId]: {
+            description: timer.description,
+            projectId: timer.projectId,
+            taskId: timer.taskId ?? "",
+            syncedTimerId: timer.id,
+          },
+        },
+      };
+    });
+  }
+
+  function patchTrackerDraft(teamId: string, patch: Partial<TrackerDraft>) {
+    if (!teamId) {
       return;
     }
 
-    if (draft.syncedTimerId === timer.id) {
-      return;
-    }
-
-    draft.description = timer.description;
-    draft.projectId = timer.projectId;
-    draft.taskId = timer.taskId ?? "";
-    draft.syncedTimerId = timer.id;
+    set((s) => {
+      const existing = s.trackerDraftsByTeam[teamId] ?? emptyTrackerDraft();
+      return {
+        ...s,
+        trackerDraftsByTeam: {
+          ...s.trackerDraftsByTeam,
+          [teamId]: { ...existing, ...patch },
+        },
+      };
+    });
   }
 
   function registerActiveTimerQuery(payload: RegisteredActiveTimerQuery) {
@@ -391,10 +456,12 @@ function createAgencyTimeTrackingActions(
 
       patchActiveTimerCaches(optimisticTimer);
 
-      draft.description = optimisticTimer.description;
-      draft.projectId = optimisticTimer.projectId;
-      draft.taskId = optimisticTimer.taskId ?? "";
-      draft.syncedTimerId = optimisticTimer.id;
+      patchTrackerDraft(payload.teamId, {
+        description: optimisticTimer.description,
+        projectId: optimisticTimer.projectId,
+        taskId: optimisticTimer.taskId ?? "",
+        syncedTimerId: optimisticTimer.id,
+      });
 
       const result = (await orpcClient.agencyOps.timer.start({
         teamId: payload.teamId,
@@ -481,10 +548,7 @@ function createAgencyTimeTrackingActions(
 
       patchActiveTimerCaches(null);
 
-      draft.description = "";
-      draft.projectId = "";
-      draft.taskId = "";
-      draft.syncedTimerId = null;
+      patchTrackerDraft(payload.teamId, emptyTrackerDraft());
 
       const result = (await orpcClient.agencyOps.timer.stop({
         teamId: payload.teamId,
@@ -599,7 +663,7 @@ function createAgencyTimeTrackingActions(
   }
 
   function getTrackerDraftSnapshot(teamId: string) {
-    const existingDraft = draftByTeam[teamId];
+    const existingDraft = get().trackerDraftsByTeam[teamId];
 
     if (!existingDraft) {
       return null;
@@ -609,12 +673,20 @@ function createAgencyTimeTrackingActions(
   }
 
   function restoreTrackerDraft(teamId: string, snapshot: TrackerDraft | null) {
-    if (!snapshot) {
-      delete draftByTeam[teamId];
-      return;
-    }
+    set((s) => {
+      if (!snapshot) {
+        const { [teamId]: _removed, ...rest } = s.trackerDraftsByTeam;
+        return { ...s, trackerDraftsByTeam: rest };
+      }
 
-    draftByTeam[teamId] = { ...snapshot };
+      return {
+        ...s,
+        trackerDraftsByTeam: {
+          ...s.trackerDraftsByTeam,
+          [teamId]: { ...snapshot },
+        },
+      };
+    });
   }
 
   function createOptimisticId(prefix: string) {
@@ -1016,7 +1088,6 @@ function createAgencyTimeTrackingActions(
   }
 
   return {
-    getDraft: (teamId: string) => draftByTeam[teamId] ?? null,
     ensureTrackerDraft,
     setTrackerDescription,
     setTrackerProjectId,
@@ -1039,11 +1110,18 @@ export const useAgencyTimeTrackingStore = create<AgencyTimeTrackingState>((set, 
   timerStopCount: 0,
   deletingEntryIds: [],
   updatingEntryIds: [],
+  trackerDraftsByTeam: {},
   ...createAgencyTimeTrackingActions(
     (fn) => set((state) => fn(state as AgencyTimeTrackingState)),
     () => get() as AgencyTimeTrackingState,
   ),
 }));
+
+export function useTrackerDraft(teamId: string) {
+  return useAgencyTimeTrackingStore((s) =>
+    teamId ? (s.trackerDraftsByTeam[teamId] ?? null) : null,
+  );
+}
 
 export const selectIsTimerMutationPending = (s: AgencyTimeTrackingState) =>
   s.timerStartCount > 0 || s.timerStopCount > 0;

@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { AgencyTaskChooser } from "@/components/agency/agency-task-chooser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PopoverContent } from "@/components/ui/popover";
 import {
   applyDurationToDraft,
   applyEndTimeToDraft,
@@ -24,7 +25,7 @@ type Task = {
   dueDate?: string | null;
 };
 
-type AgencyTimeEntryInlineEditProps = {
+type AgencyTimeEntryEditPopoverProps = {
   draft: TimeEntryDraft;
   onDraftChange: (draft: TimeEntryDraft) => void;
   projects: Project[];
@@ -35,7 +36,7 @@ type AgencyTimeEntryInlineEditProps = {
   onCancel: () => void;
 };
 
-export function AgencyTimeEntryInlineEdit({
+export function AgencyTimeEntryEditPopover({
   draft,
   onDraftChange,
   projects,
@@ -44,98 +45,100 @@ export function AgencyTimeEntryInlineEdit({
   saving,
   onSave,
   onCancel,
-}: AgencyTimeEntryInlineEditProps) {
+}: AgencyTimeEntryEditPopoverProps) {
   return (
-    <form
-      className="space-y-2 border-t border-default bg-primary/5 px-4 py-3"
-      onSubmit={(e) => {
-        e.preventDefault();
-        onSave();
-      }}
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        <Input
-          value={draft.description}
-          onChange={(e) => onDraftChange({ ...draft, description: e.target.value })}
-          aria-label="Time entry description"
-          placeholder="What did you work on?"
-          className="min-w-0 flex-1 basis-48"
-          disabled={saving}
-        />
-
-        <AgencyTaskChooser
-          value={draft.taskId}
-          onValueChange={(taskId) => onDraftChange({ ...draft, taskId })}
-          projects={projects}
-          tasks={tasks}
-          placeholder="+ Task"
-          className="w-auto max-w-44 shrink-0"
-          disabled={saving}
-        />
-
-        <Input
-          value={draft.date}
-          onChange={(e) => onDraftChange({ ...draft, date: e.target.value })}
-          type="date"
-          className="w-36 shrink-0"
-          aria-label="Entry date"
-          disabled={saving}
-        />
-
-        <div className="flex shrink-0 items-center gap-1">
-          <Input
-            value={draft.startTime}
-            onChange={(e) =>
-              onDraftChange(
-                applyDurationToDraft({ ...draft, startTime: e.target.value }, draft.durationInput),
-              )
-            }
-            type="time"
-            className="w-24 font-mono tabular-nums"
-            aria-label="Start time"
-            disabled={saving}
-          />
-          <span className="text-xs text-muted">to</span>
-          <Input
-            value={draft.endTime}
-            onChange={(e) => onDraftChange(applyEndTimeToDraft(draft, e.target.value))}
-            type="time"
-            className="w-24 font-mono tabular-nums"
-            aria-label="End time"
+    <PopoverContent align="end" className="w-80 space-y-3 p-3">
+      <form
+        className="space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave();
+        }}
+      >
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-muted">Task</label>
+          <AgencyTaskChooser
+            value={draft.taskId}
+            onValueChange={(taskId) => onDraftChange({ ...draft, taskId })}
+            projects={projects}
+            tasks={tasks}
+            placeholder="+ Task"
+            className="w-full"
             disabled={saving}
           />
         </div>
 
-        <Input
-          value={draft.durationInput}
-          onChange={(e) => onDraftChange(applyDurationToDraft(draft, e.target.value))}
-          className="w-20 shrink-0 font-mono tabular-nums"
-          placeholder="1:00"
-          aria-label="Duration"
-          disabled={saving}
-        />
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-muted">Date</label>
+          <Input
+            value={draft.date}
+            onChange={(e) => onDraftChange({ ...draft, date: e.target.value })}
+            type="date"
+            aria-label="Entry date"
+            disabled={saving}
+          />
+        </div>
 
-        <Button type="submit" size="sm" className="shrink-0 font-bold" disabled={saving}>
-          {saving ? "Saving…" : "Save"}
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted">Start</label>
+            <Input
+              value={draft.startTime}
+              onChange={(e) =>
+                onDraftChange(
+                  applyDurationToDraft(
+                    { ...draft, startTime: e.target.value },
+                    draft.durationInput,
+                  ),
+                )
+              }
+              type="time"
+              className="font-mono tabular-nums"
+              aria-label="Start time"
+              disabled={saving}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-muted">End</label>
+            <Input
+              value={draft.endTime}
+              onChange={(e) => onDraftChange(applyEndTimeToDraft(draft, e.target.value))}
+              type="time"
+              className="font-mono tabular-nums"
+              aria-label="End time"
+              disabled={saving}
+            />
+          </div>
+        </div>
 
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          aria-label="Cancel"
-          disabled={saving}
-          onClick={onCancel}
-        >
-          <X />
-        </Button>
-      </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-semibold text-muted">Duration</label>
+          <Input
+            value={draft.durationInput}
+            onChange={(e) => onDraftChange(applyDurationToDraft(draft, e.target.value))}
+            className="font-mono tabular-nums"
+            placeholder="1:00"
+            aria-label="Duration"
+            disabled={saving}
+          />
+        </div>
 
-      {error ? (
-        <p className="text-xs text-error" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </form>
+        {error ? (
+          <p className="text-xs text-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="flex items-center justify-end gap-2">
+          <Button type="button" variant="ghost" size="sm" disabled={saving} onClick={onCancel}>
+            <X />
+            Cancel
+          </Button>
+          <Button type="submit" size="sm" className="font-bold" disabled={saving}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      </form>
+    </PopoverContent>
   );
 }

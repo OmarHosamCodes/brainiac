@@ -1,5 +1,5 @@
 import { ListChecks, MoreVertical, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 
 import { AgencyTaskChooser } from "@/components/agency/agency-task-chooser";
 import { Button } from "@/components/ui/button";
@@ -21,25 +21,60 @@ import { cn } from "@/lib/utils";
 import {
   selectIsTimerMutationPending,
   useAgencyTimeTrackingStore,
+  useTrackerDraft,
 } from "@/stores/agency-time-tracking";
 
 type AgencyTimeTrackerProps = {
   teamId: string;
 };
 
+type TrackerElapsedTimerProps = {
+  startedAt: string;
+};
+
 const OPEN_TASK_STATUSES: AgencyProjectTaskStatus[] = ["open", "in_progress"];
 
-export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
-  const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
-  const isTimerMutationPending = useAgencyTimeTrackingStore(selectIsTimerMutationPending);
+const TrackerElapsedTimer = memo(function TrackerElapsedTimer({
+  startedAt,
+}: TrackerElapsedTimerProps) {
   const [now, setNow] = useState(Date.now());
-  const [taskChooserVisible, setTaskChooserVisible] = useState(false);
-  const [taskAttentionKey, setTaskAttentionKey] = useState(0);
 
   useEffect(() => {
     const tickerHandle = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(tickerHandle);
   }, []);
+
+  const elapsedSeconds = useMemo(() => {
+    const startMs = new Date(startedAt).getTime();
+    if (Number.isNaN(startMs)) return 0;
+    return Math.max(0, Math.floor((now - startMs) / 1_000));
+  }, [now, startedAt]);
+
+  return (
+    <span
+      className={cn(
+        "shrink-0 font-mono text-sm font-semibold tabular-nums text-highlighted",
+        agencyMetricClass,
+      )}
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      {formatDuration(elapsedSeconds, "clock")}
+    </span>
+  );
+});
+
+export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
+  const setTrackerDescription = useAgencyTimeTrackingStore((s) => s.setTrackerDescription);
+  const setTrackerTaskId = useAgencyTimeTrackingStore((s) => s.setTrackerTaskId);
+  const ensureTrackerDraft = useAgencyTimeTrackingStore((s) => s.ensureTrackerDraft);
+  const syncDraftFromActiveTimer = useAgencyTimeTrackingStore((s) => s.syncDraftFromActiveTimer);
+  const startTimerAction = useAgencyTimeTrackingStore((s) => s.startTimer);
+  const stopTimerAction = useAgencyTimeTrackingStore((s) => s.stopTimer);
+  const isTimerMutationPending = useAgencyTimeTrackingStore(selectIsTimerMutationPending);
+
+  const [taskChooserOpen, setTaskChooserOpen] = useState(false);
+  const [taskAttentionKey, setTaskAttentionKey] = useState(0);
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const tasksQuery = useAgencyProjectTasksQuery(teamId, { statuses: OPEN_TASK_STATUSES });
@@ -48,7 +83,7 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
   const projects = projectsQuery.data?.items ?? [];
   const tasks = tasksQuery.data?.items ?? [];
   const activeTimer = activeTimerQuery.data?.timer ?? null;
-  const trackerDraft = teamId ? agencyTimeTrackingStore.getDraft(teamId) : null;
+  const trackerDraft = useTrackerDraft(teamId);
 
   const selectedTaskId = trackerDraft?.taskId ?? "";
   const timerDescription = trackerDraft?.description ?? "";
@@ -57,7 +92,6 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
   const selectedProject = selectedTask
     ? (projects.find((project) => project.id === selectedTask.projectId) ?? null)
     : null;
-  const activeTimerTaskLabel = activeTimer?.taskTitle ?? "Task attached";
   const activeTimerHasTask = Boolean(activeTimer?.taskId);
   const tasksForChooser =
     activeTimer && !activeTimer.taskId
@@ -66,47 +100,39 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
 
   useEffect(() => {
     if (!teamId) return;
-    agencyTimeTrackingStore.ensureTrackerDraft(teamId);
-  }, [teamId, agencyTimeTrackingStore]);
+    ensureTrackerDraft(teamId);
+  }, [teamId, ensureTrackerDraft]);
 
   useEffect(() => {
     if (!teamId) return;
-    agencyTimeTrackingStore.syncDraftFromActiveTimer(teamId, activeTimer);
-  }, [teamId, activeTimer, agencyTimeTrackingStore]);
-
-  const elapsedSeconds = useMemo(() => {
-    if (!activeTimer) return 0;
-    const startedAt = new Date(activeTimer.startedAt).getTime();
-    if (Number.isNaN(startedAt)) return 0;
-    return Math.max(0, Math.floor((now - startedAt) / 1_000));
-  }, [activeTimer, now]);
+    syncDraftFromActiveTimer(teamId, activeTimer);
+  }, [teamId, activeTimer, syncDraftFromActiveTimer]);
 
   const canStartTimer = Boolean(teamId && !activeTimer);
   const canStopTimer = Boolean(activeTimer && (activeTimerHasTask || selectedTask));
-  const showTaskChoice = taskChooserVisible || Boolean(selectedTaskId && !activeTimerHasTask);
 
   const timerValidationHint = useMemo(() => {
-    if (!taskChooserVisible) return "";
+    if (!taskChooserOpen) return "";
     if (!activeTimer && !selectedTask) return "Choose a task before starting this timer.";
     if (activeTimer && !activeTimerHasTask && !selectedTask) {
       return "Choose a task before stopping this timer.";
     }
     return "";
-  }, [activeTimer, activeTimerHasTask, selectedTask, taskChooserVisible]);
+  }, [activeTimer, activeTimerHasTask, selectedTask, taskChooserOpen]);
 
   useEffect(() => {
     if (selectedTaskId || activeTimerHasTask) {
-      setTaskChooserVisible(false);
+      setTaskChooserOpen(false);
     }
   }, [activeTimerHasTask, selectedTaskId]);
 
   useEffect(() => {
-    setTaskChooserVisible(false);
+    setTaskChooserOpen(false);
     setTaskAttentionKey(0);
   }, [teamId]);
 
   function revealTaskChooser() {
-    setTaskChooserVisible(true);
+    setTaskChooserOpen(true);
     setTaskAttentionKey((current) => current + 1);
   }
 
@@ -117,7 +143,7 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
       return;
     }
 
-    await agencyTimeTrackingStore.startTimer({
+    await startTimerAction({
       teamId,
       project: selectedProject,
       task: selectedTask,
@@ -132,7 +158,7 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
       return;
     }
 
-    await agencyTimeTrackingStore.stopTimer({
+    await stopTimerAction({
       teamId,
       activeTimer,
       description: timerDescription,
@@ -144,123 +170,140 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
     });
   }
 
+  const taskChooserLabel = activeTimer?.taskTitle ?? selectedTask?.title ?? "Choose task";
+
   return (
     <div className={agencyTimeTrackerBarClass}>
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            value={timerDescription}
-            onChange={(e) =>
-              teamId && agencyTimeTrackingStore.setTrackerDescription(teamId, e.target.value)
+      <div className="flex min-w-0 items-center gap-3 overflow-x-auto">
+        <Input
+          value={timerDescription}
+          onChange={(e) => setTrackerDescription(teamId, e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && canStartTimer) {
+              e.preventDefault();
+              void startTimer();
             }
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && canStartTimer) {
-                e.preventDefault();
-                void startTimer();
-              }
-            }}
-            placeholder="What are you working on?"
-            className="min-w-0 w-full flex-1 basis-full sm:basis-48 sm:w-auto"
-            disabled={isTimerMutationPending || !teamId}
-          />
+          }}
+          placeholder="What are you working on?"
+          className="h-9 min-w-0 flex-1 border-0 bg-transparent px-0 text-sm shadow-none placeholder:text-muted focus-visible:ring-0"
+          disabled={isTimerMutationPending || !teamId}
+        />
 
-          <div className="flex w-full flex-wrap items-center gap-2 sm:ml-0 sm:w-auto sm:flex-nowrap">
-            {activeTimerHasTask ? (
-              <span className="inline-flex h-9 max-w-56 shrink-0 items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 text-xs font-bold text-primary">
-                <ListChecks className="size-3.5" />
-                <span className="truncate">{activeTimerTaskLabel}</span>
-              </span>
-            ) : showTaskChoice ? (
-              <div
-                key={taskAttentionKey}
-                className={cn(
-                  "agency-task-choice-wrap rounded-full",
-                  taskChooserVisible && "agency-task-choice-wrap--attention",
-                )}
-              >
-                <AgencyTaskChooser
-                  value={selectedTaskId}
-                  onValueChange={(value) =>
-                    teamId && agencyTimeTrackingStore.setTrackerTaskId(teamId, value || "")
-                  }
-                  projects={projects}
-                  tasks={tasksForChooser}
-                  placeholder="Choose task"
-                  className="w-auto max-w-56 shrink-0 border-warning/40 bg-warning/10 text-highlighted"
-                  loading={projectsQuery.isPending || tasksQuery.isPending}
-                  disabled={!teamId || projectsQuery.isPending || tasksQuery.isPending}
-                />
-              </div>
-            ) : null}
+        <span
+          className="hidden h-6 w-px shrink-0 border-l border-dashed border-default lg:block"
+          aria-hidden
+        />
 
-            {activeTimer ? (
-              <span
-                className={cn(
-                  "shrink-0 rounded-md bg-primary/10 px-3 py-1.5 text-base font-bold",
-                  agencyMetricClass,
-                  "text-primary",
-                )}
-                aria-live="polite"
-                aria-atomic="true"
-              >
-                {formatDuration(elapsedSeconds)}
-              </span>
-            ) : null}
+        <Popover
+          open={taskChooserOpen}
+          onOpenChange={(open) => {
+            setTaskChooserOpen(open);
+            if (open) setTaskAttentionKey((current) => current + 1);
+          }}
+        >
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={cn(
+                "h-9 max-w-44 shrink-0 gap-1.5 rounded-none px-2 font-normal text-secondary hover:bg-transparent hover:text-secondary",
+                agencyFocusRingClass,
+                !activeTimerHasTask && !selectedTask && taskChooserOpen && "text-warning",
+              )}
+              aria-label="Choose task"
+              disabled={!teamId || projectsQuery.isPending || tasksQuery.isPending}
+            >
+              <ListChecks className="size-4 shrink-0" />
+              <span className="max-w-32 truncate text-xs">{taskChooserLabel}</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-72 p-2">
+            <div
+              key={taskAttentionKey}
+              className={cn(
+                "agency-task-choice-wrap rounded-md",
+                taskChooserOpen && "agency-task-choice-wrap--attention",
+              )}
+            >
+              <AgencyTaskChooser
+                value={selectedTaskId}
+                onValueChange={(value) => setTrackerTaskId(teamId, value || "")}
+                projects={projects}
+                tasks={tasksForChooser}
+                placeholder="Choose task"
+                className="w-full"
+                loading={projectsQuery.isPending || tasksQuery.isPending}
+                disabled={!teamId || projectsQuery.isPending || tasksQuery.isPending}
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
 
-            {activeTimer ? (
-              <Button
-                variant="destructive"
-                size="sm"
-                className={cn(
-                  "shrink-0 rounded-md font-bold",
-                  !canStopTimer && "ring-2 ring-warning/30 ring-offset-1 ring-offset-background",
-                )}
-                disabled={isTimerMutationPending || !teamId}
-                onClick={() => void stopTimer()}
-              >
-                {isTimerMutationPending ? "…" : canStopTimer ? "Stop" : "Choose task to stop"}
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                className="shrink-0 font-bold"
-                disabled={!canStartTimer || isTimerMutationPending}
-                onClick={() => void startTimer()}
-              >
-                {isTimerMutationPending ? "…" : "Start"}
-              </Button>
+        <span
+          className="hidden h-6 w-px shrink-0 border-l border-dashed border-default md:block"
+          aria-hidden
+        />
+
+        {activeTimer ? <TrackerElapsedTimer startedAt={activeTimer.startedAt} /> : null}
+
+        {!activeTimer ? (
+          <span className={cn("shrink-0 text-sm font-semibold", agencyMetricClass)}>00:00:00</span>
+        ) : null}
+
+        {activeTimer ? (
+          <Button
+            variant="destructive"
+            size="sm"
+            className={cn(
+              "h-9 min-w-24 shrink-0 rounded-none px-5 font-bold uppercase tracking-normal",
+              !canStopTimer && "ring-2 ring-warning/30 ring-offset-1 ring-offset-background",
             )}
+            disabled={isTimerMutationPending || !teamId}
+            onClick={() => void stopTimer()}
+          >
+            {isTimerMutationPending ? "…" : canStopTimer ? "Stop" : "Choose task"}
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            className="h-9 min-w-24 shrink-0 rounded-none px-5 font-bold uppercase tracking-normal"
+            disabled={!canStartTimer || isTimerMutationPending}
+            onClick={() => void startTimer()}
+          >
+            {isTimerMutationPending ? "…" : "Start"}
+          </Button>
+        )}
 
-            {activeTimer ? (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn("max-sm:min-h-11 max-sm:min-w-11", agencyFocusRingClass)}
-                    aria-label="Timer options"
-                  >
-                    <MoreVertical />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-40 p-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-error"
-                    onClick={() => void stopTimer(true)}
-                  >
-                    <Trash2 />
-                    Discard timer
-                  </Button>
-                </PopoverContent>
-              </Popover>
-            ) : null}
-          </div>
-        </div>
-
-        {timerValidationHint ? <p className="text-xs text-warning">{timerValidationHint}</p> : null}
+        {activeTimer ? (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn("shrink-0", agencyFocusRingClass)}
+                aria-label="Timer options"
+              >
+                <MoreVertical className="size-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-40 p-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-error"
+                onClick={() => void stopTimer(true)}
+              >
+                <Trash2 />
+                Discard timer
+              </Button>
+            </PopoverContent>
+          </Popover>
+        ) : null}
       </div>
+
+      {timerValidationHint ? (
+        <p className="mt-1 text-xs text-warning">{timerValidationHint}</p>
+      ) : null}
     </div>
   );
 }

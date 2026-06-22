@@ -1,26 +1,26 @@
 import { ChevronRight, MoreVertical, Play, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot";
 import { AgencyTimeEntryActions } from "@/components/agency/agency-time-entry-actions";
-import { AgencyTimeEntryInlineEdit } from "@/components/agency/agency-time-entry-inline-edit";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   agencyFocusRingClass,
   agencyMetricClass,
   agencyTimeEntryRowClass,
-  agencyTimeEntryRowEditingClass,
 } from "@/lib/utils/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
 import type { CollapsedEntryGroup } from "@/lib/utils/group-time-entries";
+import { projectHueFor } from "@/lib/utils/project-palette";
 import {
   draftToIsoRange,
   entryToDraft,
   type TimeEntryDraft,
   validateTimeEntryDraft,
 } from "@/lib/utils/time-entry-draft";
+import { useTheme } from "@/stores/theme";
 import { cn } from "@/lib/utils";
 
 const timeRangeFormatter = new Intl.DateTimeFormat("en-US", {
@@ -47,7 +47,7 @@ function formatTimeRange(startedAt: string, endedAt: string) {
   const start = new Date(startedAt);
   const end = new Date(endedAt);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "";
-  return `${timeRangeFormatter.format(start)} – ${timeRangeFormatter.format(end)}`;
+  return `${timeRangeFormatter.format(start)} - ${timeRangeFormatter.format(end)}`;
 }
 
 function displayTitle(group: CollapsedEntryGroup) {
@@ -61,157 +61,218 @@ type AgencyTimeEntryRowProps = {
   projects: Project[];
   tasks: Task[];
   expanded: boolean;
-  editing: boolean;
   isTimerMutationPending: boolean;
   deletingEntryIds: string[];
   updatingEntryIds: string[];
   onToggleExpand: () => void;
-  onEdit: () => void;
-  onCancelEdit: () => void;
   onRestart: (group: CollapsedEntryGroup) => void;
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
 };
 
-export function AgencyTimeEntryRow({
+export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
   group,
   teamId,
   projects,
   tasks,
   expanded,
-  editing,
   isTimerMutationPending,
   deletingEntryIds,
   updatingEntryIds,
   onToggleExpand,
-  onEdit,
-  onCancelEdit,
   onRestart,
   onDeleteGroup,
   onDeleteEntry,
   onSaveEdit,
 }: AgencyTimeEntryRowProps) {
+  const { isDark } = useTheme();
+  const projectHue = projectHueFor(group.projectId);
+
   const isMulti = group.entries.length > 1;
   const primaryEntry = group.entries[0]!;
-  const [draft, setDraft] = useState<TimeEntryDraft>(() => entryToDraft(primaryEntry));
+  const descriptionInputRef = useRef<HTMLInputElement>(null);
+
+  const [editDraft, setEditDraft] = useState<TimeEntryDraft>(() => entryToDraft(primaryEntry));
   const [editError, setEditError] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState(() => displayTitle(group));
 
   useEffect(() => {
-    if (!editing) return;
-    setDraft(entryToDraft(primaryEntry));
-    setEditError(null);
-  }, [editing, primaryEntry.id]);
+    if (!editingDescription) {
+      setDescriptionDraft(displayTitle(group));
+    }
+  }, [group, editingDescription]);
 
-  function beginEdit() {
-    setDraft(entryToDraft(primaryEntry));
+  useEffect(() => {
+    setEditDraft(entryToDraft(primaryEntry));
     setEditError(null);
-    onEdit();
-  }
+  }, [primaryEntry.id]);
 
-  async function handleSave() {
-    const validationError = validateTimeEntryDraft(draft);
+  useEffect(() => {
+    if (editingDescription) {
+      descriptionInputRef.current?.focus();
+      descriptionInputRef.current?.select();
+    }
+  }, [editingDescription]);
+
+  const resetEditDraft = useCallback(() => {
+    setEditDraft(entryToDraft(primaryEntry));
+    setEditError(null);
+  }, [primaryEntry]);
+
+  async function handleSaveFullEdit(): Promise<boolean> {
+    const validationError = validateTimeEntryDraft(editDraft);
     if (validationError) {
       setEditError(validationError);
-      return;
+      return false;
     }
 
-    const range = draftToIsoRange(draft);
+    const range = draftToIsoRange(editDraft);
     if ("error" in range) {
       setEditError(range.error);
+      return false;
+    }
+
+    setEditSaving(true);
+    setEditError(null);
+    try {
+      await onSaveEdit(primaryEntry.id, editDraft);
+      return true;
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  async function saveDescriptionEdit() {
+    const trimmed = descriptionDraft.trim();
+    if (trimmed === displayTitle(group)) {
+      setEditingDescription(false);
       return;
     }
 
-    setSaving(true);
-    setEditError(null);
+    const draft = entryToDraft(primaryEntry);
+    draft.description = trimmed;
+    setEditSaving(true);
     try {
       await onSaveEdit(primaryEntry.id, draft);
-      onCancelEdit();
+      setEditingDescription(false);
     } finally {
-      setSaving(false);
+      setEditSaving(false);
     }
+  }
+
+  function cancelDescriptionEdit() {
+    setDescriptionDraft(displayTitle(group));
+    setEditingDescription(false);
   }
 
   const rowDeleting = group.entries.some((entry) => deletingEntryIds.includes(entry.id));
   const rowUpdating = group.entries.some((entry) => updatingEntryIds.includes(entry.id));
   const timeRange = formatTimeRange(primaryEntry.startedAt, primaryEntry.endedAt);
-  const durationLabel = formatDuration(
-    group.totalSeconds,
-    isMulti && !expanded ? "short" : "clock",
-  );
+  const durationLabel = formatDuration(group.totalSeconds, "clock");
+  const projectColor = isDark ? projectHue.dark : projectHue.light;
 
   return (
-    <div className={cn(editing && agencyTimeEntryRowEditingClass)}>
+    <>
       <div
         className={cn(
           agencyTimeEntryRowClass,
-          "flex items-start gap-2 sm:items-center",
-          editing && "border-b-0",
+          "grid min-w-[52rem] grid-cols-[minmax(14rem,1.35fr)_minmax(12rem,0.9fr)_9rem_7rem_5.25rem] items-center gap-0",
         )}
       >
-        {isMulti ? (
-          <button
-            type="button"
-            className={cn(
-              "mt-0.5 shrink-0 text-muted transition-transform duration-200 motion-reduce:transition-none sm:mt-0",
-              agencyFocusRingClass,
-              expanded && "rotate-90",
-            )}
-            aria-label={expanded ? "Collapse entries" : "Expand entries"}
-            aria-expanded={expanded}
-            onClick={onToggleExpand}
-          >
-            <ChevronRight className="size-3.5" />
-          </button>
-        ) : (
-          <span className="size-3.5 shrink-0" aria-hidden />
-        )}
+        <div className="flex min-w-0 items-center gap-3 pr-4">
+          {isMulti ? (
+            <button
+              type="button"
+              className={cn(
+                "inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-default bg-elevated px-2 font-mono text-[10px] font-bold tabular-nums text-muted transition-colors hover:bg-default hover:text-highlighted",
+                agencyFocusRingClass,
+              )}
+              aria-label={expanded ? "Collapse entries" : "Expand entries"}
+              aria-expanded={expanded}
+              onClick={onToggleExpand}
+            >
+              {group.entries.length}
+              <ChevronRight
+                className={cn(
+                  "size-3 transition-transform duration-200 motion-reduce:transition-none",
+                  expanded && "rotate-90",
+                )}
+                aria-hidden
+              />
+            </button>
+          ) : (
+            <span className="size-3.5 shrink-0" aria-hidden />
+          )}
 
-        <button
-          type="button"
-          className={cn("min-w-0 flex-1 text-left", agencyFocusRingClass)}
-          onClick={() => {
-            if (!isMulti && !editing) beginEdit();
-          }}
-        >
-          <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="truncate text-sm font-medium text-highlighted">
+          {editingDescription && !isMulti ? (
+            <Input
+              ref={descriptionInputRef}
+              value={descriptionDraft}
+              onChange={(e) => setDescriptionDraft(e.target.value)}
+              onBlur={() => void saveDescriptionEdit()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  void saveDescriptionEdit();
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  cancelDescriptionEdit();
+                }
+              }}
+              disabled={editSaving || rowUpdating}
+              className="h-7 min-w-0 border-0 bg-transparent px-0 text-sm font-medium shadow-none focus-visible:ring-0"
+              aria-label="Edit description"
+            />
+          ) : (
+            <button
+              type="button"
+              className={cn(
+                "min-w-0 truncate text-left text-sm font-medium text-highlighted",
+                !isMulti && agencyFocusRingClass,
+              )}
+              disabled={isMulti || editSaving}
+              onClick={() => {
+                if (!isMulti) setEditingDescription(true);
+              }}
+            >
               {displayTitle(group)}
-            </span>
-            {isMulti && !expanded ? (
-              <Badge
-                variant="secondary"
-                className="rounded-full font-mono tabular-nums text-[10px]"
-              >
-                {group.entries.length}
-              </Badge>
-            ) : null}
-          </div>
-          <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted">
-            <AgencyProjectHueDot projectId={group.projectId} />
-            <span className="truncate">
-              {group.clientName} · {group.projectName}
-            </span>
-          </div>
-          {(!isMulti || expanded) && timeRange ? (
-            <p className="mt-1 text-xs text-muted md:hidden">{timeRange}</p>
-          ) : null}
-        </button>
+            </button>
+          )}
+        </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-2">
-          {(!isMulti || expanded) && timeRange ? (
-            <span className="hidden shrink-0 text-xs text-muted md:inline">{timeRange}</span>
-          ) : null}
+        <span className="inline-flex min-w-0 items-center gap-1 truncate border-l border-dashed border-default pl-4 pr-4 text-xs">
+          <AgencyProjectHueDot projectId={group.projectId} />
+          <span className="truncate font-medium" style={{ color: projectColor }}>
+            {group.projectName}
+          </span>
+          <span className="truncate text-muted">- {group.clientName}</span>
+        </span>
 
-          <span className={cn("text-sm font-semibold", agencyMetricClass)}>{durationLabel}</span>
+        <span className="border-l border-dashed border-default pl-4 pr-4 text-xs text-muted">
+          {(!isMulti || expanded) && timeRange ? timeRange : "-"}
+        </span>
 
+        <span
+          className={cn(
+            "border-l border-dashed border-default pl-4 pr-4 text-base font-semibold",
+            agencyMetricClass,
+          )}
+        >
+          {durationLabel}
+        </span>
+
+        <div className="flex min-w-0 shrink-0 items-center justify-end gap-0.5 border-l border-dashed border-default pl-3">
           {isMulti && !expanded ? (
-            <div className="flex shrink-0 items-center gap-1">
+            <div className="flex shrink-0 items-center gap-0.5">
               <Button
                 variant="ghost"
                 size="sm"
-                className={cn("max-sm:min-h-11 max-sm:min-w-11", agencyFocusRingClass)}
+                className={cn("h-8 w-8 p-0", agencyFocusRingClass)}
                 disabled={!teamId || !group.taskId || isTimerMutationPending}
                 aria-label={`Restart timer for ${group.taskTitle}`}
                 onClick={() => onRestart(group)}
@@ -223,7 +284,7 @@ export function AgencyTimeEntryRow({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={cn("max-sm:min-h-11 max-sm:min-w-11", agencyFocusRingClass)}
+                    className={cn("h-8 w-8 p-0", agencyFocusRingClass)}
                     aria-label="Entry actions"
                   >
                     <MoreVertical className="size-3.5" />
@@ -259,33 +320,45 @@ export function AgencyTimeEntryRow({
                 taskTitle: group.taskTitle,
               }}
               canRestart={Boolean(teamId && group.taskId && !isTimerMutationPending)}
-              deleting={rowDeleting || rowUpdating}
-              onEdit={beginEdit}
+              deleting={rowDeleting || rowUpdating || editSaving}
+              editDraft={editDraft}
+              onEditDraftChange={setEditDraft}
+              projects={projects}
+              tasks={tasks}
+              editError={editError}
+              editSaving={editSaving || rowUpdating}
+              onSaveEdit={() => handleSaveFullEdit()}
+              onCancelEdit={resetEditDraft}
               onRestart={() => onRestart(group)}
               onDelete={() => onDeleteGroup([primaryEntry.id])}
+              onEditDescription={() => setEditingDescription(true)}
             />
           )}
         </div>
       </div>
 
       {isMulti && expanded ? (
-        <div className="border-b border-default bg-default/30">
+        <div className="min-w-[52rem] border-b border-default bg-default/30">
           {group.entries.map((entry) => (
             <div
               key={entry.id}
-              className="flex items-center justify-between gap-2 border-t border-default/60 px-4 py-2 pl-10"
+              className="grid grid-cols-[minmax(14rem,1.35fr)_minmax(12rem,0.9fr)_9rem_7rem_5.25rem] items-center border-t border-default/60 px-4 py-2 text-xs"
             >
-              <span className="text-xs text-muted">
+              <span className="truncate pl-6 text-muted">Entry detail</span>
+              <span className="border-l border-dashed border-default pl-4 pr-4 text-muted">-</span>
+              <span className="border-l border-dashed border-default pl-4 pr-4 text-muted">
                 {formatTimeRange(entry.startedAt, entry.endedAt)}
               </span>
-              <div className="flex shrink-0 items-center gap-1.5">
-                <span className={cn("text-xs", agencyMetricClass)}>
-                  {formatDuration(entry.durationSeconds, "short")}
-                </span>
+              <span
+                className={cn("border-l border-dashed border-default pl-4 pr-4", agencyMetricClass)}
+              >
+                {formatDuration(entry.durationSeconds, "clock")}
+              </span>
+              <div className="flex shrink-0 items-center justify-end gap-1.5 border-l border-dashed border-default pl-3">
                 <Button
                   variant="ghost"
                   size="sm"
-                  className={cn("text-error max-sm:min-h-11 max-sm:min-w-11", agencyFocusRingClass)}
+                  className={cn("h-8 w-8 p-0 text-error", agencyFocusRingClass)}
                   disabled={deletingEntryIds.includes(entry.id)}
                   aria-label="Delete entry"
                   onClick={() => onDeleteEntry(entry.id)}
@@ -297,19 +370,6 @@ export function AgencyTimeEntryRow({
           ))}
         </div>
       ) : null}
-
-      {editing && !isMulti ? (
-        <AgencyTimeEntryInlineEdit
-          draft={draft}
-          onDraftChange={setDraft}
-          projects={projects}
-          tasks={tasks}
-          error={editError}
-          saving={saving || rowUpdating}
-          onSave={() => void handleSave()}
-          onCancel={onCancelEdit}
-        />
-      ) : null}
-    </div>
+    </>
   );
-}
+});

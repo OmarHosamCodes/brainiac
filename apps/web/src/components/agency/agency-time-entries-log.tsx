@@ -1,9 +1,8 @@
-import { AlertTriangle, ChevronLeft, ChevronRight, Loader2, MoreVertical } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AgencyTimeEntryDayGroup } from "@/components/agency/agency-time-entry-day-group";
 import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   useAgencyProjectTasksQuery,
   useAgencyProjectsQuery,
@@ -12,7 +11,7 @@ import {
 } from "@/lib/queries/agency";
 import {
   agencyLabelClass,
-  agencyTimeFooterMetricClass,
+  agencyMetricClass,
   agencyTimeLogSkeletonClass,
   agencyTimeWeekFooterClass,
 } from "@/lib/utils/agency-ui";
@@ -29,6 +28,7 @@ import {
   selectIsTimerMutationPending,
   useAgencyTimeTrackingStore,
 } from "@/stores/agency-time-tracking";
+import { cn } from "@/lib/utils";
 
 type AgencyTimeEntriesLogProps = {
   teamId: string;
@@ -37,6 +37,7 @@ type AgencyTimeEntriesLogProps = {
 
 const OPEN_TASK_STATUSES: AgencyProjectTaskStatus[] = ["open", "in_progress", "done", "archived"];
 const DEFAULT_PAGE_SIZE = 50;
+const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
 
 export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLogProps) {
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
@@ -47,7 +48,6 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
-  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
 
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, page, pageSize);
   const projectsQuery = useAgencyProjectsQuery(teamId);
@@ -65,6 +65,9 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
     return Math.max(1, Math.ceil(totalEntries / pageSize));
   }, [pageSize, totalEntries]);
 
+  const rangeStart = totalEntries === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(page * pageSize, totalEntries);
+
   const todaySeconds = useMemo(() => {
     const daily = weekSummary?.daily;
     if (!daily) return 0;
@@ -78,7 +81,6 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
 
   useEffect(() => {
     setPage(1);
-    setEditingEntryId(null);
     setExpandedGroupKeys(new Set());
   }, [teamId]);
 
@@ -148,56 +150,23 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
   return (
     <div className={["flex min-h-0 flex-1 flex-col", className].filter(Boolean).join(" ")}>
       {logRefreshing || entries.length > 0 || weekSummary ? (
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-default px-4 py-2">
-          <span className="sr-only">Time totals</span>
-          <div className="flex items-center gap-4">
-            <div>
-              <p className={agencyLabelClass}>Today</p>
-              <p className={agencyTimeFooterMetricClass}>{formatDuration(todaySeconds, "short")}</p>
-            </div>
-            <div className="h-6 w-px bg-default" aria-hidden />
-            <div>
-              <p className={agencyLabelClass}>Week total</p>
-              <p className={agencyTimeFooterMetricClass}>
-                {formatDuration(weekSummary?.totalSeconds ?? 0, "clock")}
-              </p>
-            </div>
-          </div>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-default bg-muted/55 px-4 py-3">
+          <div className="text-sm font-medium text-highlighted">This week</div>
 
-          <div className="ml-auto flex items-center gap-2">
-            {logRefreshing ? (
-              <span className="inline-flex items-center gap-1.5 text-xs text-muted">
-                <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
-                Syncing
+          <div className="flex items-center gap-4 text-xs text-muted">
+            <span className="hidden sm:inline-flex sm:items-baseline sm:gap-1.5">
+              <span className={agencyLabelClass}>Today</span>
+              <span className={cn(agencyMetricClass, "text-xs")}>
+                {formatDuration(todaySeconds, "short")}
               </span>
-            ) : null}
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" aria-label="Log options">
-                  <MoreVertical className="size-3.5" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-48 space-y-2 p-3">
-                <p className="text-xs font-semibold text-muted">Page size</p>
-                <div className="flex flex-wrap gap-1">
-                  {[20, 50, 100].map((size) => (
-                    <Button
-                      key={size}
-                      variant={pageSize === size ? "secondary" : "ghost"}
-                      size="sm"
-                      className="rounded-full font-mono tabular-nums"
-                      onClick={() => {
-                        setPageSize(size);
-                        setPage(1);
-                      }}
-                    >
-                      {size}
-                    </Button>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
+            </span>
+            <span className="hidden h-4 w-px bg-default sm:block" aria-hidden />
+            <span className="inline-flex items-baseline gap-1.5">
+              <span className={agencyLabelClass}>Week total</span>
+              <span className={cn(agencyMetricClass, "text-base font-semibold")}>
+                {formatDuration(weekSummary?.totalSeconds ?? 0, "clock")}
+              </span>
+            </span>
           </div>
         </div>
       ) : null}
@@ -227,7 +196,7 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-auto">
         {entriesQuery.isPending && entries.length === 0 ? (
           <div className="space-y-0">
             {[1, 2, 3, 4, 5].map((rowIndex) => (
@@ -247,13 +216,10 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
               projects={projects}
               tasks={tasks}
               expandedGroupKeys={expandedGroupKeys}
-              editingEntryId={editingEntryId}
               isTimerMutationPending={isTimerMutationPending}
               deletingEntryIds={deletingEntryIds}
               updatingEntryIds={updatingEntryIds}
               onToggleGroupExpand={toggleGroupExpand}
-              onEditEntry={setEditingEntryId}
-              onCancelEdit={() => setEditingEntryId(null)}
               onRestart={restartEntry}
               onDeleteGroup={deleteGroupEntries}
               onDeleteEntry={deleteEntry}
@@ -263,29 +229,52 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
         )}
       </div>
 
-      {entries.length > 0 && maxPage > 1 ? (
+      {totalEntries > pageSize ? (
         <div className={agencyTimeWeekFooterClass}>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page <= 1}
-            onClick={() => setPage(Math.max(1, page - 1))}
-          >
-            <ChevronLeft />
-            Previous
-          </Button>
-          <p className="font-mono text-xs font-semibold tabular-nums text-muted">
-            Page {page} / {maxPage}
-          </p>
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={page >= maxPage}
-            onClick={() => setPage(Math.min(maxPage, page + 1))}
-          >
-            Next
-            <ChevronRight />
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              disabled={page <= 1}
+              aria-label="Previous page"
+              onClick={() => setPage(Math.max(1, page - 1))}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <p className="font-mono text-xs tabular-nums text-muted">
+              {rangeStart}-{rangeEnd} of {totalEntries}
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              disabled={page >= maxPage}
+              aria-label="Next page"
+              onClick={() => setPage(Math.min(maxPage, page + 1))}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+
+          <label className="flex items-center gap-2 text-xs text-muted">
+            <span>Show</span>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              className="rounded-md border border-default bg-default px-2 py-1 font-mono text-xs tabular-nums text-highlighted"
+              aria-label="Entries per page"
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       ) : null}
     </div>
