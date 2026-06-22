@@ -64,85 +64,87 @@ export function BillingPage() {
   return (
     <AppShellPage title="Billing" slots={["actions"]}>
       <div className="h-full overflow-y-auto bg-default">
-      <AppShellHeaderActions>
-        {showManageSubscription ? (
-          <Button variant="secondary" size="sm" onClick={() => void openPortal()}>
-            Manage subscription
-          </Button>
-        ) : showUpgrade ? (
-          <Button size="sm" onClick={() => void checkout("pro")}>
-            Upgrade to Pro
-          </Button>
-        ) : null}
-      </AppShellHeaderActions>
+        <AppShellHeaderActions>
+          {showManageSubscription ? (
+            <Button variant="secondary" size="sm" onClick={() => void openPortal()}>
+              Manage subscription
+            </Button>
+          ) : showUpgrade ? (
+            <Button size="sm" onClick={() => void checkout("pro")}>
+              Upgrade to Pro
+            </Button>
+          ) : null}
+        </AppShellHeaderActions>
 
-      <div className={cn(shellPageClass, "pt-4")}>
-        {billingQuery.isPending ? (
-          <Skeleton className="h-48 w-full rounded-[32px]" />
-        ) : (
-          <div className={shellContentInClass}>
-            <Card className="mb-6">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="mb-1 flex items-center gap-3">
-                      <h2 className="text-xl font-bold text-highlighted">
-                        {isPro ? "Pro" : "Free"} Plan
-                      </h2>
-                      <Badge variant={isPro ? "default" : "secondary"}>
-                        {isPro ? "Active" : "Current"}
-                      </Badge>
-                    </div>
-
-                    {isLifetimeSubscription ? (
-                      <p className="text-sm text-muted-foreground">Lifetime access</p>
-                    ) : subscription ? (
-                      <p className="text-sm text-muted-foreground">
-                        {subscription.status === "active" ? "Renews" : "Ends"}{" "}
-                        {formattedRenewalDate}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">No active subscription</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="mb-4 text-lg font-bold text-highlighted">Your Plan Limits</h3>
-
-                <div className="grid gap-4 sm:grid-cols-2">
-                  {limitItems.map((item, index) => {
-                    const Icon = item.icon;
-                    return (
-                      <div
-                        key={item.label}
-                        className={cn(
-                          "flex items-center gap-3 rounded-2xl bg-elevated p-3",
-                          index < 7 && shellStaggerItemClass,
-                        )}
-                        style={
-                          index < 7 ? ({ "--stagger-i": index } as React.CSSProperties) : undefined
-                        }
-                      >
-                        <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10">
-                          <Icon className="size-4 text-primary" />
-                        </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">{item.label}</p>
-                          <p className="text-sm font-bold text-highlighted">{item.value}</p>
-                        </div>
+        <div className={cn(shellPageClass, "pt-4")}>
+          {billingQuery.isPending ? (
+            <Skeleton className="h-48 w-full rounded-[32px]" />
+          ) : (
+            <div className={shellContentInClass}>
+              <Card className="mb-6">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="mb-1 flex items-center gap-3">
+                        <h2 className="text-xl font-bold text-highlighted">
+                          {isPro ? "Pro" : "Free"} Plan
+                        </h2>
+                        <Badge variant={isPro ? "default" : "secondary"}>
+                          {isPro ? "Active" : "Current"}
+                        </Badge>
                       </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
+
+                      {isLifetimeSubscription ? (
+                        <p className="text-sm text-muted-foreground">Lifetime access</p>
+                      ) : subscription ? (
+                        <p className="text-sm text-muted-foreground">
+                          {subscription.status === "active" ? "Renews" : "Ends"}{" "}
+                          {formattedRenewalDate}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No active subscription</p>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="mb-4 text-lg font-bold text-highlighted">Your Plan Limits</h3>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {limitItems.map((item, index) => {
+                      const Icon = item.icon;
+                      return (
+                        <div
+                          key={item.label}
+                          className={cn(
+                            "flex items-center gap-3 rounded-2xl bg-elevated p-3",
+                            index < 7 && shellStaggerItemClass,
+                          )}
+                          style={
+                            index < 7
+                              ? ({ "--stagger-i": index } as React.CSSProperties)
+                              : undefined
+                          }
+                        >
+                          <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10">
+                            <Icon className="size-4 text-primary" />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground">{item.label}</p>
+                            <p className="text-sm font-bold text-highlighted">{item.value}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </div>
       </div>
     </AppShellPage>
   );

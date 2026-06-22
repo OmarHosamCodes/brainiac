@@ -152,69 +152,13 @@ export function MarketplacePage() {
   return (
     <AppShellPage title="Marketplace" slots={["context", "actions"]}>
       <div className="flex h-full flex-col overflow-y-auto bg-default">
-      <AppShellHeaderContext>
-        <div className="hidden md:block">
-          <Tabs
-            value={activeKind}
-            onValueChange={(value) => setActiveKind(value as (typeof filterTabs)[number]["kind"])}
-          >
-            <TabsList>
-              {filterTabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <TabsTrigger key={tab.kind} value={tab.kind}>
-                    <Icon className="size-3.5" />
-                    {tab.label}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
-          </Tabs>
-        </div>
-      </AppShellHeaderContext>
-
-      <AppShellHeaderActions>
-        <div className={cn("relative hidden w-36 lg:block xl:w-44", shellTopbarFieldClass)}>
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
-          <Input
-            value={searchInput}
-            placeholder="Search..."
-            className="h-9 pl-8"
-            onChange={(event) => setSearchInput(event.target.value)}
-          />
-        </div>
-        <Badge variant="secondary" className="hidden h-9 sm:inline-flex">
-          {totalLoaded}
-        </Badge>
-        {isWorkspaceRefreshing ? (
-          <Badge variant="default" className="inline-flex h-9 gap-1">
-            <Loader2 className="size-3 animate-spin" aria-hidden="true" />
-          </Badge>
-        ) : null}
-      </AppShellHeaderActions>
-
-      <main className={shellPageClass}>
-        <div className={shellPageBodyClass}>
-          <p className={shellPageIntroClass}>
-            Browse and import shared nodes, tabs, and blocks into your workspace.
-            {saveBadge.label ? (
-              <span
-                className={cn(
-                  "ml-2 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-[0.14em] uppercase",
-                  saveBadge.className,
-                )}
-              >
-                {saveBadge.label}
-              </span>
-            ) : null}
-          </p>
-
-          <div className="flex flex-col gap-3 md:hidden">
+        <AppShellHeaderContext>
+          <div className="hidden md:block">
             <Tabs
               value={activeKind}
               onValueChange={(value) => setActiveKind(value as (typeof filterTabs)[number]["kind"])}
             >
-              <TabsList className="w-full">
+              <TabsList>
                 {filterTabs.map((tab) => {
                   const Icon = tab.icon;
                   return (
@@ -226,122 +170,182 @@ export function MarketplacePage() {
                 })}
               </TabsList>
             </Tabs>
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
-              <Input
-                value={searchInput}
-                placeholder="Search marketplace..."
-                className="h-9 pl-8"
-                onChange={(event) => setSearchInput(event.target.value)}
-              />
-            </div>
           </div>
+        </AppShellHeaderContext>
 
-          {workspaceQuery.status === "error" ? (
-            <div
-              className={cn(
-                "flex gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4",
-                shellContentInClass,
-              )}
-            >
-              <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
-              <div>
-                <p className="font-semibold text-highlighted">Workspace unavailable</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {workspaceQuery.error?.message || "The user workspace could not be loaded."}
-                </p>
+        <AppShellHeaderActions>
+          <div className={cn("relative hidden w-36 lg:block xl:w-44", shellTopbarFieldClass)}>
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
+            <Input
+              value={searchInput}
+              placeholder="Search..."
+              className="h-9 pl-8"
+              onChange={(event) => setSearchInput(event.target.value)}
+            />
+          </div>
+          <Badge variant="secondary" className="hidden h-9 sm:inline-flex">
+            {totalLoaded}
+          </Badge>
+          {isWorkspaceRefreshing ? (
+            <Badge variant="default" className="inline-flex h-9 gap-1">
+              <Loader2 className="size-3 animate-spin" aria-hidden="true" />
+            </Badge>
+          ) : null}
+        </AppShellHeaderActions>
+
+        <main className={shellPageClass}>
+          <div className={shellPageBodyClass}>
+            <p className={shellPageIntroClass}>
+              Browse and import shared nodes, tabs, and blocks into your workspace.
+              {saveBadge.label ? (
+                <span
+                  className={cn(
+                    "ml-2 rounded-full border px-2 py-0.5 text-[10px] font-bold tracking-[0.14em] uppercase",
+                    saveBadge.className,
+                  )}
+                >
+                  {saveBadge.label}
+                </span>
+              ) : null}
+            </p>
+
+            <div className="flex flex-col gap-3 md:hidden">
+              <Tabs
+                value={activeKind}
+                onValueChange={(value) =>
+                  setActiveKind(value as (typeof filterTabs)[number]["kind"])
+                }
+              >
+                <TabsList className="w-full">
+                  {filterTabs.map((tab) => {
+                    const Icon = tab.icon;
+                    return (
+                      <TabsTrigger key={tab.kind} value={tab.kind}>
+                        <Icon className="size-3.5" />
+                        {tab.label}
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+              </Tabs>
+              <div className="relative">
+                <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
+                <Input
+                  value={searchInput}
+                  placeholder="Search marketplace..."
+                  className="h-9 pl-8"
+                  onChange={(event) => setSearchInput(event.target.value)}
+                />
               </div>
             </div>
-          ) : null}
 
-          {saveError ? (
-            <div
-              className={cn(
-                "flex gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4",
-                shellContentInClass,
-              )}
-            >
-              <CloudOff className="mt-0.5 size-5 shrink-0 text-destructive" />
-              <div>
-                <p className="font-semibold text-highlighted">Unable to persist workspace</p>
-                <p className="mt-1 text-sm text-muted-foreground">{saveError}</p>
-              </div>
-            </div>
-          ) : null}
-
-          {isInitialLoading ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <Skeleton key={index} className="h-50 rounded-2xl" />
-              ))}
-            </div>
-          ) : !isInitialLoading && allItems.length === 0 && !marketplaceQuery.isFetchingNextPage ? (
-            <div
-              className={cn(
-                "flex flex-col items-center justify-center rounded-3xl border border-dashed border-muted/40 py-20 text-center",
-                shellContentInClass,
-              )}
-            >
-              <SearchX className="mb-4 size-10 text-muted-foreground" />
-              <h3 className="text-lg font-semibold text-highlighted">No items found</h3>
-              <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                We couldn&apos;t find any marketplace items matching your current filters or search
-                query.
-              </p>
-            </div>
-          ) : (
-            <>
+            {workspaceQuery.status === "error" ? (
               <div
-                key={gridGeneration}
                 className={cn(
-                  "grid gap-4 sm:grid-cols-2 xl:grid-cols-3",
-                  gridGeneration > 0 && shellContentInClass,
+                  "flex gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 p-4",
+                  shellContentInClass,
                 )}
               >
-                {allItems.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className={cn(gridGeneration === 0 && index < 8 && shellStaggerItemClass)}
-                    style={
-                      gridGeneration === 0 && index < 8
-                        ? ({ "--stagger-i": index } as React.CSSProperties)
-                        : undefined
-                    }
-                  >
-                    <MarketplaceItemCard
-                      item={item}
-                      loading={isWorkspaceInitialLoading}
-                      onInsert={openImportModal}
-                    />
-                  </div>
+                <AlertCircle className="mt-0.5 size-5 shrink-0 text-destructive" />
+                <div>
+                  <p className="font-semibold text-highlighted">Workspace unavailable</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {workspaceQuery.error?.message || "The user workspace could not be loaded."}
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
+            {saveError ? (
+              <div
+                className={cn(
+                  "flex gap-3 rounded-2xl border border-destructive/20 bg-destructive/5 p-4",
+                  shellContentInClass,
+                )}
+              >
+                <CloudOff className="mt-0.5 size-5 shrink-0 text-destructive" />
+                <div>
+                  <p className="font-semibold text-highlighted">Unable to persist workspace</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{saveError}</p>
+                </div>
+              </div>
+            ) : null}
+
+            {isInitialLoading ? (
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <Skeleton key={index} className="h-50 rounded-2xl" />
                 ))}
               </div>
-
-              <div ref={sentinelRef} className="flex items-center justify-center py-8">
-                {marketplaceQuery.isFetchingNextPage ? (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="size-4 animate-spin" />
-                    Loading more items...
-                  </div>
-                ) : !marketplaceQuery.hasNextPage && allItems.length > 0 ? (
-                  <p className="text-xs tracking-wider text-muted-foreground/60 uppercase">
-                    All items loaded
-                  </p>
-                ) : null}
+            ) : !isInitialLoading &&
+              allItems.length === 0 &&
+              !marketplaceQuery.isFetchingNextPage ? (
+              <div
+                className={cn(
+                  "flex flex-col items-center justify-center rounded-3xl border border-dashed border-muted/40 py-20 text-center",
+                  shellContentInClass,
+                )}
+              >
+                <SearchX className="mb-4 size-10 text-muted-foreground" />
+                <h3 className="text-lg font-semibold text-highlighted">No items found</h3>
+                <p className="mt-2 max-w-md text-sm text-muted-foreground">
+                  We couldn&apos;t find any marketplace items matching your current filters or
+                  search query.
+                </p>
               </div>
-            </>
-          )}
-        </div>
-      </main>
+            ) : (
+              <>
+                <div
+                  key={gridGeneration}
+                  className={cn(
+                    "grid gap-4 sm:grid-cols-2 xl:grid-cols-3",
+                    gridGeneration > 0 && shellContentInClass,
+                  )}
+                >
+                  {allItems.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className={cn(gridGeneration === 0 && index < 8 && shellStaggerItemClass)}
+                      style={
+                        gridGeneration === 0 && index < 8
+                          ? ({ "--stagger-i": index } as React.CSSProperties)
+                          : undefined
+                      }
+                    >
+                      <MarketplaceItemCard
+                        item={item}
+                        loading={isWorkspaceInitialLoading}
+                        onInsert={openImportModal}
+                      />
+                    </div>
+                  ))}
+                </div>
 
-      <MarketplaceImportModal
-        open={importModalOpen}
-        item={importItem}
-        nodes={nodes}
-        selectedNodeIds={selectedNodeIds}
-        onOpenChange={setImportModalOpen}
-        onImported={onImported}
-      />
+                <div ref={sentinelRef} className="flex items-center justify-center py-8">
+                  {marketplaceQuery.isFetchingNextPage ? (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="size-4 animate-spin" />
+                      Loading more items...
+                    </div>
+                  ) : !marketplaceQuery.hasNextPage && allItems.length > 0 ? (
+                    <p className="text-xs tracking-wider text-muted-foreground/60 uppercase">
+                      All items loaded
+                    </p>
+                  ) : null}
+                </div>
+              </>
+            )}
+          </div>
+        </main>
+
+        <MarketplaceImportModal
+          open={importModalOpen}
+          item={importItem}
+          nodes={nodes}
+          selectedNodeIds={selectedNodeIds}
+          onOpenChange={setImportModalOpen}
+          onImported={onImported}
+        />
       </div>
     </AppShellPage>
   );
