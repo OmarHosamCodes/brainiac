@@ -146,7 +146,9 @@ export const useTeamStore = create<TeamStoreState>((set, get) => ({
       current
         ? {
             ...current,
-            items: current.items.map((team) => (team.id === teamId ? { ...team, name: trimmed } : team)),
+            items: current.items.map((team) =>
+              team.id === teamId ? { ...team, name: trimmed } : team,
+            ),
           }
         : current,
     );

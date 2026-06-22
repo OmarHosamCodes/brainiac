@@ -16,7 +16,12 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth-client";
-import { signInFormSchema, signUpFormSchema, type SignInFormValues, type SignUpFormValues } from "@/lib/schemas/auth";
+import {
+  signInFormSchema,
+  signUpFormSchema,
+  type SignInFormValues,
+  type SignUpFormValues,
+} from "@/lib/schemas/auth";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 type AuthMode = "sign-in" | "sign-up";

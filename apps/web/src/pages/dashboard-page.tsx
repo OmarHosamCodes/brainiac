@@ -104,7 +104,9 @@ export function DashboardPage() {
           {selectedTeamName ? (
             <>
               <span className={shellContextDividerClass} aria-hidden="true" />
-              <span className={cn(shellBreadcrumbCurrentClass, "truncate")}>{selectedTeamName}</span>
+              <span className={cn(shellBreadcrumbCurrentClass, "truncate")}>
+                {selectedTeamName}
+              </span>
             </>
           ) : null}
         </AppShellHeaderContext>
@@ -191,7 +193,11 @@ export function DashboardPage() {
               {board.saveBadge.label}
             </span>
             {board.isWorkspaceRefreshing && board.saveBadge.label !== "Syncing" ? (
-              <Badge key="refreshing" variant="secondary" className={cn("gap-1.5", shellContentInClass)}>
+              <Badge
+                key="refreshing"
+                variant="secondary"
+                className={cn("gap-1.5", shellContentInClass)}
+              >
                 <Loader2 className="size-3 animate-spin" />
                 Refreshing
               </Badge>
