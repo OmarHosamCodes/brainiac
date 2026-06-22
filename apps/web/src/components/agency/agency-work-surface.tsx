@@ -62,7 +62,7 @@ export function AgencyWorkSurface({ teamId, onSelectProject }: AgencyWorkSurface
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 lg:flex-row">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden lg:flex-row">
       {!selectedTaskId ? (
         <div
           className="inline-flex rounded-full border border-default bg-elevated p-1 lg:hidden"
@@ -98,7 +98,7 @@ export function AgencyWorkSurface({ teamId, onSelectProject }: AgencyWorkSurface
 
       <div
         className={[
-          "min-h-0 min-w-0 transition-[width,max-width] duration-200 ease-out motion-reduce:transition-none lg:h-full lg:flex-none",
+          "min-h-0 min-w-0 transition-[width,max-width] duration-200 ease-out motion-reduce:transition-none lg:sticky lg:top-0 lg:h-full lg:flex-none lg:self-start",
           taskRailCollapsed ? "lg:w-[5.5rem] lg:max-w-[5.5rem]" : "lg:w-[28rem] lg:max-w-[28rem]",
           selectedTaskId ? "hidden lg:block" : "",
           !selectedTaskId && mobilePane !== "tasks" ? "hidden lg:block" : "",
@@ -129,7 +129,7 @@ export function AgencyWorkSurface({ teamId, onSelectProject }: AgencyWorkSurface
         <div
           className={[
             agencyTimePaneClass,
-            "min-h-0 min-w-0 flex-1",
+            "min-h-0 min-w-0 flex-1 overflow-hidden",
             mobilePane !== "time" ? "hidden lg:flex" : "flex",
           ].join(" ")}
         >
