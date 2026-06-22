@@ -4,7 +4,13 @@
  * Order is daily-traffic ranked. The shortcut key is the second letter of
  * the `g X` chord (Work = `g w`, Clients = `g c`, …).
  */
-export type AgencySegmentId = "work" | "clients" | "reports" | "management" | "settings";
+export type AgencySegmentId =
+  | "work"
+  | "projects"
+  | "clients"
+  | "reports"
+  | "management"
+  | "settings";
 
 export type LegacyAgencySegmentId = "projects" | "resourcing" | "billing";
 
@@ -33,6 +39,13 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
     subtitle: "Clients and the projects you're delivering for them.",
   },
   {
+    id: "projects",
+    label: "Projects",
+    icon: "i-lucide-folder-kanban",
+    shortcutKey: "p",
+    subtitle: "Project pipeline, delivery health, and activity.",
+  },
+  {
     id: "reports",
     label: "Reports",
     icon: "i-lucide-bar-chart-3",
@@ -56,7 +69,7 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
 ] as const;
 
 export const LEGACY_AGENCY_SEGMENT_MAP = {
-  projects: "work",
+  projects: "projects",
   resourcing: "management",
   billing: "management",
 } as const satisfies Record<LegacyAgencySegmentId, AgencySegmentId>;
