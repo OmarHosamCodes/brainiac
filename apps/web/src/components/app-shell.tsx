@@ -75,8 +75,8 @@ const AGENCY_COMMAND_ITEMS = [
   },
   {
     label: "Projects",
-    description: "Project list under Work",
-    to: "/agency?section=work&view=projects",
+    description: "Project list and delivery health",
+    to: "/agency?section=projects",
     icon: FolderKanban,
   },
   {

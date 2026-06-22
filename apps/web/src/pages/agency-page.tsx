@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Download, FolderKanban, ListChecks, Plus, type LucideIcon } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -65,44 +65,6 @@ function animatedPanelClass(segmentId: AgencySegmentId, activeSegment: AgencySeg
   return cn(shellPanelClass, segmentId === activeSegment && shellPanelActiveClass);
 }
 
-type WorkView = "tasks" | "projects";
-
-function AgencyWorkViewBar({
-  view,
-  onViewChange,
-}: {
-  view: WorkView;
-  onViewChange: (view: WorkView) => void;
-}) {
-  const items = [
-    { id: "tasks", label: "Tasks", icon: ListChecks },
-    { id: "projects", label: "Projects", icon: FolderKanban },
-  ] satisfies Array<{ id: WorkView; label: string; icon: LucideIcon }>;
-
-  return (
-    <div className="flex shrink-0 items-center gap-1 self-start rounded-full border border-default bg-elevated p-1">
-      {items.map((item) => {
-        const Icon = item.icon;
-        return (
-          <button
-            key={item.id}
-            type="button"
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold transition-colors hover:text-highlighted",
-              view === item.id ? "bg-default text-highlighted" : "text-muted",
-            )}
-            aria-pressed={view === item.id}
-            onClick={() => onViewChange(item.id)}
-          >
-            <Icon className="size-3.5" />
-            {item.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 export function AgencyPage() {
   const session = authClient.useSession();
   const authEnabled = Boolean(session.data?.user);
@@ -144,16 +106,11 @@ export function AgencyPage() {
 
   const selectedProjectId =
     typeof searchParams.get("project") === "string" ? searchParams.get("project")! : "";
-  const workView: WorkView =
-    selectedProjectId || searchParams.get("view") === "projects" ? "projects" : "tasks";
 
   useEffect(() => {
     if (!isLegacyAgencySegmentId(sectionParam)) return;
     const next = new URLSearchParams(searchParams);
     next.set("section", LEGACY_AGENCY_SEGMENT_MAP[sectionParam]);
-    if (sectionParam === "projects") {
-      next.set("view", "projects");
-    }
     const managementPane: AgencyManagementPaneId | null =
       managementPaneForLegacySection(sectionParam);
     if (managementPane) {
@@ -166,27 +123,12 @@ export function AgencyPage() {
     const next = new URLSearchParams(searchParams);
     next.set("section", nextSegment);
     next.delete("pane");
-    if (nextSegment !== "work") {
+    if (nextSegment !== "projects") {
       next.delete("project");
-      next.delete("view");
     }
     if (nextSegment !== "management") {
       next.delete("manage");
     }
-    setSearchParams(next, { replace: true });
-  }
-
-  function handleWorkViewChange(nextView: WorkView) {
-    const next = new URLSearchParams(searchParams);
-    next.set("section", "work");
-    if (nextView === "projects") {
-      next.set("view", "projects");
-    } else {
-      next.delete("view");
-      next.delete("project");
-    }
-    next.delete("manage");
-    next.delete("pane");
     setSearchParams(next, { replace: true });
   }
 
@@ -233,8 +175,7 @@ export function AgencyPage() {
 
   function openProject(projectId: string) {
     const next = new URLSearchParams(searchParams);
-    next.set("section", "work");
-    next.set("view", "projects");
+    next.set("section", "projects");
     next.set("project", projectId);
     next.delete("manage");
     next.delete("pane");
@@ -243,8 +184,7 @@ export function AgencyPage() {
 
   function closeProject() {
     const next = new URLSearchParams(searchParams);
-    next.set("section", "work");
-    next.set("view", "projects");
+    next.set("section", "projects");
     next.delete("project");
     setSearchParams(next);
   }
@@ -252,149 +192,147 @@ export function AgencyPage() {
   return (
     <AppShellPage title={currentSegment.label} slots={["context", "actions"]}>
       <div className="flex h-full flex-col overflow-hidden bg-default text-default">
-      <AppShellHeaderContext>
-        <AgencyTopBarNav
-          segment={segment}
-          teamId={selectedTeamId}
-          teams={teams}
-          syncState={syncState}
-          onSegmentChange={handleSegmentChange}
-          onTeamIdChange={setSelectedTeamId}
-        />
-      </AppShellHeaderContext>
+        <AppShellHeaderContext>
+          <AgencyTopBarNav
+            segment={segment}
+            teamId={selectedTeamId}
+            teams={teams}
+            syncState={syncState}
+            onSegmentChange={handleSegmentChange}
+            onTeamIdChange={setSelectedTeamId}
+          />
+        </AppShellHeaderContext>
 
-      <AppShellHeaderActions>
-        {segment === "work" && workView === "projects" && !selectedProjectId ? (
-          <Button size="sm" onClick={() => projectsTableRef.current?.openNewProject()}>
-            <Plus className="size-4" />
-            New project
-          </Button>
-        ) : null}
-        {segment === "reports" ? (
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={!reportsExportState.canExport || reportsExportState.isExporting}
-            onClick={() => void reportsSurfaceRef.current?.downloadCsv()}
-          >
-            <Download className="size-4" />
-            {reportsExportState.isExporting ? "Exporting…" : "Export CSV"}
-          </Button>
-        ) : null}
-      </AppShellHeaderActions>
+        <AppShellHeaderActions>
+          {segment === "projects" && !selectedProjectId ? (
+            <Button size="sm" onClick={() => projectsTableRef.current?.openNewProject()}>
+              <Plus className="size-4" />
+              New project
+            </Button>
+          ) : null}
+          {segment === "reports" ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!reportsExportState.canExport || reportsExportState.isExporting}
+              onClick={() => void reportsSurfaceRef.current?.downloadCsv()}
+            >
+              <Download className="size-4" />
+              {reportsExportState.isExporting ? "Exporting…" : "Export CSV"}
+            </Button>
+          ) : null}
+        </AppShellHeaderActions>
 
-      <main className={shellPageClass}>
-        {isInitialLoading ? (
-          <div className="space-y-4 pt-4">
-            <Skeleton className="h-12 w-full rounded-2xl" />
-            <Skeleton className="h-6 w-2/3 rounded-lg" />
-            <Skeleton className="h-64 w-full rounded-[32px]" />
-          </div>
-        ) : billingGatePending ? (
-          <div className="space-y-4 pt-4">
-            <Skeleton className="h-12 w-full rounded-2xl" />
-            <Skeleton className="h-6 w-2/3 rounded-lg" />
-            <Skeleton className="h-64 w-full rounded-[32px]" />
-          </div>
-        ) : showAgencyUpsell ? (
-          <div className={shellContentInClass}>
-            <AgencyProUpsell />
-          </div>
-        ) : teams.length === 0 ? (
-          <div className={shellContentInClass}>
-            <AgencyPlaceholderSurface
-              icon="i-lucide-users"
-              title="No team yet"
-              body="Create a team in your workspace to start using agency tools."
-              hints={["Open Dashboard and create or join a team from the team panel."]}
-            />
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col">
-            <AgencySegmentBar segment={segment} onSegmentChange={handleSegmentChange} />
+        <main className={shellPageClass}>
+          {isInitialLoading ? (
+            <div className="space-y-4 pt-4">
+              <Skeleton className="h-12 w-full rounded-2xl" />
+              <Skeleton className="h-6 w-2/3 rounded-lg" />
+              <Skeleton className="h-64 w-full rounded-[32px]" />
+            </div>
+          ) : billingGatePending ? (
+            <div className="space-y-4 pt-4">
+              <Skeleton className="h-12 w-full rounded-2xl" />
+              <Skeleton className="h-6 w-2/3 rounded-lg" />
+              <Skeleton className="h-64 w-full rounded-[32px]" />
+            </div>
+          ) : showAgencyUpsell ? (
+            <div className={shellContentInClass}>
+              <AgencyProUpsell />
+            </div>
+          ) : teams.length === 0 ? (
+            <div className={shellContentInClass}>
+              <AgencyPlaceholderSurface
+                icon="i-lucide-users"
+                title="No team yet"
+                body="Create a team in your workspace to start using agency tools."
+                hints={["Open Dashboard and create or join a team from the team panel."]}
+              />
+            </div>
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col">
+              <AgencySegmentBar segment={segment} onSegmentChange={handleSegmentChange} />
 
-            <div className={shellPageBodyClass}>
-              {segment !== "settings" ? (
-                <p key={segment} className={cn(shellPageIntroClass, shellContentInClass)}>
-                  {currentSegment.subtitle}
-                </p>
-              ) : null}
+              <div className={shellPageBodyClass}>
+                {segment !== "settings" ? (
+                  <p key={segment} className={cn(shellPageIntroClass, shellContentInClass)}>
+                    {currentSegment.subtitle}
+                  </p>
+                ) : null}
 
-              <div
-                className={shellPanelStackClass}
-                role="tabpanel"
-                id={panelIdFor(segment)}
-                aria-labelledby={`agency-tab-${segment}`}
-              >
                 <div
-                  className={animatedPanelClass("work", segment)}
-                  aria-hidden={segment !== "work"}
+                  className={shellPanelStackClass}
+                  role="tabpanel"
+                  id={panelIdFor(segment)}
+                  aria-labelledby={`agency-tab-${segment}`}
                 >
-                  <div className="flex min-h-0 flex-1 flex-col gap-3">
-                    <AgencyWorkViewBar view={workView} onViewChange={handleWorkViewChange} />
-                    <div className="min-h-0 flex-1">
-                      {workView === "projects" ? (
-                        selectedProjectId ? (
-                          <AgencyProjectDetail
-                            teamId={selectedTeamId}
-                            projectId={selectedProjectId}
-                            onBack={closeProject}
-                          />
-                        ) : (
-                          <AgencyProjectsTable
-                            ref={projectsTableRef}
-                            teamId={selectedTeamId}
-                            hideToolbarActions
-                            onSelect={openProject}
-                          />
-                        )
-                      ) : (
-                        <AgencyWorkSurface teamId={selectedTeamId} onSelectProject={openProject} />
-                      )}
-                    </div>
+                  <div
+                    className={animatedPanelClass("work", segment)}
+                    aria-hidden={segment !== "work"}
+                  >
+                    <AgencyWorkSurface teamId={selectedTeamId} onSelectProject={openProject} />
                   </div>
-                </div>
 
-                <div
-                  className={animatedPanelClass("clients", segment)}
-                  aria-hidden={segment !== "clients"}
-                >
-                  <AgencyClientsSurface teamId={selectedTeamId} />
-                </div>
+                  <div
+                    className={animatedPanelClass("projects", segment)}
+                    aria-hidden={segment !== "projects"}
+                  >
+                    {selectedProjectId ? (
+                      <AgencyProjectDetail
+                        teamId={selectedTeamId}
+                        projectId={selectedProjectId}
+                        onBack={closeProject}
+                      />
+                    ) : (
+                      <AgencyProjectsTable
+                        ref={projectsTableRef}
+                        teamId={selectedTeamId}
+                        hideToolbarActions
+                        onSelect={openProject}
+                      />
+                    )}
+                  </div>
 
-                <div
-                  className={animatedPanelClass("reports", segment)}
-                  aria-hidden={segment !== "reports"}
-                >
-                  <AgencyReportsSurface
-                    ref={reportsSurfaceRef}
-                    teamId={selectedTeamId}
-                    hideToolbarExport
-                    onExportStateChange={setReportsExportState}
-                  />
-                </div>
+                  <div
+                    className={animatedPanelClass("clients", segment)}
+                    aria-hidden={segment !== "clients"}
+                  >
+                    <AgencyClientsSurface teamId={selectedTeamId} />
+                  </div>
 
-                <div
-                  className={animatedPanelClass("management", segment)}
-                  aria-hidden={segment !== "management"}
-                >
-                  <AgencyManagementSurface
-                    teamId={selectedTeamId}
-                    onSegmentChange={handleSegmentChange}
-                  />
-                </div>
+                  <div
+                    className={animatedPanelClass("reports", segment)}
+                    aria-hidden={segment !== "reports"}
+                  >
+                    <AgencyReportsSurface
+                      ref={reportsSurfaceRef}
+                      teamId={selectedTeamId}
+                      hideToolbarExport
+                      onExportStateChange={setReportsExportState}
+                    />
+                  </div>
 
-                <div
-                  className={animatedPanelClass("settings", segment)}
-                  aria-hidden={segment !== "settings"}
-                >
-                  <AgencySettingsSurface teamId={selectedTeamId} />
+                  <div
+                    className={animatedPanelClass("management", segment)}
+                    aria-hidden={segment !== "management"}
+                  >
+                    <AgencyManagementSurface
+                      teamId={selectedTeamId}
+                      onSegmentChange={handleSegmentChange}
+                    />
+                  </div>
+
+                  <div
+                    className={animatedPanelClass("settings", segment)}
+                    aria-hidden={segment !== "settings"}
+                  >
+                    <AgencySettingsSurface teamId={selectedTeamId} />
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
-      </main>
+          )}
+        </main>
       </div>
     </AppShellPage>
   );
