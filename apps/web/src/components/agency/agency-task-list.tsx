@@ -116,6 +116,7 @@ export function AgencyTaskList({
   const [trackingNow, setTrackingNow] = useState(Date.now());
 
   const skipProjectStep = projects.length === 1;
+  const titleSuggestionProjectId = createExpanded ? selectedProjectIdForCreate : "";
 
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
@@ -139,11 +140,21 @@ export function AgencyTaskList({
     statuses: DONE_TASK_STATUSES,
   });
 
+  const titleSuggestionTasksQuery = useAgencyProjectTasksQuery(teamId, {
+    projectId: titleSuggestionProjectId,
+  });
+
   const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
   const activeTimer = activeTimerQuery.data?.timer ?? null;
 
   const activeTasks = activeTasksQuery.data?.items ?? [];
   const doneTasks = doneTasksQuery.data?.items ?? [];
+  const titleSuggestionTasks = useMemo(() => {
+    if (!createExpanded || !selectedProjectIdForCreate) return [];
+    return (titleSuggestionTasksQuery.data?.items ?? []).filter(
+      (task) => task.projectId === selectedProjectIdForCreate,
+    );
+  }, [createExpanded, selectedProjectIdForCreate, titleSuggestionTasksQuery.data?.items]);
 
   const activeCount = activeTasksQuery.isPending ? null : activeTasks.length;
   const doneCount = doneTasksQuery.isPending ? null : doneTasks.length;
@@ -327,6 +338,7 @@ export function AgencyTaskList({
         skipProjectStep={skipProjectStep}
         projects={projects}
         members={members}
+        titleSuggestionTasks={titleSuggestionTasks}
         titleDraft={titleDraft}
         selectedProjectId={selectedProjectIdForCreate}
         selectedAssigneeId={selectedAssigneeIdForCreate}

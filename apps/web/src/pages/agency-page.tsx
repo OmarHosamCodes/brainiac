@@ -91,7 +91,7 @@ export function AgencyPage() {
     ? sectionParam
     : isLegacyAgencySegmentId(sectionParam)
       ? LEGACY_AGENCY_SEGMENT_MAP[sectionParam]
-      : "dashboard";
+      : "work";
 
   const currentSegment = useMemo(
     () => AGENCY_SEGMENTS.find((entry) => entry.id === segment) ?? AGENCY_SEGMENTS[0]!,
