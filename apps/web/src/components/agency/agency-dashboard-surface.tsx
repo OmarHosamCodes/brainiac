@@ -11,15 +11,18 @@ import {
 } from "react";
 import { toast } from "sonner";
 
+import {
+  AgencyDashboardCommandBar,
+  type DashboardSortBy,
+  type RangePreset,
+} from "@/components/agency/agency-dashboard-command-bar";
 import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { orpc } from "@/lib/orpc";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
-  agencyFocusRingClass,
   agencyLabelClass,
   agencyMetricClass,
   agencyPanelClass,
@@ -29,21 +32,6 @@ import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { projectHueFor } from "@/lib/utils/project-palette";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/stores/theme";
-
-type RangePreset = "week" | "month" | "last30" | "custom";
-
-const RANGE_LABEL: Record<RangePreset, string> = {
-  week: "This week",
-  month: "This month",
-  last30: "Last 30 days",
-  custom: "Custom",
-};
-
-const dashboardControlClass = cn(
-  "h-10 rounded-xl border border-default bg-default px-3 text-sm font-semibold text-highlighted",
-  "transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
-  agencyFocusRingClass,
-);
 
 function startOfWeekUtc(): Date {
   const now = new Date();
@@ -189,6 +177,7 @@ export const AgencyDashboardSurface = forwardRef<
   const [clientId, setClientId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [memberUserId, setMemberUserId] = useState("");
+  const [sortBy, setSortBy] = useState<DashboardSortBy>("time");
 
   const range = useMemo(() => {
     const endIso = new Date(
@@ -252,6 +241,32 @@ export const AgencyDashboardSurface = forwardRef<
   const totalProjectHours =
     summary?.timeDistributionByProject.reduce((sum, row) => sum + row.hours, 0) ?? 0;
 
+  const sortedTeamMembers = useMemo(() => {
+    const members = summary?.teamMembers ?? [];
+    if (sortBy === "name") {
+      return [...members].sort((a, b) => a.userName.localeCompare(b.userName));
+    }
+    if (sortBy === "recent") {
+      return [...members].sort((a, b) => {
+        const aTime = a.latestEntry ? new Date(a.latestEntry.startedAt).getTime() : 0;
+        const bTime = b.latestEntry ? new Date(b.latestEntry.startedAt).getTime() : 0;
+        return bTime - aTime || b.totalSeconds - a.totalSeconds;
+      });
+    }
+    return [...members].sort((a, b) => b.totalSeconds - a.totalSeconds);
+  }, [summary?.teamMembers, sortBy]);
+
+  const sortedRankedProjects = useMemo(() => {
+    const list = [...rankedProjects];
+    if (sortBy === "name") {
+      return list.sort((a, b) => a.projectName.localeCompare(b.projectName));
+    }
+    if (sortBy === "recent") {
+      return list.sort((a, b) => b.hours - a.hours);
+    }
+    return list.sort((a, b) => b.hours - a.hours);
+  }, [rankedProjects, sortBy]);
+
   const downloadCsv = useCallback(async () => {
     if (!teamId) return;
     try {
@@ -278,15 +293,7 @@ export const AgencyDashboardSurface = forwardRef<
     } catch (error) {
       toast.error("Export failed", { description: getErrorMessage(error, "Try again.") });
     }
-  }, [
-    clientId,
-    exportCsvMutation,
-    memberUserId,
-    projectId,
-    range.from,
-    range.to,
-    teamId,
-  ]);
+  }, [clientId, exportCsvMutation, memberUserId, projectId, range.from, range.to, teamId]);
 
   useImperativeHandle(
     ref,
@@ -333,114 +340,43 @@ export const AgencyDashboardSurface = forwardRef<
     );
   }
 
+  function handleClientChange(nextClientId: string) {
+    setClientId(nextClientId);
+    setProjectId("");
+  }
+
+  function handleReset() {
+    setRangePreset("last30");
+    setClientId("");
+    setProjectId("");
+    setMemberUserId("");
+    setSortBy("time");
+  }
+
   return (
     <div className="space-y-4 pb-6">
-      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-default bg-elevated p-3">
-        <div
-          className="inline-flex min-h-11 rounded-full border border-default bg-default p-1"
-          role="group"
-          aria-label="Dashboard period"
-        >
-          {(["week", "month", "last30", "custom"] as const).map((preset) => (
-            <button
-              key={preset}
-              type="button"
-              className={cn(
-                "min-h-9 rounded-full px-3 py-1 text-xs font-bold transition-colors motion-reduce:transition-none",
-                agencyFocusRingClass,
-                rangePreset === preset
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted hover:bg-elevated hover:text-highlighted",
-              )}
-              aria-pressed={rangePreset === preset}
-              onClick={() => setRangePreset(preset)}
-            >
-              {RANGE_LABEL[preset]}
-            </button>
-          ))}
-        </div>
-
-        {rangePreset === "custom" ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="sr-only" htmlFor="agency-dashboard-from">
-              From date
-            </label>
-            <Input
-              id="agency-dashboard-from"
-              type="date"
-              value={customFromDate}
-              className="h-10 w-auto min-w-36 bg-default text-sm font-semibold text-highlighted"
-              onChange={(event) => setCustomFromDate(event.target.value)}
-            />
-            <label className="sr-only" htmlFor="agency-dashboard-to">
-              To date
-            </label>
-            <Input
-              id="agency-dashboard-to"
-              type="date"
-              value={customToDate}
-              className="h-10 w-auto min-w-36 bg-default text-sm font-semibold text-highlighted"
-              onChange={(event) => setCustomToDate(event.target.value)}
-            />
-          </div>
-        ) : null}
-
-        <div className="flex w-full flex-wrap items-center gap-2 lg:ml-auto lg:w-auto">
-          <label className="sr-only" htmlFor="agency-dashboard-client">
-            Client
-          </label>
-          <select
-            id="agency-dashboard-client"
-            className={cn(dashboardControlClass, "min-w-36 flex-1 lg:flex-none")}
-            value={clientId}
-            disabled={clientsQuery.isPending}
-            onChange={(event) => {
-              setClientId(event.target.value);
-              setProjectId("");
-            }}
-          >
-            <option value="">All clients</option>
-            {clients.map((client) => (
-              <option key={client.id} value={client.id}>
-                {client.name}
-              </option>
-            ))}
-          </select>
-          <label className="sr-only" htmlFor="agency-dashboard-project">
-            Project
-          </label>
-          <select
-            id="agency-dashboard-project"
-            className={cn(dashboardControlClass, "min-w-36 flex-1 lg:flex-none")}
-            value={projectId}
-            disabled={projectsQuery.isPending}
-            onChange={(event) => setProjectId(event.target.value)}
-          >
-            <option value="">All projects</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-          <label className="sr-only" htmlFor="agency-dashboard-member">
-            Member
-          </label>
-          <select
-            id="agency-dashboard-member"
-            className={cn(dashboardControlClass, "min-w-36 flex-1 lg:flex-none")}
-            value={memberUserId}
-            onChange={(event) => setMemberUserId(event.target.value)}
-          >
-            <option value="">All members</option>
-            {(summary?.teamMembers ?? []).map((member) => (
-              <option key={member.userId} value={member.userId}>
-                {member.userName}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
+      <AgencyDashboardCommandBar
+        rangePreset={rangePreset}
+        onRangePresetChange={setRangePreset}
+        customFromDate={customFromDate}
+        onCustomFromChange={setCustomFromDate}
+        customToDate={customToDate}
+        onCustomToChange={setCustomToDate}
+        clientId={clientId}
+        onClientChange={handleClientChange}
+        projectId={projectId}
+        onProjectChange={setProjectId}
+        memberUserId={memberUserId}
+        onMemberChange={setMemberUserId}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        onReset={handleReset}
+        clients={clients}
+        projects={projects}
+        members={summary?.teamMembers ?? []}
+        clientsLoading={clientsQuery.isPending}
+        projectsLoading={projectsQuery.isPending}
+      />
 
       {!summary || summary.totalEntries === 0 ? (
         <div className={agencyEmptyPanelClass}>
@@ -508,7 +444,7 @@ export const AgencyDashboardSurface = forwardRef<
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-default">
-                  {summary.teamMembers.map((member) => (
+                  {sortedTeamMembers.map((member) => (
                     <tr
                       key={member.userId}
                       className="transition-colors hover:bg-elevated/55 motion-reduce:transition-none"
@@ -581,7 +517,9 @@ export const AgencyDashboardSurface = forwardRef<
                                 key={project.projectId}
                                 projectId={project.projectId}
                                 className="block h-full min-w-1"
-                                style={{ width: `${relShare(project.seconds, member.totalSeconds)}%` }}
+                                style={{
+                                  width: `${relShare(project.seconds, member.totalSeconds)}%`,
+                                }}
                               />
                             ))
                           )}
@@ -642,7 +580,7 @@ export const AgencyDashboardSurface = forwardRef<
                 <p className="mt-4 text-xs text-muted">No project breakdown in this range.</p>
               ) : (
                 <div className="mt-4 space-y-3">
-                  {rankedProjects.map((project) => {
+                  {sortedRankedProjects.map((project) => {
                     const seconds = Math.round(project.hours * 3_600);
                     const share =
                       totalProjectHours > 0 ? (project.hours / totalProjectHours) * 100 : 0;
