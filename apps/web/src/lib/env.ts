@@ -1,9 +1,12 @@
-const serverUrl =
-  import.meta.env.VITE_PUBLIC_SERVER_URL ??
-  import.meta.env.NUXT_PUBLIC_SERVER_URL ??
-  "http://localhost:7000";
+declare const __BRAINIAC_SERVER_URL__: string;
+
+const serverUrl = __BRAINIAC_SERVER_URL__ || (import.meta.env.DEV ? "http://localhost:7000" : "");
 
 export function getServerUrl(): string {
+  if (!serverUrl) {
+    throw new Error("VITE_PUBLIC_SERVER_URL is required in production builds");
+  }
+
   return serverUrl;
 }
 

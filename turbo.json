@@ -4,7 +4,9 @@
   "globalPassThroughEnv": [
     "DATABASE_URL",
     "DATABASE_PRIVATE_URL",
+    "NUXT_PUBLIC_SERVER_URL",
     "POSTGRES_URL",
+    "VITE_PUBLIC_SERVER_URL",
     "PGDATABASE",
     "PGHOST",
     "PGPASSWORD",
