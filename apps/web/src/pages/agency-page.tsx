@@ -1,17 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
-import { Download, Plus } from "lucide-react";
+import { Download } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { AgencyClientsSurface } from "@/components/agency/agency-clients-surface";
+import {
+  AgencyDashboardSurface,
+  type AgencyDashboardSurfaceHandle,
+} from "@/components/agency/agency-dashboard-surface";
 import { AgencyManagementSurface } from "@/components/agency/agency-management-surface";
 import { AgencyPlaceholderSurface } from "@/components/agency/agency-placeholder-surface";
 import { AgencyProUpsell } from "@/components/agency/agency-pro-upsell";
 import { AgencyProjectDetail } from "@/components/agency/agency-project-detail";
-import {
-  AgencyProjectsTable,
-  type AgencyProjectsTableHandle,
-} from "@/components/agency/agency-projects-table";
+import { AgencyProjectsTable } from "@/components/agency/agency-projects-table";
 import {
   AgencyReportsSurface,
   type AgencyReportsSurfaceHandle,
@@ -90,16 +91,20 @@ export function AgencyPage() {
     ? sectionParam
     : isLegacyAgencySegmentId(sectionParam)
       ? LEGACY_AGENCY_SEGMENT_MAP[sectionParam]
-      : "work";
+      : "dashboard";
 
   const currentSegment = useMemo(
     () => AGENCY_SEGMENTS.find((entry) => entry.id === segment) ?? AGENCY_SEGMENTS[0]!,
     [segment],
   );
 
-  const projectsTableRef = useRef<AgencyProjectsTableHandle | null>(null);
   const reportsSurfaceRef = useRef<AgencyReportsSurfaceHandle | null>(null);
+  const dashboardSurfaceRef = useRef<AgencyDashboardSurfaceHandle | null>(null);
   const [reportsExportState, setReportsExportState] = useState({
+    canExport: false,
+    isExporting: false,
+  });
+  const [dashboardExportState, setDashboardExportState] = useState({
     canExport: false,
     isExporting: false,
   });
@@ -204,13 +209,17 @@ export function AgencyPage() {
         </AppShellHeaderContext>
 
         <AppShellHeaderActions>
-          {segment === "projects" && !selectedProjectId ? (
-            <Button size="sm" onClick={() => projectsTableRef.current?.openNewProject()}>
-              <Plus className="size-4" />
-              New project
+          {segment === "dashboard" ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!dashboardExportState.canExport || dashboardExportState.isExporting}
+              onClick={() => void dashboardSurfaceRef.current?.downloadCsv()}
+            >
+              <Download className="size-4" />
+              {dashboardExportState.isExporting ? "Exporting…" : "Export CSV"}
             </Button>
-          ) : null}
-          {segment === "reports" ? (
+          ) : segment === "reports" ? (
             <Button
               variant="secondary"
               size="sm"
@@ -267,6 +276,17 @@ export function AgencyPage() {
                   aria-labelledby={`agency-tab-${segment}`}
                 >
                   <div
+                    className={animatedPanelClass("dashboard", segment)}
+                    aria-hidden={segment !== "dashboard"}
+                  >
+                    <AgencyDashboardSurface
+                      ref={dashboardSurfaceRef}
+                      teamId={selectedTeamId}
+                      onExportStateChange={setDashboardExportState}
+                    />
+                  </div>
+
+                  <div
                     className={animatedPanelClass("work", segment)}
                     aria-hidden={segment !== "work"}
                   >
@@ -284,12 +304,7 @@ export function AgencyPage() {
                         onBack={closeProject}
                       />
                     ) : (
-                      <AgencyProjectsTable
-                        ref={projectsTableRef}
-                        teamId={selectedTeamId}
-                        hideToolbarActions
-                        onSelect={openProject}
-                      />
+                      <AgencyProjectsTable teamId={selectedTeamId} onSelect={openProject} />
                     )}
                   </div>
 

@@ -1,9 +1,13 @@
-import { ListChecks, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ChevronDown, ListChecks, Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
+import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
+import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
+import { cn } from "@/lib/utils";
 
 type Project = {
   id: string;
@@ -32,6 +36,9 @@ type AgencyTaskChooserProps = {
   placeholder?: string;
   searchPlaceholder?: string;
   className?: string;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  contentAlign?: "start" | "center" | "end";
 };
 
 function statusLabel(status: TaskStatus | undefined) {
@@ -79,9 +86,20 @@ export function AgencyTaskChooser({
   placeholder = "Task",
   searchPlaceholder = "Search tasks, projects, or clients",
   className,
+  open: controlledOpen,
+  onOpenChange,
+  contentAlign = "start",
 }: AgencyTaskChooserProps) {
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const open = controlledOpen ?? uncontrolledOpen;
+
+  function setOpen(nextOpen: boolean) {
+    onOpenChange?.(nextOpen);
+    if (controlledOpen === undefined) {
+      setUncontrolledOpen(nextOpen);
+    }
+  }
 
   const projectsById = useMemo(
     () => new Map(projects.map((project) => [project.id, project])),
@@ -124,7 +142,7 @@ export function AgencyTaskChooser({
     });
   }, [projectsById, searchTerm, tasks]);
 
-  const groupedItems = useMemo(() => {
+  const groupedProjects = useMemo(() => {
     const tasksByProject = new Map<string, AgencyTask[]>();
 
     for (const task of filteredTasks) {
@@ -140,35 +158,60 @@ export function AgencyTaskChooser({
         return clientSort || left.name.localeCompare(right.name);
       });
 
-    const items: Array<
-      | { kind: "client"; label: string }
-      | { kind: "project"; label: string }
-      | { kind: "task"; task: AgencyTask; project: Project }
-    > = [];
-
-    let currentClientName = "";
+    const clientGroups: Array<{
+      clientName: string;
+      projects: Array<{ project: Project; tasks: AgencyTask[] }>;
+    }> = [];
+    let currentGroup: (typeof clientGroups)[number] | null = null;
 
     for (const project of sortedProjects) {
-      if (project.clientName !== currentClientName) {
-        currentClientName = project.clientName;
-        items.push({ kind: "client", label: project.clientName });
+      if (!currentGroup || currentGroup.clientName !== project.clientName) {
+        currentGroup = { clientName: project.clientName, projects: [] };
+        clientGroups.push(currentGroup);
       }
 
-      items.push({ kind: "project", label: project.name });
-
-      for (const task of [...(tasksByProject.get(project.id) ?? [])].sort((left, right) =>
-        left.title.localeCompare(right.title),
-      )) {
-        items.push({ kind: "task", task, project });
-      }
+      currentGroup.projects.push({
+        project,
+        tasks: [...(tasksByProject.get(project.id) ?? [])].sort((left, right) =>
+          left.title.localeCompare(right.title),
+        ),
+      });
     }
 
-    return items;
+    return clientGroups;
   }, [filteredTasks, projects]);
+
+  const selectedProjectId = selectedTask?.projectId ?? "";
+  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(() => new Set());
+  const searchIsActive = searchTerm.trim().length > 0;
+
+  useEffect(() => {
+    if (!open) return;
+    if (selectedProjectId) {
+      setExpandedProjectIds((current) => {
+        if (current.has(selectedProjectId)) return current;
+        const next = new Set(current);
+        next.add(selectedProjectId);
+        return next;
+      });
+    }
+  }, [open, selectedProjectId]);
 
   function selectTask(taskId: string) {
     onValueChange(taskId);
     setOpen(false);
+  }
+
+  function toggleProject(projectId: string) {
+    setExpandedProjectIds((current) => {
+      const next = new Set(current);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
   }
 
   return (
@@ -178,91 +221,130 @@ export function AgencyTaskChooser({
           variant="outline"
           size="sm"
           disabled={disabled || loading}
-          className={["w-64 max-w-full justify-start gap-2", className].filter(Boolean).join(" ")}
+          className={cn("w-64 max-w-full justify-start gap-2", className)}
         >
           <ListChecks className="size-4 shrink-0 text-muted" />
-          <span className={selectedLabel ? "truncate" : "truncate text-dimmed"}>
+          <span className={cn("min-w-0 truncate", selectedLabel ? "" : "text-dimmed")}>
             {loading ? "Loading…" : selectedLabel || placeholder}
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="w-[34rem] min-w-[20rem] max-w-[calc(100vw-2rem)] p-0"
-      >
-        <div className="border-b border-default p-2">
+      <PopoverContent align={contentAlign} className="w-[22rem] max-w-[calc(100vw-2rem)] p-0">
+        <div className="border-b border-default bg-elevated p-2">
           <div className="relative">
             <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />
             <Input
+              autoFocus
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={searchPlaceholder}
-              className="h-8 pl-8 text-xs"
+              className="h-9 rounded-lg border-default bg-default pl-8 text-sm placeholder:text-muted"
             />
           </div>
         </div>
-        <div className="max-h-80 overflow-y-auto p-1">
-          {groupedItems.length === 0 ? (
-            <p className="p-4 text-xs text-muted">
+        <div className="max-h-[24rem] overflow-y-auto bg-elevated py-2">
+          {loading ? (
+            <div className="space-y-2 px-3 py-1">
+              {[1, 2, 3, 4, 5].map((rowIndex) => (
+                <Skeleton key={rowIndex} className="h-7 rounded-lg" />
+              ))}
+            </div>
+          ) : groupedProjects.length === 0 ? (
+            <p className="px-4 py-6 text-center text-xs text-muted">
               {searchTerm.trim() ? "No matching active tasks." : "No open or in-progress tasks."}
             </p>
           ) : (
-            groupedItems.map((item, index) => {
-              if (item.kind === "client") {
-                return (
-                  <p
-                    key={`client-${item.label}-${index}`}
-                    className="px-2 pt-2 pb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted first:pt-1"
-                  >
-                    {item.label}
-                  </p>
-                );
-              }
+            groupedProjects.map((group) => (
+              <div key={group.clientName} className="py-1 first:pt-0">
+                <div className="mb-1 flex items-center justify-between px-4 text-[11px] font-semibold text-muted">
+                  <span className="uppercase tracking-[0.12em]">{group.clientName}</span>
+                  <span className="font-mono tabular-nums">
+                    {group.projects.reduce((total, entry) => total + entry.tasks.length, 0)} Tasks
+                  </span>
+                </div>
 
-              if (item.kind === "project") {
-                return (
-                  <p
-                    key={`project-${item.label}-${index}`}
-                    className="px-3 py-1 text-[11px] font-semibold text-highlighted"
-                  >
-                    {item.label}
-                  </p>
-                );
-              }
+                {group.projects.map(({ project, tasks: projectTasks }) => {
+                  const expanded = searchIsActive || expandedProjectIds.has(project.id);
+                  return (
+                    <div key={project.id}>
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex w-full items-center gap-2 px-4 py-1.5 text-left text-sm transition-colors hover:bg-default/70",
+                          agencyFocusRingClass,
+                          "motion-reduce:transition-none",
+                        )}
+                        onClick={() => toggleProject(project.id)}
+                        aria-expanded={expanded}
+                      >
+                        <AgencyProjectHueDot projectId={project.id} className="size-1.5" />
+                        <span className="min-w-0 flex-1 truncate font-medium text-highlighted">
+                          {project.name}
+                        </span>
+                        <span className="truncate text-xs text-muted">{project.clientName}</span>
+                        <span className="ml-1 shrink-0 font-mono text-xs tabular-nums text-muted">
+                          {projectTasks.length} {projectTasks.length === 1 ? "Task" : "Tasks"}
+                        </span>
+                        <ChevronDown
+                          className={cn(
+                            "size-3.5 shrink-0 text-muted transition-transform duration-200 motion-reduce:transition-none",
+                            expanded && "rotate-180",
+                          )}
+                          aria-hidden
+                        />
+                      </button>
 
-              const { task } = item;
-              return (
-                <button
-                  key={task.id}
-                  type="button"
-                  className="mx-1 flex w-[calc(100%-0.5rem)] rounded-lg py-2 ps-6 pe-2 text-left transition-colors hover:bg-elevated/70"
-                  onClick={() => selectTask(task.id)}
-                >
-                  <div className="min-w-0">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span
-                        className={[
-                          "size-1.5 shrink-0 rounded-full",
-                          statusDotClass(task.status),
-                        ].join(" ")}
-                      />
-                      <span className="truncate text-sm font-semibold text-highlighted">
-                        {task.title}
-                      </span>
-                    </div>
-                    <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted">
-                      <span>{statusLabel(task.status)}</span>
-                      {task.assigneeName ? (
-                        <span className="truncate">{task.assigneeName}</span>
+                      {expanded ? (
+                        <div className="pb-1">
+                          {projectTasks.map((task) => {
+                            const selected = task.id === value;
+                            return (
+                              <button
+                                key={task.id}
+                                type="button"
+                                className={cn(
+                                  "group mx-2 flex w-[calc(100%-1rem)] items-start gap-2 rounded-lg py-1.5 pr-2 pl-7 text-left transition-colors hover:bg-default/80",
+                                  selected && "bg-primary/10 hover:bg-primary/10",
+                                  agencyFocusRingClass,
+                                  "motion-reduce:transition-none",
+                                )}
+                                onClick={() => selectTask(task.id)}
+                              >
+                                <span
+                                  className={[
+                                    "mt-1.5 size-1.5 shrink-0 rounded-full",
+                                    statusDotClass(task.status),
+                                  ].join(" ")}
+                                />
+                                <span className="min-w-0 flex-1">
+                                  <span
+                                    className={cn(
+                                      "block truncate text-xs font-semibold",
+                                      selected ? "text-primary" : "text-highlighted",
+                                    )}
+                                  >
+                                    {task.title}
+                                  </span>
+                                  <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted">
+                                    <span>{statusLabel(task.status)}</span>
+                                    {task.assigneeName ? (
+                                      <span className="truncate">{task.assigneeName}</span>
+                                    ) : null}
+                                    {formatDueDate(task.dueDate) ? (
+                                      <span>Due {formatDueDate(task.dueDate)}</span>
+                                    ) : null}
+                                  </span>
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       ) : null}
-                      {formatDueDate(task.dueDate) ? (
-                        <span>Due {formatDueDate(task.dueDate)}</span>
-                      ) : null}
                     </div>
-                  </div>
-                </button>
-              );
-            })
+                  );
+                })}
+              </div>
+            ))
           )}
         </div>
       </PopoverContent>

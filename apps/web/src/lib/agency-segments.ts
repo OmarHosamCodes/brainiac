@@ -5,6 +5,7 @@
  * the `g X` chord (Work = `g w`, Clients = `g c`, …).
  */
 export type AgencySegmentId =
+  | "dashboard"
   | "work"
   | "projects"
   | "clients"
@@ -24,6 +25,13 @@ export type AgencySegment = {
 };
 
 export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: "i-lucide-layout-dashboard",
+    shortcutKey: "d",
+    subtitle: "Team activity, time allocation, and project distribution.",
+  },
   {
     id: "work",
     label: "Work",

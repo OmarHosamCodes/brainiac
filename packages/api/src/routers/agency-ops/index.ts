@@ -15,6 +15,7 @@ import {
   deleteTaskAttachment,
   exportAgencyReportsCsv,
   getAgencyActiveTimer,
+  getAgencyDashboardSummary,
   getAgencyReportsSummary,
   getAgencyTimeSummary,
   getClientContact,
@@ -204,6 +205,67 @@ const reportsSummarySchema = z.object({
       userName: z.string().min(1),
       userEmail: z.email(),
       hours: z.number().nonnegative(),
+    }),
+  ),
+});
+
+const reportsDashboardSummarySchema = reportsSummarySchema.extend({
+  totalSeconds: z.number().int().nonnegative(),
+  activeTimerCount: z.number().int().nonnegative(),
+  topClient: z
+    .object({
+      clientId: z.string().min(1),
+      clientName: z.string().min(1),
+      seconds: z.number().int().nonnegative(),
+    })
+    .nullable(),
+  topProject: z
+    .object({
+      projectId: z.string().min(1),
+      projectName: z.string().min(1),
+      clientId: z.string().min(1),
+      clientName: z.string().min(1),
+      seconds: z.number().int().nonnegative(),
+    })
+    .nullable(),
+  dailyBuckets: z.array(
+    z.object({
+      date: z.string().min(1),
+      totalSeconds: z.number().int().nonnegative(),
+      segments: z.array(
+        z.object({
+          projectId: z.string().min(1),
+          projectName: z.string().min(1),
+          clientName: z.string().min(1),
+          seconds: z.number().int().nonnegative(),
+        }),
+      ),
+    }),
+  ),
+  teamMembers: z.array(
+    z.object({
+      userId: z.string().min(1),
+      userName: z.string().min(1),
+      userEmail: z.email(),
+      avatar: z.string().nullable(),
+      isActive: z.boolean(),
+      totalSeconds: z.number().int().nonnegative(),
+      latestEntry: z
+        .object({
+          projectName: z.string().min(1),
+          clientName: z.string().min(1),
+          description: z.string(),
+          startedAt: z.string().datetime(),
+        })
+        .nullable(),
+      projectBreakdown: z.array(
+        z.object({
+          projectId: z.string().min(1),
+          projectName: z.string().min(1),
+          clientName: z.string().min(1),
+          seconds: z.number().int().nonnegative(),
+        }),
+      ),
     }),
   ),
 });
@@ -757,6 +819,13 @@ export const agencyOpsRouter = {
     }),
   },
   reports: {
+    dashboard: protectedProProcedure.input(reportsInputSchema).handler(async ({ context, input }) => {
+      return z
+        .object({
+          summary: reportsDashboardSummarySchema,
+        })
+        .parse(await getAgencyDashboardSummary(context.session.user.id, input));
+    }),
     summary: protectedProProcedure.input(reportsInputSchema).handler(async ({ context, input }) => {
       return z
         .object({

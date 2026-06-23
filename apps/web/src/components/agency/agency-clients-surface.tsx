@@ -1,10 +1,16 @@
-import { Archive, Building2, Plus, Search } from "lucide-react";
+import { AlertTriangle, Archive, Building2, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  agencyEmptyPanelClass,
+  agencyErrorPanelClass,
+  agencyLabelClass,
+} from "@/lib/utils/agency-ui";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
 import {
   useAgencyClientsQuery,
   useAgencyContactQuery,
@@ -40,9 +46,10 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
   const isContactMutationPending = useAgencyOpsStore(selectIsContactMutationPending);
 
   const [filterTerm, setFilterTerm] = useState("");
-  const [selectedClientId, setSelectedClientId] = useState("");
+  const [renameClientId, setRenameClientId] = useState("");
+  const [newProjectClientId, setNewProjectClientId] = useState("");
+  const [contactClientId, setContactClientId] = useState("");
   const [renameDraft, setRenameDraft] = useState("");
-  const [renameOpen, setRenameOpen] = useState(false);
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [newClientName, setNewClientName] = useState("");
   const [newProjectName, setNewProjectName] = useState("");
@@ -54,7 +61,7 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
   const clientsQuery = useAgencyClientsQuery(teamId);
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
-  const contactQuery = useAgencyContactQuery(teamId, selectedClientId);
+  const contactQuery = useAgencyContactQuery(teamId, contactClientId);
 
   const clients = clientsQuery.data?.items ?? [];
   const projects = projectsQuery.data?.items ?? [];
@@ -86,18 +93,7 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
     return clients.filter((client) => client.name.toLowerCase().includes(term));
   }, [clients, filterTerm]);
 
-  useEffect(() => {
-    if (filteredClients.length === 0) {
-      setSelectedClientId("");
-      return;
-    }
-    if (!filteredClients.some((client) => client.id === selectedClientId)) {
-      setSelectedClientId(filteredClients[0]!.id);
-    }
-  }, [filteredClients, selectedClientId]);
-
-  const selectedClient = clients.find((client) => client.id === selectedClientId) ?? null;
-  const selectedClientProjects = projectsByClient.get(selectedClientId) ?? [];
+  const contactClient = clients.find((client) => client.id === contactClientId) ?? null;
 
   useEffect(() => {
     const contact = contactQuery.data;
@@ -115,54 +111,55 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
 
   useEffect(() => {
     setContactDirty(false);
-  }, [selectedClientId]);
+  }, [contactClientId]);
 
   useEffect(() => {
-    if (renameOpen && selectedClient) {
-      setRenameDraft(selectedClient.name);
+    const client = clients.find((entry) => entry.id === renameClientId);
+    if (client) {
+      setRenameDraft(client.name);
     }
-  }, [renameOpen, selectedClient]);
+  }, [clients, renameClientId]);
 
   async function createClient() {
     const name = newClientName.trim();
     if (!name || !teamId) return;
     setNewClientName("");
     setNewClientOpen(false);
-    await agencyOps.createClient(
-      { teamId, name },
-      { onSuccess: (clientId) => setSelectedClientId(clientId) },
-    );
+    await agencyOps.createClient({ teamId, name });
   }
 
-  async function renameClient() {
-    if (!selectedClient || !teamId) return;
+  async function renameClient(clientId: string) {
+    const client = clients.find((entry) => entry.id === clientId);
+    if (!client || !teamId) return;
     const name = renameDraft.trim();
-    if (!name || name === selectedClient.name) {
-      setRenameOpen(false);
+    if (!name || name === client.name) {
+      setRenameClientId("");
       return;
     }
-    setRenameOpen(false);
-    await agencyOps.updateClient({ teamId, clientId: selectedClient.id, name });
+    setRenameClientId("");
+    await agencyOps.updateClient({ teamId, clientId, name });
   }
 
-  async function createProject() {
+  async function createProject(clientId: string) {
+    const client = clients.find((entry) => entry.id === clientId);
     const name = newProjectName.trim();
-    if (!name || !teamId || !selectedClient) return;
+    if (!name || !teamId || !client) return;
     setNewProjectName("");
+    setNewProjectClientId("");
     await agencyOps.createProject({
       teamId,
-      clientId: selectedClient.id,
-      clientName: selectedClient.name,
+      clientId: client.id,
+      clientName: client.name,
       name,
     });
   }
 
   async function saveContact() {
-    if (!teamId || !selectedClientId) return;
+    if (!teamId || !contactClientId) return;
     await agencyOps.upsertContact(
       {
         teamId,
-        clientId: selectedClientId,
+        clientId: contactClientId,
         name: contactName.trim(),
         email: contactEmail.trim(),
         phone: contactPhone.trim(),
@@ -171,337 +168,367 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
     );
   }
 
-  async function archiveClient() {
-    if (!selectedClient || !teamId) return;
+  async function archiveClient(clientId: string) {
+    const client = clients.find((entry) => entry.id === clientId);
+    if (!client || !teamId) return;
     await agencyOps.archiveClient({
       teamId,
-      clientId: selectedClient.id,
-      clientName: selectedClient.name,
+      clientId: client.id,
+      clientName: client.name,
     });
-    setSelectedClientId("");
   }
 
   const isLoading = clientsQuery.isPending || projectsQuery.isPending;
+  const isError = clientsQuery.isError || projectsQuery.isError;
 
   return (
     <div className="agency-clients">
-      {isLoading ? (
-        <div className="grid gap-4 lg:grid-cols-[18rem,1fr]">
-          <div className="space-y-2">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <Skeleton key={i} className="h-12 rounded-2xl" />
-            ))}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative w-64 max-w-full">
+            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
+            <Input
+              value={filterTerm}
+              onChange={(e) => setFilterTerm(e.target.value)}
+              placeholder="Filter clients"
+              className="pl-9"
+            />
           </div>
-          <Skeleton className="h-64 rounded-2xl" />
-        </div>
-      ) : clients.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-default bg-muted/20 p-10 text-center">
-          <Building2 className="mx-auto size-7 text-muted" />
-          <p className="mt-4 text-sm font-bold text-highlighted">No clients yet.</p>
-          <p className="mt-1 text-xs text-muted">
-            Add your first client to start grouping projects and time.
-          </p>
-          <Popover open={newClientOpen} onOpenChange={setNewClientOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="secondary" size="sm" className="mt-4">
-                <Plus />
-                Add client
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="center" className="w-72 space-y-2 p-3">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void createClient();
-                }}
-              >
-                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+
+          <div className="ml-auto">
+            <Popover open={newClientOpen} onOpenChange={setNewClientOpen}>
+              <PopoverTrigger asChild>
+                <Button size="sm" disabled={!teamId}>
+                  <Plus />
                   New client
-                </p>
-                <Input
-                  value={newClientName}
-                  onChange={(e) => setNewClientName(e.target.value)}
-                  placeholder="Client name"
-                  className="mt-2"
-                  autoFocus
-                />
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="mt-2 w-full"
-                  disabled={!newClientName.trim() || isClientMutationPending}
-                >
-                  Create
                 </Button>
-              </form>
-            </PopoverContent>
-          </Popover>
-        </div>
-      ) : (
-        <div className="grid gap-4 lg:grid-cols-[18rem,1fr]">
-          <aside className="space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
-                <Input
-                  value={filterTerm}
-                  onChange={(e) => setFilterTerm(e.target.value)}
-                  placeholder="Filter clients"
-                  className="pl-9"
-                />
-              </div>
-              <Popover open={newClientOpen} onOpenChange={setNewClientOpen}>
-                <PopoverTrigger asChild>
-                  <Button size="sm" aria-label="New client">
-                    <Plus />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-72 space-y-2 p-3">
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void createClient();
-                    }}
-                  >
-                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                      New client
-                    </p>
-                    <Input
-                      value={newClientName}
-                      onChange={(e) => setNewClientName(e.target.value)}
-                      placeholder="Client name"
-                      className="mt-2"
-                      autoFocus
-                    />
-                    <Button
-                      type="submit"
-                      size="sm"
-                      className="mt-2 w-full"
-                      disabled={!newClientName.trim() || isClientMutationPending}
-                    >
-                      Create
-                    </Button>
-                  </form>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <ul className="space-y-1">
-              {filteredClients.map((client) => (
-                <li key={client.id}>
-                  <button
-                    type="button"
-                    className={[
-                      "group flex w-full items-center justify-between gap-2 rounded-xl border border-transparent px-3 py-2.5 text-left transition-colors",
-                      client.id === selectedClientId
-                        ? "border-default bg-elevated"
-                        : "hover:bg-elevated/60",
-                    ].join(" ")}
-                    onClick={() => setSelectedClientId(client.id)}
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-highlighted">{client.name}</p>
-                      <p className="text-[11px] text-muted">
-                        {projectsByClient.get(client.id)?.length ?? 0} projects
-                      </p>
-                    </div>
-                    <span className="font-mono text-[11px] tabular-nums text-muted">
-                      {formatDuration(weekHoursByClient.get(client.id) ?? 0, "short")}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-
-            {filteredClients.length === 0 ? (
-              <p className="px-3 py-4 text-center text-xs text-muted">No matches.</p>
-            ) : null}
-          </aside>
-
-          {selectedClient ? (
-            <section className="space-y-4">
-              <div className="flex flex-wrap items-baseline justify-between gap-3 rounded-2xl border border-default bg-default p-5">
-                <div className="min-w-0">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                    Client
-                  </p>
-                  <h2 className="mt-1 truncate text-lg font-bold text-highlighted">
-                    {selectedClient.name}
-                  </h2>
-                  <p className="mt-1 font-mono text-[11px] tabular-nums text-muted">
-                    {formatDuration(weekHoursByClient.get(selectedClient.id) ?? 0, "short")} this
-                    week · {selectedClientProjects.length} projects
-                  </p>
-                </div>
-                <Popover open={renameOpen} onOpenChange={setRenameOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" size="sm">
-                      Rename
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-72 space-y-2 p-3">
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        void renameClient();
-                      }}
-                    >
-                      <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                        Rename client
-                      </p>
-                      <Input
-                        value={renameDraft}
-                        onChange={(e) => setRenameDraft(e.target.value)}
-                        className="mt-2"
-                        autoFocus
-                      />
-                      <Button
-                        type="submit"
-                        size="sm"
-                        className="mt-2 w-full"
-                        disabled={!renameDraft.trim() || isClientMutationPending}
-                      >
-                        Save
-                      </Button>
-                    </form>
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="rounded-2xl border border-default bg-default">
-                <div className="border-b border-default px-4 py-3">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                    Projects
-                  </p>
-                </div>
-                {selectedClientProjects.length > 0 ? (
-                  <ul>
-                    {selectedClientProjects.map((project) => (
-                      <li
-                        key={project.id}
-                        className="flex items-center gap-3 border-b border-default px-4 py-3 last:border-b-0"
-                      >
-                        <span
-                          className="agency-clients__dot inline-block size-2 shrink-0 rounded-full"
-                          aria-hidden="true"
-                          style={projectHueStyle(project.id)}
-                        />
-                        <span className="flex-1 truncate text-xs font-bold text-highlighted">
-                          {project.name}
-                        </span>
-                        <span className="text-[11px] text-dimmed">Active</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <div className="px-4 py-6 text-center">
-                    <p className="text-xs text-muted">No projects yet for this client.</p>
-                  </div>
-                )}
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-72 space-y-2 p-3">
                 <form
-                  className="flex items-center gap-2 border-t border-default px-4 py-3"
                   onSubmit={(e) => {
                     e.preventDefault();
-                    void createProject();
+                    void createClient();
                   }}
                 >
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                    New client
+                  </p>
                   <Input
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    placeholder="Add a project"
-                    className="flex-1"
+                    value={newClientName}
+                    onChange={(e) => setNewClientName(e.target.value)}
+                    placeholder="Client name"
+                    className="mt-2"
+                    autoFocus
                   />
                   <Button
                     type="submit"
                     size="sm"
-                    disabled={!newProjectName.trim() || isProjectMutationPending}
+                    className="mt-2 w-full"
+                    disabled={!newClientName.trim() || isClientMutationPending}
                   >
-                    Add
+                    Create
                   </Button>
                 </form>
-              </div>
-
-              <div className="space-y-0 divide-y divide-default overflow-hidden rounded-2xl border border-default bg-default">
-                <section className="px-5 py-4">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                    Primary contact
-                  </p>
-                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                    <div>
-                      <label className="text-[11px] font-bold text-muted">Name</label>
-                      <Input
-                        value={contactName}
-                        onChange={(e) => {
-                          setContactName(e.target.value);
-                          setContactDirty(true);
-                        }}
-                        placeholder="Contact name"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-muted">Email</label>
-                      <Input
-                        value={contactEmail}
-                        onChange={(e) => {
-                          setContactEmail(e.target.value);
-                          setContactDirty(true);
-                        }}
-                        type="email"
-                        placeholder="contact@example.com"
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-muted">Phone</label>
-                      <Input
-                        value={contactPhone}
-                        onChange={(e) => {
-                          setContactPhone(e.target.value);
-                          setContactDirty(true);
-                        }}
-                        type="tel"
-                        placeholder="+1 555 000 0000"
-                        className="mt-1"
-                      />
-                    </div>
-                  </div>
-                  <div className="mt-3 flex items-center gap-3">
-                    <Button
-                      size="sm"
-                      disabled={!contactDirty || isContactMutationPending}
-                      onClick={() => void saveContact()}
-                    >
-                      Save contact
-                    </Button>
-                  </div>
-                </section>
-
-                <section className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-                  <div className="min-w-0">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                      Archive
-                    </p>
-                    <p className="mt-1 text-xs text-muted">
-                      Archive {selectedClient.name} to remove them from active filters and billing
-                      without losing their history.
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={isClientMutationPending}
-                    onClick={() => void archiveClient()}
-                  >
-                    <Archive />
-                    Archive client
-                  </Button>
-                </section>
-              </div>
-            </section>
-          ) : null}
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
-      )}
+
+        {isLoading ? (
+          <div className="overflow-hidden rounded-2xl border border-default bg-default">
+            {[1, 2, 3, 4, 5, 6].map((rowIndex) => (
+              <div key={rowIndex} className="border-b border-default px-4 py-4 last:border-b-0">
+                <Skeleton className="h-4 w-full" />
+              </div>
+            ))}
+          </div>
+        ) : isError ? (
+          <div className={agencyErrorPanelClass} role="alert">
+            <AlertTriangle className="mx-auto size-5 text-error" />
+            <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load clients.</p>
+            <p className="mt-1 text-xs text-muted">
+              {getErrorMessage(clientsQuery.error ?? projectsQuery.error, "Try refreshing.")}
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-3"
+              onClick={() => {
+                void clientsQuery.refetch();
+                void projectsQuery.refetch();
+              }}
+            >
+              Retry
+            </Button>
+          </div>
+        ) : clients.length === 0 ? (
+          <div className={agencyEmptyPanelClass}>
+            <Building2 className="mx-auto size-6 text-muted" />
+            <p className="mt-3 text-sm font-bold text-highlighted">No clients yet.</p>
+            <p className="mt-1 text-xs text-muted">
+              Add your first client to start grouping projects and time.
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-4"
+              onClick={() => setNewClientOpen(true)}
+            >
+              <Plus />
+              New client
+            </Button>
+          </div>
+        ) : filteredClients.length === 0 ? (
+          <div className="rounded-2xl border border-default bg-default p-8 text-center">
+            <p className="text-sm font-bold text-highlighted">No clients match.</p>
+            <p className="mt-1 text-xs text-muted">Try a different search.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-2xl border border-default bg-default">
+            <table className="w-full min-w-[54rem] text-xs">
+              <thead className="border-b border-default bg-muted">
+                <tr className={agencyLabelClass}>
+                  <th scope="col" className="px-4 py-2.5 font-bold">
+                    Client
+                  </th>
+                  <th scope="col" className="px-3 py-2.5 font-bold">
+                    Projects
+                  </th>
+                  <th scope="col" className="px-3 py-2.5 text-right font-bold">
+                    Hours · this week
+                  </th>
+                  <th scope="col" className="px-3 py-2.5 font-bold">
+                    Contact
+                  </th>
+                  <th scope="col" className="px-4 py-2.5 text-right font-bold">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredClients.map((client) => {
+                  const clientProjects = projectsByClient.get(client.id) ?? [];
+                  const visibleProjects = clientProjects.slice(0, 3);
+
+                  return (
+                    <tr
+                      key={client.id}
+                      className="border-b border-default transition-colors last:border-b-0 hover:bg-elevated/40"
+                    >
+                      <td className="px-4 py-3">
+                        <span className="truncate font-bold text-highlighted">{client.name}</span>
+                      </td>
+                      <td className="px-3 py-3">
+                        {clientProjects.length > 0 ? (
+                          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                            {visibleProjects.map((project) => (
+                              <span
+                                key={project.id}
+                                className="inline-flex max-w-36 items-center gap-1.5 rounded-full bg-elevated px-2 py-1 text-[11px] font-bold text-muted"
+                              >
+                                <span
+                                  className="inline-block size-1.5 shrink-0 rounded-full"
+                                  aria-hidden="true"
+                                  style={projectHueStyle(project.id)}
+                                />
+                                <span className="truncate">{project.name}</span>
+                              </span>
+                            ))}
+                            {clientProjects.length > visibleProjects.length ? (
+                              <span className="text-[11px] text-dimmed">
+                                +{clientProjects.length - visibleProjects.length} more
+                              </span>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <span className="text-dimmed">No projects</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <span
+                          className={[
+                            "font-mono font-bold tabular-nums",
+                            (weekHoursByClient.get(client.id) ?? 0) > 0
+                              ? "text-highlighted"
+                              : "text-dimmed",
+                          ].join(" ")}
+                        >
+                          {formatDuration(weekHoursByClient.get(client.id) ?? 0, "short")}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-muted">
+                        <Popover
+                          open={contactClientId === client.id}
+                          onOpenChange={(open) => setContactClientId(open ? client.id : "")}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              Contact
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent align="start" className="w-80 space-y-3 p-3">
+                            <form
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                void saveContact();
+                              }}
+                            >
+                              <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                                {contactClient?.name ?? client.name}
+                              </p>
+                              <div className="mt-3 space-y-2">
+                                <div>
+                                  <label className="text-[11px] font-bold text-muted">Name</label>
+                                  <Input
+                                    value={contactName}
+                                    onChange={(e) => {
+                                      setContactName(e.target.value);
+                                      setContactDirty(true);
+                                    }}
+                                    placeholder="Contact name"
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[11px] font-bold text-muted">Email</label>
+                                  <Input
+                                    value={contactEmail}
+                                    onChange={(e) => {
+                                      setContactEmail(e.target.value);
+                                      setContactDirty(true);
+                                    }}
+                                    type="email"
+                                    placeholder="contact@example.com"
+                                    className="mt-1"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[11px] font-bold text-muted">Phone</label>
+                                  <Input
+                                    value={contactPhone}
+                                    onChange={(e) => {
+                                      setContactPhone(e.target.value);
+                                      setContactDirty(true);
+                                    }}
+                                    type="tel"
+                                    placeholder="+1 555 000 0000"
+                                    className="mt-1"
+                                  />
+                                </div>
+                              </div>
+                              <Button
+                                type="submit"
+                                size="sm"
+                                className="mt-3 w-full"
+                                disabled={
+                                  !contactDirty ||
+                                  contactQuery.isFetching ||
+                                  isContactMutationPending
+                                }
+                              >
+                                Save contact
+                              </Button>
+                            </form>
+                          </PopoverContent>
+                        </Popover>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1.5">
+                          <Popover
+                            open={newProjectClientId === client.id}
+                            onOpenChange={(open) => setNewProjectClientId(open ? client.id : "")}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Plus />
+                                Project
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent align="end" className="w-72 space-y-2 p-3">
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  void createProject(client.id);
+                                }}
+                              >
+                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                                  New project for {client.name}
+                                </p>
+                                <Input
+                                  value={newProjectName}
+                                  onChange={(e) => setNewProjectName(e.target.value)}
+                                  placeholder="Project name"
+                                  className="mt-2"
+                                  autoFocus
+                                />
+                                <Button
+                                  type="submit"
+                                  size="sm"
+                                  className="mt-2 w-full"
+                                  disabled={!newProjectName.trim() || isProjectMutationPending}
+                                >
+                                  Create project
+                                </Button>
+                              </form>
+                            </PopoverContent>
+                          </Popover>
+
+                          <Popover
+                            open={renameClientId === client.id}
+                            onOpenChange={(open) => setRenameClientId(open ? client.id : "")}
+                          >
+                            <PopoverTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                Rename
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent align="end" className="w-72 space-y-2 p-3">
+                              <form
+                                onSubmit={(e) => {
+                                  e.preventDefault();
+                                  void renameClient(client.id);
+                                }}
+                              >
+                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
+                                  Rename client
+                                </p>
+                                <Input
+                                  value={renameDraft}
+                                  onChange={(e) => setRenameDraft(e.target.value)}
+                                  className="mt-2"
+                                  autoFocus
+                                />
+                                <Button
+                                  type="submit"
+                                  size="sm"
+                                  className="mt-2 w-full"
+                                  disabled={!renameDraft.trim() || isClientMutationPending}
+                                >
+                                  Save
+                                </Button>
+                              </form>
+                            </PopoverContent>
+                          </Popover>
+
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={isClientMutationPending}
+                            onClick={() => void archiveClient(client.id)}
+                          >
+                            <Archive />
+                            Archive
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
