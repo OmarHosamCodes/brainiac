@@ -1,4 +1,4 @@
-import { ListChecks, MoreVertical, Trash2 } from "lucide-react";
+import { MoreVertical, Trash2 } from "lucide-react";
 import { memo, useEffect, useMemo, useState } from "react";
 
 import { AgencyTaskChooser } from "@/components/agency/agency-task-chooser";
@@ -74,7 +74,6 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
   const isTimerMutationPending = useAgencyTimeTrackingStore(selectIsTimerMutationPending);
 
   const [taskChooserOpen, setTaskChooserOpen] = useState(false);
-  const [taskAttentionKey, setTaskAttentionKey] = useState(0);
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const tasksQuery = useAgencyProjectTasksQuery(teamId, { statuses: OPEN_TASK_STATUSES });
@@ -128,12 +127,10 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
 
   useEffect(() => {
     setTaskChooserOpen(false);
-    setTaskAttentionKey(0);
   }, [teamId]);
 
   function revealTaskChooser() {
     setTaskChooserOpen(true);
-    setTaskAttentionKey((current) => current + 1);
   }
 
   async function startTimer() {
@@ -194,50 +191,26 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
           aria-hidden
         />
 
-        <Popover
-          open={taskChooserOpen}
-          onOpenChange={(open) => {
-            setTaskChooserOpen(open);
-            if (open) setTaskAttentionKey((current) => current + 1);
-          }}
-        >
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-9 max-w-44 shrink-0 gap-1.5 rounded-none px-2 font-normal text-secondary hover:bg-transparent hover:text-secondary",
-                agencyFocusRingClass,
-                !activeTimerHasTask && !selectedTask && taskChooserOpen && "text-warning",
-              )}
-              aria-label="Choose task"
-              disabled={!teamId || projectsQuery.isPending || tasksQuery.isPending}
-            >
-              <ListChecks className="size-4 shrink-0" />
-              <span className="max-w-32 truncate text-xs">{taskChooserLabel}</span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-72 p-2">
-            <div
-              key={taskAttentionKey}
-              className={cn(
-                "agency-task-choice-wrap rounded-md",
-                taskChooserOpen && "agency-task-choice-wrap--attention",
-              )}
-            >
-              <AgencyTaskChooser
-                value={selectedTaskId}
-                onValueChange={(value) => setTrackerTaskId(teamId, value || "")}
-                projects={projects}
-                tasks={tasksForChooser}
-                placeholder="Choose task"
-                className="w-full"
-                loading={projectsQuery.isPending || tasksQuery.isPending}
-                disabled={!teamId || projectsQuery.isPending || tasksQuery.isPending}
-              />
-            </div>
-          </PopoverContent>
-        </Popover>
+        <div className="shrink-0">
+          <AgencyTaskChooser
+            value={selectedTaskId}
+            onValueChange={(value) => setTrackerTaskId(teamId, value || "")}
+            projects={projects}
+            tasks={tasksForChooser}
+            placeholder={taskChooserLabel}
+            className={cn(
+              "h-9 w-auto max-w-44 shrink-0 border-0 bg-transparent px-2 font-normal text-secondary shadow-none hover:bg-transparent hover:text-secondary",
+              !activeTimerHasTask && !selectedTask && taskChooserOpen && "text-warning",
+            )}
+            loading={projectsQuery.isPending || tasksQuery.isPending}
+            disabled={!teamId || projectsQuery.isPending || tasksQuery.isPending}
+            open={taskChooserOpen}
+            contentAlign="end"
+            onOpenChange={(open) => {
+              setTaskChooserOpen(open);
+            }}
+          />
+        </div>
 
         <span
           className="hidden h-6 w-px shrink-0 border-l border-dashed border-default md:block"

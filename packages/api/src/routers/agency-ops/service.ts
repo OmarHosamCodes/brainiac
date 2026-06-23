@@ -176,6 +176,49 @@ type AgencyReportSummary = {
   }>;
 };
 
+type AgencyDashboardSummary = AgencyReportSummary & {
+  totalSeconds: number;
+  activeTimerCount: number;
+  topClient: { clientId: string; clientName: string; seconds: number } | null;
+  topProject: {
+    projectId: string;
+    projectName: string;
+    clientId: string;
+    clientName: string;
+    seconds: number;
+  } | null;
+  dailyBuckets: Array<{
+    date: string;
+    totalSeconds: number;
+    segments: Array<{
+      projectId: string;
+      projectName: string;
+      clientName: string;
+      seconds: number;
+    }>;
+  }>;
+  teamMembers: Array<{
+    userId: string;
+    userName: string;
+    userEmail: string;
+    avatar: string | null;
+    isActive: boolean;
+    totalSeconds: number;
+    latestEntry: {
+      projectName: string;
+      clientName: string;
+      description: string;
+      startedAt: string;
+    } | null;
+    projectBreakdown: Array<{
+      projectId: string;
+      projectName: string;
+      clientName: string;
+      seconds: number;
+    }>;
+  }>;
+};
+
 function hasRoleAtLeast(role: WorkspaceTeamRole, required: WorkspaceTeamRole) {
   return TEAM_ROLE_WEIGHT[role] >= TEAM_ROLE_WEIGHT[required];
 }
@@ -3134,6 +3177,204 @@ export async function getAgencyReportsSummary(
   return {
     summary,
   };
+}
+
+export async function getAgencyDashboardSummary(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    from: string;
+    to: string;
+    clientId?: string;
+    projectId?: string;
+    memberUserId?: string;
+  },
+) {
+  const { rows } = await getReportRows(actorUserId, input);
+
+  const members = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+    })
+    .from(workspaceTeamMember)
+    .innerJoin(user, eq(user.id, workspaceTeamMember.userId))
+    .where(eq(workspaceTeamMember.teamId, input.teamId))
+    .orderBy(asc(user.name));
+
+  const activeTimers = await db
+    .select({
+      userId: agencyOpsActiveTimer.userId,
+      projectName: agencyOpsProject.name,
+      clientName: agencyOpsClient.name,
+      description: agencyOpsActiveTimer.description,
+      startedAt: agencyOpsActiveTimer.startedAt,
+    })
+    .from(agencyOpsActiveTimer)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .where(eq(agencyOpsActiveTimer.teamId, input.teamId));
+
+  const activeTimerByUser = new Map(activeTimers.map((timer) => [timer.userId, timer]));
+  const clientSeconds = new Map<string, { clientId: string; clientName: string; seconds: number }>();
+  const projectSeconds = new Map<
+    string,
+    { projectId: string; projectName: string; clientId: string; clientName: string; seconds: number }
+  >();
+  const memberSeconds = new Map<string, number>();
+  const memberProjectSeconds = new Map<
+    string,
+    Map<string, { projectId: string; projectName: string; clientName: string; seconds: number }>
+  >();
+  const latestEntryByMember = new Map<
+    string,
+    { projectName: string; clientName: string; description: string; startedAt: string }
+  >();
+  const dailyBuckets = new Map<
+    string,
+    Map<string, { projectId: string; projectName: string; clientName: string; seconds: number }>
+  >();
+
+  let totalSeconds = 0;
+
+  for (const row of rows) {
+    totalSeconds += row.durationSeconds;
+
+    const clientEntry = clientSeconds.get(row.clientId) ?? {
+      clientId: row.clientId,
+      clientName: row.clientName,
+      seconds: 0,
+    };
+    clientEntry.seconds += row.durationSeconds;
+    clientSeconds.set(row.clientId, clientEntry);
+
+    const projectEntry = projectSeconds.get(row.projectId) ?? {
+      projectId: row.projectId,
+      projectName: row.projectName,
+      clientId: row.clientId,
+      clientName: row.clientName,
+      seconds: 0,
+    };
+    projectEntry.seconds += row.durationSeconds;
+    projectSeconds.set(row.projectId, projectEntry);
+
+    memberSeconds.set(row.memberEmail, (memberSeconds.get(row.memberEmail) ?? 0) + row.durationSeconds);
+
+    const memberProjects = memberProjectSeconds.get(row.memberEmail) ?? new Map();
+    const memberProjectEntry = memberProjects.get(row.projectId) ?? {
+      projectId: row.projectId,
+      projectName: row.projectName,
+      clientName: row.clientName,
+      seconds: 0,
+    };
+    memberProjectEntry.seconds += row.durationSeconds;
+    memberProjects.set(row.projectId, memberProjectEntry);
+    memberProjectSeconds.set(row.memberEmail, memberProjects);
+
+    if (!latestEntryByMember.has(row.memberEmail)) {
+      latestEntryByMember.set(row.memberEmail, {
+        projectName: row.projectName,
+        clientName: row.clientName,
+        description: row.description,
+        startedAt: row.startedAt.toISOString(),
+      });
+    }
+
+    const dateKey = formatUtcDateKey(row.startedAt);
+    const dayProjects = dailyBuckets.get(dateKey) ?? new Map();
+    const dayProjectEntry = dayProjects.get(row.projectId) ?? {
+      projectId: row.projectId,
+      projectName: row.projectName,
+      clientName: row.clientName,
+      seconds: 0,
+    };
+    dayProjectEntry.seconds += row.durationSeconds;
+    dayProjects.set(row.projectId, dayProjectEntry);
+    dailyBuckets.set(dateKey, dayProjects);
+  }
+
+  const topClient = [...clientSeconds.values()].sort((left, right) => right.seconds - left.seconds)[0] ?? null;
+  const topProject = [...projectSeconds.values()].sort((left, right) => right.seconds - left.seconds)[0] ?? null;
+  const fromDate = parseIsoDateTime(input.from, "from");
+  const toDate = parseIsoDateTime(input.to, "to");
+  const filledDailyBuckets = [];
+  for (
+    let cursor = new Date(Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate()));
+    cursor <= toDate && filledDailyBuckets.length < 370;
+    cursor = addDaysUtc(cursor, 1)
+  ) {
+    const date = formatUtcDateKey(cursor);
+    const projects = dailyBuckets.get(date) ?? new Map();
+    filledDailyBuckets.push({
+      date,
+      totalSeconds: [...projects.values()].reduce((sumSeconds, project) => sumSeconds + project.seconds, 0),
+      segments: [...projects.values()].sort((left, right) => right.seconds - left.seconds),
+    });
+  }
+
+  const summary: AgencyDashboardSummary = {
+    totalHours: Number((totalSeconds / 3_600).toFixed(2)),
+    totalSeconds,
+    totalEntries: rows.length,
+    activeTimerCount: activeTimers.length,
+    topClient,
+    topProject,
+    timeDistributionByClient: [...clientSeconds.values()]
+      .map((entry) => ({
+        clientId: entry.clientId,
+        clientName: entry.clientName,
+        hours: Number((entry.seconds / 3_600).toFixed(2)),
+      }))
+      .sort((left, right) => right.hours - left.hours),
+    timeDistributionByProject: [...projectSeconds.values()]
+      .map((entry) => ({
+        projectId: entry.projectId,
+        projectName: entry.projectName,
+        clientId: entry.clientId,
+        clientName: entry.clientName,
+        hours: Number((entry.seconds / 3_600).toFixed(2)),
+      }))
+      .sort((left, right) => right.hours - left.hours),
+    teamActivity: [...memberSeconds.entries()]
+      .map(([userEmail, seconds]) => ({
+        userId: userEmail,
+        userName: members.find((member) => member.email === userEmail)?.name ?? "Unknown",
+        userEmail,
+        hours: Number((seconds / 3_600).toFixed(2)),
+      }))
+      .sort((left, right) => right.hours - left.hours),
+    dailyBuckets: filledDailyBuckets,
+    teamMembers: members
+      .map((member) => {
+        const activeTimer = activeTimerByUser.get(member.id);
+        return {
+          userId: member.id,
+          userName: member.name ?? "Unknown",
+          userEmail: member.email,
+          avatar: formatAvatarUrl(member.image),
+          isActive: activeTimerByUser.has(member.id),
+          totalSeconds: memberSeconds.get(member.email) ?? 0,
+          latestEntry:
+            latestEntryByMember.get(member.email) ??
+            (activeTimer
+              ? {
+                  projectName: activeTimer.projectName,
+                  clientName: activeTimer.clientName,
+                  description: activeTimer.description,
+                  startedAt: activeTimer.startedAt.toISOString(),
+                }
+              : null),
+          projectBreakdown: [...(memberProjectSeconds.get(member.email)?.values() ?? [])].sort(
+            (left, right) => right.seconds - left.seconds,
+          ),
+        };
+      })
+      .sort((left, right) => Number(right.isActive) - Number(left.isActive) || right.totalSeconds - left.totalSeconds),
+  };
+
+  return { summary };
 }
 
 export async function getAgencyTimeSummary(
