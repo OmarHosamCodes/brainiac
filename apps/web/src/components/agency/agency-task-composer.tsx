@@ -7,6 +7,7 @@ import { AgencyVoiceRecorder } from "@/components/agency/agency-voice-recorder";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { getRpcBaseUrl } from "@/lib/env";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { useAgencyOpsStore } from "@/stores/agency-ops";
@@ -141,10 +142,6 @@ export const AgencyTaskComposer = forwardRef<AgencyTaskComposerHandle, AgencyTas
       }),
     );
 
-    const createAttachmentMutation = useMutation(
-      orpc.agencyOps.taskThreads.attachments.create.mutationOptions(),
-    );
-
     const isBusy = isSending || askAgentMutation.isPending;
 
     async function uploadFiles(files: File[], options: { durationSeconds?: number | null } = {}) {
@@ -156,25 +153,26 @@ export const AgencyTaskComposer = forwardRef<AgencyTaskComposerHandle, AgencyTas
             metadata.mediaKind = "audio";
           }
 
-          const result = await createAttachmentMutation.mutateAsync({
-            teamId,
-            taskId,
-            fileName: file.name,
-            mimeType: file.type || "application/octet-stream",
-            sizeBytes: file.size,
-          });
+          const formData = new FormData();
+          formData.set("teamId", teamId);
+          formData.set("taskId", taskId);
+          formData.set("file", file);
 
-          const uploadResponse = await fetch(result.uploadUrl, {
-            method: "PUT",
-            body: file,
-            headers: {
-              "Content-Type": file.type || "application/octet-stream",
-            },
+          const uploadResponse = await fetch(`${getRpcBaseUrl()}/uploads/task-attachments`, {
+            method: "POST",
+            body: formData,
+            credentials: "include",
           });
 
           if (!uploadResponse.ok) {
             throw new Error("Upload failed");
           }
+
+          const result = (await uploadResponse.json()) as {
+            storageKey: string;
+            publicUrl: string;
+            uploadToken: string;
+          };
 
           setPendingAttachments((current) => [
             ...current,

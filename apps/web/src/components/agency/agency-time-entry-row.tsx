@@ -1,7 +1,9 @@
 import { ChevronRight, MoreVertical, Play, Trash2 } from "lucide-react";
+import type { KeyboardEvent } from "react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot";
+import { AgencyTaskChooser } from "@/components/agency/agency-task-chooser";
 import { AgencyTimeEntryActions } from "@/components/agency/agency-time-entry-actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +17,8 @@ import { formatDuration } from "@/lib/utils/format-duration";
 import type { CollapsedEntryGroup } from "@/lib/utils/group-time-entries";
 import { projectHueFor } from "@/lib/utils/project-palette";
 import {
+  applyDurationToDraft,
+  applyEndTimeToDraft,
   draftToIsoRange,
   entryToDraft,
   type TimeEntryDraft,
@@ -97,40 +101,30 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
 
-  const [editingDescription, setEditingDescription] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState(() => displayTitle(group));
 
   useEffect(() => {
-    if (!editingDescription) {
-      setDescriptionDraft(displayTitle(group));
-    }
-  }, [group, editingDescription]);
+    setDescriptionDraft(displayTitle(group));
+  }, [group]);
 
   useEffect(() => {
     setEditDraft(entryToDraft(primaryEntry));
     setEditError(null);
   }, [primaryEntry.id]);
 
-  useEffect(() => {
-    if (editingDescription) {
-      descriptionInputRef.current?.focus();
-      descriptionInputRef.current?.select();
-    }
-  }, [editingDescription]);
-
   const resetEditDraft = useCallback(() => {
     setEditDraft(entryToDraft(primaryEntry));
     setEditError(null);
   }, [primaryEntry]);
 
-  async function handleSaveFullEdit(): Promise<boolean> {
-    const validationError = validateTimeEntryDraft(editDraft);
+  async function saveDraft(nextDraft: TimeEntryDraft): Promise<boolean> {
+    const validationError = validateTimeEntryDraft(nextDraft);
     if (validationError) {
       setEditError(validationError);
       return false;
     }
 
-    const range = draftToIsoRange(editDraft);
+    const range = draftToIsoRange(nextDraft);
     if ("error" in range) {
       setEditError(range.error);
       return false;
@@ -139,7 +133,7 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
     setEditSaving(true);
     setEditError(null);
     try {
-      await onSaveEdit(primaryEntry.id, editDraft);
+      await onSaveEdit(primaryEntry.id, nextDraft);
       return true;
     } finally {
       setEditSaving(false);
@@ -149,24 +143,38 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
   async function saveDescriptionEdit() {
     const trimmed = descriptionDraft.trim();
     if (trimmed === displayTitle(group)) {
-      setEditingDescription(false);
       return;
     }
 
     const draft = entryToDraft(primaryEntry);
     draft.description = trimmed;
-    setEditSaving(true);
-    try {
-      await onSaveEdit(primaryEntry.id, draft);
-      setEditingDescription(false);
-    } finally {
-      setEditSaving(false);
-    }
+    await saveDraft(draft);
   }
 
   function cancelDescriptionEdit() {
     setDescriptionDraft(displayTitle(group));
-    setEditingDescription(false);
+  }
+
+  function updateInlineDraft(nextDraft: TimeEntryDraft) {
+    setEditDraft(nextDraft);
+    setEditError(null);
+  }
+
+  async function saveInlineDraft(nextDraft = editDraft) {
+    if (isMulti) return;
+    await saveDraft(nextDraft);
+  }
+
+  function saveOnEnter(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void saveInlineDraft();
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      resetEditDraft();
+      cancelDescriptionEdit();
+    }
   }
 
   const rowDeleting = group.entries.some((entry) => deletingEntryIds.includes(entry.id));
@@ -208,7 +216,7 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
             <span className="size-3.5 shrink-0" aria-hidden />
           )}
 
-          {editingDescription && !isMulti ? (
+          {!isMulti ? (
             <Input
               ref={descriptionInputRef}
               value={descriptionDraft}
@@ -229,42 +237,95 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
               aria-label="Edit description"
             />
           ) : (
-            <button
-              type="button"
-              className={cn(
-                "min-w-0 truncate text-left text-sm font-medium text-highlighted",
-                !isMulti && agencyFocusRingClass,
-              )}
-              disabled={isMulti || editSaving}
-              onClick={() => {
-                if (!isMulti) setEditingDescription(true);
-              }}
-            >
+            <span className="min-w-0 truncate text-left text-sm font-medium text-highlighted">
               {displayTitle(group)}
-            </button>
+            </span>
           )}
         </div>
 
-        <span className="inline-flex min-w-0 items-center gap-1 truncate border-l border-dashed border-default pl-4 pr-4 text-xs">
-          <AgencyProjectHueDot projectId={group.projectId} />
-          <span className="truncate font-medium" style={{ color: projectColor }}>
-            {group.projectName}
-          </span>
-          <span className="truncate text-muted">- {group.clientName}</span>
-        </span>
-
-        <span className="border-l border-dashed border-default pl-4 pr-4 text-xs text-muted">
-          {(!isMulti || expanded) && timeRange ? timeRange : "-"}
-        </span>
-
-        <span
-          className={cn(
-            "border-l border-dashed border-default pl-4 pr-4 text-base font-semibold",
-            agencyMetricClass,
+        <div className="min-w-0 border-l border-dashed border-default pl-4 pr-4">
+          {!isMulti ? (
+            <AgencyTaskChooser
+              value={editDraft.taskId}
+              onValueChange={(taskId) => {
+                const nextDraft = { ...editDraft, taskId };
+                updateInlineDraft(nextDraft);
+                void saveInlineDraft(nextDraft);
+              }}
+              projects={projects}
+              tasks={tasks}
+              placeholder="Task"
+              className="h-8 w-full border-0 bg-transparent px-0 text-xs shadow-none hover:bg-transparent"
+              disabled={editSaving || rowUpdating}
+            />
+          ) : (
+            <span className="inline-flex min-w-0 items-center gap-1 truncate text-xs">
+              <AgencyProjectHueDot projectId={group.projectId} />
+              <span className="truncate font-medium" style={{ color: projectColor }}>
+                {group.projectName}
+              </span>
+              <span className="truncate text-muted">- {group.clientName}</span>
+            </span>
           )}
-        >
-          {durationLabel}
-        </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-1 border-l border-dashed border-default pl-4 pr-4 text-xs text-muted">
+          {!isMulti ? (
+            <>
+              <Input
+                type="time"
+                value={editDraft.startTime}
+                onChange={(e) =>
+                  updateInlineDraft(
+                    applyDurationToDraft(
+                      { ...editDraft, startTime: e.target.value },
+                      editDraft.durationInput,
+                    ),
+                  )
+                }
+                onBlur={() => void saveInlineDraft()}
+                onKeyDown={saveOnEnter}
+                disabled={editSaving || rowUpdating}
+                className="h-7 border-0 bg-transparent px-0 font-mono text-[11px] shadow-none focus-visible:ring-0"
+                aria-label="Start time"
+              />
+              <Input
+                type="time"
+                value={editDraft.endTime}
+                onChange={(e) => updateInlineDraft(applyEndTimeToDraft(editDraft, e.target.value))}
+                onBlur={() => void saveInlineDraft()}
+                onKeyDown={saveOnEnter}
+                disabled={editSaving || rowUpdating}
+                className="h-7 border-0 bg-transparent px-0 font-mono text-[11px] shadow-none focus-visible:ring-0"
+                aria-label="End time"
+              />
+            </>
+          ) : (!isMulti || expanded) && timeRange ? (
+            <span className="col-span-2">{timeRange}</span>
+          ) : (
+            <span className="col-span-2">-</span>
+          )}
+        </div>
+
+        <div className="border-l border-dashed border-default pl-4 pr-4">
+          {!isMulti ? (
+            <Input
+              value={editDraft.durationInput}
+              onChange={(e) => updateInlineDraft(applyDurationToDraft(editDraft, e.target.value))}
+              onBlur={() => void saveInlineDraft()}
+              onKeyDown={saveOnEnter}
+              disabled={editSaving || rowUpdating}
+              className={cn(
+                "h-7 border-0 bg-transparent px-0 text-base font-semibold shadow-none focus-visible:ring-0",
+                agencyMetricClass,
+              )}
+              aria-label="Duration"
+            />
+          ) : (
+            <span className={cn("text-base font-semibold", agencyMetricClass)}>{durationLabel}</span>
+          )}
+          {editError ? <p className="text-[10px] text-error">{editError}</p> : null}
+        </div>
 
         <div className="flex min-w-0 shrink-0 items-center justify-end gap-0.5 border-l border-dashed border-default pl-3">
           {isMulti && !expanded ? (
@@ -321,17 +382,8 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
               }}
               canRestart={Boolean(teamId && group.taskId && !isTimerMutationPending)}
               deleting={rowDeleting || rowUpdating || editSaving}
-              editDraft={editDraft}
-              onEditDraftChange={setEditDraft}
-              projects={projects}
-              tasks={tasks}
-              editError={editError}
-              editSaving={editSaving || rowUpdating}
-              onSaveEdit={() => handleSaveFullEdit()}
-              onCancelEdit={resetEditDraft}
               onRestart={() => onRestart(group)}
               onDelete={() => onDeleteGroup([primaryEntry.id])}
-              onEditDescription={() => setEditingDescription(true)}
             />
           )}
         </div>

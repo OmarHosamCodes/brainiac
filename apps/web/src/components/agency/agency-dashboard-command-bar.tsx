@@ -13,14 +13,6 @@ export const RANGE_LABEL: Record<RangePreset, string> = {
   custom: "Custom",
 };
 
-export type DashboardSortBy = "time" | "recent" | "name";
-
-export const SORT_OPTIONS: { value: DashboardSortBy; label: string }[] = [
-  { value: "time", label: "Most time" },
-  { value: "recent", label: "Most recent" },
-  { value: "name", label: "Name" },
-] as const;
-
 type FilterOption = {
   value: string;
   label: string;
@@ -33,26 +25,20 @@ type AgencyDashboardCommandBarProps = {
   onCustomFromChange: (value: string) => void;
   customToDate: string;
   onCustomToChange: (value: string) => void;
-  clientId: string;
-  onClientChange: (clientId: string) => void;
   projectId: string;
   onProjectChange: (projectId: string) => void;
   memberUserId: string;
   onMemberChange: (memberUserId: string) => void;
-  sortBy: DashboardSortBy;
-  onSortChange: (sortBy: DashboardSortBy) => void;
   onReset: () => void;
-  clients: Array<{ id: string; name: string }>;
   projects: Array<{ id: string; name: string }>;
   members: Array<{ userId: string; userName: string }>;
-  clientsLoading?: boolean;
   projectsLoading?: boolean;
 };
 
 const PRESETS: RangePreset[] = ["week", "month", "last30", "custom"];
 
 const selectBaseClass = cn(
-  "h-8 max-w-[12rem] appearance-none truncate rounded-lg border border-default bg-default py-1 pl-2.5 pr-7 text-xs font-semibold text-highlighted transition-colors",
+  "h-9 max-w-[12rem] appearance-none truncate rounded-xl border border-default bg-default py-1 pl-3 pr-8 text-xs font-semibold text-highlighted transition-colors",
   "hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
   agencyFocusRingClass,
 );
@@ -105,53 +91,43 @@ export function AgencyDashboardCommandBar({
   onCustomFromChange,
   customToDate,
   onCustomToChange,
-  clientId,
-  onClientChange,
   projectId,
   onProjectChange,
   memberUserId,
   onMemberChange,
-  sortBy,
-  onSortChange,
   onReset,
-  clients,
   projects,
   members,
-  clientsLoading,
   projectsLoading,
 }: AgencyDashboardCommandBarProps) {
-  const hasActiveFilters =
-    rangePreset !== "last30" ||
-    clientId !== "" ||
-    projectId !== "" ||
-    memberUserId !== "" ||
-    sortBy !== "time";
+  const hasActiveFilters = rangePreset !== "last30" || projectId !== "" || memberUserId !== "";
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-default bg-elevated p-2">
-      <div
-        className="inline-flex h-9 items-center rounded-full border border-default bg-default p-0.5"
-        role="group"
-        aria-label="Dashboard period"
-      >
-        {PRESETS.map((preset) => (
-          <button
-            key={preset}
-            type="button"
-            className={cn(
-              "h-7 rounded-full px-2.5 text-[11px] font-bold transition-colors motion-reduce:transition-none",
-              agencyFocusRingClass,
-              rangePreset === preset
-                ? "bg-primary text-primary-foreground"
-                : "text-muted hover:bg-elevated hover:text-highlighted",
-            )}
-            aria-pressed={rangePreset === preset}
-            onClick={() => onRangePresetChange(preset)}
-          >
-            {RANGE_LABEL[preset]}
-          </button>
-        ))}
-      </div>
+      <FilterSelect
+        id="agency-dashboard-project"
+        label="Project"
+        value={projectId}
+        onChange={onProjectChange}
+        options={projects.map((project) => ({ value: project.id, label: project.name }))}
+        placeholder="All Projects"
+        disabled={projectsLoading}
+      />
+      <FilterSelect
+        id="agency-dashboard-member"
+        label="Member"
+        value={memberUserId}
+        onChange={onMemberChange}
+        options={members.map((member) => ({ value: member.userId, label: member.userName }))}
+        placeholder="Team"
+      />
+      <FilterSelect
+        id="agency-dashboard-range"
+        label="Time range"
+        value={rangePreset}
+        onChange={(value) => onRangePresetChange(value as RangePreset)}
+        options={PRESETS.map((preset) => ({ value: preset, label: RANGE_LABEL[preset] }))}
+      />
 
       {rangePreset === "custom" ? (
         <div className="flex flex-wrap items-center gap-2">
@@ -162,7 +138,7 @@ export function AgencyDashboardCommandBar({
             id="agency-dashboard-from"
             type="date"
             value={customFromDate}
-            className="h-8 w-auto min-w-32 rounded-lg border-default bg-default px-2 text-xs font-semibold text-highlighted"
+            className="h-9 w-auto min-w-32 rounded-xl border-default bg-default px-2 text-xs font-semibold text-highlighted"
             onChange={(event) => onCustomFromChange(event.target.value)}
           />
           <span className="text-xs text-muted">–</span>
@@ -173,55 +149,18 @@ export function AgencyDashboardCommandBar({
             id="agency-dashboard-to"
             type="date"
             value={customToDate}
-            className="h-8 w-auto min-w-32 rounded-lg border-default bg-default px-2 text-xs font-semibold text-highlighted"
+            className="h-9 w-auto min-w-32 rounded-xl border-default bg-default px-2 text-xs font-semibold text-highlighted"
             onChange={(event) => onCustomToChange(event.target.value)}
           />
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <FilterSelect
-          id="agency-dashboard-client"
-          label="Client"
-          value={clientId}
-          onChange={onClientChange}
-          options={clients.map((client) => ({ value: client.id, label: client.name }))}
-          placeholder="All clients"
-          disabled={clientsLoading}
-        />
-        <FilterSelect
-          id="agency-dashboard-project"
-          label="Project"
-          value={projectId}
-          onChange={onProjectChange}
-          options={projects.map((project) => ({ value: project.id, label: project.name }))}
-          placeholder="All projects"
-          disabled={projectsLoading}
-        />
-        <FilterSelect
-          id="agency-dashboard-member"
-          label="Member"
-          value={memberUserId}
-          onChange={onMemberChange}
-          options={members.map((member) => ({ value: member.userId, label: member.userName }))}
-          placeholder="All members"
-        />
-      </div>
-
       <div className="flex flex-wrap items-center gap-2 md:ml-auto">
-        <FilterSelect
-          id="agency-dashboard-sort"
-          label="Sort"
-          value={sortBy}
-          onChange={(value) => onSortChange(value as DashboardSortBy)}
-          options={SORT_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
-        />
-
         {hasActiveFilters ? (
           <button
             type="button"
             className={cn(
-              "h-8 rounded-lg px-2.5 text-xs font-semibold text-muted transition-colors hover:bg-default hover:text-highlighted",
+              "h-9 rounded-xl px-2.5 text-xs font-semibold text-muted transition-colors hover:bg-default hover:text-highlighted",
               agencyFocusRingClass,
               "motion-reduce:transition-none",
             )}

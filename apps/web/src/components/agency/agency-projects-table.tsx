@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AgencyMultiSelectFilter } from "@/components/agency/agency-multi-select-filter";
 import {
   useAgencyClientsQuery,
+  useAgencyProjectTasksQuery,
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
 } from "@/lib/queries/agency";
@@ -46,6 +48,10 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
     const agencyOps = useAgencyOpsStore();
     const isProjectMutationPending = useAgencyOpsStore(selectIsProjectMutationPending);
     const [filterTerm, setFilterTerm] = useState("");
+    const [selectedPeopleIds, setSelectedPeopleIds] = useState<string[]>([]);
+    const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+    const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
+    const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
     const [newProjectOpen, setNewProjectOpen] = useState(false);
 
     useImperativeHandle(ref, () => ({
@@ -57,6 +63,7 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
     const projectsQuery = useAgencyProjectsQuery(teamId);
     const clientsQuery = useAgencyClientsQuery(teamId);
     const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
+    const tasksQuery = useAgencyProjectTasksQuery(teamId);
 
     const budgetsQuery = useQuery({
       ...orpc.agencyOps.budgets.list.queryOptions({ input: { teamId } }),
@@ -74,6 +81,32 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
     const projects = projectsQuery.data?.items ?? [];
     const clients = clientsQuery.data?.items ?? [];
     const entries = entriesQuery.data?.items ?? [];
+    const tasks = tasksQuery.data?.items ?? [];
+
+    const peopleOptions = useMemo(() => {
+      const people = new Map<string, string>();
+      for (const task of tasks) {
+        if (task.assigneeUserId && task.assigneeName) {
+          people.set(task.assigneeUserId, task.assigneeName);
+        }
+      }
+      return Array.from(people, ([value, label]) => ({ value, label })).sort((a, b) =>
+        a.label.localeCompare(b.label),
+      );
+    }, [tasks]);
+
+    const clientOptions = useMemo(
+      () => clients.map((client) => ({ value: client.id, label: client.name })),
+      [clients],
+    );
+    const projectOptions = useMemo(
+      () => projects.map((project) => ({ value: project.id, label: project.name })),
+      [projects],
+    );
+    const taskOptions = useMemo(
+      () => tasks.map((task) => ({ value: task.id, label: task.title })),
+      [tasks],
+    );
 
     const hoursThisWeekByProject = useMemo(() => {
       const weekStartMs = getWeekStartUtc().getTime();
@@ -88,11 +121,44 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
 
     const filteredProjects = useMemo(() => {
       const term = filterTerm.trim().toLowerCase();
-      if (!term) return projects;
-      return projects.filter((project) =>
-        `${project.name} ${project.clientName}`.toLowerCase().includes(term),
-      );
-    }, [filterTerm, projects]);
+      const peopleSet = new Set(selectedPeopleIds);
+      const clientsSet = new Set(selectedClientIds);
+      const projectsSet = new Set(selectedProjectIds);
+      const tasksSet = new Set(selectedTaskIds);
+      return projects.filter((project) => {
+        if (term && !`${project.name} ${project.clientName}`.toLowerCase().includes(term)) {
+          return false;
+        }
+        if (clientsSet.size > 0 && !clientsSet.has(project.clientId)) return false;
+        if (projectsSet.size > 0 && !projectsSet.has(project.id)) return false;
+        if (
+          peopleSet.size > 0 &&
+          !tasks.some(
+            (task) =>
+              task.projectId === project.id &&
+              task.assigneeUserId &&
+              peopleSet.has(task.assigneeUserId),
+          )
+        ) {
+          return false;
+        }
+        if (
+          tasksSet.size > 0 &&
+          !tasks.some((task) => task.projectId === project.id && tasksSet.has(task.id))
+        ) {
+          return false;
+        }
+        return true;
+      });
+    }, [
+      filterTerm,
+      projects,
+      selectedClientIds,
+      selectedPeopleIds,
+      selectedProjectIds,
+      selectedTaskIds,
+      tasks,
+    ]);
 
     function budgetPctFor(projectId: string): number {
       const budget = budgetsByProject.get(projectId);
@@ -138,16 +204,45 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
 
     return (
       <div className="agency-projects space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative w-64">
+        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-default bg-elevated p-2">
+          <div className="relative min-w-64 flex-1 md:max-w-72">
             <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
             <Input
               value={filterTerm}
               onChange={(e) => setFilterTerm(e.target.value)}
-              placeholder="Filter projects or clients"
-              className="pl-9"
+              placeholder="Search projects"
+              className="h-9 rounded-xl bg-default pl-9 text-sm"
             />
           </div>
+
+          <AgencyMultiSelectFilter
+            label="All People"
+            values={selectedPeopleIds}
+            options={peopleOptions}
+            onValuesChange={setSelectedPeopleIds}
+            disabled={tasksQuery.isPending}
+          />
+          <AgencyMultiSelectFilter
+            label="All Clients"
+            values={selectedClientIds}
+            options={clientOptions}
+            onValuesChange={setSelectedClientIds}
+            disabled={clientsQuery.isPending}
+          />
+          <AgencyMultiSelectFilter
+            label="All Projects"
+            values={selectedProjectIds}
+            options={projectOptions}
+            onValuesChange={setSelectedProjectIds}
+            disabled={projectsQuery.isPending}
+          />
+          <AgencyMultiSelectFilter
+            label="All Tasks"
+            values={selectedTaskIds}
+            options={taskOptions}
+            onValuesChange={setSelectedTaskIds}
+            disabled={tasksQuery.isPending}
+          />
 
           {!hideToolbarActions ? (
             <div className="ml-auto">

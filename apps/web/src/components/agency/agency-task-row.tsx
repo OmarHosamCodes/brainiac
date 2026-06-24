@@ -258,7 +258,10 @@ export function AgencyTaskRow({
             />
           </div>
         ) : (
-          <span className={cn(agencyMetricClass, "shrink-0 text-[11px] text-muted")}>
+          <span
+            data-task-status-label
+            className={cn(agencyMetricClass, "shrink-0 text-[11px] text-muted")}
+          >
             {statusLabel(task.status)}
           </span>
         )}
