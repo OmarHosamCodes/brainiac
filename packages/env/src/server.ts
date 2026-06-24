@@ -21,6 +21,7 @@ export const env = createEnv({
       ),
     BETTER_AUTH_URL: z.url("BETTER_AUTH_URL must be a valid URL (e.g., http://localhost:7000)"),
     CORS_ORIGIN: z.url("CORS_ORIGIN must be a valid URL (e.g., http://localhost:7001)"),
+    CORS_ORIGINS: z.string().optional(),
     OPENROUTER_API_KEY: z
       .string()
       .min(1, "OPENROUTER_API_KEY is required. Get one from https://openrouter.ai/keys"),
@@ -41,3 +42,25 @@ export const env = createEnv({
   emptyStringAsUndefined: true,
   skipValidation: true,
 });
+
+function parseCorsOrigins(): string[] {
+  const origins = [env.CORS_ORIGIN, env.CORS_ORIGINS]
+    .filter((value): value is string => Boolean(value))
+    .flatMap((value) => value.split(","))
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return [...new Set(origins)];
+}
+
+export const corsOrigins = parseCorsOrigins();
+
+const firstCorsOrigin = corsOrigins[0];
+
+if (!firstCorsOrigin) {
+  throw new Error(
+    "CORS_ORIGIN is required. Set it to the deployed web app origin, for example https://web-brainiac.up.railway.app",
+  );
+}
+
+export const primaryCorsOrigin = firstCorsOrigin;
