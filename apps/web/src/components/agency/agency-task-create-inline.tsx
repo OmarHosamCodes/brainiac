@@ -204,8 +204,8 @@ export function AgencyTaskCreateInline({
         <button
           type="button"
           className={cn(
-            "flex w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold text-muted",
-            "transition-colors hover:bg-default/70 hover:text-highlighted",
+            "flex w-full items-center gap-2 bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground",
+            "transition-colors hover:bg-primary/90",
             agencyFocusRingClass,
             "motion-reduce:transition-none",
           )}

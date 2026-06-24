@@ -13,7 +13,6 @@ import { toast } from "sonner";
 
 import {
   AgencyDashboardCommandBar,
-  type DashboardSortBy,
   type RangePreset,
 } from "@/components/agency/agency-dashboard-command-bar";
 import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot";
@@ -174,10 +173,8 @@ export const AgencyDashboardSurface = forwardRef<
   const now = useMemo(() => new Date(), []);
   const [customFromDate, setCustomFromDate] = useState(toDateInputValue(startOfWeekUtc()));
   const [customToDate, setCustomToDate] = useState(toDateInputValue(now));
-  const [clientId, setClientId] = useState("");
   const [projectId, setProjectId] = useState("");
   const [memberUserId, setMemberUserId] = useState("");
-  const [sortBy, setSortBy] = useState<DashboardSortBy>("time");
 
   const range = useMemo(() => {
     const endIso = new Date(
@@ -203,14 +200,8 @@ export const AgencyDashboardSurface = forwardRef<
     return { from: startOfWeekUtc().toISOString(), to: endIso };
   }, [customFromDate, customToDate, now, rangePreset]);
 
-  const clientsQuery = useQuery({
-    ...orpc.agencyOps.clients.list.queryOptions({ input: { teamId } }),
-    enabled: Boolean(teamId),
-  });
   const projectsQuery = useQuery({
-    ...orpc.agencyOps.projects.list.queryOptions({
-      input: { teamId, clientId: clientId || undefined },
-    }),
+    ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
     enabled: Boolean(teamId),
   });
   const dashboardQuery = useQuery({
@@ -219,7 +210,6 @@ export const AgencyDashboardSurface = forwardRef<
         teamId,
         from: range.from,
         to: range.to,
-        clientId: clientId || undefined,
         projectId: projectId || undefined,
         memberUserId: memberUserId || undefined,
       },
@@ -231,7 +221,6 @@ export const AgencyDashboardSurface = forwardRef<
 
   const summary = dashboardQuery.data?.summary ?? null;
   const canExport = Boolean(summary && summary.totalEntries > 0);
-  const clients = clientsQuery.data?.items ?? [];
   const projects = projectsQuery.data?.items ?? [];
   const maxDaySeconds = Math.max(
     ...(summary?.dailyBuckets.map((bucket) => bucket.totalSeconds) ?? [0]),
@@ -243,29 +232,13 @@ export const AgencyDashboardSurface = forwardRef<
 
   const sortedTeamMembers = useMemo(() => {
     const members = summary?.teamMembers ?? [];
-    if (sortBy === "name") {
-      return [...members].sort((a, b) => a.userName.localeCompare(b.userName));
-    }
-    if (sortBy === "recent") {
-      return [...members].sort((a, b) => {
-        const aTime = a.latestEntry ? new Date(a.latestEntry.startedAt).getTime() : 0;
-        const bTime = b.latestEntry ? new Date(b.latestEntry.startedAt).getTime() : 0;
-        return bTime - aTime || b.totalSeconds - a.totalSeconds;
-      });
-    }
     return [...members].sort((a, b) => b.totalSeconds - a.totalSeconds);
-  }, [summary?.teamMembers, sortBy]);
+  }, [summary?.teamMembers]);
 
   const sortedRankedProjects = useMemo(() => {
     const list = [...rankedProjects];
-    if (sortBy === "name") {
-      return list.sort((a, b) => a.projectName.localeCompare(b.projectName));
-    }
-    if (sortBy === "recent") {
-      return list.sort((a, b) => b.hours - a.hours);
-    }
     return list.sort((a, b) => b.hours - a.hours);
-  }, [rankedProjects, sortBy]);
+  }, [rankedProjects]);
 
   const downloadCsv = useCallback(async () => {
     if (!teamId) return;
@@ -274,7 +247,6 @@ export const AgencyDashboardSurface = forwardRef<
         teamId,
         from: range.from,
         to: range.to,
-        clientId: clientId || undefined,
         projectId: projectId || undefined,
         memberUserId: memberUserId || undefined,
       });
@@ -293,7 +265,7 @@ export const AgencyDashboardSurface = forwardRef<
     } catch (error) {
       toast.error("Export failed", { description: getErrorMessage(error, "Try again.") });
     }
-  }, [clientId, exportCsvMutation, memberUserId, projectId, range.from, range.to, teamId]);
+  }, [exportCsvMutation, memberUserId, projectId, range.from, range.to, teamId]);
 
   useImperativeHandle(
     ref,
@@ -340,17 +312,10 @@ export const AgencyDashboardSurface = forwardRef<
     );
   }
 
-  function handleClientChange(nextClientId: string) {
-    setClientId(nextClientId);
-    setProjectId("");
-  }
-
   function handleReset() {
     setRangePreset("last30");
-    setClientId("");
     setProjectId("");
     setMemberUserId("");
-    setSortBy("time");
   }
 
   return (
@@ -362,19 +327,13 @@ export const AgencyDashboardSurface = forwardRef<
         onCustomFromChange={setCustomFromDate}
         customToDate={customToDate}
         onCustomToChange={setCustomToDate}
-        clientId={clientId}
-        onClientChange={handleClientChange}
         projectId={projectId}
         onProjectChange={setProjectId}
         memberUserId={memberUserId}
         onMemberChange={setMemberUserId}
-        sortBy={sortBy}
-        onSortChange={setSortBy}
         onReset={handleReset}
-        clients={clients}
         projects={projects}
         members={summary?.teamMembers ?? []}
-        clientsLoading={clientsQuery.isPending}
         projectsLoading={projectsQuery.isPending}
       />
 

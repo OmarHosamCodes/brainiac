@@ -1744,6 +1744,13 @@ export async function stopAgencyTimer(
 
   const now = new Date();
   const description = input.description?.trim() ?? active.description;
+
+  if (!input.discard && !description) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Add a description before stopping this timer.",
+    });
+  }
+
   const durationSeconds = getDurationSeconds(active.startedAt, now);
 
   if (input.discard) {

@@ -47,7 +47,8 @@ export const agencyTaskRowClass = [
 
 export const agencyTaskRowSelectedClass = "bg-primary/10 hover:bg-primary/10";
 
-export const agencyTaskRowDoneClass = "opacity-80";
+export const agencyTaskRowDoneClass =
+  "bg-success/10 text-success hover:bg-success/15 [&_p]:text-success [&_[data-task-status-label]]:text-success";
 
 export const agencyTaskRowCompleteClass = "agency-task-row-complete";
 
