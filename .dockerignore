@@ -1,0 +1,33 @@
+# Dependencies and package-manager stores
+node_modules
+.pnpm-store
+.bun
+
+# Build outputs
+dist
+build
+.nuxt
+.output
+*.tsbuildinfo
+
+# Tool caches
+.turbo
+.nx
+.cache
+
+# Environment and local files
+.env
+.env*
+!.env.example
+logs
+*.log
+tmp
+temp
+
+# VCS and editor files
+.git
+.github
+.idea
+.vscode
+.DS_Store
+Thumbs.db
