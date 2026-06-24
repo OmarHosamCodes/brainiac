@@ -7,6 +7,7 @@
     "dev": "vite --port 7001",
     "dev:portless": "portless web.brainiac vite --port 3001",
     "build": "vite build && bun run scripts/write-railway-server.mjs",
+    "start": "bun run .output/server/index.mjs",
     "preview": "vite preview --port 7001",
     "check-types": "tsc -b --noEmit",
     "clean": "git clean -xdf .turbo node_modules dist .output"
