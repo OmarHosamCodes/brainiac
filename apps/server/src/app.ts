@@ -127,17 +127,18 @@ function createApp() {
 }
 
 const app = createApp();
+const port = Number(process.env.PORT || 7000);
 
 // Log startup information in development
 if (env.NODE_ENV === "development") {
   logStartup({
-    port: 7000,
+    port,
     baseUrl: env.BETTER_AUTH_URL,
     corsOrigin: env.CORS_ORIGIN,
   });
 }
 
 export default {
-  port: 7000, // Proxied via Traefik (actual dev server is on 3000)
+  port,
   fetch: app.fetch,
 };
