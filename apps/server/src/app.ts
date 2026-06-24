@@ -13,7 +13,7 @@
 
 import { createContext } from "@brainiac/api/context";
 import { auth } from "@brainiac/auth";
-import { env } from "@brainiac/env/server";
+import { corsOrigins, env, primaryCorsOrigin } from "@brainiac/env/server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -90,7 +90,7 @@ function createApp() {
   app.use(
     "/*",
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: corsOrigins,
       allowMethods: ["GET", "POST", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization"],
       credentials: true,
@@ -100,7 +100,7 @@ function createApp() {
   app.on(["GET", "POST"], "/api/auth/*", (context) => auth.handler(context.req.raw));
 
   app.get("/billing/success", (context) => {
-    const url = new URL("/billing/success", env.CORS_ORIGIN);
+    const url = new URL("/billing/success", primaryCorsOrigin);
     url.search = new URL(context.req.url).search;
     return context.redirect(url.toString(), 302);
   });
@@ -134,7 +134,7 @@ if (env.NODE_ENV === "development") {
   logStartup({
     port,
     baseUrl: env.BETTER_AUTH_URL,
-    corsOrigin: env.CORS_ORIGIN,
+    corsOrigin: corsOrigins.join(", "),
   });
 }
 

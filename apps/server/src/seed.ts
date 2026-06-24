@@ -1,7 +1,7 @@
 import { auth } from "@brainiac/auth";
 import { db } from "@brainiac/db";
 import { dashboardWorkspace, user, workspaceMarketplaceItem } from "@brainiac/db/schema";
-import { env } from "@brainiac/env/server";
+import { primaryCorsOrigin } from "@brainiac/env/server";
 import {
   cloneWorkspaceNodes,
   createWorkspace2x2MatrixBlock,
@@ -1213,9 +1213,7 @@ async function recreateSeedUsers(password: string) {
     "user-agent": "brainiac-seed-script",
   });
 
-  if (env.CORS_ORIGIN) {
-    requestHeaders.set("origin", env.CORS_ORIGIN);
-  }
+  requestHeaders.set("origin", primaryCorsOrigin);
 
   await db.delete(user).where(
     inArray(
