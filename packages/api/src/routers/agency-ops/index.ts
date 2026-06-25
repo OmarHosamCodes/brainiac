@@ -819,13 +819,15 @@ export const agencyOpsRouter = {
     }),
   },
   reports: {
-    dashboard: protectedProProcedure.input(reportsInputSchema).handler(async ({ context, input }) => {
-      return z
-        .object({
-          summary: reportsDashboardSummarySchema,
-        })
-        .parse(await getAgencyDashboardSummary(context.session.user.id, input));
-    }),
+    dashboard: protectedProProcedure
+      .input(reportsInputSchema)
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            summary: reportsDashboardSummarySchema,
+          })
+          .parse(await getAgencyDashboardSummary(context.session.user.id, input));
+      }),
     summary: protectedProProcedure.input(reportsInputSchema).handler(async ({ context, input }) => {
       return z
         .object({

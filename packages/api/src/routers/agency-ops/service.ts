@@ -1275,24 +1275,7 @@ export async function createTaskThreadMessage(
     });
   }
 
-  for (const attachment of input.attachments ?? []) {
-    const expectedPrefix = `task-attachments/${input.teamId}/${input.taskId}/`;
-    if (
-      !attachment.storageKey.startsWith(expectedPrefix) ||
-      !verifyTaskAttachmentUploadToken(attachment.uploadToken, {
-        teamId: input.teamId,
-        taskId: input.taskId,
-        fileName: attachment.fileName,
-        mimeType: attachment.mimeType,
-        storageKey: attachment.storageKey,
-        sizeBytes: attachment.sizeBytes,
-      })
-    ) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Attachment upload reference is invalid or expired.",
-      });
-    }
-  }
+  validateTaskAttachmentUploadReferences(input);
 
   const now = new Date();
   const messageId = createWorkspaceId("agency-task-message");
@@ -1358,6 +1341,37 @@ export async function createTaskThreadMessage(
     type: created.type as "text" | "voice" | "attachment",
     senderType: "user",
   });
+}
+
+export function validateTaskAttachmentUploadReferences(input: {
+  teamId: string;
+  taskId: string;
+  attachments?: Array<{
+    fileName: string;
+    mimeType: string;
+    storageKey: string;
+    sizeBytes: number;
+    uploadToken: string;
+  }>;
+}) {
+  for (const attachment of input.attachments ?? []) {
+    const expectedPrefix = `task-attachments/${input.teamId}/${input.taskId}/`;
+    if (
+      !attachment.storageKey.startsWith(expectedPrefix) ||
+      !verifyTaskAttachmentUploadToken(attachment.uploadToken, {
+        teamId: input.teamId,
+        taskId: input.taskId,
+        fileName: attachment.fileName,
+        mimeType: attachment.mimeType,
+        storageKey: attachment.storageKey,
+        sizeBytes: attachment.sizeBytes,
+      })
+    ) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Attachment upload reference is invalid or expired.",
+      });
+    }
+  }
 }
 
 export async function createTaskAttachmentPresignedUrl(
@@ -3225,10 +3239,19 @@ export async function getAgencyDashboardSummary(
     .where(eq(agencyOpsActiveTimer.teamId, input.teamId));
 
   const activeTimerByUser = new Map(activeTimers.map((timer) => [timer.userId, timer]));
-  const clientSeconds = new Map<string, { clientId: string; clientName: string; seconds: number }>();
+  const clientSeconds = new Map<
+    string,
+    { clientId: string; clientName: string; seconds: number }
+  >();
   const projectSeconds = new Map<
     string,
-    { projectId: string; projectName: string; clientId: string; clientName: string; seconds: number }
+    {
+      projectId: string;
+      projectName: string;
+      clientId: string;
+      clientName: string;
+      seconds: number;
+    }
   >();
   const memberSeconds = new Map<string, number>();
   const memberProjectSeconds = new Map<
@@ -3267,7 +3290,10 @@ export async function getAgencyDashboardSummary(
     projectEntry.seconds += row.durationSeconds;
     projectSeconds.set(row.projectId, projectEntry);
 
-    memberSeconds.set(row.memberEmail, (memberSeconds.get(row.memberEmail) ?? 0) + row.durationSeconds);
+    memberSeconds.set(
+      row.memberEmail,
+      (memberSeconds.get(row.memberEmail) ?? 0) + row.durationSeconds,
+    );
 
     const memberProjects = memberProjectSeconds.get(row.memberEmail) ?? new Map();
     const memberProjectEntry = memberProjects.get(row.projectId) ?? {
@@ -3302,13 +3328,17 @@ export async function getAgencyDashboardSummary(
     dailyBuckets.set(dateKey, dayProjects);
   }
 
-  const topClient = [...clientSeconds.values()].sort((left, right) => right.seconds - left.seconds)[0] ?? null;
-  const topProject = [...projectSeconds.values()].sort((left, right) => right.seconds - left.seconds)[0] ?? null;
+  const topClient =
+    [...clientSeconds.values()].sort((left, right) => right.seconds - left.seconds)[0] ?? null;
+  const topProject =
+    [...projectSeconds.values()].sort((left, right) => right.seconds - left.seconds)[0] ?? null;
   const fromDate = parseIsoDateTime(input.from, "from");
   const toDate = parseIsoDateTime(input.to, "to");
   const filledDailyBuckets = [];
   for (
-    let cursor = new Date(Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate()));
+    let cursor = new Date(
+      Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate()),
+    );
     cursor <= toDate && filledDailyBuckets.length < 370;
     cursor = addDaysUtc(cursor, 1)
   ) {
@@ -3316,7 +3346,10 @@ export async function getAgencyDashboardSummary(
     const projects = dailyBuckets.get(date) ?? new Map();
     filledDailyBuckets.push({
       date,
-      totalSeconds: [...projects.values()].reduce((sumSeconds, project) => sumSeconds + project.seconds, 0),
+      totalSeconds: [...projects.values()].reduce(
+        (sumSeconds, project) => sumSeconds + project.seconds,
+        0,
+      ),
       segments: [...projects.values()].sort((left, right) => right.seconds - left.seconds),
     });
   }
@@ -3378,7 +3411,10 @@ export async function getAgencyDashboardSummary(
           ),
         };
       })
-      .sort((left, right) => Number(right.isActive) - Number(left.isActive) || right.totalSeconds - left.totalSeconds),
+      .sort(
+        (left, right) =>
+          Number(right.isActive) - Number(left.isActive) || right.totalSeconds - left.totalSeconds,
+      ),
   };
 
   return { summary };

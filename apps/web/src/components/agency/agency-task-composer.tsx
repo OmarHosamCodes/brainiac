@@ -172,15 +172,18 @@ export const AgencyTaskComposer = forwardRef<AgencyTaskComposerHandle, AgencyTas
             storageKey: string;
             publicUrl: string;
             uploadToken: string;
+            fileName: string;
+            mimeType: string;
+            sizeBytes: number;
           };
 
           setPendingAttachments((current) => [
             ...current,
             {
-              fileName: file.name,
-              mimeType: file.type || "application/octet-stream",
+              fileName: result.fileName,
+              mimeType: result.mimeType,
               storageKey: result.storageKey,
-              sizeBytes: file.size,
+              sizeBytes: result.sizeBytes,
               url: result.publicUrl,
               uploadToken: result.uploadToken,
               durationSeconds: options.durationSeconds ?? null,

@@ -17,8 +17,12 @@ type Attachment = {
   mimeType: string;
   storageKey: string;
   sizeBytes: number;
+  durationSeconds?: number | null;
+  metadata?: unknown;
   url: string | null;
 };
+
+type AttachmentMediaKind = "image" | "video" | "audio" | "document" | "archive" | "other";
 
 type AgencyAttachmentGridProps = {
   attachments: Attachment[];
@@ -37,6 +41,30 @@ function isAudio(mimeType: string) {
   return mimeType.startsWith("audio/");
 }
 
+function getMediaKind(metadata: unknown): AttachmentMediaKind | null {
+  if (!metadata || typeof metadata !== "object") return null;
+  const mediaKind = (metadata as { mediaKind?: unknown }).mediaKind;
+  if (
+    mediaKind === "image" ||
+    mediaKind === "video" ||
+    mediaKind === "audio" ||
+    mediaKind === "document" ||
+    mediaKind === "archive" ||
+    mediaKind === "other"
+  ) {
+    return mediaKind;
+  }
+  return null;
+}
+
+function isAudioAttachment(attachment: Attachment) {
+  return (
+    isAudio(attachment.mimeType) ||
+    getMediaKind(attachment.metadata) === "audio" ||
+    attachment.durationSeconds != null
+  );
+}
+
 function isHls(attachment: Attachment) {
   const source = fileUrl(attachment)?.toLowerCase().split(/[?#]/, 1)[0] ?? "";
   const mimeType = attachment.mimeType.toLowerCase();
@@ -49,18 +77,21 @@ function isHls(attachment: Attachment) {
 }
 
 function isPlayableMedia(attachment: Attachment) {
-  return isAudio(attachment.mimeType) || isVideo(attachment.mimeType) || isHls(attachment);
+  return isAudioAttachment(attachment) || isVideo(attachment.mimeType) || isHls(attachment);
 }
 
 function isImageOrVideo(attachment: Attachment) {
-  return isImage(attachment.mimeType) || isVideo(attachment.mimeType) || isHls(attachment);
+  return (
+    !isAudioAttachment(attachment) &&
+    (isImage(attachment.mimeType) || isVideo(attachment.mimeType) || isHls(attachment))
+  );
 }
 
-function fileIcon(mimeType: string) {
-  if (isImage(mimeType)) return Image;
-  if (isVideo(mimeType)) return Video;
-  if (isAudio(mimeType)) return Music;
-  if (mimeType.includes("pdf")) return FileText;
+function fileIcon(attachment: Attachment) {
+  if (isImage(attachment.mimeType)) return Image;
+  if (isAudioAttachment(attachment)) return Music;
+  if (isVideo(attachment.mimeType)) return Video;
+  if (attachment.mimeType.includes("pdf")) return FileText;
   return File;
 }
 
@@ -85,7 +116,7 @@ export function AgencyAttachmentGrid({ attachments, className }: AgencyAttachmen
     <>
       <div className={["flex flex-wrap gap-2", className].filter(Boolean).join(" ")}>
         {attachments.map((attachment) => {
-          const Icon = fileIcon(attachment.mimeType);
+          const Icon = fileIcon(attachment);
           const url = fileUrl(attachment);
 
           if (isImage(attachment.mimeType) && url) {
@@ -123,6 +154,9 @@ export function AgencyAttachmentGrid({ attachments, className }: AgencyAttachmen
                   src={url}
                   mimeType={attachment.mimeType}
                   fileName={attachment.fileName}
+                  mediaKind={
+                    isAudioAttachment(attachment) ? "audio" : getMediaKind(attachment.metadata)
+                  }
                 />
                 <div className="flex items-center justify-between gap-2">
                   <span className="flex min-w-0 items-center gap-2 text-xs text-muted">
@@ -197,6 +231,11 @@ export function AgencyAttachmentGrid({ attachments, className }: AgencyAttachmen
                     src={fileUrl(viewerAttachment)}
                     mimeType={viewerAttachment.mimeType}
                     fileName={viewerAttachment.fileName}
+                    mediaKind={
+                      isAudioAttachment(viewerAttachment)
+                        ? "audio"
+                        : getMediaKind(viewerAttachment.metadata)
+                    }
                   />
                 </div>
               ) : (

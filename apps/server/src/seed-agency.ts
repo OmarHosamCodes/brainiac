@@ -135,7 +135,11 @@ async function ensureSeedUsers(password: string): Promise<Map<SeedUserKey, SeedA
 // Interactive prompts
 // ---------------------------------------------------------------------------
 
-async function pickTeam(): Promise<{ teamId: string; teamName: string; members: MemberRecord[] } | null> {
+async function pickTeam(): Promise<{
+  teamId: string;
+  teamName: string;
+  members: MemberRecord[];
+} | null> {
   const existingTeams = await db
     .select({ id: workspaceTeam.id, name: workspaceTeam.name })
     .from(workspaceTeam)
@@ -172,7 +176,11 @@ async function pickTeam(): Promise<{ teamId: string; teamName: string; members: 
   return { teamId, teamName: team?.name ?? "Unknown", members };
 }
 
-async function createNewTeam(): Promise<{ teamId: string; teamName: string; members: MemberRecord[] }> {
+async function createNewTeam(): Promise<{
+  teamId: string;
+  teamName: string;
+  members: MemberRecord[];
+}> {
   const allUsers = await db
     .select({ id: user.id, name: user.name, email: user.email })
     .from(user)
@@ -189,7 +197,8 @@ async function createNewTeam(): Promise<{ teamId: string; teamName: string; memb
   const teamName = await text({
     message: "Team name:",
     defaultValue: "My Agency",
-    validate: (v) => (typeof v === "string" && v.trim().length === 0 ? "Name is required" : undefined),
+    validate: (v) =>
+      typeof v === "string" && v.trim().length === 0 ? "Name is required" : undefined,
   });
 
   if (isCancel(teamName)) throw new Error("Cancelled");
@@ -381,7 +390,12 @@ async function manageMembers(
 
       await db
         .delete(workspaceTeamMember)
-        .where(and(eq(workspaceTeamMember.teamId, teamId), eq(workspaceTeamMember.userId, removeChoice as string)));
+        .where(
+          and(
+            eq(workspaceTeamMember.teamId, teamId),
+            eq(workspaceTeamMember.userId, removeChoice as string),
+          ),
+        );
 
       members = members.filter((m) => m.userId !== removeChoice);
       return;
@@ -431,7 +445,8 @@ type TaskDef = {
 function buildSeedData(ctx: SeedContext) {
   const { now, members } = ctx;
 
-  const getOwnerId = () => members.find((m) => m.role === "owner")?.userId ?? members[0]?.userId ?? "";
+  const getOwnerId = () =>
+    members.find((m) => m.role === "owner")?.userId ?? members[0]?.userId ?? "";
   const getMemberIds = () => members.map((m) => m.userId);
   const pickMember = (exclude?: string): string => {
     const ids = getMemberIds().filter((id) => id !== exclude);
@@ -463,11 +478,23 @@ function buildSeedData(ctx: SeedContext) {
 
   // Projects
   const projects: ProjectDef[] = [
-    { id: createWorkspaceId("agency-project"), clientId: clients[0]!.id, name: "Q2 Brand Campaign" },
+    {
+      id: createWorkspaceId("agency-project"),
+      clientId: clients[0]!.id,
+      name: "Q2 Brand Campaign",
+    },
     { id: createWorkspaceId("agency-project"), clientId: clients[0]!.id, name: "Website Redesign" },
     { id: createWorkspaceId("agency-project"), clientId: clients[1]!.id, name: "Mobile App v3" },
-    { id: createWorkspaceId("agency-project"), clientId: clients[1]!.id, name: "Cloud Infrastructure Audit" },
-    { id: createWorkspaceId("agency-project"), clientId: clients[2]!.id, name: "Legacy System Migration" },
+    {
+      id: createWorkspaceId("agency-project"),
+      clientId: clients[1]!.id,
+      name: "Cloud Infrastructure Audit",
+    },
+    {
+      id: createWorkspaceId("agency-project"),
+      clientId: clients[2]!.id,
+      name: "Legacy System Migration",
+    },
   ];
 
   // Tasks with threads and messages
@@ -483,7 +510,11 @@ function buildSeedData(ctx: SeedContext) {
       dueDate: daysAgo(5),
       messages: [
         { userId: ownerId, content: "Brief draft is ready for review.", createdAt: daysAgo(10) },
-        { userId: pickMember(ownerId), content: "Looks good, just a few tweaks on the targeting section.", createdAt: daysAgo(9) },
+        {
+          userId: pickMember(ownerId),
+          content: "Looks good, just a few tweaks on the targeting section.",
+          createdAt: daysAgo(9),
+        },
         { userId: ownerId, content: "Updated per feedback. Ready to ship.", createdAt: daysAgo(6) },
       ],
     },
@@ -496,7 +527,11 @@ function buildSeedData(ctx: SeedContext) {
       assigneeUserId: pickMember(),
       dueDate: daysFromNow(3),
       messages: [
-        { userId: pickMember(), content: "Pulling reference images from the brand guide.", createdAt: daysAgo(2) },
+        {
+          userId: pickMember(),
+          content: "Pulling reference images from the brand guide.",
+          createdAt: daysAgo(2),
+        },
       ],
     },
     {
@@ -518,7 +553,11 @@ function buildSeedData(ctx: SeedContext) {
       assigneeUserId: pickMember(),
       dueDate: daysAgo(3),
       messages: [
-        { userId: pickMember(), content: "Three concepts ready for client review.", createdAt: daysAgo(7) },
+        {
+          userId: pickMember(),
+          content: "Three concepts ready for client review.",
+          createdAt: daysAgo(7),
+        },
         { userId: ownerId, content: "Client chose option B. Let's refine.", createdAt: daysAgo(5) },
       ],
     },
@@ -531,7 +570,11 @@ function buildSeedData(ctx: SeedContext) {
       assigneeUserId: pickMember(),
       dueDate: daysFromNow(5),
       messages: [
-        { userId: pickMember(), content: "Mobile layouts are done. Tablet is WIP.", createdAt: hoursAgo(12) },
+        {
+          userId: pickMember(),
+          content: "Mobile layouts are done. Tablet is WIP.",
+          createdAt: hoursAgo(12),
+        },
       ],
     },
     {
@@ -553,7 +596,11 @@ function buildSeedData(ctx: SeedContext) {
       assigneeUserId: pickMember(),
       dueDate: daysFromNow(4),
       messages: [
-        { userId: pickMember(), content: "Onboarding screens are coded. Need backend integration.", createdAt: daysAgo(1) },
+        {
+          userId: pickMember(),
+          content: "Onboarding screens are coded. Need backend integration.",
+          createdAt: daysAgo(1),
+        },
       ],
     },
     {
@@ -585,7 +632,11 @@ function buildSeedData(ctx: SeedContext) {
       assigneeUserId: pickMember(),
       dueDate: daysAgo(2),
       messages: [
-        { userId: pickMember(), content: "All critical findings have been addressed.", createdAt: daysAgo(4) },
+        {
+          userId: pickMember(),
+          content: "All critical findings have been addressed.",
+          createdAt: daysAgo(4),
+        },
         { userId: ownerId, content: "Great work. Closing this out.", createdAt: daysAgo(2) },
       ],
     },
@@ -598,7 +649,11 @@ function buildSeedData(ctx: SeedContext) {
       assigneeUserId: pickMember(),
       dueDate: daysFromNow(6),
       messages: [
-        { userId: pickMember(), content: "Preliminary savings estimate: ~30% on compute.", createdAt: hoursAgo(48) },
+        {
+          userId: pickMember(),
+          content: "Preliminary savings estimate: ~30% on compute.",
+          createdAt: hoursAgo(48),
+        },
       ],
     },
     {
@@ -639,7 +694,8 @@ function buildSeedData(ctx: SeedContext) {
       for (let e = 0; e < numEntries; e++) {
         const project = projects[Math.floor(Math.random() * projects.length)]!;
         const relTasks = tasks.filter((t) => t.projectId === project.id);
-        const task = relTasks.length > 0 ? relTasks[Math.floor(Math.random() * relTasks.length)]! : null;
+        const task =
+          relTasks.length > 0 ? relTasks[Math.floor(Math.random() * relTasks.length)]! : null;
         const startH = hour + e * 2 + Math.floor(Math.random() * 2);
         const durationM = 15 + Math.floor(Math.random() * 225);
         const start = new Date(date);
@@ -669,7 +725,8 @@ async function seedAgencyData(ctx: SeedContext) {
   s.start("Building seed data");
 
   const data = buildSeedData(ctx);
-  const ownerId = ctx.members.find((m) => m.role === "owner")?.userId ?? ctx.members[0]?.userId ?? "";
+  const ownerId =
+    ctx.members.find((m) => m.role === "owner")?.userId ?? ctx.members[0]?.userId ?? "";
   const now = ctx.now;
   const teamId = ctx.teamId;
 
@@ -807,7 +864,11 @@ async function seedAgencyData(ctx: SeedContext) {
         updatedAt: now,
       })
       .onConflictDoUpdate({
-        target: [agencyOpsMemberCapacity.teamId, agencyOpsMemberCapacity.userId, agencyOpsMemberCapacity.weekStart],
+        target: [
+          agencyOpsMemberCapacity.teamId,
+          agencyOpsMemberCapacity.userId,
+          agencyOpsMemberCapacity.weekStart,
+        ],
         set: { capacitySeconds: 144000, updatedAt: now },
       });
   }
@@ -820,7 +881,9 @@ async function seedAgencyData(ctx: SeedContext) {
   for (let ci = 0; ci < activeClients.length; ci++) {
     const client = activeClients[ci]!;
     const clientProjects = data.projects.filter((p) => p.clientId === client.id);
-    const clientTimeEntries = data.timeEntries.filter((te) => clientProjects.some((cp) => cp.id === te.projectId));
+    const clientTimeEntries = data.timeEntries.filter((te) =>
+      clientProjects.some((cp) => cp.id === te.projectId),
+    );
     const totalSeconds = clientTimeEntries.reduce((sum, te) => sum + te.durationSeconds, 0);
 
     const invoiceStatuses: Array<"draft" | "sent" | "paid"> = ["sent", "paid", "draft"];
