@@ -128,7 +128,9 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
   }, [teamId, activeTimer, syncDraftFromActiveTimer]);
 
   const canStartTimer = Boolean(teamId && !activeTimer);
-  const canStopTimer = Boolean(activeTimer && descriptionTrimmed && (activeTimerHasTask || selectedTask));
+  const canStopTimer = Boolean(
+    activeTimer && descriptionTrimmed && (activeTimerHasTask || selectedTask),
+  );
   const startedAtReference = activeTimer ? formatStartedAtReference(activeTimer.startedAt) : "";
   const descriptionSuggestions = useMemo(() => {
     const entries = recentEntriesQuery.data?.items ?? [];
@@ -239,7 +241,10 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
             disabled={isTimerMutationPending || !teamId}
           />
           {descriptionSuggestions.length > 0 ? (
-            <div className="mt-1 flex max-w-full gap-1.5 overflow-x-auto pb-0.5" aria-label="Description matches">
+            <div
+              className="mt-1 flex max-w-full gap-1.5 overflow-x-auto pb-0.5"
+              aria-label="Description matches"
+            >
               {descriptionSuggestions.map((suggestion) => (
                 <button
                   key={`${suggestion.taskId}-${suggestion.description}`}
@@ -256,7 +261,9 @@ export function AgencyTimeTracker({ teamId }: AgencyTimeTrackerProps) {
                 >
                   <Zap className="size-3" aria-hidden />
                   <span className="max-w-40 truncate">{suggestion.description}</span>
-                  <span className="text-primary/70">{suggestion.taskTitle || suggestion.projectName}</span>
+                  <span className="text-primary/70">
+                    {suggestion.taskTitle || suggestion.projectName}
+                  </span>
                 </button>
               ))}
             </div>

@@ -322,7 +322,9 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
               aria-label="Duration"
             />
           ) : (
-            <span className={cn("text-base font-semibold", agencyMetricClass)}>{durationLabel}</span>
+            <span className={cn("text-base font-semibold", agencyMetricClass)}>
+              {durationLabel}
+            </span>
           )}
           {editError ? <p className="text-[10px] text-error">{editError}</p> : null}
         </div>

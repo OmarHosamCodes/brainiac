@@ -27,8 +27,22 @@ type AgencyTaskThreadProps = {
   onBack: () => void;
 };
 
-function isAudio(mimeType: string) {
-  return mimeType.startsWith("audio/");
+function getMediaKind(metadata: unknown) {
+  if (!metadata || typeof metadata !== "object") return null;
+  const mediaKind = (metadata as { mediaKind?: unknown }).mediaKind;
+  return typeof mediaKind === "string" ? mediaKind : null;
+}
+
+function isAudioAttachment(attachment: {
+  mimeType: string;
+  durationSeconds?: number | null;
+  metadata?: unknown;
+}) {
+  return (
+    attachment.mimeType.startsWith("audio/") ||
+    getMediaKind(attachment.metadata) === "audio" ||
+    attachment.durationSeconds != null
+  );
 }
 
 function formatTime(iso: string): string {
@@ -221,23 +235,24 @@ export function AgencyTaskThread({ teamId, taskId, projects, onBack }: AgencyTas
                     ) : null}
 
                     {message.type === "voice" ||
-                    message.attachments.some((a) => isAudio(a.mimeType)) ? (
+                    message.attachments.some((a) => isAudioAttachment(a)) ? (
                       <div className="mt-2">
                         {message.attachments
-                          .filter((a) => isAudio(a.mimeType))
+                          .filter((a) => isAudioAttachment(a))
                           .map((attachment) => (
                             <AgencyTaskMediaPlayer
                               key={attachment.id}
                               src={attachment.url ?? undefined}
                               mimeType={attachment.mimeType}
                               fileName={attachment.fileName}
+                              mediaKind="audio"
                             />
                           ))}
                       </div>
                     ) : null}
 
                     <AgencyAttachmentGrid
-                      attachments={message.attachments.filter((a) => !isAudio(a.mimeType))}
+                      attachments={message.attachments.filter((a) => !isAudioAttachment(a))}
                       className="mt-2"
                     />
                   </div>

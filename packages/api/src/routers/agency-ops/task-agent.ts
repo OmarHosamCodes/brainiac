@@ -14,7 +14,11 @@ import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
-import { ensureTaskThreadByTaskId, requireTeamMembership } from "./service";
+import {
+  ensureTaskThreadByTaskId,
+  requireTeamMembership,
+  validateTaskAttachmentUploadReferences,
+} from "./service";
 
 function formatAttachmentSummary(
   attachments: Array<{
@@ -69,6 +73,7 @@ export async function askTaskAgent(
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  validateTaskAttachmentUploadReferences(input);
 
   const [context] = await db
     .select({

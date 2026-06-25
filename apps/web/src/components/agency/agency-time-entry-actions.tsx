@@ -37,10 +37,7 @@ export function AgencyTimeEntryActions({
         <Play className="size-3.5" />
       </Button>
 
-      <Popover
-        open={menuOpen}
-        onOpenChange={setMenuOpen}
-      >
+      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="ghost"

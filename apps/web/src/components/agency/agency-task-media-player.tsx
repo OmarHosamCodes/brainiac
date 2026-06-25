@@ -3,6 +3,7 @@ type AgencyTaskMediaPlayerProps = {
   mimeType: string;
   fileName?: string;
   compact?: boolean;
+  mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other" | null;
 };
 
 function isHlsSource(src: string, mimeType: string): boolean {
@@ -21,6 +22,7 @@ export function AgencyTaskMediaPlayer({
   mimeType,
   fileName,
   compact = false,
+  mediaKind,
 }: AgencyTaskMediaPlayerProps) {
   const source = src ?? "";
   const label = fileName ?? "Task attachment";
@@ -30,8 +32,8 @@ export function AgencyTaskMediaPlayer({
   }
 
   const hls = isHlsSource(source, mimeType);
-  const isAudio = mimeType.startsWith("audio/") && !hls;
-  const isVideo = mimeType.startsWith("video/") || hls;
+  const isAudio = (mediaKind === "audio" || mimeType.startsWith("audio/")) && !hls;
+  const isVideo = !isAudio && (mimeType.startsWith("video/") || hls);
 
   return (
     <div className={["agency-task-media-player w-full", compact ? "is-compact" : ""].join(" ")}>
