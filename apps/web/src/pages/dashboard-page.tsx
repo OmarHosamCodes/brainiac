@@ -1,6 +1,6 @@
 import { AlertCircle, Loader2, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { AppShellPage } from "@/components/app-shell-page";
@@ -9,6 +9,7 @@ import { AppShellPortal } from "@/components/app-shell-portal";
 import { DashboardAgentChatPanel } from "@/components/dashboard/dashboard-agent-chat-panel";
 import { DashboardWorkspaceSidebar } from "@/components/dashboard/dashboard-workspace-sidebar";
 import { InfiniteCanvas, type InfiniteCanvasHandle } from "@/components/infinite-canvas";
+import { TeamSettingsModal } from "@/components/team/team-settings-modal";
 import { WorkspaceEditorModal } from "@/components/workspace/workspace-editor-modal";
 import { WorkspaceNodeCard } from "@/components/workspace/workspace-node-card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const session = authClient.useSession();
   const authEnabled = Boolean(session.data?.user);
+  const [teamSettingsOpen, setTeamSettingsOpen] = useState(false);
 
   const setAgentDockOpen = useAppShellStore((s) => s.setAgentDockOpen);
   const isTeamAsideCompact = useTeamStore((s) => s.isTeamAsideCompact);
@@ -146,7 +148,7 @@ export function DashboardPage() {
               nodeShareActionDisabled={!selectedNode || selectedTeamRole !== "owner"}
               onCompactChange={setIsTeamAsideCompact}
               onCreateTeam={createTeam}
-              onOpenTeamSettings={() => {}}
+              onOpenTeamSettings={() => setTeamSettingsOpen(true)}
               onToggleSelectedNodeSharing={() => {}}
             />
 
@@ -252,6 +254,13 @@ export function DashboardPage() {
           onNodeTypeChange={(nodeType) => board.patchNodeDraft({ nodeType })}
           onTintChange={(tint) => board.patchNodeDraft({ tint })}
           onTitleChange={(title) => board.patchNodeDraft({ title })}
+        />
+
+        <TeamSettingsModal
+          open={teamSettingsOpen}
+          onOpenChange={setTeamSettingsOpen}
+          team={selectedTeam}
+          onRefetchWorkspace={() => board.workspaceQuery.refetch()}
         />
       </div>
     </AppShellPage>
