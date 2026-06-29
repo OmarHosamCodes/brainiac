@@ -17,10 +17,34 @@ export const shellErrorPanelClass = "rounded-2xl border border-error/30 bg-error
 
 export const shellLoadingPanelClass = "rounded-2xl border border-default bg-muted/20 p-6";
 
+export const shellRailIconClass = "size-4 shrink-0";
+
 export const shellRailLinkBaseClass =
-  "flex size-10 items-center justify-center rounded-2xl text-muted transition-[background-color,border-color,color] duration-200 hover:bg-elevated hover:text-highlighted";
+  "flex size-8 shrink-0 items-center justify-center rounded-full text-muted transition-[background-color,border-color,color,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-elevated hover:text-highlighted active:scale-95";
 
 export const shellRailLinkActiveClass = "bg-primary/10 text-primary border border-primary/30";
+
+export const shellRailToggleClass = [
+  shellRailLinkBaseClass,
+  "border border-transparent",
+].join(" ");
+
+export const shellRailExpandedLinkClass = [
+  "flex h-8 w-full min-w-0 items-center gap-2.5 rounded-full px-2.5 text-[13px] font-medium text-muted transition-[background-color,border-color,color,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-elevated hover:text-highlighted active:scale-[0.98]",
+  shellFocusRingClass,
+].join(" ");
+
+export const shellRailAvatarClass =
+  "relative flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-default bg-default text-[10px] font-semibold";
+
+export const shellRailAvatarCollapsedClass =
+  "group relative flex size-8 items-center justify-center overflow-hidden rounded-full border border-default bg-default text-[11px] font-semibold text-highlighted transition-[background-color,border-color,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-accented hover:bg-elevated focus-visible:border-accented focus-visible:bg-elevated active:scale-95";
+
+export const shellRailExpandedLinkActiveClass =
+  "bg-primary/10 text-primary border border-primary/30";
+
+export const shellRailFooterClass =
+  "mt-auto flex w-full flex-col gap-1.5 border-t border-default pt-2.5";
 
 /** Topbar shell frame (paired with `.app-shell__topbar` in index.css). */
 export const shellTopbarBaseClass = "app-shell__topbar border-b border-default bg-default";

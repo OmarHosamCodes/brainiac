@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 
 import { DashboardAgentChatPanel } from "@/components/dashboard/dashboard-agent-chat-panel";
-import { AppShellHeaderContext } from "@/components/app-shell-header-slots";
 import { WorkspaceNodeEditorProvider } from "@/components/workspace/node/context";
 import { WorkspaceNodeShell } from "@/components/workspace/node/workspace-node-shell";
 import { Badge } from "@/components/ui/badge";
@@ -11,9 +10,7 @@ import { AppShellPortal } from "@/components/app-shell-portal";
 import { useWorkspaceNodePage } from "@/lib/workspace/use-node-page";
 import { useAppShellStore } from "@/stores/app-shell";
 import {
-  shellBreadcrumbCurrentClass,
   shellContentInClass,
-  shellContextDividerClass,
   shellLoadingPanelClass,
 } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
@@ -24,16 +21,8 @@ export function NodePage() {
   const page = useWorkspaceNodePage();
 
   return (
-    <AppShellPage title={page.node?.title ?? "Node"} slots={["context", "dock"]}>
+    <AppShellPage subtitle={page.node?.title ?? "Node"} slots={["dock"]}>
       <div className="relative h-full w-full overflow-hidden">
-        <AppShellHeaderContext>
-          <Button variant="ghost" size="sm" className="shrink-0" asChild>
-            <Link to="/dashboard">Back</Link>
-          </Button>
-          <span className={shellContextDividerClass} aria-hidden="true" />
-          <span className={shellBreadcrumbCurrentClass}>{page.node?.title ?? "Node"}</span>
-        </AppShellHeaderContext>
-
         <AppShellPortal targetId="app-shell-dock-content">
           {page.node ? (
             <div className="flex h-full min-h-0 flex-col">

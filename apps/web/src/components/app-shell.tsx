@@ -1,25 +1,19 @@
 import {
   BarChart3,
-  BrainCircuit,
   Briefcase,
   Building2,
   CreditCard,
   FolderKanban,
   LayoutDashboard,
-  Moon,
-  PanelRightClose,
-  PanelRightOpen,
-  Search,
   Settings,
   ShoppingBag,
   SlidersHorizontal,
-  Sun,
 } from "lucide-react";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import { AppShellAccountMenu } from "@/components/app-shell-account-menu";
-import { Button } from "@/components/ui/button";
+import { AppShellRail } from "@/components/app-shell-rail";
+import { AppShellTopbar } from "@/components/app-shell-topbar";
 import {
   Command,
   CommandDialog,
@@ -29,33 +23,19 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { useTheme } from "@/stores/theme";
-import { useAppShellStore, useHasContextContent, useShellMode } from "@/stores/app-shell";
-import { APP_NAV_ITEMS, findActiveNavItem } from "@/lib/utils/app-navigation";
 import {
-  shellBreadcrumbCurrentClass,
-  shellBreadcrumbMutedClass,
-  shellBreadcrumbSeparatorClass,
-  shellBreadcrumbTrailClass,
-  shellContextSlotClass,
-  shellFocusRingClass,
-  shellContextDividerClass,
-  shellContentInClass,
-  shellHeaderActionsRegionClass,
-  shellHeaderContextRegionClass,
-  shellHeaderUtilityActionClass,
-  shellHeaderUtilityButtonClass,
+  APP_SHELL_RAIL_WIDTH_COLLAPSED,
+  APP_SHELL_RAIL_WIDTH_EXPANDED,
+  useAppShellStore,
+  useShellMode,
+} from "@/stores/app-shell";
+import { APP_NAV_ITEMS } from "@/lib/utils/app-navigation";
+import {
   shellMobileNavClass,
   shellMobileNavInnerClass,
   shellMobileNavLinkActiveClass,
   shellMobileNavLinkClass,
   shellMobileNavLinkIdleClass,
-  shellRailLinkActiveClass,
-  shellRailLinkBaseClass,
-  shellTopbarBaseClass,
-  shellTopbarExecutionClass,
-  shellTopbarSpatialClass,
-  shellUtilityClusterClass,
 } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 
@@ -110,35 +90,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const setCurrentPath = useAppShellStore((s) => s.setCurrentPath);
   const shellMode = useShellMode();
-  const hasContextContent = useHasContextContent();
   const [commandOpen, setCommandOpen] = useState(false);
 
-  const { isDark, toggle: toggleTheme } = useTheme();
   const agentDockOpen = useAppShellStore((s) => s.agentDockOpen);
   const agentDockWidth = useAppShellStore((s) => s.agentDockWidth);
-  const pageTitle = useAppShellStore((s) => s.pageTitle);
+  const railExpanded = useAppShellStore((s) => s.railExpanded);
   const setAgentDockOpen = useAppShellStore((s) => s.setAgentDockOpen);
   const toggleAgentDock = useAppShellStore((s) => s.toggleAgentDock);
-  const hasPageActions = useAppShellStore((s) => s.actionsOwnerCount > 0);
 
   const isSpatialMode = shellMode === "spatial";
-  const activeNavigationItem = useMemo(
-    () => findActiveNavItem(location.pathname),
-    [location.pathname],
-  );
-  const activeNavigationLabel = activeNavigationItem?.label ?? "Workspace";
-
-  const breadcrumbItems = useMemo(() => {
-    if (isSpatialMode) return [] as string[];
-    const items = [activeNavigationLabel];
-    const detailTitle = pageTitle?.trim();
-    if (detailTitle && detailTitle !== activeNavigationLabel) {
-      items.push(detailTitle);
-    }
-    return items;
-  }, [activeNavigationLabel, isSpatialMode, pageTitle]);
-
-  const showBreadcrumbs = !isSpatialMode && breadcrumbItems.length > 0 && !hasContextContent;
 
   function runCommand(to: string) {
     setCommandOpen(false);
@@ -173,61 +133,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       style={
         {
           "--app-shell-dock-width": agentDockOpen ? `${agentDockWidth}px` : "0px",
+          "--app-shell-rail-width": railExpanded
+            ? APP_SHELL_RAIL_WIDTH_EXPANDED
+            : APP_SHELL_RAIL_WIDTH_COLLAPSED,
         } as React.CSSProperties
       }
     >
-      <aside
-        className="app-shell__rail hidden border-r border-default bg-muted md:flex"
-        aria-label="Main navigation"
-      >
-        <div className="flex flex-1 flex-col items-center gap-4 py-4">
-          <Link
-            to="/dashboard"
-            className={cn(
-              shellRailLinkBaseClass,
-              shellFocusRingClass,
-              "border border-default bg-default text-highlighted hover:bg-elevated",
-            )}
-            aria-label="Open dashboard"
-            title="Dashboard"
-          >
-            <BrainCircuit className="size-5" />
-          </Link>
-
-          <button
-            type="button"
-            className={cn(shellRailLinkBaseClass, shellFocusRingClass, "border border-transparent")}
-            aria-label="Search navigation"
-            title="Search"
-            onClick={() => setCommandOpen(true)}
-          >
-            <Search className="size-4.5" />
-          </button>
-
-          <nav className="flex flex-1 flex-col items-center gap-2" aria-label="Sections">
-            {APP_NAV_ITEMS.map((item) => {
-              const Icon = NAV_ICONS[item.to as keyof typeof NAV_ICONS] ?? LayoutDashboard;
-              const active = item.matches(location.pathname);
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    shellRailLinkBaseClass,
-                    shellFocusRingClass,
-                    active ? shellRailLinkActiveClass : "border border-transparent",
-                  )}
-                  aria-label={item.label}
-                  aria-current={active ? "page" : undefined}
-                  title={item.label}
-                >
-                  <Icon className="size-4.5" />
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-      </aside>
+      <AppShellRail onOpenSearch={() => setCommandOpen(true)} />
 
       <CommandDialog open={commandOpen} onOpenChange={setCommandOpen} title="Search navigation">
         <Command>
@@ -271,80 +183,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Command>
       </CommandDialog>
 
-      <header
-        className={cn(
-          shellTopbarBaseClass,
-          isSpatialMode ? shellTopbarSpatialClass : shellTopbarExecutionClass,
-          hasContextContent ? "app-shell__topbar--owned" : "",
-        )}
-        role="banner"
-        aria-label="Application header"
-      >
-        <div className={shellHeaderContextRegionClass}>
-          <div id="app-shell-context" className={shellContextSlotClass} />
-          {showBreadcrumbs ? (
-            <nav
-              key={`${location.pathname}-${pageTitle ?? ""}`}
-              className={cn("hidden min-w-0 md:flex", shellContentInClass)}
-              aria-label="Breadcrumb"
-            >
-              <ol className={shellBreadcrumbTrailClass}>
-                {breadcrumbItems.map((item, index) => (
-                  <li key={`${item}-${index}`} className="flex min-w-0 items-center gap-2">
-                    <span
-                      className={cn(
-                        "truncate whitespace-nowrap",
-                        index === breadcrumbItems.length - 1
-                          ? shellBreadcrumbCurrentClass
-                          : shellBreadcrumbMutedClass,
-                      )}
-                    >
-                      {item}
-                    </span>
-                    {index < breadcrumbItems.length - 1 ? (
-                      <span className={shellBreadcrumbSeparatorClass} aria-hidden="true">
-                        /
-                      </span>
-                    ) : null}
-                  </li>
-                ))}
-              </ol>
-            </nav>
-          ) : null}
-        </div>
-
-        <div className={shellUtilityClusterClass}>
-          <div id="app-shell-actions" className={shellHeaderActionsRegionClass} />
-          {hasPageActions ? <span className={shellContextDividerClass} aria-hidden="true" /> : null}
-          <AppShellAccountMenu />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className={shellHeaderUtilityButtonClass}
-            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
-            onClick={toggleTheme}
-          >
-            {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-          </Button>
-          <Button
-            type="button"
-            variant={agentDockOpen ? "secondary" : "ghost"}
-            size="sm"
-            className={shellHeaderUtilityActionClass}
-            aria-label={agentDockOpen ? "Close agent dock" : "Open agent dock"}
-            aria-keyshortcuts="Control+J Meta+J"
-            onClick={() => setAgentDockOpen(!agentDockOpen)}
-          >
-            {agentDockOpen ? (
-              <PanelRightClose className="size-4" />
-            ) : (
-              <PanelRightOpen className="size-4" />
-            )}
-            <span className="hidden sm:inline">{agentDockOpen ? "Close" : "Agent"}</span>
-          </Button>
-        </div>
-      </header>
+      <AppShellTopbar />
 
       {agentDockOpen ? (
         <div
