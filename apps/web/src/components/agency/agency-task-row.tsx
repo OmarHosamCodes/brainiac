@@ -1,22 +1,25 @@
-import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import { Check, Clock } from "lucide-react";
 
-import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot";
 import { AgencyMiniTimer } from "@/components/agency/agency-mini-timer";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   agencyFocusRingClass,
-  agencyMetricClass,
+  agencyTaskRowCheckboxCheckedClass,
+  agencyTaskRowCheckboxClass,
   agencyTaskRowCompleteClass,
   agencyTaskRowClass,
   agencyTaskRowDoneClass,
+  agencyTaskRowMetaColumnClass,
+  agencyTaskRowProjectPillClass,
   agencyTaskRowSelectedClass,
+  agencyTaskRowStatusDotClass,
 } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
+import { isTaskOverdue } from "@/lib/utils/agency-task-utils";
 import { selectIsTaskRowPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
-type Project = {
+export type AgencyTaskProject = {
   id: string;
+  clientId: string;
   clientName: string;
   name: string;
 };
@@ -35,16 +38,10 @@ export type AgencyProjectTask = {
 
 export type TaskStatus = AgencyProjectTask["status"];
 
-const ACTIVE_STATUS_OPTIONS: Array<{ label: string; value: TaskStatus }> = [
-  { label: "Open", value: "open" },
-  { label: "In progress", value: "in_progress" },
-  { label: "Done", value: "done" },
-];
-
 function statusDotColor(status: TaskStatus) {
   switch (status) {
     case "open":
-      return "bg-muted";
+      return "bg-muted-foreground/50";
     case "in_progress":
       return "bg-primary";
     case "done":
@@ -82,100 +79,44 @@ function formatDueDate(iso: string | null): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-function isOverdue(iso: string | null): boolean {
-  if (!iso) return false;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return false;
-  return date.setHours(23, 59, 59, 999) < Date.now();
-}
-
-function isDueWithinDays(iso: string | null, days: number): boolean {
-  if (!iso) return false;
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return false;
-  const endOfDue = new Date(date);
-  endOfDue.setHours(23, 59, 59, 999);
-  const horizon = Date.now() + days * 24 * 60 * 60 * 1_000;
-  return endOfDue.getTime() <= horizon;
-}
-
-function shouldShowDueDate(iso: string | null): boolean {
-  if (!iso) return false;
-  return isOverdue(iso) || isDueWithinDays(iso, 7);
-}
-
-type AgencyTaskStatusPillProps = {
-  status: TaskStatus;
+type AgencyTaskRowCheckboxProps = {
   title: string;
+  checked: boolean;
   disabled?: boolean;
-  onStatusChange: (status: TaskStatus) => void;
+  onToggle: () => void;
 };
 
-function AgencyTaskStatusPill({
-  status,
+function AgencyTaskRowCheckbox({
   title,
+  checked,
   disabled = false,
-  onStatusChange,
-}: AgencyTaskStatusPillProps) {
-  const [open, setOpen] = useState(false);
-
+  onToggle,
+}: AgencyTaskRowCheckboxProps) {
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          disabled={disabled}
-          className={cn(
-            "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-default bg-default px-2 text-[11px] font-semibold text-muted",
-            "transition-colors hover:bg-elevated hover:text-highlighted",
-            agencyFocusRingClass,
-            "motion-reduce:transition-none",
-            disabled && "cursor-not-allowed opacity-50",
-          )}
-          aria-label={`Status for ${title}: ${statusLabel(status)}`}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <span className={cn("size-1.5 rounded-full", statusDotColor(status))} aria-hidden />
-          <span className="max-w-[4.5rem] truncate">{statusLabel(status)}</span>
-          <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-40 p-1">
-        <ul role="listbox" aria-label={`Status for ${title}`}>
-          {ACTIVE_STATUS_OPTIONS.map((option) => (
-            <li key={option.value}>
-              <button
-                type="button"
-                role="option"
-                aria-selected={option.value === status}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-semibold",
-                  "transition-colors hover:bg-elevated",
-                  agencyFocusRingClass,
-                  option.value === status ? "text-highlighted" : "text-muted",
-                )}
-                onClick={() => {
-                  onStatusChange(option.value);
-                  setOpen(false);
-                }}
-              >
-                <span
-                  className={cn("size-1.5 rounded-full", statusDotColor(option.value))}
-                  aria-hidden
-                />
-                {option.label}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </PopoverContent>
-    </Popover>
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={checked ? `${title} is done` : `Mark ${title} done`}
+      disabled={disabled}
+      className={cn(
+        agencyTaskRowCheckboxClass,
+        checked && agencyTaskRowCheckboxCheckedClass,
+        disabled && "cursor-not-allowed opacity-50",
+      )}
+      onClick={(event) => {
+        event.stopPropagation();
+        if (!checked) onToggle();
+      }}
+    >
+      {checked ? <Check className="size-2.5" strokeWidth={3} aria-hidden /> : null}
+    </button>
   );
 }
 
 export type AgencyTaskRowProps = {
   task: AgencyProjectTask;
-  projects: Project[];
+  projects: AgencyTaskProject[];
   teamId: string;
   selectedTaskId: string;
   readOnly?: boolean;
@@ -201,8 +142,9 @@ export function AgencyTaskRow({
   const project = projects.find((p) => p.id === task.projectId);
   const projectName = project?.name ?? "Project";
   const isSelected = task.id === selectedTaskId;
-  const showDue = shouldShowDueDate(task.dueDate);
-  const overdue = isOverdue(task.dueDate);
+  const isDone = task.status === "done";
+  const overdue = isTaskOverdue(task.dueDate);
+  const dueLabel = task.dueDate ? formatDueDate(task.dueDate) : "";
 
   return (
     <li
@@ -213,77 +155,91 @@ export function AgencyTaskRow({
         highlight && agencyTaskRowCompleteClass,
       )}
     >
-      <div className="flex items-center gap-2 px-3 py-2.5">
-        <AgencyProjectHueDot projectId={task.projectId} className="mt-0.5 self-start" />
-
+      <div className="relative flex items-center gap-2 px-3 py-2.5">
         <button
           type="button"
           className={cn(
-            "min-w-0 flex-1 text-left",
+            "absolute inset-0 z-0 rounded-none",
             agencyFocusRingClass,
-            "rounded-md motion-reduce:transition-none",
+            "motion-reduce:transition-none",
           )}
           aria-current={isSelected ? "true" : undefined}
+          aria-label={`Open thread for ${task.title}`}
           onClick={() => onSelect(task.id)}
-        >
-          <p className="truncate text-sm font-semibold text-highlighted">{task.title}</p>
-          <div className="mt-0.5 flex min-w-0 items-center gap-2 text-[11px] text-muted">
-            {onSelectProject ? (
-              <button
-                type="button"
-                className={cn(
-                  "truncate text-left transition-colors hover:text-highlighted hover:underline",
-                  agencyFocusRingClass,
-                  "rounded-sm motion-reduce:transition-none",
-                )}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelectProject(task.projectId);
-                }}
-              >
-                {projectName}
-              </button>
-            ) : (
-              <span className="truncate">{projectName}</span>
-            )}
-            {showDue ? (
-              <span
-                className={cn(
-                  "shrink-0 font-mono tabular-nums",
-                  overdue ? "text-error" : "text-muted",
-                )}
-              >
-                {overdue ? "Overdue" : `Due ${formatDueDate(task.dueDate)}`}
-              </span>
+        />
+
+        <div className="pointer-events-none relative z-10 flex w-full min-w-0 items-center gap-2">
+          <div className="pointer-events-auto">
+            <AgencyTaskRowCheckbox
+              title={task.title}
+              checked={isDone}
+              disabled={isRowPending || readOnly}
+              onToggle={() => onStatusChange?.(task, "done")}
+            />
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <span
+              className={cn(
+                "block truncate text-sm font-semibold text-highlighted",
+                readOnly && "text-muted line-through",
+              )}
+            >
+              {task.title}
+            </span>
+
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+              {onSelectProject ? (
+                <button
+                  type="button"
+                  className={cn(
+                    agencyTaskRowProjectPillClass,
+                    agencyFocusRingClass,
+                    "pointer-events-auto motion-reduce:transition-none",
+                  )}
+                  onClick={() => onSelectProject(task.projectId)}
+                >
+                  <span className="truncate">{projectName}</span>
+                </button>
+              ) : (
+                <span className={cn(agencyTaskRowProjectPillClass, "truncate")}>{projectName}</span>
+              )}
+
+              {dueLabel ? (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 text-[11px]",
+                    overdue ? "text-error" : "text-muted",
+                  )}
+                >
+                  <Clock className="size-3 shrink-0" aria-hidden />
+                  <span className="font-mono tabular-nums">
+                    {overdue ? "Overdue" : dueLabel}
+                  </span>
+                </span>
+              ) : null}
+            </div>
+          </div>
+
+          <div className={cn(agencyTaskRowMetaColumnClass, "pointer-events-auto")}>
+            <span
+              className={cn(agencyTaskRowStatusDotClass, statusDotColor(task.status))}
+              title={statusLabel(task.status)}
+              aria-hidden
+            />
+
+            {!readOnly ? (
+              <AgencyMiniTimer
+                variant="compact"
+                teamId={teamId}
+                taskId={task.id}
+                projectId={task.projectId}
+                taskTitle={task.title}
+                projectName={projectName}
+              />
             ) : null}
           </div>
-        </button>
-
-        {!readOnly ? (
-          <div className="flex shrink-0 items-center gap-1">
-            <AgencyTaskStatusPill
-              status={task.status}
-              title={task.title}
-              disabled={isRowPending}
-              onStatusChange={(status) => onStatusChange?.(task, status)}
-            />
-            <AgencyMiniTimer
-              variant="compact"
-              teamId={teamId}
-              taskId={task.id}
-              projectId={task.projectId}
-              taskTitle={task.title}
-              projectName={projectName}
-            />
-          </div>
-        ) : (
-          <span
-            data-task-status-label
-            className={cn(agencyMetricClass, "shrink-0 text-[11px] text-muted")}
-          >
-            {statusLabel(task.status)}
-          </span>
-        )}
+        </div>
       </div>
     </li>
   );
