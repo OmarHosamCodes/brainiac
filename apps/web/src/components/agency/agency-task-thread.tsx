@@ -156,17 +156,23 @@ export function AgencyTaskThread({ teamId, taskId, projects, onBack }: AgencyTas
               taskTitle={context?.taskTitle}
               projectName={context?.projectName}
             />
-            <div className="flex items-center gap-2">
-              <input
-                id="agent-toggle"
-                type="checkbox"
-                checked={agentEnabled}
-                onChange={(e) => setAgentEnabled(e.target.checked)}
-                className="size-4 rounded border-default"
-              />
-              <Label htmlFor="agent-toggle" className="text-xs font-semibold">
-                Agent
-              </Label>
+            <div className="flex flex-col items-end gap-0.5">
+              <div className="flex items-center gap-2">
+                <input
+                  id="agent-toggle"
+                  type="checkbox"
+                  checked={agentEnabled}
+                  onChange={(e) => setAgentEnabled(e.target.checked)}
+                  className="size-4 rounded border-default"
+                  aria-describedby="agent-toggle-help"
+                />
+                <Label htmlFor="agent-toggle" className="text-xs font-semibold">
+                  Agent
+                </Label>
+              </div>
+              <p id="agent-toggle-help" className="max-w-36 text-right text-[10px] leading-tight text-muted">
+                Drafts replies from task context
+              </p>
             </div>
           </div>
         </div>
