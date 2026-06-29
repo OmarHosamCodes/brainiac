@@ -278,7 +278,11 @@ export function AgencyPage() {
                     className={animatedPanelClass("work", segment)}
                     aria-hidden={segment !== "work"}
                   >
-                    <AgencyWorkSurface teamId={selectedTeamId} onSelectProject={openProject} />
+                    <AgencyWorkSurface
+                      teamId={selectedTeamId}
+                      onSelectProject={openProject}
+                      onSegmentChange={handleSegmentChange}
+                    />
                   </div>
 
                   <div

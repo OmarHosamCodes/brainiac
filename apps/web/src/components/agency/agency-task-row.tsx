@@ -182,6 +182,7 @@ export type AgencyTaskRowProps = {
   highlight?: boolean;
   isRowPending: boolean;
   onSelect: (taskId: string) => void;
+  onSelectProject?: (projectId: string) => void;
   onStatusChange?: (task: AgencyProjectTask, status: TaskStatus) => void;
 };
 
@@ -194,6 +195,7 @@ export function AgencyTaskRow({
   highlight = false,
   isRowPending,
   onSelect,
+  onSelectProject,
   onStatusChange,
 }: AgencyTaskRowProps) {
   const project = projects.find((p) => p.id === task.projectId);
@@ -226,7 +228,24 @@ export function AgencyTaskRow({
         >
           <p className="truncate text-sm font-semibold text-highlighted">{task.title}</p>
           <div className="mt-0.5 flex min-w-0 items-center gap-2 text-[11px] text-muted">
-            <span className="truncate">{projectName}</span>
+            {onSelectProject ? (
+              <button
+                type="button"
+                className={cn(
+                  "truncate text-left transition-colors hover:text-highlighted hover:underline",
+                  agencyFocusRingClass,
+                  "rounded-sm motion-reduce:transition-none",
+                )}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSelectProject(task.projectId);
+                }}
+              >
+                {projectName}
+              </button>
+            ) : (
+              <span className="truncate">{projectName}</span>
+            )}
             {showDue ? (
               <span
                 className={cn(

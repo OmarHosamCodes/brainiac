@@ -100,6 +100,7 @@ export function AgencyTaskList({
   collapsed,
   onSelect,
   onCollapsedChange,
+  onSelectProject,
 }: AgencyTaskListProps) {
   const agencyOps = useAgencyOpsStore();
   const isCreatingTask = useAgencyOpsStore(selectIsCreatingTask);
@@ -327,6 +328,7 @@ export function AgencyTaskList({
               teamId={teamId}
               selectedTaskId={selectedTaskId}
               onSelect={onSelect}
+              onSelectProject={onSelectProject}
               onStatusChange={(nextTask, status) => void updateTaskStatus(nextTask, status)}
             />
           ))}
@@ -422,6 +424,7 @@ export function AgencyTaskList({
                     highlight={recentlyCompletedTaskId === task.id}
                     readOnly
                     onSelect={onSelect}
+                    onSelectProject={onSelectProject}
                   />
                 ))}
               </ul>
