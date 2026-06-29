@@ -1,4 +1,4 @@
-import type { AgencyProjectTask, AgencyTaskProject } from "@/components/agency/agency-task-row";
+import type { AgencyProjectTask, AgencyTaskProject } from "@/lib/schemas/agency-work";
 
 export type ClientTaskGroup = {
   clientId: string;

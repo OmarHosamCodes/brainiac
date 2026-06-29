@@ -3,6 +3,7 @@ import { toast } from "sonner";
 
 import { getQueryClient } from "@/lib/query-client";
 import {
+  isAgencyProjectsListQueryKey,
   patchActiveTimerInCache,
   refetchAgencyActiveTimerQueries,
   refetchAgencyProjectTaskListQueries,
@@ -10,6 +11,10 @@ import {
 } from "@/lib/utils/agency-query-cache";
 import { orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import {
+  getAgencyTimerStartBlockedMessage,
+  getAgencyTimerStopBlockedMessage,
+} from "@/lib/agency/work/timer-validation";
 import { type AgencyListOverlay } from "@/lib/utils/agency-optimistic-merge";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 
@@ -411,8 +416,19 @@ function createAgencyTimeTrackingActions(
   }
 
   async function startTimer(payload: StartTimerPayload) {
-    const previousDraft = getTrackerDraftSnapshot(payload.teamId);
     const previousActiveTimer = getCachedActiveTimer();
+    const startBlockedMessage = getAgencyTimerStartBlockedMessage({
+      activeTimer: previousActiveTimer,
+      project: payload.project,
+      task: payload.task,
+    });
+
+    if (startBlockedMessage) {
+      toast.error("Can't start timer", { description: startBlockedMessage });
+      return;
+    }
+
+    const previousDraft = getTrackerDraftSnapshot(payload.teamId);
     const affectedLogTeams = new Set<string>([payload.teamId]);
     const timerSnapshots = snapshotQueries(
       [...activeTimerQueryRegistry.values()].map((entry) => entry.payload),
@@ -435,9 +451,13 @@ function createAgencyTimeTrackingActions(
       description: payload.description,
       startedAt: nowIso,
     });
+    const previousTimerClient = previousActiveTimer
+      ? resolveProjectClientFromCache(previousActiveTimer.teamId, previousActiveTimer.projectId)
+      : null;
     const optimisticPreviousEntry = previousActiveTimer
       ? createOptimisticEntryFromTimer(previousActiveTimer, {
           endedAt: nowIso,
+          ...(previousTimerClient ?? {}),
         })
       : null;
     const draft = ensureTrackerDraft(payload.teamId);
@@ -469,10 +489,23 @@ function createAgencyTimeTrackingActions(
         teamId: payload.teamId,
         taskId: payload.task.id,
         description: payload.description.trim(),
-      })) as AgencyActiveTimerQueryData;
+      })) as {
+        timer: AgencyActiveTimer | null;
+        createdEntry: AgencyTimeEntry | null;
+      };
 
       patchActiveTimerCaches(result.timer);
       syncDraftFromActiveTimer(payload.teamId, result.timer);
+
+      if (optimisticPreviousEntry && result.createdEntry) {
+        reconcileCreatedEntry(
+          optimisticPreviousEntry.teamId,
+          optimisticPreviousEntry.id,
+          result.createdEntry,
+        );
+      } else if (optimisticPreviousEntry) {
+        patchDeletedEntries(optimisticPreviousEntry.teamId, [optimisticPreviousEntry]);
+      }
 
       void refetchAgencyActiveTimerQueries(payload.teamId);
       void refetchAgencyProjectTaskListQueries(
@@ -512,6 +545,19 @@ function createAgencyTimeTrackingActions(
 
     if (!activeTimer) {
       return;
+    }
+
+    if (!payload.discard) {
+      const stopBlockedMessage = getAgencyTimerStopBlockedMessage({
+        activeTimer,
+        description: payload.description,
+        selectedTask: payload.task ?? null,
+      });
+
+      if (stopBlockedMessage) {
+        toast.error("Can't stop timer", { description: stopBlockedMessage });
+        return;
+      }
     }
 
     const previousDraft = getTrackerDraftSnapshot(payload.teamId);
@@ -766,6 +812,28 @@ function createAgencyTimeTrackingActions(
     }
 
     return Math.max(1, Math.floor((endedAtMs - startedAtMs) / 1_000));
+  }
+
+  function resolveProjectClientFromCache(
+    teamId: string,
+    projectId: string,
+  ): { clientId: string; clientName: string } | null {
+    const queryClient = getQueryClient();
+
+    for (const query of queryClient.getQueryCache().getAll()) {
+      if (!isAgencyProjectsListQueryKey(query.queryKey, teamId)) {
+        continue;
+      }
+
+      const data = query.state.data as { items?: AgencyProjectSummary[] } | undefined;
+      const project = data?.items?.find((item) => item.id === projectId);
+
+      if (project) {
+        return { clientId: project.clientId, clientName: project.clientName };
+      }
+    }
+
+    return null;
   }
 
   function snapshotQueries(queries: Iterable<{ queryKey: QueryKey }>) {

@@ -1,4 +1,8 @@
-import { localDateKeyFromIso } from "@/lib/utils/format-agency-day-label";
+import {
+  formatAgencyWeekLabel,
+  getLocalWeekStartKey,
+  localDateKeyFromIso,
+} from "@/lib/utils/format-agency-day-label";
 
 export type TimeEntryRecord = {
   id: string;
@@ -36,6 +40,13 @@ export type TimeEntryDayGroup = {
   dateKey: string;
   totalSeconds: number;
   groups: CollapsedEntryGroup[];
+};
+
+export type TimeEntryWeekGroup = {
+  weekStartKey: string;
+  label: string;
+  totalSeconds: number;
+  days: TimeEntryDayGroup[];
 };
 
 function collapseKeyFor(entry: TimeEntryRecord): string {
@@ -99,4 +110,28 @@ export function groupEntriesByDay(entries: TimeEntryRecord[]): TimeEntryDayGroup
         groups,
       };
     });
+}
+
+export function groupEntriesByWeek(
+  entries: TimeEntryRecord[],
+  referenceDate = new Date(),
+): TimeEntryWeekGroup[] {
+  const dayGroups = groupEntriesByDay(entries);
+  const byWeek = new Map<string, TimeEntryDayGroup[]>();
+
+  for (const day of dayGroups) {
+    const weekStartKey = getLocalWeekStartKey(day.dateKey);
+    const bucket = byWeek.get(weekStartKey) ?? [];
+    bucket.push(day);
+    byWeek.set(weekStartKey, bucket);
+  }
+
+  return [...byWeek.entries()]
+    .sort(([leftWeek], [rightWeek]) => rightWeek.localeCompare(leftWeek))
+    .map(([weekStartKey, days]) => ({
+      weekStartKey,
+      label: formatAgencyWeekLabel(weekStartKey, referenceDate),
+      totalSeconds: days.reduce((sum, day) => sum + day.totalSeconds, 0),
+      days,
+    }));
 }
