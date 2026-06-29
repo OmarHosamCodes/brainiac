@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
+import { agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
 type Project = {
@@ -238,7 +238,10 @@ export function AgencyTaskChooser({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={searchPlaceholder}
-              className="h-9 rounded-lg border-default bg-default pl-8 text-sm placeholder:text-muted"
+              className={cn(
+                "h-9 rounded-lg border-default bg-default pl-8 text-sm",
+                agencyInputPlaceholderClass,
+              )}
             />
           </div>
         </div>

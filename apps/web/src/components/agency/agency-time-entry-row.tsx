@@ -11,7 +11,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   agencyFocusRingClass,
   agencyMetricClass,
+  agencyTimeEntryGridClass,
   agencyTimeEntryRowClass,
+  agencyTimeEntryRowHighlightClass,
 } from "@/lib/utils/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
 import type { CollapsedEntryGroup } from "@/lib/utils/group-time-entries";
@@ -73,6 +75,7 @@ type AgencyTimeEntryRowProps = {
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  highlighted?: boolean;
 };
 
 export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
@@ -89,6 +92,7 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
   onDeleteGroup,
   onDeleteEntry,
   onSaveEdit,
+  highlighted = false,
 }: AgencyTimeEntryRowProps) {
   const { isDark } = useTheme();
   const projectHue = projectHueFor(group.projectId);
@@ -186,9 +190,11 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
   return (
     <>
       <div
+        data-entry-id={primaryEntry.id}
         className={cn(
           agencyTimeEntryRowClass,
-          "grid min-w-[52rem] grid-cols-[minmax(14rem,1.35fr)_minmax(12rem,0.9fr)_9rem_7rem_5.25rem] items-center gap-0",
+          agencyTimeEntryGridClass,
+          highlighted && agencyTimeEntryRowHighlightClass,
         )}
       >
         <div className="flex min-w-0 items-center gap-3 pr-4">
@@ -196,7 +202,7 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
             <button
               type="button"
               className={cn(
-                "inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-default bg-elevated px-2 font-mono text-[10px] font-bold tabular-nums text-muted transition-colors hover:bg-default hover:text-highlighted",
+                "inline-flex h-6 shrink-0 items-center gap-1 rounded-full border border-default bg-elevated px-2 font-mono text-xs font-bold tabular-nums text-muted transition-colors hover:bg-default hover:text-highlighted",
                 agencyFocusRingClass,
               )}
               aria-label={expanded ? "Collapse entries" : "Expand entries"}
@@ -286,7 +292,7 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
                 onBlur={() => void saveInlineDraft()}
                 onKeyDown={saveOnEnter}
                 disabled={editSaving || rowUpdating}
-                className="h-7 border-0 bg-transparent px-0 font-mono text-[11px] shadow-none focus-visible:ring-0"
+                className="h-7 border-0 bg-transparent px-0 font-mono text-xs shadow-none focus-visible:ring-0"
                 aria-label="Start time"
               />
               <Input
@@ -296,7 +302,7 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
                 onBlur={() => void saveInlineDraft()}
                 onKeyDown={saveOnEnter}
                 disabled={editSaving || rowUpdating}
-                className="h-7 border-0 bg-transparent px-0 font-mono text-[11px] shadow-none focus-visible:ring-0"
+                className="h-7 border-0 bg-transparent px-0 font-mono text-xs shadow-none focus-visible:ring-0"
                 aria-label="End time"
               />
             </>
@@ -326,7 +332,7 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
               {durationLabel}
             </span>
           )}
-          {editError ? <p className="text-[10px] text-error">{editError}</p> : null}
+          {editError ? <p className="text-xs text-error">{editError}</p> : null}
         </div>
 
         <div className="flex min-w-0 shrink-0 items-center justify-end gap-0.5 border-l border-dashed border-default pl-3">
@@ -392,11 +398,14 @@ export const AgencyTimeEntryRow = memo(function AgencyTimeEntryRow({
       </div>
 
       {isMulti && expanded ? (
-        <div className="min-w-[52rem] border-b border-default bg-default/30">
+        <div className="border-b border-default bg-default/30">
           {group.entries.map((entry) => (
             <div
               key={entry.id}
-              className="grid grid-cols-[minmax(14rem,1.35fr)_minmax(12rem,0.9fr)_9rem_7rem_5.25rem] items-center border-t border-default/60 px-4 py-2 text-xs"
+              className={cn(
+                agencyTimeEntryGridClass,
+                "items-center border-t border-default/60 px-4 py-2 text-xs",
+              )}
             >
               <span className="truncate pl-6 text-muted">Entry detail</span>
               <span className="border-l border-dashed border-default pl-4 pr-4 text-muted">-</span>

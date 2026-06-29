@@ -4,6 +4,8 @@ import { AgencyTaskChooser } from "@/components/agency/agency-task-chooser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PopoverContent } from "@/components/ui/popover";
+import { agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
+import { cn } from "@/lib/utils";
 import {
   applyDurationToDraft,
   applyEndTimeToDraft,
@@ -116,7 +118,7 @@ export function AgencyTimeEntryEditPopover({
           <Input
             value={draft.durationInput}
             onChange={(e) => onDraftChange(applyDurationToDraft(draft, e.target.value))}
-            className="font-mono tabular-nums"
+            className={cn("font-mono tabular-nums", agencyInputPlaceholderClass)}
             placeholder="1:00"
             aria-label="Duration"
             disabled={saving}

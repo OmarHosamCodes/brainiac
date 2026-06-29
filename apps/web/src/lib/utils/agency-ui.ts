@@ -15,6 +15,9 @@ export const agencyMetricClass = "font-mono tabular-nums text-highlighted";
 
 export const agencyFocusRingClass = shellFocusRingClass;
 
+/** Readable placeholder text on default/elevated agency surfaces (≥4.5:1). */
+export const agencyInputPlaceholderClass = "placeholder:text-muted-foreground";
+
 export const agencyPanelClass = "rounded-2xl border border-default bg-default";
 
 export const agencyFormFieldClass = "flex w-full min-w-0 flex-col gap-1.5";
@@ -69,7 +72,21 @@ export const agencyTimeEntryRowClass = [
   "hover:bg-default/55",
 ].join(" ");
 
+/** Shared column grid for time entry rows inside the horizontal scroll region. */
+export const agencyTimeEntryGridClass =
+  "grid w-full min-w-[44rem] grid-cols-[minmax(12rem,1.35fr)_minmax(10rem,0.9fr)_8.5rem_6.5rem_5rem] items-center gap-0";
+
+export const agencyTimeEntryScrollClass = "min-w-0 overflow-x-auto";
+
+export const agencyTimeEntryRowHighlightClass =
+  "bg-success/10 motion-reduce:transition-none transition-colors duration-500";
+
 export const agencyTimeEntryRowEditingClass = "bg-primary/5 hover:bg-primary/5";
+
+export const agencyTimeSuggestionChipClass = [
+  "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-default bg-elevated px-2 py-1",
+  "text-xs font-medium text-muted transition-colors hover:bg-default hover:text-highlighted",
+].join(" ");
 
 export const agencyTimeWeekFooterClass = [
   "flex shrink-0 items-center justify-between border-t border-default px-4 py-2.5",

@@ -1,5 +1,5 @@
 import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { AgencyTimeEntryDayGroup } from "@/components/agency/agency-time-entry-day-group";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
 import {
   agencyLabelClass,
   agencyMetricClass,
+  agencyTimeEntryScrollClass,
   agencyTimeLogSkeletonClass,
   agencyTimeWeekFooterClass,
 } from "@/lib/utils/agency-ui";
@@ -38,13 +39,18 @@ type AgencyTimeEntriesLogProps = {
 const OPEN_TASK_STATUSES: AgencyProjectTaskStatus[] = ["open", "in_progress", "done", "archived"];
 const DEFAULT_PAGE_SIZE = 50;
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
+const HIGHLIGHT_CLEAR_MS = 2_500;
 
 export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLogProps) {
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
   const deletingEntryIds = useAgencyTimeTrackingStore((s) => s.deletingEntryIds);
   const updatingEntryIds = useAgencyTimeTrackingStore((s) => s.updatingEntryIds);
   const isTimerMutationPending = useAgencyTimeTrackingStore(selectIsTimerMutationPending);
+  const lastHighlightedEntryId = useAgencyTimeTrackingStore((s) => s.lastHighlightedEntryId);
+  const clearHighlightedEntry = useAgencyTimeTrackingStore((s) => s.clearHighlightedEntry);
+  const requestOpenTaskChooser = useAgencyTimeTrackingStore((s) => s.requestOpenTaskChooser);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [expandedGroupKeys, setExpandedGroupKeys] = useState<Set<string>>(new Set());
@@ -84,7 +90,23 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
     setExpandedGroupKeys(new Set());
   }, [teamId]);
 
-  const logRefreshing = entriesQuery.isFetching || projectsQuery.isFetching;
+  useEffect(() => {
+    if (!lastHighlightedEntryId) return;
+
+    const row = scrollContainerRef.current?.querySelector(
+      `[data-entry-id="${lastHighlightedEntryId}"]`,
+    );
+    if (row) {
+      row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    const clearHandle = setTimeout(() => {
+      clearHighlightedEntry();
+    }, HIGHLIGHT_CLEAR_MS);
+
+    return () => clearTimeout(clearHandle);
+  }, [lastHighlightedEntryId, clearHighlightedEntry, entries]);
+
   const logQueryError = entriesQuery.error ?? projectsQuery.error ?? null;
 
   const toggleGroupExpand = useCallback((collapseKey: string) => {
@@ -149,27 +171,25 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
 
   return (
     <div className={["flex min-h-0 flex-1 flex-col", className].filter(Boolean).join(" ")}>
-      {logRefreshing || entries.length > 0 || weekSummary ? (
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-default bg-muted/55 px-4 py-3">
-          <div className="text-sm font-medium text-highlighted">This week</div>
+      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-default bg-muted/55 px-4 py-3">
+        <div className="text-sm font-medium text-highlighted">This week</div>
 
-          <div className="flex items-center gap-4 text-xs text-muted">
-            <span className="hidden sm:inline-flex sm:items-baseline sm:gap-1.5">
-              <span className={agencyLabelClass}>Today</span>
-              <span className={cn(agencyMetricClass, "text-xs")}>
-                {formatDuration(todaySeconds, "short")}
-              </span>
+        <div className="flex items-center gap-4 text-xs text-muted">
+          <span className="inline-flex items-baseline gap-1.5">
+            <span className={agencyLabelClass}>Today</span>
+            <span className={cn(agencyMetricClass, "text-xs")}>
+              {formatDuration(todaySeconds, "short")}
             </span>
-            <span className="hidden h-4 w-px bg-default sm:block" aria-hidden />
-            <span className="inline-flex items-baseline gap-1.5">
-              <span className={agencyLabelClass}>Week total</span>
-              <span className={cn(agencyMetricClass, "text-base font-semibold")}>
-                {formatDuration(weekSummary?.totalSeconds ?? 0, "clock")}
-              </span>
+          </span>
+          <span className="h-4 w-px bg-default" aria-hidden />
+          <span className="inline-flex items-baseline gap-1.5">
+            <span className={agencyLabelClass}>Week total</span>
+            <span className={cn(agencyMetricClass, "text-base font-semibold")}>
+              {formatDuration(weekSummary?.totalSeconds ?? 0, "clock")}
             </span>
-          </div>
+          </span>
         </div>
-      ) : null}
+      </div>
 
       {logQueryError ? (
         <div
@@ -196,7 +216,7 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
         </div>
       ) : null}
 
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-auto">
         {entriesQuery.isPending && entries.length === 0 ? (
           <div className="space-y-0">
             {[1, 2, 3, 4, 5].map((rowIndex) => (
@@ -204,28 +224,56 @@ export function AgencyTimeEntriesLog({ teamId, className }: AgencyTimeEntriesLog
             ))}
           </div>
         ) : entries.length === 0 ? (
-          <div className="px-4 py-8 text-center text-sm text-muted">
-            No entries yet. Start the timer above.
+          <div className="px-4 py-10 text-center">
+            <p className="text-sm font-semibold text-highlighted">No time logged yet</p>
+            <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
+              Pick a task, describe what you are working on, then press Start in the tracker above.
+            </p>
+            <ol className="mx-auto mt-4 max-w-xs space-y-2 text-left text-sm text-muted">
+              <li className="flex gap-2">
+                <span className={cn(agencyMetricClass, "text-xs")}>1.</span>
+                <span>Choose a task</span>
+              </li>
+              <li className="flex gap-2">
+                <span className={cn(agencyMetricClass, "text-xs")}>2.</span>
+                <span>Describe your work</span>
+              </li>
+              <li className="flex gap-2">
+                <span className={cn(agencyMetricClass, "text-xs")}>3.</span>
+                <span>Press Start</span>
+              </li>
+            </ol>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-5"
+              onClick={() => requestOpenTaskChooser()}
+            >
+              Choose task
+            </Button>
           </div>
         ) : (
-          dayGroups.map((day) => (
-            <AgencyTimeEntryDayGroup
-              key={day.dateKey}
-              day={day}
-              teamId={teamId}
-              projects={projects}
-              tasks={tasks}
-              expandedGroupKeys={expandedGroupKeys}
-              isTimerMutationPending={isTimerMutationPending}
-              deletingEntryIds={deletingEntryIds}
-              updatingEntryIds={updatingEntryIds}
-              onToggleGroupExpand={toggleGroupExpand}
-              onRestart={restartEntry}
-              onDeleteGroup={deleteGroupEntries}
-              onDeleteEntry={deleteEntry}
-              onSaveEdit={saveEdit}
-            />
-          ))
+          <div className={agencyTimeEntryScrollClass}>
+            {dayGroups.map((day) => (
+              <AgencyTimeEntryDayGroup
+                key={day.dateKey}
+                day={day}
+                teamId={teamId}
+                projects={projects}
+                tasks={tasks}
+                expandedGroupKeys={expandedGroupKeys}
+                isTimerMutationPending={isTimerMutationPending}
+                deletingEntryIds={deletingEntryIds}
+                updatingEntryIds={updatingEntryIds}
+                highlightedEntryId={lastHighlightedEntryId}
+                onToggleGroupExpand={toggleGroupExpand}
+                onRestart={restartEntry}
+                onDeleteGroup={deleteGroupEntries}
+                onDeleteEntry={deleteEntry}
+                onSaveEdit={saveEdit}
+              />
+            ))}
+          </div>
         )}
       </div>
 

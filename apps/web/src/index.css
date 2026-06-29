@@ -711,8 +711,12 @@ body {
  * the cascade over an @utility of the same name. These UNLAYERED rules override
  * Tailwind's layered utilities to pin the correct text role. Opacity variants
  * (text-muted/NN) are rewritten to text-muted-foreground/NN in the markup.
+ * The same collision applies to placeholder:text-muted (surface fill vs readable text).
  */
 :where(html) .text-muted {
+  color: var(--color-muted-foreground);
+}
+:where(html) .placeholder\:text-muted::placeholder {
   color: var(--color-muted-foreground);
 }
 :where(html) .text-inverted {

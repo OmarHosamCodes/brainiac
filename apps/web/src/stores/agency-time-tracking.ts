@@ -181,6 +181,8 @@ type AgencyTimeTrackingState = {
   deletingEntryIds: string[];
   updatingEntryIds: string[];
   trackerDraftsByTeam: Record<string, TrackerDraft>;
+  lastHighlightedEntryId: string | null;
+  taskChooserOpenRequest: number;
 } & AgencyTimeTrackingActions;
 
 function createAgencyTimeTrackingActions(
@@ -575,6 +577,10 @@ function createAgencyTimeTrackingActions(
       );
       if (!payload.discard) {
         void refetchAgencyTimeEntriesListQueries(activeTimer.teamId);
+        const highlightedEntryId = result.createdEntry?.id ?? optimisticEntry?.id ?? null;
+        if (highlightedEntryId) {
+          set((s) => ({ ...s, lastHighlightedEntryId: highlightedEntryId }));
+        }
       }
 
       toast.success(payload.discard ? "Timer discarded" : "Timer stopped");
@@ -1087,6 +1093,14 @@ function createAgencyTimeTrackingActions(
     });
   }
 
+  function clearHighlightedEntry() {
+    set((s) => ({ ...s, lastHighlightedEntryId: null }));
+  }
+
+  function requestOpenTaskChooser() {
+    set((s) => ({ ...s, taskChooserOpenRequest: s.taskChooserOpenRequest + 1 }));
+  }
+
   return {
     ensureTrackerDraft,
     setTrackerDescription,
@@ -1102,6 +1116,8 @@ function createAgencyTimeTrackingActions(
     stopTimer,
     deleteEntries,
     updateEntry,
+    clearHighlightedEntry,
+    requestOpenTaskChooser,
   };
 }
 
@@ -1111,6 +1127,8 @@ export const useAgencyTimeTrackingStore = create<AgencyTimeTrackingState>((set, 
   deletingEntryIds: [],
   updatingEntryIds: [],
   trackerDraftsByTeam: {},
+  lastHighlightedEntryId: null,
+  taskChooserOpenRequest: 0,
   ...createAgencyTimeTrackingActions(
     (fn) => set((state) => fn(state as AgencyTimeTrackingState)),
     () => get() as AgencyTimeTrackingState,
