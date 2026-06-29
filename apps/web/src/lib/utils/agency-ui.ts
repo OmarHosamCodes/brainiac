@@ -32,26 +32,56 @@ export const agencyEmptyPanelClass = shellEmptyPanelClass;
 export const agencyTaskRailClass =
   "flex h-full flex-col overflow-hidden rounded-xl border border-default bg-elevated";
 
-export const agencyTaskRailHeaderClass =
-  "flex shrink-0 items-center justify-between border-b border-default px-4 py-2.5";
-
-export const agencyTaskRailCountPillClass = [
-  agencyMetricClass,
-  "rounded-full bg-muted px-2 py-0.5 text-xs text-muted",
-].join(" ");
+export const agencyTaskRailSummaryClass =
+  "flex shrink-0 items-center justify-between gap-3 border-b border-default px-4 py-2.5";
 
 export const agencyTaskRailTrackingStripClass =
   "flex shrink-0 items-center gap-2 border-b border-default px-4 py-1.5 text-xs text-muted";
 
+export const agencyTaskRailSummaryMetricClass = "flex items-center gap-1.5 text-[11px]";
+
+export const agencyTaskRailSummaryLabelClass = "text-muted";
+
+export const agencyTaskRailSummaryValueClass = [
+  agencyMetricClass,
+  "text-xs font-semibold",
+].join(" ");
+
+export const agencyTaskRailSummaryDividerClass = "h-3 w-px shrink-0 bg-default";
+
+export const agencyTaskClientGroupHeaderClass = [
+  "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs",
+  "transition-colors hover:bg-default/50",
+].join(" ");
+
+export const agencyTaskRowMetaColumnClass = "flex shrink-0 items-center gap-1.5 self-center";
+
+export const agencyTaskRowProjectPillClass = [
+  "inline-flex max-w-[8rem] shrink-0 items-center rounded-full border border-default bg-elevated px-1.5 py-0.5",
+  "text-[10px] font-semibold text-secondary transition-colors hover:bg-default",
+].join(" ");
+
+export const agencyTaskRowStatusDotClass = "size-2 shrink-0 rounded-full";
+
+export const agencyTaskRowCheckboxClass = [
+  "inline-flex size-4 shrink-0 items-center justify-center rounded border border-default bg-elevated",
+  "transition-colors hover:border-muted-foreground/40",
+  agencyFocusRingClass,
+  "motion-reduce:transition-none",
+].join(" ");
+
+export const agencyTaskRowCheckboxCheckedClass =
+  "border-highlighted bg-highlighted text-inverted";
+
 export const agencyTaskRowClass = [
   "border-b border-default last:border-b-0 transition-[background-color,opacity,transform] duration-200 motion-reduce:transition-none",
-  "hover:bg-default/60",
+  "cursor-pointer hover:bg-default/60",
 ].join(" ");
 
 export const agencyTaskRowSelectedClass = "bg-primary/10 hover:bg-primary/10";
 
 export const agencyTaskRowDoneClass =
-  "bg-success/10 text-success hover:bg-success/15 [&_p]:text-success [&_[data-task-status-label]]:text-success";
+  "bg-success/10 hover:bg-success/15 [&_button>span]:text-success/80";
 
 export const agencyTaskRowCompleteClass = "agency-task-row-complete";
 
