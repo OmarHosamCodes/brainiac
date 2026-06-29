@@ -23,7 +23,7 @@ export function BillingSuccessPage() {
   }, [refreshBillingState]);
 
   return (
-    <AppShellPage title="Billing">
+    <AppShellPage subtitle="Success">
       <div className="flex h-full items-start justify-center overflow-y-auto bg-default px-4 pt-12 sm:px-6 lg:px-8">
         <div className="w-full max-w-md px-6 text-center">
           <div

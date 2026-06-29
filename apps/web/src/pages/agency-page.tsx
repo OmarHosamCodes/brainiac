@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Download } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { AgencyClientsSurface } from "@/components/agency/agency-clients-surface";
@@ -17,11 +17,11 @@ import {
   AgencyReportsSurface,
   type AgencyReportsSurfaceHandle,
 } from "@/components/agency/agency-reports-surface";
-import { AgencySegmentBar } from "@/components/agency/agency-segment-bar";
 import { AgencySettingsSurface } from "@/components/agency/agency-settings-surface";
-import { AgencyTopBarNav } from "@/components/agency/agency-top-bar-nav";
+import { AgencySubtitleBreadcrumb } from "@/components/agency/agency-subtitle-breadcrumb";
+import { AgencyTeamBreadcrumb } from "@/components/agency/agency-team-breadcrumb";
 import { AgencyWorkSurface } from "@/components/agency/agency-work-surface";
-import { AppShellHeaderActions, AppShellHeaderContext } from "@/components/app-shell-header-slots";
+import { AppShellTopbarActions, AppShellTopbarSubtitle } from "@/components/app-shell-topbar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppShellPage } from "@/components/app-shell-page";
@@ -45,7 +45,6 @@ import {
   shellContentInClass,
   shellPageBodyClass,
   shellPageClass,
-  shellPageIntroClass,
   shellPanelActiveClass,
   shellPanelClass,
   shellPanelStackClass,
@@ -92,11 +91,6 @@ export function AgencyPage() {
     : isLegacyAgencySegmentId(sectionParam)
       ? LEGACY_AGENCY_SEGMENT_MAP[sectionParam]
       : "work";
-
-  const currentSegment = useMemo(
-    () => AGENCY_SEGMENTS.find((entry) => entry.id === segment) ?? AGENCY_SEGMENTS[0]!,
-    [segment],
-  );
 
   const reportsSurfaceRef = useRef<AgencyReportsSurfaceHandle | null>(null);
   const dashboardSurfaceRef = useRef<AgencyDashboardSurfaceHandle | null>(null);
@@ -195,20 +189,22 @@ export function AgencyPage() {
   }
 
   return (
-    <AppShellPage title={currentSegment.label} slots={["context", "actions"]}>
+    <AppShellPage slots={["subtitle", "actions"]}>
       <div className="flex h-full flex-col overflow-hidden bg-default text-default">
-        <AppShellHeaderContext>
-          <AgencyTopBarNav
+        <AppShellTopbarSubtitle>
+          <AgencySubtitleBreadcrumb
             segment={segment}
-            teamId={selectedTeamId}
-            teams={teams}
             syncState={syncState}
             onSegmentChange={handleSegmentChange}
+          />
+        </AppShellTopbarSubtitle>
+
+        <AppShellTopbarActions>
+          <AgencyTeamBreadcrumb
+            teamId={selectedTeamId}
+            teams={teams}
             onTeamIdChange={setSelectedTeamId}
           />
-        </AppShellHeaderContext>
-
-        <AppShellHeaderActions>
           {segment === "dashboard" ? (
             <Button
               variant="secondary"
@@ -230,7 +226,7 @@ export function AgencyPage() {
               {reportsExportState.isExporting ? "Exporting…" : "Export CSV"}
             </Button>
           ) : null}
-        </AppShellHeaderActions>
+        </AppShellTopbarActions>
 
         <main className={shellPageClass}>
           {isInitialLoading ? (
@@ -260,15 +256,7 @@ export function AgencyPage() {
             </div>
           ) : (
             <div className="flex min-h-0 flex-1 flex-col">
-              <AgencySegmentBar segment={segment} onSegmentChange={handleSegmentChange} />
-
               <div className={shellPageBodyClass}>
-                {segment !== "settings" ? (
-                  <p key={segment} className={cn(shellPageIntroClass, shellContentInClass)}>
-                    {currentSegment.subtitle}
-                  </p>
-                ) : null}
-
                 <div
                   className={shellPanelStackClass}
                   role="tabpanel"

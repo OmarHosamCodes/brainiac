@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { AppShellPage } from "@/components/app-shell-page";
-import { AppShellHeaderActions, AppShellHeaderContext } from "@/components/app-shell-header-slots";
+import { AppShellTopbarActions, AppShellTopbarContext } from "@/components/app-shell-topbar";
 import { AppShellPortal } from "@/components/app-shell-portal";
 import { DashboardAgentChatPanel } from "@/components/dashboard/dashboard-agent-chat-panel";
 import { DashboardWorkspaceSidebar } from "@/components/dashboard/dashboard-workspace-sidebar";
@@ -20,11 +20,7 @@ import { useAppShellStore } from "@/stores/app-shell";
 import { deriveTeamPermissions, useTeamStore } from "@/stores/team";
 import { useWorkspaceQuery } from "@/stores/workspace";
 import { dashboardErrorAlertClass, dashboardStatusBadgeClass } from "@/lib/utils/dashboard-ui";
-import {
-  shellBreadcrumbCurrentClass,
-  shellContentInClass,
-  shellContextDividerClass,
-} from "@/lib/utils/app-shell-ui";
+import { shellContentInClass } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 
 export function DashboardPage() {
@@ -86,9 +82,9 @@ export function DashboardPage() {
   }, [board.isWorkspaceInitialLoading, board.nodes.length]);
 
   return (
-    <AppShellPage title="Dashboard" slots={["context", "actions", "dock"]}>
+    <AppShellPage subtitle={selectedTeamName || null} slots={["context", "actions", "dock"]}>
       <div className="relative h-full w-full overflow-hidden bg-default selection:bg-primary/30">
-        <AppShellHeaderContext>
+        <AppShellTopbarContext>
           <Button
             variant="ghost"
             size="sm"
@@ -103,17 +99,9 @@ export function DashboardPage() {
             )}
             <span className="hidden lg:inline">Workspace</span>
           </Button>
-          {selectedTeamName ? (
-            <>
-              <span className={shellContextDividerClass} aria-hidden="true" />
-              <span className={cn(shellBreadcrumbCurrentClass, "truncate")}>
-                {selectedTeamName}
-              </span>
-            </>
-          ) : null}
-        </AppShellHeaderContext>
+        </AppShellTopbarContext>
 
-        <AppShellHeaderActions>
+        <AppShellTopbarActions>
           <Button
             variant="secondary"
             size="sm"
@@ -122,7 +110,7 @@ export function DashboardPage() {
             <Plus className="size-4" />
             Add
           </Button>
-        </AppShellHeaderActions>
+        </AppShellTopbarActions>
 
         <AppShellPortal targetId="app-shell-dock-content">
           <div className="flex h-full min-h-0 flex-col">

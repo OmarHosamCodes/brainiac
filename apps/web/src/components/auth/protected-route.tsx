@@ -1,14 +1,12 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
+import { AppShellTopbarSkeleton } from "@/components/app-shell-topbar";
 import { authClient, whenAuthSessionReady } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
+import { APP_SHELL_RAIL_WIDTH_COLLAPSED } from "@/stores/app-shell";
 import {
   shellContentInClass,
-  shellHeaderActionsRegionClass,
-  shellHeaderContextRegionClass,
   shellLoadingPanelClass,
-  shellTopbarBaseClass,
-  shellUtilityClusterClass,
 } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 
@@ -25,30 +23,28 @@ export function ProtectedRoute() {
     return (
       <div
         className="app-shell app-shell--execution bg-default text-default"
-        style={{ "--app-shell-dock-width": "0px" } as React.CSSProperties}
+        style={
+          {
+            "--app-shell-dock-width": "0px",
+            "--app-shell-rail-width": APP_SHELL_RAIL_WIDTH_COLLAPSED,
+          } as React.CSSProperties
+        }
       >
         <aside
-          className="app-shell__rail hidden border-r border-default bg-muted md:block"
+          className="app-shell__rail app-shell__rail--collapsed hidden flex-col border-r border-default bg-default md:flex"
           aria-hidden="true"
         >
-          <div className="py-4" />
+          <div className="app-shell__rail-inner flex flex-1 flex-col items-center gap-1.5 px-1 py-2.5">
+            <div className="size-8 animate-pulse rounded-[6px] bg-muted/40" />
+            <div className="size-8 animate-pulse rounded-full bg-muted/40" />
+            <div className="mt-auto flex flex-col items-center gap-1.5 border-t border-default pt-3">
+              <div className="size-8 animate-pulse rounded-full bg-muted/40" />
+              <div className="size-8 animate-pulse rounded-full bg-muted/40" />
+            </div>
+          </div>
         </aside>
 
-        <header
-          className={cn(shellTopbarBaseClass, "app-shell__topbar--execution")}
-          aria-hidden="true"
-        >
-          <div className={shellHeaderContextRegionClass}>
-            <div className="h-4 w-32 animate-pulse rounded bg-muted/50" />
-          </div>
-          <div className={shellUtilityClusterClass}>
-            <div className={shellHeaderActionsRegionClass}>
-              <div className="size-9 animate-pulse rounded-xl bg-muted/40" />
-            </div>
-            <div className="size-9 animate-pulse rounded-xl bg-muted/40" />
-            <div className="h-9 w-16 animate-pulse rounded-xl bg-muted/40" />
-          </div>
-        </header>
+        <AppShellTopbarSkeleton />
 
         <main className="app-shell__main p-4 md:p-6">
           <div className={shellLoadingPanelClass}>

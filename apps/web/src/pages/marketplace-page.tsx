@@ -16,7 +16,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AppShellPage } from "@/components/app-shell-page";
 import { MarketplaceImportModal } from "@/components/marketplace-import-modal";
 import { MarketplaceItemCard } from "@/components/marketplace-item-card";
-import { AppShellHeaderActions, AppShellHeaderContext } from "@/components/app-shell-header-slots";
+import { MarketplaceSubtitleBreadcrumb } from "@/components/marketplace-subtitle-breadcrumb";
+import { AppShellTopbarActions, AppShellTopbarSubtitle } from "@/components/app-shell-topbar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -149,31 +150,20 @@ export function MarketplacePage() {
     }
   }
 
-  return (
-    <AppShellPage title="Marketplace" slots={["context", "actions"]}>
-      <div className="flex h-full flex-col overflow-y-auto bg-default">
-        <AppShellHeaderContext>
-          <div className="hidden md:block">
-            <Tabs
-              value={activeKind}
-              onValueChange={(value) => setActiveKind(value as (typeof filterTabs)[number]["kind"])}
-            >
-              <TabsList>
-                {filterTabs.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <TabsTrigger key={tab.kind} value={tab.kind}>
-                      <Icon className="size-3.5" />
-                      {tab.label}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-            </Tabs>
-          </div>
-        </AppShellHeaderContext>
+  const activeTabLabel = filterTabs.find((tab) => tab.kind === activeKind)?.label ?? "All";
 
-        <AppShellHeaderActions>
+  return (
+    <AppShellPage subtitle={activeTabLabel} slots={["subtitle", "actions"]}>
+      <div className="flex h-full flex-col overflow-y-auto bg-default">
+        <AppShellTopbarSubtitle>
+          <MarketplaceSubtitleBreadcrumb
+            tabs={filterTabs}
+            activeKind={activeKind}
+            onKindChange={(value) => setActiveKind(value as (typeof filterTabs)[number]["kind"])}
+          />
+        </AppShellTopbarSubtitle>
+
+        <AppShellTopbarActions>
           <div className={cn("relative hidden w-36 lg:block xl:w-44", shellTopbarFieldClass)}>
             <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
             <Input
@@ -191,7 +181,7 @@ export function MarketplacePage() {
               <Loader2 className="size-3 animate-spin" aria-hidden="true" />
             </Badge>
           ) : null}
-        </AppShellHeaderActions>
+        </AppShellTopbarActions>
 
         <main className={shellPageClass}>
           <div className={shellPageBodyClass}>
