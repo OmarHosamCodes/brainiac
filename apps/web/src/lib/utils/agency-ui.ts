@@ -90,16 +90,20 @@ export const agencyTimePaneClass =
   "flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-default bg-elevated";
 
 export const agencyTimeTrackerBarClass = [
-  "shrink-0 border-b border-default bg-default/75 px-4 py-2.5",
+  "shrink-0 bg-default/75 px-4 py-2.5",
 ].join(" ");
 
 export const agencyTimeDayHeaderClass = [
   "flex shrink-0 items-center justify-between border-y border-default bg-muted/55 px-4 py-2 text-xs",
 ].join(" ");
 
+export const agencyTimeWeekHeaderClass = [
+  "flex shrink-0 items-center justify-between px-4 py-2.5 text-xs",
+].join(" ");
+
 export const agencyTimeEntryRowClass = [
-  "border-b border-default bg-elevated px-4 py-2.5 transition-colors motion-reduce:transition-none",
-  "hover:bg-default/55",
+  "border-b-[1px] border-dashed border-default bg-card/20 px-4 py-2.5 transition-colors motion-reduce:transition-none",
+
 ].join(" ");
 
 /** Shared column grid for time entry rows inside the horizontal scroll region. */

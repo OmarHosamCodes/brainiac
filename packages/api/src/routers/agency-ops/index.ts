@@ -708,7 +708,10 @@ export const agencyOpsRouter = {
       )
       .handler(async ({ context, input }) => {
         const result = z
-          .object({ timer: agencyActiveTimerSchema.nullable() })
+          .object({
+            timer: agencyActiveTimerSchema.nullable(),
+            createdEntry: agencyTimeEntrySchema.nullable(),
+          })
           .parse(await startAgencyTimer(context.session.user.id, input));
         return result;
       }),

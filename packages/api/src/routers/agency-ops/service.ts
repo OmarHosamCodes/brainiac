@@ -1647,12 +1647,15 @@ export async function startAgencyTimer(
     .where(eq(agencyOpsActiveTimer.userId, actorUserId))
     .limit(1);
 
+  let rolledOverEntryId: string | null = null;
+
   await db.transaction(async (tx) => {
     if (existing) {
       const durationSeconds = getDurationSeconds(existing.startedAt, now);
+      rolledOverEntryId = createWorkspaceId("agency-time");
 
       await tx.insert(agencyOpsTimeEntry).values({
-        id: createWorkspaceId("agency-time"),
+        id: rolledOverEntryId,
         teamId: existing.teamId,
         projectId: existing.projectId,
         taskId: existing.taskId,
@@ -1696,10 +1699,68 @@ export async function startAgencyTimer(
   });
 
   const timer = await getActiveTimerByUser(actorUserId);
+  const createdEntry = rolledOverEntryId
+    ? await fetchAgencyTimeEntryRecord(rolledOverEntryId)
+    : null;
 
   return {
     timer,
+    createdEntry,
   };
+}
+
+async function fetchAgencyTimeEntryRecord(entryId: string) {
+  const [row] = await db
+    .select({
+      id: agencyOpsTimeEntry.id,
+      teamId: agencyOpsTimeEntry.teamId,
+      userId: agencyOpsTimeEntry.userId,
+      userName: user.name,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
+      projectName: agencyOpsProject.name,
+      clientId: agencyOpsClient.id,
+      clientName: agencyOpsClient.name,
+      source: agencyOpsTimeEntry.source,
+      description: agencyOpsTimeEntry.description,
+      startedAt: agencyOpsTimeEntry.startedAt,
+      endedAt: agencyOpsTimeEntry.endedAt,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+      createdAt: agencyOpsTimeEntry.createdAt,
+      updatedAt: agencyOpsTimeEntry.updatedAt,
+    })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
+    .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+    .where(eq(agencyOpsTimeEntry.id, entryId))
+    .limit(1);
+
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    teamId: row.teamId,
+    userId: row.userId,
+    userName: row.userName ?? "Unknown",
+    projectId: row.projectId,
+    taskId: row.taskId ?? null,
+    taskTitle: row.taskTitle ?? null,
+    projectName: row.projectName,
+    clientId: row.clientId,
+    clientName: row.clientName,
+    source: row.source,
+    description: row.description,
+    startedAt: row.startedAt.toISOString(),
+    endedAt: row.endedAt.toISOString(),
+    durationSeconds: row.durationSeconds,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  } satisfies AgencyTimeEntryRecord;
 }
 
 export async function stopAgencyTimer(
@@ -1817,55 +1878,7 @@ export async function stopAgencyTimer(
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
 
-  const [row] = await db
-    .select({
-      id: agencyOpsTimeEntry.id,
-      teamId: agencyOpsTimeEntry.teamId,
-      userId: agencyOpsTimeEntry.userId,
-      userName: user.name,
-      projectId: agencyOpsTimeEntry.projectId,
-      taskId: agencyOpsTimeEntry.taskId,
-      taskTitle: agencyOpsProjectTask.title,
-      projectName: agencyOpsProject.name,
-      clientId: agencyOpsClient.id,
-      clientName: agencyOpsClient.name,
-      source: agencyOpsTimeEntry.source,
-      description: agencyOpsTimeEntry.description,
-      startedAt: agencyOpsTimeEntry.startedAt,
-      endedAt: agencyOpsTimeEntry.endedAt,
-      durationSeconds: agencyOpsTimeEntry.durationSeconds,
-      createdAt: agencyOpsTimeEntry.createdAt,
-      updatedAt: agencyOpsTimeEntry.updatedAt,
-    })
-    .from(agencyOpsTimeEntry)
-    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
-    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
-    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
-    .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
-    .where(eq(agencyOpsTimeEntry.id, entry.id))
-    .limit(1);
-
-  const createdEntry = row
-    ? ({
-        id: row.id,
-        teamId: row.teamId,
-        userId: row.userId,
-        userName: row.userName ?? "Unknown",
-        projectId: row.projectId,
-        taskId: row.taskId ?? null,
-        taskTitle: row.taskTitle ?? null,
-        projectName: row.projectName,
-        clientId: row.clientId,
-        clientName: row.clientName,
-        source: row.source,
-        description: row.description,
-        startedAt: row.startedAt.toISOString(),
-        endedAt: row.endedAt.toISOString(),
-        durationSeconds: row.durationSeconds,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      } satisfies AgencyTimeEntryRecord)
-    : null;
+  const createdEntry = await fetchAgencyTimeEntryRecord(entry.id);
 
   return {
     timer: null,
