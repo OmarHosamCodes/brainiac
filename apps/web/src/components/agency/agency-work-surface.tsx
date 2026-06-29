@@ -58,6 +58,11 @@ export function AgencyWorkSurface({
     return () => clearInterval(tickerHandle);
   }, [activeTimer, teamId]);
 
+  useEffect(() => {
+    setSelectedTaskId("");
+    setMobilePane("tasks");
+  }, [teamId]);
+
   function openTimePane() {
     setSelectedTaskId("");
     setMobilePane("time");
@@ -122,11 +127,11 @@ export function AgencyWorkSurface({
     );
   }
 
-  const showMobileTimerStrip = Boolean(selectedTaskId && mobileTrackingLabel);
+  const showMobileTimerStrip = Boolean(mobileTrackingLabel);
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden lg:flex-row">
-      {!selectedTaskId || mobileTrackingLabel ? (
+      {!selectedTaskId ? (
         <div
           className="inline-flex rounded-full border border-default bg-elevated p-1 lg:hidden"
           role="tablist"
@@ -135,29 +140,22 @@ export function AgencyWorkSurface({
           <button
             type="button"
             role="tab"
-            aria-selected={mobilePane === "tasks" && !selectedTaskId}
+            aria-selected={mobilePane === "tasks"}
             className={[
-              "rounded-full px-3 py-1 text-[11px] font-bold transition-colors",
-              mobilePane === "tasks" && !selectedTaskId
-                ? "bg-default text-highlighted"
-                : "text-muted",
+              "rounded-full px-3 py-1 text-[11px] font-bold transition-colors motion-reduce:transition-none",
+              mobilePane === "tasks" ? "bg-default text-highlighted" : "text-muted",
             ].join(" ")}
-            onClick={() => {
-              setSelectedTaskId("");
-              setMobilePane("tasks");
-            }}
+            onClick={() => setMobilePane("tasks")}
           >
             Tasks
           </button>
           <button
             type="button"
             role="tab"
-            aria-selected={mobilePane === "time" && !selectedTaskId}
+            aria-selected={mobilePane === "time"}
             className={[
-              "rounded-full px-3 py-1 text-[11px] font-bold transition-colors",
-              mobilePane === "time" && !selectedTaskId
-                ? "bg-default text-highlighted"
-                : "text-muted",
+              "rounded-full px-3 py-1 text-[11px] font-bold transition-colors motion-reduce:transition-none",
+              mobilePane === "time" ? "bg-default text-highlighted" : "text-muted",
             ].join(" ")}
             onClick={() => openTimePane()}
           >
@@ -177,6 +175,7 @@ export function AgencyWorkSurface({
             className={[
               "shrink-0 text-xs font-semibold text-primary underline-offset-2 hover:underline",
               agencyFocusRingClass,
+              "motion-reduce:transition-none",
             ].join(" ")}
             onClick={openTimePane}
           >

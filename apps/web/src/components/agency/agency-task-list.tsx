@@ -19,7 +19,10 @@ import {
 } from "@/components/agency/agency-task-row";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAgencyActiveTimerQuery, useAgencyProjectTasksQuery } from "@/lib/queries/agency";
+import {
+  useAgencyActiveTimerQuery,
+  useAgencyProjectTasksQuery,
+} from "@/lib/queries/agency";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
@@ -56,40 +59,32 @@ const DONE_TASK_STATUSES: TaskStatus[] = ["done"];
 
 function AgencyTaskRailHeader({
   count,
-  trackingLabel,
   onCollapse,
 }: {
   count: number | null;
-  trackingLabel: string | null;
   onCollapse: () => void;
 }) {
   return (
-    <>
-      <div className={agencyTaskRailHeaderClass}>
-        <h2 className="text-sm font-semibold text-highlighted">My tasks</h2>
-        <div className="flex items-center gap-1.5">
-          <span className={agencyTaskRailCountPillClass}>{count === null ? "—" : count}</span>
-          <button
-            type="button"
-            className={[
-              "inline-flex size-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-default/70 hover:text-highlighted",
-              agencyFocusRingClass,
-              "motion-reduce:transition-none",
-            ].join(" ")}
-            aria-label="Collapse task list"
-            onClick={onCollapse}
-          >
-            <PanelLeftClose className="size-3.5" />
-          </button>
-        </div>
+    <div className={agencyTaskRailHeaderClass}>
+      <h2 className="text-sm font-semibold text-highlighted">My tasks</h2>
+      <div className="flex items-center gap-1.5">
+        <span className={agencyTaskRailCountPillClass}>
+          {count === null ? "—" : count}
+        </span>
+        <button
+          type="button"
+          className={[
+            "inline-flex size-7 items-center justify-center rounded-lg text-muted transition-colors hover:bg-default/70 hover:text-highlighted",
+            agencyFocusRingClass,
+            "motion-reduce:transition-none",
+          ].join(" ")}
+          aria-label="Collapse task list"
+          onClick={onCollapse}
+        >
+          <PanelLeftClose className="size-3.5" />
+        </button>
       </div>
-      {trackingLabel ? (
-        <div className={agencyTaskRailTrackingStripClass}>
-          <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
-          <span className="font-mono tabular-nums">{trackingLabel}</span>
-        </div>
-      ) : null}
-    </>
+    </div>
   );
 }
 
@@ -112,17 +107,23 @@ export function AgencyTaskList({
   const [doneExpanded, setDoneExpanded] = useState(false);
   const [recentlyCompletedTaskId, setRecentlyCompletedTaskId] = useState("");
   const [titleDraft, setTitleDraft] = useState("");
-  const [selectedProjectIdForCreate, setSelectedProjectIdForCreate] = useState("");
-  const [selectedAssigneeIdForCreate, setSelectedAssigneeIdForCreate] = useState("");
+  const [selectedProjectIdForCreate, setSelectedProjectIdForCreate] =
+    useState("");
+  const [selectedAssigneeIdForCreate, setSelectedAssigneeIdForCreate] =
+    useState("");
   const [trackingNow, setTrackingNow] = useState(Date.now());
 
   const skipProjectStep = projects.length === 1;
-  const titleSuggestionProjectId = createExpanded ? selectedProjectIdForCreate : "";
+  const titleSuggestionProjectId = createExpanded
+    ? selectedProjectIdForCreate
+    : "";
 
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
       {
-        ...orpc.agencyOps.taskThreads.members.list.queryOptions({ input: { teamId } }),
+        ...orpc.agencyOps.taskThreads.members.list.queryOptions({
+          input: { teamId },
+        }),
         enabled: Boolean(teamId),
       },
       "warm",
@@ -155,19 +156,15 @@ export function AgencyTaskList({
     return (titleSuggestionTasksQuery.data?.items ?? []).filter(
       (task) => task.projectId === selectedProjectIdForCreate,
     );
-  }, [createExpanded, selectedProjectIdForCreate, titleSuggestionTasksQuery.data?.items]);
+  }, [
+    createExpanded,
+    selectedProjectIdForCreate,
+    titleSuggestionTasksQuery.data?.items,
+  ]);
 
   const activeCount = activeTasksQuery.isPending ? null : activeTasks.length;
   const doneCount = doneTasksQuery.isPending ? null : doneTasks.length;
   const compactCount = activeCount === null ? "—" : activeCount;
-
-  const trackingLabel = useMemo(() => {
-    if (!activeTimer || activeTimer.teamId !== teamId) return null;
-    const startedAt = new Date(activeTimer.startedAt).getTime();
-    if (Number.isNaN(startedAt)) return null;
-    const elapsedSeconds = Math.max(0, Math.floor((trackingNow - startedAt) / 1_000));
-    return `Tracking · ${formatDuration(elapsedSeconds)}`;
-  }, [activeTimer, teamId, trackingNow]);
 
   useEffect(() => {
     if (!activeTimer || activeTimer.teamId !== teamId) return;
@@ -184,7 +181,9 @@ export function AgencyTaskList({
   const collapseCreate = useCallback(() => {
     setCreateExpanded(false);
     setTitleDraft("");
-    setSelectedProjectIdForCreate(skipProjectStep ? (projects[0]?.id ?? "") : "");
+    setSelectedProjectIdForCreate(
+      skipProjectStep ? (projects[0]?.id ?? "") : "",
+    );
     setSelectedAssigneeIdForCreate(currentUserId);
   }, [currentUserId, projects, skipProjectStep]);
 
@@ -232,9 +231,7 @@ export function AgencyTaskList({
         taskId: task.id,
         status,
       });
-    } catch {
-      // Store surfaces the toast.
-    }
+    } catch {}
   }
 
   if (!currentUserId) {
@@ -250,7 +247,11 @@ export function AgencyTaskList({
 
   if (collapsed) {
     return (
-      <section className={[agencyTaskRailClass, "items-center gap-3 px-2 py-3"].join(" ")}>
+      <section
+        className={[agencyTaskRailClass, "items-center gap-3 px-2 py-3"].join(
+          " ",
+        )}
+      >
         <button
           type="button"
           className={[
@@ -268,13 +269,6 @@ export function AgencyTaskList({
           <ListChecks className="size-4 text-muted" aria-hidden />
           <span className={agencyTaskRailCountPillClass}>{compactCount}</span>
         </div>
-
-        {trackingLabel ? (
-          <div className="mt-auto flex flex-col items-center gap-1 pb-1" title={trackingLabel}>
-            <span className="size-2 rounded-full bg-primary" aria-hidden />
-            <span className="font-mono text-[10px] font-bold tabular-nums text-primary">Live</span>
-          </div>
-        ) : null}
       </section>
     );
   }
@@ -283,7 +277,6 @@ export function AgencyTaskList({
     <section className={agencyTaskRailClass}>
       <AgencyTaskRailHeader
         count={activeCount}
-        trackingLabel={trackingLabel}
         onCollapse={() => onCollapsedChange(true)}
       />
 
@@ -299,7 +292,9 @@ export function AgencyTaskList({
           role="alert"
         >
           <AlertTriangle className="size-5 text-error" aria-hidden />
-          <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load tasks.</p>
+          <p className="mt-3 text-sm font-bold text-highlighted">
+            Couldn't load tasks.
+          </p>
           <p className="mt-1 text-xs text-muted">
             {getErrorMessage(activeTasksQuery.error, "Try refreshing.")}
           </p>
@@ -316,7 +311,9 @@ export function AgencyTaskList({
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-6 text-center">
           <ListChecks className="size-6 text-muted" aria-hidden />
           <p className="mt-3 text-xs text-muted">No tasks assigned to you.</p>
-          <p className="mt-1 text-xs text-muted">Add one below to get started.</p>
+          <p className="mt-1 text-xs text-muted">
+            Add one below to get started.
+          </p>
         </div>
       ) : (
         <ul className="min-h-0 flex-1 overflow-y-auto" aria-label="My tasks">
@@ -329,7 +326,9 @@ export function AgencyTaskList({
               selectedTaskId={selectedTaskId}
               onSelect={onSelect}
               onSelectProject={onSelectProject}
-              onStatusChange={(nextTask, status) => void updateTaskStatus(nextTask, status)}
+              onStatusChange={(nextTask, status) =>
+                void updateTaskStatus(nextTask, status)
+              }
             />
           ))}
         </ul>
@@ -368,16 +367,20 @@ export function AgencyTaskList({
         >
           <span className="font-semibold text-muted">Done</span>
           <span className="flex items-center gap-1.5">
-            <span className={[agencyMetricClass, "text-[11px] text-muted"].join(" ")}>
+            <span
+              className={[agencyMetricClass, "text-[11px] text-muted"].join(
+                " ",
+              )}
+            >
               {doneCount === null ? "—" : doneCount}
             </span>
             <ChevronDown
               className={[
-                "size-3.5 text-muted",
-                doneExpanded
-                  ? "rotate-180 motion-safe:transition-transform motion-safe:duration-200"
-                  : "motion-safe:transition-transform motion-safe:duration-200",
-              ].join(" ")}
+                "size-3.5 text-muted motion-safe:transition-transform motion-safe:duration-200",
+                doneExpanded ? "rotate-180" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               aria-hidden
             />
           </span>
@@ -392,9 +395,15 @@ export function AgencyTaskList({
                 ))}
               </div>
             ) : doneTasksQuery.isError ? (
-              <div className="border-t border-default px-4 py-3 text-center" role="alert">
+              <div
+                className="border-t border-default px-4 py-3 text-center"
+                role="alert"
+              >
                 <p className="text-xs text-muted">
-                  {getErrorMessage(doneTasksQuery.error, "Couldn't load done tasks.")}
+                  {getErrorMessage(
+                    doneTasksQuery.error,
+                    "Couldn't load done tasks.",
+                  )}
                 </p>
                 <Button
                   variant="secondary"

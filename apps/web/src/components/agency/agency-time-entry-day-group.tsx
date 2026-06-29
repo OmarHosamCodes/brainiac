@@ -35,6 +35,7 @@ type AgencyTimeEntryDayGroupProps = {
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  highlightedEntryId?: string | null;
 };
 
 export function AgencyTimeEntryDayGroup({
@@ -51,6 +52,7 @@ export function AgencyTimeEntryDayGroup({
   onDeleteGroup,
   onDeleteEntry,
   onSaveEdit,
+  highlightedEntryId = null,
 }: AgencyTimeEntryDayGroupProps) {
   return (
     <section>
@@ -67,6 +69,7 @@ export function AgencyTimeEntryDayGroup({
       <ul>
         {day.groups.map((group) => {
           const groupExpandKey = `${day.dateKey}||${group.collapseKey}`;
+          const primaryEntryId = group.entries[0]?.id ?? "";
           return (
             <li key={groupExpandKey}>
               <AgencyTimeEntryRow
@@ -78,6 +81,7 @@ export function AgencyTimeEntryDayGroup({
                 isTimerMutationPending={isTimerMutationPending}
                 deletingEntryIds={deletingEntryIds}
                 updatingEntryIds={updatingEntryIds}
+                highlighted={highlightedEntryId === primaryEntryId}
                 onToggleExpand={() => onToggleGroupExpand(groupExpandKey)}
                 onRestart={onRestart}
                 onDeleteGroup={onDeleteGroup}
