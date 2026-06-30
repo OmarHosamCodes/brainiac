@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { BrainCircuit, ChevronDown, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Navigate, Link, useLocation } from "react-router-dom";
+import { Navigate, Link, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -30,12 +30,26 @@ type AuthMode = "sign-in" | "sign-up";
 const GOOGLE_LOGO_URL =
   "https://cdn.brandfetch.io/id6O2oGzv-/theme/dark/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1755835725776";
 
+const OAUTH_ERROR_MESSAGES: Record<string, string> = {
+  state_mismatch: "Sign-in expired or was interrupted. Please try again.",
+  please_restart_the_process: "Sign-in could not be completed. Please try again.",
+  invalid_callback_request: "Invalid sign-in response. Please try again.",
+};
+
+function formatOAuthError(code: string): string {
+  return OAUTH_ERROR_MESSAGES[code] ?? "Sign in failed. Please try again.";
+}
+
 export function LoginPage() {
   const session = authClient.useSession();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const [mode, setMode] = useState<AuthMode>("sign-in");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    const oauthError = searchParams.get("error");
+    return oauthError ? formatOAuthError(oauthError) : null;
+  });
   const [pending, setPending] = useState(false);
   const [emailAuthOpen, setEmailAuthOpen] = useState(false);
 
@@ -125,9 +139,11 @@ export function LoginPage() {
     setError(null);
 
     try {
+      const loginUrl = new URL("/login", window.location.origin).href;
       const result = await authClient.signIn.social({
         provider: "google",
         callbackURL: new URL(redirectTo, window.location.origin).href,
+        errorCallbackURL: loginUrl,
       });
 
       if (result.error) {
