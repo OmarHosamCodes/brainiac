@@ -18,6 +18,7 @@ import { useBilling } from "@/lib/queries/billing";
 import { authClient } from "@/lib/auth-client";
 import { getServerUrl } from "@/lib/env";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { getUserAvatarPublicUrl } from "@/lib/user-avatar-url";
 import { shellFocusRingClass, shellRailAvatarClass, shellRailAvatarCollapsedClass, shellRailExpandedLinkClass } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 
@@ -52,7 +53,9 @@ export function AppShellAccountMenu({
   const userEmail = user?.email?.trim();
   const serverUrl = getServerUrl();
   const avatarUrl =
-    user?.image && user.id && serverUrl ? `${serverUrl}/api/user-avatars/${user.id}` : null;
+    user?.image && user.id && serverUrl
+      ? getUserAvatarPublicUrl({ baseUrl: serverUrl, userId: user.id, storageKey: user.image })
+      : null;
   const initials = getInitials(user?.name);
 
   async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {

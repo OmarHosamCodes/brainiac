@@ -65,7 +65,7 @@ export function registerUserAvatarRoutes(app: Hono) {
       if (contentLength != null) {
         headers["Content-Length"] = String(contentLength);
       }
-      return new Response(body as ReadableStream, { status: 200, headers });
+      return new Response(body, { status: 200, headers });
     } catch {
       return c.notFound();
     }

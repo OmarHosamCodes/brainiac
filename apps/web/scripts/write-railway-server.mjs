@@ -109,9 +109,11 @@ async function proxyApiRequest(request, response) {
     redirect: "manual",
   });
 
+  const payload = Buffer.from(await upstream.arrayBuffer());
   const responseHeaders = [];
   upstream.headers.forEach((value, key) => {
-    if (key.toLowerCase() === "set-cookie") {
+    const headerName = key.toLowerCase();
+    if (headerName === "set-cookie" || headerName === "content-length") {
       return;
     }
     responseHeaders.push([key, value]);
@@ -121,8 +123,9 @@ async function proxyApiRequest(request, response) {
     responseHeaders.push(["Set-Cookie", cookie]);
   }
 
+  responseHeaders.push(["Content-Length", String(payload.byteLength)]);
+
   response.writeHead(upstream.status, responseHeaders);
-  const payload = Buffer.from(await upstream.arrayBuffer());
   response.end(payload);
 }
 
