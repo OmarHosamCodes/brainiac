@@ -27,6 +27,10 @@ export default defineConfig(({ mode }) => {
       port: 7001,
       strictPort: true,
       proxy: {
+        "/api/auth": {
+          target: "http://localhost:7000",
+          changeOrigin: true,
+        },
         "/rpc": {
           target: "http://localhost:7000",
           changeOrigin: true,
