@@ -12,6 +12,8 @@ const polarClient = new Polar({
 });
 
 const loginErrorUrl = new URL("/login", primaryCorsOrigin).toString();
+const isSplitDeployment =
+  new URL(primaryCorsOrigin).origin !== new URL(env.BETTER_AUTH_URL).origin;
 
 function schedulePolarCustomerSetup(user: { id: string; email: string; name: string }) {
   void (async () => {
@@ -61,9 +63,9 @@ export const auth = betterAuth({
       enabled: true,
       trustedProviders: ["google"],
     },
-    // Keep OAuth state in an encrypted cookie so the Google callback (top-level
-    // navigation to the API origin) can validate state without a DB round-trip.
-    storeStateStrategy: "cookie",
+    // Split web/API: store OAuth state in the DB and skip the signed state cookie
+    // check (that cookie is not sent on the cross-origin sign-in request).
+    skipStateCookieCheck: isSplitDeployment,
   },
   databaseHooks: {
     user: {
