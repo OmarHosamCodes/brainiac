@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 import type { AgencyWorkMobilePane } from "@/lib/schemas/agency-work";
-import { agencyTimePaneClass } from "@/lib/utils/agency-ui";
+import { agencyTimePaneStackClass } from "@/lib/utils/agency-ui";
 
 type AgencyWorkSurfaceLayoutViewProps = {
   selectedTaskId: string;
@@ -45,8 +45,8 @@ export function AgencyWorkSurfaceLayoutView({
       ) : (
         <div
           className={[
-            agencyTimePaneClass,
-            "min-h-0 min-w-0 flex-1 overflow-hidden",
+            agencyTimePaneStackClass,
+            "min-h-0 min-w-0 flex-1",
             mobilePane !== "time" ? "hidden lg:flex" : "flex",
           ].join(" ")}
         >
