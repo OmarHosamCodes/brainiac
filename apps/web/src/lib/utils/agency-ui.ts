@@ -32,6 +32,10 @@ export const agencyEmptyPanelClass = shellEmptyPanelClass;
 export const agencyTaskRailClass =
   "flex h-full flex-col overflow-hidden rounded-xl border border-default bg-elevated";
 
+export const agencyTaskRailExpandedWidthClass = "lg:w-[26rem] lg:max-w-[26rem]";
+
+export const agencyTaskRailCollapsedWidthClass = "lg:w-[5.5rem] lg:max-w-[5.5rem]";
+
 export const agencyTaskRailSummaryClass =
   "flex shrink-0 items-center justify-between gap-3 border-b border-default px-4 py-2.5";
 

@@ -11,6 +11,7 @@
     "dev:portless": "portless server.brainiac bun run --hot src/index.ts",
     "grant:lifetime-pro": "bun run src/grant-lifetime-pro.ts",
     "db:seed:agency": "bun run src/seed-agency.ts",
+    "db:clear:team": "bun run src/clear-team-data.ts",
     "cleanup:agency-operator-nodes": "bun run src/cleanup-agency-operator-nodes.ts",
     "db:seed": "bun run src/seed.ts",
     "start": "bun run dist/index.mjs",
