@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
 
 import type { AgencyWorkMobilePane } from "@/lib/schemas/agency-work";
-import { agencyTimePaneStackClass } from "@/lib/utils/agency-ui";
+import {
+  agencyTaskRailCollapsedWidthClass,
+  agencyTaskRailExpandedWidthClass,
+  agencyTimePaneStackClass,
+} from "@/lib/utils/agency-ui";
 
 type AgencyWorkSurfaceLayoutViewProps = {
   selectedTaskId: string;
@@ -32,7 +36,7 @@ export function AgencyWorkSurfaceLayoutView({
       <div
         className={[
           "min-h-0 min-w-0 transition-[width,max-width] duration-200 ease-out motion-reduce:transition-none lg:sticky lg:top-0 lg:h-full lg:flex-none lg:self-start",
-          taskRailCollapsed ? "lg:w-[5.5rem] lg:max-w-[5.5rem]" : "lg:w-[28rem] lg:max-w-[28rem]",
+          taskRailCollapsed ? agencyTaskRailCollapsedWidthClass : agencyTaskRailExpandedWidthClass,
           selectedTaskId ? "hidden lg:block" : "",
           !selectedTaskId && mobilePane !== "tasks" ? "hidden lg:block" : "",
         ].join(" ")}
