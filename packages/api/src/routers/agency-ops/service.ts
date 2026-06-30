@@ -11,6 +11,7 @@ import {
   agencyOpsProject,
   agencyOpsProjectTask,
   agencyOpsProjectTaskAssignee,
+  agencyOpsProjectTaskMemberStatus,
   agencyOpsTaskAttachment,
   agencyOpsTaskMessage,
   agencyOpsTaskThread,
@@ -75,6 +76,7 @@ type AgencyProjectTaskAssigneeRecord = {
   userId: string;
   userName: string;
   userAvatar: string | null;
+  status: "open" | "in_progress" | "done";
 };
 
 type AgencyProjectTaskRecord = {
@@ -85,6 +87,7 @@ type AgencyProjectTaskRecord = {
   status: "open" | "in_progress" | "done" | "archived";
   assignedToTeam: boolean;
   assignees: AgencyProjectTaskAssigneeRecord[];
+  viewerStatus?: "open" | "in_progress" | "done";
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -355,6 +358,7 @@ function mapProjectTaskRow(row: {
   status: "open" | "in_progress" | "done" | "archived";
   assignedToTeam: boolean;
   assignees: AgencyProjectTaskAssigneeRecord[];
+  viewerStatus?: "open" | "in_progress" | "done";
   dueDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -367,10 +371,35 @@ function mapProjectTaskRow(row: {
     status: row.status,
     assignedToTeam: row.assignedToTeam,
     assignees: row.assignees,
+    ...(row.viewerStatus !== undefined ? { viewerStatus: row.viewerStatus } : {}),
     dueDate: row.dueDate?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+async function loadTaskMemberStatuses(
+  taskIds: string[],
+): Promise<Map<string, Map<string, "open" | "in_progress" | "done">>> {
+  const result = new Map<string, Map<string, "open" | "in_progress" | "done">>();
+  if (taskIds.length === 0) return result;
+
+  const rows = await db
+    .select({
+      taskId: agencyOpsProjectTaskMemberStatus.taskId,
+      userId: agencyOpsProjectTaskMemberStatus.userId,
+      status: agencyOpsProjectTaskMemberStatus.status,
+    })
+    .from(agencyOpsProjectTaskMemberStatus)
+    .where(inArray(agencyOpsProjectTaskMemberStatus.taskId, taskIds));
+
+  for (const row of rows) {
+    const byUser = result.get(row.taskId) ?? new Map<string, "open" | "in_progress" | "done">();
+    byUser.set(row.userId, row.status);
+    result.set(row.taskId, byUser);
+  }
+
+  return result;
 }
 
 async function loadTaskAssignees(
@@ -378,6 +407,8 @@ async function loadTaskAssignees(
 ): Promise<Map<string, AgencyProjectTaskAssigneeRecord[]>> {
   const result = new Map<string, AgencyProjectTaskAssigneeRecord[]>();
   if (taskIds.length === 0) return result;
+
+  const memberStatuses = await loadTaskMemberStatuses(taskIds);
 
   const rows = await db
     .select({
@@ -397,6 +428,7 @@ async function loadTaskAssignees(
       userId: row.userId,
       userName: row.userName ?? "Unknown",
       userAvatar: formatAvatarUrl(row.userAvatar),
+      status: memberStatuses.get(row.taskId)?.get(row.userId) ?? "open",
     });
     result.set(row.taskId, assignees);
   }
@@ -406,20 +438,133 @@ async function loadTaskAssignees(
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+async function upsertTaskMemberStatus(
+  tx: DbTransaction,
+  taskId: string,
+  userId: string,
+  status: "open" | "in_progress" | "done",
+) {
+  const now = new Date();
+  await tx
+    .insert(agencyOpsProjectTaskMemberStatus)
+    .values({
+      taskId,
+      userId,
+      status,
+      completedAt: status === "done" ? now : null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [
+        agencyOpsProjectTaskMemberStatus.taskId,
+        agencyOpsProjectTaskMemberStatus.userId,
+      ],
+      set: {
+        status,
+        completedAt: status === "done" ? now : null,
+        updatedAt: now,
+      },
+    });
+}
+
+async function setTaskMemberStatusesForUsers(
+  tx: DbTransaction,
+  taskId: string,
+  userIds: string[],
+  status: "open" | "in_progress" | "done" = "open",
+) {
+  for (const userId of userIds) {
+    await upsertTaskMemberStatus(tx, taskId, userId, status);
+  }
+}
+
+async function deleteTaskMemberStatusesForUsers(
+  tx: DbTransaction,
+  taskId: string,
+  userIds: string[],
+) {
+  if (userIds.length === 0) return;
+  await tx
+    .delete(agencyOpsProjectTaskMemberStatus)
+    .where(
+      and(
+        eq(agencyOpsProjectTaskMemberStatus.taskId, taskId),
+        inArray(agencyOpsProjectTaskMemberStatus.userId, userIds),
+      ),
+    );
+}
+
+function resolveViewerMemberStatus(
+  task: {
+    status: "open" | "in_progress" | "done" | "archived";
+    assignedToTeam: boolean;
+  },
+  memberStatuses: Map<string, "open" | "in_progress" | "done"> | undefined,
+  viewerUserId: string,
+): "open" | "in_progress" | "done" {
+  if (task.status === "archived") return "done";
+  return memberStatuses?.get(viewerUserId) ?? "open";
+}
+
+async function buildProjectTaskRecord(
+  row: {
+    id: string;
+    teamId: string;
+    projectId: string;
+    title: string;
+    status: "open" | "in_progress" | "done" | "archived";
+    assignedToTeam: boolean;
+    dueDate: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+  assignees: AgencyProjectTaskAssigneeRecord[],
+  viewerUserId?: string,
+  memberStatuses?: Map<string, "open" | "in_progress" | "done">,
+): Promise<AgencyProjectTaskRecord> {
+  return mapProjectTaskRow({
+    ...row,
+    assignees,
+    ...(viewerUserId
+      ? {
+          viewerStatus: resolveViewerMemberStatus(row, memberStatuses, viewerUserId),
+        }
+      : {}),
+  });
+}
+
 async function setTaskAssignees(tx: DbTransaction, taskId: string, userIds: string[]) {
+  const existingRows = await tx
+    .select({ userId: agencyOpsProjectTaskAssignee.userId })
+    .from(agencyOpsProjectTaskAssignee)
+    .where(eq(agencyOpsProjectTaskAssignee.taskId, taskId));
+  const existingUserIds = existingRows.map((row) => row.userId);
+
   await tx
     .delete(agencyOpsProjectTaskAssignee)
     .where(eq(agencyOpsProjectTaskAssignee.taskId, taskId));
 
-  if (userIds.length === 0) return;
-
   const uniqueUserIds = [...new Set(userIds)];
+  const removedUserIds = existingUserIds.filter((userId) => !uniqueUserIds.includes(userId));
+  const addedUserIds = uniqueUserIds.filter((userId) => !existingUserIds.includes(userId));
+
+  if (removedUserIds.length > 0) {
+    await deleteTaskMemberStatusesForUsers(tx, taskId, removedUserIds);
+  }
+
+  if (uniqueUserIds.length === 0) return;
+
   await tx.insert(agencyOpsProjectTaskAssignee).values(
     uniqueUserIds.map((userId) => ({
       taskId,
       userId,
     })),
   );
+
+  if (addedUserIds.length > 0) {
+    await setTaskMemberStatusesForUsers(tx, taskId, addedUserIds, "open");
+  }
 }
 
 async function getActiveTimerByUser(userId: string) {
@@ -863,11 +1008,41 @@ export async function listAgencyProjectTasks(
   if (input.projectId) {
     filters.push(eq(agencyOpsProjectTask.projectId, input.projectId));
   }
-  if (input.statuses && input.statuses.length > 0) {
-    filters.push(inArray(agencyOpsProjectTask.status, input.statuses));
-  } else if (input.status) {
-    filters.push(eq(agencyOpsProjectTask.status, input.status));
+
+  const requestedStatuses = input.statuses ?? (input.status ? [input.status] : []);
+  const filterByMemberStatus = Boolean(input.assigneeUserId && requestedStatuses.length > 0);
+
+  if (filterByMemberStatus) {
+    if (!requestedStatuses.includes("archived")) {
+      filters.push(sql`${agencyOpsProjectTask.status} <> 'archived'`);
+    }
+    const memberStatusList = requestedStatuses.filter(
+      (status): status is "open" | "in_progress" | "done" =>
+        status === "open" || status === "in_progress" || status === "done",
+    );
+    if (memberStatusList.length > 0) {
+      filters.push(
+        sql`coalesce(
+          (
+            select ${agencyOpsProjectTaskMemberStatus.status}
+            from ${agencyOpsProjectTaskMemberStatus}
+            where ${agencyOpsProjectTaskMemberStatus.taskId} = ${agencyOpsProjectTask.id}
+              and ${agencyOpsProjectTaskMemberStatus.userId} = ${input.assigneeUserId!}
+            limit 1
+          ),
+          'open'
+        ) in (${sql.join(
+          memberStatusList.map((status) => sql`${status}`),
+          sql`, `,
+        )})`,
+      );
+    } else if (requestedStatuses.includes("archived")) {
+      filters.push(eq(agencyOpsProjectTask.status, "archived"));
+    }
+  } else if (requestedStatuses.length > 0) {
+    filters.push(inArray(agencyOpsProjectTask.status, requestedStatuses));
   }
+
   if (input.assigneeUserId) {
     const assigneeSubquery = db
       .select({ one: sql`1` })
@@ -903,13 +1078,20 @@ export async function listAgencyProjectTasks(
     .orderBy(desc(agencyOpsProjectTask.createdAt));
 
   const assigneesByTask = await loadTaskAssignees(rows.map((row) => row.id));
+  const memberStatusesByTask = input.assigneeUserId
+    ? await loadTaskMemberStatuses(rows.map((row) => row.id))
+    : undefined;
 
   return {
-    items: rows.map((row) =>
-      mapProjectTaskRow({
-        ...row,
-        assignees: assigneesByTask.get(row.id) ?? [],
-      }),
+    items: await Promise.all(
+      rows.map((row) =>
+        buildProjectTaskRecord(
+          row,
+          assigneesByTask.get(row.id) ?? [],
+          input.assigneeUserId,
+          memberStatusesByTask?.get(row.id),
+        ),
+      ),
     ),
   };
 }
@@ -1024,11 +1206,85 @@ export async function createAgencyProjectTask(
   }
 
   const assigneesByTask = await loadTaskAssignees([created.id]);
+  const memberStatuses = await loadTaskMemberStatuses([created.id]);
 
-  return mapProjectTaskRow({
-    ...created,
-    assignees: assigneesByTask.get(created.id) ?? [],
-  });
+  return buildProjectTaskRecord(
+    created,
+    assigneesByTask.get(created.id) ?? [],
+    actorUserId,
+    memberStatuses.get(created.id),
+  );
+}
+
+export async function completeAgencyProjectTaskForMember(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    taskId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const current = await getTaskByIdForTeam(input.teamId, input.taskId);
+  if (current.status === "archived") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Archived tasks cannot be updated.",
+    });
+  }
+
+  const canWork =
+    current.assignedToTeam ||
+    (
+      await db
+        .select({ userId: agencyOpsProjectTaskAssignee.userId })
+        .from(agencyOpsProjectTaskAssignee)
+        .where(
+          and(
+            eq(agencyOpsProjectTaskAssignee.taskId, input.taskId),
+            eq(agencyOpsProjectTaskAssignee.userId, actorUserId),
+          ),
+        )
+        .limit(1)
+    ).length > 0;
+
+  if (!canWork) {
+    throw new ORPCError("FORBIDDEN", {
+      message: "You are not assigned to this task.",
+    });
+  }
+
+  const now = new Date();
+  await db
+    .insert(agencyOpsProjectTaskMemberStatus)
+    .values({
+      taskId: input.taskId,
+      userId: actorUserId,
+      status: "done",
+      completedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [
+        agencyOpsProjectTaskMemberStatus.taskId,
+        agencyOpsProjectTaskMemberStatus.userId,
+      ],
+      set: {
+        status: "done",
+        completedAt: now,
+        updatedAt: now,
+      },
+    });
+
+  const assigneesByTask = await loadTaskAssignees([current.id]);
+  const memberStatuses = await loadTaskMemberStatuses([current.id]);
+
+  return buildProjectTaskRecord(
+    current,
+    assigneesByTask.get(current.id) ?? [],
+    actorUserId,
+    memberStatuses.get(current.id),
+  );
 }
 
 export async function updateAgencyProjectTask(
@@ -1116,10 +1372,7 @@ export async function updateAgencyProjectTask(
 
   const assigneesByTask = await loadTaskAssignees([updated.id]);
 
-  return mapProjectTaskRow({
-    ...updated,
-    assignees: assigneesByTask.get(updated.id) ?? [],
-  });
+  return buildProjectTaskRecord(updated, assigneesByTask.get(updated.id) ?? []);
 }
 
 export async function deleteAgencyProjectTask(

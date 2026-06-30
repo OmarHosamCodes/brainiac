@@ -13,6 +13,7 @@ import {
 } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { taskMatchesAnyAssigneeFilter } from "@/lib/utils/agency-query-cache";
+import { getTaskGroupKey, groupTasksByProjectTitle } from "@/lib/utils/agency-task-utils";
 import {
   useAgencyClientsQuery,
   useAgencyContactQuery,
@@ -97,7 +98,11 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
     [projects],
   );
   const taskOptions = useMemo(
-    () => tasks.map((task) => ({ value: task.id, label: task.title })),
+    () =>
+      groupTasksByProjectTitle(tasks).map((group) => ({
+        value: group.groupKey,
+        label: group.title,
+      })),
     [tasks],
   );
 
@@ -149,7 +154,9 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
       if (
         tasksSet.size > 0 &&
         !clientProjects.some((project) =>
-          tasks.some((task) => task.projectId === project.id && tasksSet.has(task.id)),
+          tasks.some(
+            (task) => task.projectId === project.id && tasksSet.has(getTaskGroupKey(task)),
+          ),
         )
       ) {
         return false;

@@ -66,6 +66,7 @@ export type AgencyTaskListViewModel =
   | {
       status: "ready";
       teamId: string;
+      currentUserId: string;
       projects: AgencyTaskProject[];
       selectedTaskId: string;
       donePanelId: string;
@@ -239,6 +240,11 @@ export function useAgencyTaskList({
       if (status === "done") {
         setDoneExpanded(true);
         setRecentlyCompletedTaskId(task.id);
+        await agencyOps.completeProjectTaskForMember({
+          teamId,
+          taskId: task.id,
+        });
+        return;
       }
       await agencyOps.updateProjectTask({
         teamId,
@@ -283,6 +289,7 @@ export function useAgencyTaskList({
   return {
     status: "ready",
     teamId,
+    currentUserId,
     projects,
     selectedTaskId,
     donePanelId,

@@ -121,7 +121,11 @@ export function AgencyTaskRowView({
   const project = projects.find((p) => p.id === task.projectId);
   const projectName = project?.name ?? "Project";
   const isSelected = task.id === selectedTaskId;
-  const isDone = task.status === "done";
+  const memberStatus = task.viewerStatus;
+  const isDone =
+    memberStatus !== undefined
+      ? memberStatus === "done"
+      : task.status === "done" || task.status === "archived";
   const overdue = isTaskOverdue(task.dueDate);
   const dueLabel = task.dueDate ? formatDueDate(task.dueDate) : "";
 

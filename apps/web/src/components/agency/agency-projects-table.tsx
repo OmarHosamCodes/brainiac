@@ -22,6 +22,7 @@ import {
 import { formatDuration } from "@/lib/utils/format-duration";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { taskMatchesAnyAssigneeFilter } from "@/lib/utils/agency-query-cache";
+import { getTaskGroupKey, groupTasksByProjectTitle } from "@/lib/utils/agency-task-utils";
 import { projectHueStyle } from "@/lib/utils/project-palette";
 import { selectIsProjectMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
@@ -105,7 +106,11 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
       [projects],
     );
     const taskOptions = useMemo(
-      () => tasks.map((task) => ({ value: task.id, label: task.title })),
+      () =>
+        groupTasksByProjectTitle(tasks).map((group) => ({
+          value: group.groupKey,
+          label: group.title,
+        })),
       [tasks],
     );
 
@@ -143,7 +148,9 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
         }
         if (
           tasksSet.size > 0 &&
-          !tasks.some((task) => task.projectId === project.id && tasksSet.has(task.id))
+          !tasks.some(
+            (task) => task.projectId === project.id && tasksSet.has(getTaskGroupKey(task)),
+          )
         ) {
           return false;
         }

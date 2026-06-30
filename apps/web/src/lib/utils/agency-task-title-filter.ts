@@ -23,8 +23,6 @@ export function filterTasksByTitleSearch(
     return [...tasks].sort((left, right) => left.title.localeCompare(right.title));
   }
 
-  const seenTitles = new Set<string>();
-
   return tasks
     .map((task) => {
       const normalizedTitle = normalizeTaskTitle(task.title);
@@ -35,11 +33,7 @@ export function filterTasksByTitleSearch(
         createdAtMs: new Date(task.createdAt).getTime(),
       };
     })
-    .filter(({ normalizedTitle, score }) => {
-      if (!normalizedTitle || score <= 0 || seenTitles.has(normalizedTitle)) return false;
-      seenTitles.add(normalizedTitle);
-      return true;
-    })
+    .filter(({ normalizedTitle, score }) => Boolean(normalizedTitle) && score > 0)
     .sort((left, right) => {
       const rightCreatedAt = Number.isNaN(right.createdAtMs) ? 0 : right.createdAtMs;
       const leftCreatedAt = Number.isNaN(left.createdAtMs) ? 0 : left.createdAtMs;

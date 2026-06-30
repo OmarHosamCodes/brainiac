@@ -1,10 +1,12 @@
-import { AlertTriangle, ListChecks, ListPlus, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, ListChecks, ListPlus, Plus } from "lucide-react";
 import { useState } from "react";
 
+import { AgencyTaskGroupRowView } from "@/components/agency/work/task-list/agency-task-group-row-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAgencyProjectTasksQuery } from "@/lib/queries/agency";
+import { groupTasksByProjectTitle } from "@/lib/utils/agency-task-utils";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/stores/agency-ops";
 
@@ -23,6 +25,7 @@ export function AgencyProjectTasks({ teamId, projectId, projectName }: AgencyPro
   const tasksQuery = useAgencyProjectTasksQuery(teamId, { projectId });
 
   const tasks = tasksQuery.data?.items ?? [];
+  const taskGroups = groupTasksByProjectTitle(tasks);
 
   async function createTask() {
     const title = titleDraft.trim();
@@ -37,13 +40,6 @@ export function AgencyProjectTasks({ teamId, projectId, projectName }: AgencyPro
       teamId,
       taskId: task.id,
       taskTitle: task.title,
-    });
-  }
-
-  function formatTaskDate(iso: string): string {
-    return new Date(iso).toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
     });
   }
 
@@ -113,25 +109,14 @@ export function AgencyProjectTasks({ teamId, projectId, projectName }: AgencyPro
         </div>
       ) : (
         <ul className="divide-y divide-default">
-          {tasks.map((task) => (
-            <li
-              key={task.id}
-              className="grid grid-cols-[1fr,5rem,2.25rem] items-center gap-3 px-4 py-2.5 text-xs"
-            >
-              <span className="min-w-0 truncate font-bold text-highlighted">{task.title}</span>
-              <span className="font-mono tabular-nums text-muted">
-                {formatTaskDate(task.createdAt)}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                aria-label="Delete task"
-                disabled={deletingTaskIds.includes(task.id)}
-                onClick={() => void deleteTask(task)}
-              >
-                <Trash2 />
-              </Button>
-            </li>
+          {taskGroups.map((group) => (
+            <AgencyTaskGroupRowView
+              key={group.groupKey}
+              group={group}
+              mode="project"
+              deletingTaskIds={deletingTaskIds}
+              onDeleteInstance={(task) => void deleteTask(task)}
+            />
           ))}
         </ul>
       )}

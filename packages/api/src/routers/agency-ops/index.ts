@@ -6,6 +6,7 @@ import {
   createAgencyClient,
   createAgencyProject,
   createAgencyProjectTask,
+  completeAgencyProjectTaskForMember,
   createInvoice,
   createManualAgencyTimeEntry,
   createTaskAttachmentPresignedUrl,
@@ -95,8 +96,10 @@ const agencyProjectTaskSchema = z.object({
       userId: z.string().min(1),
       userName: z.string().min(1),
       userAvatar: z.string().nullable(),
+      status: z.enum(["open", "in_progress", "done"]),
     }),
   ),
+  viewerStatus: z.enum(["open", "in_progress", "done"]).optional(),
   dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -469,6 +472,18 @@ export const agencyOpsRouter = {
           })
           .parse(await deleteAgencyProjectTask(context.session.user.id, input));
         return result;
+      }),
+    completeForMember: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          taskId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        const task = agencyProjectTaskSchema.parse(
+          await completeAgencyProjectTaskForMember(context.session.user.id, input),
+        );
+        return task;
       }),
   },
   taskThreads: {

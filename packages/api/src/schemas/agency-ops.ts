@@ -51,10 +51,13 @@ export const agencyProjectSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
+export const agencyProjectTaskMemberStatusSchema = z.enum(["open", "in_progress", "done"]);
+
 export const agencyProjectTaskAssigneeSchema = z.object({
   userId: z.string().min(1),
   userName: z.string().min(1),
   userAvatar: z.string().nullable(),
+  status: agencyProjectTaskMemberStatusSchema,
 });
 
 export const agencyProjectTaskSchema = z.object({
@@ -65,6 +68,7 @@ export const agencyProjectTaskSchema = z.object({
   status: agencyProjectTaskStatusSchema,
   assignedToTeam: z.boolean(),
   assignees: z.array(agencyProjectTaskAssigneeSchema),
+  viewerStatus: agencyProjectTaskMemberStatusSchema.optional(),
   dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

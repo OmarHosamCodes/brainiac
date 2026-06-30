@@ -14,6 +14,7 @@ import { workspaceTeam } from "./team";
 
 export type AgencyOpsTimeEntrySource = "timer" | "manual";
 export type AgencyOpsProjectTaskStatus = "open" | "in_progress" | "done" | "archived";
+export type AgencyOpsProjectTaskMemberStatus = "open" | "in_progress" | "done";
 export type AgencyOpsTaskMessageType = "text" | "voice" | "attachment";
 export type AgencyOpsTaskMessageSenderType = "user" | "agent";
 
@@ -127,6 +128,36 @@ export const agencyOpsProjectTaskAssignee = pgTable(
     uniqueIndex("agency_ops_project_task_assignee_task_user_unique").on(table.taskId, table.userId),
     index("agency_ops_project_task_assignee_user_idx").on(table.userId),
     index("agency_ops_project_task_assignee_task_idx").on(table.taskId),
+  ],
+);
+
+export const agencyOpsProjectTaskMemberStatus = pgTable(
+  "agency_ops_project_task_member_status",
+  {
+    taskId: text("task_id")
+      .notNull()
+      .references(() => agencyOpsProjectTask.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    status: text("status")
+      .$type<AgencyOpsProjectTaskMemberStatus>()
+      .notNull()
+      .default("open"),
+    completedAt: timestamp("completed_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("agency_ops_project_task_member_status_task_user_unique").on(
+      table.taskId,
+      table.userId,
+    ),
+    index("agency_ops_project_task_member_status_user_status_idx").on(table.userId, table.status),
+    index("agency_ops_project_task_member_status_task_idx").on(table.taskId),
   ],
 );
 

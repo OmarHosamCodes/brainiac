@@ -36,7 +36,9 @@ export type AgencyOptimisticTask = {
     userId: string;
     userName: string;
     userAvatar: string | null;
+    status: "open" | "in_progress" | "done";
   }>;
+  viewerStatus?: "open" | "in_progress" | "done";
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
