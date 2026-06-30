@@ -27,6 +27,7 @@ import {
   createTaskAttachmentPresignedUploadUrl,
   deleteTaskAttachmentFromStorage,
   getTaskAttachmentReadUrl,
+  getUserAvatarPublicUrl,
   verifyTaskAttachmentUploadToken,
 } from "../../storage";
 
@@ -37,7 +38,11 @@ function formatAvatarUrl(image: string | null): string | null {
   const parts = image.split("/");
   const userId = parts[1];
   if (!userId) return null;
-  return `${env.BETTER_AUTH_URL}/api/user-avatars/${userId}`;
+  return getUserAvatarPublicUrl({
+    baseUrl: env.BETTER_AUTH_URL,
+    userId,
+    storageKey: image,
+  });
 }
 
 const TEAM_ROLE_WEIGHT: Record<WorkspaceTeamRole, number> = {
