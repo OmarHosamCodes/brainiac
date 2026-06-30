@@ -10,6 +10,7 @@ import {
   agencyOpsMemberRate,
   agencyOpsProject,
   agencyOpsProjectTask,
+  agencyOpsProjectTaskAssignee,
   agencyOpsTaskAttachment,
   agencyOpsTaskMessage,
   agencyOpsTaskThread,
@@ -19,7 +20,7 @@ import {
 } from "@brainiac/db/schema";
 import { createWorkspaceId, type WorkspaceTeamRole } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
-import { and, asc, desc, eq, gte, inArray, isNull, lt, lte, sql, sum } from "drizzle-orm";
+import { and, asc, desc, eq, exists, gte, inArray, isNull, lt, lte, or, sql, sum } from "drizzle-orm";
 
 import {
   createTaskAttachmentUploadToken,
@@ -65,15 +66,20 @@ type AgencyProjectRecord = {
   updatedAt: string;
 };
 
+type AgencyProjectTaskAssigneeRecord = {
+  userId: string;
+  userName: string;
+  userAvatar: string | null;
+};
+
 type AgencyProjectTaskRecord = {
   id: string;
   teamId: string;
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
-  assigneeUserId: string | null;
-  assigneeName: string | null;
-  assigneeAvatar: string | null;
+  assignedToTeam: boolean;
+  assignees: AgencyProjectTaskAssigneeRecord[];
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -342,9 +348,8 @@ function mapProjectTaskRow(row: {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
-  assigneeUserId: string | null;
-  assigneeName: string | null;
-  assigneeAvatar: string | null;
+  assignedToTeam: boolean;
+  assignees: AgencyProjectTaskAssigneeRecord[];
   dueDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -355,13 +360,61 @@ function mapProjectTaskRow(row: {
     projectId: row.projectId,
     title: row.title,
     status: row.status,
-    assigneeUserId: row.assigneeUserId,
-    assigneeName: row.assigneeName,
-    assigneeAvatar: row.assigneeAvatar,
+    assignedToTeam: row.assignedToTeam,
+    assignees: row.assignees,
     dueDate: row.dueDate?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+async function loadTaskAssignees(
+  taskIds: string[],
+): Promise<Map<string, AgencyProjectTaskAssigneeRecord[]>> {
+  const result = new Map<string, AgencyProjectTaskAssigneeRecord[]>();
+  if (taskIds.length === 0) return result;
+
+  const rows = await db
+    .select({
+      taskId: agencyOpsProjectTaskAssignee.taskId,
+      userId: agencyOpsProjectTaskAssignee.userId,
+      userName: user.name,
+      userAvatar: user.image,
+    })
+    .from(agencyOpsProjectTaskAssignee)
+    .innerJoin(user, eq(user.id, agencyOpsProjectTaskAssignee.userId))
+    .where(inArray(agencyOpsProjectTaskAssignee.taskId, taskIds))
+    .orderBy(asc(user.name));
+
+  for (const row of rows) {
+    const assignees = result.get(row.taskId) ?? [];
+    assignees.push({
+      userId: row.userId,
+      userName: row.userName ?? "Unknown",
+      userAvatar: formatAvatarUrl(row.userAvatar),
+    });
+    result.set(row.taskId, assignees);
+  }
+
+  return result;
+}
+
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function setTaskAssignees(tx: DbTransaction, taskId: string, userIds: string[]) {
+  await tx
+    .delete(agencyOpsProjectTaskAssignee)
+    .where(eq(agencyOpsProjectTaskAssignee.taskId, taskId));
+
+  if (userIds.length === 0) return;
+
+  const uniqueUserIds = [...new Set(userIds)];
+  await tx.insert(agencyOpsProjectTaskAssignee).values(
+    uniqueUserIds.map((userId) => ({
+      taskId,
+      userId,
+    })),
+  );
 }
 
 async function getActiveTimerByUser(userId: string) {
@@ -811,7 +864,18 @@ export async function listAgencyProjectTasks(
     filters.push(eq(agencyOpsProjectTask.status, input.status));
   }
   if (input.assigneeUserId) {
-    filters.push(eq(agencyOpsProjectTask.assigneeUserId, input.assigneeUserId));
+    const assigneeSubquery = db
+      .select({ one: sql`1` })
+      .from(agencyOpsProjectTaskAssignee)
+      .where(
+        and(
+          eq(agencyOpsProjectTaskAssignee.taskId, agencyOpsProjectTask.id),
+          eq(agencyOpsProjectTaskAssignee.userId, input.assigneeUserId),
+        ),
+      );
+    filters.push(
+      or(eq(agencyOpsProjectTask.assignedToTeam, true), exists(assigneeSubquery))!,
+    );
   }
   if (searchTerm) {
     filters.push(sql`lower(${agencyOpsProjectTask.title}) like ${`%${searchTerm}%`}`);
@@ -824,24 +888,22 @@ export async function listAgencyProjectTasks(
       projectId: agencyOpsProjectTask.projectId,
       title: agencyOpsProjectTask.title,
       status: agencyOpsProjectTask.status,
-      assigneeUserId: agencyOpsProjectTask.assigneeUserId,
-      assigneeName: user.name,
-      assigneeAvatar: user.image,
+      assignedToTeam: agencyOpsProjectTask.assignedToTeam,
       dueDate: agencyOpsProjectTask.dueDate,
       createdAt: agencyOpsProjectTask.createdAt,
       updatedAt: agencyOpsProjectTask.updatedAt,
     })
     .from(agencyOpsProjectTask)
-    .leftJoin(user, eq(user.id, agencyOpsProjectTask.assigneeUserId))
     .where(and(...filters))
     .orderBy(desc(agencyOpsProjectTask.createdAt));
+
+  const assigneesByTask = await loadTaskAssignees(rows.map((row) => row.id));
 
   return {
     items: rows.map((row) =>
       mapProjectTaskRow({
         ...row,
-        assigneeName: row.assigneeName ?? null,
-        assigneeAvatar: formatAvatarUrl(row.assigneeAvatar) ?? null,
+        assignees: assigneesByTask.get(row.id) ?? [],
       }),
     ),
   };
@@ -855,7 +917,7 @@ async function getTaskByIdForTeam(teamId: string, taskId: string) {
       projectId: agencyOpsProjectTask.projectId,
       title: agencyOpsProjectTask.title,
       status: agencyOpsProjectTask.status,
-      assigneeUserId: agencyOpsProjectTask.assigneeUserId,
+      assignedToTeam: agencyOpsProjectTask.assignedToTeam,
       dueDate: agencyOpsProjectTask.dueDate,
       createdAt: agencyOpsProjectTask.createdAt,
       updatedAt: agencyOpsProjectTask.updatedAt,
@@ -880,7 +942,8 @@ export async function createAgencyProjectTask(
     projectId: string;
     title: string;
     status?: "open" | "in_progress" | "done" | "archived";
-    assigneeUserId?: string | null;
+    assignedToTeam?: boolean;
+    assigneeUserIds?: string[];
     dueDate?: string | null;
   },
 ) {
@@ -894,8 +957,13 @@ export async function createAgencyProjectTask(
     });
   }
 
-  if (input.assigneeUserId) {
-    await requireTeamMember(input.teamId, input.assigneeUserId);
+  const assignedToTeam = input.assignedToTeam ?? false;
+  const assigneeUserIds = assignedToTeam ? [] : [...new Set(input.assigneeUserIds ?? [])];
+
+  if (!assignedToTeam) {
+    for (const userId of assigneeUserIds) {
+      await requireTeamMember(input.teamId, userId);
+    }
   }
 
   const now = new Date();
@@ -911,7 +979,7 @@ export async function createAgencyProjectTask(
         projectId: input.projectId,
         title,
         status: input.status ?? "open",
-        assigneeUserId: input.assigneeUserId ?? null,
+        assignedToTeam,
         dueDate,
         createdByUserId: actorUserId,
         createdAt: now,
@@ -923,13 +991,17 @@ export async function createAgencyProjectTask(
         projectId: agencyOpsProjectTask.projectId,
         title: agencyOpsProjectTask.title,
         status: agencyOpsProjectTask.status,
-        assigneeUserId: agencyOpsProjectTask.assigneeUserId,
+        assignedToTeam: agencyOpsProjectTask.assignedToTeam,
         dueDate: agencyOpsProjectTask.dueDate,
         createdAt: agencyOpsProjectTask.createdAt,
         updatedAt: agencyOpsProjectTask.updatedAt,
       });
 
     if (task) {
+      if (assigneeUserIds.length > 0) {
+        await setTaskAssignees(tx, task.id, assigneeUserIds);
+      }
+
       await tx.insert(agencyOpsTaskThread).values({
         id: createWorkspaceId("agency-task-thread"),
         teamId: input.teamId,
@@ -946,10 +1018,11 @@ export async function createAgencyProjectTask(
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
 
+  const assigneesByTask = await loadTaskAssignees([created.id]);
+
   return mapProjectTaskRow({
     ...created,
-    assigneeName: null,
-    assigneeAvatar: null,
+    assignees: assigneesByTask.get(created.id) ?? [],
   });
 }
 
@@ -960,17 +1033,14 @@ export async function updateAgencyProjectTask(
     taskId: string;
     title?: string;
     status?: "open" | "in_progress" | "done" | "archived";
-    assigneeUserId?: string | null;
+    assignedToTeam?: boolean;
+    assigneeUserIds?: string[];
     dueDate?: string | null;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const current = await getTaskByIdForTeam(input.teamId, input.taskId);
-
-  if (input.assigneeUserId) {
-    await requireTeamMember(input.teamId, input.assigneeUserId);
-  }
 
   const title = input.title?.trim();
   if (title === "") {
@@ -986,45 +1056,64 @@ export async function updateAgencyProjectTask(
         : null
       : current.dueDate;
 
+  let nextAssignedToTeam = current.assignedToTeam;
+  let nextAssigneeUserIds: string[] | null = null;
+
+  if (input.assignedToTeam === true) {
+    nextAssignedToTeam = true;
+    nextAssigneeUserIds = [];
+  } else if (input.assignedToTeam === false || input.assigneeUserIds !== undefined) {
+    nextAssignedToTeam = false;
+    nextAssigneeUserIds = [...new Set(input.assigneeUserIds ?? [])];
+    for (const userId of nextAssigneeUserIds) {
+      await requireTeamMember(input.teamId, userId);
+    }
+  }
+
   const now = new Date();
-  const [updated] = await db
-    .update(agencyOpsProjectTask)
-    .set({
-      ...(title ? { title } : {}),
-      ...(input.status ? { status: input.status } : {}),
-      ...(input.assigneeUserId !== undefined ? { assigneeUserId: input.assigneeUserId } : {}),
-      dueDate,
-      updatedAt: now,
-    })
-    .where(
-      and(eq(agencyOpsProjectTask.teamId, input.teamId), eq(agencyOpsProjectTask.id, input.taskId)),
-    )
-    .returning({
-      id: agencyOpsProjectTask.id,
-      teamId: agencyOpsProjectTask.teamId,
-      projectId: agencyOpsProjectTask.projectId,
-      title: agencyOpsProjectTask.title,
-      status: agencyOpsProjectTask.status,
-      assigneeUserId: agencyOpsProjectTask.assigneeUserId,
-      dueDate: agencyOpsProjectTask.dueDate,
-      createdAt: agencyOpsProjectTask.createdAt,
-      updatedAt: agencyOpsProjectTask.updatedAt,
-    });
+  const [updated] = await db.transaction(async (tx) => {
+    const [task] = await tx
+      .update(agencyOpsProjectTask)
+      .set({
+        ...(title ? { title } : {}),
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.assignedToTeam !== undefined || input.assigneeUserIds !== undefined
+          ? { assignedToTeam: nextAssignedToTeam }
+          : {}),
+        dueDate,
+        updatedAt: now,
+      })
+      .where(
+        and(eq(agencyOpsProjectTask.teamId, input.teamId), eq(agencyOpsProjectTask.id, input.taskId)),
+      )
+      .returning({
+        id: agencyOpsProjectTask.id,
+        teamId: agencyOpsProjectTask.teamId,
+        projectId: agencyOpsProjectTask.projectId,
+        title: agencyOpsProjectTask.title,
+        status: agencyOpsProjectTask.status,
+        assignedToTeam: agencyOpsProjectTask.assignedToTeam,
+        dueDate: agencyOpsProjectTask.dueDate,
+        createdAt: agencyOpsProjectTask.createdAt,
+        updatedAt: agencyOpsProjectTask.updatedAt,
+      });
+
+    if (task && nextAssigneeUserIds !== null) {
+      await setTaskAssignees(tx, task.id, nextAssigneeUserIds);
+    }
+
+    return [task];
+  });
 
   if (!updated) {
     throw new ORPCError("NOT_FOUND");
   }
 
-  const [assignee] = await db
-    .select({ name: user.name, image: user.image })
-    .from(user)
-    .where(eq(user.id, updated.assigneeUserId ?? ""))
-    .limit(1);
+  const assigneesByTask = await loadTaskAssignees([updated.id]);
 
   return mapProjectTaskRow({
     ...updated,
-    assigneeName: assignee?.name ?? null,
-    assigneeAvatar: formatAvatarUrl(assignee?.image ?? null),
+    assignees: assigneesByTask.get(updated.id) ?? [],
   });
 }
 
@@ -1509,12 +1598,11 @@ export async function getTaskThreadContext(
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
-      assigneeName: user.name,
+      assignedToTeam: agencyOpsProjectTask.assignedToTeam,
     })
     .from(agencyOpsProjectTask)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
-    .leftJoin(user, eq(user.id, agencyOpsProjectTask.assigneeUserId))
     .where(
       and(eq(agencyOpsProjectTask.id, input.taskId), eq(agencyOpsProjectTask.teamId, input.teamId)),
     )
@@ -1526,7 +1614,18 @@ export async function getTaskThreadContext(
     });
   }
 
-  return context;
+  const assigneesByTask = await loadTaskAssignees([context.taskId]);
+  const assignees = assigneesByTask.get(context.taskId) ?? [];
+
+  return {
+    ...context,
+    assigneeName:
+      context.assignedToTeam || assignees.length > 0
+        ? context.assignedToTeam
+          ? "Entire team"
+          : assignees.map((assignee) => assignee.userName).join(", ")
+        : null,
+  };
 }
 
 export async function listRecentTaskThreadMessages(

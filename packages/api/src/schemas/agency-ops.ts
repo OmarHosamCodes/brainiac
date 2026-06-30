@@ -51,19 +51,44 @@ export const agencyProjectSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
+export const agencyProjectTaskAssigneeSchema = z.object({
+  userId: z.string().min(1),
+  userName: z.string().min(1),
+  userAvatar: z.string().nullable(),
+});
+
 export const agencyProjectTaskSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
   projectId: z.string().min(1),
   title: z.string().min(1),
   status: agencyProjectTaskStatusSchema,
-  assigneeUserId: z.string().nullable(),
-  assigneeName: z.string().nullable(),
-  assigneeAvatar: z.string().nullable(),
+  assignedToTeam: z.boolean(),
+  assignees: z.array(agencyProjectTaskAssigneeSchema),
   dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
+
+export function formatTaskAssigneeLabel(task: {
+  assignedToTeam: boolean;
+  assignees: Array<{ userName: string }>;
+}): string {
+  if (task.assignedToTeam) return "Entire team";
+  if (task.assignees.length === 0) return "Unassigned";
+  return task.assignees.map((assignee) => assignee.userName).join(", ");
+}
+
+export function taskVisibleToAssignee(
+  task: {
+    assignedToTeam: boolean;
+    assignees: Array<{ userId: string }>;
+  },
+  assigneeUserId: string,
+): boolean {
+  if (task.assignedToTeam) return true;
+  return task.assignees.some((assignee) => assignee.userId === assigneeUserId);
+}
 
 export const agencyTaskMessageAttachmentSchema = z.object({
   id: z.string().min(1),
@@ -143,6 +168,7 @@ export const agencyTaskProjectSchema = agencyProjectSchema.pick({
 });
 
 export type AgencyProjectTaskStatus = z.infer<typeof agencyProjectTaskStatusSchema>;
+export type AgencyProjectTaskAssignee = z.infer<typeof agencyProjectTaskAssigneeSchema>;
 export type AgencyClient = z.infer<typeof agencyClientSchema>;
 export type AgencyProject = z.infer<typeof agencyProjectSchema>;
 export type AgencyProjectTask = z.infer<typeof agencyProjectTaskSchema>;

@@ -37,6 +37,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     statusLabel,
     statusDotClass,
     formatDueDate,
+    formatAssigneeLabel,
   } = view;
 
   return (
@@ -176,9 +177,12 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                                   </span>
                                   <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted">
                                     <span>{statusLabel(task.status)}</span>
-                                    {task.assigneeName ? (
-                                      <span className="truncate">{task.assigneeName}</span>
-                                    ) : null}
+                                    {(() => {
+                                      const assigneeLabel = formatAssigneeLabel(task);
+                                      return assigneeLabel !== "Unassigned" ? (
+                                        <span className="truncate">{assigneeLabel}</span>
+                                      ) : null;
+                                    })()}
                                     {formatDueDate(task.dueDate) ? (
                                       <span>Due {formatDueDate(task.dueDate)}</span>
                                     ) : null}

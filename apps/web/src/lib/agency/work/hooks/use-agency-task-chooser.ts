@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { formatTaskAssigneeLabel } from "@brainiac/api/schemas/agency-ops";
 import type { AgencyProject, AgencyProjectTask, TaskStatus } from "@/lib/schemas/agency-work";
 
 type Project = Pick<AgencyProject, "id" | "clientName" | "name">;
-type AgencyTask = Pick<AgencyProjectTask, "id" | "projectId" | "title" | "status"> & {
-  assigneeName?: string | null;
+type AgencyTask = Pick<
+  AgencyProjectTask,
+  "id" | "projectId" | "title" | "status" | "assignedToTeam" | "assignees"
+> & {
   dueDate?: string | null;
 };
 
@@ -54,6 +57,7 @@ export type AgencyTaskChooserViewModel = {
   statusLabel: (status: TaskStatus | undefined) => string;
   statusDotClass: (status: TaskStatus | undefined) => string;
   formatDueDate: (iso: string | null | undefined) => string;
+  formatAssigneeLabel: (task: AgencyTask) => string;
 };
 
 function statusLabel(status: TaskStatus | undefined) {
@@ -155,7 +159,7 @@ export function useAgencyTaskChooser({
       const searchableText = [
         task.title,
         task.status,
-        task.assigneeName ?? "",
+        formatTaskAssigneeLabel(task),
         project?.name ?? "",
         project?.clientName ?? "",
       ]
@@ -258,5 +262,6 @@ export function useAgencyTaskChooser({
     statusLabel,
     statusDotClass,
     formatDueDate,
+    formatAssigneeLabel: formatTaskAssigneeLabel,
   };
 }

@@ -9,8 +9,10 @@ type AgencyTaskChooserContainerProps = {
   onValueChange: (value: string) => void;
   projects: Array<Pick<AgencyProject, "id" | "clientName" | "name">>;
   tasks: Array<
-    Pick<AgencyProjectTask, "id" | "projectId" | "title" | "status"> & {
-      assigneeName?: string | null;
+    Pick<
+      AgencyProjectTask,
+      "id" | "projectId" | "title" | "status" | "assignedToTeam" | "assignees"
+    > & {
       dueDate?: string | null;
     }
   >;

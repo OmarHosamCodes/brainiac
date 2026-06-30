@@ -4,11 +4,13 @@ import {
   agencyOpsClient,
   agencyOpsProject,
   agencyOpsProjectTask,
+  agencyOpsProjectTaskAssignee,
   agencyOpsTaskAttachment,
   agencyOpsTaskMessage,
   agencyOpsTaskThread,
   user,
 } from "@brainiac/db/schema";
+import { formatTaskAssigneeLabel } from "../../schemas/agency-ops";
 import type { AttachmentMetadata } from "@brainiac/db/schema/agency-ops";
 import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
@@ -81,12 +83,11 @@ export async function askTaskAgent(
       taskStatus: agencyOpsProjectTask.status,
       projectName: agencyOpsProject.name,
       clientName: agencyOpsClient.name,
-      assigneeName: user.name,
+      assignedToTeam: agencyOpsProjectTask.assignedToTeam,
     })
     .from(agencyOpsProjectTask)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
-    .leftJoin(user, eq(user.id, agencyOpsProjectTask.assigneeUserId))
     .where(
       and(eq(agencyOpsProjectTask.id, input.taskId), eq(agencyOpsProjectTask.teamId, input.teamId)),
     )
@@ -97,6 +98,22 @@ export async function askTaskAgent(
       message: "Task was not found.",
     });
   }
+
+  const assigneeRows = await db
+    .select({
+      userId: agencyOpsProjectTaskAssignee.userId,
+      userName: user.name,
+    })
+    .from(agencyOpsProjectTaskAssignee)
+    .innerJoin(user, eq(user.id, agencyOpsProjectTaskAssignee.userId))
+    .where(eq(agencyOpsProjectTaskAssignee.taskId, input.taskId));
+
+  const assigneeName = formatTaskAssigneeLabel({
+    assignedToTeam: context.assignedToTeam,
+    assignees: assigneeRows.map((row) => ({
+      userName: row.userName ?? "Unknown",
+    })),
+  });
 
   const thread = await ensureTaskThreadByTaskId(input.teamId, input.taskId);
 
@@ -197,7 +214,7 @@ export async function askTaskAgent(
       taskStatus: context.taskStatus,
       projectName: context.projectName,
       clientName: context.clientName,
-      assigneeName: context.assigneeName ?? null,
+      assigneeName: assigneeName === "Unassigned" ? null : assigneeName,
       recentMessages,
     },
     { model: input.model },

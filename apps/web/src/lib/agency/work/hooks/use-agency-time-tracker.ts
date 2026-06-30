@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { authClient } from "@/lib/auth-client";
 import { useAgencyElapsedTimer } from "@/lib/agency/work/hooks/use-agency-elapsed-timer";
 import {
   canStartAgencyTimer,
@@ -80,8 +81,16 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
 
   const [taskChooserOpen, setTaskChooserOpen] = useState(false);
 
+  const session = authClient.useSession();
+  const currentUserId = session.data?.user?.id ?? "";
+
   const projectsQuery = useAgencyProjectsQuery(teamId);
-  const tasksQuery = useAgencyProjectTasksQuery(teamId, { statuses: OPEN_TASK_STATUSES });
+  const tasksQuery = useAgencyProjectTasksQuery(
+    teamId,
+    currentUserId
+      ? { assigneeUserId: currentUserId, statuses: OPEN_TASK_STATUSES }
+      : { statuses: OPEN_TASK_STATUSES },
+  );
   const recentEntriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 50);
   const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
 

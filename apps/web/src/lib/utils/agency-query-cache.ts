@@ -15,9 +15,12 @@ type AgencyProjectTask = {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
-  assigneeUserId: string | null;
-  assigneeName: string | null;
-  assigneeAvatar: string | null;
+  assignedToTeam: boolean;
+  assignees: Array<{
+    userId: string;
+    userName: string;
+    userAvatar: string | null;
+  }>;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -78,13 +81,34 @@ export function isAgencyTimeEntriesListQueryKey(queryKey: QueryKey, teamId: stri
   return getOrpcQueryMeta(queryKey)?.input?.teamId === teamId;
 }
 
+export function taskVisibleToAssignee(
+  task: Pick<AgencyProjectTask, "assignedToTeam" | "assignees">,
+  assigneeUserId: string,
+): boolean {
+  if (task.assignedToTeam) return true;
+  return task.assignees.some((assignee) => assignee.userId === assigneeUserId);
+}
+
+export function taskMatchesAnyAssigneeFilter(
+  task: Pick<AgencyProjectTask, "assignedToTeam" | "assignees">,
+  assigneeUserIds: Iterable<string>,
+): boolean {
+  for (const assigneeUserId of assigneeUserIds) {
+    if (taskVisibleToAssignee(task, assigneeUserId)) return true;
+  }
+  return false;
+}
+
 export function taskMatchesQueryInput(
   task: AgencyProjectTask,
   input: Record<string, unknown> | undefined,
 ) {
   if (!input) return true;
   if (typeof input.projectId === "string" && input.projectId !== task.projectId) return false;
-  if (typeof input.assigneeUserId === "string" && input.assigneeUserId !== task.assigneeUserId) {
+  if (
+    typeof input.assigneeUserId === "string" &&
+    !taskVisibleToAssignee(task, input.assigneeUserId)
+  ) {
     return false;
   }
   const statuses = input.statuses;

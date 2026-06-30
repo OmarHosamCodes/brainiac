@@ -15,6 +15,7 @@ const port = Number(process.env.PORT || 7001);
 const host = process.env.HOST || "0.0.0.0";
 const distDir = resolve(process.cwd(), "dist");
 const apiOrigin = (
+  process.env.INTERNAL_API_URL ??
   process.env.VITE_PUBLIC_SERVER_URL ??
   (process.env.RAILWAY_SERVICE_SERVER_URL
     ? "https://" + process.env.RAILWAY_SERVICE_SERVER_URL
@@ -48,6 +49,15 @@ const contentTypes = new Map([
   [".woff2", "font/woff2"],
 ]);
 
+function shouldProxy(pathname) {
+  return (
+    pathname.startsWith("/api/") ||
+    pathname.startsWith("/rpc/") ||
+    pathname.startsWith("/uploads/") ||
+    pathname.startsWith("/billing/")
+  );
+}
+
 async function readRequestBody(request) {
   const chunks = [];
   for await (const chunk of request) {
@@ -56,7 +66,7 @@ async function readRequestBody(request) {
   return Buffer.concat(chunks);
 }
 
-async function proxyAuthRequest(request, response) {
+async function proxyApiRequest(request, response) {
   const requestUrl = new URL(request.url, "http://localhost");
   const targetUrl = apiOrigin + requestUrl.pathname + requestUrl.search;
   const headers = new Headers();
@@ -130,11 +140,11 @@ const server = createServer(async (request, response) => {
   }
 
   const pathname = new URL(request.url, "http://localhost").pathname;
-  if (pathname.startsWith("/api/auth")) {
+  if (shouldProxy(pathname)) {
     try {
-      await proxyAuthRequest(request, response);
+      await proxyApiRequest(request, response);
     } catch (error) {
-      console.error("Auth proxy error:", error);
+      console.error("API proxy error:", error);
       response.writeHead(502);
       response.end("Bad Gateway");
     }
@@ -166,7 +176,7 @@ const server = createServer(async (request, response) => {
 
 server.listen(port, host, () => {
   console.log("Web server listening on http://" + host + ":" + port);
-  console.log("Proxying /api/auth to " + apiOrigin);
+  console.log("Proxying API routes to " + apiOrigin);
 });
 `;
 

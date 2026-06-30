@@ -73,7 +73,7 @@ export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
           />
 
           {view.isLoading ? (
-            <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+            <div className="min-h-0 flex-1 space-y-2 overflow-x-hidden overflow-y-auto p-3">
               {[1, 2, 3].map((rowIndex) => (
                 <div key={rowIndex} className="space-y-2">
                   <Skeleton className="h-8 w-full rounded-lg" />
@@ -102,7 +102,7 @@ export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
               <p className="mt-1 text-xs text-muted">Add one below to get started.</p>
             </div>
           ) : (
-            <div className="min-h-0 flex-1 overflow-y-auto" aria-label="My tasks">
+            <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto" aria-label="My tasks">
               {view.clientGroups.map((group) => (
                 <AgencyTaskClientGroupView
                   key={group.clientId}
@@ -181,7 +181,7 @@ export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
                     <p className="text-xs text-muted">Nothing completed yet.</p>
                   </div>
                 ) : (
-                  <ul className="max-h-48 overflow-y-auto border-t border-default" aria-label="Done tasks">
+                  <ul className="max-h-48 overflow-x-hidden overflow-y-auto border-t border-default" aria-label="Done tasks">
                     {view.doneTasks.map((task) => (
                       <AgencyTaskRowView
                         key={task.id}
