@@ -11,6 +11,10 @@ const polarClient = new Polar({
   server: env.POLAR_SERVER,
 });
 
+const loginErrorUrl = new URL("/login", primaryCorsOrigin).toString();
+const isSplitDeployment =
+  new URL(primaryCorsOrigin).origin !== new URL(env.BETTER_AUTH_URL).origin;
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -32,6 +36,12 @@ export const auth = betterAuth({
       enabled: true,
       trustedProviders: ["google"],
     },
+    // Web and API run on different origins in production; the signed OAuth state
+    // cookie set during cross-origin sign-in is not sent on the Google callback.
+    skipStateCookieCheck: isSplitDeployment,
+  },
+  onAPIError: {
+    errorURL: loginErrorUrl,
   },
   session: {
     // Cache the resolved session in a signed cookie so `getSession` can verify

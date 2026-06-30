@@ -105,6 +105,12 @@ function createApp() {
     return context.redirect(url.toString(), 302);
   });
 
+  app.get("/error", (context) => {
+    const url = new URL("/login", primaryCorsOrigin);
+    url.search = new URL(context.req.url).search;
+    return context.redirect(url.toString(), 302);
+  });
+
   registerTaskAttachmentUploadRoute(app);
   registerUserAvatarRoutes(app);
 
