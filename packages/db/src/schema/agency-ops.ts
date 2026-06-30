@@ -91,7 +91,7 @@ export const agencyOpsProjectTask = pgTable(
       .references(() => agencyOpsProject.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     status: text("status").$type<AgencyOpsProjectTaskStatus>().notNull().default("open"),
-    assigneeUserId: text("assignee_user_id").references(() => user.id, { onDelete: "set null" }),
+    assignedToTeam: boolean("assigned_to_team").notNull().default(false),
     dueDate: timestamp("due_date"),
     createdByUserId: text("created_by_user_id")
       .notNull()
@@ -106,9 +106,27 @@ export const agencyOpsProjectTask = pgTable(
     index("agency_ops_project_task_team_idx").on(table.teamId),
     index("agency_ops_project_task_team_project_idx").on(table.teamId, table.projectId),
     index("agency_ops_project_task_project_created_idx").on(table.projectId, table.createdAt),
-    index("agency_ops_project_task_assignee_idx").on(table.assigneeUserId),
     index("agency_ops_project_task_status_idx").on(table.teamId, table.status),
     index("agency_ops_project_task_due_date_idx").on(table.dueDate),
+    index("agency_ops_project_task_assigned_to_team_idx").on(table.teamId, table.assignedToTeam),
+  ],
+);
+
+export const agencyOpsProjectTaskAssignee = pgTable(
+  "agency_ops_project_task_assignee",
+  {
+    taskId: text("task_id")
+      .notNull()
+      .references(() => agencyOpsProjectTask.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex("agency_ops_project_task_assignee_task_user_unique").on(table.taskId, table.userId),
+    index("agency_ops_project_task_assignee_user_idx").on(table.userId),
+    index("agency_ops_project_task_assignee_task_idx").on(table.taskId),
   ],
 );
 

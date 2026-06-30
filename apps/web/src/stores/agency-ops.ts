@@ -46,9 +46,12 @@ type AgencyProjectTask = {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
-  assigneeUserId: string | null;
-  assigneeName: string | null;
-  assigneeAvatar: string | null;
+  assignedToTeam: boolean;
+  assignees: Array<{
+    userId: string;
+    userName: string;
+    userAvatar: string | null;
+  }>;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -198,7 +201,8 @@ type CreateProjectTaskPayload = {
   projectId: string;
   title: string;
   status?: "open" | "in_progress" | "done" | "archived";
-  assigneeUserId?: string;
+  assignedToTeam?: boolean;
+  assigneeUserIds?: string[];
   dueDate?: string;
 };
 
@@ -213,7 +217,8 @@ type UpdateProjectTaskPayload = {
   taskId: string;
   title?: string;
   status?: AgencyProjectTask["status"];
-  assigneeUserId?: string | null;
+  assignedToTeam?: boolean;
+  assigneeUserIds?: string[];
   dueDate?: string | null;
 };
 
@@ -771,9 +776,8 @@ function createAgencyOpsActions(
       projectId: payload.projectId,
       title,
       status: payload.status ?? "open",
-      assigneeUserId: payload.assigneeUserId ?? null,
-      assigneeName: null,
-      assigneeAvatar: null,
+      assignedToTeam: payload.assignedToTeam ?? false,
+      assignees: [],
       dueDate: payload.dueDate ?? null,
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -790,7 +794,8 @@ function createAgencyOpsActions(
         projectId: payload.projectId,
         title,
         status: payload.status,
-        assigneeUserId: payload.assigneeUserId,
+        assignedToTeam: payload.assignedToTeam,
+        assigneeUserIds: payload.assigneeUserIds,
         dueDate: payload.dueDate,
       })) as AgencyProjectTask;
 
@@ -1034,7 +1039,8 @@ function createAgencyOpsActions(
           taskId: payload.taskId,
           title: payload.title,
           status: payload.status,
-          assigneeUserId: payload.assigneeUserId,
+          assignedToTeam: payload.assignedToTeam,
+          assigneeUserIds: payload.assigneeUserIds,
           dueDate: payload.dueDate,
         })) as AgencyProjectTask;
 
@@ -1056,8 +1062,9 @@ function createAgencyOpsActions(
       ...current,
       title: payload.title ?? current.title,
       status: payload.status ?? current.status,
-      assigneeUserId:
-        payload.assigneeUserId === undefined ? current.assigneeUserId : payload.assigneeUserId,
+      assignedToTeam:
+        payload.assignedToTeam === undefined ? current.assignedToTeam : payload.assignedToTeam,
+      assignees: payload.assigneeUserIds === undefined ? current.assignees : [],
       dueDate: payload.dueDate === undefined ? current.dueDate : payload.dueDate,
       updatedAt: nowIso,
     };
@@ -1071,7 +1078,8 @@ function createAgencyOpsActions(
         taskId: payload.taskId,
         title: payload.title,
         status: payload.status,
-        assigneeUserId: payload.assigneeUserId,
+        assignedToTeam: payload.assignedToTeam,
+        assigneeUserIds: payload.assigneeUserIds,
         dueDate: payload.dueDate,
       })) as AgencyProjectTask;
 

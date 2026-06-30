@@ -89,9 +89,14 @@ const agencyProjectTaskSchema = z.object({
   projectId: z.string().min(1),
   title: z.string().min(1),
   status: z.enum(["open", "in_progress", "done", "archived"]),
-  assigneeUserId: z.string().nullable(),
-  assigneeName: z.string().nullable(),
-  assigneeAvatar: z.string().nullable(),
+  assignedToTeam: z.boolean(),
+  assignees: z.array(
+    z.object({
+      userId: z.string().min(1),
+      userName: z.string().min(1),
+      userAvatar: z.string().nullable(),
+    }),
+  ),
   dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -422,7 +427,8 @@ export const agencyOpsRouter = {
           projectId: z.string().min(1),
           title: z.string().trim().min(1).max(240),
           status: z.enum(["open", "in_progress", "done", "archived"]).optional(),
-          assigneeUserId: z.string().min(1).optional(),
+          assignedToTeam: z.boolean().optional(),
+          assigneeUserIds: z.array(z.string().min(1)).optional(),
           dueDate: z.string().datetime().optional(),
         }),
       )
@@ -438,7 +444,8 @@ export const agencyOpsRouter = {
           taskId: z.string().min(1),
           title: z.string().trim().min(1).max(240).optional(),
           status: z.enum(["open", "in_progress", "done", "archived"]).optional(),
-          assigneeUserId: z.string().min(1).nullable().optional(),
+          assignedToTeam: z.boolean().optional(),
+          assigneeUserIds: z.array(z.string().min(1)).optional(),
           dueDate: z.string().datetime().nullable().optional(),
         }),
       )

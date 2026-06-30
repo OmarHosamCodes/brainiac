@@ -1,4 +1,4 @@
-import { ChevronDown, Search, UserRound } from "lucide-react";
+import { Check, ChevronDown, Search, UserRound, UsersRound } from "lucide-react";
 
 import { AgencyMemberAvatar } from "@/components/agency/agency-member-avatar";
 import { Input } from "@/components/ui/input";
@@ -15,31 +15,27 @@ type AgencyMemberChooserViewProps = {
 
 export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) {
   const {
-    value,
+    mode,
     disabled,
     loading,
-    placeholder,
     searchPlaceholder,
     className,
     contentAlign,
-    allowUnassigned,
     open,
     searchTerm,
-    selectedMember,
-    isUnassigned,
     filteredMembers,
+    triggerLabel,
     onOpenChange,
     onSearchChange,
-    onSelectMember,
+    single,
+    multiple,
   } = view;
 
-  const triggerLabel = loading
-    ? "Loading…"
-    : selectedMember
-      ? selectedMember.userName
-      : isUnassigned
-        ? "Unassigned"
-        : placeholder;
+  const showTeamOption = mode === "multiple";
+  const showUnassigned = mode === "single" && single?.allowUnassigned;
+  const selectedMember = single?.selectedMember ?? null;
+  const isUnassigned = single?.isUnassigned ?? false;
+  const assignedToTeam = multiple?.assignedToTeam ?? false;
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -51,13 +47,19 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
             "flex h-8 w-full min-w-0 items-center gap-1.5 rounded-full border border-default bg-default px-2.5 text-[11px] font-semibold",
             "transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50",
             agencyFocusRingClass,
-            selectedMember ? "text-highlighted" : "text-muted",
+            mode === "single" && selectedMember
+              ? "text-highlighted"
+              : mode === "multiple" && (assignedToTeam || (multiple?.selectedUserIds.length ?? 0) > 0)
+                ? "text-highlighted"
+                : "text-muted",
             "motion-reduce:transition-none",
             className,
           )}
           aria-label="Assignee"
         >
-          {loading ? null : selectedMember ? (
+          {loading ? null : assignedToTeam ? (
+            <UsersRound className="size-3.5 shrink-0 text-muted" aria-hidden />
+          ) : selectedMember ? (
             <AgencyMemberAvatar
               name={selectedMember.userName}
               avatarUrl={selectedMember.userAvatar}
@@ -66,7 +68,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
           ) : (
             <UserRound className="size-3.5 shrink-0 text-muted" aria-hidden />
           )}
-          <span className="min-w-0 flex-1 truncate text-left">{triggerLabel}</span>
+          <span className="min-w-0 flex-1 truncate text-left">{loading ? "Loading…" : triggerLabel}</span>
           <ChevronDown className="size-3 shrink-0 opacity-70" aria-hidden />
         </button>
       </PopoverTrigger>
@@ -98,7 +100,33 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
             </div>
           ) : (
             <>
-              {allowUnassigned ? (
+              {showTeamOption ? (
+                <button
+                  type="button"
+                  className={cn(
+                    "flex w-full min-w-0 items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-default/80",
+                    assignedToTeam && "bg-primary/10 hover:bg-primary/10",
+                    agencyFocusRingClass,
+                    "motion-reduce:transition-none",
+                  )}
+                  onClick={() => multiple?.onToggleEntireTeam()}
+                >
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <UsersRound className="size-3 text-muted" aria-hidden />
+                  </span>
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1 truncate text-xs font-semibold",
+                      assignedToTeam ? "text-primary" : "text-highlighted",
+                    )}
+                  >
+                    Entire team
+                  </span>
+                  {assignedToTeam ? <Check className="size-3.5 shrink-0 text-primary" aria-hidden /> : null}
+                </button>
+              ) : null}
+
+              {showUnassigned ? (
                 <button
                   type="button"
                   className={cn(
@@ -107,7 +135,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                     agencyFocusRingClass,
                     "motion-reduce:transition-none",
                   )}
-                  onClick={() => onSelectMember(UNASSIGNED_ASSIGNEE_VALUE)}
+                  onClick={() => single?.onSelectMember(UNASSIGNED_ASSIGNEE_VALUE)}
                 >
                   <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted">
                     <UserRound className="size-3 text-muted" aria-hidden />
@@ -129,7 +157,11 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                 </p>
               ) : (
                 filteredMembers.map((member) => {
-                  const selected = member.userId === value;
+                  const selected =
+                    mode === "single"
+                      ? member.userId === single?.value
+                      : multiple?.isMemberSelected(member.userId) ?? false;
+
                   return (
                     <button
                       key={member.userId}
@@ -140,7 +172,11 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                         agencyFocusRingClass,
                         "motion-reduce:transition-none",
                       )}
-                      onClick={() => onSelectMember(member.userId)}
+                      onClick={() =>
+                        mode === "single"
+                          ? single?.onSelectMember(member.userId)
+                          : multiple?.onToggleMember(member.userId)
+                      }
                     >
                       <AgencyMemberAvatar
                         name={member.userName}
@@ -155,6 +191,9 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                       >
                         {member.userName}
                       </span>
+                      {mode === "multiple" && selected ? (
+                        <Check className="size-3.5 shrink-0 text-primary" aria-hidden />
+                      ) : null}
                     </button>
                   );
                 })

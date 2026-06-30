@@ -21,6 +21,7 @@ import {
 } from "@/lib/utils/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { taskMatchesAnyAssigneeFilter } from "@/lib/utils/agency-query-cache";
 import { projectHueStyle } from "@/lib/utils/project-palette";
 import { selectIsProjectMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
@@ -86,8 +87,8 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
     const peopleOptions = useMemo(() => {
       const people = new Map<string, string>();
       for (const task of tasks) {
-        if (task.assigneeUserId && task.assigneeName) {
-          people.set(task.assigneeUserId, task.assigneeName);
+        for (const assignee of task.assignees) {
+          people.set(assignee.userId, assignee.userName);
         }
       }
       return Array.from(people, ([value, label]) => ({ value, label })).sort((a, b) =>
@@ -135,9 +136,7 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
           peopleSet.size > 0 &&
           !tasks.some(
             (task) =>
-              task.projectId === project.id &&
-              task.assigneeUserId &&
-              peopleSet.has(task.assigneeUserId),
+              task.projectId === project.id && taskMatchesAnyAssigneeFilter(task, peopleSet),
           )
         ) {
           return false;

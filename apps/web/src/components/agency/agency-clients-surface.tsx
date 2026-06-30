@@ -12,6 +12,7 @@ import {
   agencyLabelClass,
 } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { taskMatchesAnyAssigneeFilter } from "@/lib/utils/agency-query-cache";
 import {
   useAgencyClientsQuery,
   useAgencyContactQuery,
@@ -78,8 +79,8 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
   const peopleOptions = useMemo(() => {
     const people = new Map<string, string>();
     for (const task of tasks) {
-      if (task.assigneeUserId && task.assigneeName) {
-        people.set(task.assigneeUserId, task.assigneeName);
+      for (const assignee of task.assignees) {
+        people.set(assignee.userId, assignee.userName);
       }
     }
     return Array.from(people, ([value, label]) => ({ value, label })).sort((a, b) =>
@@ -139,9 +140,7 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
         !clientProjects.some((project) =>
           tasks.some(
             (task) =>
-              task.projectId === project.id &&
-              task.assigneeUserId &&
-              peopleSet.has(task.assigneeUserId),
+              task.projectId === project.id && taskMatchesAnyAssigneeFilter(task, peopleSet),
           ),
         )
       ) {

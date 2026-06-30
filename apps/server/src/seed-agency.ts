@@ -10,6 +10,7 @@ import {
   agencyOpsMemberTenureProfile,
   agencyOpsProject,
   agencyOpsProjectTask,
+  agencyOpsProjectTaskAssignee,
   agencyOpsTaskMessage,
   agencyOpsTaskThread,
   agencyOpsTenurePolicy,
@@ -416,7 +417,8 @@ type TaskDef = {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
-  assigneeUserId: string | null;
+  assignedToTeam?: boolean;
+  assigneeUserIds: string[];
   dueDate: Date | null;
   messages: Array<{ userId: string; content: string; createdAt: Date }>;
 };
@@ -485,7 +487,7 @@ function buildSeedData(ctx: SeedContext) {
       projectId: projects[0]!.id,
       title: "Finalize creative brief",
       status: "done",
-      assigneeUserId: pickMember(),
+      assigneeUserIds: [pickMember()],
       dueDate: daysAgo(5),
       messages: [
         { userId: ownerId, content: "Brief draft is ready for review.", createdAt: daysAgo(10) },
@@ -503,7 +505,7 @@ function buildSeedData(ctx: SeedContext) {
       projectId: projects[0]!.id,
       title: "Produce social media assets",
       status: "in_progress",
-      assigneeUserId: pickMember(),
+      assigneeUserIds: [pickMember()],
       dueDate: daysFromNow(3),
       messages: [
         {
@@ -519,7 +521,7 @@ function buildSeedData(ctx: SeedContext) {
       projectId: projects[0]!.id,
       title: "Set up campaign tracking",
       status: "open",
-      assigneeUserId: null,
+      assigneeUserIds: [],
       dueDate: daysFromNow(7),
       messages: [],
     },
@@ -529,7 +531,7 @@ function buildSeedData(ctx: SeedContext) {
       projectId: projects[1]!.id,
       title: "Design new homepage mockups",
       status: "done",
-      assigneeUserId: pickMember(),
+      assigneeUserIds: [pickMember()],
       dueDate: daysAgo(3),
       messages: [
         {
@@ -546,7 +548,7 @@ function buildSeedData(ctx: SeedContext) {
       projectId: projects[1]!.id,
       title: "Implement responsive breakpoints",
       status: "in_progress",
-      assigneeUserId: pickMember(),
+      assigneeUserIds: [pickMember()],
       dueDate: daysFromNow(5),
       messages: [
         {
@@ -562,7 +564,7 @@ function buildSeedData(ctx: SeedContext) {
       projectId: projects[1]!.id,
       title: "Accessibility audit",
       status: "open",
-      assigneeUserId: null,
+      assigneeUserIds: [],
       dueDate: daysFromNow(10),
       messages: [],
     },
@@ -572,7 +574,7 @@ function buildSeedData(ctx: SeedContext) {
       projectId: projects[2]!.id,
       title: "Implement user onboarding flow",
       status: "in_progress",
-      assigneeUserId: pickMember(),
+      assigneeUserIds: [pickMember()],
       dueDate: daysFromNow(4),
       messages: [
         {
@@ -588,7 +590,7 @@ function buildSeedData(ctx: SeedContext) {
       projectId: projects[2]!.id,
       title: "Push notification setup",
       status: "open",
-      assigneeUserId: pickMember(),
+      assigneeUserIds: [pickMember()],
       dueDate: daysFromNow(8),
       messages: [],
     },
@@ -598,7 +600,7 @@ function buildSeedData(ctx: SeedContext) {
       projectId: projects[2]!.id,
       title: "Beta testing coordination",
       status: "open",
-      assigneeUserId: null,
+      assigneeUserIds: [],
       dueDate: daysFromNow(14),
       messages: [],
     },
@@ -608,7 +610,7 @@ function buildSeedData(ctx: SeedContext) {
       projectId: projects[3]!.id,
       title: "Security compliance review",
       status: "done",
-      assigneeUserId: pickMember(),
+      assigneeUserIds: [pickMember()],
       dueDate: daysAgo(2),
       messages: [
         {
@@ -625,7 +627,7 @@ function buildSeedData(ctx: SeedContext) {
       projectId: projects[3]!.id,
       title: "Cost optimization report",
       status: "in_progress",
-      assigneeUserId: pickMember(),
+      assigneeUserIds: [pickMember()],
       dueDate: daysFromNow(6),
       messages: [
         {
@@ -641,7 +643,7 @@ function buildSeedData(ctx: SeedContext) {
       projectId: projects[4]!.id,
       title: "Data migration ETL pipeline",
       status: "archived",
-      assigneeUserId: null,
+      assigneeUserIds: [],
       dueDate: null,
       messages: [
         { userId: ownerId, content: "Client paused this indefinitely.", createdAt: daysAgo(20) },
@@ -756,12 +758,21 @@ async function seedAgencyData(ctx: SeedContext) {
       projectId: t.projectId,
       title: t.title,
       status: t.status,
-      assigneeUserId: t.assigneeUserId,
+      assignedToTeam: t.assignedToTeam ?? false,
       dueDate: t.dueDate,
       createdByUserId: ownerId,
       createdAt: t.messages[0]?.createdAt ?? now,
       updatedAt: t.messages[t.messages.length - 1]?.createdAt ?? now,
     });
+
+    if (!t.assignedToTeam && t.assigneeUserIds.length > 0) {
+      await db.insert(agencyOpsProjectTaskAssignee).values(
+        t.assigneeUserIds.map((userId) => ({
+          taskId: t.id,
+          userId,
+        })),
+      );
+    }
 
     await db.insert(agencyOpsTaskThread).values({
       id: t.threadId,

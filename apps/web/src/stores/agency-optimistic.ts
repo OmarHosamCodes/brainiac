@@ -31,9 +31,12 @@ export type AgencyOptimisticTask = {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
-  assigneeUserId: string | null;
-  assigneeName: string | null;
-  assigneeAvatar: string | null;
+  assignedToTeam: boolean;
+  assignees: Array<{
+    userId: string;
+    userName: string;
+    userAvatar: string | null;
+  }>;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;

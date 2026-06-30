@@ -23,7 +23,12 @@ type Task = {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
-  assigneeName?: string | null;
+  assignedToTeam: boolean;
+  assignees: Array<{
+    userId: string;
+    userName: string;
+    userAvatar: string | null;
+  }>;
   dueDate?: string | null;
 };
 
