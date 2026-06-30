@@ -28,6 +28,7 @@ type Task = {
     userId: string;
     userName: string;
     userAvatar: string | null;
+    status: "open" | "in_progress" | "done";
   }>;
   dueDate?: string | null;
 };

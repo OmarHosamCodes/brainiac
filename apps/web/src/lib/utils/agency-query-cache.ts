@@ -20,7 +20,9 @@ type AgencyProjectTask = {
     userId: string;
     userName: string;
     userAvatar: string | null;
+    status: "open" | "in_progress" | "done";
   }>;
+  viewerStatus?: "open" | "in_progress" | "done";
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -112,7 +114,15 @@ export function taskMatchesQueryInput(
     return false;
   }
   const statuses = input.statuses;
-  if (Array.isArray(statuses) && statuses.length > 0 && !statuses.includes(task.status)) {
+  if (Array.isArray(statuses) && statuses.length > 0) {
+    const effectiveStatus =
+      typeof input.assigneeUserId === "string"
+        ? (task.viewerStatus ??
+          (task.status === "archived" ? "done" : task.status === "done" ? "done" : task.status))
+        : task.status;
+    if (!statuses.includes(effectiveStatus)) return false;
+  }
+  if (task.status === "archived" && Array.isArray(statuses) && !statuses.includes("archived")) {
     return false;
   }
   return true;

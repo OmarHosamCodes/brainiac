@@ -3,8 +3,6 @@ import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import type { AgencyProjectTask } from "@/lib/schemas/agency-work";
 import {
   filterTasksByTitleSearch,
-  normalizeTaskTitle,
-  taskTitleExactlyMatches,
 } from "@/lib/utils/agency-task-title-filter";
 
 type UseAgencyTaskTitleChooserOptions = {
@@ -84,9 +82,7 @@ export function useAgencyTaskTitleChooser({
   );
 
   const trimmedSearch = searchTerm.trim();
-  const showCreateRow = Boolean(
-    trimmedSearch && !taskTitleExactlyMatches(tasks, trimmedSearch),
-  );
+  const showCreateRow = Boolean(trimmedSearch);
   const optionCount = filteredTasks.length + (showCreateRow ? 1 : 0);
   const createRowIndex = showCreateRow ? filteredTasks.length : -1;
 
@@ -157,15 +153,6 @@ export function useAgencyTaskTitleChooser({
           return;
         }
         if (trimmedSearch) {
-          if (taskTitleExactlyMatches(tasks, trimmedSearch)) {
-            const match = tasks.find(
-              (task) => normalizeTaskTitle(task.title) === normalizeTaskTitle(trimmedSearch),
-            );
-            if (match) {
-              onSelectTask(match);
-              return;
-            }
-          }
           onCreateFromSearch();
         }
       }

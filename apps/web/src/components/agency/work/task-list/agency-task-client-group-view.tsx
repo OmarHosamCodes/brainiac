@@ -1,7 +1,8 @@
 import { ChevronDown } from "lucide-react";
 
-import { AgencyTaskRowView } from "@/components/agency/work/task-list/agency-task-row-view";
+import { AgencyTaskGroupRowView } from "@/components/agency/work/task-list/agency-task-group-row-view";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
+import { groupTasksWithinClient } from "@/lib/utils/agency-task-utils";
 import {
   agencyFocusRingClass,
   agencyMetricClass,
@@ -16,12 +17,14 @@ export type AgencyTaskClientGroupViewProps = {
   expanded: boolean;
   projects: AgencyTaskProject[];
   teamId: string;
+  currentUserId: string;
   selectedTaskId: string;
   isRowPending: (taskId: string) => boolean;
   onExpandedChange: (expanded: boolean) => void;
   onSelect: (taskId: string) => void;
   onSelectProject: (projectId: string) => void;
   onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
+  highlightTaskId?: string;
 };
 
 export function AgencyTaskClientGroupView({
@@ -31,15 +34,21 @@ export function AgencyTaskClientGroupView({
   expanded,
   projects,
   teamId,
+  currentUserId,
   selectedTaskId,
   isRowPending,
   onExpandedChange,
   onSelect,
   onSelectProject,
   onStatusChange,
+  highlightTaskId = "",
 }: AgencyTaskClientGroupViewProps) {
   const panelId = `agency-task-client-group-${clientId}`;
-  const inProgressCount = tasks.filter((task) => task.status === "in_progress").length;
+  const taskGroups = groupTasksWithinClient(tasks);
+  const inProgressCount = tasks.filter((task) => {
+    const status = task.viewerStatus ?? task.status;
+    return status === "in_progress";
+  }).length;
 
   return (
     <section aria-labelledby={`${panelId}-label`}>
@@ -72,17 +81,20 @@ export function AgencyTaskClientGroupView({
 
       {expanded ? (
         <ul id={panelId} aria-label={`${clientName} tasks`}>
-          {tasks.map((task) => (
-            <AgencyTaskRowView
-              key={task.id}
-              task={task}
+          {taskGroups.map((group) => (
+            <AgencyTaskGroupRowView
+              key={group.groupKey}
+              group={group}
+              mode="work"
               projects={projects}
               teamId={teamId}
+              currentUserId={currentUserId}
               selectedTaskId={selectedTaskId}
-              isRowPending={isRowPending(task.id)}
+              isRowPending={isRowPending}
               onSelect={onSelect}
               onSelectProject={onSelectProject}
               onStatusChange={onStatusChange}
+              highlightTaskId={highlightTaskId}
             />
           ))}
         </ul>

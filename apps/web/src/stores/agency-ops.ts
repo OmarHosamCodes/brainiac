@@ -51,7 +51,9 @@ type AgencyProjectTask = {
     userId: string;
     userName: string;
     userAvatar: string | null;
+    status: "open" | "in_progress" | "done";
   }>;
+  viewerStatus?: "open" | "in_progress" | "done";
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1098,6 +1100,54 @@ function createAgencyOpsActions(
     }
   }
 
+  async function completeProjectTaskForMember(payload: { teamId: string; taskId: string }) {
+    if (!payload.teamId || !payload.taskId) return;
+
+    const current = getCachedProjectTask(payload.teamId, payload.taskId);
+    const snapshots = snapshotQueries(registryPayloads(projectTasksQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotTasks(payload.teamId);
+    const nowIso = new Date().toISOString();
+
+    set((state) => ({
+      ...state,
+      pendingTaskIds: [...new Set([...state.pendingTaskIds, payload.taskId])],
+    }));
+
+    if (current) {
+      const optimisticTask: AgencyProjectTask = {
+        ...current,
+        viewerStatus: "done",
+        assignees: current.assignees.map((assignee) => ({
+          ...assignee,
+          status: assignee.status,
+        })),
+        updatedAt: nowIso,
+      };
+      await cancelAgencyProjectTaskListQueries(payload.teamId);
+      patchUpdatedProjectTask(payload.teamId, optimisticTask);
+    }
+
+    try {
+      const updated = (await orpcClient.agencyOps.projectTasks.completeForMember({
+        teamId: payload.teamId,
+        taskId: payload.taskId,
+      })) as AgencyProjectTask;
+
+      patchUpdatedProjectTask(payload.teamId, updated);
+      await syncProjectTaskQueriesAfterMutation(payload.teamId);
+    } catch (error) {
+      restoreQuerySnapshots(snapshots);
+      optimistic().restoreTasks(payload.teamId, optimisticSnapshot);
+      toast.error("Couldn't complete task", { description: getErrorMessage(error, "Try again.") });
+      throw error;
+    } finally {
+      set((state) => ({
+        ...state,
+        pendingTaskIds: state.pendingTaskIds.filter((id) => id !== payload.taskId),
+      }));
+    }
+  }
+
   async function sendTaskMessage(payload: SendTaskMessagePayload) {
     if (!payload.teamId || !payload.taskId) return;
 
@@ -1257,6 +1307,7 @@ function createAgencyOpsActions(
     createProject,
     createProjectTask,
     updateProjectTask,
+    completeProjectTaskForMember,
     deleteProjectTask,
     sendTaskMessage,
     upsertContact,

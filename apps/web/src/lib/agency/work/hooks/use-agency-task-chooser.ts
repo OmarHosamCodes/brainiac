@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 
 import { formatTaskAssigneeLabel } from "@brainiac/api/schemas/agency-ops";
 import type { AgencyProject, AgencyProjectTask, TaskStatus } from "@/lib/schemas/agency-work";
+import {
+  groupTasksByProjectTitle,
+  type AgencyProjectTaskGroup,
+} from "@/lib/utils/agency-task-utils";
 
 type Project = Pick<AgencyProject, "id" | "clientName" | "name">;
 type AgencyTask = Pick<
@@ -9,6 +13,7 @@ type AgencyTask = Pick<
   "id" | "projectId" | "title" | "status" | "assignedToTeam" | "assignees"
 > & {
   dueDate?: string | null;
+  createdAt?: string;
 };
 
 export type AgencyTaskChooserTriggerFormat = "task-project" | "project-client";
@@ -29,9 +34,14 @@ type UseAgencyTaskChooserOptions = {
   triggerFormat?: AgencyTaskChooserTriggerFormat;
 };
 
+export type AgencyTaskChooserProjectGroup = {
+  project: Project;
+  taskGroups: AgencyProjectTaskGroup<AgencyTask>[];
+};
+
 export type AgencyTaskChooserClientGroup = {
   clientName: string;
-  projects: Array<{ project: Project; tasks: AgencyTask[] }>;
+  projects: AgencyTaskChooserProjectGroup[];
 };
 
 export type AgencyTaskChooserViewModel = {
@@ -50,10 +60,12 @@ export type AgencyTaskChooserViewModel = {
   groupedProjects: AgencyTaskChooserClientGroup[];
   searchIsActive: boolean;
   isProjectExpanded: (projectId: string) => boolean;
+  isTaskGroupExpanded: (groupKey: string) => boolean;
   onOpenChange: (open: boolean) => void;
   onSearchChange: (value: string) => void;
   onSelectTask: (taskId: string) => void;
   onToggleProject: (projectId: string) => void;
+  onToggleTaskGroup: (groupKey: string) => void;
   statusLabel: (status: TaskStatus | undefined) => string;
   statusDotClass: (status: TaskStatus | undefined) => string;
   formatDueDate: (iso: string | null | undefined) => string;
@@ -197,9 +209,7 @@ export function useAgencyTaskChooser({
 
       currentGroup.projects.push({
         project,
-        tasks: [...(tasksByProject.get(project.id) ?? [])].sort((left, right) =>
-          left.title.localeCompare(right.title),
-        ),
+        taskGroups: groupTasksByProjectTitle(tasksByProject.get(project.id) ?? []),
       });
     }
 
@@ -208,6 +218,7 @@ export function useAgencyTaskChooser({
 
   const selectedProjectId = selectedTask?.projectId ?? "";
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(() => new Set());
+  const [expandedTaskGroupKeys, setExpandedTaskGroupKeys] = useState<Set<string>>(() => new Set());
   const searchIsActive = searchTerm.trim().length > 0;
 
   useEffect(() => {
@@ -239,6 +250,18 @@ export function useAgencyTaskChooser({
     });
   }
 
+  function toggleTaskGroup(groupKey: string) {
+    setExpandedTaskGroupKeys((current) => {
+      const next = new Set(current);
+      if (next.has(groupKey)) {
+        next.delete(groupKey);
+      } else {
+        next.add(groupKey);
+      }
+      return next;
+    });
+  }
+
   return {
     value,
     disabled,
@@ -255,10 +278,12 @@ export function useAgencyTaskChooser({
     groupedProjects,
     searchIsActive,
     isProjectExpanded: (projectId) => searchIsActive || expandedProjectIds.has(projectId),
+    isTaskGroupExpanded: (groupKey) => searchIsActive || expandedTaskGroupKeys.has(groupKey),
     onOpenChange: setOpen,
     onSearchChange: setSearchTerm,
     onSelectTask: selectTask,
     onToggleProject: toggleProject,
+    onToggleTaskGroup: toggleTaskGroup,
     statusLabel,
     statusDotClass,
     formatDueDate,

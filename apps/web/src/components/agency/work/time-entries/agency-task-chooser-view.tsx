@@ -30,10 +30,12 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     selectedLabel,
     groupedProjects,
     isProjectExpanded,
+    isTaskGroupExpanded,
     onOpenChange,
     onSearchChange,
     onSelectTask,
     onToggleProject,
+    onToggleTaskGroup,
     statusLabel,
     statusDotClass,
     formatDueDate,
@@ -109,12 +111,25 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                 <div className="mb-1 flex items-center justify-between px-4 text-[11px] font-semibold text-muted">
                   <span className="uppercase tracking-[0.12em]">{group.clientName}</span>
                   <span className="font-mono tabular-nums">
-                    {group.projects.reduce((total, entry) => total + entry.tasks.length, 0)} Tasks
+                    {group.projects.reduce(
+                      (total, entry) =>
+                        total +
+                        entry.taskGroups.reduce(
+                          (groupTotal, taskGroup) => groupTotal + taskGroup.instanceCount,
+                          0,
+                        ),
+                      0,
+                    )}{" "}
+                    Tasks
                   </span>
                 </div>
 
-                {group.projects.map(({ project, tasks: projectTasks }) => {
+                {group.projects.map(({ project, taskGroups }) => {
                   const expanded = isProjectExpanded(project.id);
+                  const projectTaskCount = taskGroups.reduce(
+                    (total, taskGroup) => total + taskGroup.instanceCount,
+                    0,
+                  );
                   return (
                     <div key={project.id}>
                       <button
@@ -133,7 +148,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                         </span>
                         <span className="truncate text-xs text-muted">{project.clientName}</span>
                         <span className="ml-1 shrink-0 font-mono text-xs tabular-nums text-muted">
-                          {projectTasks.length} {projectTasks.length === 1 ? "Task" : "Tasks"}
+                          {projectTaskCount} {projectTaskCount === 1 ? "Task" : "Tasks"}
                         </span>
                         <ChevronDown
                           className={cn(
@@ -146,49 +161,98 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
 
                       {expanded ? (
                         <div className="pb-1">
-                          {projectTasks.map((task) => {
-                            const selected = task.id === value;
+                          {taskGroups.map((taskGroup) => {
+                            const groupExpanded =
+                              taskGroup.instanceCount === 1 ||
+                              isTaskGroupExpanded(taskGroup.groupKey);
                             return (
-                              <button
-                                key={task.id}
-                                type="button"
-                                className={cn(
-                                  "group mx-2 flex w-[calc(100%-1rem)] items-start gap-2 rounded-lg py-1.5 pr-2 pl-7 text-left transition-colors hover:bg-default/80",
-                                  selected && "bg-primary/10 hover:bg-primary/10",
-                                  agencyFocusRingClass,
-                                  "motion-reduce:transition-none",
-                                )}
-                                onClick={() => onSelectTask(task.id)}
-                              >
-                                <span
-                                  className={[
-                                    "mt-1.5 size-1.5 shrink-0 rounded-full",
-                                    statusDotClass(task.status),
-                                  ].join(" ")}
-                                />
-                                <span className="min-w-0 flex-1">
-                                  <span
+                              <div key={taskGroup.groupKey} className="mx-2">
+                                {taskGroup.instanceCount > 1 ? (
+                                  <button
+                                    type="button"
                                     className={cn(
-                                      "block truncate text-xs font-semibold",
-                                      selected ? "text-primary" : "text-highlighted",
+                                      "flex w-full items-center gap-2 rounded-lg py-1.5 pr-2 pl-5 text-left transition-colors hover:bg-default/80",
+                                      agencyFocusRingClass,
+                                      "motion-reduce:transition-none",
                                     )}
+                                    onClick={() => onToggleTaskGroup(taskGroup.groupKey)}
+                                    aria-expanded={groupExpanded}
                                   >
-                                    {task.title}
-                                  </span>
-                                  <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted">
-                                    <span>{statusLabel(task.status)}</span>
-                                    {(() => {
-                                      const assigneeLabel = formatAssigneeLabel(task);
-                                      return assigneeLabel !== "Unassigned" ? (
-                                        <span className="truncate">{assigneeLabel}</span>
-                                      ) : null;
-                                    })()}
-                                    {formatDueDate(task.dueDate) ? (
-                                      <span>Due {formatDueDate(task.dueDate)}</span>
-                                    ) : null}
-                                  </span>
-                                </span>
-                              </button>
+                                    <ChevronDown
+                                      className={cn(
+                                        "size-3 shrink-0 text-muted transition-transform duration-200 motion-reduce:transition-none",
+                                        groupExpanded && "rotate-180",
+                                      )}
+                                      aria-hidden
+                                    />
+                                    <span className="min-w-0 flex-1 truncate text-xs font-semibold text-highlighted">
+                                      {taskGroup.title}
+                                    </span>
+                                    <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted">
+                                      ×{taskGroup.instanceCount}
+                                    </span>
+                                  </button>
+                                ) : null}
+
+                                {groupExpanded
+                                  ? taskGroup.instances.map((task) => {
+                                      const selected = task.id === value;
+                                      const instanceLabel =
+                                        taskGroup.instanceCount > 1
+                                          ? new Date(task.createdAt ?? "").toLocaleDateString(
+                                              undefined,
+                                              {
+                                                month: "short",
+                                                day: "numeric",
+                                              },
+                                            )
+                                          : task.title;
+                                      return (
+                                        <button
+                                          key={task.id}
+                                          type="button"
+                                          className={cn(
+                                            "group flex w-full items-start gap-2 rounded-lg py-1.5 pr-2 text-left transition-colors hover:bg-default/80",
+                                            taskGroup.instanceCount > 1 ? "pl-9" : "pl-7",
+                                            selected && "bg-primary/10 hover:bg-primary/10",
+                                            agencyFocusRingClass,
+                                            "motion-reduce:transition-none",
+                                          )}
+                                          onClick={() => onSelectTask(task.id)}
+                                        >
+                                          <span
+                                            className={[
+                                              "mt-1.5 size-1.5 shrink-0 rounded-full",
+                                              statusDotClass(task.status),
+                                            ].join(" ")}
+                                          />
+                                          <span className="min-w-0 flex-1">
+                                            <span
+                                              className={cn(
+                                                "block truncate text-xs font-semibold",
+                                                selected ? "text-primary" : "text-highlighted",
+                                              )}
+                                            >
+                                              {instanceLabel}
+                                            </span>
+                                            <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted">
+                                              <span>{statusLabel(task.status)}</span>
+                                              {(() => {
+                                                const assigneeLabel = formatAssigneeLabel(task);
+                                                return assigneeLabel !== "Unassigned" ? (
+                                                  <span className="truncate">{assigneeLabel}</span>
+                                                ) : null;
+                                              })()}
+                                              {formatDueDate(task.dueDate) ? (
+                                                <span>Due {formatDueDate(task.dueDate)}</span>
+                                              ) : null}
+                                            </span>
+                                          </span>
+                                        </button>
+                                      );
+                                    })
+                                  : null}
+                              </div>
                             );
                           })}
                         </div>

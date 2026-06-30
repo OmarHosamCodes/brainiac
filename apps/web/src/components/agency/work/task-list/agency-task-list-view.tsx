@@ -112,6 +112,7 @@ export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
                   expanded={!view.collapsedClients.has(group.clientId)}
                   projects={view.projects}
                   teamId={view.teamId}
+                  currentUserId={view.currentUserId}
                   selectedTaskId={view.selectedTaskId}
                   isRowPending={view.isRowPending}
                   onExpandedChange={(expanded) =>
@@ -120,6 +121,7 @@ export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
                   onSelect={view.onSelect}
                   onSelectProject={view.onSelectProject}
                   onStatusChange={view.onStatusChange}
+                  highlightTaskId={view.recentlyCompletedTaskId}
                 />
               ))}
             </div>
