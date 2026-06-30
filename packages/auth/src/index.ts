@@ -12,8 +12,33 @@ const polarClient = new Polar({
 });
 
 const loginErrorUrl = new URL("/login", primaryCorsOrigin).toString();
-const isSplitDeployment =
-  new URL(primaryCorsOrigin).origin !== new URL(env.BETTER_AUTH_URL).origin;
+
+function schedulePolarCustomerSetup(user: { id: string; email: string; name: string }) {
+  void (async () => {
+    try {
+      const { result } = await polarClient.customers.list({ email: user.email });
+      const existing = result.items[0];
+
+      if (!existing) {
+        await polarClient.customers.create({
+          email: user.email,
+          name: user.name,
+          externalId: user.id,
+        });
+        return;
+      }
+
+      if (existing.externalId !== user.id) {
+        await polarClient.customers.update({
+          id: existing.id,
+          customerUpdate: { externalId: user.id },
+        });
+      }
+    } catch (error) {
+      console.error("Polar customer setup failed:", error);
+    }
+  })();
+}
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -36,9 +61,18 @@ export const auth = betterAuth({
       enabled: true,
       trustedProviders: ["google"],
     },
-    // Web and API run on different origins in production; the signed OAuth state
-    // cookie set during cross-origin sign-in is not sent on the Google callback.
-    skipStateCookieCheck: isSplitDeployment,
+    // Keep OAuth state in an encrypted cookie so the Google callback (top-level
+    // navigation to the API origin) can validate state without a DB round-trip.
+    storeStateStrategy: "cookie",
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          schedulePolarCustomerSetup(user);
+        },
+      },
+    },
   },
   onAPIError: {
     errorURL: loginErrorUrl,
@@ -65,7 +99,7 @@ export const auth = betterAuth({
   plugins: [
     polar({
       client: polarClient,
-      createCustomerOnSignUp: true,
+      createCustomerOnSignUp: false,
       use: [
         checkout({
           products: [
