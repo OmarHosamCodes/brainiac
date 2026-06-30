@@ -1,7 +1,6 @@
 import { intro, isCancel, outro, select, spinner, text, confirm } from "@clack/prompts";
 import { db } from "@brainiac/db";
 import {
-  account,
   agencyOpsClient,
   agencyOpsClientContact,
   agencyOpsInvoice,
@@ -22,6 +21,7 @@ import {
 } from "@brainiac/db/schema";
 import { createWorkspaceId } from "@brainiac/workspace";
 import { and, eq } from "drizzle-orm";
+import { ensureCredentialAccount } from "./lib/ensure-credential-account";
 
 type SeedUserKey = "founder" | "ops" | "analyst" | "designer" | "dev";
 
@@ -76,15 +76,10 @@ function getMonday(date: Date) {
 // Auth / User helpers
 // ---------------------------------------------------------------------------
 
-function seedId(...parts: string[]) {
-  return `seed-${parts.join("-")}`;
-}
-
 async function ensureSeedUsers(password: string): Promise<Map<SeedUserKey, SeedActor>> {
   const s = spinner();
   s.start("Ensuring seed users exist");
 
-  const passwordHash = await Bun.password.hash(password);
   const created = new Map<SeedUserKey, SeedActor>();
 
   for (const def of SEED_USERS) {
@@ -96,6 +91,7 @@ async function ensureSeedUsers(password: string): Promise<Map<SeedUserKey, SeedA
 
     if (existing) {
       await db.update(user).set({ lifetimePro: true }).where(eq(user.id, existing.id));
+      await ensureCredentialAccount(existing.id);
       created.set(def.key, existing);
       s.message(`User ${def.email} already exists`);
     } else {
@@ -112,15 +108,7 @@ async function ensureSeedUsers(password: string): Promise<Map<SeedUserKey, SeedA
         updatedAt: now,
       });
 
-      await db.insert(account).values({
-        id: seedId("account", def.key),
-        accountId: def.email,
-        providerId: "email",
-        userId,
-        password: passwordHash,
-        createdAt: now,
-        updatedAt: now,
-      });
+      await ensureCredentialAccount(userId, { password });
 
       created.set(def.key, { id: userId, name: def.name, email: def.email });
       s.message(`Created user ${def.email}`);
@@ -315,7 +303,6 @@ async function manageMembers(
         createSpinner.start("Creating new user");
         const now = new Date();
         const newUserId = createWorkspaceId("user");
-        const pwHash = await Bun.password.hash(pw as string);
         await db.insert(user).values({
           id: newUserId,
           name: name as string,
@@ -325,15 +312,7 @@ async function manageMembers(
           createdAt: now,
           updatedAt: now,
         });
-        await db.insert(account).values({
-          id: createWorkspaceId("account"),
-          accountId: email as string,
-          providerId: "email",
-          userId: newUserId,
-          password: pwHash,
-          createdAt: now,
-          updatedAt: now,
-        });
+        await ensureCredentialAccount(newUserId, { password: pw as string });
         userId = newUserId;
         userName = name as string;
         userEmail = email as string;

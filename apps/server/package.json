@@ -12,6 +12,7 @@
     "grant:lifetime-pro": "bun run src/grant-lifetime-pro.ts",
     "db:seed:agency": "bun run src/seed-agency.ts",
     "db:clear:team": "bun run src/clear-team-data.ts",
+    "db:import:clockify": "bun run src/import-clockify.ts",
     "cleanup:agency-operator-nodes": "bun run src/cleanup-agency-operator-nodes.ts",
     "db:seed": "bun run src/seed.ts",
     "start": "bun run dist/index.mjs",
@@ -27,6 +28,7 @@
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
+    "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "catalog:",
     "zod": "catalog:"
