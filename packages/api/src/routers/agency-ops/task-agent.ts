@@ -34,6 +34,10 @@ function formatAttachmentSummary(
   const lines = attachments.map((a) => {
     const parts: string[] = [a.fileName];
     const meta = a.metadata;
+    if (meta?.mediaKind === "link" && meta.sourceUrl) {
+      parts.push(`(${meta.sourceUrl})`);
+      return `  - ${parts.join(" ")}`;
+    }
     if (meta?.mediaKind) {
       parts.push(`(${meta.mediaKind}`);
       if (meta.imageWidth && meta.imageHeight) {

@@ -1,19 +1,28 @@
 import type { AgencyTaskMessageAttachment } from "@/lib/schemas/agency-work";
+import type { AgencyAttachmentVariant } from "@/lib/utils/agency-attachment-utils";
+import { selectAttachmentVariant } from "@/lib/utils/agency-attachment-utils";
 import { useAgencyAttachmentGrid } from "@/lib/agency/work/hooks/use-agency-attachment-grid";
 
-import { AgencyAttachmentGridView } from "@/components/agency/work/task-thread/agency-attachment-grid-view";
+import { AgencyAttachmentsView } from "@/components/agency/work/task-thread/agency-attachments-view";
 
 type AgencyAttachmentGridProps = {
   attachments: AgencyTaskMessageAttachment[];
   className?: string;
+  variant?: AgencyAttachmentVariant;
 };
 
-export function AgencyAttachmentGrid({ attachments, className }: AgencyAttachmentGridProps) {
+export function AgencyAttachmentGrid({
+  attachments,
+  className,
+  variant,
+}: AgencyAttachmentGridProps) {
   const vm = useAgencyAttachmentGrid({ attachments });
+  const resolvedVariant = variant ?? selectAttachmentVariant(attachments, "message");
 
   return (
-    <AgencyAttachmentGridView
+    <AgencyAttachmentsView
       attachments={vm.attachments}
+      variant={resolvedVariant}
       className={className}
       viewerAttachment={vm.viewerAttachment}
       onOpenViewer={vm.openViewer}

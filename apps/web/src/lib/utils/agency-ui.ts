@@ -139,3 +139,10 @@ export const agencyTimeFooterMetricClass = ["text-sm font-semibold", agencyMetri
 
 export const agencyTimeLogSkeletonClass =
   "h-11 border-b border-default bg-elevated/40 motion-reduce:animate-none animate-pulse";
+
+/** Structured agency task agent reply card. */
+export const agencyAgentMessageCardClass =
+  "rounded-xl border border-default bg-muted/20 px-3 py-2.5 text-sm text-highlighted";
+
+export const agencyAgentMessageCodeClass =
+  "mt-2 overflow-x-auto rounded-lg border border-default bg-default px-2.5 py-2 font-mono text-xs text-highlighted";

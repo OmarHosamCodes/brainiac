@@ -10,6 +10,7 @@ import {
   createInvoice,
   createManualAgencyTimeEntry,
   createTaskAttachmentPresignedUrl,
+  createTaskLinkAttachment,
   createTaskThreadMessage,
   deleteAgencyProjectTask,
   deleteMyAgencyTimeEntry,
@@ -114,10 +115,23 @@ const attachmentMetadataSchema = z
     durationSeconds: z.number().nonnegative().optional(),
     fileExtension: z.string().optional(),
     lastModified: z.string().optional(),
-    mediaKind: z.enum(["image", "video", "audio", "document", "archive", "other"]).optional(),
+    mediaKind: z
+      .enum(["image", "video", "audio", "document", "archive", "other", "link"])
+      .optional(),
+    sourceUrl: z.string().url().optional(),
   })
   .nullable()
   .optional();
+
+const agencyTaskThreadAttachmentInputSchema = z.object({
+  fileName: z.string().min(1),
+  mimeType: z.string().min(1),
+  storageKey: z.string().min(1),
+  sizeBytes: z.number().int().nonnegative(),
+  durationSeconds: z.number().int().nonnegative().optional(),
+  uploadToken: z.string().min(1),
+  metadata: attachmentMetadataSchema,
+});
 
 const agencyTaskMessageAttachmentSchema = z.object({
   id: z.string().min(1),
@@ -512,32 +526,7 @@ export const agencyOpsRouter = {
             taskId: z.string().min(1),
             content: z.string().max(10_000),
             type: z.enum(["text", "voice", "attachment"]).optional(),
-            attachments: z
-              .array(
-                z.object({
-                  fileName: z.string().min(1),
-                  mimeType: z.string().min(1),
-                  storageKey: z.string().min(1),
-                  sizeBytes: z.number().int().nonnegative(),
-                  durationSeconds: z.number().int().nonnegative().optional(),
-                  uploadToken: z.string().min(1),
-                  metadata: z
-                    .object({
-                      imageWidth: z.number().int().positive().optional(),
-                      imageHeight: z.number().int().positive().optional(),
-                      videoWidth: z.number().int().positive().optional(),
-                      videoHeight: z.number().int().positive().optional(),
-                      durationSeconds: z.number().nonnegative().optional(),
-                      fileExtension: z.string().optional(),
-                      lastModified: z.string().optional(),
-                      mediaKind: z
-                        .enum(["image", "video", "audio", "document", "archive", "other"])
-                        .optional(),
-                    })
-                    .optional(),
-                }),
-              )
-              .optional(),
+            attachments: z.array(agencyTaskThreadAttachmentInputSchema).optional(),
           }),
         )
         .handler(async ({ context, input }) => {
@@ -566,6 +555,27 @@ export const agencyOpsRouter = {
               uploadToken: z.string().min(1),
             })
             .parse(await createTaskAttachmentPresignedUrl(context.session.user.id, input));
+        }),
+      createLink: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            taskId: z.string().min(1),
+            url: z.string().trim().min(1).max(2048),
+            label: z.string().trim().max(260).optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({
+              storageKey: z.string().min(1),
+              publicUrl: z.string().url(),
+              fileName: z.string().min(1),
+              mimeType: z.string().min(1),
+              sizeBytes: z.number().int().nonnegative(),
+              uploadToken: z.string().min(1),
+              metadata: attachmentMetadataSchema,
+            })
+            .parse(await createTaskLinkAttachment(context.session.user.id, input));
         }),
       delete: protectedProProcedure
         .input(
@@ -631,32 +641,7 @@ export const agencyOpsRouter = {
           taskId: z.string().min(1),
           content: z.string().trim().min(1).max(10_000),
           model: z.string().trim().min(1).optional(),
-          attachments: z
-            .array(
-              z.object({
-                fileName: z.string().min(1),
-                mimeType: z.string().min(1),
-                storageKey: z.string().min(1),
-                sizeBytes: z.number().int().nonnegative(),
-                durationSeconds: z.number().int().nonnegative().optional(),
-                uploadToken: z.string().min(1),
-                metadata: z
-                  .object({
-                    imageWidth: z.number().int().positive().optional(),
-                    imageHeight: z.number().int().positive().optional(),
-                    videoWidth: z.number().int().positive().optional(),
-                    videoHeight: z.number().int().positive().optional(),
-                    durationSeconds: z.number().nonnegative().optional(),
-                    fileExtension: z.string().optional(),
-                    lastModified: z.string().optional(),
-                    mediaKind: z
-                      .enum(["image", "video", "audio", "document", "archive", "other"])
-                      .optional(),
-                  })
-                  .optional(),
-              }),
-            )
-            .optional(),
+          attachments: z.array(agencyTaskThreadAttachmentInputSchema).optional(),
         }),
       )
       .handler(async ({ context, input }) => {

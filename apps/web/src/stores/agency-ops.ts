@@ -18,6 +18,7 @@ import {
 import { getAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { createEmptyListOverlay } from "@/lib/utils/agency-optimistic-merge";
 
 // Shared types (mirrored from API shapes — keep in sync with oRPC output)
 // ---------------------------------------------------------------------------
@@ -238,6 +239,10 @@ type SendTaskMessagePayload = {
     uploadToken: string;
     metadata?: Record<string, unknown>;
   }>;
+};
+
+type AskTaskAgentPayload = SendTaskMessagePayload & {
+  model?: string;
 };
 
 type ArchiveClientPayload = {
@@ -1148,14 +1153,23 @@ function createAgencyOpsActions(
     }
   }
 
-  async function sendTaskMessage(payload: SendTaskMessagePayload) {
-    if (!payload.teamId || !payload.taskId) return;
+  function refetchTaskMessageQueries(teamId: string, taskId: string) {
+    return Promise.all(
+      [...taskMessagesQueryRegistry.values()]
+        .filter(({ payload: reg }) => reg.teamId === teamId && reg.taskId === taskId)
+        .map(({ payload: reg }) =>
+          getQueryClient().invalidateQueries({ queryKey: reg.queryKey }),
+        ),
+    );
+  }
 
-    const snapshots = snapshotQueries(registryPayloads(taskMessagesQueryRegistry));
-    const optimisticSnapshot = optimistic().snapshotTaskMessages(payload.teamId, payload.taskId);
+  function buildOptimisticTaskMessage(
+    payload: SendTaskMessagePayload,
+    messageId: string,
+  ): AgencyTaskMessage {
     const nowIso = new Date().toISOString();
-    const optimisticMessage: AgencyTaskMessage = {
-      id: optimisticId("agency-task-message"),
+    return {
+      id: messageId,
       teamId: payload.teamId,
       threadId: payload.taskId,
       userId: "",
@@ -1168,6 +1182,17 @@ function createAgencyOpsActions(
       updatedAt: nowIso,
       attachments: [],
     };
+  }
+
+  async function sendTaskMessage(payload: SendTaskMessagePayload) {
+    if (!payload.teamId || !payload.taskId) return;
+
+    const snapshots = snapshotQueries(registryPayloads(taskMessagesQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotTaskMessages(payload.teamId, payload.taskId);
+    const optimisticMessage = buildOptimisticTaskMessage(
+      payload,
+      optimisticId("agency-task-message"),
+    );
 
     try {
       patchInsertedTaskMessage(payload.teamId, payload.taskId, optimisticMessage);
@@ -1206,6 +1231,44 @@ function createAgencyOpsActions(
       });
 
       return created;
+    } catch (error) {
+      restoreQuerySnapshots(snapshots);
+      optimistic().restoreTaskMessages(payload.teamId, payload.taskId, optimisticSnapshot);
+      throw error;
+    }
+  }
+
+  async function askTaskAgent(payload: AskTaskAgentPayload) {
+    if (!payload.teamId || !payload.taskId) return;
+
+    const snapshots = snapshotQueries(registryPayloads(taskMessagesQueryRegistry));
+    const optimisticSnapshot = optimistic().snapshotTaskMessages(payload.teamId, payload.taskId);
+    const optimisticMessage = buildOptimisticTaskMessage(
+      payload,
+      optimisticId("agency-task-message"),
+    );
+
+    try {
+      patchInsertedTaskMessage(payload.teamId, payload.taskId, optimisticMessage);
+
+      const result = await orpcClient.agencyOps.taskAgent.ask({
+        teamId: payload.teamId,
+        taskId: payload.taskId,
+        content: payload.content,
+        model: payload.model,
+        attachments: payload.attachments as Parameters<
+          typeof orpcClient.agencyOps.taskAgent.ask
+        >[0]["attachments"],
+      });
+
+      optimistic().restoreTaskMessages(
+        payload.teamId,
+        payload.taskId,
+        createEmptyListOverlay(),
+      );
+      await refetchTaskMessageQueries(payload.teamId, payload.taskId);
+
+      return result;
     } catch (error) {
       restoreQuerySnapshots(snapshots);
       optimistic().restoreTaskMessages(payload.teamId, payload.taskId, optimisticSnapshot);
@@ -1310,6 +1373,7 @@ function createAgencyOpsActions(
     completeProjectTaskForMember,
     deleteProjectTask,
     sendTaskMessage,
+    askTaskAgent,
     upsertContact,
     upsertRate,
     setCapacity,

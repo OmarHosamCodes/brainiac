@@ -26,7 +26,8 @@ export type AttachmentMetadata = {
   durationSeconds?: number;
   fileExtension?: string;
   lastModified?: string;
-  mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other";
+  mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other" | "link";
+  sourceUrl?: string;
 };
 
 export const agencyOpsClient = pgTable(

@@ -9,6 +9,11 @@ import {
   useAgencyTaskThreadContextQuery,
 } from "@/lib/queries/agency";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import {
+  isOptimisticTaskMessage,
+  resolveMessageAnimationKey,
+} from "@/lib/utils/agency-thread-motion";
+import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 import { useAgencyTaskThreadStore } from "@/stores/agency-task-thread";
 
 type UseAgencyTaskThreadOptions = {
@@ -20,6 +25,8 @@ type UseAgencyTaskThreadOptions = {
 
 export type AgencyTaskThreadMessageViewModel = {
   id: string;
+  animationKey: string;
+  isOptimistic: boolean;
   senderType: AgencyTaskMessage["senderType"];
   userName: string;
   createdAt: string;
@@ -87,6 +94,10 @@ export function useAgencyTaskThread({
 
   const contextQuery = useAgencyTaskThreadContextQuery(teamId, taskId);
   const messagesQuery = useAgencyTaskMessagesQuery(teamId, taskId);
+  const messageOverlayKey = `${teamId}:${taskId}`;
+  const messageOverlay = useAgencyOptimisticStore(
+    (state) => state.taskMessages[messageOverlayKey],
+  );
 
   const context = contextQuery.data;
   const project = projects.find((p) => p.id === context?.projectId);
@@ -113,12 +124,6 @@ export function useAgencyTaskThread({
   }, [taskId, resetThreadStore]);
 
   useEffect(() => {
-    if (threadContainerRef.current) {
-      threadContainerRef.current.scrollTop = threadContainerRef.current.scrollHeight;
-    }
-  }, [messagesQuery.data]);
-
-  useEffect(() => {
     function handleKeydown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -130,9 +135,12 @@ export function useAgencyTaskThread({
     return () => window.removeEventListener("keydown", handleKeydown);
   }, [onBack]);
 
+  const overlay = messageOverlay ?? { upserts: {}, deletedIds: {}, idMap: {} };
   const rawMessages = [...(messagesQuery.data?.items ?? [])].reverse();
   const messages: AgencyTaskThreadMessageViewModel[] = rawMessages.map((message, index) => ({
     id: message.id,
+    animationKey: resolveMessageAnimationKey(message.id, overlay.idMap),
+    isOptimistic: isOptimisticTaskMessage(message.id, overlay),
     senderType: message.senderType,
     userName: message.userName,
     createdAt: message.createdAt,
