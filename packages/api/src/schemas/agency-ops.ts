@@ -16,6 +16,7 @@ export const attachmentMediaKindSchema = z.enum([
   "document",
   "archive",
   "other",
+  "link",
 ]);
 
 export const attachmentMetadataSchema = z
@@ -28,9 +29,20 @@ export const attachmentMetadataSchema = z
     fileExtension: z.string().optional(),
     lastModified: z.string().optional(),
     mediaKind: attachmentMediaKindSchema.optional(),
+    sourceUrl: z.string().url().optional(),
   })
   .nullable()
   .optional();
+
+export const agencyTaskThreadAttachmentInputSchema = z.object({
+  fileName: z.string().min(1),
+  mimeType: z.string().min(1),
+  storageKey: z.string().min(1),
+  sizeBytes: z.number().int().nonnegative(),
+  durationSeconds: z.number().int().nonnegative().optional(),
+  uploadToken: z.string().min(1),
+  metadata: attachmentMetadataSchema,
+});
 
 export const agencyClientSchema = z.object({
   id: z.string().min(1),

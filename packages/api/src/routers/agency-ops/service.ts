@@ -116,8 +116,45 @@ type AttachmentMetadata = {
   durationSeconds?: number;
   fileExtension?: string;
   lastModified?: string;
-  mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other";
+  mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other" | "link";
+  sourceUrl?: string;
 };
+
+function isTaskLinkStorageKey(storageKey: string) {
+  return storageKey.startsWith("task-links/");
+}
+
+function normalizeTaskLinkUrl(input: string): string {
+  const trimmed = input.trim();
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const parsed = new URL(withProtocol);
+  if (parsed.protocol !== "https:") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Link attachments must use HTTPS URLs.",
+    });
+  }
+  return parsed.href;
+}
+
+function deriveTaskLinkLabel(url: string, label?: string | null): string {
+  if (label?.trim()) return label.trim().slice(0, 260);
+  const parsed = new URL(url);
+  const path =
+    parsed.pathname !== "/" && parsed.pathname.length > 1
+      ? parsed.pathname.replace(/\/$/, "").slice(0, 48)
+      : "";
+  return (path ? `${parsed.hostname}${path}` : parsed.hostname).slice(0, 260);
+}
+
+async function resolveTaskAttachmentUrl(args: {
+  storageKey: string;
+  metadata: AttachmentMetadata | null;
+}): Promise<string | null> {
+  if (isTaskLinkStorageKey(args.storageKey)) {
+    return args.metadata?.sourceUrl ?? null;
+  }
+  return getTaskAttachmentReadUrl(args.storageKey);
+}
 
 type AgencyTaskAttachmentRecord = {
   id: string;
@@ -1515,7 +1552,10 @@ async function mapTaskMessageRow(row: {
         durationSeconds: a.durationSeconds,
         metadata: a.metadata as AttachmentMetadata | null,
         createdAt: a.createdAt.toISOString(),
-        url: await getTaskAttachmentReadUrl(a.storageKey),
+        url: await resolveTaskAttachmentUrl({
+          storageKey: a.storageKey,
+          metadata: a.metadata as AttachmentMetadata | null,
+        }),
       })),
     ),
   };
@@ -1702,6 +1742,27 @@ export function validateTaskAttachmentUploadReferences(input: {
   }>;
 }) {
   for (const attachment of input.attachments ?? []) {
+    const linkPrefix = `task-links/${input.teamId}/${input.taskId}/`;
+    if (attachment.storageKey.startsWith(linkPrefix)) {
+      if (
+        attachment.mimeType !== "text/uri-list" ||
+        attachment.sizeBytes !== 0 ||
+        !verifyTaskAttachmentUploadToken(attachment.uploadToken, {
+          teamId: input.teamId,
+          taskId: input.taskId,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          storageKey: attachment.storageKey,
+          sizeBytes: attachment.sizeBytes,
+        })
+      ) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "Link attachment reference is invalid or expired.",
+        });
+      }
+      continue;
+    }
+
     const expectedPrefix = `task-attachments/${input.teamId}/${input.taskId}/`;
     if (
       !attachment.storageKey.startsWith(expectedPrefix) ||
@@ -1758,6 +1819,44 @@ export async function createTaskAttachmentPresignedUrl(
   };
 }
 
+export async function createTaskLinkAttachment(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    taskId: string;
+    url: string;
+    label?: string | null;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  await getTaskByIdForTeam(input.teamId, input.taskId);
+
+  const sourceUrl = normalizeTaskLinkUrl(input.url);
+  const fileName = deriveTaskLinkLabel(sourceUrl, input.label);
+  const storageKey = `task-links/${input.teamId}/${input.taskId}/${createWorkspaceId("link")}`;
+  const mimeType = "text/uri-list";
+
+  return {
+    storageKey,
+    publicUrl: sourceUrl,
+    fileName,
+    mimeType,
+    sizeBytes: 0,
+    metadata: {
+      mediaKind: "link" as const,
+      sourceUrl,
+    },
+    uploadToken: createTaskAttachmentUploadToken({
+      teamId: input.teamId,
+      taskId: input.taskId,
+      fileName,
+      mimeType,
+      storageKey,
+      sizeBytes: 0,
+    }),
+  };
+}
+
 export async function deleteTaskAttachment(
   actorUserId: string,
   input: {
@@ -1798,7 +1897,9 @@ export async function deleteTaskAttachment(
 
   const now = new Date();
 
-  await deleteTaskAttachmentFromStorage(attachment.storageKey);
+  if (!isTaskLinkStorageKey(attachment.storageKey)) {
+    await deleteTaskAttachmentFromStorage(attachment.storageKey);
+  }
   await db
     .update(agencyOpsTaskAttachment)
     .set({ deletedAt: now })

@@ -1,7 +1,7 @@
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 
 import { AgencyTaskComposerView } from "@/components/agency/work/task-thread/agency-task-composer-view";
-import { AgencyTaskThreadMessageView } from "@/components/agency/work/task-thread/agency-task-message-attachments-view";
+import { AgencyTaskThreadMessageListView } from "@/components/agency/work/task-thread/agency-task-thread-message-list-view";
 import { AgencyMiniTimer } from "@/components/agency/agency-mini-timer";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -99,19 +99,10 @@ export function AgencyTaskThreadView({ view }: AgencyTaskThreadViewProps) {
                 No messages yet. Start the thread below.
               </div>
             ) : (
-              view.messages.map((message) => (
-                <AgencyTaskThreadMessageView
-                  key={message.id}
-                  senderType={message.senderType}
-                  userName={message.userName}
-                  createdAt={message.createdAt}
-                  showDateDivider={message.showDateDivider}
-                  dateLabel={message.dateLabel}
-                  attachments={message.attachments}
-                  messageType={message.type}
-                  content={message.content}
-                />
-              ))
+              <AgencyTaskThreadMessageListView
+                messages={view.messages}
+                threadContainerRef={view.threadContainerRef}
+              />
             )}
           </div>
 

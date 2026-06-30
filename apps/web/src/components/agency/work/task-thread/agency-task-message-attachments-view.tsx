@@ -1,26 +1,12 @@
-import { Bot } from "lucide-react";
-
 import { AgencyAttachmentGrid } from "@/components/agency/agency-attachment-grid";
+import { AgencyTaskAgentMessageView } from "@/components/agency/work/task-thread/agency-task-agent-message-view";
 import { AgencyTaskMediaPlayer } from "@/components/agency/agency-task-media-player";
 import type { AgencyTaskMessageAttachment } from "@/lib/schemas/agency-work";
-
-function getMediaKind(metadata: unknown) {
-  if (!metadata || typeof metadata !== "object") return null;
-  const mediaKind = (metadata as { mediaKind?: unknown }).mediaKind;
-  return typeof mediaKind === "string" ? mediaKind : null;
-}
-
-function isAudioAttachment(attachment: {
-  mimeType: string;
-  durationSeconds?: number | null;
-  metadata?: unknown;
-}) {
-  return (
-    attachment.mimeType.startsWith("audio/") ||
-    getMediaKind(attachment.metadata) === "audio" ||
-    attachment.durationSeconds != null
-  );
-}
+import {
+  getAttachmentUrl,
+  isAudioAttachment,
+  selectAttachmentVariant,
+} from "@/lib/utils/agency-attachment-utils";
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, {
@@ -42,6 +28,7 @@ export function AgencyTaskMessageAttachmentsView({
 }: AgencyTaskMessageAttachmentsViewProps) {
   const audioAttachments = attachments.filter((a) => isAudioAttachment(a));
   const fileAttachments = attachments.filter((a) => !isAudioAttachment(a));
+  const attachmentVariant = selectAttachmentVariant(fileAttachments, "message");
 
   return (
     <>
@@ -50,11 +37,11 @@ export function AgencyTaskMessageAttachmentsView({
       ) : null}
 
       {messageType === "voice" || audioAttachments.length > 0 ? (
-        <div className="mt-2">
+        <div className="mt-2 space-y-2">
           {audioAttachments.map((attachment) => (
             <AgencyTaskMediaPlayer
               key={attachment.id}
-              src={attachment.url ?? undefined}
+              src={getAttachmentUrl(attachment) ?? undefined}
               mimeType={attachment.mimeType}
               fileName={attachment.fileName}
               mediaKind="audio"
@@ -63,7 +50,13 @@ export function AgencyTaskMessageAttachmentsView({
         </div>
       ) : null}
 
-      <AgencyAttachmentGrid attachments={fileAttachments} className="mt-2" />
+      {fileAttachments.length > 0 ? (
+        <AgencyAttachmentGrid
+          attachments={fileAttachments}
+          className="mt-2"
+          variant={attachmentVariant}
+        />
+      ) : null}
     </>
   );
 }
@@ -89,6 +82,30 @@ export function AgencyTaskThreadMessageView({
   messageType,
   content,
 }: AgencyTaskThreadMessageViewProps) {
+  if (senderType === "agent") {
+    return (
+      <div>
+        {showDateDivider ? (
+          <div className="py-2 text-center text-[11px] font-bold uppercase tracking-wider text-muted">
+            {dateLabel}
+          </div>
+        ) : null}
+
+        <AgencyTaskAgentMessageView content={content} createdAt={createdAt} />
+
+        {attachments.length > 0 ? (
+          <div className="mt-2 pl-1">
+            <AgencyTaskMessageAttachmentsView
+              attachments={attachments}
+              messageType={messageType}
+              content={null}
+            />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div>
       {showDateDivider ? (
@@ -97,21 +114,10 @@ export function AgencyTaskThreadMessageView({
         </div>
       ) : null}
 
-      <div
-        className={[
-          "flex gap-3",
-          senderType === "agent" ? "rounded-xl bg-primary/5 p-3" : "",
-        ].join(" ")}
-      >
-        {senderType === "agent" ? (
-          <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <Bot className="size-4 text-primary" />
-          </div>
-        ) : (
-          <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted">
-            {userName.slice(0, 2)}
-          </div>
-        )}
+      <div className="flex gap-3">
+        <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted">
+          {userName.slice(0, 2)}
+        </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
             <span className="text-xs font-bold text-highlighted">{userName}</span>

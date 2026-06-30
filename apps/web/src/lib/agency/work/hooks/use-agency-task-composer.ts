@@ -1,9 +1,12 @@
-import { useMutation } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { getRpcBaseUrl } from "@/lib/env";
-import { orpc } from "@/lib/orpc";
+import { orpcClient } from "@/lib/orpc";
+import {
+  normalizeAttachmentUrl,
+  type AttachmentMetadataLike,
+} from "@/lib/utils/agency-attachment-utils";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { useAgencyOpsStore } from "@/stores/agency-ops";
 
@@ -15,16 +18,7 @@ type PendingAttachment = {
   url: string;
   uploadToken: string;
   durationSeconds: number | null;
-  metadata?: {
-    imageWidth?: number;
-    imageHeight?: number;
-    videoWidth?: number;
-    videoHeight?: number;
-    durationSeconds?: number;
-    fileExtension?: string;
-    lastModified?: string;
-    mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other";
-  };
+  metadata?: AttachmentMetadataLike;
 };
 
 export type AgencyTaskComposerUploadHandler = (
@@ -46,18 +40,33 @@ export type AgencyTaskComposerViewModel = {
   isBusy: boolean;
   pendingAttachments: PendingAttachment[];
   agentEnabled: boolean;
+  placeholder: string;
+  attachmentCountLabel: string | null;
   onContentChange: (value: string) => void;
   onSend: () => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
-  onFileInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onImageInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  onDocumentInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onDrop: (event: React.DragEvent) => void;
   onDragOver: (event: React.DragEvent) => void;
   onDragLeave: () => void;
-  onAttachClick: () => void;
+  onAttachImageClick: () => void;
+  onAttachDocumentClick: () => void;
   onRemoveAttachment: (index: number) => void;
   onVoiceRecorded: (file: File, durationSeconds: number) => void;
-  fileInputId: string;
+  onAddUrlAttachment: (url: string, label?: string) => Promise<void>;
+  imageFileInputId: string;
+  documentFileInputId: string;
 };
+
+function getComposerPlaceholder(agentEnabled: boolean, hasAttachments: boolean): string {
+  if (hasAttachments) {
+    return agentEnabled
+      ? "Describe what you want to do with these files..."
+      : "Add a message...";
+  }
+  return agentEnabled ? "Ask the agent about this task..." : "Write a message...";
+}
 
 async function captureFileMetadata(
   file: File,
@@ -131,6 +140,18 @@ async function captureFileMetadata(
   return meta;
 }
 
+function mapPendingAttachmentsForSend(attachments: PendingAttachment[]) {
+  return attachments.map((a) => ({
+    fileName: a.fileName,
+    mimeType: a.mimeType,
+    storageKey: a.storageKey,
+    sizeBytes: a.sizeBytes,
+    durationSeconds: a.durationSeconds ?? undefined,
+    uploadToken: a.uploadToken,
+    metadata: a.metadata ?? undefined,
+  }));
+}
+
 export function useAgencyTaskComposer({
   teamId,
   taskId,
@@ -142,28 +163,12 @@ export function useAgencyTaskComposer({
   const [content, setContent] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isAgentPending, setIsAgentPending] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
-  const fileInputId = `agency-task-composer-file-${teamId}-${taskId}`;
+  const imageFileInputId = `agency-task-composer-image-${teamId}-${taskId}`;
+  const documentFileInputId = `agency-task-composer-document-${teamId}-${taskId}`;
 
-  const askAgentMutation = useMutation(
-    orpc.agencyOps.taskAgent.ask.mutationOptions({
-      onSuccess: (result) => {
-        setContent("");
-        setPendingAttachments([]);
-        onSent();
-        toast("Agent", {
-          description: result.response.slice(0, 120),
-        });
-      },
-      onError: (error) => {
-        toast.error("Agent error", {
-          description: getErrorMessage(error, "Try again."),
-        });
-      },
-    }),
-  );
-
-  const isBusy = isSending || askAgentMutation.isPending;
+  const isBusy = isSending || isAgentPending;
 
   const uploadFiles = useCallback(
     async (files: File[], options: { durationSeconds?: number | null } = {}) => {
@@ -222,6 +227,49 @@ export function useAgencyTaskComposer({
     [taskId, teamId],
   );
 
+  const onAddUrlAttachment = useCallback(
+    async (rawUrl: string, label?: string) => {
+      const normalizedUrl = normalizeAttachmentUrl(rawUrl);
+      if (!normalizedUrl) {
+        toast.error("Invalid URL", {
+          description: "Enter a valid HTTPS link.",
+        });
+        return;
+      }
+
+      try {
+        const result = await orpcClient.agencyOps.taskThreads.attachments.createLink({
+          teamId,
+          taskId,
+          url: normalizedUrl,
+          label,
+        });
+
+        setPendingAttachments((current) => [
+          ...current,
+          {
+            fileName: result.fileName,
+            mimeType: result.mimeType,
+            storageKey: result.storageKey,
+            sizeBytes: result.sizeBytes,
+            url: result.publicUrl,
+            uploadToken: result.uploadToken,
+            durationSeconds: null,
+            metadata: result.metadata ?? {
+              mediaKind: "link",
+              sourceUrl: normalizedUrl,
+            },
+          },
+        ]);
+      } catch (error) {
+        toast.error("Couldn't add link", {
+          description: getErrorMessage(error, "Try again."),
+        });
+      }
+    },
+    [taskId, teamId],
+  );
+
   useEffect(() => {
     onRegisterUploadHandler(uploadFiles);
     return () => onRegisterUploadHandler(null);
@@ -232,23 +280,32 @@ export function useAgencyTaskComposer({
     if (!text && pendingAttachments.length === 0) return;
 
     if (agentEnabled) {
-      await askAgentMutation.mutateAsync({
-        teamId,
-        taskId,
-        content: text || "What do you think?",
-        attachments:
-          pendingAttachments.length > 0
-            ? pendingAttachments.map((a) => ({
-                fileName: a.fileName,
-                mimeType: a.mimeType,
-                storageKey: a.storageKey,
-                sizeBytes: a.sizeBytes,
-                durationSeconds: a.durationSeconds ?? undefined,
-                uploadToken: a.uploadToken,
-                metadata: a.metadata,
-              }))
-            : undefined,
-      });
+      setIsAgentPending(true);
+      try {
+        const result = await agencyOps.askTaskAgent({
+          teamId,
+          taskId,
+          content: text || "What do you think?",
+          attachments:
+            pendingAttachments.length > 0
+              ? mapPendingAttachmentsForSend(pendingAttachments)
+              : undefined,
+        });
+        setContent("");
+        setPendingAttachments([]);
+        onSent();
+        if (result) {
+          toast("Agent", {
+            description: result.response.slice(0, 120),
+          });
+        }
+      } catch (error) {
+        toast.error("Agent error", {
+          description: getErrorMessage(error, "Try again."),
+        });
+      } finally {
+        setIsAgentPending(false);
+      }
       return;
     }
 
@@ -266,17 +323,7 @@ export function useAgencyTaskComposer({
               ? "attachment"
               : "text",
         attachments:
-          pendingAttachments.length > 0
-            ? pendingAttachments.map((a) => ({
-                fileName: a.fileName,
-                mimeType: a.mimeType,
-                storageKey: a.storageKey,
-                sizeBytes: a.sizeBytes,
-                durationSeconds: a.durationSeconds ?? undefined,
-                uploadToken: a.uploadToken,
-                metadata: a.metadata,
-              }))
-            : undefined,
+          pendingAttachments.length > 0 ? mapPendingAttachmentsForSend(pendingAttachments) : undefined,
       });
       setContent("");
       setPendingAttachments([]);
@@ -288,7 +335,7 @@ export function useAgencyTaskComposer({
     } finally {
       setIsSending(false);
     }
-  }, [agencyOps, agentEnabled, askAgentMutation, content, onSent, pendingAttachments, taskId, teamId]);
+  }, [agencyOps, agentEnabled, content, onSent, pendingAttachments, taskId, teamId]);
 
   const onKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -300,7 +347,7 @@ export function useAgencyTaskComposer({
     [send],
   );
 
-  const onFileInputChange = useCallback(
+  const handleFileInputChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const files = event.target.files;
       if (files) {
@@ -323,28 +370,46 @@ export function useAgencyTaskComposer({
     [uploadFiles],
   );
 
+  const placeholder = useMemo(
+    () => getComposerPlaceholder(agentEnabled, pendingAttachments.length > 0),
+    [agentEnabled, pendingAttachments.length],
+  );
+
+  const attachmentCountLabel =
+    pendingAttachments.length > 0
+      ? `${pendingAttachments.length} file${pendingAttachments.length === 1 ? "" : "s"}`
+      : null;
+
   return {
     content,
     isDragging,
     isBusy,
     pendingAttachments,
     agentEnabled,
+    placeholder,
+    attachmentCountLabel,
     onContentChange: setContent,
     onSend: () => void send(),
     onKeyDown,
-    onFileInputChange,
+    onImageInputChange: handleFileInputChange,
+    onDocumentInputChange: handleFileInputChange,
     onDrop,
     onDragOver: (event) => {
       event.preventDefault();
       setIsDragging(true);
     },
     onDragLeave: () => setIsDragging(false),
-    onAttachClick: () => {
-      document.getElementById(fileInputId)?.click();
+    onAttachImageClick: () => {
+      document.getElementById(imageFileInputId)?.click();
+    },
+    onAttachDocumentClick: () => {
+      document.getElementById(documentFileInputId)?.click();
     },
     onRemoveAttachment: (index) =>
       setPendingAttachments((current) => current.filter((_, i) => i !== index)),
     onVoiceRecorded: (file, durationSeconds) => void uploadFiles([file], { durationSeconds }),
-    fileInputId,
+    onAddUrlAttachment,
+    imageFileInputId,
+    documentFileInputId,
   };
 }
