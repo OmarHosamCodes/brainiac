@@ -73,7 +73,7 @@ Seven-state contract on every interactive element (default, hover, focus-visible
 - **Eyebrows.** DESIGN.md Label scale, never colored. Examples: `THIS WEEK`, `BUDGET`, `BILLABLE`, `UTILIZATION`.
 - **Empty states.** Plain-spoken, instructional, no exclamation marks (authored in §6).
 - **Errors.** Specific subject, specific action. "Couldn't save 0:45 to Acme · Onboarding. Retry."
-- **Numbers.** Durations in `H:MM`, currency in `$1,240`, both JetBrains Mono per the Mono For Truth rule.
+- **Numbers.** Durations in `H:MM`, currency in `$1,240`, both IBM Plex Mono per the Mono For Truth rule.
 - **Banned.** Em dashes, "magical / powerful / AI-powered", exclamation marks, sparkle emoji. The agent has no presence on this surface.
 - **Dynamic ranges.** Projects 0/12/200+. Time entries per week 0/30/250+. Members 1/12/80+. Reports rows 0/100/5000+. Virtual scroll above 100.
 
