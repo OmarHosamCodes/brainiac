@@ -70,9 +70,11 @@ async function proxyApiRequest(request, response) {
   const requestUrl = new URL(request.url, "http://localhost");
   const targetUrl = apiOrigin + requestUrl.pathname + requestUrl.search;
   const headers = new Headers();
+  const forwardHost = request.headers.host;
 
   for (const [key, value] of Object.entries(request.headers)) {
-    if (!value || hopByHopHeaders.has(key)) {
+    const headerName = key.toLowerCase();
+    if (!value || hopByHopHeaders.has(headerName)) {
       continue;
     }
 
@@ -84,6 +86,15 @@ async function proxyApiRequest(request, response) {
     }
 
     headers.set(key, value);
+  }
+
+  if (forwardHost) {
+    headers.set("host", forwardHost);
+    headers.set("x-forwarded-host", forwardHost);
+    headers.set(
+      "x-forwarded-proto",
+      request.headers["x-forwarded-proto"]?.toString() || "https",
+    );
   }
 
   const body =
@@ -98,13 +109,17 @@ async function proxyApiRequest(request, response) {
     redirect: "manual",
   });
 
-  const responseHeaders = {};
+  const responseHeaders = [];
   upstream.headers.forEach((value, key) => {
-    if (hopByHopHeaders.has(key)) {
+    if (key.toLowerCase() === "set-cookie") {
       return;
     }
-    responseHeaders[key] = value;
+    responseHeaders.push([key, value]);
   });
+
+  for (const cookie of upstream.headers.getSetCookie()) {
+    responseHeaders.push(["Set-Cookie", cookie]);
+  }
 
   response.writeHead(upstream.status, responseHeaders);
   const payload = Buffer.from(await upstream.arrayBuffer());
