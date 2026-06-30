@@ -38,6 +38,7 @@
     "grant:lifetime-pro": "turbo -F server grant:lifetime-pro --",
     "db:seed:agency": "turbo -F server db:seed:agency --",
     "db:clear:team": "turbo -F server db:clear:team --",
+    "db:import:clockify": "turbo -F server db:import:clockify --",
     "db:start": "turbo -F @brainiac/db db:start",
     "db:watch": "turbo -F @brainiac/db db:watch",
     "db:stop": "turbo -F @brainiac/db db:stop",
