@@ -20,6 +20,8 @@ export const env = createEnv({
         "BETTER_AUTH_SECRET must be at least 32 characters (generate with: openssl rand -hex 16)",
       ),
     BETTER_AUTH_URL: z.url("BETTER_AUTH_URL must be a valid URL (e.g., http://localhost:7000)"),
+    GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required for Google OAuth"),
+    GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required for Google OAuth"),
     CORS_ORIGIN: z.url("CORS_ORIGIN must be a valid URL (e.g., http://localhost:7001)"),
     CORS_ORIGINS: z.string().optional(),
     OPENROUTER_API_KEY: z
