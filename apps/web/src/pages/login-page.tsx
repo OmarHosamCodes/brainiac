@@ -1,5 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { BrainCircuit, Loader2 } from "lucide-react";
+import { BrainCircuit, ChevronDown, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Navigate, Link, useLocation } from "react-router-dom";
@@ -22,9 +22,13 @@ import {
   type SignInFormValues,
   type SignUpFormValues,
 } from "@/lib/schemas/auth";
+import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 type AuthMode = "sign-in" | "sign-up";
+
+const GOOGLE_LOGO_URL =
+  "https://cdn.brandfetch.io/id6O2oGzv-/theme/dark/symbol.svg?c=1bxid64Mup7aczewSAYMX&t=1755835725776";
 
 export function LoginPage() {
   const session = authClient.useSession();
@@ -33,6 +37,7 @@ export function LoginPage() {
   const [mode, setMode] = useState<AuthMode>("sign-in");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [emailAuthOpen, setEmailAuthOpen] = useState(false);
 
   const redirectTo = (location.state as { from?: string } | null)?.from ?? "/dashboard";
   const isSignUp = mode === "sign-up";
@@ -101,8 +106,38 @@ export function LoginPage() {
   function switchMode(nextMode: AuthMode) {
     setMode(nextMode);
     setError(null);
+    setEmailAuthOpen(true);
     signInForm.reset();
     signUpForm.reset();
+  }
+
+  function toggleEmailAuth() {
+    setEmailAuthOpen((open) => {
+      if (open) {
+        setError(null);
+      }
+      return !open;
+    });
+  }
+
+  async function handleGoogleSignIn() {
+    setPending(true);
+    setError(null);
+
+    try {
+      const result = await authClient.signIn.social({
+        provider: "google",
+        callbackURL: new URL(redirectTo, window.location.origin).href,
+      });
+
+      if (result.error) {
+        setError(result.error.message ?? "Google sign in failed.");
+      }
+    } catch (submitError) {
+      setError(getErrorMessage(submitError, "Google sign in failed."));
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -160,83 +195,137 @@ export function LoginPage() {
             </div>
           </div>
 
-          <Form {...form}>
-            <form
-              className="space-y-4"
-              onSubmit={form.handleSubmit((values) =>
-                isSignUp ? handleSignUp(values as SignUpFormValues) : handleSignIn(values),
-              )}
-            >
-              {isSignUp ? (
-                <FormField
-                  control={signUpForm.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Name</FormLabel>
-                      <FormControl>
-                        <Input type="text" autoComplete="name" placeholder="Jane Doe" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ) : null}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            disabled={pending}
+            onClick={() => void handleGoogleSignIn()}
+          >
+            {pending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <img src={GOOGLE_LOGO_URL} alt="" className="size-4" />
+            )}
+            Continue with Google
+          </Button>
 
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" autoComplete="email" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          {error && !emailAuthOpen ? <p className="text-sm text-destructive">{error}</p> : null}
 
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        autoComplete={isSignUp ? "new-password" : "current-password"}
-                        {...field}
-                      />
-                    </FormControl>
+          <button
+            type="button"
+            className="flex w-full items-center justify-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            onClick={toggleEmailAuth}
+            aria-expanded={emailAuthOpen}
+          >
+            Sign in with email and password
+            <ChevronDown
+              className={cn("size-4 transition-transform duration-300", emailAuthOpen && "rotate-180")}
+            />
+          </button>
+
+          <div
+            className={cn(
+              "grid transition-[grid-template-rows] duration-300 ease-in-out",
+              emailAuthOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+            )}
+          >
+            <div className="overflow-hidden">
+              <div className="space-y-4 pt-1">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">or</span>
+                  </div>
+                </div>
+
+                <Form {...form}>
+                  <form
+                    className="space-y-4"
+                    onSubmit={form.handleSubmit((values) =>
+                      isSignUp ? handleSignUp(values as SignUpFormValues) : handleSignIn(values),
+                    )}
+                  >
                     {isSignUp ? (
-                      <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+                      <FormField
+                        control={signUpForm.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="text"
+                                autoComplete="name"
+                                placeholder="Jane Doe"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                     ) : null}
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input type="email" autoComplete="email" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-              <Button type="submit" className="w-full" disabled={pending}>
-                {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-                {isSignUp ? "Create account" : "Sign in"}
-              </Button>
-            </form>
-          </Form>
+                    <FormField
+                      control={form.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Password</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="password"
+                              autoComplete={isSignUp ? "new-password" : "current-password"}
+                              {...field}
+                            />
+                          </FormControl>
+                          {isSignUp ? (
+                            <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+                          ) : null}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-          <p className="text-center text-sm text-muted-foreground">
-            {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-            <button
-              type="button"
-              className="font-semibold text-primary hover:underline"
-              onClick={() => switchMode(isSignUp ? "sign-in" : "sign-up")}
-            >
-              {isSignUp ? "Sign in" : "Sign up"}
-            </button>
-          </p>
+                    {error ? <p className="text-sm text-destructive">{error}</p> : null}
+
+                    <Button type="submit" className="w-full" disabled={pending}>
+                      {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+                      {isSignUp ? "Create account" : "Sign in"}
+                    </Button>
+                  </form>
+                </Form>
+
+                <p className="text-center text-sm text-muted-foreground">
+                  {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+                  <button
+                    type="button"
+                    className="font-semibold text-primary hover:underline"
+                    onClick={() => switchMode(isSignUp ? "sign-in" : "sign-up")}
+                  >
+                    {isSignUp ? "Sign in" : "Sign up"}
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>
