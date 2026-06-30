@@ -85,13 +85,17 @@ export const agencyTaskRowDoneClass =
 
 export const agencyTaskRowCompleteClass = "agency-task-row-complete";
 
-/** Time pane — execution stack beside the task rail. */
-export const agencyTimePaneClass =
-  "flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-default bg-elevated";
+/** Time column beside the task rail — stacks tracker and log as separate panels. */
+export const agencyTimePaneStackClass =
+  "flex h-full min-h-0 flex-col gap-3 overflow-hidden";
 
-export const agencyTimeTrackerBarClass = [
-  "shrink-0 bg-default/75 px-4 py-2.5",
-].join(" ");
+export const agencyTimeTrackerPanelClass =
+  "shrink-0 overflow-hidden rounded-xl border border-default bg-default";
+
+export const agencyTimeLogPanelClass =
+  "flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-default bg-elevated";
+
+export const agencyTimeTrackerBarClass = ["shrink-0 px-4 py-2.5"].join(" ");
 
 export const agencyTimeDayHeaderClass = [
   "flex shrink-0 items-center justify-between border-y border-default bg-muted/55 px-4 py-2 text-xs",

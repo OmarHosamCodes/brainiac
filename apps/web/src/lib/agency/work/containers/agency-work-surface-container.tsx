@@ -12,6 +12,11 @@ import { AgencyWorkSurfaceLayoutView } from "@/components/agency/work/work-surfa
 import { AgencyWorkSurfaceLoadingView } from "@/components/agency/work/work-surface/agency-work-surface-loading-view";
 import { AgencyWorkSurfaceMobileTabsView } from "@/components/agency/work/work-surface/agency-work-surface-mobile-tabs-view";
 import { AgencyWorkSurfaceTimerStripView } from "@/components/agency/work/work-surface/agency-work-surface-timer-strip-view";
+import {
+  agencyTimeLogPanelClass,
+  agencyTimeTrackerPanelClass,
+} from "@/lib/utils/agency-ui";
+import { cn } from "@/lib/utils";
 
 type AgencyWorkSurfaceProps = {
   teamId: string;
@@ -78,10 +83,12 @@ function renderWorkSurfaceView(view: AgencyWorkSurfaceView) {
           }
           timePane={
             <>
-              <div className="sticky top-0 z-10 shrink-0 border-b border-default bg-default/90 backdrop-blur-sm supports-[backdrop-filter]:bg-default/80">
+              <div className={agencyTimeTrackerPanelClass}>
                 <AgencyTimeTracker teamId={view.teamId} />
               </div>
-              <AgencyTimeEntriesLog teamId={view.teamId} />
+              <div className={cn(agencyTimeLogPanelClass, "min-h-0")}>
+                <AgencyTimeEntriesLog teamId={view.teamId} />
+              </div>
             </>
           }
         />
