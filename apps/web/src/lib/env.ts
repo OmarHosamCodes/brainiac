@@ -18,9 +18,9 @@ export function getRpcBaseUrl(): string {
   return getServerUrl();
 }
 
-/** In dev, route auth through the Vite proxy so session cookies stay on the web origin. */
+/** Route auth through the web app origin so session cookies stay first-party. */
 export function getAuthBaseUrl(): string {
-  if (typeof window !== "undefined" && import.meta.env.DEV) {
+  if (typeof window !== "undefined") {
     return window.location.origin;
   }
   return getServerUrl();
