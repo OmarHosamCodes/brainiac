@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prism Light Dispersion Animation</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #050505; /* Deep dark background */
+            overflow: hidden;
+            font-family: sans-serif;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="prismCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('prismCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let w, h;
+        let tri, pIn, pFace1, pFace2, spectrum;
+        let startTime = null;
+
+        // Animation Timings (in milliseconds)
+        const DUR_IN = 800;
+        const DUR_INT = 200;
+        const DUR_OUT = 1500;
+        
+        // Helper to clamp values between 0 and 1
+        const clamp = (val) => Math.max(0, Math.min(1, val));
+
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+            calculateGeometry();
+        }
+
+        function calculateGeometry() {
+            const cx = w / 2;
+            const cy = h / 2;
+            
+            // Triangle size relative to screen
+            const side = Math.min(w, h) * 0.35;
+            const h_tri = side * Math.sqrt(3) / 2;
+
+            // Equilateral Triangle Vertices
+            tri = [
+                { x: cx, y: cy - h_tri / 2 },          // Top
+                { x: cx + side / 2, y: cy + h_tri / 2 }, // Bottom Right
+                { x: cx - side / 2, y: cy + h_tri / 2 }  // Bottom Left
+            ];
+
+            // Point where light hits left face (approx 45% down from top)
+            const t1 = 0.45;
+            pFace1 = {
+                x: tri[0].x * (1 - t1) + tri[2].x * t1,
+                y: tri[0].y * (1 - t1) + tri[2].y * t1
+            };
+
+            // Point where light exits right face (approx 65% down from top - refracting downwards)
+            const t2 = 0.65;
+            pFace2 = {
+                x: tri[0].x * (1 - t2) + tri[1].x * t2,
+                y: tri[0].y * (1 - t2) + tri[1].y * t2
+            };
+
+            // Incoming beam origin (off-screen left, slight downward slope)
+            pIn = {
+                x: -100,
+                y: pFace1.y - (pFace1.x + 100) * 0.06 
+            };
+
+            // Spectrum definitions (Classic 7 colors)
+            const colors = [
+                '#FF3333', // Red
+                '#FF9933', // Orange
+                '#FFFF66', // Yellow
+                '#33FF33', // Green
+                '#3399FF', // Blue
+                '#6633FF', // Indigo
+                '#CC33FF'  // Violet
+            ];
+            
+            // Slopes dictate how far they spread vertically
+            const slopes = [0.01, 0.05, 0.09, 0.13, 0.17, 0.21, 0.25];
+
+            spectrum = colors.map((c, i) => ({
+                color: c,
+                pEnd: {
+                    x: w + 100,
+                    y: pFace2.y + (w + 100 - pFace2.x) * slopes[i]
+                }
+            }));
+        }
+
+        function drawGrid() {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            ctx.lineWidth = 1;
+            const gridSize = 50;
+            
+            ctx.beginPath();
+            for(let x = 0; x < w; x += gridSize) {
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, h);
+            }
+            for(let y = 0; y < h; y += gridSize) {
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+            }
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        function drawTriangle() {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(tri[0].x, tri[0].y);
+            ctx.lineTo(tri[1].x, tri[1].y);
+            ctx.lineTo(tri[2].x, tri[2].y);
+            ctx.closePath();
+            ctx.stroke();
+
+            // Very subtle glass fill
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.015)';
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawGlowingLine(p1, p2, progress, coreColor, glowColor, baseWidth, pulseAmount) {
+            if (progress <= 0) return;
+            
+            let ex = p1.x + (p2.x - p1.x) * progress;
+            let ey = p1.y + (p2.y - p1.y) * progress;
+
+            ctx.save();
+            ctx.lineCap = 'round';
+            // 'screen' blending makes colors combine into white light when overlapping
+            ctx.globalCompositeOperation = 'screen'; 
+
+            const layers = [
+                { w: baseWidth * 6, a: 0.15 * pulseAmount, blur: 20 },
+                { w: baseWidth * 3, a: 0.35 * pulseAmount, blur: 10 },
+                { w: baseWidth * 1.5, a: 0.7 * pulseAmount, blur: 5 },
+                { w: baseWidth, a: 1.0, blur: 0, isCore: true }
+            ];
+
+            layers.forEach(layer => {
+                ctx.beginPath();
+                ctx.moveTo(p1.x, p1.y);
+                ctx.lineTo(ex, ey);
+                ctx.strokeStyle = layer.isCore ? coreColor : glowColor;
+                ctx.lineWidth = layer.w;
+                ctx.globalAlpha = layer.a;
+                ctx.shadowColor = glowColor;
+                ctx.shadowBlur = layer.blur;
+                ctx.stroke();
+            });
+
+            ctx.restore();
+        }
+
+        function animate(time) {
+            if (!startTime) startTime = time;
+            let elapsed = time - startTime;
+
+            // Clear frame
+            ctx.fillStyle = '#070707';
+            ctx.fillRect(0, 0, w, h);
+
+            drawGrid();
+            drawTriangle();
+
+            // Calculate progress for each phase
+            let progIn = clamp(elapsed / DUR_IN);
+            let progInt = clamp((elapsed - DUR_IN) / DUR_INT);
+            let progOut = clamp((elapsed - DUR_IN - DUR_INT) / DUR_OUT);
+
+            // Shimmer effect (subtle pulsing glow after drawing)
+            let shimmer = 1 + 0.15 * Math.sin(time / 200);
+
+            // Phase 1: Incoming White Beam
+            drawGlowingLine(pIn, pFace1, progIn, '#FFFFFF', '#FFFFFF', 2, shimmer);
+
+            // Phase 2: Faint Internal Refraction
+            if (progInt > 0) {
+                drawGlowingLine(pFace1, pFace2, progInt, 'rgba(255,255,255,0.4)', '#FFFFFF', 1, shimmer * 0.5);
+            }
+
+            // Phase 3: Outgoing Spectrum
+            if (progOut > 0) {
+                // Bright white flare exactly at the exit point
+                ctx.save();
+                ctx.globalCompositeOperation = 'screen';
+                ctx.beginPath();
+                ctx.arc(pFace2.x, pFace2.y, 4 * progOut, 0, Math.PI * 2);
+                ctx.fillStyle = '#FFFFFF';
+                ctx.shadowColor = '#FFFFFF';
+                ctx.shadowBlur = 15;
+                ctx.fill();
+                ctx.restore();
+
+                // Draw each colored beam
+                spectrum.forEach(spec => {
+                    drawGlowingLine(pFace2, spec.pEnd, progOut, spec.color, spec.color, 1.8, shimmer);
+                });
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Initialization
+        window.addEventListener('resize', resize);
+        resize(); // Initial calculation
+        requestAnimationFrame(animate); // Start loop
+
+    </script>
+</body>
+</html>
