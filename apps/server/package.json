@@ -36,7 +36,7 @@
   "devDependencies": {
     "@brainiac/config": "workspace:*",
     "@types/bun": "catalog:",
-    "tsdown": "^0.16.5",
+    "tsdown": "^0.22.3",
     "typescript": "catalog:"
   }
 }
