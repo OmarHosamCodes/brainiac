@@ -64,6 +64,13 @@
   --shadow-2xl: 0.5px 0.25rem 5px -8.5px hsl(0 0% 0% / 0.25);
   --tracking-normal: 0.025em;
   --spacing: 0.3rem;
+
+  --marketing-ink: oklch(0.13 0.005 285);
+  --marketing-ink-foreground: oklch(0.98 0.002 285);
+  --marketing-ink-muted: oklch(0.55 0.005 285);
+  --marketing-ink-border: oklch(0.27 0.005 285);
+  --marketing-paper: var(--background);
+  --marketing-emerald-glow: oklch(0.508 0.118 165.612 / 0.15);
 }
 
 .dark {
@@ -723,4 +730,67 @@ body {
 }
 :where(html) .text-inverted {
   color: var(--color-inverted-foreground);
+}
+
+/* Marketing: neural canvas artifact (CodePen-inspired signal paths) */
+.neural-artifact {
+  --neural-stroke: oklch(0.72 0.17 162 / 0.35);
+  --neural-node: oklch(0.72 0.17 162 / 0.85);
+  --neural-node-soft: oklch(0.72 0.17 162 / 0.45);
+}
+
+.neural-artifact__path {
+  fill: none;
+  stroke: var(--neural-stroke);
+  stroke-width: 1;
+  stroke-linecap: round;
+}
+
+.neural-artifact__path--animate {
+  animation: neural-signal 3s cubic-bezier(0.25, 1, 0.5, 1) alternate infinite;
+}
+
+.neural-artifact__node {
+  fill: var(--neural-node-soft);
+  stroke: var(--neural-node);
+  stroke-width: 1;
+}
+
+.neural-artifact__node--animate {
+  animation: neural-pulse 3s cubic-bezier(0.25, 1, 0.5, 1) alternate infinite;
+}
+
+@keyframes neural-signal {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes neural-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neural-artifact__path--animate,
+  .neural-artifact__node--animate {
+    animation: none;
+  }
+
+  .neural-artifact__path--animate {
+    stroke-dashoffset: 0;
+  }
+
+  .neural-artifact__node--animate {
+    opacity: 0.85;
+    transform: none;
+  }
 }

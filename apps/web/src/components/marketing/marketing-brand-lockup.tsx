@@ -20,8 +20,8 @@ export function MarketingBrandLockup({
         className={cn(
           "flex size-7 items-center justify-center rounded-md",
           invert
-            ? "bg-neutral-100 text-neutral-900"
-            : "bg-neutral-900 text-white dark:bg-neutral-100 dark:text-neutral-900",
+            ? "bg-[var(--marketing-ink-foreground)] text-[var(--marketing-ink)]"
+            : "bg-foreground text-background",
         )}
       >
         <BrainCircuit className="size-4" />

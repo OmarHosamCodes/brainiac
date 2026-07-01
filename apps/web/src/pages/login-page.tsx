@@ -159,12 +159,12 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--marketing-paper)] text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
-      <aside className="relative hidden flex-1 flex-col justify-between overflow-hidden bg-[var(--marketing-ink)] p-12 text-neutral-100 lg:flex xl:p-16">
+    <div className="flex min-h-screen bg-background text-foreground">
+      <aside className="relative hidden flex-1 flex-col justify-between overflow-hidden bg-[var(--marketing-ink)] p-12 text-[var(--marketing-ink-foreground)] lg:flex xl:p-16">
         <NeuralCanvasArtifact className="opacity-40" />
 
         <div className="relative z-10">
-          <MarketingBrandLockup invert linkToHome className="text-neutral-100" />
+          <MarketingBrandLockup invert linkToHome />
         </div>
 
         <div className="relative z-10 max-w-lg">
@@ -173,13 +173,13 @@ export function LoginPage() {
             <br />
             Run your agency.
           </h2>
-          <p className="mt-6 text-lg leading-relaxed text-neutral-400">
+          <p className="mt-6 text-lg leading-relaxed text-[var(--marketing-ink-muted)]">
             Canvas for ideas, Agency for execution. Sign in to open your workspace and pick up where
             you left off.
           </p>
         </div>
 
-        <p className="relative z-10 text-xs text-neutral-500">
+        <p className="relative z-10 text-xs text-[var(--marketing-ink-muted)]">
           &copy; {new Date().getFullYear()} Brainiac
         </p>
       </aside>
@@ -193,7 +193,7 @@ export function LoginPage() {
                 <h1 className="text-2xl font-bold tracking-tight">
                   {isSignUp ? "Create your account" : "Sign in"}
                 </h1>
-                <p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                   {isSignUp
                     ? "Start with a free workspace. 10 nodes, agent included."
                     : "Access your canvas, agency tools, and agent history."}
@@ -220,7 +220,7 @@ export function LoginPage() {
 
             <button
               type="button"
-              className="flex w-full items-center justify-center gap-2 text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+              className="flex w-full items-center justify-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               onClick={toggleEmailAuth}
               aria-expanded={emailAuthOpen}
             >
@@ -243,10 +243,10 @@ export function LoginPage() {
                 <div className="space-y-4 pt-1">
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-neutral-200 dark:border-neutral-800" />
+                      <span className="w-full border-t border-border" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-[var(--marketing-paper)] px-2 text-neutral-500 dark:bg-neutral-950">
+                      <span className="bg-background px-2 text-muted-foreground">
                         or
                       </span>
                     </div>
@@ -308,7 +308,7 @@ export function LoginPage() {
                               />
                             </FormControl>
                             {isSignUp ? (
-                              <p className="text-xs text-neutral-500">At least 8 characters.</p>
+                              <p className="text-xs text-muted-foreground">At least 8 characters.</p>
                             ) : null}
                             <FormMessage />
                           </FormItem>
@@ -324,7 +324,7 @@ export function LoginPage() {
                     </form>
                   </Form>
 
-                  <p className="text-center text-sm text-neutral-500">
+                  <p className="text-center text-sm text-muted-foreground">
                     {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
                     <button
                       type="button"
@@ -340,20 +340,20 @@ export function LoginPage() {
           </div>
         </div>
 
-        <footer className="border-t border-neutral-200 px-6 py-4 dark:border-neutral-800">
-          <div className="mx-auto flex max-w-md flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-neutral-500">
-            <Link to="/" className="transition-colors hover:text-neutral-900 dark:hover:text-neutral-100">
+        <footer className="border-t border-border px-6 py-4">
+          <div className="mx-auto flex max-w-md flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <Link to="/" className="transition-colors hover:text-foreground">
               Home
             </Link>
             <Link
               to="/terms"
-              className="transition-colors hover:text-neutral-900 dark:hover:text-neutral-100"
+              className="transition-colors hover:text-foreground"
             >
               Terms
             </Link>
             <Link
               to="/privacy"
-              className="transition-colors hover:text-neutral-900 dark:hover:text-neutral-100"
+              className="transition-colors hover:text-foreground"
             >
               Privacy
             </Link>

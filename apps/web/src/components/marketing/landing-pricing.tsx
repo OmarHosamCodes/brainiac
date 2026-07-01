@@ -74,30 +74,30 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
   return (
     <section
       id="pricing"
-      className="w-full scroll-mt-8 border-t border-neutral-200 bg-[var(--marketing-paper)] dark:border-neutral-800/80 dark:bg-neutral-950"
+      className="w-full scroll-mt-8 border-t border-border bg-background"
     >
       <div className="mx-auto max-w-4xl px-6 py-20 md:px-10 md:py-28 lg:px-16">
         <div className="max-w-2xl">
           <h2 className="text-3xl leading-[1.1] font-bold tracking-tight md:text-5xl">
             Free to try. Pro when you need the room.
           </h2>
-          <p className="mt-5 text-base leading-relaxed text-neutral-600 md:text-lg dark:text-neutral-400">
+          <p className="mt-5 text-base leading-relaxed text-muted-foreground md:text-lg">
             Start with 10 nodes, 6 blocks per tab, and the AI agent. Upgrade for 200 nodes, agency
             ops, and marketplace publishing.
           </p>
         </div>
 
-        <div className="mt-12 overflow-hidden rounded-2xl border border-neutral-200 dark:border-neutral-800">
+        <div className="mt-12 overflow-hidden rounded-2xl border border-border">
           <table className="w-full border-collapse text-left">
             <caption className="sr-only">Brainiac plan comparison</caption>
             <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/60">
-                <th scope="col" className="w-[44%] px-5 py-4 text-sm font-semibold text-neutral-500">
+              <tr className="border-b border-border bg-muted/60">
+                <th scope="col" className="w-[44%] px-5 py-4 text-sm font-semibold text-muted-foreground">
                   Plan
                 </th>
                 <th
                   scope="col"
-                  className="w-[28%] px-5 py-4 text-center text-sm font-semibold text-neutral-700 dark:text-neutral-300"
+                  className="w-[28%] px-5 py-4 text-center text-sm font-semibold text-muted-foreground"
                 >
                   Free
                 </th>
@@ -108,20 +108,20 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
                   Pro
                 </th>
               </tr>
-              <tr className="border-b border-neutral-200 dark:border-neutral-800">
+              <tr className="border-b border-border">
                 <td className="px-5 py-6 align-top">
-                  <p className="text-sm text-neutral-500">Monthly price</p>
+                  <p className="text-sm text-muted-foreground">Monthly price</p>
                 </td>
                 <td className="px-5 py-6 text-center align-top">
                   <p className="text-3xl font-bold tabular-nums">$0</p>
-                  <p className="mt-1 text-xs text-neutral-500">10 nodes, single user</p>
+                  <p className="mt-1 text-xs text-muted-foreground">10 nodes, single user</p>
                   <Button asChild variant="outline" size="sm" className="mt-4 w-full max-w-[10rem]">
                     <Link to={isAuthenticated ? "/dashboard" : "/login"}>Get started</Link>
                   </Button>
                 </td>
                 <td className="bg-primary/5 px-5 py-6 text-center align-top">
                   <p className="text-3xl font-bold tabular-nums">$19</p>
-                  <p className="mt-1 text-xs text-neutral-500">200 nodes, teams, agency ops</p>
+                  <p className="mt-1 text-xs text-muted-foreground">200 nodes, teams, agency ops</p>
                   <Button
                     size="sm"
                     variant={isAuthenticated && isPro ? "outline" : "default"}
@@ -137,11 +137,11 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
               {features.map((feature) => (
                 <tr
                   key={feature.label}
-                  className="border-b border-neutral-200 last:border-b-0 dark:border-neutral-800"
+                  className="border-b border-border last:border-b-0"
                 >
                   <th
                     scope="row"
-                    className="px-5 py-4 text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                    className="px-5 py-4 text-sm font-medium text-muted-foreground"
                   >
                     {feature.label}
                   </th>
