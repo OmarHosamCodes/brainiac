@@ -18,7 +18,7 @@ export const agencyFocusRingClass = shellFocusRingClass;
 /** Readable placeholder text on default/elevated agency surfaces (≥4.5:1). */
 export const agencyInputPlaceholderClass = "placeholder:text-muted-foreground";
 
-export const agencyPanelClass = "rounded-2xl border border-default bg-default";
+export const agencyPanelClass = "rounded-[2rem] border border-default bg-default";
 
 export const agencyFormFieldClass = "flex w-full min-w-0 flex-col gap-1.5";
 

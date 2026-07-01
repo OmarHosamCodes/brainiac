@@ -1,10 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { BrainCircuit, ChevronDown, Loader2 } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Navigate, Link, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
+import { MarketingBrandLockup } from "@/components/marketing/marketing-brand-lockup";
+import { NeuralCanvasArtifact } from "@/components/marketing/neural-canvas-artifact";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -157,192 +159,206 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen">
-      <aside className="relative hidden flex-1 flex-col justify-between overflow-hidden border-r border-border bg-muted/40 p-12 lg:flex xl:p-16">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-40"
-          style={{
-            backgroundImage: "radial-gradient(circle at 2px 2px, var(--border) 1px, transparent 0)",
-            backgroundSize: "24px 24px",
-          }}
-        />
-        <Link to="/" className="relative z-10 flex items-center gap-3">
-          <div className="flex size-12 items-center justify-center rounded-2xl bg-foreground text-background">
-            <BrainCircuit className="size-7" />
-          </div>
-          <div>
-            <p className="text-xl font-bold tracking-tight">Brainiac</p>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-              The infinite workspace
-            </p>
-          </div>
-        </Link>
+    <div className="flex min-h-screen bg-[var(--marketing-paper)] text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+      <aside className="relative hidden flex-1 flex-col justify-between overflow-hidden bg-[var(--marketing-ink)] p-12 text-neutral-100 lg:flex xl:p-16">
+        <NeuralCanvasArtifact className="opacity-40" />
+
+        <div className="relative z-10">
+          <MarketingBrandLockup invert linkToHome className="text-neutral-100" />
+        </div>
 
         <div className="relative z-10 max-w-lg">
-          <h2 className="text-4xl font-bold leading-tight tracking-tight xl:text-5xl">
-            Reimagine the way you <span className="text-primary italic">think</span>.
+          <h2 className="text-4xl leading-[1.05] font-bold tracking-[-0.02em] text-balance xl:text-5xl">
+            Map your thinking.
+            <br />
+            Run your agency.
           </h2>
-          <p className="mt-6 text-lg leading-relaxed text-muted-foreground">
-            Your mind isn&apos;t a grid. It&apos;s a canvas. Brainiac organizes chaos into clarity
-            with an infinite spatial interface powered by an embedded agent.
+          <p className="mt-6 text-lg leading-relaxed text-neutral-400">
+            Canvas for ideas, Agency for execution. Sign in to open your workspace and pick up where
+            you left off.
           </p>
         </div>
 
-        <div className="relative z-10 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-          &copy; 2026 Brainiac
-        </div>
+        <p className="relative z-10 text-xs text-neutral-500">
+          &copy; {new Date().getFullYear()} Brainiac
+        </p>
       </aside>
 
-      <main className="flex flex-1 items-center justify-center px-6 py-12">
-        <div className="w-full max-w-md space-y-8">
-          <div className="flex flex-col items-center gap-3 text-center lg:items-start lg:text-left">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-foreground text-background lg:hidden">
-              <BrainCircuit className="size-7" />
+      <main className="flex flex-1 flex-col">
+        <div className="flex flex-1 items-center justify-center px-6 py-12">
+          <div className="w-full max-w-md space-y-8">
+            <div className="flex flex-col gap-4 lg:items-start">
+              <MarketingBrandLockup linkToHome className="lg:hidden" />
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">
+                  {isSignUp ? "Create your account" : "Sign in"}
+                </h1>
+                <p className="mt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                  {isSignUp
+                    ? "Start with a free workspace. 10 nodes, agent included."
+                    : "Access your canvas, agency tools, and agent history."}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                {isSignUp ? "Create your account" : "Welcome back"}
-              </h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {isSignUp
-                  ? "Start building your infinite workspace."
-                  : "Sign in to access your infinite workspace."}
-              </p>
-            </div>
-          </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            disabled={pending}
-            onClick={() => void handleGoogleSignIn()}
-          >
-            {pending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <img src={GOOGLE_LOGO_URL} alt="" className="size-4" />
-            )}
-            Continue with Google
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={pending}
+              onClick={() => void handleGoogleSignIn()}
+            >
+              {pending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <img src={GOOGLE_LOGO_URL} alt="" className="size-4" />
+              )}
+              Continue with Google
+            </Button>
 
-          {error && !emailAuthOpen ? <p className="text-sm text-destructive">{error}</p> : null}
+            {error && !emailAuthOpen ? <p className="text-sm text-destructive">{error}</p> : null}
 
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            onClick={toggleEmailAuth}
-            aria-expanded={emailAuthOpen}
-          >
-            Sign in with email and password
-            <ChevronDown
-              className={cn("size-4 transition-transform duration-300", emailAuthOpen && "rotate-180")}
-            />
-          </button>
+            <button
+              type="button"
+              className="flex w-full items-center justify-center gap-2 text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+              onClick={toggleEmailAuth}
+              aria-expanded={emailAuthOpen}
+            >
+              Sign in with email and password
+              <ChevronDown
+                className={cn(
+                  "size-4 transition-transform duration-300",
+                  emailAuthOpen && "rotate-180",
+                )}
+              />
+            </button>
 
-          <div
-            className={cn(
-              "grid transition-[grid-template-rows] duration-300 ease-in-out",
-              emailAuthOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-            )}
-          >
-            <div className="overflow-hidden">
-              <div className="space-y-4 pt-1">
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border" />
+            <div
+              className={cn(
+                "grid transition-[grid-template-rows] duration-300 ease-in-out",
+                emailAuthOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+              )}
+            >
+              <div className="overflow-hidden">
+                <div className="space-y-4 pt-1">
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t border-neutral-200 dark:border-neutral-800" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-[var(--marketing-paper)] px-2 text-neutral-500 dark:bg-neutral-950">
+                        or
+                      </span>
+                    </div>
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">or</span>
-                  </div>
-                </div>
 
-                <Form {...form}>
-                  <form
-                    className="space-y-4"
-                    onSubmit={form.handleSubmit((values) =>
-                      isSignUp ? handleSignUp(values as SignUpFormValues) : handleSignIn(values),
-                    )}
-                  >
-                    {isSignUp ? (
+                  <Form {...form}>
+                    <form
+                      className="space-y-4"
+                      onSubmit={form.handleSubmit((values) =>
+                        isSignUp ? handleSignUp(values as SignUpFormValues) : handleSignIn(values),
+                      )}
+                    >
+                      {isSignUp ? (
+                        <FormField
+                          control={signUpForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Name</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="text"
+                                  autoComplete="name"
+                                  placeholder="Jane Doe"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      ) : null}
+
                       <FormField
-                        control={signUpForm.control}
-                        name="name"
+                        control={form.control}
+                        name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Name</FormLabel>
+                            <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input
-                                type="text"
-                                autoComplete="name"
-                                placeholder="Jane Doe"
-                                {...field}
-                              />
+                              <Input type="email" autoComplete="email" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    ) : null}
 
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input type="email" autoComplete="email" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Password</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="password"
+                                autoComplete={isSignUp ? "new-password" : "current-password"}
+                                {...field}
+                              />
+                            </FormControl>
+                            {isSignUp ? (
+                              <p className="text-xs text-neutral-500">At least 8 characters.</p>
+                            ) : null}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                    <FormField
-                      control={form.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Password</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="password"
-                              autoComplete={isSignUp ? "new-password" : "current-password"}
-                              {...field}
-                            />
-                          </FormControl>
-                          {isSignUp ? (
-                            <p className="text-xs text-muted-foreground">At least 8 characters.</p>
-                          ) : null}
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                      {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-                    {error ? <p className="text-sm text-destructive">{error}</p> : null}
+                      <Button type="submit" className="w-full" disabled={pending}>
+                        {pending ? <Loader2 className="size-4 animate-spin" /> : null}
+                        {isSignUp ? "Create account" : "Sign in"}
+                      </Button>
+                    </form>
+                  </Form>
 
-                    <Button type="submit" className="w-full" disabled={pending}>
-                      {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-                      {isSignUp ? "Create account" : "Sign in"}
-                    </Button>
-                  </form>
-                </Form>
-
-                <p className="text-center text-sm text-muted-foreground">
-                  {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-                  <button
-                    type="button"
-                    className="font-semibold text-primary hover:underline"
-                    onClick={() => switchMode(isSignUp ? "sign-in" : "sign-up")}
-                  >
-                    {isSignUp ? "Sign in" : "Sign up"}
-                  </button>
-                </p>
+                  <p className="text-center text-sm text-neutral-500">
+                    {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+                    <button
+                      type="button"
+                      className="font-semibold text-primary hover:underline"
+                      onClick={() => switchMode(isSignUp ? "sign-in" : "sign-up")}
+                    >
+                      {isSignUp ? "Sign in" : "Sign up"}
+                    </button>
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        <footer className="border-t border-neutral-200 px-6 py-4 dark:border-neutral-800">
+          <div className="mx-auto flex max-w-md flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-neutral-500">
+            <Link to="/" className="transition-colors hover:text-neutral-900 dark:hover:text-neutral-100">
+              Home
+            </Link>
+            <Link
+              to="/terms"
+              className="transition-colors hover:text-neutral-900 dark:hover:text-neutral-100"
+            >
+              Terms
+            </Link>
+            <Link
+              to="/privacy"
+              className="transition-colors hover:text-neutral-900 dark:hover:text-neutral-100"
+            >
+              Privacy
+            </Link>
+          </div>
+        </footer>
       </main>
     </div>
   );

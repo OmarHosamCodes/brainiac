@@ -37,14 +37,27 @@ function ThemeToggle() {
   );
 }
 
-export function MarketingPageShell({ children }: { children: ReactNode }) {
+export function MarketingPageShell({
+  children,
+  heroIsDark = false,
+}: {
+  children: ReactNode;
+  heroIsDark?: boolean;
+}) {
   const healthCheck = useQuery({
     ...orpc.healthCheck.queryOptions(),
   } as unknown as Parameters<typeof useQuery>[0]);
   const year = new Date().getFullYear();
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-white text-neutral-900 selection:bg-primary/20 dark:bg-neutral-950 dark:text-neutral-100">
+    <div
+      className={cn(
+        "flex min-h-screen w-full flex-col selection:bg-primary/20",
+        heroIsDark
+          ? "bg-[var(--marketing-paper)] text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100"
+          : "bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100",
+      )}
+    >
       {children}
 
       <footer className="mt-auto w-full border-t border-neutral-200 dark:border-neutral-800/80">
