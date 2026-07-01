@@ -1031,6 +1031,8 @@ export async function listAgencyProjectTasks(
     statuses?: ("open" | "in_progress" | "done" | "archived")[];
     assigneeUserId?: string;
     search?: string;
+    page?: number;
+    pageSize?: number;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -1098,6 +1100,19 @@ export async function listAgencyProjectTasks(
     filters.push(sql`lower(${agencyOpsProjectTask.title}) like ${`%${searchTerm}%`}`);
   }
 
+  const page = Math.max(1, input.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 50));
+  const offset = (page - 1) * pageSize;
+  const whereClause = and(...filters);
+
+  const [countRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(agencyOpsProjectTask)
+    .where(whereClause);
+
+  const parsedTotal = Number(countRow?.count ?? 0);
+  const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
+
   const rows = await db
     .select({
       id: agencyOpsProjectTask.id,
@@ -1111,8 +1126,10 @@ export async function listAgencyProjectTasks(
       updatedAt: agencyOpsProjectTask.updatedAt,
     })
     .from(agencyOpsProjectTask)
-    .where(and(...filters))
-    .orderBy(desc(agencyOpsProjectTask.createdAt));
+    .where(whereClause)
+    .orderBy(desc(agencyOpsProjectTask.createdAt))
+    .limit(pageSize)
+    .offset(offset);
 
   const assigneesByTask = await loadTaskAssignees(rows.map((row) => row.id));
   const memberStatusesByTask = input.assigneeUserId
@@ -1130,6 +1147,9 @@ export async function listAgencyProjectTasks(
         ),
       ),
     ),
+    page,
+    pageSize,
+    total,
   };
 }
 

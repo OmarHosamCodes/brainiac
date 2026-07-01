@@ -30,6 +30,9 @@ type AgencyProjectTask = {
 
 type AgencyProjectTasksListQueryData = {
   items: AgencyProjectTask[];
+  page?: number;
+  pageSize?: number;
+  total?: number;
 };
 
 type ProjectTasksListInput = {
@@ -218,7 +221,11 @@ export function patchInsertedProjectTaskInCache(teamId: string, task: AgencyProj
         items: base.items.map((item) => (item.id === task.id ? task : item)),
       };
     }
-    return { ...base, items: [task, ...base.items] };
+    return {
+      ...base,
+      items: [task, ...base.items],
+      total: typeof base.total === "number" ? base.total + 1 : base.total,
+    };
   });
 }
 

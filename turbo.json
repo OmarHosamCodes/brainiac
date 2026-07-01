@@ -52,6 +52,9 @@
     "db:seed": {
       "cache": false
     },
+    "db:seed:massive": {
+      "cache": false
+    },
     "db:seed:agency": {
       "cache": false
     },

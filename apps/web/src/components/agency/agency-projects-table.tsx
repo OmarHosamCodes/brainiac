@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertTriangle, Building2, FolderKanban, Plus, Search } from "lucide-react";
 import { useImperativeHandle, useMemo, useState, forwardRef, useEffect } from "react";
 
@@ -7,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AgencyMultiSelectFilter } from "@/components/agency/agency-multi-select-filter";
+import { AgencyProjectsVirtualTable } from "@/components/agency/agency-projects-virtual-table";
 import {
   useAgencyClientsQuery,
   useAgencyProjectTasksQuery,
@@ -17,13 +19,10 @@ import { orpc } from "@/lib/orpc";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
-  agencyLabelClass,
 } from "@/lib/utils/agency-ui";
-import { formatDuration } from "@/lib/utils/format-duration";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { taskMatchesAnyAssigneeFilter } from "@/lib/utils/agency-query-cache";
 import { getTaskGroupKey, groupTasksByProjectTitle } from "@/lib/utils/agency-task-utils";
-import { projectHueStyle } from "@/lib/utils/project-palette";
+import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
 import { selectIsProjectMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
 export type AgencyProjectsTableHandle = {
@@ -65,7 +64,19 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
     const projectsQuery = useAgencyProjectsQuery(teamId);
     const clientsQuery = useAgencyClientsQuery(teamId);
     const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
-    const tasksQuery = useAgencyProjectTasksQuery(teamId);
+    const membersQuery = useQuery(
+      withAgencySyncQueryOptions(
+        {
+          ...orpc.agencyOps.taskThreads.members.list.queryOptions({ input: { teamId } }),
+          enabled: Boolean(teamId),
+        },
+        "warm",
+      ),
+    );
+    const tasksQuery = useAgencyProjectTasksQuery(teamId, {
+      search: filterTerm.trim() || undefined,
+      pageSize: 100,
+    });
 
     const budgetsQuery = useQuery({
       ...orpc.agencyOps.budgets.list.queryOptions({ input: { teamId } }),
@@ -87,15 +98,16 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
 
     const peopleOptions = useMemo(() => {
       const people = new Map<string, string>();
-      for (const task of tasks) {
-        for (const assignee of task.assignees) {
-          people.set(assignee.userId, assignee.userName);
-        }
+      for (const member of membersQuery.data?.items ?? []) {
+        people.set(member.userId, member.userName);
+      }
+      for (const entry of entries) {
+        people.set(entry.userId, entry.userName);
       }
       return Array.from(people, ([value, label]) => ({ value, label })).sort((a, b) =>
         a.label.localeCompare(b.label),
       );
-    }, [tasks]);
+    }, [entries, membersQuery.data?.items]);
 
     const clientOptions = useMemo(
       () => clients.map((client) => ({ value: client.id, label: client.name })),
@@ -139,9 +151,8 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
         if (projectsSet.size > 0 && !projectsSet.has(project.id)) return false;
         if (
           peopleSet.size > 0 &&
-          !tasks.some(
-            (task) =>
-              task.projectId === project.id && taskMatchesAnyAssigneeFilter(task, peopleSet),
+          !entries.some(
+            (entry) => entry.projectId === project.id && peopleSet.has(entry.userId),
           )
         ) {
           return false;
@@ -157,6 +168,7 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
         return true;
       });
     }, [
+      entries,
       filterTerm,
       projects,
       selectedClientIds,
@@ -365,99 +377,14 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
             <p className="mt-1 text-xs text-muted">Try a different search.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-default bg-default">
-            <table className="w-full min-w-[40rem] text-xs">
-              <thead className="border-b border-default bg-muted">
-                <tr className={agencyLabelClass}>
-                  <th scope="col" className="px-4 py-2.5 font-bold">
-                    Project
-                  </th>
-                  <th scope="col" className="px-3 py-2.5 font-bold">
-                    Client
-                  </th>
-                  <th scope="col" className="px-3 py-2.5 font-bold">
-                    Budget
-                  </th>
-                  <th scope="col" className="px-3 py-2.5 text-right font-bold">
-                    Hours · this week
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredProjects.map((project) => (
-                  <tr
-                    key={project.id}
-                    className="cursor-pointer border-b border-default last:border-b-0 transition-colors hover:bg-elevated/40"
-                    tabIndex={0}
-                    onClick={() => onSelect(project.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        onSelect(project.id);
-                      }
-                    }}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex min-w-0 items-center gap-2">
-                        <span
-                          className="agency-projects__dot inline-block size-2 shrink-0 rounded-full"
-                          aria-hidden="true"
-                          style={projectHueStyle(project.id)}
-                        />
-                        <span className="truncate font-bold text-highlighted">{project.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-muted">
-                      <span className="truncate">{project.clientName}</span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 rounded-full bg-elevated">
-                          <div
-                            className={[
-                              "h-full rounded-full transition-[width] duration-200 ease-out",
-                              budgetsByProject.get(project.id)
-                                ? budgetToneFor(project.id)
-                                : "bg-muted",
-                            ].join(" ")}
-                            style={{
-                              width: budgetsByProject.get(project.id)
-                                ? `${budgetPctFor(project.id)}%`
-                                : "0%",
-                            }}
-                          />
-                        </div>
-                        <span
-                          className={[
-                            "text-[11px]",
-                            budgetsByProject.get(project.id)
-                              ? "font-mono tabular-nums text-muted"
-                              : "text-dimmed",
-                          ].join(" ")}
-                        >
-                          {budgetsByProject.get(project.id)
-                            ? `${budgetPctFor(project.id)}%`
-                            : "Not set"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 text-right">
-                      <span
-                        className={[
-                          "font-mono font-bold tabular-nums",
-                          (hoursThisWeekByProject.get(project.id) ?? 0) > 0
-                            ? "text-highlighted"
-                            : "text-dimmed",
-                        ].join(" ")}
-                      >
-                        {formatDuration(hoursThisWeekByProject.get(project.id) ?? 0, "short")}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <AgencyProjectsVirtualTable
+            projects={filteredProjects}
+            hoursThisWeekByProject={hoursThisWeekByProject}
+            budgetsByProject={budgetsByProject}
+            budgetPctFor={budgetPctFor}
+            budgetToneFor={budgetToneFor}
+            onSelect={onSelect}
+          />
         )}
       </div>
     );

@@ -1,19 +1,54 @@
-import * as LucideIcons from "lucide-react";
-import type { ComponentType, SVGProps } from "react";
+import {
+  BarChart3,
+  Briefcase,
+  Building2,
+  CalendarRange,
+  CreditCard,
+  DollarSign,
+  FolderKanban,
+  LayoutDashboard,
+  Palette,
+  Plug,
+  Receipt,
+  Repeat,
+  Rocket,
+  Scale,
+  Settings,
+  ShoppingBag,
+  SlidersHorizontal,
+  Target,
+  Users,
+  type LucideIcon as LucideIconComponent,
+} from "lucide-react";
 
-function toLucideComponentName(iconName: string) {
-  return iconName
-    .replace(/^i-lucide-/, "")
-    .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("");
+const ICON_BY_SLUG: Record<string, LucideIconComponent> = {
+  "bar-chart-3": BarChart3,
+  briefcase: Briefcase,
+  "building-2": Building2,
+  "calendar-range": CalendarRange,
+  "credit-card": CreditCard,
+  "dollar-sign": DollarSign,
+  "folder-kanban": FolderKanban,
+  "layout-dashboard": LayoutDashboard,
+  palette: Palette,
+  plug: Plug,
+  receipt: Receipt,
+  repeat: Repeat,
+  rocket: Rocket,
+  scale: Scale,
+  settings: Settings,
+  "shopping-bag": ShoppingBag,
+  "sliders-horizontal": SlidersHorizontal,
+  target: Target,
+  users: Users,
+};
+
+function toIconSlug(iconName: string) {
+  return iconName.replace(/^i-lucide-/, "");
 }
 
 export function LucideIcon({ name, className }: { name: string; className?: string }) {
-  const componentName = toLucideComponentName(name);
-  const Icon = (LucideIcons as unknown as Record<string, ComponentType<SVGProps<SVGSVGElement>>>)[
-    componentName
-  ];
+  const Icon = ICON_BY_SLUG[toIconSlug(name)];
   if (!Icon) {
     return null;
   }

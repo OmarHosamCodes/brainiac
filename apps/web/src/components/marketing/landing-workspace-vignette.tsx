@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { WorkspaceNodeCard } from "@/components/workspace/workspace-node-card";
+import { MarketingNodeCard } from "@/components/marketing/marketing-node-card";
 import { marketingWorkspaceNodes } from "@/components/marketing/marketing-demo-data";
 import { cn } from "@/lib/utils";
 
@@ -114,11 +114,7 @@ export function LandingWorkspaceVignette({ className }: { className?: string }) 
                   }}
                 >
                   <div className="h-full overflow-hidden">
-                    <WorkspaceNodeCard
-                    node={node}
-                    selected={selected}
-                    allNodes={marketingWorkspaceNodes}
-                  />
+                    <MarketingNodeCard node={node} selected={selected} />
                   </div>
                 </div>
               );

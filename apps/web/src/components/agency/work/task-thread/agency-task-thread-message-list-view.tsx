@@ -1,3 +1,4 @@
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 
@@ -82,9 +83,16 @@ export function AgencyTaskThreadMessageListView({
   const scrollAnchorKey =
     messages.length > 0 ? messages[messages.length - 1]?.animationKey : "empty";
 
+  const virtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => threadContainerRef.current,
+    estimateSize: () => 88,
+    overscan: 6,
+  });
+
   useEffect(() => {
     const container = threadContainerRef.current;
-    if (!container) return;
+    if (!container || messages.length === 0) return;
 
     container.scrollTo({
       top: container.scrollHeight,
@@ -94,15 +102,30 @@ export function AgencyTaskThreadMessageListView({
 
   return (
     <LayoutGroup id="agency-task-thread-messages">
-      <AnimatePresence initial={false} mode="popLayout">
-        {messages.map((message) => (
-          <AgencyTaskThreadMessageMotionItem
-            key={message.animationKey}
-            message={message}
-            reducedMotion={reducedMotion}
-          />
-        ))}
-      </AnimatePresence>
+      <div
+        className="relative w-full"
+        style={{ height: `${virtualizer.getTotalSize()}px` }}
+      >
+        <AnimatePresence initial={false} mode="popLayout">
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const message = messages[virtualRow.index];
+            if (!message) return null;
+
+            return (
+              <div
+                key={message.animationKey}
+                className="absolute top-0 left-0 w-full px-1"
+                style={{ transform: `translateY(${virtualRow.start}px)` }}
+              >
+                <AgencyTaskThreadMessageMotionItem
+                  message={message}
+                  reducedMotion={reducedMotion}
+                />
+              </div>
+            );
+          })}
+        </AnimatePresence>
+      </div>
     </LayoutGroup>
   );
 }

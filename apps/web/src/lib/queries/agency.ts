@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
 import {
@@ -12,7 +12,7 @@ import {
   useMergedAgencyTimeEntriesQuery,
 } from "@/lib/queries/agency-optimistic";
 import { getQueryClient } from "@/lib/query-client";
-import { orpc } from "@/lib/orpc";
+import { orpc, orpcClient } from "@/lib/orpc";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
 import { useAgencyOpsStore } from "@/stores/agency-ops";
 import { useAgencyTimeTrackingStore } from "@/stores/agency-time-tracking";
@@ -23,6 +23,28 @@ export type AgencyProjectTasksFilters = {
   projectId?: string;
   assigneeUserId?: string;
   statuses?: AgencyProjectTaskStatus[];
+  search?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type AgencyProjectTasksListPage = {
+  items: Array<{
+    id: string;
+    projectId: string;
+    title: string;
+    status: AgencyProjectTaskStatus;
+    assignees: Array<{ userId: string; userName: string }>;
+    assignedToTeam: boolean;
+    dueDate: string | null;
+    createdAt: string;
+    updatedAt: string;
+    teamId: string;
+    memberStatus?: AgencyProjectTaskStatus;
+  }>;
+  page: number;
+  pageSize: number;
+  total: number;
 };
 
 export function prefetchAgencyWorkQueries(teamId: string, assigneeUserId: string) {
@@ -276,8 +298,19 @@ export function useAgencyProjectTasksQuery(
       projectId: filters.projectId,
       assigneeUserId: filters.assigneeUserId,
       statuses: filters.statuses,
+      search: filters.search,
+      page: filters.page,
+      pageSize: filters.pageSize,
     }),
-    [filters.projectId, filters.assigneeUserId, statusesKey, filters.statuses],
+    [
+      filters.projectId,
+      filters.assigneeUserId,
+      statusesKey,
+      filters.statuses,
+      filters.search,
+      filters.page,
+      filters.pageSize,
+    ],
   );
 
   const input = useMemo(
@@ -286,6 +319,9 @@ export function useAgencyProjectTasksQuery(
       ...(stableFilters.projectId ? { projectId: stableFilters.projectId } : {}),
       ...(stableFilters.assigneeUserId ? { assigneeUserId: stableFilters.assigneeUserId } : {}),
       ...(stableFilters.statuses ? { statuses: stableFilters.statuses } : {}),
+      ...(stableFilters.search ? { search: stableFilters.search } : {}),
+      ...(stableFilters.page ? { page: stableFilters.page } : {}),
+      ...(stableFilters.pageSize ? { pageSize: stableFilters.pageSize } : {}),
     }),
     [teamId, stableFilters],
   );
@@ -333,6 +369,69 @@ export function useAgencyProjectTasksQuery(
   ]);
 
   return useMergedAgencyProjectTasksQuery(query, teamId, stableFilters);
+}
+
+export function useAgencyProjectTasksInfiniteQuery(
+  teamId: string,
+  filters: AgencyProjectTasksFilters = {},
+) {
+  const pageSize = filters.pageSize ?? 50;
+  const statusesKey = filters.statuses?.join(",") ?? "";
+
+  const baseInput = useMemo(
+    () => ({
+      teamId,
+      pageSize,
+      ...(filters.projectId ? { projectId: filters.projectId } : {}),
+      ...(filters.assigneeUserId ? { assigneeUserId: filters.assigneeUserId } : {}),
+      ...(filters.statuses ? { statuses: filters.statuses } : {}),
+      ...(filters.search ? { search: filters.search } : {}),
+    }),
+    [
+      teamId,
+      pageSize,
+      filters.projectId,
+      filters.assigneeUserId,
+      statusesKey,
+      filters.statuses,
+      filters.search,
+    ],
+  );
+
+  const queryEnabled =
+    Boolean(teamId) &&
+    (filters.projectId === undefined || Boolean(filters.projectId)) &&
+    (filters.assigneeUserId === undefined || Boolean(filters.assigneeUserId));
+
+  const query = useInfiniteQuery({
+    queryKey: [
+      ...orpc.agencyOps.projectTasks.list.queryOptions({ input: baseInput }).queryKey,
+      "infinite",
+    ],
+    queryFn: async ({ pageParam }) =>
+      orpcClient.agencyOps.projectTasks.list({
+        ...baseInput,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.page * lastPage.pageSize < lastPage.total) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
+    enabled: queryEnabled,
+    staleTime: 15_000,
+  });
+
+  const items = useMemo(
+    () => query.data?.pages.flatMap((page) => page.items) ?? [],
+    [query.data?.pages],
+  );
+
+  const total = query.data?.pages[0]?.total ?? 0;
+
+  return { ...query, items, total };
 }
 
 export function useAgencyActiveTimerQuery(teamId: string) {

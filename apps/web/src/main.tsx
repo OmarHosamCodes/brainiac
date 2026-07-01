@@ -4,8 +4,8 @@ import { BrowserRouter } from "react-router-dom";
 
 import { App } from "@/app";
 import { Toaster } from "@/components/ui/sonner";
+import { dismissMarketingPrerenderShell } from "@/lib/marketing-prerender";
 import { subscribeThemeDomSync } from "@/stores/theme";
-import { AuthProvider } from "@/providers/auth-provider";
 import { QueryProvider } from "@/providers/query-provider";
 
 import "@/index.css";
@@ -15,12 +15,17 @@ subscribeThemeDomSync();
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <App />
-          <Toaster richColors closeButton position="top-right" />
-        </BrowserRouter>
-      </AuthProvider>
+      <BrowserRouter>
+        <App />
+        <Toaster richColors closeButton position="top-right" />
+      </BrowserRouter>
     </QueryProvider>
   </StrictMode>,
 );
+
+// ponytail: one global dismiss — per-page hooks miss /dashboard and other app routes
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    dismissMarketingPrerenderShell();
+  });
+});

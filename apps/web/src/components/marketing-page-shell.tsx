@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
 import { BrainCircuit, Moon, Sun } from "lucide-react";
-import { type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/stores/theme";
@@ -37,6 +37,42 @@ function ThemeToggle() {
   );
 }
 
+function MarketingHealthStatus() {
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    if ("requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(() => setEnabled(true));
+      return () => window.cancelIdleCallback(idleId);
+    }
+
+    const timeoutId = window.setTimeout(() => setEnabled(true), 1);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  const healthCheck = useQuery({
+    ...orpc.healthCheck.queryOptions(),
+    enabled,
+  } as unknown as Parameters<typeof useQuery>[0]);
+
+  return (
+    <div className="mt-6 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+      <span
+        className={cn(
+          "size-1.5 rounded-full",
+          healthCheck.isSuccess ? "bg-primary" : "bg-muted-foreground/40",
+        )}
+      />
+      <span>
+        {healthCheck.isSuccess ? "All systems operational" : "Status unavailable"}
+      </span>
+      {healthCheck.isSuccess ? (
+        <span className="text-muted-foreground/50">· {String(healthCheck.data)}ms</span>
+      ) : null}
+    </div>
+  );
+}
+
 export function MarketingPageShell({
   children,
   heroIsDark: _heroIsDark = false,
@@ -44,9 +80,6 @@ export function MarketingPageShell({
   children: ReactNode;
   heroIsDark?: boolean;
 }) {
-  const healthCheck = useQuery({
-    ...orpc.healthCheck.queryOptions(),
-  } as unknown as Parameters<typeof useQuery>[0]);
   const year = new Date().getFullYear();
 
   return (
@@ -67,22 +100,7 @@ export function MarketingPageShell({
                 A spatial knowledge workspace with an embedded agent.
               </p>
 
-              <div className="mt-6 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                <span
-                  className={cn(
-                    "size-1.5 rounded-full",
-                    healthCheck.isSuccess ? "bg-primary" : "bg-muted-foreground/40",
-                  )}
-                />
-                <span>
-                  {healthCheck.isSuccess ? "All systems operational" : "Status unavailable"}
-                </span>
-                {healthCheck.isSuccess ? (
-                  <span className="text-muted-foreground/50">
-                    · {String(healthCheck.data)}ms
-                  </span>
-                ) : null}
-              </div>
+              <MarketingHealthStatus />
             </div>
 
             <div className="md:col-span-3 md:col-start-7">

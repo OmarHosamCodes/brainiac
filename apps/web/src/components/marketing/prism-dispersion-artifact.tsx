@@ -237,14 +237,30 @@ export function PrismDispersionArtifact({ className }: PrismDispersionArtifactPr
       frameId = requestAnimationFrame(animate);
     }
 
+    function startAnimation() {
+      if (frameId) return;
+      frameId = requestAnimationFrame(animate);
+    }
+
     resize();
-    const observer = new ResizeObserver(resize);
-    observer.observe(container);
-    frameId = requestAnimationFrame(animate);
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(container);
+
+    const intersectionObserver = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        const idle =
+          window.requestIdleCallback ?? ((callback: IdleRequestCallback) => window.setTimeout(callback, 1));
+        idle(() => startAnimation());
+      },
+      { rootMargin: "120px" },
+    );
+    intersectionObserver.observe(container);
 
     return () => {
       cancelAnimationFrame(frameId);
-      observer.disconnect();
+      resizeObserver.disconnect();
+      intersectionObserver.disconnect();
     };
   }, []);
 

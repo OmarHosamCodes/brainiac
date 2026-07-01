@@ -5,7 +5,7 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 
-import { AgencyTaskClientGroupView } from "@/components/agency/work/task-list/agency-task-client-group-view";
+import { AgencyTaskVirtualList } from "@/components/agency/work/task-list/agency-task-virtual-list";
 import { AgencyTaskCreateInlineView } from "@/components/agency/work/task-list/agency-task-create-inline-view";
 import { AgencyTaskRowView } from "@/components/agency/work/task-list/agency-task-row-view";
 import { AgencyTaskRailSummary } from "@/components/agency/agency-task-rail-summary";
@@ -102,29 +102,23 @@ export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
               <p className="mt-1 text-xs text-muted">Add one below to get started.</p>
             </div>
           ) : (
-            <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto" aria-label="My tasks">
-              {view.clientGroups.map((group) => (
-                <AgencyTaskClientGroupView
-                  key={group.clientId}
-                  clientId={group.clientId}
-                  clientName={group.clientName}
-                  tasks={group.tasks}
-                  expanded={!view.collapsedClients.has(group.clientId)}
-                  projects={view.projects}
-                  teamId={view.teamId}
-                  currentUserId={view.currentUserId}
-                  selectedTaskId={view.selectedTaskId}
-                  isRowPending={view.isRowPending}
-                  onExpandedChange={(expanded) =>
-                    view.onClientExpandedChange(group.clientId, expanded)
-                  }
-                  onSelect={view.onSelect}
-                  onSelectProject={view.onSelectProject}
-                  onStatusChange={view.onStatusChange}
-                  highlightTaskId={view.recentlyCompletedTaskId}
-                />
-              ))}
-            </div>
+            <AgencyTaskVirtualList
+              clientGroups={view.clientGroups}
+              collapsedClients={view.collapsedClients}
+              projects={view.projects}
+              teamId={view.teamId}
+              currentUserId={view.currentUserId}
+              selectedTaskId={view.selectedTaskId}
+              highlightTaskId={view.recentlyCompletedTaskId}
+              isRowPending={view.isRowPending}
+              onClientExpandedChange={view.onClientExpandedChange}
+              onSelect={view.onSelect}
+              onSelectProject={view.onSelectProject}
+              onStatusChange={view.onStatusChange}
+              hasMore={view.hasMoreActiveTasks}
+              isFetchingMore={view.isFetchingMoreActiveTasks}
+              onFetchMore={view.onFetchMoreActiveTasks}
+            />
           )}
 
           <AgencyTaskCreateInlineView projects={view.projects} create={view.create} />
