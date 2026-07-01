@@ -1,5 +1,5 @@
 {
-  "$schema": "https://turbo.build/schema.json",
+  "$schema": "https://v2-10-2.turborepo.dev/schema.json",
   "ui": "tui",
   "globalPassThroughEnv": [
     "DATABASE_URL",
@@ -52,6 +52,9 @@
     "db:seed": {
       "cache": false
     },
+    "db:seed:agency": {
+      "cache": false
+    },
     "grant:lifetime-pro": {
       "cache": false
     },
@@ -71,6 +74,10 @@
       "persistent": true
     },
     "db:down": {
+      "cache": false
+    },
+    "perf": {
+      "dependsOn": ["build"],
       "cache": false
     },
     "clean": {
