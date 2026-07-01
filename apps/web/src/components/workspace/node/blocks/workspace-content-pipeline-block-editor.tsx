@@ -14,18 +14,18 @@ import {
   ArrowRight,
   CheckCircle2,
   Eye,
-  Instagram,
+  Camera,
   Layers,
   Lightbulb,
-  Linkedin,
+  Link,
   Music2,
   PencilLine,
+  Play,
   Plus,
   Rocket,
   Trash2,
   TrendingUp,
   User,
-  Youtube,
   type LucideIcon,
 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -84,11 +84,11 @@ const platformOptions = WORKSPACE_CONTENT_PLATFORMS.map((platform) => ({
 function getPlatformIcon(platform: WorkspaceContentPlatform): LucideIcon {
   switch (platform) {
     case "instagram":
-      return Instagram;
+      return Camera;
     case "linkedin":
-      return Linkedin;
+      return Link;
     case "youtube":
-      return Youtube;
+      return Play;
     case "tiktok":
       return Music2;
     default: {

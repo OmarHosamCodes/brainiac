@@ -1,0 +1,90 @@
+{
+  "version": 1,
+  "capturedAt": "2026-07-01T05:30:40.650Z",
+  "bundle": {
+    "jsGzipKb": 684,
+    "cssGzipKb": 20
+  },
+  "routes": {
+    "landing": {
+      "lcpMs": 12557.779400000007,
+      "inpMs": 1047,
+      "cls": 0.002443259888029346,
+      "lighthouseScore": 33,
+      "score": 51,
+      "grade": "D"
+    },
+    "privacy": {
+      "lcpMs": 12552.31485,
+      "inpMs": 962,
+      "cls": 0,
+      "lighthouseScore": 34,
+      "score": 52,
+      "grade": "D"
+    },
+    "terms": {
+      "lcpMs": 13035.368050000003,
+      "inpMs": 1294,
+      "cls": 0.006946282886188864,
+      "lighthouseScore": 31,
+      "score": 50,
+      "grade": "D"
+    },
+    "login": {
+      "lcpMs": 13559.507300000012,
+      "inpMs": 1873,
+      "cls": 0.0003885403362905182,
+      "lighthouseScore": 28.000000000000004,
+      "score": 48,
+      "grade": "F"
+    },
+    "dashboard": {
+      "lcpMs": 2825.7859999999996,
+      "inpMs": 243.59779999999955,
+      "cls": 0.00001834652175816478,
+      "lighthouseScore": 63,
+      "score": 85,
+      "grade": "A"
+    },
+    "marketplace": {
+      "lcpMs": 2611.8114499999983,
+      "inpMs": 203.00000000000068,
+      "cls": 0,
+      "lighthouseScore": 67,
+      "score": 87,
+      "grade": "A"
+    },
+    "billing": {
+      "lcpMs": 2480.6834999999996,
+      "inpMs": 81,
+      "cls": 0,
+      "lighthouseScore": 72,
+      "score": 89,
+      "grade": "A"
+    },
+    "agency-work": {
+      "lcpMs": 2648.124175,
+      "inpMs": 226.99999999999864,
+      "cls": 0,
+      "lighthouseScore": 59,
+      "score": 84,
+      "grade": "B"
+    },
+    "agency-projects": {
+      "lcpMs": 3345.118,
+      "inpMs": 193,
+      "cls": 0,
+      "lighthouseScore": 56.99999999999999,
+      "score": 83,
+      "grade": "B"
+    },
+    "agency-reports": {
+      "lcpMs": 2964.4085,
+      "inpMs": 196.99999999999955,
+      "cls": 0,
+      "lighthouseScore": 59,
+      "score": 84,
+      "grade": "B"
+    }
+  }
+}

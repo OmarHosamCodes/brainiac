@@ -1,0 +1,113 @@
+/** @typedef {{ id: string; path: string; tier: string; auth: boolean; ci: boolean; label?: string }} PerfRoute */
+
+/** @type {PerfRoute[]} */
+const ALL_ROUTES = [
+  { id: "landing", path: "/", tier: "marketing", auth: false, ci: true },
+  { id: "privacy", path: "/privacy", tier: "marketing", auth: false, ci: true },
+  { id: "terms", path: "/terms", tier: "marketing", auth: false, ci: true },
+  { id: "login", path: "/login", tier: "auth", auth: false, ci: true },
+  { id: "dashboard", path: "/dashboard", tier: "app-heavy", auth: true, ci: true },
+  {
+    id: "marketplace",
+    path: "/marketplace",
+    tier: "app-data",
+    auth: true,
+    ci: true,
+  },
+  { id: "billing", path: "/billing", tier: "app-light", auth: true, ci: true },
+  {
+    id: "billing-success",
+    path: "/billing/success",
+    tier: "app-light",
+    auth: true,
+    ci: false,
+  },
+  {
+    id: "node",
+    path: "/node/{nodeId}",
+    tier: "app-heavy",
+    auth: true,
+    ci: false,
+    dynamic: "nodeId",
+  },
+  {
+    id: "agency-work",
+    path: "/agency?section=work",
+    tier: "agency",
+    auth: true,
+    ci: true,
+    label: "Agency / Work",
+  },
+  {
+    id: "agency-dashboard",
+    path: "/agency?section=dashboard",
+    tier: "agency",
+    auth: true,
+    ci: false,
+    label: "Agency / Dashboard",
+  },
+  {
+    id: "agency-clients",
+    path: "/agency?section=clients",
+    tier: "agency",
+    auth: true,
+    ci: false,
+    label: "Agency / Clients",
+  },
+  {
+    id: "agency-projects",
+    path: "/agency?section=projects",
+    tier: "agency",
+    auth: true,
+    ci: true,
+    label: "Agency / Projects",
+  },
+  {
+    id: "agency-reports",
+    path: "/agency?section=reports",
+    tier: "agency",
+    auth: true,
+    ci: true,
+    label: "Agency / Reports",
+  },
+  {
+    id: "agency-management",
+    path: "/agency?section=management&manage=resourcing",
+    tier: "agency",
+    auth: true,
+    ci: false,
+    label: "Agency / Management",
+  },
+  {
+    id: "agency-settings",
+    path: "/agency?section=settings",
+    tier: "agency",
+    auth: true,
+    ci: false,
+    label: "Agency / Settings",
+  },
+];
+
+/**
+ * @param {{ ci?: boolean; nodeId?: string | null }} options
+ */
+export function resolveRoutes({ ci = false, nodeId = null } = {}) {
+  const selected = ci ? ALL_ROUTES.filter((route) => route.ci) : ALL_ROUTES;
+
+  return selected
+    .map((route) => {
+      let path = route.path;
+      if (route.dynamic === "nodeId") {
+        if (!nodeId) return null;
+        path = `/node/${nodeId}`;
+      }
+      return {
+        ...route,
+        path,
+        displayPath: path,
+      };
+    })
+    .filter(Boolean);
+}
+
+export { ALL_ROUTES };

@@ -51,6 +51,9 @@ lerna-debug.log*
 # Testing
 coverage
 .nyc_output
+apps/web/perf/.auth/
+apps/web/perf/perf-report.json
+apps/web/perf/perf-report.md
 
 # Misc
 *.tgz
