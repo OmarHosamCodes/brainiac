@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useMemo } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
-import { useAgencyProjectTasksQuery } from "@/lib/queries/agency";
+import { useAgencyProjectTasksInfiniteQuery, useAgencyProjectTasksQuery } from "@/lib/queries/agency";
 import type {
   AgencyProjectTask,
   AgencyTaskProject,
@@ -93,6 +93,9 @@ export type AgencyTaskListViewModel =
       onRetryDoneTasks: () => void;
       doneTasks: AgencyProjectTask[];
       recentlyCompletedTaskId: string;
+      hasMoreActiveTasks: boolean;
+      isFetchingMoreActiveTasks: boolean;
+      onFetchMoreActiveTasks: () => void;
       onCollapseRail: () => void;
       create: AgencyTaskListCreateViewModel;
     };
@@ -154,22 +157,23 @@ export function useAgencyTaskList({
 
   const members = membersQuery.data?.items ?? [];
 
-  const activeTasksQuery = useAgencyProjectTasksQuery(teamId, {
+  const activeTasksQuery = useAgencyProjectTasksInfiniteQuery(teamId, {
     assigneeUserId: currentUserId,
     statuses: ACTIVE_TASK_STATUSES,
   });
 
-  const doneTasksQuery = useAgencyProjectTasksQuery(teamId, {
+  const doneTasksQuery = useAgencyProjectTasksInfiniteQuery(teamId, {
     assigneeUserId: currentUserId,
     statuses: DONE_TASK_STATUSES,
   });
 
   const titleSuggestionTasksQuery = useAgencyProjectTasksQuery(teamId, {
     projectId: createExpanded ? selectedProjectIdForCreate : undefined,
+    pageSize: 50,
   });
 
-  const activeTasks = activeTasksQuery.data?.items ?? [];
-  const doneTasks = doneTasksQuery.data?.items ?? [];
+  const activeTasks = activeTasksQuery.items;
+  const doneTasks = doneTasksQuery.items;
   const createTasks = useMemo(() => {
     if (!createExpanded || !selectedProjectIdForCreate) return [];
     return (titleSuggestionTasksQuery.data?.items ?? []).filter(
@@ -177,8 +181,8 @@ export function useAgencyTaskList({
     );
   }, [createExpanded, selectedProjectIdForCreate, titleSuggestionTasksQuery.data?.items]);
 
-  const activeCount = activeTasksQuery.isPending ? null : activeTasks.length;
-  const doneCount = doneTasksQuery.isPending ? null : doneTasks.length;
+  const activeCount = activeTasksQuery.isPending ? null : activeTasksQuery.total;
+  const doneCount = doneTasksQuery.isPending ? null : doneTasksQuery.total;
   const totalCount =
     activeCount === null || doneCount === null ? null : activeCount + doneCount;
 
@@ -316,6 +320,9 @@ export function useAgencyTaskList({
     onRetryDoneTasks: () => void doneTasksQuery.refetch(),
     doneTasks,
     recentlyCompletedTaskId,
+    hasMoreActiveTasks: Boolean(activeTasksQuery.hasNextPage),
+    isFetchingMoreActiveTasks: activeTasksQuery.isFetchingNextPage,
+    onFetchMoreActiveTasks: () => void activeTasksQuery.fetchNextPage(),
     onCollapseRail: () => onCollapsedChange(true),
     create: {
       expanded: createExpanded,

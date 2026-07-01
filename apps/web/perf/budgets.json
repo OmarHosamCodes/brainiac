@@ -6,8 +6,8 @@
       "inpMs": 200,
       "cls": 0.1,
       "lighthouseMin": 90,
-      "minGrade": "A",
-      "minScore": 85,
+      "minGrade": "S",
+      "minScore": 95,
       "throttling": "mobile"
     },
     "auth": {
@@ -15,9 +15,9 @@
       "lcpMs": 2500,
       "inpMs": 200,
       "cls": 0.1,
-      "lighthouseMin": 85,
-      "minGrade": "B",
-      "minScore": 75,
+      "lighthouseMin": 90,
+      "minGrade": "S",
+      "minScore": 95,
       "throttling": "mobile"
     },
     "app-light": {
@@ -25,9 +25,9 @@
       "lcpMs": 2800,
       "inpMs": 200,
       "cls": 0.1,
-      "lighthouseMin": 85,
-      "minGrade": "B",
-      "minScore": 75,
+      "lighthouseMin": 90,
+      "minGrade": "S",
+      "minScore": 95,
       "throttling": "desktop"
     },
     "app-data": {
@@ -35,9 +35,9 @@
       "lcpMs": 3000,
       "inpMs": 250,
       "cls": 0.1,
-      "lighthouseMin": 80,
-      "minGrade": "B",
-      "minScore": 75,
+      "lighthouseMin": 90,
+      "minGrade": "S",
+      "minScore": 95,
       "throttling": "desktop"
     },
     "app-heavy": {
@@ -45,9 +45,9 @@
       "lcpMs": 3500,
       "inpMs": 300,
       "cls": 0.1,
-      "lighthouseMin": 75,
-      "minGrade": "B",
-      "minScore": 75,
+      "lighthouseMin": 90,
+      "minGrade": "S",
+      "minScore": 95,
       "throttling": "desktop"
     },
     "agency": {
@@ -55,15 +55,15 @@
       "lcpMs": 3500,
       "inpMs": 300,
       "cls": 0.1,
-      "lighthouseMin": 75,
-      "minGrade": "B",
-      "minScore": 75,
+      "lighthouseMin": 90,
+      "minGrade": "S",
+      "minScore": 95,
       "throttling": "desktop"
     }
   },
   "bundle": {
     "jsGzipKb": 719,
-    "cssGzipKb": 21,
+    "cssGzipKb": 22,
     "fontsTransferredKb": 120
   },
   "regression": {

@@ -156,11 +156,7 @@ async function main() {
     });
 
     console.log("Seeding database...");
-    await run("bun", ["run", "db:seed"], { cwd: root });
-    await run("bun", ["run", "grant:lifetime-pro", "--", "--email", "founder@brainiac.test"], {
-      cwd: resolve(root, "apps/server"),
-      inherit: false,
-    });
+    await run("bun", ["run", "db:seed:massive"], { cwd: resolve(root, "apps/server") });
   }
 
   const bundleResult = await measureBundle(webDist);

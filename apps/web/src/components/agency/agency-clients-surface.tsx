@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, Archive, Building2, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -12,8 +13,9 @@ import {
   agencyLabelClass,
 } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { taskMatchesAnyAssigneeFilter } from "@/lib/utils/agency-query-cache";
 import { getTaskGroupKey, groupTasksByProjectTitle } from "@/lib/utils/agency-task-utils";
+import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
+import { orpc } from "@/lib/orpc";
 import {
   useAgencyClientsQuery,
   useAgencyContactQuery,
@@ -69,7 +71,19 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
   const clientsQuery = useAgencyClientsQuery(teamId);
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
-  const tasksQuery = useAgencyProjectTasksQuery(teamId);
+  const membersQuery = useQuery(
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.taskThreads.members.list.queryOptions({ input: { teamId } }),
+        enabled: Boolean(teamId),
+      },
+      "warm",
+    ),
+  );
+  const tasksQuery = useAgencyProjectTasksQuery(teamId, {
+    search: filterTerm.trim() || undefined,
+    pageSize: 100,
+  });
   const contactQuery = useAgencyContactQuery(teamId, contactClientId);
 
   const clients = clientsQuery.data?.items ?? [];
@@ -79,15 +93,16 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
 
   const peopleOptions = useMemo(() => {
     const people = new Map<string, string>();
-    for (const task of tasks) {
-      for (const assignee of task.assignees) {
-        people.set(assignee.userId, assignee.userName);
-      }
+    for (const member of membersQuery.data?.items ?? []) {
+      people.set(member.userId, member.userName);
+    }
+    for (const entry of entries) {
+      people.set(entry.userId, entry.userName);
     }
     return Array.from(people, ([value, label]) => ({ value, label })).sort((a, b) =>
       a.label.localeCompare(b.label),
     );
-  }, [tasks]);
+  }, [entries, membersQuery.data?.items]);
 
   const clientOptions = useMemo(
     () => clients.map((client) => ({ value: client.id, label: client.name })),
@@ -143,9 +158,8 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
       if (
         peopleSet.size > 0 &&
         !clientProjects.some((project) =>
-          tasks.some(
-            (task) =>
-              task.projectId === project.id && taskMatchesAnyAssigneeFilter(task, peopleSet),
+          entries.some(
+            (entry) => entry.projectId === project.id && peopleSet.has(entry.userId),
           ),
         )
       ) {
@@ -165,6 +179,7 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
     });
   }, [
     clients,
+    entries,
     filterTerm,
     projects,
     selectedClientIds,

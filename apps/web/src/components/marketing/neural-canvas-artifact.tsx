@@ -43,12 +43,20 @@ export function NeuralCanvasArtifact({ className }: NeuralCanvasArtifactProps) {
   const pathRefs = useRef<(SVGPathElement | null)[]>([]);
 
   useEffect(() => {
-    pathRefs.current.forEach((path) => {
-      if (!path) return;
-      const length = path.getTotalLength();
-      path.style.strokeDasharray = `${length}`;
-      path.style.strokeDashoffset = `${length}`;
-    });
+    const run = () => {
+      pathRefs.current.forEach((path) => {
+        if (!path) return;
+        const length = path.getTotalLength();
+        path.style.strokeDasharray = `${length}`;
+        path.style.strokeDashoffset = `${length}`;
+      });
+    };
+
+    const idle = window.requestIdleCallback ?? ((callback: IdleRequestCallback) => window.setTimeout(callback, 1));
+    const idleId = idle(run);
+    return () => {
+      if (window.cancelIdleCallback) window.cancelIdleCallback(idleId as number);
+    };
   }, []);
 
   return (

@@ -8,7 +8,7 @@ import { AppShellTopbarActions, AppShellTopbarContext } from "@/components/app-s
 import { AppShellPortal } from "@/components/app-shell-portal";
 import { DashboardAgentChatPanel } from "@/components/dashboard/dashboard-agent-chat-panel";
 import { DashboardWorkspaceSidebar } from "@/components/dashboard/dashboard-workspace-sidebar";
-import { InfiniteCanvas, type InfiniteCanvasHandle } from "@/components/infinite-canvas";
+import { LazyInfiniteCanvas, type InfiniteCanvasHandle } from "@/components/lazy-infinite-canvas";
 import { TeamSettingsModal } from "@/components/team/team-settings-modal";
 import { WorkspaceEditorModal } from "@/components/workspace/workspace-editor-modal";
 import { WorkspaceNodeCard } from "@/components/workspace/workspace-node-card";
@@ -141,7 +141,7 @@ export function DashboardPage() {
             />
 
             <div className="min-h-0 min-w-0 flex-1 h-full">
-              <InfiniteCanvas
+              <LazyInfiniteCanvas
                 ref={canvasRef}
                 nodes={board.nodes}
                 selectedNodeIds={board.selectedNodeIds}

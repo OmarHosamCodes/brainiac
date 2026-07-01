@@ -132,6 +132,17 @@ export function buildReport(input) {
       );
     }
 
+    const targetIssues = [];
+    if (scored.score < tier.minScore) {
+      targetIssues.push(`score ${scored.score} < ${tier.minScore}`);
+    }
+    if (route.lighthouseScore != null && route.lighthouseScore < tier.lighthouseMin) {
+      targetIssues.push(`Lighthouse ${Math.round(route.lighthouseScore)} < ${tier.lighthouseMin}`);
+    }
+    if (!scored.cwvPass) {
+      targetIssues.push("CWV thresholds missed");
+    }
+
     const baselineRoute = input.baseline?.routes?.[route.id];
     const regressionIssues = [];
 
@@ -154,7 +165,8 @@ export function buildReport(input) {
       }
     }
 
-    const gatePass = bundleResult.pass && regressionIssues.length === 0;
+    const gatePass =
+      bundleResult.pass && regressionIssues.length === 0 && targetIssues.length === 0;
 
     if (!gatePass) {
       if (!bundleResult.pass) {
@@ -162,6 +174,9 @@ export function buildReport(input) {
       }
       if (regressionIssues.length > 0) {
         failures.push(`${route.displayPath}: regressed vs baseline (${regressionIssues.join(", ")})`);
+      }
+      if (targetIssues.length > 0) {
+        failures.push(`${route.displayPath}: target miss (${targetIssues.join(", ")})`);
       }
     }
 

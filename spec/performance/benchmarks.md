@@ -45,18 +45,18 @@ Composite score (0–100):
 
 1. **Bundle budgets** must pass (baseline + 5% headroom in [`budgets.json`](../../apps/web/perf/budgets.json)).
 2. **Regression:** no route may regress more than 10% vs [`baseline.json`](../../apps/web/perf/baseline.json) on LCP, INP, CLS, or Lighthouse performance score.
-3. **Aspirational targets** (tier minimum grades in the tables above) are reported but do not fail CI until the app meets them.
+3. **Target scores:** every audited route must meet composite score ≥95, Lighthouse ≥90, and tier CWV thresholds.
 
 ## Page tiers
 
 | Tier | Routes | LCP | INP | CLS | Lighthouse min | CI min grade |
 |------|--------|-----|-----|-----|----------------|--------------|
-| **Marketing** | `/`, `/privacy`, `/terms` | ≤ 2.0s | ≤ 200ms | ≤ 0.1 | 90 | A |
-| **Auth** | `/login` | ≤ 2.5s | ≤ 200ms | ≤ 0.1 | 85 | B |
-| **App Light** | `/billing`, `/billing/success` | ≤ 2.8s | ≤ 200ms | ≤ 0.1 | 85 | B |
-| **App Data** | `/marketplace` | ≤ 3.0s | ≤ 250ms | ≤ 0.1 | 80 | B |
-| **App Heavy** | `/dashboard`, `/node/:id` | ≤ 3.5s | ≤ 300ms | ≤ 0.1 | 75 | B |
-| **Agency** | `/agency?section=*` | ≤ 3.5s | ≤ 300ms | ≤ 0.1 | 75 | B |
+| **Marketing** | `/`, `/privacy`, `/terms` | ≤ 2.0s | ≤ 200ms | ≤ 0.1 | 90 | S |
+| **Auth** | `/login` | ≤ 2.5s | ≤ 200ms | ≤ 0.1 | 90 | S |
+| **App Light** | `/billing`, `/billing/success` | ≤ 2.8s | ≤ 200ms | ≤ 0.1 | 90 | S |
+| **App Data** | `/marketplace` | ≤ 3.0s | ≤ 250ms | ≤ 0.1 | 90 | S |
+| **App Heavy** | `/dashboard`, `/node/:id` | ≤ 3.5s | ≤ 300ms | ≤ 0.1 | 90 | S |
+| **Agency** | `/agency?section=*` | ≤ 3.5s | ≤ 300ms | ≤ 0.1 | 90 | S |
 
 Machine-readable thresholds: [`apps/web/perf/budgets.json`](../../apps/web/perf/budgets.json).
 
@@ -96,9 +96,12 @@ Benchmarks measure current behavior. Likely flags on first run:
 ## Commands
 
 ```bash
+bun run db:seed:massive   # stress dataset for perf audits
 bun run perf          # full local suite (~16 route audits)
 bun run perf:ci       # CI subset (~10 audits)
 bun run perf -- --update-baseline   # refresh baseline.json after intentional changes
 ```
+
+**Seed data for CI:** `bun run db:seed:massive` (workspace + agency scale) before perf runs. Uses `founder@brainiac.test` / `brainiac1234`.
 
 Reports: `apps/web/perf/perf-report.json`, `apps/web/perf/perf-report.md`

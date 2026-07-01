@@ -431,11 +431,18 @@ export const agencyOpsRouter = {
           statuses: z.array(z.enum(["open", "in_progress", "done", "archived"])).optional(),
           assigneeUserId: z.string().min(1).optional(),
           search: z.string().optional(),
+          page: z.number().int().min(1).optional(),
+          pageSize: z.number().int().min(1).max(100).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         return z
-          .object({ items: z.array(agencyProjectTaskSchema) })
+          .object({
+            items: z.array(agencyProjectTaskSchema),
+            page: z.number().int().min(1),
+            pageSize: z.number().int().min(1),
+            total: z.number().int().nonnegative(),
+          })
           .parse(await listAgencyProjectTasks(context.session.user.id, input));
       }),
     create: protectedProProcedure

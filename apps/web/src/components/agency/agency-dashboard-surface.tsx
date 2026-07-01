@@ -491,7 +491,7 @@ export const AgencyDashboardSurface = forwardRef<
             </div>
           </section>
 
-          <section className={cn(agencyPanelClass, "p-4")}>
+          <section className={cn(agencyPanelClass, "p-4 [content-visibility:auto]")}>
             <div className="mb-4 flex items-center justify-between">
               <p className={agencyLabelClass}>Daily timeline</p>
               <p className="text-[11px] text-muted">Stacked by project</p>
@@ -528,7 +528,7 @@ export const AgencyDashboardSurface = forwardRef<
             </div>
           </section>
 
-          <section className="grid gap-4 lg:grid-cols-[22rem_minmax(0,1fr)]">
+          <section className="grid gap-4 [content-visibility:auto] lg:grid-cols-[22rem_minmax(0,1fr)]">
             <div className={cn(agencyPanelClass, "p-4")}>
               <p className={agencyLabelClass}>Project share</p>
               <ProjectShareDonut projects={rankedProjects} totalSeconds={summary.totalSeconds} />

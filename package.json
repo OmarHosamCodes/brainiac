@@ -36,6 +36,7 @@
     "db:generate": "turbo -F @brainiac/db db:generate",
     "db:migrate": "turbo -F @brainiac/db db:migrate",
     "db:seed": "turbo -F server db:seed --",
+    "db:seed:massive": "turbo -F server db:seed:massive --",
     "grant:lifetime-pro": "turbo -F server grant:lifetime-pro --",
     "db:seed:agency": "turbo -F server db:seed:agency --",
     "db:clear:team": "turbo -F server db:clear:team --",

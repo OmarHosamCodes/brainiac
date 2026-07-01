@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { LandingAgencyPreview } from "@/components/marketing/landing-agency-preview";
@@ -12,15 +12,25 @@ import { PrismDispersionArtifact } from "@/components/marketing/prism-dispersion
 import { MarketingPageShell } from "@/components/marketing-page-shell";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
-import { orpc } from "@/lib/orpc";
 
 export function LandingPage() {
-  useQuery({
-    ...orpc.healthCheck.queryOptions(),
-  } as unknown as Parameters<typeof useQuery>[0]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  const session = authClient.useSession();
-  const isAuthenticated = Boolean(session.data?.user);
+  useEffect(() => {
+    const resolveSession = () => {
+      void authClient.getSession().then((session) => {
+        setIsAuthenticated(Boolean(session.data?.user));
+      });
+    };
+
+    if ("requestIdleCallback" in window) {
+      const idleId = window.requestIdleCallback(resolveSession);
+      return () => window.cancelIdleCallback(idleId);
+    }
+
+    const timeoutId = window.setTimeout(resolveSession, 1);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   return (
     <MarketingPageShell heroIsDark>

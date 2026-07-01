@@ -28,8 +28,15 @@ import {
 import { createWorkspaceId } from "@brainiac/workspace";
 import { and, eq } from "drizzle-orm";
 import { ensureCredentialAccount } from "./lib/ensure-credential-account";
+import {
+  appendMassiveAgencyData,
+  insertInBatches,
+  resolveAgencySeedScale,
+  type AgencySeedScale,
+} from "./lib/seed-agency-scale";
+import type { MemberRecord, SeedActor, SeedContext } from "./lib/seed-agency-types";
 
-type SeedUserKey = "founder" | "ops" | "analyst" | "designer" | "dev";
+type SeedUserKey = import("./lib/seed-agency-types").SeedUserKey;
 
 type SeedUserDefinition = {
   key: SeedUserKey;
@@ -37,11 +44,7 @@ type SeedUserDefinition = {
   email: string;
 };
 
-type SeedActor = {
-  id: string;
-  name: string;
-  email: string;
-};
+type SeedActor = import("./lib/seed-agency-types").SeedActor;
 
 const SEED_USERS: SeedUserDefinition[] = [
   { key: "founder", name: "Avery Founder", email: "founder@brainiac.test" },
@@ -95,12 +98,7 @@ async function uploadSeedAttachmentIfPossible(args: {
   }
 }
 
-type MemberRecord = {
-  userId: string;
-  userName: string;
-  userEmail: string;
-  role: "owner" | "editor" | "viewer";
-};
+type MemberRecord = import("./lib/seed-agency-types").MemberRecord;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -437,13 +435,7 @@ async function manageMembers(
 // Agency data seeders
 // ---------------------------------------------------------------------------
 
-type SeedContext = {
-  now: Date;
-  teamId: string;
-  teamName: string;
-  members: MemberRecord[];
-  actors: Map<SeedUserKey, SeedActor>;
-};
+type SeedContext = import("./lib/seed-agency-types").SeedContext;
 
 type ClientDef = {
   id: string;
@@ -749,7 +741,7 @@ async function buildShowcaseThreadMessages(ctx: SeedContext): Promise<SeedMessag
   ];
 }
 
-function buildSeedData(ctx: SeedContext) {
+function buildSeedData(ctx: SeedContext, scale: AgencySeedScale = "default") {
   const { now, members } = ctx;
 
   const getOwnerId = () =>
@@ -1057,7 +1049,8 @@ function buildSeedData(ctx: SeedContext) {
     }
   }
 
-  return { clients, projects, tasks, timeEntries };
+  const base = { clients, projects, tasks, timeEntries };
+  return scale === "massive" ? appendMassiveAgencyData(ctx, base) : base;
 }
 
 async function seedTaskMessageAttachments(args: {
@@ -1097,11 +1090,11 @@ async function seedTaskMessageAttachments(args: {
   }
 }
 
-async function seedAgencyData(ctx: SeedContext) {
+async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "default") {
   const s = spinner();
   s.start("Building seed data");
 
-  const data = buildSeedData(ctx);
+  const data = buildSeedData(ctx, scale);
   const ownerId =
     ctx.members.find((m) => m.role === "owner")?.userId ?? ctx.members[0]?.userId ?? "";
   const now = ctx.now;
@@ -1210,22 +1203,24 @@ async function seedAgencyData(ctx: SeedContext) {
   }
 
   s.message("Seeding time entries...");
-  for (const te of data.timeEntries) {
-    await db.insert(agencyOpsTimeEntry).values({
-      id: te.id,
-      teamId,
-      projectId: te.projectId,
-      taskId: te.taskId,
-      userId: te.userId,
-      source: te.source,
-      description: te.description,
-      startedAt: te.startedAt,
-      endedAt: te.endedAt,
-      durationSeconds: te.durationSeconds,
-      createdAt: te.startedAt,
-      updatedAt: te.startedAt,
-    });
-  }
+  await insertInBatches(data.timeEntries, async (chunk) => {
+    await db.insert(agencyOpsTimeEntry).values(
+      chunk.map((te) => ({
+        id: te.id,
+        teamId,
+        projectId: te.projectId,
+        taskId: te.taskId,
+        userId: te.userId,
+        source: te.source,
+        description: te.description,
+        startedAt: te.startedAt,
+        endedAt: te.endedAt,
+        durationSeconds: te.durationSeconds,
+        createdAt: te.startedAt,
+        updatedAt: te.startedAt,
+      })),
+    );
+  });
 
   s.message("Seeding member rates...");
   for (const member of ctx.members) {
@@ -1392,7 +1387,128 @@ async function seedAgencyData(ctx: SeedContext) {
 // Main
 // ---------------------------------------------------------------------------
 
+async function resolveSeedTeam(teamId: string | null): Promise<{
+  teamId: string;
+  teamName: string;
+  members: MemberRecord[];
+}> {
+  if (teamId) {
+    const [team] = await db
+      .select({ id: workspaceTeam.id, name: workspaceTeam.name })
+      .from(workspaceTeam)
+      .where(eq(workspaceTeam.id, teamId))
+      .limit(1);
+
+    if (!team) {
+      throw new Error(`Team not found: ${teamId}`);
+    }
+
+    const members = await loadTeamMembers(team.id);
+    return { teamId: team.id, teamName: team.name, members };
+  }
+
+  const [founder] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, "founder@brainiac.test"))
+    .limit(1);
+
+  if (founder) {
+    const [ownedTeam] = await db
+      .select({ id: workspaceTeam.id, name: workspaceTeam.name })
+      .from(workspaceTeam)
+      .innerJoin(workspaceTeamMember, eq(workspaceTeamMember.teamId, workspaceTeam.id))
+      .where(eq(workspaceTeamMember.userId, founder.id))
+      .limit(1);
+
+    if (ownedTeam) {
+      const members = await loadTeamMembers(ownedTeam.id);
+      return { teamId: ownedTeam.id, teamName: ownedTeam.name, members };
+    }
+  }
+
+  const [fallbackTeam] = await db
+    .select({ id: workspaceTeam.id, name: workspaceTeam.name })
+    .from(workspaceTeam)
+    .limit(1);
+
+  if (!fallbackTeam) {
+    throw new Error("No team available for agency seed. Run db:seed first or pass --team-id.");
+  }
+
+  const members = await loadTeamMembers(fallbackTeam.id);
+  return { teamId: fallbackTeam.id, teamName: fallbackTeam.name, members };
+}
+
+type AgencyCliOptions = {
+  yes: boolean;
+  teamId: string | null;
+  scale: AgencySeedScale;
+  help: boolean;
+};
+
+function parseAgencyCli(argv: string[]): AgencyCliOptions {
+  let yes = false;
+  let teamId: string | null = null;
+  let help = false;
+  let scale = resolveAgencySeedScale(process.env.BRAINIAC_SEED_SCALE);
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index];
+    if (!argument) continue;
+
+    if (argument === "--help" || argument === "-h") {
+      help = true;
+      continue;
+    }
+
+    if (argument === "--yes" || argument === "-y") {
+      yes = true;
+      continue;
+    }
+
+    if (argument === "--team-id") {
+      const value = argv[index + 1]?.trim();
+      if (!value) throw new Error("Missing value for --team-id.");
+      teamId = value;
+      index += 1;
+      continue;
+    }
+
+    if (argument.startsWith("--team-id=")) {
+      const value = argument.slice("--team-id=".length).trim();
+      if (!value) throw new Error("Missing value for --team-id.");
+      teamId = value;
+      continue;
+    }
+
+    if (argument === "--scale") {
+      const value = argv[index + 1]?.trim();
+      if (!value) throw new Error("Missing value for --scale.");
+      scale = resolveAgencySeedScale(value);
+      index += 1;
+      continue;
+    }
+
+    if (argument.startsWith("--scale=")) {
+      scale = resolveAgencySeedScale(argument.slice("--scale=".length));
+      continue;
+    }
+
+    throw new Error(`Unknown argument: ${argument}`);
+  }
+
+  return { yes, teamId, scale, help };
+}
+
 async function main() {
+  const cli = parseAgencyCli(process.argv.slice(2));
+
+  if (cli.help) {
+    console.log("Usage: bun run db:seed:agency [--yes] [--team-id <id>] [--scale default|massive]");
+    return;
+  }
+
   intro("Brainiac Agency Seed");
 
   const password = process.env.BRAINIAC_SEED_PASSWORD?.trim() || DEFAULT_SEED_PASSWORD;
@@ -1400,35 +1516,35 @@ async function main() {
   // 1. Ensure seed users exist
   const actors = await ensureSeedUsers(password);
 
-  // 2. Interactive team selection
-  const team = await pickTeam();
+  const team = cli.yes ? await resolveSeedTeam(cli.teamId) : await pickTeam();
   if (!team) {
     outro("No team selected. Exiting.");
     process.exit(0);
     return;
   }
 
-  // 3. Interactive member management (loop until done)
   let members = team.members;
-  const manageMore = await confirm({
-    message: `Manage members for "${team.teamName}"? Currently ${members.length} member(s).`,
-    initialValue: true,
-  });
 
-  if (!isCancel(manageMore) && manageMore) {
-    members = await manageMembers(team.teamId, members);
-  }
+  if (!cli.yes) {
+    const manageMore = await confirm({
+      message: `Manage members for "${team.teamName}"? Currently ${members.length} member(s).`,
+      initialValue: true,
+    });
 
-  // 4. Confirm seeding
-  const proceed = await confirm({
-    message: `Seed comprehensive agency data into "${team.teamName}" with ${members.length} member(s)?`,
-    initialValue: true,
-  });
+    if (!isCancel(manageMore) && manageMore) {
+      members = await manageMembers(team.teamId, members);
+    }
 
-  if (isCancel(proceed) || !proceed) {
-    outro("Seed cancelled.");
-    process.exit(0);
-    return;
+    const proceed = await confirm({
+      message: `Seed comprehensive agency data into "${team.teamName}" with ${members.length} member(s)?`,
+      initialValue: true,
+    });
+
+    if (isCancel(proceed) || !proceed) {
+      outro("Seed cancelled.");
+      process.exit(0);
+      return;
+    }
   }
 
   // 5. Seed all agency data
@@ -1440,7 +1556,7 @@ async function main() {
     actors,
   };
 
-  const stats = await seedAgencyData(ctx);
+  const stats = await seedAgencyData(ctx, cli.scale);
 
   // 6. Summary
   console.log("");

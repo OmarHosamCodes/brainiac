@@ -15,6 +15,7 @@
     "db:import:clockify": "bun run src/import-clockify.ts",
     "cleanup:agency-operator-nodes": "bun run src/cleanup-agency-operator-nodes.ts",
     "db:seed": "bun run src/seed.ts",
+    "db:seed:massive": "bun run src/seed-massive.ts",
     "start": "bun run dist/index.mjs",
     "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"
   },
