@@ -45,8 +45,6 @@ import {
   shellContentInClass,
   shellPageBodyClass,
   shellPageClass,
-  shellPanelActiveClass,
-  shellPanelClass,
   shellPanelStackClass,
 } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
@@ -59,10 +57,6 @@ function isAgencySegmentId(value: string | null): value is AgencySegmentId {
 
 function panelIdFor(segmentId: AgencySegmentId) {
   return `agency-panel-${segmentId}`;
-}
-
-function animatedPanelClass(segmentId: AgencySegmentId, activeSegment: AgencySegmentId) {
-  return cn(shellPanelClass, segmentId === activeSegment && shellPanelActiveClass);
 }
 
 export function AgencyPage() {
@@ -258,38 +252,27 @@ export function AgencyPage() {
             <div className="flex min-h-0 flex-1 flex-col">
               <div className={shellPageBodyClass}>
                 <div
-                  className={shellPanelStackClass}
+                  className={cn(shellPanelStackClass, "overflow-y-auto overscroll-contain")}
                   role="tabpanel"
                   id={panelIdFor(segment)}
                   aria-labelledby={`agency-tab-${segment}`}
                 >
-                  <div
-                    className={animatedPanelClass("dashboard", segment)}
-                    aria-hidden={segment !== "dashboard"}
-                  >
+                  {segment === "dashboard" ? (
                     <AgencyDashboardSurface
                       ref={dashboardSurfaceRef}
                       teamId={selectedTeamId}
                       onExportStateChange={setDashboardExportState}
                     />
-                  </div>
-
-                  <div
-                    className={animatedPanelClass("work", segment)}
-                    aria-hidden={segment !== "work"}
-                  >
+                  ) : null}
+                  {segment === "work" ? (
                     <AgencyWorkSurface
                       teamId={selectedTeamId}
                       onSelectProject={openProject}
                       onSegmentChange={handleSegmentChange}
                     />
-                  </div>
-
-                  <div
-                    className={animatedPanelClass("projects", segment)}
-                    aria-hidden={segment !== "projects"}
-                  >
-                    {selectedProjectId ? (
+                  ) : null}
+                  {segment === "projects" ? (
+                    selectedProjectId ? (
                       <AgencyProjectDetail
                         teamId={selectedTeamId}
                         projectId={selectedProjectId}
@@ -297,44 +280,28 @@ export function AgencyPage() {
                       />
                     ) : (
                       <AgencyProjectsTable teamId={selectedTeamId} onSelect={openProject} />
-                    )}
-                  </div>
-
-                  <div
-                    className={animatedPanelClass("clients", segment)}
-                    aria-hidden={segment !== "clients"}
-                  >
+                    )
+                  ) : null}
+                  {segment === "clients" ? (
                     <AgencyClientsSurface teamId={selectedTeamId} />
-                  </div>
-
-                  <div
-                    className={animatedPanelClass("reports", segment)}
-                    aria-hidden={segment !== "reports"}
-                  >
+                  ) : null}
+                  {segment === "reports" ? (
                     <AgencyReportsSurface
                       ref={reportsSurfaceRef}
                       teamId={selectedTeamId}
                       hideToolbarExport
                       onExportStateChange={setReportsExportState}
                     />
-                  </div>
-
-                  <div
-                    className={animatedPanelClass("management", segment)}
-                    aria-hidden={segment !== "management"}
-                  >
+                  ) : null}
+                  {segment === "management" ? (
                     <AgencyManagementSurface
                       teamId={selectedTeamId}
                       onSegmentChange={handleSegmentChange}
                     />
-                  </div>
-
-                  <div
-                    className={animatedPanelClass("settings", segment)}
-                    aria-hidden={segment !== "settings"}
-                  >
+                  ) : null}
+                  {segment === "settings" ? (
                     <AgencySettingsSurface teamId={selectedTeamId} />
-                  </div>
+                  ) : null}
                 </div>
               </div>
             </div>

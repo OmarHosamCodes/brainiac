@@ -6,6 +6,8 @@ import { ShellPageTransition } from "@/components/shell/shell-page-transition";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AuthProvider } from "@/providers/auth-provider";
 
+import { shellLoadingPanelClass } from "@/lib/utils/app-shell-ui";
+
 const DashboardPage = lazy(() =>
   import("@/pages/dashboard-page").then((module) => ({ default: module.DashboardPage })),
 );
@@ -35,20 +37,25 @@ function AuthBoundary() {
   );
 }
 
-function ShellLayout() {
+function ShellPageSkeleton() {
   return (
-    <AppShell>
-      <ShellPageTransition />
-    </AppShell>
+    <div className="p-4 md:p-6">
+      <div className={shellLoadingPanelClass}>
+        <div className="h-5 w-40 animate-pulse rounded bg-muted/50" />
+        <div className="mt-4 h-64 w-full animate-pulse rounded bg-muted/30" />
+      </div>
+    </div>
   );
 }
 
-function PageFallback() {
-  return <div className="min-h-screen bg-default" aria-hidden />;
-}
-
-function LazyAppPage({ children }: { children: React.ReactNode }) {
-  return <Suspense fallback={<PageFallback />}>{children}</Suspense>;
+function ShellLayout() {
+  return (
+    <AppShell>
+      <Suspense fallback={<ShellPageSkeleton />}>
+        <ShellPageTransition />
+      </Suspense>
+    </AppShell>
+  );
 }
 
 export function AuthenticatedRoutes() {
@@ -57,54 +64,12 @@ export function AuthenticatedRoutes() {
       <Route element={<AuthBoundary />}>
         <Route element={<ProtectedRoute />}>
           <Route element={<ShellLayout />}>
-            <Route
-              path="/dashboard"
-              element={
-                <LazyAppPage>
-                  <DashboardPage />
-                </LazyAppPage>
-              }
-            />
-            <Route
-              path="/agency"
-              element={
-                <LazyAppPage>
-                  <AgencyPage />
-                </LazyAppPage>
-              }
-            />
-            <Route
-              path="/marketplace"
-              element={
-                <LazyAppPage>
-                  <MarketplacePage />
-                </LazyAppPage>
-              }
-            />
-            <Route
-              path="/billing"
-              element={
-                <LazyAppPage>
-                  <BillingPage />
-                </LazyAppPage>
-              }
-            />
-            <Route
-              path="/billing/success"
-              element={
-                <LazyAppPage>
-                  <BillingSuccessPage />
-                </LazyAppPage>
-              }
-            />
-            <Route
-              path="/node/:id"
-              element={
-                <LazyAppPage>
-                  <NodePage />
-                </LazyAppPage>
-              }
-            />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/agency" element={<AgencyPage />} />
+            <Route path="/marketplace" element={<MarketplacePage />} />
+            <Route path="/billing" element={<BillingPage />} />
+            <Route path="/billing/success" element={<BillingSuccessPage />} />
+            <Route path="/node/:id" element={<NodePage />} />
           </Route>
         </Route>
       </Route>
