@@ -182,9 +182,10 @@ export function useAgencyTaskList({
   }, [createExpanded, selectedProjectIdForCreate, titleSuggestionTasksQuery.data?.items]);
 
   const activeCount = activeTasksQuery.isPending ? null : activeTasksQuery.total;
+  // Done metric is sum of per-member completion counts (server total), not distinct rows.
   const doneCount = doneTasksQuery.isPending ? null : doneTasksQuery.total;
-  const totalCount =
-    activeCount === null || doneCount === null ? null : activeCount + doneCount;
+  // Completions stay open, so unique todos == active list.
+  const totalCount = activeCount;
 
   const clientGroups = useMemo(
     () => groupTasksByClient(activeTasks, projects),

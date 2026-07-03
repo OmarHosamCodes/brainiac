@@ -55,6 +55,7 @@ type AgencyProjectTask = {
     status: "open" | "in_progress" | "done";
   }>;
   viewerStatus?: "open" | "in_progress" | "done";
+  viewerCompletionCount?: number;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -1122,11 +1123,8 @@ function createAgencyOpsActions(
     if (current) {
       const optimisticTask: AgencyProjectTask = {
         ...current,
-        viewerStatus: "done",
-        assignees: current.assignees.map((assignee) => ({
-          ...assignee,
-          status: assignee.status,
-        })),
+        viewerStatus: "open",
+        viewerCompletionCount: (current.viewerCompletionCount ?? 0) + 1,
         updatedAt: nowIso,
       };
       await cancelAgencyProjectTaskListQueries(payload.teamId);

@@ -122,12 +122,16 @@ export function AgencyTaskRowView({
   const projectName = project?.name ?? "Project";
   const isSelected = task.id === selectedTaskId;
   const memberStatus = task.viewerStatus;
+  const completionCount = task.viewerCompletionCount ?? 0;
+  // Done section is read-only; active rows stay unchecked so the same todo can be checked again.
   const isDone =
-    memberStatus !== undefined
+    readOnly ||
+    (memberStatus !== undefined
       ? memberStatus === "done"
-      : task.status === "done" || task.status === "archived";
+      : task.status === "done" || task.status === "archived");
   const overdue = isTaskOverdue(task.dueDate);
   const dueLabel = task.dueDate ? formatDueDate(task.dueDate) : "";
+  const showCompletionMultiplier = readOnly && completionCount > 1;
 
   return (
     <li
@@ -162,14 +166,24 @@ export function AgencyTaskRowView({
           </div>
 
           <div className="min-w-0 flex-1">
-            <span
-              className={cn(
-                "block truncate text-sm font-semibold text-highlighted",
-                readOnly && "text-muted line-through",
-              )}
-            >
-              {task.title}
-            </span>
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span
+                className={cn(
+                  "block min-w-0 truncate text-sm font-semibold text-highlighted",
+                  readOnly && "text-muted line-through",
+                )}
+              >
+                {task.title}
+              </span>
+              {showCompletionMultiplier ? (
+                <span
+                  className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted"
+                  aria-label={`Completed ${completionCount} times`}
+                >
+                  ×{completionCount}
+                </span>
+              ) : null}
+            </div>
 
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
               {onSelectProject ? (

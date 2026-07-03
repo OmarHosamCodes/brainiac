@@ -81,6 +81,7 @@ export const agencyProjectTaskSchema = z.object({
   assignedToTeam: z.boolean(),
   assignees: z.array(agencyProjectTaskAssigneeSchema),
   viewerStatus: agencyProjectTaskMemberStatusSchema.optional(),
+  viewerCompletionCount: z.number().int().nonnegative().optional(),
   dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -89,6 +90,17 @@ export const agencyProjectTaskSchema = z.object({
 /** Case/whitespace-insensitive task title key (must match DB unique index expression). */
 export function normalizeTaskTitle(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/** One check-off: bump count, stay/return open so the todo auto-reappears. */
+export function applyMemberTaskCompletion(current: { completionCount: number }): {
+  completionCount: number;
+  status: "open";
+} {
+  return {
+    completionCount: current.completionCount + 1,
+    status: "open",
+  };
 }
 
 export function formatTaskAssigneeLabel(task: {

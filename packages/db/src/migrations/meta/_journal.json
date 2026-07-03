@@ -99,6 +99,13 @@
       "when": 1783600000000,
       "tag": "0013_unique_task_title_per_project",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1784200000000,
+      "tag": "0014_member_completion_count",
+      "breakpoints": true
     }
   ]
 }

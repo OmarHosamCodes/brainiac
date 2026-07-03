@@ -23,6 +23,7 @@ type AgencyProjectTask = {
     status: "open" | "in_progress" | "done";
   }>;
   viewerStatus?: "open" | "in_progress" | "done";
+  viewerCompletionCount?: number;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -159,6 +160,23 @@ export function taskMatchesAnyAssigneeFilter(
   return false;
 }
 
+function isDoneCompletionQuery(input: Record<string, unknown> | undefined) {
+  if (!input || typeof input.assigneeUserId !== "string") return false;
+  const statuses = input.statuses;
+  if (!Array.isArray(statuses) || statuses.length === 0) return false;
+  const wantsDone = statuses.includes("done");
+  const wantsActive = statuses.includes("open") || statuses.includes("in_progress");
+  return wantsDone && !wantsActive;
+}
+
+function taskListContribution(
+  task: AgencyProjectTask,
+  input: Record<string, unknown> | undefined,
+): number {
+  if (isDoneCompletionQuery(input)) return task.viewerCompletionCount ?? 0;
+  return 1;
+}
+
 export function taskMatchesQueryInput(
   task: AgencyProjectTask,
   input: Record<string, unknown> | undefined,
@@ -173,12 +191,16 @@ export function taskMatchesQueryInput(
   }
   const statuses = input.statuses;
   if (Array.isArray(statuses) && statuses.length > 0) {
-    const effectiveStatus =
-      typeof input.assigneeUserId === "string"
-        ? (task.viewerStatus ??
-          (task.status === "archived" ? "done" : task.status === "done" ? "done" : task.status))
-        : task.status;
-    if (!statuses.includes(effectiveStatus)) return false;
+    if (isDoneCompletionQuery(input)) {
+      if ((task.viewerCompletionCount ?? 0) <= 0) return false;
+    } else {
+      const effectiveStatus =
+        typeof input.assigneeUserId === "string"
+          ? (task.viewerStatus ??
+            (task.status === "archived" ? "done" : task.status === "done" ? "done" : task.status))
+          : task.status;
+      if (!statuses.includes(effectiveStatus)) return false;
+    }
   }
   if (task.status === "archived" && Array.isArray(statuses) && !statuses.includes("archived")) {
     return false;
@@ -317,23 +339,34 @@ function updateTaskInPage(
   task: AgencyProjectTask,
   matches: boolean,
   allowInsert: boolean,
+  input: Record<string, unknown> | undefined,
 ): AgencyProjectTasksListQueryData {
   const items = pageItems(page);
   const index = items.findIndex((item) => item.id === task.id);
+  const previousContribution = index === -1 ? 0 : taskListContribution(items[index]!, input);
+  const nextContribution = matches ? taskListContribution(task, input) : 0;
+  const totalDelta = nextContribution - previousContribution;
+  const nextTotal =
+    typeof page.total === "number" ? Math.max(0, page.total + totalDelta) : page.total;
 
   if (matches) {
     if (index === -1) {
       if (!allowInsert) return page;
-      return { ...page, items: [task, ...items] };
+      return { ...page, items: [task, ...items], total: nextTotal };
     }
     return {
       ...page,
       items: items.map((item) => (item.id === task.id ? task : item)),
+      total: nextTotal,
     };
   }
 
   if (index !== -1) {
-    return { ...page, items: items.filter((item) => item.id !== task.id) };
+    return {
+      ...page,
+      items: items.filter((item) => item.id !== task.id),
+      total: nextTotal,
+    };
   }
 
   return page;
@@ -343,11 +376,11 @@ export function patchUpdatedProjectTaskInCache(teamId: string, task: AgencyProje
   patchAllProjectTasksListData(teamId, (current, input) => {
     const matches = taskMatchesQueryInput(task, input);
     return transformTasksCacheData(current, {
-      list: (data) => updateTaskInPage(data, task, matches, true),
+      list: (data) => updateTaskInPage(data, task, matches, true, input),
       infinite: (pages) => {
         const hasTask = pages.some((page) => page.items.some((item) => item.id === task.id));
         return pages.map((page, index) =>
-          updateTaskInPage(page, task, matches, !hasTask && index === 0),
+          updateTaskInPage(page, task, matches, !hasTask && index === 0, input),
         );
       },
     });
