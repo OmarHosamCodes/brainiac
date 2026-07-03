@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -111,6 +112,11 @@ export const agencyOpsProjectTask = pgTable(
     index("agency_ops_project_task_status_idx").on(table.teamId, table.status),
     index("agency_ops_project_task_due_date_idx").on(table.dueDate),
     index("agency_ops_project_task_assigned_to_team_idx").on(table.teamId, table.assignedToTeam),
+    // Must match normalizeTaskTitle() / migration 0013 expression.
+    uniqueIndex("agency_ops_project_task_project_title_unique").on(
+      table.projectId,
+      sql`(lower(trim(regexp_replace(${table.title}, '\\s+', ' ', 'g'))))`,
+    ),
   ],
 );
 

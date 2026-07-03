@@ -1,8 +1,8 @@
+import { normalizeTaskTitle } from "@brainiac/api/schemas/agency-ops";
+
 import type { AgencyProjectTask } from "@/lib/schemas/agency-work";
 
-export function normalizeTaskTitle(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
+export { normalizeTaskTitle };
 
 function scoreTaskTitleMatch(normalizedTitle: string, normalizedQuery: string) {
   if (!normalizedQuery) return 0;

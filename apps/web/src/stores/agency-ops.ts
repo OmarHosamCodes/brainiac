@@ -806,9 +806,10 @@ function createAgencyOpsActions(
         dueDate: payload.dueDate,
       })) as AgencyProjectTask;
 
+      const existingInCache = findProjectTaskInCache(payload.teamId, created.id);
       reconcileCreatedTask(payload.teamId, optimisticTask.id, created);
 
-      toast.success("Task added", { description: title });
+      toast.success(existingInCache ? "Task ready" : "Task added", { description: title });
       await syncProjectTaskQueriesAfterMutation(payload.teamId);
       return true;
     } catch (error) {
