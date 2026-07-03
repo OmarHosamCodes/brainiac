@@ -374,54 +374,83 @@ export function patchDeletedProjectTaskInCache(teamId: string, taskId: string) {
   );
 }
 
+function reconcileCreatedTaskInPage(
+  page: AgencyProjectTasksListQueryData,
+  optimisticIdValue: string,
+  created: AgencyProjectTask,
+  matches: boolean,
+  allowInsert: boolean,
+): AgencyProjectTasksListQueryData {
+  const items = pageItems(page);
+  const hadOptimistic = items.some((task) => task.id === optimisticIdValue);
+  const withoutOptimistic = items.filter((task) => task.id !== optimisticIdValue);
+  const existingIndex = withoutOptimistic.findIndex((task) => task.id === created.id);
+
+  if (existingIndex !== -1) {
+    return {
+      ...page,
+      items: withoutOptimistic.map((task) => (task.id === created.id ? created : task)),
+      total:
+        typeof page.total === "number" && hadOptimistic
+          ? Math.max(0, page.total - 1)
+          : page.total,
+    };
+  }
+
+  if (!matches) {
+    return {
+      ...page,
+      items: withoutOptimistic,
+      total:
+        typeof page.total === "number" && hadOptimistic
+          ? Math.max(0, page.total - 1)
+          : page.total,
+    };
+  }
+
+  if (hadOptimistic) {
+    return {
+      ...page,
+      items: items.map((task) => (task.id === optimisticIdValue ? created : task)),
+    };
+  }
+
+  if (!allowInsert) return page;
+
+  return {
+    ...page,
+    items: [created, ...items],
+    total: typeof page.total === "number" ? page.total + 1 : page.total,
+  };
+}
+
 export function reconcileCreatedProjectTaskInCache(
   teamId: string,
   optimisticIdValue: string,
   created: AgencyProjectTask,
 ) {
-  patchAllProjectTasksListData(teamId, (current, input) =>
-    transformTasksCacheData(current, {
-      list: (data) => {
-        const items = pageItems(data);
-        if (items.some((task) => task.id === optimisticIdValue)) {
-          return {
-            ...data,
-            items: items.map((task) => (task.id === optimisticIdValue ? created : task)),
-          };
-        }
-        if (!taskMatchesQueryInput(created, input)) return data;
-        if (items.some((task) => task.id === created.id)) {
-          return {
-            ...data,
-            items: items.map((task) => (task.id === created.id ? created : task)),
-          };
-        }
-        return { ...data, items: [created, ...items] };
-      },
+  patchAllProjectTasksListData(teamId, (current, input) => {
+    const matches = taskMatchesQueryInput(created, input);
+    return transformTasksCacheData(current, {
+      list: (data) => reconcileCreatedTaskInPage(data, optimisticIdValue, created, matches, true),
       infinite: (pages) => {
-        const hasOptimistic = pages.some((page) =>
-          page.items.some((task) => task.id === optimisticIdValue),
+        const hasCreated = pages.some((page) =>
+          page.items.some(
+            (task) => task.id === created.id || task.id === optimisticIdValue,
+          ),
         );
-        if (hasOptimistic) {
-          return pages.map((page) => ({
-            ...page,
-            items: page.items.map((task) => (task.id === optimisticIdValue ? created : task)),
-          }));
-        }
-        if (!taskMatchesQueryInput(created, input)) return pages;
-        const hasCreated = pages.some((page) => page.items.some((task) => task.id === created.id));
-        if (hasCreated) {
-          return pages.map((page) => ({
-            ...page,
-            items: page.items.map((task) => (task.id === created.id ? created : task)),
-          }));
-        }
         return pages.map((page, index) =>
-          index === 0 ? { ...page, items: [created, ...page.items] } : page,
+          reconcileCreatedTaskInPage(
+            page,
+            optimisticIdValue,
+            created,
+            matches,
+            !hasCreated && index === 0,
+          ),
         );
       },
-    }),
-  );
+    });
+  });
 }
 
 export async function refetchAgencyProjectsListQueries(teamId: string) {

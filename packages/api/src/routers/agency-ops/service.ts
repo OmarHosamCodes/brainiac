@@ -31,6 +31,7 @@ import {
   getUserAvatarPublicUrl,
   verifyTaskAttachmentUploadToken,
 } from "../../storage";
+import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
 
 const AVATAR_KEY_PREFIX = "user-avatars/";
 
@@ -602,6 +603,141 @@ async function setTaskAssignees(tx: DbTransaction, taskId: string, userIds: stri
   if (addedUserIds.length > 0) {
     await setTaskMemberStatusesForUsers(tx, taskId, addedUserIds, "open");
   }
+}
+
+async function addTaskAssignees(tx: DbTransaction, taskId: string, userIds: string[]) {
+  const uniqueUserIds = [...new Set(userIds)];
+  if (uniqueUserIds.length === 0) return;
+
+  const existingRows = await tx
+    .select({ userId: agencyOpsProjectTaskAssignee.userId })
+    .from(agencyOpsProjectTaskAssignee)
+    .where(eq(agencyOpsProjectTaskAssignee.taskId, taskId));
+  const existingUserIds = new Set(existingRows.map((row) => row.userId));
+  const addedUserIds = uniqueUserIds.filter((userId) => !existingUserIds.has(userId));
+  if (addedUserIds.length === 0) return;
+
+  await tx.insert(agencyOpsProjectTaskAssignee).values(
+    addedUserIds.map((userId) => ({
+      taskId,
+      userId,
+    })),
+  );
+  await setTaskMemberStatusesForUsers(tx, taskId, addedUserIds, "open");
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
+    if ("code" in current && current.code === "23505") return true;
+    current = "cause" in current ? current.cause : undefined;
+  }
+  return false;
+}
+
+/** SQL expression matching normalizeTaskTitle() / unique index. */
+function taskTitleKeySql() {
+  return sql`lower(trim(regexp_replace(${agencyOpsProjectTask.title}, '\\s+', ' ', 'g')))`;
+}
+
+const projectTaskColumns = {
+  id: agencyOpsProjectTask.id,
+  teamId: agencyOpsProjectTask.teamId,
+  projectId: agencyOpsProjectTask.projectId,
+  title: agencyOpsProjectTask.title,
+  status: agencyOpsProjectTask.status,
+  assignedToTeam: agencyOpsProjectTask.assignedToTeam,
+  dueDate: agencyOpsProjectTask.dueDate,
+  createdAt: agencyOpsProjectTask.createdAt,
+  updatedAt: agencyOpsProjectTask.updatedAt,
+} as const;
+
+type ProjectTaskRow = {
+  id: string;
+  teamId: string;
+  projectId: string;
+  title: string;
+  status: "open" | "in_progress" | "done" | "archived";
+  assignedToTeam: boolean;
+  dueDate: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+async function findProjectTaskByTitleKey(
+  teamId: string,
+  projectId: string,
+  titleKey: string,
+): Promise<ProjectTaskRow | null> {
+  const [task] = await db
+    .select(projectTaskColumns)
+    .from(agencyOpsProjectTask)
+    .where(
+      and(
+        eq(agencyOpsProjectTask.teamId, teamId),
+        eq(agencyOpsProjectTask.projectId, projectId),
+        sql`${taskTitleKeySql()} = ${titleKey}`,
+      ),
+    )
+    .limit(1);
+
+  return task ?? null;
+}
+
+async function mergeAssigneesIntoExistingTask(
+  task: ProjectTaskRow,
+  input: {
+    assignedToTeam: boolean;
+    assigneeUserIds: string[];
+  },
+): Promise<ProjectTaskRow> {
+  const existingAssigneeRows = await db
+    .select({ userId: agencyOpsProjectTaskAssignee.userId })
+    .from(agencyOpsProjectTaskAssignee)
+    .where(eq(agencyOpsProjectTaskAssignee.taskId, task.id));
+
+  const plan = planAssigneeMerge({
+    existingAssignedToTeam: task.assignedToTeam,
+    existingAssigneeIds: existingAssigneeRows.map((row) => row.userId),
+    wantAssignedToTeam: input.assignedToTeam,
+    wantAssigneeIds: input.assigneeUserIds,
+  });
+
+  if (plan.kind === "noop") return task;
+
+  const now = new Date();
+  const [updated] = await db.transaction(async (tx) => {
+    if (plan.kind === "team") {
+      await setTaskAssignees(tx, task.id, []);
+      const [row] = await tx
+        .update(agencyOpsProjectTask)
+        .set({ assignedToTeam: true, updatedAt: now })
+        .where(eq(agencyOpsProjectTask.id, task.id))
+        .returning(projectTaskColumns);
+      return [row];
+    }
+
+    await addTaskAssignees(tx, task.id, plan.userIds);
+    const [row] = await tx
+      .update(agencyOpsProjectTask)
+      .set({ updatedAt: now })
+      .where(eq(agencyOpsProjectTask.id, task.id))
+      .returning(projectTaskColumns);
+    return [row];
+  });
+
+  return updated ?? task;
+}
+
+async function buildTaskRecordForActor(task: ProjectTaskRow, actorUserId: string) {
+  const assigneesByTask = await loadTaskAssignees([task.id]);
+  const memberStatuses = await loadTaskMemberStatuses([task.id]);
+  return buildProjectTaskRecord(
+    task,
+    assigneesByTask.get(task.id) ?? [],
+    actorUserId,
+    memberStatuses.get(task.id),
+  );
 }
 
 async function getActiveTimerByUser(userId: string) {
@@ -1201,6 +1337,7 @@ export async function createAgencyProjectTask(
     });
   }
 
+  const titleKey = normalizeTaskTitle(title);
   const assignedToTeam = input.assignedToTeam ?? false;
   const assigneeUserIds = assignedToTeam ? [] : [...new Set(input.assigneeUserIds ?? [])];
 
@@ -1210,67 +1347,71 @@ export async function createAgencyProjectTask(
     }
   }
 
+  const existing = await findProjectTaskByTitleKey(input.teamId, input.projectId, titleKey);
+  if (existing) {
+    const merged = await mergeAssigneesIntoExistingTask(existing, {
+      assignedToTeam,
+      assigneeUserIds,
+    });
+    return buildTaskRecordForActor(merged, actorUserId);
+  }
+
   const now = new Date();
   const taskId = createWorkspaceId("agency-project-task");
   const dueDate = input.dueDate ? parseIsoDateTime(input.dueDate, "dueDate") : null;
 
-  const [created] = await db.transaction(async (tx) => {
-    const [task] = await tx
-      .insert(agencyOpsProjectTask)
-      .values({
-        id: taskId,
-        teamId: input.teamId,
-        projectId: input.projectId,
-        title,
-        status: input.status ?? "open",
-        assignedToTeam,
-        dueDate,
-        createdByUserId: actorUserId,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning({
-        id: agencyOpsProjectTask.id,
-        teamId: agencyOpsProjectTask.teamId,
-        projectId: agencyOpsProjectTask.projectId,
-        title: agencyOpsProjectTask.title,
-        status: agencyOpsProjectTask.status,
-        assignedToTeam: agencyOpsProjectTask.assignedToTeam,
-        dueDate: agencyOpsProjectTask.dueDate,
-        createdAt: agencyOpsProjectTask.createdAt,
-        updatedAt: agencyOpsProjectTask.updatedAt,
-      });
+  try {
+    const [created] = await db.transaction(async (tx) => {
+      const [task] = await tx
+        .insert(agencyOpsProjectTask)
+        .values({
+          id: taskId,
+          teamId: input.teamId,
+          projectId: input.projectId,
+          title,
+          status: input.status ?? "open",
+          assignedToTeam,
+          dueDate,
+          createdByUserId: actorUserId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning(projectTaskColumns);
 
-    if (task) {
-      if (assigneeUserIds.length > 0) {
-        await setTaskAssignees(tx, task.id, assigneeUserIds);
+      if (task) {
+        if (assigneeUserIds.length > 0) {
+          await setTaskAssignees(tx, task.id, assigneeUserIds);
+        }
+
+        await tx.insert(agencyOpsTaskThread).values({
+          id: createWorkspaceId("agency-task-thread"),
+          teamId: input.teamId,
+          taskId: task.id,
+          createdAt: now,
+          updatedAt: now,
+        });
       }
 
-      await tx.insert(agencyOpsTaskThread).values({
-        id: createWorkspaceId("agency-task-thread"),
-        teamId: input.teamId,
-        taskId: task.id,
-        createdAt: now,
-        updatedAt: now,
-      });
+      return [task];
+    });
+
+    if (!created) {
+      throw new ORPCError("INTERNAL_SERVER_ERROR");
     }
 
-    return [task];
-  });
+    return buildTaskRecordForActor(created, actorUserId);
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
 
-  if (!created) {
-    throw new ORPCError("INTERNAL_SERVER_ERROR");
+    const raced = await findProjectTaskByTitleKey(input.teamId, input.projectId, titleKey);
+    if (!raced) throw error;
+
+    const merged = await mergeAssigneesIntoExistingTask(raced, {
+      assignedToTeam,
+      assigneeUserIds,
+    });
+    return buildTaskRecordForActor(merged, actorUserId);
   }
-
-  const assigneesByTask = await loadTaskAssignees([created.id]);
-  const memberStatuses = await loadTaskMemberStatuses([created.id]);
-
-  return buildProjectTaskRecord(
-    created,
-    assigneesByTask.get(created.id) ?? [],
-    actorUserId,
-    memberStatuses.get(created.id),
-  );
 }
 
 export async function completeAgencyProjectTaskForMember(
@@ -1367,6 +1508,19 @@ export async function updateAgencyProjectTask(
     });
   }
 
+  if (title && normalizeTaskTitle(title) !== normalizeTaskTitle(current.title)) {
+    const collision = await findProjectTaskByTitleKey(
+      input.teamId,
+      current.projectId,
+      normalizeTaskTitle(title),
+    );
+    if (collision && collision.id !== current.id) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "A task with this name already exists on this project.",
+      });
+    }
+  }
+
   const dueDate =
     input.dueDate !== undefined
       ? input.dueDate
@@ -1404,17 +1558,7 @@ export async function updateAgencyProjectTask(
       .where(
         and(eq(agencyOpsProjectTask.teamId, input.teamId), eq(agencyOpsProjectTask.id, input.taskId)),
       )
-      .returning({
-        id: agencyOpsProjectTask.id,
-        teamId: agencyOpsProjectTask.teamId,
-        projectId: agencyOpsProjectTask.projectId,
-        title: agencyOpsProjectTask.title,
-        status: agencyOpsProjectTask.status,
-        assignedToTeam: agencyOpsProjectTask.assignedToTeam,
-        dueDate: agencyOpsProjectTask.dueDate,
-        createdAt: agencyOpsProjectTask.createdAt,
-        updatedAt: agencyOpsProjectTask.updatedAt,
-      });
+      .returning(projectTaskColumns);
 
     if (task && nextAssigneeUserIds !== null) {
       await setTaskAssignees(tx, task.id, nextAssigneeUserIds);

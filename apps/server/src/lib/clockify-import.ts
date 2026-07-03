@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { normalizeTaskTitle } from "@brainiac/api/schemas/agency-ops";
 import { db } from "@brainiac/db";
 import {
   agencyOpsClient,
@@ -229,7 +230,10 @@ function parseClockifyEntry(raw: unknown, clockifyUserId: string): ParsedClockif
     (projectName === NO_PROJECT_NAME ? NO_PROJECT_ID : `name-${slugify(`${clientId}-${projectName}`)}`);
 
   const taskName = readString(entry.taskName) ?? readNestedName(taskObj);
-  const taskId = readString(entry.taskId) ?? readNestedId(taskObj);
+  // Key by project + normalized title so same-named Clockify tasks collapse to one row.
+  const taskId = taskName
+    ? `name-${slugify(`${projectId}-${normalizeTaskTitle(taskName)}`)}`
+    : null;
 
   return {
     clockifyEntryId,
@@ -239,7 +243,7 @@ function parseClockifyEntry(raw: unknown, clockifyUserId: string): ParsedClockif
     clientName,
     projectId,
     projectName,
-    taskId: taskId ?? (taskName ? `name-${slugify(`${projectId}-${taskName}`)}` : null),
+    taskId,
     taskName,
     ...time,
   };

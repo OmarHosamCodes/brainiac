@@ -86,6 +86,11 @@ export const agencyProjectTaskSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
+/** Case/whitespace-insensitive task title key (must match DB unique index expression). */
+export function normalizeTaskTitle(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 export function formatTaskAssigneeLabel(task: {
   assignedToTeam: boolean;
   assignees: Array<{ userName: string }>;

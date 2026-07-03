@@ -3,6 +3,7 @@ import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import type { AgencyProjectTask } from "@/lib/schemas/agency-work";
 import {
   filterTasksByTitleSearch,
+  taskTitleExactlyMatches,
 } from "@/lib/utils/agency-task-title-filter";
 
 type UseAgencyTaskTitleChooserOptions = {
@@ -82,7 +83,8 @@ export function useAgencyTaskTitleChooser({
   );
 
   const trimmedSearch = searchTerm.trim();
-  const showCreateRow = Boolean(trimmedSearch);
+  const showCreateRow =
+    Boolean(trimmedSearch) && !taskTitleExactlyMatches(tasks, trimmedSearch);
   const optionCount = filteredTasks.length + (showCreateRow ? 1 : 0);
   const createRowIndex = showCreateRow ? filteredTasks.length : -1;
 

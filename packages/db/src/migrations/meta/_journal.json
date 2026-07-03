@@ -85,6 +85,20 @@
       "when": 1782400000000,
       "tag": "0011_task_multi_assign",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783000000000,
+      "tag": "0012_task_member_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1783600000000,
+      "tag": "0013_unique_task_title_per_project",
+      "breakpoints": true
     }
   ]
 }
