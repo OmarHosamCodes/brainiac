@@ -77,14 +77,28 @@ INSERT INTO agency_ops_project_task_member_status (
 	updated_at
 )
 SELECT
-	d.canonical_id,
-	ms.user_id,
-	ms.status,
-	ms.completed_at,
-	ms.created_at,
-	ms.updated_at
-FROM agency_ops_project_task_member_status AS ms
-INNER JOIN "_agency_ops_task_title_dupes_migration" AS d ON d.dupe_id = ms.task_id
+	merged.canonical_id,
+	merged.user_id,
+	merged.status,
+	merged.completed_at,
+	merged.created_at,
+	merged.updated_at
+FROM (
+	SELECT
+		d.canonical_id,
+		ms.user_id,
+		CASE
+			WHEN bool_or(ms.status = 'done') THEN 'done'
+			WHEN bool_or(ms.status = 'in_progress') THEN 'in_progress'
+			ELSE 'open'
+		END AS status,
+		MAX(ms.completed_at) AS completed_at,
+		MIN(ms.created_at) AS created_at,
+		MAX(ms.updated_at) AS updated_at
+	FROM agency_ops_project_task_member_status AS ms
+	INNER JOIN "_agency_ops_task_title_dupes_migration" AS d ON d.dupe_id = ms.task_id
+	GROUP BY d.canonical_id, ms.user_id
+) AS merged
 ON CONFLICT (task_id, user_id) DO UPDATE SET
 	status = CASE
 		WHEN agency_ops_project_task_member_status.status = 'done'
