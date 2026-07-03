@@ -39,6 +39,7 @@ export type AgencyOptimisticTask = {
     status: "open" | "in_progress" | "done";
   }>;
   viewerStatus?: "open" | "in_progress" | "done";
+  viewerCompletionCount?: number;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;

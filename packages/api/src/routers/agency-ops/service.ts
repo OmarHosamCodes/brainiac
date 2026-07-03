@@ -31,6 +31,7 @@ import {
   getUserAvatarPublicUrl,
   verifyTaskAttachmentUploadToken,
 } from "../../storage";
+import { applyMemberTaskCompletion } from "../../schemas/agency-ops";
 import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
 
 const AVATAR_KEY_PREFIX = "user-avatars/";
@@ -89,9 +90,15 @@ type AgencyProjectTaskRecord = {
   assignedToTeam: boolean;
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
+  viewerCompletionCount?: number;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+type MemberStatusEntry = {
+  status: "open" | "in_progress" | "done";
+  completionCount: number;
 };
 
 type AgencyTaskMessageRecord = {
@@ -397,6 +404,7 @@ function mapProjectTaskRow(row: {
   assignedToTeam: boolean;
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
+  viewerCompletionCount?: number;
   dueDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -410,6 +418,9 @@ function mapProjectTaskRow(row: {
     assignedToTeam: row.assignedToTeam,
     assignees: row.assignees,
     ...(row.viewerStatus !== undefined ? { viewerStatus: row.viewerStatus } : {}),
+    ...(row.viewerCompletionCount !== undefined
+      ? { viewerCompletionCount: row.viewerCompletionCount }
+      : {}),
     dueDate: row.dueDate?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -418,8 +429,8 @@ function mapProjectTaskRow(row: {
 
 async function loadTaskMemberStatuses(
   taskIds: string[],
-): Promise<Map<string, Map<string, "open" | "in_progress" | "done">>> {
-  const result = new Map<string, Map<string, "open" | "in_progress" | "done">>();
+): Promise<Map<string, Map<string, MemberStatusEntry>>> {
+  const result = new Map<string, Map<string, MemberStatusEntry>>();
   if (taskIds.length === 0) return result;
 
   const rows = await db
@@ -427,13 +438,17 @@ async function loadTaskMemberStatuses(
       taskId: agencyOpsProjectTaskMemberStatus.taskId,
       userId: agencyOpsProjectTaskMemberStatus.userId,
       status: agencyOpsProjectTaskMemberStatus.status,
+      completionCount: agencyOpsProjectTaskMemberStatus.completionCount,
     })
     .from(agencyOpsProjectTaskMemberStatus)
     .where(inArray(agencyOpsProjectTaskMemberStatus.taskId, taskIds));
 
   for (const row of rows) {
-    const byUser = result.get(row.taskId) ?? new Map<string, "open" | "in_progress" | "done">();
-    byUser.set(row.userId, row.status);
+    const byUser = result.get(row.taskId) ?? new Map<string, MemberStatusEntry>();
+    byUser.set(row.userId, {
+      status: row.status,
+      completionCount: row.completionCount,
+    });
     result.set(row.taskId, byUser);
   }
 
@@ -466,7 +481,7 @@ async function loadTaskAssignees(
       userId: row.userId,
       userName: row.userName ?? "Unknown",
       userAvatar: formatAvatarUrl(row.userAvatar),
-      status: memberStatuses.get(row.taskId)?.get(row.userId) ?? "open",
+      status: memberStatuses.get(row.taskId)?.get(row.userId)?.status ?? "open",
     });
     result.set(row.taskId, assignees);
   }
@@ -538,11 +553,18 @@ function resolveViewerMemberStatus(
     status: "open" | "in_progress" | "done" | "archived";
     assignedToTeam: boolean;
   },
-  memberStatuses: Map<string, "open" | "in_progress" | "done"> | undefined,
+  memberStatuses: Map<string, MemberStatusEntry> | undefined,
   viewerUserId: string,
 ): "open" | "in_progress" | "done" {
   if (task.status === "archived") return "done";
-  return memberStatuses?.get(viewerUserId) ?? "open";
+  return memberStatuses?.get(viewerUserId)?.status ?? "open";
+}
+
+function resolveViewerCompletionCount(
+  memberStatuses: Map<string, MemberStatusEntry> | undefined,
+  viewerUserId: string,
+): number {
+  return memberStatuses?.get(viewerUserId)?.completionCount ?? 0;
 }
 
 async function buildProjectTaskRecord(
@@ -559,7 +581,7 @@ async function buildProjectTaskRecord(
   },
   assignees: AgencyProjectTaskAssigneeRecord[],
   viewerUserId?: string,
-  memberStatuses?: Map<string, "open" | "in_progress" | "done">,
+  memberStatuses?: Map<string, MemberStatusEntry>,
 ): Promise<AgencyProjectTaskRecord> {
   return mapProjectTaskRow({
     ...row,
@@ -567,6 +589,7 @@ async function buildProjectTaskRecord(
     ...(viewerUserId
       ? {
           viewerStatus: resolveViewerMemberStatus(row, memberStatuses, viewerUserId),
+          viewerCompletionCount: resolveViewerCompletionCount(memberStatuses, viewerUserId),
         }
       : {}),
   });
@@ -1186,16 +1209,35 @@ export async function listAgencyProjectTasks(
 
   const requestedStatuses = input.statuses ?? (input.status ? [input.status] : []);
   const filterByMemberStatus = Boolean(input.assigneeUserId && requestedStatuses.length > 0);
+  const memberStatusList = requestedStatuses.filter(
+    (status): status is "open" | "in_progress" | "done" =>
+      status === "open" || status === "in_progress" || status === "done",
+  );
+  const activeMemberStatuses = memberStatusList.filter(
+    (status): status is "open" | "in_progress" =>
+      status === "open" || status === "in_progress",
+  );
+  const wantsDoneByCompletion =
+    filterByMemberStatus && memberStatusList.includes("done") && activeMemberStatuses.length === 0;
+
+  const viewerCompletionCountSql = sql`coalesce(
+    (
+      select ${agencyOpsProjectTaskMemberStatus.completionCount}
+      from ${agencyOpsProjectTaskMemberStatus}
+      where ${agencyOpsProjectTaskMemberStatus.taskId} = ${agencyOpsProjectTask.id}
+        and ${agencyOpsProjectTaskMemberStatus.userId} = ${input.assigneeUserId!}
+      limit 1
+    ),
+    0
+  )`;
 
   if (filterByMemberStatus) {
     if (!requestedStatuses.includes("archived")) {
       filters.push(sql`${agencyOpsProjectTask.status} <> 'archived'`);
     }
-    const memberStatusList = requestedStatuses.filter(
-      (status): status is "open" | "in_progress" | "done" =>
-        status === "open" || status === "in_progress" || status === "done",
-    );
-    if (memberStatusList.length > 0) {
+    if (wantsDoneByCompletion) {
+      filters.push(sql`${viewerCompletionCountSql} > 0`);
+    } else if (activeMemberStatuses.length > 0) {
       filters.push(
         sql`coalesce(
           (
@@ -1207,7 +1249,7 @@ export async function listAgencyProjectTasks(
           ),
           'open'
         ) in (${sql.join(
-          memberStatusList.map((status) => sql`${status}`),
+          activeMemberStatuses.map((status) => sql`${status}`),
           sql`, `,
         )})`,
       );
@@ -1242,7 +1284,11 @@ export async function listAgencyProjectTasks(
   const whereClause = and(...filters);
 
   const [countRow] = await db
-    .select({ count: sql<number>`count(*)` })
+    .select({
+      count: wantsDoneByCompletion
+        ? sql<number>`coalesce(sum(${viewerCompletionCountSql}), 0)`
+        : sql<number>`count(*)`,
+    })
     .from(agencyOpsProjectTask)
     .where(whereClause);
 
@@ -1452,12 +1498,14 @@ export async function completeAgencyProjectTaskForMember(
   }
 
   const now = new Date();
+  const firstCompletion = applyMemberTaskCompletion({ completionCount: 0 });
   await db
     .insert(agencyOpsProjectTaskMemberStatus)
     .values({
       taskId: input.taskId,
       userId: actorUserId,
-      status: "done",
+      status: firstCompletion.status,
+      completionCount: firstCompletion.completionCount,
       completedAt: now,
       createdAt: now,
       updatedAt: now,
@@ -1468,7 +1516,8 @@ export async function completeAgencyProjectTaskForMember(
         agencyOpsProjectTaskMemberStatus.userId,
       ],
       set: {
-        status: "done",
+        status: "open",
+        completionCount: sql`${agencyOpsProjectTaskMemberStatus.completionCount} + 1`,
         completedAt: now,
         updatedAt: now,
       },

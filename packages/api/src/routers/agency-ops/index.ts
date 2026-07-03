@@ -101,6 +101,7 @@ const agencyProjectTaskSchema = z.object({
     }),
   ),
   viewerStatus: z.enum(["open", "in_progress", "done"]).optional(),
+  viewerCompletionCount: z.number().int().nonnegative().optional(),
   dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
