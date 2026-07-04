@@ -21,7 +21,7 @@ import {
 } from "@/stores/agency-time-tracking";
 
 const OPEN_TASK_STATUSES: AgencyProjectTaskStatus[] = ["open", "in_progress"];
-const TRACKER_SUGGESTION_LIMIT = 4;
+const TRACKER_SUGGESTION_LIMIT = 3;
 
 type UseAgencyTimeTrackerOptions = {
   teamId: string;

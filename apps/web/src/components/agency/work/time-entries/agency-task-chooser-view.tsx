@@ -57,7 +57,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
         >
           {triggerFormat === "project-client" ? (
             loading ? (
-              <span className="min-w-0 truncate text-dimmed">Loading…</span>
+              <span className="min-w-0 truncate text-muted">Loading…</span>
             ) : selectedProject ? (
               <AgencyTimeEntryProjectLabel
                 projectId={selectedProject.id}
@@ -66,12 +66,22 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                 className="min-w-0"
               />
             ) : (
-              <span className="min-w-0 truncate text-dimmed">{placeholder}</span>
+              <span className="min-w-0 truncate text-muted">{placeholder}</span>
             )
           ) : (
             <>
-              <ListChecks className="size-4 shrink-0 text-muted" />
-              <span className={cn("min-w-0 truncate", selectedLabel ? "" : "text-dimmed")}>
+              <ListChecks
+                className={cn(
+                  "size-4 shrink-0",
+                  selectedLabel ? "text-highlighted" : "text-muted",
+                )}
+              />
+              <span
+                className={cn(
+                  "min-w-0 truncate",
+                  selectedLabel ? "text-highlighted" : "text-muted",
+                )}
+              >
                 {loading ? "Loading…" : selectedLabel || placeholder}
               </span>
             </>
@@ -146,7 +156,6 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                         <span className="min-w-0 flex-1 truncate font-medium text-highlighted">
                           {project.name}
                         </span>
-                        <span className="truncate text-xs text-muted">{project.clientName}</span>
                         <span className="ml-1 shrink-0 font-mono text-xs tabular-nums text-muted">
                           {projectTaskCount} {projectTaskCount === 1 ? "Task" : "Tasks"}
                         </span>

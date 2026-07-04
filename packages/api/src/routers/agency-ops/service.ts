@@ -2207,6 +2207,11 @@ export async function getTaskThreadContext(
 
   return {
     ...context,
+    assignees: assignees.map((assignee) => ({
+      userId: assignee.userId,
+      userName: assignee.userName,
+      userAvatar: assignee.userAvatar,
+    })),
     assigneeName:
       context.assignedToTeam || assignees.length > 0
         ? context.assignedToTeam

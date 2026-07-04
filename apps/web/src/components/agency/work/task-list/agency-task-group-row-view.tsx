@@ -121,7 +121,7 @@ export function AgencyTaskGroupRowView({
   }
 
   return (
-    <li className="border-b border-default last:border-b-0">
+    <li>
       <button
         type="button"
         className={cn(

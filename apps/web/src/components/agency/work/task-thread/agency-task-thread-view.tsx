@@ -1,12 +1,14 @@
-import { ArrowLeft, AlertTriangle } from "lucide-react";
+import { ArrowLeft, AlertTriangle, Bot } from "lucide-react";
 
+import { AgencyMemberChooser } from "@/components/agency/agency-member-chooser";
 import { AgencyTaskComposerView } from "@/components/agency/work/task-thread/agency-task-composer-view";
 import { AgencyTaskThreadMessageListView } from "@/components/agency/work/task-thread/agency-task-thread-message-list-view";
 import { AgencyMiniTimer } from "@/components/agency/agency-mini-timer";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AgencyTaskThreadViewModel } from "@/lib/agency/work/hooks/use-agency-task-thread";
+import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
+import { cn } from "@/lib/utils";
 
 type AgencyTaskThreadViewProps = {
   view: AgencyTaskThreadViewModel;
@@ -68,27 +70,47 @@ export function AgencyTaskThreadView({ view }: AgencyTaskThreadViewProps) {
                   </p>
                 </div>
               </div>
-              <div className="flex shrink-0 items-center justify-between gap-3 pl-10 sm:justify-end sm:pl-0">
+              <div className="flex shrink-0 items-center justify-end gap-1.5 pl-10 sm:pl-0">
+                <AgencyMemberChooser
+                  mode="multiple"
+                  triggerVariant="stack"
+                  contentAlign="end"
+                  assignedToTeam={view.assignedToTeam}
+                  selectedUserIds={view.assignees.map((assignee) => assignee.userId)}
+                  onAssignedToTeamChange={(assignedToTeam) =>
+                    view.onAssigneesChange(assignedToTeam, assignedToTeam ? [] : view.assignees.map((a) => a.userId))
+                  }
+                  onSelectedUserIdsChange={(userIds) => view.onAssigneesChange(false, userIds)}
+                  members={view.members}
+                  loading={view.membersLoading}
+                  disabled={view.isAssigneesPending}
+                />
                 <AgencyMiniTimer
+                  variant="compact"
                   teamId={view.teamId}
                   taskId={view.taskId}
                   projectId={view.projectId}
                   taskTitle={view.taskTitle}
                   projectName={view.projectName}
                 />
-                <div className="flex items-center gap-2">
-                  <input
-                    id={view.agentToggleId}
-                    type="checkbox"
-                    checked={view.agentEnabled}
-                    onChange={(e) => view.onAgentEnabledChange(e.target.checked)}
-                    className="size-4 rounded border-default"
-                    aria-describedby={view.agentToggleHelpId}
-                  />
-                  <Label htmlFor={view.agentToggleId} className="text-xs font-semibold">
-                    Agent
-                  </Label>
-                </div>
+                <button
+                  id={view.agentToggleId}
+                  type="button"
+                  aria-label={view.agentEnabled ? "Disable agent" : "Enable agent"}
+                  aria-pressed={view.agentEnabled}
+                  className={cn(
+                    "inline-flex size-7 shrink-0 items-center justify-center rounded-full",
+                    "transition-colors",
+                    agencyFocusRingClass,
+                    "motion-reduce:transition-none",
+                    view.agentEnabled
+                      ? "bg-primary/10 text-primary hover:bg-primary/15"
+                      : "text-muted hover:bg-elevated hover:text-highlighted",
+                  )}
+                  onClick={() => view.onAgentEnabledChange(!view.agentEnabled)}
+                >
+                  <Bot className="size-3.5" aria-hidden />
+                </button>
               </div>
             </div>
           </header>

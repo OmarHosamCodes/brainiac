@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Search, UserRound, UsersRound } from "lucide-react";
+import { Check, ChevronDown, Plus, Search, UserRound, UsersRound } from "lucide-react";
 
 import { AgencyMemberAvatar } from "@/components/agency/agency-member-avatar";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,8 @@ import type { AgencyMemberChooserViewModel } from "@/lib/agency/work/hooks/use-a
 import { UNASSIGNED_ASSIGNEE_VALUE } from "@/stores/agency-task-list";
 import { agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
+
+const STACK_AVATAR_LIMIT = 4;
 
 type AgencyMemberChooserViewProps = {
   view: AgencyMemberChooserViewModel;
@@ -20,6 +22,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
     loading,
     searchPlaceholder,
     className,
+    triggerVariant,
     contentAlign,
     open,
     searchTerm,
@@ -36,41 +39,108 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
   const selectedMember = single?.selectedMember ?? null;
   const isUnassigned = single?.isUnassigned ?? false;
   const assignedToTeam = multiple?.assignedToTeam ?? false;
+  const stackMembers = multiple?.selectedMembers ?? [];
+  const stackVisible = stackMembers.slice(0, STACK_AVATAR_LIMIT);
+  const stackOverflow = stackMembers.length - stackVisible.length;
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          disabled={disabled || loading}
-          className={cn(
-            "flex h-8 w-full min-w-0 items-center gap-1.5 rounded-full border border-default bg-default px-2.5 text-[11px] font-semibold",
-            "transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50",
-            agencyFocusRingClass,
-            mode === "single" && selectedMember
-              ? "text-highlighted"
-              : mode === "multiple" && (assignedToTeam || (multiple?.selectedUserIds.length ?? 0) > 0)
+        {triggerVariant === "stack" ? (
+          <button
+            type="button"
+            disabled={disabled || loading}
+            className={cn(
+              "inline-flex items-center",
+              "transition-opacity disabled:cursor-not-allowed disabled:opacity-50",
+              agencyFocusRingClass,
+              "motion-reduce:transition-none",
+              className,
+            )}
+            aria-label={triggerLabel === "Unassigned" ? "Add assignees" : `Assignees: ${triggerLabel}`}
+          >
+            {assignedToTeam ? (
+              <span
+                className="relative z-0 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted ring-2 ring-default"
+                aria-hidden
+              >
+                <UsersRound className="size-3 text-highlighted" />
+              </span>
+            ) : (
+              stackVisible.map((member, index) => (
+                <span
+                  key={member.userId}
+                  className={cn("relative", index > 0 && "-ml-2")}
+                  style={{ zIndex: index + 1 }}
+                >
+                  <AgencyMemberAvatar
+                    name={member.userName}
+                    avatarUrl={member.userAvatar}
+                    size="sm"
+                    className="size-6 rounded-full ring-2 ring-default"
+                  />
+                </span>
+              ))
+            )}
+            {stackOverflow > 0 && !assignedToTeam ? (
+              <span
+                className={cn(
+                  "relative z-10 -ml-2 flex size-6 shrink-0 items-center justify-center rounded-full",
+                  "bg-muted text-[9px] font-bold text-highlighted ring-2 ring-default",
+                )}
+                aria-hidden
+              >
+                +{stackOverflow}
+              </span>
+            ) : null}
+            <span
+              className={cn(
+                "relative z-20 flex size-6 shrink-0 items-center justify-center rounded-full",
+                "border border-dashed border-default bg-elevated text-muted",
+                "transition-colors hover:border-accented hover:bg-default hover:text-highlighted",
+                "motion-reduce:transition-none",
+                (assignedToTeam || stackVisible.length > 0 || stackOverflow > 0) && "-ml-1",
+              )}
+              aria-hidden
+            >
+              <Plus className="size-3" strokeWidth={2.5} />
+            </span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={disabled || loading}
+            className={cn(
+              "flex h-8 w-full min-w-0 items-center gap-1.5 rounded-full border border-default bg-default px-2.5 text-[11px] font-semibold",
+              "transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50",
+              agencyFocusRingClass,
+              mode === "single" && selectedMember
                 ? "text-highlighted"
-                : "text-muted",
-            "motion-reduce:transition-none",
-            className,
-          )}
-          aria-label="Assignee"
-        >
-          {loading ? null : assignedToTeam ? (
-            <UsersRound className="size-3.5 shrink-0 text-muted" aria-hidden />
-          ) : selectedMember ? (
-            <AgencyMemberAvatar
-              name={selectedMember.userName}
-              avatarUrl={selectedMember.userAvatar}
-              size="sm"
-            />
-          ) : (
-            <UserRound className="size-3.5 shrink-0 text-muted" aria-hidden />
-          )}
-          <span className="min-w-0 flex-1 truncate text-left">{loading ? "Loading…" : triggerLabel}</span>
-          <ChevronDown className="size-3 shrink-0 opacity-70" aria-hidden />
-        </button>
+                : mode === "multiple" && (assignedToTeam || (multiple?.selectedUserIds.length ?? 0) > 0)
+                  ? "text-highlighted"
+                  : "text-muted",
+              "motion-reduce:transition-none",
+              className,
+            )}
+            aria-label="Assignee"
+          >
+            {loading ? null : assignedToTeam ? (
+              <UsersRound className="size-3.5 shrink-0 text-muted" aria-hidden />
+            ) : selectedMember ? (
+              <AgencyMemberAvatar
+                name={selectedMember.userName}
+                avatarUrl={selectedMember.userAvatar}
+                size="sm"
+              />
+            ) : (
+              <UserRound className="size-3.5 shrink-0 text-muted" aria-hidden />
+            )}
+            <span className="min-w-0 flex-1 truncate text-left">
+              {loading ? "Loading…" : triggerLabel}
+            </span>
+            <ChevronDown className="size-3 shrink-0 opacity-70" aria-hidden />
+          </button>
+        )}
       </PopoverTrigger>
       <PopoverContent
         align={contentAlign}
