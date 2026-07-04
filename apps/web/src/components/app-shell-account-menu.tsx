@@ -1,5 +1,16 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { BadgeCheck, Camera, Circle, CreditCard, Loader2, LogIn, LogOut } from "lucide-react";
+import {
+  BadgeCheck,
+  Camera,
+  Circle,
+  CreditCard,
+  Loader2,
+  LogIn,
+  LogOut,
+  Moon,
+  Settings,
+  Sun,
+} from "lucide-react";
 import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -20,6 +31,7 @@ import { getServerUrl } from "@/lib/env";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { getUserAvatarPublicUrl } from "@/lib/user-avatar-url";
 import { shellFocusRingClass, shellRailAvatarClass, shellRailAvatarCollapsedClass, shellRailExpandedLinkClass } from "@/lib/utils/app-shell-ui";
+import { useTheme } from "@/stores/theme";
 import { cn } from "@/lib/utils";
 
 function getInitials(name: string | undefined | null): string {
@@ -45,6 +57,7 @@ export function AppShellAccountMenu({
   const queryClient = useQueryClient();
   const session = authClient.useSession();
   const { tier, isPro } = useBilling();
+  const { isDark, toggle: toggleTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -250,10 +263,22 @@ export function AppShellAccountMenu({
             {tier === "pro" ? "Pro plan" : "Free plan"}
           </DropdownMenuItem>
 
+          <DropdownMenuItem onSelect={toggleTheme}>
+            {isDark ? <Sun /> : <Moon />}
+            {isDark ? "Light mode" : "Dark mode"}
+          </DropdownMenuItem>
+
           <DropdownMenuItem asChild>
             <Link to="/billing">
               <CreditCard />
               Billing
+            </Link>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem asChild>
+            <Link to="/agency?section=settings">
+              <Settings />
+              Settings
             </Link>
           </DropdownMenuItem>
 

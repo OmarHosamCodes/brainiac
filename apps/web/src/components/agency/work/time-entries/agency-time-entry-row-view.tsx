@@ -20,9 +20,10 @@ const descriptionLeadingSlotClass = "flex w-8 shrink-0 items-center justify-star
 
 type AgencyTimeEntryRowViewProps = {
   view: AgencyTimeEntryRowViewModel;
+  className?: string;
 };
 
-export function AgencyTimeEntryRowView({ view }: AgencyTimeEntryRowViewProps) {
+export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowViewProps) {
   const {
     group,
     projects,
@@ -62,11 +63,12 @@ export function AgencyTimeEntryRowView({ view }: AgencyTimeEntryRowViewProps) {
         agencyTimeEntryRowClass,
         agencyTimeEntryGridClass,
         highlighted && agencyTimeEntryRowHighlightClass,
+        className,
       )}
     >
       <div className="flex min-w-0 items-center gap-3 pr-4">
-        <div className={descriptionLeadingSlotClass}>
-          {isMulti ? (
+        {isMulti ? (
+          <div className={descriptionLeadingSlotClass}>
             <button
               type="button"
               className={cn(
@@ -79,8 +81,8 @@ export function AgencyTimeEntryRowView({ view }: AgencyTimeEntryRowViewProps) {
             >
               {group.entries.length}
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         {!isMulti ? (
           <Input

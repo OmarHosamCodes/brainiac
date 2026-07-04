@@ -1,4 +1,4 @@
-import { AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { AgencyTimeEntryWeekGroupView } from "@/components/agency/work/time-entries/agency-time-entry-week-group-view";
 import { Button } from "@/components/ui/button";
@@ -127,18 +127,24 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
 
           <label className="flex items-center gap-2 text-xs text-muted">
             <span>Show</span>
-            <select
-              value={view.pageSize}
-              onChange={(e) => view.onPageSizeChange(Number(e.target.value))}
-              className="rounded-md border border-default bg-default px-2 py-1 font-mono text-xs tabular-nums text-highlighted"
-              aria-label="Entries per page"
-            >
-              {view.pageSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+            <span className="relative inline-flex items-center">
+              <select
+                value={view.pageSize}
+                onChange={(e) => view.onPageSizeChange(Number(e.target.value))}
+                className="appearance-none rounded-md border border-default bg-default py-1 pl-2 pr-6 font-mono text-xs tabular-nums leading-none text-highlighted"
+                aria-label="Entries per page"
+              >
+                {view.pageSizeOptions.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-1.5 top-1/2 size-3 shrink-0 -translate-y-1/2 text-muted"
+                aria-hidden
+              />
+            </span>
           </label>
         </div>
       ) : null}

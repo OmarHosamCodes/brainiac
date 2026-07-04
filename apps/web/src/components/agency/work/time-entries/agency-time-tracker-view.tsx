@@ -141,9 +141,11 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                 className={cn(agencyTimeSuggestionChipClass, agencyFocusRingClass)}
                 onClick={() => view.onApplySuggestion(suggestion)}
               >
-                <History className="size-3 shrink-0" aria-hidden />
-                <span className="max-w-40 truncate">{suggestion.description}</span>
-                <span className="text-muted">
+                <History className="size-3 shrink-0 text-muted" aria-hidden />
+                <span className="max-w-40 truncate font-medium text-highlighted">
+                  {suggestion.description}
+                </span>
+                <span className="max-w-28 truncate rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted">
                   {suggestion.taskTitle || suggestion.projectName}
                 </span>
               </button>

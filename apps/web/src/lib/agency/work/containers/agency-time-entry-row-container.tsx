@@ -20,6 +20,8 @@ type AgencyTimeEntryRowContainerProps = {
   onDeleteEntry: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
   highlighted?: boolean;
+  /** Suppress the row's dashed bottom border (group wrapper supplies a solid one). */
+  omitBottomBorder?: boolean;
 };
 
 function singleEntryGroup(group: CollapsedEntryGroup, entry: TimeEntryRecord): CollapsedEntryGroup {
@@ -36,23 +38,39 @@ function singleEntryGroup(group: CollapsedEntryGroup, entry: TimeEntryRecord): C
   };
 }
 
-export function AgencyTimeEntryRowContainer(props: AgencyTimeEntryRowContainerProps) {
+export function AgencyTimeEntryRowContainer({
+  omitBottomBorder = false,
+  ...props
+}: AgencyTimeEntryRowContainerProps) {
   const view = useAgencyTimeEntryRow(props);
 
+  if (!view.isMulti) {
+    return (
+      <AgencyTimeEntryRowView
+        view={view}
+        className={omitBottomBorder ? "border-b-0" : undefined}
+      />
+    );
+  }
+
   return (
-    <>
-      <AgencyTimeEntryRowView view={view} />
-      {view.isMulti && view.expanded
-        ? props.group.entries.map((entry) => (
+    <div className="ml-1 border-b-2 border-l-2 border-solid border-default border-l-primary/40 pl-1">
+      <AgencyTimeEntryRowView
+        view={view}
+        className={view.expanded ? undefined : "border-b-0"}
+      />
+      {view.expanded
+        ? props.group.entries.map((entry, index) => (
             <AgencyTimeEntryRowContainer
               key={entry.id}
               {...props}
               group={singleEntryGroup(props.group, entry)}
               expanded={false}
               highlighted={props.highlighted === true && entry.id === props.group.entries[0]?.id}
+              omitBottomBorder={index === props.group.entries.length - 1}
             />
           ))
         : null}
-    </>
+    </div>
   );
 }

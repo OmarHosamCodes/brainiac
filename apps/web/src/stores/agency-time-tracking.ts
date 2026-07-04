@@ -6,6 +6,7 @@ import {
   cancelAgencyProjectTaskListQueries,
   findProjectTaskInCache,
   isAgencyProjectsListQueryKey,
+  isAgencyTimeEntriesListQueryKey,
   patchActiveTimerInCache,
   patchUpdatedProjectTaskInCache,
   refetchAgencyActiveTimerQueries,
@@ -152,6 +153,8 @@ type DeleteEntriesPayload = {
 type UpdateEntryPayload = {
   teamId: string;
   entryId: string;
+  /** Baseline from the UI list; preferred over cache lookup. */
+  previousEntry?: AgencyTimeEntry;
   projectId: string;
   taskId: string | null;
   task: Pick<AgencyProjectTask, "id" | "title"> | null;
@@ -1105,22 +1108,42 @@ function createAgencyTimeTrackingActions(
     };
   }
 
+  function findTimeEntry(teamId: string, entryId: string): AgencyTimeEntry | null {
+    for (const { payload: registeredQuery } of logQueryRegistry.values()) {
+      if (registeredQuery.teamId !== teamId) continue;
+      const cached = getQueryClient().getQueryData<AgencyTimeEntriesListQueryData>(
+        registeredQuery.queryKey,
+      );
+      const found = cached?.items.find((item) => item.id === entryId);
+      if (found) return found;
+    }
+
+    // Full cache scan: registry can miss keepPreviousData / unregistered observers.
+    for (const query of getQueryClient().getQueryCache().findAll()) {
+      if (!isAgencyTimeEntriesListQueryKey(query.queryKey, teamId)) continue;
+      const cached = getQueryClient().getQueryData<AgencyTimeEntriesListQueryData>(query.queryKey);
+      const found = cached?.items.find((item) => item.id === entryId);
+      if (found) return found;
+    }
+
+    const overlay = optimistic().timeEntries[teamId];
+    if (!overlay) return null;
+    if (overlay.upserts[entryId]) return overlay.upserts[entryId] as AgencyTimeEntry;
+    for (const [optimisticId, realId] of Object.entries(overlay.idMap)) {
+      if (realId !== entryId) continue;
+      const upsert = overlay.upserts[optimisticId] ?? overlay.upserts[realId];
+      if (upsert) return { ...upsert, id: entryId } as AgencyTimeEntry;
+    }
+    return null;
+  }
+
   async function updateEntry(payload: UpdateEntryPayload) {
     const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([payload.teamId])));
     const entryOverlaySnapshot = optimistic().snapshotTimeEntries(payload.teamId);
     const previousUpdatingIds = [...get().updatingEntryIds];
 
-    const previousEntry = (() => {
-      for (const { payload: registeredQuery } of logQueryRegistry.values()) {
-        if (registeredQuery.teamId !== payload.teamId) continue;
-        const cached = getQueryClient().getQueryData<AgencyTimeEntriesListQueryData>(
-          registeredQuery.queryKey,
-        );
-        const found = cached?.items.find((item) => item.id === payload.entryId);
-        if (found) return found;
-      }
-      return null;
-    })();
+    const previousEntry =
+      payload.previousEntry ?? findTimeEntry(payload.teamId, payload.entryId);
 
     if (!previousEntry) {
       toast.error("Unable to update entry", { description: "Entry not found." });
