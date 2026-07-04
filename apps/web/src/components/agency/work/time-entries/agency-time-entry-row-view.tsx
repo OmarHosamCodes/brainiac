@@ -1,4 +1,5 @@
-import { MoreVertical, Play, Trash2 } from "lucide-react";
+import { Calendar, MoreVertical, Play, Trash2 } from "lucide-react";
+import { useRef } from "react";
 
 import { AgencyTaskChooser } from "@/components/agency/agency-task-chooser";
 import { AgencyTimeEntryActions } from "@/components/agency/agency-time-entry-actions";
@@ -9,10 +10,10 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { AgencyTimeEntryRowViewModel } from "@/lib/agency/work/hooks/use-agency-time-entry-row";
 import {
   agencyFocusRingClass,
-  agencyMetricClass,
   agencyTimeEntryGridClass,
   agencyTimeEntryRowClass,
   agencyTimeEntryRowHighlightClass,
+  agencyTimeEntryTimeInputClass,
 } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
@@ -51,10 +52,23 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onTaskChange,
     onStartTimeChange,
     onEndTimeChange,
+    onStartDateChange,
     onDurationChange,
     onInlineBlur,
     onInlineKeyDown,
   } = view;
+
+  const startDateInputRef = useRef<HTMLInputElement>(null);
+
+  function openStartDatePicker() {
+    const input = startDateInputRef.current;
+    if (!input || editSaving || rowUpdating) return;
+    if (typeof input.showPicker === "function") {
+      input.showPicker();
+      return;
+    }
+    input.click();
+  }
 
   return (
     <div
@@ -101,7 +115,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         )}
       </div>
 
-      <div className="min-w-0 border-l border-dashed border-default pl-4 pr-4">
+      <div className="min-w-0 border-l border-dashed border-default px-3">
         {!isMulti ? (
           <AgencyTaskChooser
             value={editDraft.taskId}
@@ -122,38 +136,63 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-1 border-l border-dashed border-default pl-4 pr-4 text-xs text-muted">
+      <div className="flex min-w-0 items-center gap-1 border-l border-dashed border-default px-3">
         {!isMulti ? (
           <>
-            <Input
-              type="time"
-              value={editDraft.startTime}
-              onChange={(e) => onStartTimeChange(e.target.value)}
-              onBlur={onInlineBlur}
-              onKeyDown={onInlineKeyDown}
+            <div className="grid min-w-0 flex-1 grid-cols-2 gap-1">
+              <Input
+                type="time"
+                value={editDraft.startTime}
+                onChange={(e) => onStartTimeChange(e.target.value)}
+                onBlur={onInlineBlur}
+                onKeyDown={onInlineKeyDown}
+                disabled={editSaving || rowUpdating}
+                className={agencyTimeEntryTimeInputClass}
+                aria-label="Start time"
+              />
+              <Input
+                type="time"
+                value={editDraft.endTime}
+                onChange={(e) => onEndTimeChange(e.target.value)}
+                onBlur={onInlineBlur}
+                onKeyDown={onInlineKeyDown}
+                disabled={editSaving || rowUpdating}
+                className={agencyTimeEntryTimeInputClass}
+                aria-label="End time"
+              />
+            </div>
+            <input
+              ref={startDateInputRef}
+              type="date"
+              value={editDraft.date}
+              onChange={(e) => onStartDateChange(e.target.value)}
               disabled={editSaving || rowUpdating}
-              className="h-7 border-0 bg-transparent px-0 font-mono text-xs shadow-none focus-visible:ring-0"
-              aria-label="Start time"
+              aria-label="Start date"
+              tabIndex={-1}
+              className="sr-only"
             />
-            <Input
-              type="time"
-              value={editDraft.endTime}
-              onChange={(e) => onEndTimeChange(e.target.value)}
-              onBlur={onInlineBlur}
-              onKeyDown={onInlineKeyDown}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
               disabled={editSaving || rowUpdating}
-              className="h-7 border-0 bg-transparent px-0 font-mono text-xs shadow-none focus-visible:ring-0"
-              aria-label="End time"
-            />
+              className={cn("h-8 w-8 shrink-0 p-0 text-muted", agencyFocusRingClass)}
+              aria-label="Choose start date"
+              onClick={openStartDatePicker}
+            >
+              <Calendar className="size-4" />
+            </Button>
           </>
         ) : timeRange ? (
-          <span className="col-span-2">{timeRange}</span>
+          <span className="min-w-0 flex-1 truncate font-mono text-sm font-medium tabular-nums tracking-tight text-muted">
+            {timeRange}
+          </span>
         ) : (
-          <span className="col-span-2">-</span>
+          <span className="text-sm text-muted/70">-</span>
         )}
       </div>
 
-      <div className="border-l border-dashed border-default pl-4 pr-4">
+      <div className="min-w-0 border-l border-dashed border-default px-3">
         {!isMulti ? (
           <Input
             value={editDraft.durationInput}
@@ -161,19 +200,16 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             onBlur={onInlineBlur}
             onKeyDown={onInlineKeyDown}
             disabled={editSaving || rowUpdating}
-            className={cn(
-              "h-7 border-0 bg-transparent px-0 text-base font-semibold shadow-none focus-visible:ring-0",
-              agencyMetricClass,
-            )}
+            className="h-7 min-w-[4rem] border-0 bg-transparent px-0 font-mono text-sm font-medium tabular-nums text-muted shadow-none focus-visible:text-highlighted focus-visible:ring-0"
             aria-label="Duration"
           />
         ) : (
-          <span className={cn("text-base font-semibold", agencyMetricClass)}>{durationLabel}</span>
+          <span className="font-mono text-sm font-medium tabular-nums text-muted">{durationLabel}</span>
         )}
         {editError ? <p className="text-xs text-error">{editError}</p> : null}
       </div>
 
-      <div className="flex min-w-0 shrink-0 items-center justify-end gap-0.5 border-l border-dashed border-default pl-3">
+      <div className="flex min-w-0 shrink-0 items-center justify-end gap-1 border-l border-dashed border-default pl-3 pr-1">
         {isMulti && !expanded ? (
           <div className="flex shrink-0 items-center gap-0.5">
             <Button
