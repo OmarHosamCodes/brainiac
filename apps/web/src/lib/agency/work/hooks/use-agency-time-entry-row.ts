@@ -109,6 +109,7 @@ export type AgencyTimeEntryRowViewModel = {
   onTaskChange: (taskId: string) => void;
   onStartTimeChange: (value: string) => void;
   onEndTimeChange: (value: string) => void;
+  onStartDateChange: (value: string) => void;
   onDurationChange: (value: string) => void;
   onInlineBlur: () => void;
   onInlineKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
@@ -285,6 +286,11 @@ export function useAgencyTimeEntryRow({
         applyDurationToDraft({ ...editDraft, startTime: value }, editDraft.durationInput),
       ),
     onEndTimeChange: (value) => updateInlineDraft(applyEndTimeToDraft(editDraft, value)),
+    onStartDateChange: (value) => {
+      const nextDraft = { ...editDraft, date: value };
+      updateInlineDraft(nextDraft);
+      void saveInlineDraft(nextDraft);
+    },
     onDurationChange: (value) => updateInlineDraft(applyDurationToDraft(editDraft, value)),
     onInlineBlur: () => void saveInlineDraft(),
     onInlineKeyDown,

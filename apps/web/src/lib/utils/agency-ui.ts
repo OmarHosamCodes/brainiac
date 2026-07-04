@@ -110,13 +110,18 @@ export const agencyTimeWeekHeaderClass = [
 ].join(" ");
 
 export const agencyTimeEntryRowClass = [
-  "border-b-[1px] border-dashed border-default bg-card/20 px-4 py-2.5 transition-colors motion-reduce:transition-none",
+  "border-b-[1px] border-dashed border-default bg-card/20 px-4 py-3 transition-colors motion-reduce:transition-none",
+].join(" ");
 
+/** Inline time inputs in entry rows. */
+export const agencyTimeEntryTimeInputClass = [
+  "h-7 w-full min-w-0 appearance-none border-0 bg-transparent px-0 font-mono text-sm font-medium tabular-nums tracking-tight text-muted shadow-none focus-visible:ring-0 focus-visible:text-highlighted",
+  "[&::-webkit-calendar-picker-indicator]:hidden",
 ].join(" ");
 
 /** Shared column grid for time entry rows inside the horizontal scroll region. */
 export const agencyTimeEntryGridClass =
-  "grid w-full min-w-[44rem] grid-cols-[minmax(12rem,1.35fr)_minmax(10rem,0.9fr)_8.5rem_6.5rem_5rem] items-center gap-0";
+  "grid w-full min-w-[46rem] grid-cols-[minmax(12rem,1.35fr)_minmax(10rem,0.9fr)_minmax(11rem,auto)_minmax(6.5rem,7rem)_5.5rem] items-center gap-0";
 
 export const agencyTimeEntryScrollClass = "min-w-0 overflow-x-auto";
 
