@@ -6,9 +6,12 @@ mock.module("@/lib/env", () => ({
   getRpcBaseUrl: () => "http://localhost:7000",
 }));
 
-const { bindQueryClient } = await import("@/lib/query-client");
+const {
+  bindQueryClient,
+} = await import("@/lib/query-client");
 const {
   findProjectTaskInCache,
+  patchActiveTimerInCache,
   patchDeletedProjectTaskInCache,
   patchInsertedProjectTaskInCache,
   patchUpdatedProjectTaskInCache,
@@ -127,5 +130,27 @@ describe("findProjectTaskInCache", () => {
     });
 
     expect(findProjectTaskInCache(teamId, "cached")?.id).toBe("cached");
+  });
+});
+
+describe("patchActiveTimerInCache", () => {
+  test("seeds listActiveMembers cache even when query has not mounted", () => {
+    const client = setupClient();
+    const membersQueryKey = [
+      ["agencyOps", "timer", "listActiveMembers"],
+      { input: { teamId }, type: "query" },
+    ] as const;
+    const timer = {
+      teamId,
+      userId: "user-1",
+      projectName: "Project Alpha",
+      description: "Working",
+      startedAt: "2026-07-04T12:00:00.000Z",
+    };
+
+    patchActiveTimerInCache(teamId, timer);
+
+    const members = client.getQueryData<{ items: Array<{ userId: string }> }>(membersQueryKey);
+    expect(members?.items.map((item) => item.userId)).toEqual(["user-1"]);
   });
 });

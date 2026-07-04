@@ -22,6 +22,8 @@ export function AgencyProjectChooserView({ view }: AgencyProjectChooserViewProps
     className,
     contentAlign,
     autoFocus,
+    allowEmpty,
+    emptyLabel,
     open,
     searchTerm,
     selectedProject,
@@ -29,7 +31,16 @@ export function AgencyProjectChooserView({ view }: AgencyProjectChooserViewProps
     onOpenChange,
     onSearchChange,
     onSelectProject,
+    onClearSelection,
   } = view;
+
+  const triggerLabel = loading
+    ? "Loading…"
+    : selectedProject
+      ? selectedProject.name
+      : allowEmpty
+        ? emptyLabel
+        : placeholder;
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -50,13 +61,13 @@ export function AgencyProjectChooserView({ view }: AgencyProjectChooserViewProps
         >
           {loading ? (
             <span className="truncate">Loading…</span>
-          ) : selectedProject ? (
-            <>
-              <AgencyProjectHueDot projectId={selectedProject.id} />
-              <span className="truncate">{selectedProject.name}</span>
-            </>
           ) : (
-            <span className="truncate">{placeholder}</span>
+            <>
+              {selectedProject ? (
+                <AgencyProjectHueDot projectId={selectedProject.id} />
+              ) : null}
+              <span className="truncate">{triggerLabel}</span>
+            </>
           )}
           <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden />
         </button>
@@ -84,48 +95,68 @@ export function AgencyProjectChooserView({ view }: AgencyProjectChooserViewProps
                 <Skeleton key={rowIndex} className="h-7 rounded-lg" />
               ))}
             </div>
-          ) : groupedProjects.length === 0 ? (
-            <p className="px-4 py-6 text-center text-xs text-muted">
-              {searchTerm.trim() ? "No matching projects." : "No projects available."}
-            </p>
           ) : (
-            groupedProjects.map((group) => (
-              <div key={group.clientName} className="py-1 first:pt-0">
-                <div className="mb-1 flex items-center justify-between px-4 text-[11px] font-semibold text-muted">
-                  <span className="uppercase tracking-[0.12em]">{group.clientName}</span>
-                  <span className="font-mono tabular-nums">
-                    {group.projects.length} {group.projects.length === 1 ? "Project" : "Projects"}
-                  </span>
-                </div>
+            <>
+              {allowEmpty ? (
+                <button
+                  type="button"
+                  className={cn(
+                    "mx-2 mb-1 flex w-[calc(100%-1rem)] items-center rounded-lg px-2.5 py-2 text-left text-xs font-semibold transition-colors hover:bg-default/80",
+                    !value ? "bg-primary/10 text-primary hover:bg-primary/10" : "text-highlighted",
+                    agencyFocusRingClass,
+                    "motion-reduce:transition-none",
+                  )}
+                  onClick={onClearSelection}
+                >
+                  {emptyLabel}
+                </button>
+              ) : null}
 
-                {group.projects.map((project) => {
-                  const selected = project.id === value;
-                  return (
-                    <button
-                      key={project.id}
-                      type="button"
-                      className={cn(
-                        "mx-2 flex w-[calc(100%-1rem)] items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-default/80",
-                        selected && "bg-primary/10 hover:bg-primary/10",
-                        agencyFocusRingClass,
-                        "motion-reduce:transition-none",
-                      )}
-                      onClick={() => onSelectProject(project.id)}
-                    >
-                      <AgencyProjectHueDot projectId={project.id} />
-                      <span
-                        className={cn(
-                          "min-w-0 flex-1 truncate text-xs font-semibold",
-                          selected ? "text-primary" : "text-highlighted",
-                        )}
-                      >
-                        {project.name}
+              {groupedProjects.length === 0 ? (
+                <p className="px-4 py-6 text-center text-xs text-muted">
+                  {searchTerm.trim() ? "No matching projects." : "No projects available."}
+                </p>
+              ) : (
+                groupedProjects.map((group) => (
+                  <div key={group.clientName} className="py-1 first:pt-0">
+                    <div className="mb-1 flex items-center justify-between px-4 text-[11px] font-semibold text-muted">
+                      <span className="uppercase tracking-[0.12em]">{group.clientName}</span>
+                      <span className="font-mono tabular-nums">
+                        {group.projects.length}{" "}
+                        {group.projects.length === 1 ? "Project" : "Projects"}
                       </span>
-                    </button>
-                  );
-                })}
-              </div>
-            ))
+                    </div>
+
+                    {group.projects.map((project) => {
+                      const selected = project.id === value;
+                      return (
+                        <button
+                          key={project.id}
+                          type="button"
+                          className={cn(
+                            "mx-2 flex w-[calc(100%-1rem)] items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-default/80",
+                            selected && "bg-primary/10 hover:bg-primary/10",
+                            agencyFocusRingClass,
+                            "motion-reduce:transition-none",
+                          )}
+                          onClick={() => onSelectProject(project.id)}
+                        >
+                          <AgencyProjectHueDot projectId={project.id} />
+                          <span
+                            className={cn(
+                              "min-w-0 flex-1 truncate text-xs font-semibold",
+                              selected ? "text-primary" : "text-highlighted",
+                            )}
+                          >
+                            {project.name}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))
+              )}
+            </>
           )}
         </div>
       </PopoverContent>

@@ -1,5 +1,6 @@
 import { Check, Clock, Plus } from "lucide-react";
 
+import { AgencyTaskRowSwipeShell } from "@/components/agency/work/task-list/agency-task-row-swipe-shell";
 import { AgencyMiniTimerContainer } from "@/lib/agency/work/containers/agency-mini-timer-container";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import {
@@ -106,6 +107,7 @@ export type AgencyTaskRowViewProps = {
   onStatusChange?: (task: AgencyProjectTask, status: TaskStatus) => void;
   /** Done section: reopen this task into Active. */
   onReopenToActive?: (task: AgencyProjectTask) => void;
+  onDelete?: (task: AgencyProjectTask) => void;
 };
 
 export function AgencyTaskRowView({
@@ -120,6 +122,7 @@ export function AgencyTaskRowView({
   onSelectProject,
   onStatusChange,
   onReopenToActive,
+  onDelete,
 }: AgencyTaskRowViewProps) {
   const project = projects.find((p) => p.id === task.projectId);
   const projectName = project?.name ?? "Project";
@@ -140,27 +143,41 @@ export function AgencyTaskRowView({
         ? "archived"
         : "open";
 
+  const swipeEnabled = !readOnly && Boolean(onDelete);
+
   return (
     <li
       className={cn(
+        "group/task-row",
         agencyTaskRowClass,
         isSelected && agencyTaskRowSelectedClass,
         readOnly && agencyTaskRowDoneClass,
         highlight && agencyTaskRowCompleteClass,
       )}
     >
+      <AgencyTaskRowSwipeShell
+        enabled={swipeEnabled}
+        disabled={isRowPending}
+        deleteLabel={`Delete ${task.title}`}
+        rowLabel={`Open thread for ${task.title}`}
+        surfaceClassName={cn(isSelected && "ring-1 ring-inset ring-primary/30")}
+        onDeleteRequest={() => onDelete?.(task)}
+        onRowActivate={() => onSelect(task.id)}
+      >
       <div className="relative flex items-center gap-2 px-3 py-2.5">
-        <button
-          type="button"
-          className={cn(
-            "absolute inset-0 z-0 rounded-none",
-            agencyFocusRingClass,
-            "motion-reduce:transition-none",
-          )}
-          aria-current={isSelected ? "true" : undefined}
-          aria-label={`Open thread for ${task.title}`}
-          onClick={() => onSelect(task.id)}
-        />
+        {!swipeEnabled ? (
+          <button
+            type="button"
+            className={cn(
+              "absolute inset-0 z-0 rounded-none",
+              agencyFocusRingClass,
+              "motion-reduce:transition-none",
+            )}
+            aria-current={isSelected ? "true" : undefined}
+            aria-label={`Open thread for ${task.title}`}
+            onClick={() => onSelect(task.id)}
+          />
+        ) : null}
 
         <div className="pointer-events-none relative z-10 flex w-full min-w-0 items-center gap-2">
           <div className="pointer-events-auto">
@@ -266,6 +283,7 @@ export function AgencyTaskRowView({
           </div>
         </div>
       </div>
+      </AgencyTaskRowSwipeShell>
     </li>
   );
 }

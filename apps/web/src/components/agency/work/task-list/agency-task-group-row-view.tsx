@@ -79,6 +79,7 @@ export type AgencyTaskGroupRowViewProps = {
   onSelectProject?: (projectId: string) => void;
   onStatusChange?: (task: AgencyProjectTask, status: TaskStatus) => void;
   onDeleteInstance?: (task: AgencyProjectTask) => void;
+  onDelete?: (task: AgencyProjectTask) => void;
   readOnly?: boolean;
   highlightTaskId?: string;
 };
@@ -96,6 +97,7 @@ export function AgencyTaskGroupRowView({
   onSelectProject,
   onStatusChange,
   onDeleteInstance,
+  onDelete,
   readOnly = false,
   highlightTaskId = "",
 }: AgencyTaskGroupRowViewProps) {
@@ -116,6 +118,7 @@ export function AgencyTaskGroupRowView({
         onSelect={onSelect ?? (() => undefined)}
         onSelectProject={onSelectProject}
         onStatusChange={onStatusChange}
+        onDelete={onDelete}
       />
     );
   }

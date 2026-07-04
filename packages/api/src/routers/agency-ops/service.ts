@@ -2296,6 +2296,41 @@ export async function getAgencyActiveTimer(actorUserId: string, input: { teamId?
   };
 }
 
+export async function listAgencyActiveMembers(
+  actorUserId: string,
+  input: {
+    teamId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const rows = await db
+    .select({
+      userId: agencyOpsActiveTimer.userId,
+      userName: user.name,
+      userAvatar: user.image,
+      projectName: agencyOpsProject.name,
+      description: agencyOpsActiveTimer.description,
+      startedAt: agencyOpsActiveTimer.startedAt,
+    })
+    .from(agencyOpsActiveTimer)
+    .innerJoin(user, eq(user.id, agencyOpsActiveTimer.userId))
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+    .where(eq(agencyOpsActiveTimer.teamId, input.teamId))
+    .orderBy(asc(user.name));
+
+  return {
+    items: rows.map((row) => ({
+      userId: row.userId,
+      userName: row.userName ?? "Unknown",
+      userAvatar: formatAvatarUrl(row.userAvatar),
+      projectName: row.projectName,
+      description: row.description,
+      startedAt: row.startedAt.toISOString(),
+    })),
+  };
+}
+
 export async function startAgencyTimer(
   actorUserId: string,
   input: {

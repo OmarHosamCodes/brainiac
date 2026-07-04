@@ -17,6 +17,7 @@ import {
   deleteTaskAttachment,
   exportAgencyReportsCsv,
   getAgencyActiveTimer,
+  listAgencyActiveMembers,
   getAgencyDashboardSummary,
   getAgencyReportsSummary,
   getAgencyTimeSummary,
@@ -714,6 +715,24 @@ export const agencyOpsRouter = {
         return z
           .object({ timer: agencyActiveTimerSchema.nullable() })
           .parse(await getAgencyActiveTimer(context.session.user.id, input));
+      }),
+    listActiveMembers: protectedProProcedure
+      .input(teamScopedInputSchema)
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            items: z.array(
+              z.object({
+                userId: z.string().min(1),
+                userName: z.string().min(1),
+                userAvatar: z.string().nullable(),
+                projectName: z.string().min(1),
+                description: z.string(),
+                startedAt: z.string().datetime(),
+              }),
+            ),
+          })
+          .parse(await listAgencyActiveMembers(context.session.user.id, input));
       }),
     start: protectedProProcedure
       .input(

@@ -5,7 +5,7 @@ import { useLocation } from "react-router-dom";
 import { AppShellBreadcrumbs } from "@/components/app-shell-breadcrumbs";
 import { AppShellPortal } from "@/components/app-shell-portal";
 import { Button } from "@/components/ui/button";
-import { useAppShellStore, useHasContextContent, useShellMode } from "@/stores/app-shell";
+import { useAppShellStore, useHasContextContent, useShellMode, useAgentButtonHidden } from "@/stores/app-shell";
 import {
   shellActionsSlotClass,
   shellContextDividerClass,
@@ -71,6 +71,7 @@ export function AppShellTopbar() {
   const agentDockOpen = useAppShellStore((s) => s.agentDockOpen);
   const setAgentDockOpen = useAppShellStore((s) => s.setAgentDockOpen);
   const hasPageActions = useAppShellStore((s) => s.actionsOwnerCount > 0);
+  const agentButtonHidden = useAgentButtonHidden();
   const isSpatialMode = shellMode === "spatial";
 
   return (
@@ -93,22 +94,24 @@ export function AppShellTopbar() {
       <div className={shellUtilityClusterClass}>
         <div id={APP_SHELL_ACTIONS_SLOT_ID} className={shellHeaderActionsRegionClass} />
         {hasPageActions ? <span className={shellContextDividerClass} aria-hidden="true" /> : null}
-        <Button
-          type="button"
-          variant={agentDockOpen ? "secondary" : "ghost"}
-          size="sm"
-          className={shellHeaderUtilityActionClass}
-          aria-label={agentDockOpen ? "Close agent dock" : "Open agent dock"}
-          aria-keyshortcuts="Control+J Meta+J"
-          onClick={() => setAgentDockOpen(!agentDockOpen)}
-        >
-          {agentDockOpen ? (
-            <PanelRightClose className="size-4" />
-          ) : (
-            <PanelRightOpen className="size-4" />
-          )}
-          <span className="hidden sm:inline">{agentDockOpen ? "Close" : "Agent"}</span>
-        </Button>
+        {agentButtonHidden ? null : (
+          <Button
+            type="button"
+            variant={agentDockOpen ? "secondary" : "ghost"}
+            size="sm"
+            className={shellHeaderUtilityActionClass}
+            aria-label={agentDockOpen ? "Close agent dock" : "Open agent dock"}
+            aria-keyshortcuts="Control+J Meta+J"
+            onClick={() => setAgentDockOpen(!agentDockOpen)}
+          >
+            {agentDockOpen ? (
+              <PanelRightClose className="size-4" />
+            ) : (
+              <PanelRightOpen className="size-4" />
+            )}
+            <span className="hidden sm:inline">{agentDockOpen ? "Close" : "Agent"}</span>
+          </Button>
+        )}
       </div>
     </header>
   );

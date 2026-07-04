@@ -15,6 +15,8 @@ type AgencyProjectChooserContainerProps = {
   onOpenChange?: (open: boolean) => void;
   contentAlign?: "start" | "center" | "end";
   autoFocus?: boolean;
+  allowEmpty?: boolean;
+  emptyLabel?: string;
 };
 
 export function AgencyProjectChooserContainer(props: AgencyProjectChooserContainerProps) {

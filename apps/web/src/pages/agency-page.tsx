@@ -1,28 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
-import { Download } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { AgencyClientsSurface } from "@/components/agency/agency-clients-surface";
-import {
-  AgencyDashboardSurface,
-  type AgencyDashboardSurfaceHandle,
-} from "@/components/agency/agency-dashboard-surface";
+import { AgencyDashboardSurface } from "@/components/agency/agency-dashboard-surface";
 import { AgencyManagementSurface } from "@/components/agency/agency-management-surface";
 import { AgencyPlaceholderSurface } from "@/components/agency/agency-placeholder-surface";
 import { AgencyProUpsell } from "@/components/agency/agency-pro-upsell";
 import { AgencyProjectDetail } from "@/components/agency/agency-project-detail";
 import { AgencyProjectsTable } from "@/components/agency/agency-projects-table";
-import {
-  AgencyReportsSurface,
-  type AgencyReportsSurfaceHandle,
-} from "@/components/agency/agency-reports-surface";
-import { AgencySettingsSurface } from "@/components/agency/agency-settings-surface";
+import { AgencyReportsSurface } from "@/components/agency/agency-reports-surface";
 import { AgencySubtitleBreadcrumb } from "@/components/agency/agency-subtitle-breadcrumb";
+import { AgencyPresenceAvatars } from "@/components/agency/agency-presence-avatars";
 import { AgencyTeamBreadcrumb } from "@/components/agency/agency-team-breadcrumb";
 import { AgencyWorkSurface } from "@/components/agency/agency-work-surface";
 import { AppShellTopbarActions, AppShellTopbarSubtitle } from "@/components/app-shell-topbar";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppShellPage } from "@/components/app-shell-page";
 import { useAgencySyncStatus } from "@/lib/queries/agency-sync";
@@ -86,21 +78,17 @@ export function AgencyPage() {
       ? LEGACY_AGENCY_SEGMENT_MAP[sectionParam]
       : "work";
 
-  const reportsSurfaceRef = useRef<AgencyReportsSurfaceHandle | null>(null);
-  const dashboardSurfaceRef = useRef<AgencyDashboardSurfaceHandle | null>(null);
-  const [reportsExportState, setReportsExportState] = useState({
-    canExport: false,
-    isExporting: false,
-  });
-  const [dashboardExportState, setDashboardExportState] = useState({
-    canExport: false,
-    isExporting: false,
-  });
-
   const selectedProjectId =
     typeof searchParams.get("project") === "string" ? searchParams.get("project")! : "";
 
   useEffect(() => {
+    if (sectionParam === "settings") {
+      const next = new URLSearchParams(searchParams);
+      next.set("section", "management");
+      next.set("manage", "resourcing");
+      setSearchParams(next, { replace: true });
+      return;
+    }
     if (!isLegacyAgencySegmentId(sectionParam)) return;
     const next = new URLSearchParams(searchParams);
     next.set("section", LEGACY_AGENCY_SEGMENT_MAP[sectionParam]);
@@ -183,7 +171,7 @@ export function AgencyPage() {
   }
 
   return (
-    <AppShellPage slots={["subtitle", "actions"]}>
+    <AppShellPage slots={["subtitle", "actions", "hideAgent"]}>
       <div className="flex h-full flex-col overflow-hidden bg-default text-default">
         <AppShellTopbarSubtitle>
           <AgencySubtitleBreadcrumb
@@ -199,27 +187,7 @@ export function AgencyPage() {
             teams={teams}
             onTeamIdChange={setSelectedTeamId}
           />
-          {segment === "dashboard" ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!dashboardExportState.canExport || dashboardExportState.isExporting}
-              onClick={() => void dashboardSurfaceRef.current?.downloadCsv()}
-            >
-              <Download className="size-4" />
-              {dashboardExportState.isExporting ? "Exporting…" : "Export CSV"}
-            </Button>
-          ) : segment === "reports" ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!reportsExportState.canExport || reportsExportState.isExporting}
-              onClick={() => void reportsSurfaceRef.current?.downloadCsv()}
-            >
-              <Download className="size-4" />
-              {reportsExportState.isExporting ? "Exporting…" : "Export CSV"}
-            </Button>
-          ) : null}
+          {selectedTeamId ? <AgencyPresenceAvatars teamId={selectedTeamId} /> : null}
         </AppShellTopbarActions>
 
         <main className={shellPageClass}>
@@ -258,11 +226,7 @@ export function AgencyPage() {
                   aria-labelledby={`agency-tab-${segment}`}
                 >
                   {segment === "dashboard" ? (
-                    <AgencyDashboardSurface
-                      ref={dashboardSurfaceRef}
-                      teamId={selectedTeamId}
-                      onExportStateChange={setDashboardExportState}
-                    />
+                    <AgencyDashboardSurface teamId={selectedTeamId} />
                   ) : null}
                   {segment === "work" ? (
                     <AgencyWorkSurface
@@ -286,21 +250,10 @@ export function AgencyPage() {
                     <AgencyClientsSurface teamId={selectedTeamId} />
                   ) : null}
                   {segment === "reports" ? (
-                    <AgencyReportsSurface
-                      ref={reportsSurfaceRef}
-                      teamId={selectedTeamId}
-                      hideToolbarExport
-                      onExportStateChange={setReportsExportState}
-                    />
+                    <AgencyReportsSurface teamId={selectedTeamId} />
                   ) : null}
                   {segment === "management" ? (
-                    <AgencyManagementSurface
-                      teamId={selectedTeamId}
-                      onSegmentChange={handleSegmentChange}
-                    />
-                  ) : null}
-                  {segment === "settings" ? (
-                    <AgencySettingsSurface teamId={selectedTeamId} />
+                    <AgencyManagementSurface teamId={selectedTeamId} />
                   ) : null}
                 </div>
               </div>

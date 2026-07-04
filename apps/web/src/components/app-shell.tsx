@@ -5,7 +5,6 @@ import {
   CreditCard,
   FolderKanban,
   LayoutDashboard,
-  Settings,
   ShoppingBag,
   SlidersHorizontal,
 } from "lucide-react";
@@ -76,12 +75,6 @@ const AGENCY_COMMAND_ITEMS = [
     description: "Resourcing, invoices, rates, tenure",
     to: "/agency?section=management",
     icon: SlidersHorizontal,
-  },
-  {
-    label: "Settings",
-    description: "Workspace preferences",
-    to: "/agency?section=settings",
-    icon: Settings,
   },
 ] as const;
 

@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, type ReactNode } from "react";
 
 import { useAppShellStore } from "@/stores/app-shell";
 
-export type AppShellPageSlot = "context" | "pageCrumb" | "subtitle" | "actions" | "dock";
+export type AppShellPageSlot = "context" | "pageCrumb" | "subtitle" | "actions" | "dock" | "hideAgent";
 
 type AppShellPageProps = {
   /** Second breadcrumb — current tab or section inside the page. */
@@ -23,12 +23,16 @@ export function AppShellPage({ subtitle = null, slots = [], children }: AppShell
   const releaseSubtitleSlot = useAppShellStore((s) => s.releaseSubtitleSlot);
   const acquireActionsSlot = useAppShellStore((s) => s.acquireActionsSlot);
   const releaseActionsSlot = useAppShellStore((s) => s.releaseActionsSlot);
+  const acquireAgentButtonHidden = useAppShellStore((s) => s.acquireAgentButtonHidden);
+  const releaseAgentButtonHidden = useAppShellStore((s) => s.releaseAgentButtonHidden);
+  const setAgentDockOpen = useAppShellStore((s) => s.setAgentDockOpen);
 
   const wantsDock = slots.includes("dock");
   const wantsContext = slots.includes("context");
   const wantsPageCrumb = slots.includes("pageCrumb");
   const wantsSubtitle = slots.includes("subtitle");
   const wantsActions = slots.includes("actions");
+  const wantsHideAgent = slots.includes("hideAgent");
 
   useEffect(() => {
     const nextSubtitle = subtitle ?? null;
@@ -70,6 +74,18 @@ export function AppShellPage({ subtitle = null, slots = [], children }: AppShell
     acquireActionsSlot();
     return () => releaseActionsSlot();
   }, [wantsActions, acquireActionsSlot, releaseActionsSlot]);
+
+  useLayoutEffect(() => {
+    if (!wantsHideAgent) return;
+    setAgentDockOpen(false);
+    acquireAgentButtonHidden();
+    return () => releaseAgentButtonHidden();
+  }, [
+    wantsHideAgent,
+    setAgentDockOpen,
+    acquireAgentButtonHidden,
+    releaseAgentButtonHidden,
+  ]);
 
   return children;
 }

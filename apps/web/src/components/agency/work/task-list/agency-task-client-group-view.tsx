@@ -24,6 +24,7 @@ export type AgencyTaskClientGroupViewProps = {
   onSelect: (taskId: string) => void;
   onSelectProject: (projectId: string) => void;
   onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
+  onDelete?: (task: AgencyProjectTask) => void;
   highlightTaskId?: string;
 };
 
@@ -41,6 +42,7 @@ export function AgencyTaskClientGroupView({
   onSelect,
   onSelectProject,
   onStatusChange,
+  onDelete,
   highlightTaskId = "",
 }: AgencyTaskClientGroupViewProps) {
   const panelId = `agency-task-client-group-${clientId}`;
@@ -94,6 +96,7 @@ export function AgencyTaskClientGroupView({
               onSelect={onSelect}
               onSelectProject={onSelectProject}
               onStatusChange={onStatusChange}
+              onDelete={onDelete}
               highlightTaskId={highlightTaskId}
             />
           ))}

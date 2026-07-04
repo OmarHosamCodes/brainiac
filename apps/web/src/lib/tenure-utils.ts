@@ -1,3 +1,42 @@
+import {
+  fiscalQuarterLabel,
+  getFiscalQuarterForDate,
+  getFiscalQuarterRange,
+  toFiscalCalendar,
+} from "@brainiac/api/routers/agency-ops/tenure-engine";
+
+export type TenurePolicyCalendar = {
+  fiscalYearStartMonth: number;
+  fiscalYearStartDay: number;
+  enabled: boolean;
+};
+
+export function resolveDefaultDashboardRangePreset(
+  policy: TenurePolicyCalendar | null | undefined,
+): "tenure" | "last30" {
+  return policy?.enabled ? "tenure" : "last30";
+}
+
+export function getCurrentTenurePeriodRange(
+  policy: TenurePolicyCalendar | null | undefined,
+  now = new Date(),
+): { from: string; to: string; label: string } | null {
+  if (!policy?.enabled) return null;
+
+  const calendar = toFiscalCalendar(policy);
+  const ref = getFiscalQuarterForDate(now, calendar);
+  const range = getFiscalQuarterRange(calendar, ref.fiscalYear, ref.fiscalQuarter);
+  const to = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
+  );
+
+  return {
+    from: range.start.toISOString(),
+    to: to.toISOString(),
+    label: fiscalQuarterLabel(ref.fiscalYear, ref.fiscalQuarter),
+  };
+}
+
 export function tenureStatusLabel(status: string): string {
   const labels: Record<string, string> = {
     intern: "Intern",

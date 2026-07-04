@@ -1,15 +1,6 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, BarChart3 } from "lucide-react";
-import {
-  forwardRef,
-  useCallback,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useState,
-  type CSSProperties,
-} from "react";
-import { toast } from "sonner";
+import { useMemo, useState, type CSSProperties } from "react";
 
 import {
   AgencyDashboardCommandBar,
@@ -19,6 +10,10 @@ import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot"
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { orpc } from "@/lib/orpc";
+import {
+  getCurrentTenurePeriodRange,
+  resolveDefaultDashboardRangePreset,
+} from "@/lib/tenure-utils";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
@@ -156,37 +151,54 @@ function ProjectShareDonut({
 
 type AgencyDashboardSurfaceProps = {
   teamId: string;
-  onExportStateChange?: (state: { canExport: boolean; isExporting: boolean }) => void;
 };
 
-export type AgencyDashboardSurfaceHandle = {
-  downloadCsv: () => Promise<void>;
-  canExport: boolean;
-  isExporting: boolean;
-};
-
-export const AgencyDashboardSurface = forwardRef<
-  AgencyDashboardSurfaceHandle,
-  AgencyDashboardSurfaceProps
->(function AgencyDashboardSurface({ teamId, onExportStateChange }, ref) {
-  const [rangePreset, setRangePreset] = useState<RangePreset>("last30");
+export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) {
   const now = useMemo(() => new Date(), []);
-  const [customFromDate, setCustomFromDate] = useState(toDateInputValue(startOfWeekUtc()));
-  const [customToDate, setCustomToDate] = useState(toDateInputValue(now));
-  const [projectId, setProjectId] = useState("");
-  const [memberUserId, setMemberUserId] = useState("");
+  const tenurePolicyQuery = useQuery({
+    ...orpc.agencyOps.tenure.policy.get.queryOptions({ input: { teamId } }),
+    enabled: Boolean(teamId),
+  });
+  const tenurePolicy = tenurePolicyQuery.data?.policy ?? null;
+  const defaultRangePreset = useMemo(
+    () => resolveDefaultDashboardRangePreset(tenurePolicy),
+    [tenurePolicy],
+  );
+  const [appliedRangePreset, setAppliedRangePreset] = useState<RangePreset | null>(null);
+  const effectiveAppliedRangePreset = appliedRangePreset ?? defaultRangePreset;
+  const [appliedCustomFromDate, setAppliedCustomFromDate] = useState(
+    toDateInputValue(startOfWeekUtc()),
+  );
+  const [appliedCustomToDate, setAppliedCustomToDate] = useState(toDateInputValue(now));
+  const [appliedProjectId, setAppliedProjectId] = useState("");
+  const [appliedMemberUserId, setAppliedMemberUserId] = useState("");
+
+  const [draftRangePreset, setDraftRangePreset] = useState<RangePreset | null>(null);
+  const effectiveDraftRangePreset = draftRangePreset ?? defaultRangePreset;
+  const [draftCustomFromDate, setDraftCustomFromDate] = useState(
+    toDateInputValue(startOfWeekUtc()),
+  );
+  const [draftCustomToDate, setDraftCustomToDate] = useState(toDateInputValue(now));
+  const [draftProjectId, setDraftProjectId] = useState("");
+  const [draftMemberUserId, setDraftMemberUserId] = useState("");
+
+  const hasPendingFilterChanges =
+    effectiveDraftRangePreset !== effectiveAppliedRangePreset ||
+    draftProjectId !== appliedProjectId ||
+    draftMemberUserId !== appliedMemberUserId ||
+    (effectiveDraftRangePreset === "custom" &&
+      (draftCustomFromDate !== appliedCustomFromDate ||
+        draftCustomToDate !== appliedCustomToDate));
 
   const range = useMemo(() => {
     const endIso = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
     ).toISOString();
-    if (rangePreset === "month") {
-      return {
-        from: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
-        to: endIso,
-      };
-    }
-    if (rangePreset === "last30") {
+    if (effectiveAppliedRangePreset === "tenure") {
+      const tenureRange = getCurrentTenurePeriodRange(tenurePolicy, now);
+      if (tenureRange) {
+        return { from: tenureRange.from, to: tenureRange.to };
+      }
       return {
         from: new Date(
           Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29),
@@ -194,11 +206,28 @@ export const AgencyDashboardSurface = forwardRef<
         to: endIso,
       };
     }
-    if (rangePreset === "custom") {
-      return { from: dateInputToIso(customFromDate), to: dateInputToIso(customToDate, true) };
+    if (effectiveAppliedRangePreset === "month") {
+      return {
+        from: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
+        to: endIso,
+      };
+    }
+    if (effectiveAppliedRangePreset === "last30") {
+      return {
+        from: new Date(
+          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29),
+        ).toISOString(),
+        to: endIso,
+      };
+    }
+    if (effectiveAppliedRangePreset === "custom") {
+      return {
+        from: dateInputToIso(appliedCustomFromDate),
+        to: dateInputToIso(appliedCustomToDate, true),
+      };
     }
     return { from: startOfWeekUtc().toISOString(), to: endIso };
-  }, [customFromDate, customToDate, now, rangePreset]);
+  }, [appliedCustomFromDate, appliedCustomToDate, effectiveAppliedRangePreset, now, tenurePolicy]);
 
   const projectsQuery = useQuery({
     ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
@@ -210,17 +239,14 @@ export const AgencyDashboardSurface = forwardRef<
         teamId,
         from: range.from,
         to: range.to,
-        projectId: projectId || undefined,
-        memberUserId: memberUserId || undefined,
+        projectId: appliedProjectId || undefined,
+        memberUserId: appliedMemberUserId || undefined,
       },
     }),
     enabled: Boolean(teamId),
   });
 
-  const exportCsvMutation = useMutation(orpc.agencyOps.reports.exportCsv.mutationOptions());
-
   const summary = dashboardQuery.data?.summary ?? null;
-  const canExport = Boolean(summary && summary.totalEntries > 0);
   const projects = projectsQuery.data?.items ?? [];
   const maxDaySeconds = Math.max(
     ...(summary?.dailyBuckets.map((bucket) => bucket.totalSeconds) ?? [0]),
@@ -240,52 +266,11 @@ export const AgencyDashboardSurface = forwardRef<
     return list.sort((a, b) => b.hours - a.hours);
   }, [rankedProjects]);
 
-  const downloadCsv = useCallback(async () => {
-    if (!teamId) return;
-    try {
-      const result = await exportCsvMutation.mutateAsync({
-        teamId,
-        from: range.from,
-        to: range.to,
-        projectId: projectId || undefined,
-        memberUserId: memberUserId || undefined,
-      });
-      const blob = new Blob([result.csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = result.fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast.success("Export ready", {
-        description: `${result.totalRows} rows in ${result.fileName}`,
-      });
-    } catch (error) {
-      toast.error("Export failed", { description: getErrorMessage(error, "Try again.") });
-    }
-  }, [exportCsvMutation, memberUserId, projectId, range.from, range.to, teamId]);
-
-  useImperativeHandle(
-    ref,
-    () => ({
-      downloadCsv,
-      canExport,
-      isExporting: exportCsvMutation.isPending,
-    }),
-    [canExport, downloadCsv, exportCsvMutation.isPending],
-  );
-
-  useEffect(() => {
-    onExportStateChange?.({ canExport, isExporting: exportCsvMutation.isPending });
-  }, [canExport, exportCsvMutation.isPending, onExportStateChange]);
-
   if (dashboardQuery.isPending) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-[4.25rem] rounded-2xl" />
         <Skeleton className="h-10 w-full max-w-2xl rounded-xl" />
+        <Skeleton className="h-[4.25rem] rounded-2xl" />
         <Skeleton className="h-[28rem] rounded-2xl" />
         <Skeleton className="h-72 rounded-2xl" />
       </div>
@@ -312,26 +297,70 @@ export const AgencyDashboardSurface = forwardRef<
     );
   }
 
+  function handleApply() {
+    setAppliedRangePreset(draftRangePreset);
+    setAppliedCustomFromDate(draftCustomFromDate);
+    setAppliedCustomToDate(draftCustomToDate);
+    setAppliedProjectId(draftProjectId);
+    setAppliedMemberUserId(draftMemberUserId);
+  }
+
   function handleReset() {
-    setRangePreset("last30");
-    setProjectId("");
-    setMemberUserId("");
+    setDraftRangePreset(null);
+    setDraftProjectId("");
+    setDraftMemberUserId("");
+    setAppliedRangePreset(null);
+    setAppliedProjectId("");
+    setAppliedMemberUserId("");
   }
 
   return (
     <div className="space-y-4 pb-6">
+      {summary && summary.totalEntries > 0 ? (
+        <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-default pb-3 text-xs">
+          <div>
+            <span className={agencyLabelClass}>Total time</span>
+            <span className={cn("ml-2", agencyMetricClass)}>
+              {formatDuration(summary.totalSeconds)}
+            </span>
+          </div>
+          <div className="min-w-0 max-w-xs">
+            <span className={agencyLabelClass}>Top project</span>
+            <span className="ml-2 truncate font-semibold text-highlighted">
+              {summary.topProject?.projectName ?? "None"}
+            </span>
+          </div>
+          <div className="min-w-0 max-w-xs">
+            <span className={agencyLabelClass}>Top client</span>
+            <span className="ml-2 truncate font-semibold text-highlighted">
+              {summary.topClient?.clientName ?? "None"}
+            </span>
+          </div>
+          <div>
+            <span className={agencyLabelClass}>Active timers</span>
+            <span className={cn("ml-2", agencyMetricClass, "text-primary")}>
+              {summary.activeTimerCount}
+            </span>
+          </div>
+        </div>
+      ) : null}
+
       <AgencyDashboardCommandBar
-        rangePreset={rangePreset}
-        onRangePresetChange={setRangePreset}
-        customFromDate={customFromDate}
-        onCustomFromChange={setCustomFromDate}
-        customToDate={customToDate}
-        onCustomToChange={setCustomToDate}
-        projectId={projectId}
-        onProjectChange={setProjectId}
-        memberUserId={memberUserId}
-        onMemberChange={setMemberUserId}
+        rangePreset={effectiveDraftRangePreset}
+        onRangePresetChange={setDraftRangePreset}
+        customFromDate={draftCustomFromDate}
+        onCustomFromChange={setDraftCustomFromDate}
+        customToDate={draftCustomToDate}
+        onCustomToChange={setDraftCustomToDate}
+        projectId={draftProjectId}
+        onProjectChange={setDraftProjectId}
+        memberUserId={draftMemberUserId}
+        onMemberChange={setDraftMemberUserId}
+        onApply={handleApply}
+        hasPendingChanges={hasPendingFilterChanges}
         onReset={handleReset}
+        defaultRangePreset={defaultRangePreset}
+        tenureAvailable={Boolean(tenurePolicy?.enabled)}
         projects={projects}
         members={summary?.teamMembers ?? []}
         projectsLoading={projectsQuery.isPending}
@@ -347,33 +376,6 @@ export const AgencyDashboardSurface = forwardRef<
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-default pb-3 text-xs">
-            <div>
-              <span className={agencyLabelClass}>Total time</span>
-              <span className={cn("ml-2", agencyMetricClass)}>
-                {formatDuration(summary.totalSeconds)}
-              </span>
-            </div>
-            <div className="min-w-0 max-w-xs">
-              <span className={agencyLabelClass}>Top project</span>
-              <span className="ml-2 truncate font-semibold text-highlighted">
-                {summary.topProject?.projectName ?? "None"}
-              </span>
-            </div>
-            <div className="min-w-0 max-w-xs">
-              <span className={agencyLabelClass}>Top client</span>
-              <span className="ml-2 truncate font-semibold text-highlighted">
-                {summary.topClient?.clientName ?? "None"}
-              </span>
-            </div>
-            <div>
-              <span className={agencyLabelClass}>Active timers</span>
-              <span className={cn("ml-2", agencyMetricClass, "text-primary")}>
-                {summary.activeTimerCount}
-              </span>
-            </div>
-          </div>
-
           <section className={cn(agencyPanelClass, "overflow-hidden")}>
             <header className="flex items-center justify-between border-b border-default px-4 py-3">
               <p className={agencyLabelClass}>Team activity</p>
@@ -578,4 +580,4 @@ export const AgencyDashboardSurface = forwardRef<
       )}
     </div>
   );
-});
+}

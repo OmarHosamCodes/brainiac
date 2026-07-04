@@ -11,8 +11,7 @@ export type AgencySegmentId =
   | "clients"
   | "projects"
   | "reports"
-  | "management"
-  | "settings";
+  | "management";
 
 export type LegacyAgencySegmentId = "projects" | "resourcing" | "billing";
 
@@ -67,13 +66,6 @@ export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
     icon: "i-lucide-sliders-horizontal",
     shortcutKey: "m",
     subtitle: "Capacity, invoices, rates, and tenure policy.",
-  },
-  {
-    id: "settings",
-    label: "Settings",
-    icon: "i-lucide-settings",
-    shortcutKey: "s",
-    subtitle: "Workspace preferences and operational defaults.",
   },
 ] as const;
 

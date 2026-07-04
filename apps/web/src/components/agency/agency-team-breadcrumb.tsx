@@ -1,12 +1,8 @@
-import { Check, ChevronDown, Users } from "lucide-react";
+import { Check, UsersRound } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  shellBreadcrumbCurrentClass,
-  shellFocusRingClass,
-  shellTopbarChipClass,
-} from "@/lib/utils/app-shell-ui";
+import { shellFocusRingClass, shellSearchIconButtonClass } from "@/lib/utils/app-shell-ui";
 
 type AgencyTeamBreadcrumbProps = {
   teamId: string;
@@ -36,13 +32,11 @@ export function AgencyTeamBreadcrumb({ teamId, teams, onTeamIdChange }: AgencyTe
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={[shellTopbarChipClass, shellFocusRingClass, "max-w-[9rem]"].join(" ")}
+          className={[shellSearchIconButtonClass, shellFocusRingClass].join(" ")}
+          aria-label={`Switch team (${currentTeam?.name ?? "Team"})`}
+          aria-expanded={open}
         >
-          <Users className="size-3.5 shrink-0 text-muted" />
-          <span className={["truncate", shellBreadcrumbCurrentClass].join(" ")}>
-            {currentTeam?.name ?? "Team"}
-          </span>
-          <ChevronDown className="size-3 shrink-0 text-muted" />
+          <UsersRound className="size-4 shrink-0" />
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 p-1">

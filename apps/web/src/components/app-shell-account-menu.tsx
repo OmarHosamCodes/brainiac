@@ -276,9 +276,9 @@ export function AppShellAccountMenu({
           </DropdownMenuItem>
 
           <DropdownMenuItem asChild>
-            <Link to="/agency?section=settings">
+            <Link to="/agency?section=management">
               <Settings />
-              Settings
+              Agency settings
             </Link>
           </DropdownMenuItem>
 

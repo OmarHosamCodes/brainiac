@@ -1,6 +1,11 @@
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
+import { authClient } from "@/lib/auth-client";
+import {
+  mergeAgencyPresenceMembers,
+  type AgencyPresenceMember,
+} from "@/lib/utils/agency-presence-members";
 import {
   useMergedAgencyActiveTimerQuery,
   useMergedAgencyCapacityQuery,
@@ -104,6 +109,17 @@ export function prefetchAgencyWorkQueries(teamId: string, assigneeUserId: string
     withAgencySyncQueryOptions(
       {
         ...orpc.agencyOps.timer.getActive.queryOptions({
+          input: { teamId },
+        }),
+      },
+      "hot",
+    ),
+  );
+
+  void queryClient.prefetchQuery(
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.timer.listActiveMembers.queryOptions({
           input: { teamId },
         }),
       },
@@ -522,6 +538,49 @@ export function useAgencyProjectTasksInfiniteQuery(
   ]);
 
   return { ...query, items, total };
+}
+
+export type { AgencyPresenceMember } from "@/lib/utils/agency-presence-members";
+export { mergeAgencyPresenceMembers } from "@/lib/utils/agency-presence-members";
+
+export function useAgencyActiveMembersQuery(teamId: string) {
+  return useQuery(
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.timer.listActiveMembers.queryOptions({
+          input: { teamId },
+        }),
+        enabled: Boolean(teamId),
+        placeholderData: keepPreviousData,
+      },
+      "hot",
+    ),
+  );
+}
+
+export function useAgencyPresenceMembers(teamId: string) {
+  const activeMembersQuery = useAgencyActiveMembersQuery(teamId);
+  const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
+  const timerOverlay = useAgencyOptimisticStore((state) => state.activeTimers[teamId]);
+  const session = authClient.useSession();
+  const user = session.data?.user;
+
+  const timer = useMemo(() => {
+    if (timerOverlay !== undefined) {
+      return timerOverlay;
+    }
+    return activeTimerQuery.data?.timer ?? null;
+  }, [timerOverlay, activeTimerQuery.data?.timer]);
+
+  const members = useMemo(
+    () => mergeAgencyPresenceMembers(activeMembersQuery.data?.items ?? [], timer, teamId, user),
+    [activeMembersQuery.data?.items, timer, teamId, user],
+  );
+
+  return {
+    members,
+    isPending: activeMembersQuery.isPending || activeTimerQuery.isPending,
+  };
 }
 
 export function useAgencyActiveTimerQuery(teamId: string) {

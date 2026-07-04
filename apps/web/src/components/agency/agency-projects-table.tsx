@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AgencyMultiSelectFilter } from "@/components/agency/agency-multi-select-filter";
+import {
+  AgencyMultiSelectFilter,
+  type AgencyFilterOptionGroup,
+} from "@/components/agency/agency-multi-select-filter";
 import { AgencyProjectsVirtualTable } from "@/components/agency/agency-projects-virtual-table";
 import {
   useAgencyClientsQuery,
@@ -21,7 +24,7 @@ import {
   agencyErrorPanelClass,
 } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { getTaskGroupKey, groupTasksByProjectTitle } from "@/lib/utils/agency-task-utils";
+import { getTaskGroupKey, groupTasksByClient, groupTasksByProjectTitle } from "@/lib/utils/agency-task-utils";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
 import { selectIsProjectMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
@@ -113,18 +116,50 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
       () => clients.map((client) => ({ value: client.id, label: client.name })),
       [clients],
     );
-    const projectOptions = useMemo(
-      () => projects.map((project) => ({ value: project.id, label: project.name })),
-      [projects],
-    );
-    const taskOptions = useMemo(
-      () =>
-        groupTasksByProjectTitle(tasks).map((group) => ({
-          value: group.groupKey,
-          label: group.title,
-        })),
-      [tasks],
-    );
+    const projectFilterGroups = useMemo((): AgencyFilterOptionGroup[] => {
+      const sortedProjects = [...projects].sort(
+        (left, right) =>
+          left.clientName.localeCompare(right.clientName) || left.name.localeCompare(right.name),
+      );
+      const groups: AgencyFilterOptionGroup[] = [];
+      let currentGroup: AgencyFilterOptionGroup | null = null;
+
+      for (const project of sortedProjects) {
+        if (!currentGroup || currentGroup.groupLabel !== project.clientName) {
+          currentGroup = { groupLabel: project.clientName, options: [] };
+          groups.push(currentGroup);
+        }
+        currentGroup.options!.push({ value: project.id, label: project.name });
+      }
+
+      return groups;
+    }, [projects]);
+    const taskFilterGroups = useMemo((): AgencyFilterOptionGroup[] => {
+      return groupTasksByClient(tasks, projects).map((clientGroup) => {
+        const tasksByProject = new Map<string, typeof tasks>();
+        for (const task of clientGroup.tasks) {
+          const list = tasksByProject.get(task.projectId) ?? [];
+          list.push(task);
+          tasksByProject.set(task.projectId, list);
+        }
+
+        return {
+          groupLabel: clientGroup.clientName,
+          sections: projects
+            .filter(
+              (project) => project.clientId === clientGroup.clientId && tasksByProject.has(project.id),
+            )
+            .sort((left, right) => left.name.localeCompare(right.name))
+            .map((project) => ({
+              sectionLabel: project.name,
+              options: groupTasksByProjectTitle(tasksByProject.get(project.id) ?? []).map((group) => ({
+                value: group.groupKey,
+                label: group.title,
+              })),
+            })),
+        };
+      });
+    }, [projects, tasks]);
 
     const hoursThisWeekByProject = useMemo(() => {
       const weekStartMs = getWeekStartUtc().getTime();
@@ -239,6 +274,7 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
             options={peopleOptions}
             onValuesChange={setSelectedPeopleIds}
             disabled={tasksQuery.isPending}
+            searchPlaceholder="Search people"
           />
           <AgencyMultiSelectFilter
             label="All Clients"
@@ -246,20 +282,23 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
             options={clientOptions}
             onValuesChange={setSelectedClientIds}
             disabled={clientsQuery.isPending}
+            searchPlaceholder="Search clients"
           />
           <AgencyMultiSelectFilter
             label="All Projects"
             values={selectedProjectIds}
-            options={projectOptions}
+            groups={projectFilterGroups}
             onValuesChange={setSelectedProjectIds}
             disabled={projectsQuery.isPending}
+            searchPlaceholder="Search projects or clients"
           />
           <AgencyMultiSelectFilter
             label="All Tasks"
             values={selectedTaskIds}
-            options={taskOptions}
+            groups={taskFilterGroups}
             onValuesChange={setSelectedTaskIds}
             disabled={tasksQuery.isPending}
+            searchPlaceholder="Search tasks, projects, or clients"
           />
 
           {!hideToolbarActions ? (
