@@ -58,6 +58,9 @@
     "db:seed:agency": {
       "cache": false
     },
+    "db:clear:team": {
+      "cache": false
+    },
     "grant:lifetime-pro": {
       "cache": false
     },
