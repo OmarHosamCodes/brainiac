@@ -25,10 +25,12 @@
     "@polar-sh/sdk": "^0.47.0",
     "@types/pg": "catalog:",
     "drizzle-orm": "catalog:",
+    "web-push": "^3.6.7",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@brainiac/config": "workspace:*",
+    "@types/web-push": "^3.6.4",
     "hono": "catalog:",
     "typescript": "catalog:"
   }

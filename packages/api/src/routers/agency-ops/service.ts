@@ -33,6 +33,11 @@ import {
 } from "../../storage";
 import { applyMemberTaskCompletion } from "../../schemas/agency-ops";
 import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
+import {
+  emitTaskAssignedNotifications,
+  emitTeamAssignedNotifications,
+  emitThreadMessageNotifications,
+} from "./notifications";
 
 const AVATAR_KEY_PREFIX = "user-avatars/";
 
@@ -614,7 +619,7 @@ async function setTaskAssignees(tx: DbTransaction, taskId: string, userIds: stri
     await deleteTaskMemberStatusesForUsers(tx, taskId, removedUserIds);
   }
 
-  if (uniqueUserIds.length === 0) return;
+  if (uniqueUserIds.length === 0) return addedUserIds;
 
   await tx.insert(agencyOpsProjectTaskAssignee).values(
     uniqueUserIds.map((userId) => ({
@@ -626,11 +631,13 @@ async function setTaskAssignees(tx: DbTransaction, taskId: string, userIds: stri
   if (addedUserIds.length > 0) {
     await setTaskMemberStatusesForUsers(tx, taskId, addedUserIds, "open");
   }
+
+  return addedUserIds;
 }
 
 async function addTaskAssignees(tx: DbTransaction, taskId: string, userIds: string[]) {
   const uniqueUserIds = [...new Set(userIds)];
-  if (uniqueUserIds.length === 0) return;
+  if (uniqueUserIds.length === 0) return [];
 
   const existingRows = await tx
     .select({ userId: agencyOpsProjectTaskAssignee.userId })
@@ -638,7 +645,7 @@ async function addTaskAssignees(tx: DbTransaction, taskId: string, userIds: stri
     .where(eq(agencyOpsProjectTaskAssignee.taskId, taskId));
   const existingUserIds = new Set(existingRows.map((row) => row.userId));
   const addedUserIds = uniqueUserIds.filter((userId) => !existingUserIds.has(userId));
-  if (addedUserIds.length === 0) return;
+  if (addedUserIds.length === 0) return [];
 
   await tx.insert(agencyOpsProjectTaskAssignee).values(
     addedUserIds.map((userId) => ({
@@ -647,6 +654,7 @@ async function addTaskAssignees(tx: DbTransaction, taskId: string, userIds: stri
     })),
   );
   await setTaskMemberStatusesForUsers(tx, taskId, addedUserIds, "open");
+  return addedUserIds;
 }
 
 function isUniqueViolation(error: unknown): boolean {
@@ -713,6 +721,7 @@ async function mergeAssigneesIntoExistingTask(
     assignedToTeam: boolean;
     assigneeUserIds: string[];
   },
+  actorUserId: string,
 ): Promise<ProjectTaskRow> {
   const existingAssigneeRows = await db
     .select({ userId: agencyOpsProjectTaskAssignee.userId })
@@ -729,9 +738,12 @@ async function mergeAssigneesIntoExistingTask(
   if (plan.kind === "noop") return task;
 
   const now = new Date();
+  let addedUserIds: string[] = [];
+  let assignedTeam = false;
   const [updated] = await db.transaction(async (tx) => {
     if (plan.kind === "team") {
       await setTaskAssignees(tx, task.id, []);
+      assignedTeam = !task.assignedToTeam;
       const [row] = await tx
         .update(agencyOpsProjectTask)
         .set({ assignedToTeam: true, updatedAt: now })
@@ -740,7 +752,7 @@ async function mergeAssigneesIntoExistingTask(
       return [row];
     }
 
-    await addTaskAssignees(tx, task.id, plan.userIds);
+    addedUserIds = await addTaskAssignees(tx, task.id, plan.userIds);
     const [row] = await tx
       .update(agencyOpsProjectTask)
       .set({ updatedAt: now })
@@ -748,6 +760,21 @@ async function mergeAssigneesIntoExistingTask(
       .returning(projectTaskColumns);
     return [row];
   });
+
+  if (assignedTeam) {
+    void emitTeamAssignedNotifications({
+      teamId: task.teamId,
+      taskId: task.id,
+      actorUserId,
+    });
+  } else if (addedUserIds.length > 0) {
+    void emitTaskAssignedNotifications({
+      teamId: task.teamId,
+      taskId: task.id,
+      actorUserId,
+      recipientUserIds: addedUserIds,
+    });
+  }
 
   return updated ?? task;
 }
@@ -1410,10 +1437,14 @@ export async function createAgencyProjectTask(
 
   const existing = await findProjectTaskByTitleKey(input.teamId, input.projectId, titleKey);
   if (existing) {
-    const merged = await mergeAssigneesIntoExistingTask(existing, {
-      assignedToTeam,
-      assigneeUserIds,
-    });
+    const merged = await mergeAssigneesIntoExistingTask(
+      existing,
+      {
+        assignedToTeam,
+        assigneeUserIds,
+      },
+      actorUserId,
+    );
     return buildTaskRecordForActor(merged, actorUserId);
   }
 
@@ -1422,6 +1453,7 @@ export async function createAgencyProjectTask(
   const dueDate = input.dueDate ? parseIsoDateTime(input.dueDate, "dueDate") : null;
 
   try {
+    let addedAssigneeUserIds: string[] = [];
     const [created] = await db.transaction(async (tx) => {
       const [task] = await tx
         .insert(agencyOpsProjectTask)
@@ -1441,7 +1473,7 @@ export async function createAgencyProjectTask(
 
       if (task) {
         if (assigneeUserIds.length > 0) {
-          await setTaskAssignees(tx, task.id, assigneeUserIds);
+          addedAssigneeUserIds = await setTaskAssignees(tx, task.id, assigneeUserIds);
         }
 
         await tx.insert(agencyOpsTaskThread).values({
@@ -1460,6 +1492,21 @@ export async function createAgencyProjectTask(
       throw new ORPCError("INTERNAL_SERVER_ERROR");
     }
 
+    if (assignedToTeam) {
+      void emitTeamAssignedNotifications({
+        teamId: input.teamId,
+        taskId: created.id,
+        actorUserId,
+      });
+    } else if (addedAssigneeUserIds.length > 0) {
+      void emitTaskAssignedNotifications({
+        teamId: input.teamId,
+        taskId: created.id,
+        actorUserId,
+        recipientUserIds: addedAssigneeUserIds,
+      });
+    }
+
     return buildTaskRecordForActor(created, actorUserId);
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
@@ -1467,10 +1514,14 @@ export async function createAgencyProjectTask(
     const raced = await findProjectTaskByTitleKey(input.teamId, input.projectId, titleKey);
     if (!raced) throw error;
 
-    const merged = await mergeAssigneesIntoExistingTask(raced, {
-      assignedToTeam,
-      assigneeUserIds,
-    });
+    const merged = await mergeAssigneesIntoExistingTask(
+      raced,
+      {
+        assignedToTeam,
+        assigneeUserIds,
+      },
+      actorUserId,
+    );
     return buildTaskRecordForActor(merged, actorUserId);
   }
 }
@@ -1608,6 +1659,8 @@ export async function updateAgencyProjectTask(
   }
 
   const now = new Date();
+  let addedAssigneeUserIds: string[] = [];
+  const switchedToTeam = input.assignedToTeam === true && !current.assignedToTeam;
   const [updated] = await db.transaction(async (tx) => {
     const [task] = await tx
       .update(agencyOpsProjectTask)
@@ -1626,7 +1679,7 @@ export async function updateAgencyProjectTask(
       .returning(projectTaskColumns);
 
     if (task && nextAssigneeUserIds !== null) {
-      await setTaskAssignees(tx, task.id, nextAssigneeUserIds);
+      addedAssigneeUserIds = await setTaskAssignees(tx, task.id, nextAssigneeUserIds);
     }
 
     return [task];
@@ -1634,6 +1687,21 @@ export async function updateAgencyProjectTask(
 
   if (!updated) {
     throw new ORPCError("NOT_FOUND");
+  }
+
+  if (switchedToTeam) {
+    void emitTeamAssignedNotifications({
+      teamId: input.teamId,
+      taskId: updated.id,
+      actorUserId,
+    });
+  } else if (addedAssigneeUserIds.length > 0) {
+    void emitTaskAssignedNotifications({
+      teamId: input.teamId,
+      taskId: updated.id,
+      actorUserId,
+      recipientUserIds: addedAssigneeUserIds,
+    });
   }
 
   const assigneesByTask = await loadTaskAssignees([updated.id]);
@@ -1949,6 +2017,15 @@ export async function createTaskThreadMessage(
     .update(agencyOpsTaskThread)
     .set({ updatedAt: now })
     .where(eq(agencyOpsTaskThread.id, thread.id));
+
+  void emitThreadMessageNotifications({
+    teamId: input.teamId,
+    taskId: input.taskId,
+    messageId: created.id,
+    actorUserId,
+    senderType: "user",
+    messageType: created.type as "text" | "voice" | "attachment",
+  });
 
   return mapTaskMessageRow({
     ...created,

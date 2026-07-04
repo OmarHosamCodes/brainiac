@@ -21,6 +21,7 @@ import {
   requireTeamMembership,
   validateTaskAttachmentUploadReferences,
 } from "./service";
+import { emitThreadMessageNotifications } from "./notifications";
 
 function formatAttachmentSummary(
   attachments: Array<{
@@ -229,6 +230,7 @@ export async function askTaskAgent(
   // ------------------------------------------------------------------
   const now = new Date();
   const userMessageId = createWorkspaceId("agency-task-message");
+  const agentMessageId = createWorkspaceId("agency-task-message");
 
   await db.transaction(async (tx) => {
     await tx.insert(agencyOpsTaskMessage).values([
@@ -244,7 +246,7 @@ export async function askTaskAgent(
         updatedAt: now,
       },
       {
-        id: createWorkspaceId("agency-task-message"),
+        id: agentMessageId,
         teamId: input.teamId,
         threadId: thread.id,
         userId: actorUserId,
@@ -277,6 +279,15 @@ export async function askTaskAgent(
       .update(agencyOpsTaskThread)
       .set({ updatedAt: now })
       .where(eq(agencyOpsTaskThread.id, thread.id));
+  });
+
+  void emitThreadMessageNotifications({
+    teamId: input.teamId,
+    taskId: input.taskId,
+    messageId: agentMessageId,
+    actorUserId,
+    senderType: "agent",
+    messageType: "text",
   });
 
   return {

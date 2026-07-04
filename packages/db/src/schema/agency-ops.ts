@@ -18,6 +18,15 @@ export type AgencyOpsProjectTaskStatus = "open" | "in_progress" | "done" | "arch
 export type AgencyOpsProjectTaskMemberStatus = "open" | "in_progress" | "done";
 export type AgencyOpsTaskMessageType = "text" | "voice" | "attachment";
 export type AgencyOpsTaskMessageSenderType = "user" | "agent";
+export type AgencyOpsNotificationType = "task_assigned" | "thread_message";
+
+export type AgencyOpsNotificationPayload = {
+  taskTitle: string;
+  projectName: string;
+  clientName: string;
+  messageType?: AgencyOpsTaskMessageType;
+  actorName: string;
+};
 
 export type AttachmentMetadata = {
   imageWidth?: number;
@@ -313,6 +322,64 @@ export const agencyOpsActiveTimer = pgTable(
     index("agency_ops_active_timer_team_idx").on(table.teamId),
     index("agency_ops_active_timer_team_user_idx").on(table.teamId, table.userId),
     index("agency_ops_active_timer_task_idx").on(table.taskId),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// Notifications
+// ---------------------------------------------------------------------------
+
+export const agencyOpsNotification = pgTable(
+  "agency_ops_notification",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    recipientUserId: text("recipient_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    type: text("type").$type<AgencyOpsNotificationType>().notNull(),
+    actorUserId: text("actor_user_id").references(() => user.id, { onDelete: "set null" }),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => agencyOpsProjectTask.id, { onDelete: "cascade" }),
+    messageId: text("message_id").references(() => agencyOpsTaskMessage.id, {
+      onDelete: "cascade",
+    }),
+    payload: jsonb("payload").$type<AgencyOpsNotificationPayload>().notNull(),
+    readAt: timestamp("read_at"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("agency_ops_notification_recipient_team_created_idx").on(
+      table.recipientUserId,
+      table.teamId,
+      table.createdAt,
+    ),
+    index("agency_ops_notification_recipient_read_idx").on(table.recipientUserId, table.readAt),
+  ],
+);
+
+export const agencyOpsPushSubscription = pgTable(
+  "agency_ops_push_subscription",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    endpoint: text("endpoint").notNull(),
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    uniqueIndex("agency_ops_push_subscription_endpoint_unique").on(table.endpoint),
+    index("agency_ops_push_subscription_user_idx").on(table.userId),
   ],
 );
 

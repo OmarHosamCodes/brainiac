@@ -48,6 +48,15 @@ import {
   upsertClientContact,
   upsertMemberRate,
 } from "./service";
+import {
+  getAgencyVapidPublicKey,
+  listAgencyNotifications,
+  listAgencyNotificationsSince,
+  markAgencyNotificationsRead,
+  markAllAgencyNotificationsRead,
+  subscribeAgencyPush,
+  unsubscribeAgencyPush,
+} from "./notifications";
 import { askTaskAgent } from "./task-agent";
 import {
   deleteTenureExemption,
@@ -168,6 +177,27 @@ const agencyTaskThreadMemberSchema = z.object({
   userId: z.string().min(1),
   userName: z.string().min(1),
   userAvatar: z.string().nullable(),
+});
+
+const agencyNotificationSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  type: z.enum(["task_assigned", "thread_message"]),
+  actorUserId: z.string().nullable(),
+  taskId: z.string().min(1),
+  messageId: z.string().nullable(),
+  payload: z.object({
+    taskTitle: z.string().min(1),
+    projectName: z.string().min(1),
+    clientName: z.string().min(1),
+    messageType: z.enum(["text", "voice", "attachment"]).optional(),
+    actorName: z.string().min(1),
+  }),
+  title: z.string().min(1),
+  body: z.string().min(1),
+  description: z.string().min(1),
+  readAt: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
 });
 
 const agencyTimeEntrySchema = z.object({
@@ -773,6 +803,85 @@ export const agencyOpsRouter = {
           }
         }
         return result;
+      }),
+  },
+  notifications: {
+    list: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          cursor: z.string().optional(),
+          since: z.string().datetime().optional(),
+          limit: z.number().int().min(1).max(50).optional(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        if (input.since) {
+          return z
+            .object({
+              items: z.array(agencyNotificationSchema),
+              unreadCount: z.number().int().nonnegative(),
+            })
+            .parse(await listAgencyNotificationsSince(context.session.user.id, input));
+        }
+
+        return z
+          .object({
+            items: z.array(agencyNotificationSchema),
+            nextCursor: z.string().nullable(),
+            unreadCount: z.number().int().nonnegative(),
+          })
+          .parse(await listAgencyNotifications(context.session.user.id, input));
+      }),
+    markRead: protectedProProcedure
+      .input(
+        z.object({
+          ids: z.array(z.string().min(1)).min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ updated: z.number().int().nonnegative() })
+          .parse(await markAgencyNotificationsRead(context.session.user.id, input));
+      }),
+    markAllRead: protectedProProcedure
+      .input(teamScopedInputSchema)
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ updated: z.number().int().nonnegative() })
+          .parse(await markAllAgencyNotificationsRead(context.session.user.id, input));
+      }),
+  },
+  push: {
+    getVapidPublicKey: protectedProProcedure.handler(async () => {
+      return z
+        .object({ publicKey: z.string().nullable() })
+        .parse(getAgencyVapidPublicKey());
+    }),
+    subscribe: protectedProProcedure
+      .input(
+        z.object({
+          endpoint: z.string().url(),
+          keys: z.object({
+            p256dh: z.string().min(1),
+            auth: z.string().min(1),
+          }),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ subscribed: z.boolean() })
+          .parse(await subscribeAgencyPush(context.session.user.id, input));
+      }),
+    unsubscribe: protectedProProcedure
+      .input(
+        z.object({
+          endpoint: z.string().url(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ unsubscribed: z.boolean() })
+          .parse(await unsubscribeAgencyPush(context.session.user.id, input));
       }),
   },
   timeEntries: {

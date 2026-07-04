@@ -11,12 +11,17 @@ import { AgencyProjectDetail } from "@/components/agency/agency-project-detail";
 import { AgencyProjectsTable } from "@/components/agency/agency-projects-table";
 import { AgencyReportsSurface } from "@/components/agency/agency-reports-surface";
 import { AgencySubtitleBreadcrumb } from "@/components/agency/agency-subtitle-breadcrumb";
+import { AgencyNotificationsBell } from "@/components/agency/agency-notifications-bell";
 import { AgencyPresenceAvatars } from "@/components/agency/agency-presence-avatars";
 import { AgencyTeamBreadcrumb } from "@/components/agency/agency-team-breadcrumb";
 import { AgencyWorkSurface } from "@/components/agency/agency-work-surface";
 import { AppShellTopbarActions, AppShellTopbarSubtitle } from "@/components/app-shell-topbar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AppShellPage } from "@/components/app-shell-page";
+import {
+  consumeAgencyTaskSearchParam,
+} from "@/lib/agency/agency-notification-navigation";
+import { useAgencyNotifications } from "@/lib/agency/use-agency-notifications";
 import { useAgencySyncStatus } from "@/lib/queries/agency-sync";
 import { prefetchAgencyWorkQueries, useAgencyActiveTimerQuery } from "@/lib/queries/agency";
 import { useBilling } from "@/lib/queries/billing";
@@ -80,6 +85,27 @@ export function AgencyPage() {
 
   const selectedProjectId =
     typeof searchParams.get("project") === "string" ? searchParams.get("project")! : "";
+  const taskParam = searchParams.get("task");
+
+  const notificationsEnabled = agencyEnabled && Boolean(selectedTeamId) && Boolean(currentUserId);
+  const {
+    openTask,
+    markNotificationsRead,
+    markAllRead,
+    setInboxOpen,
+    enablePushNotifications,
+    isMarkingAllRead,
+  } = useAgencyNotifications({
+    teamId: selectedTeamId,
+    enabled: notificationsEnabled,
+    segment,
+    searchParams,
+    setSearchParams,
+  });
+
+  useEffect(() => {
+    consumeAgencyTaskSearchParam(taskParam, segment, setSearchParams);
+  }, [taskParam, segment, setSearchParams]);
 
   useEffect(() => {
     if (sectionParam === "settings") {
@@ -188,6 +214,17 @@ export function AgencyPage() {
             onTeamIdChange={setSelectedTeamId}
           />
           {selectedTeamId ? <AgencyPresenceAvatars teamId={selectedTeamId} /> : null}
+          {selectedTeamId ? (
+            <AgencyNotificationsBell
+              teamId={selectedTeamId}
+              onOpenTask={openTask}
+              onMarkRead={(ids) => void markNotificationsRead(ids)}
+              onMarkAllRead={() => void markAllRead()}
+              onOpenChange={setInboxOpen}
+              onEnablePush={enablePushNotifications}
+              isMarkingAllRead={isMarkingAllRead}
+            />
+          ) : null}
         </AppShellTopbarActions>
 
         <main className={shellPageClass}>
