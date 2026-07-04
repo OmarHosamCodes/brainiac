@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, BarChart2, Download } from "lucide-react";
-import { useImperativeHandle, useEffect, useMemo, useState, forwardRef } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -15,16 +15,8 @@ import {
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { projectHueStyle } from "@/lib/utils/project-palette";
 
-export type AgencyReportsSurfaceHandle = {
-  downloadCsv: () => Promise<void>;
-  canExport: boolean;
-  isExporting: boolean;
-};
-
 type AgencyReportsSurfaceProps = {
   teamId: string;
-  hideToolbarExport?: boolean;
-  onExportStateChange?: (state: { canExport: boolean; isExporting: boolean }) => void;
 };
 
 type RangePreset = "week" | "month" | "last30";
@@ -57,10 +49,7 @@ function formatHours(value: number): string {
   return `${whole}h ${String(minutes).padStart(2, "0")}m`;
 }
 
-export const AgencyReportsSurface = forwardRef<
-  AgencyReportsSurfaceHandle,
-  AgencyReportsSurfaceProps
->(function AgencyReportsSurface({ teamId, hideToolbarExport = false, onExportStateChange }, ref) {
+export function AgencyReportsSurface({ teamId }: AgencyReportsSurfaceProps) {
   const [rangePreset, setRangePreset] = useState<RangePreset>("week");
 
   const range = useMemo(() => {
@@ -90,7 +79,6 @@ export const AgencyReportsSurface = forwardRef<
   });
 
   const summary = summaryQuery.data?.summary ?? null;
-  const canExport = Boolean(summary && summary.totalEntries > 0);
 
   const exportCsvMutation = useMutation(orpc.agencyOps.reports.exportCsv.mutationOptions());
 
@@ -121,23 +109,6 @@ export const AgencyReportsSurface = forwardRef<
     }
   }
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      downloadCsv,
-      canExport,
-      isExporting: exportCsvMutation.isPending,
-    }),
-    [canExport, exportCsvMutation.isPending, range.from, range.to, teamId],
-  );
-
-  useEffect(() => {
-    onExportStateChange?.({
-      canExport,
-      isExporting: exportCsvMutation.isPending,
-    });
-  }, [canExport, exportCsvMutation.isPending, onExportStateChange]);
-
   return (
     <div className="agency-reports space-y-4">
       <div className="flex flex-wrap items-center gap-2">
@@ -160,19 +131,17 @@ export const AgencyReportsSurface = forwardRef<
           ))}
         </div>
 
-        {!hideToolbarExport ? (
-          <div className="ml-auto">
-            <Button
-              variant="secondary"
-              size="sm"
-              disabled={!summary || summary.totalEntries === 0 || exportCsvMutation.isPending}
-              onClick={() => void downloadCsv()}
-            >
-              <Download />
-              Export CSV
-            </Button>
-          </div>
-        ) : null}
+        <div className="ml-auto">
+          <Button
+            variant="secondary"
+            size="sm"
+            disabled={!summary || summary.totalEntries === 0 || exportCsvMutation.isPending}
+            onClick={() => void downloadCsv()}
+          >
+            <Download />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {summaryQuery.isPending ? (
@@ -334,4 +303,4 @@ export const AgencyReportsSurface = forwardRef<
       )}
     </div>
   );
-});
+}

@@ -1,12 +1,16 @@
 import { ChevronDown } from "lucide-react";
 
+import { AgencyMemberChooser } from "@/components/agency/agency-member-chooser";
+import { AgencyProjectChooser } from "@/components/agency/agency-project-chooser";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
-export type RangePreset = "week" | "month" | "last30" | "custom";
+export type RangePreset = "tenure" | "week" | "month" | "last30" | "custom";
 
 export const RANGE_LABEL: Record<RangePreset, string> = {
+  tenure: "Tenure period",
   week: "This week",
   month: "This month",
   last30: "Last 30 days",
@@ -29,13 +33,26 @@ type AgencyDashboardCommandBarProps = {
   onProjectChange: (projectId: string) => void;
   memberUserId: string;
   onMemberChange: (memberUserId: string) => void;
+  onApply: () => void;
+  hasPendingChanges: boolean;
   onReset: () => void;
-  projects: Array<{ id: string; name: string }>;
-  members: Array<{ userId: string; userName: string }>;
+  defaultRangePreset: RangePreset;
+  tenureAvailable: boolean;
+  projects: Array<{ id: string; name: string; clientName: string }>;
+  members: Array<{ userId: string; userName: string; avatar?: string | null }>;
   projectsLoading?: boolean;
 };
 
-const PRESETS: RangePreset[] = ["week", "month", "last30", "custom"];
+function rangePresets(tenureAvailable: boolean): RangePreset[] {
+  return tenureAvailable
+    ? ["tenure", "week", "month", "last30", "custom"]
+    : ["week", "month", "last30", "custom"];
+}
+
+const filterTriggerClass = cn(
+  "inline-flex h-9 min-w-32 max-w-44 items-center justify-between gap-2 rounded-xl border border-default bg-default px-3 text-left text-xs font-semibold transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
+  agencyFocusRingClass,
+);
 
 const selectBaseClass = cn(
   "h-9 max-w-[12rem] appearance-none truncate rounded-xl border border-default bg-default py-1 pl-3 pr-8 text-xs font-semibold text-highlighted transition-colors",
@@ -95,38 +112,61 @@ export function AgencyDashboardCommandBar({
   onProjectChange,
   memberUserId,
   onMemberChange,
+  onApply,
+  hasPendingChanges,
   onReset,
+  defaultRangePreset,
+  tenureAvailable,
   projects,
   members,
   projectsLoading,
 }: AgencyDashboardCommandBarProps) {
-  const hasActiveFilters = rangePreset !== "last30" || projectId !== "" || memberUserId !== "";
+  const hasActiveFilters =
+    rangePreset !== defaultRangePreset || projectId !== "" || memberUserId !== "";
+
+  const memberOptions = members.map((member) => ({
+    userId: member.userId,
+    userName: member.userName,
+    userAvatar: member.avatar ?? null,
+  }));
 
   return (
     <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-default bg-elevated p-2">
-      <FilterSelect
-        id="agency-dashboard-project"
-        label="Project"
+      <AgencyProjectChooser
         value={projectId}
-        onChange={onProjectChange}
-        options={projects.map((project) => ({ value: project.id, label: project.name }))}
+        onValueChange={onProjectChange}
+        projects={projects}
+        allowEmpty
+        emptyLabel="All Projects"
         placeholder="All Projects"
+        searchPlaceholder="Search projects or clients"
+        loading={projectsLoading}
         disabled={projectsLoading}
+        className={cn(filterTriggerClass, projectId ? "text-highlighted" : "text-muted")}
       />
-      <FilterSelect
-        id="agency-dashboard-member"
-        label="Member"
+      <AgencyMemberChooser
         value={memberUserId}
-        onChange={onMemberChange}
-        options={members.map((member) => ({ value: member.userId, label: member.userName }))}
+        onValueChange={onMemberChange}
+        members={memberOptions}
         placeholder="Team"
+        searchPlaceholder="Search members"
+        allowUnassigned={false}
+        allowEmpty
+        className={cn(
+          filterTriggerClass,
+          "h-9 w-auto max-w-44",
+          memberUserId ? "text-highlighted" : "text-muted",
+        )}
       />
       <FilterSelect
         id="agency-dashboard-range"
         label="Time range"
         value={rangePreset}
         onChange={(value) => onRangePresetChange(value as RangePreset)}
-        options={PRESETS.map((preset) => ({ value: preset, label: RANGE_LABEL[preset] }))}
+        options={rangePresets(tenureAvailable).map((preset) => ({
+          value: preset,
+          label: RANGE_LABEL[preset],
+        }))}
       />
 
       {rangePreset === "custom" ? (
@@ -156,6 +196,9 @@ export function AgencyDashboardCommandBar({
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+        <Button variant="secondary" size="sm" disabled={!hasPendingChanges} onClick={onApply}>
+          Apply
+        </Button>
         {hasActiveFilters ? (
           <button
             type="button"

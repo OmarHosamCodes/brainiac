@@ -36,6 +36,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
 
   const showTeamOption = mode === "multiple";
   const showUnassigned = mode === "single" && single?.allowUnassigned;
+  const showEmpty = mode === "single" && single?.allowEmpty;
   const selectedMember = single?.selectedMember ?? null;
   const isUnassigned = single?.isUnassigned ?? false;
   const assignedToTeam = multiple?.assignedToTeam ?? false;
@@ -193,6 +194,31 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                     Entire team
                   </span>
                   {assignedToTeam ? <Check className="size-3.5 shrink-0 text-primary" aria-hidden /> : null}
+                </button>
+              ) : null}
+
+              {showEmpty ? (
+                <button
+                  type="button"
+                  className={cn(
+                    "flex w-full min-w-0 items-center gap-2 px-4 py-2 text-left transition-colors hover:bg-default/80",
+                    !single?.value && "bg-primary/10 hover:bg-primary/10",
+                    agencyFocusRingClass,
+                    "motion-reduce:transition-none",
+                  )}
+                  onClick={() => single?.onClearSelection()}
+                >
+                  <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <UsersRound className="size-3 text-muted" aria-hidden />
+                  </span>
+                  <span
+                    className={cn(
+                      "min-w-0 flex-1 truncate text-xs font-semibold",
+                      !single?.value ? "text-primary" : "text-highlighted",
+                    )}
+                  >
+                    {placeholder}
+                  </span>
                 </button>
               ) : null}
 

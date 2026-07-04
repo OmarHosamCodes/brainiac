@@ -23,6 +23,7 @@ type SingleAgencyMemberChooserOptions = AgencyMemberChooserBaseOptions & {
   value: string;
   onValueChange: (value: string) => void;
   allowUnassigned?: boolean;
+  allowEmpty?: boolean;
 };
 
 type MultipleAgencyMemberChooserOptions = AgencyMemberChooserBaseOptions & {
@@ -55,9 +56,11 @@ export type AgencyMemberChooserViewModel = {
   single?: {
     value: string;
     allowUnassigned: boolean;
+    allowEmpty: boolean;
     selectedMember: AgencyTaskThreadMember | null;
     isUnassigned: boolean;
     onSelectMember: (userId: string) => void;
+    onClearSelection: () => void;
   };
   multiple?: {
     assignedToTeam: boolean;
@@ -175,15 +178,21 @@ export function useAgencyMemberChooser(
     };
   }
 
-  const { value, onValueChange, allowUnassigned = true } = options;
-  const isUnassigned = value === UNASSIGNED_ASSIGNEE_VALUE || !value;
+  const { value, onValueChange, allowUnassigned = true, allowEmpty = false } = options;
+  const isUnassigned =
+    !allowEmpty && (value === UNASSIGNED_ASSIGNEE_VALUE || !value);
   const selectedMember = useMemo(
-    () => (isUnassigned ? null : (members.find((member) => member.userId === value) ?? null)),
+    () => (isUnassigned || !value ? null : (members.find((member) => member.userId === value) ?? null)),
     [isUnassigned, members, value],
   );
 
   function selectMember(userId: string) {
     onValueChange(userId);
+    setOpen(false);
+  }
+
+  function clearSelection() {
+    onValueChange("");
     setOpen(false);
   }
 
@@ -213,9 +222,11 @@ export function useAgencyMemberChooser(
     single: {
       value,
       allowUnassigned,
+      allowEmpty,
       selectedMember,
       isUnassigned,
       onSelectMember: selectMember,
+      onClearSelection: clearSelection,
     },
   };
 }

@@ -24,6 +24,7 @@ type AgencyTaskVirtualListProps = {
   onSelect: (taskId: string) => void;
   onSelectProject: (projectId: string) => void;
   onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
+  onDelete?: (task: AgencyProjectTask) => void;
   hasMore?: boolean;
   isFetchingMore?: boolean;
   onFetchMore?: () => void;
@@ -50,6 +51,7 @@ export function AgencyTaskVirtualList({
   onSelect,
   onSelectProject,
   onStatusChange,
+  onDelete,
   hasMore = false,
   isFetchingMore = false,
   onFetchMore,
@@ -141,6 +143,7 @@ export function AgencyTaskVirtualList({
                 onSelect={onSelect}
                 onSelectProject={onSelectProject}
                 onStatusChange={onStatusChange}
+                onDelete={onDelete}
                 highlightTaskId={highlightTaskId}
               />
             </div>

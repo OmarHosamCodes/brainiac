@@ -17,6 +17,8 @@ type UseAgencyProjectChooserOptions = {
   onOpenChange?: (open: boolean) => void;
   contentAlign?: "start" | "center" | "end";
   autoFocus?: boolean;
+  allowEmpty?: boolean;
+  emptyLabel?: string;
 };
 
 export type AgencyProjectChooserClientGroup = {
@@ -33,6 +35,8 @@ export type AgencyProjectChooserViewModel = {
   className?: string;
   contentAlign: "start" | "center" | "end";
   autoFocus: boolean;
+  allowEmpty: boolean;
+  emptyLabel: string;
   open: boolean;
   searchTerm: string;
   selectedProject: Project | null;
@@ -40,6 +44,7 @@ export type AgencyProjectChooserViewModel = {
   onOpenChange: (open: boolean) => void;
   onSearchChange: (value: string) => void;
   onSelectProject: (projectId: string) => void;
+  onClearSelection: () => void;
 };
 
 export function useAgencyProjectChooser({
@@ -55,6 +60,8 @@ export function useAgencyProjectChooser({
   onOpenChange,
   contentAlign = "start",
   autoFocus = false,
+  allowEmpty = false,
+  emptyLabel = "All projects",
 }: UseAgencyProjectChooserOptions): AgencyProjectChooserViewModel {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -112,15 +119,22 @@ export function useAgencyProjectChooser({
     setOpen(false);
   }
 
+  function clearSelection() {
+    onValueChange("");
+    setOpen(false);
+  }
+
   return {
     value,
     disabled,
     loading,
-    placeholder,
+    placeholder: allowEmpty && !value ? emptyLabel : placeholder,
     searchPlaceholder,
     className,
     contentAlign,
     autoFocus,
+    allowEmpty,
+    emptyLabel,
     open,
     searchTerm,
     selectedProject,
@@ -128,5 +142,6 @@ export function useAgencyProjectChooser({
     onOpenChange: setOpen,
     onSearchChange: setSearchTerm,
     onSelectProject: selectProject,
+    onClearSelection: clearSelection,
   };
 }

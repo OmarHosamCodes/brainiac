@@ -23,6 +23,7 @@ type AppShellState = {
   pageCrumbOwnerCount: number;
   subtitleOwnerCount: number;
   actionsOwnerCount: number;
+  agentButtonHiddenOwnerCount: number;
   currentPath: string;
   setAgentDockOpen: (open: boolean) => void;
   toggleAgentDock: () => void;
@@ -40,6 +41,8 @@ type AppShellState = {
   releaseSubtitleSlot: () => void;
   acquireActionsSlot: () => void;
   releaseActionsSlot: () => void;
+  acquireAgentButtonHidden: () => void;
+  releaseAgentButtonHidden: () => void;
   setCurrentPath: (path: string) => void;
 };
 
@@ -53,6 +56,7 @@ export const useAppShellStore = create<AppShellState>((set, get) => ({
   pageCrumbOwnerCount: 0,
   subtitleOwnerCount: 0,
   actionsOwnerCount: 0,
+  agentButtonHiddenOwnerCount: 0,
   currentPath: "/",
   setAgentDockOpen: (open) => set({ agentDockOpen: open }),
   toggleAgentDock: () => set({ agentDockOpen: !get().agentDockOpen }),
@@ -73,6 +77,12 @@ export const useAppShellStore = create<AppShellState>((set, get) => ({
     set({ subtitleOwnerCount: Math.max(0, get().subtitleOwnerCount - 1) }),
   acquireActionsSlot: () => set({ actionsOwnerCount: get().actionsOwnerCount + 1 }),
   releaseActionsSlot: () => set({ actionsOwnerCount: Math.max(0, get().actionsOwnerCount - 1) }),
+  acquireAgentButtonHidden: () =>
+    set({ agentButtonHiddenOwnerCount: get().agentButtonHiddenOwnerCount + 1 }),
+  releaseAgentButtonHidden: () =>
+    set({
+      agentButtonHiddenOwnerCount: Math.max(0, get().agentButtonHiddenOwnerCount - 1),
+    }),
   setCurrentPath: (path) => set({ currentPath: path }),
 }));
 
@@ -94,4 +104,8 @@ export function useHasPageCrumbContent(): boolean {
 
 export function useHasSubtitleContent(): boolean {
   return useAppShellStore((s) => s.subtitleOwnerCount > 0);
+}
+
+export function useAgentButtonHidden(): boolean {
+  return useAppShellStore((s) => s.agentButtonHiddenOwnerCount > 0);
 }

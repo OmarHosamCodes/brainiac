@@ -11,15 +11,13 @@ import {
   isAgencyManagementPaneId,
   type AgencyManagementPaneId,
 } from "@/lib/agency-management-sections";
-import type { AgencySegmentId } from "@/lib/agency-segments";
 import { LucideIcon } from "@/lib/lucide-icon";
 
 type AgencyManagementSurfaceProps = {
   teamId: string;
-  onSegmentChange: (segment: AgencySegmentId) => void;
 };
 
-export function AgencyManagementSurface({ teamId, onSegmentChange }: AgencyManagementSurfaceProps) {
+export function AgencyManagementSurface({ teamId }: AgencyManagementSurfaceProps) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const paneFromRoute: AgencyManagementPaneId = isAgencyManagementPaneId(searchParams.get("manage"))
@@ -71,7 +69,7 @@ export function AgencyManagementSurface({ teamId, onSegmentChange }: AgencyManag
 
         <div className="min-h-0 flex-1 pb-4">
           <TabsContent value="resourcing">
-            <AgencyResourcingSurface teamId={teamId} onSegmentChange={onSegmentChange} />
+            <AgencyResourcingSurface teamId={teamId} />
           </TabsContent>
           <TabsContent value="invoices">
             <AgencyBillingSurface teamId={teamId} />

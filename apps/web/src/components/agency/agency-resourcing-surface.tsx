@@ -1,4 +1,4 @@
-import { AlertTriangle, CalendarRange, Settings } from "lucide-react";
+import { AlertTriangle, CalendarRange } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -10,11 +10,8 @@ import { formatDuration } from "@/lib/utils/format-duration";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { selectIsCapacityMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
-import type { AgencySegmentId } from "@/lib/agency-segments";
-
 type AgencyResourcingSurfaceProps = {
   teamId: string;
-  onSegmentChange: (segment: AgencySegmentId) => void;
 };
 
 const WEEKS_AHEAD = 4;
@@ -32,7 +29,7 @@ type MemberRow = {
   cells: { weekStart: string; capacity: number; logged: number; booked: number }[];
 };
 
-export function AgencyResourcingSurface({ teamId, onSegmentChange }: AgencyResourcingSurfaceProps) {
+export function AgencyResourcingSurface({ teamId }: AgencyResourcingSurfaceProps) {
   const agencyOps = useAgencyOpsStore();
   const isCapacityMutationPending = useAgencyOpsStore(selectIsCapacityMutationPending);
 
@@ -173,19 +170,9 @@ export function AgencyResourcingSurface({ teamId, onSegmentChange }: AgencyResou
                       <CalendarRange className="mx-auto size-6 text-muted" />
                       <p className="mt-3 text-sm font-bold text-highlighted">Capacity isn't set.</p>
                       <p className="mx-auto mt-1 max-w-sm text-xs text-muted">
-                        Add weekly hours per member in Settings to see utilization across the team.
-                        Once set, this grid colors each cell by how much of a member's week is
-                        committed.
+                        Add weekly hours per member to see utilization across the team. Once set,
+                        this grid colors each cell by how much of a member's week is committed.
                       </p>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="mt-4"
-                        onClick={() => onSegmentChange("settings")}
-                      >
-                        <Settings />
-                        Go to Settings
-                      </Button>
                     </td>
                   </tr>
                 ) : (

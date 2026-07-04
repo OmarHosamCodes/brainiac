@@ -136,6 +136,12 @@ export function isAgencyActiveTimerQueryKey(queryKey: QueryKey, teamId: string) 
   return input?.teamId === teamId || input?.teamId === undefined;
 }
 
+export function isAgencyActiveMembersQueryKey(queryKey: QueryKey, teamId: string) {
+  const path = getOrpcQueryPath(queryKey);
+  if (!isAgencyOpsPath(path, "agencyOps", "timer", "listActiveMembers")) return false;
+  return getOrpcQueryMeta(queryKey)?.input?.teamId === teamId;
+}
+
 export function isAgencyTimeEntriesListQueryKey(queryKey: QueryKey, teamId: string) {
   const path = getOrpcQueryPath(queryKey);
   if (!isAgencyOpsPath(path, "agencyOps", "timeEntries", "listMine")) return false;
@@ -519,12 +525,22 @@ export async function refetchAgencyProjectsListQueries(teamId: string) {
 export async function refetchAgencyActiveTimerQueries(teamId: string) {
   const queryClient = getQueryClient();
   await queryClient.invalidateQueries({
-    predicate: (query) => isAgencyActiveTimerQueryKey(query.queryKey, teamId),
+    predicate: (query) =>
+      isAgencyActiveTimerQueryKey(query.queryKey, teamId) ||
+      isAgencyActiveMembersQueryKey(query.queryKey, teamId),
   });
   await queryClient.fetchQuery(
     withAgencySyncQueryOptions(
       {
         ...orpc.agencyOps.timer.getActive.queryOptions({ input: { teamId } }),
+      },
+      "hot",
+    ),
+  );
+  await queryClient.fetchQuery(
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.timer.listActiveMembers.queryOptions({ input: { teamId } }),
       },
       "hot",
     ),
@@ -556,8 +572,94 @@ type AgencyActiveTimerQueryData = {
   timer: Record<string, unknown> | null;
 };
 
+type AgencyActiveMemberItem = {
+  userId: string;
+  userName: string;
+  userAvatar: string | null;
+  projectName: string;
+  description: string;
+  startedAt: string;
+};
+
+type AgencyActiveMembersQueryData = {
+  items: AgencyActiveMemberItem[];
+};
+
+function applyActiveMembersCachePatch(
+  current: AgencyActiveMembersQueryData | undefined,
+  teamId: string,
+  timer: Record<string, unknown> | null,
+  removedUserId?: string,
+): AgencyActiveMembersQueryData {
+  const items = current?.items ?? [];
+
+  if (timer && timer.teamId === teamId && typeof timer.userId === "string") {
+    const userId = timer.userId;
+    const existing = items.find((item) => item.userId === userId);
+    const nextMember: AgencyActiveMemberItem = {
+      userId,
+      userName: existing?.userName ?? "Member",
+      userAvatar: existing?.userAvatar ?? null,
+      projectName: String(timer.projectName ?? ""),
+      description: String(timer.description ?? ""),
+      startedAt: String(timer.startedAt ?? new Date().toISOString()),
+    };
+    const without = items.filter((item) => item.userId !== userId);
+    return {
+      items: [...without, nextMember].sort((left, right) =>
+        left.userName.localeCompare(right.userName),
+      ),
+    };
+  }
+
+  if (!removedUserId) {
+    return current ?? { items: [] };
+  }
+
+  const nextItems = items.filter((item) => item.userId !== removedUserId);
+  if (nextItems.length === items.length) {
+    return current ?? { items: [] };
+  }
+
+  return { items: nextItems };
+}
+
+function patchActiveMembersInCache(
+  teamId: string,
+  timer: Record<string, unknown> | null,
+  removedUserId?: string,
+) {
+  const queryClient = getQueryClient();
+  const patch = (current: AgencyActiveMembersQueryData | undefined) =>
+    applyActiveMembersCachePatch(current, teamId, timer, removedUserId);
+
+  const canonicalKey = orpc.agencyOps.timer.listActiveMembers.queryOptions({
+    input: { teamId },
+  }).queryKey;
+
+  queryClient.setQueryData<AgencyActiveMembersQueryData | undefined>(canonicalKey, patch);
+
+  for (const query of queryClient.getQueryCache().findAll()) {
+    if (query.queryKey === canonicalKey) continue;
+    if (!isAgencyActiveMembersQueryKey(query.queryKey, teamId)) continue;
+    queryClient.setQueryData<AgencyActiveMembersQueryData | undefined>(query.queryKey, patch);
+  }
+}
+
 export function patchActiveTimerInCache(teamId: string, timer: Record<string, unknown> | null) {
   const queryClient = getQueryClient();
+  let removedUserId: string | undefined;
+
+  if (!timer) {
+    for (const query of queryClient.getQueryCache().findAll()) {
+      if (!isAgencyActiveTimerQueryKey(query.queryKey, teamId)) continue;
+      const cached = queryClient.getQueryData<AgencyActiveTimerQueryData>(query.queryKey);
+      const cachedUserId = cached?.timer?.userId;
+      if (typeof cachedUserId === "string") {
+        removedUserId = cachedUserId;
+      }
+    }
+  }
 
   for (const query of queryClient.getQueryCache().findAll()) {
     if (!isAgencyActiveTimerQueryKey(query.queryKey, teamId)) continue;
@@ -566,4 +668,6 @@ export function patchActiveTimerInCache(teamId: string, timer: Record<string, un
       timer: timer && timer.teamId === teamId ? timer : null,
     }));
   }
+
+  patchActiveMembersInCache(teamId, timer, removedUserId);
 }

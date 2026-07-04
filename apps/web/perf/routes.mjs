@@ -78,14 +78,6 @@ const ALL_ROUTES = [
     ci: false,
     label: "Agency / Management",
   },
-  {
-    id: "agency-settings",
-    path: "/agency?section=settings",
-    tier: "agency",
-    auth: true,
-    ci: false,
-    label: "Agency / Settings",
-  },
 ];
 
 /**
