@@ -82,6 +82,10 @@ export function entryToDraft(entry: DraftEntrySource): TimeEntryDraft {
   };
 }
 
+export function applyStartTimeToDraft(draft: TimeEntryDraft, startTime: string): TimeEntryDraft {
+  return applyEndTimeToDraft({ ...draft, startTime }, draft.endTime);
+}
+
 export function applyDurationToDraft(draft: TimeEntryDraft, durationInput: string): TimeEntryDraft {
   const seconds = parseDurationInput(durationInput);
   const start = combineDateAndTime(draft.date, draft.startTime);
@@ -121,16 +125,11 @@ function resolveDraftEndDate(draft: TimeEntryDraft): Date | null {
   const start = combineDateAndTime(draft.date, draft.startTime);
   if (!start) return null;
 
-  const parsedDuration = parseDurationInput(draft.durationInput);
-  let end: Date | null = combineDateAndTime(draft.date, draft.endTime);
-
-  if (parsedDuration !== null && draft.durationInput.trim()) {
-    end = new Date(start.getTime() + parsedDuration * 1_000);
-  }
-
+  const end = combineDateAndTime(draft.date, draft.endTime);
   if (!end) return null;
+
   if (end.getTime() < start.getTime()) {
-    end = new Date(end.getTime() + 24 * 60 * 60 * 1_000);
+    return new Date(end.getTime() + 24 * 60 * 60 * 1_000);
   }
 
   return end;

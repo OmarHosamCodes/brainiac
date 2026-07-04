@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   applyDurationToDraft,
   applyEndTimeToDraft,
+  applyStartTimeToDraft,
   draftSpansNextDay,
   draftToIsoRange,
   type TimeEntryDraft,
@@ -67,5 +68,21 @@ assert.equal(sameDayDraft.date, "2026-07-04");
 assert.equal(sameDayDraft.endTime, "17:00");
 assert.equal(sameDayDraft.durationInput, "8:00:00");
 assert.equal(draftSpansNextDay(sameDayDraft), false);
+
+const staleDurationRange = draftToIsoRange({
+  ...baseDraft,
+  startTime: "10:43",
+  endTime: "13:32",
+  durationInput: "13:32:00",
+});
+assert.ok(!("error" in staleDurationRange));
+assert.equal(staleDurationRange.durationSeconds, 10_140);
+
+const startDraft = applyStartTimeToDraft(
+  { ...baseDraft, startTime: "10:43", endTime: "13:32", durationInput: "13:32:00" },
+  "11:00",
+);
+assert.equal(startDraft.endTime, "13:32");
+assert.equal(startDraft.durationInput, "2:32:00");
 
 console.log("time-entry-draft: ok");
