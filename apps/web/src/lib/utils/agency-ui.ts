@@ -62,7 +62,7 @@ export const agencyTaskRowMetaColumnClass = "flex shrink-0 items-center gap-1.5 
 
 export const agencyTaskRowProjectPillClass = [
   "inline-flex max-w-[8rem] shrink-0 items-center rounded-full border border-default bg-elevated px-1.5 py-0.5",
-  "text-[10px] font-semibold text-secondary transition-colors hover:bg-default",
+  "text-[10px] font-semibold text-highlighted transition-colors hover:bg-default",
 ].join(" ");
 
 export const agencyTaskRowStatusDotClass = "size-2 shrink-0 rounded-full";
@@ -78,7 +78,7 @@ export const agencyTaskRowCheckboxCheckedClass =
   "border-highlighted bg-highlighted text-inverted";
 
 export const agencyTaskRowClass = [
-  "border-b border-default last:border-b-0 transition-[background-color,opacity,transform] duration-200 motion-reduce:transition-none",
+  "transition-[background-color,opacity,transform] duration-200 motion-reduce:transition-none",
   "cursor-pointer hover:bg-default/60",
 ].join(" ");
 

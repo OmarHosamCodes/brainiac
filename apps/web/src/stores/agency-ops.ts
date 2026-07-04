@@ -813,6 +813,8 @@ function createAgencyOpsActions(
         : null;
 
       // Reuse: update the existing row in place. New: insert a temporary optimistic row.
+      // Always open for the viewer — create/reuse (and Done → Active reopen) lands in Active.
+      const reopenedFromDone = existingByTitle?.viewerStatus === "done";
       if (existingByTitle) {
         patchUpdatedProjectTask(payload.teamId, {
           ...existingByTitle,
@@ -829,7 +831,7 @@ function createAgencyOpsActions(
                     existingByTitle.assignees.find((a) => a.userId === userId)?.status ?? "open",
                 }))
               : existingByTitle.assignees,
-          viewerStatus: existingByTitle.viewerStatus ?? "open",
+          viewerStatus: "open",
           viewerCompletionCount: existingByTitle.viewerCompletionCount ?? 0,
           updatedAt: nowIso,
         });
@@ -850,17 +852,28 @@ function createAgencyOpsActions(
       })) as AgencyProjectTask;
 
       if (existingByTitle) {
-        patchUpdatedProjectTask(payload.teamId, created);
+        patchUpdatedProjectTask(payload.teamId, {
+          ...created,
+          viewerStatus: created.viewerStatus === "done" ? "open" : (created.viewerStatus ?? "open"),
+        });
       } else {
         reconcileCreatedTask(payload.teamId, optimisticTask.id, created);
       }
 
-      toast.success(existingByTitle || payload.reusesExistingTitle ? "Using existing task" : "Task added", {
-        description:
-          existingByTitle || payload.reusesExistingTitle
-            ? `"${title}" is already open on this project. Assignees were merged.`
-            : title,
-      });
+      toast.success(
+        reopenedFromDone
+          ? "Added to open tasks"
+          : existingByTitle || payload.reusesExistingTitle
+            ? "Using existing task"
+            : "Task added",
+        {
+          description: reopenedFromDone
+            ? `"${title}" is open again.`
+            : existingByTitle || payload.reusesExistingTitle
+              ? `"${title}" is already open on this project. Assignees were merged.`
+              : title,
+        },
+      );
       syncProjectTaskQueriesAfterMutation(payload.teamId);
 
       return created.id;
@@ -1128,7 +1141,22 @@ function createAgencyOpsActions(
           : current.viewerStatus,
       assignedToTeam:
         payload.assignedToTeam === undefined ? current.assignedToTeam : payload.assignedToTeam,
-      assignees: payload.assigneeUserIds === undefined ? current.assignees : [],
+      assignees:
+        payload.assigneeUserIds === undefined
+          ? current.assignees
+          : payload.assignedToTeam
+            ? []
+            : payload.assigneeUserIds.map((userId) => {
+                const existing = current.assignees.find((assignee) => assignee.userId === userId);
+                return (
+                  existing ?? {
+                    userId,
+                    userName: "Member",
+                    userAvatar: null,
+                    status: "open" as const,
+                  }
+                );
+              }),
       dueDate: payload.dueDate === undefined ? current.dueDate : payload.dueDate,
       updatedAt: nowIso,
     };

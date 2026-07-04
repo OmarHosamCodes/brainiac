@@ -11,6 +11,8 @@ type AgencyMemberChooserBaseOptions = {
   placeholder?: string;
   searchPlaceholder?: string;
   className?: string;
+  /** default: labeled pill. stack: overlapping avatars + plus (multiple mode). */
+  triggerVariant?: "default" | "stack";
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   contentAlign?: "start" | "center" | "end";
@@ -42,6 +44,7 @@ export type AgencyMemberChooserViewModel = {
   placeholder: string;
   searchPlaceholder: string;
   className?: string;
+  triggerVariant: "default" | "stack";
   contentAlign: "start" | "center" | "end";
   open: boolean;
   searchTerm: string;
@@ -59,6 +62,7 @@ export type AgencyMemberChooserViewModel = {
   multiple?: {
     assignedToTeam: boolean;
     selectedUserIds: string[];
+    selectedMembers: AgencyTaskThreadMember[];
     onToggleEntireTeam: () => void;
     onToggleMember: (userId: string) => void;
     isMemberSelected: (userId: string) => boolean;
@@ -92,6 +96,7 @@ export function useAgencyMemberChooser(
     placeholder = "Assignee",
     searchPlaceholder = "Search members",
     className,
+    triggerVariant = "default",
     open: controlledOpen,
     onOpenChange,
     contentAlign = "start",
@@ -126,26 +131,23 @@ export function useAgencyMemberChooser(
     } = options;
 
     function toggleEntireTeam() {
-      const nextAssignedToTeam = !assignedToTeam;
-      onAssignedToTeamChange(nextAssignedToTeam);
-      if (nextAssignedToTeam) {
-        onSelectedUserIdsChange([]);
-      }
+      // Parent clears selectedUserIds when assignedToTeam becomes true.
+      onAssignedToTeamChange(!assignedToTeam);
       setOpen(false);
     }
 
     function toggleMember(userId: string) {
-      if (assignedToTeam) {
-        onAssignedToTeamChange(false);
-        onSelectedUserIdsChange([userId]);
-        return;
-      }
-
-      const next = selectedUserIds.includes(userId)
-        ? selectedUserIds.filter((id: string) => id !== userId)
-        : [...selectedUserIds, userId];
+      // Parent clears assignedToTeam when member selection changes.
+      const baseIds = assignedToTeam ? [] : selectedUserIds;
+      const next = baseIds.includes(userId)
+        ? baseIds.filter((id: string) => id !== userId)
+        : [...baseIds, userId];
       onSelectedUserIdsChange(next);
     }
+
+    const selectedMembers = selectedUserIds
+      .map((userId) => members.find((member) => member.userId === userId))
+      .filter((member): member is AgencyTaskThreadMember => Boolean(member));
 
     return {
       mode: "multiple" as const,
@@ -154,6 +156,7 @@ export function useAgencyMemberChooser(
       placeholder,
       searchPlaceholder,
       className,
+      triggerVariant,
       contentAlign,
       open,
       searchTerm,
@@ -164,6 +167,7 @@ export function useAgencyMemberChooser(
       multiple: {
         assignedToTeam,
         selectedUserIds,
+        selectedMembers,
         onToggleEntireTeam: toggleEntireTeam,
         onToggleMember: toggleMember,
         isMemberSelected: (userId) => !assignedToTeam && selectedUserIds.includes(userId),
@@ -198,6 +202,7 @@ export function useAgencyMemberChooser(
     placeholder,
     searchPlaceholder,
     className,
+    triggerVariant,
     contentAlign,
     open,
     searchTerm,

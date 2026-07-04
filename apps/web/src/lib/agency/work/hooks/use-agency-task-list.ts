@@ -99,6 +99,7 @@ export type AgencyTaskListViewModel =
       doneTasks: AgencyProjectTask[];
       recentlyCompletedTaskId: string;
       recentlyCreatedTaskId: string;
+      onReopenDoneTask: (task: AgencyProjectTask) => void;
       hasMoreActiveTasks: boolean;
       isFetchingMoreActiveTasks: boolean;
       onFetchMoreActiveTasks: () => void;
@@ -302,6 +303,35 @@ export function useAgencyTaskList({
     [agencyOps, setDoneExpanded, setRecentlyCompletedTaskId, teamId],
   );
 
+  const reopenDoneTask = useCallback(
+    async (task: AgencyProjectTask) => {
+      if (!teamId || isCreatingTask) return;
+
+      setRecentlyCreatedTaskId(task.id);
+
+      const createdId = await agencyOps.createProjectTask({
+        teamId,
+        projectId: task.projectId,
+        title: task.title,
+        assignedToTeam: task.assignedToTeam,
+        assigneeUserIds: task.assignedToTeam
+          ? undefined
+          : [currentUserId, ...task.assignees.map((assignee) => assignee.userId)].filter(
+              (userId, index, ids) => Boolean(userId) && ids.indexOf(userId) === index,
+            ),
+        reusesExistingTitle: true,
+        onOptimisticId: setRecentlyCreatedTaskId,
+      });
+
+      if (createdId) {
+        setRecentlyCreatedTaskId(createdId);
+        return;
+      }
+      setRecentlyCreatedTaskId("");
+    },
+    [agencyOps, currentUserId, isCreatingTask, setRecentlyCreatedTaskId, teamId],
+  );
+
   const canSubmit = Boolean(
     titleDraft.trim() && selectedProjectIdForCreate && teamId && !membersQuery.isPending && !isCreatingTask,
   );
@@ -364,6 +394,7 @@ export function useAgencyTaskList({
     doneTasks,
     recentlyCompletedTaskId,
     recentlyCreatedTaskId: activeHighlightTaskId,
+    onReopenDoneTask: (task) => void reopenDoneTask(task),
     hasMoreActiveTasks: Boolean(activeTasksQuery.hasNextPage),
     isFetchingMoreActiveTasks: activeTasksQuery.isFetchingNextPage,
     onFetchMoreActiveTasks: () => void activeTasksQuery.fetchNextPage(),

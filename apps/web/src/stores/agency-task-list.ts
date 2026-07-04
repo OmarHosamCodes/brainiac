@@ -46,8 +46,16 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   setRecentlyCreatedTaskId: (taskId) => set({ recentlyCreatedTaskId: taskId }),
   setTitleDraft: (value) => set({ titleDraft: value }),
   setSelectedProjectIdForCreate: (value) => set({ selectedProjectIdForCreate: value }),
-  setAssignedToTeamForCreate: (value) => set({ assignedToTeamForCreate: value }),
-  setSelectedAssigneeIdsForCreate: (value) => set({ selectedAssigneeIdsForCreate: value }),
+  setAssignedToTeamForCreate: (value) =>
+    set({
+      assignedToTeamForCreate: value,
+      ...(value ? { selectedAssigneeIdsForCreate: [] } : {}),
+    }),
+  setSelectedAssigneeIdsForCreate: (value) =>
+    set({
+      selectedAssigneeIdsForCreate: value,
+      assignedToTeamForCreate: false,
+    }),
   setClientExpanded: (clientId, expanded) =>
     set((state) => {
       const next = new Set(state.collapsedClients);

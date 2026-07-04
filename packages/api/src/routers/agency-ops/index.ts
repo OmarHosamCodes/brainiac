@@ -622,6 +622,8 @@ export const agencyOpsRouter = {
               projectName: z.string().min(1),
               clientId: z.string().min(1),
               clientName: z.string().min(1),
+              assignedToTeam: z.boolean(),
+              assignees: z.array(agencyTaskThreadMemberSchema),
               assigneeName: z.string().nullable(),
             })
             .parse(await getTaskThreadContext(context.session.user.id, input));

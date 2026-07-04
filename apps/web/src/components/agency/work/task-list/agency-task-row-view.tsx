@@ -1,4 +1,4 @@
-import { Check, Clock } from "lucide-react";
+import { Check, Clock, Plus } from "lucide-react";
 
 import { AgencyMiniTimerContainer } from "@/lib/agency/work/containers/agency-mini-timer-container";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
@@ -104,6 +104,8 @@ export type AgencyTaskRowViewProps = {
   onSelect: (taskId: string) => void;
   onSelectProject?: (projectId: string) => void;
   onStatusChange?: (task: AgencyProjectTask, status: TaskStatus) => void;
+  /** Done section: reopen this task into Active. */
+  onReopenToActive?: (task: AgencyProjectTask) => void;
 };
 
 export function AgencyTaskRowView({
@@ -117,6 +119,7 @@ export function AgencyTaskRowView({
   onSelect,
   onSelectProject,
   onStatusChange,
+  onReopenToActive,
 }: AgencyTaskRowViewProps) {
   const project = projects.find((p) => p.id === task.projectId);
   const projectName = project?.name ?? "Project";
@@ -223,11 +226,32 @@ export function AgencyTaskRowView({
           </div>
 
           <div className={cn(agencyTaskRowMetaColumnClass, "pointer-events-auto")}>
-            <span
-              className={cn(agencyTaskRowStatusDotClass, statusDotColor(statusForDot))}
-              title={statusLabel(statusForDot)}
-              aria-hidden
-            />
+            {readOnly && onReopenToActive ? (
+              <button
+                type="button"
+                aria-label={`Add ${task.title} to open tasks`}
+                disabled={isRowPending}
+                className={cn(
+                  "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted",
+                  "transition-colors hover:bg-default hover:text-highlighted",
+                  agencyFocusRingClass,
+                  "motion-reduce:transition-none",
+                  isRowPending && "cursor-not-allowed opacity-50",
+                )}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onReopenToActive(task);
+                }}
+              >
+                <Plus className="size-3.5" strokeWidth={2.5} aria-hidden />
+              </button>
+            ) : (
+              <span
+                className={cn(agencyTaskRowStatusDotClass, statusDotColor(statusForDot))}
+                title={statusLabel(statusForDot)}
+                aria-hidden
+              />
+            )}
 
             {!readOnly ? (
               <AgencyMiniTimerContainer

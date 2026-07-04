@@ -187,9 +187,12 @@ export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
                         selectedTaskId={view.selectedTaskId}
                         highlight={view.recentlyCompletedTaskId === task.id}
                         readOnly
-                        isRowPending={view.isRowPending(task.id)}
+                        isRowPending={
+                          view.isRowPending(task.id) || view.create.isCreatingTask
+                        }
                         onSelect={view.onSelect}
                         onSelectProject={view.onSelectProject}
+                        onReopenToActive={view.onReopenDoneTask}
                       />
                     ))}
                   </ul>

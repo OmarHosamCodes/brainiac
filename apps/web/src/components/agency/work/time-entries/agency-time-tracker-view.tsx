@@ -50,8 +50,9 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
               tasks={view.tasksForChooser}
               placeholder={view.taskChooserLabel}
               className={cn(
-                "h-9 w-auto max-w-44 shrink-0 border-0 bg-transparent px-2 font-normal text-secondary shadow-none hover:bg-transparent hover:text-secondary",
-                view.taskChooserWarning && "text-warning",
+                "h-9 w-auto max-w-44 shrink-0 border-0 bg-transparent px-2 font-normal shadow-none hover:bg-transparent",
+                view.taskChooserWarning &&
+                  "text-warning hover:text-warning [&_svg]:text-warning [&_span]:text-warning",
               )}
               loading={view.projectsLoading || view.tasksLoading}
               disabled={!view.teamId || view.projectsLoading || view.tasksLoading}
