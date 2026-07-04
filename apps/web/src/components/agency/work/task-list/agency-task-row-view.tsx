@@ -123,15 +123,19 @@ export function AgencyTaskRowView({
   const isSelected = task.id === selectedTaskId;
   const memberStatus = task.viewerStatus;
   const completionCount = task.viewerCompletionCount ?? 0;
-  // Done section is read-only; active rows stay unchecked so the same todo can be checked again.
-  const isDone =
-    readOnly ||
-    (memberStatus !== undefined
-      ? memberStatus === "done"
-      : task.status === "done" || task.status === "archived");
+  const isDone = readOnly || memberStatus === "done";
   const overdue = isTaskOverdue(task.dueDate);
   const dueLabel = task.dueDate ? formatDueDate(task.dueDate) : "";
-  const showCompletionMultiplier = readOnly && completionCount > 1;
+  // Done section: always show ×N once there is at least one completion.
+  const showCompletionMultiplier = readOnly && completionCount >= 1;
+  // Active rail: member workflow status, never a stale project-level "done" from find-or-create.
+  const statusForDot: TaskStatus = readOnly
+    ? "done"
+    : task.status === "in_progress" || memberStatus === "in_progress"
+      ? "in_progress"
+      : task.status === "archived"
+        ? "archived"
+        : "open";
 
   return (
     <li
@@ -220,8 +224,8 @@ export function AgencyTaskRowView({
 
           <div className={cn(agencyTaskRowMetaColumnClass, "pointer-events-auto")}>
             <span
-              className={cn(agencyTaskRowStatusDotClass, statusDotColor(task.status))}
-              title={statusLabel(task.status)}
+              className={cn(agencyTaskRowStatusDotClass, statusDotColor(statusForDot))}
+              title={statusLabel(statusForDot)}
               aria-hidden
             />
 

@@ -6,6 +6,7 @@ type AgencyTaskListState = {
   createExpanded: boolean;
   doneExpanded: boolean;
   recentlyCompletedTaskId: string;
+  recentlyCreatedTaskId: string;
   titleDraft: string;
   selectedProjectIdForCreate: string;
   assignedToTeamForCreate: boolean;
@@ -14,6 +15,7 @@ type AgencyTaskListState = {
   setCreateExpanded: (expanded: boolean) => void;
   setDoneExpanded: (expanded: boolean) => void;
   setRecentlyCompletedTaskId: (taskId: string) => void;
+  setRecentlyCreatedTaskId: (taskId: string) => void;
   setTitleDraft: (value: string) => void;
   setSelectedProjectIdForCreate: (value: string) => void;
   setAssignedToTeamForCreate: (value: boolean) => void;
@@ -32,6 +34,7 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   createExpanded: false,
   doneExpanded: false,
   recentlyCompletedTaskId: "",
+  recentlyCreatedTaskId: "",
   titleDraft: "",
   selectedProjectIdForCreate: "",
   assignedToTeamForCreate: false,
@@ -40,6 +43,7 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   setCreateExpanded: (expanded) => set({ createExpanded: expanded }),
   setDoneExpanded: (expanded) => set({ doneExpanded: expanded }),
   setRecentlyCompletedTaskId: (taskId) => set({ recentlyCompletedTaskId: taskId }),
+  setRecentlyCreatedTaskId: (taskId) => set({ recentlyCreatedTaskId: taskId }),
   setTitleDraft: (value) => set({ titleDraft: value }),
   setSelectedProjectIdForCreate: (value) => set({ selectedProjectIdForCreate: value }),
   setAssignedToTeamForCreate: (value) => set({ assignedToTeamForCreate: value }),

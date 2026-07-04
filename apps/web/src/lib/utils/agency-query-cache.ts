@@ -248,37 +248,51 @@ export function findProjectTaskInCache(teamId: string, taskId: string): AgencyPr
   return null;
 }
 
-export async function refetchAgencyProjectTaskListQueries(teamId: string, assigneeUserId?: string) {
+function normalizeTitleKey(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+export function findProjectTaskInCacheByTitle(
+  teamId: string,
+  projectId: string,
+  title: string,
+): AgencyProjectTask | null {
+  const titleKey = normalizeTitleKey(title);
+  if (!titleKey) return null;
+
   const queryClient = getQueryClient();
-
-  await queryClient.invalidateQueries({
-    predicate: (query) => isAgencyProjectTasksListQueryKey(query.queryKey, teamId),
-  });
-
-  const inputs: ProjectTasksListInput[] = [
-    { teamId, statuses: ["open", "in_progress"] },
-    { teamId, statuses: ["done"] },
-  ];
-
-  if (assigneeUserId) {
-    inputs.push(
-      { teamId, assigneeUserId, statuses: ["open", "in_progress"] },
-      { teamId, assigneeUserId, statuses: ["done"] },
-    );
+  for (const query of queryClient.getQueryCache().findAll()) {
+    if (!isAgencyProjectTasksListQueryKey(query.queryKey, teamId)) continue;
+    const data = queryClient.getQueryData(query.queryKey);
+    const pages = isInfiniteQueryData(data)
+      ? data.pages
+      : isListQueryData(data)
+        ? [data]
+        : [];
+    for (const page of pages) {
+      const task = pageItems(page).find(
+        (item) =>
+          item.projectId === projectId && normalizeTitleKey(item.title) === titleKey,
+      );
+      if (task) return task;
+    }
   }
 
-  await Promise.all(
-    inputs.map((input) =>
-      queryClient.fetchQuery(
-        withAgencySyncQueryOptions(
-          {
-            ...orpc.agencyOps.projectTasks.list.queryOptions({ input }),
-          },
-          "hot",
-        ),
-      ),
-    ),
-  );
+  return null;
+}
+
+export async function refetchAgencyProjectTaskListQueries(teamId: string, _assigneeUserId?: string) {
+  const queryClient = getQueryClient();
+  // Refetch in place (list + infinite). Do not invalidate: that drops infinite
+  // pages and flashes the rail empty until the refetch finishes.
+  await queryClient.refetchQueries({
+    predicate: (query) => isAgencyProjectTasksListQueryKey(query.queryKey, teamId),
+    type: "active",
+  });
+}
+
+function isInfiniteProjectTasksQueryKey(queryKey: QueryKey) {
+  return queryKey[queryKey.length - 1] === "infinite";
 }
 
 export function patchAllProjectTasksListData(
@@ -290,9 +304,14 @@ export function patchAllProjectTasksListData(
 ) {
   const queryClient = getQueryClient();
   forEachAgencyProjectTasksListQuery(teamId, (queryKey, input) => {
-    queryClient.setQueryData<AgencyProjectTasksCacheData | undefined>(queryKey, (current) =>
-      apply(current, input),
-    );
+    queryClient.setQueryData<AgencyProjectTasksCacheData | undefined>(queryKey, (current) => {
+      // Infinite lists must keep { pages } shape; seeding a list shape breaks the rail.
+      const seeded =
+        current == null && isInfiniteProjectTasksQueryKey(queryKey)
+          ? { pages: [{ items: [] as AgencyProjectTask[], total: 0, page: 1, pageSize: 50 }], pageParams: [1] }
+          : current;
+      return apply(seeded, input);
+    });
   });
 }
 

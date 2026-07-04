@@ -103,15 +103,17 @@ export function useMergedAgencyProjectTasksQuery<TData extends ListQueryData<Age
   },
 ) {
   const overlay = useAgencyOptimisticStore((state) => state.tasks[teamId] ?? EMPTY_LIST_OVERLAY);
-  const pruneTasks = useAgencyOptimisticStore((state) => state.pruneTasks);
   const matches = useMemo(
     () => (task: AgencyOptimisticTask) => taskMatchesAgencyFilters(task, filters),
     [filters],
   );
 
+  // Do not prune the shared task overlay from non-rail lists (title suggestions,
+  // project tables, etc.). Those queries can include a task the Active rail
+  // cache does not yet have, which drops the overlay and makes the row vanish.
   return useMergedAgencyListQuery(query, overlay, {
     teamId,
-    prune: pruneTasks,
+    prune: () => undefined,
     matches,
   });
 }

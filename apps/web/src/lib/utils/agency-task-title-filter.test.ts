@@ -3,6 +3,7 @@ import { describe, expect, test } from "bun:test";
 import type { AgencyProjectTask } from "../schemas/agency-work";
 import {
   filterTasksByTitleSearch,
+  findOpenTaskByExactTitle,
   normalizeTaskTitle,
   taskTitleExactlyMatches,
 } from "./agency-task-title-filter";
@@ -46,6 +47,24 @@ describe("taskTitleExactlyMatches", () => {
   test("matches normalized titles", () => {
     const tasks = [makeTask({ id: "a", projectId: "p1", title: "Design Review" })];
     expect(taskTitleExactlyMatches(tasks, "design review")).toBe(true);
+  });
+});
+
+describe("findOpenTaskByExactTitle", () => {
+  test("returns open/in-progress match and ignores archived", () => {
+    const tasks = [
+      makeTask({ id: "done", projectId: "p1", title: "Design Review", status: "done" }),
+      makeTask({ id: "open", projectId: "p1", title: "design review", status: "open" }),
+      makeTask({ id: "arch", projectId: "p1", title: "Design Review", status: "archived" }),
+    ];
+    expect(findOpenTaskByExactTitle(tasks, "Design Review")?.id).toBe("open");
+  });
+
+  test("returns null when only done or archived share the title", () => {
+    const tasks = [
+      makeTask({ id: "done", projectId: "p1", title: "Design Review", status: "done" }),
+    ];
+    expect(findOpenTaskByExactTitle(tasks, "Design Review")).toBeNull();
   });
 });
 

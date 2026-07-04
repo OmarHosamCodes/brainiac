@@ -461,7 +461,33 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
 
   pruneTasks: (teamId, serverItems) =>
     set((state) => {
-      const pruned = pruneListOverlay(getListOverlay(state.tasks, teamId), serverItems);
+      const pruned = pruneListOverlay(
+        getListOverlay(state.tasks, teamId),
+        serverItems,
+        (server, optimistic) => {
+          // Keep local completion / status until the server catches up.
+          if ((server.viewerCompletionCount ?? 0) < (optimistic.viewerCompletionCount ?? 0)) {
+            return false;
+          }
+          if (optimistic.status === "in_progress" && server.status === "open") {
+            return false;
+          }
+          if (
+            optimistic.viewerStatus === "in_progress" &&
+            server.viewerStatus !== "in_progress" &&
+            server.status !== "in_progress"
+          ) {
+            return false;
+          }
+          if (optimistic.viewerStatus === "done" && server.viewerStatus !== "done") {
+            return false;
+          }
+          if (optimistic.updatedAt && server.updatedAt && server.updatedAt < optimistic.updatedAt) {
+            return false;
+          }
+          return true;
+        },
+      );
       return { tasks: setListOverlay(state.tasks, teamId, pruned) };
     }),
 

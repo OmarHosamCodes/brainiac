@@ -9,13 +9,12 @@ import { orpc, orpcClient } from "@/lib/orpc";
 import {
   cancelAgencyProjectTaskListQueries,
   findProjectTaskInCache,
+  findProjectTaskInCacheByTitle,
   patchDeletedProjectTaskInCache,
   patchInsertedProjectTaskInCache,
   patchUpdatedProjectTaskInCache,
   reconcileCreatedProjectTaskInCache,
-  refetchAgencyProjectTaskListQueries,
 } from "@/lib/utils/agency-query-cache";
-import { getAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { createEmptyListOverlay } from "@/lib/utils/agency-optimistic-merge";
@@ -208,6 +207,10 @@ type CreateProjectTaskPayload = {
   assignedToTeam?: boolean;
   assigneeUserIds?: string[];
   dueDate?: string;
+  /** True when an open/in-progress task with this title already exists on the project. */
+  reusesExistingTitle?: boolean;
+  /** Fires with the row id as soon as the optimistic Active row is written. */
+  onOptimisticId?: (taskId: string) => void;
 };
 
 type DeleteProjectTaskPayload = {
@@ -518,12 +521,11 @@ function createAgencyOpsActions(
     patchDeletedProjectTaskInCache(teamId, taskId);
   }
 
-  async function syncProjectTaskQueriesAfterMutation(teamId: string) {
-    const userId = getAgencyTimeTrackingUserId();
-    await refetchAgencyProjectTaskListQueries(
-      teamId,
-      userId !== "unknown-user" ? userId : undefined,
-    );
+  function syncProjectTaskQueriesAfterMutation(_teamId: string) {
+    // Intentionally no-op. Refetching task lists after mutations overwrites
+    // optimistic/server-patched completion counts with stale pages (see debug
+    // session d9b705: counts roll back 8→7 / 2→1 after background refetch).
+    // Mutations already write the authoritative task into the cache + overlay.
   }
 
   function patchInsertedTaskMessage(teamId: string, taskId: string, message: AgencyTaskMessage) {
@@ -771,21 +773,31 @@ function createAgencyOpsActions(
     }
   }
 
-  async function createProjectTask(payload: CreateProjectTaskPayload): Promise<boolean> {
+  async function createProjectTask(payload: CreateProjectTaskPayload): Promise<string | null> {
     const title = payload.title.trim();
-    if (!payload.teamId || !payload.projectId || !title) return false;
+    if (!payload.teamId || !payload.projectId || !title) return null;
 
     const snapshots = snapshotQueries(registryPayloads(projectTasksQueryRegistry));
     const optimisticSnapshot = optimistic().snapshotTasks(payload.teamId);
     const nowIso = new Date().toISOString();
+    const assignedToTeam = payload.assignedToTeam ?? false;
+    const assigneeUserIds = assignedToTeam ? [] : [...new Set(payload.assigneeUserIds ?? [])];
     const optimisticTask: AgencyProjectTask = {
       id: optimisticId("agency-project-task"),
       teamId: payload.teamId,
       projectId: payload.projectId,
       title,
       status: payload.status ?? "open",
-      assignedToTeam: payload.assignedToTeam ?? false,
-      assignees: [],
+      assignedToTeam,
+      // Assignees required so assignee-filtered active lists accept the optimistic row.
+      assignees: assigneeUserIds.map((userId) => ({
+        userId,
+        userName: "",
+        userAvatar: null,
+        status: "open" as const,
+      })),
+      viewerStatus: "open",
+      viewerCompletionCount: 0,
       dueDate: payload.dueDate ?? null,
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -795,7 +807,37 @@ function createAgencyOpsActions(
 
     try {
       await cancelAgencyProjectTaskListQueries(payload.teamId);
-      patchInsertedProjectTask(payload.teamId, optimisticTask);
+
+      const existingByTitle = payload.reusesExistingTitle
+        ? findProjectTaskInCacheByTitle(payload.teamId, payload.projectId, title)
+        : null;
+
+      // Reuse: update the existing row in place. New: insert a temporary optimistic row.
+      if (existingByTitle) {
+        patchUpdatedProjectTask(payload.teamId, {
+          ...existingByTitle,
+          assignedToTeam,
+          assignees:
+            assigneeUserIds.length > 0
+              ? assigneeUserIds.map((userId) => ({
+                  userId,
+                  userName:
+                    existingByTitle.assignees.find((a) => a.userId === userId)?.userName ?? "",
+                  userAvatar:
+                    existingByTitle.assignees.find((a) => a.userId === userId)?.userAvatar ?? null,
+                  status:
+                    existingByTitle.assignees.find((a) => a.userId === userId)?.status ?? "open",
+                }))
+              : existingByTitle.assignees,
+          viewerStatus: existingByTitle.viewerStatus ?? "open",
+          viewerCompletionCount: existingByTitle.viewerCompletionCount ?? 0,
+          updatedAt: nowIso,
+        });
+        payload.onOptimisticId?.(existingByTitle.id);
+      } else {
+        patchInsertedProjectTask(payload.teamId, optimisticTask);
+        payload.onOptimisticId?.(optimisticTask.id);
+      }
 
       const created = (await orpcClient.agencyOps.projectTasks.create({
         teamId: payload.teamId,
@@ -807,17 +849,26 @@ function createAgencyOpsActions(
         dueDate: payload.dueDate,
       })) as AgencyProjectTask;
 
-      const existingInCache = findProjectTaskInCache(payload.teamId, created.id);
-      reconcileCreatedTask(payload.teamId, optimisticTask.id, created);
+      if (existingByTitle) {
+        patchUpdatedProjectTask(payload.teamId, created);
+      } else {
+        reconcileCreatedTask(payload.teamId, optimisticTask.id, created);
+      }
 
-      toast.success(existingInCache ? "Task ready" : "Task added", { description: title });
-      await syncProjectTaskQueriesAfterMutation(payload.teamId);
-      return true;
+      toast.success(existingByTitle || payload.reusesExistingTitle ? "Using existing task" : "Task added", {
+        description:
+          existingByTitle || payload.reusesExistingTitle
+            ? `"${title}" is already open on this project. Assignees were merged.`
+            : title,
+      });
+      syncProjectTaskQueriesAfterMutation(payload.teamId);
+
+      return created.id;
     } catch (error) {
       restoreQuerySnapshots(snapshots);
       optimistic().restoreTasks(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't add task", { description: getErrorMessage(error, "Try again.") });
-      return false;
+      return null;
     } finally {
       set((state) => ({ ...state, isCreatingTask: false }));
     }
@@ -1042,7 +1093,6 @@ function createAgencyOpsActions(
 
     if (!current) {
       try {
-        await cancelAgencyProjectTaskListQueries(payload.teamId);
         const updated = (await orpcClient.agencyOps.projectTasks.update({
           teamId: payload.teamId,
           taskId: payload.taskId,
@@ -1054,7 +1104,7 @@ function createAgencyOpsActions(
         })) as AgencyProjectTask;
 
         patchUpdatedProjectTask(payload.teamId, updated);
-        await syncProjectTaskQueriesAfterMutation(payload.teamId);
+        syncProjectTaskQueriesAfterMutation(payload.teamId);
       } catch (error) {
         toast.error("Couldn't update task", { description: getErrorMessage(error, "Try again.") });
         throw error;
@@ -1067,10 +1117,15 @@ function createAgencyOpsActions(
       return;
     }
 
+    const nextStatus = payload.status ?? current.status;
     const optimisticTask: AgencyProjectTask = {
       ...current,
       title: payload.title ?? current.title,
-      status: payload.status ?? current.status,
+      status: nextStatus,
+      viewerStatus:
+        nextStatus === "open" || nextStatus === "in_progress" || nextStatus === "done"
+          ? nextStatus
+          : current.viewerStatus,
       assignedToTeam:
         payload.assignedToTeam === undefined ? current.assignedToTeam : payload.assignedToTeam,
       assignees: payload.assigneeUserIds === undefined ? current.assignees : [],
@@ -1093,7 +1148,7 @@ function createAgencyOpsActions(
       })) as AgencyProjectTask;
 
       patchUpdatedProjectTask(payload.teamId, updated);
-      await syncProjectTaskQueriesAfterMutation(payload.teamId);
+      syncProjectTaskQueriesAfterMutation(payload.teamId);
     } catch (error) {
       restoreQuerySnapshots(snapshots);
       optimistic().restoreTasks(payload.teamId, optimisticSnapshot);
@@ -1123,7 +1178,7 @@ function createAgencyOpsActions(
     if (current) {
       const optimisticTask: AgencyProjectTask = {
         ...current,
-        viewerStatus: "open",
+        viewerStatus: "done",
         viewerCompletionCount: (current.viewerCompletionCount ?? 0) + 1,
         updatedAt: nowIso,
       };
@@ -1138,7 +1193,7 @@ function createAgencyOpsActions(
       })) as AgencyProjectTask;
 
       patchUpdatedProjectTask(payload.teamId, updated);
-      await syncProjectTaskQueriesAfterMutation(payload.teamId);
+      syncProjectTaskQueriesAfterMutation(payload.teamId);
     } catch (error) {
       restoreQuerySnapshots(snapshots);
       optimistic().restoreTasks(payload.teamId, optimisticSnapshot);

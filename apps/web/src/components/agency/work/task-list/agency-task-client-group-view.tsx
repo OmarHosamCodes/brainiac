@@ -45,10 +45,10 @@ export function AgencyTaskClientGroupView({
 }: AgencyTaskClientGroupViewProps) {
   const panelId = `agency-task-client-group-${clientId}`;
   const taskGroups = groupTasksWithinClient(tasks);
-  const inProgressCount = tasks.filter((task) => {
-    const status = task.viewerStatus ?? task.status;
-    return status === "in_progress";
-  }).length;
+  // Timer sets task.status; member completion uses viewerStatus. Count either.
+  const inProgressCount = tasks.filter(
+    (task) => task.status === "in_progress" || task.viewerStatus === "in_progress",
+  ).length;
 
   return (
     <section aria-labelledby={`${panelId}-label`}>

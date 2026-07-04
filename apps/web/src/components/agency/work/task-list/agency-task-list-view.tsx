@@ -109,7 +109,7 @@ export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
               teamId={view.teamId}
               currentUserId={view.currentUserId}
               selectedTaskId={view.selectedTaskId}
-              highlightTaskId={view.recentlyCompletedTaskId}
+              highlightTaskId={view.recentlyCreatedTaskId}
               isRowPending={view.isRowPending}
               onClientExpandedChange={view.onClientExpandedChange}
               onSelect={view.onSelect}
