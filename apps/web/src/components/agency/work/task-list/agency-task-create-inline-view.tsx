@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { AlertTriangle, Plus } from "lucide-react";
 
 import { AgencyMemberChooser } from "@/components/agency/agency-member-chooser";
 import { AgencyProjectChooser } from "@/components/agency/agency-project-chooser";
@@ -26,6 +26,7 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
     selectedAssigneeIds,
     createTasks,
     createTasksLoading,
+    existingOpenTask,
     disabled,
     membersLoading,
     isCreatingTask,
@@ -103,6 +104,19 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
           />
         </div>
 
+        {existingOpenTask ? (
+          <div
+            role="status"
+            className="mb-2 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-2 text-xs text-warning"
+          >
+            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+            <p className="min-w-0 leading-snug text-highlighted">
+              <span className="font-semibold text-warning">This name is already open.</span>{" "}
+              Submitting reuses that task and merges assignees; it does not create a second one.
+            </p>
+          </div>
+        ) : null}
+
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="min-w-0 flex-1 sm:max-w-[11rem]">
             <AgencyMemberChooser
@@ -131,10 +145,16 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
               type="button"
               size="sm"
               className="h-8 rounded-full px-3 text-xs"
-              disabled={!canSubmit}
+              disabled={disabled || !canSubmit || isCreatingTask}
               onClick={onSubmit}
             >
-              {isCreatingTask ? "Adding…" : "Create"}
+              {isCreatingTask
+                ? existingOpenTask
+                  ? "Using…"
+                  : "Adding…"
+                : existingOpenTask
+                  ? "Use existing"
+                  : "Create"}
             </Button>
           </div>
         </div>

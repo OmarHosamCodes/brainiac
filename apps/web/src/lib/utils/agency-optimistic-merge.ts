@@ -20,15 +20,18 @@ export function mergeListWithOverlay<T extends { id: string }>(
   matches?: (item: T) => boolean,
 ): T[] {
   const deleted = new Set(Object.keys(overlay.deletedIds));
-  const confirmedRealIds = new Set(Object.values(overlay.idMap));
+  // Keys are optimistic ids; values are confirmed server ids.
+  const optimisticIds = new Set(Object.keys(overlay.idMap));
   let items = serverItems.filter((item) => !deleted.has(item.id));
 
   for (const entity of Object.values(overlay.upserts)) {
-    const realId = overlay.idMap[entity.id];
-    if (realId && items.some((item) => item.id === realId)) {
+    const mappedRealId = overlay.idMap[entity.id];
+    // Stale optimistic row whose real id is already in the list.
+    if (mappedRealId && items.some((item) => item.id === mappedRealId)) {
       continue;
     }
-    if (confirmedRealIds.has(entity.id)) {
+    // Skip leftover optimistic-id entries after reconcile (real row is under created.id).
+    if (optimisticIds.has(entity.id)) {
       continue;
     }
 
@@ -64,32 +67,37 @@ export function mergeListWithOverlay<T extends { id: string }>(
 export function pruneListOverlay<T extends { id: string }>(
   overlay: AgencyListOverlay<T>,
   serverItems: T[],
+  serverHasCaughtUp?: (serverItem: T, optimisticItem: T) => boolean,
 ): AgencyListOverlay<T> {
-  const serverIds = new Set(serverItems.map((item) => item.id));
+  const serverById = new Map(serverItems.map((item) => [item.id, item]));
   const nextUpserts = { ...overlay.upserts };
   const nextDeletedIds = { ...overlay.deletedIds };
   const nextIdMap = { ...overlay.idMap };
 
   for (const [id, entity] of Object.entries(nextUpserts)) {
     const realId = nextIdMap[id] ?? id;
-    if (serverIds.has(realId)) {
-      delete nextUpserts[id];
-    } else if (serverIds.has(entity.id)) {
-      delete nextUpserts[id];
-    }
+    const serverItem = serverById.get(realId) ?? serverById.get(entity.id);
+    if (!serverItem) continue;
+    // Keep optimistic updates until the server reflects them (avoids flicker).
+    if (serverHasCaughtUp && !serverHasCaughtUp(serverItem, entity)) continue;
+    delete nextUpserts[id];
   }
 
   for (const id of Object.keys(nextDeletedIds)) {
-    if (!serverIds.has(id)) {
+    if (!serverById.has(id)) {
       delete nextDeletedIds[id];
     }
   }
 
   for (const [optimisticId, realId] of Object.entries(nextIdMap)) {
-    if (serverIds.has(realId)) {
-      delete nextIdMap[optimisticId];
-      delete nextUpserts[optimisticId];
+    const serverItem = serverById.get(realId);
+    if (!serverItem) continue;
+    const optimisticItem = nextUpserts[optimisticId] ?? nextUpserts[realId];
+    if (optimisticItem && serverHasCaughtUp && !serverHasCaughtUp(serverItem, optimisticItem)) {
+      continue;
     }
+    delete nextIdMap[optimisticId];
+    delete nextUpserts[optimisticId];
   }
 
   if (

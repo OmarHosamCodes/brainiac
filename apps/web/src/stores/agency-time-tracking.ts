@@ -3,10 +3,12 @@ import { toast } from "sonner";
 
 import { getQueryClient } from "@/lib/query-client";
 import {
+  cancelAgencyProjectTaskListQueries,
+  findProjectTaskInCache,
   isAgencyProjectsListQueryKey,
   patchActiveTimerInCache,
+  patchUpdatedProjectTaskInCache,
   refetchAgencyActiveTimerQueries,
-  refetchAgencyProjectTaskListQueries,
   refetchAgencyTimeEntriesListQueries,
 } from "@/lib/utils/agency-query-cache";
 import { orpcClient } from "@/lib/orpc";
@@ -443,6 +445,7 @@ function createAgencyTimeTrackingActions(
       previousActiveTimer ? [payload.teamId, previousActiveTimer.teamId] : [payload.teamId],
     );
     const entryOverlaySnapshots = captureEntryOverlaySnapshots(affectedLogTeams);
+    const taskOverlaySnapshot = optimistic().snapshotTasks(payload.teamId);
     const nowIso = new Date().toISOString();
     const optimisticTimer = createOptimisticTimer({
       teamId: payload.teamId,
@@ -485,6 +488,22 @@ function createAgencyTimeTrackingActions(
         syncedTimerId: optimisticTimer.id,
       });
 
+      // Server promotes open → in_progress on timer start; mirror that in the task rail.
+      const cachedTask =
+        optimistic().findTask(payload.teamId, payload.task.id) ??
+        findProjectTaskInCache(payload.teamId, payload.task.id);
+      if (cachedTask && cachedTask.status === "open") {
+        await cancelAgencyProjectTaskListQueries(payload.teamId);
+        const inProgressTask = {
+          ...cachedTask,
+          status: "in_progress" as const,
+          viewerStatus: "in_progress" as const,
+          updatedAt: nowIso,
+        };
+        optimistic().upsertTask(payload.teamId, inProgressTask);
+        patchUpdatedProjectTaskInCache(payload.teamId, inProgressTask);
+      }
+
       const result = (await orpcClient.agencyOps.timer.start({
         teamId: payload.teamId,
         taskId: payload.task.id,
@@ -508,10 +527,8 @@ function createAgencyTimeTrackingActions(
       }
 
       void refetchAgencyActiveTimerQueries(payload.teamId);
-      void refetchAgencyProjectTaskListQueries(
-        payload.teamId,
-        getCurrentUserId() !== "unknown-user" ? getCurrentUserId() : undefined,
-      );
+      // Do not refetch task lists here: it races the in_progress optimistic
+      // patch and flashes status back to open.
       void refetchAgencyTimeEntriesListQueries(payload.teamId);
 
       toast.success("Timer started", { description: payload.successDescription });
@@ -520,6 +537,7 @@ function createAgencyTimeTrackingActions(
       restoreQuerySnapshots(logSnapshots);
       restoreTimerOverlaySnapshots(timerOverlaySnapshots);
       restoreEntryOverlaySnapshots(entryOverlaySnapshots);
+      optimistic().restoreTasks(payload.teamId, taskOverlaySnapshot);
       restoreTrackerDraft(payload.teamId, previousDraft);
 
       toast.error("Unable to start timer", {
@@ -617,10 +635,6 @@ function createAgencyTimeTrackingActions(
       }
 
       void refetchAgencyActiveTimerQueries(activeTimer.teamId);
-      void refetchAgencyProjectTaskListQueries(
-        activeTimer.teamId,
-        getCurrentUserId() !== "unknown-user" ? getCurrentUserId() : undefined,
-      );
       if (!payload.discard) {
         void refetchAgencyTimeEntriesListQueries(activeTimer.teamId);
         const highlightedEntryId = result.createdEntry?.id ?? optimisticEntry?.id ?? null;

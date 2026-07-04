@@ -51,3 +51,22 @@ export function taskTitleExactlyMatches(tasks: AgencyProjectTask[], searchTerm: 
   if (!normalizedQuery) return false;
   return tasks.some((task) => normalizeTaskTitle(task.title) === normalizedQuery);
 }
+
+function isOpenOrInProgressTask(task: AgencyProjectTask): boolean {
+  return task.status === "open" || task.status === "in_progress";
+}
+
+/** Existing open/in-progress task with the same normalized title (create will reuse it). */
+export function findOpenTaskByExactTitle(
+  tasks: AgencyProjectTask[],
+  searchTerm: string,
+): AgencyProjectTask | null {
+  const normalizedQuery = normalizeTaskTitle(searchTerm);
+  if (!normalizedQuery) return null;
+  return (
+    tasks.find(
+      (task) =>
+        isOpenOrInProgressTask(task) && normalizeTaskTitle(task.title) === normalizedQuery,
+    ) ?? null
+  );
+}

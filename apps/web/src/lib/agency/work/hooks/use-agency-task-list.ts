@@ -11,11 +11,14 @@ import type {
   TaskStatus,
 } from "@/lib/schemas/agency-work";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
+import { findOpenTaskByExactTitle } from "@/lib/utils/agency-task-title-filter";
 import { groupTasksByClient } from "@/lib/utils/agency-task-utils";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/stores/agency-ops";
 import {
   useAgencyTaskListStore,
 } from "@/stores/agency-task-list";
+import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
+import { EMPTY_LIST_OVERLAY } from "@/lib/utils/agency-optimistic-merge";
 
 const ACTIVE_TASK_STATUSES: TaskStatus[] = ["open", "in_progress"];
 const DONE_TASK_STATUSES: TaskStatus[] = ["done"];
@@ -40,6 +43,8 @@ export type AgencyTaskListCreateViewModel = {
   selectedAssigneeIds: string[];
   createTasks: AgencyProjectTask[];
   createTasksLoading: boolean;
+  /** Open/in-progress task that shares this title; create will reuse it. */
+  existingOpenTask: AgencyProjectTask | null;
   disabled: boolean;
   membersLoading: boolean;
   isCreatingTask: boolean;
@@ -93,6 +98,7 @@ export type AgencyTaskListViewModel =
       onRetryDoneTasks: () => void;
       doneTasks: AgencyProjectTask[];
       recentlyCompletedTaskId: string;
+      recentlyCreatedTaskId: string;
       hasMoreActiveTasks: boolean;
       isFetchingMoreActiveTasks: boolean;
       onFetchMoreActiveTasks: () => void;
@@ -125,6 +131,7 @@ export function useAgencyTaskList({
   const createExpanded = useAgencyTaskListStore((s) => s.createExpanded);
   const doneExpanded = useAgencyTaskListStore((s) => s.doneExpanded);
   const recentlyCompletedTaskId = useAgencyTaskListStore((s) => s.recentlyCompletedTaskId);
+  const recentlyCreatedTaskId = useAgencyTaskListStore((s) => s.recentlyCreatedTaskId);
   const titleDraft = useAgencyTaskListStore((s) => s.titleDraft);
   const selectedProjectIdForCreate = useAgencyTaskListStore((s) => s.selectedProjectIdForCreate);
   const selectedAssigneeIdsForCreate = useAgencyTaskListStore((s) => s.selectedAssigneeIdsForCreate);
@@ -132,6 +139,7 @@ export function useAgencyTaskList({
   const collapsedClients = useAgencyTaskListStore((s) => s.collapsedClients);
   const setDoneExpanded = useAgencyTaskListStore((s) => s.setDoneExpanded);
   const setRecentlyCompletedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCompletedTaskId);
+  const setRecentlyCreatedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCreatedTaskId);
   const setTitleDraft = useAgencyTaskListStore((s) => s.setTitleDraft);
   const setSelectedProjectIdForCreate = useAgencyTaskListStore((s) => s.setSelectedProjectIdForCreate);
   const setSelectedAssigneeIdsForCreate = useAgencyTaskListStore((s) => s.setSelectedAssigneeIdsForCreate);
@@ -181,22 +189,43 @@ export function useAgencyTaskList({
     );
   }, [createExpanded, selectedProjectIdForCreate, titleSuggestionTasksQuery.data?.items]);
 
-  const activeCount = activeTasksQuery.isPending ? null : activeTasksQuery.total;
-  // Done metric is sum of per-member completion counts (server total), not distinct rows.
-  const doneCount = doneTasksQuery.isPending ? null : doneTasksQuery.total;
-  // Completions stay open, so unique todos == active list.
-  const totalCount = activeCount;
+  const existingOpenTask = useMemo(
+    () => findOpenTaskByExactTitle(createTasks, titleDraft),
+    [createTasks, titleDraft],
+  );
+
+  // Prefer live list length while a background refetch is pending so the rail
+  // does not flash empty (infinite queries used to drop pages on invalidate).
+  const activeCount =
+    activeTasksQuery.isPending && activeTasks.length === 0 ? null : activeTasksQuery.total;
+  const doneCount =
+    doneTasksQuery.isPending && doneTasks.length === 0 ? null : doneTasksQuery.total;
+  const totalCount =
+    activeCount === null && doneCount === null
+      ? null
+      : (activeCount ?? 0) + (doneCount ?? 0);
 
   const clientGroups = useMemo(
     () => groupTasksByClient(activeTasks, projects),
     [activeTasks, projects],
   );
 
+  const taskOverlay = useAgencyOptimisticStore((state) => state.tasks[teamId] ?? EMPTY_LIST_OVERLAY);
+  // Keep create highlight across optimistic → real id reconcile.
+  const activeHighlightTaskId =
+    (recentlyCreatedTaskId && taskOverlay.idMap[recentlyCreatedTaskId]) || recentlyCreatedTaskId;
+
   useEffect(() => {
     if (!recentlyCompletedTaskId) return;
     const clearHandle = setTimeout(() => setRecentlyCompletedTaskId(""), 900);
     return () => clearTimeout(clearHandle);
   }, [recentlyCompletedTaskId, setRecentlyCompletedTaskId]);
+
+  useEffect(() => {
+    if (!recentlyCreatedTaskId) return;
+    const clearHandle = setTimeout(() => setRecentlyCreatedTaskId(""), 900);
+    return () => clearTimeout(clearHandle);
+  }, [recentlyCreatedTaskId, setRecentlyCreatedTaskId]);
 
   const collapseCreate = useCallback(() => {
     collapseCreateAction({
@@ -219,23 +248,36 @@ export function useAgencyTaskList({
     const projectId = selectedProjectIdForCreate;
     if (!title || !projectId || !teamId) return;
 
-    const created = await agencyOps.createProjectTask({
+    const existing = findOpenTaskByExactTitle(createTasks, title);
+    // Reuse: animate the existing Active row immediately (same id, no temp flash).
+    if (existing) {
+      setRecentlyCreatedTaskId(existing.id);
+    }
+
+    const createdId = await agencyOps.createProjectTask({
       teamId,
       projectId,
       title,
       assignedToTeam: assignedToTeamForCreate,
       assigneeUserIds: assignedToTeamForCreate ? undefined : selectedAssigneeIdsForCreate,
+      reusesExistingTitle: Boolean(existing),
+      onOptimisticId: setRecentlyCreatedTaskId,
     });
 
-    if (created) {
+    if (createdId) {
+      setRecentlyCreatedTaskId(createdId);
       collapseCreate();
+      return;
     }
+    setRecentlyCreatedTaskId("");
   }, [
     agencyOps,
     collapseCreate,
     assignedToTeamForCreate,
+    createTasks,
     selectedAssigneeIdsForCreate,
     selectedProjectIdForCreate,
+    setRecentlyCreatedTaskId,
     teamId,
     titleDraft,
   ]);
@@ -301,7 +343,7 @@ export function useAgencyTaskList({
     activeCount,
     doneCount,
     totalCount,
-    isLoading: activeTasksQuery.isPending,
+    isLoading: activeTasksQuery.isPending && activeTasks.length === 0,
     activeTasksEmpty: activeTasks.length === 0,
     activeTasksQueryError: activeTasksQuery.isError,
     activeTasksErrorMessage: activeTasksQuery.isError ? String(activeTasksQuery.error) : "",
@@ -315,12 +357,13 @@ export function useAgencyTaskList({
     isRowPending,
     doneExpanded,
     onDoneExpandedChange: setDoneExpanded,
-    doneTasksLoading: doneTasksQuery.isPending,
+    doneTasksLoading: doneTasksQuery.isPending && doneTasks.length === 0,
     doneTasksQueryError: doneTasksQuery.isError,
     doneTasksErrorMessage: doneTasksQuery.isError ? String(doneTasksQuery.error) : "",
     onRetryDoneTasks: () => void doneTasksQuery.refetch(),
     doneTasks,
     recentlyCompletedTaskId,
+    recentlyCreatedTaskId: activeHighlightTaskId,
     hasMoreActiveTasks: Boolean(activeTasksQuery.hasNextPage),
     isFetchingMoreActiveTasks: activeTasksQuery.isFetchingNextPage,
     onFetchMoreActiveTasks: () => void activeTasksQuery.fetchNextPage(),
@@ -335,6 +378,7 @@ export function useAgencyTaskList({
       selectedAssigneeIds: selectedAssigneeIdsForCreate,
       createTasks,
       createTasksLoading: titleSuggestionTasksQuery.isPending,
+      existingOpenTask,
       disabled: !teamId || membersQuery.isPending,
       membersLoading: membersQuery.isPending,
       isCreatingTask,

@@ -13,7 +13,16 @@ import {
 } from "@/lib/queries/agency-optimistic";
 import { getQueryClient } from "@/lib/query-client";
 import { orpc, orpcClient } from "@/lib/orpc";
+import {
+  adjustPaginatedTotal,
+  EMPTY_LIST_OVERLAY,
+  mergeListWithOverlay,
+} from "@/lib/utils/agency-optimistic-merge";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
+import {
+  taskMatchesAgencyFilters,
+  useAgencyOptimisticStore,
+} from "@/stores/agency-optimistic";
 import { useAgencyOpsStore } from "@/stores/agency-ops";
 import { useAgencyTimeTrackingStore } from "@/stores/agency-time-tracking";
 
@@ -403,11 +412,20 @@ export function useAgencyProjectTasksInfiniteQuery(
     (filters.projectId === undefined || Boolean(filters.projectId)) &&
     (filters.assigneeUserId === undefined || Boolean(filters.assigneeUserId));
 
+  const queryKey = useMemo(
+    () =>
+      [
+        ...orpc.agencyOps.projectTasks.list.queryOptions({ input: baseInput }).queryKey,
+        "infinite",
+      ] as const,
+    [baseInput],
+  );
+
+  const registerProjectTasksQuery = useAgencyOpsStore((s) => s.registerProjectTasksQuery);
+  const unregisterProjectTasksQuery = useAgencyOpsStore((s) => s.unregisterProjectTasksQuery);
+
   const query = useInfiniteQuery({
-    queryKey: [
-      ...orpc.agencyOps.projectTasks.list.queryOptions({ input: baseInput }).queryKey,
-      "infinite",
-    ],
+    queryKey,
     queryFn: async ({ pageParam }) =>
       orpcClient.agencyOps.projectTasks.list({
         ...baseInput,
@@ -422,14 +440,86 @@ export function useAgencyProjectTasksInfiniteQuery(
     },
     enabled: queryEnabled,
     staleTime: 15_000,
+    placeholderData: keepPreviousData,
   });
 
-  const items = useMemo(
+  useEffect(() => {
+    if (!teamId || !queryEnabled) return;
+    registerProjectTasksQuery({
+      queryKey: [...queryKey],
+      teamId,
+      projectId: filters.projectId,
+      assigneeUserId: filters.assigneeUserId,
+      statuses: filters.statuses,
+    });
+    return () => unregisterProjectTasksQuery([...queryKey]);
+  }, [
+    teamId,
+    queryKey,
+    queryEnabled,
+    filters.projectId,
+    filters.assigneeUserId,
+    filters.statuses,
+    registerProjectTasksQuery,
+    unregisterProjectTasksQuery,
+  ]);
+
+  const overlay = useAgencyOptimisticStore((state) => state.tasks[teamId] ?? EMPTY_LIST_OVERLAY);
+  const pruneTasks = useAgencyOptimisticStore((state) => state.pruneTasks);
+
+  const matches = useMemo(
+    () => (task: Parameters<typeof taskMatchesAgencyFilters>[0]) =>
+      taskMatchesAgencyFilters(task, {
+        projectId: filters.projectId,
+        assigneeUserId: filters.assigneeUserId,
+        statuses: filters.statuses,
+      }),
+    [filters.projectId, filters.assigneeUserId, filters.statuses, statusesKey],
+  );
+
+  const serverItems = useMemo(
     () => query.data?.pages.flatMap((page) => page.items) ?? [],
     [query.data?.pages],
   );
 
-  const total = query.data?.pages[0]?.total ?? 0;
+  const items = useMemo(
+    () => mergeListWithOverlay(serverItems, overlay, matches),
+    [serverItems, overlay, matches],
+  );
+
+  const isDoneCompletionList =
+    Boolean(filters.assigneeUserId) &&
+    Boolean(filters.statuses?.includes("done")) &&
+    !filters.statuses?.includes("open") &&
+    !filters.statuses?.includes("in_progress");
+
+  const total = useMemo(() => {
+    if (isDoneCompletionList) {
+      return items.reduce((sum, task) => sum + (task.viewerCompletionCount ?? 0), 0);
+    }
+    const serverTotal = query.data?.pages[0]?.total ?? 0;
+    return adjustPaginatedTotal(serverTotal, overlay, serverItems);
+  }, [isDoneCompletionList, items, overlay, query.data?.pages, serverItems]);
+
+  useEffect(() => {
+    if (!teamId || !query.isSuccess) return;
+    // Only the assignee-filtered Active rail may prune status/create overlays.
+    // Done-list pages can carry a patched in_progress row and drop the overlay
+    // while Active still has a stale open row (timer flash).
+    const isActiveRail =
+      Boolean(filters.assigneeUserId) &&
+      Boolean(filters.statuses?.includes("open") || filters.statuses?.includes("in_progress")) &&
+      !filters.statuses?.includes("done");
+    if (!isActiveRail) return;
+    pruneTasks(teamId, serverItems);
+  }, [
+    teamId,
+    query.isSuccess,
+    pruneTasks,
+    serverItems,
+    filters.assigneeUserId,
+    filters.statuses,
+  ]);
 
   return { ...query, items, total };
 }

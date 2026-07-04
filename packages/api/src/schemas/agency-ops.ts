@@ -95,11 +95,11 @@ export function normalizeTaskTitle(value: string) {
 /** One check-off: bump count, stay/return open so the todo auto-reappears. */
 export function applyMemberTaskCompletion(current: { completionCount: number }): {
   completionCount: number;
-  status: "open";
+  status: "done";
 } {
   return {
     completionCount: current.completionCount + 1,
-    status: "open",
+    status: "done",
   };
 }
 

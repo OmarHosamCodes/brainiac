@@ -752,7 +752,22 @@ async function mergeAssigneesIntoExistingTask(
   return updated ?? task;
 }
 
+async function reopenMemberTaskForActor(taskId: string, actorUserId: string) {
+  const now = new Date();
+  await db
+    .update(agencyOpsProjectTaskMemberStatus)
+    .set({ status: "open", updatedAt: now })
+    .where(
+      and(
+        eq(agencyOpsProjectTaskMemberStatus.taskId, taskId),
+        eq(agencyOpsProjectTaskMemberStatus.userId, actorUserId),
+        eq(agencyOpsProjectTaskMemberStatus.status, "done"),
+      ),
+    );
+}
+
 async function buildTaskRecordForActor(task: ProjectTaskRow, actorUserId: string) {
+  await reopenMemberTaskForActor(task.id, actorUserId);
   const assigneesByTask = await loadTaskAssignees([task.id]);
   const memberStatuses = await loadTaskMemberStatuses([task.id]);
   return buildProjectTaskRecord(
@@ -1467,6 +1482,7 @@ export async function completeAgencyProjectTaskForMember(
     taskId: string;
   },
 ) {
+
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
   const current = await getTaskByIdForTeam(input.teamId, input.taskId);
@@ -1516,7 +1532,7 @@ export async function completeAgencyProjectTaskForMember(
         agencyOpsProjectTaskMemberStatus.userId,
       ],
       set: {
-        status: "open",
+        status: "done",
         completionCount: sql`${agencyOpsProjectTaskMemberStatus.completionCount} + 1`,
         completedAt: now,
         updatedAt: now,
