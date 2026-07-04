@@ -171,11 +171,18 @@ type AgencyOptimisticState = {
   ) => void;
 
   upsertTaskMessage: (teamId: string, taskId: string, message: AgencyOptimisticTaskMessage) => void;
+  deleteTaskMessage: (teamId: string, taskId: string, messageId: string) => void;
   reconcileTaskMessage: (
     teamId: string,
     taskId: string,
     optimisticId: string,
     created: AgencyOptimisticTaskMessage,
+  ) => void;
+  mapTaskMessageIdentity: (
+    teamId: string,
+    taskId: string,
+    optimisticId: string,
+    realId: string,
   ) => void;
   pruneTaskMessages: (
     teamId: string,
@@ -295,6 +302,10 @@ function reconcileListItem<T extends { id: string }>(
   optimisticId: string,
   created: T,
 ): AgencyListOverlay<T> {
+  if (!created?.id) {
+    return overlay;
+  }
+
   const nextUpserts = { ...overlay.upserts };
   delete nextUpserts[optimisticId];
   nextUpserts[created.id] = created;
@@ -558,6 +569,24 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
       };
     }),
 
+  deleteTaskMessage: (teamId, taskId, messageId) =>
+    set((state) => {
+      const key = taskMessagesKey(teamId, taskId);
+      const overlay = state.taskMessages[key];
+      if (!overlay) return state;
+      const nextOverlay = deleteListItem(overlay, messageId);
+      const next = { ...state.taskMessages };
+      if (
+        Object.keys(nextOverlay.upserts).length === 0 &&
+        Object.keys(nextOverlay.deletedIds).length === 0 &&
+        Object.keys(nextOverlay.idMap).length === 0
+      ) {
+        delete next[key];
+        return { taskMessages: next };
+      }
+      return { taskMessages: { ...next, [key]: nextOverlay } };
+    }),
+
   reconcileTaskMessage: (teamId, taskId, optimisticId, created) =>
     set((state) => {
       const key = taskMessagesKey(teamId, taskId);
@@ -567,6 +596,25 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
         taskMessages: {
           ...state.taskMessages,
           [key]: reconcileListItem(overlay, optimisticId, created),
+        },
+      };
+    }),
+
+  mapTaskMessageIdentity: (teamId, taskId, optimisticId, realId) =>
+    set((state) => {
+      const key = taskMessagesKey(teamId, taskId);
+      const overlay =
+        state.taskMessages[key] ?? createEmptyListOverlay<AgencyOptimisticTaskMessage>();
+      const nextUpserts = { ...overlay.upserts };
+      delete nextUpserts[optimisticId];
+      return {
+        taskMessages: {
+          ...state.taskMessages,
+          [key]: {
+            upserts: nextUpserts,
+            deletedIds: overlay.deletedIds,
+            idMap: { ...overlay.idMap, [optimisticId]: realId },
+          },
         },
       };
     }),

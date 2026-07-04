@@ -1,20 +1,20 @@
 import { ArrowLeft, AlertTriangle, Bot } from "lucide-react";
 
 import { AgencyMemberChooser } from "@/components/agency/agency-member-chooser";
-import { AgencyTaskComposerView } from "@/components/agency/work/task-thread/agency-task-composer-view";
-import { AgencyTaskThreadMessageListView } from "@/components/agency/work/task-thread/agency-task-thread-message-list-view";
 import { AgencyMiniTimer } from "@/components/agency/agency-mini-timer";
+import { TaskThreadComposer } from "@/components/agency/work/task-thread/task-thread-composer";
+import { TaskThreadMessageList } from "@/components/agency/work/task-thread/task-thread-message-list";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AgencyTaskThreadViewModel } from "@/lib/agency/work/hooks/use-agency-task-thread";
 import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
-type AgencyTaskThreadViewProps = {
+type TaskThreadViewProps = {
   view: AgencyTaskThreadViewModel;
 };
 
-export function AgencyTaskThreadView({ view }: AgencyTaskThreadViewProps) {
+export function TaskThreadView({ view }: TaskThreadViewProps) {
   switch (view.status) {
     case "loading":
       return (
@@ -42,10 +42,10 @@ export function AgencyTaskThreadView({ view }: AgencyTaskThreadViewProps) {
     case "ready":
       return (
         <section
-          className="relative flex h-full flex-col rounded-2xl border border-default bg-default"
-          onDragOver={view.onDragOver}
-          onDragLeave={view.onDragLeave}
-          onDrop={view.onDrop}
+          className="relative flex h-full min-h-0 flex-col rounded-2xl border border-default bg-default"
+          onDragOver={view.onThreadDragOver}
+          onDragLeave={view.onThreadDragLeave}
+          onDrop={view.onThreadDrop}
         >
           {view.isDraggingFile ? (
             <div
@@ -78,7 +78,10 @@ export function AgencyTaskThreadView({ view }: AgencyTaskThreadViewProps) {
                   assignedToTeam={view.assignedToTeam}
                   selectedUserIds={view.assignees.map((assignee) => assignee.userId)}
                   onAssignedToTeamChange={(assignedToTeam) =>
-                    view.onAssigneesChange(assignedToTeam, assignedToTeam ? [] : view.assignees.map((a) => a.userId))
+                    view.onAssigneesChange(
+                      assignedToTeam,
+                      assignedToTeam ? [] : view.assignees.map((assignee) => assignee.userId),
+                    )
                   }
                   onSelectedUserIdsChange={(userIds) => view.onAssigneesChange(false, userIds)}
                   members={view.members}
@@ -115,21 +118,21 @@ export function AgencyTaskThreadView({ view }: AgencyTaskThreadViewProps) {
             </div>
           </header>
 
-          <div ref={view.threadContainerRef} className="flex-1 space-y-4 overflow-y-auto p-4">
-            {view.messagesEmpty ? (
-              <div className="py-8 text-center text-xs text-muted">
-                No messages yet. Start the thread below.
-              </div>
-            ) : (
-              <AgencyTaskThreadMessageListView
-                messages={view.messages}
-                threadContainerRef={view.threadContainerRef}
-              />
-            )}
-          </div>
+          <TaskThreadMessageList
+            messages={view.messages}
+            messagesEmpty={view.messagesEmpty}
+            agentEnabled={view.agentEnabled}
+            containerRef={view.threadContainerRef}
+            hasOlderMessages={view.hasOlderMessages}
+            isFetchingOlder={view.isFetchingOlder}
+            showJumpToLatest={view.showJumpToLatest}
+            onJumpToLatest={view.onJumpToLatest}
+            lastError={view.lastError}
+            onClearError={view.onClearError}
+          />
 
           <div className="border-t border-default p-3">
-            <AgencyTaskComposerView composer={view.composer} voice={view.voice} />
+            <TaskThreadComposer composer={view.composer} voice={view.voice} />
           </div>
         </section>
       );
@@ -139,3 +142,6 @@ export function AgencyTaskThreadView({ view }: AgencyTaskThreadViewProps) {
     }
   }
 }
+
+// Back-compat export while callers migrate.
+export { TaskThreadView as AgencyTaskThreadView };

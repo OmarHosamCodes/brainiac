@@ -22,6 +22,7 @@ export function mergeListWithOverlay<T extends { id: string }>(
   const deleted = new Set(Object.keys(overlay.deletedIds));
   // Keys are optimistic ids; values are confirmed server ids.
   const optimisticIds = new Set(Object.keys(overlay.idMap));
+  const reconciledRealIds = new Set(Object.values(overlay.idMap));
   let items = serverItems.filter((item) => !deleted.has(item.id));
 
   for (const entity of Object.values(overlay.upserts)) {
@@ -45,12 +46,16 @@ export function mergeListWithOverlay<T extends { id: string }>(
       continue;
     }
 
-    if (index === -1) {
-      items = [entity, ...items];
+    if (index !== -1) {
+      // Server already has this reconciled row — don't duplicate from overlay.
+      if (reconciledRealIds.has(entity.id)) {
+        continue;
+      }
+      items = items.map((item) => (item.id === entity.id ? entity : item));
       continue;
     }
 
-    items = items.map((item) => (item.id === entity.id ? entity : item));
+    items = [entity, ...items];
   }
 
   for (const optimisticId of Object.keys(overlay.idMap)) {

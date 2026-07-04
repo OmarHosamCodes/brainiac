@@ -1,7 +1,7 @@
 import { useAgencyTaskThread } from "@/lib/agency/work/hooks/use-agency-task-thread";
 import type { AgencyTaskProject } from "@/lib/schemas/agency-work";
 
-import { AgencyTaskThreadView } from "@/components/agency/work/task-thread/agency-task-thread-view";
+import { TaskThreadView } from "@/components/agency/work/task-thread/task-thread-view";
 
 type AgencyTaskThreadContainerProps = {
   teamId: string;
@@ -17,5 +17,5 @@ export function AgencyTaskThreadContainer({
   onBack,
 }: AgencyTaskThreadContainerProps) {
   const view = useAgencyTaskThread({ teamId, taskId, projects, onBack });
-  return <AgencyTaskThreadView view={view} />;
+  return <TaskThreadView view={view} />;
 }
