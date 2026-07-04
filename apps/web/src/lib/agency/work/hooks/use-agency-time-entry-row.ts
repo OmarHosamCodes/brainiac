@@ -14,6 +14,7 @@ import {
 import {
   applyDurationToDraft,
   applyEndTimeToDraft,
+  applyStartTimeToDraft,
   entryToDraft,
 } from "@/lib/utils/time-entry-draft";
 import { formatDuration } from "@/lib/utils/format-duration";
@@ -281,10 +282,7 @@ export function useAgencyTimeEntryRow({
       updateInlineDraft(nextDraft);
       void saveInlineDraft(nextDraft);
     },
-    onStartTimeChange: (value) =>
-      updateInlineDraft(
-        applyDurationToDraft({ ...editDraft, startTime: value }, editDraft.durationInput),
-      ),
+    onStartTimeChange: (value) => updateInlineDraft(applyStartTimeToDraft(editDraft, value)),
     onEndTimeChange: (value) => updateInlineDraft(applyEndTimeToDraft(editDraft, value)),
     onStartDateChange: (value) => {
       const nextDraft = { ...editDraft, date: value };
