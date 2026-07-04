@@ -186,7 +186,8 @@ export function useAgencyTimeEntriesLog({
 
     await agencyTimeTrackingStore.updateEntry({
       teamId,
-      entryId,
+      entryId: entry.id,
+      previousEntry: entry,
       projectId: project.id,
       taskId: task.id,
       task,

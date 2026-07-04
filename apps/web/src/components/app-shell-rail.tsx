@@ -2,23 +2,13 @@ import {
   Briefcase,
   CreditCard,
   LayoutDashboard,
-  Moon,
   Search,
-  Settings,
   ShoppingBag,
-  Sun,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 import { AppShellAccountMenu } from "@/components/app-shell-account-menu";
 import { AppShellRailToggle } from "@/components/app-shell-rail-toggle";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useTheme } from "@/stores/theme";
 import { useAppShellStore } from "@/stores/app-shell";
 import { APP_NAV_ITEMS } from "@/lib/utils/app-navigation";
 import {
@@ -47,7 +37,6 @@ export function AppShellRail({ onOpenSearch }: AppShellRailProps) {
   const location = useLocation();
   const railExpanded = useAppShellStore((s) => s.railExpanded);
   const toggleRail = useAppShellStore((s) => s.toggleRail);
-  const { isDark, toggle: toggleTheme } = useTheme();
 
   return (
     <aside
@@ -146,47 +135,6 @@ export function AppShellRail({ onOpenSearch }: AppShellRailProps) {
             railExpanded ? "px-0.5" : "items-center",
           )}
         >
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  railExpanded ? shellRailExpandedLinkClass : shellRailLinkBaseClass,
-                  shellFocusRingClass,
-                  "border border-transparent",
-                  railExpanded ? "text-left" : "",
-                )}
-                aria-label="Settings"
-                title={railExpanded ? undefined : "Settings"}
-              >
-                <Settings className={shellRailIconClass} />
-                <span
-                  className={cn("app-shell__rail-label truncate", !railExpanded && "sr-only")}
-                >
-                  Settings
-                </span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" align="end" className="w-52">
-              <DropdownMenuItem onSelect={toggleTheme}>
-                {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
-                {isDark ? "Light mode" : "Dark mode"}
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/billing">
-                  <CreditCard className="size-4" />
-                  Billing
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/agency?section=settings">
-                  <Settings className="size-4" />
-                  Agency settings
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           <AppShellAccountMenu variant="rail" expanded={railExpanded} />
         </div>
       </div>

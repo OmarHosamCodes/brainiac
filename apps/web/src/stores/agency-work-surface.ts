@@ -16,7 +16,7 @@ type AgencyWorkSurfaceState = {
 export const useAgencyWorkSurfaceStore = create<AgencyWorkSurfaceState>((set) => ({
   selectedTaskId: "",
   mobilePane: "tasks",
-  taskRailCollapsed: false,
+  taskRailCollapsed: true,
   setSelectedTaskId: (taskId) => set({ selectedTaskId: taskId }),
   setMobilePane: (pane) => set({ mobilePane: pane }),
   setTaskRailCollapsed: (collapsed) => set({ taskRailCollapsed: collapsed }),

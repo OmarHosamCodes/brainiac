@@ -688,6 +688,61 @@ body {
   animation: agency-task-row-complete 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Collapsed task rail: liquid fill for done vs open/in-progress. */
+@keyframes agency-task-rail-liquid-shine {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scaleX(1);
+    opacity: 0.55;
+  }
+
+  50% {
+    transform: translate3d(0, -2px, 0) scaleX(1.04);
+    opacity: 0.95;
+  }
+}
+
+.agency-task-rail-liquid__active {
+  background: linear-gradient(
+    to top,
+    color-mix(in oklab, var(--primary) 14%, transparent),
+    color-mix(in oklab, var(--primary) 7%, transparent) 65%,
+    color-mix(in oklab, var(--primary) 3%, transparent)
+  );
+}
+
+.agency-task-rail-liquid__done {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: auto;
+  height: 0%;
+  background: linear-gradient(
+    to top,
+    color-mix(in oklab, var(--primary) 42%, transparent),
+    color-mix(in oklab, var(--primary) 28%, transparent) 48%,
+    color-mix(in oklab, var(--primary) 16%, transparent)
+  );
+  transition: height calc(var(--motion-duration-rail) + var(--motion-duration-panel))
+    var(--motion-ease-out);
+}
+
+.agency-task-rail-liquid__shine {
+  position: absolute;
+  inset-inline: -20%;
+  top: -1px;
+  height: 12px;
+  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--primary) 55%, white 18%),
+    color-mix(in oklab, var(--primary) 22%, transparent) 55%,
+    transparent
+  );
+  animation: agency-task-rail-liquid-shine 3.2s ease-in-out infinite;
+}
+
 .shell-panel-stack {
   position: relative;
   min-height: 0;
@@ -732,10 +787,15 @@ body {
   .shell-stagger-item,
   .shell-confirm-in,
   .agency-task-choice-wrap--attention,
-  .agency-task-row-complete {
+  .agency-task-row-complete,
+  .agency-task-rail-liquid__shine {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  .agency-task-rail-liquid__done {
+    transition: none;
   }
 
   .shell-panel {

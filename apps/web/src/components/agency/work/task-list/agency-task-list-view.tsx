@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   ChevronDown,
@@ -12,6 +13,7 @@ import { AgencyTaskRailSummary } from "@/components/agency/agency-task-rail-summ
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AgencyTaskListViewModel } from "@/lib/agency/work/hooks/use-agency-task-list";
+import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import {
   agencyFocusRingClass,
   agencyMetricClass,
@@ -24,6 +26,42 @@ type AgencyTaskListViewProps = {
   view: AgencyTaskListViewModel;
 };
 
+function AgencyTaskRailLiquidDone({ donePct }: { donePct: number }) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [fillPct, setFillPct] = useState(0);
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setFillPct(donePct);
+      return;
+    }
+
+    // Double rAF so the browser paints height 0% before easing upward.
+    let frame2 = 0;
+    const frame1 = requestAnimationFrame(() => {
+      frame2 = requestAnimationFrame(() => {
+        setFillPct(donePct);
+      });
+    });
+    return () => {
+      cancelAnimationFrame(frame1);
+      cancelAnimationFrame(frame2);
+    };
+  }, [donePct, prefersReducedMotion]);
+
+  const heightPct = prefersReducedMotion ? donePct : fillPct;
+  if (donePct <= 0 && heightPct <= 0) return null;
+
+  return (
+    <div
+      className="agency-task-rail-liquid__done absolute bottom-0 left-0 right-0 top-auto"
+      style={{ height: `${heightPct}%` }}
+    >
+      <div className="agency-task-rail-liquid__shine" />
+    </div>
+  );
+}
+
 export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
   switch (view.status) {
     case "unsigned":
@@ -35,13 +73,42 @@ export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
           </div>
         </section>
       );
-    case "collapsed":
+    case "collapsed": {
+      const total = view.totalCount;
+      const done = view.doneCount;
+      const active = view.activeCount;
+      const hasCounts = total !== null && total > 0;
+      const donePct = hasCounts ? ((done ?? 0) / total) * 100 : 0;
+      const progressLabel =
+        total === null
+          ? "Loading task progress"
+          : total === 0
+            ? "No tasks"
+            : `${done ?? 0} done, ${active ?? 0} open of ${total}`;
+
       return (
-        <section className={cn(agencyTaskRailClass, "items-center gap-3 px-2 py-3")}>
+        <section className={cn(agencyTaskRailClass, "relative items-center gap-3 px-2 py-3")}>
+          <div
+            className="agency-task-rail-liquid pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
+            role="progressbar"
+            aria-valuemin={0}
+            aria-valuemax={total ?? 0}
+            aria-valuenow={done ?? 0}
+            aria-valuetext={progressLabel}
+            aria-label="Task completion"
+          >
+            {hasCounts ? (
+              <>
+                <div className="agency-task-rail-liquid__active absolute inset-x-0 bottom-0 h-full" />
+                <AgencyTaskRailLiquidDone donePct={donePct} />
+              </>
+            ) : null}
+          </div>
+
           <button
             type="button"
             className={cn(
-              "flex size-11 items-center justify-center rounded-xl border border-default bg-default text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+              "relative z-10 flex size-11 items-center justify-center rounded-xl border border-default bg-default text-muted transition-colors hover:bg-elevated hover:text-highlighted",
               agencyFocusRingClass,
               "motion-reduce:transition-none",
             )}
@@ -51,8 +118,7 @@ export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
             <PanelLeftOpen className="size-4" />
           </button>
 
-          <div className="flex flex-col items-center gap-2" title="My tasks">
-            <ListChecks className="size-4 text-muted" aria-hidden />
+          <div className="relative z-10 flex flex-col items-center" title="My tasks">
             <AgencyTaskRailSummary
               compact
               total={view.totalCount}
@@ -62,6 +128,7 @@ export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
           </div>
         </section>
       );
+    }
     case "ready":
       return (
         <section className={agencyTaskRailClass}>

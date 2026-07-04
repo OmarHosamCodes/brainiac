@@ -121,9 +121,6 @@ export function AgencyProjectChooserView({ view }: AgencyProjectChooserViewProps
                       >
                         {project.name}
                       </span>
-                      <span className="shrink-0 truncate text-[11px] text-muted">
-                        {project.clientName}
-                      </span>
                     </button>
                   );
                 })}

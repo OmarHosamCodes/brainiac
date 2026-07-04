@@ -49,7 +49,7 @@ export function AgencyTaskRailSummary({
     return (
       <div className="flex flex-col items-center gap-0.5 text-center" aria-label="Task workload summary">
         <span className={cn(agencyMetricClass, "text-[10px] font-semibold text-highlighted")}>
-          {left === null ? "—" : left}
+          {done === null ? "—" : done}
         </span>
         <span className="text-[9px] text-muted">of {total === null ? "—" : total}</span>
       </div>
