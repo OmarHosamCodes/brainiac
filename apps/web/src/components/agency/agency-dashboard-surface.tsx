@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, BarChart3 } from "lucide-react";
 import { useMemo, useState, type CSSProperties } from "react";
 
@@ -244,6 +244,7 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
       },
     }),
     enabled: Boolean(teamId),
+    placeholderData: keepPreviousData,
   });
 
   const summary = dashboardQuery.data?.summary ?? null;
@@ -266,7 +267,7 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
     return list.sort((a, b) => b.hours - a.hours);
   }, [rankedProjects]);
 
-  if (dashboardQuery.isPending) {
+  if (dashboardQuery.isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-full max-w-2xl rounded-xl" />
