@@ -1,19 +1,14 @@
 import { useState } from "react";
 import { Bot, FileText, Globe, Image as ImageIcon, Send } from "lucide-react";
-import { motion } from "motion/react";
 
 import { AgencyAttachmentInlineView } from "@/components/agency/work/task-thread/agency-attachment-inline-view";
 import { AgencyTaskVoiceRecorderView } from "@/components/agency/work/task-thread/agency-task-voice-recorder-view";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import type { AgencyTaskComposerViewModel } from "@/lib/agency/work/hooks/use-agency-task-composer";
+import type { TaskThreadComposerViewModel } from "@/lib/agency/work/hooks/use-task-thread-messaging";
 import type { AgencyVoiceRecorderViewModel } from "@/lib/agency/work/hooks/use-agency-voice-recorder";
 import {
   AGENCY_ATTACHMENT_DOCUMENT_ACCEPT,
@@ -22,19 +17,14 @@ import {
   normalizeAttachmentUrl,
 } from "@/lib/utils/agency-attachment-utils";
 import { agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
-import {
-  AGENCY_THREAD_MESSAGE_DURATION,
-  AGENCY_THREAD_MESSAGE_EASE,
-} from "@/lib/utils/agency-thread-motion";
-import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
 
-type AgencyTaskComposerViewProps = {
-  composer: AgencyTaskComposerViewModel;
+type TaskThreadComposerProps = {
+  composer: TaskThreadComposerViewModel;
   voice: AgencyVoiceRecorderViewModel;
 };
 
-function AgencyUrlAttachmentPopover({
+function TaskThreadUrlAttachmentPopover({
   disabled,
   onAdd,
 }: {
@@ -74,9 +64,9 @@ function AgencyUrlAttachmentPopover({
       </PopoverTrigger>
       <PopoverContent align="start" className="w-80 space-y-3">
         <div className="space-y-1.5">
-          <Label htmlFor="agency-task-url-input">URL</Label>
+          <Label htmlFor="task-thread-url-input">URL</Label>
           <Input
-            id="agency-task-url-input"
+            id="task-thread-url-input"
             value={url}
             onChange={(event) => setUrl(event.target.value)}
             placeholder="https://docs.example.com"
@@ -84,9 +74,9 @@ function AgencyUrlAttachmentPopover({
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="agency-task-url-label">Label (optional)</Label>
+          <Label htmlFor="task-thread-url-label">Label (optional)</Label>
           <Input
-            id="agency-task-url-label"
+            id="task-thread-url-label"
             value={label}
             onChange={(event) => setLabel(event.target.value)}
             placeholder={previewLabel ?? "Display name"}
@@ -106,8 +96,7 @@ function AgencyUrlAttachmentPopover({
   );
 }
 
-export function AgencyTaskComposerView({ composer, voice }: AgencyTaskComposerViewProps) {
-  const reducedMotion = usePrefersReducedMotion();
+export function TaskThreadComposer({ composer, voice }: TaskThreadComposerProps) {
   const {
     content,
     isDragging,
@@ -116,6 +105,7 @@ export function AgencyTaskComposerView({ composer, voice }: AgencyTaskComposerVi
     agentEnabled,
     placeholder,
     attachmentCountLabel,
+    micError,
     onContentChange,
     onSend,
     onKeyDown,
@@ -156,10 +146,15 @@ export function AgencyTaskComposerView({ composer, voice }: AgencyTaskComposerVi
         onChange={(event) => onContentChange(event.target.value)}
         placeholder={placeholder}
         rows={1}
-        className={cn("min-h-8 w-full resize-none", agencyInputPlaceholderClass)}
+        className={cn(
+          "field-sizing-content min-h-8 max-h-40 w-full resize-none",
+          agencyInputPlaceholderClass,
+        )}
         disabled={isBusy}
         onKeyDown={onKeyDown}
       />
+
+      {micError ? <p className="mt-1 text-xs text-error">{micError}</p> : null}
 
       <div className="mt-2 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">
@@ -201,27 +196,22 @@ export function AgencyTaskComposerView({ composer, voice }: AgencyTaskComposerVi
             onChange={onDocumentInputChange}
           />
 
-          <AgencyUrlAttachmentPopover disabled={isBusy} onAdd={onAddUrlAttachment} />
+          <TaskThreadUrlAttachmentPopover disabled={isBusy} onAdd={onAddUrlAttachment} />
         </div>
 
         <div className="flex items-center gap-2">
           {attachmentCountLabel ? (
             <span className="text-xs text-muted">{attachmentCountLabel}</span>
           ) : null}
-          <motion.div
-            whileTap={reducedMotion ? undefined : { scale: 0.97 }}
-            transition={{ duration: AGENCY_THREAD_MESSAGE_DURATION * 0.6, ease: AGENCY_THREAD_MESSAGE_EASE }}
+          <Button
+            size="sm"
+            disabled={(!content.trim() && pendingAttachments.length === 0) || isBusy}
+            onClick={onSend}
+            aria-label={agentEnabled ? "Ask agent" : "Send message"}
           >
-            <Button
-              size="sm"
-              disabled={(!content.trim() && pendingAttachments.length === 0) || isBusy}
-              onClick={onSend}
-              aria-label={agentEnabled ? "Ask agent" : "Send message"}
-            >
-              {agentEnabled ? <Bot /> : <Send />}
-              {agentEnabled ? "Ask" : "Send"}
-            </Button>
-          </motion.div>
+            {agentEnabled ? <Bot /> : <Send />}
+            {agentEnabled ? "Ask" : "Send"}
+          </Button>
         </div>
       </div>
     </div>

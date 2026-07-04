@@ -27,6 +27,17 @@ describe("mergeListWithOverlay", () => {
     expect(merged.map((item) => item.id)).toEqual(["real-1"]);
   });
 
+  test("idMap alone does not keep a row visible when upsert was cleared", () => {
+    const overlay: AgencyListOverlay<Item> = {
+      upserts: {},
+      deletedIds: {},
+      idMap: { "optimistic-1": "real-1" },
+    };
+
+    const merged = mergeListWithOverlay<Item>([], overlay);
+    expect(merged).toHaveLength(0);
+  });
+
   test("applies completion count update on an existing active todo", () => {
     const server: Item[] = [
       {

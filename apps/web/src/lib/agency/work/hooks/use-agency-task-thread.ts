@@ -1,28 +1,24 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type { AgencyTaskComposerUploadHandler } from "@/lib/agency/work/hooks/use-agency-task-composer";
-import { useAgencyTaskComposer } from "@/lib/agency/work/hooks/use-agency-task-composer";
-import { useAgencyVoiceRecorder } from "@/lib/agency/work/hooks/use-agency-voice-recorder";
+import type { TaskThreadComposerUploadHandler } from "@/lib/agency/work/hooks/use-task-thread-messaging";
+import { useTaskThreadMessaging } from "@/lib/agency/work/hooks/use-task-thread-messaging";
+import type { AgencyVoiceRecorderViewModel } from "@/lib/agency/work/hooks/use-agency-voice-recorder";
 import type {
-  AgencyTaskMessage,
   AgencyTaskProject,
   AgencyTaskThreadMember,
 } from "@/lib/schemas/agency-work";
-import {
-  useAgencyTaskMessagesQuery,
-  useAgencyTaskThreadContextQuery,
-} from "@/lib/queries/agency";
+import { useAgencyTaskThreadContextQuery } from "@/lib/queries/agency";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import {
-  isOptimisticTaskMessage,
-  resolveMessageAnimationKey,
-} from "@/lib/utils/agency-thread-motion";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
-import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 import { useAgencyOpsStore } from "@/stores/agency-ops";
 import { useAgencyTaskThreadStore } from "@/stores/agency-task-thread";
+
+import type {
+  TaskThreadComposerViewModel,
+  TaskThreadMessageViewModel,
+} from "@/lib/agency/work/hooks/use-task-thread-messaging";
 
 type UseAgencyTaskThreadOptions = {
   teamId: string;
@@ -31,19 +27,7 @@ type UseAgencyTaskThreadOptions = {
   onBack: () => void;
 };
 
-export type AgencyTaskThreadMessageViewModel = {
-  id: string;
-  animationKey: string;
-  isOptimistic: boolean;
-  senderType: AgencyTaskMessage["senderType"];
-  userName: string;
-  createdAt: string;
-  content: string | null;
-  type: AgencyTaskMessage["type"];
-  attachments: AgencyTaskMessage["attachments"];
-  showDateDivider: boolean;
-  dateLabel: string;
-};
+export type AgencyTaskThreadMessageViewModel = TaskThreadMessageViewModel;
 
 export type AgencyTaskThreadViewModel =
   | { status: "loading" }
@@ -59,8 +43,13 @@ export type AgencyTaskThreadViewModel =
       agentEnabled: boolean;
       agentToggleId: string;
       isDraggingFile: boolean;
-      messages: AgencyTaskThreadMessageViewModel[];
+      messages: TaskThreadMessageViewModel[];
       messagesEmpty: boolean;
+      hasOlderMessages: boolean;
+      isFetchingOlder: boolean;
+      agentPending: boolean;
+      lastError: string | null;
+      onClearError: () => void;
       assignees: AgencyTaskThreadMember[];
       assignedToTeam: boolean;
       members: AgencyTaskThreadMember[];
@@ -69,24 +58,15 @@ export type AgencyTaskThreadViewModel =
       onAssigneesChange: (assignedToTeam: boolean, assigneeUserIds: string[]) => void;
       onBack: () => void;
       onAgentEnabledChange: (enabled: boolean) => void;
-      onDragOver: (event: React.DragEvent) => void;
-      onDragLeave: (event: React.DragEvent) => void;
-      onDrop: (event: React.DragEvent) => void;
+      onThreadDrop: (event: React.DragEvent) => void;
+      onThreadDragOver: (event: React.DragEvent) => void;
+      onThreadDragLeave: (event: React.DragEvent) => void;
       threadContainerRef: React.RefObject<HTMLDivElement | null>;
-      composer: ReturnType<typeof useAgencyTaskComposer>;
-      voice: ReturnType<typeof useAgencyVoiceRecorder>;
+      showJumpToLatest: boolean;
+      onJumpToLatest: () => void;
+      composer: TaskThreadComposerViewModel;
+      voice: AgencyVoiceRecorderViewModel;
     };
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
-}
-
-function sameDay(left: string, right: string) {
-  return new Date(left).toDateString() === new Date(right).toDateString();
-}
 
 function formatAssigneeName(assignedToTeam: boolean, assignees: AgencyTaskThreadMember[]) {
   if (assignedToTeam) return "Entire team";
@@ -109,12 +89,12 @@ export function useAgencyTaskThread({
   const setIsDraggingFile = useAgencyTaskThreadStore((s) => s.setIsDraggingFile);
   const resetThreadStore = useAgencyTaskThreadStore((s) => s.reset);
 
-  const threadContainerRef = useRef<HTMLDivElement | null>(null);
-  const uploadHandlerRef = useRef<AgencyTaskComposerUploadHandler | null>(null);
+  const uploadHandlerRef = useRef<TaskThreadComposerUploadHandler | null>(null);
   const agentToggleId = `agency-task-thread-agent-${taskId}`;
 
   const contextQuery = useAgencyTaskThreadContextQuery(teamId, taskId);
-  const messagesQuery = useAgencyTaskMessagesQuery(teamId, taskId);
+  const messaging = useTaskThreadMessaging({ teamId, taskId, agentEnabled });
+
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
       {
@@ -126,14 +106,11 @@ export function useAgencyTaskThread({
       "warm",
     ),
   );
-  const messageOverlayKey = `${teamId}:${taskId}`;
-  const messageOverlay = useAgencyOptimisticStore(
-    (state) => state.taskMessages[messageOverlayKey],
-  );
 
   const context = contextQuery.data;
-  const project = projects.find((p) => p.id === context?.projectId);
+  const project = projects.find((entry) => entry.id === context?.projectId);
   const contextAssignees = context?.assignees ?? [];
+
   const members = useMemo(() => {
     const byId = new Map<string, AgencyTaskThreadMember>();
     for (const member of membersQuery.data?.items ?? []) {
@@ -145,22 +122,9 @@ export function useAgencyTaskThread({
     return [...byId.values()];
   }, [contextAssignees, membersQuery.data?.items]);
 
-  const onRegisterUploadHandler = useCallback((handler: AgencyTaskComposerUploadHandler | null) => {
-    uploadHandlerRef.current = handler;
-  }, []);
-
-  const composer = useAgencyTaskComposer({
-    teamId,
-    taskId,
-    agentEnabled,
-    onSent: () => {},
-    onRegisterUploadHandler,
-  });
-
-  const voice = useAgencyVoiceRecorder({
-    disabled: composer.isBusy,
-    onRecorded: composer.onVoiceRecorded,
-  });
+  useEffect(() => {
+    uploadHandlerRef.current = messaging.uploadFiles;
+  }, [messaging.uploadFiles]);
 
   useEffect(() => {
     resetThreadStore();
@@ -178,32 +142,15 @@ export function useAgencyTaskThread({
     return () => window.removeEventListener("keydown", handleKeydown);
   }, [onBack]);
 
-  const overlay = messageOverlay ?? { upserts: {}, deletedIds: {}, idMap: {} };
-  const rawMessages = [...(messagesQuery.data?.items ?? [])].reverse();
-  const messages: AgencyTaskThreadMessageViewModel[] = rawMessages.map((message, index) => ({
-    id: message.id,
-    animationKey: resolveMessageAnimationKey(message.id, overlay.idMap),
-    isOptimistic: isOptimisticTaskMessage(message.id, overlay),
-    senderType: message.senderType,
-    userName: message.userName,
-    createdAt: message.createdAt,
-    content: message.content,
-    type: message.type,
-    attachments: message.attachments,
-    showDateDivider:
-      index === 0 || !sameDay(message.createdAt, rawMessages[index - 1]?.createdAt ?? ""),
-    dateLabel: formatDate(message.createdAt),
-  }));
-
-  const isThreadLoading = contextQuery.isPending || messagesQuery.isPending;
-  const isThreadError = contextQuery.isError || messagesQuery.isError;
+  const isThreadLoading = contextQuery.isPending || messaging.messagesLoading;
+  const isThreadError = contextQuery.isError || Boolean(messaging.messagesError);
 
   function retryThread() {
     void contextQuery.refetch();
-    void messagesQuery.refetch();
+    void messaging.refetchMessages();
   }
 
-  const onDragOver = useCallback(
+  const onThreadDragOver = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
       if (event.dataTransfer?.types.includes("Files")) {
@@ -213,7 +160,7 @@ export function useAgencyTaskThread({
     [setIsDraggingFile],
   );
 
-  const onDragLeave = useCallback(
+  const onThreadDragLeave = useCallback(
     (event: React.DragEvent) => {
       if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null)) {
         setIsDraggingFile(false);
@@ -222,7 +169,7 @@ export function useAgencyTaskThread({
     [setIsDraggingFile],
   );
 
-  const onDrop = useCallback(
+  const onThreadDrop = useCallback(
     (event: React.DragEvent) => {
       event.preventDefault();
       setIsDraggingFile(false);
@@ -288,7 +235,7 @@ export function useAgencyTaskThread({
   }
 
   if (isThreadError) {
-    const threadError = contextQuery.error ?? messagesQuery.error;
+    const threadError = contextQuery.error ?? messaging.messagesError;
     return {
       status: "error",
       message: getErrorMessage(threadError, "Try refreshing."),
@@ -307,8 +254,13 @@ export function useAgencyTaskThread({
     agentEnabled,
     agentToggleId,
     isDraggingFile,
-    messages,
-    messagesEmpty: messages.length === 0,
+    messages: messaging.messages,
+    messagesEmpty: messaging.messagesEmpty,
+    hasOlderMessages: messaging.hasOlderMessages,
+    isFetchingOlder: messaging.isFetchingOlder,
+    agentPending: messaging.agentPending,
+    lastError: messaging.lastError,
+    onClearError: messaging.clearError,
     assignees: contextAssignees,
     assignedToTeam: context?.assignedToTeam ?? false,
     members,
@@ -317,11 +269,13 @@ export function useAgencyTaskThread({
     onAssigneesChange,
     onBack,
     onAgentEnabledChange: setAgentEnabled,
-    onDragOver,
-    onDragLeave,
-    onDrop,
-    threadContainerRef,
-    composer,
-    voice,
+    onThreadDrop,
+    onThreadDragOver,
+    onThreadDragLeave,
+    threadContainerRef: messaging.scroll.containerRef,
+    showJumpToLatest: messaging.scroll.showJumpToLatest,
+    onJumpToLatest: () => messaging.scroll.scrollToBottom(),
+    composer: messaging.composer,
+    voice: messaging.voice,
   };
 }

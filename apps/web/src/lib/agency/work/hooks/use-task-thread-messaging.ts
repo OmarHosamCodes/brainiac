@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { useAgencyTaskMessagesInfiniteQuery } from "@/lib/queries/agency";
 import { getRpcBaseUrl } from "@/lib/env";
 import { orpcClient } from "@/lib/orpc";
 import {
@@ -8,7 +9,17 @@ import {
   type AttachmentMetadataLike,
 } from "@/lib/utils/agency-attachment-utils";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { useAgencyOpsStore } from "@/stores/agency-ops";
+import {
+  isAgentPendingMessageId,
+  isOptimisticTaskMessage,
+  resolveMessageAnimationKey,
+} from "@/lib/utils/agency-thread-motion";
+import { useAgencyTaskMessagesStore } from "@/stores/agency-task-messages";
+import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
+import type { AgencyTaskMessage } from "@/lib/schemas/agency-work";
+
+import { useAgencyVoiceRecorder } from "@/lib/agency/work/hooks/use-agency-voice-recorder";
+import { useTaskThreadScroll } from "@/lib/agency/work/hooks/use-task-thread-scroll";
 
 type PendingAttachment = {
   fileName: string;
@@ -21,20 +32,27 @@ type PendingAttachment = {
   metadata?: AttachmentMetadataLike;
 };
 
-export type AgencyTaskComposerUploadHandler = (
+export type TaskThreadComposerUploadHandler = (
   files: File[],
   options?: { durationSeconds?: number | null },
 ) => Promise<void>;
 
-type UseAgencyTaskComposerOptions = {
-  teamId: string;
-  taskId: string;
-  agentEnabled: boolean;
-  onSent: () => void;
-  onRegisterUploadHandler: (handler: AgencyTaskComposerUploadHandler | null) => void;
+export type TaskThreadMessageViewModel = {
+  id: string;
+  animationKey: string;
+  isOptimistic: boolean;
+  isAgentPending: boolean;
+  senderType: AgencyTaskMessage["senderType"] | "system";
+  userName: string;
+  createdAt: string;
+  content: string | null;
+  type: AgencyTaskMessage["type"];
+  attachments: AgencyTaskMessage["attachments"];
+  showDateDivider: boolean;
+  dateLabel: string;
 };
 
-export type AgencyTaskComposerViewModel = {
+export type TaskThreadComposerViewModel = {
   content: string;
   isDragging: boolean;
   isBusy: boolean;
@@ -42,6 +60,7 @@ export type AgencyTaskComposerViewModel = {
   agentEnabled: boolean;
   placeholder: string;
   attachmentCountLabel: string | null;
+  micError: string | null;
   onContentChange: (value: string) => void;
   onSend: () => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
@@ -58,6 +77,23 @@ export type AgencyTaskComposerViewModel = {
   imageFileInputId: string;
   documentFileInputId: string;
 };
+
+type UseTaskThreadMessagingOptions = {
+  teamId: string;
+  taskId: string;
+  agentEnabled: boolean;
+};
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function sameDay(left: string, right: string) {
+  return new Date(left).toDateString() === new Date(right).toDateString();
+}
 
 function getComposerPlaceholder(agentEnabled: boolean, hasAttachments: boolean): string {
   if (hasAttachments) {
@@ -100,35 +136,6 @@ async function captureFileMetadata(
     }
   } else if (file.type.startsWith("video/")) {
     meta.mediaKind = "video";
-    try {
-      const data = await new Promise<{
-        width: number;
-        height: number;
-        duration: number;
-      }>((resolve, reject) => {
-        const video = document.createElement("video");
-        video.preload = "metadata";
-        const url = URL.createObjectURL(file);
-        video.onloadedmetadata = () => {
-          URL.revokeObjectURL(url);
-          resolve({
-            width: video.videoWidth,
-            height: video.videoHeight,
-            duration: video.duration,
-          });
-        };
-        video.onerror = () => {
-          URL.revokeObjectURL(url);
-          reject(new Error("Failed to load video metadata"));
-        };
-        video.src = url;
-      });
-      meta.videoWidth = data.width;
-      meta.videoHeight = data.height;
-      meta.durationSeconds = data.duration;
-    } catch {
-      // metadata capture failed
-    }
   } else if (file.type.startsWith("audio/")) {
     meta.mediaKind = "audio";
   } else if (["zip", "rar", "7z", "tar", "gz", "bz2"].includes(ext)) {
@@ -141,37 +148,115 @@ async function captureFileMetadata(
 }
 
 function mapPendingAttachmentsForSend(attachments: PendingAttachment[]) {
-  return attachments.map((a) => ({
-    fileName: a.fileName,
-    mimeType: a.mimeType,
-    storageKey: a.storageKey,
-    sizeBytes: a.sizeBytes,
-    durationSeconds: a.durationSeconds ?? undefined,
-    uploadToken: a.uploadToken,
-    metadata: a.metadata ?? undefined,
+  return attachments.map((attachment) => ({
+    fileName: attachment.fileName,
+    mimeType: attachment.mimeType,
+    storageKey: attachment.storageKey,
+    sizeBytes: attachment.sizeBytes,
+    durationSeconds: attachment.durationSeconds ?? undefined,
+    uploadToken: attachment.uploadToken,
+    metadata: attachment.metadata ?? undefined,
+    url: attachment.url,
   }));
 }
 
-export function useAgencyTaskComposer({
+function inferMessageType(pendingAttachments: PendingAttachment[]) {
+  if (
+    pendingAttachments.length > 0 &&
+    pendingAttachments.every((attachment) => attachment.durationSeconds !== null)
+  ) {
+    return "voice" as const;
+  }
+  if (pendingAttachments.length > 0) {
+    return "attachment" as const;
+  }
+  return "text" as const;
+}
+
+export function useTaskThreadMessaging({
   teamId,
   taskId,
   agentEnabled,
-  onSent,
-  onRegisterUploadHandler,
-}: UseAgencyTaskComposerOptions): AgencyTaskComposerViewModel {
-  const agencyOps = useAgencyOpsStore();
+}: UseTaskThreadMessagingOptions) {
+  const sendMessage = useAgencyTaskMessagesStore((state) => state.sendMessage);
+  const askAgent = useAgencyTaskMessagesStore((state) => state.askAgent);
+  const isSending = useAgencyTaskMessagesStore((state) => state.isSending);
+  const agentPending = useAgencyTaskMessagesStore((state) => state.agentPending);
+  const lastError = useAgencyTaskMessagesStore((state) => state.lastError);
+  const clearError = useAgencyTaskMessagesStore((state) => state.clearError);
+
+  const messagesQuery = useAgencyTaskMessagesInfiniteQuery(teamId, taskId);
+  const messageOverlayKey = `${teamId}:${taskId}`;
+  const messageOverlay = useAgencyOptimisticStore(
+    (state) => state.taskMessages[messageOverlayKey],
+  );
+
   const [content, setContent] = useState("");
   const [isDragging, setIsDragging] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [isAgentPending, setIsAgentPending] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
-  const imageFileInputId = `agency-task-composer-image-${teamId}-${taskId}`;
-  const documentFileInputId = `agency-task-composer-document-${teamId}-${taskId}`;
+  const [micError, setMicError] = useState<string | null>(null);
+  const [justSent, setJustSent] = useState(false);
 
-  const isBusy = isSending || isAgentPending;
+  const imageFileInputId = `task-thread-composer-image-${teamId}-${taskId}`;
+  const documentFileInputId = `task-thread-composer-document-${teamId}-${taskId}`;
 
-  const uploadFiles = useCallback(
-    async (files: File[], options: { durationSeconds?: number | null } = {}) => {
+  const serverItems = useMemo(
+    () => messagesQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [messagesQuery.data?.pages],
+  );
+
+  const totalMessages = messagesQuery.data?.pages[0]?.total ?? serverItems.length;
+  const hasOlderMessages = serverItems.length < totalMessages;
+
+  const fetchOlderMessages = useCallback(() => {
+    if (messagesQuery.hasNextPage && !messagesQuery.isFetchingNextPage) {
+      void messagesQuery.fetchNextPage();
+    }
+  }, [messagesQuery]);
+
+  const overlay = messageOverlay ?? { upserts: {}, deletedIds: {}, idMap: {} };
+  const rawMessages = useMemo(() => [...serverItems].reverse(), [serverItems]);
+
+  const messages: TaskThreadMessageViewModel[] = useMemo(
+    () =>
+      rawMessages.map((message, index) => ({
+        id: message.id,
+        animationKey: resolveMessageAnimationKey(message.id, overlay.idMap),
+        isOptimistic: isOptimisticTaskMessage(message.id, overlay),
+        isAgentPending: isAgentPendingMessageId(message.id),
+        senderType: message.senderType,
+        userName: message.userName,
+        createdAt: message.createdAt,
+        content: message.content,
+        type: message.type,
+        attachments: message.attachments,
+        showDateDivider:
+          index === 0 || !sameDay(message.createdAt, rawMessages[index - 1]?.createdAt ?? ""),
+        dateLabel: formatDate(message.createdAt),
+      })),
+    [rawMessages, overlay],
+  );
+
+  const scrollAnchorKey =
+    messages.length > 0 ? messages[messages.length - 1]?.animationKey : "empty";
+
+  const scroll = useTaskThreadScroll({
+    messageCount: messages.length,
+    scrollAnchorKey,
+    hasOlderMessages,
+    isFetchingOlder: messagesQuery.isFetchingNextPage,
+    onLoadOlder: fetchOlderMessages,
+    forceScrollToBottom: justSent,
+  });
+
+  useEffect(() => {
+    if (!justSent) return;
+    const timer = window.setTimeout(() => setJustSent(false), 100);
+    return () => window.clearTimeout(timer);
+  }, [justSent]);
+
+  const uploadFiles = useCallback<TaskThreadComposerUploadHandler>(
+    async (files, options = {}) => {
       for (const file of files) {
         try {
           const metadata = await captureFileMetadata(file);
@@ -231,9 +316,7 @@ export function useAgencyTaskComposer({
     async (rawUrl: string, label?: string) => {
       const normalizedUrl = normalizeAttachmentUrl(rawUrl);
       if (!normalizedUrl) {
-        toast.error("Invalid URL", {
-          description: "Enter a valid HTTPS link.",
-        });
+        toast.error("Invalid URL", { description: "Enter a valid HTTPS link." });
         return;
       }
 
@@ -270,72 +353,58 @@ export function useAgencyTaskComposer({
     [taskId, teamId],
   );
 
-  useEffect(() => {
-    onRegisterUploadHandler(uploadFiles);
-    return () => onRegisterUploadHandler(null);
-  }, [onRegisterUploadHandler, uploadFiles]);
+  const onVoiceRecorded = useCallback(
+    (file: File, durationSeconds: number) => {
+      setMicError(null);
+      void uploadFiles([file], { durationSeconds });
+    },
+    [uploadFiles],
+  );
+
+  const voice = useAgencyVoiceRecorder({
+    disabled: isSending || agentPending,
+    onRecorded: onVoiceRecorded,
+    onMicDenied: () => setMicError("Microphone access was denied."),
+  });
 
   const send = useCallback(async () => {
     const text = content.trim();
     if (!text && pendingAttachments.length === 0) return;
 
-    if (agentEnabled) {
-      setIsAgentPending(true);
-      try {
-        const result = await agencyOps.askTaskAgent({
-          teamId,
-          taskId,
-          content: text || "What do you think?",
-          attachments:
-            pendingAttachments.length > 0
-              ? mapPendingAttachmentsForSend(pendingAttachments)
-              : undefined,
-        });
-        setContent("");
-        setPendingAttachments([]);
-        onSent();
-        if (result) {
-          toast("Agent", {
-            description: result.response.slice(0, 120),
-          });
-        }
-      } catch (error) {
-        toast.error("Agent error", {
-          description: getErrorMessage(error, "Try again."),
-        });
-      } finally {
-        setIsAgentPending(false);
-      }
-      return;
-    }
+    clearError();
+    const payload = {
+      teamId,
+      taskId,
+      content: text || (agentEnabled ? "What do you think?" : ""),
+      type: inferMessageType(pendingAttachments),
+      attachments:
+        pendingAttachments.length > 0
+          ? mapPendingAttachmentsForSend(pendingAttachments)
+          : undefined,
+    };
 
-    setIsSending(true);
     try {
-      await agencyOps.sendTaskMessage({
-        teamId,
-        taskId,
-        content: text,
-        type:
-          pendingAttachments.length > 0 &&
-          pendingAttachments.every((a) => a.durationSeconds !== null)
-            ? "voice"
-            : pendingAttachments.length > 0
-              ? "attachment"
-              : "text",
-        attachments:
-          pendingAttachments.length > 0 ? mapPendingAttachmentsForSend(pendingAttachments) : undefined,
-      });
+      if (agentEnabled) {
+        await askAgent(payload);
+      } else {
+        await sendMessage(payload);
+      }
       setContent("");
       setPendingAttachments([]);
-      onSent();
-    } catch (error) {
-      toast.error("Couldn't send message", {
-        description: getErrorMessage(error, "Try again."),
-      });
-    } finally {
-      setIsSending(false);
+      setJustSent(true);
+    } catch {
+      // store sets lastError
     }
-  }, [agencyOps, agentEnabled, content, onSent, pendingAttachments, taskId, teamId]);
+  }, [
+    agentEnabled,
+    askAgent,
+    clearError,
+    content,
+    pendingAttachments,
+    sendMessage,
+    taskId,
+    teamId,
+  ]);
 
   const onKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -358,8 +427,24 @@ export function useAgencyTaskComposer({
     [uploadFiles],
   );
 
-  const onDrop = useCallback(
-    (event: React.DragEvent) => {
+  const composer: TaskThreadComposerViewModel = {
+    content,
+    isDragging,
+    isBusy: isSending || agentPending,
+    pendingAttachments,
+    agentEnabled,
+    placeholder: getComposerPlaceholder(agentEnabled, pendingAttachments.length > 0),
+    attachmentCountLabel:
+      pendingAttachments.length > 0
+        ? `${pendingAttachments.length} file${pendingAttachments.length === 1 ? "" : "s"}`
+        : null,
+    micError,
+    onContentChange: setContent,
+    onSend: () => void send(),
+    onKeyDown,
+    onImageInputChange: handleFileInputChange,
+    onDocumentInputChange: handleFileInputChange,
+    onDrop: (event) => {
       event.preventDefault();
       setIsDragging(false);
       const files = event.dataTransfer?.files;
@@ -367,33 +452,6 @@ export function useAgencyTaskComposer({
         void uploadFiles(Array.from(files));
       }
     },
-    [uploadFiles],
-  );
-
-  const placeholder = useMemo(
-    () => getComposerPlaceholder(agentEnabled, pendingAttachments.length > 0),
-    [agentEnabled, pendingAttachments.length],
-  );
-
-  const attachmentCountLabel =
-    pendingAttachments.length > 0
-      ? `${pendingAttachments.length} file${pendingAttachments.length === 1 ? "" : "s"}`
-      : null;
-
-  return {
-    content,
-    isDragging,
-    isBusy,
-    pendingAttachments,
-    agentEnabled,
-    placeholder,
-    attachmentCountLabel,
-    onContentChange: setContent,
-    onSend: () => void send(),
-    onKeyDown,
-    onImageInputChange: handleFileInputChange,
-    onDocumentInputChange: handleFileInputChange,
-    onDrop,
     onDragOver: (event) => {
       event.preventDefault();
       setIsDragging(true);
@@ -406,10 +464,29 @@ export function useAgencyTaskComposer({
       document.getElementById(documentFileInputId)?.click();
     },
     onRemoveAttachment: (index) =>
-      setPendingAttachments((current) => current.filter((_, i) => i !== index)),
-    onVoiceRecorded: (file, durationSeconds) => void uploadFiles([file], { durationSeconds }),
+      setPendingAttachments((current) => current.filter((_, itemIndex) => itemIndex !== index)),
+    onVoiceRecorded,
     onAddUrlAttachment,
     imageFileInputId,
     documentFileInputId,
+  };
+
+  return {
+    messages,
+    messagesEmpty: messages.length === 0,
+    messagesLoading: messagesQuery.isPending,
+    messagesError: messagesQuery.error,
+    refetchMessages: messagesQuery.refetch,
+    hasOlderMessages,
+    isFetchingOlder: messagesQuery.isFetchingNextPage,
+    fetchOlderMessages,
+    composer,
+    voice,
+    uploadFiles,
+    agentPending,
+    isSending,
+    lastError,
+    clearError,
+    scroll,
   };
 }
