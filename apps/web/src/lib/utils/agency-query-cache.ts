@@ -223,7 +223,10 @@ export function taskMatchesQueryInput(
       if (!statuses.includes(effectiveStatus)) return false;
     }
   }
-  if (task.status === "archived" && Array.isArray(statuses) && !statuses.includes("archived")) {
+  if (
+    task.status === "archived" &&
+    (!Array.isArray(statuses) || statuses.length === 0 || !statuses.includes("archived"))
+  ) {
     return false;
   }
   return true;
