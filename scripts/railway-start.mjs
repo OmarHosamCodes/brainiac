@@ -62,7 +62,7 @@ await waitForApi();
 console.log("API ready");
 
 console.log(`Starting web on port ${publicPort}`);
-const web = spawnTracked("bun", ["run", ".output/server/index.mjs"], {
+const web = spawnTracked("node", [".output/server/index.mjs"], {
   cwd: resolve(root, "apps/web"),
   env: {
     ...process.env,
