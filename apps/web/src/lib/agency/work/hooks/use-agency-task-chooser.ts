@@ -106,14 +106,19 @@ export function useAgencyTaskChooser({
     }
   }
 
+  const chooserTasks = useMemo(
+    () => tasks.filter((task) => task.status !== "archived"),
+    [tasks],
+  );
+
   const projectsById = useMemo(
     () => new Map(projects.map((project) => [project.id, project])),
     [projects],
   );
 
   const selectedTask = useMemo(
-    () => tasks.find((task) => task.id === value) ?? null,
-    [tasks, value],
+    () => chooserTasks.find((task) => task.id === value) ?? null,
+    [chooserTasks, value],
   );
 
   const selectedProject = useMemo(
@@ -129,9 +134,9 @@ export function useAgencyTaskChooser({
 
   const filteredTasks = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    if (!query) return tasks;
+    if (!query) return chooserTasks;
 
-    return tasks.filter((task) => {
+    return chooserTasks.filter((task) => {
       const project = projectsById.get(task.projectId);
       const searchableText = [
         task.title,
@@ -145,7 +150,7 @@ export function useAgencyTaskChooser({
 
       return searchableText.includes(query);
     });
-  }, [projectsById, searchTerm, tasks]);
+  }, [chooserTasks, projectsById, searchTerm]);
 
   const groupedProjects = useMemo(() => {
     const tasksByProject = new Map<string, AgencyTask[]>();
