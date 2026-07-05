@@ -35,7 +35,7 @@ import {
   verifyTaskAttachmentUploadToken,
 } from "../../storage";
 import { applyMemberTaskCompletion } from "../../schemas/agency-ops";
-import { liveUpdatedAt, publishAgencyJourneyStepUpdated, publishAgencyLiveEvent } from "./live";
+import { liveUpdatedAt, publishAgencyJourneyStepUpdated, publishAgencyLiveEvent, publishAgencyTaskUpdated, publishAgencyTimerUpdated } from "./live";
 import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
 
 const AVATAR_KEY_PREFIX = "user-avatars/";
@@ -2683,8 +2683,13 @@ export async function updateAgencyProjectTask(
   }
 
   const assigneesByTask = await loadTaskAssignees([updated.id]);
+  const task = await buildProjectTaskRecord(updated, assigneesByTask.get(updated.id) ?? []);
 
-  return buildProjectTaskRecord(updated, assigneesByTask.get(updated.id) ?? []);
+  if (input.status !== undefined || input.assigneeUserIds !== undefined || input.assignedToTeam !== undefined) {
+    await publishAgencyTaskUpdated(input.teamId, task);
+  }
+
+  return task;
 }
 
 export async function deleteAgencyProjectTask(
@@ -3532,6 +3537,8 @@ export async function startAgencyTimer(
     ? await fetchAgencyTimeEntryRecord(rolledOverEntryId)
     : null;
 
+  await publishAgencyTimerUpdated(input.teamId, actorUserId, timer);
+
   return {
     timer,
     createdEntry,
@@ -3643,6 +3650,8 @@ export async function stopAgencyTimer(
   if (input.discard) {
     await db.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, active.id));
 
+    await publishAgencyTimerUpdated(active.teamId, actorUserId, null);
+
     return {
       timer: null,
       createdEntry: null,
@@ -3693,6 +3702,8 @@ export async function stopAgencyTimer(
   }
 
   const createdEntry = await fetchAgencyTimeEntryRecord(entry.id);
+
+  await publishAgencyTimerUpdated(active.teamId, actorUserId, null);
 
   return {
     timer: null,

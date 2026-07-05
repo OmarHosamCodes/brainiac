@@ -31,6 +31,44 @@ const agencyTaskMessageLiveSchema = z.object({
   attachments: z.array(agencyTaskMessageAttachmentLiveSchema),
 });
 
+const agencyActiveTimerLiveSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  userId: z.string().min(1),
+  projectId: z.string().min(1),
+  taskId: z.string().nullable(),
+  taskTitle: z.string().nullable(),
+  projectName: z.string(),
+  description: z.string(),
+  startedAt: z.string().datetime(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+const agencyProjectTaskAssigneeLiveSchema = z.object({
+  userId: z.string().min(1),
+  userName: z.string().min(1),
+  userAvatar: z.string().nullable(),
+  status: z.enum(["open", "in_progress", "done"]),
+});
+
+const agencyProjectTaskLiveSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  projectId: z.string().min(1),
+  title: z.string().min(1),
+  status: z.enum(["open", "in_progress", "done", "archived"]),
+  taskKind: z.enum(["standard", "journey_anchor", "journey_milestone"]),
+  assignedToTeam: z.boolean(),
+  isWaste: z.boolean(),
+  assignees: z.array(agencyProjectTaskAssigneeLiveSchema),
+  viewerStatus: z.enum(["open", "in_progress", "done"]).optional(),
+  viewerCompletionCount: z.number().int().nonnegative().optional(),
+  dueDate: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
 export const agencyLiveEventSchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("taskMessage.created"),
@@ -45,9 +83,42 @@ export const agencyLiveEventSchema = z.discriminatedUnion("type", [
     projectId: z.string().min(1),
     updatedAt: z.string().datetime(),
   }),
+  z.object({
+    type: z.literal("timer.updated"),
+    teamId: z.string().min(1),
+    userId: z.string().min(1),
+    updatedAt: z.string().datetime(),
+    timer: agencyActiveTimerLiveSchema.nullable(),
+  }),
+  z.object({
+    type: z.literal("task.updated"),
+    teamId: z.string().min(1),
+    taskId: z.string().min(1),
+    updatedAt: z.string().datetime(),
+    task: agencyProjectTaskLiveSchema,
+  }),
 ]);
 
 export type AgencyLiveEvent = z.infer<typeof agencyLiveEventSchema>;
+
+const MAX_SUBSCRIBER_QUEUE = 50;
+
+function liveEventCoalesceKey(event: AgencyLiveEvent): string | null {
+  switch (event.type) {
+    case "journey.step.updated":
+      return `journey.step.updated:${event.projectId}`;
+    case "taskMessage.created":
+      return `taskMessage.created:${event.taskId}`;
+    case "timer.updated":
+      return `timer.updated:${event.userId}`;
+    case "task.updated":
+      return `task.updated:${event.taskId}`;
+    default: {
+      const _exhaustive: never = event;
+      return _exhaustive;
+    }
+  }
+}
 
 type Subscriber = {
   push: (event: AgencyLiveEvent) => void;
@@ -77,7 +148,19 @@ class AgencyLivePublisher {
         const subscriber: Subscriber = {
           signal,
           push(event) {
+            const key = liveEventCoalesceKey(event);
+            if (key) {
+              const idx = queue.findIndex((queued) => liveEventCoalesceKey(queued) === key);
+              if (idx !== -1) {
+                queue.splice(idx, 1);
+              }
+            }
             queue.push(event);
+            // ponytail: cap at 50 events per slow subscriber; drop oldest on overflow.
+            // Upgrade path: persistent replay buffer + client cursor/resume token.
+            while (queue.length > MAX_SUBSCRIBER_QUEUE) {
+              queue.shift();
+            }
             notify?.();
             notify = null;
           },
@@ -125,16 +208,22 @@ class AgencyLivePublisher {
   }
 
   publish(teamId: string, event: AgencyLiveEvent) {
-    const subscribers = this.subscribers.get(teamChannel(teamId));
+    const channel = teamChannel(teamId);
+    const subscribers = this.subscribers.get(channel);
     if (!subscribers) {
       return;
     }
 
-    for (const subscriber of subscribers) {
+    for (const subscriber of [...subscribers]) {
       if (subscriber.signal?.aborted) {
+        subscribers.delete(subscriber);
         continue;
       }
       subscriber.push(event);
+    }
+
+    if (subscribers.size === 0) {
+      this.subscribers.delete(channel);
     }
   }
 }
@@ -155,6 +244,65 @@ export async function publishAgencyJourneyStepUpdated(teamId: string, projectId:
     type: "journey.step.updated",
     teamId,
     projectId,
+    updatedAt: liveUpdatedAt(new Date()),
+  });
+}
+
+export async function publishAgencyTimerUpdated(
+  teamId: string,
+  userId: string,
+  timer: {
+    id: string;
+    teamId: string;
+    userId: string;
+    projectId: string;
+    taskId: string | null;
+    taskTitle: string | null;
+    projectName: string;
+    description: string;
+    startedAt: string;
+    createdAt: string;
+    updatedAt: string;
+  } | null,
+) {
+  await publishAgencyLiveEvent(teamId, {
+    type: "timer.updated",
+    teamId,
+    userId,
+    timer,
+    updatedAt: liveUpdatedAt(new Date()),
+  });
+}
+
+export async function publishAgencyTaskUpdated(
+  teamId: string,
+  task: {
+    id: string;
+    teamId: string;
+    projectId: string;
+    title: string;
+    status: "open" | "in_progress" | "done" | "archived";
+    taskKind: "standard" | "journey_anchor" | "journey_milestone";
+    assignedToTeam: boolean;
+    isWaste: boolean;
+    assignees: Array<{
+      userId: string;
+      userName: string;
+      userAvatar: string | null;
+      status: "open" | "in_progress" | "done";
+    }>;
+    viewerStatus?: "open" | "in_progress" | "done";
+    viewerCompletionCount?: number;
+    dueDate: string | null;
+    createdAt: string;
+    updatedAt: string;
+  },
+) {
+  await publishAgencyLiveEvent(teamId, {
+    type: "task.updated",
+    teamId,
+    taskId: task.id,
+    task,
     updatedAt: liveUpdatedAt(new Date()),
   });
 }
