@@ -36,7 +36,10 @@ import {
   shellMobileNavLinkClass,
   shellMobileNavLinkIdleClass,
 } from "@/lib/utils/app-shell-ui";
+import { useAgencyTrackingFavicon } from "@/lib/agency/work/hooks/use-agency-time-tracker";
+import { useAgencyActiveTimerQuery } from "@/lib/queries/agency";
 import { cn } from "@/lib/utils";
+import { useCurrentAgencyTeamStore } from "@/stores/agency-timer";
 
 const NAV_ICONS = {
   "/dashboard": LayoutDashboard,
@@ -79,6 +82,10 @@ const AGENCY_COMMAND_ITEMS = [
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const agencyTeamId = useCurrentAgencyTeamStore((s) => s.currentAgencyTeamId) ?? "";
+  const activeTimer = useAgencyActiveTimerQuery(agencyTeamId).data?.timer ?? null;
+  useAgencyTrackingFavicon(Boolean(activeTimer));
+
   const location = useLocation();
   const navigate = useNavigate();
   const setCurrentPath = useAppShellStore((s) => s.setCurrentPath);

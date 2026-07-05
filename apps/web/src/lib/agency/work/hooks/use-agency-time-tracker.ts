@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
+import { setTrackingFavicon } from "@/lib/favicon";
+
 import { useAgencyElapsedTimer } from "@/lib/agency/work/hooks/use-agency-elapsed-timer";
 import {
   canStartAgencyTimer,
@@ -69,6 +71,12 @@ function normalizeSuggestionText(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+export function useAgencyTrackingFavicon(isTracking: boolean) {
+  useEffect(() => {
+    setTrackingFavicon(isTracking);
+  }, [isTracking]);
+}
+
 export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): AgencyTimeTrackerViewModel {
   const setTrackerDescription = useAgencyTimeTrackingStore((s) => s.setTrackerDescription);
   const setTrackerProjectId = useAgencyTimeTrackingStore((s) => s.setTrackerProjectId);
@@ -92,6 +100,7 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
   const projects = projectsQuery.data?.items ?? [];
   const tasks = tasksQuery.items ?? [];
   const activeTimer = activeTimerQuery.data?.timer ?? null;
+  useAgencyTrackingFavicon(Boolean(activeTimer));
   const trackerDraft = useTrackerDraft(teamId);
 
   const selectedTaskId = trackerDraft?.taskId ?? "";
