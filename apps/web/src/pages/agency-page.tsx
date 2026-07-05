@@ -36,6 +36,8 @@ import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import {
   shellContentInClass,
+  shellLoadingPanelClass,
+  shellPageBodyClass,
   shellPageClass,
 } from "@/lib/utils/app-shell-ui";
 import { AGENCY_PAGE_SCROLL_ATTR, agencyWorkSurfaceShellClass } from "@/lib/utils/agency-ui";
@@ -156,6 +158,7 @@ export function AgencyPage() {
   }, [agencyEnabled, selectedTeamId, currentUserId]);
 
   const isInitialLoading = teamsQuery.isPending;
+  const isPageLoading = isInitialLoading || billingGatePending;
 
   function openProject(projectId: string) {
     const next = new URLSearchParams(searchParams);
@@ -179,7 +182,7 @@ export function AgencyPage() {
     <AppShellPage slots={["subtitle", "actions", "hideAgent"]}>
       <div
         className={cn(
-          "flex h-full flex-col overflow-y-auto bg-default",
+          "flex h-full flex-col overflow-y-auto bg-background text-foreground",
           isWorkSegment && "lg:overflow-hidden",
         )}
         {...{ [AGENCY_PAGE_SCROLL_ATTR]: "" }}
@@ -202,17 +205,13 @@ export function AgencyPage() {
         </AppShellTopbarActions>
 
         <main className={cn(shellPageClass, isWorkSegment && "min-h-0")}>
-          {isInitialLoading ? (
-            <div className="space-y-4 pt-4">
-              <Skeleton className="h-12 w-full rounded-2xl" />
-              <Skeleton className="h-6 w-2/3 rounded-lg" />
-              <Skeleton className="h-64 w-full rounded-[32px]" />
-            </div>
-          ) : billingGatePending ? (
-            <div className="space-y-4 pt-4">
-              <Skeleton className="h-12 w-full rounded-2xl" />
-              <Skeleton className="h-6 w-2/3 rounded-lg" />
-              <Skeleton className="h-64 w-full rounded-[32px]" />
+          {isPageLoading ? (
+            <div className={shellPageBodyClass}>
+              <div className={shellLoadingPanelClass}>
+                <Skeleton className="h-12 w-full rounded-xl" />
+                <Skeleton className="h-6 w-2/3 rounded-lg" />
+                <Skeleton className="h-64 w-full rounded-xl" />
+              </div>
             </div>
           ) : showAgencyUpsell ? (
             <div className={shellContentInClass}>
@@ -228,12 +227,7 @@ export function AgencyPage() {
               />
             </div>
           ) : (
-            <div
-              className={cn(
-                "flex flex-col gap-4 pt-4",
-                isWorkSegment && "min-h-0 flex-1",
-              )}
-            >
+            <div className={cn(shellPageBodyClass, isWorkSegment && "min-h-0 flex-1")}>
               <div
                 role="tabpanel"
                 id={panelIdFor(segment)}
