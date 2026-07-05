@@ -2,6 +2,7 @@
 buildCommand = "bun install && bun run build"
 
 [deploy]
+preDeployCommand = "bun run --cwd packages/db db:push"
 startCommand = "bun run start"
 healthcheckPath = "/"
 healthcheckTimeout = 300
