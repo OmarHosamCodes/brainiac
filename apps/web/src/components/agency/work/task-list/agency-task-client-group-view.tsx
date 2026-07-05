@@ -1,6 +1,6 @@
 import { ChevronDown } from "lucide-react";
 
-import { AgencyTaskDisplayRowView } from "@/components/agency/work/task-list/agency-task-display-row-view";
+import { AgencyTaskProjectGroupView } from "@/components/agency/work/task-list/agency-task-project-group-view";
 import type { AgencyTaskClientDisplayGroup } from "@/lib/agency/work/hooks/use-agency-task-list";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
@@ -9,17 +9,20 @@ import {
   agencyMetricClass,
   agencyTaskClientGroupHeaderClass,
 } from "@/lib/utils/agency-ui";
+import { countClientDisplayRows } from "@/lib/utils/agency-task-rail-grouping";
 import { cn } from "@/lib/utils";
 
 export type AgencyTaskClientGroupViewProps = {
   group: AgencyTaskClientDisplayGroup;
   expanded: boolean;
+  collapsedProjects: Set<string>;
   allTasks: AgencyProjectTask[];
   projects: AgencyTaskProject[];
   teamId: string;
   selectedTaskId: string;
   isRowPending: (taskId: string) => boolean;
   onExpandedChange: (expanded: boolean) => void;
+  onProjectExpandedChange: (projectId: string, expanded: boolean) => void;
   onSelect: (taskId: string, blueprintId?: string | null) => void;
   onSelectProject: (projectId: string) => void;
   onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
@@ -27,17 +30,22 @@ export type AgencyTaskClientGroupViewProps = {
   highlightBlueprintId?: string;
   getTaskTrackingState?: (taskId: string, blueprintDescription?: string) => TaskTrackingState;
   onBlueprintDescriptionChange?: (blueprintId: string, value: string) => void;
+  readOnly?: boolean;
+  onReopenToActive?: (task: AgencyProjectTask) => void;
+  highlightTaskId?: string;
 };
 
 export function AgencyTaskClientGroupView({
   group,
   expanded,
+  collapsedProjects,
   allTasks,
   projects,
   teamId,
   selectedTaskId,
   isRowPending,
   onExpandedChange,
+  onProjectExpandedChange,
   onSelect,
   onSelectProject,
   onStatusChange,
@@ -45,9 +53,12 @@ export function AgencyTaskClientGroupView({
   highlightBlueprintId = "",
   getTaskTrackingState,
   onBlueprintDescriptionChange,
+  readOnly = false,
+  onReopenToActive,
+  highlightTaskId = "",
 }: AgencyTaskClientGroupViewProps) {
   const panelId = `agency-task-client-group-${group.clientId}`;
-  const taskCount = group.displayRows.length;
+  const taskCount = countClientDisplayRows(group);
 
   return (
     <section aria-labelledby={`${panelId}-label`}>
@@ -71,38 +82,41 @@ export function AgencyTaskClientGroupView({
             )}
             aria-hidden
           />
-          <span className="truncate font-semibold text-highlighted">{group.clientName}</span>
+          <span className="truncate font-bold text-highlighted">{group.clientName}</span>
         </span>
-        <span className={cn(agencyMetricClass, "shrink-0 text-[11px] text-muted")}>
+        <span className={cn(agencyMetricClass, "shrink-0 text-[11px] font-semibold text-muted")}>
           {taskCount} {taskCount === 1 ? "task" : "tasks"}
         </span>
       </button>
 
       {expanded ? (
-        <ul id={panelId} aria-label={`${group.clientName} tasks`}>
-          {group.displayRows.map((row) => (
-            <AgencyTaskDisplayRowView
-              key={row.rowKey}
-              row={row}
+        <div id={panelId}>
+          {group.projectGroups.map((projectGroup) => (
+            <AgencyTaskProjectGroupView
+              key={projectGroup.projectId}
+              group={projectGroup}
+              expanded={!collapsedProjects.has(projectGroup.projectId)}
               allTasks={allTasks}
               projects={projects}
               teamId={teamId}
               selectedTaskId={selectedTaskId}
-              highlight={row.blueprintId === highlightBlueprintId}
-              isRowPending={isRowPending(row.task.id)}
-              trackingState={getTaskTrackingState?.(row.task.id, row.blueprintDescription)}
-              onSelect={(taskId) => onSelect(taskId, row.blueprintId)}
+              isRowPending={isRowPending}
+              onExpandedChange={(nextExpanded) =>
+                onProjectExpandedChange(projectGroup.projectId, nextExpanded)
+              }
+              onSelect={onSelect}
               onSelectProject={onSelectProject}
               onStatusChange={onStatusChange}
               onDelete={onDelete}
-              onBlueprintDescriptionChange={
-                row.blueprintId
-                  ? (value) => onBlueprintDescriptionChange?.(row.blueprintId!, value)
-                  : undefined
-              }
+              highlightBlueprintId={highlightBlueprintId}
+              getTaskTrackingState={getTaskTrackingState}
+              onBlueprintDescriptionChange={onBlueprintDescriptionChange}
+              readOnly={readOnly}
+              onReopenToActive={onReopenToActive}
+              highlightTaskId={highlightTaskId}
             />
           ))}
-        </ul>
+        </div>
       ) : null}
     </section>
   );
