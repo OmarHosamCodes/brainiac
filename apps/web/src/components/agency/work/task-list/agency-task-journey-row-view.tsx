@@ -6,6 +6,8 @@ import {
   agencyFocusRingClass,
   agencyMetricClass,
   agencyTaskRowClass,
+  agencyTaskRowContentClass,
+  agencyTaskRowNestedContentClass,
   agencyTaskRowProjectPillClass,
   agencyTaskRowSelectedClass,
 } from "@/lib/utils/agency-ui";
@@ -24,6 +26,7 @@ export type AgencyTaskJourneyRowViewProps = {
   allTasks: AgencyProjectTask[];
   selectedTaskId: string;
   journeyProgress?: JourneyProgressSummary;
+  nested?: boolean;
   onSelect: (taskId: string) => void;
   onSelectProject?: (projectId: string) => void;
 };
@@ -34,6 +37,7 @@ export function AgencyTaskJourneyRowView({
   allTasks,
   selectedTaskId,
   journeyProgress,
+  nested = false,
   onSelect,
   onSelectProject,
 }: AgencyTaskJourneyRowViewProps) {
@@ -52,6 +56,10 @@ export function AgencyTaskJourneyRowView({
     completedSteps !== undefined && totalSteps !== undefined
       ? `${completedSteps}/${totalSteps}`
       : "—";
+  const showSecondaryMeta =
+    !nested &&
+    (assignees.length > 0 || Boolean(onSelectProject));
+  const isSingleLineRow = nested || !showSecondaryMeta;
 
   return (
     <li
@@ -61,7 +69,12 @@ export function AgencyTaskJourneyRowView({
         isSelected && agencyTaskRowSelectedClass,
       )}
     >
-      <div className="relative flex items-start gap-2 px-3 py-2.5">
+      <div
+        className={cn(
+          nested ? agencyTaskRowNestedContentClass : agencyTaskRowContentClass,
+          isSingleLineRow ? "items-center" : "items-start",
+        )}
+      >
         <button
           type="button"
           className={cn(
@@ -74,31 +87,52 @@ export function AgencyTaskJourneyRowView({
           onClick={() => onSelect(task.id)}
         />
 
-        <div className="pointer-events-none relative z-10 flex w-full min-w-0 items-start gap-2">
+        <div
+          className={cn(
+            "pointer-events-none relative z-10 flex w-full min-w-0 gap-1.5",
+            isSingleLineRow ? "items-center" : "items-start",
+          )}
+        >
           <span
-            className="inline-flex size-4 shrink-0 items-center justify-center pt-0.5 text-info"
+            className={cn(
+              "inline-flex size-3.5 shrink-0 items-center justify-center text-info",
+              !isSingleLineRow && nested && "pt-px",
+            )}
             aria-hidden
           >
-            <Route className="size-3.5" strokeWidth={2.25} />
+            <Route className="size-3" strokeWidth={2.25} />
           </span>
 
-          <div className="min-w-0 flex-1">
+          <div
+            className={cn(
+              "min-w-0 flex-1",
+              !isSingleLineRow && cn("flex flex-col", nested ? "gap-0.5" : "gap-1.5"),
+            )}
+          >
             <div className="flex min-w-0 items-center gap-1.5">
-              <span className="min-w-0 flex-1 truncate text-sm font-semibold text-highlighted">
-                {task.title}
-              </span>
               <span
                 className={cn(
-                  agencyMetricClass,
-                  "shrink-0 text-[11px] font-semibold text-muted",
+                  "min-w-0 flex-1 truncate text-sm leading-tight text-highlighted",
+                  nested ? "font-medium" : "font-semibold",
                 )}
-                aria-label={`${progressLabel} steps complete`}
               >
-                {progressLabel}
+                {task.title}
               </span>
+              {!nested ? (
+                <span
+                  className={cn(
+                    agencyMetricClass,
+                    "shrink-0 text-[11px] font-semibold text-muted",
+                  )}
+                  aria-label={`${progressLabel} steps complete`}
+                >
+                  {progressLabel}
+                </span>
+              ) : null}
             </div>
 
-            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
+            {showSecondaryMeta ? (
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
               <span className="inline-flex shrink-0 items-center gap-1">
                 {stackVisible.map((member, index) => (
                   <span
@@ -142,7 +176,8 @@ export function AgencyTaskJourneyRowView({
               ) : (
                 <span className={cn(agencyTaskRowProjectPillClass, "truncate")}>{projectName}</span>
               )}
-            </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

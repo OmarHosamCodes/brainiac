@@ -13,16 +13,13 @@ import {
   agencyTaskRowCheckboxClass,
   agencyTaskRowCompleteClass,
   agencyTaskRowClass,
+  agencyTaskRowContentClass,
   agencyTaskRowDoneClass,
+  agencyTaskRowNestedContentClass,
   agencyTaskRowNeedsDescriptionClass,
   agencyTaskRowProjectPillClass,
   agencyTaskRowSelectedClass,
 } from "@/lib/utils/agency-ui";
-import {
-  resolveTaskDisplayStatus,
-  statusLabel,
-  taskStatusDisplay,
-} from "@/lib/utils/agency-task-status";
 import { isTaskOverdue } from "@/lib/utils/agency-task-utils";
 import { isJourneyMilestoneTask } from "@/lib/utils/agency-task-journey";
 import { cn } from "@/lib/utils";
@@ -68,7 +65,7 @@ function AgencyTaskRowCheckbox({
         if (!checked) onToggle();
       }}
     >
-      {checked ? <Check className="size-2.5" strokeWidth={3} aria-hidden /> : null}
+      {checked ? <Check className="size-2" strokeWidth={3} aria-hidden /> : null}
     </button>
   );
 }
@@ -90,6 +87,7 @@ export type AgencyTaskRowViewProps = {
   blueprintId?: string | null;
   blueprintDescription?: string;
   showAllAssignees?: boolean;
+  nested?: boolean;
   trackingState?: TaskTrackingState;
   onBlueprintDescriptionChange?: (value: string) => void;
 };
@@ -110,6 +108,7 @@ export function AgencyTaskRowView({
   blueprintId = null,
   blueprintDescription = "",
   showAllAssignees = false,
+  nested = false,
   trackingState,
   onBlueprintDescriptionChange,
 }: AgencyTaskRowViewProps) {
@@ -122,17 +121,27 @@ export function AgencyTaskRowView({
   const overdue = isTaskOverdue(task.dueDate);
   const dueLabel = task.dueDate ? formatDueDate(task.dueDate) : "";
   const showCompletionMultiplier = readOnly && completionCount >= 1;
-  const displayStatus = resolveTaskDisplayStatus({ task, readOnly });
-  const statusDisplay = taskStatusDisplay(displayStatus);
   const showAssigneeStack = showAllAssignees || isJourneyMilestoneTask(task);
   const assigneeStack = task.assignees.slice(0, STACK_AVATAR_LIMIT);
   const assigneeOverflow = task.assignees.length - assigneeStack.length;
+  const inlineAssigneeStack =
+    nested && showAssigneeStack && task.assignees.length > 0;
 
   const swipeEnabled = !readOnly && Boolean(onDelete) && !isJourneyMilestoneTask(task);
+  const inlineNeedsDescriptionHint =
+    nested &&
+    Boolean(trackingState?.needsDescription) &&
+    !blueprintId &&
+    !blueprintDescription.trim();
   const showDescriptionRow =
     Boolean(blueprintId) ||
     Boolean(blueprintDescription.trim()) ||
-    Boolean(trackingState?.needsDescription);
+    (Boolean(trackingState?.needsDescription) && !inlineNeedsDescriptionHint);
+  const showSecondaryMeta =
+    Boolean(dueLabel) ||
+    (showAssigneeStack && task.assignees.length > 0 && !inlineAssigneeStack) ||
+    (!nested && Boolean(onSelectProject));
+  const isSingleLineRow = !showDescriptionRow && !showSecondaryMeta;
 
   return (
     <li
@@ -154,7 +163,12 @@ export function AgencyTaskRowView({
         onDeleteRequest={() => onDelete?.(task)}
         onRowActivate={() => onSelect(task.id)}
       >
-        <div className="relative flex items-start gap-2 px-3 py-2.5">
+        <div
+          className={cn(
+            nested ? agencyTaskRowNestedContentClass : agencyTaskRowContentClass,
+            isSingleLineRow ? "items-center" : "items-start",
+          )}
+        >
           {!swipeEnabled ? (
             <button
               type="button"
@@ -169,8 +183,13 @@ export function AgencyTaskRowView({
             />
           ) : null}
 
-          <div className="pointer-events-none relative z-10 flex w-full min-w-0 items-start gap-2">
-            <div className="pointer-events-auto shrink-0 pt-0.5">
+          <div
+            className={cn(
+              "pointer-events-none relative z-10 flex w-full min-w-0 gap-1.5",
+              isSingleLineRow ? "items-center" : "items-start",
+            )}
+          >
+            <div className={cn("pointer-events-auto shrink-0", !isSingleLineRow && nested && "pt-px")}>
               <AgencyTaskRowCheckbox
                 title={task.title}
                 checked={isDone}
@@ -179,16 +198,30 @@ export function AgencyTaskRowView({
               />
             </div>
 
-            <div className="min-w-0 flex-1">
+            <div
+              className={cn(
+                "min-w-0 flex-1",
+                !isSingleLineRow && cn("flex flex-col", nested ? "gap-0.5" : "gap-1.5"),
+              )}
+            >
               <div className="flex min-w-0 items-center gap-1.5">
                 <span
                   className={cn(
-                    "min-w-0 flex-1 truncate text-sm font-semibold text-highlighted",
+                    "min-w-0 flex-1 truncate text-sm leading-tight text-highlighted",
+                    nested ? "font-medium" : "font-semibold",
                     readOnly && "text-muted line-through",
                   )}
                 >
                   {task.title}
                 </span>
+                {inlineNeedsDescriptionHint ? (
+                  <span
+                    className="shrink-0 truncate text-[10px] font-medium text-warning"
+                    title="Add a description in the tracker to stop"
+                  >
+                    Needs note
+                  </span>
+                ) : null}
                 {showCompletionMultiplier ? (
                   <span
                     className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted"
@@ -197,14 +230,43 @@ export function AgencyTaskRowView({
                     ×{completionCount}
                   </span>
                 ) : null}
-                <div className="pointer-events-auto ml-auto flex shrink-0 items-center gap-1.5">
+                {inlineAssigneeStack ? (
+                  <span className="inline-flex shrink-0 items-center">
+                    {assigneeStack.map((member, index) => (
+                      <span
+                        key={member.userId}
+                        className={cn("relative", index > 0 && "-ml-1.5")}
+                        style={{ zIndex: index + 1 }}
+                      >
+                        <AgencyMemberAvatar
+                          name={member.userName}
+                          avatarUrl={member.userAvatar}
+                          size="sm"
+                          className="size-5 rounded-full ring-2 ring-elevated"
+                        />
+                      </span>
+                    ))}
+                    {assigneeOverflow > 0 ? (
+                      <span
+                        className={cn(
+                          "relative z-10 -ml-1.5 flex size-5 shrink-0 items-center justify-center rounded-full",
+                          "bg-muted text-[9px] font-bold text-highlighted ring-2 ring-elevated",
+                        )}
+                        aria-hidden
+                      >
+                        +{assigneeOverflow}
+                      </span>
+                    ) : null}
+                  </span>
+                ) : null}
+                <div className="pointer-events-auto ml-auto flex shrink-0 items-center gap-1">
                   {readOnly && onReopenToActive ? (
                     <button
                       type="button"
                       aria-label={`Add ${task.title} to open tasks`}
                       disabled={isRowPending}
                       className={cn(
-                        "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted",
+                        "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted",
                         "transition-colors hover:bg-default hover:text-highlighted",
                         agencyFocusRingClass,
                         "motion-reduce:transition-none",
@@ -231,28 +293,25 @@ export function AgencyTaskRowView({
                 </div>
               </div>
 
-              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
-                <span className={statusDisplay.chipClass} aria-label={statusDisplay.ariaLabel}>
-                  {statusDisplay.label}
-                </span>
-
-                {onSelectProject ? (
-                  <button
-                    type="button"
-                    className={cn(
-                      agencyTaskRowProjectPillClass,
-                      agencyFocusRingClass,
-                      "pointer-events-auto motion-reduce:transition-none",
-                    )}
-                    onClick={() => onSelectProject(task.projectId)}
-                  >
-                    <span className="truncate">{projectName}</span>
-                  </button>
-                ) : (
-                  <span className={cn(agencyTaskRowProjectPillClass, "truncate")}>
-                    {projectName}
-                  </span>
-                )}
+              {showSecondaryMeta ? (
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  {onSelectProject && !nested ? (
+                    <button
+                      type="button"
+                      className={cn(
+                        agencyTaskRowProjectPillClass,
+                        agencyFocusRingClass,
+                        "pointer-events-auto motion-reduce:transition-none",
+                      )}
+                      onClick={() => onSelectProject(task.projectId)}
+                    >
+                      <span className="truncate">{projectName}</span>
+                    </button>
+                  ) : !nested ? (
+                    <span className={cn(agencyTaskRowProjectPillClass, "truncate")}>
+                      {projectName}
+                    </span>
+                  ) : null}
 
                 {dueLabel ? (
                   <span
@@ -273,21 +332,21 @@ export function AgencyTaskRowView({
                     {assigneeStack.map((member, index) => (
                       <span
                         key={member.userId}
-                        className={cn("relative", index > 0 && "-ml-2")}
+                        className={cn("relative", index > 0 && "-ml-1.5")}
                         style={{ zIndex: index + 1 }}
                       >
                         <AgencyMemberAvatar
                           name={member.userName}
                           avatarUrl={member.userAvatar}
                           size="sm"
-                          className="size-6 rounded-full ring-2 ring-elevated"
+                          className="rounded-full ring-2 ring-elevated"
                         />
                       </span>
                     ))}
                     {assigneeOverflow > 0 ? (
                       <span
                         className={cn(
-                          "relative z-10 -ml-2 flex size-6 shrink-0 items-center justify-center rounded-full",
+                          "relative z-10 -ml-1.5 flex size-5 shrink-0 items-center justify-center rounded-full",
                           "bg-muted text-[9px] font-bold text-highlighted ring-2 ring-elevated",
                         )}
                         aria-hidden
@@ -297,10 +356,11 @@ export function AgencyTaskRowView({
                     ) : null}
                   </span>
                 ) : null}
-              </div>
+                </div>
+              ) : null}
 
               {showDescriptionRow ? (
-                <div className="pointer-events-auto mt-1 min-w-0">
+                <div className="pointer-events-auto min-w-0">
                   {blueprintId && onBlueprintDescriptionChange ? (
                     <Input
                       value={blueprintDescription}
@@ -309,16 +369,16 @@ export function AgencyTaskRowView({
                       onKeyDown={(event) => event.stopPropagation()}
                       placeholder="What are you working on?"
                       className={cn(
-                        "h-7 min-w-0 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0",
+                        "h-6 min-w-0 border-0 bg-transparent px-0 text-[11px] leading-tight shadow-none focus-visible:ring-0",
                         agencyInputPlaceholderClass,
                         trackingState?.needsDescription ? "text-warning" : "text-muted",
                       )}
                       aria-label="Task blueprint description"
                     />
                   ) : blueprintDescription.trim() ? (
-                    <p className="truncate text-xs text-muted">{blueprintDescription}</p>
+                    <p className="truncate text-[11px] leading-tight text-muted">{blueprintDescription}</p>
                   ) : trackingState?.needsDescription ? (
-                    <p className="text-xs text-warning">
+                    <p className="truncate text-[11px] leading-tight text-warning">
                       Add a description in the tracker to stop.
                     </p>
                   ) : null}

@@ -13,6 +13,7 @@ export type AgencyTaskDisplayRowViewProps = {
   readOnly?: boolean;
   highlight?: boolean;
   isRowPending: boolean;
+  nested?: boolean;
   onSelect: (taskId: string) => void;
   onSelectProject?: (projectId: string) => void;
   onStatusChange?: (task: AgencyProjectTask, status: TaskStatus) => void;
@@ -31,6 +32,7 @@ export function AgencyTaskDisplayRowView({
   readOnly = false,
   highlight = false,
   isRowPending,
+  nested = false,
   onSelect,
   onSelectProject,
   onStatusChange,
@@ -47,6 +49,7 @@ export function AgencyTaskDisplayRowView({
         allTasks={allTasks}
         selectedTaskId={selectedTaskId}
         journeyProgress={row.journeyProgress}
+        nested={nested}
         onSelect={onSelect}
         onSelectProject={onSelectProject}
       />
@@ -63,6 +66,7 @@ export function AgencyTaskDisplayRowView({
       highlight={highlight}
       isRowPending={isRowPending}
       showAllAssignees={row.rowKind === "journey_milestone"}
+      nested={nested}
       blueprintId={row.blueprintId}
       blueprintDescription={row.blueprintDescription}
       trackingState={trackingState}
