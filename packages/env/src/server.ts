@@ -39,6 +39,7 @@ export const env = createEnv({
     S3_BUCKET: z.string().min(1, "S3_BUCKET is required for file storage"),
     S3_ACCESS_KEY_ID: z.string().min(1, "S3_ACCESS_KEY_ID is required for file storage"),
     S3_SECRET_ACCESS_KEY: z.string().min(1, "S3_SECRET_ACCESS_KEY is required for file storage"),
+    REDIS_URL: z.string().min(1, "REDIS_URL is required for live sync (e.g., redis://localhost:6379)"),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

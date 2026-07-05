@@ -33,6 +33,7 @@ import {
   verifyTaskAttachmentUploadToken,
 } from "../../storage";
 import { applyMemberTaskCompletion } from "../../schemas/agency-ops";
+import { liveUpdatedAt, publishAgencyLiveEvent } from "./live";
 import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
 
 const AVATAR_KEY_PREFIX = "user-avatars/";
@@ -2149,13 +2150,20 @@ export async function createTaskThreadMessage(
     .set({ updatedAt: now })
     .where(eq(agencyOpsTaskThread.id, thread.id));
 
-  return mapTaskMessageRow({
-    ...created,
-    userName: null,
-    userAvatar: null,
-    type: created.type as "text" | "voice" | "attachment",
-    senderType: "user",
+  const message = await getTaskThreadMessageById(actorUserId, {
+    teamId: input.teamId,
+    messageId: created.id,
   });
+
+  await publishAgencyLiveEvent(input.teamId, {
+    type: "taskMessage.created",
+    teamId: input.teamId,
+    taskId: input.taskId,
+    updatedAt: liveUpdatedAt(message.updatedAt),
+    message,
+  });
+
+  return message;
 }
 
 export function validateTaskAttachmentUploadReferences(input: {

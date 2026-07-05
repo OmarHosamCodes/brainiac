@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { protectedProProcedure } from "../../procedures";
+import { agencyLiveEventSchema, agencyLivePublisher } from "./live";
 import {
   archiveAgencyClient,
   createAgencyClient,
@@ -35,6 +36,7 @@ import {
   listRecentTaskThreadMessages,
   listTaskThreadMembers,
   listTaskThreadMessages,
+  requireTeamMembership,
   setMemberCapacity,
   startAgencyTimer,
   stopAgencyTimer,
@@ -338,6 +340,18 @@ const timeSummarySchema = z.object({
 });
 
 export const agencyOpsRouter = {
+  live: {
+    subscribe: protectedProProcedure.input(teamScopedInputSchema).handler(async function* ({
+      context,
+      input,
+      signal,
+    }) {
+      await requireTeamMembership(context.session.user.id, input.teamId, "viewer");
+      for await (const event of agencyLivePublisher.subscribe(input.teamId, signal)) {
+        yield agencyLiveEventSchema.parse(event);
+      }
+    }),
+  },
   clients: {
     list: protectedProProcedure
       .input(

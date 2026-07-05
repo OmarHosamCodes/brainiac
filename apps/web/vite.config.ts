@@ -51,6 +51,7 @@ export default defineConfig(({ mode }) => {
         "/rpc": {
           target: "http://localhost:7000",
           changeOrigin: true,
+          ws: true,
         },
         "/uploads": {
           target: "http://localhost:7000",

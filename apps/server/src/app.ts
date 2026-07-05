@@ -12,6 +12,7 @@
  */
 
 import { createContext } from "@brainiac/api/context";
+import { bootstrapAgencyLiveRedisSubscriber } from "@brainiac/api/routers/agency-ops/live";
 import { auth } from "@brainiac/auth";
 import { corsOrigins, env, primaryCorsOrigin } from "@brainiac/env/server";
 import { Hono } from "hono";
@@ -22,6 +23,12 @@ import { handleAppRouterRequest } from "./lib/handlers";
 import { logStartup } from "./lib/startup";
 import { registerTaskAttachmentUploadRoute } from "./lib/task-attachments";
 import { registerUserAvatarRoutes } from "./lib/user-avatar";
+import {
+  authenticateWebSocket,
+  handleWebSocketClose,
+  handleWebSocketMessage,
+  type AgencyWebSocketData,
+} from "./lib/ws-handler";
 
 function getRpcDebugResponse(error: unknown, path: string) {
   /**
@@ -135,6 +142,8 @@ function createApp() {
 const app = createApp();
 const port = Number(process.env.PORT || 7000);
 
+await bootstrapAgencyLiveRedisSubscriber();
+
 // Log startup information in development
 if (env.NODE_ENV === "development") {
   logStartup({
@@ -146,5 +155,32 @@ if (env.NODE_ENV === "development") {
 
 export default {
   port,
-  fetch: app.fetch,
+  fetch(request: Request, server: Bun.Server<AgencyWebSocketData>) {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/rpc/ws") {
+      const upgraded = server.upgrade(request, {
+        data: { request },
+      });
+
+      if (upgraded) {
+        return undefined;
+      }
+
+      return new Response("WebSocket upgrade failed", { status: 500 });
+    }
+
+    return app.fetch(request, server);
+  },
+  websocket: {
+    async open(ws: Bun.ServerWebSocket<AgencyWebSocketData>) {
+      await authenticateWebSocket(ws, ws.data.request);
+    },
+    message(ws: Bun.ServerWebSocket<AgencyWebSocketData>, message: string | Buffer) {
+      handleWebSocketMessage(ws, message);
+    },
+    close(ws: Bun.ServerWebSocket<AgencyWebSocketData>) {
+      handleWebSocketClose(ws);
+    },
+  },
 };

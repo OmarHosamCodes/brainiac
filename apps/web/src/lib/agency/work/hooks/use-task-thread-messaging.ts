@@ -19,6 +19,7 @@ import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 import type { AgencyTaskMessage } from "@/lib/schemas/agency-work";
 
 import { useAgencyVoiceRecorder } from "@/lib/agency/work/hooks/use-agency-voice-recorder";
+import { useTaskThreadLiveSync } from "@/lib/agency/work/hooks/use-task-thread-live-sync";
 import { useTaskThreadScroll } from "@/lib/agency/work/hooks/use-task-thread-scroll";
 
 type PendingAttachment = {
@@ -186,6 +187,7 @@ export function useTaskThreadMessaging({
   const clearError = useAgencyTaskMessagesStore((state) => state.clearError);
 
   const messagesQuery = useAgencyTaskMessagesInfiniteQuery(teamId, taskId);
+  const { connectionState: liveConnectionState } = useTaskThreadLiveSync({ teamId, taskId });
   const messageOverlayKey = `${teamId}:${taskId}`;
   const messageOverlay = useAgencyOptimisticStore(
     (state) => state.taskMessages[messageOverlayKey],
@@ -488,5 +490,6 @@ export function useTaskThreadMessaging({
     lastError,
     clearError,
     scroll,
+    liveConnectionState,
   };
 }

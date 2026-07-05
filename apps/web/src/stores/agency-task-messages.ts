@@ -11,6 +11,7 @@ import {
   isAgentPendingMessageId,
 } from "@/lib/utils/agency-thread-motion";
 import { createEmptyListOverlay } from "@/lib/utils/agency-optimistic-merge";
+import { insertLiveTaskMessageIntoInfiniteCache } from "@/lib/utils/agency-task-messages-cache";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 
 export type AgencyTaskMessageAttachment = {
@@ -93,6 +94,8 @@ type AgencyTaskMessagesState = {
   lastError: string | null;
   registerTaskMessagesQuery: (payload: RegisteredTaskMessagesQuery) => void;
   unregisterTaskMessagesQuery: (queryKey: QueryKey) => void;
+  applyLiveMessage: (teamId: string, taskId: string, message: AgencyTaskMessage) => void;
+  invalidateTaskMessages: (teamId: string, taskId: string) => Promise<void>;
   sendMessage: (payload: SendTaskMessagePayload) => Promise<AgencyTaskMessage | undefined>;
   askAgent: (payload: AskTaskAgentPayload) => Promise<
     | {
@@ -230,6 +233,37 @@ function prependMessagesDesc(
   return [...incoming, ...filtered];
 }
 
+function reconcileOverlayForLiveMessage(
+  teamId: string,
+  taskId: string,
+  message: AgencyTaskMessage,
+) {
+  const overlayKey = `${teamId}:${taskId}`;
+  const overlay = optimistic().taskMessages[overlayKey];
+  if (!overlay) {
+    return;
+  }
+
+  for (const [optimisticId, realId] of Object.entries(overlay.idMap)) {
+    if (realId === message.id) {
+      optimistic().deleteTaskMessage(teamId, taskId, optimisticId);
+    }
+  }
+
+  for (const [optimisticId, upsert] of Object.entries(overlay.upserts)) {
+    if (!optimisticId.startsWith("agency-task-message-")) {
+      continue;
+    }
+    if (upsert.userId && message.userId && upsert.userId !== message.userId) {
+      continue;
+    }
+    if (upsert.content.trim() !== message.content.trim()) {
+      continue;
+    }
+    optimistic().reconcileTaskMessage(teamId, taskId, optimisticId, message);
+  }
+}
+
 function patchInsertedTaskMessage(teamId: string, taskId: string, message: AgencyTaskMessage) {
   // ponytail: pending rows live in the overlay only; cache stays server-shaped so a
   // hot poll cannot wipe an optimistic id and flash the row away mid-reconcile.
@@ -356,6 +390,18 @@ export const useAgencyTaskMessagesStore = create<AgencyTaskMessagesState>((set) 
   unregisterTaskMessagesQuery: (queryKey) => {
     unregisterFrom(registryKey(queryKey));
   },
+
+  applyLiveMessage: (teamId, taskId, message) => {
+    if (!teamId || !taskId || !message?.id) {
+      return;
+    }
+    reconcileOverlayForLiveMessage(teamId, taskId, message);
+    patchMessagesForThread(teamId, taskId, (current) =>
+      insertLiveTaskMessageIntoInfiniteCache(current, message),
+    );
+  },
+
+  invalidateTaskMessages: (teamId, taskId) => invalidateTaskMessageQueries(teamId, taskId),
 
   sendMessage: async (payload) => {
     if (!payload.teamId || !payload.taskId) return;

@@ -22,6 +22,7 @@ import {
   requireTeamMembership,
   validateTaskAttachmentUploadReferences,
 } from "./service";
+import { liveUpdatedAt, publishAgencyLiveEvent } from "./live";
 
 function formatAttachmentSummary(
   attachments: Array<{
@@ -284,6 +285,23 @@ export async function askTaskAgent(
   const [userMessage, agentMessage] = await Promise.all([
     getTaskThreadMessageById(actorUserId, { teamId: input.teamId, messageId: userMessageId }),
     getTaskThreadMessageById(actorUserId, { teamId: input.teamId, messageId: agentMessageId }),
+  ]);
+
+  await Promise.all([
+    publishAgencyLiveEvent(input.teamId, {
+      type: "taskMessage.created",
+      teamId: input.teamId,
+      taskId: input.taskId,
+      updatedAt: liveUpdatedAt(userMessage.updatedAt),
+      message: userMessage,
+    }),
+    publishAgencyLiveEvent(input.teamId, {
+      type: "taskMessage.created",
+      teamId: input.teamId,
+      taskId: input.taskId,
+      updatedAt: liveUpdatedAt(agentMessage.updatedAt),
+      message: agentMessage,
+    }),
   ]);
 
   return {

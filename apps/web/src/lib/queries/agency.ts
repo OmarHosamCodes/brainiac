@@ -318,7 +318,6 @@ export function useAgencyTaskMessagesInfiniteQuery(teamId: string, taskId: strin
     },
     enabled: Boolean(teamId) && Boolean(taskId),
     staleTime: AGENCY_STALE_TIME.hot,
-    refetchInterval: AGENCY_POLL.hot,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
