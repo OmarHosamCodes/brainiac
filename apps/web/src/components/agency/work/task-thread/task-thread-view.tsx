@@ -29,7 +29,7 @@ export function TaskThreadView({ view, onEditJourney, journey }: TaskThreadViewP
   switch (view.status) {
     case "loading":
       return (
-        <section className="relative flex h-full flex-col rounded-2xl border border-default bg-default">
+        <section className="relative flex h-full flex-col rounded-2xl border border-border bg-background">
           <div className="flex-1 p-4">
             {[1, 2, 3, 4, 5, 6].map((rowIndex) => (
               <Skeleton key={rowIndex} className="mb-3 h-16 rounded-xl" />
@@ -39,11 +39,11 @@ export function TaskThreadView({ view, onEditJourney, journey }: TaskThreadViewP
       );
     case "error":
       return (
-        <section className="relative flex h-full flex-col rounded-2xl border border-default bg-default">
+        <section className="relative flex h-full flex-col rounded-2xl border border-border bg-background">
           <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-            <AlertTriangle className="size-5 text-error" />
-            <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load thread.</p>
-            <p className="mt-1 text-xs text-muted">{view.message}</p>
+            <AlertTriangle className="size-5 text-destructive" />
+            <p className="mt-3 text-sm font-bold text-foreground">Couldn't load thread.</p>
+            <p className="mt-1 text-xs text-muted-foreground">{view.message}</p>
             <Button variant="secondary" size="sm" className="mt-3" onClick={view.onRetry}>
               Retry
             </Button>
@@ -53,7 +53,7 @@ export function TaskThreadView({ view, onEditJourney, journey }: TaskThreadViewP
     case "ready":
       return (
         <section
-          className="relative flex h-full min-h-0 flex-col rounded-2xl border border-default bg-default"
+          className="relative flex h-full min-h-0 flex-col rounded-2xl border border-border bg-background"
           onDragOver={view.onThreadDragOver}
           onDragLeave={view.onThreadDragLeave}
           onDrop={view.onThreadDrop}
@@ -62,21 +62,21 @@ export function TaskThreadView({ view, onEditJourney, journey }: TaskThreadViewP
             <div
               role="status"
               aria-live="polite"
-              className="pointer-events-none absolute inset-2 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 text-sm font-bold text-highlighted"
+              className="pointer-events-none absolute inset-2 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 text-sm font-bold text-foreground"
             >
               Drop files to attach them to this task.
             </div>
           ) : null}
 
-          <header className="border-b border-default px-4 py-3">
+          <header className="border-b border-border px-4 py-3">
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={view.onBack} aria-label="Back to tasks">
                   <ArrowLeft />
                 </Button>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-highlighted">{view.taskTitle}</p>
-                  <p className="truncate text-xs text-muted">
+                  <p className="truncate text-sm font-bold text-foreground">{view.taskTitle}</p>
+                  <p className="truncate text-xs text-muted-foreground">
                     {view.clientName} · {view.projectName}
                   </p>
                 </div>
@@ -110,7 +110,7 @@ export function TaskThreadView({ view, onEditJourney, journey }: TaskThreadViewP
                 {onEditJourney ? (
                   <Button
                     type="button"
-                    variant="secondary"
+                    variant="default"
                     size="sm"
                     className="shrink-0"
                     onClick={onEditJourney}
@@ -130,7 +130,7 @@ export function TaskThreadView({ view, onEditJourney, journey }: TaskThreadViewP
                     "motion-reduce:transition-none",
                     view.agentEnabled
                       ? "bg-primary/10 text-primary hover:bg-primary/15"
-                      : "text-muted hover:bg-elevated hover:text-highlighted",
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                   onClick={() => view.onAgentEnabledChange(!view.agentEnabled)}
                 >
@@ -141,7 +141,7 @@ export function TaskThreadView({ view, onEditJourney, journey }: TaskThreadViewP
           </header>
 
           {journey ? (
-            <div className="border-b border-default px-4 py-3">
+            <div className="border-b border-border px-4 py-3">
               <AgencyProjectJourneyStepper
                 teamId={journey.teamId}
                 projectId={journey.projectId}
@@ -166,7 +166,7 @@ export function TaskThreadView({ view, onEditJourney, journey }: TaskThreadViewP
             onClearError={view.onClearError}
           />
 
-          <div className="border-t border-default p-3">
+          <div className="border-t border-border p-3">
             <TaskThreadComposer composer={view.composer} voice={view.voice} />
           </div>
         </section>
