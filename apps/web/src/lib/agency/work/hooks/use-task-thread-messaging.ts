@@ -2,13 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useAgencyTaskMessagesInfiniteQuery } from "@/lib/queries/agency";
-import { getRpcBaseUrl } from "@/lib/env";
+import { authClient } from "@/lib/auth-client";
+import { getRpcBaseUrl, getServerUrl } from "@/lib/env";
 import { orpcClient } from "@/lib/orpc";
 import {
   normalizeAttachmentUrl,
+  collectClipboardFiles,
   type AttachmentMetadataLike,
 } from "@/lib/utils/agency-attachment-utils";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { getUserAvatarPublicUrl } from "@/lib/user-avatar-url";
 import {
   isAgentPendingMessageId,
   isOptimisticTaskMessage,
@@ -45,6 +48,7 @@ export type TaskThreadMessageViewModel = {
   isAgentPending: boolean;
   senderType: AgencyTaskMessage["senderType"] | "system";
   userName: string;
+  userAvatar: string | null;
   createdAt: string;
   content: string | null;
   type: AgencyTaskMessage["type"];
@@ -65,6 +69,7 @@ export type TaskThreadComposerViewModel = {
   onContentChange: (value: string) => void;
   onSend: () => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onPaste: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onImageInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onDocumentInputChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onDrop: (event: React.DragEvent) => void;
@@ -187,6 +192,17 @@ export function useTaskThreadMessaging({
   const clearError = useAgencyTaskMessagesStore((state) => state.clearError);
 
   const messagesQuery = useAgencyTaskMessagesInfiniteQuery(teamId, taskId);
+  const session = authClient.useSession();
+  const selfAvatarUrl = useMemo(() => {
+    const user = session.data?.user;
+    const serverUrl = getServerUrl();
+    if (!user?.id || !user.image || !serverUrl) return null;
+    return getUserAvatarPublicUrl({
+      baseUrl: serverUrl,
+      userId: user.id,
+      storageKey: user.image,
+    });
+  }, [session.data?.user]);
   const { connectionState: liveConnectionState } = useTaskThreadLiveSync({ teamId, taskId });
   const messageOverlayKey = `${teamId}:${taskId}`;
   const messageOverlay = useAgencyOptimisticStore(
@@ -221,22 +237,26 @@ export function useTaskThreadMessaging({
 
   const messages: TaskThreadMessageViewModel[] = useMemo(
     () =>
-      rawMessages.map((message, index) => ({
-        id: message.id,
-        animationKey: resolveMessageAnimationKey(message.id, overlay.idMap),
-        isOptimistic: isOptimisticTaskMessage(message.id, overlay),
-        isAgentPending: isAgentPendingMessageId(message.id),
-        senderType: message.senderType,
-        userName: message.userName,
-        createdAt: message.createdAt,
-        content: message.content,
-        type: message.type,
-        attachments: message.attachments,
-        showDateDivider:
-          index === 0 || !sameDay(message.createdAt, rawMessages[index - 1]?.createdAt ?? ""),
-        dateLabel: formatDate(message.createdAt),
-      })),
-    [rawMessages, overlay],
+      rawMessages.map((message, index) => {
+        const isOptimistic = isOptimisticTaskMessage(message.id, overlay);
+        return {
+          id: message.id,
+          animationKey: resolveMessageAnimationKey(message.id, overlay.idMap),
+          isOptimistic,
+          isAgentPending: isAgentPendingMessageId(message.id),
+          senderType: message.senderType,
+          userName: message.userName,
+          userAvatar: message.userAvatar ?? (isOptimistic ? selfAvatarUrl : null),
+          createdAt: message.createdAt,
+          content: message.content,
+          type: message.type,
+          attachments: message.attachments,
+          showDateDivider:
+            index === 0 || !sameDay(message.createdAt, rawMessages[index - 1]?.createdAt ?? ""),
+          dateLabel: formatDate(message.createdAt),
+        };
+      }),
+    [rawMessages, overlay, selfAvatarUrl],
   );
 
   const scrollAnchorKey =
@@ -429,6 +449,19 @@ export function useTaskThreadMessaging({
     [uploadFiles],
   );
 
+  const handlePaste = useCallback(
+    (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+      if (isSending || agentPending) return;
+
+      const files = collectClipboardFiles(event.clipboardData);
+      if (files.length === 0) return;
+
+      event.preventDefault();
+      void uploadFiles(files);
+    },
+    [agentPending, isSending, uploadFiles],
+  );
+
   const composer: TaskThreadComposerViewModel = {
     content,
     isDragging,
@@ -444,6 +477,7 @@ export function useTaskThreadMessaging({
     onContentChange: setContent,
     onSend: () => void send(),
     onKeyDown,
+    onPaste: handlePaste,
     onImageInputChange: handleFileInputChange,
     onDocumentInputChange: handleFileInputChange,
     onDrop: (event) => {

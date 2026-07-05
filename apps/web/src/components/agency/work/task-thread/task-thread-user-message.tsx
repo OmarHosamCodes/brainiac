@@ -1,4 +1,5 @@
 import { AgencyAttachmentGrid } from "@/components/agency/agency-attachment-grid";
+import { AgencyMemberAvatar } from "@/components/agency/agency-member-avatar";
 import { AgencyTaskMediaPlayer } from "@/components/agency/agency-task-media-player";
 import type { AgencyTaskMessageAttachment } from "@/lib/schemas/agency-work";
 import {
@@ -25,7 +26,7 @@ export function TaskThreadMessageBody({
   return (
     <>
       {messageType === "text" || content ? (
-        <div className="mt-1 whitespace-pre-wrap text-sm text-default">{content}</div>
+        <div className="mt-1 whitespace-pre-wrap text-sm text-foreground">{content}</div>
       ) : null}
 
       {messageType === "voice" || audioAttachments.length > 0 ? (
@@ -62,6 +63,7 @@ function formatTime(iso: string): string {
 
 type TaskThreadUserMessageProps = {
   userName: string;
+  userAvatar: string | null;
   createdAt: string;
   attachments: AgencyTaskMessageAttachment[];
   messageType: string;
@@ -71,6 +73,7 @@ type TaskThreadUserMessageProps = {
 
 export function TaskThreadUserMessage({
   userName,
+  userAvatar,
   createdAt,
   attachments,
   messageType,
@@ -80,13 +83,16 @@ export function TaskThreadUserMessage({
   return (
     <div className={isOptimistic ? "opacity-70" : undefined}>
       <div className="flex gap-3">
-        <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted">
-          {userName.slice(0, 2)}
-        </div>
+        <AgencyMemberAvatar
+          name={userName}
+          avatarUrl={userAvatar}
+          size="sm"
+          className="size-6 rounded-full"
+        />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-xs font-bold text-highlighted">{userName}</span>
-            <span className="text-[11px] text-muted">{formatTime(createdAt)}</span>
+            <span className="text-xs font-bold text-foreground">{userName}</span>
+            <span className="text-[11px] text-muted-foreground">{formatTime(createdAt)}</span>
           </div>
           <TaskThreadMessageBody
             attachments={attachments}

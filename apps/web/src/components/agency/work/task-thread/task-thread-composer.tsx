@@ -109,6 +109,7 @@ export function TaskThreadComposer({ composer, voice }: TaskThreadComposerProps)
     onContentChange,
     onSend,
     onKeyDown,
+    onPaste,
     onImageInputChange,
     onDocumentInputChange,
     onDrop,
@@ -152,6 +153,7 @@ export function TaskThreadComposer({ composer, voice }: TaskThreadComposerProps)
         )}
         disabled={isBusy}
         onKeyDown={onKeyDown}
+        onPaste={onPaste}
       />
 
       {micError ? <p className="mt-1 text-xs text-error">{micError}</p> : null}

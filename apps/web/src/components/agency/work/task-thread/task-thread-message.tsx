@@ -36,7 +36,7 @@ export function TaskThreadMessage({ message }: TaskThreadMessageProps) {
             isPending={message.isAgentPending}
           />
           {message.attachments.length > 0 ? (
-            <div className="mt-2 pl-1">
+            <div className="mt-2 pl-9">
               <TaskThreadMessageBody
                 attachments={message.attachments}
                 messageType={message.type}
@@ -50,6 +50,7 @@ export function TaskThreadMessage({ message }: TaskThreadMessageProps) {
       {message.senderType === "user" ? (
         <TaskThreadUserMessage
           userName={message.userName}
+          userAvatar={message.userAvatar}
           createdAt={message.createdAt}
           attachments={message.attachments}
           messageType={message.type}
