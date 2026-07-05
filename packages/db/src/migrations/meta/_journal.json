@@ -120,6 +120,13 @@
       "when": 1785400000000,
       "tag": "0016_project_journey",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1786000000000,
+      "tag": "0017_task_is_waste",
+      "breakpoints": true
     }
   ]
 }

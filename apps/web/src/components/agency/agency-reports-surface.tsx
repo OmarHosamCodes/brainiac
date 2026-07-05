@@ -1,56 +1,28 @@
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, BarChart2, History } from "lucide-react";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   AgencyDashboardCommandBar,
   type RangePreset,
 } from "@/components/agency/agency-dashboard-command-bar";
+import { AgencyReportsTable } from "@/components/agency/agency-reports-table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { orpc, orpcClient } from "@/lib/orpc";
+import { fetchAllReportEntries } from "@/lib/agency/reports/fetch-report-entries";
+import { orpc } from "@/lib/orpc";
 import { useAgencyClientsQuery } from "@/lib/queries/agency";
 import {
   getCurrentTenurePeriodRange,
   resolveDefaultDashboardRangePreset,
 } from "@/lib/tenure-utils";
-import {
-  agencyEmptyPanelClass,
-  agencyErrorPanelClass,
-  agencyMetricClass,
-} from "@/lib/utils/agency-ui";
-import { formatDuration } from "@/lib/utils/format-duration";
+import { agencyEmptyPanelClass, agencyErrorPanelClass } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 type AgencyReportsSurfaceProps = {
   teamId: string;
 };
-
-type AgencyReportEntry = Awaited<
-  ReturnType<typeof orpcClient.agencyOps.reports.listEntries>
->["items"][number];
-
-type ProjectGroup = {
-  projectId: string;
-  projectName: string;
-  rows: AgencyReportEntry[];
-};
-
-type ClientGroup = {
-  clientId: string;
-  clientName: string;
-  projects: ProjectGroup[];
-  totalSeconds: number;
-};
-
-type ReportEntryFilters = {
-  clientId?: string;
-  projectId?: string;
-  memberUserId?: string;
-};
-
-const ENTRIES_PAGE_SIZE = 100;
 
 function startOfWeekUtc(): Date {
   const now = new Date();
@@ -73,95 +45,9 @@ function dateInputToIso(value: string, endOfDay = false): string {
   return date.toISOString();
 }
 
-function sortRowsByStartedAt(rows: AgencyReportEntry[]): AgencyReportEntry[] {
-  return [...rows].sort(
-    (left, right) => new Date(right.startedAt).getTime() - new Date(left.startedAt).getTime(),
-  );
-}
-
-function groupEntriesByClient(entries: AgencyReportEntry[]): ClientGroup[] {
-  const byClient = new Map<
-    string,
-    {
-      clientId: string;
-      clientName: string;
-      byProject: Map<string, ProjectGroup>;
-      totalSeconds: number;
-    }
-  >();
-
-  for (const entry of entries) {
-    let client = byClient.get(entry.clientId);
-    if (!client) {
-      client = {
-        clientId: entry.clientId,
-        clientName: entry.clientName,
-        byProject: new Map(),
-        totalSeconds: 0,
-      };
-      byClient.set(entry.clientId, client);
-    }
-
-    client.totalSeconds += entry.durationSeconds;
-
-    let project = client.byProject.get(entry.projectId);
-    if (!project) {
-      project = {
-        projectId: entry.projectId,
-        projectName: entry.projectName,
-        rows: [],
-      };
-      client.byProject.set(entry.projectId, project);
-    }
-    project.rows.push(entry);
-  }
-
-  return [...byClient.values()]
-    .sort((left, right) => left.clientName.localeCompare(right.clientName))
-    .map((client) => ({
-      clientId: client.clientId,
-      clientName: client.clientName,
-      totalSeconds: client.totalSeconds,
-      projects: [...client.byProject.values()]
-        .sort((left, right) => left.projectName.localeCompare(right.projectName))
-        .map((project) => ({
-          ...project,
-          rows: sortRowsByStartedAt(project.rows),
-        })),
-    }));
-}
-
-// ponytail: sequential page fetches; upgrade path is a bulk reports.entries endpoint.
-async function fetchAllReportEntries(
-  teamId: string,
-  range: { from: string; to: string },
-  filters: ReportEntryFilters,
-): Promise<AgencyReportEntry[]> {
-  const items: AgencyReportEntry[] = [];
-  let page = 1;
-
-  while (true) {
-    const result = await orpcClient.agencyOps.reports.listEntries({
-      teamId,
-      from: range.from,
-      to: range.to,
-      clientId: filters.clientId,
-      projectId: filters.projectId,
-      memberUserId: filters.memberUserId,
-      page,
-      pageSize: ENTRIES_PAGE_SIZE,
-    });
-    items.push(...result.items);
-    if (items.length >= result.total || result.items.length < ENTRIES_PAGE_SIZE) {
-      break;
-    }
-    page += 1;
-  }
-
-  return items;
-}
-
 export function AgencyReportsSurface({ teamId }: AgencyReportsSurfaceProps) {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const now = useMemo(() => new Date(), []);
 
   const tenurePolicyQuery = useQuery({
@@ -279,13 +165,6 @@ export function AgencyReportsSurface({ teamId }: AgencyReportsSurfaceProps) {
   });
 
   const entries = entriesQuery.data ?? [];
-  const clientGroups = useMemo(() => groupEntriesByClient(entries), [entries]);
-  const totalSeconds = useMemo(
-    () => entries.reduce((sum, entry) => sum + entry.durationSeconds, 0),
-    [entries],
-  );
-
-  const exportCsvMutation = useMutation(orpc.agencyOps.reports.exportCsv.mutationOptions());
 
   const projects = projectsQuery.data?.items ?? [];
   const clients = (clientsQuery.data?.items ?? []).map((client) => ({
@@ -331,34 +210,19 @@ export function AgencyReportsSurface({ teamId }: AgencyReportsSurfaceProps) {
     setAppliedClientId("");
   }
 
-  async function downloadCsv() {
-    if (!teamId) return;
-    try {
-      const result = await exportCsvMutation.mutateAsync({
-        teamId,
-        from: range.from,
-        to: range.to,
-        clientId: appliedFilters.clientId,
-        projectId: appliedFilters.projectId,
-        memberUserId: appliedFilters.memberUserId,
-      });
-      const blob = new Blob([result.csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = result.fileName;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast.success("Export ready", {
-        description: `${result.totalRows} rows in ${result.fileName}`,
-      });
-    } catch (error) {
-      toast.error("Export failed", {
-        description: getErrorMessage(error, "Try again."),
-      });
-    }
+  function openReportCreator() {
+    const next = new URLSearchParams(searchParams);
+    next.set("section", "reports");
+    next.set("report", "create");
+    next.set("from", range.from);
+    next.set("to", range.to);
+    if (appliedFilters.clientId) next.set("client", appliedFilters.clientId);
+    else next.delete("client");
+    if (appliedFilters.projectId) next.set("project", appliedFilters.projectId);
+    else next.delete("project");
+    if (appliedFilters.memberUserId) next.set("member", appliedFilters.memberUserId);
+    else next.delete("member");
+    navigate(`/agency?${next.toString()}`);
   }
 
   const filtersLoading =
@@ -397,10 +261,8 @@ export function AgencyReportsSurface({ teamId }: AgencyReportsSurfaceProps) {
               <Button
                 variant="secondary"
                 size="sm"
-                disabled={
-                  entries.length === 0 || exportCsvMutation.isPending || entriesQuery.isFetching
-                }
-                onClick={() => void downloadCsv()}
+                disabled={entries.length === 0 || entriesQuery.isFetching}
+                onClick={openReportCreator}
               >
                 Create report
               </Button>
@@ -454,79 +316,7 @@ export function AgencyReportsSurface({ teamId }: AgencyReportsSurfaceProps) {
           </p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {clientGroups.map((clientGroup) => (
-            <section key={clientGroup.clientId} className="space-y-2">
-              <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-                <h3 className="text-sm font-bold text-highlighted">{clientGroup.clientName}</h3>
-                <p className="text-xs text-muted">
-                  <span className={agencyMetricClass}>
-                    {formatDuration(clientGroup.totalSeconds, "clock")}
-                  </span>
-                  {" total"}
-                </p>
-              </div>
-              <div className="overflow-x-auto rounded-2xl border border-default bg-default">
-                <table className="w-full min-w-[40rem] text-xs">
-                  <caption className="sr-only">
-                    Time entries for {clientGroup.clientName}, grouped by project
-                  </caption>
-                  <thead className="border-b border-default bg-muted/55">
-                    <tr className="text-left text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
-                      <th scope="col" className="w-48 px-4 py-2.5 font-bold">
-                        Project
-                      </th>
-                      <th scope="col" className="px-4 py-2.5 font-bold">
-                        Description
-                      </th>
-                      <th scope="col" className="w-28 px-4 py-2.5 text-right font-bold">
-                        Duration
-                      </th>
-                      <th scope="col" className="w-36 px-4 py-2.5 font-bold">
-                        Assignee
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {clientGroup.projects.flatMap((project) =>
-                      project.rows.map((row, rowIndex) => (
-                        <tr key={row.id} className="border-b border-default last:border-b-0">
-                          {rowIndex === 0 ? (
-                            <td
-                              rowSpan={project.rows.length}
-                              className="border-r border-default bg-elevated/40 px-4 py-3 align-middle text-xs font-bold text-highlighted"
-                            >
-                              {project.projectName}
-                            </td>
-                          ) : null}
-                          <td
-                            className="max-w-md truncate px-4 py-3 text-highlighted"
-                            title={row.description || undefined}
-                            dir="auto"
-                          >
-                            {row.description || "—"}
-                          </td>
-                          <td className="px-4 py-3 text-right font-mono tabular-nums text-muted">
-                            {formatDuration(row.durationSeconds, "clock")}
-                          </td>
-                          <td className="px-4 py-3 text-highlighted">{row.userName}</td>
-                        </tr>
-                      )),
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          ))}
-
-          <p className="text-xs text-muted">
-            <span className={agencyMetricClass}>{entries.length}</span>
-            {entries.length === 1 ? " entry" : " entries"}
-            <span aria-hidden="true"> · </span>
-            <span className={agencyMetricClass}>{formatDuration(totalSeconds, "clock")}</span>
-            {" total"}
-          </p>
-        </div>
+        <AgencyReportsTable entries={entries} />
       )}
     </div>
   );

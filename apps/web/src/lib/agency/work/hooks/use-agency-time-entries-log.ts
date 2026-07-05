@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import {
   useAgencyTimeEntriesLogStore,
@@ -17,6 +17,7 @@ import {
   validateTimeEntryDraft,
   type TimeEntryDraft,
 } from "@/lib/schemas/agency-time-entry";
+import { orpcClient } from "@/lib/orpc";
 import {
   selectIsTimerMutationPending,
   useAgencyTimeTrackingStore,
@@ -50,6 +51,8 @@ export type AgencyTimeEntriesLogViewModel = {
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  onToggleWaste: (entryId: string) => Promise<void>;
+  togglingWasteEntryIds: string[];
   onRequestOpenTaskChooser: () => void;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   showPagination: boolean;
@@ -86,6 +89,7 @@ export function useAgencyTimeEntriesLog({
   const resetForTeam = useAgencyTimeEntriesLogStore((s) => s.resetForTeam);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [togglingWasteEntryIds, setTogglingWasteEntryIds] = useState<string[]>([]);
 
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, page, pageSize);
   const projectsQuery = useAgencyProjectsQuery(teamId);
@@ -197,6 +201,23 @@ export function useAgencyTimeEntriesLog({
     });
   }
 
+  async function toggleWaste(entryId: string) {
+    const entry = entries.find((item) => item.id === entryId);
+    if (!teamId || !entry?.taskId) return;
+
+    setTogglingWasteEntryIds((current) => [...current, entryId]);
+    try {
+      await orpcClient.agencyOps.projectTasks.update({
+        teamId,
+        taskId: entry.taskId,
+        isWaste: !(entry.taskIsWaste === true),
+      });
+      await entriesQuery.refetch();
+    } finally {
+      setTogglingWasteEntryIds((current) => current.filter((id) => id !== entryId));
+    }
+  }
+
   return {
     teamId,
     className,
@@ -217,6 +238,8 @@ export function useAgencyTimeEntriesLog({
     onDeleteGroup: (entryIds) => void deleteGroupEntries(entryIds),
     onDeleteEntry: (entryId) => void deleteEntry(entryId),
     onSaveEdit: saveEdit,
+    onToggleWaste: toggleWaste,
+    togglingWasteEntryIds,
     onRequestOpenTaskChooser: requestOpenTaskChooser,
     scrollContainerRef,
     showPagination: totalEntries > pageSize,

@@ -77,6 +77,8 @@ type UseAgencyTimeEntryRowOptions = {
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  onToggleWaste: (entryId: string) => Promise<void>;
+  togglingWasteEntryIds: string[];
   highlighted?: boolean;
 };
 
@@ -97,6 +99,8 @@ export type AgencyTimeEntryRowViewModel = {
   editSaving: boolean;
   rowDeleting: boolean;
   rowUpdating: boolean;
+  rowWastePending: boolean;
+  isWaste: boolean;
   timeRange: string;
   durationLabel: string;
   displayTitle: string;
@@ -104,6 +108,7 @@ export type AgencyTimeEntryRowViewModel = {
   onRestart: () => void;
   onDeleteGroup: () => void;
   onDeleteEntry: (entryId: string) => void;
+  onToggleWaste: () => void;
   onDescriptionChange: (value: string) => void;
   onDescriptionBlur: () => void;
   onDescriptionKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
@@ -130,6 +135,8 @@ export function useAgencyTimeEntryRow({
   onDeleteGroup,
   onDeleteEntry,
   onSaveEdit,
+  onToggleWaste,
+  togglingWasteEntryIds,
   highlighted = false,
 }: UseAgencyTimeEntryRowOptions): AgencyTimeEntryRowViewModel {
   const activeTimer = useAgencyActiveTimerQuery(teamId).data?.timer ?? null;
@@ -224,6 +231,8 @@ export function useAgencyTimeEntryRow({
 
   const rowDeleting = group.entries.some((entry) => deletingEntryIds.includes(entry.id));
   const rowUpdating = group.entries.some((entry) => updatingEntryIds.includes(entry.id));
+  const rowWastePending = group.entries.some((entry) => togglingWasteEntryIds.includes(entry.id));
+  const isWaste = primaryEntry.taskIsWaste === true;
   const timeRange = isMulti
     ? formatGroupTimeRange(group)
     : formatTimeRange(primaryEntry.startedAt, primaryEntry.endedAt);
@@ -257,6 +266,8 @@ export function useAgencyTimeEntryRow({
     editSaving,
     rowDeleting,
     rowUpdating,
+    rowWastePending,
+    isWaste,
     timeRange,
     durationLabel,
     displayTitle: displayTitle(group),
@@ -264,6 +275,7 @@ export function useAgencyTimeEntryRow({
     onRestart: () => onRestart(group),
     onDeleteGroup: () => onDeleteGroup(group.entries.map((entry) => entry.id)),
     onDeleteEntry,
+    onToggleWaste: () => void onToggleWaste(primaryEntry.id),
     onDescriptionChange: setDescriptionDraft,
     onDescriptionBlur: () => void saveDescriptionEdit(),
     onDescriptionKeyDown: (event) => {

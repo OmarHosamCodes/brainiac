@@ -10,6 +10,7 @@ import { AgencyProUpsell } from "@/components/agency/agency-pro-upsell";
 import { AgencyProjectDetail } from "@/components/agency/agency-project-detail";
 import { AgencyProjectsTable } from "@/components/agency/agency-projects-table";
 import { AgencyReportsSurface } from "@/components/agency/agency-reports-surface";
+import { AgencyReportCreatorSurface } from "@/components/agency/agency-report-creator-surface";
 import { AgencySubtitleBreadcrumb } from "@/components/agency/agency-subtitle-breadcrumb";
 import { AgencyPresenceAvatars } from "@/components/agency/agency-presence-avatars";
 import { AgencyTeamBreadcrumb } from "@/components/agency/agency-team-breadcrumb";
@@ -108,6 +109,9 @@ export function AgencyPage() {
     }
     if (nextSegment !== "management") {
       next.delete("manage");
+    }
+    if (nextSegment !== "reports") {
+      next.delete("report");
     }
     setSearchParams(next, { replace: true });
   }
@@ -263,7 +267,11 @@ export function AgencyPage() {
                     <AgencyClientsSurface teamId={selectedTeamId} />
                   ) : null}
                   {segment === "reports" ? (
-                    <AgencyReportsSurface teamId={selectedTeamId} />
+                    searchParams.get("report") === "create" ? (
+                      <AgencyReportCreatorSurface teamId={selectedTeamId} />
+                    ) : (
+                      <AgencyReportsSurface teamId={selectedTeamId} />
+                    )
                   ) : null}
                   {segment === "management" ? (
                     <AgencyManagementSurface teamId={selectedTeamId} />

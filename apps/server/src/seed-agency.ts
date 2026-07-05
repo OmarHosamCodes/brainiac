@@ -34,8 +34,6 @@ import {
   resolveAgencySeedScale,
   type AgencySeedScale,
 } from "./lib/seed-agency-scale";
-import type { MemberRecord, SeedActor, SeedContext } from "./lib/seed-agency-types";
-
 type SeedUserKey = import("./lib/seed-agency-types").SeedUserKey;
 
 type SeedUserDefinition = {
@@ -1190,13 +1188,14 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
         updatedAt: msg.createdAt,
       });
 
-      if (msg.attachments && msg.attachments.length > 0) {
+      const attachments = (msg as SeedMessageDef).attachments;
+      if (attachments && attachments.length > 0) {
         await seedTaskMessageAttachments({
           teamId,
           taskId: t.id,
           messageId: msg.id,
           createdAt: msg.createdAt,
-          attachments: msg.attachments,
+          attachments,
         });
       }
     }

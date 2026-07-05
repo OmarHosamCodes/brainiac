@@ -50,6 +50,7 @@ type AgencyProjectTask = {
   status: "open" | "in_progress" | "done" | "archived";
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
+  isWaste: boolean;
   assignees: Array<{
     userId: string;
     userName: string;
@@ -725,6 +726,7 @@ function createAgencyOpsActions(
       status: "open",
       taskKind,
       assignedToTeam: false,
+      isWaste: false,
       assignees: assigneeIds.map((userId) => ({
         userId,
         userName: "",
@@ -870,6 +872,7 @@ function createAgencyOpsActions(
       status: payload.status ?? "open",
       taskKind: "standard",
       assignedToTeam,
+      isWaste: false,
       // Assignees required so assignee-filtered active lists accept the optimistic row.
       assignees: assigneeUserIds.map((userId) => ({
         userId,
@@ -907,6 +910,7 @@ function createAgencyOpsActions(
         patchUpdatedProjectTask(payload.teamId, {
           ...existingByTitle,
           assignedToTeam,
+          isWaste: existingByTitle.isWaste ?? false,
           assignees:
             assigneeUserIds.length > 0
               ? assigneeUserIds.map((userId) => ({

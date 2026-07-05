@@ -15,6 +15,7 @@ import {
   agencyTimeEntryRowHighlightClass,
   agencyTimeEntryTimeInputClass,
 } from "@/lib/utils/agency-ui";
+import { reportEntryWasteRowClass } from "@/lib/utils/agency-report-grouping";
 import { cn } from "@/lib/utils";
 
 const descriptionLeadingSlotClass = "flex w-8 shrink-0 items-center justify-start";
@@ -40,12 +41,15 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     editSaving,
     rowDeleting,
     rowUpdating,
+    rowWastePending,
+    isWaste,
     timeRange,
     durationLabel,
     displayTitle,
     onToggleExpand,
     onRestart,
     onDeleteGroup,
+    onToggleWaste,
     onDescriptionChange,
     onDescriptionBlur,
     onDescriptionKeyDown,
@@ -77,6 +81,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         agencyTimeEntryRowClass,
         agencyTimeEntryGridClass,
         highlighted && agencyTimeEntryRowHighlightClass,
+        isWaste && reportEntryWasteRowClass,
         className,
       )}
     >
@@ -261,11 +266,15 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               id: primaryEntryId,
               projectName: group.projectName,
               taskTitle: group.taskTitle,
+              taskId: group.taskId,
+              taskIsWaste: isWaste,
             }}
             canRestart={canRestart}
             deleting={rowDeleting || rowUpdating || editSaving}
+            wastePending={rowWastePending}
             onRestart={onRestart}
             onDelete={() => onDeleteGroup()}
+            onToggleWaste={group.taskId ? onToggleWaste : undefined}
           />
         )}
       </div>

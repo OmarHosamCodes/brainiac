@@ -98,6 +98,7 @@ type AgencyProjectTaskRecord = {
   status: "open" | "in_progress" | "done" | "archived";
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
+  isWaste: boolean;
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
   viewerCompletionCount?: number;
@@ -221,6 +222,7 @@ type AgencyTimeEntryRecord = {
   projectId: string;
   taskId: string | null;
   taskTitle: string | null;
+  taskIsWaste: boolean | null;
   projectName: string;
   clientId: string;
   clientName: string;
@@ -232,6 +234,48 @@ type AgencyTimeEntryRecord = {
   createdAt: string;
   updatedAt: string;
 };
+
+function mapAgencyTimeEntryRow(row: {
+  id: string;
+  teamId: string;
+  userId: string;
+  userName: string | null;
+  projectId: string;
+  taskId: string | null;
+  taskTitle: string | null;
+  taskIsWaste: boolean | null;
+  projectName: string;
+  clientId: string;
+  clientName: string;
+  source: AgencyTimeEntrySource;
+  description: string;
+  startedAt: Date;
+  endedAt: Date;
+  durationSeconds: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): AgencyTimeEntryRecord {
+  return {
+    id: row.id,
+    teamId: row.teamId,
+    userId: row.userId,
+    userName: row.userName ?? "Unknown",
+    projectId: row.projectId,
+    taskId: row.taskId ?? null,
+    taskTitle: row.taskTitle ?? null,
+    taskIsWaste: row.taskId ? (row.taskIsWaste ?? false) : null,
+    projectName: row.projectName,
+    clientId: row.clientId,
+    clientName: row.clientName,
+    source: row.source,
+    description: row.description,
+    startedAt: row.startedAt.toISOString(),
+    endedAt: row.endedAt.toISOString(),
+    durationSeconds: row.durationSeconds,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
 
 type AgencyActiveTimerRecord = {
   id: string;
@@ -438,6 +482,7 @@ function mapProjectTaskRow(row: {
   status: "open" | "in_progress" | "done" | "archived";
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
+  isWaste: boolean;
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
   viewerCompletionCount?: number;
@@ -454,6 +499,7 @@ function mapProjectTaskRow(row: {
     status: row.status,
     taskKind: row.taskKind,
     assignedToTeam: row.assignedToTeam,
+    isWaste: row.isWaste,
     assignees: row.assignees,
     ...(row.viewerStatus !== undefined ? { viewerStatus: row.viewerStatus } : {}),
     ...(row.viewerCompletionCount !== undefined
@@ -675,6 +721,7 @@ async function buildProjectTaskRecord(
     status: "open" | "in_progress" | "done" | "archived";
     taskKind: "standard" | "journey_anchor" | "journey_milestone";
     assignedToTeam: boolean;
+    isWaste: boolean;
     dueDate: Date | null;
     createdAt: Date;
     updatedAt: Date;
@@ -773,6 +820,7 @@ const projectTaskColumns = {
   status: agencyOpsProjectTask.status,
   taskKind: agencyOpsProjectTask.taskKind,
   assignedToTeam: agencyOpsProjectTask.assignedToTeam,
+  isWaste: agencyOpsProjectTask.isWaste,
   dueDate: agencyOpsProjectTask.dueDate,
   createdAt: agencyOpsProjectTask.createdAt,
   updatedAt: agencyOpsProjectTask.updatedAt,
@@ -786,6 +834,7 @@ type ProjectTaskRow = {
   status: "open" | "in_progress" | "done" | "archived";
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
+  isWaste: boolean;
   dueDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -893,6 +942,7 @@ async function getActiveTimerByUser(userId: string) {
       projectId: agencyOpsActiveTimer.projectId,
       taskId: agencyOpsActiveTimer.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       description: agencyOpsActiveTimer.description,
       startedAt: agencyOpsActiveTimer.startedAt,
@@ -1024,6 +1074,7 @@ async function getReportRows(
       clientName: agencyOpsClient.name,
       projectId: agencyOpsProject.id,
       taskId: agencyOpsTimeEntry.taskId,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
@@ -1032,6 +1083,7 @@ async function getReportRows(
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
     .innerJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .where(and(...filters))
     .orderBy(desc(agencyOpsTimeEntry.startedAt));
 
@@ -2235,18 +2287,7 @@ export async function listAgencyProjectTasks(
   const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
 
   const rows = await db
-    .select({
-      id: agencyOpsProjectTask.id,
-      teamId: agencyOpsProjectTask.teamId,
-      projectId: agencyOpsProjectTask.projectId,
-      title: agencyOpsProjectTask.title,
-      status: agencyOpsProjectTask.status,
-      taskKind: agencyOpsProjectTask.taskKind,
-      assignedToTeam: agencyOpsProjectTask.assignedToTeam,
-      dueDate: agencyOpsProjectTask.dueDate,
-      createdAt: agencyOpsProjectTask.createdAt,
-      updatedAt: agencyOpsProjectTask.updatedAt,
-    })
+    .select(projectTaskColumns)
     .from(agencyOpsProjectTask)
     .where(whereClause)
     .orderBy(desc(agencyOpsProjectTask.createdAt))
@@ -2284,18 +2325,7 @@ export async function listAgencyProjectTasks(
 
 async function getTaskByIdForTeam(teamId: string, taskId: string) {
   const [task] = await db
-    .select({
-      id: agencyOpsProjectTask.id,
-      teamId: agencyOpsProjectTask.teamId,
-      projectId: agencyOpsProjectTask.projectId,
-      title: agencyOpsProjectTask.title,
-      status: agencyOpsProjectTask.status,
-      taskKind: agencyOpsProjectTask.taskKind,
-      assignedToTeam: agencyOpsProjectTask.assignedToTeam,
-      dueDate: agencyOpsProjectTask.dueDate,
-      createdAt: agencyOpsProjectTask.createdAt,
-      updatedAt: agencyOpsProjectTask.updatedAt,
-    })
+    .select(projectTaskColumns)
     .from(agencyOpsProjectTask)
     .where(and(eq(agencyOpsProjectTask.id, taskId), eq(agencyOpsProjectTask.teamId, teamId)))
     .limit(1);
@@ -2570,6 +2600,7 @@ export async function updateAgencyProjectTask(
     assignedToTeam?: boolean;
     assigneeUserIds?: string[];
     dueDate?: string | null;
+    isWaste?: boolean;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -2624,6 +2655,7 @@ export async function updateAgencyProjectTask(
       .set({
         ...(title ? { title } : {}),
         ...(input.status ? { status: input.status } : {}),
+        ...(input.isWaste !== undefined ? { isWaste: input.isWaste } : {}),
         ...(input.assignedToTeam !== undefined || input.assigneeUserIds !== undefined
           ? { assignedToTeam: nextAssignedToTeam }
           : {}),
@@ -3246,6 +3278,7 @@ export async function getTaskThreadContext(
     .select({
       taskId: agencyOpsProjectTask.id,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       taskStatus: agencyOpsProjectTask.status,
       projectId: agencyOpsProject.id,
       projectName: agencyOpsProject.name,
@@ -3515,6 +3548,7 @@ async function fetchAgencyTimeEntryRecord(entryId: string) {
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -3538,25 +3572,7 @@ async function fetchAgencyTimeEntryRecord(entryId: string) {
     return null;
   }
 
-  return {
-    id: row.id,
-    teamId: row.teamId,
-    userId: row.userId,
-    userName: row.userName ?? "Unknown",
-    projectId: row.projectId,
-    taskId: row.taskId ?? null,
-    taskTitle: row.taskTitle ?? null,
-    projectName: row.projectName,
-    clientId: row.clientId,
-    clientName: row.clientName,
-    source: row.source,
-    description: row.description,
-    startedAt: row.startedAt.toISOString(),
-    endedAt: row.endedAt.toISOString(),
-    durationSeconds: row.durationSeconds,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  } satisfies AgencyTimeEntryRecord;
+  return mapAgencyTimeEntryRow(row);
 }
 
 export async function stopAgencyTimer(
@@ -3708,6 +3724,7 @@ export async function listMyAgencyTimeEntries(
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -3735,28 +3752,7 @@ export async function listMyAgencyTimeEntries(
     .limit(pageSize)
     .offset(offset);
 
-  const items = rows.map(
-    (row) =>
-      ({
-        id: row.id,
-        teamId: row.teamId,
-        userId: row.userId,
-        userName: row.userName ?? "Unknown",
-        projectId: row.projectId,
-        taskId: row.taskId ?? null,
-        taskTitle: row.taskTitle ?? null,
-        projectName: row.projectName,
-        clientId: row.clientId,
-        clientName: row.clientName,
-        source: row.source,
-        description: row.description,
-        startedAt: row.startedAt.toISOString(),
-        endedAt: row.endedAt.toISOString(),
-        durationSeconds: row.durationSeconds,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      }) satisfies AgencyTimeEntryRecord,
-  );
+  const items = rows.map((row) => mapAgencyTimeEntryRow(row));
 
   // Count total for pagination
   const [countRow] = await db
@@ -4692,6 +4688,7 @@ export async function createManualAgencyTimeEntry(
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -4715,25 +4712,7 @@ export async function createManualAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  return {
-    id: row.id,
-    teamId: row.teamId,
-    userId: row.userId,
-    userName: row.userName ?? "Unknown",
-    projectId: row.projectId,
-    taskId: row.taskId ?? null,
-    taskTitle: row.taskTitle ?? null,
-    projectName: row.projectName,
-    clientId: row.clientId,
-    clientName: row.clientName,
-    source: row.source,
-    description: row.description,
-    startedAt: row.startedAt.toISOString(),
-    endedAt: row.endedAt.toISOString(),
-    durationSeconds: row.durationSeconds,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  } satisfies AgencyTimeEntryRecord;
+  return mapAgencyTimeEntryRow(row);
 }
 
 export async function updateMyAgencyTimeEntry(
@@ -4838,6 +4817,7 @@ export async function updateMyAgencyTimeEntry(
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -4861,25 +4841,7 @@ export async function updateMyAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  return {
-    id: row.id,
-    teamId: row.teamId,
-    userId: row.userId,
-    userName: row.userName ?? "Unknown",
-    projectId: row.projectId,
-    taskId: row.taskId ?? null,
-    taskTitle: row.taskTitle ?? null,
-    projectName: row.projectName,
-    clientId: row.clientId,
-    clientName: row.clientName,
-    source: row.source,
-    description: row.description,
-    startedAt: row.startedAt.toISOString(),
-    endedAt: row.endedAt.toISOString(),
-    durationSeconds: row.durationSeconds,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  } satisfies AgencyTimeEntryRecord;
+  return mapAgencyTimeEntryRow(row);
 }
 
 export async function deleteMyAgencyTimeEntry(
@@ -5473,6 +5435,7 @@ export async function listAllAgencyTimeEntries(
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -5494,28 +5457,7 @@ export async function listAllAgencyTimeEntries(
     .limit(pageSize)
     .offset(offset);
 
-  const items = rows.map(
-    (row) =>
-      ({
-        id: row.id,
-        teamId: row.teamId,
-        userId: row.userId,
-        userName: row.userName ?? "Unknown",
-        projectId: row.projectId,
-        taskId: row.taskId ?? null,
-        taskTitle: row.taskTitle ?? null,
-        projectName: row.projectName,
-        clientId: row.clientId,
-        clientName: row.clientName,
-        source: row.source,
-        description: row.description,
-        startedAt: row.startedAt.toISOString(),
-        endedAt: row.endedAt.toISOString(),
-        durationSeconds: row.durationSeconds,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      }) satisfies AgencyTimeEntryRecord,
-  );
+  const items = rows.map((row) => mapAgencyTimeEntryRow(row));
 
   const [countRow] = await db
     .select({ count: sql<number>`count(*)` })
@@ -5635,6 +5577,7 @@ export async function updateAnyAgencyTimeEntry(
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
@@ -5658,23 +5601,5 @@ export async function updateAnyAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  return {
-    id: row.id,
-    teamId: row.teamId,
-    userId: row.userId,
-    userName: row.userName ?? "Unknown",
-    projectId: row.projectId,
-    taskId: row.taskId ?? null,
-    taskTitle: row.taskTitle ?? null,
-    projectName: row.projectName,
-    clientId: row.clientId,
-    clientName: row.clientName,
-    source: row.source,
-    description: row.description,
-    startedAt: row.startedAt.toISOString(),
-    endedAt: row.endedAt.toISOString(),
-    durationSeconds: row.durationSeconds,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  } satisfies AgencyTimeEntryRecord;
+  return mapAgencyTimeEntryRow(row);
 }

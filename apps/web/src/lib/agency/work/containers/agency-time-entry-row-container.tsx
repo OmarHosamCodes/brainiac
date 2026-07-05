@@ -19,6 +19,8 @@ type AgencyTimeEntryRowContainerProps = {
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  onToggleWaste: (entryId: string) => Promise<void>;
+  togglingWasteEntryIds: string[];
   highlighted?: boolean;
   /** Suppress the row's dashed bottom border (group wrapper supplies a solid one). */
   omitBottomBorder?: boolean;

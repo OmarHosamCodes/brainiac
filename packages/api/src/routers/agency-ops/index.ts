@@ -108,6 +108,7 @@ const agencyProjectTaskSchema = z.object({
   status: z.enum(["open", "in_progress", "done", "archived"]),
   taskKind: z.enum(["standard", "journey_anchor", "journey_milestone"]),
   assignedToTeam: z.boolean(),
+  isWaste: z.boolean(),
   assignees: z.array(
     z.object({
       userId: z.string().min(1),
@@ -225,6 +226,7 @@ const agencyTimeEntrySchema = z.object({
   projectId: z.string().min(1),
   taskId: z.string().nullable(),
   taskTitle: z.string().nullable(),
+  taskIsWaste: z.boolean().nullable(),
   projectName: z.string().min(1),
   clientId: z.string().min(1),
   clientName: z.string().min(1),
@@ -630,6 +632,7 @@ export const agencyOpsRouter = {
           assignedToTeam: z.boolean().optional(),
           assigneeUserIds: z.array(z.string().min(1)).optional(),
           dueDate: z.string().datetime().nullable().optional(),
+          isWaste: z.boolean().optional(),
         }),
       )
       .handler(async ({ context, input }) => {

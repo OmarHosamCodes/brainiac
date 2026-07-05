@@ -12,6 +12,7 @@ export type TimeEntryRecord = {
   projectId: string;
   taskId: string | null;
   taskTitle: string | null;
+  taskIsWaste?: boolean | null;
   projectName: string;
   clientId: string;
   clientName: string;

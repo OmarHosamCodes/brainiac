@@ -21,6 +21,8 @@ type AgencyTimeEntryDayGroupViewProps = {
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  onToggleWaste: (entryId: string) => Promise<void>;
+  togglingWasteEntryIds: string[];
   highlightedEntryId?: string | null;
 };
 
@@ -38,6 +40,8 @@ export function AgencyTimeEntryDayGroupView({
   onDeleteGroup,
   onDeleteEntry,
   onSaveEdit,
+  onToggleWaste,
+  togglingWasteEntryIds,
   highlightedEntryId = null,
 }: AgencyTimeEntryDayGroupViewProps) {
   return (
@@ -73,6 +77,8 @@ export function AgencyTimeEntryDayGroupView({
                 onDeleteGroup={onDeleteGroup}
                 onDeleteEntry={onDeleteEntry}
                 onSaveEdit={onSaveEdit}
+                onToggleWaste={onToggleWaste}
+                togglingWasteEntryIds={togglingWasteEntryIds}
               />
             </li>
           );

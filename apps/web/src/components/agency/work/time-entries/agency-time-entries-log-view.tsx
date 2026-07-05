@@ -92,6 +92,8 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
                 onDeleteGroup={view.onDeleteGroup}
                 onDeleteEntry={view.onDeleteEntry}
                 onSaveEdit={view.onSaveEdit}
+                onToggleWaste={view.onToggleWaste}
+                togglingWasteEntryIds={view.togglingWasteEntryIds}
               />
             ))}
           </div>

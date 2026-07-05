@@ -7,11 +7,7 @@
  */
 import { resolve } from "node:path";
 import { db } from "@brainiac/db";
-import {
-  user,
-  workspaceTeam,
-  workspaceTeamMember,
-} from "@brainiac/db/schema";
+import { user, workspaceTeamMember } from "@brainiac/db/schema";
 import { eq, sql } from "drizzle-orm";
 import {
   buildCatalog,
