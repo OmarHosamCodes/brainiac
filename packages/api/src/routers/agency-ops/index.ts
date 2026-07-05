@@ -173,6 +173,13 @@ const agencyTaskMessageSchema = z.object({
   attachments: z.array(agencyTaskMessageAttachmentSchema),
 });
 
+const agencyTaskAgentAskResponseSchema = z.object({
+  userMessage: agencyTaskMessageSchema,
+  agentMessage: agencyTaskMessageSchema,
+  model: z.string(),
+  response: z.string(),
+});
+
 const agencyTaskThreadMemberSchema = z.object({
   userId: z.string().min(1),
   userName: z.string().min(1),
@@ -686,12 +693,9 @@ export const agencyOpsRouter = {
         }),
       )
       .handler(async ({ context, input }) => {
-        return z
-          .object({
-            response: z.string(),
-            model: z.string(),
-          })
-          .parse(await askTaskAgent(context.session.user.id, input));
+        return agencyTaskAgentAskResponseSchema.parse(
+          await askTaskAgent(context.session.user.id, input),
+        );
       }),
   },
   contacts: {

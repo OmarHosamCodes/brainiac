@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, BarChart3 } from "lucide-react";
 import { useMemo, useState, type CSSProperties } from "react";
 
@@ -110,6 +110,29 @@ function ProjectHueFill({
   );
 }
 
+function polarToCartesian(cx: number, cy: number, radius: number, angleDeg: number) {
+  const angleRad = (angleDeg * Math.PI) / 180;
+  return {
+    x: cx + radius * Math.cos(angleRad),
+    y: cy + radius * Math.sin(angleRad),
+  };
+}
+
+function describeArc(
+  cx: number,
+  cy: number,
+  radius: number,
+  startAngleDeg: number,
+  endAngleDeg: number,
+): string {
+  const start = polarToCartesian(cx, cy, radius, startAngleDeg);
+  const end = polarToCartesian(cx, cy, radius, endAngleDeg);
+  const sweep = endAngleDeg - startAngleDeg;
+  if (sweep <= 0) return "";
+  const largeArc = sweep > 180 ? 1 : 0;
+  return `M ${start.x.toFixed(3)} ${start.y.toFixed(3)} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x.toFixed(3)} ${end.y.toFixed(3)}`;
+}
+
 function ProjectShareDonut({
   projects,
   totalSeconds,
@@ -118,28 +141,71 @@ function ProjectShareDonut({
   totalSeconds: number;
 }) {
   const { isDark } = useTheme();
-  let cursor = 0;
-  const stops = projects.slice(0, 8).map((project) => {
+  const size = 100;
+  const cx = 50;
+  const cy = 50;
+  const radius = 42;
+  const strokeWidth = 11;
+  const gapDeg = 2.8;
+
+  const slices = projects.slice(0, 8).map((project) => {
     const hue = projectHueFor(project.projectId);
-    const color = isDark ? hue.dark : hue.light;
-    const next = cursor + (project.hours * 3_600 * 100) / Math.max(totalSeconds, 1);
-    const stop = `${color} ${cursor.toFixed(2)}% ${next.toFixed(2)}%`;
-    cursor = next;
-    return stop;
+    return {
+      projectId: project.projectId,
+      seconds: Math.round(project.hours * 3_600),
+      color: isDark ? hue.dark : hue.light,
+    };
   });
-  const background =
-    stops.length > 0
-      ? `conic-gradient(${stops.join(", ")}, var(--muted) ${cursor.toFixed(2)}% 100%)`
-      : "var(--muted)";
+
+  const trackedSeconds = slices.reduce((sum, slice) => sum + slice.seconds, 0);
+  const total = Math.max(totalSeconds, 1);
+  const trackedSweep = (trackedSeconds / total) * 360;
+  const totalGap = slices.length > 1 ? (slices.length - 1) * gapDeg : 0;
+  const drawableSweep = Math.max(0, trackedSweep - totalGap);
+
+  let angle = -90;
+  const arcs = slices
+    .map((slice, index) => {
+      const share = trackedSeconds > 0 ? slice.seconds / trackedSeconds : 0;
+      const sweep = drawableSweep * share;
+      const start = angle;
+      const end = angle + sweep;
+      angle = end + (index < slices.length - 1 ? gapDeg : 0);
+      const path = describeArc(cx, cy, radius, start, end);
+      if (!path) return null;
+      return { ...slice, path };
+    })
+    .filter((arc): arc is NonNullable<typeof arc> => arc !== null);
 
   return (
-    <div
-      className="mt-6 flex aspect-square max-h-72 items-center justify-center rounded-full p-8"
-      style={{ background }}
-      role="img"
-      aria-label="Project time share"
-    >
-      <div className="flex size-32 items-center justify-center rounded-full border border-default bg-default text-center">
+    <div className="relative mt-6 flex aspect-square max-h-72 items-center justify-center">
+      <svg
+        viewBox={`0 0 ${size} ${size}`}
+        className="size-full"
+        role="img"
+        aria-label="Project time share"
+      >
+        <circle
+          cx={cx}
+          cy={cy}
+          r={radius}
+          fill="none"
+          stroke="var(--muted)"
+          strokeOpacity={0.35}
+          strokeWidth={strokeWidth}
+        />
+        {arcs.map((arc) => (
+          <path
+            key={arc.projectId}
+            d={arc.path}
+            fill="none"
+            stroke={arc.color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
+        ))}
+      </svg>
+      <div className="absolute flex size-32 items-center justify-center rounded-full border border-default bg-default text-center">
         <div>
           <p className={cn(agencyMetricClass, "text-lg")}>{formatDuration(totalSeconds)}</p>
           <p className="mt-1 text-xs text-muted">logged</p>
@@ -244,6 +310,7 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
       },
     }),
     enabled: Boolean(teamId),
+    placeholderData: keepPreviousData,
   });
 
   const summary = dashboardQuery.data?.summary ?? null;
@@ -266,7 +333,7 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
     return list.sort((a, b) => b.hours - a.hours);
   }, [rankedProjects]);
 
-  if (dashboardQuery.isPending) {
+  if (dashboardQuery.isLoading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-full max-w-2xl rounded-xl" />
@@ -376,6 +443,90 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
         </div>
       ) : (
         <>
+          <section className={cn(agencyPanelClass, "p-4 [content-visibility:auto]")}>
+            <div className="mb-4 flex items-center justify-between">
+              <p className={agencyLabelClass}>Daily timeline</p>
+              <p className="text-[11px] text-muted">Stacked by project</p>
+            </div>
+            <div
+              className="flex h-56 items-end gap-2 overflow-x-auto border-b border-default pb-3"
+              role="img"
+              aria-label="Daily tracked time stacked by project"
+            >
+              {summary.dailyBuckets.map((bucket) => (
+                <div key={bucket.date} className="flex min-w-12 flex-1 flex-col items-center gap-2">
+                  <div
+                    className="flex w-full min-w-8 flex-col-reverse overflow-hidden rounded-sm bg-elevated"
+                    style={{
+                      height: `${Math.max(3, (bucket.totalSeconds / maxDaySeconds) * 100)}%`,
+                    }}
+                    title={`${formatActivityDateLabel(bucket.date)} · ${formatShortDuration(bucket.totalSeconds)}`}
+                    aria-label={`${formatActivityDateLabel(bucket.date)}, ${formatShortDuration(bucket.totalSeconds)}`}
+                  >
+                    {bucket.segments.map((segment) => (
+                      <ProjectHueFill
+                        key={segment.projectId}
+                        projectId={segment.projectId}
+                        className="block w-full"
+                        style={{ height: `${relShare(segment.seconds, bucket.totalSeconds)}%` }}
+                      />
+                    ))}
+                  </div>
+                  <span className="whitespace-nowrap text-[11px] tabular-nums text-muted">
+                    {formatChartDateLabel(bucket.date)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="grid gap-4 [content-visibility:auto] lg:grid-cols-[22rem_minmax(0,1fr)]">
+            <div className={cn(agencyPanelClass, "p-4")}>
+              <p className={agencyLabelClass}>Project share</p>
+              <ProjectShareDonut projects={rankedProjects} totalSeconds={summary.totalSeconds} />
+            </div>
+            <div className={cn(agencyPanelClass, "p-4")}>
+              <p className={agencyLabelClass}>Ranked projects</p>
+              {rankedProjects.length === 0 ? (
+                <p className="mt-4 text-xs text-muted">No project breakdown in this range.</p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {sortedRankedProjects.map((project) => {
+                    const seconds = Math.round(project.hours * 3_600);
+                    const share =
+                      totalProjectHours > 0 ? (project.hours / totalProjectHours) * 100 : 0;
+                    return (
+                      <div
+                        key={project.projectId}
+                        className="grid gap-2 text-xs md:grid-cols-[minmax(12rem,1fr)_6rem_minmax(12rem,1.5fr)_3.5rem] md:items-center"
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          <AgencyProjectHueDot projectId={project.projectId} className="size-2" />
+                          <span className="truncate font-semibold text-highlighted">
+                            {project.projectName}
+                          </span>
+                        </div>
+                        <span className={cn(agencyMetricClass, "text-muted md:text-right")}>
+                          {formatDuration(seconds)}
+                        </span>
+                        <div className="h-3 overflow-hidden rounded-sm bg-elevated">
+                          <ProjectHueFill
+                            projectId={project.projectId}
+                            className="block h-full"
+                            style={{ width: `${Math.max(2, share)}%` }}
+                          />
+                        </div>
+                        <span className={cn(agencyMetricClass, "text-muted md:text-right")}>
+                          {share.toFixed(1)}%
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+
           <section className={cn(agencyPanelClass, "overflow-hidden")}>
             <header className="flex items-center justify-between border-b border-default px-4 py-3">
               <p className={agencyLabelClass}>Team activity</p>
@@ -490,90 +641,6 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
                   ))}
                 </tbody>
               </table>
-            </div>
-          </section>
-
-          <section className={cn(agencyPanelClass, "p-4 [content-visibility:auto]")}>
-            <div className="mb-4 flex items-center justify-between">
-              <p className={agencyLabelClass}>Daily timeline</p>
-              <p className="text-[11px] text-muted">Stacked by project</p>
-            </div>
-            <div
-              className="flex h-56 items-end gap-2 overflow-x-auto border-b border-default pb-3"
-              role="img"
-              aria-label="Daily tracked time stacked by project"
-            >
-              {summary.dailyBuckets.map((bucket) => (
-                <div key={bucket.date} className="flex min-w-12 flex-1 flex-col items-center gap-2">
-                  <div
-                    className="flex w-full min-w-8 flex-col-reverse overflow-hidden rounded-sm bg-elevated"
-                    style={{
-                      height: `${Math.max(3, (bucket.totalSeconds / maxDaySeconds) * 100)}%`,
-                    }}
-                    title={`${formatActivityDateLabel(bucket.date)} · ${formatShortDuration(bucket.totalSeconds)}`}
-                    aria-label={`${formatActivityDateLabel(bucket.date)}, ${formatShortDuration(bucket.totalSeconds)}`}
-                  >
-                    {bucket.segments.map((segment) => (
-                      <ProjectHueFill
-                        key={segment.projectId}
-                        projectId={segment.projectId}
-                        className="block w-full"
-                        style={{ height: `${relShare(segment.seconds, bucket.totalSeconds)}%` }}
-                      />
-                    ))}
-                  </div>
-                  <span className="whitespace-nowrap text-[11px] tabular-nums text-muted">
-                    {formatChartDateLabel(bucket.date)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className="grid gap-4 [content-visibility:auto] lg:grid-cols-[22rem_minmax(0,1fr)]">
-            <div className={cn(agencyPanelClass, "p-4")}>
-              <p className={agencyLabelClass}>Project share</p>
-              <ProjectShareDonut projects={rankedProjects} totalSeconds={summary.totalSeconds} />
-            </div>
-            <div className={cn(agencyPanelClass, "p-4")}>
-              <p className={agencyLabelClass}>Ranked projects</p>
-              {rankedProjects.length === 0 ? (
-                <p className="mt-4 text-xs text-muted">No project breakdown in this range.</p>
-              ) : (
-                <div className="mt-4 space-y-3">
-                  {sortedRankedProjects.map((project) => {
-                    const seconds = Math.round(project.hours * 3_600);
-                    const share =
-                      totalProjectHours > 0 ? (project.hours / totalProjectHours) * 100 : 0;
-                    return (
-                      <div
-                        key={project.projectId}
-                        className="grid gap-2 text-xs md:grid-cols-[minmax(12rem,1fr)_6rem_minmax(12rem,1.5fr)_3.5rem] md:items-center"
-                      >
-                        <div className="flex min-w-0 items-center gap-2">
-                          <AgencyProjectHueDot projectId={project.projectId} className="size-2" />
-                          <span className="truncate font-semibold text-highlighted">
-                            {project.projectName}
-                          </span>
-                        </div>
-                        <span className={cn(agencyMetricClass, "text-muted md:text-right")}>
-                          {formatDuration(seconds)}
-                        </span>
-                        <div className="h-3 overflow-hidden rounded-sm bg-elevated">
-                          <ProjectHueFill
-                            projectId={project.projectId}
-                            className="block h-full"
-                            style={{ width: `${Math.max(2, share)}%` }}
-                          />
-                        </div>
-                        <span className={cn(agencyMetricClass, "text-muted md:text-right")}>
-                          {share.toFixed(1)}%
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
             </div>
           </section>
         </>

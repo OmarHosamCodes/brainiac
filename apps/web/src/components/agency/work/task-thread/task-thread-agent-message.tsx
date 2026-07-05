@@ -1,10 +1,13 @@
+import { Loader2 } from "lucide-react";
+
 import { renderSimpleMarkdown } from "@/lib/utils/render-simple-markdown";
 import { agencyAgentMessageCardClass, agencyAgentMessageCodeClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
-type AgencyTaskAgentMessageViewProps = {
+type TaskThreadAgentMessageProps = {
   content: string | null;
   createdAt: string;
+  isPending?: boolean;
 };
 
 type ContentSegment =
@@ -49,7 +52,11 @@ function formatTime(iso: string): string {
   });
 }
 
-export function AgencyTaskAgentMessageView({ content, createdAt }: AgencyTaskAgentMessageViewProps) {
+export function TaskThreadAgentMessage({
+  content,
+  createdAt,
+  isPending = false,
+}: TaskThreadAgentMessageProps) {
   const segments = content ? parseAgentContent(content) : [];
 
   return (
@@ -61,7 +68,12 @@ export function AgencyTaskAgentMessageView({ content, createdAt }: AgencyTaskAge
         </time>
       </div>
 
-      {segments.length === 0 ? (
+      {isPending ? (
+        <div className="flex items-center gap-2 text-sm text-muted" role="status">
+          <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+          <span>Agent is thinking…</span>
+        </div>
+      ) : segments.length === 0 ? (
         <p className="text-sm text-muted">No response content.</p>
       ) : (
         <div className="space-y-2">

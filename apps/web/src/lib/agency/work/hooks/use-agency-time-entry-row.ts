@@ -14,6 +14,7 @@ import {
 import {
   applyDurationToDraft,
   applyEndTimeToDraft,
+  applyStartTimeToDraft,
   entryToDraft,
 } from "@/lib/utils/time-entry-draft";
 import { formatDuration } from "@/lib/utils/format-duration";
@@ -24,11 +25,20 @@ const timeRangeFormatter = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
+function localDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function formatTimeRange(startedAt: string, endedAt: string) {
   const start = new Date(startedAt);
   const end = new Date(endedAt);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "";
-  return `${timeRangeFormatter.format(start)} - ${timeRangeFormatter.format(end)}`;
+  const overnight = localDateKey(start) !== localDateKey(end);
+  const range = `${timeRangeFormatter.format(start)} - ${timeRangeFormatter.format(end)}`;
+  return overnight ? `${range} +1` : range;
 }
 
 function formatGroupTimeRange(group: CollapsedEntryGroup) {
@@ -100,6 +110,7 @@ export type AgencyTimeEntryRowViewModel = {
   onTaskChange: (taskId: string) => void;
   onStartTimeChange: (value: string) => void;
   onEndTimeChange: (value: string) => void;
+  onStartDateChange: (value: string) => void;
   onDurationChange: (value: string) => void;
   onInlineBlur: () => void;
   onInlineKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
@@ -271,11 +282,13 @@ export function useAgencyTimeEntryRow({
       updateInlineDraft(nextDraft);
       void saveInlineDraft(nextDraft);
     },
-    onStartTimeChange: (value) =>
-      updateInlineDraft(
-        applyDurationToDraft({ ...editDraft, startTime: value }, editDraft.durationInput),
-      ),
+    onStartTimeChange: (value) => updateInlineDraft(applyStartTimeToDraft(editDraft, value)),
     onEndTimeChange: (value) => updateInlineDraft(applyEndTimeToDraft(editDraft, value)),
+    onStartDateChange: (value) => {
+      const nextDraft = { ...editDraft, date: value };
+      updateInlineDraft(nextDraft);
+      void saveInlineDraft(nextDraft);
+    },
     onDurationChange: (value) => updateInlineDraft(applyDurationToDraft(editDraft, value)),
     onInlineBlur: () => void saveInlineDraft(),
     onInlineKeyDown,

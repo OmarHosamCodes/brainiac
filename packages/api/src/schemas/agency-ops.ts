@@ -207,6 +207,15 @@ export type AgencyProject = z.infer<typeof agencyProjectSchema>;
 export type AgencyProjectTask = z.infer<typeof agencyProjectTaskSchema>;
 export type AgencyTaskProject = z.infer<typeof agencyTaskProjectSchema>;
 export type AgencyTaskMessage = z.infer<typeof agencyTaskMessageSchema>;
+
+export const agencyTaskAgentAskResponseSchema = z.object({
+  userMessage: agencyTaskMessageSchema,
+  agentMessage: agencyTaskMessageSchema,
+  model: z.string(),
+  response: z.string(),
+});
+
+export type AgencyTaskAgentAskResponse = z.infer<typeof agencyTaskAgentAskResponseSchema>;
 export type AgencyTaskMessageAttachment = z.infer<typeof agencyTaskMessageAttachmentSchema>;
 export type AgencyTaskThreadMember = z.infer<typeof agencyTaskThreadMemberSchema>;
 export type AgencyTimeEntry = z.infer<typeof agencyTimeEntrySchema>;

@@ -20,6 +20,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
     mode,
     disabled,
     loading,
+    placeholder,
     searchPlaceholder,
     className,
     triggerVariant,
@@ -162,7 +163,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
             />
           </div>
         </div>
-        <div className="max-h-[24rem] overflow-x-hidden overflow-y-auto bg-elevated py-2">
+        <div className="max-h-[24rem] overflow-x-hidden overflow-y-auto bg-elevated px-2 py-2">
           {loading ? (
             <div className="space-y-2 px-3 py-1">
               {[1, 2, 3].map((rowIndex) => (

@@ -140,16 +140,19 @@ export function AgencyMultiSelectFilter({
           type="button"
           disabled={disabled}
           className={cn(
-            "inline-flex h-9 min-w-32 max-w-44 items-center justify-between gap-2 rounded-xl border border-default bg-default px-3 text-left text-xs font-semibold text-highlighted transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
+            "inline-flex h-9 min-w-32 max-w-44 overflow-hidden items-center justify-between gap-2 rounded-xl border border-default bg-default px-3 text-left text-xs font-semibold text-highlighted transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
             agencyFocusRingClass,
           )}
           aria-label={label}
         >
-          <span className="truncate">{buttonLabel}</span>
+          <span className="min-w-0 flex-1 truncate">{buttonLabel}</span>
           <ChevronDown className="size-3.5 shrink-0 text-muted" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[22rem] max-w-[calc(100vw-2rem)] p-0">
+      <PopoverContent
+        align="start"
+        className="w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden p-0"
+      >
         <div className="border-b border-default bg-elevated p-2">
           <div className="relative">
             <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />
@@ -165,11 +168,11 @@ export function AgencyMultiSelectFilter({
             />
           </div>
         </div>
-        <div className="max-h-72 overflow-y-auto bg-elevated py-2">
+        <div className="max-h-72 overflow-x-hidden overflow-y-auto bg-elevated px-2 py-2">
           <button
             type="button"
             className={cn(
-              "mx-2 flex w-[calc(100%-1rem)] items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-colors hover:bg-default/80",
+              "flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-colors hover:bg-default/80",
               values.length === 0 ? "bg-primary/10 text-primary hover:bg-primary/10" : "text-muted hover:text-highlighted",
               agencyFocusRingClass,
             )}
@@ -185,15 +188,17 @@ export function AgencyMultiSelectFilter({
             </p>
           ) : groups ? (
             filteredGroups.map((group) => (
-              <div key={group.groupLabel} className="py-1 first:pt-0">
-                <div className="mb-1 flex items-center justify-between px-4 text-[11px] font-semibold text-muted">
-                  <span className="uppercase tracking-[0.12em]">{group.groupLabel}</span>
+              <div key={group.groupLabel} className="min-w-0 py-1 first:pt-0">
+                <div className="mb-1 flex min-w-0 items-center justify-between gap-2 px-2 text-[11px] font-semibold text-muted">
+                  <span className="min-w-0 truncate uppercase tracking-[0.12em]">
+                    {group.groupLabel}
+                  </span>
                 </div>
 
                 {group.sections
                   ? group.sections.map((section) => (
                       <div key={`${group.groupLabel}-${section.sectionLabel}`} className="pb-1">
-                        <p className="px-4 py-1 text-[11px] font-semibold text-muted">
+                        <p className="min-w-0 truncate px-2 py-1 text-[11px] font-semibold text-muted">
                           {section.sectionLabel}
                         </p>
                         {section.options.map((option) => {
@@ -203,14 +208,14 @@ export function AgencyMultiSelectFilter({
                               key={option.value}
                               type="button"
                               className={cn(
-                                "mx-2 flex w-[calc(100%-1rem)] items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-colors hover:bg-default/80",
+                                "flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-colors hover:bg-default/80",
                                 checked ? "bg-primary/10 text-primary hover:bg-primary/10" : "text-muted hover:text-highlighted",
                                 agencyFocusRingClass,
                               )}
                               onClick={() => toggleValue(option.value)}
                               aria-pressed={checked}
                             >
-                              <span className="truncate">{option.label}</span>
+                              <span className="min-w-0 truncate">{option.label}</span>
                               {checked ? <Check className="size-3.5 shrink-0" /> : null}
                             </button>
                           );
@@ -224,14 +229,14 @@ export function AgencyMultiSelectFilter({
                           key={option.value}
                           type="button"
                           className={cn(
-                            "mx-2 flex w-[calc(100%-1rem)] items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-colors hover:bg-default/80",
+                            "flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-colors hover:bg-default/80",
                             checked ? "bg-primary/10 text-primary hover:bg-primary/10" : "text-muted hover:text-highlighted",
                             agencyFocusRingClass,
                           )}
                           onClick={() => toggleValue(option.value)}
                           aria-pressed={checked}
                         >
-                          <span className="truncate">{option.label}</span>
+                          <span className="min-w-0 truncate">{option.label}</span>
                           {checked ? <Check className="size-3.5 shrink-0" /> : null}
                         </button>
                       );
@@ -246,14 +251,14 @@ export function AgencyMultiSelectFilter({
                   key={option.value}
                   type="button"
                   className={cn(
-                    "mx-2 flex w-[calc(100%-1rem)] items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-colors hover:bg-default/80",
+                    "flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-colors hover:bg-default/80",
                     checked ? "bg-primary/10 text-primary hover:bg-primary/10" : "text-muted hover:text-highlighted",
                     agencyFocusRingClass,
                   )}
                   onClick={() => toggleValue(option.value)}
                   aria-pressed={checked}
                 >
-                  <span className="truncate">{option.label}</span>
+                  <span className="min-w-0 truncate">{option.label}</span>
                   {checked ? <Check className="size-3.5 shrink-0" /> : null}
                 </button>
               );

@@ -18,6 +18,7 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import {
   ensureTaskThreadByTaskId,
+  getTaskThreadMessageById,
   requireTeamMembership,
   validateTaskAttachmentUploadReferences,
 } from "./service";
@@ -281,6 +282,11 @@ export async function askTaskAgent(
       .where(eq(agencyOpsTaskThread.id, thread.id));
   });
 
+  const [userMessage, agentMessage] = await Promise.all([
+    getTaskThreadMessageById(actorUserId, { teamId: input.teamId, messageId: userMessageId }),
+    getTaskThreadMessageById(actorUserId, { teamId: input.teamId, messageId: agentMessageId }),
+  ]);
+
   void emitThreadMessageNotifications({
     teamId: input.teamId,
     taskId: input.taskId,
@@ -291,7 +297,9 @@ export async function askTaskAgent(
   });
 
   return {
-    response: result.response,
+    userMessage,
+    agentMessage,
     model: result.model,
+    response: result.response,
   };
 }

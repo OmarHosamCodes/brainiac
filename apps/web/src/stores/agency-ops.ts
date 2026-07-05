@@ -17,7 +17,6 @@ import {
 } from "@/lib/utils/agency-query-cache";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { createEmptyListOverlay } from "@/lib/utils/agency-optimistic-merge";
 
 // Shared types (mirrored from API shapes — keep in sync with oRPC output)
 // ---------------------------------------------------------------------------
@@ -101,38 +100,9 @@ type RegisteredProjectTasksQuery = {
   statuses?: AgencyProjectTask["status"][];
 };
 
-type AgencyTaskMessage = {
-  id: string;
+type RegisteredCapacityQuery = {
+  queryKey: QueryKey;
   teamId: string;
-  threadId: string;
-  userId: string;
-  userName: string;
-  userAvatar: string | null;
-  content: string;
-  type: "text" | "voice" | "attachment";
-  senderType: "user" | "agent";
-  createdAt: string;
-  updatedAt: string;
-  attachments: Array<{
-    id: string;
-    teamId: string;
-    messageId: string;
-    fileName: string;
-    mimeType: string;
-    storageKey: string;
-    sizeBytes: number;
-    durationSeconds: number | null;
-    metadata?: unknown;
-    createdAt: string;
-    url: string | null;
-  }>;
-};
-
-type AgencyTaskMessagesListQueryData = {
-  items: AgencyTaskMessage[];
-  page: number;
-  pageSize: number;
-  total: number;
 };
 
 type AgencyContact = {
@@ -159,21 +129,10 @@ type AgencyCapacityListQueryData = {
   }>;
 };
 
-type RegisteredTaskMessagesQuery = {
-  queryKey: QueryKey;
-  teamId: string;
-  taskId: string;
-};
-
 type RegisteredContactQuery = {
   queryKey: QueryKey;
   teamId: string;
   clientId: string;
-};
-
-type RegisteredCapacityQuery = {
-  queryKey: QueryKey;
-  teamId: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -227,26 +186,6 @@ type UpdateProjectTaskPayload = {
   assignedToTeam?: boolean;
   assigneeUserIds?: string[];
   dueDate?: string | null;
-};
-
-type SendTaskMessagePayload = {
-  teamId: string;
-  taskId: string;
-  content: string;
-  type?: "text" | "voice" | "attachment";
-  attachments?: Array<{
-    fileName: string;
-    mimeType: string;
-    storageKey: string;
-    sizeBytes: number;
-    durationSeconds?: number | null;
-    uploadToken: string;
-    metadata?: Record<string, unknown>;
-  }>;
-};
-
-type AskTaskAgentPayload = SendTaskMessagePayload & {
-  model?: string;
 };
 
 type ArchiveClientPayload = {
@@ -317,7 +256,6 @@ function createAgencyOpsActions(
   const clientsQueryRegistry = new Map<string, RefCounted<RegisteredClientsQuery>>();
   const projectsQueryRegistry = new Map<string, RefCounted<RegisteredProjectsQuery>>();
   const projectTasksQueryRegistry = new Map<string, RefCounted<RegisteredProjectTasksQuery>>();
-  const taskMessagesQueryRegistry = new Map<string, RefCounted<RegisteredTaskMessagesQuery>>();
   const contactsQueryRegistry = new Map<string, RefCounted<RegisteredContactQuery>>();
   const capacityQueryRegistry = new Map<string, RefCounted<RegisteredCapacityQuery>>();
 
@@ -377,14 +315,6 @@ function createAgencyOpsActions(
 
   function unregisterProjectTasksQuery(queryKey: QueryKey) {
     unregisterFrom(projectTasksQueryRegistry, registryKey(queryKey));
-  }
-
-  function registerTaskMessagesQuery(payload: RegisteredTaskMessagesQuery) {
-    registerInto(taskMessagesQueryRegistry, registryKey(payload.queryKey), payload);
-  }
-
-  function unregisterTaskMessagesQuery(queryKey: QueryKey) {
-    unregisterFrom(taskMessagesQueryRegistry, registryKey(queryKey));
   }
 
   function registerContactQuery(payload: RegisteredContactQuery) {
@@ -526,30 +456,6 @@ function createAgencyOpsActions(
     // optimistic/server-patched completion counts with stale pages (see debug
     // session d9b705: counts roll back 8→7 / 2→1 after background refetch).
     // Mutations already write the authoritative task into the cache + overlay.
-  }
-
-  function patchInsertedTaskMessage(teamId: string, taskId: string, message: AgencyTaskMessage) {
-    optimistic().upsertTaskMessage(teamId, taskId, message);
-    taskMessagesQueryRegistry.forEach(({ payload: reg }) => {
-      if (reg.teamId !== teamId || reg.taskId !== taskId) return;
-      getQueryClient().setQueryData<AgencyTaskMessagesListQueryData | undefined>(
-        reg.queryKey,
-        (current) => {
-          if (!current) return current;
-          if (current.items.some((item) => item.id === message.id)) {
-            return {
-              ...current,
-              items: current.items.map((item) => (item.id === message.id ? message : item)),
-            };
-          }
-          return {
-            ...current,
-            items: [...current.items, message],
-            total: current.total + 1,
-          };
-        },
-      );
-    });
   }
 
   function patchUpsertedContact(teamId: string, clientId: string, contact: AgencyContact) {
@@ -1235,129 +1141,6 @@ function createAgencyOpsActions(
     }
   }
 
-  function refetchTaskMessageQueries(teamId: string, taskId: string) {
-    return Promise.all(
-      [...taskMessagesQueryRegistry.values()]
-        .filter(({ payload: reg }) => reg.teamId === teamId && reg.taskId === taskId)
-        .map(({ payload: reg }) =>
-          getQueryClient().invalidateQueries({ queryKey: reg.queryKey }),
-        ),
-    );
-  }
-
-  function buildOptimisticTaskMessage(
-    payload: SendTaskMessagePayload,
-    messageId: string,
-  ): AgencyTaskMessage {
-    const nowIso = new Date().toISOString();
-    return {
-      id: messageId,
-      teamId: payload.teamId,
-      threadId: payload.taskId,
-      userId: "",
-      userName: "You",
-      userAvatar: null,
-      content: payload.content,
-      type: payload.type ?? "text",
-      senderType: "user",
-      createdAt: nowIso,
-      updatedAt: nowIso,
-      attachments: [],
-    };
-  }
-
-  async function sendTaskMessage(payload: SendTaskMessagePayload) {
-    if (!payload.teamId || !payload.taskId) return;
-
-    const snapshots = snapshotQueries(registryPayloads(taskMessagesQueryRegistry));
-    const optimisticSnapshot = optimistic().snapshotTaskMessages(payload.teamId, payload.taskId);
-    const optimisticMessage = buildOptimisticTaskMessage(
-      payload,
-      optimisticId("agency-task-message"),
-    );
-
-    try {
-      patchInsertedTaskMessage(payload.teamId, payload.taskId, optimisticMessage);
-
-      const created = (await orpcClient.agencyOps.taskThreads.messages.create({
-        teamId: payload.teamId,
-        taskId: payload.taskId,
-        content: payload.content,
-        type: payload.type,
-        attachments: payload.attachments as Parameters<
-          typeof orpcClient.agencyOps.taskThreads.messages.create
-        >[0]["attachments"],
-      })) as AgencyTaskMessage;
-
-      optimistic().reconcileTaskMessage(
-        payload.teamId,
-        payload.taskId,
-        optimisticMessage.id,
-        created,
-      );
-
-      taskMessagesQueryRegistry.forEach(({ payload: reg }) => {
-        if (reg.teamId !== payload.teamId || reg.taskId !== payload.taskId) return;
-        getQueryClient().setQueryData<AgencyTaskMessagesListQueryData | undefined>(
-          reg.queryKey,
-          (current) => {
-            if (!current) return current;
-            return {
-              ...current,
-              items: current.items
-                .filter((item) => item.id !== optimisticMessage.id)
-                .concat(created),
-            };
-          },
-        );
-      });
-
-      return created;
-    } catch (error) {
-      restoreQuerySnapshots(snapshots);
-      optimistic().restoreTaskMessages(payload.teamId, payload.taskId, optimisticSnapshot);
-      throw error;
-    }
-  }
-
-  async function askTaskAgent(payload: AskTaskAgentPayload) {
-    if (!payload.teamId || !payload.taskId) return;
-
-    const snapshots = snapshotQueries(registryPayloads(taskMessagesQueryRegistry));
-    const optimisticSnapshot = optimistic().snapshotTaskMessages(payload.teamId, payload.taskId);
-    const optimisticMessage = buildOptimisticTaskMessage(
-      payload,
-      optimisticId("agency-task-message"),
-    );
-
-    try {
-      patchInsertedTaskMessage(payload.teamId, payload.taskId, optimisticMessage);
-
-      const result = await orpcClient.agencyOps.taskAgent.ask({
-        teamId: payload.teamId,
-        taskId: payload.taskId,
-        content: payload.content,
-        model: payload.model,
-        attachments: payload.attachments as Parameters<
-          typeof orpcClient.agencyOps.taskAgent.ask
-        >[0]["attachments"],
-      });
-
-      optimistic().restoreTaskMessages(
-        payload.teamId,
-        payload.taskId,
-        createEmptyListOverlay(),
-      );
-      await refetchTaskMessageQueries(payload.teamId, payload.taskId);
-
-      return result;
-    } catch (error) {
-      restoreQuerySnapshots(snapshots);
-      optimistic().restoreTaskMessages(payload.teamId, payload.taskId, optimisticSnapshot);
-      throw error;
-    }
-  }
-
   // ---------------------------------------------------------------------------
   // Invoice create / status update
   // ---------------------------------------------------------------------------
@@ -1440,8 +1223,6 @@ function createAgencyOpsActions(
     unregisterProjectsQuery,
     registerProjectTasksQuery,
     unregisterProjectTasksQuery,
-    registerTaskMessagesQuery,
-    unregisterTaskMessagesQuery,
     registerContactQuery,
     unregisterContactQuery,
     registerCapacityQuery,
@@ -1454,8 +1235,6 @@ function createAgencyOpsActions(
     updateProjectTask,
     completeProjectTaskForMember,
     deleteProjectTask,
-    sendTaskMessage,
-    askTaskAgent,
     upsertContact,
     upsertRate,
     setCapacity,

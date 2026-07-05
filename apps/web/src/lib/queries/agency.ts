@@ -13,6 +13,7 @@ import {
   useMergedAgencyContactQuery,
   useMergedAgencyProjectTasksQuery,
   useMergedAgencyProjectsQuery,
+  useMergedAgencyTaskMessagesInfiniteQuery,
   useMergedAgencyTaskMessagesQuery,
   useMergedAgencyTimeEntriesQuery,
 } from "@/lib/queries/agency-optimistic";
@@ -23,11 +24,12 @@ import {
   EMPTY_LIST_OVERLAY,
   mergeListWithOverlay,
 } from "@/lib/utils/agency-optimistic-merge";
-import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
+import { withAgencySyncQueryOptions, AGENCY_POLL, AGENCY_STALE_TIME } from "@/lib/utils/agency-query-options";
 import {
   taskMatchesAgencyFilters,
   useAgencyOptimisticStore,
 } from "@/stores/agency-optimistic";
+import { useAgencyTaskMessagesStore } from "@/stores/agency-task-messages";
 import { useAgencyOpsStore } from "@/stores/agency-ops";
 import { useAgencyTimeTrackingStore } from "@/stores/agency-time-tracking";
 
@@ -281,32 +283,60 @@ export function useAgencyTaskThreadContextQuery(teamId: string, taskId: string) 
   );
 }
 
-export function useAgencyTaskMessagesQuery(teamId: string, taskId: string, pageSize = 50) {
-  const registerTaskMessagesQuery = useAgencyOpsStore((s) => s.registerTaskMessagesQuery);
-  const unregisterTaskMessagesQuery = useAgencyOpsStore((s) => s.unregisterTaskMessagesQuery);
-
-  const input = useMemo(() => ({ teamId, taskId, pageSize }), [teamId, taskId, pageSize]);
-
-  const queryKey = orpc.agencyOps.taskThreads.messages.list.queryOptions({ input }).queryKey;
-
-  const query = useQuery(
-    withAgencySyncQueryOptions(
-      {
-        ...orpc.agencyOps.taskThreads.messages.list.queryOptions({ input }),
-        enabled: Boolean(teamId) && Boolean(taskId),
-        placeholderData: keepPreviousData,
-      },
-      "hot",
-    ),
+export function useAgencyTaskMessagesInfiniteQuery(teamId: string, taskId: string, pageSize = 50) {
+  const registerTaskMessagesQuery = useAgencyTaskMessagesStore(
+    (s) => s.registerTaskMessagesQuery,
   );
+  const unregisterTaskMessagesQuery = useAgencyTaskMessagesStore(
+    (s) => s.unregisterTaskMessagesQuery,
+  );
+
+  const baseInput = useMemo(() => ({ teamId, taskId, pageSize }), [teamId, taskId, pageSize]);
+
+  const queryKey = useMemo(
+    () =>
+      [
+        ...orpc.agencyOps.taskThreads.messages.list.queryOptions({ input: baseInput }).queryKey,
+        "infinite",
+      ] as const,
+    [baseInput],
+  );
+
+  const query = useInfiniteQuery({
+    queryKey,
+    queryFn: async ({ pageParam }) =>
+      orpcClient.agencyOps.taskThreads.messages.list({
+        ...baseInput,
+        page: pageParam,
+      }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.page * lastPage.pageSize < lastPage.total) {
+        return lastPage.page + 1;
+      }
+      return undefined;
+    },
+    enabled: Boolean(teamId) && Boolean(taskId),
+    staleTime: AGENCY_STALE_TIME.hot,
+    refetchInterval: AGENCY_POLL.hot,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    placeholderData: keepPreviousData,
+  });
 
   useEffect(() => {
     if (!teamId || !taskId) return;
-    registerTaskMessagesQuery({ queryKey, teamId, taskId });
-    return () => unregisterTaskMessagesQuery(queryKey);
+    registerTaskMessagesQuery({ queryKey: [...queryKey], teamId, taskId });
+    return () => unregisterTaskMessagesQuery([...queryKey]);
   }, [teamId, taskId, queryKey, registerTaskMessagesQuery, unregisterTaskMessagesQuery]);
 
-  return useMergedAgencyTaskMessagesQuery(query, teamId, taskId);
+  return useMergedAgencyTaskMessagesInfiniteQuery(query, teamId, taskId);
+}
+
+/** @deprecated Use useAgencyTaskMessagesInfiniteQuery */
+export function useAgencyTaskMessagesQuery(teamId: string, taskId: string, pageSize = 50) {
+  return useAgencyTaskMessagesInfiniteQuery(teamId, taskId, pageSize);
 }
 
 export function useAgencyProjectTasksQuery(

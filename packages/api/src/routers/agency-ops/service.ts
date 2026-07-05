@@ -1928,6 +1928,50 @@ export async function listTaskThreadMessages(
   };
 }
 
+export async function getTaskThreadMessageById(
+  actorUserId: string,
+  input: { teamId: string; messageId: string },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const [row] = await db
+    .select({
+      id: agencyOpsTaskMessage.id,
+      teamId: agencyOpsTaskMessage.teamId,
+      threadId: agencyOpsTaskMessage.threadId,
+      userId: agencyOpsTaskMessage.userId,
+      userName: user.name,
+      userAvatar: user.image,
+      content: agencyOpsTaskMessage.content,
+      type: agencyOpsTaskMessage.type,
+      senderType: agencyOpsTaskMessage.senderType,
+      createdAt: agencyOpsTaskMessage.createdAt,
+      updatedAt: agencyOpsTaskMessage.updatedAt,
+    })
+    .from(agencyOpsTaskMessage)
+    .leftJoin(user, eq(user.id, agencyOpsTaskMessage.userId))
+    .where(
+      and(
+        eq(agencyOpsTaskMessage.id, input.messageId),
+        eq(agencyOpsTaskMessage.teamId, input.teamId),
+        isNull(agencyOpsTaskMessage.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!row) {
+    throw new ORPCError("NOT_FOUND", { message: "Message was not found." });
+  }
+
+  return mapTaskMessageRow({
+    ...row,
+    userName: row.userName ?? null,
+    userAvatar: row.userAvatar ?? null,
+    type: row.type as "text" | "voice" | "attachment",
+    senderType: row.senderType as "user" | "agent",
+  });
+}
+
 export async function createTaskThreadMessage(
   actorUserId: string,
   input: {

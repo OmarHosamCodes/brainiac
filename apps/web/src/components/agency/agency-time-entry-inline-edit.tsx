@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import {
   applyDurationToDraft,
   applyEndTimeToDraft,
+  draftSpansNextDay,
   type TimeEntryDraft,
 } from "@/lib/utils/time-entry-draft";
 
@@ -116,6 +117,9 @@ export function AgencyTimeEntryEditPopover({
               aria-label="End time"
               disabled={saving}
             />
+            {draftSpansNextDay(draft) ? (
+              <p className="text-[11px] text-muted">Ends next day</p>
+            ) : null}
           </div>
         </div>
 

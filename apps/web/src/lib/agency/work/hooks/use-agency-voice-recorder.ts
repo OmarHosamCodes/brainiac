@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 type UseAgencyVoiceRecorderOptions = {
   disabled?: boolean;
   onRecorded: (file: File, durationSeconds: number) => void;
+  onMicDenied?: () => void;
 };
 
 export type AgencyVoiceRecorderViewModel = {
@@ -26,6 +27,7 @@ function formatRecordingDuration(seconds: number): string {
 export function useAgencyVoiceRecorder({
   disabled = false,
   onRecorded,
+  onMicDenied,
 }: UseAgencyVoiceRecorderOptions): AgencyVoiceRecorderViewModel {
   const [isRecording, setIsRecording] = useState(false);
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
@@ -52,30 +54,36 @@ export function useAgencyVoiceRecorder({
   async function startRecording() {
     if (disabled) return;
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mediaRecorder = new MediaRecorder(stream);
-    mediaRecorderRef.current = mediaRecorder;
-    chunksRef.current = [];
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      chunksRef.current = [];
 
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        chunksRef.current.push(event.data);
-      }
-    };
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
 
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: "audio/webm" });
-      setRecordedBlob(blob);
-      setRecordedUrl(URL.createObjectURL(blob));
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: "audio/webm" });
+        setRecordedBlob(blob);
+        setRecordedUrl(URL.createObjectURL(blob));
+        stopTimer();
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      timerHandleRef.current = setInterval(() => {
+        setRecordingSeconds((current) => current + 1);
+      }, 1_000);
+    } catch {
+      setIsRecording(false);
       stopTimer();
-    };
-
-    mediaRecorder.start();
-    setIsRecording(true);
-    setRecordingSeconds(0);
-    timerHandleRef.current = setInterval(() => {
-      setRecordingSeconds((current) => current + 1);
-    }, 1_000);
+      onMicDenied?.();
+    }
   }
 
   function sendRecording() {
