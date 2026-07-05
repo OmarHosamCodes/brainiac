@@ -1,6 +1,7 @@
 import { Bell } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,7 +12,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { useAgencyNotificationsStore } from "@/stores/agency-notifications";
+import {
+  useAgencyNotificationsStore,
+  type AgencyNotificationItem,
+} from "@/stores/agency-notifications";
+
+const EMPTY_NOTIFICATION_ITEMS: AgencyNotificationItem[] = [];
+const INBOX_DISPLAY_LIMIT = 20;
+
+type PushUiState = "idle" | "pending" | "enabled" | "denied" | "unsupported" | "not-configured";
 
 function formatRelativeTime(iso: string): string {
   const deltaMs = Date.now() - new Date(iso).getTime();
@@ -22,6 +31,20 @@ function formatRelativeTime(iso: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.round(hours / 24);
   return `${days}d ago`;
+}
+
+function formatUnreadBadge(count: number): string {
+  return count > 9 ? "9+" : String(count);
+}
+
+function notificationTypeBadge(item: AgencyNotificationItem) {
+  if (item.type === "task_assigned") {
+    return { label: "Assigned", variant: "default" as const };
+  }
+  if (item.body.startsWith("Agent ")) {
+    return { label: "Agent", variant: "secondary" as const };
+  }
+  return { label: "Thread", variant: "outline" as const };
 }
 
 type AgencyNotificationsBellProps = {
@@ -43,11 +66,13 @@ export function AgencyNotificationsBell({
   onEnablePush,
   isMarkingAllRead = false,
 }: AgencyNotificationsBellProps) {
-  const [pushState, setPushState] = useState<"idle" | "pending" | "denied" | "enabled">("idle");
-  const items = useAgencyNotificationsStore((state) => state.itemsByTeam[teamId] ?? []);
+  const [pushState, setPushState] = useState<PushUiState>("idle");
+  const items = useAgencyNotificationsStore(
+    (state) => state.itemsByTeam[teamId] ?? EMPTY_NOTIFICATION_ITEMS,
+  );
   const unreadCount = useAgencyNotificationsStore((state) => state.unreadCountByTeam[teamId] ?? 0);
 
-  const visibleItems = useMemo(() => items.slice(0, 8), [items]);
+  const visibleItems = useMemo(() => items.slice(0, INBOX_DISPLAY_LIMIT), [items]);
   const pushPermission =
     typeof Notification !== "undefined" ? Notification.permission : "default";
 
@@ -62,7 +87,52 @@ export function AgencyNotificationsBell({
       setPushState("denied");
       return;
     }
+    if (result.reason === "unsupported") {
+      setPushState("unsupported");
+      return;
+    }
+    if (result.reason === "not-configured") {
+      setPushState("not-configured");
+      return;
+    }
     setPushState("idle");
+  }
+
+  function renderPushFooter() {
+    if (pushPermission === "granted" || pushState === "enabled") {
+      return <p className="text-xs text-muted">Browser notifications enabled</p>;
+    }
+    if (pushState === "denied" || pushPermission === "denied") {
+      return (
+        <p className="text-xs text-muted">
+          Browser notifications blocked. In-app alerts still work.
+        </p>
+      );
+    }
+    if (pushState === "unsupported") {
+      return (
+        <p className="text-xs text-muted">
+          Browser notifications are not supported here. In-app alerts still work.
+        </p>
+      );
+    }
+    if (pushState === "not-configured") {
+      return (
+        <p className="text-xs text-muted">
+          Browser notifications are not set up on this server yet. In-app alerts still work.
+        </p>
+      );
+    }
+    return (
+      <button
+        type="button"
+        className="text-xs font-semibold text-primary hover:underline disabled:opacity-50"
+        disabled={pushState === "pending"}
+        onClick={() => void handleEnablePush()}
+      >
+        {pushState === "pending" ? "Enabling…" : "Enable browser notifications"}
+      </button>
+    );
   }
 
   return (
@@ -85,9 +155,11 @@ export function AgencyNotificationsBell({
           <Bell className="size-4" />
           {unreadCount > 0 ? (
             <span
-              className="absolute right-1 top-1 size-2 rounded-full bg-primary ring-2 ring-default"
+              className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground ring-2 ring-default"
               aria-hidden
-            />
+            >
+              {formatUnreadBadge(unreadCount)}
+            </span>
           ) : null}
         </Button>
       </DropdownMenuTrigger>
@@ -110,56 +182,57 @@ export function AgencyNotificationsBell({
 
         <div className="max-h-80 overflow-y-auto">
           {visibleItems.length === 0 ? (
-            <p className="px-3 py-6 text-center text-sm text-muted">No notifications yet</p>
+            <p className="px-3 py-6 text-center text-sm text-muted">
+              Task assignments and thread replies appear here.
+            </p>
           ) : (
-            visibleItems.map((item) => (
-              <DropdownMenuItem
-                key={item.id}
-                className={cn(
-                  "cursor-pointer rounded-none border-b border-border/60 px-3 py-3 focus:bg-muted/40",
-                  !item.readAt && "bg-muted/20",
-                )}
-                onClick={() => {
-                  if (!item.readAt) {
-                    void onMarkRead([item.id]);
-                  }
-                  onOpenTask(item.taskId);
-                }}
-              >
-                <div className="min-w-0 space-y-1">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="truncate text-sm font-semibold text-highlighted">{item.title}</p>
-                    <span className="shrink-0 font-mono text-[10px] text-muted">
-                      {formatRelativeTime(item.createdAt)}
-                    </span>
+            visibleItems.map((item) => {
+              const typeBadge = notificationTypeBadge(item);
+              return (
+                <DropdownMenuItem
+                  key={item.id}
+                  className={cn(
+                    "cursor-pointer rounded-none border-b border-border/60 px-3 py-3 focus:bg-muted/40",
+                    !item.readAt && "bg-muted/20",
+                  )}
+                  aria-describedby={`agency-notification-${item.id}-body`}
+                  onClick={() => {
+                    if (!item.readAt) {
+                      void onMarkRead([item.id]);
+                    }
+                    onOpenTask(item.taskId);
+                  }}
+                >
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <Badge
+                          variant={typeBadge.variant}
+                          className="shrink-0 px-1.5 py-0 text-[10px] uppercase tracking-wide"
+                        >
+                          {typeBadge.label}
+                        </Badge>
+                        <p className="truncate text-sm font-semibold text-highlighted">
+                          {item.title}
+                        </p>
+                      </div>
+                      <span className="shrink-0 font-mono text-[10px] text-muted">
+                        {formatRelativeTime(item.createdAt)}
+                      </span>
+                    </div>
+                    <p id={`agency-notification-${item.id}-body`} className="text-xs text-default">
+                      {item.body}
+                    </p>
+                    <p className="text-[11px] text-muted">{item.description}</p>
                   </div>
-                  <p className="text-xs text-default">{item.body}</p>
-                  <p className="text-[11px] text-muted">{item.description}</p>
-                </div>
-              </DropdownMenuItem>
-            ))
+                </DropdownMenuItem>
+              );
+            })
           )}
         </div>
 
         <DropdownMenuSeparator className="m-0" />
-        <div className="px-3 py-2">
-          {pushPermission === "granted" || pushState === "enabled" ? (
-            <p className="text-xs text-muted">Browser notifications enabled</p>
-          ) : pushState === "denied" || pushPermission === "denied" ? (
-            <p className="text-xs text-muted">
-              Browser notifications blocked. In-app alerts still work.
-            </p>
-          ) : (
-            <button
-              type="button"
-              className="text-xs font-semibold text-primary hover:underline disabled:opacity-50"
-              disabled={pushState === "pending"}
-              onClick={() => void handleEnablePush()}
-            >
-              {pushState === "pending" ? "Enabling…" : "Enable browser notifications"}
-            </button>
-          )}
-        </div>
+        <div className="px-3 py-2">{renderPushFooter()}</div>
       </DropdownMenuContent>
     </DropdownMenu>
   );

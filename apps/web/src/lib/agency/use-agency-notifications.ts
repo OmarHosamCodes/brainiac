@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SetURLSearchParams } from "react-router-dom";
+import { toast } from "sonner";
 
 import { openAgencyTask } from "@/lib/agency/agency-notification-navigation";
 import type { AgencySegmentId } from "@/lib/agency-segments";
@@ -171,6 +172,7 @@ export function useAgencyNotifications({
   const markAllRead = useCallback(async () => {
     markAllReadLocal(teamId);
     await markAllReadMutation.mutateAsync({ teamId });
+    toast.success("All notifications marked as read");
     void queryClient.invalidateQueries({
       predicate: (query) => JSON.stringify(query.queryKey).includes("notifications"),
     });

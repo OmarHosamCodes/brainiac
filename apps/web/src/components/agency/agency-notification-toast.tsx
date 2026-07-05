@@ -11,8 +11,8 @@ export function showAgencyNotificationToast({
   notification,
   onOpenTask,
 }: ShowAgencyNotificationToastOptions) {
-  toast(notification.title, {
-    description: `${notification.body}\n${notification.description}`,
+  toast(notification.body, {
+    description: `${notification.title} · ${notification.description}`,
     action: {
       label: "Open task",
       onClick: () => onOpenTask(notification.taskId),
