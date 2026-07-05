@@ -21,6 +21,7 @@ import {
 import {
   buildCurvedSegmentPath,
   computeVerticalLayout,
+  computeCompactZigzagLayout,
   computeZigzagLayout,
   getJourneyStepNumber,
   isJourneySegmentCompleted,
@@ -47,6 +48,12 @@ type AgencyProjectJourneyStepperProps = {
   projectId: string;
   className?: string;
   layout?: "auto" | "horizontal" | "vertical";
+  /** Display-only: no edit controls; use with Edit journey dialog for changes. */
+  readOnly?: boolean;
+  /** Highlights a step in read-only mode (e.g. task-linked milestone). */
+  selectedStepId?: string | null;
+  /** Tighter graph for read-only horizontal embeds. */
+  compact?: boolean;
 };
 
 function getNodeTone(step: AgencyProjectJourneyStep) {
@@ -93,6 +100,9 @@ export function AgencyProjectJourneyStepper({
   projectId,
   className,
   layout = "auto",
+  readOnly = false,
+  selectedStepId: selectedStepIdProp,
+  compact = false,
 }: AgencyProjectJourneyStepperProps) {
   const prefersReducedMotion = usePrefersReducedMotion();
   const journeyState = useAgencyProjectJourney(teamId, projectId);
@@ -125,10 +135,10 @@ export function AgencyProjectJourneyStepper({
   const keyboardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!journey || selectedStepId) return;
+    if (readOnly || !journey || selectedStepId) return;
     const activeStep = sortedSteps.find((step) => step.status === "active");
     setSelectedStepId(activeStep?.id ?? sortedSteps[0]?.id ?? null);
-  }, [journey, selectedStepId, sortedSteps]);
+  }, [journey, readOnly, selectedStepId, sortedSteps]);
 
   const [verticalLayout, setVerticalLayout] = useState(false);
 
@@ -288,6 +298,31 @@ export function AgencyProjectJourneyStepper({
 
   const progressLabel = `${journey.completedSteps}/${journey.totalSteps}`;
 
+  if (readOnly) {
+    const highlightedStepId =
+      selectedStepIdProp ??
+      sortedSteps.find((step) => step.status === "active")?.id ??
+      sortedSteps[0]?.id ??
+      null;
+    const readOnlyLayout = compact
+      ? computeCompactZigzagLayout(sortedSteps.length)
+      : computeZigzagLayout(sortedSteps.length);
+
+    return (
+      <div className={cn("overflow-x-auto", className)}>
+        <HorizontalJourneyGraph
+          steps={sortedSteps}
+          layout={readOnlyLayout}
+          selectedStepId={highlightedStepId}
+          prefersReducedMotion={prefersReducedMotion}
+          onSelectStep={() => {}}
+          interactive={false}
+          compact={compact}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       <div className="flex flex-wrap items-center justify-between gap-3 px-1">
@@ -422,6 +457,8 @@ type HorizontalJourneyGraphProps = {
   selectedStepId: string | null;
   prefersReducedMotion: boolean;
   onSelectStep: (stepId: string) => void;
+  interactive?: boolean;
+  compact?: boolean;
 };
 
 function JourneyFlagIcon({ className }: { className?: string }) {
@@ -439,12 +476,15 @@ function HorizontalJourneyGraph({
   selectedStepId,
   prefersReducedMotion,
   onSelectStep,
+  interactive = true,
+  compact = false,
 }: HorizontalJourneyGraphProps) {
   return (
-    <div className="overflow-x-auto px-2 py-4">
+    <div className={cn("overflow-x-auto px-2", compact ? "py-1.5" : "py-4")}>
       <svg
         viewBox={`0 0 ${layout.width} ${layout.height}`}
-        className="min-w-full"
+        preserveAspectRatio="xMidYMid meet"
+        className={compact ? "h-[160px] w-full" : "min-w-full"}
         role="img"
         aria-label="Journey path"
       >
@@ -482,36 +522,47 @@ function HorizontalJourneyGraph({
             <g
               key={step.id}
               transform={`translate(${point.x} ${point.y})`}
-              className="cursor-pointer"
-              onClick={() => onSelectStep(step.id)}
+              className={interactive ? "cursor-pointer" : undefined}
+              onClick={interactive ? () => onSelectStep(step.id) : undefined}
             >
               <circle
-                r={isSelected ? 18 : 16}
+                r={compact ? (isSelected ? 14 : 12) : isSelected ? 18 : 16}
                 className={cn(
                   "fill-elevated",
                   tone.ring,
-                  isSelected && "stroke-[3px]",
+                  isSelected && (compact ? "stroke-[2.5px]" : "stroke-[3px]"),
                   !prefersReducedMotion && "transition-[r,stroke-width] duration-200 motion-reduce:transition-none",
                 )}
               />
               {isEndpoint ? (
-                <foreignObject x={-8} y={-8} width={16} height={16} className="pointer-events-none">
-                  <JourneyFlagIcon className={cn("size-4", tone.text)} />
+                <foreignObject
+                  x={compact ? -6 : -8}
+                  y={compact ? -6 : -8}
+                  width={compact ? 12 : 16}
+                  height={compact ? 12 : 16}
+                  className="pointer-events-none"
+                >
+                  <JourneyFlagIcon className={cn(compact ? "size-3" : "size-4", tone.text)} />
                 </foreignObject>
               ) : (
                 <text
                   textAnchor="middle"
                   dominantBaseline="central"
-                  className={cn("fill-current text-[11px] font-bold", tone.text)}
+                  className={cn(
+                    "fill-current font-bold",
+                    compact ? "text-[10px]" : "text-[11px]",
+                    tone.text,
+                  )}
                 >
                   {stepNumber}
                 </text>
               )}
               <text
-                y={28}
+                y={compact ? 22 : 28}
                 textAnchor="middle"
                 className={cn(
-                  "fill-current text-[10px] font-semibold",
+                  "fill-current font-semibold",
+                  compact ? "text-[9px]" : "text-[10px]",
                   isSelected ? "text-highlighted" : tone.label,
                 )}
               >

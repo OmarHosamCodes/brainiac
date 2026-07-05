@@ -14,23 +14,50 @@ export type JourneyLayout = {
 const LAYOUT_PADDING_X = 56;
 const LAYOUT_PADDING_Y = 48;
 
-export function computeZigzagLayout(stepCount: number): JourneyLayout {
-  const width = Math.max(640, stepCount * 120);
-  const height = 220;
-  const usableWidth = width - LAYOUT_PADDING_X * 2;
+function computeZigzagPoints(
+  stepCount: number,
+  width: number,
+  height: number,
+  paddingX: number,
+  paddingY: number,
+): JourneyLayoutPoint[] {
+  const usableWidth = width - paddingX * 2;
   const midY = height / 2;
-  const amplitude = (height - LAYOUT_PADDING_Y * 2) * 0.38;
-
+  const amplitude = (height - paddingY * 2) * 0.38;
   const points: JourneyLayoutPoint[] = [];
+
   for (let index = 0; index < stepCount; index += 1) {
     const t = stepCount <= 1 ? 0.5 : index / (stepCount - 1);
     points.push({
-      x: LAYOUT_PADDING_X + t * usableWidth,
+      x: paddingX + t * usableWidth,
       y: midY + (index % 2 === 0 ? -amplitude : amplitude),
     });
   }
 
-  return { width, height, points };
+  return points;
+}
+
+export function computeZigzagLayout(stepCount: number): JourneyLayout {
+  const width = Math.max(640, stepCount * 120);
+  const height = 220;
+  return {
+    width,
+    height,
+    points: computeZigzagPoints(stepCount, width, height, LAYOUT_PADDING_X, LAYOUT_PADDING_Y),
+  };
+}
+
+/** Smaller zigzag for read-only embeds (e.g. task thread progress). */
+export function computeCompactZigzagLayout(stepCount: number): JourneyLayout {
+  const width = Math.max(480, stepCount * 96);
+  const height = 140;
+  const paddingX = 40;
+  const paddingY = 24;
+  return {
+    width,
+    height,
+    points: computeZigzagPoints(stepCount, width, height, paddingX, paddingY),
+  };
 }
 
 export function computeVerticalLayout(stepCount: number): JourneyLayout {
