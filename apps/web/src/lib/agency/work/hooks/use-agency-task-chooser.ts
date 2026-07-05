@@ -107,8 +107,15 @@ export function useAgencyTaskChooser({
   }
 
   const chooserTasks = useMemo(
-    () => tasks.filter((task) => task.status !== "archived"),
-    [tasks],
+    () =>
+      tasks.filter(
+        (task) =>
+          task.status !== "archived" &&
+          (task.status === "open" ||
+            task.status === "in_progress" ||
+            (value !== "" && task.id === value)),
+      ),
+    [tasks, value],
   );
 
   const projectsById = useMemo(
@@ -117,8 +124,8 @@ export function useAgencyTaskChooser({
   );
 
   const selectedTask = useMemo(
-    () => chooserTasks.find((task) => task.id === value) ?? null,
-    [chooserTasks, value],
+    () => tasks.find((task) => task.id === value) ?? null,
+    [tasks, value],
   );
 
   const selectedProject = useMemo(
