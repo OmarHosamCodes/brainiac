@@ -5,10 +5,9 @@ import {
 } from "@/stores/agency-time-entries-log";
 import type { AgencyProject, AgencyProjectTask } from "@/lib/schemas/agency-work";
 import {
-  useAgencyProjectTasksQuery,
+  useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
-  type AgencyProjectTaskStatus,
 } from "@/lib/queries/agency";
 import { getLocalWeekStartKey, todayLocalDateKey } from "@/lib/utils/format-agency-day-label";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
@@ -23,7 +22,6 @@ import {
   useAgencyTimeTrackingStore,
 } from "@/stores/agency-time-tracking";
 
-const OPEN_TASK_STATUSES: AgencyProjectTaskStatus[] = ["open", "in_progress", "done", "archived"];
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
 const HIGHLIGHT_CLEAR_MS = 2_500;
 
@@ -91,11 +89,11 @@ export function useAgencyTimeEntriesLog({
 
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, page, pageSize);
   const projectsQuery = useAgencyProjectsQuery(teamId);
-  const tasksQuery = useAgencyProjectTasksQuery(teamId, { statuses: OPEN_TASK_STATUSES });
+  const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId);
   const entries = entriesQuery.data?.items ?? [];
   const totalEntries = entriesQuery.data?.total ?? 0;
   const projects = projectsQuery.data?.items ?? [];
-  const tasks = tasksQuery.data?.items ?? [];
+  const tasks = tasksQuery.items ?? [];
   const weekSummary = entriesQuery.data?.weekSummary ?? null;
 
   const weekGroups = useMemo(() => {

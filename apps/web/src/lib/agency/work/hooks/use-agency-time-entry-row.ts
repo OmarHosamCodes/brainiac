@@ -237,7 +237,6 @@ export function useAgencyTimeEntryRow({
       canStartAgencyTimer({
         activeTimer,
         project,
-        task: { id: group.taskId, title: group.taskTitle },
       }),
   );
 

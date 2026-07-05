@@ -1,15 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { authClient } from "@/lib/auth-client";
 import { useAgencyElapsedTimer } from "@/lib/agency/work/hooks/use-agency-elapsed-timer";
 import {
   canStartAgencyTimer,
   canStopAgencyTimer,
+  resolveAgencyTimerStartProject,
 } from "@/lib/agency/work/timer-validation";
 import type { AgencyProject, AgencyProjectTask } from "@/lib/schemas/agency-work";
 import {
   useAgencyActiveTimerQuery,
-  useAgencyProjectTasksQuery,
+  useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
   type AgencyProjectTaskStatus,
@@ -71,6 +71,7 @@ function normalizeSuggestionText(value: string) {
 
 export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): AgencyTimeTrackerViewModel {
   const setTrackerDescription = useAgencyTimeTrackingStore((s) => s.setTrackerDescription);
+  const setTrackerProjectId = useAgencyTimeTrackingStore((s) => s.setTrackerProjectId);
   const setTrackerTaskId = useAgencyTimeTrackingStore((s) => s.setTrackerTaskId);
   const ensureTrackerDraft = useAgencyTimeTrackingStore((s) => s.ensureTrackerDraft);
   const syncDraftFromActiveTimer = useAgencyTimeTrackingStore((s) => s.syncDraftFromActiveTimer);
@@ -81,21 +82,15 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
 
   const [taskChooserOpen, setTaskChooserOpen] = useState(false);
 
-  const session = authClient.useSession();
-  const currentUserId = session.data?.user?.id ?? "";
-
   const projectsQuery = useAgencyProjectsQuery(teamId);
-  const tasksQuery = useAgencyProjectTasksQuery(
-    teamId,
-    currentUserId
-      ? { assigneeUserId: currentUserId, statuses: OPEN_TASK_STATUSES }
-      : { statuses: OPEN_TASK_STATUSES },
-  );
+  const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId, {
+    statuses: OPEN_TASK_STATUSES,
+  });
   const recentEntriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 50);
   const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
 
   const projects = projectsQuery.data?.items ?? [];
-  const tasks = tasksQuery.data?.items ?? [];
+  const tasks = tasksQuery.items ?? [];
   const activeTimer = activeTimerQuery.data?.timer ?? null;
   const trackerDraft = useTrackerDraft(teamId);
 
@@ -103,9 +98,13 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
   const timerDescription = trackerDraft?.description ?? "";
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
-  const selectedProject = selectedTask
-    ? (projects.find((project) => project.id === selectedTask.projectId) ?? null)
-    : null;
+  const recentEntryProjectId = recentEntriesQuery.data?.items[0]?.projectId ?? null;
+  const startProject = resolveAgencyTimerStartProject({
+    projects,
+    selectedTaskProjectId: selectedTask?.projectId ?? null,
+    draftProjectId: trackerDraft?.projectId ?? "",
+    recentEntryProjectId,
+  });
   const activeTimerHasTask = Boolean(activeTimer?.taskId);
   const descriptionTrimmed = timerDescription.trim();
   const tasksForChooser =
@@ -132,8 +131,7 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
     teamId &&
       canStartAgencyTimer({
         activeTimer,
-        project: selectedProject,
-        task: selectedTask,
+        project: startProject,
       }),
   );
   const canStopTimer = canStopAgencyTimer({
@@ -190,15 +188,11 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
   }
 
   async function startTimer() {
-    if (!teamId || activeTimer) return;
-    if (!selectedProject || !selectedTask) {
-      revealTaskChooser();
-      return;
-    }
+    if (!teamId || activeTimer || !startProject) return;
 
     await startTimerAction({
       teamId,
-      project: selectedProject,
+      project: startProject,
       task: selectedTask,
       description: timerDescription,
     });
@@ -258,7 +252,13 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
         void startTimer();
       }
     },
-    onTaskChange: (value) => setTrackerTaskId(teamId, value || ""),
+    onTaskChange: (value) => {
+      setTrackerTaskId(teamId, value || "");
+      const task = tasks.find((entry) => entry.id === value);
+      if (task) {
+        setTrackerProjectId(teamId, task.projectId);
+      }
+    },
     onTaskChooserOpenChange: setTaskChooserOpen,
     onStartTimer: () => void startTimer(),
     onStopTimer: () => void stopTimer(),
@@ -266,6 +266,10 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
     onApplySuggestion: (suggestion) => {
       setTrackerDescription(teamId, suggestion.description);
       setTrackerTaskId(teamId, suggestion.taskId);
+      const task = tasks.find((entry) => entry.id === suggestion.taskId);
+      if (task) {
+        setTrackerProjectId(teamId, task.projectId);
+      }
     },
   };
 }

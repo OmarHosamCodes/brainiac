@@ -2422,23 +2422,25 @@ export async function startAgencyTimer(
 
   await db.transaction(async (tx) => {
     if (existing) {
-      const durationSeconds = getDurationSeconds(existing.startedAt, now);
-      rolledOverEntryId = createWorkspaceId("agency-time");
+      if (existing.taskId) {
+        const durationSeconds = getDurationSeconds(existing.startedAt, now);
+        rolledOverEntryId = createWorkspaceId("agency-time");
 
-      await tx.insert(agencyOpsTimeEntry).values({
-        id: rolledOverEntryId,
-        teamId: existing.teamId,
-        projectId: existing.projectId,
-        taskId: existing.taskId,
-        userId: actorUserId,
-        source: "timer",
-        description: existing.description,
-        startedAt: existing.startedAt,
-        endedAt: now,
-        durationSeconds,
-        createdAt: now,
-        updatedAt: now,
-      });
+        await tx.insert(agencyOpsTimeEntry).values({
+          id: rolledOverEntryId,
+          teamId: existing.teamId,
+          projectId: existing.projectId,
+          taskId: existing.taskId,
+          userId: actorUserId,
+          source: "timer",
+          description: existing.description,
+          startedAt: existing.startedAt,
+          endedAt: now,
+          durationSeconds,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
 
       await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, existing.id));
     }

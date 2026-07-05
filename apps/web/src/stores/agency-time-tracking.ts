@@ -125,7 +125,7 @@ type QuerySnapshot = {
 type StartTimerPayload = {
   teamId: string;
   project: Pick<AgencyProjectSummary, "id" | "name">;
-  task: Pick<AgencyProjectTask, "id" | "title">;
+  task: Pick<AgencyProjectTask, "id" | "title"> | null;
   description: string;
   successDescription?: string;
 };
@@ -347,7 +347,7 @@ function createAgencyTimeTrackingActions(
           [teamId]: {
             description: timer.description,
             projectId: timer.projectId,
-            taskId: timer.taskId ?? "",
+            taskId: timer.taskId ?? draft.taskId ?? "",
             syncedTimerId: timer.id,
           },
         },
@@ -425,7 +425,6 @@ function createAgencyTimeTrackingActions(
     const startBlockedMessage = getAgencyTimerStartBlockedMessage({
       activeTimer: previousActiveTimer,
       project: payload.project,
-      task: payload.task,
     });
 
     if (startBlockedMessage) {
@@ -492,24 +491,27 @@ function createAgencyTimeTrackingActions(
       });
 
       // Server promotes open → in_progress on timer start; mirror that in the task rail.
-      const cachedTask =
-        optimistic().findTask(payload.teamId, payload.task.id) ??
-        findProjectTaskInCache(payload.teamId, payload.task.id);
-      if (cachedTask && cachedTask.status === "open") {
-        await cancelAgencyProjectTaskListQueries(payload.teamId);
-        const inProgressTask = {
-          ...cachedTask,
-          status: "in_progress" as const,
-          viewerStatus: "in_progress" as const,
-          updatedAt: nowIso,
-        };
-        optimistic().upsertTask(payload.teamId, inProgressTask);
-        patchUpdatedProjectTaskInCache(payload.teamId, inProgressTask);
+      if (payload.task) {
+        const cachedTask =
+          optimistic().findTask(payload.teamId, payload.task.id) ??
+          findProjectTaskInCache(payload.teamId, payload.task.id);
+        if (cachedTask && cachedTask.status === "open") {
+          await cancelAgencyProjectTaskListQueries(payload.teamId);
+          const inProgressTask = {
+            ...cachedTask,
+            status: "in_progress" as const,
+            viewerStatus: "in_progress" as const,
+            updatedAt: nowIso,
+          };
+          optimistic().upsertTask(payload.teamId, inProgressTask);
+          patchUpdatedProjectTaskInCache(payload.teamId, inProgressTask);
+        }
       }
 
       const result = (await orpcClient.agencyOps.timer.start({
         teamId: payload.teamId,
-        taskId: payload.task.id,
+        projectId: payload.project.id,
+        ...(payload.task ? { taskId: payload.task.id } : {}),
         description: payload.description.trim(),
       })) as {
         timer: AgencyActiveTimer | null;
@@ -617,7 +619,12 @@ function createAgencyTimeTrackingActions(
 
       patchActiveTimerCaches(null);
 
-      patchTrackerDraft(payload.teamId, emptyTrackerDraft());
+      patchTrackerDraft(
+        payload.teamId,
+        payload.discard
+          ? emptyTrackerDraft()
+          : { ...emptyTrackerDraft(), projectId: activeTimer.projectId },
+      );
 
       const result = (await orpcClient.agencyOps.timer.stop({
         teamId: payload.teamId,
@@ -769,7 +776,7 @@ function createAgencyTimeTrackingActions(
   function createOptimisticTimer(payload: {
     teamId: string;
     project: Pick<AgencyProjectSummary, "id" | "name">;
-    task: Pick<AgencyProjectTask, "id" | "title">;
+    task: Pick<AgencyProjectTask, "id" | "title"> | null;
     description: string;
     startedAt: string;
   }) {
@@ -778,8 +785,8 @@ function createAgencyTimeTrackingActions(
       teamId: payload.teamId,
       userId: getCurrentUserId(),
       projectId: payload.project.id,
-      taskId: payload.task.id,
-      taskTitle: payload.task.title,
+      taskId: payload.task?.id ?? null,
+      taskTitle: payload.task?.title ?? null,
       projectName: payload.project.name,
       description: payload.description.trim(),
       startedAt: payload.startedAt,

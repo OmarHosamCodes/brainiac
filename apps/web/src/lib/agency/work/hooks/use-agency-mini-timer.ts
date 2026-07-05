@@ -59,7 +59,7 @@ export function useAgencyMiniTimer({
     [taskId, taskTitle],
   );
 
-  const canStart = canStartAgencyTimer({ activeTimer, project, task });
+  const canStart = canStartAgencyTimer({ activeTimer, project });
   const canStop = canStopAgencyTimer({
     activeTimer,
     description: activeTimer?.description ?? "",

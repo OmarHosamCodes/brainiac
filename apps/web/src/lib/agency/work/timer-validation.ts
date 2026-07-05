@@ -17,9 +17,8 @@ export type AgencyActiveTimerRef = {
 export function canStartAgencyTimer(input: {
   activeTimer: AgencyActiveTimerRef | null;
   project: AgencyTimerProjectRef | null;
-  task: AgencyTimerTaskRef | null;
 }): boolean {
-  return Boolean(!input.activeTimer && input.project && input.task);
+  return Boolean(!input.activeTimer && input.project);
 }
 
 export function canStopAgencyTimer(input: {
@@ -37,17 +36,44 @@ export function canStopAgencyTimer(input: {
   return Boolean(descriptionTrimmed && (activeTimerHasTask || input.selectedTask));
 }
 
+// ponytail: naive fallback chain (draft → recent entry → first project); upgrade path is explicit project picker
+export function resolveAgencyTimerStartProject(input: {
+  projects: AgencyTimerProjectRef[];
+  selectedTaskProjectId: string | null;
+  draftProjectId: string;
+  recentEntryProjectId: string | null;
+}): AgencyTimerProjectRef | null {
+  const findProject = (projectId: string) =>
+    input.projects.find((project) => project.id === projectId) ?? null;
+
+  if (input.selectedTaskProjectId) {
+    const project = findProject(input.selectedTaskProjectId);
+    if (project) return project;
+  }
+
+  if (input.draftProjectId) {
+    const project = findProject(input.draftProjectId);
+    if (project) return project;
+  }
+
+  if (input.recentEntryProjectId) {
+    const project = findProject(input.recentEntryProjectId);
+    if (project) return project;
+  }
+
+  return input.projects[0] ?? null;
+}
+
 export function getAgencyTimerStartBlockedMessage(input: {
   activeTimer: AgencyActiveTimerRef | null;
   project: AgencyTimerProjectRef | null;
-  task: AgencyTimerTaskRef | null;
 }): string | null {
   if (input.activeTimer) {
     return "Stop the active timer in the time tracker before starting another.";
   }
 
-  if (!input.project || !input.task) {
-    return "Choose a task before starting the timer.";
+  if (!input.project) {
+    return "No project available to start the timer.";
   }
 
   return null;

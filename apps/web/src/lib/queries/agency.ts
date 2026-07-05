@@ -570,6 +570,42 @@ export function useAgencyProjectTasksInfiniteQuery(
   return { ...query, items, total };
 }
 
+const TASK_CHOOSER_PAGE_SIZE = 100;
+
+/** Loads every page for task picker UIs. ponytail: sequential fetches; upgrade path is a dedicated unpaginated endpoint. */
+export function useAgencyProjectTasksForChooserQuery(
+  teamId: string,
+  filters: Omit<AgencyProjectTasksFilters, "page" | "pageSize"> = {},
+) {
+  const infiniteQuery = useAgencyProjectTasksInfiniteQuery(teamId, {
+    ...filters,
+    pageSize: TASK_CHOOSER_PAGE_SIZE,
+  });
+
+  useEffect(() => {
+    if (!teamId || !infiniteQuery.hasNextPage || infiniteQuery.isFetchingNextPage) return;
+    void infiniteQuery.fetchNextPage();
+  }, [
+    teamId,
+    infiniteQuery.hasNextPage,
+    infiniteQuery.isFetchingNextPage,
+    infiniteQuery.fetchNextPage,
+    infiniteQuery.data?.pages.length,
+  ]);
+
+  const isFetchingAll =
+    infiniteQuery.isFetchingNextPage || Boolean(infiniteQuery.hasNextPage);
+
+  return {
+    ...infiniteQuery,
+    items: infiniteQuery.items,
+    total: infiniteQuery.total,
+    isPending: infiniteQuery.isPending,
+    isLoading: infiniteQuery.isPending,
+    isFetchingAll,
+  };
+}
+
 export type { AgencyPresenceMember } from "@/lib/utils/agency-presence-members";
 export { mergeAgencyPresenceMembers } from "@/lib/utils/agency-presence-members";
 

@@ -47,12 +47,13 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
           <div className="px-4 py-10 text-center">
             <p className="text-sm font-semibold text-highlighted">No time logged yet</p>
             <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-              Pick a task, describe what you are working on, then press Start in the tracker above.
+              Press Start in the tracker above to begin tracking; add a description and task before
+              you stop.
             </p>
             <ol className="mx-auto mt-4 max-w-xs space-y-2 text-left text-sm text-muted">
               <li className="flex gap-2">
                 <span className={cn(agencyMetricClass, "text-xs")}>1.</span>
-                <span>Choose a task</span>
+                <span>Press Start</span>
               </li>
               <li className="flex gap-2">
                 <span className={cn(agencyMetricClass, "text-xs")}>2.</span>
@@ -60,7 +61,7 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
               </li>
               <li className="flex gap-2">
                 <span className={cn(agencyMetricClass, "text-xs")}>3.</span>
-                <span>Press Start</span>
+                <span>Choose a task</span>
               </li>
             </ol>
             <Button
