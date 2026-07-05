@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef } from "react";
 import {
   useAgencyTimeEntriesLogStore,
 } from "@/stores/agency-time-entries-log";
-import type { AgencyProject, AgencyProjectTask, AgencyProjectTaskStatus } from "@/lib/schemas/agency-work";
+import type { AgencyProject, AgencyProjectTask } from "@/lib/schemas/agency-work";
 import {
   useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
@@ -21,13 +21,8 @@ import {
   selectIsTimerMutationPending,
   useAgencyTimeTrackingStore,
 } from "@/stores/agency-time-tracking";
-import {
-  mergeTimeEntryProjectsForChooser,
-  mergeTimeEntryTasksForChooser,
-} from "@/lib/utils/merge-time-entry-chooser-catalog";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
-const OPEN_TASK_STATUSES: AgencyProjectTaskStatus[] = ["open", "in_progress"];
 const HIGHLIGHT_CLEAR_MS = 2_500;
 
 type UseAgencyTimeEntriesLogOptions = {
@@ -94,19 +89,11 @@ export function useAgencyTimeEntriesLog({
 
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, page, pageSize);
   const projectsQuery = useAgencyProjectsQuery(teamId);
-  const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId, {
-    statuses: OPEN_TASK_STATUSES,
-  });
+  const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId);
   const entries = entriesQuery.data?.items ?? [];
   const totalEntries = entriesQuery.data?.total ?? 0;
-  const projects = useMemo(
-    () => mergeTimeEntryProjectsForChooser(projectsQuery.data?.items ?? [], entries),
-    [projectsQuery.data?.items, entries],
-  );
-  const tasks = useMemo(
-    () => mergeTimeEntryTasksForChooser(tasksQuery.items ?? [], entries),
-    [tasksQuery.items, entries],
-  );
+  const projects = projectsQuery.data?.items ?? [];
+  const tasks = tasksQuery.items ?? [];
   const weekSummary = entriesQuery.data?.weekSummary ?? null;
 
   const weekGroups = useMemo(() => {
@@ -172,14 +159,12 @@ export function useAgencyTimeEntriesLog({
 
   async function restartEntry(group: CollapsedEntryGroup) {
     const project = projects.find((projectEntry) => projectEntry.id === group.projectId);
-    if (!teamId || !project) return;
+    if (!teamId || !project || !group.taskId) return;
 
     await agencyTimeTrackingStore.restartEntry({
       teamId,
       project,
-      task: group.taskId
-        ? { id: group.taskId, title: group.taskTitle }
-        : null,
+      task: { id: group.taskId, title: group.taskTitle },
       description: group.description,
     });
   }

@@ -231,6 +231,7 @@ export function useAgencyTimeEntryRow({
   const project = projects.find((projectEntry) => projectEntry.id === group.projectId) ?? null;
   const canRestart = Boolean(
     teamId &&
+      group.taskId &&
       project &&
       !isTimerMutationPending &&
       canStartAgencyTimer({

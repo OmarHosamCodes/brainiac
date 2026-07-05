@@ -141,7 +141,7 @@ type StopTimerPayload = {
 type RestartEntryPayload = {
   teamId: string;
   project: Pick<AgencyProjectSummary, "id" | "name">;
-  task: Pick<AgencyProjectTask, "id" | "title"> | null;
+  task: Pick<AgencyProjectTask, "id" | "title">;
   description: string;
 };
 
@@ -495,7 +495,7 @@ function createAgencyTimeTrackingActions(
         const cachedTask =
           optimistic().findTask(payload.teamId, payload.task.id) ??
           findProjectTaskInCache(payload.teamId, payload.task.id);
-        if (cachedTask && (cachedTask.status === "open" || cachedTask.status === "done")) {
+        if (cachedTask && cachedTask.status === "open") {
           await cancelAgencyProjectTaskListQueries(payload.teamId);
           const inProgressTask = {
             ...cachedTask,

@@ -107,15 +107,8 @@ export function useAgencyTaskChooser({
   }
 
   const chooserTasks = useMemo(
-    () =>
-      tasks.filter(
-        (task) =>
-          task.status !== "archived" &&
-          (task.status === "open" ||
-            task.status === "in_progress" ||
-            (value !== "" && task.id === value)),
-      ),
-    [tasks, value],
+    () => tasks.filter((task) => task.status !== "archived"),
+    [tasks],
   );
 
   const projectsById = useMemo(

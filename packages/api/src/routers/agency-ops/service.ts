@@ -3488,7 +3488,7 @@ export async function startAgencyTimer(
           and(
             eq(agencyOpsProjectTask.id, input.taskId),
             eq(agencyOpsProjectTask.teamId, input.teamId),
-            inArray(agencyOpsProjectTask.status, ["open", "done"]),
+            eq(agencyOpsProjectTask.status, "open"),
           ),
         );
     }
