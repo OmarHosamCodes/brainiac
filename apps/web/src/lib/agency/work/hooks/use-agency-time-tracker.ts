@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { setTrackingFavicon } from "@/lib/favicon";
 
@@ -16,6 +16,11 @@ import {
   useAgencyTimeEntriesQuery,
   type AgencyProjectTaskStatus,
 } from "@/lib/queries/agency";
+import { formatAgencyDayLabel } from "@/lib/utils/format-agency-day-label";
+import {
+  activeTimerStartToIso,
+  startedAtToDateTimeDraft,
+} from "@/lib/utils/time-entry-draft";
 import {
   selectIsTimerMutationPending,
   useAgencyTimeTrackingStore,
@@ -24,6 +29,14 @@ import {
 
 const OPEN_TASK_STATUSES: AgencyProjectTaskStatus[] = ["open", "in_progress"];
 const TRACKER_SUGGESTION_LIMIT = 3;
+const START_TIME_DEBOUNCE_MS = 300;
+
+const emptyStartDraft = { date: "", startTime: "" };
+
+export type AgencyTimerStartDraft = {
+  date: string;
+  startTime: string;
+};
 
 type UseAgencyTimeTrackerOptions = {
   teamId: string;
@@ -56,11 +69,18 @@ export type AgencyTimeTrackerViewModel = {
   stopButtonLabel: string;
   stopButtonWarningRing: boolean;
   isTimerMutationPending: boolean;
+  isStartTimeSaving: boolean;
+  startTimePopoverOpen: boolean;
+  startTimeDraft: AgencyTimerStartDraft;
+  startTimeDayLabel: string;
+  startTimeError: string | null;
   descriptionSuggestions: AgencyTimeTrackerSuggestion[];
   onDescriptionChange: (value: string) => void;
   onDescriptionKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   onTaskChange: (taskId: string) => void;
   onTaskChooserOpenChange: (open: boolean) => void;
+  onStartTimePopoverOpenChange: (open: boolean) => void;
+  onStartTimeDraftChange: (patch: Partial<AgencyTimerStartDraft>) => void;
   onStartTimer: () => void;
   onStopTimer: () => void;
   onDiscardTimer: () => void;
@@ -85,10 +105,16 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
   const syncDraftFromActiveTimer = useAgencyTimeTrackingStore((s) => s.syncDraftFromActiveTimer);
   const startTimerAction = useAgencyTimeTrackingStore((s) => s.startTimer);
   const stopTimerAction = useAgencyTimeTrackingStore((s) => s.stopTimer);
+  const updateActiveTimerStartAction = useAgencyTimeTrackingStore((s) => s.updateActiveTimerStart);
+  const timerAdjustCount = useAgencyTimeTrackingStore((s) => s.timerAdjustCount);
   const isTimerMutationPending = useAgencyTimeTrackingStore(selectIsTimerMutationPending);
   const taskChooserOpenRequest = useAgencyTimeTrackingStore((s) => s.taskChooserOpenRequest);
 
   const [taskChooserOpen, setTaskChooserOpen] = useState(false);
+  const [startTimePopoverOpen, setStartTimePopoverOpen] = useState(false);
+  const [startTimeDraft, setStartTimeDraft] = useState<AgencyTimerStartDraft>(emptyStartDraft);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingDraftRef = useRef<AgencyTimerStartDraft | null>(null);
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId, {
@@ -154,6 +180,68 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
     enabled: Boolean(activeTimer),
     format: "clock",
   });
+
+  const startTimeDayLabel = useMemo(
+    () => (startTimeDraft.date ? formatAgencyDayLabel(startTimeDraft.date) : ""),
+    [startTimeDraft.date],
+  );
+
+  const startTimeError = useMemo(() => {
+    if (!startTimeDraft.date || !startTimeDraft.startTime) return null;
+    const result = activeTimerStartToIso(startTimeDraft.date, startTimeDraft.startTime);
+    return "error" in result ? result.error : null;
+  }, [startTimeDraft]);
+
+  const persistStartDraft = useCallback(
+    (draft: AgencyTimerStartDraft) => {
+      if (!teamId || !activeTimer) return;
+      const result = activeTimerStartToIso(draft.date, draft.startTime);
+      if ("error" in result) return;
+      const nextMs = new Date(result.startAt).getTime();
+      const currentMs = new Date(activeTimer.startedAt).getTime();
+      if (nextMs === currentMs) return;
+      void updateActiveTimerStartAction({
+        teamId,
+        activeTimer,
+        startedAt: result.startAt,
+      });
+    },
+    [teamId, activeTimer, updateActiveTimerStartAction],
+  );
+
+  const flushStartDraftPersist = useCallback(() => {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    const draft = pendingDraftRef.current ?? startTimeDraft;
+    pendingDraftRef.current = null;
+    persistStartDraft(draft);
+  }, [persistStartDraft, startTimeDraft]);
+
+  const scheduleStartDraftPersist = useCallback(
+    (draft: AgencyTimerStartDraft) => {
+      pendingDraftRef.current = draft;
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        pendingDraftRef.current = null;
+        persistStartDraft(draft);
+      }, START_TIME_DEBOUNCE_MS);
+    },
+    [persistStartDraft],
+  );
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!activeTimer) {
+      setStartTimePopoverOpen(false);
+    }
+  }, [activeTimer]);
 
   const descriptionSuggestions = useMemo(() => {
     const entries = recentEntriesQuery.data?.items ?? [];
@@ -235,6 +323,26 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
     stopButtonLabel = descriptionTrimmed ? "Choose task" : "Add details";
   }
 
+  function onStartTimePopoverOpenChange(open: boolean) {
+    if (open && activeTimer?.startedAt) {
+      setStartTimeDraft(startedAtToDateTimeDraft(activeTimer.startedAt));
+    } else if (!open) {
+      flushStartDraftPersist();
+    }
+    setStartTimePopoverOpen(open);
+  }
+
+  function onStartTimeDraftChange(patch: Partial<AgencyTimerStartDraft>) {
+    setStartTimeDraft((current) => {
+      const next = { ...current, ...patch };
+      const result = activeTimerStartToIso(next.date, next.startTime);
+      if (!("error" in result)) {
+        scheduleStartDraftPersist(next);
+      }
+      return next;
+    });
+  }
+
   return {
     teamId,
     timerDescription,
@@ -253,6 +361,11 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
     stopButtonLabel,
     stopButtonWarningRing: Boolean(activeTimer && !canStopTimer),
     isTimerMutationPending,
+    isStartTimeSaving: timerAdjustCount > 0,
+    startTimePopoverOpen,
+    startTimeDraft,
+    startTimeDayLabel,
+    startTimeError,
     descriptionSuggestions,
     onDescriptionChange: (value) => setTrackerDescription(teamId, value),
     onDescriptionKeyDown: (event) => {
@@ -269,6 +382,8 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
       }
     },
     onTaskChooserOpenChange: setTaskChooserOpen,
+    onStartTimePopoverOpenChange,
+    onStartTimeDraftChange,
     onStartTimer: () => void startTimer(),
     onStopTimer: () => void stopTimer(),
     onDiscardTimer: () => void stopTimer(true),

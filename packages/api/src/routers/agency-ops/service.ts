@@ -3711,6 +3711,56 @@ export async function stopAgencyTimer(
   };
 }
 
+export async function updateAgencyActiveTimerStart(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    startedAt: string;
+  },
+) {
+  const [active] = await db
+    .select({ id: agencyOpsActiveTimer.id, teamId: agencyOpsActiveTimer.teamId })
+    .from(agencyOpsActiveTimer)
+    .where(eq(agencyOpsActiveTimer.userId, actorUserId))
+    .limit(1);
+
+  if (!active) {
+    throw new ORPCError("NOT_FOUND", { message: "No active timer." });
+  }
+
+  await requireTeamMembership(actorUserId, active.teamId, "viewer");
+
+  if (active.teamId !== input.teamId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Active timer belongs to a different team.",
+    });
+  }
+
+  const nextStartedAt = parseIsoDateTime(input.startedAt, "startedAt");
+  const now = new Date();
+
+  if (nextStartedAt.getTime() > now.getTime()) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Start time can't be in the future.",
+    });
+  }
+
+  await db
+    .update(agencyOpsActiveTimer)
+    .set({ startedAt: nextStartedAt, updatedAt: now })
+    .where(eq(agencyOpsActiveTimer.id, active.id));
+
+  const timer = await getActiveTimerByUser(actorUserId);
+
+  if (!timer) {
+    throw new ORPCError("NOT_FOUND", { message: "No active timer." });
+  }
+
+  await publishAgencyTimerUpdated(input.teamId, actorUserId, timer);
+
+  return { timer };
+}
+
 export async function listMyAgencyTimeEntries(
   actorUserId: string,
   input: {

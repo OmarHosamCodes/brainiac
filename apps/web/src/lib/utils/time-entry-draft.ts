@@ -82,6 +82,27 @@ export function entryToDraft(entry: DraftEntrySource): TimeEntryDraft {
   };
 }
 
+export function startedAtToDateTimeDraft(startedAt: string): { date: string; startTime: string } {
+  const start = new Date(startedAt);
+  return {
+    date: toDateInputValue(start),
+    startTime: toTimeInputValue(start),
+  };
+}
+
+export function activeTimerStartToIso(
+  date: string,
+  startTime: string,
+  now: Date = new Date(),
+): { startAt: string } | { error: string } {
+  const start = combineDateAndTime(date, startTime);
+  if (!start) return { error: "Invalid start time." };
+  if (start.getTime() > now.getTime()) {
+    return { error: "Start time can't be in the future." };
+  }
+  return { startAt: start.toISOString() };
+}
+
 export function applyStartTimeToDraft(draft: TimeEntryDraft, startTime: string): TimeEntryDraft {
   return applyEndTimeToDraft({ ...draft, startTime }, draft.endTime);
 }
@@ -177,4 +198,14 @@ export function draftToIsoRange(
     endAt: end.toISOString(),
     durationSeconds,
   };
+}
+
+if (import.meta.main) {
+  const now = new Date(2026, 6, 6, 12, 0, 0);
+  const past = new Date(2026, 6, 6, 9, 1, 0);
+  const draft = startedAtToDateTimeDraft(past.toISOString());
+  const ok = activeTimerStartToIso(draft.date, draft.startTime, now);
+  console.assert(!("error" in ok));
+  const future = activeTimerStartToIso(draft.date, "23:00", now);
+  console.assert("error" in future);
 }

@@ -46,6 +46,7 @@ import {
   setMemberCapacity,
   startAgencyTimer,
   stopAgencyTimer,
+  updateAgencyActiveTimerStart,
   unarchiveAgencyClient,
   updateAgencyClient,
   updateAgencyProject,
@@ -943,6 +944,17 @@ export const agencyOpsRouter = {
           }
         }
         return result;
+      }),
+    updateStart: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          startedAt: z.string().datetime(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ timer: agencyActiveTimerSchema })
+          .parse(await updateAgencyActiveTimerStart(context.session.user.id, input));
       }),
   },
   timeEntries: {

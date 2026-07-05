@@ -138,6 +138,12 @@ type StopTimerPayload = {
   task?: Pick<AgencyProjectTask, "id" | "title"> | null;
 };
 
+type UpdateActiveTimerStartPayload = {
+  teamId: string;
+  activeTimer: AgencyActiveTimer;
+  startedAt: string;
+};
+
 type RestartEntryPayload = {
   teamId: string;
   project: Pick<AgencyProjectSummary, "id" | "name">;
@@ -188,6 +194,7 @@ type AgencyTimeTrackingActions = ReturnType<typeof createAgencyTimeTrackingActio
 type AgencyTimeTrackingState = {
   timerStartCount: number;
   timerStopCount: number;
+  timerAdjustCount: number;
   deletingEntryIds: string[];
   updatingEntryIds: string[];
   trackerDraftsByTeam: Record<string, TrackerDraft>;
@@ -666,6 +673,46 @@ function createAgencyTimeTrackingActions(
       });
     } finally {
       set((s) => ({ ...s, timerStopCount: Math.max(0, s.timerStopCount - 1) }));
+    }
+  }
+
+  async function updateActiveTimerStart(payload: UpdateActiveTimerStartPayload) {
+    const nextMs = new Date(payload.startedAt).getTime();
+    const currentMs = new Date(payload.activeTimer.startedAt).getTime();
+    if (!Number.isNaN(nextMs) && !Number.isNaN(currentMs) && nextMs === currentMs) {
+      return;
+    }
+
+    const timerSnapshots = snapshotQueries(
+      [...activeTimerQueryRegistry.values()].map((entry) => entry.payload),
+    );
+    const timerOverlaySnapshots = captureTimerOverlaySnapshots([payload.teamId]);
+    const optimisticTimer: AgencyActiveTimer = {
+      ...payload.activeTimer,
+      startedAt: payload.startedAt,
+      updatedAt: new Date().toISOString(),
+    };
+
+    set((s) => ({ ...s, timerAdjustCount: s.timerAdjustCount + 1 }));
+
+    try {
+      patchActiveTimerCaches(optimisticTimer);
+
+      const result = (await orpcClient.agencyOps.timer.updateStart({
+        teamId: payload.teamId,
+        startedAt: payload.startedAt,
+      })) as { timer: AgencyActiveTimer };
+
+      patchActiveTimerCaches(result.timer);
+    } catch (error) {
+      restoreQuerySnapshots(timerSnapshots);
+      restoreTimerOverlaySnapshots(timerOverlaySnapshots);
+
+      toast.error("Unable to update start time", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+    } finally {
+      set((s) => ({ ...s, timerAdjustCount: Math.max(0, s.timerAdjustCount - 1) }));
     }
   }
 
@@ -1226,6 +1273,7 @@ function createAgencyTimeTrackingActions(
     startTimer,
     restartEntry,
     stopTimer,
+    updateActiveTimerStart,
     deleteEntries,
     updateEntry,
     clearHighlightedEntry,
@@ -1236,6 +1284,7 @@ function createAgencyTimeTrackingActions(
 export const useAgencyTimeTrackingStore = create<AgencyTimeTrackingState>((set, get) => ({
   timerStartCount: 0,
   timerStopCount: 0,
+  timerAdjustCount: 0,
   deletingEntryIds: [],
   updatingEntryIds: [],
   trackerDraftsByTeam: {},
@@ -1254,4 +1303,4 @@ export function useTrackerDraft(teamId: string) {
 }
 
 export const selectIsTimerMutationPending = (s: AgencyTimeTrackingState) =>
-  s.timerStartCount > 0 || s.timerStopCount > 0;
+  s.timerStartCount > 0 || s.timerStopCount > 0 || s.timerAdjustCount > 0;

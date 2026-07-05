@@ -8,6 +8,7 @@ import type { AgencyTimeTrackerViewModel } from "@/lib/agency/work/hooks/use-age
 import {
   agencyFocusRingClass,
   agencyInputPlaceholderClass,
+  agencyLabelClass,
   agencyMetricClass,
   agencyTimeSuggestionChipClass,
   agencyTimeTrackerBarClass,
@@ -68,16 +69,61 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
           />
 
           {view.activeTimer && view.elapsedLabel ? (
-            <span
-              className={cn(
-                "shrink-0 font-mono text-sm font-semibold tabular-nums text-highlighted",
-                agencyMetricClass,
-              )}
-              aria-live="polite"
-              aria-atomic="true"
+            <Popover
+              open={view.startTimePopoverOpen}
+              onOpenChange={view.onStartTimePopoverOpenChange}
             >
-              {view.elapsedLabel}
-            </span>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "shrink-0 rounded-md px-1.5 py-0.5 font-mono text-sm font-semibold tabular-nums text-highlighted transition-colors",
+                    "cursor-pointer hover:bg-elevated",
+                    agencyMetricClass,
+                    agencyFocusRingClass,
+                  )}
+                  aria-live="polite"
+                  aria-atomic="true"
+                  aria-haspopup="dialog"
+                  aria-expanded={view.startTimePopoverOpen}
+                  aria-label={`Adjust timer start time, ${view.elapsedLabel} elapsed`}
+                  disabled={view.isStartTimeSaving}
+                >
+                  {view.elapsedLabel}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" side="bottom" className="w-auto min-w-[16rem] p-2">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <span className={cn(agencyLabelClass, "shrink-0 text-muted")}>Start time</span>
+                    <Input
+                      type="time"
+                      value={view.startTimeDraft.startTime}
+                      onChange={(e) => view.onStartTimeDraftChange({ startTime: e.target.value })}
+                      className="h-8 w-[5.5rem] font-mono text-sm tabular-nums"
+                      aria-label="Start time"
+                      disabled={view.isStartTimeSaving}
+                    />
+                    <label className="relative flex min-w-0 shrink-0 cursor-pointer items-center rounded-md px-1 py-0.5 hover:bg-elevated">
+                      <Input
+                        type="date"
+                        value={view.startTimeDraft.date}
+                        onChange={(e) => view.onStartTimeDraftChange({ date: e.target.value })}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        aria-label="Start date"
+                        disabled={view.isStartTimeSaving}
+                      />
+                      <span className="text-sm text-muted">{view.startTimeDayLabel}</span>
+                    </label>
+                  </div>
+                  {view.startTimeError ? (
+                    <p className="text-xs text-error" role="alert">
+                      {view.startTimeError}
+                    </p>
+                  ) : null}
+                </div>
+              </PopoverContent>
+            </Popover>
           ) : null}
 
           {view.activeTimer ? (
