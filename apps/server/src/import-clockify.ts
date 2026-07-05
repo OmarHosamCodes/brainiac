@@ -23,6 +23,8 @@ import {
   buildCatalog,
   defaultOutputDir,
   loadManifest,
+  loadWorkspaceCatalog,
+  parseBeforeDate,
   runImport,
   type ClockifyMember,
   type ScrapeManifest,
@@ -39,6 +41,7 @@ type CliOptions = {
   dryRun: boolean;
   help: boolean;
   outputDir: string | null;
+  before: Date | null;
 };
 
 type TeamMember = {
@@ -52,6 +55,7 @@ function parseCliArgs(argv: string[]): CliOptions {
   let dryRun = false;
   let help = false;
   let outputDir: string | null = null;
+  let before: Date | null = null;
 
   for (let i = 0; i < argv.length; i += 1) {
     const argument = argv[i];
@@ -64,6 +68,16 @@ function parseCliArgs(argv: string[]): CliOptions {
 
     if (argument === "--dry-run" || argument === "-n") {
       dryRun = true;
+      continue;
+    }
+
+    if (argument === "--before") {
+      const next = argv[i + 1];
+      if (!next) {
+        throw new Error("--before requires a date (YYYY-MM-DD)");
+      }
+      before = parseBeforeDate(next);
+      i += 1;
       continue;
     }
 
@@ -80,16 +94,20 @@ function parseCliArgs(argv: string[]): CliOptions {
     throw new Error(`Unknown argument: ${argument}`);
   }
 
-  return { dryRun, help, outputDir };
+  return { dryRun, help, outputDir, before };
 }
 
 function printUsage() {
   console.log("Usage:");
-  console.log("  bun run src/import-clockify.ts [--dry-run] [--output-dir <path>]");
+  console.log(
+    "  bun run src/import-clockify.ts [--dry-run] [--before YYYY-MM-DD] [--output-dir <path>]",
+  );
   console.log("");
   console.log("Root workspace command:");
   console.log("  pnpm db:import:clockify");
-  console.log("  pnpm db:import:clockify -- --dry-run --output-dir ../Clockify-Scrapper/output");
+  console.log(
+    "  pnpm db:import:clockify -- --dry-run --before 2026-06-25 --output-dir ../Clockify-Scrapper/output",
+  );
 }
 
 async function resolveOutputDir(cliOutputDir: string | null): Promise<string> {
@@ -533,16 +551,63 @@ function printPreview(
   catalog: Awaited<ReturnType<typeof buildCatalog>>,
   selectedMembers: ClockifyMember[],
   userIdByClockifyUserId: Map<string, string>,
+  before: Date | null,
+  usedWorkspaceCatalog: boolean,
 ) {
   console.log("");
   console.log("── Import Preview ────────────────────────────");
   console.log(`  Members selected:  ${selectedMembers.length}`);
   console.log(`  Members mapped:    ${userIdByClockifyUserId.size}`);
+  console.log(
+    `  Catalog source:    ${usedWorkspaceCatalog ? "catalog.json (API)" : "time entries JSONL"}`,
+  );
+  if (before) {
+    console.log(`  Before cutoff:     ${before.toISOString()} (exclusive)`);
+  }
   console.log(`  Clients:           ${catalog.clients.size}`);
   console.log(`  Projects:          ${catalog.projects.size}`);
   console.log(`  Tasks:             ${catalog.tasks.size}`);
   console.log(`  Time entries:      ${catalog.timeEntries.length}`);
   console.log(`  Skipped records:   ${catalog.skipped.length}`);
+  console.log(`  Skipped by before: ${catalog.skippedByBefore}`);
+  console.log(`  Duplicate JSONL:   ${catalog.duplicateEntryIds}`);
+  console.log("──────────────────────────────────────────────");
+}
+
+function printImportSummary(
+  stats: Awaited<ReturnType<typeof runImport>>,
+  team: { teamId: string; teamName: string },
+  dryRun: boolean,
+  catalog: Awaited<ReturnType<typeof buildCatalog>>,
+) {
+  console.log("");
+  console.log("── Import Summary ────────────────────────────");
+  console.log(`  Team:              ${team.teamName} (${team.teamId})`);
+  console.log(`  Clients inserted:  ${stats.clientsInserted}`);
+  console.log(`  Clients exist:     ${stats.clientsAlreadyExist}`);
+  console.log(`  Projects inserted: ${stats.projectsInserted}`);
+  console.log(`  Projects exist:    ${stats.projectsAlreadyExist}`);
+  console.log(`  Tasks inserted:    ${stats.tasksInserted}`);
+  console.log(`  Tasks exist:       ${stats.tasksAlreadyExist}`);
+  console.log(`  Threads inserted:  ${stats.threadsInserted}`);
+  console.log(`  Entries inserted:  ${stats.timeEntriesInserted}`);
+  console.log(`  Entries exist:     ${stats.timeEntriesAlreadyExist}`);
+  console.log(`  Skipped records:   ${stats.skipped}`);
+  console.log(`  Skipped by before: ${stats.skippedByBefore}`);
+  console.log(`  Duplicate JSONL:   ${stats.duplicateEntryIds}`);
+  console.log(`  Task remapped:     ${stats.taskConflictsRemapped}`);
+  if (catalog.taskConflicts.length > 0) {
+    console.log("  Task title conflicts (remapped to existing):");
+    for (const conflict of catalog.taskConflicts.slice(0, 10)) {
+      console.log(`    · ${conflict.title} → ${conflict.existingId}`);
+    }
+    if (catalog.taskConflicts.length > 10) {
+      console.log(`    … and ${catalog.taskConflicts.length - 10} more`);
+    }
+  }
+  if (dryRun) {
+    console.log("  Mode:              dry-run (no writes)");
+  }
   console.log("──────────────────────────────────────────────");
 }
 
@@ -585,8 +650,11 @@ async function main() {
     return;
   }
 
-  const catalog = await buildCatalog(outputDir, selectedMembers, userIdByClockifyUserId);
-  printPreview(catalog, selectedMembers, userIdByClockifyUserId);
+  const catalog = await buildCatalog(outputDir, selectedMembers, userIdByClockifyUserId, {
+    before: options.before ?? undefined,
+  });
+  const usedWorkspaceCatalog = (await loadWorkspaceCatalog(outputDir)) !== null;
+  printPreview(catalog, selectedMembers, userIdByClockifyUserId, options.before, usedWorkspaceCatalog);
 
   const proceed = await confirm({
     message: options.dryRun
@@ -615,19 +683,7 @@ async function main() {
 
   s.stop(options.dryRun ? "Dry-run complete" : "Import complete");
 
-  console.log("");
-  console.log("── Import Summary ────────────────────────────");
-  console.log(`  Team:              ${team.teamName} (${team.teamId})`);
-  console.log(`  Clients inserted:  ${stats.clientsInserted}`);
-  console.log(`  Projects inserted: ${stats.projectsInserted}`);
-  console.log(`  Tasks inserted:    ${stats.tasksInserted}`);
-  console.log(`  Threads inserted:  ${stats.threadsInserted}`);
-  console.log(`  Entries inserted:  ${stats.timeEntriesInserted}`);
-  console.log(`  Skipped records:   ${stats.skipped}`);
-  if (options.dryRun) {
-    console.log("  Mode:              dry-run (no writes)");
-  }
-  console.log("──────────────────────────────────────────────");
+  printImportSummary(stats, team, options.dryRun, catalog);
 
   outro(options.dryRun ? "Dry-run finished." : "Clockify import complete.");
 }

@@ -13,6 +13,8 @@
     "db:seed:agency": "bun run src/seed-agency.ts",
     "db:clear:team": "bun run src/clear-team-data.ts",
     "db:import:clockify": "bun run src/import-clockify.ts",
+    "db:import:clockify-backfill": "bun run src/import-clockify-backfill.ts",
+    "db:verify:clockify-backfill": "bun run src/verify-clockify-backfill.ts",
     "cleanup:agency-operator-nodes": "bun run src/cleanup-agency-operator-nodes.ts",
     "db:seed": "bun run src/seed.ts",
     "db:seed:massive": "bun run src/seed-massive.ts",

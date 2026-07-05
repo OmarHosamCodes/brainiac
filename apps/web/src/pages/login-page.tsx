@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronDown, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Navigate, Link, useLocation, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -52,6 +52,7 @@ export function LoginPage() {
     const oauthError = searchParams.get("error");
     return oauthError ? formatOAuthError(oauthError) : null;
   });
+
   const [pending, setPending] = useState(false);
   const [emailAuthOpen, setEmailAuthOpen] = useState(false);
 

@@ -192,7 +192,7 @@ const agencyTimeEntrySchema = z.object({
   description: z.string(),
   startedAt: z.string().datetime(),
   endedAt: z.string().datetime(),
-  durationSeconds: z.number().int().positive(),
+  durationSeconds: z.number().int().nonnegative(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

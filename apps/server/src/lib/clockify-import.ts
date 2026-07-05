@@ -8,6 +8,7 @@ import {
   agencyOpsTaskThread,
   agencyOpsTimeEntry,
 } from "@brainiac/db/schema";
+import { eq, inArray } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -50,6 +51,27 @@ export type ImportCatalog = {
   tasks: Map<string, { id: string; title: string; projectId: string }>;
   timeEntries: ParsedClockifyEntry[];
   skipped: Array<{ reason: string; clockifyUserId?: string; clockifyEntryId?: string }>;
+  skippedByBefore: number;
+  duplicateEntryIds: number;
+  taskConflicts: Array<{
+    incomingId: string;
+    existingId: string;
+    title: string;
+    projectId: string;
+  }>;
+};
+
+export type BuildCatalogOptions = {
+  /** Exclude entries with startedAt on or after this instant (UTC midnight). */
+  before?: Date;
+};
+
+export type WorkspaceCatalogFile = {
+  workspaceId: string;
+  scrapedAt: string;
+  clients: Array<{ id: string; name: string }>;
+  projects: Array<{ id: string; name: string; clientId: string | null; clientName: string | null }>;
+  tasks: Array<{ id: string; name: string; projectId: string }>;
 };
 
 export type ImportStats = {
@@ -59,6 +81,13 @@ export type ImportStats = {
   threadsInserted: number;
   timeEntriesInserted: number;
   skipped: number;
+  skippedByBefore: number;
+  duplicateEntryIds: number;
+  taskConflictsRemapped: number;
+  clientsAlreadyExist: number;
+  projectsAlreadyExist: number;
+  tasksAlreadyExist: number;
+  timeEntriesAlreadyExist: number;
 };
 
 export type ImportContext = {
@@ -66,6 +95,8 @@ export type ImportContext = {
   createdByUserId: string;
   userIdByClockifyUserId: Map<string, string>;
   dryRun: boolean;
+  /** Skip client/project/task inserts (catalog already imported). */
+  entriesOnly?: boolean;
 };
 
 // ---------------------------------------------------------------------------
@@ -77,6 +108,17 @@ const NO_CLIENT_NAME = "(No client)";
 const NO_PROJECT_ID = "__no_project__";
 const NO_PROJECT_NAME = "(No project)";
 const BATCH_SIZE = 500;
+
+export function parseBeforeDate(value: string): Date {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error(`Invalid --before value: ${value}. Use YYYY-MM-DD.`);
+  }
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+function taskTitleKey(projectId: string, title: string): string {
+  return `${projectId}|${normalizeTaskTitle(title)}`;
+}
 
 // ---------------------------------------------------------------------------
 // ID helpers
@@ -136,6 +178,75 @@ export async function loadManifest(outputDir: string): Promise<ScrapeManifest> {
     throw new Error(`manifest.json not found at ${manifestPath}`);
   }
   return (await file.json()) as ScrapeManifest;
+}
+
+export async function loadWorkspaceCatalog(outputDir: string): Promise<WorkspaceCatalogFile | null> {
+  const catalogPath = join(outputDir, "catalog.json");
+  const file = Bun.file(catalogPath);
+  if (!(await file.exists())) {
+    return null;
+  }
+  return (await file.json()) as WorkspaceCatalogFile;
+}
+
+function mergeWorkspaceCatalog(
+  clients: ImportCatalog["clients"],
+  projects: ImportCatalog["projects"],
+  tasks: ImportCatalog["tasks"],
+  catalog: WorkspaceCatalogFile,
+): void {
+  for (const client of catalog.clients) {
+    if (!clients.has(client.id)) {
+      clients.set(client.id, {
+        id: clockifyClientId(client.id),
+        name: client.name,
+      });
+    }
+  }
+
+  if (!clients.has(NO_CLIENT_ID)) {
+    clients.set(NO_CLIENT_ID, {
+      id: clockifyClientId(NO_CLIENT_ID),
+      name: NO_CLIENT_NAME,
+    });
+  }
+
+  if (!projects.has(NO_PROJECT_ID)) {
+    projects.set(NO_PROJECT_ID, {
+      id: clockifyProjectId(NO_PROJECT_ID),
+      name: NO_PROJECT_NAME,
+      clientId: clockifyClientId(NO_CLIENT_ID),
+    });
+  }
+
+  for (const project of catalog.projects) {
+    const rawClientId = project.clientId?.trim();
+    const clientKey = rawClientId && rawClientId.length > 0 ? rawClientId : NO_CLIENT_ID;
+    if (rawClientId && !clients.has(rawClientId)) {
+      clients.set(rawClientId, {
+        id: clockifyClientId(rawClientId),
+        name: project.clientName?.trim() || rawClientId,
+      });
+    }
+
+    if (!projects.has(project.id)) {
+      projects.set(project.id, {
+        id: clockifyProjectId(project.id),
+        name: project.name,
+        clientId: clockifyClientId(clientKey),
+      });
+    }
+  }
+
+  for (const task of catalog.tasks) {
+    if (!tasks.has(task.id)) {
+      tasks.set(task.id, {
+        id: clockifyTaskId(task.id),
+        title: task.name,
+        projectId: clockifyProjectId(task.projectId),
+      });
+    }
+  }
 }
 
 async function readJsonlLines(outputDir: string, clockifyUserId: string, filename: string): Promise<unknown[]> {
@@ -253,6 +364,7 @@ export async function buildCatalog(
   outputDir: string,
   selectedMembers: ClockifyMember[],
   userIdByClockifyUserId: Map<string, string>,
+  options: BuildCatalogOptions = {},
 ): Promise<ImportCatalog> {
   const clients = new Map<string, { id: string; name: string }>();
   const projects = new Map<string, { id: string; name: string; clientId: string }>();
@@ -260,6 +372,14 @@ export async function buildCatalog(
   const timeEntries: ParsedClockifyEntry[] = [];
   const skipped: ImportCatalog["skipped"] = [];
   const seenEntryIds = new Set<string>();
+  let skippedByBefore = 0;
+  let duplicateEntryIds = 0;
+  const beforeCutoff = options.before;
+  const workspaceCatalog = await loadWorkspaceCatalog(outputDir);
+
+  if (workspaceCatalog) {
+    mergeWorkspaceCatalog(clients, projects, tasks, workspaceCatalog);
+  }
 
   for (const member of selectedMembers) {
     const brainiacUserId = userIdByClockifyUserId.get(member.userId);
@@ -283,35 +403,52 @@ export async function buildCatalog(
       }
 
       if (seenEntryIds.has(parsed.clockifyEntryId)) {
+        duplicateEntryIds += 1;
         continue;
       }
       seenEntryIds.add(parsed.clockifyEntryId);
 
-      const clientKey = parsed.clientId;
-      if (!clients.has(clientKey)) {
-        clients.set(clientKey, {
-          id: clockifyClientId(parsed.clientId),
-          name: parsed.clientName,
-        });
+      if (beforeCutoff && parsed.startedAt >= beforeCutoff) {
+        skippedByBefore += 1;
+        continue;
       }
 
-      const projectKey = parsed.projectId;
-      if (!projects.has(projectKey)) {
-        projects.set(projectKey, {
-          id: clockifyProjectId(parsed.projectId),
-          name: parsed.projectName,
-          clientId: clockifyClientId(parsed.clientId),
+      if (parsed.durationSeconds <= 0) {
+        skipped.push({
+          reason: "Zero or negative duration",
+          clockifyUserId: member.userId,
+          clockifyEntryId: parsed.clockifyEntryId,
         });
+        continue;
       }
 
-      if (parsed.taskId && parsed.taskName) {
-        const taskKey = parsed.taskId;
-        if (!tasks.has(taskKey)) {
-          tasks.set(taskKey, {
-            id: clockifyTaskId(parsed.taskId),
-            title: parsed.taskName,
-            projectId: clockifyProjectId(parsed.projectId),
+      if (!workspaceCatalog) {
+        const clientKey = parsed.clientId;
+        if (!clients.has(clientKey)) {
+          clients.set(clientKey, {
+            id: clockifyClientId(parsed.clientId),
+            name: parsed.clientName,
           });
+        }
+
+        const projectKey = parsed.projectId;
+        if (!projects.has(projectKey)) {
+          projects.set(projectKey, {
+            id: clockifyProjectId(parsed.projectId),
+            name: parsed.projectName,
+            clientId: clockifyClientId(parsed.clientId),
+          });
+        }
+
+        if (parsed.taskId && parsed.taskName) {
+          const taskKey = parsed.taskId;
+          if (!tasks.has(taskKey)) {
+            tasks.set(taskKey, {
+              id: clockifyTaskId(parsed.taskId),
+              title: parsed.taskName,
+              projectId: clockifyProjectId(parsed.projectId),
+            });
+          }
         }
       }
 
@@ -319,12 +456,141 @@ export async function buildCatalog(
     }
   }
 
-  return { clients, projects, tasks, timeEntries, skipped };
+  return {
+    clients,
+    projects,
+    tasks,
+    timeEntries,
+    skipped,
+    skippedByBefore,
+    duplicateEntryIds,
+    taskConflicts: [],
+  };
 }
 
 // ---------------------------------------------------------------------------
 // Import
 // ---------------------------------------------------------------------------
+
+async function loadExistingClientIds(ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) {
+    return new Set();
+  }
+  const existing = new Set<string>();
+  for (const batch of chunk(ids, BATCH_SIZE)) {
+    const rows = await db
+      .select({ id: agencyOpsClient.id })
+      .from(agencyOpsClient)
+      .where(inArray(agencyOpsClient.id, batch));
+    for (const row of rows) {
+      existing.add(row.id);
+    }
+  }
+  return existing;
+}
+
+async function loadExistingProjectIds(ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) {
+    return new Set();
+  }
+  const existing = new Set<string>();
+  for (const batch of chunk(ids, BATCH_SIZE)) {
+    const rows = await db
+      .select({ id: agencyOpsProject.id })
+      .from(agencyOpsProject)
+      .where(inArray(agencyOpsProject.id, batch));
+    for (const row of rows) {
+      existing.add(row.id);
+    }
+  }
+  return existing;
+}
+
+async function loadExistingTaskIds(ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) {
+    return new Set();
+  }
+  const existing = new Set<string>();
+  for (const batch of chunk(ids, BATCH_SIZE)) {
+    const rows = await db
+      .select({ id: agencyOpsProjectTask.id })
+      .from(agencyOpsProjectTask)
+      .where(inArray(agencyOpsProjectTask.id, batch));
+    for (const row of rows) {
+      existing.add(row.id);
+    }
+  }
+  return existing;
+}
+
+async function loadExistingEntryIds(ids: string[]): Promise<Set<string>> {
+  if (ids.length === 0) {
+    return new Set();
+  }
+  const existing = new Set<string>();
+  for (const batch of chunk(ids, BATCH_SIZE)) {
+    const rows = await db
+      .select({ id: agencyOpsTimeEntry.id })
+      .from(agencyOpsTimeEntry)
+      .where(inArray(agencyOpsTimeEntry.id, batch));
+    for (const row of rows) {
+      existing.add(row.id);
+    }
+  }
+  return existing;
+}
+
+async function loadExistingTaskTitleIndex(teamId: string): Promise<Map<string, string>> {
+  const rows = await db
+    .select({
+      id: agencyOpsProjectTask.id,
+      projectId: agencyOpsProjectTask.projectId,
+      title: agencyOpsProjectTask.title,
+    })
+    .from(agencyOpsProjectTask)
+    .where(eq(agencyOpsProjectTask.teamId, teamId));
+
+  const index = new Map<string, string>();
+  for (const row of rows) {
+    index.set(taskTitleKey(row.projectId, row.title), row.id);
+  }
+  return index;
+}
+
+export function resolveTaskConflicts(
+  catalog: ImportCatalog,
+  existingTitleIndex: Map<string, string>,
+): Map<string, string> {
+  const remapped = new Map<string, string>();
+  const conflicts: ImportCatalog["taskConflicts"] = [];
+
+  for (const task of catalog.tasks.values()) {
+    const existingId = existingTitleIndex.get(taskTitleKey(task.projectId, task.title));
+    if (existingId && existingId !== task.id) {
+      remapped.set(task.id, existingId);
+      conflicts.push({
+        incomingId: task.id,
+        existingId,
+        title: task.title,
+        projectId: task.projectId,
+      });
+    }
+  }
+
+  catalog.taskConflicts = conflicts;
+  return remapped;
+}
+
+function resolveEntryTaskId(
+  entry: ParsedClockifyEntry,
+  taskIdRemap: Map<string, string>,
+): string | null {
+  if (!entry.taskId) {
+    return null;
+  }
+  const incomingId = clockifyTaskId(entry.taskId);
+  return taskIdRemap.get(incomingId) ?? incomingId;
+}
 
 function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
@@ -342,84 +608,143 @@ export async function runImport(ctx: ImportContext, catalog: ImportCatalog): Pro
     threadsInserted: 0,
     timeEntriesInserted: 0,
     skipped: catalog.skipped.length,
+    skippedByBefore: catalog.skippedByBefore,
+    duplicateEntryIds: catalog.duplicateEntryIds,
+    taskConflictsRemapped: 0,
+    clientsAlreadyExist: 0,
+    projectsAlreadyExist: 0,
+    tasksAlreadyExist: 0,
+    timeEntriesAlreadyExist: 0,
   };
 
+  const clientIds = [...catalog.clients.values()].map((client) => client.id);
+  const projectIds = [...catalog.projects.values()].map((project) => project.id);
+  const taskIds = [...catalog.tasks.values()].map((task) => task.id);
+  const entryIds = catalog.timeEntries.map((entry) => clockifyEntryId(entry.clockifyEntryId));
+
+  const existingClientIds = await loadExistingClientIds(clientIds);
+  const existingProjectIds = await loadExistingProjectIds(projectIds);
+  const existingTaskIds = await loadExistingTaskIds(taskIds);
+  const existingEntryIds = await loadExistingEntryIds(entryIds);
+
+  stats.clientsAlreadyExist = existingClientIds.size;
+  stats.projectsAlreadyExist = existingProjectIds.size;
+  stats.tasksAlreadyExist = existingTaskIds.size;
+  stats.timeEntriesAlreadyExist = existingEntryIds.size;
+
+  const taskTitleIndex = await loadExistingTaskTitleIndex(ctx.teamId);
+  const taskIdRemap = resolveTaskConflicts(catalog, taskTitleIndex);
+  stats.taskConflictsRemapped = taskIdRemap.size;
+
   if (ctx.dryRun) {
-    return {
-      clientsInserted: catalog.clients.size,
-      projectsInserted: catalog.projects.size,
-      tasksInserted: catalog.tasks.size,
-      threadsInserted: catalog.tasks.size,
-      timeEntriesInserted: catalog.timeEntries.length,
-      skipped: catalog.skipped.length,
-    };
+    const tasksToInsert = [...catalog.tasks.values()].filter((task) => !taskIdRemap.has(task.id));
+    stats.clientsInserted = clientIds.length - existingClientIds.size;
+    stats.projectsInserted = projectIds.length - existingProjectIds.size;
+    stats.tasksInserted = tasksToInsert.filter((task) => !existingTaskIds.has(task.id)).length;
+    stats.threadsInserted = stats.tasksInserted;
+    stats.timeEntriesInserted = entryIds.length - existingEntryIds.size;
+    return stats;
   }
 
   const now = new Date();
 
-  for (const client of catalog.clients.values()) {
-    const inserted = await db
+  async function ensureSentinelCatalogRows(): Promise<void> {
+    await db
       .insert(agencyOpsClient)
       .values({
-        id: client.id,
+        id: clockifyClientId(NO_CLIENT_ID),
         teamId: ctx.teamId,
-        name: client.name,
+        name: NO_CLIENT_NAME,
         createdByUserId: ctx.createdByUserId,
         createdAt: now,
         updatedAt: now,
       })
-      .onConflictDoNothing()
-      .returning({ id: agencyOpsClient.id });
-    stats.clientsInserted += inserted.length;
-  }
-
-  for (const project of catalog.projects.values()) {
-    const inserted = await db
+      .onConflictDoNothing();
+    await db
       .insert(agencyOpsProject)
       .values({
-        id: project.id,
+        id: clockifyProjectId(NO_PROJECT_ID),
         teamId: ctx.teamId,
-        clientId: project.clientId,
-        name: project.name,
+        clientId: clockifyClientId(NO_CLIENT_ID),
+        name: NO_PROJECT_NAME,
         createdByUserId: ctx.createdByUserId,
         createdAt: now,
         updatedAt: now,
       })
-      .onConflictDoNothing()
-      .returning({ id: agencyOpsProject.id });
-    stats.projectsInserted += inserted.length;
+      .onConflictDoNothing();
   }
 
-  for (const task of catalog.tasks.values()) {
-    const insertedTasks = await db
-      .insert(agencyOpsProjectTask)
-      .values({
-        id: task.id,
-        teamId: ctx.teamId,
-        projectId: task.projectId,
-        title: task.title,
-        status: "done",
-        createdByUserId: ctx.createdByUserId,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoNothing()
-      .returning({ id: agencyOpsProjectTask.id });
-    stats.tasksInserted += insertedTasks.length;
+  if (ctx.entriesOnly) {
+    await ensureSentinelCatalogRows();
+  } else {
+    for (const client of catalog.clients.values()) {
+      const inserted = await db
+        .insert(agencyOpsClient)
+        .values({
+          id: client.id,
+          teamId: ctx.teamId,
+          name: client.name,
+          createdByUserId: ctx.createdByUserId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoNothing()
+        .returning({ id: agencyOpsClient.id });
+      stats.clientsInserted += inserted.length;
+    }
 
-    const threadId = `${task.id}-thread`;
-    const insertedThreads = await db
-      .insert(agencyOpsTaskThread)
-      .values({
-        id: threadId,
-        teamId: ctx.teamId,
-        taskId: task.id,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .onConflictDoNothing()
-      .returning({ id: agencyOpsTaskThread.id });
-    stats.threadsInserted += insertedThreads.length;
+    for (const project of catalog.projects.values()) {
+      const inserted = await db
+        .insert(agencyOpsProject)
+        .values({
+          id: project.id,
+          teamId: ctx.teamId,
+          clientId: project.clientId,
+          name: project.name,
+          createdByUserId: ctx.createdByUserId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoNothing()
+        .returning({ id: agencyOpsProject.id });
+      stats.projectsInserted += inserted.length;
+    }
+
+    for (const task of catalog.tasks.values()) {
+      if (taskIdRemap.has(task.id)) {
+        continue;
+      }
+
+      const insertedTasks = await db
+        .insert(agencyOpsProjectTask)
+        .values({
+          id: task.id,
+          teamId: ctx.teamId,
+          projectId: task.projectId,
+          title: task.title,
+          status: "done",
+          createdByUserId: ctx.createdByUserId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoNothing()
+        .returning({ id: agencyOpsProjectTask.id });
+      stats.tasksInserted += insertedTasks.length;
+
+      const threadId = `${task.id}-thread`;
+      const insertedThreads = await db
+        .insert(agencyOpsTaskThread)
+        .values({
+          id: threadId,
+          teamId: ctx.teamId,
+          taskId: task.id,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoNothing()
+        .returning({ id: agencyOpsTaskThread.id });
+      stats.threadsInserted += insertedThreads.length;
+    }
   }
 
   const entryRows = catalog.timeEntries
@@ -434,7 +759,7 @@ export async function runImport(ctx: ImportContext, catalog: ImportCatalog): Pro
         id: clockifyEntryId(entry.clockifyEntryId),
         teamId: ctx.teamId,
         projectId: clockifyProjectId(entry.projectId),
-        taskId: entry.taskId ? clockifyTaskId(entry.taskId) : null,
+        taskId: resolveEntryTaskId(entry, taskIdRemap),
         userId,
         source: "manual" as const,
         description: entry.description,
