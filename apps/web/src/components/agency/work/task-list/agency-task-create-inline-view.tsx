@@ -155,13 +155,7 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
               disabled={disabled || !canSubmit || isCreatingTask}
               onClick={onSubmit}
             >
-              {isCreatingTask
-                ? existingOpenTask
-                  ? "Using…"
-                  : "Adding…"
-                : existingOpenTask
-                  ? "Use existing"
-                  : "Create"}
+              {isCreatingTask ? "Adding…" : "Add"}
             </Button>
           </div>
         </div>

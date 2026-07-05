@@ -16,6 +16,11 @@ import type {
 } from "@/lib/schemas/agency-work";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
 import { findOpenTaskByExactTitle } from "@/lib/utils/agency-task-title-filter";
+import {
+  expandTasksWithBlueprints,
+  EMPTY_TASK_BLUEPRINTS,
+  type AgencyTaskDisplayRow,
+} from "@/lib/utils/agency-task-blueprints";
 import { groupTasksByClient } from "@/lib/utils/agency-task-utils";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/stores/agency-ops";
 import {
@@ -36,6 +41,10 @@ type UseAgencyTaskListOptions = {
   onSelect: (taskId: string) => void;
   onCollapsedChange: (collapsed: boolean) => void;
   onSelectProject: (projectId: string) => void;
+};
+
+export type AgencyTaskClientDisplayGroup = ReturnType<typeof groupTasksByClient>[number] & {
+  displayRows: AgencyTaskDisplayRow[];
 };
 
 export type AgencyTaskListCreateViewModel = {
@@ -91,10 +100,10 @@ export type AgencyTaskListViewModel =
       activeTasksQueryError: boolean;
       activeTasksErrorMessage: string;
       onRetryActiveTasks: () => void;
-      clientGroups: ReturnType<typeof groupTasksByClient>;
+      clientGroups: AgencyTaskClientDisplayGroup[];
       collapsedClients: Set<string>;
       onClientExpandedChange: (clientId: string, expanded: boolean) => void;
-      onSelect: (taskId: string) => void;
+      onSelect: (taskId: string, blueprintId?: string | null) => void;
       onSelectProject: (projectId: string) => void;
       onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
       isRowPending: (taskId: string) => boolean;
@@ -107,13 +116,14 @@ export type AgencyTaskListViewModel =
       doneTasks: AgencyProjectTask[];
       recentlyCompletedTaskId: string;
       recentlyCreatedTaskId: string;
+      recentlyCreatedBlueprintId: string;
       onReopenDoneTask: (task: AgencyProjectTask) => void;
       hasMoreActiveTasks: boolean;
       isFetchingMoreActiveTasks: boolean;
       onFetchMoreActiveTasks: () => void;
       onCollapseRail: () => void;
-      getTaskTrackingState: (taskId: string) => TaskTrackingState;
-      onTaskDescriptionChange: (taskId: string, value: string) => void;
+      getTaskTrackingState: (taskId: string, blueprintDescription?: string) => TaskTrackingState;
+      onBlueprintDescriptionChange: (blueprintId: string, value: string) => void;
       create: AgencyTaskListCreateViewModel;
     };
 
@@ -143,6 +153,10 @@ export function useAgencyTaskList({
   const doneExpanded = useAgencyTaskListStore((s) => s.doneExpanded);
   const recentlyCompletedTaskId = useAgencyTaskListStore((s) => s.recentlyCompletedTaskId);
   const recentlyCreatedTaskId = useAgencyTaskListStore((s) => s.recentlyCreatedTaskId);
+  const recentlyCreatedBlueprintId = useAgencyTaskListStore((s) => s.recentlyCreatedBlueprintId);
+  const blueprints = useAgencyTaskListStore(
+    (s) => s.blueprintsByTeam[teamId] ?? EMPTY_TASK_BLUEPRINTS,
+  );
   const titleDraft = useAgencyTaskListStore((s) => s.titleDraft);
   const descriptionDraft = useAgencyTaskListStore((s) => s.descriptionDraft);
   const selectedProjectIdForCreate = useAgencyTaskListStore((s) => s.selectedProjectIdForCreate);
@@ -152,6 +166,9 @@ export function useAgencyTaskList({
   const setDoneExpanded = useAgencyTaskListStore((s) => s.setDoneExpanded);
   const setRecentlyCompletedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCompletedTaskId);
   const setRecentlyCreatedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCreatedTaskId);
+  const setRecentlyCreatedBlueprintId = useAgencyTaskListStore((s) => s.setRecentlyCreatedBlueprintId);
+  const addTaskBlueprint = useAgencyTaskListStore((s) => s.addTaskBlueprint);
+  const updateTaskBlueprintDescription = useAgencyTaskListStore((s) => s.updateTaskBlueprintDescription);
   const setTitleDraft = useAgencyTaskListStore((s) => s.setTitleDraft);
   const setDescriptionDraft = useAgencyTaskListStore((s) => s.setDescriptionDraft);
   const setSelectedProjectIdForCreate = useAgencyTaskListStore((s) => s.setSelectedProjectIdForCreate);
@@ -185,26 +202,21 @@ export function useAgencyTaskList({
   );
 
   const getTaskTrackingState = useCallback(
-    (taskId: string) =>
+    (taskId: string, blueprintDescription = "") =>
       resolveTaskTrackingState({
         taskId,
         activeTimer: trackingTimer,
         trackerDraft: trackingDraft,
+        blueprintDescription,
       }),
     [trackingDraft, trackingTimer],
   );
 
-  const onTaskDescriptionChange = useCallback(
-    (taskId: string, value: string) => {
-      const state = resolveTaskTrackingState({
-        taskId,
-        activeTimer: trackingTimer,
-        trackerDraft: trackingDraft,
-      });
-      if (!state.canEditDescription) return;
-      setTrackerDescription(teamId, value);
+  const onBlueprintDescriptionChange = useCallback(
+    (blueprintId: string, value: string) => {
+      updateTaskBlueprintDescription(teamId, blueprintId, value);
     },
-    [setTrackerDescription, teamId, trackingDraft, trackingTimer],
+    [teamId, updateTaskBlueprintDescription],
   );
 
   const skipProjectStep = projects.length === 1;
@@ -254,20 +266,43 @@ export function useAgencyTaskList({
   );
 
   const handleSelect = useCallback(
-    (taskId: string) => {
+    (taskId: string, blueprintId: string | null = null) => {
       onSelect(taskId);
-
-      if (!activeTimer || activeTimer.taskId) return;
 
       const task =
         activeTasks.find((entry) => entry.id === taskId) ??
         doneTasks.find((entry) => entry.id === taskId);
-      if (!task || task.projectId !== activeTimer.projectId) return;
+      const blueprint = blueprintId
+        ? blueprints.find((entry) => entry.id === blueprintId)
+        : null;
+
+      if (activeTimer) {
+        if (!activeTimer.taskId && task && task.projectId === activeTimer.projectId) {
+          setTrackerTaskId(teamId, taskId);
+        }
+        if (blueprint?.description.trim()) {
+          setTrackerDescription(teamId, blueprint.description.trim());
+        }
+        return;
+      }
+
+      if (!blueprint) return;
 
       setTrackerTaskId(teamId, taskId);
-      setTrackerProjectId(teamId, task.projectId);
+      if (task) setTrackerProjectId(teamId, task.projectId);
+      setTrackerDescription(teamId, blueprint.description.trim());
     },
-    [activeTasks, activeTimer, doneTasks, onSelect, setTrackerProjectId, setTrackerTaskId, teamId],
+    [
+      activeTasks,
+      activeTimer,
+      blueprints,
+      doneTasks,
+      onSelect,
+      setTrackerDescription,
+      setTrackerProjectId,
+      setTrackerTaskId,
+      teamId,
+    ],
   );
 
   // Prefer live list length while a background refetch is pending so the rail
@@ -282,8 +317,12 @@ export function useAgencyTaskList({
       : (activeCount ?? 0) + (doneCount ?? 0);
 
   const clientGroups = useMemo(
-    () => groupTasksByClient(activeTasks, projects),
-    [activeTasks, projects],
+    (): AgencyTaskClientDisplayGroup[] =>
+      groupTasksByClient(activeTasks, projects).map((group) => ({
+        ...group,
+        displayRows: expandTasksWithBlueprints(group.tasks, blueprints),
+      })),
+    [activeTasks, blueprints, projects],
   );
 
   const taskOverlay = useAgencyOptimisticStore((state) => state.tasks[teamId] ?? EMPTY_LIST_OVERLAY);
@@ -302,6 +341,12 @@ export function useAgencyTaskList({
     const clearHandle = setTimeout(() => setRecentlyCreatedTaskId(""), 900);
     return () => clearTimeout(clearHandle);
   }, [recentlyCreatedTaskId, setRecentlyCreatedTaskId]);
+
+  useEffect(() => {
+    if (!recentlyCreatedBlueprintId) return;
+    const clearHandle = setTimeout(() => setRecentlyCreatedBlueprintId(""), 900);
+    return () => clearTimeout(clearHandle);
+  }, [recentlyCreatedBlueprintId, setRecentlyCreatedBlueprintId]);
 
   const collapseCreate = useCallback(() => {
     collapseCreateAction({
@@ -325,10 +370,6 @@ export function useAgencyTaskList({
     if (!title || !projectId || !teamId) return;
 
     const existing = findOpenTaskByExactTitle(createTasks, title);
-    // Reuse: animate the existing Active row immediately (same id, no temp flash).
-    if (existing) {
-      setRecentlyCreatedTaskId(existing.id);
-    }
 
     const createdId = await agencyOps.createProjectTask({
       teamId,
@@ -341,15 +382,26 @@ export function useAgencyTaskList({
     });
 
     if (createdId) {
-      setTrackerTaskId(teamId, createdId);
-      setTrackerProjectId(teamId, projectId);
-      setTrackerDescription(teamId, descriptionDraft.trim());
+      const blueprintId = addTaskBlueprint(teamId, {
+        taskId: createdId,
+        description: descriptionDraft.trim(),
+      });
+      setRecentlyCreatedBlueprintId(blueprintId);
+      if (!activeTimer) {
+        setTrackerTaskId(teamId, createdId);
+        setTrackerProjectId(teamId, projectId);
+        setTrackerDescription(teamId, descriptionDraft.trim());
+      } else if (!activeTimer.taskId && projectId === activeTimer.projectId) {
+        setTrackerTaskId(teamId, createdId);
+      }
       setRecentlyCreatedTaskId(createdId);
       collapseCreate();
       return;
     }
     setRecentlyCreatedTaskId("");
   }, [
+    activeTimer,
+    addTaskBlueprint,
     agencyOps,
     collapseCreate,
     assignedToTeamForCreate,
@@ -358,6 +410,7 @@ export function useAgencyTaskList({
     selectedAssigneeIdsForCreate,
     selectedProjectIdForCreate,
     setRecentlyCreatedTaskId,
+    setRecentlyCreatedBlueprintId,
     setTrackerDescription,
     setTrackerProjectId,
     setTrackerTaskId,
@@ -476,13 +529,14 @@ export function useAgencyTaskList({
     doneTasks,
     recentlyCompletedTaskId,
     recentlyCreatedTaskId: activeHighlightTaskId,
+    recentlyCreatedBlueprintId,
     onReopenDoneTask: (task) => void reopenDoneTask(task),
     hasMoreActiveTasks: Boolean(activeTasksQuery.hasNextPage),
     isFetchingMoreActiveTasks: activeTasksQuery.isFetchingNextPage,
     onFetchMoreActiveTasks: () => void activeTasksQuery.fetchNextPage(),
     onCollapseRail: () => onCollapsedChange(true),
     getTaskTrackingState,
-    onTaskDescriptionChange,
+    onBlueprintDescriptionChange,
     create: {
       expanded: createExpanded,
       skipProjectStep,

@@ -2,43 +2,40 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef } from "react";
 
 import { AgencyTaskClientGroupView } from "@/components/agency/work/task-list/agency-task-client-group-view";
+import type { AgencyTaskClientDisplayGroup } from "@/lib/agency/work/hooks/use-agency-task-list";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
-import type { groupTasksByClient } from "@/lib/utils/agency-task-utils";
-
-type ClientGroup = ReturnType<typeof groupTasksByClient>[number];
 
 type FlatRow =
-  | { kind: "group"; key: string; group: ClientGroup; expanded: boolean }
+  | { kind: "group"; key: string; group: AgencyTaskClientDisplayGroup; expanded: boolean }
   | { kind: "spacer"; key: string };
 
 type AgencyTaskVirtualListProps = {
-  clientGroups: ClientGroup[];
+  clientGroups: AgencyTaskClientDisplayGroup[];
   collapsedClients: Set<string>;
   projects: AgencyTaskProject[];
   teamId: string;
-  currentUserId: string;
   selectedTaskId: string;
-  highlightTaskId: string;
+  highlightBlueprintId: string;
   isRowPending: (taskId: string) => boolean;
   onClientExpandedChange: (clientId: string, expanded: boolean) => void;
-  onSelect: (taskId: string) => void;
+  onSelect: (taskId: string, blueprintId?: string | null) => void;
   onSelectProject: (projectId: string) => void;
   onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
   onDelete?: (task: AgencyProjectTask) => void;
   hasMore?: boolean;
   isFetchingMore?: boolean;
   onFetchMore?: () => void;
-  getTaskTrackingState?: (taskId: string) => TaskTrackingState;
-  onTaskDescriptionChange?: (taskId: string, value: string) => void;
+  getTaskTrackingState?: (taskId: string, blueprintDescription?: string) => TaskTrackingState;
+  onBlueprintDescriptionChange?: (blueprintId: string, value: string) => void;
 };
 
 const GROUP_HEADER_HEIGHT = 40;
 const GROUP_TASK_HEIGHT = 68;
 
-function estimateGroupHeight(group: ClientGroup, expanded: boolean) {
+function estimateGroupHeight(group: AgencyTaskClientDisplayGroup, expanded: boolean) {
   if (!expanded) return GROUP_HEADER_HEIGHT;
-  return GROUP_HEADER_HEIGHT + Math.max(1, group.tasks.length) * GROUP_TASK_HEIGHT;
+  return GROUP_HEADER_HEIGHT + Math.max(1, group.displayRows.length) * GROUP_TASK_HEIGHT;
 }
 
 export function AgencyTaskVirtualList({
@@ -46,9 +43,8 @@ export function AgencyTaskVirtualList({
   collapsedClients,
   projects,
   teamId,
-  currentUserId,
   selectedTaskId,
-  highlightTaskId,
+  highlightBlueprintId,
   isRowPending,
   onClientExpandedChange,
   onSelect,
@@ -59,7 +55,7 @@ export function AgencyTaskVirtualList({
   isFetchingMore = false,
   onFetchMore,
   getTaskTrackingState,
-  onTaskDescriptionChange,
+  onBlueprintDescriptionChange,
 }: AgencyTaskVirtualListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -133,13 +129,10 @@ export function AgencyTaskVirtualList({
               data-index={virtualRow.index}
             >
               <AgencyTaskClientGroupView
-                clientId={row.group.clientId}
-                clientName={row.group.clientName}
-                tasks={row.group.tasks}
+                group={row.group}
                 expanded={row.expanded}
                 projects={projects}
                 teamId={teamId}
-                currentUserId={currentUserId}
                 selectedTaskId={selectedTaskId}
                 isRowPending={isRowPending}
                 onExpandedChange={(expanded) =>
@@ -149,9 +142,9 @@ export function AgencyTaskVirtualList({
                 onSelectProject={onSelectProject}
                 onStatusChange={onStatusChange}
                 onDelete={onDelete}
-                highlightTaskId={highlightTaskId}
+                highlightBlueprintId={highlightBlueprintId}
                 getTaskTrackingState={getTaskTrackingState}
-                onTaskDescriptionChange={onTaskDescriptionChange}
+                onBlueprintDescriptionChange={onBlueprintDescriptionChange}
               />
             </div>
           );

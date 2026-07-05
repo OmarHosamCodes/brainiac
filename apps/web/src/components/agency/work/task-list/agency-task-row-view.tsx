@@ -112,8 +112,10 @@ export type AgencyTaskRowViewProps = {
   /** Done section: reopen this task into Active. */
   onReopenToActive?: (task: AgencyProjectTask) => void;
   onDelete?: (task: AgencyProjectTask) => void;
+  blueprintId?: string | null;
+  blueprintDescription?: string;
   trackingState?: TaskTrackingState;
-  onDescriptionChange?: (value: string) => void;
+  onBlueprintDescriptionChange?: (value: string) => void;
 };
 
 export function AgencyTaskRowView({
@@ -129,8 +131,10 @@ export function AgencyTaskRowView({
   onStatusChange,
   onReopenToActive,
   onDelete,
+  blueprintId = null,
+  blueprintDescription = "",
   trackingState,
-  onDescriptionChange,
+  onBlueprintDescriptionChange,
 }: AgencyTaskRowViewProps) {
   const project = projects.find((p) => p.id === task.projectId);
   const projectName = project?.name ?? "Project";
@@ -152,9 +156,10 @@ export function AgencyTaskRowView({
         : "open";
 
   const swipeEnabled = !readOnly && Boolean(onDelete);
-  const showTrackingDescription =
-    trackingState?.isTrackingTask &&
-    (trackingState.canEditDescription || trackingState.hasDescription);
+  const showDescriptionRow =
+    Boolean(blueprintId) ||
+    Boolean(blueprintDescription.trim()) ||
+    Boolean(trackingState?.needsDescription);
 
   return (
     <li
@@ -221,25 +226,27 @@ export function AgencyTaskRowView({
               ) : null}
             </div>
 
-            {showTrackingDescription ? (
+            {showDescriptionRow ? (
               <div className="pointer-events-auto mt-1 min-w-0">
-                {trackingState?.canEditDescription ? (
+                {blueprintId && onBlueprintDescriptionChange ? (
                   <Input
-                    value={trackingState.description}
-                    onChange={(e) => onDescriptionChange?.(e.target.value)}
+                    value={blueprintDescription}
+                    onChange={(e) => onBlueprintDescriptionChange(e.target.value)}
                     onClick={(event) => event.stopPropagation()}
                     onKeyDown={(event) => event.stopPropagation()}
                     placeholder="What are you working on?"
                     className={cn(
                       "h-7 min-w-0 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0",
                       agencyInputPlaceholderClass,
-                      trackingState.needsDescription ? "text-warning" : "text-muted",
+                      trackingState?.needsDescription ? "text-warning" : "text-muted",
                     )}
-                    aria-label="Work description"
+                    aria-label="Task blueprint description"
                   />
-                ) : (
-                  <p className="truncate text-xs text-muted">{trackingState?.description}</p>
-                )}
+                ) : blueprintDescription.trim() ? (
+                  <p className="truncate text-xs text-muted">{blueprintDescription}</p>
+                ) : trackingState?.needsDescription ? (
+                  <p className="text-xs text-warning">Add a description in the tracker to stop.</p>
+                ) : null}
               </div>
             ) : null}
 

@@ -177,9 +177,8 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
             collapsedClients={view.collapsedClients}
             projects={view.projects}
             teamId={view.teamId}
-            currentUserId={view.currentUserId}
             selectedTaskId={view.selectedTaskId}
-            highlightTaskId={view.recentlyCreatedTaskId}
+            highlightBlueprintId={view.recentlyCreatedBlueprintId}
             isRowPending={(taskId) =>
               view.isRowPending(taskId) || deletingTaskIds.includes(taskId)
             }
@@ -192,7 +191,7 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
             isFetchingMore={view.isFetchingMoreActiveTasks}
             onFetchMore={view.onFetchMoreActiveTasks}
             getTaskTrackingState={view.getTaskTrackingState}
-            onTaskDescriptionChange={view.onTaskDescriptionChange}
+            onBlueprintDescriptionChange={view.onBlueprintDescriptionChange}
           />
         )}
 
@@ -269,10 +268,6 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
                       onSelect={view.onSelect}
                       onSelectProject={view.onSelectProject}
                       onReopenToActive={view.onReopenDoneTask}
-                      trackingState={view.getTaskTrackingState(task.id)}
-                      onDescriptionChange={(value) =>
-                        view.onTaskDescriptionChange(task.id, value)
-                      }
                     />
                   ))}
                 </ul>

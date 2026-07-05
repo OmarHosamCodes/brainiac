@@ -1,9 +1,9 @@
 import { ChevronDown } from "lucide-react";
 
-import { AgencyTaskGroupRowView } from "@/components/agency/work/task-list/agency-task-group-row-view";
+import { AgencyTaskRowView } from "@/components/agency/work/task-list/agency-task-row-view";
+import type { AgencyTaskClientDisplayGroup } from "@/lib/agency/work/hooks/use-agency-task-list";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
-import { groupTasksWithinClient } from "@/lib/utils/agency-task-utils";
 import {
   agencyFocusRingClass,
   agencyMetricClass,
@@ -12,33 +12,27 @@ import {
 import { cn } from "@/lib/utils";
 
 export type AgencyTaskClientGroupViewProps = {
-  clientId: string;
-  clientName: string;
-  tasks: AgencyProjectTask[];
+  group: AgencyTaskClientDisplayGroup;
   expanded: boolean;
   projects: AgencyTaskProject[];
   teamId: string;
-  currentUserId: string;
   selectedTaskId: string;
   isRowPending: (taskId: string) => boolean;
   onExpandedChange: (expanded: boolean) => void;
-  onSelect: (taskId: string) => void;
+  onSelect: (taskId: string, blueprintId?: string | null) => void;
   onSelectProject: (projectId: string) => void;
   onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
   onDelete?: (task: AgencyProjectTask) => void;
-  highlightTaskId?: string;
-  getTaskTrackingState?: (taskId: string) => TaskTrackingState;
-  onTaskDescriptionChange?: (taskId: string, value: string) => void;
+  highlightBlueprintId?: string;
+  getTaskTrackingState?: (taskId: string, blueprintDescription?: string) => TaskTrackingState;
+  onBlueprintDescriptionChange?: (blueprintId: string, value: string) => void;
 };
 
 export function AgencyTaskClientGroupView({
-  clientId,
-  clientName,
-  tasks,
+  group,
   expanded,
   projects,
   teamId,
-  currentUserId,
   selectedTaskId,
   isRowPending,
   onExpandedChange,
@@ -46,14 +40,12 @@ export function AgencyTaskClientGroupView({
   onSelectProject,
   onStatusChange,
   onDelete,
-  highlightTaskId = "",
+  highlightBlueprintId = "",
   getTaskTrackingState,
-  onTaskDescriptionChange,
+  onBlueprintDescriptionChange,
 }: AgencyTaskClientGroupViewProps) {
-  const panelId = `agency-task-client-group-${clientId}`;
-  const taskGroups = groupTasksWithinClient(tasks);
-  // Timer sets task.status; member completion uses viewerStatus. Count either.
-  const inProgressCount = tasks.filter(
+  const panelId = `agency-task-client-group-${group.clientId}`;
+  const inProgressCount = group.tasks.filter(
     (task) => task.status === "in_progress" || task.viewerStatus === "in_progress",
   ).length;
 
@@ -79,32 +71,36 @@ export function AgencyTaskClientGroupView({
             )}
             aria-hidden
           />
-          <span className="truncate font-semibold text-highlighted">{clientName}</span>
+          <span className="truncate font-semibold text-highlighted">{group.clientName}</span>
         </span>
         <span className={cn(agencyMetricClass, "shrink-0 text-[11px] text-muted")}>
-          {inProgressCount}/{tasks.length}
+          {inProgressCount}/{group.displayRows.length}
         </span>
       </button>
 
       {expanded ? (
-        <ul id={panelId} aria-label={`${clientName} tasks`}>
-          {taskGroups.map((group) => (
-            <AgencyTaskGroupRowView
-              key={group.groupKey}
-              group={group}
-              mode="work"
+        <ul id={panelId} aria-label={`${group.clientName} tasks`}>
+          {group.displayRows.map((row) => (
+            <AgencyTaskRowView
+              key={row.rowKey}
+              task={row.task}
               projects={projects}
               teamId={teamId}
-              currentUserId={currentUserId}
               selectedTaskId={selectedTaskId}
-              isRowPending={isRowPending}
-              onSelect={onSelect}
+              highlight={row.blueprintId === highlightBlueprintId}
+              isRowPending={isRowPending(row.task.id)}
+              blueprintId={row.blueprintId}
+              blueprintDescription={row.blueprintDescription}
+              trackingState={getTaskTrackingState?.(row.task.id, row.blueprintDescription)}
+              onSelect={(taskId) => onSelect(taskId, row.blueprintId)}
               onSelectProject={onSelectProject}
               onStatusChange={onStatusChange}
               onDelete={onDelete}
-              highlightTaskId={highlightTaskId}
-              getTaskTrackingState={getTaskTrackingState}
-              onTaskDescriptionChange={onTaskDescriptionChange}
+              onBlueprintDescriptionChange={
+                row.blueprintId
+                  ? (value) => onBlueprintDescriptionChange?.(row.blueprintId!, value)
+                  : undefined
+              }
             />
           ))}
         </ul>

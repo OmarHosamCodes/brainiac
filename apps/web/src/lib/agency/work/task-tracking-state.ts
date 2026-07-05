@@ -20,21 +20,21 @@ export function resolveTaskTrackingState(input: {
   taskId: string;
   activeTimer: TaskTrackingTimerRef;
   trackerDraft: TaskTrackingDraftRef;
+  blueprintDescription?: string;
 }): TaskTrackingState {
   const draftTaskId = input.trackerDraft?.taskId ?? "";
   const isTrackingTask =
-    draftTaskId === input.taskId ||
-    input.activeTimer?.taskId === input.taskId;
+    draftTaskId === input.taskId || input.activeTimer?.taskId === input.taskId;
 
-  const description = isTrackingTask ? (input.trackerDraft?.description ?? "") : "";
-  const hasDescription = description.trim().length > 0;
+  const blueprintDescription = input.blueprintDescription ?? "";
+  const trackerDescription = isTrackingTask ? (input.trackerDraft?.description ?? "") : "";
   const hasActiveTimer = Boolean(input.activeTimer);
 
   return {
     isTrackingTask,
-    description,
-    hasDescription,
-    needsDescription: isTrackingTask && hasActiveTimer && !hasDescription,
-    canEditDescription: isTrackingTask && hasActiveTimer,
+    description: blueprintDescription,
+    hasDescription: blueprintDescription.trim().length > 0,
+    needsDescription: isTrackingTask && hasActiveTimer && !trackerDescription.trim(),
+    canEditDescription: false,
   };
 }
