@@ -1,10 +1,36 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  collectClipboardFiles,
   normalizeAttachmentUrl,
   selectAttachmentVariant,
   deriveLinkLabel,
 } from "./agency-attachment-utils";
+
+describe("collectClipboardFiles", () => {
+  test("returns files from dataTransfer.files", () => {
+    const file = new File(["x"], "photo.png", { type: "image/png" });
+    const dataTransfer = { files: [file], items: [] } as unknown as DataTransfer;
+    expect(collectClipboardFiles(dataTransfer)).toEqual([file]);
+  });
+
+  test("falls back to clipboard items when files list is empty", () => {
+    const file = new File(["x"], "shot.png", { type: "image/png" });
+    const dataTransfer = {
+      files: [],
+      items: [{ kind: "file", getAsFile: () => file }],
+    } as unknown as DataTransfer;
+    expect(collectClipboardFiles(dataTransfer)).toEqual([file]);
+  });
+
+  test("returns empty for text-only clipboard", () => {
+    const dataTransfer = {
+      files: [],
+      items: [{ kind: "string", getAsFile: () => null }],
+    } as unknown as DataTransfer;
+    expect(collectClipboardFiles(dataTransfer)).toEqual([]);
+  });
+});
 
 describe("normalizeAttachmentUrl", () => {
   test("accepts https URLs", () => {

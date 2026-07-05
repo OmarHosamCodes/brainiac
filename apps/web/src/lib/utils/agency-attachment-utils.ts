@@ -58,6 +58,19 @@ const DOCUMENT_ACCEPT =
 export const AGENCY_ATTACHMENT_IMAGE_ACCEPT = "image/*";
 export const AGENCY_ATTACHMENT_DOCUMENT_ACCEPT = DOCUMENT_ACCEPT;
 
+/** Files from a paste or drop clipboard/dataTransfer (screenshots often only appear on items). */
+export function collectClipboardFiles(dataTransfer: DataTransfer | null | undefined): File[] {
+  if (!dataTransfer) return [];
+
+  const fromFiles = Array.from(dataTransfer.files).filter((file) => file.size > 0);
+  if (fromFiles.length > 0) return fromFiles;
+
+  return Array.from(dataTransfer.items)
+    .filter((item) => item.kind === "file")
+    .map((item) => item.getAsFile())
+    .filter((file): file is File => file !== null && file.size > 0);
+}
+
 export function getMediaKindFromMetadata(metadata: AttachmentMetadataLike): AttachmentMediaKind | null {
   if (!metadata?.mediaKind) return null;
   return metadata.mediaKind;
