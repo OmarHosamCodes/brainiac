@@ -77,14 +77,19 @@ export function useAgencyTaskTitleChooser({
     }
   }
 
+  const chooserTasks = useMemo(
+    () => tasks.filter((task) => task.status !== "archived"),
+    [tasks],
+  );
+
   const filteredTasks = useMemo(
-    () => filterTasksByTitleSearch(tasks, searchTerm),
-    [searchTerm, tasks],
+    () => filterTasksByTitleSearch(chooserTasks, searchTerm),
+    [searchTerm, chooserTasks],
   );
 
   const trimmedSearch = searchTerm.trim();
   const showCreateRow =
-    Boolean(trimmedSearch) && !taskTitleExactlyMatches(tasks, trimmedSearch);
+    Boolean(trimmedSearch) && !taskTitleExactlyMatches(chooserTasks, trimmedSearch);
   const optionCount = filteredTasks.length + (showCreateRow ? 1 : 0);
   const createRowIndex = showCreateRow ? filteredTasks.length : -1;
 
@@ -166,7 +171,6 @@ export function useAgencyTaskTitleChooser({
       onCreateFromSearch,
       onSelectTask,
       optionCount,
-      tasks,
       trimmedSearch,
     ],
   );
