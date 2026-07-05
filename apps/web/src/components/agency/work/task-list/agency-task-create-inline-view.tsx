@@ -1,4 +1,4 @@
-import { AlertTriangle, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 
 import { AgencyMemberChooser } from "@/components/agency/agency-member-chooser";
 import { AgencyProjectChooser } from "@/components/agency/agency-project-chooser";
@@ -121,19 +121,6 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
               )}
               aria-label="Work description"
             />
-          </div>
-        ) : null}
-
-        {existingOpenTask ? (
-          <div
-            role="status"
-            className="mb-2 flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-2 text-xs text-warning"
-          >
-            <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            <p className="min-w-0 leading-snug text-highlighted">
-              <span className="font-semibold text-warning">This name is already open.</span>{" "}
-              Submitting reuses that task and merges assignees; it does not create a second one.
-            </p>
           </div>
         ) : null}
 

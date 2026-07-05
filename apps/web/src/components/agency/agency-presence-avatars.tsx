@@ -32,7 +32,7 @@ export function AgencyPresenceAvatars({ teamId, className }: AgencyPresenceAvata
       {visibleMembers.map((member, index) => (
         <span
           key={member.userId}
-          className={cn("relative", index > 0 && "-ml-2")}
+          className={cn(index > 0 && "-ml-2")}
           style={{ zIndex: index + 1 }}
           title={`${member.userName} · ${member.projectName}`}
         >
@@ -41,10 +41,6 @@ export function AgencyPresenceAvatars({ teamId, className }: AgencyPresenceAvata
             avatarUrl={member.userAvatar}
             size="sm"
             className="size-7 rounded-full ring-2 ring-default"
-          />
-          <span
-            className="absolute -bottom-0.5 -right-0.5 size-2 rounded-full bg-primary ring-2 ring-default"
-            aria-hidden
           />
         </span>
       ))}
