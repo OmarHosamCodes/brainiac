@@ -15,6 +15,8 @@ type AgencyTaskRailSummaryProps = {
   total: number | null;
   done: number | null;
   left: number | null;
+  journeyCount?: number;
+  standaloneTaskCount?: number;
   compact?: boolean;
   onCollapse?: () => void;
 };
@@ -42,6 +44,8 @@ export function AgencyTaskRailSummary({
   total,
   done,
   left,
+  journeyCount = 0,
+  standaloneTaskCount = 0,
   compact = false,
   onCollapse,
 }: AgencyTaskRailSummaryProps) {
@@ -58,7 +62,20 @@ export function AgencyTaskRailSummary({
 
   return (
     <div className={agencyTaskRailSummaryClass} aria-label="Task workload summary">
-      <h2 className="shrink-0 text-sm font-semibold text-highlighted">My tasks</h2>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <h2 className="shrink-0 text-sm font-semibold text-highlighted">My tasks</h2>
+        {journeyCount > 0 || standaloneTaskCount > 0 ? (
+          <p className="text-[10px] text-muted">
+            {journeyCount > 0
+              ? `${journeyCount} ${journeyCount === 1 ? "journey" : "journeys"}`
+              : null}
+            {journeyCount > 0 && standaloneTaskCount > 0 ? " · " : null}
+            {standaloneTaskCount > 0
+              ? `${standaloneTaskCount} ${standaloneTaskCount === 1 ? "task" : "tasks"}`
+              : null}
+          </p>
+        ) : null}
+      </div>
       <div className="flex min-w-0 items-center gap-2">
         <div className="flex shrink-0 items-center gap-2">
           <SummaryMetric label="Total" value={total} />

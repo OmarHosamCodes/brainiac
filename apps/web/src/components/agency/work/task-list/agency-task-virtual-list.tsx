@@ -6,6 +6,8 @@ import type { AgencyTaskClientDisplayGroup } from "@/lib/agency/work/hooks/use-a
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
 import { estimateDisplayRowHeight } from "@/lib/utils/agency-task-status";
+import { estimateClientGroupHeight } from "@/lib/utils/agency-task-rail-grouping";
+import type { AgencyTaskDisplayRow } from "@/lib/utils/agency-task-blueprints";
 
 type FlatRow =
   | { kind: "group"; key: string; group: AgencyTaskClientDisplayGroup; expanded: boolean }
@@ -15,12 +17,14 @@ type AgencyTaskVirtualListProps = {
   clientGroups: AgencyTaskClientDisplayGroup[];
   allTasks: AgencyProjectTask[];
   collapsedClients: Set<string>;
+  collapsedProjects: Set<string>;
   projects: AgencyTaskProject[];
   teamId: string;
   selectedTaskId: string;
   highlightBlueprintId: string;
   isRowPending: (taskId: string) => boolean;
   onClientExpandedChange: (clientId: string, expanded: boolean) => void;
+  onProjectExpandedChange: (projectId: string, expanded: boolean) => void;
   onSelect: (taskId: string, blueprintId?: string | null) => void;
   onSelectProject: (projectId: string) => void;
   onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
@@ -32,32 +36,40 @@ type AgencyTaskVirtualListProps = {
   onBlueprintDescriptionChange?: (blueprintId: string, value: string) => void;
 };
 
-const GROUP_HEADER_HEIGHT = 40;
+function estimateRowHeight(
+  row: AgencyTaskDisplayRow,
+  getTaskTrackingState?: (taskId: string, blueprintDescription?: string) => TaskTrackingState,
+) {
+  const tracking = getTaskTrackingState?.(row.task.id, row.blueprintDescription);
+  return estimateDisplayRowHeight(row, tracking?.needsDescription, true);
+}
 
 function estimateGroupHeight(
   group: AgencyTaskClientDisplayGroup,
   expanded: boolean,
+  collapsedProjects: Set<string>,
   getTaskTrackingState?: (taskId: string, blueprintDescription?: string) => TaskTrackingState,
 ) {
-  if (!expanded) return GROUP_HEADER_HEIGHT;
-  let height = GROUP_HEADER_HEIGHT;
-  for (const row of group.displayRows) {
-    const tracking = getTaskTrackingState?.(row.task.id, row.blueprintDescription);
-    height += estimateDisplayRowHeight(row, tracking?.needsDescription);
-  }
-  return height;
+  return estimateClientGroupHeight({
+    group,
+    expanded,
+    collapsedProjects,
+    estimateRowHeight: (row) => estimateRowHeight(row, getTaskTrackingState),
+  });
 }
 
 export function AgencyTaskVirtualList({
   clientGroups,
   allTasks,
   collapsedClients,
+  collapsedProjects,
   projects,
   teamId,
   selectedTaskId,
   highlightBlueprintId,
   isRowPending,
   onClientExpandedChange,
+  onProjectExpandedChange,
   onSelect,
   onSelectProject,
   onStatusChange,
@@ -89,7 +101,12 @@ export function AgencyTaskVirtualList({
     estimateSize: (index) => {
       const row = flatRows[index];
       if (!row || row.kind === "spacer") return 24;
-      return estimateGroupHeight(row.group, row.expanded, getTaskTrackingState);
+      return estimateGroupHeight(
+        row.group,
+        row.expanded,
+        collapsedProjects,
+        getTaskTrackingState,
+      );
     },
     overscan: 4,
   });
@@ -142,6 +159,7 @@ export function AgencyTaskVirtualList({
               <AgencyTaskClientGroupView
                 group={row.group}
                 expanded={row.expanded}
+                collapsedProjects={collapsedProjects}
                 allTasks={allTasks}
                 projects={projects}
                 teamId={teamId}
@@ -150,6 +168,7 @@ export function AgencyTaskVirtualList({
                 onExpandedChange={(expanded) =>
                   onClientExpandedChange(row.group.clientId, expanded)
                 }
+                onProjectExpandedChange={onProjectExpandedChange}
                 onSelect={onSelect}
                 onSelectProject={onSelectProject}
                 onStatusChange={onStatusChange}
