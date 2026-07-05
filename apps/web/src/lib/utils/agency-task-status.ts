@@ -1,11 +1,33 @@
 import type { AgencyProjectTask, TaskStatus } from "@/lib/schemas/agency-work";
 import type { AgencyTaskDisplayRow } from "@/lib/utils/agency-task-blueprints";
 
-export const TASK_ROW_BASE_HEIGHT = 56;
-export const TASK_ROW_WITH_DESC_HEIGHT = 88;
+export const TASK_ROW_BASE_HEIGHT = 48;
+export const TASK_ROW_COMPACT_HEIGHT = 34;
+export const TASK_ROW_WITH_DESC_HEIGHT = 48;
 
 const STATUS_CHIP_BASE =
-  "inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wide";
+  "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium";
+
+export function statusInlineClass(status: TaskStatus | undefined): string {
+  switch (status) {
+    case "in_progress":
+      return `${STATUS_CHIP_BASE} bg-primary/15 text-primary`;
+    case "done":
+      return `${STATUS_CHIP_BASE} bg-success/15 text-success`;
+    case "archived":
+      return `${STATUS_CHIP_BASE} bg-muted text-muted`;
+    case "open":
+      return `${STATUS_CHIP_BASE} bg-elevated text-toned`;
+    default: {
+      const _exhaustive: never = status;
+      return _exhaustive;
+    }
+  }
+}
+
+export function statusChipClass(status: TaskStatus | undefined): string {
+  return statusInlineClass(status);
+}
 
 export function statusLabel(status: TaskStatus | undefined): string {
   if (!status) return "Open";
@@ -43,23 +65,6 @@ export function statusDotClass(status: TaskStatus | undefined): string {
   }
 }
 
-export function statusChipClass(status: TaskStatus | undefined): string {
-  switch (status) {
-    case "in_progress":
-      return `${STATUS_CHIP_BASE} bg-primary/10 text-primary`;
-    case "done":
-      return `${STATUS_CHIP_BASE} bg-success/10 text-success`;
-    case "archived":
-      return `${STATUS_CHIP_BASE} bg-muted text-muted`;
-    case "open":
-      return `${STATUS_CHIP_BASE} bg-elevated text-muted`;
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
-
 export type ResolveTaskDisplayStatusInput = {
   task: Pick<AgencyProjectTask, "status" | "viewerStatus">;
   readOnly?: boolean;
@@ -83,6 +88,7 @@ export function taskStatusDisplay(status: TaskStatus | undefined) {
     label,
     dotClass: statusDotClass(status),
     chipClass: statusChipClass(status),
+    inlineClass: statusInlineClass(status),
     ariaLabel: `${label} status`,
   };
 }
@@ -90,13 +96,17 @@ export function taskStatusDisplay(status: TaskStatus | undefined) {
 export function estimateDisplayRowHeight(
   row: Pick<AgencyTaskDisplayRow, "blueprintId" | "blueprintDescription" | "rowKind">,
   needsDescription = false,
+  nested = false,
 ): number {
-  if (row.rowKind === "journey_anchor") return TASK_ROW_BASE_HEIGHT;
+  if (row.rowKind === "journey_anchor") {
+    return nested ? TASK_ROW_COMPACT_HEIGHT : TASK_ROW_BASE_HEIGHT;
+  }
+  const hasBlueprintDescriptionRow =
+    Boolean(row.blueprintId) || Boolean(row.blueprintDescription.trim());
   const hasDescriptionRow =
-    Boolean(row.blueprintId) ||
-    Boolean(row.blueprintDescription.trim()) ||
-    needsDescription;
-  return hasDescriptionRow ? TASK_ROW_WITH_DESC_HEIGHT : TASK_ROW_BASE_HEIGHT;
+    hasBlueprintDescriptionRow || (needsDescription && !nested);
+  if (hasDescriptionRow) return TASK_ROW_WITH_DESC_HEIGHT;
+  return nested ? TASK_ROW_COMPACT_HEIGHT : TASK_ROW_BASE_HEIGHT;
 }
 
 if (import.meta.env.DEV) {
@@ -111,5 +121,14 @@ if (import.meta.env.DEV) {
       readOnly: true,
     }) === "done",
   );
-  console.assert(estimateDisplayRowHeight({ blueprintId: "b1", blueprintDescription: "" }) === 88);
+  console.assert(
+    estimateDisplayRowHeight({ blueprintId: "b1", blueprintDescription: "" }) === 48,
+  );
+  console.assert(
+    estimateDisplayRowHeight(
+      { blueprintId: null, blueprintDescription: "", rowKind: "standard" },
+      true,
+      true,
+    ) === 34,
+  );
 }
