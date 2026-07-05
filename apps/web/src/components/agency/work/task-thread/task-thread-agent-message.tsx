@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { Bot, Loader2 } from "lucide-react";
 
 import { renderSimpleMarkdown } from "@/lib/utils/render-simple-markdown";
 import { agencyAgentMessageCardClass, agencyAgentMessageCodeClass } from "@/lib/utils/agency-ui";
@@ -60,49 +60,59 @@ export function TaskThreadAgentMessage({
   const segments = content ? parseAgentContent(content) : [];
 
   return (
-    <article className={agencyAgentMessageCardClass} aria-label="Agent message">
-      <div className="mb-2 flex items-baseline gap-2">
-        <span className="text-xs font-bold text-highlighted">Agent</span>
-        <time className="text-[11px] text-muted" dateTime={createdAt}>
-          {formatTime(createdAt)}
-        </time>
+    <article className="flex gap-3" aria-label="Agent message">
+      <div
+        className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+        aria-hidden
+      >
+        <Bot className="size-3.5" />
       </div>
-
-      {isPending ? (
-        <div className="flex items-center gap-2 text-sm text-muted" role="status">
-          <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
-          <span>Agent is thinking…</span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-baseline gap-2">
+          <span className="text-xs font-bold text-foreground">Agent</span>
+          <time className="text-[11px] text-muted-foreground" dateTime={createdAt}>
+            {formatTime(createdAt)}
+          </time>
         </div>
-      ) : segments.length === 0 ? (
-        <p className="text-sm text-muted">No response content.</p>
-      ) : (
-        <div className="space-y-2">
-          {segments.map((segment, index) => {
-            if (segment.type === "code") {
-              return (
-                <div key={`code-${index}`} className={agencyAgentMessageCodeClass}>
-                  {segment.language ? (
-                    <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted">
-                      {segment.language}
-                    </p>
-                  ) : null}
-                  <pre className="whitespace-pre-wrap select-text">{segment.content}</pre>
-                </div>
-              );
-            }
 
-            return (
-              <div
-                key={`prose-${index}`}
-                className={cn(
-                  "prose prose-sm dark:prose-invert max-w-none select-text text-sm",
-                )}
-                dangerouslySetInnerHTML={{ __html: renderSimpleMarkdown(segment.content) }}
-              />
-            );
-          })}
+        <div className={cn(agencyAgentMessageCardClass, "mt-1")}>
+          {isPending ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+              <Loader2 className="size-4 motion-safe:animate-spin" aria-hidden="true" />
+              <span>Agent is thinking…</span>
+            </div>
+          ) : segments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No response content.</p>
+          ) : (
+            <div className="space-y-2">
+              {segments.map((segment, index) => {
+                if (segment.type === "code") {
+                  return (
+                    <div key={`code-${index}`} className={agencyAgentMessageCodeClass}>
+                      {segment.language ? (
+                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          {segment.language}
+                        </p>
+                      ) : null}
+                      <pre className="whitespace-pre-wrap select-text">{segment.content}</pre>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div
+                    key={`prose-${index}`}
+                    className={cn(
+                      "prose prose-sm dark:prose-invert max-w-none select-text text-sm",
+                    )}
+                    dangerouslySetInnerHTML={{ __html: renderSimpleMarkdown(segment.content) }}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </article>
   );
 }

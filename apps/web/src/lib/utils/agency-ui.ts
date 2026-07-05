@@ -209,7 +209,7 @@ export const agencyTimeLogSkeletonClass =
 
 /** Structured agency task agent reply card. */
 export const agencyAgentMessageCardClass =
-  "rounded-xl border border-default bg-muted/20 px-3 py-2.5 text-sm text-highlighted";
+  "rounded-xl border border-border bg-muted/20 px-3 py-2.5 text-sm text-foreground";
 
 export const agencyAgentMessageCodeClass =
-  "mt-2 overflow-x-auto rounded-lg border border-default bg-default px-2.5 py-2 font-mono text-xs text-highlighted";
+  "mt-2 overflow-x-auto rounded-lg border border-border bg-background px-2.5 py-2 font-mono text-xs text-foreground";
