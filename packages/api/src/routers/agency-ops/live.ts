@@ -39,6 +39,12 @@ export const agencyLiveEventSchema = z.discriminatedUnion("type", [
     updatedAt: z.string().datetime(),
     message: agencyTaskMessageLiveSchema,
   }),
+  z.object({
+    type: z.literal("journey.step.updated"),
+    teamId: z.string().min(1),
+    projectId: z.string().min(1),
+    updatedAt: z.string().datetime(),
+  }),
 ]);
 
 export type AgencyLiveEvent = z.infer<typeof agencyLiveEventSchema>;
@@ -142,6 +148,10 @@ export function liveUpdatedAt(value: string | Date) {
 export async function publishAgencyLiveEvent(teamId: string, event: AgencyLiveEvent) {
   agencyLiveEventSchema.parse(event);
   await getRedisPublisher().publish(redisTeamChannel(teamId), JSON.stringify(event));
+}
+
+export async function publishAgencyJourneyStepUpdated(_teamId: string, _projectId: string) {
+  // ponytail: journey live events not in scope yet; keep call sites for a future event type
 }
 
 let redisSubscriberBootstrapped = false;
