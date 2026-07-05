@@ -8,7 +8,8 @@ const outputPath = resolve(webRoot, ".output/server/index.mjs");
 
 const serverSource = String.raw`import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
 import { extname, join, normalize, resolve } from "node:path";
 
 const port = Number(process.env.PORT || 7001);
@@ -56,6 +57,90 @@ function shouldProxy(pathname) {
     pathname.startsWith("/uploads/") ||
     pathname.startsWith("/billing/")
   );
+}
+
+function shouldProxyWebSocket(pathname) {
+  return pathname === "/rpc/ws";
+}
+
+function proxyWebSocketUpgrade(request, socket, head) {
+  const requestUrl = new URL(request.url, "http://localhost");
+  if (!shouldProxyWebSocket(requestUrl.pathname)) {
+    socket.destroy();
+    return;
+  }
+
+  const target = new URL(apiOrigin);
+  const requestFn = target.protocol === "https:" ? httpsRequest : httpRequest;
+  const proxyRequest = requestFn({
+    hostname: target.hostname,
+    port: target.port || (target.protocol === "https:" ? 443 : 80),
+    path: requestUrl.pathname + requestUrl.search,
+    method: request.method,
+    headers: {
+      ...request.headers,
+      host: target.host,
+    },
+  });
+
+  proxyRequest.on("upgrade", (response, upstream, upstreamHead) => {
+    const headerLines = [];
+    for (let index = 0; index < response.rawHeaders.length; index += 2) {
+      headerLines.push(
+        response.rawHeaders[index] + ": " + response.rawHeaders[index + 1],
+      );
+    }
+
+    socket.write(
+      "HTTP/1.1 " +
+        response.statusCode +
+        " " +
+        response.statusMessage +
+        "\r\n" +
+        headerLines.join("\r\n") +
+        "\r\n\r\n",
+    );
+
+    if (head?.length) {
+      upstream.write(head);
+    }
+    if (upstreamHead?.length) {
+      upstream.write(upstreamHead);
+    }
+
+    upstream.pipe(socket);
+    socket.pipe(upstream);
+
+    upstream.on("error", () => socket.destroy());
+    socket.on("error", () => upstream.destroy());
+  });
+
+  proxyRequest.on("response", (response) => {
+    const headerLines = [];
+    for (let index = 0; index < response.rawHeaders.length; index += 2) {
+      headerLines.push(
+        response.rawHeaders[index] + ": " + response.rawHeaders[index + 1],
+      );
+    }
+
+    socket.write(
+      "HTTP/1.1 " +
+        response.statusCode +
+        " " +
+        response.statusMessage +
+        "\r\n" +
+        headerLines.join("\r\n") +
+        "\r\n\r\n",
+    );
+    response.pipe(socket);
+  });
+
+  proxyRequest.on("error", (error) => {
+    console.error("WebSocket proxy error:", error);
+    socket.destroy();
+  });
+
+  proxyRequest.end();
 }
 
 async function readRequestBody(request) {
@@ -190,6 +275,10 @@ const server = createServer(async (request, response) => {
       response.end("Not Found");
     })
     .pipe(response);
+});
+
+server.on("upgrade", (request, socket, head) => {
+  proxyWebSocketUpgrade(request, socket, head);
 });
 
 server.listen(port, host, () => {
