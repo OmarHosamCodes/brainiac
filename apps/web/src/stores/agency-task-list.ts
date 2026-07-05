@@ -8,6 +8,7 @@ type AgencyTaskListState = {
   recentlyCompletedTaskId: string;
   recentlyCreatedTaskId: string;
   titleDraft: string;
+  descriptionDraft: string;
   selectedProjectIdForCreate: string;
   assignedToTeamForCreate: boolean;
   selectedAssigneeIdsForCreate: string[];
@@ -17,6 +18,7 @@ type AgencyTaskListState = {
   setRecentlyCompletedTaskId: (taskId: string) => void;
   setRecentlyCreatedTaskId: (taskId: string) => void;
   setTitleDraft: (value: string) => void;
+  setDescriptionDraft: (value: string) => void;
   setSelectedProjectIdForCreate: (value: string) => void;
   setAssignedToTeamForCreate: (value: boolean) => void;
   setSelectedAssigneeIdsForCreate: (value: string[]) => void;
@@ -36,6 +38,7 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   recentlyCompletedTaskId: "",
   recentlyCreatedTaskId: "",
   titleDraft: "",
+  descriptionDraft: "",
   selectedProjectIdForCreate: "",
   assignedToTeamForCreate: false,
   selectedAssigneeIdsForCreate: [],
@@ -45,6 +48,7 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   setRecentlyCompletedTaskId: (taskId) => set({ recentlyCompletedTaskId: taskId }),
   setRecentlyCreatedTaskId: (taskId) => set({ recentlyCreatedTaskId: taskId }),
   setTitleDraft: (value) => set({ titleDraft: value }),
+  setDescriptionDraft: (value) => set({ descriptionDraft: value }),
   setSelectedProjectIdForCreate: (value) => set({ selectedProjectIdForCreate: value }),
   setAssignedToTeamForCreate: (value) =>
     set({
@@ -69,6 +73,7 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   resetCreateDraft: ({ skipProjectStep, defaultProjectId, currentUserId }) =>
     set({
       titleDraft: "",
+      descriptionDraft: "",
       selectedProjectIdForCreate: skipProjectStep ? defaultProjectId : "",
       assignedToTeamForCreate: false,
       selectedAssigneeIdsForCreate: defaultAssigneeIds(currentUserId),
@@ -80,11 +85,13 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
       selectedAssigneeIdsForCreate: defaultAssigneeIds(currentUserId),
       selectedProjectIdForCreate: skipProjectStep ? defaultProjectId : "",
       titleDraft: "",
+      descriptionDraft: "",
     }),
   collapseCreate: ({ skipProjectStep, defaultProjectId, currentUserId }) =>
     set({
       createExpanded: false,
       titleDraft: "",
+      descriptionDraft: "",
       selectedProjectIdForCreate: skipProjectStep ? defaultProjectId : "",
       assignedToTeamForCreate: false,
       selectedAssigneeIdsForCreate: defaultAssigneeIds(currentUserId),

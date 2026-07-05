@@ -89,6 +89,8 @@ export const agencyTaskRowDoneClass =
 
 export const agencyTaskRowCompleteClass = "agency-task-row-complete";
 
+export const agencyTaskRowNeedsDescriptionClass = "border-l-2 border-warning";
+
 /** Time column beside the task rail — stacks tracker and log as separate panels. */
 export const agencyTimePaneStackClass =
   "flex h-full min-h-0 flex-col gap-3 overflow-hidden";

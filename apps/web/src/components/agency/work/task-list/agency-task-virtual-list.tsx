@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from "react";
 
 import { AgencyTaskClientGroupView } from "@/components/agency/work/task-list/agency-task-client-group-view";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
+import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
 import type { groupTasksByClient } from "@/lib/utils/agency-task-utils";
 
 type ClientGroup = ReturnType<typeof groupTasksByClient>[number];
@@ -28,10 +29,12 @@ type AgencyTaskVirtualListProps = {
   hasMore?: boolean;
   isFetchingMore?: boolean;
   onFetchMore?: () => void;
+  getTaskTrackingState?: (taskId: string) => TaskTrackingState;
+  onTaskDescriptionChange?: (taskId: string, value: string) => void;
 };
 
 const GROUP_HEADER_HEIGHT = 40;
-const GROUP_TASK_HEIGHT = 52;
+const GROUP_TASK_HEIGHT = 68;
 
 function estimateGroupHeight(group: ClientGroup, expanded: boolean) {
   if (!expanded) return GROUP_HEADER_HEIGHT;
@@ -55,6 +58,8 @@ export function AgencyTaskVirtualList({
   hasMore = false,
   isFetchingMore = false,
   onFetchMore,
+  getTaskTrackingState,
+  onTaskDescriptionChange,
 }: AgencyTaskVirtualListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -145,6 +150,8 @@ export function AgencyTaskVirtualList({
                 onStatusChange={onStatusChange}
                 onDelete={onDelete}
                 highlightTaskId={highlightTaskId}
+                getTaskTrackingState={getTaskTrackingState}
+                onTaskDescriptionChange={onTaskDescriptionChange}
               />
             </div>
           );

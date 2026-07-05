@@ -191,6 +191,8 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
             hasMore={view.hasMoreActiveTasks}
             isFetchingMore={view.isFetchingMoreActiveTasks}
             onFetchMore={view.onFetchMoreActiveTasks}
+            getTaskTrackingState={view.getTaskTrackingState}
+            onTaskDescriptionChange={view.onTaskDescriptionChange}
           />
         )}
 
@@ -267,6 +269,10 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
                       onSelect={view.onSelect}
                       onSelectProject={view.onSelectProject}
                       onReopenToActive={view.onReopenDoneTask}
+                      trackingState={view.getTaskTrackingState(task.id)}
+                      onDescriptionChange={(value) =>
+                        view.onTaskDescriptionChange(task.id, value)
+                      }
                     />
                   ))}
                 </ul>

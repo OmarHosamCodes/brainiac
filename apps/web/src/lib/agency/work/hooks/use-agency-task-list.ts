@@ -3,7 +3,11 @@ import { useCallback, useEffect, useId, useMemo } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
-import { useAgencyProjectTasksInfiniteQuery, useAgencyProjectTasksQuery } from "@/lib/queries/agency";
+import { useAgencyActiveTimerQuery, useAgencyProjectTasksInfiniteQuery, useAgencyProjectTasksQuery } from "@/lib/queries/agency";
+import {
+  resolveTaskTrackingState,
+  type TaskTrackingState,
+} from "@/lib/agency/work/task-tracking-state";
 import type {
   AgencyProjectTask,
   AgencyTaskProject,
@@ -19,6 +23,7 @@ import {
 } from "@/stores/agency-task-list";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 import { EMPTY_LIST_OVERLAY } from "@/lib/utils/agency-optimistic-merge";
+import { useAgencyTimeTrackingStore, useTrackerDraft } from "@/stores/agency-time-tracking";
 
 const ACTIVE_TASK_STATUSES: TaskStatus[] = ["open", "in_progress"];
 const DONE_TASK_STATUSES: TaskStatus[] = ["done"];
@@ -38,6 +43,8 @@ export type AgencyTaskListCreateViewModel = {
   skipProjectStep: boolean;
   members: AgencyTaskThreadMember[];
   titleDraft: string;
+  descriptionDraft: string;
+  showDescriptionField: boolean;
   selectedProjectId: string;
   assignedToTeam: boolean;
   selectedAssigneeIds: string[];
@@ -53,6 +60,7 @@ export type AgencyTaskListCreateViewModel = {
   onExpand: () => void;
   onCollapse: () => void;
   onTitleChange: (value: string) => void;
+  onDescriptionChange: (value: string) => void;
   onProjectChange: (value: string) => void;
   onAssignedToTeamChange: (value: boolean) => void;
   onAssigneeIdsChange: (value: string[]) => void;
@@ -104,6 +112,8 @@ export type AgencyTaskListViewModel =
       isFetchingMoreActiveTasks: boolean;
       onFetchMoreActiveTasks: () => void;
       onCollapseRail: () => void;
+      getTaskTrackingState: (taskId: string) => TaskTrackingState;
+      onTaskDescriptionChange: (taskId: string, value: string) => void;
       create: AgencyTaskListCreateViewModel;
     };
 
@@ -134,6 +144,7 @@ export function useAgencyTaskList({
   const recentlyCompletedTaskId = useAgencyTaskListStore((s) => s.recentlyCompletedTaskId);
   const recentlyCreatedTaskId = useAgencyTaskListStore((s) => s.recentlyCreatedTaskId);
   const titleDraft = useAgencyTaskListStore((s) => s.titleDraft);
+  const descriptionDraft = useAgencyTaskListStore((s) => s.descriptionDraft);
   const selectedProjectIdForCreate = useAgencyTaskListStore((s) => s.selectedProjectIdForCreate);
   const selectedAssigneeIdsForCreate = useAgencyTaskListStore((s) => s.selectedAssigneeIdsForCreate);
   const assignedToTeamForCreate = useAgencyTaskListStore((s) => s.assignedToTeamForCreate);
@@ -142,12 +153,59 @@ export function useAgencyTaskList({
   const setRecentlyCompletedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCompletedTaskId);
   const setRecentlyCreatedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCreatedTaskId);
   const setTitleDraft = useAgencyTaskListStore((s) => s.setTitleDraft);
+  const setDescriptionDraft = useAgencyTaskListStore((s) => s.setDescriptionDraft);
   const setSelectedProjectIdForCreate = useAgencyTaskListStore((s) => s.setSelectedProjectIdForCreate);
   const setSelectedAssigneeIdsForCreate = useAgencyTaskListStore((s) => s.setSelectedAssigneeIdsForCreate);
   const setAssignedToTeamForCreate = useAgencyTaskListStore((s) => s.setAssignedToTeamForCreate);
   const setClientExpanded = useAgencyTaskListStore((s) => s.setClientExpanded);
   const expandCreateAction = useAgencyTaskListStore((s) => s.expandCreate);
   const collapseCreateAction = useAgencyTaskListStore((s) => s.collapseCreate);
+
+  const setTrackerDescription = useAgencyTimeTrackingStore((s) => s.setTrackerDescription);
+  const setTrackerProjectId = useAgencyTimeTrackingStore((s) => s.setTrackerProjectId);
+  const setTrackerTaskId = useAgencyTimeTrackingStore((s) => s.setTrackerTaskId);
+  const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
+  const activeTimer = activeTimerQuery.data?.timer ?? null;
+  const trackerDraft = useTrackerDraft(teamId);
+
+  const trackingDraft = useMemo(
+    () =>
+      trackerDraft?.taskId
+        ? { taskId: trackerDraft.taskId, description: trackerDraft.description }
+        : null,
+    [trackerDraft?.description, trackerDraft?.taskId],
+  );
+
+  const trackingTimer = useMemo(
+    () =>
+      activeTimer
+        ? { taskId: activeTimer.taskId, projectId: activeTimer.projectId }
+        : null,
+    [activeTimer],
+  );
+
+  const getTaskTrackingState = useCallback(
+    (taskId: string) =>
+      resolveTaskTrackingState({
+        taskId,
+        activeTimer: trackingTimer,
+        trackerDraft: trackingDraft,
+      }),
+    [trackingDraft, trackingTimer],
+  );
+
+  const onTaskDescriptionChange = useCallback(
+    (taskId: string, value: string) => {
+      const state = resolveTaskTrackingState({
+        taskId,
+        activeTimer: trackingTimer,
+        trackerDraft: trackingDraft,
+      });
+      if (!state.canEditDescription) return;
+      setTrackerDescription(teamId, value);
+    },
+    [setTrackerDescription, teamId, trackingDraft, trackingTimer],
+  );
 
   const skipProjectStep = projects.length === 1;
   const defaultProjectId = projects[0]?.id ?? "";
@@ -193,6 +251,23 @@ export function useAgencyTaskList({
   const existingOpenTask = useMemo(
     () => findOpenTaskByExactTitle(createTasks, titleDraft),
     [createTasks, titleDraft],
+  );
+
+  const handleSelect = useCallback(
+    (taskId: string) => {
+      onSelect(taskId);
+
+      if (!activeTimer || activeTimer.taskId) return;
+
+      const task =
+        activeTasks.find((entry) => entry.id === taskId) ??
+        doneTasks.find((entry) => entry.id === taskId);
+      if (!task || task.projectId !== activeTimer.projectId) return;
+
+      setTrackerTaskId(teamId, taskId);
+      setTrackerProjectId(teamId, task.projectId);
+    },
+    [activeTasks, activeTimer, doneTasks, onSelect, setTrackerProjectId, setTrackerTaskId, teamId],
   );
 
   // Prefer live list length while a background refetch is pending so the rail
@@ -266,6 +341,9 @@ export function useAgencyTaskList({
     });
 
     if (createdId) {
+      setTrackerTaskId(teamId, createdId);
+      setTrackerProjectId(teamId, projectId);
+      setTrackerDescription(teamId, descriptionDraft.trim());
       setRecentlyCreatedTaskId(createdId);
       collapseCreate();
       return;
@@ -276,9 +354,13 @@ export function useAgencyTaskList({
     collapseCreate,
     assignedToTeamForCreate,
     createTasks,
+    descriptionDraft,
     selectedAssigneeIdsForCreate,
     selectedProjectIdForCreate,
     setRecentlyCreatedTaskId,
+    setTrackerDescription,
+    setTrackerProjectId,
+    setTrackerTaskId,
     teamId,
     titleDraft,
   ]);
@@ -381,7 +463,7 @@ export function useAgencyTaskList({
     clientGroups,
     collapsedClients,
     onClientExpandedChange: setClientExpanded,
-    onSelect,
+    onSelect: handleSelect,
     onSelectProject,
     onStatusChange: (task, status) => void updateTaskStatus(task, status),
     isRowPending,
@@ -399,11 +481,15 @@ export function useAgencyTaskList({
     isFetchingMoreActiveTasks: activeTasksQuery.isFetchingNextPage,
     onFetchMoreActiveTasks: () => void activeTasksQuery.fetchNextPage(),
     onCollapseRail: () => onCollapsedChange(true),
+    getTaskTrackingState,
+    onTaskDescriptionChange,
     create: {
       expanded: createExpanded,
       skipProjectStep,
       members,
       titleDraft,
+      descriptionDraft,
+      showDescriptionField: Boolean(titleDraft.trim()),
       selectedProjectId: selectedProjectIdForCreate,
       assignedToTeam: assignedToTeamForCreate,
       selectedAssigneeIds: selectedAssigneeIdsForCreate,
@@ -418,6 +504,7 @@ export function useAgencyTaskList({
       onExpand: expandCreate,
       onCollapse: collapseCreate,
       onTitleChange: setTitleDraft,
+      onDescriptionChange: setDescriptionDraft,
       onProjectChange: setSelectedProjectIdForCreate,
       onAssignedToTeamChange: setAssignedToTeamForCreate,
       onAssigneeIdsChange: setSelectedAssigneeIdsForCreate,

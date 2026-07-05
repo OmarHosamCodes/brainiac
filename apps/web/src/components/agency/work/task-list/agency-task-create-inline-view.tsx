@@ -7,7 +7,8 @@ import { AgencyTaskTitleChooser } from "@/components/agency/agency-task-title-ch
 import type { AgencyTaskListCreateViewModel } from "@/lib/agency/work/hooks/use-agency-task-list";
 import type { AgencyTaskProject } from "@/lib/schemas/agency-work";
 import { Button } from "@/components/ui/button";
-import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
+import { Input } from "@/components/ui/input";
+import { agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
 type AgencyTaskCreateInlineViewProps = {
@@ -21,6 +22,8 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
     skipProjectStep,
     members,
     titleDraft,
+    descriptionDraft,
+    showDescriptionField,
     selectedProjectId,
     assignedToTeam,
     selectedAssigneeIds,
@@ -35,6 +38,7 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
     onExpand,
     onCollapse,
     onTitleChange,
+    onDescriptionChange,
     onProjectChange,
     onAssignedToTeamChange,
     onAssigneeIdsChange,
@@ -103,6 +107,22 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
             autoFocus={skipProjectStep}
           />
         </div>
+
+        {showDescriptionField ? (
+          <div className="mb-2 min-w-0">
+            <Input
+              value={descriptionDraft}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+              placeholder="What are you working on?"
+              disabled={disabled}
+              className={cn(
+                "h-8 rounded-lg border-default bg-default text-xs",
+                agencyInputPlaceholderClass,
+              )}
+              aria-label="Work description"
+            />
+          </div>
+        ) : null}
 
         {existingOpenTask ? (
           <div

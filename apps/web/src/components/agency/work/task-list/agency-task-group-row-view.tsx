@@ -3,6 +3,7 @@ import { useState } from "react";
 
 import { AgencyTaskRowView } from "@/components/agency/work/task-list/agency-task-row-view";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
+import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
 import type { AgencyProjectTaskGroup } from "@/lib/utils/agency-task-utils";
 import {
   agencyFocusRingClass,
@@ -82,6 +83,8 @@ export type AgencyTaskGroupRowViewProps = {
   onDelete?: (task: AgencyProjectTask) => void;
   readOnly?: boolean;
   highlightTaskId?: string;
+  getTaskTrackingState?: (taskId: string) => TaskTrackingState;
+  onTaskDescriptionChange?: (taskId: string, value: string) => void;
 };
 
 export function AgencyTaskGroupRowView({
@@ -100,6 +103,8 @@ export function AgencyTaskGroupRowView({
   onDelete,
   readOnly = false,
   highlightTaskId = "",
+  getTaskTrackingState,
+  onTaskDescriptionChange,
 }: AgencyTaskGroupRowViewProps) {
   const [expanded, setExpanded] = useState(group.instanceCount === 1);
   const progress = countDoneStatuses(group, mode === "work" ? currentUserId : undefined);
@@ -119,6 +124,8 @@ export function AgencyTaskGroupRowView({
         onSelectProject={onSelectProject}
         onStatusChange={onStatusChange}
         onDelete={onDelete}
+        trackingState={getTaskTrackingState?.(singleInstance.id)}
+        onDescriptionChange={(value) => onTaskDescriptionChange?.(singleInstance.id, value)}
       />
     );
   }

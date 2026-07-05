@@ -2,15 +2,19 @@ import { Check, Clock, Plus } from "lucide-react";
 
 import { AgencyTaskRowSwipeShell } from "@/components/agency/work/task-list/agency-task-row-swipe-shell";
 import { AgencyMiniTimerContainer } from "@/lib/agency/work/containers/agency-mini-timer-container";
+import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
+import { Input } from "@/components/ui/input";
 import {
   agencyFocusRingClass,
+  agencyInputPlaceholderClass,
   agencyTaskRowCheckboxCheckedClass,
   agencyTaskRowCheckboxClass,
   agencyTaskRowCompleteClass,
   agencyTaskRowClass,
   agencyTaskRowDoneClass,
   agencyTaskRowMetaColumnClass,
+  agencyTaskRowNeedsDescriptionClass,
   agencyTaskRowProjectPillClass,
   agencyTaskRowSelectedClass,
   agencyTaskRowStatusDotClass,
@@ -108,6 +112,8 @@ export type AgencyTaskRowViewProps = {
   /** Done section: reopen this task into Active. */
   onReopenToActive?: (task: AgencyProjectTask) => void;
   onDelete?: (task: AgencyProjectTask) => void;
+  trackingState?: TaskTrackingState;
+  onDescriptionChange?: (value: string) => void;
 };
 
 export function AgencyTaskRowView({
@@ -123,6 +129,8 @@ export function AgencyTaskRowView({
   onStatusChange,
   onReopenToActive,
   onDelete,
+  trackingState,
+  onDescriptionChange,
 }: AgencyTaskRowViewProps) {
   const project = projects.find((p) => p.id === task.projectId);
   const projectName = project?.name ?? "Project";
@@ -144,6 +152,9 @@ export function AgencyTaskRowView({
         : "open";
 
   const swipeEnabled = !readOnly && Boolean(onDelete);
+  const showTrackingDescription =
+    trackingState?.isTrackingTask &&
+    (trackingState.canEditDescription || trackingState.hasDescription);
 
   return (
     <li
@@ -153,6 +164,7 @@ export function AgencyTaskRowView({
         isSelected && agencyTaskRowSelectedClass,
         readOnly && agencyTaskRowDoneClass,
         highlight && agencyTaskRowCompleteClass,
+        trackingState?.needsDescription && agencyTaskRowNeedsDescriptionClass,
       )}
     >
       <AgencyTaskRowSwipeShell
@@ -208,6 +220,28 @@ export function AgencyTaskRowView({
                 </span>
               ) : null}
             </div>
+
+            {showTrackingDescription ? (
+              <div className="pointer-events-auto mt-1 min-w-0">
+                {trackingState?.canEditDescription ? (
+                  <Input
+                    value={trackingState.description}
+                    onChange={(e) => onDescriptionChange?.(e.target.value)}
+                    onClick={(event) => event.stopPropagation()}
+                    onKeyDown={(event) => event.stopPropagation()}
+                    placeholder="What are you working on?"
+                    className={cn(
+                      "h-7 min-w-0 border-0 bg-transparent px-0 text-xs shadow-none focus-visible:ring-0",
+                      agencyInputPlaceholderClass,
+                      trackingState.needsDescription ? "text-warning" : "text-muted",
+                    )}
+                    aria-label="Work description"
+                  />
+                ) : (
+                  <p className="truncate text-xs text-muted">{trackingState?.description}</p>
+                )}
+              </div>
+            ) : null}
 
             <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2">
               {onSelectProject ? (

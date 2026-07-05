@@ -2,6 +2,7 @@ import { ChevronDown } from "lucide-react";
 
 import { AgencyTaskGroupRowView } from "@/components/agency/work/task-list/agency-task-group-row-view";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
+import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
 import { groupTasksWithinClient } from "@/lib/utils/agency-task-utils";
 import {
   agencyFocusRingClass,
@@ -26,6 +27,8 @@ export type AgencyTaskClientGroupViewProps = {
   onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
   onDelete?: (task: AgencyProjectTask) => void;
   highlightTaskId?: string;
+  getTaskTrackingState?: (taskId: string) => TaskTrackingState;
+  onTaskDescriptionChange?: (taskId: string, value: string) => void;
 };
 
 export function AgencyTaskClientGroupView({
@@ -44,6 +47,8 @@ export function AgencyTaskClientGroupView({
   onStatusChange,
   onDelete,
   highlightTaskId = "",
+  getTaskTrackingState,
+  onTaskDescriptionChange,
 }: AgencyTaskClientGroupViewProps) {
   const panelId = `agency-task-client-group-${clientId}`;
   const taskGroups = groupTasksWithinClient(tasks);
@@ -98,6 +103,8 @@ export function AgencyTaskClientGroupView({
               onStatusChange={onStatusChange}
               onDelete={onDelete}
               highlightTaskId={highlightTaskId}
+              getTaskTrackingState={getTaskTrackingState}
+              onTaskDescriptionChange={onTaskDescriptionChange}
             />
           ))}
         </ul>
