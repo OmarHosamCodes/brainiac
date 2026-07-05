@@ -315,6 +315,21 @@ export async function refetchAgencyProjectTaskListQueries(teamId: string, _assig
   });
 }
 
+export async function refetchAgencyProjectScopedTaskListQueries(teamId: string, projectId: string) {
+  const queryClient = getQueryClient();
+  await queryClient.refetchQueries({
+    predicate: (query) => {
+      if (!isAgencyProjectTasksListQueryKey(query.queryKey, teamId)) return false;
+      const input = getOrpcQueryMeta(query.queryKey)?.input;
+      if (input?.projectId === projectId) return true;
+      // Assignee rails without a project filter may include this project's anchor task.
+      if (typeof input?.assigneeUserId === "string" && !input.projectId) return true;
+      return false;
+    },
+    type: "active",
+  });
+}
+
 export async function refetchAgencyProjectJourneyQueries(teamId: string, projectId: string) {
   const queryClient = getQueryClient();
   await queryClient.refetchQueries({
@@ -600,6 +615,7 @@ export async function refetchAgencyActiveTimerQueries(teamId: string) {
         ...orpc.agencyOps.timer.getActive.queryOptions({ input: { teamId } }),
       },
       "hot",
+      { liveGated: true, teamId },
     ),
   );
   await queryClient.fetchQuery(
@@ -608,6 +624,7 @@ export async function refetchAgencyActiveTimerQueries(teamId: string) {
         ...orpc.agencyOps.timer.listActiveMembers.queryOptions({ input: { teamId } }),
       },
       "hot",
+      { liveGated: true, teamId },
     ),
   );
 }
@@ -625,6 +642,7 @@ export async function refetchAgencyTimeEntriesListQueries(teamId: string) {
         }),
       },
       "hot",
+      { liveGated: true, teamId },
     ),
   );
   await queryClient.refetchQueries({
@@ -709,6 +727,14 @@ function patchActiveMembersInCache(
     if (!isAgencyActiveMembersQueryKey(query.queryKey, teamId)) continue;
     queryClient.setQueryData<AgencyActiveMembersQueryData | undefined>(query.queryKey, patch);
   }
+}
+
+export function patchActiveMembersFromLiveTimer(
+  teamId: string,
+  timer: Record<string, unknown> | null,
+  removedUserId?: string,
+) {
+  patchActiveMembersInCache(teamId, timer, removedUserId);
 }
 
 export function patchActiveTimerInCache(teamId: string, timer: Record<string, unknown> | null) {
