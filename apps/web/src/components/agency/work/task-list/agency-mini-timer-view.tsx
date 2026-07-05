@@ -19,7 +19,7 @@ export function AgencyMiniTimerView({ view }: AgencyMiniTimerViewProps) {
         <button
           type="button"
           className={cn(
-            "inline-flex h-7 shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 font-mono text-[11px] font-medium tabular-nums text-primary",
+            "inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary",
             "transition-colors hover:bg-primary/15",
             agencyFocusRingClass,
             "motion-reduce:transition-none",
@@ -30,11 +30,10 @@ export function AgencyMiniTimerView({ view }: AgencyMiniTimerViewProps) {
           onClick={onToggle}
         >
           {isTimerMutationPending ? (
-            <Square className="size-3 animate-pulse" aria-hidden />
+            <Square className="size-3.5 animate-pulse" aria-hidden />
           ) : (
-            <Square className="size-3" aria-hidden />
+            <Square className="size-3.5" aria-hidden />
           )}
-          {elapsedLabel}
         </button>
       );
     }
@@ -43,7 +42,7 @@ export function AgencyMiniTimerView({ view }: AgencyMiniTimerViewProps) {
       <button
         type="button"
         className={cn(
-          "inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted",
+          "inline-flex size-6 shrink-0 items-center justify-center rounded-full text-muted",
           "transition-colors hover:bg-elevated hover:text-highlighted",
           agencyFocusRingClass,
           "motion-reduce:transition-none",
