@@ -1,11 +1,62 @@
 /** Shared Tailwind class strings for the Agency dense register. */
 
+import { useLayoutEffect, useState, type RefObject } from "react";
+
 import {
   shellEmptyPanelClass,
   shellErrorPanelClass,
   shellFocusRingClass,
   shellLabelClass,
 } from "@/lib/utils/app-shell-ui";
+
+export const AGENCY_PAGE_SCROLL_ATTR = "data-agency-page-scroll";
+
+/** Page-level scroll container for agency surfaces (see agency-page.tsx). */
+export function getAgencyPageScrollElement(): HTMLElement | null {
+  return document.querySelector(`[${AGENCY_PAGE_SCROLL_ATTR}]`);
+}
+
+/** Offset of a list root from the agency page scroll top (for @tanstack/react-virtual scrollMargin). */
+export function getAgencyPageScrollMargin(listElement: HTMLElement | null): number {
+  const scrollElement = getAgencyPageScrollElement();
+  if (!scrollElement || !listElement) return 0;
+
+  const scrollRect = scrollElement.getBoundingClientRect();
+  const listRect = listElement.getBoundingClientRect();
+  return listRect.top - scrollRect.top + scrollElement.scrollTop;
+}
+
+export function useAgencyPageScrollMargin(listRef: RefObject<HTMLElement | null>): number {
+  const [scrollMargin, setScrollMargin] = useState(0);
+
+  useLayoutEffect(() => {
+    const scrollElement = getAgencyPageScrollElement();
+    const listElement = listRef.current;
+    if (!scrollElement || !listElement) return;
+
+    const update = () => setScrollMargin(getAgencyPageScrollMargin(listElement));
+
+    update();
+    scrollElement.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+
+    const resizeObserver = new ResizeObserver(update);
+    resizeObserver.observe(listElement);
+    resizeObserver.observe(scrollElement);
+
+    return () => {
+      scrollElement.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      resizeObserver.disconnect();
+    };
+  }, [listRef]);
+
+  return scrollMargin;
+}
+
+/** Work surface fills the agency page body so nested rails scroll independently. */
+export const agencyWorkSurfaceShellClass =
+  "flex min-h-0 flex-1 flex-col overflow-hidden";
 
 export const agencyLabelClass = shellLabelClass;
 

@@ -35,10 +35,9 @@ import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import {
   shellContentInClass,
-  shellPageBodyClass,
   shellPageClass,
-  shellPanelStackClass,
 } from "@/lib/utils/app-shell-ui";
+import { AGENCY_PAGE_SCROLL_ATTR, agencyWorkSurfaceShellClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 import { setAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
@@ -170,9 +169,17 @@ export function AgencyPage() {
     setSearchParams(next);
   }
 
+  const isWorkSegment = segment === "work";
+
   return (
     <AppShellPage slots={["subtitle", "actions", "hideAgent"]}>
-      <div className="flex h-full flex-col overflow-hidden bg-default text-default">
+      <div
+        className={cn(
+          "flex h-full flex-col overflow-y-auto bg-default",
+          isWorkSegment && "lg:overflow-hidden",
+        )}
+        {...{ [AGENCY_PAGE_SCROLL_ATTR]: "" }}
+      >
         <AppShellTopbarSubtitle>
           <AgencySubtitleBreadcrumb
             segment={segment}
@@ -190,7 +197,7 @@ export function AgencyPage() {
           {selectedTeamId ? <AgencyPresenceAvatars teamId={selectedTeamId} /> : null}
         </AppShellTopbarActions>
 
-        <main className={shellPageClass}>
+        <main className={cn(shellPageClass, isWorkSegment && "min-h-0")}>
           {isInitialLoading ? (
             <div className="space-y-4 pt-4">
               <Skeleton className="h-12 w-full rounded-2xl" />
@@ -217,23 +224,29 @@ export function AgencyPage() {
               />
             </div>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col">
-              <div className={shellPageBodyClass}>
-                <div
-                  className={cn(shellPanelStackClass, "overflow-y-auto overscroll-contain")}
-                  role="tabpanel"
-                  id={panelIdFor(segment)}
-                  aria-labelledby={`agency-tab-${segment}`}
-                >
+            <div
+              className={cn(
+                "flex flex-col gap-4 pt-4",
+                isWorkSegment && "min-h-0 flex-1",
+              )}
+            >
+              <div
+                role="tabpanel"
+                id={panelIdFor(segment)}
+                aria-labelledby={`agency-tab-${segment}`}
+                className={cn(isWorkSegment && "flex min-h-0 flex-1 flex-col")}
+              >
                   {segment === "dashboard" ? (
                     <AgencyDashboardSurface teamId={selectedTeamId} />
                   ) : null}
                   {segment === "work" ? (
-                    <AgencyWorkSurface
-                      teamId={selectedTeamId}
-                      onSelectProject={openProject}
-                      onSegmentChange={handleSegmentChange}
-                    />
+                    <div className={agencyWorkSurfaceShellClass}>
+                      <AgencyWorkSurface
+                        teamId={selectedTeamId}
+                        onSelectProject={openProject}
+                        onSegmentChange={handleSegmentChange}
+                      />
+                    </div>
                   ) : null}
                   {segment === "projects" ? (
                     selectedProjectId ? (
@@ -255,7 +268,6 @@ export function AgencyPage() {
                   {segment === "management" ? (
                     <AgencyManagementSurface teamId={selectedTeamId} />
                   ) : null}
-                </div>
               </div>
             </div>
           )}

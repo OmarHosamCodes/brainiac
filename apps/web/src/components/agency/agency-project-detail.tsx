@@ -168,7 +168,7 @@ export function AgencyProjectDetail({ teamId, projectId, onBack }: AgencyProject
   }
 
   return (
-    <div className="agency-project-detail flex min-h-0 flex-1 flex-col gap-4">
+    <div className="agency-project-detail flex flex-col gap-4">
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={onBack}>
           <ArrowLeft />
@@ -270,9 +270,9 @@ export function AgencyProjectDetail({ teamId, projectId, onBack }: AgencyProject
             </div>
           </header>
 
-          <div className="grid flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
-            <div className="flex min-h-0 flex-col gap-4">
-              <section className={cn(agencyPanelClass, "flex min-h-0 flex-col overflow-hidden")}>
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
+            <div className="flex flex-col gap-4">
+              <section className={cn(agencyPanelClass, "flex flex-col")}>
                 <header className="flex flex-wrap items-center justify-between gap-3 border-b border-default px-4 py-3">
                   <p className={agencyLabelClass}>Activity</p>
                   <div className="inline-flex items-center rounded-full border border-default bg-elevated p-0.5">
@@ -301,7 +301,7 @@ export function AgencyProjectDetail({ teamId, projectId, onBack }: AgencyProject
                     <p className="mt-3 text-xs text-muted">No activity in the last 30 days.</p>
                   </div>
                 ) : (
-                  <div className="min-h-0 flex-1 overflow-y-auto overflow-x-auto">
+                  <div className="overflow-x-auto">
                     <ul className="min-w-[36rem] divide-y divide-default">
                       {sortedRecentEntries.map((entry) => (
                         <li

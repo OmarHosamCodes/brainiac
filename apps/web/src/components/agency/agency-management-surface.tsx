@@ -51,7 +51,7 @@ export function AgencyManagementSurface({ teamId }: AgencyManagementSurfaceProps
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <Tabs
         value={activePane}
         onValueChange={(value) => {
@@ -67,7 +67,7 @@ export function AgencyManagementSurface({ teamId }: AgencyManagementSurfaceProps
           ))}
         </TabsList>
 
-        <div className="min-h-0 flex-1 pb-4">
+        <div className="pb-4">
           <TabsContent value="resourcing">
             <AgencyResourcingSurface teamId={teamId} />
           </TabsContent>

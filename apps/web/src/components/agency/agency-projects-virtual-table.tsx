@@ -1,7 +1,11 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
 
-import { agencyLabelClass } from "@/lib/utils/agency-ui";
+import {
+  agencyLabelClass,
+  getAgencyPageScrollElement,
+  useAgencyPageScrollMargin,
+} from "@/lib/utils/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { projectHueStyle } from "@/lib/utils/project-palette";
 
@@ -31,19 +35,18 @@ export function AgencyProjectsVirtualTable({
   onSelect,
 }: AgencyProjectsVirtualTableProps) {
   const parentRef = useRef<HTMLDivElement>(null);
+  const scrollMargin = useAgencyPageScrollMargin(parentRef);
 
   const virtualizer = useVirtualizer({
     count: projects.length,
-    getScrollElement: () => parentRef.current,
+    getScrollElement: () => getAgencyPageScrollElement(),
     estimateSize: () => ROW_HEIGHT,
     overscan: 10,
+    scrollMargin,
   });
 
   return (
-    <div
-      ref={parentRef}
-      className="max-h-[min(70vh,720px)] overflow-auto rounded-2xl border border-default bg-default"
-    >
+    <div ref={parentRef} className="overflow-x-auto rounded-2xl border border-default bg-default">
       <div
         className={`grid min-w-[40rem] grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-default bg-muted text-xs ${agencyLabelClass}`}
       >
