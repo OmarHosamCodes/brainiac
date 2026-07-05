@@ -6,6 +6,7 @@ import {
   groupTasksByProjectTitle,
   type AgencyProjectTaskGroup,
 } from "@/lib/utils/agency-task-utils";
+import { statusDotClass, statusLabel } from "@/lib/utils/agency-task-status";
 
 type Project = Pick<AgencyProject, "id" | "clientName" | "name">;
 type AgencyTask = Pick<
@@ -71,42 +72,6 @@ export type AgencyTaskChooserViewModel = {
   formatDueDate: (iso: string | null | undefined) => string;
   formatAssigneeLabel: (task: AgencyTask) => string;
 };
-
-function statusLabel(status: TaskStatus | undefined) {
-  if (!status) return "Open";
-  switch (status) {
-    case "in_progress":
-      return "In progress";
-    case "done":
-      return "Done";
-    case "archived":
-      return "Archived";
-    case "open":
-      return "Open";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
-
-function statusDotClass(status: TaskStatus | undefined) {
-  if (!status) return "bg-muted";
-  switch (status) {
-    case "in_progress":
-      return "bg-primary";
-    case "done":
-      return "bg-success";
-    case "archived":
-      return "bg-muted";
-    case "open":
-      return "bg-muted";
-    default: {
-      const _exhaustive: never = status;
-      return _exhaustive;
-    }
-  }
-}
 
 function formatDueDate(iso: string | null | undefined) {
   if (!iso) return "";

@@ -12,6 +12,7 @@ import {
   findProjectTaskInCacheByTitle,
   patchDeletedProjectTaskInCache,
   patchInsertedProjectTaskInCache,
+  patchProjectTaskBlueprintDescriptionInCache,
   patchUpdatedProjectTaskInCache,
   reconcileCreatedProjectTaskInCache,
 } from "@/lib/utils/agency-query-cache";
@@ -54,6 +55,7 @@ type AgencyProjectTask = {
   }>;
   viewerStatus?: "open" | "in_progress" | "done";
   viewerCompletionCount?: number;
+  viewerBlueprints?: Array<{ id: string; description: string }>;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -166,10 +168,19 @@ type CreateProjectTaskPayload = {
   assignedToTeam?: boolean;
   assigneeUserIds?: string[];
   dueDate?: string;
+  description?: string;
   /** True when an open/in-progress task with this title already exists on the project. */
   reusesExistingTitle?: boolean;
   /** Fires with the row id as soon as the optimistic Active row is written. */
   onOptimisticId?: (taskId: string) => void;
+  /** Fires with the persisted task after the API succeeds. */
+  onCreated?: (task: AgencyProjectTask) => void;
+};
+
+type UpdateProjectTaskBlueprintPayload = {
+  teamId: string;
+  blueprintId: string;
+  description: string;
 };
 
 type DeleteProjectTaskPayload = {
@@ -688,6 +699,8 @@ function createAgencyOpsActions(
     const nowIso = new Date().toISOString();
     const assignedToTeam = payload.assignedToTeam ?? false;
     const assigneeUserIds = assignedToTeam ? [] : [...new Set(payload.assigneeUserIds ?? [])];
+    const trimmedDescription = payload.description?.trim() ?? "";
+    const optimisticBlueprintId = trimmedDescription ? optimisticId("agency-task-blueprint") : null;
     const optimisticTask: AgencyProjectTask = {
       id: optimisticId("agency-project-task"),
       teamId: payload.teamId,
@@ -704,6 +717,11 @@ function createAgencyOpsActions(
       })),
       viewerStatus: "open",
       viewerCompletionCount: 0,
+      ...(optimisticBlueprintId
+        ? {
+            viewerBlueprints: [{ id: optimisticBlueprintId, description: trimmedDescription }],
+          }
+        : {}),
       dueDate: payload.dueDate ?? null,
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -714,9 +732,11 @@ function createAgencyOpsActions(
     try {
       await cancelAgencyProjectTaskListQueries(payload.teamId);
 
-      const existingByTitle = payload.reusesExistingTitle
-        ? findProjectTaskInCacheByTitle(payload.teamId, payload.projectId, title)
-        : null;
+      const existingByTitle = findProjectTaskInCacheByTitle(
+        payload.teamId,
+        payload.projectId,
+        title,
+      );
 
       // Reuse: update the existing row in place. New: insert a temporary optimistic row.
       // Always open for the viewer — create/reuse (and Done → Active reopen) lands in Active.
@@ -739,6 +759,14 @@ function createAgencyOpsActions(
               : existingByTitle.assignees,
           viewerStatus: "open",
           viewerCompletionCount: existingByTitle.viewerCompletionCount ?? 0,
+          ...(optimisticBlueprintId
+            ? {
+                viewerBlueprints: [
+                  ...(existingByTitle.viewerBlueprints ?? []),
+                  { id: optimisticBlueprintId, description: trimmedDescription },
+                ],
+              }
+            : {}),
           updatedAt: nowIso,
         });
         payload.onOptimisticId?.(existingByTitle.id);
@@ -755,6 +783,7 @@ function createAgencyOpsActions(
         assignedToTeam: payload.assignedToTeam,
         assigneeUserIds: payload.assigneeUserIds,
         dueDate: payload.dueDate,
+        description: trimmedDescription || undefined,
       })) as AgencyProjectTask;
 
       if (existingByTitle) {
@@ -765,6 +794,8 @@ function createAgencyOpsActions(
       } else {
         reconcileCreatedTask(payload.teamId, optimisticTask.id, created);
       }
+
+      payload.onCreated?.(created);
 
       toast.success(
         reopenedFromDone
@@ -790,6 +821,32 @@ function createAgencyOpsActions(
       return null;
     } finally {
       set((state) => ({ ...state, isCreatingTask: false }));
+    }
+  }
+
+  function patchProjectTaskBlueprintDescription(
+    teamId: string,
+    taskId: string,
+    blueprintId: string,
+    description: string,
+  ) {
+    patchProjectTaskBlueprintDescriptionInCache(teamId, taskId, blueprintId, description);
+  }
+
+  async function updateProjectTaskBlueprint(payload: UpdateProjectTaskBlueprintPayload) {
+    if (!payload.teamId || !payload.blueprintId) return;
+
+    try {
+      await orpcClient.agencyOps.projectTasks.updateBlueprint({
+        teamId: payload.teamId,
+        blueprintId: payload.blueprintId,
+        description: payload.description,
+      });
+    } catch (error) {
+      toast.error("Couldn't save task description", {
+        description: getErrorMessage(error, "Try again."),
+      });
+      await syncProjectTaskQueriesAfterMutation(payload.teamId);
     }
   }
 
@@ -1232,6 +1289,8 @@ function createAgencyOpsActions(
     archiveClient,
     createProject,
     createProjectTask,
+    patchProjectTaskBlueprintDescription,
+    updateProjectTaskBlueprint,
     updateProjectTask,
     completeProjectTaskForMember,
     deleteProjectTask,

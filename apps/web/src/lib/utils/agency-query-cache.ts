@@ -24,6 +24,7 @@ type AgencyProjectTask = {
   }>;
   viewerStatus?: "open" | "in_progress" | "done";
   viewerCompletionCount?: number;
+  viewerBlueprints?: Array<{ id: string; description: string }>;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -410,6 +411,45 @@ export function patchUpdatedProjectTaskInCache(teamId: string, task: AgencyProje
       },
     });
   });
+}
+
+export function patchProjectTaskBlueprintDescriptionInCache(
+  teamId: string,
+  taskId: string,
+  blueprintId: string,
+  description: string,
+) {
+  patchAllProjectTasksListData(teamId, (current) =>
+    transformTasksCacheData(current, {
+      list: (data) => ({
+        ...data,
+        items: pageItems(data).map((task) =>
+          task.id !== taskId
+            ? task
+            : {
+                ...task,
+                viewerBlueprints: (task.viewerBlueprints ?? []).map((blueprint) =>
+                  blueprint.id === blueprintId ? { ...blueprint, description } : blueprint,
+                ),
+              },
+        ),
+      }),
+      infinite: (pages) =>
+        pages.map((page) => ({
+          ...page,
+          items: page.items.map((task) =>
+            task.id !== taskId
+              ? task
+              : {
+                  ...task,
+                  viewerBlueprints: (task.viewerBlueprints ?? []).map((blueprint) =>
+                    blueprint.id === blueprintId ? { ...blueprint, description } : blueprint,
+                  ),
+                },
+          ),
+        })),
+    }),
+  );
 }
 
 export function patchDeletedProjectTaskInCache(teamId: string, taskId: string) {

@@ -16,6 +16,22 @@ export type AgencyTaskDisplayRow = {
   rowKey: string;
 };
 
+export function collectTaskBlueprintsFromTasks(
+  tasks: AgencyProjectTask[],
+): AgencyTaskBlueprintEntry[] {
+  const entries: AgencyTaskBlueprintEntry[] = [];
+  for (const task of tasks) {
+    for (const blueprint of task.viewerBlueprints ?? []) {
+      entries.push({
+        id: blueprint.id,
+        taskId: task.id,
+        description: blueprint.description,
+      });
+    }
+  }
+  return entries;
+}
+
 export function expandTasksWithBlueprints(
   tasks: AgencyProjectTask[],
   blueprints: AgencyTaskBlueprintEntry[],

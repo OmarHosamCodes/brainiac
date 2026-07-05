@@ -169,6 +169,33 @@ export const agencyOpsProjectTaskMemberStatus = pgTable(
   ],
 );
 
+export const agencyOpsProjectTaskBlueprint = pgTable(
+  "agency_ops_project_task_blueprint",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => agencyOpsProjectTask.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    description: text("description").notNull().default(""),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_project_task_blueprint_team_idx").on(table.teamId),
+    index("agency_ops_project_task_blueprint_task_idx").on(table.taskId),
+    index("agency_ops_project_task_blueprint_user_task_idx").on(table.userId, table.taskId),
+  ],
+);
+
 export const agencyOpsTaskThread = pgTable(
   "agency_ops_task_thread",
   {

@@ -5,6 +5,7 @@ import { AgencyTaskClientGroupView } from "@/components/agency/work/task-list/ag
 import type { AgencyTaskClientDisplayGroup } from "@/lib/agency/work/hooks/use-agency-task-list";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
+import { estimateDisplayRowHeight } from "@/lib/utils/agency-task-status";
 
 type FlatRow =
   | { kind: "group"; key: string; group: AgencyTaskClientDisplayGroup; expanded: boolean }
@@ -31,11 +32,19 @@ type AgencyTaskVirtualListProps = {
 };
 
 const GROUP_HEADER_HEIGHT = 40;
-const GROUP_TASK_HEIGHT = 68;
 
-function estimateGroupHeight(group: AgencyTaskClientDisplayGroup, expanded: boolean) {
+function estimateGroupHeight(
+  group: AgencyTaskClientDisplayGroup,
+  expanded: boolean,
+  getTaskTrackingState?: (taskId: string, blueprintDescription?: string) => TaskTrackingState,
+) {
   if (!expanded) return GROUP_HEADER_HEIGHT;
-  return GROUP_HEADER_HEIGHT + Math.max(1, group.displayRows.length) * GROUP_TASK_HEIGHT;
+  let height = GROUP_HEADER_HEIGHT;
+  for (const row of group.displayRows) {
+    const tracking = getTaskTrackingState?.(row.task.id, row.blueprintDescription);
+    height += estimateDisplayRowHeight(row, tracking?.needsDescription);
+  }
+  return height;
 }
 
 export function AgencyTaskVirtualList({
@@ -78,7 +87,7 @@ export function AgencyTaskVirtualList({
     estimateSize: (index) => {
       const row = flatRows[index];
       if (!row || row.kind === "spacer") return 24;
-      return estimateGroupHeight(row.group, row.expanded);
+      return estimateGroupHeight(row.group, row.expanded, getTaskTrackingState);
     },
     overscan: 4,
   });

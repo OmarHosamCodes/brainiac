@@ -109,14 +109,10 @@ export const agencyTaskClientGroupHeaderClass = [
   "transition-colors hover:bg-default/50",
 ].join(" ");
 
-export const agencyTaskRowMetaColumnClass = "flex shrink-0 items-center gap-1.5 self-center";
-
 export const agencyTaskRowProjectPillClass = [
   "inline-flex max-w-[8rem] shrink-0 items-center rounded-full border border-default bg-elevated px-1.5 py-0.5",
   "text-[10px] font-semibold text-highlighted transition-colors hover:bg-default",
 ].join(" ");
-
-export const agencyTaskRowStatusDotClass = "size-2 shrink-0 rounded-full";
 
 export const agencyTaskRowCheckboxClass = [
   "inline-flex size-4 shrink-0 items-center justify-center rounded border border-default bg-elevated",
@@ -140,7 +136,7 @@ export const agencyTaskRowDoneClass =
 
 export const agencyTaskRowCompleteClass = "agency-task-row-complete";
 
-export const agencyTaskRowNeedsDescriptionClass = "border-l-2 border-warning";
+export const agencyTaskRowNeedsDescriptionClass = "bg-warning/5";
 
 /** Time column beside the task rail — stacks tracker and log as separate panels. */
 export const agencyTimePaneStackClass =

@@ -1,8 +1,5 @@
 import { create } from "zustand";
 
-import type { AgencyTaskBlueprintEntry } from "@/lib/utils/agency-task-blueprints";
-import { EMPTY_TASK_BLUEPRINTS } from "@/lib/utils/agency-task-blueprints";
-
 export const UNASSIGNED_ASSIGNEE_VALUE = "__unassigned__";
 
 type AgencyTaskListState = {
@@ -17,7 +14,6 @@ type AgencyTaskListState = {
   assignedToTeamForCreate: boolean;
   selectedAssigneeIdsForCreate: string[];
   collapsedClients: Set<string>;
-  blueprintsByTeam: Record<string, AgencyTaskBlueprintEntry[]>;
   setCreateExpanded: (expanded: boolean) => void;
   setDoneExpanded: (expanded: boolean) => void;
   setRecentlyCompletedTaskId: (taskId: string) => void;
@@ -29,15 +25,6 @@ type AgencyTaskListState = {
   setAssignedToTeamForCreate: (value: boolean) => void;
   setSelectedAssigneeIdsForCreate: (value: string[]) => void;
   setClientExpanded: (clientId: string, expanded: boolean) => void;
-  addTaskBlueprint: (
-    teamId: string,
-    entry: { taskId: string; description: string },
-  ) => string;
-  updateTaskBlueprintDescription: (
-    teamId: string,
-    blueprintId: string,
-    description: string,
-  ) => void;
   resetCreateDraft: (options: { skipProjectStep: boolean; defaultProjectId: string; currentUserId: string }) => void;
   expandCreate: (options: { skipProjectStep: boolean; defaultProjectId: string; currentUserId: string }) => void;
   collapseCreate: (options: { skipProjectStep: boolean; defaultProjectId: string; currentUserId: string }) => void;
@@ -59,7 +46,6 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   assignedToTeamForCreate: false,
   selectedAssigneeIdsForCreate: [],
   collapsedClients: new Set(),
-  blueprintsByTeam: {},
   setCreateExpanded: (expanded) => set({ createExpanded: expanded }),
   setDoneExpanded: (expanded) => set({ doneExpanded: expanded }),
   setRecentlyCompletedTaskId: (taskId) => set({ recentlyCompletedTaskId: taskId }),
@@ -88,28 +74,6 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
       }
       return { collapsedClients: next };
     }),
-  addTaskBlueprint: (teamId, entry) => {
-    const id = crypto.randomUUID();
-    set((state) => ({
-      blueprintsByTeam: {
-        ...state.blueprintsByTeam,
-        [teamId]: [
-          ...(state.blueprintsByTeam[teamId] ?? EMPTY_TASK_BLUEPRINTS),
-          { id, taskId: entry.taskId, description: entry.description },
-        ],
-      },
-    }));
-    return id;
-  },
-  updateTaskBlueprintDescription: (teamId, blueprintId, description) =>
-    set((state) => ({
-      blueprintsByTeam: {
-        ...state.blueprintsByTeam,
-        [teamId]: (state.blueprintsByTeam[teamId] ?? EMPTY_TASK_BLUEPRINTS).map((blueprint) =>
-          blueprint.id === blueprintId ? { ...blueprint, description } : blueprint,
-        ),
-      },
-    })),
   resetCreateDraft: ({ skipProjectStep, defaultProjectId, currentUserId }) =>
     set({
       titleDraft: "",

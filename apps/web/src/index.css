@@ -720,12 +720,21 @@ body {
   height: 0%;
   background: linear-gradient(
     to top,
-    color-mix(in oklab, var(--primary) 42%, transparent),
-    color-mix(in oklab, var(--primary) 28%, transparent) 48%,
-    color-mix(in oklab, var(--primary) 16%, transparent)
+    color-mix(in oklab, var(--success) 42%, transparent),
+    color-mix(in oklab, var(--success) 28%, transparent) 48%,
+    color-mix(in oklab, var(--success) 16%, transparent)
   );
   transition: height calc(var(--motion-duration-rail) + var(--motion-duration-panel))
     var(--motion-ease-out);
+}
+
+.agency-task-rail-liquid__done .agency-task-rail-liquid__shine {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--success) 55%, white 18%),
+    color-mix(in oklab, var(--success) 22%, transparent) 55%,
+    transparent
+  );
 }
 
 .agency-task-rail-liquid__shine {

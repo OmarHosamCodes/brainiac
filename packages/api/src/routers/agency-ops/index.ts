@@ -42,6 +42,7 @@ import {
   updateAgencyClient,
   updateAgencyProject,
   updateAgencyProjectTask,
+  updateAgencyProjectTaskBlueprint,
   updateAnyAgencyTimeEntry,
   updateInvoiceStatus,
   updateMyAgencyTimeEntry,
@@ -86,6 +87,11 @@ const agencyProjectSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
+const agencyProjectTaskBlueprintSchema = z.object({
+  id: z.string().min(1),
+  description: z.string(),
+});
+
 const agencyProjectTaskSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
@@ -103,6 +109,7 @@ const agencyProjectTaskSchema = z.object({
   ),
   viewerStatus: z.enum(["open", "in_progress", "done"]).optional(),
   viewerCompletionCount: z.number().int().nonnegative().optional(),
+  viewerBlueprints: z.array(agencyProjectTaskBlueprintSchema).optional(),
   dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -463,6 +470,7 @@ export const agencyOpsRouter = {
           assignedToTeam: z.boolean().optional(),
           assigneeUserIds: z.array(z.string().min(1)).optional(),
           dueDate: z.string().datetime().optional(),
+          description: z.string().max(4000).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -514,6 +522,19 @@ export const agencyOpsRouter = {
           await completeAgencyProjectTaskForMember(context.session.user.id, input),
         );
         return task;
+      }),
+    updateBlueprint: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          blueprintId: z.string().min(1),
+          description: z.string().max(4000),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        const blueprint = agencyProjectTaskBlueprintSchema.parse(
+          await updateAgencyProjectTaskBlueprint(context.session.user.id, input),
+        );
+        return blueprint;
       }),
   },
   taskThreads: {

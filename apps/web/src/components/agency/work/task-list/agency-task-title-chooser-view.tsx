@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AgencyTaskTitleChooserViewModel } from "@/lib/agency/work/hooks/use-agency-task-title-chooser";
+import type { TaskStatus } from "@/lib/schemas/agency-work";
 import { agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
+import { statusChipClass, statusLabel } from "@/lib/utils/agency-task-status";
 import { normalizeTaskTitle } from "@/lib/utils/agency-task-title-filter";
 import { cn } from "@/lib/utils";
 
@@ -136,8 +138,11 @@ export function AgencyTaskTitleChooserView({ view }: AgencyTaskTitleChooserViewP
                     >
                       {task.title}
                     </span>
-                    <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold capitalize text-muted">
-                      {task.status.replace("_", " ")}
+                    <span
+                      className={statusChipClass(task.status as TaskStatus)}
+                      aria-label={`${statusLabel(task.status as TaskStatus)} status`}
+                    >
+                      {statusLabel(task.status as TaskStatus)}
                     </span>
                   </button>
                 );

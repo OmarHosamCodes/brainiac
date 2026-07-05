@@ -72,6 +72,11 @@ export const agencyProjectTaskAssigneeSchema = z.object({
   status: agencyProjectTaskMemberStatusSchema,
 });
 
+export const agencyProjectTaskBlueprintSchema = z.object({
+  id: z.string().min(1),
+  description: z.string(),
+});
+
 export const agencyProjectTaskSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
@@ -82,6 +87,7 @@ export const agencyProjectTaskSchema = z.object({
   assignees: z.array(agencyProjectTaskAssigneeSchema),
   viewerStatus: agencyProjectTaskMemberStatusSchema.optional(),
   viewerCompletionCount: z.number().int().nonnegative().optional(),
+  viewerBlueprints: z.array(agencyProjectTaskBlueprintSchema).optional(),
   dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),

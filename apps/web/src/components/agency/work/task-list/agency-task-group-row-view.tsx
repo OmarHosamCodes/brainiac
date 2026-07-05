@@ -84,7 +84,6 @@ export type AgencyTaskGroupRowViewProps = {
   readOnly?: boolean;
   highlightTaskId?: string;
   getTaskTrackingState?: (taskId: string) => TaskTrackingState;
-  onTaskDescriptionChange?: (taskId: string, value: string) => void;
 };
 
 export function AgencyTaskGroupRowView({
@@ -104,7 +103,6 @@ export function AgencyTaskGroupRowView({
   readOnly = false,
   highlightTaskId = "",
   getTaskTrackingState,
-  onTaskDescriptionChange,
 }: AgencyTaskGroupRowViewProps) {
   const [expanded, setExpanded] = useState(group.instanceCount === 1);
   const progress = countDoneStatuses(group, mode === "work" ? currentUserId : undefined);
@@ -125,7 +123,6 @@ export function AgencyTaskGroupRowView({
         onStatusChange={onStatusChange}
         onDelete={onDelete}
         trackingState={getTaskTrackingState?.(singleInstance.id)}
-        onDescriptionChange={(value) => onTaskDescriptionChange?.(singleInstance.id, value)}
       />
     );
   }

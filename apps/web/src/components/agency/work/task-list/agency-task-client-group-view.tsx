@@ -45,9 +45,7 @@ export function AgencyTaskClientGroupView({
   onBlueprintDescriptionChange,
 }: AgencyTaskClientGroupViewProps) {
   const panelId = `agency-task-client-group-${group.clientId}`;
-  const inProgressCount = group.tasks.filter(
-    (task) => task.status === "in_progress" || task.viewerStatus === "in_progress",
-  ).length;
+  const taskCount = group.displayRows.length;
 
   return (
     <section aria-labelledby={`${panelId}-label`}>
@@ -74,7 +72,7 @@ export function AgencyTaskClientGroupView({
           <span className="truncate font-semibold text-highlighted">{group.clientName}</span>
         </span>
         <span className={cn(agencyMetricClass, "shrink-0 text-[11px] text-muted")}>
-          {inProgressCount}/{group.displayRows.length}
+          {taskCount} {taskCount === 1 ? "task" : "tasks"}
         </span>
       </button>
 

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useId, useMemo } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
@@ -17,8 +17,8 @@ import type {
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
 import { findOpenTaskByExactTitle } from "@/lib/utils/agency-task-title-filter";
 import {
+  collectTaskBlueprintsFromTasks,
   expandTasksWithBlueprints,
-  EMPTY_TASK_BLUEPRINTS,
   type AgencyTaskDisplayRow,
 } from "@/lib/utils/agency-task-blueprints";
 import { groupTasksByClient } from "@/lib/utils/agency-task-utils";
@@ -154,9 +154,6 @@ export function useAgencyTaskList({
   const recentlyCompletedTaskId = useAgencyTaskListStore((s) => s.recentlyCompletedTaskId);
   const recentlyCreatedTaskId = useAgencyTaskListStore((s) => s.recentlyCreatedTaskId);
   const recentlyCreatedBlueprintId = useAgencyTaskListStore((s) => s.recentlyCreatedBlueprintId);
-  const blueprints = useAgencyTaskListStore(
-    (s) => s.blueprintsByTeam[teamId] ?? EMPTY_TASK_BLUEPRINTS,
-  );
   const titleDraft = useAgencyTaskListStore((s) => s.titleDraft);
   const descriptionDraft = useAgencyTaskListStore((s) => s.descriptionDraft);
   const selectedProjectIdForCreate = useAgencyTaskListStore((s) => s.selectedProjectIdForCreate);
@@ -167,8 +164,6 @@ export function useAgencyTaskList({
   const setRecentlyCompletedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCompletedTaskId);
   const setRecentlyCreatedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCreatedTaskId);
   const setRecentlyCreatedBlueprintId = useAgencyTaskListStore((s) => s.setRecentlyCreatedBlueprintId);
-  const addTaskBlueprint = useAgencyTaskListStore((s) => s.addTaskBlueprint);
-  const updateTaskBlueprintDescription = useAgencyTaskListStore((s) => s.updateTaskBlueprintDescription);
   const setTitleDraft = useAgencyTaskListStore((s) => s.setTitleDraft);
   const setDescriptionDraft = useAgencyTaskListStore((s) => s.setDescriptionDraft);
   const setSelectedProjectIdForCreate = useAgencyTaskListStore((s) => s.setSelectedProjectIdForCreate);
@@ -212,13 +207,6 @@ export function useAgencyTaskList({
     [trackingDraft, trackingTimer],
   );
 
-  const onBlueprintDescriptionChange = useCallback(
-    (blueprintId: string, value: string) => {
-      updateTaskBlueprintDescription(teamId, blueprintId, value);
-    },
-    [teamId, updateTaskBlueprintDescription],
-  );
-
   const skipProjectStep = projects.length === 1;
   const defaultProjectId = projects[0]?.id ?? "";
 
@@ -253,6 +241,36 @@ export function useAgencyTaskList({
 
   const activeTasks = activeTasksQuery.items;
   const doneTasks = doneTasksQuery.items;
+  const blueprints = useMemo(
+    () => collectTaskBlueprintsFromTasks([...activeTasks, ...doneTasks]),
+    [activeTasks, doneTasks],
+  );
+  const blueprintUpdateTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+
+  const onBlueprintDescriptionChange = useCallback(
+    (blueprintId: string, value: string) => {
+      const entry = blueprints.find((blueprint) => blueprint.id === blueprintId);
+      if (!entry) return;
+
+      agencyOps.patchProjectTaskBlueprintDescription(teamId, entry.taskId, blueprintId, value);
+
+      const existing = blueprintUpdateTimers.current.get(blueprintId);
+      if (existing) clearTimeout(existing);
+      blueprintUpdateTimers.current.set(
+        blueprintId,
+        setTimeout(() => {
+          blueprintUpdateTimers.current.delete(blueprintId);
+          void agencyOps.updateProjectTaskBlueprint({
+            teamId,
+            blueprintId,
+            description: value,
+          });
+        }, 400),
+      );
+    },
+    [agencyOps, blueprints, teamId],
+  );
+
   const createTasks = useMemo(() => {
     if (!createExpanded || !selectedProjectIdForCreate) return [];
     return (titleSuggestionTasksQuery.data?.items ?? []).filter(
@@ -377,16 +395,16 @@ export function useAgencyTaskList({
       title,
       assignedToTeam: assignedToTeamForCreate,
       assigneeUserIds: assignedToTeamForCreate ? undefined : selectedAssigneeIdsForCreate,
+      description: descriptionDraft.trim() || undefined,
       reusesExistingTitle: Boolean(existing),
       onOptimisticId: setRecentlyCreatedTaskId,
+      onCreated: (task) => {
+        const blueprint = task.viewerBlueprints?.at(-1);
+        if (blueprint) setRecentlyCreatedBlueprintId(blueprint.id);
+      },
     });
 
     if (createdId) {
-      const blueprintId = addTaskBlueprint(teamId, {
-        taskId: createdId,
-        description: descriptionDraft.trim(),
-      });
-      setRecentlyCreatedBlueprintId(blueprintId);
       if (!activeTimer) {
         setTrackerTaskId(teamId, createdId);
         setTrackerProjectId(teamId, projectId);
@@ -401,7 +419,6 @@ export function useAgencyTaskList({
     setRecentlyCreatedTaskId("");
   }, [
     activeTimer,
-    addTaskBlueprint,
     agencyOps,
     collapseCreate,
     assignedToTeamForCreate,

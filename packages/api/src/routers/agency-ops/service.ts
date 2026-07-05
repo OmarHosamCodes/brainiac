@@ -11,6 +11,7 @@ import {
   agencyOpsProject,
   agencyOpsProjectTask,
   agencyOpsProjectTaskAssignee,
+  agencyOpsProjectTaskBlueprint,
   agencyOpsProjectTaskMemberStatus,
   agencyOpsTaskAttachment,
   agencyOpsTaskMessage,
@@ -81,6 +82,11 @@ type AgencyProjectTaskAssigneeRecord = {
   status: "open" | "in_progress" | "done";
 };
 
+type AgencyProjectTaskBlueprintRecord = {
+  id: string;
+  description: string;
+};
+
 type AgencyProjectTaskRecord = {
   id: string;
   teamId: string;
@@ -91,6 +97,7 @@ type AgencyProjectTaskRecord = {
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
   viewerCompletionCount?: number;
+  viewerBlueprints?: AgencyProjectTaskBlueprintRecord[];
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -405,6 +412,7 @@ function mapProjectTaskRow(row: {
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
   viewerCompletionCount?: number;
+  viewerBlueprints?: AgencyProjectTaskBlueprintRecord[];
   dueDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -421,10 +429,71 @@ function mapProjectTaskRow(row: {
     ...(row.viewerCompletionCount !== undefined
       ? { viewerCompletionCount: row.viewerCompletionCount }
       : {}),
+    ...(row.viewerBlueprints !== undefined ? { viewerBlueprints: row.viewerBlueprints } : {}),
     dueDate: row.dueDate?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+async function loadTaskBlueprintsForViewer(
+  taskIds: string[],
+  viewerUserId: string,
+): Promise<Map<string, AgencyProjectTaskBlueprintRecord[]>> {
+  const result = new Map<string, AgencyProjectTaskBlueprintRecord[]>();
+  if (taskIds.length === 0 || !viewerUserId) return result;
+
+  const rows = await db
+    .select({
+      id: agencyOpsProjectTaskBlueprint.id,
+      taskId: agencyOpsProjectTaskBlueprint.taskId,
+      description: agencyOpsProjectTaskBlueprint.description,
+    })
+    .from(agencyOpsProjectTaskBlueprint)
+    .where(
+      and(
+        inArray(agencyOpsProjectTaskBlueprint.taskId, taskIds),
+        eq(agencyOpsProjectTaskBlueprint.userId, viewerUserId),
+      ),
+    )
+    .orderBy(asc(agencyOpsProjectTaskBlueprint.createdAt));
+
+  for (const row of rows) {
+    const existing = result.get(row.taskId) ?? [];
+    existing.push({ id: row.id, description: row.description });
+    result.set(row.taskId, existing);
+  }
+
+  return result;
+}
+
+async function createTaskBlueprintForViewer(
+  teamId: string,
+  taskId: string,
+  viewerUserId: string,
+  description: string,
+): Promise<AgencyProjectTaskBlueprintRecord | null> {
+  const trimmed = description.trim();
+  if (!trimmed) return null;
+
+  const now = new Date();
+  const [row] = await db
+    .insert(agencyOpsProjectTaskBlueprint)
+    .values({
+      id: createWorkspaceId("agency-task-blueprint"),
+      teamId,
+      taskId,
+      userId: viewerUserId,
+      description: trimmed,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning({
+      id: agencyOpsProjectTaskBlueprint.id,
+      description: agencyOpsProjectTaskBlueprint.description,
+    });
+
+  return row ?? null;
 }
 
 async function loadTaskMemberStatuses(
@@ -582,6 +651,7 @@ async function buildProjectTaskRecord(
   assignees: AgencyProjectTaskAssigneeRecord[],
   viewerUserId?: string,
   memberStatuses?: Map<string, MemberStatusEntry>,
+  viewerBlueprints?: AgencyProjectTaskBlueprintRecord[],
 ): Promise<AgencyProjectTaskRecord> {
   return mapProjectTaskRow({
     ...row,
@@ -590,6 +660,7 @@ async function buildProjectTaskRecord(
       ? {
           viewerStatus: resolveViewerMemberStatus(row, memberStatuses, viewerUserId),
           viewerCompletionCount: resolveViewerCompletionCount(memberStatuses, viewerUserId),
+          viewerBlueprints: viewerBlueprints ?? [],
         }
       : {}),
   });
@@ -770,11 +841,13 @@ async function buildTaskRecordForActor(task: ProjectTaskRow, actorUserId: string
   await reopenMemberTaskForActor(task.id, actorUserId);
   const assigneesByTask = await loadTaskAssignees([task.id]);
   const memberStatuses = await loadTaskMemberStatuses([task.id]);
+  const blueprintsByTask = await loadTaskBlueprintsForViewer([task.id], actorUserId);
   return buildProjectTaskRecord(
     task,
     assigneesByTask.get(task.id) ?? [],
     actorUserId,
     memberStatuses.get(task.id),
+    blueprintsByTask.get(task.id),
   );
 }
 
@@ -1332,6 +1405,12 @@ export async function listAgencyProjectTasks(
   const memberStatusesByTask = input.assigneeUserId
     ? await loadTaskMemberStatuses(rows.map((row) => row.id))
     : undefined;
+  const blueprintsByTask = input.assigneeUserId
+    ? await loadTaskBlueprintsForViewer(
+        rows.map((row) => row.id),
+        input.assigneeUserId,
+      )
+    : undefined;
 
   return {
     items: await Promise.all(
@@ -1341,6 +1420,7 @@ export async function listAgencyProjectTasks(
           assigneesByTask.get(row.id) ?? [],
           input.assigneeUserId,
           memberStatusesByTask?.get(row.id),
+          blueprintsByTask?.get(row.id),
         ),
       ),
     ),
@@ -1386,6 +1466,7 @@ export async function createAgencyProjectTask(
     assignedToTeam?: boolean;
     assigneeUserIds?: string[];
     dueDate?: string | null;
+    description?: string;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -1414,6 +1495,12 @@ export async function createAgencyProjectTask(
       assignedToTeam,
       assigneeUserIds,
     });
+    await createTaskBlueprintForViewer(
+      input.teamId,
+      merged.id,
+      actorUserId,
+      input.description ?? "",
+    );
     return buildTaskRecordForActor(merged, actorUserId);
   }
 
@@ -1460,6 +1547,13 @@ export async function createAgencyProjectTask(
       throw new ORPCError("INTERNAL_SERVER_ERROR");
     }
 
+    await createTaskBlueprintForViewer(
+      input.teamId,
+      created.id,
+      actorUserId,
+      input.description ?? "",
+    );
+
     return buildTaskRecordForActor(created, actorUserId);
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
@@ -1471,6 +1565,12 @@ export async function createAgencyProjectTask(
       assignedToTeam,
       assigneeUserIds,
     });
+    await createTaskBlueprintForViewer(
+      input.teamId,
+      merged.id,
+      actorUserId,
+      input.description ?? "",
+    );
     return buildTaskRecordForActor(merged, actorUserId);
   }
 }
@@ -1541,13 +1641,68 @@ export async function completeAgencyProjectTaskForMember(
 
   const assigneesByTask = await loadTaskAssignees([current.id]);
   const memberStatuses = await loadTaskMemberStatuses([current.id]);
+  const blueprintsByTask = await loadTaskBlueprintsForViewer([current.id], actorUserId);
 
   return buildProjectTaskRecord(
     current,
     assigneesByTask.get(current.id) ?? [],
     actorUserId,
     memberStatuses.get(current.id),
+    blueprintsByTask.get(current.id),
   );
+}
+
+export async function updateAgencyProjectTaskBlueprint(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    blueprintId: string;
+    description: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const [existing] = await db
+    .select({
+      id: agencyOpsProjectTaskBlueprint.id,
+      taskId: agencyOpsProjectTaskBlueprint.taskId,
+    })
+    .from(agencyOpsProjectTaskBlueprint)
+    .where(
+      and(
+        eq(agencyOpsProjectTaskBlueprint.id, input.blueprintId),
+        eq(agencyOpsProjectTaskBlueprint.teamId, input.teamId),
+        eq(agencyOpsProjectTaskBlueprint.userId, actorUserId),
+      ),
+    )
+    .limit(1);
+
+  if (!existing) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Task blueprint was not found.",
+    });
+  }
+
+  const now = new Date();
+  const [updated] = await db
+    .update(agencyOpsProjectTaskBlueprint)
+    .set({
+      description: input.description,
+      updatedAt: now,
+    })
+    .where(eq(agencyOpsProjectTaskBlueprint.id, input.blueprintId))
+    .returning({
+      id: agencyOpsProjectTaskBlueprint.id,
+      description: agencyOpsProjectTaskBlueprint.description,
+    });
+
+  if (!updated) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Task blueprint was not found.",
+    });
+  }
+
+  return updated;
 }
 
 export async function updateAgencyProjectTask(
