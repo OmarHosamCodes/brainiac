@@ -1195,6 +1195,7 @@ export async function listAgencyProjects(
     .where(
       and(
         eq(agencyOpsProject.teamId, input.teamId),
+        isNull(agencyOpsClient.archivedAt),
         input.clientId ? eq(agencyOpsProject.clientId, input.clientId) : undefined,
       ),
     )
@@ -2194,6 +2195,8 @@ export async function listAgencyProjectTasks(
     }
   } else if (requestedStatuses.length > 0) {
     filters.push(inArray(agencyOpsProjectTask.status, requestedStatuses));
+  } else {
+    filters.push(sql`${agencyOpsProjectTask.status} <> 'archived'`);
   }
 
   if (input.assigneeUserId) {
