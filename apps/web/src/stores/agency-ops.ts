@@ -664,8 +664,8 @@ function createAgencyOpsActions(
     }
   }
 
-  async function createProject(payload: CreateProjectPayload) {
-    if (!payload.teamId || !payload.clientId || !payload.name.trim()) return;
+  async function createProject(payload: CreateProjectPayload): Promise<string | null> {
+    if (!payload.teamId || !payload.clientId || !payload.name.trim()) return null;
 
     const snapshots = snapshotQueries(registryPayloads(projectsQueryRegistry));
     const optimisticSnapshot = optimistic().snapshotProjects(payload.teamId);
@@ -694,10 +694,12 @@ function createAgencyOpsActions(
       reconcileCreatedProject(payload.teamId, optimisticProject.id, created);
 
       toast.success("Project added", { description: payload.name.trim() });
+      return created.id;
     } catch (error) {
       restoreQuerySnapshots(snapshots);
       optimistic().restoreProjects(payload.teamId, optimisticSnapshot);
       toast.error("Couldn't add project", { description: getErrorMessage(error, "Try again.") });
+      return null;
     } finally {
       set((state) => ({
         ...state,

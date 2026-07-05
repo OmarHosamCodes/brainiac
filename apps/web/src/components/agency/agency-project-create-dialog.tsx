@@ -37,6 +37,13 @@ type MilestoneDraft = {
   assigneeUserIds: string[];
 };
 
+type ProjectCreateMode = "normal" | "journey";
+
+const CREATE_MODE_OPTIONS: Array<{ value: ProjectCreateMode; label: string }> = [
+  { value: "normal", label: "Normal" },
+  { value: "journey", label: "Journey" },
+];
+
 export type AgencyProjectCreateDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -70,22 +77,25 @@ export function AgencyProjectCreateDialog({
   const isProjectMutationPending = useAgencyOpsStore(selectIsProjectMutationPending);
   const formId = useId();
 
+  const [mode, setMode] = useState<ProjectCreateMode>("journey");
+  const [clientId, setClientId] = useState("");
+  const [projectName, setProjectName] = useState("");
+  const [milestones, setMilestones] = useState<MilestoneDraft[]>(() => [createMilestoneDraft()]);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const isJourneyMode = mode === "journey";
+
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
       {
         ...orpc.agencyOps.taskThreads.members.list.queryOptions({ input: { teamId } }),
-        enabled: Boolean(teamId) && open,
+        enabled: Boolean(teamId) && open && isJourneyMode,
       },
       "warm",
     ),
   );
 
   const members: AgencyTaskThreadMember[] = membersQuery.data?.items ?? [];
-
-  const [clientId, setClientId] = useState("");
-  const [projectName, setProjectName] = useState("");
-  const [milestones, setMilestones] = useState<MilestoneDraft[]>(() => [createMilestoneDraft()]);
-  const [milestoneError, setMilestoneError] = useState<string | null>(null);
 
   const resolvedClientId = lockClientId ?? clientId;
   const selectedClient =
@@ -97,22 +107,23 @@ export function AgencyProjectCreateDialog({
 
     const initialClientId =
       lockClientId ?? defaultClientId ?? clients[0]?.id ?? "";
+    setMode("journey");
     setClientId(initialClientId);
     setProjectName("");
     setMilestones([createMilestoneDraft()]);
-    setMilestoneError(null);
+    setFormError(null);
   }, [open, lockClientId, defaultClientId, clients]);
 
   function updateMilestone(key: string, patch: Partial<MilestoneDraft>) {
     setMilestones((current) =>
       current.map((row) => (row.key === key ? { ...row, ...patch } : row)),
     );
-    setMilestoneError(null);
+    setFormError(null);
   }
 
   function addMilestone() {
     setMilestones((current) => [...current, createMilestoneDraft()]);
-    setMilestoneError(null);
+    setFormError(null);
   }
 
   function removeMilestone(key: string) {
@@ -126,26 +137,41 @@ export function AgencyProjectCreateDialog({
     event.preventDefault();
 
     const name = projectName.trim();
-    const validMilestones = milestones
-      .map((row) => ({
-        title: row.title.trim(),
-        assigneeUserIds: row.assignedToTeam ? [] : [...new Set(row.assigneeUserIds)],
-      }))
-      .filter((row) => row.title.length > 0);
+    if (!teamId || !resolvedClientId || !name || !selectedClient) return;
 
-    if (validMilestones.length === 0) {
-      setMilestoneError("Add at least one milestone.");
+    if (isJourneyMode) {
+      const validMilestones = milestones
+        .map((row) => ({
+          title: row.title.trim(),
+          assigneeUserIds: row.assignedToTeam ? [] : [...new Set(row.assigneeUserIds)],
+        }))
+        .filter((row) => row.title.length > 0);
+
+      if (validMilestones.length === 0) {
+        setFormError("Add at least one milestone.");
+        return;
+      }
+
+      const projectId = await agencyOps.createProjectWithJourney({
+        teamId,
+        clientId: resolvedClientId,
+        clientName: selectedClient.name,
+        name,
+        milestones: validMilestones,
+      });
+
+      if (projectId) {
+        onOpenChange(false);
+        onCreated?.(projectId);
+      }
       return;
     }
 
-    if (!teamId || !resolvedClientId || !name || !selectedClient) return;
-
-    const projectId = await agencyOps.createProjectWithJourney({
+    const projectId = await agencyOps.createProject({
       teamId,
       clientId: resolvedClientId,
       clientName: selectedClient.name,
       name,
-      milestones: validMilestones,
     });
 
     if (projectId) {
@@ -157,7 +183,7 @@ export function AgencyProjectCreateDialog({
   const canSubmit =
     Boolean(projectName.trim()) &&
     Boolean(resolvedClientId) &&
-    milestones.length > 0 &&
+    (!isJourneyMode || milestones.length > 0) &&
     !isProjectMutationPending;
 
   return (
@@ -166,12 +192,37 @@ export function AgencyProjectCreateDialog({
         <DialogHeader className="space-y-1 border-b border-default px-5 py-4 text-left">
           <DialogTitle className="text-base font-bold text-highlighted">New project</DialogTitle>
           <DialogDescription className="text-xs text-muted">
-            Define milestones and assignees to seed the project journey.
+            {isJourneyMode
+              ? "Define milestones and assignees to seed the project journey."
+              : "Create a simple project with client and name."}
           </DialogDescription>
         </DialogHeader>
 
         <form id={formId} className="flex min-h-0 flex-1 flex-col" onSubmit={(e) => void handleSubmit(e)}>
           <div className="space-y-4 overflow-y-auto px-5 py-4">
+            <div className="inline-flex rounded-full border border-default bg-elevated p-1">
+              {CREATE_MODE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={cn(
+                    "rounded-full px-3 py-1 text-[11px] font-bold transition-colors",
+                    mode === option.value
+                      ? "bg-default text-highlighted"
+                      : "text-muted hover:text-highlighted",
+                  )}
+                  aria-pressed={mode === option.value}
+                  disabled={isProjectMutationPending}
+                  onClick={() => {
+                    setMode(option.value);
+                    setFormError(null);
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2">
               {!clientLocked ? (
                 <div className={agencyFormFieldClass}>
@@ -215,89 +266,91 @@ export function AgencyProjectCreateDialog({
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className={agencyLabelClass}>Milestones</p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 rounded-full px-2.5 text-xs"
-                  onClick={addMilestone}
-                  disabled={isProjectMutationPending}
-                >
-                  <Plus className="size-3.5" />
-                  Add milestone
-                </Button>
-              </div>
-
+            {isJourneyMode ? (
               <div className="space-y-2">
-                {milestones.map((row, index) => (
-                  <div
-                    key={row.key}
-                    className="rounded-2xl border border-default bg-elevated/60 p-2.5"
+                <div className="flex items-center justify-between gap-2">
+                  <p className={agencyLabelClass}>Milestones</p>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 rounded-full px-2.5 text-xs"
+                    onClick={addMilestone}
+                    disabled={isProjectMutationPending}
                   >
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-semibold text-muted">
-                        Milestone {index + 1}
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 rounded-full p-0 text-muted hover:text-error"
-                        onClick={() => removeMilestone(row.key)}
-                        disabled={milestones.length <= 1 || isProjectMutationPending}
-                        aria-label={`Remove milestone ${index + 1}`}
-                      >
-                        <Trash2 className="size-3.5" />
-                      </Button>
-                    </div>
+                    <Plus className="size-3.5" />
+                    Add milestone
+                  </Button>
+                </div>
 
-                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_11rem]">
-                      <Input
-                        value={row.title}
-                        onChange={(e) => updateMilestone(row.key, { title: e.target.value })}
-                        placeholder="Milestone title"
-                        disabled={isProjectMutationPending}
-                        className={cn(
-                          "h-8 rounded-lg border-default bg-default text-xs",
-                          agencyInputPlaceholderClass,
-                        )}
-                        aria-label={`Milestone ${index + 1} title`}
-                      />
-                      <AgencyMemberChooser
-                        mode="multiple"
-                        assignedToTeam={row.assignedToTeam}
-                        selectedUserIds={row.assigneeUserIds}
-                        onAssignedToTeamChange={(assignedToTeam) =>
-                          updateMilestone(row.key, {
-                            assignedToTeam,
-                            assigneeUserIds: assignedToTeam ? [] : row.assigneeUserIds,
-                          })
-                        }
-                        onSelectedUserIdsChange={(assigneeUserIds) =>
-                          updateMilestone(row.key, {
-                            assignedToTeam: false,
-                            assigneeUserIds,
-                          })
-                        }
-                        members={members}
-                        loading={membersQuery.isPending}
-                        disabled={isProjectMutationPending}
-                        triggerVariant="stack"
-                      />
+                <div className="space-y-2">
+                  {milestones.map((row, index) => (
+                    <div
+                      key={row.key}
+                      className="rounded-2xl border border-default bg-elevated/60 p-2.5"
+                    >
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="text-[11px] font-semibold text-muted">
+                          Milestone {index + 1}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 rounded-full p-0 text-muted hover:text-error"
+                          onClick={() => removeMilestone(row.key)}
+                          disabled={milestones.length <= 1 || isProjectMutationPending}
+                          aria-label={`Remove milestone ${index + 1}`}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_11rem]">
+                        <Input
+                          value={row.title}
+                          onChange={(e) => updateMilestone(row.key, { title: e.target.value })}
+                          placeholder="Milestone title"
+                          disabled={isProjectMutationPending}
+                          className={cn(
+                            "h-8 rounded-lg border-default bg-default text-xs",
+                            agencyInputPlaceholderClass,
+                          )}
+                          aria-label={`Milestone ${index + 1} title`}
+                        />
+                        <AgencyMemberChooser
+                          mode="multiple"
+                          assignedToTeam={row.assignedToTeam}
+                          selectedUserIds={row.assigneeUserIds}
+                          onAssignedToTeamChange={(assignedToTeam) =>
+                            updateMilestone(row.key, {
+                              assignedToTeam,
+                              assigneeUserIds: assignedToTeam ? [] : row.assigneeUserIds,
+                            })
+                          }
+                          onSelectedUserIdsChange={(assigneeUserIds) =>
+                            updateMilestone(row.key, {
+                              assignedToTeam: false,
+                              assigneeUserIds,
+                            })
+                          }
+                          members={members}
+                          loading={membersQuery.isPending}
+                          disabled={isProjectMutationPending}
+                          triggerVariant="stack"
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+
+                {formError ? (
+                  <p className="text-xs font-semibold text-error" role="alert">
+                    {formError}
+                  </p>
+                ) : null}
               </div>
-
-              {milestoneError ? (
-                <p className="text-xs font-semibold text-error" role="alert">
-                  {milestoneError}
-                </p>
-              ) : null}
-            </div>
+            ) : null}
           </div>
 
           <DialogFooter className="border-t border-default px-5 py-4 sm:justify-end">
