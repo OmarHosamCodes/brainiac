@@ -7,6 +7,7 @@ import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import { Input } from "@/components/ui/input";
 import {
+  agencyAvatarStackRingClass,
   agencyFocusRingClass,
   agencyInputPlaceholderClass,
   agencyTaskRowCheckboxCheckedClass,
@@ -242,7 +243,7 @@ export function AgencyTaskRowView({
                           name={member.userName}
                           avatarUrl={member.userAvatar}
                           size="sm"
-                          className="size-5 rounded-full ring-2 ring-elevated"
+                          className={cn("size-5 rounded-full", agencyAvatarStackRingClass)}
                         />
                       </span>
                     ))}
@@ -250,7 +251,8 @@ export function AgencyTaskRowView({
                       <span
                         className={cn(
                           "relative z-10 -ml-1.5 flex size-5 shrink-0 items-center justify-center rounded-full",
-                          "bg-muted text-[9px] font-bold text-highlighted ring-2 ring-elevated",
+                          "bg-muted text-[9px] font-bold text-foreground",
+                          agencyAvatarStackRingClass,
                         )}
                         aria-hidden
                       >
@@ -339,7 +341,7 @@ export function AgencyTaskRowView({
                           name={member.userName}
                           avatarUrl={member.userAvatar}
                           size="sm"
-                          className="rounded-full ring-2 ring-elevated"
+                          className={cn("rounded-full", agencyAvatarStackRingClass)}
                         />
                       </span>
                     ))}
@@ -347,7 +349,8 @@ export function AgencyTaskRowView({
                       <span
                         className={cn(
                           "relative z-10 -ml-1.5 flex size-5 shrink-0 items-center justify-center rounded-full",
-                          "bg-muted text-[9px] font-bold text-highlighted ring-2 ring-elevated",
+                          "bg-muted text-[9px] font-bold text-foreground",
+                          agencyAvatarStackRingClass,
                         )}
                         aria-hidden
                       >

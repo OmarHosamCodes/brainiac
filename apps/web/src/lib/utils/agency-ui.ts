@@ -66,6 +66,9 @@ export const agencyMetricClass = "font-mono tabular-nums text-highlighted";
 
 export const agencyFocusRingClass = shellFocusRingClass;
 
+/** Hairline separator for overlapping member avatar stacks. */
+export const agencyAvatarStackRingClass = "ring-1 ring-background";
+
 /** Readable placeholder text on default/elevated agency surfaces (≥4.5:1). */
 export const agencyInputPlaceholderClass = "placeholder:text-muted-foreground";
 

@@ -3,6 +3,7 @@ import { Route } from "lucide-react";
 import { AgencyMemberAvatar } from "@/components/agency/agency-member-avatar";
 import type { AgencyProjectTask, AgencyTaskProject } from "@/lib/schemas/agency-work";
 import {
+  agencyAvatarStackRingClass,
   agencyFocusRingClass,
   agencyMetricClass,
   agencyTaskRowClass,
@@ -144,7 +145,7 @@ export function AgencyTaskJourneyRowView({
                       name={member.userName}
                       avatarUrl={member.userAvatar}
                       size="sm"
-                      className="size-6 rounded-full ring-2 ring-elevated"
+                      className={cn("size-6 rounded-full", agencyAvatarStackRingClass)}
                     />
                   </span>
                 ))}
@@ -152,7 +153,8 @@ export function AgencyTaskJourneyRowView({
                   <span
                     className={cn(
                       "relative z-10 -ml-2 flex size-6 shrink-0 items-center justify-center rounded-full",
-                      "bg-muted text-[9px] font-bold text-highlighted ring-2 ring-elevated",
+                      "bg-muted text-[9px] font-bold text-foreground",
+                      agencyAvatarStackRingClass,
                     )}
                     aria-hidden
                   >

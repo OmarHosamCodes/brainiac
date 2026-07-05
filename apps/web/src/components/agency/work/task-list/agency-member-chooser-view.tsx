@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AgencyMemberChooserViewModel } from "@/lib/agency/work/hooks/use-agency-member-chooser";
 import { UNASSIGNED_ASSIGNEE_VALUE } from "@/stores/agency-task-list";
-import { agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
+import { agencyAvatarStackRingClass, agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
 const STACK_AVATAR_LIMIT = 4;
@@ -63,7 +63,10 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
           >
             {assignedToTeam ? (
               <span
-                className="relative z-0 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted ring-2 ring-default"
+                className={cn(
+                  "relative z-0 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted",
+                  agencyAvatarStackRingClass,
+                )}
                 aria-hidden
               >
                 <UsersRound className="size-3 text-highlighted" />
@@ -79,7 +82,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                     name={member.userName}
                     avatarUrl={member.userAvatar}
                     size="sm"
-                    className="size-6 rounded-full ring-2 ring-default"
+                    className={cn("size-6 rounded-full", agencyAvatarStackRingClass)}
                   />
                 </span>
               ))
@@ -88,7 +91,8 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
               <span
                 className={cn(
                   "relative z-10 -ml-2 flex size-6 shrink-0 items-center justify-center rounded-full",
-                  "bg-muted text-[9px] font-bold text-highlighted ring-2 ring-default",
+                  "bg-muted text-[9px] font-bold text-foreground",
+                  agencyAvatarStackRingClass,
                 )}
                 aria-hidden
               >

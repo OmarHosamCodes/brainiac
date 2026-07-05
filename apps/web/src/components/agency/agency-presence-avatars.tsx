@@ -1,5 +1,6 @@
 import { AgencyMemberAvatar } from "@/components/agency/agency-member-avatar";
 import { useAgencyPresenceMembers } from "@/lib/queries/agency";
+import { agencyAvatarStackRingClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
 const STACK_AVATAR_LIMIT = 4;
@@ -40,7 +41,7 @@ export function AgencyPresenceAvatars({ teamId, className }: AgencyPresenceAvata
             name={member.userName}
             avatarUrl={member.userAvatar}
             size="sm"
-            className="size-7 rounded-full ring-2 ring-default"
+            className={cn("size-7 rounded-full", agencyAvatarStackRingClass)}
           />
         </span>
       ))}
@@ -48,7 +49,8 @@ export function AgencyPresenceAvatars({ teamId, className }: AgencyPresenceAvata
         <span
           className={cn(
             "relative z-10 -ml-2 flex size-7 shrink-0 items-center justify-center rounded-full",
-            "bg-muted text-[10px] font-bold text-highlighted ring-2 ring-default",
+            "bg-muted text-[10px] font-bold text-foreground",
+            agencyAvatarStackRingClass,
           )}
           title={`${overflowCount} more tracking time`}
           aria-hidden

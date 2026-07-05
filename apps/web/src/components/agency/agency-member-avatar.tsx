@@ -37,7 +37,7 @@ export function AgencyMemberAvatar({
     <span
       className={cn(
         box,
-        "flex shrink-0 items-center justify-center bg-muted font-bold text-highlighted",
+        "flex shrink-0 items-center justify-center bg-muted font-bold text-foreground",
         text,
         className,
       )}
