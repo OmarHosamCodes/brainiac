@@ -2,6 +2,7 @@ import { ArrowLeft, AlertTriangle, Bot } from "lucide-react";
 
 import { AgencyMemberChooser } from "@/components/agency/agency-member-chooser";
 import { AgencyMiniTimer } from "@/components/agency/agency-mini-timer";
+import { AgencyProjectJourneyStepper } from "@/components/agency/journey/agency-project-journey-stepper";
 import { TaskThreadComposer } from "@/components/agency/work/task-thread/task-thread-composer";
 import { TaskThreadMessageList } from "@/components/agency/work/task-thread/task-thread-message-list";
 import { Button } from "@/components/ui/button";
@@ -10,11 +11,21 @@ import type { AgencyTaskThreadViewModel } from "@/lib/agency/work/hooks/use-agen
 import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
-type TaskThreadViewProps = {
-  view: AgencyTaskThreadViewModel;
+export type TaskThreadJourneyProps = {
+  teamId: string;
+  projectId: string;
+  selectedStepId: string | null;
+  timerTaskId?: string;
+  timerTaskTitle?: string;
 };
 
-export function TaskThreadView({ view }: TaskThreadViewProps) {
+type TaskThreadViewProps = {
+  view: AgencyTaskThreadViewModel;
+  onEditJourney?: () => void;
+  journey?: TaskThreadJourneyProps;
+};
+
+export function TaskThreadView({ view, onEditJourney, journey }: TaskThreadViewProps) {
   switch (view.status) {
     case "loading":
       return (
@@ -91,11 +102,22 @@ export function TaskThreadView({ view }: TaskThreadViewProps) {
                 <AgencyMiniTimer
                   variant="compact"
                   teamId={view.teamId}
-                  taskId={view.taskId}
+                  taskId={journey?.timerTaskId ?? view.taskId}
                   projectId={view.projectId}
-                  taskTitle={view.taskTitle}
+                  taskTitle={journey?.timerTaskTitle ?? view.taskTitle}
                   projectName={view.projectName}
                 />
+                {onEditJourney ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="shrink-0"
+                    onClick={onEditJourney}
+                  >
+                    Edit journey
+                  </Button>
+                ) : null}
                 <button
                   id={view.agentToggleId}
                   type="button"
@@ -117,6 +139,19 @@ export function TaskThreadView({ view }: TaskThreadViewProps) {
               </div>
             </div>
           </header>
+
+          {journey ? (
+            <div className="border-b border-default px-4 py-3">
+              <AgencyProjectJourneyStepper
+                teamId={journey.teamId}
+                projectId={journey.projectId}
+                layout="horizontal"
+                readOnly
+                compact
+                selectedStepId={journey.selectedStepId}
+              />
+            </div>
+          ) : null}
 
           <TaskThreadMessageList
             messages={view.messages}

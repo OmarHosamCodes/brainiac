@@ -1,13 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 
-import { useAgencyTaskProgressThread } from "@/lib/agency/work/hooks/use-agency-task-progress-thread";
 import { useAgencyTaskThread } from "@/lib/agency/work/hooks/use-agency-task-thread";
+import { useAgencyProjectJourneyQuery } from "@/lib/queries/agency";
 import type { AgencyTaskProject } from "@/lib/schemas/agency-work";
 import { findProjectTaskInCache } from "@/lib/utils/agency-query-cache";
-import { isJourneyTaskKind } from "@/lib/utils/agency-task-journey";
+import { isJourneyTaskKind, resolveFocusedJourneyStep } from "@/lib/utils/agency-task-journey";
 
 import { AgencyProjectJourneyStepperDialog } from "@/components/agency/journey/agency-project-journey-stepper-dialog";
-import { TaskThreadProgressView } from "@/components/agency/work/task-thread/task-thread-progress-view";
 import { TaskThreadView } from "@/components/agency/work/task-thread/task-thread-view";
 
 type AgencyTaskThreadContainerProps = {
@@ -17,27 +16,6 @@ type AgencyTaskThreadContainerProps = {
   onBack: () => void;
   onEditJourney?: () => void;
 };
-
-function AgencyTaskStandardThreadContainer({
-  teamId,
-  taskId,
-  projects,
-  onBack,
-}: AgencyTaskThreadContainerProps) {
-  const view = useAgencyTaskThread({ teamId, taskId, projects, onBack });
-  return <TaskThreadView view={view} />;
-}
-
-function AgencyTaskProgressThreadContainer({
-  teamId,
-  taskId,
-  projects,
-  onBack,
-  onEditJourney,
-}: AgencyTaskThreadContainerProps) {
-  const view = useAgencyTaskProgressThread({ teamId, taskId, projects, onBack });
-  return <TaskThreadProgressView view={view} onEditJourney={onEditJourney} />;
-}
 
 export function AgencyTaskThreadContainer({
   teamId,
@@ -50,32 +28,37 @@ export function AgencyTaskThreadContainer({
   const cachedTask = useMemo(() => findProjectTaskInCache(teamId, taskId), [teamId, taskId]);
   const taskKind = cachedTask?.taskKind ?? "standard";
   const projectId = cachedTask?.projectId ?? "";
+  const isJourneyTask = isJourneyTaskKind(taskKind);
+  const journeyQuery = useAgencyProjectJourneyQuery(teamId, isJourneyTask ? projectId : "");
+  const focusedStep = useMemo(() => {
+    if (!isJourneyTask || !cachedTask) return null;
+    return resolveFocusedJourneyStep(journeyQuery.data, cachedTask);
+  }, [cachedTask, isJourneyTask, journeyQuery.data]);
+  const journey = useMemo(() => {
+    if (!isJourneyTask || !projectId) return undefined;
+    return {
+      teamId,
+      projectId,
+      selectedStepId: focusedStep?.id ?? null,
+      timerTaskId: focusedStep?.taskId ?? taskId,
+      timerTaskTitle: focusedStep?.label,
+    };
+  }, [focusedStep, isJourneyTask, projectId, taskId, teamId]);
 
   const openJourneyDialog = useCallback(() => {
     setJourneyDialogOpen(true);
     onEditJourneyProp?.();
   }, [onEditJourneyProp]);
 
-  const thread = isJourneyTaskKind(taskKind) ? (
-    <AgencyTaskProgressThreadContainer
-      teamId={teamId}
-      taskId={taskId}
-      projects={projects}
-      onBack={onBack}
-      onEditJourney={openJourneyDialog}
-    />
-  ) : (
-    <AgencyTaskStandardThreadContainer
-      teamId={teamId}
-      taskId={taskId}
-      projects={projects}
-      onBack={onBack}
-    />
-  );
+  const view = useAgencyTaskThread({ teamId, taskId, projects, onBack });
 
   return (
     <>
-      {thread}
+      <TaskThreadView
+        view={view}
+        journey={journey}
+        onEditJourney={isJourneyTask ? openJourneyDialog : undefined}
+      />
       {projectId ? (
         <AgencyProjectJourneyStepperDialog
           teamId={teamId}
