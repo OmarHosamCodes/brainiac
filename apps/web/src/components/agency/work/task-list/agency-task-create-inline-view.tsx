@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 import { AgencyMemberChooser } from "@/components/agency/agency-member-chooser";
 import { AgencyProjectChooser } from "@/components/agency/agency-project-chooser";
@@ -49,12 +49,14 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
 
   if (!expanded) {
     return (
-      <div className="shrink-0 border-y border-default">
+      <div className="shrink-0 border-y border-default px-3 py-2.5">
         <button
           type="button"
           className={cn(
-            "flex w-full items-center gap-2 bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground",
+            "flex w-full items-center justify-between gap-3 rounded-full bg-primary py-1.5 pl-4 pr-1.5",
+            "text-sm font-bold text-primary-foreground",
             "transition-colors hover:bg-primary/90",
+            "disabled:pointer-events-none disabled:opacity-50",
             agencyFocusRingClass,
             "motion-reduce:transition-none",
           )}
@@ -63,8 +65,13 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
           aria-controls={zoneId}
           aria-expanded={false}
         >
-          <Plus className="size-4 shrink-0" aria-hidden />
-          New task
+          <span>New task</span>
+          <span
+            className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-foreground text-primary"
+            aria-hidden
+          >
+            <ArrowRight className="size-3.5" />
+          </span>
         </button>
       </div>
     );
