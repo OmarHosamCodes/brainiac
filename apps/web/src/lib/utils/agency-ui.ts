@@ -104,10 +104,23 @@ export const agencyTaskRailSummaryValueClass = [
 
 export const agencyTaskRailSummaryDividerClass = "h-3 w-px shrink-0 bg-default";
 
+/** Virtual-list height estimates — keep in sync with header padding/typography below. */
+export const AGENCY_TASK_CLIENT_GROUP_HEADER_HEIGHT = 44;
+export const AGENCY_TASK_PROJECT_GROUP_HEADER_HEIGHT = 36;
+
 export const agencyTaskClientGroupHeaderClass = [
-  "flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs",
+  "flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm",
   "transition-colors hover:bg-default/50",
 ].join(" ");
+
+export const agencyTaskProjectGroupHeaderClass = [
+  "flex w-full items-center justify-between gap-2 px-3 py-2 pl-4 text-left text-xs",
+  "transition-colors hover:bg-default/40",
+].join(" ");
+
+export const agencyTaskRowContentClass = "relative flex gap-1.5 px-3 py-2.5";
+
+export const agencyTaskRowNestedContentClass = "relative flex gap-1.5 px-3 py-1.5 pl-7";
 
 export const agencyTaskRowProjectPillClass = [
   "inline-flex max-w-[8rem] shrink-0 items-center rounded-full border border-default bg-elevated px-1.5 py-0.5",
@@ -115,7 +128,7 @@ export const agencyTaskRowProjectPillClass = [
 ].join(" ");
 
 export const agencyTaskRowCheckboxClass = [
-  "inline-flex size-4 shrink-0 items-center justify-center rounded border border-default bg-elevated",
+  "inline-flex size-3.5 shrink-0 items-center justify-center rounded border border-default bg-elevated",
   "transition-colors hover:border-muted-foreground/40",
   agencyFocusRingClass,
   "motion-reduce:transition-none",
