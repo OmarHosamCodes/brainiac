@@ -38,7 +38,11 @@ export function useAgencyProjectJourney(
   });
 
   const journeyQuery = useQuery({
-    ...withAgencySyncQueryOptions(journeyQueryOptions, "warm"),
+    ...withAgencySyncQueryOptions(journeyQueryOptions, "warm", {
+      liveGated: true,
+      teamId,
+      noPoll: true,
+    }),
     enabled,
     retry: (failureCount, error) => {
       if (isOrpcNotFoundError(error)) return false;

@@ -91,7 +91,8 @@ export function AgencyProjectCreateDialog({
         ...orpc.agencyOps.taskThreads.members.list.queryOptions({ input: { teamId } }),
         enabled: Boolean(teamId) && open && isJourneyMode,
       },
-      "warm",
+      "cold",
+      { liveGated: true, teamId },
     ),
   );
 

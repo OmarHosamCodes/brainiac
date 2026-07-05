@@ -103,7 +103,8 @@ export function useAgencyTaskThread({
         }),
         enabled: Boolean(teamId),
       },
-      "warm",
+      "cold",
+      { liveGated: true, teamId },
     ),
   );
 

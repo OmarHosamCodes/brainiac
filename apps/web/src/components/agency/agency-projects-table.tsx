@@ -68,7 +68,8 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
           ...orpc.agencyOps.taskThreads.members.list.queryOptions({ input: { teamId } }),
           enabled: Boolean(teamId),
         },
-        "warm",
+        "cold",
+        { liveGated: true, teamId },
       ),
     );
     const tasksQuery = useAgencyProjectTasksQuery(teamId, {

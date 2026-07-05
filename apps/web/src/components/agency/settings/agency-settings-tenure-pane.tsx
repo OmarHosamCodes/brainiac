@@ -41,6 +41,7 @@ export function AgencySettingsTenurePane({ teamId, active }: AgencySettingsTenur
         enabled: Boolean(teamId) && active,
       },
       "cold",
+      { liveGated: true, teamId },
     ),
   );
 
@@ -51,6 +52,7 @@ export function AgencySettingsTenurePane({ teamId, active }: AgencySettingsTenur
         enabled: Boolean(teamId) && active,
       },
       "cold",
+      { liveGated: true, teamId },
     ),
   );
 
@@ -61,6 +63,7 @@ export function AgencySettingsTenurePane({ teamId, active }: AgencySettingsTenur
         enabled: Boolean(teamId) && active,
       },
       "cold",
+      { liveGated: true, teamId },
     ),
   );
 
@@ -114,6 +117,7 @@ export function AgencySettingsTenurePane({ teamId, active }: AgencySettingsTenur
         enabled: Boolean(teamId && selectedUserId && active),
       },
       "cold",
+      { liveGated: true, teamId },
     ),
   );
 

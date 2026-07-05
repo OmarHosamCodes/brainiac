@@ -24,7 +24,8 @@ import {
   EMPTY_LIST_OVERLAY,
   mergeListWithOverlay,
 } from "@/lib/utils/agency-optimistic-merge";
-import { withAgencySyncQueryOptions, AGENCY_POLL, AGENCY_STALE_TIME } from "@/lib/utils/agency-query-options";
+import { isAgencyLiveConnected } from "@/lib/agency/live/agency-live-connected";
+import { withAgencySyncQueryOptions, prefetchAgencySyncQueryOptions, AGENCY_POLL, AGENCY_STALE_TIME } from "@/lib/utils/agency-query-options";
 import {
   taskMatchesAgencyFilters,
   useAgencyOptimisticStore,
@@ -69,16 +70,16 @@ export function prefetchAgencyWorkQueries(teamId: string, assigneeUserId: string
   const queryClient = getQueryClient();
 
   void queryClient.prefetchQuery(
-    withAgencySyncQueryOptions(
+    prefetchAgencySyncQueryOptions(
       {
         ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
       },
-      "warm",
+      "cold",
     ),
   );
 
   void queryClient.prefetchQuery(
-    withAgencySyncQueryOptions(
+    prefetchAgencySyncQueryOptions(
       {
         ...orpc.agencyOps.projectTasks.list.queryOptions({
           input: {
@@ -93,7 +94,7 @@ export function prefetchAgencyWorkQueries(teamId: string, assigneeUserId: string
   );
 
   void queryClient.prefetchQuery(
-    withAgencySyncQueryOptions(
+    prefetchAgencySyncQueryOptions(
       {
         ...orpc.agencyOps.projectTasks.list.queryOptions({
           input: {
@@ -108,7 +109,7 @@ export function prefetchAgencyWorkQueries(teamId: string, assigneeUserId: string
   );
 
   void queryClient.prefetchQuery(
-    withAgencySyncQueryOptions(
+    prefetchAgencySyncQueryOptions(
       {
         ...orpc.agencyOps.timer.getActive.queryOptions({
           input: { teamId },
@@ -119,7 +120,7 @@ export function prefetchAgencyWorkQueries(teamId: string, assigneeUserId: string
   );
 
   void queryClient.prefetchQuery(
-    withAgencySyncQueryOptions(
+    prefetchAgencySyncQueryOptions(
       {
         ...orpc.agencyOps.timer.listActiveMembers.queryOptions({
           input: { teamId },
@@ -130,7 +131,7 @@ export function prefetchAgencyWorkQueries(teamId: string, assigneeUserId: string
   );
 
   void queryClient.prefetchQuery(
-    withAgencySyncQueryOptions(
+    prefetchAgencySyncQueryOptions(
       {
         ...orpc.agencyOps.timeEntries.listMine.queryOptions({
           input: { teamId, page: 1, pageSize: 20 },
@@ -171,7 +172,8 @@ export function useAgencyProjectsQuery(teamId: string, clientId?: string) {
         enabled: Boolean(teamId),
         placeholderData: keepPreviousData,
       },
-      "warm",
+      "cold",
+      { liveGated: true, teamId },
     ),
   );
 
@@ -197,7 +199,8 @@ export function useAgencyClientsQuery(teamId: string) {
         enabled: Boolean(teamId),
         placeholderData: keepPreviousData,
       },
-      "warm",
+      "cold",
+      { liveGated: true, teamId },
     ),
   );
 
@@ -227,7 +230,8 @@ export function useAgencyContactQuery(teamId: string, clientId: string) {
         enabled: Boolean(teamId) && Boolean(clientId),
         placeholderData: keepPreviousData,
       },
-      "warm",
+      "cold",
+      { liveGated: true, teamId },
     ),
   );
 
@@ -255,7 +259,8 @@ export function useAgencyCapacityQuery(teamId: string, weekStart: string, weeks:
         enabled: Boolean(teamId),
         placeholderData: keepPreviousData,
       },
-      "warm",
+      "cold",
+      { liveGated: true, teamId },
     ),
   );
 
@@ -279,6 +284,7 @@ export function useAgencyTaskThreadContextQuery(teamId: string, taskId: string) 
         placeholderData: keepPreviousData,
       },
       "hot",
+      { liveGated: true, teamId },
     ),
   );
 }
@@ -294,6 +300,7 @@ export function useAgencyProjectJourneyQuery(teamId: string, projectId: string) 
         placeholderData: keepPreviousData,
       },
       "warm",
+      { liveGated: true, teamId, noPoll: true },
     ),
   );
 }
@@ -333,10 +340,17 @@ export function useAgencyTaskMessagesInfiniteQuery(teamId: string, taskId: strin
     },
     enabled: Boolean(teamId) && Boolean(taskId),
     staleTime: AGENCY_STALE_TIME.hot,
+    refetchInterval: teamId && isAgencyLiveConnected(teamId) ? false : AGENCY_POLL.hot,
     refetchIntervalInBackground: false,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     placeholderData: keepPreviousData,
+    meta: teamId
+      ? {
+          agencyLiveGatedTeamId: teamId,
+          agencySyncTier: "hot" as const,
+        }
+      : undefined,
   });
 
   useEffect(() => {
@@ -413,6 +427,7 @@ export function useAgencyProjectTasksQuery(
         placeholderData: keepPreviousData,
       },
       "hot",
+      { liveGated: true, teamId },
     ),
   );
 
@@ -634,6 +649,7 @@ export function useAgencyActiveMembersQuery(teamId: string) {
         placeholderData: keepPreviousData,
       },
       "hot",
+      { liveGated: true, teamId },
     ),
   );
 }
@@ -683,6 +699,7 @@ export function useAgencyActiveTimerQuery(teamId: string) {
         placeholderData: keepPreviousData,
       },
       "hot",
+      { liveGated: true, teamId },
     ),
   );
 
@@ -713,6 +730,7 @@ export function useAgencyTimeEntriesQuery(teamId: string, page: number, pageSize
         placeholderData: keepPreviousData,
       },
       "hot",
+      { liveGated: true, teamId },
     ),
   );
 

@@ -227,7 +227,8 @@ export function useAgencyTaskList({
         }),
         enabled: Boolean(teamId),
       },
-      "warm",
+      "cold",
+      { liveGated: true, teamId },
     ),
   );
 
@@ -273,6 +274,7 @@ export function useAgencyTaskList({
           enabled: Boolean(teamId && projectId),
         },
         "warm",
+        { liveGated: true, teamId, noPoll: true },
       ),
     ),
   });
