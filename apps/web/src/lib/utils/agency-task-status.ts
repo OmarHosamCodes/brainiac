@@ -88,9 +88,10 @@ export function taskStatusDisplay(status: TaskStatus | undefined) {
 }
 
 export function estimateDisplayRowHeight(
-  row: Pick<AgencyTaskDisplayRow, "blueprintId" | "blueprintDescription">,
+  row: Pick<AgencyTaskDisplayRow, "blueprintId" | "blueprintDescription" | "rowKind">,
   needsDescription = false,
 ): number {
+  if (row.rowKind === "journey_anchor") return TASK_ROW_BASE_HEIGHT;
   const hasDescriptionRow =
     Boolean(row.blueprintId) ||
     Boolean(row.blueprintDescription.trim()) ||

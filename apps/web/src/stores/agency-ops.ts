@@ -15,8 +15,10 @@ import {
   patchProjectTaskBlueprintDescriptionInCache,
   patchUpdatedProjectTaskInCache,
   reconcileCreatedProjectTaskInCache,
+  refetchAgencyProjectTaskListQueries,
 } from "@/lib/utils/agency-query-cache";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
+import type { AgencyProjectJourney } from "@brainiac/api/schemas/agency-ops";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 // Shared types (mirrored from API shapes — keep in sync with oRPC output)
@@ -46,6 +48,7 @@ type AgencyProjectTask = {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
+  taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   assignees: Array<{
     userId: string;
@@ -158,6 +161,19 @@ type CreateProjectPayload = {
   /** Used to fill the optimistic row's clientName field. */
   clientName: string;
   name: string;
+};
+
+type CreateProjectWithJourneyMilestonePayload = {
+  title: string;
+  assigneeUserIds: string[];
+};
+
+type CreateProjectWithJourneyPayload = {
+  teamId: string;
+  clientId: string;
+  clientName: string;
+  name: string;
+  milestones: CreateProjectWithJourneyMilestonePayload[];
 };
 
 type CreateProjectTaskPayload = {
@@ -690,6 +706,149 @@ function createAgencyOpsActions(
     }
   }
 
+  function buildOptimisticJourneyTask(
+    teamId: string,
+    projectId: string,
+    title: string,
+    taskKind: AgencyProjectTask["taskKind"],
+    assigneeUserIds: string[],
+    nowIso: string,
+  ): AgencyProjectTask {
+    const assigneeIds = [...new Set(assigneeUserIds)];
+    return {
+      id: optimisticId("agency-project-task"),
+      teamId,
+      projectId,
+      title,
+      status: "open",
+      taskKind,
+      assignedToTeam: false,
+      assignees: assigneeIds.map((userId) => ({
+        userId,
+        userName: "",
+        userAvatar: null,
+        status: "open" as const,
+      })),
+      viewerStatus: "open",
+      viewerCompletionCount: 0,
+      dueDate: null,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+  }
+
+  function journeyMilestoneTasks(journey: AgencyProjectJourney): AgencyProjectTask[] {
+    return journey.steps
+      .map((step) => step.task)
+      .filter((task): task is AgencyProjectTask => Boolean(task));
+  }
+
+  async function createProjectWithJourney(
+    payload: CreateProjectWithJourneyPayload,
+  ): Promise<string | null> {
+    const name = payload.name.trim();
+    const milestones = payload.milestones
+      .map((milestone) => ({
+        title: milestone.title.trim(),
+        assigneeUserIds: [...new Set(milestone.assigneeUserIds)],
+      }))
+      .filter((milestone) => milestone.title.length > 0);
+
+    if (!payload.teamId || !payload.clientId || !name || milestones.length === 0) {
+      return null;
+    }
+
+    const snapshots = snapshotQueries([
+      ...registryPayloads(projectsQueryRegistry),
+      ...registryPayloads(projectTasksQueryRegistry),
+    ]);
+    const optimisticProjectSnapshot = optimistic().snapshotProjects(payload.teamId);
+    const optimisticTaskSnapshot = optimistic().snapshotTasks(payload.teamId);
+    const nowIso = new Date().toISOString();
+    const optimisticProject: AgencyProject = {
+      id: optimisticId("project"),
+      teamId: payload.teamId,
+      clientId: payload.clientId,
+      clientName: payload.clientName,
+      name,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    const allAssigneeIds = new Set<string>();
+    for (const milestone of milestones) {
+      for (const userId of milestone.assigneeUserIds) {
+        allAssigneeIds.add(userId);
+      }
+    }
+
+    const optimisticMilestoneTasks = milestones.map((milestone) =>
+      buildOptimisticJourneyTask(
+        payload.teamId,
+        optimisticProject.id,
+        milestone.title,
+        "journey_milestone",
+        milestone.assigneeUserIds,
+        nowIso,
+      ),
+    );
+    const optimisticAnchorTask = buildOptimisticJourneyTask(
+      payload.teamId,
+      optimisticProject.id,
+      name,
+      "journey_anchor",
+      [...allAssigneeIds],
+      nowIso,
+    );
+    const optimisticTasks = [...optimisticMilestoneTasks, optimisticAnchorTask];
+
+    set((state) => ({ ...state, projectMutationCount: state.projectMutationCount + 1 }));
+
+    try {
+      await cancelAgencyProjectTaskListQueries(payload.teamId);
+      patchInsertedProject(payload.teamId, optimisticProject);
+      for (const task of optimisticTasks) {
+        patchInsertedProjectTask(payload.teamId, task);
+      }
+
+      const result = await orpcClient.agencyOps.projects.createWithJourney({
+        teamId: payload.teamId,
+        clientId: payload.clientId,
+        name,
+        milestones,
+      });
+
+      reconcileCreatedProject(payload.teamId, optimisticProject.id, result.project);
+
+      const serverMilestoneTasks = journeyMilestoneTasks(result.journey);
+      for (let index = 0; index < optimisticMilestoneTasks.length; index += 1) {
+        const optimisticTask = optimisticMilestoneTasks[index];
+        const createdTask = serverMilestoneTasks[index];
+        if (optimisticTask && createdTask) {
+          reconcileCreatedTask(payload.teamId, optimisticTask.id, createdTask);
+        }
+      }
+
+      // Journey anchor is not linked to a step; refetch picks up the persisted row.
+      optimistic().deleteTask(payload.teamId, optimisticAnchorTask.id);
+      await refetchAgencyProjectTaskListQueries(payload.teamId);
+
+      toast.success("Project added", { description: name });
+      return result.project.id;
+    } catch (error) {
+      restoreQuerySnapshots(snapshots);
+      optimistic().restoreProjects(payload.teamId, optimisticProjectSnapshot);
+      optimistic().restoreTasks(payload.teamId, optimisticTaskSnapshot);
+      toast.error("Couldn't add project", { description: getErrorMessage(error, "Try again.") });
+      return null;
+    } finally {
+      set((state) => ({
+        ...state,
+        projectMutationCount: Math.max(0, state.projectMutationCount - 1),
+      }));
+    }
+  }
+
   async function createProjectTask(payload: CreateProjectTaskPayload): Promise<string | null> {
     const title = payload.title.trim();
     if (!payload.teamId || !payload.projectId || !title) return null;
@@ -707,6 +866,7 @@ function createAgencyOpsActions(
       projectId: payload.projectId,
       title,
       status: payload.status ?? "open",
+      taskKind: "standard",
       assignedToTeam,
       // Assignees required so assignee-filtered active lists accept the optimistic row.
       assignees: assigneeUserIds.map((userId) => ({
@@ -1288,6 +1448,7 @@ function createAgencyOpsActions(
     updateClient,
     archiveClient,
     createProject,
+    createProjectWithJourney,
     createProjectTask,
     patchProjectTaskBlueprintDescription,
     updateProjectTaskBlueprint,

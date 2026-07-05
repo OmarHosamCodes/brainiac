@@ -1,6 +1,6 @@
 import { ChevronDown } from "lucide-react";
 
-import { AgencyTaskRowView } from "@/components/agency/work/task-list/agency-task-row-view";
+import { AgencyTaskDisplayRowView } from "@/components/agency/work/task-list/agency-task-display-row-view";
 import type { AgencyTaskClientDisplayGroup } from "@/lib/agency/work/hooks/use-agency-task-list";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 export type AgencyTaskClientGroupViewProps = {
   group: AgencyTaskClientDisplayGroup;
   expanded: boolean;
+  allTasks: AgencyProjectTask[];
   projects: AgencyTaskProject[];
   teamId: string;
   selectedTaskId: string;
@@ -31,6 +32,7 @@ export type AgencyTaskClientGroupViewProps = {
 export function AgencyTaskClientGroupView({
   group,
   expanded,
+  allTasks,
   projects,
   teamId,
   selectedTaskId,
@@ -79,16 +81,15 @@ export function AgencyTaskClientGroupView({
       {expanded ? (
         <ul id={panelId} aria-label={`${group.clientName} tasks`}>
           {group.displayRows.map((row) => (
-            <AgencyTaskRowView
+            <AgencyTaskDisplayRowView
               key={row.rowKey}
-              task={row.task}
+              row={row}
+              allTasks={allTasks}
               projects={projects}
               teamId={teamId}
               selectedTaskId={selectedTaskId}
               highlight={row.blueprintId === highlightBlueprintId}
               isRowPending={isRowPending(row.task.id)}
-              blueprintId={row.blueprintId}
-              blueprintDescription={row.blueprintDescription}
               trackingState={getTaskTrackingState?.(row.task.id, row.blueprintDescription)}
               onSelect={(taskId) => onSelect(taskId, row.blueprintId)}
               onSelectProject={onSelectProject}

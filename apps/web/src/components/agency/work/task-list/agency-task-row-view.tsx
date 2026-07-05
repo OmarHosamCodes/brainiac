@@ -1,5 +1,6 @@
 import { Check, Clock, Plus } from "lucide-react";
 
+import { AgencyMemberAvatar } from "@/components/agency/agency-member-avatar";
 import { AgencyTaskRowSwipeShell } from "@/components/agency/work/task-list/agency-task-row-swipe-shell";
 import { AgencyMiniTimerContainer } from "@/lib/agency/work/containers/agency-mini-timer-container";
 import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
@@ -23,7 +24,10 @@ import {
   taskStatusDisplay,
 } from "@/lib/utils/agency-task-status";
 import { isTaskOverdue } from "@/lib/utils/agency-task-utils";
+import { isJourneyMilestoneTask } from "@/lib/utils/agency-task-journey";
 import { cn } from "@/lib/utils";
+
+const STACK_AVATAR_LIMIT = 4;
 
 export { statusLabel } from "@/lib/utils/agency-task-status";
 
@@ -85,6 +89,7 @@ export type AgencyTaskRowViewProps = {
   onDelete?: (task: AgencyProjectTask) => void;
   blueprintId?: string | null;
   blueprintDescription?: string;
+  showAllAssignees?: boolean;
   trackingState?: TaskTrackingState;
   onBlueprintDescriptionChange?: (value: string) => void;
 };
@@ -104,6 +109,7 @@ export function AgencyTaskRowView({
   onDelete,
   blueprintId = null,
   blueprintDescription = "",
+  showAllAssignees = false,
   trackingState,
   onBlueprintDescriptionChange,
 }: AgencyTaskRowViewProps) {
@@ -118,8 +124,11 @@ export function AgencyTaskRowView({
   const showCompletionMultiplier = readOnly && completionCount >= 1;
   const displayStatus = resolveTaskDisplayStatus({ task, readOnly });
   const statusDisplay = taskStatusDisplay(displayStatus);
+  const showAssigneeStack = showAllAssignees || isJourneyMilestoneTask(task);
+  const assigneeStack = task.assignees.slice(0, STACK_AVATAR_LIMIT);
+  const assigneeOverflow = task.assignees.length - assigneeStack.length;
 
-  const swipeEnabled = !readOnly && Boolean(onDelete);
+  const swipeEnabled = !readOnly && Boolean(onDelete) && !isJourneyMilestoneTask(task);
   const showDescriptionRow =
     Boolean(blueprintId) ||
     Boolean(blueprintDescription.trim()) ||
@@ -256,6 +265,36 @@ export function AgencyTaskRowView({
                     <span className="font-mono tabular-nums">
                       {overdue ? "Overdue" : dueLabel}
                     </span>
+                  </span>
+                ) : null}
+
+                {showAssigneeStack && task.assignees.length > 0 ? (
+                  <span className="inline-flex shrink-0 items-center">
+                    {assigneeStack.map((member, index) => (
+                      <span
+                        key={member.userId}
+                        className={cn("relative", index > 0 && "-ml-2")}
+                        style={{ zIndex: index + 1 }}
+                      >
+                        <AgencyMemberAvatar
+                          name={member.userName}
+                          avatarUrl={member.userAvatar}
+                          size="sm"
+                          className="size-6 rounded-full ring-2 ring-elevated"
+                        />
+                      </span>
+                    ))}
+                    {assigneeOverflow > 0 ? (
+                      <span
+                        className={cn(
+                          "relative z-10 -ml-2 flex size-6 shrink-0 items-center justify-center rounded-full",
+                          "bg-muted text-[9px] font-bold text-highlighted ring-2 ring-elevated",
+                        )}
+                        aria-hidden
+                      >
+                        +{assigneeOverflow}
+                      </span>
+                    ) : null}
                   </span>
                 ) : null}
               </div>

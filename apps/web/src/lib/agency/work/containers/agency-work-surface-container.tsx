@@ -1,4 +1,5 @@
 import type { AgencySegmentId } from "@/lib/agency-segments";
+import { useAgencyJourneyLiveSync } from "@/lib/agency/work/hooks/use-agency-journey-live-sync";
 import { useAgencyWorkSurface } from "@/lib/agency/work/hooks/use-agency-work-surface";
 import type { AgencyWorkSurfaceView } from "@/lib/schemas/agency-work";
 
@@ -106,6 +107,7 @@ export function AgencyWorkSurface({
   onSelectProject,
   onSegmentChange,
 }: AgencyWorkSurfaceProps) {
+  useAgencyJourneyLiveSync({ teamId });
   const view = useAgencyWorkSurface({ teamId, onSelectProject, onSegmentChange });
   return renderWorkSurfaceView(view);
 }

@@ -10,6 +10,7 @@ import {
   AgencyMultiSelectFilter,
   type AgencyFilterOptionGroup,
 } from "@/components/agency/agency-multi-select-filter";
+import { AgencyProjectCreateDialog } from "@/components/agency/agency-project-create-dialog";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
@@ -31,7 +32,6 @@ import { projectHueStyle } from "@/lib/utils/project-palette";
 import {
   selectIsClientMutationPending,
   selectIsContactMutationPending,
-  selectIsProjectMutationPending,
   useAgencyOpsStore,
 } from "@/stores/agency-ops";
 
@@ -51,7 +51,6 @@ function getWeekStartUtc(): Date {
 export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
   const agencyOps = useAgencyOpsStore();
   const isClientMutationPending = useAgencyOpsStore(selectIsClientMutationPending);
-  const isProjectMutationPending = useAgencyOpsStore(selectIsProjectMutationPending);
   const isContactMutationPending = useAgencyOpsStore(selectIsContactMutationPending);
 
   const [filterTerm, setFilterTerm] = useState("");
@@ -60,12 +59,11 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [renameClientId, setRenameClientId] = useState("");
-  const [newProjectClientId, setNewProjectClientId] = useState("");
+  const [createProjectClientId, setCreateProjectClientId] = useState("");
   const [contactClientId, setContactClientId] = useState("");
   const [renameDraft, setRenameDraft] = useState("");
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [newClientName, setNewClientName] = useState("");
-  const [newProjectName, setNewProjectName] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -267,20 +265,6 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
     }
     setRenameClientId("");
     await agencyOps.updateClient({ teamId, clientId, name });
-  }
-
-  async function createProject(clientId: string) {
-    const client = clients.find((entry) => entry.id === clientId);
-    const name = newProjectName.trim();
-    if (!name || !teamId || !client) return;
-    setNewProjectName("");
-    setNewProjectClientId("");
-    await agencyOps.createProject({
-      teamId,
-      clientId: client.id,
-      clientName: client.name,
-      name,
-    });
   }
 
   async function saveContact() {
@@ -596,44 +580,14 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1.5">
-                          <Popover
-                            open={newProjectClientId === client.id}
-                            onOpenChange={(open) => setNewProjectClientId(open ? client.id : "")}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setCreateProjectClientId(client.id)}
                           >
-                            <PopoverTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <Plus />
-                                Project
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent align="end" className="w-72 space-y-2 p-3">
-                              <form
-                                onSubmit={(e) => {
-                                  e.preventDefault();
-                                  void createProject(client.id);
-                                }}
-                              >
-                                <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                                  New project for {client.name}
-                                </p>
-                                <Input
-                                  value={newProjectName}
-                                  onChange={(e) => setNewProjectName(e.target.value)}
-                                  placeholder="Project name"
-                                  className="mt-2"
-                                  autoFocus
-                                />
-                                <Button
-                                  type="submit"
-                                  size="sm"
-                                  className="mt-2 w-full"
-                                  disabled={!newProjectName.trim() || isProjectMutationPending}
-                                >
-                                  Create project
-                                </Button>
-                              </form>
-                            </PopoverContent>
-                          </Popover>
+                            <Plus />
+                            Project
+                          </Button>
 
                           <Popover
                             open={renameClientId === client.id}
@@ -691,6 +645,16 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
           </div>
         )}
       </div>
+
+      <AgencyProjectCreateDialog
+        open={Boolean(createProjectClientId)}
+        onOpenChange={(open) => {
+          if (!open) setCreateProjectClientId("");
+        }}
+        teamId={teamId}
+        clients={clients}
+        lockClientId={createProjectClientId || undefined}
+      />
     </div>
   );
 }

@@ -1,15 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
+import { AgencyProjectCreateDialog } from "@/components/agency/agency-project-create-dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { orpc } from "@/lib/orpc";
-import {
-  selectIsClientMutationPending,
-  selectIsProjectMutationPending,
-  useAgencyOpsStore,
-} from "@/stores/agency-ops";
+import { selectIsClientMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
 type AgencyProjectManagerProps = {
   teamId: string;
@@ -18,11 +16,10 @@ type AgencyProjectManagerProps = {
 export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
   const agencyOps = useAgencyOpsStore();
   const isClientMutationPending = useAgencyOpsStore(selectIsClientMutationPending);
-  const isProjectMutationPending = useAgencyOpsStore(selectIsProjectMutationPending);
 
   const [selectedClientId, setSelectedClientId] = useState("");
   const [newClientName, setNewClientName] = useState("");
-  const [newProjectName, setNewProjectName] = useState("");
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
 
   useEffect(() => {
     setSelectedClientId("");
@@ -75,18 +72,6 @@ export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
     );
   }
 
-  async function createProject() {
-    const name = newProjectName.trim();
-    if (!name || !selectedClientId || !teamId) return;
-    setNewProjectName("");
-    await agencyOps.createProject({
-      teamId,
-      clientId: selectedClientId,
-      clientName: selectedClient?.name ?? "",
-      name,
-    });
-  }
-
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-2">
@@ -134,32 +119,20 @@ export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
         </Card>
 
         <Card className="p-4">
-          <h3 className="mb-4 text-sm font-semibold text-highlighted">
-            Projects
-            {selectedClient ? (
-              <span className="ml-1 text-xs font-normal text-muted">for {selectedClient.name}</span>
-            ) : null}
-          </h3>
-          {selectedClientId ? (
-            <div className="mb-4 flex gap-2">
-              <Input
-                value={newProjectName}
-                onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder="Project name"
-                disabled={isProjectMutationPending}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void createProject();
-                }}
-              />
-              <Button
-                size="sm"
-                disabled={!newProjectName.trim() || isProjectMutationPending}
-                onClick={() => void createProject()}
-              >
-                Add
+          <div className="mb-4 flex items-start justify-between gap-2">
+            <h3 className="text-sm font-semibold text-highlighted">
+              Projects
+              {selectedClient ? (
+                <span className="ml-1 text-xs font-normal text-muted">for {selectedClient.name}</span>
+              ) : null}
+            </h3>
+            {selectedClientId ? (
+              <Button size="sm" onClick={() => setCreateProjectOpen(true)}>
+                <Plus />
+                New project
               </Button>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
           {selectedClientId && projects.length > 0 ? (
             <div className="space-y-2">
               {projects.map((project) => (
@@ -174,6 +147,15 @@ export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
           ) : selectedClientId ? (
             <div className="rounded-lg border border-dashed border-muted/30 p-4 text-center">
               <p className="text-xs text-muted">No projects for this client yet</p>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-3"
+                onClick={() => setCreateProjectOpen(true)}
+              >
+                <Plus />
+                New project
+              </Button>
             </div>
           ) : (
             <div className="rounded-lg border border-dashed border-muted/30 p-4 text-center">
@@ -182,6 +164,14 @@ export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
           )}
         </Card>
       </div>
+
+      <AgencyProjectCreateDialog
+        open={createProjectOpen}
+        onOpenChange={setCreateProjectOpen}
+        teamId={teamId}
+        clients={clients}
+        lockClientId={selectedClientId || undefined}
+      />
     </div>
   );
 }

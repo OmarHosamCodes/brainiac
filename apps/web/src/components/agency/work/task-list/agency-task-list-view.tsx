@@ -9,6 +9,7 @@ import {
 
 import { AgencyTaskVirtualList } from "@/components/agency/work/task-list/agency-task-virtual-list";
 import { AgencyTaskCreateInlineView } from "@/components/agency/work/task-list/agency-task-create-inline-view";
+import { AgencyTaskDisplayRowView } from "@/components/agency/work/task-list/agency-task-display-row-view";
 import { AgencyTaskRowView } from "@/components/agency/work/task-list/agency-task-row-view";
 import { AgencyTaskRailSummary } from "@/components/agency/agency-task-rail-summary";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { AgencyTaskListViewModel } from "@/lib/agency/work/hooks/use-agency-task-list";
 import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import type { AgencyProjectTask } from "@/lib/schemas/agency-work";
+import { isJourneyTaskKind } from "@/lib/utils/agency-task-journey";
 import {
   agencyFocusRingClass,
   agencyMetricClass,
@@ -174,6 +176,7 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
         ) : (
           <AgencyTaskVirtualList
             clientGroups={view.clientGroups}
+            allTasks={view.allListedTasks}
             collapsedClients={view.collapsedClients}
             projects={view.projects}
             teamId={view.teamId}
@@ -255,21 +258,44 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
                   className="max-h-48 overflow-x-hidden overflow-y-auto border-t border-default"
                   aria-label="Done tasks"
                 >
-                  {view.doneTasks.map((task) => (
-                    <AgencyTaskRowView
-                      key={task.id}
-                      task={task}
-                      projects={view.projects}
-                      teamId={view.teamId}
-                      selectedTaskId={view.selectedTaskId}
-                      highlight={view.recentlyCompletedTaskId === task.id}
-                      readOnly
-                      isRowPending={view.isRowPending(task.id) || view.create.isCreatingTask}
-                      onSelect={view.onSelect}
-                      onSelectProject={view.onSelectProject}
-                      onReopenToActive={view.onReopenDoneTask}
-                    />
-                  ))}
+                  {view.doneTasks.map((task) =>
+                    isJourneyTaskKind(task.taskKind) ? (
+                      <AgencyTaskDisplayRowView
+                        key={task.id}
+                        row={{
+                          task,
+                          blueprintId: null,
+                          blueprintDescription: "",
+                          rowKey: task.id,
+                          rowKind: task.taskKind,
+                        }}
+                        allTasks={view.allListedTasks}
+                        projects={view.projects}
+                        teamId={view.teamId}
+                        selectedTaskId={view.selectedTaskId}
+                        highlight={view.recentlyCompletedTaskId === task.id}
+                        readOnly
+                        isRowPending={view.isRowPending(task.id) || view.create.isCreatingTask}
+                        onSelect={view.onSelect}
+                        onSelectProject={view.onSelectProject}
+                        onReopenToActive={view.onReopenDoneTask}
+                      />
+                    ) : (
+                      <AgencyTaskRowView
+                        key={task.id}
+                        task={task}
+                        projects={view.projects}
+                        teamId={view.teamId}
+                        selectedTaskId={view.selectedTaskId}
+                        highlight={view.recentlyCompletedTaskId === task.id}
+                        readOnly
+                        isRowPending={view.isRowPending(task.id) || view.create.isCreatingTask}
+                        onSelect={view.onSelect}
+                        onSelectProject={view.onSelectProject}
+                        onReopenToActive={view.onReopenDoneTask}
+                      />
+                    ),
+                  )}
                 </ul>
               )}
             </div>

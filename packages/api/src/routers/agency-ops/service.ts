@@ -9,6 +9,8 @@ import {
   agencyOpsMemberCapacity,
   agencyOpsMemberRate,
   agencyOpsProject,
+  agencyOpsProjectJourney,
+  agencyOpsProjectJourneyStep,
   agencyOpsProjectTask,
   agencyOpsProjectTaskAssignee,
   agencyOpsProjectTaskBlueprint,
@@ -22,7 +24,7 @@ import {
 } from "@brainiac/db/schema";
 import { createWorkspaceId, type WorkspaceTeamRole } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
-import { and, asc, desc, eq, exists, gte, inArray, isNull, lt, lte, or, sql, sum } from "drizzle-orm";
+import { and, asc, count, desc, eq, exists, gte, inArray, isNull, lt, lte, or, sql, sum } from "drizzle-orm";
 
 import {
   createTaskAttachmentUploadToken,
@@ -33,7 +35,7 @@ import {
   verifyTaskAttachmentUploadToken,
 } from "../../storage";
 import { applyMemberTaskCompletion } from "../../schemas/agency-ops";
-import { liveUpdatedAt, publishAgencyLiveEvent } from "./live";
+import { liveUpdatedAt, publishAgencyJourneyStepUpdated, publishAgencyLiveEvent } from "./live";
 import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
 
 const AVATAR_KEY_PREFIX = "user-avatars/";
@@ -94,6 +96,7 @@ type AgencyProjectTaskRecord = {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
+  taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
@@ -102,6 +105,30 @@ type AgencyProjectTaskRecord = {
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+type AgencyProjectJourneyStepRecord = {
+  id: string;
+  journeyId: string;
+  sortOrder: number;
+  label: string;
+  stepKind: "start" | "milestone" | "checkpoint" | "destination";
+  status: "planned" | "active" | "done" | "blocked";
+  taskId: string | null;
+  task?: AgencyProjectTaskRecord | null;
+  timeEntryCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type AgencyProjectJourneyRecord = {
+  id: string;
+  projectId: string;
+  createdAt: string;
+  updatedAt: string;
+  steps: AgencyProjectJourneyStepRecord[];
+  completedSteps: number;
+  totalSteps: number;
 };
 
 type MemberStatusEntry = {
@@ -409,6 +436,7 @@ function mapProjectTaskRow(row: {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
+  taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
@@ -424,6 +452,7 @@ function mapProjectTaskRow(row: {
     projectId: row.projectId,
     title: row.title,
     status: row.status,
+    taskKind: row.taskKind,
     assignedToTeam: row.assignedToTeam,
     assignees: row.assignees,
     ...(row.viewerStatus !== undefined ? { viewerStatus: row.viewerStatus } : {}),
@@ -644,6 +673,7 @@ async function buildProjectTaskRecord(
     projectId: string;
     title: string;
     status: "open" | "in_progress" | "done" | "archived";
+    taskKind: "standard" | "journey_anchor" | "journey_milestone";
     assignedToTeam: boolean;
     dueDate: Date | null;
     createdAt: Date;
@@ -741,6 +771,7 @@ const projectTaskColumns = {
   projectId: agencyOpsProjectTask.projectId,
   title: agencyOpsProjectTask.title,
   status: agencyOpsProjectTask.status,
+  taskKind: agencyOpsProjectTask.taskKind,
   assignedToTeam: agencyOpsProjectTask.assignedToTeam,
   dueDate: agencyOpsProjectTask.dueDate,
   createdAt: agencyOpsProjectTask.createdAt,
@@ -753,6 +784,7 @@ type ProjectTaskRow = {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
+  taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   dueDate: Date | null;
   createdAt: Date;
@@ -1221,6 +1253,821 @@ export async function createAgencyProject(
   });
 }
 
+async function getJourneyRowForProject(teamId: string, projectId: string) {
+  const [row] = await db
+    .select({
+      id: agencyOpsProjectJourney.id,
+      projectId: agencyOpsProjectJourney.projectId,
+      createdAt: agencyOpsProjectJourney.createdAt,
+      updatedAt: agencyOpsProjectJourney.updatedAt,
+    })
+    .from(agencyOpsProjectJourney)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectJourney.projectId))
+    .where(and(eq(agencyOpsProjectJourney.projectId, projectId), eq(agencyOpsProject.teamId, teamId)))
+    .limit(1);
+
+  if (!row) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Project journey was not found.",
+    });
+  }
+
+  return row;
+}
+
+function isJourneyStepComplete(
+  step: {
+    stepKind: "start" | "milestone" | "checkpoint" | "destination";
+    taskId: string | null;
+  },
+  task: ProjectTaskRow | null,
+  assignees: AgencyProjectTaskAssigneeRecord[],
+): boolean {
+  switch (step.stepKind) {
+    case "start":
+      return true;
+    case "destination":
+      return false;
+    case "milestone":
+    case "checkpoint":
+      if (task?.status === "done") return true;
+      if (assignees.length > 0 && assignees.every((assignee) => assignee.status === "done")) {
+        return true;
+      }
+      return false;
+    default: {
+      const _exhaustive: never = step.stepKind;
+      return _exhaustive;
+    }
+  }
+}
+
+function deriveJourneyStepStatuses(
+  steps: Array<{
+    id: string;
+    sortOrder: number;
+    stepKind: "start" | "milestone" | "checkpoint" | "destination";
+    taskId: string | null;
+    status: "planned" | "active" | "done" | "blocked";
+  }>,
+  tasksById: Map<string, ProjectTaskRow>,
+  assigneesByTask: Map<string, AgencyProjectTaskAssigneeRecord[]>,
+): Map<string, "planned" | "active" | "done" | "blocked"> {
+  const result = new Map<string, "planned" | "active" | "done" | "blocked">();
+  const sorted = [...steps].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const completionById = new Map<string, boolean>();
+  for (const step of sorted) {
+    if (step.stepKind === "destination") continue;
+    const task = step.taskId ? (tasksById.get(step.taskId) ?? null) : null;
+    const assignees = step.taskId ? (assigneesByTask.get(step.taskId) ?? []) : [];
+    completionById.set(step.id, isJourneyStepComplete(step, task, assignees));
+  }
+
+  let foundActive = false;
+  for (const step of sorted) {
+    if (step.status === "blocked") {
+      result.set(step.id, "blocked");
+      continue;
+    }
+
+    if (step.stepKind === "destination") {
+      const priorDone = sorted
+        .filter((candidate) => candidate.stepKind !== "destination")
+        .every((candidate) => completionById.get(candidate.id));
+      result.set(step.id, priorDone ? "done" : "planned");
+      continue;
+    }
+
+    const complete = completionById.get(step.id) ?? false;
+    if (complete) {
+      result.set(step.id, "done");
+      continue;
+    }
+
+    if (!foundActive) {
+      result.set(step.id, "active");
+      foundActive = true;
+    } else {
+      result.set(step.id, "planned");
+    }
+  }
+
+  return result;
+}
+
+async function loadJourneyStepTimeEntryCounts(stepIds: string[]) {
+  const counts = new Map<string, number>();
+  if (stepIds.length === 0) return counts;
+
+  const rows = await db
+    .select({
+      journeyStepId: agencyOpsTimeEntry.journeyStepId,
+      entryCount: count(),
+    })
+    .from(agencyOpsTimeEntry)
+    .where(
+      and(inArray(agencyOpsTimeEntry.journeyStepId, stepIds), isNull(agencyOpsTimeEntry.deletedAt)),
+    )
+    .groupBy(agencyOpsTimeEntry.journeyStepId);
+
+  for (const row of rows) {
+    if (row.journeyStepId) {
+      counts.set(row.journeyStepId, Number(row.entryCount));
+    }
+  }
+
+  return counts;
+}
+
+async function syncJourneyStepStatuses(teamId: string, projectId: string) {
+  const journey = await getJourneyRowForProject(teamId, projectId);
+  const steps = await db
+    .select({
+      id: agencyOpsProjectJourneyStep.id,
+      sortOrder: agencyOpsProjectJourneyStep.sortOrder,
+      stepKind: agencyOpsProjectJourneyStep.stepKind,
+      status: agencyOpsProjectJourneyStep.status,
+      taskId: agencyOpsProjectJourneyStep.taskId,
+    })
+    .from(agencyOpsProjectJourneyStep)
+    .where(eq(agencyOpsProjectJourneyStep.journeyId, journey.id))
+    .orderBy(asc(agencyOpsProjectJourneyStep.sortOrder));
+
+  const taskIds = steps.map((step) => step.taskId).filter((taskId): taskId is string => Boolean(taskId));
+  const tasksById = new Map<string, ProjectTaskRow>();
+  if (taskIds.length > 0) {
+    const taskRows = await db
+      .select(projectTaskColumns)
+      .from(agencyOpsProjectTask)
+      .where(
+        and(eq(agencyOpsProjectTask.teamId, teamId), inArray(agencyOpsProjectTask.id, taskIds)),
+      );
+    for (const task of taskRows) {
+      tasksById.set(task.id, task);
+    }
+  }
+
+  const assigneesByTask = await loadTaskAssignees(taskIds);
+  const derived = deriveJourneyStepStatuses(steps, tasksById, assigneesByTask);
+  const now = new Date();
+  let changed = false;
+
+  for (const step of steps) {
+    const nextStatus = derived.get(step.id);
+    if (!nextStatus || nextStatus === step.status) continue;
+    changed = true;
+    await db
+      .update(agencyOpsProjectJourneyStep)
+      .set({ status: nextStatus, updatedAt: now })
+      .where(eq(agencyOpsProjectJourneyStep.id, step.id));
+  }
+
+  if (changed) {
+    await db
+      .update(agencyOpsProjectJourney)
+      .set({ updatedAt: now })
+      .where(eq(agencyOpsProjectJourney.id, journey.id));
+  }
+
+  return changed;
+}
+
+async function maybeSyncJourneyForTask(teamId: string, taskId: string) {
+  const [step] = await db
+    .select({ projectId: agencyOpsProjectJourney.projectId })
+    .from(agencyOpsProjectJourneyStep)
+    .innerJoin(
+      agencyOpsProjectJourney,
+      eq(agencyOpsProjectJourney.id, agencyOpsProjectJourneyStep.journeyId),
+    )
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectJourney.projectId))
+    .where(
+      and(eq(agencyOpsProjectJourneyStep.taskId, taskId), eq(agencyOpsProject.teamId, teamId)),
+    )
+    .limit(1);
+
+  if (!step) return;
+
+  const changed = await syncJourneyStepStatuses(teamId, step.projectId);
+  if (changed) {
+    await publishAgencyJourneyStepUpdated(teamId, step.projectId);
+  }
+}
+
+async function buildAgencyProjectJourneyRecord(
+  teamId: string,
+  projectId: string,
+  actorUserId?: string,
+): Promise<AgencyProjectJourneyRecord> {
+  const journey = await getJourneyRowForProject(teamId, projectId);
+  await syncJourneyStepStatuses(teamId, projectId);
+
+  const stepRows = await db
+    .select({
+      id: agencyOpsProjectJourneyStep.id,
+      journeyId: agencyOpsProjectJourneyStep.journeyId,
+      sortOrder: agencyOpsProjectJourneyStep.sortOrder,
+      label: agencyOpsProjectJourneyStep.label,
+      stepKind: agencyOpsProjectJourneyStep.stepKind,
+      status: agencyOpsProjectJourneyStep.status,
+      taskId: agencyOpsProjectJourneyStep.taskId,
+      createdAt: agencyOpsProjectJourneyStep.createdAt,
+      updatedAt: agencyOpsProjectJourneyStep.updatedAt,
+    })
+    .from(agencyOpsProjectJourneyStep)
+    .where(eq(agencyOpsProjectJourneyStep.journeyId, journey.id))
+    .orderBy(asc(agencyOpsProjectJourneyStep.sortOrder));
+
+  const taskIds = stepRows
+    .map((step) => step.taskId)
+    .filter((taskId): taskId is string => Boolean(taskId));
+  const tasksById = new Map<string, ProjectTaskRow>();
+  if (taskIds.length > 0) {
+    const taskRows = await db
+      .select(projectTaskColumns)
+      .from(agencyOpsProjectTask)
+      .where(
+        and(eq(agencyOpsProjectTask.teamId, teamId), inArray(agencyOpsProjectTask.id, taskIds)),
+      );
+    for (const task of taskRows) {
+      tasksById.set(task.id, task);
+    }
+  }
+
+  const assigneesByTask = await loadTaskAssignees(taskIds);
+  const memberStatusesByTask = actorUserId ? await loadTaskMemberStatuses(taskIds) : undefined;
+  const blueprintsByTask =
+    actorUserId && taskIds.length > 0
+      ? await loadTaskBlueprintsForViewer(taskIds, actorUserId)
+      : undefined;
+  const entryCounts = await loadJourneyStepTimeEntryCounts(stepRows.map((step) => step.id));
+
+  const steps: AgencyProjectJourneyStepRecord[] = await Promise.all(
+    stepRows.map(async (step) => {
+      const taskRow = step.taskId ? (tasksById.get(step.taskId) ?? null) : null;
+      const task = taskRow
+        ? await buildProjectTaskRecord(
+            taskRow,
+            assigneesByTask.get(taskRow.id) ?? [],
+            actorUserId,
+            memberStatusesByTask?.get(taskRow.id),
+            blueprintsByTask?.get(taskRow.id),
+          )
+        : null;
+
+      return {
+        id: step.id,
+        journeyId: step.journeyId,
+        sortOrder: step.sortOrder,
+        label: step.label,
+        stepKind: step.stepKind,
+        status: step.status,
+        taskId: step.taskId,
+        ...(task ? { task } : {}),
+        timeEntryCount: entryCounts.get(step.id) ?? 0,
+        createdAt: step.createdAt.toISOString(),
+        updatedAt: step.updatedAt.toISOString(),
+      };
+    }),
+  );
+
+  const completedSteps = steps.filter((step) => step.status === "done").length;
+
+  return {
+    id: journey.id,
+    projectId: journey.projectId,
+    createdAt: journey.createdAt.toISOString(),
+    updatedAt: journey.updatedAt.toISOString(),
+    steps,
+    completedSteps,
+    totalSteps: steps.length,
+  };
+}
+
+async function insertJourneyLinkedTask(
+  tx: DbTransaction,
+  args: {
+    teamId: string;
+    projectId: string;
+    actorUserId: string;
+    title: string;
+    taskKind: "journey_anchor" | "journey_milestone";
+    assigneeUserIds: string[];
+    now: Date;
+  },
+) {
+  const taskId = createWorkspaceId("agency-project-task");
+  const [task] = await tx
+    .insert(agencyOpsProjectTask)
+    .values({
+      id: taskId,
+      teamId: args.teamId,
+      projectId: args.projectId,
+      title: args.title,
+      status: "open",
+      taskKind: args.taskKind,
+      assignedToTeam: false,
+      createdByUserId: args.actorUserId,
+      createdAt: args.now,
+      updatedAt: args.now,
+    })
+    .returning(projectTaskColumns);
+
+  if (!task) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
+  }
+
+  if (args.assigneeUserIds.length > 0) {
+    await setTaskAssignees(tx, task.id, args.assigneeUserIds);
+  }
+
+  await tx.insert(agencyOpsTaskThread).values({
+    id: createWorkspaceId("agency-task-thread"),
+    teamId: args.teamId,
+    taskId: task.id,
+    createdAt: args.now,
+    updatedAt: args.now,
+  });
+
+  return task;
+}
+
+async function resolveJourneyStepIdForTask(teamId: string, taskId: string | null | undefined) {
+  if (!taskId) return null;
+
+  const [step] = await db
+    .select({ id: agencyOpsProjectJourneyStep.id })
+    .from(agencyOpsProjectJourneyStep)
+    .innerJoin(
+      agencyOpsProjectJourney,
+      eq(agencyOpsProjectJourney.id, agencyOpsProjectJourneyStep.journeyId),
+    )
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectJourney.projectId))
+    .where(
+      and(eq(agencyOpsProjectJourneyStep.taskId, taskId), eq(agencyOpsProject.teamId, teamId)),
+    )
+    .limit(1);
+
+  return step?.id ?? null;
+}
+
+export async function createAgencyProjectWithJourney(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    clientId: string;
+    name: string;
+    milestones: Array<{
+      title: string;
+      assigneeUserIds: string[];
+    }>;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  await getClientByIdForTeam(input.teamId, input.clientId);
+
+  if (input.milestones.length === 0) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Add at least one milestone.",
+    });
+  }
+
+  const projectName = input.name.trim();
+  const now = new Date();
+  const projectId = createWorkspaceId("agency-project");
+  const journeyId = createWorkspaceId("agency-project-journey");
+  const allAssigneeIds = new Set<string>();
+
+  for (const milestone of input.milestones) {
+    const title = milestone.title.trim();
+    if (!title) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Milestone title is required.",
+      });
+    }
+    for (const userId of milestone.assigneeUserIds) {
+      await requireTeamMember(input.teamId, userId);
+      allAssigneeIds.add(userId);
+    }
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.insert(agencyOpsProject).values({
+      id: projectId,
+      teamId: input.teamId,
+      clientId: input.clientId,
+      name: projectName,
+      createdByUserId: actorUserId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await tx.insert(agencyOpsProjectJourney).values({
+      id: journeyId,
+      projectId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await tx.insert(agencyOpsProjectJourneyStep).values({
+      id: createWorkspaceId("agency-journey-step"),
+      journeyId,
+      sortOrder: 0,
+      label: "Start",
+      stepKind: "start",
+      status: "done",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    let sortOrder = 1;
+    for (const milestone of input.milestones) {
+      const task = await insertJourneyLinkedTask(tx, {
+        teamId: input.teamId,
+        projectId,
+        actorUserId,
+        title: milestone.title.trim(),
+        taskKind: "journey_milestone",
+        assigneeUserIds: [...new Set(milestone.assigneeUserIds)],
+        now,
+      });
+
+      await tx.insert(agencyOpsProjectJourneyStep).values({
+        id: createWorkspaceId("agency-journey-step"),
+        journeyId,
+        sortOrder,
+        label: milestone.title.trim(),
+        stepKind: "milestone",
+        status: "planned",
+        taskId: task.id,
+        createdAt: now,
+        updatedAt: now,
+      });
+      sortOrder += 1;
+    }
+
+    await tx.insert(agencyOpsProjectJourneyStep).values({
+      id: createWorkspaceId("agency-journey-step"),
+      journeyId,
+      sortOrder,
+      label: "Destination",
+      stepKind: "destination",
+      status: "planned",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await insertJourneyLinkedTask(tx, {
+      teamId: input.teamId,
+      projectId,
+      actorUserId,
+      title: projectName,
+      taskKind: "journey_anchor",
+      assigneeUserIds: [...allAssigneeIds],
+      now,
+    });
+  });
+
+  await syncJourneyStepStatuses(input.teamId, projectId);
+  await publishAgencyJourneyStepUpdated(input.teamId, projectId);
+
+  const [client] = await db
+    .select({ name: agencyOpsClient.name })
+    .from(agencyOpsClient)
+    .where(eq(agencyOpsClient.id, input.clientId))
+    .limit(1);
+
+  const [createdProject] = await db
+    .select({
+      id: agencyOpsProject.id,
+      teamId: agencyOpsProject.teamId,
+      clientId: agencyOpsProject.clientId,
+      name: agencyOpsProject.name,
+      createdAt: agencyOpsProject.createdAt,
+      updatedAt: agencyOpsProject.updatedAt,
+    })
+    .from(agencyOpsProject)
+    .where(eq(agencyOpsProject.id, projectId))
+    .limit(1);
+
+  if (!createdProject) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
+  }
+
+  return {
+    project: mapProjectRow({
+      ...createdProject,
+      clientName: client?.name ?? "Unknown",
+    }),
+    journey: await buildAgencyProjectJourneyRecord(input.teamId, projectId, actorUserId),
+  };
+}
+
+export async function getAgencyProjectJourney(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
+  return buildAgencyProjectJourneyRecord(input.teamId, input.projectId, actorUserId);
+}
+
+export async function updateAgencyProjectJourneySteps(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+    steps: Array<{
+      id: string;
+      sortOrder?: number;
+      label?: string;
+    }>;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
+  const journey = await getJourneyRowForProject(input.teamId, input.projectId);
+
+  const existingSteps = await db
+    .select({
+      id: agencyOpsProjectJourneyStep.id,
+      stepKind: agencyOpsProjectJourneyStep.stepKind,
+    })
+    .from(agencyOpsProjectJourneyStep)
+    .where(eq(agencyOpsProjectJourneyStep.journeyId, journey.id));
+
+  const existingIds = new Set(existingSteps.map((step) => step.id));
+  for (const step of input.steps) {
+    if (!existingIds.has(step.id)) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Journey step was not found.",
+      });
+    }
+  }
+
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    for (const step of input.steps) {
+      const patch: {
+        sortOrder?: number;
+        label?: string;
+        updatedAt: Date;
+      } = { updatedAt: now };
+      if (step.sortOrder !== undefined) patch.sortOrder = step.sortOrder;
+      if (step.label !== undefined) {
+        const trimmed = step.label.trim();
+        if (!trimmed) {
+          throw new ORPCError("BAD_REQUEST", {
+            message: "Step label is required.",
+          });
+        }
+        patch.label = trimmed;
+      }
+      if (patch.sortOrder === undefined && patch.label === undefined) continue;
+
+      await tx
+        .update(agencyOpsProjectJourneyStep)
+        .set(patch)
+        .where(
+          and(
+            eq(agencyOpsProjectJourneyStep.id, step.id),
+            eq(agencyOpsProjectJourneyStep.journeyId, journey.id),
+          ),
+        );
+    }
+
+    await tx
+      .update(agencyOpsProjectJourney)
+      .set({ updatedAt: now })
+      .where(eq(agencyOpsProjectJourney.id, journey.id));
+  });
+
+  await syncJourneyStepStatuses(input.teamId, input.projectId);
+  await publishAgencyJourneyStepUpdated(input.teamId, input.projectId);
+  return buildAgencyProjectJourneyRecord(input.teamId, input.projectId, actorUserId);
+}
+
+export async function addAgencyProjectJourneyStep(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+    label: string;
+    assigneeUserIds?: string[];
+    sortOrder?: number;
+    stepKind?: "milestone" | "checkpoint";
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
+  const journey = await getJourneyRowForProject(input.teamId, input.projectId);
+
+  const label = input.label.trim();
+  if (!label) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Step label is required.",
+    });
+  }
+
+  const stepKind = input.stepKind ?? "milestone";
+  const assigneeUserIds = [...new Set(input.assigneeUserIds ?? [])];
+  for (const userId of assigneeUserIds) {
+    await requireTeamMember(input.teamId, userId);
+  }
+
+  const existingSteps = await db
+    .select({
+      id: agencyOpsProjectJourneyStep.id,
+      sortOrder: agencyOpsProjectJourneyStep.sortOrder,
+      stepKind: agencyOpsProjectJourneyStep.stepKind,
+    })
+    .from(agencyOpsProjectJourneyStep)
+    .where(eq(agencyOpsProjectJourneyStep.journeyId, journey.id))
+    .orderBy(asc(agencyOpsProjectJourneyStep.sortOrder));
+
+  const destinationIndex = existingSteps.findIndex((step) => step.stepKind === "destination");
+  const insertAt =
+    input.sortOrder ??
+    (destinationIndex >= 0 ? existingSteps[destinationIndex]!.sortOrder : existingSteps.length);
+
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    for (const step of existingSteps) {
+      if (step.sortOrder >= insertAt && step.stepKind !== "destination") {
+        await tx
+          .update(agencyOpsProjectJourneyStep)
+          .set({ sortOrder: step.sortOrder + 1, updatedAt: now })
+          .where(eq(agencyOpsProjectJourneyStep.id, step.id));
+      }
+      if (step.stepKind === "destination" && step.sortOrder >= insertAt) {
+        await tx
+          .update(agencyOpsProjectJourneyStep)
+          .set({ sortOrder: step.sortOrder + 1, updatedAt: now })
+          .where(eq(agencyOpsProjectJourneyStep.id, step.id));
+      }
+    }
+
+    const task = await insertJourneyLinkedTask(tx, {
+      teamId: input.teamId,
+      projectId: input.projectId,
+      actorUserId,
+      title: label,
+      taskKind: "journey_milestone",
+      assigneeUserIds,
+      now,
+    });
+
+    await tx.insert(agencyOpsProjectJourneyStep).values({
+      id: createWorkspaceId("agency-journey-step"),
+      journeyId: journey.id,
+      sortOrder: insertAt,
+      label,
+      stepKind,
+      status: "planned",
+      taskId: task.id,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await tx
+      .update(agencyOpsProjectJourney)
+      .set({ updatedAt: now })
+      .where(eq(agencyOpsProjectJourney.id, journey.id));
+  });
+
+  await syncJourneyStepStatuses(input.teamId, input.projectId);
+  await publishAgencyJourneyStepUpdated(input.teamId, input.projectId);
+  return buildAgencyProjectJourneyRecord(input.teamId, input.projectId, actorUserId);
+}
+
+export async function previewRemoveAgencyProjectJourneyStep(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+    stepId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
+  const journey = await getJourneyRowForProject(input.teamId, input.projectId);
+
+  const [step] = await db
+    .select({
+      id: agencyOpsProjectJourneyStep.id,
+      label: agencyOpsProjectJourneyStep.label,
+      stepKind: agencyOpsProjectJourneyStep.stepKind,
+    })
+    .from(agencyOpsProjectJourneyStep)
+    .where(
+      and(
+        eq(agencyOpsProjectJourneyStep.id, input.stepId),
+        eq(agencyOpsProjectJourneyStep.journeyId, journey.id),
+      ),
+    )
+    .limit(1);
+
+  if (!step) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Journey step was not found.",
+    });
+  }
+
+  if (step.stepKind === "start" || step.stepKind === "destination") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Start and destination steps cannot be removed.",
+    });
+  }
+
+  const [countRow] = await db
+    .select({ entryCount: count() })
+    .from(agencyOpsTimeEntry)
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.journeyStepId, step.id),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    );
+
+  return {
+    stepId: step.id,
+    label: step.label,
+    timeEntryCount: Number(countRow?.entryCount ?? 0),
+  };
+}
+
+export async function removeAgencyProjectJourneyStep(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+    stepId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
+  const journey = await getJourneyRowForProject(input.teamId, input.projectId);
+
+  const [step] = await db
+    .select({
+      id: agencyOpsProjectJourneyStep.id,
+      taskId: agencyOpsProjectJourneyStep.taskId,
+      stepKind: agencyOpsProjectJourneyStep.stepKind,
+    })
+    .from(agencyOpsProjectJourneyStep)
+    .where(
+      and(
+        eq(agencyOpsProjectJourneyStep.id, input.stepId),
+        eq(agencyOpsProjectJourneyStep.journeyId, journey.id),
+      ),
+    )
+    .limit(1);
+
+  if (!step) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Journey step was not found.",
+    });
+  }
+
+  if (step.stepKind === "start" || step.stepKind === "destination") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Start and destination steps cannot be removed.",
+    });
+  }
+
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    await tx
+      .update(agencyOpsTimeEntry)
+      .set({ journeyStepId: null, updatedAt: now })
+      .where(eq(agencyOpsTimeEntry.journeyStepId, step.id));
+
+    if (step.taskId) {
+      await tx
+        .update(agencyOpsProjectTask)
+        .set({ taskKind: "standard", updatedAt: now })
+        .where(eq(agencyOpsProjectTask.id, step.taskId));
+    }
+
+    await tx
+      .delete(agencyOpsProjectJourneyStep)
+      .where(eq(agencyOpsProjectJourneyStep.id, step.id));
+
+    await tx
+      .update(agencyOpsProjectJourney)
+      .set({ updatedAt: now })
+      .where(eq(agencyOpsProjectJourney.id, journey.id));
+  });
+
+  await syncJourneyStepStatuses(input.teamId, input.projectId);
+  await publishAgencyJourneyStepUpdated(input.teamId, input.projectId);
+  return buildAgencyProjectJourneyRecord(input.teamId, input.projectId, actorUserId);
+}
+
 export async function updateAgencyProject(
   actorUserId: string,
   input: {
@@ -1391,6 +2238,7 @@ export async function listAgencyProjectTasks(
       projectId: agencyOpsProjectTask.projectId,
       title: agencyOpsProjectTask.title,
       status: agencyOpsProjectTask.status,
+      taskKind: agencyOpsProjectTask.taskKind,
       assignedToTeam: agencyOpsProjectTask.assignedToTeam,
       dueDate: agencyOpsProjectTask.dueDate,
       createdAt: agencyOpsProjectTask.createdAt,
@@ -1439,6 +2287,7 @@ async function getTaskByIdForTeam(teamId: string, taskId: string) {
       projectId: agencyOpsProjectTask.projectId,
       title: agencyOpsProjectTask.title,
       status: agencyOpsProjectTask.status,
+      taskKind: agencyOpsProjectTask.taskKind,
       assignedToTeam: agencyOpsProjectTask.assignedToTeam,
       dueDate: agencyOpsProjectTask.dueDate,
       createdAt: agencyOpsProjectTask.createdAt,
@@ -1644,6 +2493,8 @@ export async function completeAgencyProjectTaskForMember(
   const memberStatuses = await loadTaskMemberStatuses([current.id]);
   const blueprintsByTask = await loadTaskBlueprintsForViewer([current.id], actorUserId);
 
+  await maybeSyncJourneyForTask(input.teamId, input.taskId);
+
   return buildProjectTaskRecord(
     current,
     assigneesByTask.get(current.id) ?? [],
@@ -1790,6 +2641,10 @@ export async function updateAgencyProjectTask(
 
   if (!updated) {
     throw new ORPCError("NOT_FOUND");
+  }
+
+  if (input.status === "done") {
+    await maybeSyncJourneyForTask(input.teamId, input.taskId);
   }
 
   const assigneesByTask = await loadTaskAssignees([updated.id]);
@@ -2588,12 +3443,14 @@ export async function startAgencyTimer(
       if (existing.taskId) {
         const durationSeconds = getDurationSeconds(existing.startedAt, now);
         rolledOverEntryId = createWorkspaceId("agency-time");
+        const journeyStepId = await resolveJourneyStepIdForTask(existing.teamId, existing.taskId);
 
         await tx.insert(agencyOpsTimeEntry).values({
           id: rolledOverEntryId,
           teamId: existing.teamId,
           projectId: existing.projectId,
           taskId: existing.taskId,
+          journeyStepId,
           userId: actorUserId,
           source: "timer",
           description: existing.description,
@@ -2774,6 +3631,7 @@ export async function stopAgencyTimer(
   }
 
   const [entry] = await db.transaction(async (tx) => {
+    const journeyStepId = await resolveJourneyStepIdForTask(active.teamId, taskId);
     const [created] = await tx
       .insert(agencyOpsTimeEntry)
       .values({
@@ -2781,6 +3639,7 @@ export async function stopAgencyTimer(
         teamId: active.teamId,
         projectId: active.projectId,
         taskId,
+        journeyStepId,
         userId: actorUserId,
         source: "timer",
         description,
@@ -3796,6 +4655,7 @@ export async function createManualAgencyTimeEntry(
 
   const now = new Date();
   const durationSeconds = getDurationSeconds(startAt, endAt);
+  const journeyStepId = await resolveJourneyStepIdForTask(input.teamId, input.taskId ?? null);
 
   const [created] = await db
     .insert(agencyOpsTimeEntry)
@@ -3804,6 +4664,7 @@ export async function createManualAgencyTimeEntry(
       teamId: input.teamId,
       projectId,
       taskId: input.taskId ?? null,
+      journeyStepId,
       userId: actorUserId,
       source: "manual",
       description: input.description?.trim() ?? "",

@@ -31,6 +31,7 @@ export type AgencyOptimisticTask = {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
+  taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   assignees: Array<{
     userId: string;

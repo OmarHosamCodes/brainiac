@@ -1,4 +1,10 @@
 import type { AgencyProjectTask } from "@/lib/schemas/agency-work";
+import {
+  isJourneyAnchorTask,
+  isJourneyMilestoneTask,
+  shouldShowJourneyAnchor,
+  type JourneyProgressSummary,
+} from "@/lib/utils/agency-task-journey";
 
 export type AgencyTaskBlueprintEntry = {
   id: string;
@@ -9,11 +15,21 @@ export type AgencyTaskBlueprintEntry = {
 /** Stable fallback for zustand selectors — never use inline `?? []`. */
 export const EMPTY_TASK_BLUEPRINTS: AgencyTaskBlueprintEntry[] = [];
 
+export type AgencyTaskDisplayRowKind = "standard" | "journey_anchor" | "journey_milestone";
+
 export type AgencyTaskDisplayRow = {
   task: AgencyProjectTask;
   blueprintId: string | null;
   blueprintDescription: string;
   rowKey: string;
+  rowKind: AgencyTaskDisplayRowKind;
+  journeyProgress?: JourneyProgressSummary;
+};
+
+export type ExpandTasksWithBlueprintsOptions = {
+  currentUserId?: string;
+  allTasks?: AgencyProjectTask[];
+  journeyProgressByProjectId?: Map<string, JourneyProgressSummary>;
 };
 
 export function collectTaskBlueprintsFromTasks(
@@ -32,10 +48,18 @@ export function collectTaskBlueprintsFromTasks(
   return entries;
 }
 
+function resolveRowKind(task: AgencyProjectTask): AgencyTaskDisplayRowKind {
+  if (isJourneyAnchorTask(task)) return "journey_anchor";
+  if (isJourneyMilestoneTask(task)) return "journey_milestone";
+  return "standard";
+}
+
 export function expandTasksWithBlueprints(
   tasks: AgencyProjectTask[],
   blueprints: AgencyTaskBlueprintEntry[],
+  options: ExpandTasksWithBlueprintsOptions = {},
 ): AgencyTaskDisplayRow[] {
+  const { currentUserId = "", allTasks = tasks, journeyProgressByProjectId } = options;
   const byTaskId = new Map<string, AgencyTaskBlueprintEntry[]>();
 
   for (const blueprint of blueprints) {
@@ -47,6 +71,24 @@ export function expandTasksWithBlueprints(
   const rows: AgencyTaskDisplayRow[] = [];
 
   for (const task of tasks) {
+    if (isJourneyAnchorTask(task) && !shouldShowJourneyAnchor(task, allTasks, currentUserId)) {
+      continue;
+    }
+
+    const rowKind = resolveRowKind(task);
+
+    if (isJourneyAnchorTask(task)) {
+      rows.push({
+        task,
+        blueprintId: null,
+        blueprintDescription: "",
+        rowKey: task.id,
+        rowKind,
+        journeyProgress: journeyProgressByProjectId?.get(task.projectId),
+      });
+      continue;
+    }
+
     const entries = byTaskId.get(task.id) ?? [];
     if (entries.length === 0) {
       rows.push({
@@ -54,6 +96,7 @@ export function expandTasksWithBlueprints(
         blueprintId: null,
         blueprintDescription: "",
         rowKey: task.id,
+        rowKind,
       });
       continue;
     }
@@ -64,6 +107,7 @@ export function expandTasksWithBlueprints(
         blueprintId: blueprint.id,
         blueprintDescription: blueprint.description,
         rowKey: blueprint.id,
+        rowKind,
       });
     }
   }

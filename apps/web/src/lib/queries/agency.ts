@@ -283,6 +283,21 @@ export function useAgencyTaskThreadContextQuery(teamId: string, taskId: string) 
   );
 }
 
+export function useAgencyProjectJourneyQuery(teamId: string, projectId: string) {
+  return useQuery(
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.projects.journey.get.queryOptions({
+          input: { teamId, projectId },
+        }),
+        enabled: Boolean(teamId) && Boolean(projectId),
+        placeholderData: keepPreviousData,
+      },
+      "warm",
+    ),
+  );
+}
+
 export function useAgencyTaskMessagesInfiniteQuery(teamId: string, taskId: string, pageSize = 50) {
   const registerTaskMessagesQuery = useAgencyTaskMessagesStore(
     (s) => s.registerTaskMessagesQuery,

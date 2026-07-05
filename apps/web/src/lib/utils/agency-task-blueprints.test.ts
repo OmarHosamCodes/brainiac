@@ -8,6 +8,7 @@ const baseTask = {
   projectId: "proj-1",
   title: "Meeting",
   status: "open" as const,
+  taskKind: "standard" as const,
   assignedToTeam: false,
   assignees: [],
   dueDate: null,
@@ -39,6 +40,7 @@ describe("expandTasksWithBlueprints", () => {
         blueprintId: null,
         blueprintDescription: "",
         rowKey: "task-1",
+        rowKind: "standard",
       },
     ]);
   });

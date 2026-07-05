@@ -15,6 +15,7 @@ type AgencyProjectTask = {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
+  taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   assignees: Array<{
     userId: string;
@@ -128,6 +129,19 @@ export function isAgencyProjectsListQueryKey(queryKey: QueryKey, teamId: string)
   const path = getOrpcQueryPath(queryKey);
   if (!isAgencyOpsPath(path, "agencyOps", "projects", "list")) return false;
   return getOrpcQueryMeta(queryKey)?.input?.teamId === teamId;
+}
+
+export function isAgencyProjectJourneyQueryKey(
+  queryKey: QueryKey,
+  teamId: string,
+  projectId?: string,
+) {
+  const path = getOrpcQueryPath(queryKey);
+  if (!isAgencyOpsPath(path, "agencyOps", "projects", "journey", "get")) return false;
+  const input = getOrpcQueryMeta(queryKey)?.input;
+  if (input?.teamId !== teamId) return false;
+  if (projectId && input?.projectId !== projectId) return false;
+  return true;
 }
 
 export function isAgencyActiveTimerQueryKey(queryKey: QueryKey, teamId: string) {
@@ -294,6 +308,14 @@ export async function refetchAgencyProjectTaskListQueries(teamId: string, _assig
   // pages and flashes the rail empty until the refetch finishes.
   await queryClient.refetchQueries({
     predicate: (query) => isAgencyProjectTasksListQueryKey(query.queryKey, teamId),
+    type: "active",
+  });
+}
+
+export async function refetchAgencyProjectJourneyQueries(teamId: string, projectId: string) {
+  const queryClient = getQueryClient();
+  await queryClient.refetchQueries({
+    predicate: (query) => isAgencyProjectJourneyQueryKey(query.queryKey, teamId, projectId),
     type: "active",
   });
 }

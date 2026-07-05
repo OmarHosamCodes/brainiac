@@ -1,16 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertTriangle, Building2, FolderKanban, Plus, Search } from "lucide-react";
-import { useImperativeHandle, useMemo, useState, forwardRef, useEffect } from "react";
+import { useImperativeHandle, useMemo, useState, forwardRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   AgencyMultiSelectFilter,
   type AgencyFilterOptionGroup,
 } from "@/components/agency/agency-multi-select-filter";
+import { AgencyProjectCreateDialog } from "@/components/agency/agency-project-create-dialog";
 import { AgencyProjectsVirtualTable } from "@/components/agency/agency-projects-virtual-table";
 import {
   useAgencyClientsQuery,
@@ -26,7 +26,6 @@ import {
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { getTaskGroupKey, groupTasksByClient, groupTasksByProjectTitle } from "@/lib/utils/agency-task-utils";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
-import { selectIsProjectMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
 export type AgencyProjectsTableHandle = {
   openNewProject: () => void;
@@ -49,8 +48,6 @@ function getWeekStartUtc(): Date {
 
 export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyProjectsTableProps>(
   function AgencyProjectsTable({ teamId, hideToolbarActions = false, onSelect }, ref) {
-    const agencyOps = useAgencyOpsStore();
-    const isProjectMutationPending = useAgencyOpsStore(selectIsProjectMutationPending);
     const [filterTerm, setFilterTerm] = useState("");
     const [selectedPeopleIds, setSelectedPeopleIds] = useState<string[]>([]);
     const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
@@ -61,8 +58,6 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
     useImperativeHandle(ref, () => ({
       openNewProject: () => setNewProjectOpen(true),
     }));
-    const [newProjectName, setNewProjectName] = useState("");
-    const [newProjectClientId, setNewProjectClientId] = useState("");
 
     const projectsQuery = useAgencyProjectsQuery(teamId);
     const clientsQuery = useAgencyClientsQuery(teamId);
@@ -232,26 +227,6 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
       return "bg-primary";
     }
 
-    useEffect(() => {
-      if (newProjectOpen && !newProjectClientId && clients[0]) {
-        setNewProjectClientId(clients[0].id);
-      }
-    }, [newProjectOpen, newProjectClientId, clients]);
-
-    async function createProject() {
-      const name = newProjectName.trim();
-      if (!name || !newProjectClientId || !teamId) return;
-      const client = clients.find((c) => c.id === newProjectClientId);
-      setNewProjectName("");
-      setNewProjectOpen(false);
-      await agencyOps.createProject({
-        teamId,
-        clientId: newProjectClientId,
-        clientName: client?.name ?? "",
-        name,
-      });
-    }
-
     const isLoading = projectsQuery.isPending || clientsQuery.isPending;
     const isError = projectsQuery.isError;
 
@@ -303,63 +278,24 @@ export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyP
 
           {!hideToolbarActions ? (
             <div className="ml-auto">
-              <Popover open={newProjectOpen} onOpenChange={setNewProjectOpen}>
-                <PopoverTrigger asChild>
-                  <Button size="sm" disabled={!teamId || clients.length === 0}>
-                    <Plus />
-                    New project
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-72 space-y-2 p-3">
-                  <form
-                    className="space-y-2"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void createProject();
-                    }}
-                  >
-                    <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                      New project
-                    </p>
-                    <div>
-                      <label className="text-[11px] font-bold text-muted">Client</label>
-                      <select
-                        value={newProjectClientId}
-                        onChange={(e) => setNewProjectClientId(e.target.value)}
-                        className="mt-1 h-9 w-full rounded-md border border-default bg-background px-2 text-sm"
-                      >
-                        {clients.map((client) => (
-                          <option key={client.id} value={client.id}>
-                            {client.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[11px] font-bold text-muted">Name</label>
-                      <Input
-                        value={newProjectName}
-                        onChange={(e) => setNewProjectName(e.target.value)}
-                        placeholder="Project name"
-                        className="mt-1"
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      size="sm"
-                      className="w-full"
-                      disabled={
-                        !newProjectName.trim() || !newProjectClientId || isProjectMutationPending
-                      }
-                    >
-                      Create project
-                    </Button>
-                  </form>
-                </PopoverContent>
-              </Popover>
+              <Button
+                size="sm"
+                disabled={!teamId || clients.length === 0}
+                onClick={() => setNewProjectOpen(true)}
+              >
+                <Plus />
+                New project
+              </Button>
             </div>
           ) : null}
         </div>
+
+        <AgencyProjectCreateDialog
+          open={newProjectOpen}
+          onOpenChange={setNewProjectOpen}
+          teamId={teamId}
+          clients={clients}
+        />
 
         {isLoading ? (
           <div className="overflow-hidden rounded-2xl border border-default bg-default">

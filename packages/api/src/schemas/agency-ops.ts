@@ -7,6 +7,26 @@ export const agencyProjectTaskStatusSchema = z.enum([
   "archived",
 ]);
 
+export const agencyProjectTaskKindSchema = z.enum([
+  "standard",
+  "journey_anchor",
+  "journey_milestone",
+]);
+
+export const agencyJourneyStepKindSchema = z.enum([
+  "start",
+  "milestone",
+  "checkpoint",
+  "destination",
+]);
+
+export const agencyJourneyStepStatusSchema = z.enum([
+  "planned",
+  "active",
+  "done",
+  "blocked",
+]);
+
 export const agencyTimeEntrySourceSchema = z.enum(["timer", "manual"]);
 
 export const attachmentMediaKindSchema = z.enum([
@@ -83,6 +103,7 @@ export const agencyProjectTaskSchema = z.object({
   projectId: z.string().min(1),
   title: z.string().min(1),
   status: agencyProjectTaskStatusSchema,
+  taskKind: agencyProjectTaskKindSchema,
   assignedToTeam: z.boolean(),
   assignees: z.array(agencyProjectTaskAssigneeSchema),
   viewerStatus: agencyProjectTaskMemberStatusSchema.optional(),
@@ -91,6 +112,59 @@ export const agencyProjectTaskSchema = z.object({
   dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+});
+
+export const agencyProjectJourneyStepSchema = z.object({
+  id: z.string().min(1),
+  journeyId: z.string().min(1),
+  sortOrder: z.number().int(),
+  label: z.string().min(1),
+  stepKind: agencyJourneyStepKindSchema,
+  status: agencyJourneyStepStatusSchema,
+  taskId: z.string().nullable(),
+  task: agencyProjectTaskSchema.nullable().optional(),
+  timeEntryCount: z.number().int().nonnegative(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export const agencyProjectJourneySchema = z.object({
+  id: z.string().min(1),
+  projectId: z.string().min(1),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  steps: z.array(agencyProjectJourneyStepSchema),
+  completedSteps: z.number().int().nonnegative(),
+  totalSteps: z.number().int().nonnegative(),
+});
+
+export const createAgencyProjectWithJourneyMilestoneInputSchema = z.object({
+  title: z.string().trim().min(1).max(240),
+  assigneeUserIds: z.array(z.string().min(1)).default([]),
+});
+
+export const createAgencyProjectWithJourneyInputSchema = z.object({
+  teamId: z.string().min(1),
+  clientId: z.string().min(1),
+  name: z.string().trim().min(1).max(160),
+  milestones: z.array(createAgencyProjectWithJourneyMilestoneInputSchema).min(1),
+});
+
+export const createAgencyProjectWithJourneyOutputSchema = z.object({
+  project: agencyProjectSchema,
+  journey: agencyProjectJourneySchema,
+});
+
+export const updateAgencyProjectJourneyStepInputSchema = z.object({
+  id: z.string().min(1),
+  sortOrder: z.number().int().nonnegative().optional(),
+  label: z.string().trim().min(1).max(240).optional(),
+});
+
+export const previewRemoveAgencyProjectJourneyStepOutputSchema = z.object({
+  stepId: z.string().min(1),
+  label: z.string().min(1),
+  timeEntryCount: z.number().int().nonnegative(),
 });
 
 /** Case/whitespace-insensitive task title key (must match DB unique index expression). */
@@ -207,10 +281,21 @@ export const agencyTaskProjectSchema = agencyProjectSchema.pick({
 });
 
 export type AgencyProjectTaskStatus = z.infer<typeof agencyProjectTaskStatusSchema>;
+export type AgencyProjectTaskKind = z.infer<typeof agencyProjectTaskKindSchema>;
+export type AgencyJourneyStepKind = z.infer<typeof agencyJourneyStepKindSchema>;
+export type AgencyJourneyStepStatus = z.infer<typeof agencyJourneyStepStatusSchema>;
 export type AgencyProjectTaskAssignee = z.infer<typeof agencyProjectTaskAssigneeSchema>;
 export type AgencyClient = z.infer<typeof agencyClientSchema>;
 export type AgencyProject = z.infer<typeof agencyProjectSchema>;
 export type AgencyProjectTask = z.infer<typeof agencyProjectTaskSchema>;
+export type AgencyProjectJourney = z.infer<typeof agencyProjectJourneySchema>;
+export type AgencyProjectJourneyStep = z.infer<typeof agencyProjectJourneyStepSchema>;
+export type CreateAgencyProjectWithJourneyInput = z.infer<
+  typeof createAgencyProjectWithJourneyInputSchema
+>;
+export type CreateAgencyProjectWithJourneyOutput = z.infer<
+  typeof createAgencyProjectWithJourneyOutputSchema
+>;
 export type AgencyTaskProject = z.infer<typeof agencyTaskProjectSchema>;
 export type AgencyTaskMessage = z.infer<typeof agencyTaskMessageSchema>;
 

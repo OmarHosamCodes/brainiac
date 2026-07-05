@@ -15,6 +15,9 @@ import { workspaceTeam } from "./team";
 
 export type AgencyOpsTimeEntrySource = "timer" | "manual";
 export type AgencyOpsProjectTaskStatus = "open" | "in_progress" | "done" | "archived";
+export type AgencyOpsProjectTaskKind = "standard" | "journey_anchor" | "journey_milestone";
+export type AgencyOpsJourneyStepKind = "start" | "milestone" | "checkpoint" | "destination";
+export type AgencyOpsJourneyStepStatus = "planned" | "active" | "done" | "blocked";
 export type AgencyOpsProjectTaskMemberStatus = "open" | "in_progress" | "done";
 export type AgencyOpsTaskMessageType = "text" | "voice" | "attachment";
 export type AgencyOpsTaskMessageSenderType = "user" | "agent";
@@ -82,6 +85,22 @@ export const agencyOpsProject = pgTable(
   ],
 );
 
+export const agencyOpsProjectJourney = pgTable(
+  "agency_ops_project_journey",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => agencyOpsProject.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [uniqueIndex("agency_ops_project_journey_project_unique").on(table.projectId)],
+);
+
 export const agencyOpsProjectTask = pgTable(
   "agency_ops_project_task",
   {
@@ -94,6 +113,7 @@ export const agencyOpsProjectTask = pgTable(
       .references(() => agencyOpsProject.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     status: text("status").$type<AgencyOpsProjectTaskStatus>().notNull().default("open"),
+    taskKind: text("task_kind").$type<AgencyOpsProjectTaskKind>().notNull().default("standard"),
     assignedToTeam: boolean("assigned_to_team").notNull().default(false),
     dueDate: timestamp("due_date"),
     createdByUserId: text("created_by_user_id")
@@ -112,11 +132,37 @@ export const agencyOpsProjectTask = pgTable(
     index("agency_ops_project_task_status_idx").on(table.teamId, table.status),
     index("agency_ops_project_task_due_date_idx").on(table.dueDate),
     index("agency_ops_project_task_assigned_to_team_idx").on(table.teamId, table.assignedToTeam),
+    index("agency_ops_project_task_task_kind_idx").on(table.teamId, table.taskKind),
     // Must match normalizeTaskTitle() / migration 0013 expression.
     uniqueIndex("agency_ops_project_task_project_title_unique").on(
       table.projectId,
       sql`(lower(trim(regexp_replace(${table.title}, '\\s+', ' ', 'g'))))`,
     ),
+  ],
+);
+
+export const agencyOpsProjectJourneyStep = pgTable(
+  "agency_ops_project_journey_step",
+  {
+    id: text("id").primaryKey(),
+    journeyId: text("journey_id")
+      .notNull()
+      .references(() => agencyOpsProjectJourney.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").notNull(),
+    label: text("label").notNull(),
+    stepKind: text("step_kind").$type<AgencyOpsJourneyStepKind>().notNull(),
+    status: text("status").$type<AgencyOpsJourneyStepStatus>().notNull().default("planned"),
+    taskId: text("task_id").references(() => agencyOpsProjectTask.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_project_journey_step_journey_idx").on(table.journeyId),
+    index("agency_ops_project_journey_step_journey_sort_idx").on(table.journeyId, table.sortOrder),
+    index("agency_ops_project_journey_step_task_idx").on(table.taskId),
   ],
 );
 
@@ -287,6 +333,9 @@ export const agencyOpsTimeEntry = pgTable(
       .notNull()
       .references(() => agencyOpsProject.id, { onDelete: "cascade" }),
     taskId: text("task_id").references(() => agencyOpsProjectTask.id, { onDelete: "set null" }),
+    journeyStepId: text("journey_step_id").references(() => agencyOpsProjectJourneyStep.id, {
+      onDelete: "set null",
+    }),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -307,6 +356,7 @@ export const agencyOpsTimeEntry = pgTable(
     index("agency_ops_time_entry_team_started_idx").on(table.teamId, table.startedAt),
     index("agency_ops_time_entry_team_project_idx").on(table.teamId, table.projectId),
     index("agency_ops_time_entry_team_task_idx").on(table.teamId, table.taskId),
+    index("agency_ops_time_entry_journey_step_idx").on(table.journeyStepId),
     index("agency_ops_time_entry_team_user_idx").on(table.teamId, table.userId),
     index("agency_ops_time_entry_user_started_idx").on(table.userId, table.startedAt),
     index("agency_ops_time_entry_team_deleted_idx").on(table.teamId, table.deletedAt),

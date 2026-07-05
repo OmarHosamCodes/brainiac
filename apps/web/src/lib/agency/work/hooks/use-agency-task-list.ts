@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useMemo, useRef } from "react";
 
 import { authClient } from "@/lib/auth-client";
@@ -21,6 +21,7 @@ import {
   expandTasksWithBlueprints,
   type AgencyTaskDisplayRow,
 } from "@/lib/utils/agency-task-blueprints";
+import { isJourneyAnchorTask } from "@/lib/utils/agency-task-journey";
 import { groupTasksByClient } from "@/lib/utils/agency-task-utils";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/stores/agency-ops";
 import {
@@ -101,6 +102,7 @@ export type AgencyTaskListViewModel =
       activeTasksErrorMessage: string;
       onRetryActiveTasks: () => void;
       clientGroups: AgencyTaskClientDisplayGroup[];
+      allListedTasks: AgencyProjectTask[];
       collapsedClients: Set<string>;
       onClientExpandedChange: (clientId: string, expanded: boolean) => void;
       onSelect: (taskId: string, blueprintId?: string | null) => void;
@@ -241,6 +243,44 @@ export function useAgencyTaskList({
 
   const activeTasks = activeTasksQuery.items;
   const doneTasks = doneTasksQuery.items;
+  const allListedTasks = useMemo(
+    () => [...activeTasks, ...doneTasks],
+    [activeTasks, doneTasks],
+  );
+  const anchorProjectIds = useMemo(
+    () =>
+      [
+        ...new Set(
+          activeTasks.filter((task) => isJourneyAnchorTask(task)).map((task) => task.projectId),
+        ),
+      ],
+    [activeTasks],
+  );
+  const journeyQueries = useQueries({
+    queries: anchorProjectIds.map((projectId) =>
+      withAgencySyncQueryOptions(
+        {
+          ...orpc.agencyOps.projects.journey.get.queryOptions({
+            input: { teamId, projectId },
+          }),
+          enabled: Boolean(teamId && projectId),
+        },
+        "warm",
+      ),
+    ),
+  });
+  const journeyProgressByProjectId = useMemo(() => {
+    const map = new Map<string, { completedSteps: number; totalSteps: number }>();
+    anchorProjectIds.forEach((projectId, index) => {
+      const journey = journeyQueries[index]?.data;
+      if (!journey) return;
+      map.set(projectId, {
+        completedSteps: journey.completedSteps,
+        totalSteps: journey.totalSteps,
+      });
+    });
+    return map;
+  }, [anchorProjectIds, journeyQueries]);
   const blueprints = useMemo(
     () => collectTaskBlueprintsFromTasks([...activeTasks, ...doneTasks]),
     [activeTasks, doneTasks],
@@ -338,9 +378,13 @@ export function useAgencyTaskList({
     (): AgencyTaskClientDisplayGroup[] =>
       groupTasksByClient(activeTasks, projects).map((group) => ({
         ...group,
-        displayRows: expandTasksWithBlueprints(group.tasks, blueprints),
+        displayRows: expandTasksWithBlueprints(group.tasks, blueprints, {
+          currentUserId,
+          allTasks: allListedTasks,
+          journeyProgressByProjectId,
+        }),
       })),
-    [activeTasks, blueprints, projects],
+    [activeTasks, allListedTasks, blueprints, currentUserId, journeyProgressByProjectId, projects],
   );
 
   const taskOverlay = useAgencyOptimisticStore((state) => state.tasks[teamId] ?? EMPTY_LIST_OVERLAY);
@@ -531,6 +575,7 @@ export function useAgencyTaskList({
     activeTasksErrorMessage: activeTasksQuery.isError ? String(activeTasksQuery.error) : "",
     onRetryActiveTasks: () => void activeTasksQuery.refetch(),
     clientGroups,
+    allListedTasks,
     collapsedClients,
     onClientExpandedChange: setClientExpanded,
     onSelect: handleSelect,

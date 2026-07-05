@@ -6,6 +6,7 @@ import {
   archiveAgencyClient,
   createAgencyClient,
   createAgencyProject,
+  createAgencyProjectWithJourney,
   createAgencyProjectTask,
   completeAgencyProjectTaskForMember,
   createInvoice,
@@ -18,6 +19,7 @@ import {
   deleteTaskAttachment,
   exportAgencyReportsCsv,
   getAgencyActiveTimer,
+  getAgencyProjectJourney,
   listAgencyActiveMembers,
   getAgencyDashboardSummary,
   getAgencyReportsSummary,
@@ -27,6 +29,10 @@ import {
   getTaskThreadContext,
   listAgencyClients,
   listAgencyProjects,
+  addAgencyProjectJourneyStep,
+  previewRemoveAgencyProjectJourneyStep,
+  removeAgencyProjectJourneyStep,
+  updateAgencyProjectJourneySteps,
   listAgencyProjectTasks,
   listAllAgencyTimeEntries,
   listInvoices,
@@ -100,6 +106,7 @@ const agencyProjectTaskSchema = z.object({
   projectId: z.string().min(1),
   title: z.string().min(1),
   status: z.enum(["open", "in_progress", "done", "archived"]),
+  taskKind: z.enum(["standard", "journey_anchor", "journey_milestone"]),
   assignedToTeam: z.boolean(),
   assignees: z.array(
     z.object({
@@ -115,6 +122,30 @@ const agencyProjectTaskSchema = z.object({
   dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+});
+
+const agencyProjectJourneyStepSchema = z.object({
+  id: z.string().min(1),
+  journeyId: z.string().min(1),
+  sortOrder: z.number().int(),
+  label: z.string().min(1),
+  stepKind: z.enum(["start", "milestone", "checkpoint", "destination"]),
+  status: z.enum(["planned", "active", "done", "blocked"]),
+  taskId: z.string().nullable(),
+  task: agencyProjectTaskSchema.nullable().optional(),
+  timeEntryCount: z.number().int().nonnegative(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+const agencyProjectJourneySchema = z.object({
+  id: z.string().min(1),
+  projectId: z.string().min(1),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  steps: z.array(agencyProjectJourneyStepSchema),
+  completedSteps: z.number().int().nonnegative(),
+  totalSteps: z.number().int().nonnegative(),
 });
 
 const attachmentMetadataSchema = z
@@ -437,6 +468,103 @@ export const agencyOpsRouter = {
         );
         return project;
       }),
+    createWithJourney: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          clientId: z.string().min(1),
+          name: z.string().trim().min(1).max(160),
+          milestones: z
+            .array(
+              z.object({
+                title: z.string().trim().min(1).max(240),
+                assigneeUserIds: z.array(z.string().min(1)).default([]),
+              }),
+            )
+            .min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            project: agencyProjectSchema,
+            journey: agencyProjectJourneySchema,
+          })
+          .parse(await createAgencyProjectWithJourney(context.session.user.id, input));
+      }),
+    journey: {
+      get: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            projectId: z.string().min(1),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return agencyProjectJourneySchema.parse(
+            await getAgencyProjectJourney(context.session.user.id, input),
+          );
+        }),
+      updateSteps: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            projectId: z.string().min(1),
+            steps: z.array(
+              z.object({
+                id: z.string().min(1),
+                sortOrder: z.number().int().nonnegative().optional(),
+                label: z.string().trim().min(1).max(240).optional(),
+              }),
+            ),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return agencyProjectJourneySchema.parse(
+            await updateAgencyProjectJourneySteps(context.session.user.id, input),
+          );
+        }),
+      addStep: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            projectId: z.string().min(1),
+            label: z.string().trim().min(1).max(240),
+            assigneeUserIds: z.array(z.string().min(1)).optional(),
+            sortOrder: z.number().int().nonnegative().optional(),
+            stepKind: z.enum(["milestone", "checkpoint"]).optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return agencyProjectJourneySchema.parse(
+            await addAgencyProjectJourneyStep(context.session.user.id, input),
+          );
+        }),
+      removeStep: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            projectId: z.string().min(1),
+            stepId: z.string().min(1),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return agencyProjectJourneySchema.parse(
+            await removeAgencyProjectJourneyStep(context.session.user.id, input),
+          );
+        }),
+      previewRemoveStep: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            projectId: z.string().min(1),
+            stepId: z.string().min(1),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({
+              stepId: z.string().min(1),
+              label: z.string().min(1),
+              timeEntryCount: z.number().int().nonnegative(),
+            })
+            .parse(await previewRemoveAgencyProjectJourneyStep(context.session.user.id, input));
+        }),
+    },
     update: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({

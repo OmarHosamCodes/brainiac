@@ -3,7 +3,10 @@ import { z } from "zod";
 import type {
   AgencyActiveTimer,
   AgencyProject,
+  AgencyProjectJourney,
+  AgencyProjectJourneyStep,
   AgencyProjectTask,
+  AgencyProjectTaskKind,
   AgencyProjectTaskStatus,
   AgencyTaskMessage,
   AgencyTaskMessageAttachment,
@@ -15,7 +18,10 @@ import type {
 export type {
   AgencyActiveTimer,
   AgencyProject,
+  AgencyProjectJourney,
+  AgencyProjectJourneyStep,
   AgencyProjectTask,
+  AgencyProjectTaskKind,
   AgencyProjectTaskStatus,
   AgencyTaskMessage,
   AgencyTaskMessageAttachment,

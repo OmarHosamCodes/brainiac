@@ -1,14 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, Clock, FolderX } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronDown, Clock, FolderX } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { AgencyProjectJourneyStepper } from "@/components/agency/journey/agency-project-journey-stepper";
 import { AgencyProjectTasks } from "@/components/agency/agency-project-tasks";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { orpc } from "@/lib/orpc";
+import { useAgencyProjectJourney } from "@/lib/agency/hooks/use-agency-project-journey";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
+  agencyFocusRingClass,
   agencyLabelClass,
   agencyPanelClass,
 } from "@/lib/utils/agency-ui";
@@ -53,6 +56,11 @@ export function AgencyProjectDetail({ teamId, projectId, onBack }: AgencyProject
   }, []);
 
   const [activitySort, setActivitySort] = useState<ActivitySort>("newest");
+  const [journeyExpandedMobile, setJourneyExpandedMobile] = useState(true);
+
+  const journeyState = useAgencyProjectJourney(teamId, projectId, {
+    enabled: Boolean(teamId && projectId),
+  });
 
   const projectsQuery = useQuery({
     ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
@@ -272,6 +280,41 @@ export function AgencyProjectDetail({ teamId, projectId, onBack }: AgencyProject
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
             <div className="flex flex-col gap-4">
+              {!journeyState.isLegacyProject && journeyState.hasJourney ? (
+                <section className={cn(agencyPanelClass, "overflow-hidden")}>
+                  <header className="border-b border-default px-4 py-3">
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex w-full items-center justify-between gap-3 text-left md:cursor-default",
+                        agencyFocusRingClass,
+                        "rounded-md md:pointer-events-none",
+                      )}
+                      aria-expanded={journeyExpandedMobile}
+                      onClick={() => setJourneyExpandedMobile((value) => !value)}
+                    >
+                      <div className="min-w-0">
+                        <p className={agencyLabelClass}>Journey</p>
+                        <p className="mt-1 font-mono text-[11px] tabular-nums text-muted">
+                          {journeyState.journey?.completedSteps ?? 0}/
+                          {journeyState.journey?.totalSteps ?? 0} steps
+                        </p>
+                      </div>
+                      <ChevronDown
+                        className={cn(
+                          "size-4 shrink-0 text-muted md:hidden",
+                          journeyExpandedMobile ? "" : "-rotate-90",
+                        )}
+                        aria-hidden
+                      />
+                    </button>
+                  </header>
+                  <div className={cn("px-2 py-3", !journeyExpandedMobile && "hidden md:block")}>
+                    <AgencyProjectJourneyStepper teamId={teamId} projectId={projectId} />
+                  </div>
+                </section>
+              ) : null}
+
               <section className={cn(agencyPanelClass, "flex flex-col")}>
                 <header className="flex flex-wrap items-center justify-between gap-3 border-b border-default px-4 py-3">
                   <p className={agencyLabelClass}>Activity</p>

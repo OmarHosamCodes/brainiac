@@ -13,6 +13,7 @@ type FlatRow =
 
 type AgencyTaskVirtualListProps = {
   clientGroups: AgencyTaskClientDisplayGroup[];
+  allTasks: AgencyProjectTask[];
   collapsedClients: Set<string>;
   projects: AgencyTaskProject[];
   teamId: string;
@@ -49,6 +50,7 @@ function estimateGroupHeight(
 
 export function AgencyTaskVirtualList({
   clientGroups,
+  allTasks,
   collapsedClients,
   projects,
   teamId,
@@ -140,6 +142,7 @@ export function AgencyTaskVirtualList({
               <AgencyTaskClientGroupView
                 group={row.group}
                 expanded={row.expanded}
+                allTasks={allTasks}
                 projects={projects}
                 teamId={teamId}
                 selectedTaskId={selectedTaskId}

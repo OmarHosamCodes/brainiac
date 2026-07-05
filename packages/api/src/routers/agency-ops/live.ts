@@ -150,8 +150,13 @@ export async function publishAgencyLiveEvent(teamId: string, event: AgencyLiveEv
   await getRedisPublisher().publish(redisTeamChannel(teamId), JSON.stringify(event));
 }
 
-export async function publishAgencyJourneyStepUpdated(_teamId: string, _projectId: string) {
-  // ponytail: journey live events not in scope yet; keep call sites for a future event type
+export async function publishAgencyJourneyStepUpdated(teamId: string, projectId: string) {
+  await publishAgencyLiveEvent(teamId, {
+    type: "journey.step.updated",
+    teamId,
+    projectId,
+    updatedAt: liveUpdatedAt(new Date()),
+  });
 }
 
 let redisSubscriberBootstrapped = false;
