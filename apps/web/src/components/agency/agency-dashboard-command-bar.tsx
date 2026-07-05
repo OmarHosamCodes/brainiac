@@ -1,4 +1,5 @@
 import { ChevronDown } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { AgencyMemberChooser } from "@/components/agency/agency-member-chooser";
 import { AgencyProjectChooser } from "@/components/agency/agency-project-chooser";
@@ -29,6 +30,10 @@ type AgencyDashboardCommandBarProps = {
   onCustomFromChange: (value: string) => void;
   customToDate: string;
   onCustomToChange: (value: string) => void;
+  clientId?: string;
+  onClientChange?: (clientId: string) => void;
+  clients?: Array<{ id: string; name: string }>;
+  clientsLoading?: boolean;
   projectId: string;
   onProjectChange: (projectId: string) => void;
   memberUserId: string;
@@ -41,6 +46,7 @@ type AgencyDashboardCommandBarProps = {
   projects: Array<{ id: string; name: string; clientName: string }>;
   members: Array<{ userId: string; userName: string; avatar?: string | null }>;
   projectsLoading?: boolean;
+  trailingActions?: ReactNode;
 };
 
 function rangePresets(tenureAvailable: boolean): RangePreset[] {
@@ -108,6 +114,10 @@ export function AgencyDashboardCommandBar({
   onCustomFromChange,
   customToDate,
   onCustomToChange,
+  clientId = "",
+  onClientChange,
+  clients,
+  clientsLoading,
   projectId,
   onProjectChange,
   memberUserId,
@@ -120,9 +130,15 @@ export function AgencyDashboardCommandBar({
   projects,
   members,
   projectsLoading,
+  trailingActions,
 }: AgencyDashboardCommandBarProps) {
+  const showClientFilter = Boolean(onClientChange && clients);
+
   const hasActiveFilters =
-    rangePreset !== defaultRangePreset || projectId !== "" || memberUserId !== "";
+    rangePreset !== defaultRangePreset ||
+    clientId !== "" ||
+    projectId !== "" ||
+    memberUserId !== "";
 
   const memberOptions = members.map((member) => ({
     userId: member.userId,
@@ -131,7 +147,26 @@ export function AgencyDashboardCommandBar({
   }));
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-default bg-elevated p-2">
+    <div
+      className={cn(
+        "flex flex-wrap items-center gap-2 rounded-2xl border border-default bg-elevated p-2",
+        trailingActions ? "justify-center" : undefined,
+      )}
+    >
+      {showClientFilter ? (
+        <FilterSelect
+          id="agency-dashboard-client"
+          label="Client"
+          value={clientId}
+          onChange={onClientChange!}
+          placeholder="All Clients"
+          disabled={clientsLoading}
+          options={clients!.map((client) => ({
+            value: client.id,
+            label: client.name,
+          }))}
+        />
+      ) : null}
       <AgencyProjectChooser
         value={projectId}
         onValueChange={onProjectChange}
@@ -195,7 +230,12 @@ export function AgencyDashboardCommandBar({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-2",
+          trailingActions ? undefined : "md:ml-auto",
+        )}
+      >
         <Button variant="secondary" size="sm" disabled={!hasPendingChanges} onClick={onApply}>
           Apply
         </Button>
@@ -212,6 +252,7 @@ export function AgencyDashboardCommandBar({
             Reset
           </button>
         ) : null}
+        {trailingActions}
       </div>
     </div>
   );
