@@ -60,31 +60,31 @@ function getNodeTone(step: AgencyProjectJourneyStep) {
   switch (step.status) {
     case "done":
       return {
-        ring: "stroke-success",
-        fill: "fill-success",
-        text: "text-success",
-        label: "text-highlighted",
+        ring: "stroke-primary",
+        fill: "fill-primary",
+        text: "text-primary-foreground",
+        label: "text-foreground",
       };
     case "active":
       return {
-        ring: "stroke-info",
-        fill: "fill-info",
-        text: "text-info",
-        label: "text-highlighted",
+        ring: "stroke-primary",
+        fill: "fill-background",
+        text: "text-primary",
+        label: "text-foreground",
       };
     case "blocked":
       return {
-        ring: "stroke-warning",
-        fill: "fill-warning",
-        text: "text-warning",
-        label: "text-highlighted",
+        ring: "stroke-destructive",
+        fill: "fill-background",
+        text: "text-destructive",
+        label: "text-foreground",
       };
     default:
       return {
-        ring: "stroke-muted",
-        fill: "fill-elevated",
-        text: "text-muted",
-        label: "text-muted",
+        ring: "stroke-border",
+        fill: "fill-card",
+        text: "text-foreground",
+        label: "text-muted-foreground",
       };
   }
 }
@@ -346,7 +346,7 @@ export function AgencyProjectJourneyStepper({
               type="button"
               size="sm"
               variant="ghost"
-              className="text-muted hover:text-error"
+              className="text-muted-foreground hover:text-destructive"
               disabled={isRemoving}
               onClick={() => requestRemoveStep(selectedStep.id)}
             >
@@ -361,7 +361,7 @@ export function AgencyProjectJourneyStepper({
         ref={keyboardRef}
         tabIndex={0}
         className={cn(
-          "rounded-2xl border border-default bg-elevated/40 outline-none",
+          "rounded-2xl border border-border bg-muted/40 outline-none",
           agencyFocusRingClass,
         )}
         onKeyDown={handleKeyDown}
@@ -432,7 +432,7 @@ export function AgencyProjectJourneyStepper({
           </Button>
         </div>
       ) : selectedStep ? (
-        <p className="px-1 text-[11px] text-dimmed">
+        <p className="px-1 text-[11px] text-muted-foreground">
           {isJourneyStepLabelEditable(selectedStep.stepKind)
             ? "Press Enter to rename the selected step."
             : "Start and destination labels are fixed."}
@@ -502,7 +502,7 @@ function HorizontalJourneyGraph({
               strokeWidth={completed ? 3 : 2}
               strokeDasharray={completed ? undefined : "6 6"}
               className={cn(
-                completed ? "stroke-success" : "stroke-muted",
+                completed ? "stroke-primary" : "stroke-border",
                 !prefersReducedMotion &&
                   "transition-[stroke,stroke-dashoffset] duration-300 motion-reduce:transition-none",
               )}
@@ -528,7 +528,7 @@ function HorizontalJourneyGraph({
               <circle
                 r={compact ? (isSelected ? 14 : 12) : isSelected ? 18 : 16}
                 className={cn(
-                  "fill-elevated",
+                  tone.fill,
                   tone.ring,
                   isSelected && (compact ? "stroke-[2.5px]" : "stroke-[3px]"),
                   !prefersReducedMotion && "transition-[r,stroke-width] duration-200 motion-reduce:transition-none",
@@ -563,7 +563,7 @@ function HorizontalJourneyGraph({
                 className={cn(
                   "fill-current font-semibold",
                   compact ? "text-[9px]" : "text-[10px]",
-                  isSelected ? "text-highlighted" : tone.label,
+                  isSelected ? "text-foreground font-bold" : tone.label,
                 )}
               >
                 {step.label.length > 18 ? `${step.label.slice(0, 16)}…` : step.label}
@@ -599,14 +599,16 @@ function DesktopJourneyReorderStrip({
   if (middleSteps.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-default px-3 py-2">
-      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-dimmed">Reorder</span>
+    <div className="flex flex-wrap items-center gap-2 border-t border-border px-3 py-2">
+      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+        Reorder
+      </span>
       {middleSteps.map((step) => (
         <div
           key={step.id}
           className={cn(
-            "inline-flex items-center gap-1 rounded-full border border-default bg-default px-2 py-1 text-[11px] font-semibold text-muted",
-            dragOverStepId === step.id && "border-info/40 bg-info/5",
+            "inline-flex items-center gap-1 rounded-full border border-border bg-background px-2 py-1 text-[11px] font-semibold text-muted-foreground",
+            dragOverStepId === step.id && "border-primary/40 bg-primary/5",
           )}
           onDragOver={(event) => {
             if (!draggingStepId) return;
@@ -623,13 +625,13 @@ function DesktopJourneyReorderStrip({
             type="button"
             draggable
             aria-label={`Reorder ${step.label}`}
-            className="inline-flex cursor-grab items-center text-dimmed hover:text-highlighted active:cursor-grabbing"
+            className="inline-flex cursor-grab items-center text-muted-foreground hover:text-foreground active:cursor-grabbing"
             onDragStart={() => onDragStart(step.id)}
             onDragEnd={onDragEnd}
           >
             <GripVertical className="size-3.5" />
           </button>
-          <span className="max-w-[8rem] truncate text-highlighted">{step.label}</span>
+          <span className="max-w-[8rem] truncate text-foreground">{step.label}</span>
         </div>
       ))}
     </div>
@@ -672,7 +674,7 @@ function VerticalJourneyList({
   onDrop,
 }: VerticalJourneyListProps) {
   return (
-    <ul className="divide-y divide-default px-2 py-2">
+    <ul className="divide-y divide-border px-2 py-2">
       {steps.map((step, index) => {
         const tone = getNodeTone(step);
         const isSelected = step.id === selectedStepId;
@@ -690,7 +692,7 @@ function VerticalJourneyList({
             className={cn(
               "flex items-start gap-3 px-2 py-3",
               dragOverStepId === step.id && reorderable && "bg-primary/5",
-              isSelected && "bg-default/60",
+              isSelected && "bg-muted/60",
             )}
             onDragOver={(event) => {
               if (!reorderable || !draggingStepId) return;
@@ -710,13 +712,13 @@ function VerticalJourneyList({
                   aria-hidden
                   className={cn(
                     "h-3 w-px",
-                    segmentCompleted ? "bg-success" : "border-l border-dashed border-muted",
+                    segmentCompleted ? "bg-primary" : "border-l border-dashed border-border",
                   )}
                 />
               ) : null}
               <span
                 className={cn(
-                  "inline-flex size-8 items-center justify-center rounded-full border-2 bg-elevated text-[11px] font-bold",
+                  "inline-flex size-8 items-center justify-center rounded-full border-2 bg-card text-[11px] font-bold",
                   tone.ring,
                   tone.text,
                 )}
@@ -765,7 +767,7 @@ function VerticalJourneyList({
                   }}
                 >
                   <p className={cn("text-sm font-semibold", tone.label)}>{step.label}</p>
-                  <p className="text-[10px] capitalize text-dimmed">{step.status}</p>
+                  <p className="text-[10px] capitalize text-muted-foreground">{step.status}</p>
                 </button>
               )}
             </div>
@@ -776,7 +778,7 @@ function VerticalJourneyList({
                 draggable
                 aria-label={`Reorder ${step.label}`}
                 className={cn(
-                  "mt-1 inline-flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md text-muted hover:bg-default hover:text-highlighted active:cursor-grabbing",
+                  "mt-1 inline-flex size-8 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground active:cursor-grabbing",
                   agencyFocusRingClass,
                 )}
                 onDragStart={() => onDragStart(step.id)}
