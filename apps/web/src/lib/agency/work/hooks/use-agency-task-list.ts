@@ -18,11 +18,13 @@ import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
 import { findOpenTaskByExactTitle } from "@/lib/utils/agency-task-title-filter";
 import {
   collectTaskBlueprintsFromTasks,
-  expandTasksWithBlueprints,
-  type AgencyTaskDisplayRow,
 } from "@/lib/utils/agency-task-blueprints";
 import { isJourneyAnchorTask } from "@/lib/utils/agency-task-journey";
-import { groupTasksByClient } from "@/lib/utils/agency-task-utils";
+import {
+  buildAgencyTaskRailGroups,
+  summarizeAgencyTaskRailGroups,
+  type AgencyTaskClientDisplayGroup,
+} from "@/lib/utils/agency-task-rail-grouping";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/stores/agency-ops";
 import {
   useAgencyTaskListStore,
@@ -44,9 +46,7 @@ type UseAgencyTaskListOptions = {
   onSelectProject: (projectId: string) => void;
 };
 
-export type AgencyTaskClientDisplayGroup = ReturnType<typeof groupTasksByClient>[number] & {
-  displayRows: AgencyTaskDisplayRow[];
-};
+export type { AgencyTaskClientDisplayGroup } from "@/lib/utils/agency-task-rail-grouping";
 
 export type AgencyTaskListCreateViewModel = {
   expanded: boolean;
@@ -96,15 +96,20 @@ export type AgencyTaskListViewModel =
       activeCount: number | null;
       doneCount: number | null;
       totalCount: number | null;
+      journeyCount: number;
+      standaloneTaskCount: number;
       isLoading: boolean;
       activeTasksEmpty: boolean;
       activeTasksQueryError: boolean;
       activeTasksErrorMessage: string;
       onRetryActiveTasks: () => void;
       clientGroups: AgencyTaskClientDisplayGroup[];
+      doneClientGroups: AgencyTaskClientDisplayGroup[];
       allListedTasks: AgencyProjectTask[];
       collapsedClients: Set<string>;
+      collapsedProjects: Set<string>;
       onClientExpandedChange: (clientId: string, expanded: boolean) => void;
+      onProjectExpandedChange: (projectId: string, expanded: boolean) => void;
       onSelect: (taskId: string, blueprintId?: string | null) => void;
       onSelectProject: (projectId: string) => void;
       onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
@@ -162,6 +167,7 @@ export function useAgencyTaskList({
   const selectedAssigneeIdsForCreate = useAgencyTaskListStore((s) => s.selectedAssigneeIdsForCreate);
   const assignedToTeamForCreate = useAgencyTaskListStore((s) => s.assignedToTeamForCreate);
   const collapsedClients = useAgencyTaskListStore((s) => s.collapsedClients);
+  const collapsedProjects = useAgencyTaskListStore((s) => s.collapsedProjects);
   const setDoneExpanded = useAgencyTaskListStore((s) => s.setDoneExpanded);
   const setRecentlyCompletedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCompletedTaskId);
   const setRecentlyCreatedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCreatedTaskId);
@@ -172,6 +178,7 @@ export function useAgencyTaskList({
   const setSelectedAssigneeIdsForCreate = useAgencyTaskListStore((s) => s.setSelectedAssigneeIdsForCreate);
   const setAssignedToTeamForCreate = useAgencyTaskListStore((s) => s.setAssignedToTeamForCreate);
   const setClientExpanded = useAgencyTaskListStore((s) => s.setClientExpanded);
+  const setProjectExpanded = useAgencyTaskListStore((s) => s.setProjectExpanded);
   const expandCreateAction = useAgencyTaskListStore((s) => s.expandCreate);
   const collapseCreateAction = useAgencyTaskListStore((s) => s.collapseCreate);
 
@@ -376,15 +383,37 @@ export function useAgencyTaskList({
 
   const clientGroups = useMemo(
     (): AgencyTaskClientDisplayGroup[] =>
-      groupTasksByClient(activeTasks, projects).map((group) => ({
-        ...group,
-        displayRows: expandTasksWithBlueprints(group.tasks, blueprints, {
+      buildAgencyTaskRailGroups({
+        tasks: activeTasks,
+        projects,
+        blueprints,
+        expandOptions: {
           currentUserId,
           allTasks: allListedTasks,
           journeyProgressByProjectId,
-        }),
-      })),
+        },
+      }),
     [activeTasks, allListedTasks, blueprints, currentUserId, journeyProgressByProjectId, projects],
+  );
+
+  const doneClientGroups = useMemo(
+    (): AgencyTaskClientDisplayGroup[] =>
+      buildAgencyTaskRailGroups({
+        tasks: doneTasks,
+        projects,
+        blueprints,
+        expandOptions: {
+          currentUserId,
+          allTasks: allListedTasks,
+          journeyProgressByProjectId,
+        },
+      }),
+    [allListedTasks, blueprints, currentUserId, doneTasks, journeyProgressByProjectId, projects],
+  );
+
+  const railSummaryCounts = useMemo(
+    () => summarizeAgencyTaskRailGroups(clientGroups),
+    [clientGroups],
   );
 
   const taskOverlay = useAgencyOptimisticStore((state) => state.tasks[teamId] ?? EMPTY_LIST_OVERLAY);
@@ -569,15 +598,20 @@ export function useAgencyTaskList({
     activeCount,
     doneCount,
     totalCount,
+    journeyCount: railSummaryCounts.journeyCount,
+    standaloneTaskCount: railSummaryCounts.taskCount,
     isLoading: activeTasksQuery.isPending && activeTasks.length === 0,
     activeTasksEmpty: activeTasks.length === 0,
     activeTasksQueryError: activeTasksQuery.isError,
     activeTasksErrorMessage: activeTasksQuery.isError ? String(activeTasksQuery.error) : "",
     onRetryActiveTasks: () => void activeTasksQuery.refetch(),
     clientGroups,
+    doneClientGroups,
     allListedTasks,
     collapsedClients,
+    collapsedProjects,
     onClientExpandedChange: setClientExpanded,
+    onProjectExpandedChange: setProjectExpanded,
     onSelect: handleSelect,
     onSelectProject,
     onStatusChange: (task, status) => void updateTaskStatus(task, status),
