@@ -7,4 +7,7 @@ export default defineConfig({
   clean: true,
   dts: false,
   noExternal: [/@brainiac\/.*/],
+  deps: {
+    neverBundle: ["sharp"],
+  },
 });
