@@ -3,11 +3,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import {
-  AGENCY_BOOT_TIMEOUT_MS,
-  isAgencyAnimationReady,
-  resetAgencyBoot,
-  startAgencyBoot,
-} from "@/lib/agency/agency-boot";
+  SHELL_BOOT_TIMEOUT_MS,
+  isShellAnimationReady,
+  resetShellBoot,
+  startShellBoot,
+} from "@/lib/shell/shell-boot";
 import { ensureAgencySegmentBootQueries } from "@/lib/agency/agency-segment-boot";
 import type { AgencySegmentId } from "@/lib/agency-segments";
 
@@ -36,7 +36,7 @@ export function useAgencyBootGate({
 }: UseAgencyBootGateOptions) {
   const queryClient = useQueryClient();
   const [segmentBootDone, setSegmentBootDone] = useState(false);
-  const [animationReady, setAnimationReady] = useState(() => isAgencyAnimationReady());
+  const [animationReady, setAnimationReady] = useState(() => isShellAnimationReady());
 
   const isTeamReady = teamsCount === 0 || Boolean(teamId);
   const isPageReady =
@@ -45,7 +45,7 @@ export function useAgencyBootGate({
     showAgencyUpsell || teamsCount === 0 || !agencyEnabled || !teamId;
 
   useEffect(() => {
-    startAgencyBoot();
+    startShellBoot();
   }, []);
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export function useAgencyBootGate({
 
     const timeoutId = window.setTimeout(() => {
       if (!cancelled) setSegmentBootDone(true);
-    }, AGENCY_BOOT_TIMEOUT_MS);
+    }, SHELL_BOOT_TIMEOUT_MS);
 
     void ensureAgencySegmentBootQueries(queryClient, {
       segment,
@@ -99,7 +99,7 @@ export function useAgencyBootGate({
     if (animationReady) return;
 
     const intervalId = window.setInterval(() => {
-      if (isAgencyAnimationReady()) {
+      if (isShellAnimationReady()) {
         setAnimationReady(true);
       }
     }, 100);
@@ -107,7 +107,7 @@ export function useAgencyBootGate({
     return () => window.clearInterval(intervalId);
   }, [animationReady]);
 
-  useEffect(() => resetAgencyBoot, []);
+  useEffect(() => resetShellBoot, []);
 
   const isBooting = !(isPageReady && segmentBootDone && animationReady);
 
