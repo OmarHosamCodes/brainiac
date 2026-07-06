@@ -1,17 +1,26 @@
-import { History, Plus } from "lucide-react";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { Plus } from "lucide-react";
+import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { AgencyDashboardCommandBar } from "@/components/agency/agency-dashboard-command-bar";
 import { AgencyListFilterCommandBar } from "@/components/agency/agency-list-filter-command-bar";
 import { AgencyProjectCreateDialog } from "@/components/agency/agency-project-create-dialog";
+import { AgencyReportHistoryMenu } from "@/components/agency/agency-report-history-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import { serializeReportFieldsParam } from "@/lib/agency/reports/agency-report-fields";
+import {
+  createReportHistorySnapshot,
+  pushAgencyReportHistory,
+} from "@/lib/agency/reports/agency-report-history";
 import type { AgencyListFiltersApplied } from "@/lib/agency/use-agency-list-filters";
 import { useAgencyListFilters } from "@/lib/agency/use-agency-list-filters";
-import type { AgencyTimeRangeFilters } from "@/lib/agency/use-agency-time-range-filters";
+import type {
+  AgencyTimeRangeFilterSnapshot,
+  AgencyTimeRangeFilters,
+} from "@/lib/agency/use-agency-time-range-filters";
 import { useAgencyTimeRangeFilters } from "@/lib/agency/use-agency-time-range-filters";
 import type { AgencySegmentId } from "@/lib/agency-segments";
 import {
@@ -98,13 +107,29 @@ function ReportsFiltersRoot({
   children: ReactNode;
 }) {
   const navigate = useNavigate();
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+
+  const recordHistory = useCallback(
+    (snapshot: AgencyTimeRangeFilterSnapshot) => {
+      pushAgencyReportHistory(teamId, snapshot);
+      setHistoryRefreshKey((value) => value + 1);
+    },
+    [teamId],
+  );
+
   const timeRange = useAgencyTimeRangeFilters({
     teamId,
     includeClientFilter: true,
+    includeFieldsFilter: true,
     fetchEntries: true,
+    onFiltersApplied: (snapshot) => {
+      recordHistory(createReportHistorySnapshot(snapshot));
+    },
   });
 
   function openReportCreator() {
+    recordHistory(createReportHistorySnapshot(timeRange.captureAppliedSnapshot()));
+
     const next = new URLSearchParams(searchParams);
     next.set("section", "reports");
     next.set("report", "create");
@@ -116,6 +141,11 @@ function ReportsFiltersRoot({
     else next.delete("project");
     if (timeRange.applied.memberUserId) next.set("member", timeRange.applied.memberUserId);
     else next.delete("member");
+    if (timeRange.applied.fields) {
+      next.set("fields", serializeReportFieldsParam(timeRange.applied.fields));
+    } else {
+      next.delete("fields");
+    }
     navigate(`/agency?${next.toString()}`);
   }
 
@@ -130,6 +160,20 @@ function ReportsFiltersRoot({
           ) : (
             <AgencyDashboardCommandBar
               {...timeRange.barProps}
+              createReportAction={{
+                onSelect: openReportCreator,
+                disabled: timeRange.entriesCount === 0 || timeRange.entriesFetching,
+              }}
+              historyMenu={{
+                teamId,
+                refreshKey: historyRefreshKey,
+                labelContext: {
+                  clients: timeRange.clients,
+                  projects: timeRange.projects,
+                  members: timeRange.members,
+                },
+                onSelect: timeRange.restoreSnapshot,
+              }}
               trailingActions={
                 <>
                   <Button
@@ -140,15 +184,16 @@ function ReportsFiltersRoot({
                   >
                     Create report
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="px-2.5"
-                    aria-label="Report history"
-                    title="Report history"
-                  >
-                    <History />
-                  </Button>
+                  <AgencyReportHistoryMenu
+                    teamId={teamId}
+                    refreshKey={historyRefreshKey}
+                    labelContext={{
+                      clients: timeRange.clients,
+                      projects: timeRange.projects,
+                      members: timeRange.members,
+                    }}
+                    onSelect={timeRange.restoreSnapshot}
+                  />
                 </>
               }
             />
