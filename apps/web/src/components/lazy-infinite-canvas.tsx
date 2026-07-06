@@ -1,5 +1,6 @@
 import { forwardRef, lazy, Suspense } from "react";
 
+import { LogoLoader } from "@/components/shell/logo-loader";
 import type { InfiniteCanvasHandle, InfiniteCanvasProps } from "@/components/infinite-canvas";
 export type { InfiniteCanvasHandle } from "@/components/infinite-canvas";
 
@@ -12,7 +13,7 @@ export const LazyInfiniteCanvas = forwardRef<InfiniteCanvasHandle, InfiniteCanva
   function LazyInfiniteCanvas(props, ref) {
     return (
       <Suspense
-        fallback={<div className="h-full w-full animate-pulse rounded-xl bg-elevated" aria-hidden />}
+        fallback={<LogoLoader label="Loading canvas" />}
       >
         <InfiniteCanvasLazy {...props} ref={ref} />
       </Suspense>

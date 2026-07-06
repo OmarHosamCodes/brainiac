@@ -1,18 +1,12 @@
 import { lazy, Suspense, useEffect } from "react";
-import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 
-import { AgencyLogoLoader } from "@/components/agency/agency-logo-loader";
+import { LogoLoader } from "@/components/shell/logo-loader";
 import { AppShell } from "@/components/app-shell";
 import { ShellPageTransition } from "@/components/shell/shell-page-transition";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AuthProvider } from "@/providers/auth-provider";
-import { startAgencyBoot } from "@/lib/agency/agency-boot";
-
-import { shellLoadingPanelClass } from "@/lib/utils/app-shell-ui";
-
-function isAgencyPath(pathname: string) {
-  return pathname === "/agency" || pathname.startsWith("/agency/");
-}
+import { startShellBoot } from "@/lib/shell/shell-boot";
 
 const DashboardPage = lazy(() =>
   import("@/pages/dashboard-page").then((module) => ({ default: module.DashboardPage })),
@@ -43,30 +37,12 @@ function AuthBoundary() {
   );
 }
 
-function ShellPageSkeleton() {
-  return (
-    <div className="p-4 md:p-6">
-      <div className={shellLoadingPanelClass}>
-        <div className="h-5 w-40 animate-pulse rounded bg-muted/50" />
-        <div className="mt-4 h-64 w-full animate-pulse rounded bg-muted/30" />
-      </div>
-    </div>
-  );
-}
-
 function ShellSuspenseFallback() {
-  const { pathname } = useLocation();
-  const agencyLoading = isAgencyPath(pathname);
-
   useEffect(() => {
-    if (agencyLoading) startAgencyBoot();
-  }, [agencyLoading]);
+    startShellBoot();
+  }, []);
 
-  if (agencyLoading) {
-    return <AgencyLogoLoader fullScreen />;
-  }
-
-  return <ShellPageSkeleton />;
+  return <LogoLoader fullScreen />;
 }
 
 function ShellLayout() {
