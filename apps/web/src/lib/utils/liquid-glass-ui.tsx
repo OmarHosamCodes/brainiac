@@ -13,14 +13,27 @@ export function LiquidGlassBackdrop({ className }: { className?: string }) {
   return <div aria-hidden className={cn(liquidGlassBackdropClass, className)} />;
 }
 
-/** Outer shell: border, shadow, Radix positioning, enter/exit animation. */
+/** Content layer above the frosted backdrop — safe target for enter/exit animation. */
+export const liquidGlassBodyClass = "ui-liquid-glass-body relative z-[1]";
+
+export function LiquidGlassBody({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return <div className={cn(liquidGlassBodyClass, className)}>{children}</div>;
+}
+
+/** Outer shell: border, shadow, Radix positioning. */
 export const liquidGlassFrameClass =
-  "ui-liquid-glass-content ui-liquid-glass-frame relative z-50 overflow-hidden rounded-xl border border-white/10 dark:border-white/[0.08] text-popover-foreground outline-none";
+  "ui-liquid-glass-frame relative z-50 overflow-hidden rounded-xl border border-white/10 dark:border-white/[0.08] text-popover-foreground outline-none";
 
 /** @deprecated use liquidGlassFrameClass */
 export const liquidGlassPanelClass = liquidGlassFrameClass;
 
-export const liquidGlassMenuContentClass = `${liquidGlassFrameClass} min-w-[8rem] p-1`;
+export const liquidGlassMenuContentClass = `${liquidGlassFrameClass} min-w-[8rem]`;
 
 export const liquidGlassMenuItemClass =
   "rounded-lg transition-[background-color,transform,color] duration-200 ease-[var(--motion-ease-rail)] focus:bg-accent/80";

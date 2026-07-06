@@ -3,6 +3,7 @@ import * as React from "react";
 
 import {
   LiquidGlassBackdrop,
+  LiquidGlassBody,
   liquidGlassMenuContentClass,
   liquidGlassMenuItemClass,
   liquidGlassMenuSeparatorClass,
@@ -32,11 +33,11 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         align={align}
-        className={cn(liquidGlassMenuContentClass, "min-w-[12rem]", className)}
+        className={cn(liquidGlassMenuContentClass, "min-w-[12rem] p-1", className)}
         {...props}
       >
         <LiquidGlassBackdrop />
-        {children}
+        <LiquidGlassBody>{children}</LiquidGlassBody>
       </DropdownMenuPrimitive.Content>
     </DropdownMenuPrimitive.Portal>
   );

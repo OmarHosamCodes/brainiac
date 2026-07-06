@@ -240,6 +240,14 @@ export function useAgencyTaskList({
     }
   }, [defaultProjectId, selectedProjectIdForCreate, setSelectedProjectIdForCreate]);
 
+  useEffect(() => {
+    if (!currentUserId) return;
+    const { assignedToTeamForCreate, selectedAssigneeIdsForCreate } =
+      useAgencyTaskListStore.getState();
+    if (assignedToTeamForCreate || selectedAssigneeIdsForCreate.length > 0) return;
+    setSelectedAssigneeIdsForCreate([currentUserId]);
+  }, [currentUserId, setSelectedAssigneeIdsForCreate]);
+
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
       {

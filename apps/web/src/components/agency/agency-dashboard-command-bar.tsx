@@ -1,11 +1,12 @@
-import { ChevronDown } from "lucide-react";
-import type { ReactNode } from "react";
+import { Check, ChevronDown, Search } from "lucide-react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { AgencyMemberChooser } from "@/components/agency/agency-member-chooser";
 import { AgencyProjectChooser } from "@/components/agency/agency-project-chooser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
 export type RangePreset = "tenure" | "week" | "month" | "last30" | "custom";
@@ -60,50 +61,177 @@ const filterTriggerClass = cn(
   agencyFocusRingClass,
 );
 
-const selectBaseClass = cn(
-  "h-9 max-w-[12rem] appearance-none truncate rounded-xl border border-default bg-default py-1 pl-3 pr-8 text-xs font-semibold text-highlighted transition-colors",
-  "hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
+const filterOptionButtonClass = cn(
+  "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition-colors hover:bg-default/80",
   agencyFocusRingClass,
+  "motion-reduce:transition-none",
 );
 
-function FilterSelect({
-  id,
+function FilterOptionChooser({
   label,
   value,
   onChange,
   options,
-  placeholder,
+  emptyLabel,
+  searchPlaceholder,
   disabled,
+  loading,
 }: {
-  id: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: FilterOption[];
-  placeholder?: string;
+  emptyLabel: string;
+  searchPlaceholder: string;
   disabled?: boolean;
+  loading?: boolean;
 }) {
+  const [open, setOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const selectedLabel =
+    options.find((option) => option.value === value)?.label ?? emptyLabel;
+
+  const filteredOptions = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) return options;
+    return options.filter((option) => option.label.toLowerCase().includes(query));
+  }, [options, searchTerm]);
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) setSearchTerm("");
+  }
+
+  function selectOption(optionValue: string) {
+    onChange(optionValue);
+    setOpen(false);
+    setSearchTerm("");
+  }
+
   return (
-    <div className="relative flex items-center">
-      <label htmlFor={id} className="sr-only">
-        {label}
-      </label>
-      <select
-        id={id}
-        value={value}
-        disabled={disabled}
-        className={selectBaseClass}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {placeholder ? <option value="">{placeholder}</option> : null}
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted" />
-    </div>
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled || loading}
+          className={cn(filterTriggerClass, value ? "text-highlighted" : "text-muted")}
+          aria-label={label}
+        >
+          <span className="min-w-0 flex-1 truncate">
+            {loading ? "Loading…" : selectedLabel}
+          </span>
+          <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden p-0">
+        <div className="border-b border-white/10 p-2">
+          <div className="relative">
+            <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />
+            <Input
+              autoFocus
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder={searchPlaceholder}
+              className={cn(
+                "h-9 rounded-lg border-default bg-default pl-8 text-sm",
+                agencyInputPlaceholderClass,
+              )}
+            />
+          </div>
+        </div>
+        <div className="max-h-60 overflow-y-auto p-1">
+          <button
+            type="button"
+            className={cn(filterOptionButtonClass, !value && "bg-primary/10 text-primary")}
+            onClick={() => selectOption("")}
+          >
+            <span className="truncate">{emptyLabel}</span>
+            {!value ? (
+              <Check className="size-3.5 shrink-0" aria-hidden />
+            ) : (
+              <span className="size-3.5 shrink-0" aria-hidden />
+            )}
+          </button>
+          {filteredOptions.length === 0 ? (
+            <p className="px-2 py-3 text-center text-xs text-muted">No matches.</p>
+          ) : (
+            filteredOptions.map((option) => {
+              const selected = option.value === value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  className={cn(filterOptionButtonClass, selected && "bg-primary/10 text-primary")}
+                  onClick={() => selectOption(option.value)}
+                >
+                  <span className="truncate">{option.label}</span>
+                  {selected ? (
+                    <Check className="size-3.5 shrink-0" aria-hidden />
+                  ) : (
+                    <span className="size-3.5 shrink-0" aria-hidden />
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function RangePresetChooser({
+  value,
+  onChange,
+  tenureAvailable,
+}: {
+  value: RangePreset;
+  onChange: (preset: RangePreset) => void;
+  tenureAvailable: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const presets = rangePresets(tenureAvailable);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className={cn(filterTriggerClass, "text-highlighted")}
+          aria-label="Time range"
+        >
+          <span className="min-w-0 flex-1 truncate">{RANGE_LABEL[value]}</span>
+          <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-48 p-1">
+        {presets.map((preset) => {
+          const selected = preset === value;
+          return (
+            <button
+              key={preset}
+              type="button"
+              className={cn(
+                filterOptionButtonClass,
+                selected && "bg-primary/10 text-primary",
+              )}
+              onClick={() => {
+                onChange(preset);
+                setOpen(false);
+              }}
+            >
+              <span className="truncate">{RANGE_LABEL[preset]}</span>
+              {selected ? (
+                <Check className="size-3.5 shrink-0" aria-hidden />
+              ) : (
+                <span className="size-3.5 shrink-0" aria-hidden />
+              )}
+            </button>
+          );
+        })}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -154,13 +282,14 @@ export function AgencyDashboardCommandBar({
       )}
     >
       {showClientFilter ? (
-        <FilterSelect
-          id="agency-dashboard-client"
+        <FilterOptionChooser
           label="Client"
           value={clientId}
           onChange={onClientChange!}
-          placeholder="All Clients"
+          emptyLabel="All Clients"
+          searchPlaceholder="Search clients"
           disabled={clientsLoading}
+          loading={clientsLoading}
           options={clients!.map((client) => ({
             value: client.id,
             label: client.name,
@@ -193,15 +322,10 @@ export function AgencyDashboardCommandBar({
           memberUserId ? "text-highlighted" : "text-muted",
         )}
       />
-      <FilterSelect
-        id="agency-dashboard-range"
-        label="Time range"
+      <RangePresetChooser
         value={rangePreset}
-        onChange={(value) => onRangePresetChange(value as RangePreset)}
-        options={rangePresets(tenureAvailable).map((preset) => ({
-          value: preset,
-          label: RANGE_LABEL[preset],
-        }))}
+        onChange={onRangePresetChange}
+        tenureAvailable={tenureAvailable}
       />
 
       {rangePreset === "custom" ? (

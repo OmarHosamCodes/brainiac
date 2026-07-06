@@ -754,6 +754,10 @@ body {
   isolation: isolate;
   overflow: hidden;
   background: transparent;
+  transform-origin: var(
+    --radix-context-menu-content-transform-origin,
+    var(--radix-dropdown-menu-content-transform-origin, var(--radix-popover-content-transform-origin, center))
+  );
   box-shadow:
     0 0 0 1px color-mix(in oklab, white 22%, transparent),
     0 10px 38px color-mix(in oklab, black 14%, transparent);
@@ -917,38 +921,32 @@ body {
   }
 }
 
-.ui-liquid-glass-content {
-  transform-origin: var(
-    --radix-context-menu-content-transform-origin,
-    var(--radix-dropdown-menu-content-transform-origin, var(--radix-popover-content-transform-origin, center))
-  );
-}
-
-.ui-liquid-glass-content[data-state="open"] {
+.ui-liquid-glass-frame[data-state="open"] .ui-liquid-glass-body {
   animation: ui-liquid-glass-in 0.44s var(--motion-ease-rail) both;
 }
 
-.ui-liquid-glass-content[data-state="closed"] {
+.ui-liquid-glass-frame[data-state="closed"] .ui-liquid-glass-body,
+.ui-liquid-glass-frame[data-state="closed"] .ui-liquid-glass-surface {
   animation: ui-liquid-glass-out 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
-.ui-liquid-glass-content[data-state="open"] [data-slot$="-menu-item"],
-.ui-liquid-glass-content[data-state="open"] [data-slot="command-item"] {
+.ui-liquid-glass-frame[data-state="open"] [data-slot$="-menu-item"],
+.ui-liquid-glass-frame[data-state="open"] [data-slot="command-item"] {
   animation: ui-liquid-glass-item-in 0.34s var(--motion-ease-rail) both;
 }
 
-.ui-liquid-glass-content[data-state="open"] [data-slot$="-menu-item"]:nth-child(1),
-.ui-liquid-glass-content[data-state="open"] [data-slot="command-item"]:nth-child(1) {
+.ui-liquid-glass-frame[data-state="open"] [data-slot$="-menu-item"]:nth-child(1),
+.ui-liquid-glass-frame[data-state="open"] [data-slot="command-item"]:nth-child(1) {
   animation-delay: 0.03s;
 }
 
-.ui-liquid-glass-content[data-state="open"] [data-slot$="-menu-item"]:nth-child(2),
-.ui-liquid-glass-content[data-state="open"] [data-slot="command-item"]:nth-child(2) {
+.ui-liquid-glass-frame[data-state="open"] [data-slot$="-menu-item"]:nth-child(2),
+.ui-liquid-glass-frame[data-state="open"] [data-slot="command-item"]:nth-child(2) {
   animation-delay: 0.06s;
 }
 
-.ui-liquid-glass-content[data-state="open"] [data-slot$="-menu-item"]:nth-child(3),
-.ui-liquid-glass-content[data-state="open"] [data-slot="command-item"]:nth-child(3) {
+.ui-liquid-glass-frame[data-state="open"] [data-slot$="-menu-item"]:nth-child(3),
+.ui-liquid-glass-frame[data-state="open"] [data-slot="command-item"]:nth-child(3) {
   animation-delay: 0.09s;
 }
 
@@ -1074,10 +1072,11 @@ body {
     opacity: 0.25;
   }
 
-  .ui-liquid-glass-content[data-state="open"],
-  .ui-liquid-glass-content[data-state="closed"],
-  .ui-liquid-glass-content[data-state="open"] [data-slot$="-menu-item"],
-  .ui-liquid-glass-content[data-state="open"] [data-slot="command-item"] {
+  .ui-liquid-glass-frame[data-state="open"] .ui-liquid-glass-body,
+  .ui-liquid-glass-frame[data-state="closed"] .ui-liquid-glass-body,
+  .ui-liquid-glass-frame[data-state="closed"] .ui-liquid-glass-surface,
+  .ui-liquid-glass-frame[data-state="open"] [data-slot$="-menu-item"],
+  .ui-liquid-glass-frame[data-state="open"] [data-slot="command-item"] {
     animation: none;
     filter: none;
     opacity: 1;

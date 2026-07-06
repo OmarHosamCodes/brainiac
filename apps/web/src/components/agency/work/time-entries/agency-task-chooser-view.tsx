@@ -1,4 +1,5 @@
 import { ChevronDown, Search } from "lucide-react";
+import { useEffect, useRef } from "react";
 
 import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot";
 import { AgencyTimeEntryProjectLabel } from "@/components/agency/agency-time-entry-project-label";
@@ -38,11 +39,26 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     onSelectTask,
     onToggleProject,
     onToggleTaskGroup,
-    statusLabel,
+    revealToken,
     statusDotClass,
     formatDueDate,
-    formatAssigneeLabel,
   } = view;
+
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const frame = requestAnimationFrame(() => {
+      searchInputRef.current?.focus({ preventScroll: true });
+      listRef.current
+        ?.querySelector<HTMLElement>('[data-selected-task="true"]')
+        ?.scrollIntoView({ block: "nearest" });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [open, revealToken]);
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -90,6 +106,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
           <div className="relative">
             <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />
             <Input
+              ref={searchInputRef}
               autoFocus
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
@@ -101,7 +118,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
             />
           </div>
         </div>
-        <div className="max-h-[24rem] overflow-y-auto py-2">
+        <div ref={listRef} className="max-h-[24rem] overflow-y-auto py-2">
           {loading ? (
             <div className="space-y-2 px-3 py-1">
               {[1, 2, 3, 4, 5].map((rowIndex) => (
@@ -217,8 +234,9 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                                         <button
                                           key={task.id}
                                           type="button"
+                                          data-selected-task={selected ? "true" : undefined}
                                           className={cn(
-                                            "group flex w-full items-start gap-2 rounded-lg py-1.5 pr-2 text-left transition-colors hover:bg-default/80",
+                                            "group flex w-full items-center gap-2 rounded-lg py-1.5 pr-2 text-left transition-colors hover:bg-default/80",
                                             taskGroup.instanceCount > 1 ? "pl-9" : "pl-7",
                                             selected && "bg-primary/10 hover:bg-primary/10",
                                             agencyFocusRingClass,
@@ -228,7 +246,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                                         >
                                           <span
                                             className={[
-                                              "mt-1.5 size-1.5 shrink-0 rounded-full",
+                                              "size-1.5 shrink-0 rounded-full",
                                               statusDotClass(task.status),
                                             ].join(" ")}
                                           />
@@ -241,18 +259,11 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                                             >
                                               {instanceLabel}
                                             </span>
-                                            <span className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-muted">
-                                              <span>{statusLabel(task.status)}</span>
-                                              {(() => {
-                                                const assigneeLabel = formatAssigneeLabel(task);
-                                                return assigneeLabel !== "Unassigned" ? (
-                                                  <span className="truncate">{assigneeLabel}</span>
-                                                ) : null;
-                                              })()}
-                                              {formatDueDate(task.dueDate) ? (
-                                                <span>Due {formatDueDate(task.dueDate)}</span>
-                                              ) : null}
-                                            </span>
+                                            {formatDueDate(task.dueDate) ? (
+                                              <span className="mt-0.5 block truncate text-[11px] text-muted">
+                                                Due {formatDueDate(task.dueDate)}
+                                              </span>
+                                            ) : null}
                                           </span>
                                         </button>
                                       );

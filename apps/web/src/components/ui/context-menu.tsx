@@ -5,6 +5,7 @@ import { ContextMenu as ContextMenuPrimitive } from "radix-ui"
 import { cn } from "@/lib/utils"
 import {
   LiquidGlassBackdrop,
+  LiquidGlassBody,
   liquidGlassMenuContentClass,
   liquidGlassMenuItemClass,
   liquidGlassMenuSeparatorClass,
@@ -93,11 +94,11 @@ function ContextMenuSubContent({
   return (
     <ContextMenuPrimitive.SubContent
       data-slot="context-menu-sub-content"
-      className={cn(liquidGlassContentClass, "shadow-lg", className)}
+      className={cn(liquidGlassContentClass, "shadow-lg p-1", className)}
       {...props}
     >
       <LiquidGlassBackdrop />
-      {children}
+      <LiquidGlassBody>{children}</LiquidGlassBody>
     </ContextMenuPrimitive.SubContent>
   )
 }
@@ -113,13 +114,13 @@ function ContextMenuContent({
         data-slot="context-menu-content"
         className={cn(
           liquidGlassContentClass,
-          "max-h-(--radix-context-menu-content-available-height) overflow-x-hidden overflow-y-auto shadow-md",
+          "max-h-(--radix-context-menu-content-available-height) overflow-x-hidden overflow-y-auto p-1 shadow-md",
           className,
         )}
         {...props}
       >
         <LiquidGlassBackdrop />
-        {children}
+        <LiquidGlassBody>{children}</LiquidGlassBody>
       </ContextMenuPrimitive.Content>
     </ContextMenuPrimitive.Portal>
   )

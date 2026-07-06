@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { formatTaskAssigneeLabel } from "@brainiac/api/schemas/agency-ops";
 import type { AgencyProject, AgencyProjectTask, TaskStatus } from "@/lib/schemas/agency-work";
 import {
+  getTaskGroupKey,
   groupTasksByProjectTitle,
   type AgencyProjectTaskGroup,
 } from "@/lib/utils/agency-task-utils";
@@ -68,6 +69,7 @@ export type AgencyTaskChooserViewModel = {
   searchIsActive: boolean;
   isProjectExpanded: (projectId: string) => boolean;
   isTaskGroupExpanded: (groupKey: string) => boolean;
+  revealToken: number;
   onOpenChange: (open: boolean) => void;
   onSearchChange: (value: string) => void;
   onSelectTask: (taskId: string) => void;
@@ -112,6 +114,9 @@ export function useAgencyTaskChooser({
     onOpenChange?.(nextOpen);
     if (controlledOpen === undefined) {
       setUncontrolledOpen(nextOpen);
+    }
+    if (!nextOpen) {
+      setSearchTerm("");
     }
   }
 
@@ -207,22 +212,36 @@ export function useAgencyTaskChooser({
     return clientGroups;
   }, [filteredTasks, projects]);
 
-  const selectedProjectId = selectedTask?.projectId ?? "";
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(() => new Set());
   const [expandedTaskGroupKeys, setExpandedTaskGroupKeys] = useState<Set<string>>(() => new Set());
+  const [revealToken, setRevealToken] = useState(0);
   const searchIsActive = searchTerm.trim().length > 0;
 
   useEffect(() => {
     if (!open) return;
-    if (selectedProjectId) {
-      setExpandedProjectIds((current) => {
-        if (current.has(selectedProjectId)) return current;
-        const next = new Set(current);
-        next.add(selectedProjectId);
-        return next;
-      });
+
+    if (!selectedTask) {
+      setRevealToken((current) => current + 1);
+      return;
     }
-  }, [open, selectedProjectId]);
+
+    const projectId = selectedTask.projectId;
+    const groupKey = getTaskGroupKey(selectedTask);
+
+    setExpandedProjectIds((current) => {
+      if (current.has(projectId)) return current;
+      const next = new Set(current);
+      next.add(projectId);
+      return next;
+    });
+    setExpandedTaskGroupKeys((current) => {
+      if (current.has(groupKey)) return current;
+      const next = new Set(current);
+      next.add(groupKey);
+      return next;
+    });
+    setRevealToken((current) => current + 1);
+  }, [open, selectedTask]);
 
   function selectTask(taskId: string) {
     onValueChange(taskId);
@@ -273,6 +292,7 @@ export function useAgencyTaskChooser({
     searchIsActive,
     isProjectExpanded: (projectId) => searchIsActive || expandedProjectIds.has(projectId),
     isTaskGroupExpanded: (groupKey) => searchIsActive || expandedTaskGroupKeys.has(groupKey),
+    revealToken,
     onOpenChange: setOpen,
     onSearchChange: setSearchTerm,
     onSelectTask: selectTask,
