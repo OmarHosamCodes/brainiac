@@ -13,6 +13,7 @@
 
 import { createContext } from "@brainiac/api/context";
 import { bootstrapAgencyLiveRedisSubscriber } from "@brainiac/api/routers/agency-ops/live";
+import { registerNotificationPushHandler } from "@brainiac/api/routers/notifications/delivery";
 import { auth } from "@brainiac/auth";
 import { corsOrigins, env, primaryCorsOrigin } from "@brainiac/env/server";
 import { Hono } from "hono";
@@ -29,6 +30,8 @@ import {
   handleWebSocketMessage,
   type AgencyWebSocketData,
 } from "./lib/ws-handler";
+import { startNotificationDigestScheduler } from "./lib/notification-digest";
+import { sendWebPushForNotification } from "./lib/web-push";
 
 function getRpcDebugResponse(error: unknown, path: string) {
   /**
@@ -143,6 +146,8 @@ const app = createApp();
 const port = Number(process.env.PORT || 7000);
 
 await bootstrapAgencyLiveRedisSubscriber();
+registerNotificationPushHandler(sendWebPushForNotification);
+startNotificationDigestScheduler();
 
 // Log startup information in development
 if (env.NODE_ENV === "development") {
