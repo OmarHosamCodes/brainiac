@@ -2,6 +2,11 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import type { RangePreset } from "@/components/agency/agency-dashboard-command-bar";
+import {
+  allAgencyReportFieldIds,
+  areSameReportFieldSets,
+  type AgencyReportFieldId,
+} from "@/lib/agency/reports/agency-report-fields";
 import { fetchAllReportEntries } from "@/lib/agency/reports/fetch-report-entries";
 import { orpc } from "@/lib/orpc";
 import { useAgencyClientsQuery } from "@/lib/queries/agency";
@@ -36,19 +41,84 @@ export type AgencyTimeRangeFilters = {
   projectId?: string;
   memberUserId?: string;
   clientId?: string;
+  fields?: AgencyReportFieldId[];
+};
+
+export type AgencyTimeRangeFilterSnapshot = {
+  id: string;
+  savedAt: string;
+  rangePreset: RangePreset;
+  customFromDate: string;
+  customToDate: string;
+  clientId: string;
+  projectId: string;
+  memberUserId: string;
+  fieldIds: AgencyReportFieldId[];
+  range: { from: string; to: string };
 };
 
 type UseAgencyTimeRangeFiltersOptions = {
   teamId: string;
   includeClientFilter?: boolean;
+  includeFieldsFilter?: boolean;
   fetchEntries?: boolean;
+  onFiltersApplied?: (snapshot: Omit<AgencyTimeRangeFilterSnapshot, "id" | "savedAt">) => void;
 };
+
+function resolveRangeFromPreset(
+  preset: RangePreset,
+  customFromDate: string,
+  customToDate: string,
+  tenurePolicy: Parameters<typeof getCurrentTenurePeriodRange>[0],
+  now: Date,
+): { from: string; to: string } {
+  const endIso = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
+  ).toISOString();
+
+  if (preset === "tenure") {
+    const tenureRange = getCurrentTenurePeriodRange(tenurePolicy, now);
+    if (tenureRange) {
+      return { from: tenureRange.from, to: tenureRange.to };
+    }
+    return {
+      from: new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29),
+      ).toISOString(),
+      to: endIso,
+    };
+  }
+  if (preset === "month") {
+    return {
+      from: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
+      to: endIso,
+    };
+  }
+  if (preset === "last30") {
+    return {
+      from: new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29),
+      ).toISOString(),
+      to: endIso,
+    };
+  }
+  if (preset === "custom") {
+    return {
+      from: dateInputToIso(customFromDate),
+      to: dateInputToIso(customToDate, true),
+    };
+  }
+  return { from: startOfWeekUtc().toISOString(), to: endIso };
+}
 
 export function useAgencyTimeRangeFilters({
   teamId,
   includeClientFilter = false,
+  includeFieldsFilter = false,
   fetchEntries = false,
+  onFiltersApplied,
 }: UseAgencyTimeRangeFiltersOptions) {
+  const defaultFieldIds = allAgencyReportFieldIds();
   const now = useMemo(() => new Date(), []);
 
   const tenurePolicyQuery = useQuery({
@@ -70,6 +140,8 @@ export function useAgencyTimeRangeFilters({
   const [appliedProjectId, setAppliedProjectId] = useState("");
   const [appliedMemberUserId, setAppliedMemberUserId] = useState("");
   const [appliedClientId, setAppliedClientId] = useState("");
+  const [appliedFieldIds, setAppliedFieldIds] =
+    useState<AgencyReportFieldId[]>(defaultFieldIds);
 
   const [draftRangePreset, setDraftRangePreset] = useState<RangePreset | null>(null);
   const effectiveDraftRangePreset = draftRangePreset ?? defaultRangePreset;
@@ -80,55 +152,31 @@ export function useAgencyTimeRangeFilters({
   const [draftProjectId, setDraftProjectId] = useState("");
   const [draftMemberUserId, setDraftMemberUserId] = useState("");
   const [draftClientId, setDraftClientId] = useState("");
+  const [draftFieldIds, setDraftFieldIds] =
+    useState<AgencyReportFieldId[]>(defaultFieldIds);
 
   const hasPendingFilterChanges =
     effectiveDraftRangePreset !== effectiveAppliedRangePreset ||
     draftProjectId !== appliedProjectId ||
     draftMemberUserId !== appliedMemberUserId ||
     (includeClientFilter && draftClientId !== appliedClientId) ||
+    (includeFieldsFilter &&
+      !areSameReportFieldSets(draftFieldIds, appliedFieldIds)) ||
     (effectiveDraftRangePreset === "custom" &&
       (draftCustomFromDate !== appliedCustomFromDate ||
         draftCustomToDate !== appliedCustomToDate));
 
-  const range = useMemo(() => {
-    const endIso = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
-    ).toISOString();
-
-    if (effectiveAppliedRangePreset === "tenure") {
-      const tenureRange = getCurrentTenurePeriodRange(tenurePolicy, now);
-      if (tenureRange) {
-        return { from: tenureRange.from, to: tenureRange.to };
-      }
-      return {
-        from: new Date(
-          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29),
-        ).toISOString(),
-        to: endIso,
-      };
-    }
-    if (effectiveAppliedRangePreset === "month") {
-      return {
-        from: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
-        to: endIso,
-      };
-    }
-    if (effectiveAppliedRangePreset === "last30") {
-      return {
-        from: new Date(
-          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29),
-        ).toISOString(),
-        to: endIso,
-      };
-    }
-    if (effectiveAppliedRangePreset === "custom") {
-      return {
-        from: dateInputToIso(appliedCustomFromDate),
-        to: dateInputToIso(appliedCustomToDate, true),
-      };
-    }
-    return { from: startOfWeekUtc().toISOString(), to: endIso };
-  }, [appliedCustomFromDate, appliedCustomToDate, effectiveAppliedRangePreset, now, tenurePolicy]);
+  const range = useMemo(
+    () =>
+      resolveRangeFromPreset(
+        effectiveAppliedRangePreset,
+        appliedCustomFromDate,
+        appliedCustomToDate,
+        tenurePolicy,
+        now,
+      ),
+    [appliedCustomFromDate, appliedCustomToDate, effectiveAppliedRangePreset, now, tenurePolicy],
+  );
 
   const applied: AgencyTimeRangeFilters = useMemo(
     () => ({
@@ -136,12 +184,15 @@ export function useAgencyTimeRangeFilters({
       projectId: appliedProjectId || undefined,
       memberUserId: appliedMemberUserId || undefined,
       ...(includeClientFilter ? { clientId: appliedClientId || undefined } : {}),
+      ...(includeFieldsFilter ? { fields: appliedFieldIds } : {}),
     }),
     [
       appliedClientId,
+      appliedFieldIds,
       appliedMemberUserId,
       appliedProjectId,
       includeClientFilter,
+      includeFieldsFilter,
       range,
     ],
   );
@@ -201,7 +252,41 @@ export function useAgencyTimeRangeFilters({
     }
   }
 
+  function buildSnapshot(
+    preset: RangePreset,
+    customFromDate: string,
+    customToDate: string,
+    projectId: string,
+    memberUserId: string,
+    clientId: string,
+    fieldIds: AgencyReportFieldId[],
+  ): Omit<AgencyTimeRangeFilterSnapshot, "id" | "savedAt"> {
+    return {
+      rangePreset: preset,
+      customFromDate,
+      customToDate,
+      projectId,
+      memberUserId,
+      clientId,
+      fieldIds,
+      range: resolveRangeFromPreset(preset, customFromDate, customToDate, tenurePolicy, now),
+    };
+  }
+
   function handleApply() {
+    if (onFiltersApplied) {
+      onFiltersApplied(
+        buildSnapshot(
+          effectiveDraftRangePreset,
+          draftCustomFromDate,
+          draftCustomToDate,
+          draftProjectId,
+          draftMemberUserId,
+          draftClientId,
+          draftFieldIds,
+        ),
+      );
+    }
     setAppliedRangePreset(draftRangePreset);
     setAppliedCustomFromDate(draftCustomFromDate);
     setAppliedCustomToDate(draftCustomToDate);
@@ -209,6 +294,9 @@ export function useAgencyTimeRangeFilters({
     setAppliedMemberUserId(draftMemberUserId);
     if (includeClientFilter) {
       setAppliedClientId(draftClientId);
+    }
+    if (includeFieldsFilter) {
+      setAppliedFieldIds(draftFieldIds);
     }
   }
 
@@ -219,12 +307,49 @@ export function useAgencyTimeRangeFilters({
     if (includeClientFilter) {
       setDraftClientId("");
     }
+    if (includeFieldsFilter) {
+      setDraftFieldIds(defaultFieldIds);
+    }
     setAppliedRangePreset(null);
     setAppliedProjectId("");
     setAppliedMemberUserId("");
     if (includeClientFilter) {
       setAppliedClientId("");
     }
+    if (includeFieldsFilter) {
+      setAppliedFieldIds(defaultFieldIds);
+    }
+  }
+
+  function captureAppliedSnapshot(): Omit<AgencyTimeRangeFilterSnapshot, "id" | "savedAt"> {
+    return buildSnapshot(
+      effectiveAppliedRangePreset,
+      appliedCustomFromDate,
+      appliedCustomToDate,
+      appliedProjectId,
+      appliedMemberUserId,
+      appliedClientId,
+      appliedFieldIds,
+    );
+  }
+
+  function restoreSnapshot(snapshot: AgencyTimeRangeFilterSnapshot) {
+    const storedPreset =
+      snapshot.rangePreset === defaultRangePreset ? null : snapshot.rangePreset;
+    setDraftRangePreset(storedPreset);
+    setDraftCustomFromDate(snapshot.customFromDate);
+    setDraftCustomToDate(snapshot.customToDate);
+    setDraftProjectId(snapshot.projectId);
+    setDraftMemberUserId(snapshot.memberUserId);
+    setDraftClientId(snapshot.clientId);
+    setDraftFieldIds(snapshot.fieldIds);
+    setAppliedRangePreset(storedPreset);
+    setAppliedCustomFromDate(snapshot.customFromDate);
+    setAppliedCustomToDate(snapshot.customToDate);
+    setAppliedProjectId(snapshot.projectId);
+    setAppliedMemberUserId(snapshot.memberUserId);
+    setAppliedClientId(snapshot.clientId);
+    setAppliedFieldIds(snapshot.fieldIds);
   }
 
   const isLoading =
@@ -259,6 +384,13 @@ export function useAgencyTimeRangeFilters({
           clientsLoading: clientsQuery.isPending,
         }
       : {}),
+    ...(includeFieldsFilter
+      ? {
+          fieldIds: draftFieldIds,
+          onFieldIdsChange: setDraftFieldIds,
+          defaultFieldIds,
+        }
+      : {}),
   };
 
   return {
@@ -267,7 +399,10 @@ export function useAgencyTimeRangeFilters({
     isLoading,
     projects,
     members,
+    clients,
     entriesCount: entriesQuery.data?.length ?? 0,
     entriesFetching: entriesQuery.isFetching,
+    captureAppliedSnapshot,
+    restoreSnapshot,
   };
 }
