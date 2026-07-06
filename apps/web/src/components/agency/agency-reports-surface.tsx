@@ -15,7 +15,7 @@ type AgencyReportsSurfaceProps = {
 };
 
 export function AgencyReportsSurface({ teamId, filters }: AgencyReportsSurfaceProps) {
-  const { range, projectId, memberUserId, clientId } = filters;
+  const { range, projectId, memberUserId, clientId, fields } = filters;
 
   const appliedFilters = {
     clientId,
@@ -79,7 +79,7 @@ export function AgencyReportsSurface({ teamId, filters }: AgencyReportsSurfacePr
           </p>
         </div>
       ) : (
-        <AgencyReportsTable entries={entries} />
+        <AgencyReportsTable entries={entries} visibleFields={fields} />
       )}
     </div>
   );
