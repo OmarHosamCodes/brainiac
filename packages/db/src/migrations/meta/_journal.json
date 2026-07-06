@@ -127,6 +127,13 @@
       "when": 1786000000000,
       "tag": "0017_task_is_waste",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786600000000,
+      "tag": "0018_notifications",
+      "breakpoints": true
     }
   ]
 }
