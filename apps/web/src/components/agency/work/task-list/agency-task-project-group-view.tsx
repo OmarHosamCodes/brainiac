@@ -96,7 +96,7 @@ export function AgencyTaskProjectGroupView({
           ) : (
             <AgencyProjectHueDot projectId={group.projectId} />
           )}
-          <span className="truncate font-semibold text-toned">{group.projectName}</span>
+          <span className="truncate font-medium text-muted">{group.projectName}</span>
         </span>
         <span className={cn(agencyMetricClass, "shrink-0 text-[10px] font-medium text-muted")}>
           {countLabel}

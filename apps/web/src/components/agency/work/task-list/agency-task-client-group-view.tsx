@@ -82,7 +82,7 @@ export function AgencyTaskClientGroupView({
             )}
             aria-hidden
           />
-          <span className="truncate font-bold text-highlighted">{group.clientName}</span>
+          <span className="truncate font-semibold text-muted">{group.clientName}</span>
         </span>
         <span className={cn(agencyMetricClass, "shrink-0 text-[11px] font-semibold text-muted")}>
           {taskCount} {taskCount === 1 ? "task" : "tasks"}
