@@ -1,6 +1,8 @@
 import type { AgencyLiveEvent } from "@brainiac/api/routers/agency-ops/live";
 
 import { authClient } from "@/lib/auth-client";
+import { orpc } from "@/lib/orpc";
+import { getQueryClient } from "@/lib/query-client";
 import {
   patchActiveMembersFromLiveTimer,
   patchActiveTimerInCache,
@@ -38,6 +40,41 @@ function handleTaskUpdated(event: Extract<AgencyLiveEvent, { type: "task.updated
   patchUpdatedProjectTaskInCache(event.teamId, event.task);
 }
 
+function handleNotificationCreated(
+  event: Extract<AgencyLiveEvent, { type: "notification.created" }>,
+) {
+  void getViewerUserId().then((viewerUserId) => {
+    if (!viewerUserId || event.notification.recipientUserId !== viewerUserId) return;
+
+    const queryClient = getQueryClient();
+    const teamId = event.teamId;
+
+    queryClient.setQueryData(orpc.notifications.list.queryKey({ input: { teamId, limit: 40 } }), (current) => {
+      if (!current || !Array.isArray(current.items)) {
+        return current;
+      }
+
+      const withoutDuplicate = current.items.filter((item) => item.id !== event.notification.id);
+      return {
+        ...current,
+        items: [event.notification, ...withoutDuplicate].slice(0, 40),
+      };
+    });
+
+    queryClient.setQueryData(
+      orpc.notifications.unreadCount.queryKey({ input: { teamId } }),
+      (current) => {
+        const base =
+          current && typeof current === "object" && "count" in current
+            ? Number(current.count)
+            : 0;
+        if (event.notification.seenAt) return { count: base };
+        return { count: base + 1 };
+      },
+    );
+  });
+}
+
 export function handleAgencyLiveEvent(_teamId: string, event: AgencyLiveEvent) {
   switch (event.type) {
     case "timer.updated":
@@ -50,6 +87,9 @@ export function handleAgencyLiveEvent(_teamId: string, event: AgencyLiveEvent) {
       void handleJourneyStepUpdated(event);
       break;
     case "taskMessage.created":
+      break;
+    case "notification.created":
+      handleNotificationCreated(event);
       break;
     default: {
       const _exhaustive: never = event;

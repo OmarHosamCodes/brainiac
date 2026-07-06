@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import { AgencyNotifications } from "@/components/agency/agency-notifications";
 import { AgencyClientsSurface } from "@/components/agency/agency-clients-surface";
 import { AgencyDashboardSurface } from "@/components/agency/agency-dashboard-surface";
 import { AgencyManagementSurface } from "@/components/agency/agency-management-surface";
@@ -15,11 +16,13 @@ import { AgencySubtitleBreadcrumb } from "@/components/agency/agency-subtitle-br
 import { AgencyPresenceAvatars } from "@/components/agency/agency-presence-avatars";
 import { AgencyTeamBreadcrumb } from "@/components/agency/agency-team-breadcrumb";
 import { AgencyWorkSurface } from "@/components/agency/agency-work-surface";
+import { AgencyLogoLoader } from "@/components/agency/agency-logo-loader";
 import { AppShellTopbarActions, AppShellTopbarSubtitle } from "@/components/app-shell-topbar";
-import { Skeleton } from "@/components/ui/skeleton";
 import { AppShellPage } from "@/components/app-shell-page";
 import { useAgencySyncStatus } from "@/lib/queries/agency-sync";
-import { prefetchAgencyWorkQueries, useAgencyActiveTimerQuery } from "@/lib/queries/agency";
+import { useAgencyJourneyLiveSync } from "@/lib/agency/work/hooks/use-agency-journey-live-sync";
+import { useAgencyBootGate } from "@/lib/agency/use-agency-boot-gate";
+import { useAgencyActiveTimerQuery } from "@/lib/queries/agency";
 import { useBilling } from "@/lib/queries/billing";
 import { useCurrentAgencyTeam } from "@/stores/agency-timer";
 import {
@@ -36,7 +39,6 @@ import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import {
   shellContentInClass,
-  shellLoadingPanelClass,
   shellPageBodyClass,
   shellPageClass,
 } from "@/lib/utils/app-shell-ui";
@@ -44,6 +46,7 @@ import { AGENCY_PAGE_SCROLL_ATTR, agencyWorkSurfaceShellClass } from "@/lib/util
 import { cn } from "@/lib/utils";
 import { setAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
+import { useAgencyWorkSurfaceStore } from "@/stores/agency-work-surface";
 
 function isAgencySegmentId(value: string | null): value is AgencySegmentId {
   return AGENCY_SEGMENTS.some((entry) => entry.id === value);
@@ -82,6 +85,14 @@ export function AgencyPage() {
 
   const selectedProjectId =
     typeof searchParams.get("project") === "string" ? searchParams.get("project")! : "";
+  const selectedTaskId =
+    typeof searchParams.get("task") === "string" ? searchParams.get("task")! : "";
+
+  useEffect(() => {
+    if (segment === "work" && selectedTaskId) {
+      useAgencyWorkSurfaceStore.getState().setSelectedTaskId(selectedTaskId);
+    }
+  }, [segment, selectedTaskId]);
 
   useEffect(() => {
     if (sectionParam === "settings") {
@@ -150,15 +161,20 @@ export function AgencyPage() {
 
   const agencySyncTeamId = agencyEnabled && selectedTeamId ? selectedTeamId : "";
   useAgencyActiveTimerQuery(agencySyncTeamId);
+  useAgencyJourneyLiveSync({ teamId: agencySyncTeamId });
   const syncState = useAgencySyncStatus(agencySyncTeamId);
 
-  useEffect(() => {
-    if (!agencyEnabled || !selectedTeamId || !currentUserId) return;
-    prefetchAgencyWorkQueries(selectedTeamId, currentUserId);
-  }, [agencyEnabled, selectedTeamId, currentUserId]);
-
-  const isInitialLoading = teamsQuery.isPending;
-  const isPageLoading = isInitialLoading || billingGatePending;
+  const { isBooting } = useAgencyBootGate({
+    segment,
+    teamId: selectedTeamId,
+    userId: currentUserId,
+    agencyEnabled,
+    teamsCount: teams.length,
+    showAgencyUpsell,
+    teamsQuery,
+    billingQuery,
+    searchParams,
+  });
 
   function openProject(projectId: string) {
     const next = new URLSearchParams(searchParams);
@@ -187,22 +203,27 @@ export function AgencyPage() {
         )}
         {...{ [AGENCY_PAGE_SCROLL_ATTR]: "" }}
       >
-        <AppShellTopbarSubtitle>
-          <AgencySubtitleBreadcrumb
-            segment={segment}
-            syncState={syncState}
-            onSegmentChange={handleSegmentChange}
-          />
-        </AppShellTopbarSubtitle>
+        {!isBooting ? (
+          <>
+            <AppShellTopbarSubtitle>
+              <AgencySubtitleBreadcrumb
+                segment={segment}
+                syncState={syncState}
+                onSegmentChange={handleSegmentChange}
+              />
+            </AppShellTopbarSubtitle>
 
-        <AppShellTopbarActions>
-          <AgencyTeamBreadcrumb
-            teamId={selectedTeamId}
-            teams={teams}
-            onTeamIdChange={setSelectedTeamId}
-          />
-          {selectedTeamId ? <AgencyPresenceAvatars teamId={selectedTeamId} /> : null}
-        </AppShellTopbarActions>
+            <AppShellTopbarActions>
+              {selectedTeamId ? <AgencyNotifications teamId={selectedTeamId} /> : null}
+              <AgencyTeamBreadcrumb
+                teamId={selectedTeamId}
+                teams={teams}
+                onTeamIdChange={setSelectedTeamId}
+              />
+              {selectedTeamId ? <AgencyPresenceAvatars teamId={selectedTeamId} /> : null}
+            </AppShellTopbarActions>
+          </>
+        ) : null}
 
         <main
           className={cn(
@@ -210,14 +231,8 @@ export function AgencyPage() {
             isWorkSegment && "min-h-0 flex-1 overflow-hidden pb-0",
           )}
         >
-          {isPageLoading ? (
-            <div className={shellPageBodyClass}>
-              <div className={shellLoadingPanelClass}>
-                <Skeleton className="h-12 w-full rounded-xl" />
-                <Skeleton className="h-6 w-2/3 rounded-lg" />
-                <Skeleton className="h-64 w-full rounded-xl" />
-              </div>
-            </div>
+          {isBooting ? (
+            <AgencyLogoLoader />
           ) : showAgencyUpsell ? (
             <div className={shellContentInClass}>
               <AgencyProUpsell />
