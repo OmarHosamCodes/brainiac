@@ -127,16 +127,20 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             onValueChange={onTaskChange}
             projects={projects}
             tasks={tasks}
+            fallbackTaskTitle={group.taskTitle}
+            fallbackProjectId={group.projectId}
+            fallbackProjectName={group.projectName}
             placeholder="Task"
-            triggerFormat="project-client"
+            triggerFormat="task-project"
             className="h-8 w-full border-0 bg-transparent px-0 text-xs shadow-none hover:bg-transparent"
             disabled={editSaving || rowUpdating}
           />
         ) : (
           <AgencyTimeEntryProjectLabel
+            format="task-project"
             projectId={group.projectId}
             projectName={group.projectName}
-            clientName={group.clientName}
+            taskTitle={group.taskTitle}
           />
         )}
       </div>

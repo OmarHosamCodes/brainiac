@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { useAgencyTimeEntryRow } from "@/lib/agency/work/hooks/use-agency-time-entry-row";
 import type { AgencyProject, AgencyProjectTask } from "@/lib/schemas/agency-work";
 import type { TimeEntryDraft } from "@/lib/schemas/agency-time-entry";
@@ -46,6 +48,14 @@ export function AgencyTimeEntryRowContainer({
 }: AgencyTimeEntryRowContainerProps) {
   const view = useAgencyTimeEntryRow(props);
 
+  const expandedChildGroups = useMemo(
+    () =>
+      view.expanded
+        ? props.group.entries.map((entry) => singleEntryGroup(props.group, entry))
+        : [],
+    [props.group, view.expanded],
+  );
+
   if (!view.isMulti) {
     return (
       <AgencyTimeEntryRowView
@@ -61,18 +71,18 @@ export function AgencyTimeEntryRowContainer({
         view={view}
         className={view.expanded ? undefined : "border-b-0"}
       />
-      {view.expanded
-        ? props.group.entries.map((entry, index) => (
-            <AgencyTimeEntryRowContainer
-              key={entry.id}
-              {...props}
-              group={singleEntryGroup(props.group, entry)}
-              expanded={false}
-              highlighted={props.highlighted === true && entry.id === props.group.entries[0]?.id}
-              omitBottomBorder={index === props.group.entries.length - 1}
-            />
-          ))
-        : null}
+      {expandedChildGroups.map((childGroup, index) => (
+        <AgencyTimeEntryRowContainer
+          key={childGroup.entries[0]!.id}
+          {...props}
+          group={childGroup}
+          expanded={false}
+          highlighted={
+            props.highlighted === true && childGroup.entries[0]?.id === props.group.entries[0]?.id
+          }
+          omitBottomBorder={index === expandedChildGroups.length - 1}
+        />
+      ))}
     </div>
   );
 }

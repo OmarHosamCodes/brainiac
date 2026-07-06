@@ -1,4 +1,4 @@
-import { ChevronDown, ListChecks, Search } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 
 import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot";
 import { AgencyTimeEntryProjectLabel } from "@/components/agency/agency-time-entry-project-label";
@@ -27,7 +27,9 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     open,
     searchTerm,
     selectedProject,
-    selectedLabel,
+    selectedTask,
+    triggerProject,
+    triggerTaskTitle,
     groupedProjects,
     isProjectExpanded,
     isTaskGroupExpanded,
@@ -68,23 +70,18 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
             ) : (
               <span className="min-w-0 truncate text-muted">{placeholder}</span>
             )
+          ) : loading ? (
+            <span className="min-w-0 truncate text-muted">Loading…</span>
+          ) : triggerProject && triggerTaskTitle ? (
+            <AgencyTimeEntryProjectLabel
+              format="task-project"
+              projectId={triggerProject.id}
+              projectName={triggerProject.name}
+              taskTitle={triggerTaskTitle}
+              className="min-w-0"
+            />
           ) : (
-            <>
-              <ListChecks
-                className={cn(
-                  "size-4 shrink-0",
-                  selectedLabel ? "text-highlighted" : "text-muted",
-                )}
-              />
-              <span
-                className={cn(
-                  "min-w-0 truncate",
-                  selectedLabel ? "text-highlighted" : "text-muted",
-                )}
-              >
-                {loading ? "Loading…" : selectedLabel || placeholder}
-              </span>
-            </>
+            <span className="min-w-0 truncate text-muted">{placeholder}</span>
           )}
         </Button>
       </PopoverTrigger>

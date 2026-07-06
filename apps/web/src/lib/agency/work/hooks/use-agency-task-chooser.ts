@@ -33,6 +33,9 @@ type UseAgencyTaskChooserOptions = {
   onOpenChange?: (open: boolean) => void;
   contentAlign?: "start" | "center" | "end";
   triggerFormat?: AgencyTaskChooserTriggerFormat;
+  fallbackTaskTitle?: string;
+  fallbackProjectId?: string;
+  fallbackProjectName?: string;
 };
 
 export type AgencyTaskChooserProjectGroup = {
@@ -57,6 +60,9 @@ export type AgencyTaskChooserViewModel = {
   open: boolean;
   searchTerm: string;
   selectedProject: Project | null;
+  selectedTask: AgencyTask | null;
+  triggerProject: Project | null;
+  triggerTaskTitle: string | null;
   selectedLabel: string;
   groupedProjects: AgencyTaskChooserClientGroup[];
   searchIsActive: boolean;
@@ -94,6 +100,9 @@ export function useAgencyTaskChooser({
   onOpenChange,
   contentAlign = "start",
   triggerFormat = "task-project",
+  fallbackTaskTitle,
+  fallbackProjectId,
+  fallbackProjectName,
 }: UseAgencyTaskChooserOptions): AgencyTaskChooserViewModel {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -126,10 +135,22 @@ export function useAgencyTaskChooser({
     [projectsById, selectedTask],
   );
 
+  const triggerProject = useMemo((): Project | null => {
+    if (selectedProject) return selectedProject;
+    if (!fallbackProjectId || !fallbackProjectName) return null;
+    return {
+      id: fallbackProjectId,
+      name: fallbackProjectName,
+      clientName: projectsById.get(fallbackProjectId)?.clientName ?? "",
+    };
+  }, [fallbackProjectId, fallbackProjectName, projectsById, selectedProject]);
+
+  const triggerTaskTitle = selectedTask?.title ?? fallbackTaskTitle ?? null;
+
   const selectedLabel = useMemo(() => {
     if (!selectedTask) return "";
     if (!selectedProject) return selectedTask.title;
-    return `${selectedTask.title} · ${selectedProject.name}`;
+    return `${selectedTask.title} . ${selectedProject.name}`;
   }, [selectedProject, selectedTask]);
 
   const filteredTasks = useMemo(() => {
@@ -244,6 +265,9 @@ export function useAgencyTaskChooser({
     open,
     searchTerm,
     selectedProject,
+    selectedTask,
+    triggerProject,
+    triggerTaskTitle,
     selectedLabel,
     groupedProjects,
     searchIsActive,

@@ -146,11 +146,16 @@ export function useAgencyTimeEntryRow({
   const [editDraft, setEditDraft] = useState<TimeEntryDraft>(() => entryToDraft(primaryEntry));
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
-  const [descriptionDraft, setDescriptionDraft] = useState(() => displayTitle(group));
+  const groupDescription = group.description;
+  const groupTaskTitle = group.taskTitle;
+  const resolvedTitle =
+    groupDescription.trim().length > 0 ? groupDescription : groupTaskTitle;
+
+  const [descriptionDraft, setDescriptionDraft] = useState(() => resolvedTitle);
 
   useEffect(() => {
-    setDescriptionDraft(displayTitle(group));
-  }, [group]);
+    setDescriptionDraft(resolvedTitle);
+  }, [groupDescription, groupTaskTitle]);
 
   useEffect(() => {
     setEditDraft(entryToDraft(primaryEntry));
@@ -190,16 +195,16 @@ export function useAgencyTimeEntryRow({
 
   const saveDescriptionEdit = useCallback(async () => {
     const trimmed = descriptionDraft.trim();
-    if (trimmed === displayTitle(group)) return;
+    if (trimmed === resolvedTitle) return;
 
     const draft = entryToDraft(primaryEntry);
     draft.description = trimmed;
     await saveDraft(draft);
-  }, [descriptionDraft, group, primaryEntry, saveDraft]);
+  }, [descriptionDraft, primaryEntry, resolvedTitle, saveDraft]);
 
   const cancelDescriptionEdit = useCallback(() => {
-    setDescriptionDraft(displayTitle(group));
-  }, [group]);
+    setDescriptionDraft(resolvedTitle);
+  }, [resolvedTitle]);
 
   const updateInlineDraft = useCallback((nextDraft: TimeEntryDraft) => {
     setEditDraft(nextDraft);

@@ -25,6 +25,9 @@ type AgencyTaskChooserContainerProps = {
   onOpenChange?: (open: boolean) => void;
   contentAlign?: "start" | "center" | "end";
   triggerFormat?: AgencyTaskChooserTriggerFormat;
+  fallbackTaskTitle?: string;
+  fallbackProjectId?: string;
+  fallbackProjectName?: string;
 };
 
 export function AgencyTaskChooserContainer(props: AgencyTaskChooserContainerProps) {
