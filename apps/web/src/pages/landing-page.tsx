@@ -40,7 +40,7 @@ export function LandingPage() {
         <div className="relative mx-auto max-w-6xl px-6 pt-20 pb-16 md:px-10 md:pt-28 md:pb-24 lg:px-16">
           <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
             <div>
-              <MarketingBrandLockup invert className="mb-12 md:mb-16" />
+              <MarketingBrandLockup className="mb-12 md:mb-16" />
 
               <h1 className="max-w-xl text-[2.25rem] leading-[1.05] font-bold tracking-[-0.02em] text-balance sm:text-5xl md:text-6xl lg:text-[3.75rem]">
                 Map your thinking.

@@ -68,7 +68,7 @@ export function MarketingLegalLayout({
     <MarketingPageShell heroIsDark>
       <section className="relative w-full overflow-hidden bg-[var(--marketing-ink)] text-[var(--marketing-ink-foreground)]">
         <div className="relative mx-auto max-w-6xl px-6 pt-20 pb-14 md:px-10 md:pt-28 md:pb-16 lg:px-16">
-          <MarketingBrandLockup invert linkToHome className="mb-12 md:mb-16" />
+          <MarketingBrandLockup linkToHome className="mb-12 md:mb-16" />
           <h1 className="max-w-3xl text-4xl leading-[1.05] font-bold tracking-[-0.02em] text-balance md:text-6xl">
             {title}
           </h1>

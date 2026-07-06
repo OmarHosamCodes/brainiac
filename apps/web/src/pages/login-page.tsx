@@ -165,7 +165,7 @@ export function LoginPage() {
         <NeuralCanvasArtifact className="opacity-40" />
 
         <div className="relative z-10">
-          <MarketingBrandLockup invert linkToHome />
+          <MarketingBrandLockup linkToHome />
         </div>
 
         <div className="relative z-10 max-w-lg">

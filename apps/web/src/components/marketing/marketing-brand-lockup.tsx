@@ -1,31 +1,20 @@
-import { BrainCircuit } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { BrandMark } from "@/components/shell/brand-mark";
 import { cn } from "@/lib/utils";
 
 type MarketingBrandLockupProps = {
   className?: string;
-  invert?: boolean;
   linkToHome?: boolean;
 };
 
 export function MarketingBrandLockup({
   className,
-  invert = false,
   linkToHome = false,
 }: MarketingBrandLockupProps) {
   const content = (
     <div className={cn("flex items-center gap-2.5 text-sm font-bold tracking-tight", className)}>
-      <span
-        className={cn(
-          "flex size-7 items-center justify-center rounded-md",
-          invert
-            ? "bg-[var(--marketing-ink-foreground)] text-[var(--marketing-ink)]"
-            : "bg-foreground text-background",
-        )}
-      >
-        <BrainCircuit className="size-4" />
-      </span>
+      <BrandMark className="size-7" />
       Brainiac
     </div>
   );

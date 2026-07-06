@@ -1,5 +1,6 @@
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
+import { BrandMark } from "@/components/shell/brand-mark";
 import {
   shellFocusRingClass,
   shellRailIconClass,
@@ -24,7 +25,7 @@ export function AppShellRailToggle({ expanded, onClick }: AppShellRailToggleProp
       onClick={onClick}
     >
       <span className="app-shell__rail-toggle-layer app-shell__rail-toggle-layer--brand" aria-hidden="true">
-        <img src="/favicon.svg" alt="" className="size-5 rounded-[6px]" />
+        <BrandMark className="size-5 rounded-[6px]" />
       </span>
       <span className="app-shell__rail-toggle-layer app-shell__rail-toggle-layer--action" aria-hidden="true">
         <ActionIcon className={shellRailIconClass} />

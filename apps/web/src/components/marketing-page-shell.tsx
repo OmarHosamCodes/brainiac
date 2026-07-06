@@ -1,8 +1,9 @@
-import { BrainCircuit, Moon, Sun } from "lucide-react";
+import { Moon, Sun } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
+import { MarketingBrandLockup } from "@/components/marketing/marketing-brand-lockup";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/stores/theme";
 import { orpc } from "@/lib/orpc";
@@ -90,12 +91,7 @@ export function MarketingPageShell({
         <div className="mx-auto max-w-6xl px-6 py-12 md:px-10 md:py-16 lg:px-16">
           <div className="grid grid-cols-1 gap-y-10 md:grid-cols-12 md:gap-x-10">
             <div className="md:col-span-5">
-              <div className="flex items-center gap-2.5 text-sm font-bold tracking-tight text-foreground">
-                <span className="flex size-7 items-center justify-center rounded-md bg-foreground text-background">
-                  <BrainCircuit className="size-4" />
-                </span>
-                Brainiac
-              </div>
+              <MarketingBrandLockup />
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
                 A spatial knowledge workspace with an embedded agent.
               </p>
