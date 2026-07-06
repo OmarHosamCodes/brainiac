@@ -134,7 +134,23 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
 
   return (
     <>
-      <section className={agencyTaskRailClass}>
+      <section
+        className={agencyTaskRailClass}
+        tabIndex={-1}
+        data-agency-task-rail
+        onKeyDown={(event) => {
+          if (
+            event.key === "n" &&
+            !event.metaKey &&
+            !event.ctrlKey &&
+            !event.altKey &&
+            event.target === event.currentTarget
+          ) {
+            event.preventDefault();
+            view.create.onFocusQuickAdd();
+          }
+        }}
+      >
         <AgencyTaskRailSummary
           total={view.totalCount}
           done={view.doneCount}
@@ -171,7 +187,7 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-6 text-center">
             <ListChecks className="size-6 text-muted" aria-hidden />
             <p className="mt-3 text-xs text-muted">No tasks assigned to you.</p>
-            <p className="mt-1 text-xs text-muted">Add one below to get started.</p>
+            <p className="mt-1 text-xs text-muted">Type below to add one.</p>
           </div>
         ) : (
           <AgencyTaskVirtualList
