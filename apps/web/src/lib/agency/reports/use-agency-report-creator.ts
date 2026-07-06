@@ -3,16 +3,10 @@ import { useCallback, useMemo, useState } from "react";
 
 import type { AgencyReportEntry } from "@/lib/utils/agency-report-grouping";
 
-export type ReportCommandBarAnchor = {
-  x: number;
-  y: number;
-};
-
 export function useAgencyReportCreator(entries: AgencyReportEntry[]) {
   const [excludedEntryIds, setExcludedEntryIds] = useState<Set<string>>(() => new Set());
   const [excludeUndoStack, setExcludeUndoStack] = useState<string[]>([]);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
-  const [commandBarAnchor, setCommandBarAnchor] = useState<ReportCommandBarAnchor | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [entryOverrides, setEntryOverrides] = useState<Map<string, Partial<AgencyTimeEntry>>>(
     () => new Map(),
@@ -32,21 +26,13 @@ export function useAgencyReportCreator(entries: AgencyReportEntry[]) {
     [visibleEntries, selectedEntryId],
   );
 
-  const toggleSelectEntry = useCallback((entryId: string, anchor: ReportCommandBarAnchor) => {
-    setSelectedEntryId((current) => {
-      if (current === entryId) {
-        setCommandBarAnchor(null);
-        return null;
-      }
-      setCommandBarAnchor(anchor);
-      return entryId;
-    });
+  const selectEntry = useCallback((entryId: string) => {
+    setSelectedEntryId(entryId);
     setEditingEntryId(null);
   }, []);
 
   const clearSelection = useCallback(() => {
     setSelectedEntryId(null);
-    setCommandBarAnchor(null);
     setEditingEntryId(null);
   }, []);
 
@@ -56,7 +42,6 @@ export function useAgencyReportCreator(entries: AgencyReportEntry[]) {
     setExcludedEntryIds((current) => new Set([...current, entryId]));
     setExcludeUndoStack((current) => [...current, entryId]);
     setSelectedEntryId(null);
-    setCommandBarAnchor(null);
     setEditingEntryId(null);
   }, [selectedEntryId]);
 
@@ -105,12 +90,11 @@ export function useAgencyReportCreator(entries: AgencyReportEntry[]) {
     excludeUndoStack,
     canUndo: excludeUndoStack.length > 0,
     selectedEntryId,
-    commandBarAnchor,
     editingEntryId,
     entryOverrides,
     visibleEntries,
     selectedEntry,
-    toggleSelectEntry,
+    selectEntry,
     clearSelection,
     excludeSelectedEntry,
     undoLastExclude,

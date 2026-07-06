@@ -5,10 +5,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import { AgencyReportCreatorTable } from "@/components/agency/agency-report-creator-table";
-import { AgencyReportFloatingCommandBar } from "@/components/agency/agency-report-floating-command-bar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchAllReportEntries } from "@/lib/agency/reports/fetch-report-entries";
+import { parseReportFieldsParam } from "@/lib/agency/reports/agency-report-fields";
 import { useAgencyReportCreator } from "@/lib/agency/reports/use-agency-report-creator";
 import { draftToIsoRange, type TimeEntryDraft } from "@/lib/schemas/agency-time-entry";
 import { orpcClient } from "@/lib/orpc";
@@ -33,6 +33,10 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
   const clientId = searchParams.get("client") ?? undefined;
   const projectId = searchParams.get("project") ?? undefined;
   const memberUserId = searchParams.get("member") ?? undefined;
+  const visibleFields = useMemo(
+    () => parseReportFieldsParam(searchParams.get("fields")),
+    [searchParams],
+  );
 
   const filters = useMemo(
     () => ({ clientId, projectId, memberUserId }),
@@ -198,6 +202,7 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
         entries,
         excludedEntryIds: creator.excludedEntryIds,
         entryOverrides: creator.entryOverrides,
+        visibleFields,
       });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -303,27 +308,13 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
       ) : (
         <AgencyReportCreatorTable
           creator={creator}
+          visibleFields={visibleFields}
           onSaveEdit={handleSaveEdit}
+          onToggleWaste={() => void handleToggleWaste()}
           savingEntryId={savingEntryId}
+          wastePending={wastePending}
         />
       )}
-
-      <AgencyReportFloatingCommandBar
-        visible={Boolean(creator.selectedEntryId && !creator.editingEntryId)}
-        anchor={creator.commandBarAnchor}
-        canUndo={creator.canUndo}
-        canMarkWaste={Boolean(creator.selectedEntry?.taskId)}
-        isWaste={creator.selectedEntry?.taskIsWaste === true}
-        wastePending={wastePending}
-        onDelete={creator.excludeSelectedEntry}
-        onToggleWaste={() => void handleToggleWaste()}
-        onEdit={creator.startEditingSelected}
-        onUndo={() => {
-          creator.undoLastExclude();
-          toast.success("Restored removed entry");
-        }}
-        onDismiss={creator.clearSelection}
-      />
     </div>
   );
 }
