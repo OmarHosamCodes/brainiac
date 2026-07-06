@@ -1,25 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Archive, Building2, Plus, Search } from "lucide-react";
+import { AlertTriangle, Archive, Building2, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AgencyMultiSelectFilter,
-  type AgencyFilterOptionGroup,
-} from "@/components/agency/agency-multi-select-filter";
 import { AgencyProjectCreateDialog } from "@/components/agency/agency-project-create-dialog";
+import { useAgencyClientsActions } from "@/lib/agency/agency-segment-filters";
+import type { AgencyListFiltersApplied } from "@/lib/agency/use-agency-list-filters";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
   agencyLabelClass,
 } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { getTaskGroupKey, groupTasksByClient, groupTasksByProjectTitle } from "@/lib/utils/agency-task-utils";
-import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
-import { orpc } from "@/lib/orpc";
+import { getTaskGroupKey } from "@/lib/utils/agency-task-utils";
 import {
   useAgencyClientsQuery,
   useAgencyContactQuery,
@@ -37,6 +32,7 @@ import {
 
 type AgencyClientsSurfaceProps = {
   teamId: string;
+  filters: AgencyListFiltersApplied;
 };
 
 function getWeekStartUtc(): Date {
@@ -48,22 +44,16 @@ function getWeekStartUtc(): Date {
   return date;
 }
 
-export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
+export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfaceProps) {
+  const { openNewClient } = useAgencyClientsActions();
   const agencyOps = useAgencyOpsStore();
   const isClientMutationPending = useAgencyOpsStore(selectIsClientMutationPending);
   const isContactMutationPending = useAgencyOpsStore(selectIsContactMutationPending);
 
-  const [filterTerm, setFilterTerm] = useState("");
-  const [selectedPeopleIds, setSelectedPeopleIds] = useState<string[]>([]);
-  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
-  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
-  const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [renameClientId, setRenameClientId] = useState("");
   const [createProjectClientId, setCreateProjectClientId] = useState("");
   const [contactClientId, setContactClientId] = useState("");
   const [renameDraft, setRenameDraft] = useState("");
-  const [newClientOpen, setNewClientOpen] = useState(false);
-  const [newClientName, setNewClientName] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -72,18 +62,8 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
   const clientsQuery = useAgencyClientsQuery(teamId);
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
-  const membersQuery = useQuery(
-    withAgencySyncQueryOptions(
-      {
-        ...orpc.agencyOps.taskThreads.members.list.queryOptions({ input: { teamId } }),
-        enabled: Boolean(teamId),
-      },
-      "cold",
-      { liveGated: true, teamId },
-    ),
-  );
   const tasksQuery = useAgencyProjectTasksQuery(teamId, {
-    search: filterTerm.trim() || undefined,
+    search: filters.filterTerm.trim() || undefined,
     pageSize: 100,
   });
   const contactQuery = useAgencyContactQuery(teamId, contactClientId);
@@ -92,66 +72,6 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
   const projects = projectsQuery.data?.items ?? [];
   const entries = entriesQuery.data?.items ?? [];
   const tasks = tasksQuery.data?.items ?? [];
-
-  const peopleOptions = useMemo(() => {
-    const people = new Map<string, string>();
-    for (const member of membersQuery.data?.items ?? []) {
-      people.set(member.userId, member.userName);
-    }
-    for (const entry of entries) {
-      people.set(entry.userId, entry.userName);
-    }
-    return Array.from(people, ([value, label]) => ({ value, label })).sort((a, b) =>
-      a.label.localeCompare(b.label),
-    );
-  }, [entries, membersQuery.data?.items]);
-
-  const clientOptions = useMemo(
-    () => clients.map((client) => ({ value: client.id, label: client.name })),
-    [clients],
-  );
-  const projectFilterGroups = useMemo((): AgencyFilterOptionGroup[] => {
-    const sortedProjects = [...projects].sort(
-      (left, right) =>
-        left.clientName.localeCompare(right.clientName) || left.name.localeCompare(right.name),
-    );
-    const groups: AgencyFilterOptionGroup[] = [];
-    let currentGroup: AgencyFilterOptionGroup | null = null;
-
-    for (const project of sortedProjects) {
-      if (!currentGroup || currentGroup.groupLabel !== project.clientName) {
-        currentGroup = { groupLabel: project.clientName, options: [] };
-        groups.push(currentGroup);
-      }
-      currentGroup.options!.push({ value: project.id, label: project.name });
-    }
-
-    return groups;
-  }, [projects]);
-  const taskFilterGroups = useMemo((): AgencyFilterOptionGroup[] => {
-    return groupTasksByClient(tasks, projects).map((clientGroup) => {
-      const tasksByProject = new Map<string, typeof tasks>();
-      for (const task of clientGroup.tasks) {
-        const list = tasksByProject.get(task.projectId) ?? [];
-        list.push(task);
-        tasksByProject.set(task.projectId, list);
-      }
-
-      return {
-        groupLabel: clientGroup.clientName,
-        sections: projects
-          .filter((project) => project.clientId === clientGroup.clientId && tasksByProject.has(project.id))
-          .sort((left, right) => left.name.localeCompare(right.name))
-          .map((project) => ({
-            sectionLabel: project.name,
-            options: groupTasksByProjectTitle(tasksByProject.get(project.id) ?? []).map((group) => ({
-              value: group.groupKey,
-              label: group.title,
-            })),
-          })),
-      };
-    });
-  }, [projects, tasks]);
 
   const weekHoursByClient = useMemo(() => {
     const weekStartMs = getWeekStartUtc().getTime();
@@ -174,11 +94,8 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
   }, [projects]);
 
   const filteredClients = useMemo(() => {
-    const term = filterTerm.trim().toLowerCase();
-    const peopleSet = new Set(selectedPeopleIds);
-    const clientsSet = new Set(selectedClientIds);
-    const projectsSet = new Set(selectedProjectIds);
-    const tasksSet = new Set(selectedTaskIds);
+    const term = filters.filterTerm.trim().toLowerCase();
+    const { peopleSet, clientsSet, projectsSet, tasksSet } = filters;
     return clients.filter((client) => {
       if (term && !client.name.toLowerCase().includes(term)) return false;
       if (clientsSet.size > 0 && !clientsSet.has(client.id)) return false;
@@ -209,17 +126,7 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
       }
       return true;
     });
-  }, [
-    clients,
-    entries,
-    filterTerm,
-    projects,
-    selectedClientIds,
-    selectedPeopleIds,
-    selectedProjectIds,
-    selectedTaskIds,
-    tasks,
-  ]);
+  }, [clients, entries, filters, projects, tasks]);
 
   const contactClient = clients.find((client) => client.id === contactClientId) ?? null;
 
@@ -247,14 +154,6 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
       setRenameDraft(client.name);
     }
   }, [clients, renameClientId]);
-
-  async function createClient() {
-    const name = newClientName.trim();
-    if (!name || !teamId) return;
-    setNewClientName("");
-    setNewClientOpen(false);
-    await agencyOps.createClient({ teamId, name });
-  }
 
   async function renameClient(clientId: string) {
     const client = clients.find((entry) => entry.id === clientId);
@@ -297,91 +196,7 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
 
   return (
     <div className="agency-clients">
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-default bg-elevated p-2">
-          <div className="relative min-w-64 flex-1 md:max-w-72">
-            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
-            <Input
-              value={filterTerm}
-              onChange={(e) => setFilterTerm(e.target.value)}
-              placeholder="Filter clients"
-              className="h-9 rounded-xl bg-default pl-9 text-sm"
-            />
-          </div>
-
-          <AgencyMultiSelectFilter
-            label="All People"
-            values={selectedPeopleIds}
-            options={peopleOptions}
-            onValuesChange={setSelectedPeopleIds}
-            disabled={tasksQuery.isPending}
-            searchPlaceholder="Search people"
-          />
-          <AgencyMultiSelectFilter
-            label="All Clients"
-            values={selectedClientIds}
-            options={clientOptions}
-            onValuesChange={setSelectedClientIds}
-            disabled={clientsQuery.isPending}
-            searchPlaceholder="Search clients"
-          />
-          <AgencyMultiSelectFilter
-            label="All Projects"
-            values={selectedProjectIds}
-            groups={projectFilterGroups}
-            onValuesChange={setSelectedProjectIds}
-            disabled={projectsQuery.isPending}
-            searchPlaceholder="Search projects or clients"
-          />
-          <AgencyMultiSelectFilter
-            label="All Tasks"
-            values={selectedTaskIds}
-            groups={taskFilterGroups}
-            onValuesChange={setSelectedTaskIds}
-            disabled={tasksQuery.isPending}
-            searchPlaceholder="Search tasks, projects, or clients"
-          />
-
-          <div className="ml-auto">
-            <Popover open={newClientOpen} onOpenChange={setNewClientOpen}>
-              <PopoverTrigger asChild>
-                <Button size="sm" disabled={!teamId}>
-                  <Plus />
-                  New client
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-72 space-y-2 p-3">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    void createClient();
-                  }}
-                >
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                    New client
-                  </p>
-                  <Input
-                    value={newClientName}
-                    onChange={(e) => setNewClientName(e.target.value)}
-                    placeholder="Client name"
-                    className="mt-2"
-                    autoFocus
-                  />
-                  <Button
-                    type="submit"
-                    size="sm"
-                    className="mt-2 w-full"
-                    disabled={!newClientName.trim() || isClientMutationPending}
-                  >
-                    Create
-                  </Button>
-                </form>
-              </PopoverContent>
-            </Popover>
-          </div>
-        </div>
-
-        {isLoading ? (
+      {isLoading ? (
           <div className="overflow-hidden rounded-2xl border border-default bg-default">
             {[1, 2, 3, 4, 5, 6].map((rowIndex) => (
               <div key={rowIndex} className="border-b border-default px-4 py-4 last:border-b-0">
@@ -419,7 +234,7 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
               variant="secondary"
               size="sm"
               className="mt-4"
-              onClick={() => setNewClientOpen(true)}
+              onClick={openNewClient}
             >
               <Plus />
               New client
@@ -645,8 +460,6 @@ export function AgencyClientsSurface({ teamId }: AgencyClientsSurfaceProps) {
             </table>
           </div>
         )}
-      </div>
-
       <AgencyProjectCreateDialog
         open={Boolean(createProjectClientId)}
         onOpenChange={(open) => {
