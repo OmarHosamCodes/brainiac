@@ -29,28 +29,28 @@ export function AgencyWorkSurfaceLayoutView({
   timePane,
 }: AgencyWorkSurfaceLayoutViewProps) {
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col gap-4 overflow-hidden lg:flex-row">
+    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-hidden lg:flex-row lg:items-stretch">
       {!selectedTaskId ? mobileTabs : null}
       {timerStrip}
 
       <div
         className={[
-          "min-h-0 min-w-0 transition-[width,max-width] duration-200 ease-out motion-reduce:transition-none lg:sticky lg:top-0 lg:h-full lg:flex-none lg:self-start",
+          "flex min-h-0 min-w-0 flex-col overflow-hidden transition-[width,max-width] duration-200 ease-out motion-reduce:transition-none lg:flex-none",
           taskRailCollapsed ? agencyTaskRailCollapsedWidthClass : agencyTaskRailExpandedWidthClass,
-          selectedTaskId ? "hidden lg:block" : "",
-          !selectedTaskId && mobilePane !== "tasks" ? "hidden lg:block" : "",
+          selectedTaskId ? "hidden lg:flex" : "",
+          !selectedTaskId && mobilePane !== "tasks" ? "hidden lg:flex" : "",
         ].join(" ")}
       >
         {taskRail}
       </div>
 
       {selectedTaskId ? (
-        <div className="min-h-0 min-w-0 flex-1 lg:h-full">{taskThread}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{taskThread}</div>
       ) : (
         <div
           className={[
             agencyTimePaneStackClass,
-            "min-h-0 min-w-0 flex-1",
+            "min-h-0 min-w-0 flex-1 overflow-hidden",
             mobilePane !== "time" ? "hidden lg:flex" : "flex",
           ].join(" ")}
         >

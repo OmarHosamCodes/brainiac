@@ -312,12 +312,21 @@ body {
     @apply antialiased;
   }
 
+  html:has(.app-shell),
+  html:has(.app-shell) body {
+    @apply h-full overflow-hidden;
+  }
+
   body {
     @apply bg-background text-foreground font-sans min-h-screen;
   }
 
   #root {
     @apply min-h-screen;
+  }
+
+  #root:has(.app-shell) {
+    @apply h-full min-h-0 overflow-hidden;
   }
 }
 

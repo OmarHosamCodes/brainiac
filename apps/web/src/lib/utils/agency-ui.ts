@@ -56,7 +56,7 @@ export function useAgencyPageScrollMargin(listRef: RefObject<HTMLElement | null>
 
 /** Work surface fills the agency page body so nested rails scroll independently. */
 export const agencyWorkSurfaceShellClass =
-  "flex min-h-0 flex-1 flex-col overflow-hidden";
+  "flex h-full min-h-0 flex-1 flex-col overflow-hidden";
 
 export const agencyLabelClass = shellLabelClass;
 
@@ -156,7 +156,7 @@ export const agencyTaskRowNeedsDescriptionClass = "bg-warning/5";
 
 /** Time column beside the task rail — stacks tracker and log as separate panels. */
 export const agencyTimePaneStackClass =
-  "flex h-full min-h-0 flex-col gap-3 overflow-hidden";
+  "flex min-h-0 flex-1 flex-col gap-3 overflow-hidden";
 
 export const agencyTimeTrackerPanelClass =
   "shrink-0 overflow-hidden rounded-xl border border-default bg-default";

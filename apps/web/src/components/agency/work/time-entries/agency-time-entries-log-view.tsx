@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import type { AgencyTimeEntriesLogViewModel } from "@/lib/agency/work/hooks/use-agency-time-entries-log";
 import {
   agencyMetricClass,
-  agencyTimeEntryScrollClass,
   agencyTimeLogSkeletonClass,
   agencyTimeWeekFooterClass,
 } from "@/lib/utils/agency-ui";
@@ -36,7 +35,7 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
         </div>
       ) : null}
 
-      <div ref={view.scrollContainerRef} className="min-h-0 flex-1 overflow-auto">
+      <div ref={view.scrollContainerRef} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
         {view.isLoading ? (
           <div className="space-y-0">
             {[1, 2, 3, 4, 5].map((rowIndex) => (
@@ -74,7 +73,7 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
             </Button>
           </div>
         ) : (
-          <div className={cn(agencyTimeEntryScrollClass, "flex flex-col gap-6")}>
+          <div className="flex min-w-0 flex-col gap-6">
             {view.weekGroups.map((week) => (
               <AgencyTimeEntryWeekGroupView
                 key={week.weekStartKey}

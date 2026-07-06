@@ -182,8 +182,8 @@ export function AgencyPage() {
     <AppShellPage slots={["subtitle", "actions", "hideAgent"]}>
       <div
         className={cn(
-          "flex h-full flex-col overflow-y-auto bg-background text-foreground",
-          isWorkSegment && "lg:overflow-hidden",
+          "flex h-full min-h-0 flex-col bg-background text-foreground",
+          isWorkSegment ? "overflow-hidden" : "overflow-y-auto",
         )}
         {...{ [AGENCY_PAGE_SCROLL_ATTR]: "" }}
       >
@@ -204,7 +204,12 @@ export function AgencyPage() {
           {selectedTeamId ? <AgencyPresenceAvatars teamId={selectedTeamId} /> : null}
         </AppShellTopbarActions>
 
-        <main className={cn(shellPageClass, isWorkSegment && "min-h-0")}>
+        <main
+          className={cn(
+            shellPageClass,
+            isWorkSegment && "min-h-0 flex-1 overflow-hidden pb-0",
+          )}
+        >
           {isPageLoading ? (
             <div className={shellPageBodyClass}>
               <div className={shellLoadingPanelClass}>
