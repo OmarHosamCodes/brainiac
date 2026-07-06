@@ -341,7 +341,7 @@ export function useAgencyTaskList({
     [agencyOps, blueprints, teamId],
   );
 
-  const suggestionsActive = createExpanded || Boolean(titleDraft.trim());
+  const suggestionsActive = Boolean(titleDraft.trim());
 
   const createTasks = useMemo(() => {
     if (!suggestionsActive) return [];

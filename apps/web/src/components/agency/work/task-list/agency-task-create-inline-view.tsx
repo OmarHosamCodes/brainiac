@@ -23,8 +23,6 @@ type AgencyTaskCreateInlineViewProps = {
 const suggestionPanelClass =
   "absolute inset-x-0 bottom-full z-20 mb-1 rounded-lg border border-default bg-elevated shadow-md";
 
-const BROWSE_TASK_LIMIT = 8;
-
 function QuickAddSuggestions({
   listboxId,
   titleDraft,
@@ -45,10 +43,10 @@ function QuickAddSuggestions({
   onCreateFromDraft: () => void;
 }) {
   const trimmedTitle = titleDraft.trim();
-  const filteredTasks = useMemo(() => {
-    const matches = filterTasksByTitleSearch(tasks, titleDraft);
-    return trimmedTitle ? matches : matches.slice(0, BROWSE_TASK_LIMIT);
-  }, [tasks, titleDraft, trimmedTitle]);
+  const filteredTasks = useMemo(
+    () => filterTasksByTitleSearch(tasks, titleDraft),
+    [tasks, titleDraft],
+  );
   const showCreateRow =
     Boolean(trimmedTitle) && !taskTitleExactlyMatches(tasks, trimmedTitle);
   const showCreateInList = showCreateRow && filteredTasks.length === 0;
@@ -65,7 +63,7 @@ function QuickAddSuggestions({
     return (
       <div className={cn(suggestionPanelClass, "p-2")}>
         <p className="px-2 py-3 text-center text-xs text-muted">
-          {trimmedTitle ? "No matching tasks. Shift+Enter to create." : "No tasks in this project yet."}
+          No matching tasks. Shift+Enter to create.
         </p>
       </div>
     );
@@ -78,15 +76,6 @@ function QuickAddSuggestions({
       aria-label="Task suggestions"
       className={cn(suggestionPanelClass, "max-h-48 overflow-y-auto py-1")}
     >
-      {!trimmedTitle ? (
-        <>
-          <li className="px-3 pb-1 pt-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
-            Recent tasks
-          </li>
-          <li className="px-3 pb-1.5 text-[10px] text-muted">Click or Enter to choose</li>
-        </>
-      ) : null}
-
       {showCreateRow && filteredTasks.length > 0 ? (
         <li className="px-3 pb-1.5 pt-1 text-[10px] text-muted">
           Enter to choose · Shift+Enter for new
@@ -195,12 +184,13 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
 
   const selectedProject = projects.find((project) => project.id === selectedProjectId);
   const trimmedTitle = titleDraft.trim();
-  const showSuggestions = quickAddFocused && !noProjects && !createOptionsExpanded;
+  const showSuggestions =
+    quickAddFocused && !noProjects && !createOptionsExpanded && Boolean(trimmedTitle);
 
-  const filteredTasks = useMemo(() => {
-    const matches = filterTasksByTitleSearch(createTasks, titleDraft);
-    return trimmedTitle ? matches : matches.slice(0, BROWSE_TASK_LIMIT);
-  }, [createTasks, titleDraft, trimmedTitle]);
+  const filteredTasks = useMemo(
+    () => filterTasksByTitleSearch(createTasks, titleDraft),
+    [createTasks, titleDraft],
+  );
   const showCreateRow =
     Boolean(trimmedTitle) && !taskTitleExactlyMatches(createTasks, trimmedTitle);
   const hasExistingMatches = filteredTasks.length > 0;
