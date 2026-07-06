@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
@@ -64,82 +65,73 @@ export type AgencyProjectTasksListPage = {
   total: number;
 };
 
-export function prefetchAgencyWorkQueries(teamId: string, assigneeUserId: string) {
+export async function ensureAgencyWorkBootQueries(
+  queryClient: QueryClient,
+  teamId: string,
+  assigneeUserId: string,
+) {
   if (!teamId) return;
 
-  const queryClient = getQueryClient();
-
-  void queryClient.prefetchQuery(
-    prefetchAgencySyncQueryOptions(
-      {
-        ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
-      },
-      "cold",
+  await Promise.all([
+    queryClient.ensureQueryData(
+      prefetchAgencySyncQueryOptions(
+        orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
+        "cold",
+      ),
     ),
-  );
-
-  void queryClient.prefetchQuery(
-    prefetchAgencySyncQueryOptions(
-      {
-        ...orpc.agencyOps.projectTasks.list.queryOptions({
+    queryClient.ensureQueryData(
+      prefetchAgencySyncQueryOptions(
+        orpc.agencyOps.projectTasks.list.queryOptions({
           input: {
             teamId,
             assigneeUserId,
             statuses: ["open", "in_progress"],
           },
         }),
-      },
-      "hot",
+        "hot",
+      ),
     ),
-  );
-
-  void queryClient.prefetchQuery(
-    prefetchAgencySyncQueryOptions(
-      {
-        ...orpc.agencyOps.projectTasks.list.queryOptions({
+    queryClient.ensureQueryData(
+      prefetchAgencySyncQueryOptions(
+        orpc.agencyOps.projectTasks.list.queryOptions({
           input: {
             teamId,
             assigneeUserId,
             statuses: ["done"],
           },
         }),
-      },
-      "hot",
+        "hot",
+      ),
     ),
-  );
-
-  void queryClient.prefetchQuery(
-    prefetchAgencySyncQueryOptions(
-      {
-        ...orpc.agencyOps.timer.getActive.queryOptions({
+    queryClient.ensureQueryData(
+      prefetchAgencySyncQueryOptions(
+        orpc.agencyOps.timer.getActive.queryOptions({
           input: { teamId },
         }),
-      },
-      "hot",
+        "hot",
+      ),
     ),
-  );
-
-  void queryClient.prefetchQuery(
-    prefetchAgencySyncQueryOptions(
-      {
-        ...orpc.agencyOps.timer.listActiveMembers.queryOptions({
+    queryClient.ensureQueryData(
+      prefetchAgencySyncQueryOptions(
+        orpc.agencyOps.timer.listActiveMembers.queryOptions({
           input: { teamId },
         }),
-      },
-      "hot",
+        "hot",
+      ),
     ),
-  );
-
-  void queryClient.prefetchQuery(
-    prefetchAgencySyncQueryOptions(
-      {
-        ...orpc.agencyOps.timeEntries.listMine.queryOptions({
+    queryClient.ensureQueryData(
+      prefetchAgencySyncQueryOptions(
+        orpc.agencyOps.timeEntries.listMine.queryOptions({
           input: { teamId, page: 1, pageSize: 20 },
         }),
-      },
-      "hot",
+        "hot",
+      ),
     ),
-  );
+  ]);
+}
+
+export function prefetchAgencyWorkQueries(teamId: string, assigneeUserId: string) {
+  void ensureAgencyWorkBootQueries(getQueryClient(), teamId, assigneeUserId);
 }
 
 export async function invalidateAgencyTeamQueries(teamId: string) {
