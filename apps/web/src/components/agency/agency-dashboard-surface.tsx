@@ -1,19 +1,12 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { AlertTriangle, BarChart3 } from "lucide-react";
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, type CSSProperties } from "react";
 
-import {
-  AgencyDashboardCommandBar,
-  type RangePreset,
-} from "@/components/agency/agency-dashboard-command-bar";
 import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { AgencyTimeRangeFilters } from "@/lib/agency/use-agency-time-range-filters";
 import { orpc } from "@/lib/orpc";
-import {
-  getCurrentTenurePeriodRange,
-  resolveDefaultDashboardRangePreset,
-} from "@/lib/tenure-utils";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
@@ -26,27 +19,6 @@ import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { projectHueFor } from "@/lib/utils/project-palette";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/stores/theme";
-
-function startOfWeekUtc(): Date {
-  const now = new Date();
-  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  const day = date.getUTCDay();
-  const diff = (day + 6) % 7;
-  date.setUTCDate(date.getUTCDate() - diff);
-  return date;
-}
-
-function toDateInputValue(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function dateInputToIso(value: string, endOfDay = false): string {
-  if (!value) return new Date().toISOString();
-  const [year, month, day] = value.split("-").map(Number);
-  const date = new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1));
-  if (endOfDay) date.setUTCHours(23, 59, 59, 999);
-  return date.toISOString();
-}
 
 function relShare(seconds: number, totalSeconds: number): number {
   if (totalSeconds <= 0) return 0;
@@ -189,96 +161,21 @@ function ProjectShareDonut({
 
 type AgencyDashboardSurfaceProps = {
   teamId: string;
+  filters: AgencyTimeRangeFilters;
 };
 
-export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) {
-  const now = useMemo(() => new Date(), []);
-  const tenurePolicyQuery = useQuery({
-    ...orpc.agencyOps.tenure.policy.get.queryOptions({ input: { teamId } }),
-    enabled: Boolean(teamId),
-  });
-  const tenurePolicy = tenurePolicyQuery.data?.policy ?? null;
-  const defaultRangePreset = useMemo(
-    () => resolveDefaultDashboardRangePreset(tenurePolicy),
-    [tenurePolicy],
-  );
-  const [appliedRangePreset, setAppliedRangePreset] = useState<RangePreset | null>(null);
-  const effectiveAppliedRangePreset = appliedRangePreset ?? defaultRangePreset;
-  const [appliedCustomFromDate, setAppliedCustomFromDate] = useState(
-    toDateInputValue(startOfWeekUtc()),
-  );
-  const [appliedCustomToDate, setAppliedCustomToDate] = useState(toDateInputValue(now));
-  const [appliedProjectId, setAppliedProjectId] = useState("");
-  const [appliedMemberUserId, setAppliedMemberUserId] = useState("");
+export function AgencyDashboardSurface({ teamId, filters }: AgencyDashboardSurfaceProps) {
+  const { range, projectId, memberUserId, clientId } = filters;
 
-  const [draftRangePreset, setDraftRangePreset] = useState<RangePreset | null>(null);
-  const effectiveDraftRangePreset = draftRangePreset ?? defaultRangePreset;
-  const [draftCustomFromDate, setDraftCustomFromDate] = useState(
-    toDateInputValue(startOfWeekUtc()),
-  );
-  const [draftCustomToDate, setDraftCustomToDate] = useState(toDateInputValue(now));
-  const [draftProjectId, setDraftProjectId] = useState("");
-  const [draftMemberUserId, setDraftMemberUserId] = useState("");
-
-  const hasPendingFilterChanges =
-    effectiveDraftRangePreset !== effectiveAppliedRangePreset ||
-    draftProjectId !== appliedProjectId ||
-    draftMemberUserId !== appliedMemberUserId ||
-    (effectiveDraftRangePreset === "custom" &&
-      (draftCustomFromDate !== appliedCustomFromDate ||
-        draftCustomToDate !== appliedCustomToDate));
-
-  const range = useMemo(() => {
-    const endIso = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
-    ).toISOString();
-    if (effectiveAppliedRangePreset === "tenure") {
-      const tenureRange = getCurrentTenurePeriodRange(tenurePolicy, now);
-      if (tenureRange) {
-        return { from: tenureRange.from, to: tenureRange.to };
-      }
-      return {
-        from: new Date(
-          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29),
-        ).toISOString(),
-        to: endIso,
-      };
-    }
-    if (effectiveAppliedRangePreset === "month") {
-      return {
-        from: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString(),
-        to: endIso,
-      };
-    }
-    if (effectiveAppliedRangePreset === "last30") {
-      return {
-        from: new Date(
-          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 29),
-        ).toISOString(),
-        to: endIso,
-      };
-    }
-    if (effectiveAppliedRangePreset === "custom") {
-      return {
-        from: dateInputToIso(appliedCustomFromDate),
-        to: dateInputToIso(appliedCustomToDate, true),
-      };
-    }
-    return { from: startOfWeekUtc().toISOString(), to: endIso };
-  }, [appliedCustomFromDate, appliedCustomToDate, effectiveAppliedRangePreset, now, tenurePolicy]);
-
-  const projectsQuery = useQuery({
-    ...orpc.agencyOps.projects.list.queryOptions({ input: { teamId } }),
-    enabled: Boolean(teamId),
-  });
   const dashboardQuery = useQuery({
     ...orpc.agencyOps.reports.dashboard.queryOptions({
       input: {
         teamId,
         from: range.from,
         to: range.to,
-        projectId: appliedProjectId || undefined,
-        memberUserId: appliedMemberUserId || undefined,
+        clientId,
+        projectId,
+        memberUserId,
       },
     }),
     enabled: Boolean(teamId),
@@ -286,7 +183,6 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
   });
 
   const summary = dashboardQuery.data?.summary ?? null;
-  const projects = projectsQuery.data?.items ?? [];
   const rankedProjects = summary?.timeDistributionByProject.slice(0, 10) ?? [];
   const totalProjectHours =
     summary?.timeDistributionByProject.reduce((sum, row) => sum + row.hours, 0) ?? 0;
@@ -305,7 +201,6 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
     return (
       <div className="space-y-4">
         <Skeleton className="h-10 w-full max-w-2xl rounded-xl" />
-        <Skeleton className="h-[4.25rem] rounded-2xl" />
         <Skeleton className="h-72 rounded-2xl" />
       </div>
     );
@@ -331,25 +226,8 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
     );
   }
 
-  function handleApply() {
-    setAppliedRangePreset(draftRangePreset);
-    setAppliedCustomFromDate(draftCustomFromDate);
-    setAppliedCustomToDate(draftCustomToDate);
-    setAppliedProjectId(draftProjectId);
-    setAppliedMemberUserId(draftMemberUserId);
-  }
-
-  function handleReset() {
-    setDraftRangePreset(null);
-    setDraftProjectId("");
-    setDraftMemberUserId("");
-    setAppliedRangePreset(null);
-    setAppliedProjectId("");
-    setAppliedMemberUserId("");
-  }
-
   return (
-    <div className="space-y-4 pb-6">
+    <div className="pb-6">
       {summary && summary.totalEntries > 0 ? (
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-default pb-3 text-xs">
           <div>
@@ -378,27 +256,6 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
           </div>
         </div>
       ) : null}
-
-      <AgencyDashboardCommandBar
-        rangePreset={effectiveDraftRangePreset}
-        onRangePresetChange={setDraftRangePreset}
-        customFromDate={draftCustomFromDate}
-        onCustomFromChange={setDraftCustomFromDate}
-        customToDate={draftCustomToDate}
-        onCustomToChange={setDraftCustomToDate}
-        projectId={draftProjectId}
-        onProjectChange={setDraftProjectId}
-        memberUserId={draftMemberUserId}
-        onMemberChange={setDraftMemberUserId}
-        onApply={handleApply}
-        hasPendingChanges={hasPendingFilterChanges}
-        onReset={handleReset}
-        defaultRangePreset={defaultRangePreset}
-        tenureAvailable={Boolean(tenurePolicy?.enabled)}
-        projects={projects}
-        members={summary?.teamMembers ?? []}
-        projectsLoading={projectsQuery.isPending}
-      />
 
       {!summary || summary.totalEntries === 0 ? (
         <div className={agencyEmptyPanelClass}>
