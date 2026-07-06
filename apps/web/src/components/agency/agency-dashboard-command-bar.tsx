@@ -29,12 +29,11 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  formatAgencyReportHistoryLabel,
-  formatAgencyReportHistoryMeta,
-  loadAgencyReportHistory,
-  type ReportHistoryLabelContext,
-} from "@/lib/agency/reports/agency-report-history";
-import type { AgencyTimeRangeFilterSnapshot } from "@/lib/agency/use-agency-time-range-filters";
+  SavedReportsListBody,
+  SavedReportsListSkeleton,
+  useSavedReportsList,
+} from "@/lib/agency/reports/agency-saved-reports-list";
+import type { SavedReportSearchContext } from "@/lib/agency/reports/agency-report-naming";
 import { agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
 import {
   AGENCY_REPORT_FIELD_LABELS,
@@ -169,9 +168,8 @@ type AgencyDashboardCommandBarProps = {
   };
   historyMenu?: {
     teamId: string;
-    refreshKey?: number;
-    labelContext: ReportHistoryLabelContext;
-    onSelect: (snapshot: AgencyTimeRangeFilterSnapshot) => void;
+    searchContext: SavedReportSearchContext;
+    onSelectReport: (reportId: string) => void;
   };
 };
 
@@ -409,10 +407,10 @@ function AgencyDashboardCommandBarMenu({
   historyMenu,
 }: AgencyDashboardCommandBarMenuProps) {
   const [historyOpen, setHistoryOpen] = useState(false);
-  const historyEntries = useMemo(
-    () => (historyOpen && historyMenu ? loadAgencyReportHistory(historyMenu.teamId) : []),
-    [historyMenu, historyOpen],
-  );
+  const reportsQuery = useSavedReportsList({
+    teamId: historyMenu?.teamId ?? "",
+    enabled: historyOpen && Boolean(historyMenu?.teamId),
+  });
   const selectedFields = new Set(fieldIds ?? []);
   const presets = rangePresets(tenureAvailable);
   const selectedClientLabel =
@@ -590,22 +588,21 @@ function AgencyDashboardCommandBarMenu({
 
         {historyMenu ? (
           <ContextMenuSub onOpenChange={setHistoryOpen}>
-            <SubTriggerWithTooltip tooltip="Restore a recently used filter setup.">
-              Report history
+            <SubTriggerWithTooltip tooltip="Open a saved report.">
+              Reports
             </SubTriggerWithTooltip>
-            <ContextMenuSubContent className="max-h-72 w-80 overflow-y-auto">
-              {historyEntries.length === 0 ? (
-                <ContextMenuItem disabled>No saved reports yet.</ContextMenuItem>
+            <ContextMenuSubContent className="w-80 overflow-hidden p-0">
+              {reportsQuery.isPending ? (
+                <SavedReportsListSkeleton />
+              ) : reportsQuery.isError ? (
+                <ContextMenuItem disabled>Couldn't load reports.</ContextMenuItem>
               ) : (
-                historyEntries.map((entry) => (
-                  <MenuItemWithTooltip
-                    key={entry.id}
-                    onSelect={() => historyMenu.onSelect(entry)}
-                    tooltip={formatAgencyReportHistoryMeta(entry)}
-                  >
-                    <span className="truncate">{formatAgencyReportHistoryLabel(entry, historyMenu.labelContext)}</span>
-                  </MenuItemWithTooltip>
-                ))
+                <SavedReportsListBody
+                  items={reportsQuery.data?.items ?? []}
+                  searchContext={historyMenu.searchContext}
+                  onSelect={historyMenu.onSelectReport}
+                  compact
+                />
               )}
             </ContextMenuSubContent>
           </ContextMenuSub>

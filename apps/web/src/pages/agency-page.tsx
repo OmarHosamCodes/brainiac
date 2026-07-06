@@ -267,7 +267,7 @@ export function AgencyPage() {
                     />
                   </div>
                 ) : null}
-                {segment === "reports" && searchParams.get("report") === "create" ? (
+                {segment === "reports" && searchParams.get("report") ? (
                   <AgencyReportCreatorSurface teamId={selectedTeamId} />
                 ) : null}
                 {segment === "management" ? (
@@ -276,7 +276,7 @@ export function AgencyPage() {
                 {segment === "dashboard" ||
                 segment === "clients" ||
                 segment === "projects" ||
-                (segment === "reports" && searchParams.get("report") !== "create") ? (
+                (segment === "reports" && !searchParams.get("report")) ? (
                   <AgencySegmentBody
                     segment={segment}
                     teamId={selectedTeamId}

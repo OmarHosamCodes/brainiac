@@ -7,6 +7,7 @@ import {
   isReportFieldVisible,
   type AgencyReportFieldId,
 } from "@/lib/agency/reports/agency-report-fields";
+import { sanitizeReportFileName } from "@/lib/agency/reports/agency-report-naming";
 import {
   groupEntriesForDisplay,
   type AgencyReportEntry,
@@ -16,6 +17,7 @@ import { formatDuration } from "@/lib/utils/format-duration";
 
 type ExportAgencyReportXlsxInput = {
   teamId: string;
+  reportName?: string;
   entries: AgencyReportEntry[];
   excludedEntryIds: Set<string>;
   entryOverrides: Map<string, Partial<AgencyTimeEntry>>;
@@ -68,6 +70,7 @@ function resolveExportEntries(
 
 export async function exportAgencyReportXlsx({
   teamId,
+  reportName,
   entries,
   excludedEntryIds,
   entryOverrides,
@@ -137,7 +140,8 @@ export async function exportAgencyReportXlsx({
 
   const buffer = await workbook.xlsx.writeBuffer();
   const dateStamp = new Date().toISOString().slice(0, 10);
-  const fileName = `agency-report-${teamId}-${dateStamp}.xlsx`;
+  const baseName = reportName ? sanitizeReportFileName(reportName) : `agency-report-${teamId}`;
+  const fileName = `${baseName}-${dateStamp}.xlsx`;
 
   return {
     fileName,

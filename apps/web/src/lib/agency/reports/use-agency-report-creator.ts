@@ -3,8 +3,17 @@ import { useCallback, useMemo, useState } from "react";
 
 import type { AgencyReportEntry } from "@/lib/utils/agency-report-grouping";
 
-export function useAgencyReportCreator(entries: AgencyReportEntry[]) {
-  const [excludedEntryIds, setExcludedEntryIds] = useState<Set<string>>(() => new Set());
+type UseAgencyReportCreatorOptions = {
+  initialExcludedEntryIds?: string[];
+};
+
+export function useAgencyReportCreator(
+  entries: AgencyReportEntry[],
+  options: UseAgencyReportCreatorOptions = {},
+) {
+  const [excludedEntryIds, setExcludedEntryIds] = useState<Set<string>>(
+    () => new Set(options.initialExcludedEntryIds ?? []),
+  );
   const [excludeUndoStack, setExcludeUndoStack] = useState<string[]>([]);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
@@ -43,12 +52,15 @@ export function useAgencyReportCreator(entries: AgencyReportEntry[]) {
     setExcludeUndoStack((current) => [...current, entryId]);
     setSelectedEntryId(null);
     setEditingEntryId(null);
+    return entryId;
   }, [selectedEntryId]);
 
   const undoLastExclude = useCallback(() => {
+    let restoredId: string | undefined;
     setExcludeUndoStack((stack) => {
       const entryId = stack[stack.length - 1];
       if (!entryId) return stack;
+      restoredId = entryId;
       setExcludedEntryIds((current) => {
         const next = new Set(current);
         next.delete(entryId);
@@ -56,6 +68,7 @@ export function useAgencyReportCreator(entries: AgencyReportEntry[]) {
       });
       return stack.slice(0, -1);
     });
+    return restoredId;
   }, []);
 
   const startEditingSelected = useCallback(() => {

@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import { AgencyDashboardCommandBar } from "@/components/agency/agency-dashboard-command-bar";
 import { AgencyListFilterCommandBar } from "@/components/agency/agency-list-filter-command-bar";
@@ -10,19 +11,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { serializeReportFieldsParam } from "@/lib/agency/reports/agency-report-fields";
-import {
-  createReportHistorySnapshot,
-  pushAgencyReportHistory,
-} from "@/lib/agency/reports/agency-report-history";
+import { suggestAgencyReportName } from "@/lib/agency/reports/agency-report-naming";
 import type { AgencyListFiltersApplied } from "@/lib/agency/use-agency-list-filters";
 import { useAgencyListFilters } from "@/lib/agency/use-agency-list-filters";
 import type {
-  AgencyTimeRangeFilterSnapshot,
   AgencyTimeRangeFilters,
 } from "@/lib/agency/use-agency-time-range-filters";
 import { useAgencyTimeRangeFilters } from "@/lib/agency/use-agency-time-range-filters";
 import type { AgencySegmentId } from "@/lib/agency-segments";
+import { orpcClient } from "@/lib/orpc";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
 import {
   selectIsClientMutationPending,
   useAgencyOpsStore,
@@ -58,7 +56,7 @@ function commandBarVisible(
 ): boolean {
   if (segment === "work" || segment === "management") return false;
   if (segment === "projects" && selectedProjectId) return false;
-  if (segment === "reports" && reportMode === "create") return false;
+  if (segment === "reports" && reportMode) return false;
   return segment === "dashboard" || segment === "reports" || segment === "clients" || segment === "projects";
 }
 
@@ -107,46 +105,72 @@ function ReportsFiltersRoot({
   children: ReactNode;
 }) {
   const navigate = useNavigate();
-  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
-
-  const recordHistory = useCallback(
-    (snapshot: AgencyTimeRangeFilterSnapshot) => {
-      pushAgencyReportHistory(teamId, snapshot);
-      setHistoryRefreshKey((value) => value + 1);
-    },
-    [teamId],
-  );
+  const [creatingReport, setCreatingReport] = useState(false);
 
   const timeRange = useAgencyTimeRangeFilters({
     teamId,
     includeClientFilter: true,
     includeFieldsFilter: true,
     fetchEntries: true,
-    onFiltersApplied: (snapshot) => {
-      recordHistory(createReportHistorySnapshot(snapshot));
-    },
   });
 
-  function openReportCreator() {
-    recordHistory(createReportHistorySnapshot(timeRange.captureAppliedSnapshot()));
+  const searchContext = {
+    clients: timeRange.clients,
+    members: timeRange.members,
+  };
 
-    const next = new URLSearchParams(searchParams);
-    next.set("section", "reports");
-    next.set("report", "create");
-    next.set("from", timeRange.applied.range.from);
-    next.set("to", timeRange.applied.range.to);
-    if (timeRange.applied.clientId) next.set("client", timeRange.applied.clientId);
-    else next.delete("client");
-    if (timeRange.applied.projectId) next.set("project", timeRange.applied.projectId);
-    else next.delete("project");
-    if (timeRange.applied.memberUserId) next.set("member", timeRange.applied.memberUserId);
-    else next.delete("member");
-    if (timeRange.applied.fields) {
-      next.set("fields", serializeReportFieldsParam(timeRange.applied.fields));
-    } else {
+  const openSavedReport = useCallback(
+    (reportId: string) => {
+      const next = new URLSearchParams(searchParams);
+      next.set("section", "reports");
+      next.set("report", reportId);
+      next.delete("from");
+      next.delete("to");
+      next.delete("client");
+      next.delete("project");
+      next.delete("member");
       next.delete("fields");
+      navigate(`/agency?${next.toString()}`);
+    },
+    [navigate, searchParams],
+  );
+
+  async function openReportCreator() {
+    if (creatingReport) return;
+    setCreatingReport(true);
+    try {
+      const snapshot = timeRange.captureAppliedSnapshot();
+      const name = suggestAgencyReportName(
+        {
+          range: snapshot.range,
+          clientId: snapshot.clientId || undefined,
+          memberUserId: snapshot.memberUserId || undefined,
+        },
+        searchContext,
+      );
+
+      const report = await orpcClient.agencyOps.reports.saved.create({
+        teamId,
+        name,
+        rangePreset: snapshot.rangePreset,
+        customFromDate: snapshot.customFromDate,
+        customToDate: snapshot.customToDate,
+        rangeFrom: snapshot.range.from,
+        rangeTo: snapshot.range.to,
+        clientId: snapshot.clientId || undefined,
+        projectId: snapshot.projectId || undefined,
+        memberUserId: snapshot.memberUserId || undefined,
+        fieldIds: snapshot.fieldIds,
+      });
+
+      openSavedReport(report.id);
+    } catch (error) {
+      toast.error("Couldn't create report", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      setCreatingReport(false);
     }
-    navigate(`/agency?${next.toString()}`);
   }
 
   return (
@@ -161,38 +185,31 @@ function ReportsFiltersRoot({
             <AgencyDashboardCommandBar
               {...timeRange.barProps}
               createReportAction={{
-                onSelect: openReportCreator,
-                disabled: timeRange.entriesCount === 0 || timeRange.entriesFetching,
+                onSelect: () => void openReportCreator(),
+                disabled:
+                  timeRange.entriesCount === 0 || timeRange.entriesFetching || creatingReport,
               }}
               historyMenu={{
                 teamId,
-                refreshKey: historyRefreshKey,
-                labelContext: {
-                  clients: timeRange.clients,
-                  projects: timeRange.projects,
-                  members: timeRange.members,
-                },
-                onSelect: timeRange.restoreSnapshot,
+                searchContext,
+                onSelectReport: openSavedReport,
               }}
               trailingActions={
                 <>
                   <Button
                     variant="secondary"
                     size="sm"
-                    disabled={timeRange.entriesCount === 0 || timeRange.entriesFetching}
-                    onClick={openReportCreator}
+                    disabled={
+                      timeRange.entriesCount === 0 || timeRange.entriesFetching || creatingReport
+                    }
+                    onClick={() => void openReportCreator()}
                   >
-                    Create report
+                    {creatingReport ? "Creating…" : "Create report"}
                   </Button>
                   <AgencyReportHistoryMenu
                     teamId={teamId}
-                    refreshKey={historyRefreshKey}
-                    labelContext={{
-                      clients: timeRange.clients,
-                      projects: timeRange.projects,
-                      members: timeRange.members,
-                    }}
-                    onSelect={timeRange.restoreSnapshot}
+                    searchContext={searchContext}
+                    onSelectReport={openSavedReport}
                   />
                 </>
               }

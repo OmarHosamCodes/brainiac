@@ -62,6 +62,14 @@ import {
   upsertClientContact,
   upsertMemberRate,
 } from "./service";
+import {
+  createSavedReport,
+  deleteSavedReport,
+  getSavedReport,
+  listSavedReportActivity,
+  listSavedReports,
+  updateSavedReport,
+} from "./saved-reports-service";
 import { askTaskAgent } from "./task-agent";
 import {
   deleteTenureExemption,
@@ -354,6 +362,68 @@ const reportsInputSchema = teamScopedInputSchema.extend({
   clientId: z.string().min(1).optional(),
   projectId: z.string().min(1).optional(),
   memberUserId: z.string().min(1).optional(),
+});
+
+const savedReportActivityActionSchema = z.enum([
+  "created",
+  "renamed",
+  "entries_excluded",
+  "entries_restored",
+  "entry_edited",
+  "waste_toggled",
+  "exported",
+]);
+
+const savedReportSnapshotInputSchema = teamScopedInputSchema.extend({
+  name: z.string().trim().min(1).max(240),
+  rangePreset: z.string().min(1),
+  customFromDate: z.string().optional(),
+  customToDate: z.string().optional(),
+  rangeFrom: z.string().datetime(),
+  rangeTo: z.string().datetime(),
+  clientId: z.string().optional(),
+  projectId: z.string().optional(),
+  memberUserId: z.string().optional(),
+  fieldIds: z.array(z.string().min(1)),
+});
+
+const savedReportRecordSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  name: z.string().min(1),
+  rangePreset: z.string().min(1),
+  customFromDate: z.string(),
+  customToDate: z.string(),
+  rangeFrom: z.string().datetime(),
+  rangeTo: z.string().datetime(),
+  clientId: z.string(),
+  projectId: z.string(),
+  memberUserId: z.string(),
+  fieldIds: z.array(z.string().min(1)),
+  excludedEntryIds: z.array(z.string().min(1)),
+  createdByUserName: z.string().min(1),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+const savedReportListItemSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  rangeFrom: z.string().datetime(),
+  rangeTo: z.string().datetime(),
+  clientId: z.string(),
+  projectId: z.string(),
+  memberUserId: z.string(),
+  createdByUserName: z.string().min(1),
+  updatedAt: z.string().datetime(),
+});
+
+const savedReportActivityRecordSchema = z.object({
+  id: z.string().min(1),
+  action: savedReportActivityActionSchema,
+  payload: z.record(z.string(), z.unknown()),
+  actorUserName: z.string().min(1),
+  createdAt: z.string().datetime(),
 });
 
 const timeSummarySchema = z.object({
@@ -1112,6 +1182,67 @@ export const agencyOpsRouter = {
         );
         return entry;
       }),
+    saved: {
+      create: protectedProProcedure
+        .input(savedReportSnapshotInputSchema)
+        .handler(async ({ context, input }) => {
+          return savedReportRecordSchema.parse(
+            await createSavedReport(context.session.user.id, input),
+          );
+        }),
+      list: protectedProProcedure.input(teamScopedInputSchema).handler(async ({ context, input }) => {
+        return z
+          .object({ items: z.array(savedReportListItemSchema) })
+          .parse(await listSavedReports(context.session.user.id, input));
+      }),
+      get: protectedProProcedure
+        .input(teamScopedInputSchema.extend({ reportId: z.string().min(1) }))
+        .handler(async ({ context, input }) => {
+          return savedReportRecordSchema.parse(
+            await getSavedReport(context.session.user.id, input),
+          );
+        }),
+      update: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            reportId: z.string().min(1),
+            name: z.string().trim().min(1).max(240).optional(),
+            excludedEntryIds: z.array(z.string().min(1)).optional(),
+            actions: z
+              .array(
+                z.object({
+                  action: savedReportActivityActionSchema,
+                  payload: z.record(z.string(), z.unknown()).optional(),
+                }),
+              )
+              .optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return savedReportRecordSchema.parse(
+            await updateSavedReport(context.session.user.id, input),
+          );
+        }),
+      delete: protectedProProcedure
+        .input(teamScopedInputSchema.extend({ reportId: z.string().min(1) }))
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ reportId: z.string().min(1), deleted: z.boolean() })
+            .parse(await deleteSavedReport(context.session.user.id, input));
+        }),
+      listActivity: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            reportId: z.string().min(1),
+            limit: z.number().int().min(1).max(50).optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ items: z.array(savedReportActivityRecordSchema) })
+            .parse(await listSavedReportActivity(context.session.user.id, input));
+        }),
+    },
   },
   // Phase 4 stubs.
   //

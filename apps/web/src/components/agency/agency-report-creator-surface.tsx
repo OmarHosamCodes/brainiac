@@ -1,14 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, BarChart2, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
+import { AgencyReportActivityMenu } from "@/components/agency/agency-report-activity-menu";
 import { AgencyReportCreatorTable } from "@/components/agency/agency-report-creator-table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  normalizeReportFieldIds,
+  type AgencyReportFieldId,
+} from "@/lib/agency/reports/agency-report-fields";
+import {
+  formatRelativeReportTime,
+} from "@/lib/agency/reports/agency-report-naming";
 import { fetchAllReportEntries } from "@/lib/agency/reports/fetch-report-entries";
-import { parseReportFieldsParam } from "@/lib/agency/reports/agency-report-fields";
+import { useAgencyReportAutosave } from "@/lib/agency/reports/use-agency-report-autosave";
 import { useAgencyReportCreator } from "@/lib/agency/reports/use-agency-report-creator";
 import { draftToIsoRange, type TimeEntryDraft } from "@/lib/schemas/agency-time-entry";
 import { orpcClient } from "@/lib/orpc";
@@ -21,30 +30,141 @@ type AgencyReportCreatorSurfaceProps = {
   teamId: string;
 };
 
+function SaveIndicator({
+  state,
+  lastSavedAt,
+  onRetry,
+}: {
+  state: ReturnType<typeof useAgencyReportAutosave>["state"];
+  lastSavedAt: Date | null;
+  onRetry: () => void;
+}) {
+  if (state === "saving" || state === "pending") {
+    return <span className="font-mono text-[11px] text-muted">Saving…</span>;
+  }
+  if (state === "error") {
+    return (
+      <span className="flex items-center gap-1.5 font-mono text-[11px] text-error">
+        Save failed
+        <button type="button" className="underline" onClick={onRetry}>
+          Retry
+        </button>
+      </span>
+    );
+  }
+  if (state === "saved" && lastSavedAt) {
+    return (
+      <span className="font-mono text-[11px] text-muted">
+        Saved · {formatRelativeReportTime(lastSavedAt.toISOString())}
+      </span>
+    );
+  }
+  return null;
+}
+
 export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfaceProps) {
   const [searchParams] = useSearchParams();
+  const reportId = searchParams.get("report") ?? "";
+
+  const reportQuery = useQuery({
+    queryKey: ["agency-reports", "saved", teamId, reportId],
+    queryFn: () => orpcClient.agencyOps.reports.saved.get({ teamId, reportId }),
+    enabled: Boolean(teamId && reportId),
+  });
+
+  const backParams = useMemo(() => {
+    const next = new URLSearchParams(searchParams);
+    next.set("section", "reports");
+    next.delete("report");
+    return next.toString();
+  }, [searchParams]);
+
+  if (!reportId) {
+    return (
+      <div className={agencyEmptyPanelClass}>
+        <BarChart2 className="mx-auto size-7 text-muted" />
+        <p className="mt-4 text-sm font-bold text-highlighted">No report selected.</p>
+        <p className="mt-1 text-xs text-muted">Go back to Reports and create or open a report.</p>
+      </div>
+    );
+  }
+
+  if (reportQuery.isPending) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
+      </div>
+    );
+  }
+
+  if (reportQuery.isError || !reportQuery.data) {
+    return (
+      <div className={agencyErrorPanelClass} role="alert">
+        <AlertTriangle className="mx-auto size-5 text-error" />
+        <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load report.</p>
+        <p className="mt-1 text-xs text-muted">
+          {getErrorMessage(reportQuery.error, "Try going back to Reports.")}
+        </p>
+        <Button variant="secondary" size="sm" className="mt-3" asChild>
+          <Link to={`/agency?${backParams}`}>Back to Reports</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <AgencyReportCreatorLoaded
+      teamId={teamId}
+      reportId={reportId}
+      report={reportQuery.data}
+      backParams={backParams}
+    />
+  );
+}
+
+type SavedReportRecord = NonNullable<
+  Awaited<ReturnType<typeof orpcClient.agencyOps.reports.saved.get>>
+>;
+
+function AgencyReportCreatorLoaded({
+  teamId,
+  reportId,
+  report,
+  backParams,
+}: {
+  teamId: string;
+  reportId: string;
+  report: SavedReportRecord;
+  backParams: string;
+}) {
   const queryClient = useQueryClient();
   const [exporting, setExporting] = useState(false);
   const [savingEntryId, setSavingEntryId] = useState<string | null>(null);
   const [wastePending, setWastePending] = useState(false);
+  const [reportName, setReportName] = useState(report.name);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
-  const from = searchParams.get("from") ?? "";
-  const to = searchParams.get("to") ?? "";
-  const clientId = searchParams.get("client") ?? undefined;
-  const projectId = searchParams.get("project") ?? undefined;
-  const memberUserId = searchParams.get("member") ?? undefined;
-  const visibleFields = useMemo(
-    () => parseReportFieldsParam(searchParams.get("fields")),
-    [searchParams],
+  const visibleFields = useMemo<AgencyReportFieldId[]>(
+    () => normalizeReportFieldIds(report.fieldIds),
+    [report.fieldIds],
   );
 
   const filters = useMemo(
-    () => ({ clientId, projectId, memberUserId }),
-    [clientId, memberUserId, projectId],
+    () => ({
+      clientId: report.clientId || undefined,
+      projectId: report.projectId || undefined,
+      memberUserId: report.memberUserId || undefined,
+    }),
+    [report.clientId, report.memberUserId, report.projectId],
   );
 
-  const range = useMemo(() => ({ from, to }), [from, to]);
-  const rangeReady = Boolean(from && to);
+  const range = useMemo(
+    () => ({ from: report.rangeFrom, to: report.rangeTo }),
+    [report.rangeFrom, report.rangeTo],
+  );
+  const rangeReady = Boolean(range.from && range.to);
 
   const entriesQuery = useQuery({
     queryKey: [
@@ -53,23 +173,33 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
       teamId,
       range.from,
       range.to,
-      clientId,
-      projectId,
-      memberUserId,
+      filters.clientId,
+      filters.projectId,
+      filters.memberUserId,
     ],
     queryFn: () => fetchAllReportEntries(teamId, range, filters),
     enabled: Boolean(teamId && rangeReady),
   });
 
   const entries = entriesQuery.data ?? [];
-  const creator = useAgencyReportCreator(entries);
+  const creator = useAgencyReportCreator(entries, {
+    initialExcludedEntryIds: report.excludedEntryIds,
+  });
 
-  const backParams = useMemo(() => {
-    const next = new URLSearchParams(searchParams);
-    next.set("section", "reports");
-    next.delete("report");
-    return next.toString();
-  }, [searchParams]);
+  const autosave = useAgencyReportAutosave({
+    teamId,
+    reportId,
+    name: reportName,
+    excludedEntryIds: creator.excludedEntryIds,
+    enabled: Boolean(reportName),
+    initialBaseline: {
+      name: report.name,
+      excludedEntryIds: report.excludedEntryIds,
+    },
+    onSaved: () => {
+      void queryClient.invalidateQueries({ queryKey: ["agency-reports", "saved", teamId] });
+    },
+  });
 
   const saveEditMutation = useMutation({
     mutationFn: async ({
@@ -93,6 +223,7 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
     },
     onSuccess: (updated, variables) => {
       creator.applyEntryOverride(variables.entryId, updated);
+      autosave.queueActivity({ action: "entry_edited", payload: { entryId: variables.entryId } });
       void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
       toast.success("Entry updated");
     },
@@ -128,6 +259,7 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
         isWaste: nextIsWaste,
       });
       creator.setTaskWaste(entry.id, entry.taskId, nextIsWaste);
+      autosave.queueActivity({ action: "waste_toggled", payload: { isWaste: nextIsWaste } });
       void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
       void invalidateAgencyTeamQueries(teamId);
       toast.success(nextIsWaste ? "Marked as waste" : "Unmarked as waste");
@@ -138,7 +270,22 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
     } finally {
       setWastePending(false);
     }
-  }, [creator, queryClient, teamId]);
+  }, [autosave, creator, queryClient, teamId]);
+
+  const handleExcludeSelected = useCallback(() => {
+    const excludedId = creator.excludeSelectedEntry();
+    if (excludedId) {
+      autosave.queueActivity({ action: "entries_excluded", payload: { count: 1 } });
+    }
+  }, [autosave, creator]);
+
+  const handleUndoExclude = useCallback(() => {
+    const restoredId = creator.undoLastExclude();
+    if (restoredId) {
+      autosave.queueActivity({ action: "entries_restored", payload: { count: 1 } });
+      toast.success("Restored removed entry");
+    }
+  }, [autosave, creator]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -162,8 +309,7 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
       if ((event.ctrlKey || event.metaKey) && event.key === "z") {
         if (creator.canUndo) {
           event.preventDefault();
-          creator.undoLastExclude();
-          toast.success("Restored removed entry");
+          handleUndoExclude();
         }
         return;
       }
@@ -172,7 +318,7 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
 
       if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
-        creator.excludeSelectedEntry();
+        handleExcludeSelected();
         return;
       }
 
@@ -191,14 +337,15 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [creator, handleToggleWaste]);
+  }, [creator, handleExcludeSelected, handleToggleWaste, handleUndoExclude]);
 
   async function handleExport() {
-    if (!teamId || exporting) return;
+    if (!teamId || exporting || !report) return;
     setExporting(true);
     try {
       const { fileName, blob } = await exportAgencyReportXlsx({
         teamId,
+        reportName: reportName || report.name,
         entries,
         excludedEntryIds: creator.excludedEntryIds,
         entryOverrides: creator.entryOverrides,
@@ -212,7 +359,8 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
-      toast.success("Export ready", { description: fileName });
+      autosave.queueActivity({ action: "exported" });
+      toast.success(`${reportName || report.name} exported`);
     } catch (error) {
       toast.error("Export failed", {
         description: getErrorMessage(error, "Try again."),
@@ -222,26 +370,70 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
     }
   }
 
+  function commitTitleEdit() {
+    setEditingTitle(false);
+    const trimmed = reportName.trim();
+    if (!trimmed) {
+      setReportName(report.name);
+      return;
+    }
+    if (trimmed !== report.name) {
+      autosave.queueActivity({ action: "renamed", payload: { name: trimmed } });
+    }
+    setReportName(trimmed);
+  }
+
   return (
     <div className="agency-report-creator space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
             <Link to={`/agency?${backParams}`}>
               <ArrowLeft className="size-4" />
               Reports
             </Link>
           </Button>
-          <h2 className="text-sm font-bold text-highlighted">Report</h2>
+          {editingTitle ? (
+            <Input
+              ref={titleInputRef}
+              value={reportName}
+              onChange={(event) => setReportName(event.target.value)}
+              onBlur={commitTitleEdit}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  commitTitleEdit();
+                }
+                if (event.key === "Escape") {
+                  setReportName(report.name);
+                  setEditingTitle(false);
+                }
+              }}
+              className="h-8 max-w-sm text-sm font-bold"
+              autoFocus
+            />
+          ) : (
+            <button
+              type="button"
+              className="truncate text-left text-sm font-bold text-highlighted hover:underline"
+              onClick={() => setEditingTitle(true)}
+              title="Click to rename"
+            >
+              {reportName || report.name}
+            </button>
+          )}
+          <SaveIndicator
+            state={autosave.state}
+            lastSavedAt={autosave.lastSavedAt}
+            onRetry={autosave.retry}
+          />
+          <AgencyReportActivityMenu teamId={teamId} reportId={reportId} />
           {creator.canUndo ? (
             <Button
               variant="ghost"
               size="sm"
               className="h-8 gap-1.5 px-2 text-xs"
-              onClick={() => {
-                creator.undoLastExclude();
-                toast.success("Restored removed entry");
-              }}
+              onClick={handleUndoExclude}
             >
               Undo
             </Button>
@@ -271,7 +463,7 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
         <div className={agencyEmptyPanelClass}>
           <BarChart2 className="mx-auto size-7 text-muted" />
           <p className="mt-4 text-sm font-bold text-highlighted">Missing date range.</p>
-          <p className="mt-1 text-xs text-muted">Go back to Reports and create a report from filters.</p>
+          <p className="mt-1 text-xs text-muted">This report has an invalid date range.</p>
         </div>
       ) : entriesQuery.isPending ? (
         <div className="overflow-hidden rounded-2xl border border-default bg-default">

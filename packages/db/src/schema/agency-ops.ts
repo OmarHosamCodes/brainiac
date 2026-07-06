@@ -612,6 +612,76 @@ export const agencyOpsMemberTenureProfile = pgTable(
   ],
 );
 
+// ---------------------------------------------------------------------------
+// Saved reports
+// ---------------------------------------------------------------------------
+
+export type AgencyOpsReportActivityAction =
+  | "created"
+  | "renamed"
+  | "entries_excluded"
+  | "entries_restored"
+  | "entry_edited"
+  | "waste_toggled"
+  | "exported";
+
+export const agencyOpsReport = pgTable(
+  "agency_ops_report",
+  {
+    id: text("id").primaryKey(),
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    rangePreset: text("range_preset").notNull(),
+    customFromDate: text("custom_from_date").notNull().default(""),
+    customToDate: text("custom_to_date").notNull().default(""),
+    rangeFrom: timestamp("range_from").notNull(),
+    rangeTo: timestamp("range_to").notNull(),
+    clientId: text("client_id").notNull().default(""),
+    projectId: text("project_id").notNull().default(""),
+    memberUserId: text("member_user_id").notNull().default(""),
+    fieldIds: jsonb("field_ids").$type<string[]>().notNull().default([]),
+    excludedEntryIds: jsonb("excluded_entry_ids").$type<string[]>().notNull().default([]),
+    createdByUserId: text("created_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    updatedByUserId: text("updated_by_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => /* @__PURE__ */ new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_report_team_idx").on(table.teamId),
+    index("agency_ops_report_team_updated_idx").on(table.teamId, table.updatedAt),
+    index("agency_ops_report_team_range_from_idx").on(table.teamId, table.rangeFrom),
+  ],
+);
+
+export const agencyOpsReportActivity = pgTable(
+  "agency_ops_report_activity",
+  {
+    id: text("id").primaryKey(),
+    reportId: text("report_id")
+      .notNull()
+      .references(() => agencyOpsReport.id, { onDelete: "cascade" }),
+    actorUserId: text("actor_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    action: text("action").$type<AgencyOpsReportActivityAction>().notNull(),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("agency_ops_report_activity_report_idx").on(table.reportId),
+    index("agency_ops_report_activity_report_created_idx").on(table.reportId, table.createdAt),
+  ],
+);
+
 export type AgencyOpsTenureExemptionType =
   | "team_holiday"
   | "member_waiver"
