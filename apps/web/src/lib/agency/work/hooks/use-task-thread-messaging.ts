@@ -309,7 +309,14 @@ export function useTaskThreadMessaging({
             fileName: string;
             mimeType: string;
             sizeBytes: number;
+            imageWidth?: number;
+            imageHeight?: number;
           };
+
+          if (result.imageWidth != null && result.imageHeight != null) {
+            metadata.imageWidth = result.imageWidth;
+            metadata.imageHeight = result.imageHeight;
+          }
 
           setPendingAttachments((current) => [
             ...current,

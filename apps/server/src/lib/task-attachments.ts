@@ -1,4 +1,5 @@
 import { createContext, type Context } from "@brainiac/api/context";
+import { compressImage, replaceFileExtension } from "@brainiac/api/image-compression";
 import {
   createTaskAttachmentUploadToken,
   getTaskAttachmentReadUrl,
@@ -57,6 +58,11 @@ export function registerTaskAttachmentUploadRoute(app: Hono) {
       return c.json({ error: "file is required" }, 400);
     }
 
+    const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+    if (file.size > MAX_UPLOAD_BYTES) {
+      return c.json({ error: "File size must be under 50MB" }, 400);
+    }
+
     if (typeof taskId !== "string" || !taskId) {
       return c.json({ error: "taskId is required" }, 400);
     }
@@ -71,16 +77,32 @@ export function registerTaskAttachmentUploadRoute(app: Hono) {
       return c.json({ error: "Task not found" }, 404);
     }
 
-    const extension = file.name.split(".").pop() ?? "";
-    const storageKey = `task-attachments/${teamId}/${taskId}/${createWorkspaceId("upload")}${extension ? `.${extension}` : ""}`;
+    let fileName = file.name;
+    let mimeType = file.type || "application/octet-stream";
+    let uploadBuffer = Buffer.from(await file.arrayBuffer());
+    let imageWidth: number | undefined;
+    let imageHeight: number | undefined;
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    if (mimeType.startsWith("image/")) {
+      const compressed = await compressImage(uploadBuffer, mimeType, { maxDimension: 2560 });
+      if (compressed) {
+        uploadBuffer = Buffer.from(compressed.buffer);
+        mimeType = compressed.mimeType;
+        imageWidth = compressed.width;
+        imageHeight = compressed.height;
+        if (compressed.changed) {
+          fileName = replaceFileExtension(fileName, "webp");
+        }
+      }
+    }
+
+    const extension = fileName.split(".").pop() ?? "";
+    const storageKey = `task-attachments/${teamId}/${taskId}/${createWorkspaceId("upload")}${extension ? `.${extension}` : ""}`;
 
     await uploadTaskAttachmentBuffer({
       storageKey,
-      buffer,
-      mimeType: file.type || "application/octet-stream",
+      buffer: uploadBuffer,
+      mimeType,
     });
 
     return c.json(
@@ -90,14 +112,15 @@ export function registerTaskAttachmentUploadRoute(app: Hono) {
         uploadToken: createTaskAttachmentUploadToken({
           teamId,
           taskId,
-          fileName: file.name,
-          mimeType: file.type || "application/octet-stream",
+          fileName,
+          mimeType,
           storageKey,
-          sizeBytes: arrayBuffer.byteLength,
+          sizeBytes: uploadBuffer.byteLength,
         }),
-        fileName: file.name,
-        mimeType: file.type || "application/octet-stream",
-        sizeBytes: arrayBuffer.byteLength,
+        fileName,
+        mimeType,
+        sizeBytes: uploadBuffer.byteLength,
+        ...(imageWidth != null && imageHeight != null ? { imageWidth, imageHeight } : {}),
         taskId,
         projectId,
       },

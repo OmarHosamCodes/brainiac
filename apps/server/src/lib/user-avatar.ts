@@ -1,3 +1,4 @@
+import { compressImage } from "@brainiac/api/image-compression";
 import { getUserAvatarStream, uploadUserAvatarBuffer } from "@brainiac/api/storage";
 import { createContext } from "@brainiac/api/context";
 import { db } from "@brainiac/db";
@@ -29,13 +30,17 @@ export function registerUserAvatarRoutes(app: Hono) {
       return c.json({ error: "File size must be under 5MB" }, 400);
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const compressed = await compressImage(buffer, file.type, { maxDimension: 512 });
+
+    if (!compressed) {
+      return c.json({ error: "Only image files are allowed" }, 400);
+    }
 
     const { storageKey } = await uploadUserAvatarBuffer({
       userId,
-      buffer,
-      mimeType: file.type,
+      buffer: compressed.buffer,
+      mimeType: compressed.mimeType,
     });
 
     return c.json({ storageKey }, 201);
