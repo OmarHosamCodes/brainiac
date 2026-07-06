@@ -707,16 +707,18 @@ export function useAgencyActiveTimerQuery(teamId: string) {
 export function useAgencyTimeEntriesQuery(teamId: string, page: number, pageSize: number) {
   const registerLogQuery = useAgencyTimeTrackingStore((s) => s.registerLogQuery);
   const unregisterLogQuery = useAgencyTimeTrackingStore((s) => s.unregisterLogQuery);
+  const utcOffsetMinutes = new Date().getTimezoneOffset();
+  const listMineInput = { teamId, page, pageSize, utcOffsetMinutes };
 
   const queryKey = orpc.agencyOps.timeEntries.listMine.queryOptions({
-    input: { teamId, page, pageSize },
+    input: listMineInput,
   }).queryKey;
 
   const query = useQuery(
     withAgencySyncQueryOptions(
       {
         ...orpc.agencyOps.timeEntries.listMine.queryOptions({
-          input: { teamId, page, pageSize },
+          input: listMineInput,
         }),
         enabled: Boolean(teamId),
         placeholderData: keepPreviousData,

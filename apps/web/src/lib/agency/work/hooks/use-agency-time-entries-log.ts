@@ -105,14 +105,20 @@ export function useAgencyTimeEntriesLog({
     const currentWeekStart = getLocalWeekStartKey(todayLocalDateKey());
     const apiWeekTotal = weekSummary?.totalSeconds;
 
-    if (apiWeekTotal === undefined) return groups;
+    return groups.map((week) => {
+      if (week.weekStartKey !== currentWeekStart || apiWeekTotal === undefined || !weekSummary) {
+        return week;
+      }
 
-    return groups.map((week) =>
-      week.weekStartKey === currentWeekStart
-        ? { ...week, totalSeconds: apiWeekTotal }
-        : week,
-    );
-  }, [entries, weekSummary?.totalSeconds]);
+      const apiDaily = new Map(weekSummary.daily.map((daily) => [daily.date, daily.totalSeconds]));
+      const days = week.days.map((day) => ({
+        ...day,
+        totalSeconds: Math.max(day.totalSeconds, apiDaily.get(day.dateKey) ?? 0),
+      }));
+
+      return { ...week, days, totalSeconds: apiWeekTotal };
+    });
+  }, [entries, weekSummary]);
 
   const maxPage = useMemo(() => {
     if (pageSize <= 0) return 1;

@@ -1044,6 +1044,7 @@ export const agencyOpsRouter = {
           page: z.number().int().min(1).optional(),
           pageSize: z.number().int().min(1).max(100).optional(),
           anchorDate: z.string().datetime().optional(),
+          utcOffsetMinutes: z.number().int().min(-840).max(840).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
