@@ -1,6 +1,7 @@
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import * as React from "react";
 
+import { liquidGlassPanelClass } from "@/lib/utils/liquid-glass-ui";
 import { cn } from "@/lib/utils";
 
 function Popover({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
@@ -23,10 +24,7 @@ function PopoverContent({
         data-slot="popover-content"
         align={align}
         sideOffset={sideOffset}
-        className={cn(
-          "z-50 w-72 rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-md outline-none",
-          className,
-        )}
+        className={cn(liquidGlassPanelClass, "w-72 p-1", className)}
         {...props}
       />
     </PopoverPrimitive.Portal>

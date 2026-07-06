@@ -3,13 +3,14 @@ import { Search } from "lucide-react";
 import * as React from "react";
 
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { liquidGlassMenuItemClass } from "@/lib/utils/liquid-glass-ui";
 import { cn } from "@/lib/utils";
 
 function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
   return (
     <CommandPrimitive
       className={cn(
-        "flex h-full w-full flex-col overflow-hidden rounded-2xl bg-background text-foreground",
+        "flex h-full w-full flex-col overflow-hidden rounded-2xl bg-transparent text-foreground",
         className,
       )}
       {...props}
@@ -105,8 +106,11 @@ function CommandSeparator({
 function CommandItem({ className, ...props }: React.ComponentProps<typeof CommandPrimitive.Item>) {
   return (
     <CommandPrimitive.Item
+      data-slot="command-item"
       className={cn(
-        "relative flex cursor-default select-none items-center gap-2 rounded-xl px-2 py-2.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+        "relative flex cursor-default select-none items-center gap-2 rounded-xl px-2 py-2.5 text-sm outline-none",
+        liquidGlassMenuItemClass,
+        "data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
         className,
       )}
       {...props}
