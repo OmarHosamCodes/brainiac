@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { getRedisPublisher, getRedisSubscriber } from "../../lib/redis";
+import { notificationRecordSchema } from "../../schemas/notifications";
 
 const agencyTaskMessageAttachmentLiveSchema = z.object({
   id: z.string().min(1),
@@ -97,6 +98,12 @@ export const agencyLiveEventSchema = z.discriminatedUnion("type", [
     updatedAt: z.string().datetime(),
     task: agencyProjectTaskLiveSchema,
   }),
+  z.object({
+    type: z.literal("notification.created"),
+    teamId: z.string().min(1),
+    updatedAt: z.string().datetime(),
+    notification: notificationRecordSchema,
+  }),
 ]);
 
 export type AgencyLiveEvent = z.infer<typeof agencyLiveEventSchema>;
@@ -113,6 +120,8 @@ function liveEventCoalesceKey(event: AgencyLiveEvent): string | null {
       return `timer.updated:${event.userId}`;
     case "task.updated":
       return `task.updated:${event.taskId}`;
+    case "notification.created":
+      return `notification.created:${event.notification.id}`;
     default: {
       const _exhaustive: never = event;
       return _exhaustive;

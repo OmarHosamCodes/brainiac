@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { protectedProProcedure } from "../../procedures";
+import {
+  registerAgencyLiveUserConnection,
+  unregisterAgencyLiveUserConnection,
+} from "../notifications/live-bridge";
 import { agencyLiveEventSchema, agencyLivePublisher } from "./live";
 import {
   archiveAgencyClient,
@@ -380,9 +384,15 @@ export const agencyOpsRouter = {
       input,
       signal,
     }) {
-      await requireTeamMembership(context.session.user.id, input.teamId, "viewer");
-      for await (const event of agencyLivePublisher.subscribe(input.teamId, signal)) {
-        yield agencyLiveEventSchema.parse(event);
+      const userId = context.session.user.id;
+      await requireTeamMembership(userId, input.teamId, "viewer");
+      registerAgencyLiveUserConnection(userId, input.teamId);
+      try {
+        for await (const event of agencyLivePublisher.subscribe(input.teamId, signal)) {
+          yield agencyLiveEventSchema.parse(event);
+        }
+      } finally {
+        unregisterAgencyLiveUserConnection(userId, input.teamId);
       }
     }),
   },

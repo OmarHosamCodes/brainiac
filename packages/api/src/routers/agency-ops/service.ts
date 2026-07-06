@@ -1416,6 +1416,7 @@ async function syncJourneyStepStatuses(teamId: string, projectId: string) {
   const steps = await db
     .select({
       id: agencyOpsProjectJourneyStep.id,
+      label: agencyOpsProjectJourneyStep.label,
       sortOrder: agencyOpsProjectJourneyStep.sortOrder,
       stepKind: agencyOpsProjectJourneyStep.stepKind,
       status: agencyOpsProjectJourneyStep.status,
@@ -1443,11 +1444,26 @@ async function syncJourneyStepStatuses(teamId: string, projectId: string) {
   const derived = deriveJourneyStepStatuses(steps, tasksById, assigneesByTask);
   const now = new Date();
   let changed = false;
+  const completedMilestones: Array<{
+    journeyStepId: string;
+    journeyStepLabel: string;
+    stepKind: AgencyOpsJourneyStepKind;
+  }> = [];
 
   for (const step of steps) {
     const nextStatus = derived.get(step.id);
     if (!nextStatus || nextStatus === step.status) continue;
     changed = true;
+    if (
+      nextStatus === "done" &&
+      (step.stepKind === "milestone" || step.stepKind === "checkpoint" || step.stepKind === "destination")
+    ) {
+      completedMilestones.push({
+        journeyStepId: step.id,
+        journeyStepLabel: step.label,
+        stepKind: step.stepKind,
+      });
+    }
     await db
       .update(agencyOpsProjectJourneyStep)
       .set({ status: nextStatus, updatedAt: now })
@@ -1461,7 +1477,44 @@ async function syncJourneyStepStatuses(teamId: string, projectId: string) {
       .where(eq(agencyOpsProjectJourney.id, journey.id));
   }
 
-  return changed;
+  return { changed, completedMilestones };
+}
+
+async function applyJourneySyncNotifications(
+  teamId: string,
+  projectId: string,
+  actorUserId: string | null,
+  syncResult: {
+    changed: boolean;
+    completedMilestones: Array<{
+      journeyStepId: string;
+      journeyStepLabel: string;
+      stepKind: AgencyOpsJourneyStepKind;
+    }>;
+  },
+) {
+  if (!syncResult.changed) return;
+
+  await publishAgencyJourneyStepUpdated(teamId, projectId);
+  if (syncResult.completedMilestones.length === 0) return;
+
+  const [project] = await db
+    .select({ name: agencyOpsProject.name })
+    .from(agencyOpsProject)
+    .where(and(eq(agencyOpsProject.teamId, teamId), eq(agencyOpsProject.id, projectId)))
+    .limit(1);
+
+  const projectName = project?.name ?? "Project";
+  for (const milestone of syncResult.completedMilestones) {
+    await notifyJourneyMilestone({
+      teamId,
+      actorUserId,
+      projectId,
+      projectName,
+      journeyStepId: milestone.journeyStepId,
+      journeyStepLabel: milestone.journeyStepLabel,
+    });
+  }
 }
 
 async function maybeSyncJourneyForTask(teamId: string, taskId: string) {
@@ -1480,10 +1533,8 @@ async function maybeSyncJourneyForTask(teamId: string, taskId: string) {
 
   if (!step) return;
 
-  const changed = await syncJourneyStepStatuses(teamId, step.projectId);
-  if (changed) {
-    await publishAgencyJourneyStepUpdated(teamId, step.projectId);
-  }
+  const syncResult = await syncJourneyStepStatuses(teamId, step.projectId);
+  await applyJourneySyncNotifications(teamId, step.projectId, null, syncResult);
 }
 
 async function buildAgencyProjectJourneyRecord(
@@ -1760,8 +1811,8 @@ export async function createAgencyProjectWithJourney(
     });
   });
 
-  await syncJourneyStepStatuses(input.teamId, projectId);
-  await publishAgencyJourneyStepUpdated(input.teamId, projectId);
+  const syncResult = await syncJourneyStepStatuses(input.teamId, projectId);
+  await applyJourneySyncNotifications(input.teamId, projectId, actorUserId, syncResult);
 
   const [client] = await db
     .select({ name: agencyOpsClient.name })
@@ -1877,8 +1928,8 @@ export async function updateAgencyProjectJourneySteps(
       .where(eq(agencyOpsProjectJourney.id, journey.id));
   });
 
-  await syncJourneyStepStatuses(input.teamId, input.projectId);
-  await publishAgencyJourneyStepUpdated(input.teamId, input.projectId);
+  const syncResult = await syncJourneyStepStatuses(input.teamId, input.projectId);
+  await applyJourneySyncNotifications(input.teamId, input.projectId, actorUserId, syncResult);
   return buildAgencyProjectJourneyRecord(input.teamId, input.projectId, actorUserId);
 }
 
@@ -1970,8 +2021,8 @@ export async function addAgencyProjectJourneyStep(
       .where(eq(agencyOpsProjectJourney.id, journey.id));
   });
 
-  await syncJourneyStepStatuses(input.teamId, input.projectId);
-  await publishAgencyJourneyStepUpdated(input.teamId, input.projectId);
+  const syncResult = await syncJourneyStepStatuses(input.teamId, input.projectId);
+  await applyJourneySyncNotifications(input.teamId, input.projectId, actorUserId, syncResult);
   return buildAgencyProjectJourneyRecord(input.teamId, input.projectId, actorUserId);
 }
 
@@ -2094,8 +2145,8 @@ export async function removeAgencyProjectJourneyStep(
       .where(eq(agencyOpsProjectJourney.id, journey.id));
   });
 
-  await syncJourneyStepStatuses(input.teamId, input.projectId);
-  await publishAgencyJourneyStepUpdated(input.teamId, input.projectId);
+  const syncResult = await syncJourneyStepStatuses(input.teamId, input.projectId);
+  await applyJourneySyncNotifications(input.teamId, input.projectId, actorUserId, syncResult);
   return buildAgencyProjectJourneyRecord(input.teamId, input.projectId, actorUserId);
 }
 
@@ -2317,6 +2368,36 @@ async function getTaskByIdForTeam(teamId: string, taskId: string) {
   return task;
 }
 
+async function emitTaskAssignedNotification(
+  actorUserId: string,
+  teamId: string,
+  task: {
+    id: string;
+    title: string;
+    projectId: string;
+    assignedToTeam: boolean;
+    assignees: Array<{ userId: string }>;
+  },
+  recipientUserIds?: string[],
+) {
+  const [project] = await db
+    .select({ name: agencyOpsProject.name })
+    .from(agencyOpsProject)
+    .where(eq(agencyOpsProject.id, task.projectId))
+    .limit(1);
+
+  await notifyTaskAssigned({
+    teamId,
+    actorUserId,
+    taskId: task.id,
+    taskTitle: task.title,
+    projectId: task.projectId,
+    projectName: project?.name ?? "Project",
+    assigneeUserIds: recipientUserIds ?? task.assignees.map((assignee) => assignee.userId),
+    assignedToTeam: task.assignedToTeam,
+  });
+}
+
 export async function createAgencyProjectTask(
   actorUserId: string,
   input: {
@@ -2415,7 +2496,11 @@ export async function createAgencyProjectTask(
       input.description ?? "",
     );
 
-    return buildTaskRecordForActor(created, actorUserId);
+    const record = await buildTaskRecordForActor(created, actorUserId);
+    if (record.assignees.length > 0 || record.assignedToTeam) {
+      await emitTaskAssignedNotification(actorUserId, input.teamId, record);
+    }
+    return record;
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
 
@@ -2584,6 +2669,10 @@ export async function updateAgencyProjectTask(
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const current = await getTaskByIdForTeam(input.teamId, input.taskId);
+  const previousAssigneeIds = new Set(
+    (await loadTaskAssignees([input.taskId])).get(input.taskId)?.map((assignee) => assignee.userId) ??
+      [],
+  );
 
   const title = input.title?.trim();
   if (title === "") {
@@ -2665,6 +2754,20 @@ export async function updateAgencyProjectTask(
 
   if (input.status !== undefined || input.assigneeUserIds !== undefined || input.assignedToTeam !== undefined) {
     await publishAgencyTaskUpdated(input.teamId, task);
+  }
+
+  if (nextAssigneeUserIds !== null || input.assignedToTeam === true) {
+    const newlyAssigned = task.assignedToTeam
+      ? []
+      : task.assignees.map((assignee) => assignee.userId).filter((id) => !previousAssigneeIds.has(id));
+    if (task.assignedToTeam || newlyAssigned.length > 0) {
+      await emitTaskAssignedNotification(
+        actorUserId,
+        input.teamId,
+        task,
+        newlyAssigned.length > 0 ? newlyAssigned : undefined,
+      );
+    }
   }
 
   return task;
@@ -3034,6 +3137,27 @@ export async function createTaskThreadMessage(
     taskId: input.taskId,
     updatedAt: liveUpdatedAt(message.updatedAt),
     message,
+  });
+
+  const task = await getTaskByIdForTeam(input.teamId, input.taskId);
+  const assignees = (await loadTaskAssignees([input.taskId])).get(input.taskId) ?? [];
+  const [project] = await db
+    .select({ name: agencyOpsProject.name })
+    .from(agencyOpsProject)
+    .where(eq(agencyOpsProject.id, task.projectId))
+    .limit(1);
+  const preview = message.content.trim().slice(0, 140);
+
+  await notifyTaskMessage({
+    teamId: input.teamId,
+    actorUserId,
+    taskId: input.taskId,
+    taskTitle: task.title,
+    projectId: task.projectId,
+    projectName: project?.name ?? "Project",
+    messageId: message.id,
+    messagePreview: preview,
+    assigneeUserIds: assignees.map((assignee) => assignee.userId),
   });
 
   return message;
@@ -3517,10 +3641,48 @@ export async function startAgencyTimer(
 
   await publishAgencyTimerUpdated(input.teamId, actorUserId, timer);
 
+  if (timer) {
+    await notifyTimerActivity({
+      teamId: input.teamId,
+      actorUserId,
+      projectId: timer.projectId,
+      projectName: timer.projectName,
+      taskId: timer.taskId,
+      taskTitle: timer.taskTitle,
+      timerAction: "started",
+    });
+  }
+
   return {
     timer,
     createdEntry,
   };
+}
+
+async function emitTimerStoppedNotification(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+    taskId: string | null;
+    taskTitle: string | null;
+  },
+) {
+  const [project] = await db
+    .select({ name: agencyOpsProject.name })
+    .from(agencyOpsProject)
+    .where(eq(agencyOpsProject.id, input.projectId))
+    .limit(1);
+
+  await notifyTimerActivity({
+    teamId: input.teamId,
+    actorUserId,
+    projectId: input.projectId,
+    projectName: project?.name ?? "Project",
+    taskId: input.taskId,
+    taskTitle: input.taskTitle,
+    timerAction: "stopped",
+  });
 }
 
 async function fetchAgencyTimeEntryRecord(entryId: string) {
@@ -3682,6 +3844,12 @@ export async function stopAgencyTimer(
   const createdEntry = await fetchAgencyTimeEntryRecord(entry.id);
 
   await publishAgencyTimerUpdated(active.teamId, actorUserId, null);
+  await emitTimerStoppedNotification(actorUserId, {
+    teamId: active.teamId,
+    projectId: active.projectId,
+    taskId,
+    taskTitle: createdEntry?.taskTitle ?? null,
+  });
 
   return {
     timer: null,
