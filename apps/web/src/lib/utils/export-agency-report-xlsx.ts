@@ -1,8 +1,16 @@
 import type { AgencyTimeEntry } from "@brainiac/api/schemas/agency-ops";
 
 import {
-  groupEntriesByClient,
+  AGENCY_REPORT_FIELD_LABELS,
+  AGENCY_REPORT_FIELDS,
+  allAgencyReportFieldIds,
+  isReportFieldVisible,
+  type AgencyReportFieldId,
+} from "@/lib/agency/reports/agency-report-fields";
+import {
+  groupEntriesForDisplay,
   type AgencyReportEntry,
+  type AggregatedReportRow,
 } from "@/lib/utils/agency-report-grouping";
 import { formatDuration } from "@/lib/utils/format-duration";
 
@@ -11,7 +19,39 @@ type ExportAgencyReportXlsxInput = {
   entries: AgencyReportEntry[];
   excludedEntryIds: Set<string>;
   entryOverrides: Map<string, Partial<AgencyTimeEntry>>;
+  visibleFields?: AgencyReportFieldId[];
 };
+
+function resolveActiveReportFields(
+  visibleFields: AgencyReportFieldId[] | undefined,
+): AgencyReportFieldId[] {
+  const normalized = visibleFields ?? allAgencyReportFieldIds();
+  return AGENCY_REPORT_FIELDS.filter((field) => isReportFieldVisible(normalized, field));
+}
+
+function reportFieldValue(
+  field: AgencyReportFieldId,
+  entry: AggregatedReportRow,
+  projectName: string,
+  entryIndex: number,
+): string {
+  switch (field) {
+    case "project":
+      return entryIndex === 0 ? projectName : "";
+    case "task":
+      return entry.taskTitle || "—";
+    case "description":
+      return entry.description || "—";
+    case "duration":
+      return formatDuration(entry.durationSeconds, "clock");
+    case "assignee":
+      return entry.userName;
+    default: {
+      const unexpected: never = field;
+      return unexpected;
+    }
+  }
+}
 
 function resolveExportEntries(
   entries: AgencyReportEntry[],
@@ -31,37 +71,37 @@ export async function exportAgencyReportXlsx({
   entries,
   excludedEntryIds,
   entryOverrides,
+  visibleFields,
 }: ExportAgencyReportXlsxInput): Promise<{ fileName: string; blob: Blob }> {
   const ExcelJS = await import("exceljs");
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Report");
 
   const exportEntries = resolveExportEntries(entries, excludedEntryIds, entryOverrides);
-  const clientGroups = groupEntriesByClient(exportEntries);
+  const clientGroups = groupEntriesForDisplay(exportEntries);
+  const activeFields = resolveActiveReportFields(visibleFields);
+  const columnCount = Math.max(activeFields.length, 1);
+  const projectColumnIndex = activeFields.indexOf("project");
 
-  sheet.columns = [
-    { width: 28 },
-    { width: 40 },
-    { width: 12 },
-    { width: 18 },
-  ];
+  sheet.columns = activeFields.map(() => ({ width: 20 }));
 
   let rowIndex = 1;
 
   for (const clientGroup of clientGroups) {
-    sheet.mergeCells(rowIndex, 1, rowIndex, 3);
+    const mergeEndColumn = Math.max(1, columnCount - 1);
+    sheet.mergeCells(rowIndex, 1, rowIndex, mergeEndColumn);
     const clientHeader = sheet.getCell(rowIndex, 1);
     clientHeader.value = clientGroup.clientName;
     clientHeader.font = { bold: true, size: 12 };
 
-    const clientTotal = sheet.getCell(rowIndex, 4);
+    const clientTotal = sheet.getCell(rowIndex, columnCount);
     clientTotal.value = formatDuration(clientGroup.totalSeconds, "clock");
     clientTotal.font = { bold: true };
     clientTotal.alignment = { horizontal: "right" };
     rowIndex += 1;
 
     const headerRow = sheet.getRow(rowIndex);
-    headerRow.values = ["Project", "Description", "Duration", "Assignee"];
+    headerRow.values = activeFields.map((field) => AGENCY_REPORT_FIELD_LABELS[field]);
     headerRow.font = { bold: true, size: 10 };
     headerRow.fill = {
       type: "pattern",
@@ -75,18 +115,20 @@ export async function exportAgencyReportXlsx({
 
       for (const [entryIndex, entry] of project.rows.entries()) {
         const dataRow = sheet.getRow(rowIndex);
-        dataRow.values = [
-          entryIndex === 0 ? project.projectName : "",
-          entry.description || "—",
-          formatDuration(entry.durationSeconds, "clock"),
-          entry.userName,
-        ];
+        dataRow.values = activeFields.map((field) =>
+          reportFieldValue(field, entry, project.projectName, entryIndex),
+        );
         rowIndex += 1;
       }
 
-      if (project.rows.length > 1) {
-        sheet.mergeCells(projectStartRow, 1, rowIndex - 1, 1);
-        sheet.getCell(projectStartRow, 1).alignment = { vertical: "middle" };
+      if (projectColumnIndex >= 0 && project.rows.length > 1) {
+        sheet.mergeCells(
+          projectStartRow,
+          projectColumnIndex + 1,
+          rowIndex - 1,
+          projectColumnIndex + 1,
+        );
+        sheet.getCell(projectStartRow, projectColumnIndex + 1).alignment = { vertical: "middle" };
       }
     }
 
