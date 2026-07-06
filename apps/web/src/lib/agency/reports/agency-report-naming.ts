@@ -36,6 +36,85 @@ function formatPeriodRange(from: Date, to: Date): string {
   return `${quarterLabel(from)}–${quarterLabel(to)}`;
 }
 
+const SHORT_MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+function formatCompactUtcDate(date: Date): string {
+  const month = SHORT_MONTH_NAMES[date.getUTCMonth()] ?? "???";
+  return `${month} ${date.getUTCDate()}`;
+}
+
+export function formatCompactDateSpan(fromIso: string, toIso: string): string {
+  const from = new Date(fromIso);
+  const to = new Date(toIso);
+  return `${formatCompactUtcDate(from)} – ${formatCompactUtcDate(to)}`;
+}
+
+export type AgencyReportHeaderLabelContext = {
+  clients: ReadonlyArray<{ id: string; name: string }>;
+  projects: ReadonlyArray<{ id: string; name: string }>;
+  members: ReadonlyArray<{ userId: string; userName: string }>;
+};
+
+export type AgencyReportHeaderMetaInput = {
+  rangeFrom: string;
+  rangeTo: string;
+  clientId?: string;
+  projectId?: string;
+  memberUserId?: string;
+  createdByUserName: string;
+  visibleEntryCount: number;
+};
+
+export function formatReportHeaderMeta(
+  input: AgencyReportHeaderMetaInput,
+  context: AgencyReportHeaderLabelContext,
+): { scopeLine: string; attributionLine: string } {
+  const from = new Date(input.rangeFrom);
+  const to = new Date(input.rangeTo);
+  const scopeParts = [
+    formatPeriodRange(from, to),
+    formatCompactDateSpan(input.rangeFrom, input.rangeTo),
+  ];
+
+  if (input.clientId) {
+    scopeParts.push(
+      context.clients.find((client) => client.id === input.clientId)?.name ?? "Client",
+    );
+  }
+  if (input.projectId) {
+    scopeParts.push(
+      context.projects.find((project) => project.id === input.projectId)?.name ?? "Project",
+    );
+  }
+  if (input.memberUserId) {
+    scopeParts.push(
+      context.members.find((member) => member.userId === input.memberUserId)?.userName ??
+        "Member",
+    );
+  }
+
+  const entryLabel = input.visibleEntryCount === 1 ? "entry" : "entries";
+  scopeParts.push(`${input.visibleEntryCount} ${entryLabel}`);
+
+  return {
+    scopeLine: scopeParts.join(" · "),
+    attributionLine: `Created by ${input.createdByUserName}`,
+  };
+}
+
 export function suggestAgencyReportName(
   snapshot: AgencyReportNameSnapshot,
   context: AgencyReportNameLabelContext,

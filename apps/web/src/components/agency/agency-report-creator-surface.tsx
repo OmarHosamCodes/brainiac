@@ -1,24 +1,24 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertTriangle, ArrowLeft, BarChart2, Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, BarChart2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
-import { AgencyReportActivityMenu } from "@/components/agency/agency-report-activity-menu";
+import {
+  AgencyReportCreatorHeader,
+  AgencyReportCreatorHeaderSkeleton,
+} from "@/components/agency/agency-report-creator-header";
 import { AgencyReportCreatorTable } from "@/components/agency/agency-report-creator-table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   normalizeReportFieldIds,
   type AgencyReportFieldId,
 } from "@/lib/agency/reports/agency-report-fields";
-import {
-  formatRelativeReportTime,
-} from "@/lib/agency/reports/agency-report-naming";
 import { fetchAllReportEntries } from "@/lib/agency/reports/fetch-report-entries";
 import { useAgencyReportAutosave } from "@/lib/agency/reports/use-agency-report-autosave";
 import { useAgencyReportCreator } from "@/lib/agency/reports/use-agency-report-creator";
+import { useAgencyReportLabelContext } from "@/lib/agency/reports/use-agency-report-label-context";
 import { draftToIsoRange, type TimeEntryDraft } from "@/lib/schemas/agency-time-entry";
 import { orpcClient } from "@/lib/orpc";
 import { invalidateAgencyTeamQueries } from "@/lib/queries/agency";
@@ -29,38 +29,6 @@ import { getErrorMessage } from "@/lib/utils/get-error-message";
 type AgencyReportCreatorSurfaceProps = {
   teamId: string;
 };
-
-function SaveIndicator({
-  state,
-  lastSavedAt,
-  onRetry,
-}: {
-  state: ReturnType<typeof useAgencyReportAutosave>["state"];
-  lastSavedAt: Date | null;
-  onRetry: () => void;
-}) {
-  if (state === "saving" || state === "pending") {
-    return <span className="font-mono text-[11px] text-muted">Saving…</span>;
-  }
-  if (state === "error") {
-    return (
-      <span className="flex items-center gap-1.5 font-mono text-[11px] text-error">
-        Save failed
-        <button type="button" className="underline" onClick={onRetry}>
-          Retry
-        </button>
-      </span>
-    );
-  }
-  if (state === "saved" && lastSavedAt) {
-    return (
-      <span className="font-mono text-[11px] text-muted">
-        Saved · {formatRelativeReportTime(lastSavedAt.toISOString())}
-      </span>
-    );
-  }
-  return null;
-}
 
 export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfaceProps) {
   const [searchParams] = useSearchParams();
@@ -91,8 +59,8 @@ export function AgencyReportCreatorSurface({ teamId }: AgencyReportCreatorSurfac
 
   if (reportQuery.isPending) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-64" />
+      <div className="agency-report-creator space-y-4">
+        <AgencyReportCreatorHeaderSkeleton />
         <Skeleton className="h-64 w-full rounded-2xl" />
       </div>
     );
@@ -143,8 +111,7 @@ function AgencyReportCreatorLoaded({
   const [savingEntryId, setSavingEntryId] = useState<string | null>(null);
   const [wastePending, setWastePending] = useState(false);
   const [reportName, setReportName] = useState(report.name);
-  const [editingTitle, setEditingTitle] = useState(false);
-  const titleInputRef = useRef<HTMLInputElement>(null);
+  const labelContext = useAgencyReportLabelContext(teamId);
 
   const visibleFields = useMemo<AgencyReportFieldId[]>(
     () => normalizeReportFieldIds(report.fieldIds),
@@ -370,94 +337,40 @@ function AgencyReportCreatorLoaded({
     }
   }
 
-  function commitTitleEdit() {
-    setEditingTitle(false);
-    const trimmed = reportName.trim();
-    if (!trimmed) {
-      setReportName(report.name);
-      return;
-    }
+  function handleRenameCommitted(trimmed: string) {
     if (trimmed !== report.name) {
       autosave.queueActivity({ action: "renamed", payload: { name: trimmed } });
     }
-    setReportName(trimmed);
   }
 
   return (
     <div className="agency-report-creator space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <Button variant="ghost" size="sm" className="h-8 px-2" asChild>
-            <Link to={`/agency?${backParams}`}>
-              <ArrowLeft className="size-4" />
-              Reports
-            </Link>
-          </Button>
-          {editingTitle ? (
-            <Input
-              ref={titleInputRef}
-              value={reportName}
-              onChange={(event) => setReportName(event.target.value)}
-              onBlur={commitTitleEdit}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  commitTitleEdit();
-                }
-                if (event.key === "Escape") {
-                  setReportName(report.name);
-                  setEditingTitle(false);
-                }
-              }}
-              className="h-8 max-w-sm text-sm font-bold"
-              autoFocus
-            />
-          ) : (
-            <button
-              type="button"
-              className="truncate text-left text-sm font-bold text-highlighted hover:underline"
-              onClick={() => setEditingTitle(true)}
-              title="Click to rename"
-            >
-              {reportName || report.name}
-            </button>
-          )}
-          <SaveIndicator
-            state={autosave.state}
-            lastSavedAt={autosave.lastSavedAt}
-            onRetry={autosave.retry}
-          />
-          <AgencyReportActivityMenu teamId={teamId} reportId={reportId} />
-          {creator.canUndo ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 gap-1.5 px-2 text-xs"
-              onClick={handleUndoExclude}
-            >
-              Undo
-            </Button>
-          ) : null}
-        </div>
-        <div className="flex flex-col items-end gap-0.5">
-          <Button
-            variant="secondary"
-            size="sm"
-            disabled={creator.visibleEntries.length === 0 || exporting}
-            onClick={() => void handleExport()}
-          >
-            {exporting ? (
-              <>
-                <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
-                Exporting…
-              </>
-            ) : (
-              "Export to Sheets"
-            )}
-          </Button>
-          <p className="text-[10px] text-muted">Downloads .xlsx — open in Google Sheets</p>
-        </div>
-      </header>
+      <AgencyReportCreatorHeader
+        backHref={`/agency?${backParams}`}
+        reportName={reportName}
+        fallbackName={report.name}
+        onReportNameChange={setReportName}
+        onRenameCommitted={handleRenameCommitted}
+        report={{
+          rangeFrom: report.rangeFrom,
+          rangeTo: report.rangeTo,
+          clientId: report.clientId,
+          projectId: report.projectId,
+          memberUserId: report.memberUserId,
+          createdByUserName: report.createdByUserName,
+        }}
+        labelContext={labelContext}
+        visibleEntryCount={creator.visibleEntries.length}
+        canUndo={creator.canUndo}
+        onUndo={handleUndoExclude}
+        autosaveState={autosave.state}
+        lastSavedAt={autosave.lastSavedAt}
+        onRetrySave={autosave.retry}
+        exporting={exporting}
+        onExport={() => void handleExport()}
+        teamId={teamId}
+        reportId={reportId}
+      />
 
       {!rangeReady ? (
         <div className={agencyEmptyPanelClass}>

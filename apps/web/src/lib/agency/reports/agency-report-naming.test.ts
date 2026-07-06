@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 
 import {
   filterSavedReports,
+  formatCompactDateSpan,
   formatRelativeReportTime,
+  formatReportHeaderMeta,
   getAgencyReportPeriodGroup,
   groupSavedReportsByPeriod,
   sanitizeReportFileName,
@@ -11,7 +13,14 @@ import {
 
 const labelContext = {
   clients: [{ id: "c1", name: "Acme" }],
+  projects: [{ id: "p1", name: "Website" }],
   members: [{ userId: "u1", userName: "Sara" }],
+};
+
+const headerLabelContext = {
+  clients: labelContext.clients,
+  projects: labelContext.projects,
+  members: labelContext.members,
 };
 
 assert.equal(
@@ -80,3 +89,25 @@ assert.equal(filterSavedReports(reports, "sara", labelContext).length, 1);
 assert.match(formatRelativeReportTime(new Date(Date.now() - 90_000).toISOString()), /m ago/);
 assert.equal(sanitizeReportFileName("Q3 2026 · Acme"), "Q3 2026 · Acme");
 assert.equal(sanitizeReportFileName("  "), "report");
+
+assert.equal(
+  formatCompactDateSpan("2026-07-01T00:00:00.000Z", "2026-09-30T23:59:59.999Z"),
+  "Jul 1 – Sep 30",
+);
+
+const headerMeta = formatReportHeaderMeta(
+  {
+    rangeFrom: "2026-07-01T00:00:00.000Z",
+    rangeTo: "2026-09-30T23:59:59.999Z",
+    clientId: "c1",
+    memberUserId: "u1",
+    createdByUserName: "Sara",
+    visibleEntryCount: 142,
+  },
+  headerLabelContext,
+);
+assert.equal(
+  headerMeta.scopeLine,
+  "Q3 2026 · Jul 1 – Sep 30 · Acme · Sara · 142 entries",
+);
+assert.equal(headerMeta.attributionLine, "Created by Sara");
