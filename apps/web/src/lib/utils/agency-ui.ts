@@ -152,6 +152,8 @@ export const agencyTaskRowDoneClass =
 
 export const agencyTaskRowCompleteClass = "agency-task-row-complete";
 
+export const agencySearchHighlightMarkClass = "agency-search-highlight-mark";
+
 export const agencyTaskRowNeedsDescriptionClass = "bg-warning/5";
 
 /** Time column beside the task rail — stacks tracker and log as separate panels. */

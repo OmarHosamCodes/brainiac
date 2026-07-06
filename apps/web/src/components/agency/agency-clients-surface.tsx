@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AgencyProjectCreateDialog } from "@/components/agency/agency-project-create-dialog";
+import { AgencySearchHighlight } from "@/components/agency/agency-search-highlight";
 import { useAgencyClientsActions } from "@/lib/agency/agency-segment-filters";
 import type { AgencyListFiltersApplied } from "@/lib/agency/use-agency-list-filters";
 import {
@@ -15,6 +16,7 @@ import {
 } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { getTaskGroupKey } from "@/lib/utils/agency-task-utils";
+import { agencyListSearchMatches } from "@/lib/utils/agency-list-search";
 import {
   useAgencyClientsQuery,
   useAgencyContactQuery,
@@ -94,13 +96,18 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
   }, [projects]);
 
   const filteredClients = useMemo(() => {
-    const term = filters.filterTerm.trim().toLowerCase();
+    const term = filters.filterTerm;
     const { peopleSet, clientsSet, projectsSet, tasksSet } = filters;
     return clients.filter((client) => {
-      if (term && !client.name.toLowerCase().includes(term)) return false;
+      const clientProjects = projects.filter((project) => project.clientId === client.id);
+      if (
+        term &&
+        !agencyListSearchMatches(term, client.name, ...clientProjects.map((project) => project.name))
+      ) {
+        return false;
+      }
       if (clientsSet.size > 0 && !clientsSet.has(client.id)) return false;
 
-      const clientProjects = projects.filter((project) => project.clientId === client.id);
       if (projectsSet.size > 0 && !clientProjects.some((project) => projectsSet.has(project.id))) {
         return false;
       }
@@ -270,7 +277,17 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
               <tbody>
                 {filteredClients.map((client) => {
                   const clientProjects = projectsByClient.get(client.id) ?? [];
-                  const visibleProjects = clientProjects.slice(0, 3);
+                  const searchTerm = filters.filterTerm;
+                  const visibleProjects =
+                    searchTerm.trim() === ""
+                      ? clientProjects.slice(0, 3)
+                      : [...clientProjects]
+                          .sort(
+                            (left, right) =>
+                              Number(agencyListSearchMatches(searchTerm, right.name)) -
+                              Number(agencyListSearchMatches(searchTerm, left.name)),
+                          )
+                          .slice(0, 3);
 
                   return (
                     <tr
@@ -278,7 +295,9 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
                       className="border-b border-default transition-colors last:border-b-0 hover:bg-elevated/40"
                     >
                       <td className="px-4 py-3">
-                        <span className="truncate font-bold text-highlighted">{client.name}</span>
+                        <span className="truncate font-bold text-highlighted">
+                          <AgencySearchHighlight text={client.name} query={filters.filterTerm} />
+                        </span>
                       </td>
                       <td className="px-3 py-3">
                         {clientProjects.length > 0 ? (
@@ -293,7 +312,12 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
                                   aria-hidden="true"
                                   style={projectHueStyle(project.id)}
                                 />
-                                <span className="truncate">{project.name}</span>
+                                <span className="truncate">
+                                  <AgencySearchHighlight
+                                    text={project.name}
+                                    query={filters.filterTerm}
+                                  />
+                                </span>
                               </span>
                             ))}
                             {clientProjects.length > visibleProjects.length ? (

@@ -1,6 +1,7 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useRef } from "react";
 
+import { AgencySearchHighlight } from "@/components/agency/agency-search-highlight";
 import {
   agencyLabelClass,
   getAgencyPageScrollElement,
@@ -21,6 +22,7 @@ type AgencyProjectsVirtualTableProps = {
   budgetsByProject: Map<string, unknown>;
   budgetPctFor: (projectId: string) => number;
   budgetToneFor: (projectId: string) => string;
+  searchQuery?: string;
   onSelect: (projectId: string) => void;
 };
 
@@ -32,6 +34,7 @@ export function AgencyProjectsVirtualTable({
   budgetsByProject,
   budgetPctFor,
   budgetToneFor,
+  searchQuery = "",
   onSelect,
 }: AgencyProjectsVirtualTableProps) {
   const parentRef = useRef<HTMLDivElement>(null);
@@ -89,11 +92,15 @@ export function AgencyProjectsVirtualTable({
                     aria-hidden="true"
                     style={projectHueStyle(project.id)}
                   />
-                  <span className="truncate font-bold text-highlighted">{project.name}</span>
+                  <span className="truncate font-bold text-highlighted">
+                    <AgencySearchHighlight text={project.name} query={searchQuery} />
+                  </span>
                 </div>
               </div>
               <div className="px-3 py-3 text-muted" role="cell">
-                <span className="truncate">{project.clientName}</span>
+                <span className="truncate">
+                  <AgencySearchHighlight text={project.clientName} query={searchQuery} />
+                </span>
               </div>
               <div className="px-3 py-3" role="cell">
                 <div className="flex items-center gap-2">

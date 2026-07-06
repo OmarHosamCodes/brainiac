@@ -237,7 +237,7 @@ The system is flat at rest. Surfaces lie on the page; depth is established throu
 
 ### Buttons
 
-- **Shape:** Full-pill (radius `9999px`). Set globally in `app.config.ts` so every button across the product wears the same shape.
+- **Shape:** Full-pill (radius `9999px`). Enforced via shared `Button` variants in `apps/web/src/components/ui/` and Tailwind utilities.
 - **Primary:** Operator Emerald background, white text, weight `700` (bold). Padding scales with size (`sm` 8×16px, `md` 10×20px, `lg` 12×24px, `xl` 14×28px).
 - **Hover / Focus:** Background shifts to Operator Emerald Deep. Focus shows the focus-ring at 20% opacity. No transform on hover; no scale-up.
 - **Ghost:** Transparent background, ink text, hover fills Surface Elevated. Used for tertiary actions.
@@ -252,7 +252,7 @@ The system is flat at rest. Surfaces lie on the page; depth is established throu
 
 ### Cards / Containers
 
-- **Corner Style:** Generous (`32px` radius). Set globally; overriding to a smaller radius is a deliberate choice, not a default.
+- **Corner Style:** Generous (`32px` radius). Defined in `apps/web/src/index.css` and shared card primitives; overriding to a smaller radius is a deliberate choice, not a default.
 - **Background:** Paper Pure in light, surface-darkest in dark.
 - **Shadow Strategy:** None at rest. See Elevation: shadows on state only.
 - **Border:** 1px hairline at 20% opacity (`border-muted/20`). Visible enough to define, quiet enough to recede.

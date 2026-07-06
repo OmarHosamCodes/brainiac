@@ -21,6 +21,7 @@ import {
 } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { getTaskGroupKey } from "@/lib/utils/agency-task-utils";
+import { agencyListSearchMatches } from "@/lib/utils/agency-list-search";
 
 type AgencyProjectsTableProps = {
   teamId: string;
@@ -78,10 +79,10 @@ export function AgencyProjectsTable({ teamId, filters, onSelect }: AgencyProject
   }, [entries]);
 
   const filteredProjects = useMemo(() => {
-    const term = filters.filterTerm.trim().toLowerCase();
+    const term = filters.filterTerm;
     const { peopleSet, clientsSet, projectsSet, tasksSet } = filters;
     return projects.filter((project) => {
-      if (term && !`${project.name} ${project.clientName}`.toLowerCase().includes(term)) {
+      if (term && !agencyListSearchMatches(term, project.name, project.clientName)) {
         return false;
       }
       if (clientsSet.size > 0 && !clientsSet.has(project.clientId)) return false;
@@ -205,6 +206,7 @@ export function AgencyProjectsTable({ teamId, filters, onSelect }: AgencyProject
         budgetsByProject={budgetsByProject}
         budgetPctFor={budgetPctFor}
         budgetToneFor={budgetToneFor}
+        searchQuery={filters.filterTerm}
         onSelect={onSelect}
       />
     </div>
