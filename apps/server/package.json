@@ -34,6 +34,7 @@
     "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "catalog:",
+    "web-push": "^3.6.7",
     "zod": "catalog:"
   },
   "devDependencies": {
