@@ -1,17 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { AlertTriangle, Building2, FolderKanban, Plus, Search } from "lucide-react";
-import { useImperativeHandle, useMemo, useState, forwardRef } from "react";
+import { AlertTriangle, Building2, FolderKanban, Plus } from "lucide-react";
+import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  AgencyMultiSelectFilter,
-  type AgencyFilterOptionGroup,
-} from "@/components/agency/agency-multi-select-filter";
-import { AgencyProjectCreateDialog } from "@/components/agency/agency-project-create-dialog";
 import { AgencyProjectsVirtualTable } from "@/components/agency/agency-projects-virtual-table";
+import { useAgencyProjectsActions } from "@/lib/agency/agency-segment-filters";
+import type { AgencyListFiltersApplied } from "@/lib/agency/use-agency-list-filters";
 import {
   useAgencyClientsQuery,
   useAgencyProjectTasksQuery,
@@ -24,16 +20,11 @@ import {
   agencyErrorPanelClass,
 } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { getTaskGroupKey, groupTasksByClient, groupTasksByProjectTitle } from "@/lib/utils/agency-task-utils";
-import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
-
-export type AgencyProjectsTableHandle = {
-  openNewProject: () => void;
-};
+import { getTaskGroupKey } from "@/lib/utils/agency-task-utils";
 
 type AgencyProjectsTableProps = {
   teamId: string;
-  hideToolbarActions?: boolean;
+  filters: AgencyListFiltersApplied;
   onSelect: (projectId: string) => void;
 };
 
@@ -46,323 +37,176 @@ function getWeekStartUtc(): Date {
   return date;
 }
 
-export const AgencyProjectsTable = forwardRef<AgencyProjectsTableHandle, AgencyProjectsTableProps>(
-  function AgencyProjectsTable({ teamId, hideToolbarActions = false, onSelect }, ref) {
-    const [filterTerm, setFilterTerm] = useState("");
-    const [selectedPeopleIds, setSelectedPeopleIds] = useState<string[]>([]);
-    const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
-    const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
-    const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
-    const [newProjectOpen, setNewProjectOpen] = useState(false);
+export function AgencyProjectsTable({ teamId, filters, onSelect }: AgencyProjectsTableProps) {
+  const { openNewProject } = useAgencyProjectsActions();
 
-    useImperativeHandle(ref, () => ({
-      openNewProject: () => setNewProjectOpen(true),
-    }));
+  const projectsQuery = useAgencyProjectsQuery(teamId);
+  const clientsQuery = useAgencyClientsQuery(teamId);
+  const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
+  const tasksQuery = useAgencyProjectTasksQuery(teamId, {
+    search: filters.filterTerm.trim() || undefined,
+    pageSize: 100,
+  });
 
-    const projectsQuery = useAgencyProjectsQuery(teamId);
-    const clientsQuery = useAgencyClientsQuery(teamId);
-    const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
-    const membersQuery = useQuery(
-      withAgencySyncQueryOptions(
-        {
-          ...orpc.agencyOps.taskThreads.members.list.queryOptions({ input: { teamId } }),
-          enabled: Boolean(teamId),
-        },
-        "cold",
-        { liveGated: true, teamId },
-      ),
-    );
-    const tasksQuery = useAgencyProjectTasksQuery(teamId, {
-      search: filterTerm.trim() || undefined,
-      pageSize: 100,
-    });
+  const budgetsQuery = useQuery({
+    ...orpc.agencyOps.budgets.list.queryOptions({ input: { teamId } }),
+    enabled: Boolean(teamId),
+  });
 
-    const budgetsQuery = useQuery({
-      ...orpc.agencyOps.budgets.list.queryOptions({ input: { teamId } }),
-      enabled: Boolean(teamId),
-    });
-
-    const budgetsByProject = useMemo(() => {
-      const map = new Map<string, NonNullable<typeof budgetsQuery.data>["items"][number]>();
-      for (const entry of budgetsQuery.data?.items ?? []) {
-        map.set(entry.projectId, entry);
-      }
-      return map;
-    }, [budgetsQuery.data?.items]);
-
-    const projects = projectsQuery.data?.items ?? [];
-    const clients = clientsQuery.data?.items ?? [];
-    const entries = entriesQuery.data?.items ?? [];
-    const tasks = tasksQuery.data?.items ?? [];
-
-    const peopleOptions = useMemo(() => {
-      const people = new Map<string, string>();
-      for (const member of membersQuery.data?.items ?? []) {
-        people.set(member.userId, member.userName);
-      }
-      for (const entry of entries) {
-        people.set(entry.userId, entry.userName);
-      }
-      return Array.from(people, ([value, label]) => ({ value, label })).sort((a, b) =>
-        a.label.localeCompare(b.label),
-      );
-    }, [entries, membersQuery.data?.items]);
-
-    const clientOptions = useMemo(
-      () => clients.map((client) => ({ value: client.id, label: client.name })),
-      [clients],
-    );
-    const projectFilterGroups = useMemo((): AgencyFilterOptionGroup[] => {
-      const sortedProjects = [...projects].sort(
-        (left, right) =>
-          left.clientName.localeCompare(right.clientName) || left.name.localeCompare(right.name),
-      );
-      const groups: AgencyFilterOptionGroup[] = [];
-      let currentGroup: AgencyFilterOptionGroup | null = null;
-
-      for (const project of sortedProjects) {
-        if (!currentGroup || currentGroup.groupLabel !== project.clientName) {
-          currentGroup = { groupLabel: project.clientName, options: [] };
-          groups.push(currentGroup);
-        }
-        currentGroup.options!.push({ value: project.id, label: project.name });
-      }
-
-      return groups;
-    }, [projects]);
-    const taskFilterGroups = useMemo((): AgencyFilterOptionGroup[] => {
-      return groupTasksByClient(tasks, projects).map((clientGroup) => {
-        const tasksByProject = new Map<string, typeof tasks>();
-        for (const task of clientGroup.tasks) {
-          const list = tasksByProject.get(task.projectId) ?? [];
-          list.push(task);
-          tasksByProject.set(task.projectId, list);
-        }
-
-        return {
-          groupLabel: clientGroup.clientName,
-          sections: projects
-            .filter(
-              (project) => project.clientId === clientGroup.clientId && tasksByProject.has(project.id),
-            )
-            .sort((left, right) => left.name.localeCompare(right.name))
-            .map((project) => ({
-              sectionLabel: project.name,
-              options: groupTasksByProjectTitle(tasksByProject.get(project.id) ?? []).map((group) => ({
-                value: group.groupKey,
-                label: group.title,
-              })),
-            })),
-        };
-      });
-    }, [projects, tasks]);
-
-    const hoursThisWeekByProject = useMemo(() => {
-      const weekStartMs = getWeekStartUtc().getTime();
-      const totals = new Map<string, number>();
-      for (const entry of entries) {
-        const startedAtMs = new Date(entry.startedAt).getTime();
-        if (startedAtMs < weekStartMs) continue;
-        totals.set(entry.projectId, (totals.get(entry.projectId) ?? 0) + entry.durationSeconds);
-      }
-      return totals;
-    }, [entries]);
-
-    const filteredProjects = useMemo(() => {
-      const term = filterTerm.trim().toLowerCase();
-      const peopleSet = new Set(selectedPeopleIds);
-      const clientsSet = new Set(selectedClientIds);
-      const projectsSet = new Set(selectedProjectIds);
-      const tasksSet = new Set(selectedTaskIds);
-      return projects.filter((project) => {
-        if (term && !`${project.name} ${project.clientName}`.toLowerCase().includes(term)) {
-          return false;
-        }
-        if (clientsSet.size > 0 && !clientsSet.has(project.clientId)) return false;
-        if (projectsSet.size > 0 && !projectsSet.has(project.id)) return false;
-        if (
-          peopleSet.size > 0 &&
-          !entries.some(
-            (entry) => entry.projectId === project.id && peopleSet.has(entry.userId),
-          )
-        ) {
-          return false;
-        }
-        if (
-          tasksSet.size > 0 &&
-          !tasks.some(
-            (task) => task.projectId === project.id && tasksSet.has(getTaskGroupKey(task)),
-          )
-        ) {
-          return false;
-        }
-        return true;
-      });
-    }, [
-      entries,
-      filterTerm,
-      projects,
-      selectedClientIds,
-      selectedPeopleIds,
-      selectedProjectIds,
-      selectedTaskIds,
-      tasks,
-    ]);
-
-    function budgetPctFor(projectId: string): number {
-      const budget = budgetsByProject.get(projectId);
-      if (!budget) return 0;
-      if (budget.hoursBudget && budget.hoursBudget > 0) {
-        return Math.min(100, Math.round((budget.hoursLogged / budget.hoursBudget) * 100));
-      }
-      if (budget.costBudgetCents && budget.costBudgetCents > 0) {
-        return Math.min(100, Math.round((budget.costLoggedCents / budget.costBudgetCents) * 100));
-      }
-      return 0;
+  const budgetsByProject = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof budgetsQuery.data>["items"][number]>();
+    for (const entry of budgetsQuery.data?.items ?? []) {
+      map.set(entry.projectId, entry);
     }
+    return map;
+  }, [budgetsQuery.data?.items]);
 
-    function budgetToneFor(projectId: string): string {
-      const pct = budgetPctFor(projectId);
-      if (pct >= 100) return "bg-error";
-      if (pct >= 85) return "bg-warning";
-      return "bg-primary";
+  const projects = projectsQuery.data?.items ?? [];
+  const clients = clientsQuery.data?.items ?? [];
+  const entries = entriesQuery.data?.items ?? [];
+  const tasks = tasksQuery.data?.items ?? [];
+
+  const hoursThisWeekByProject = useMemo(() => {
+    const weekStartMs = getWeekStartUtc().getTime();
+    const totals = new Map<string, number>();
+    for (const entry of entries) {
+      const startedAtMs = new Date(entry.startedAt).getTime();
+      if (startedAtMs < weekStartMs) continue;
+      totals.set(entry.projectId, (totals.get(entry.projectId) ?? 0) + entry.durationSeconds);
     }
+    return totals;
+  }, [entries]);
 
-    const isLoading = projectsQuery.isPending || clientsQuery.isPending;
-    const isError = projectsQuery.isError;
+  const filteredProjects = useMemo(() => {
+    const term = filters.filterTerm.trim().toLowerCase();
+    const { peopleSet, clientsSet, projectsSet, tasksSet } = filters;
+    return projects.filter((project) => {
+      if (term && !`${project.name} ${project.clientName}`.toLowerCase().includes(term)) {
+        return false;
+      }
+      if (clientsSet.size > 0 && !clientsSet.has(project.clientId)) return false;
+      if (projectsSet.size > 0 && !projectsSet.has(project.id)) return false;
+      if (
+        peopleSet.size > 0 &&
+        !entries.some(
+          (entry) => entry.projectId === project.id && peopleSet.has(entry.userId),
+        )
+      ) {
+        return false;
+      }
+      if (
+        tasksSet.size > 0 &&
+        !tasks.some(
+          (task) => task.projectId === project.id && tasksSet.has(getTaskGroupKey(task)),
+        )
+      ) {
+        return false;
+      }
+      return true;
+    });
+  }, [entries, filters, projects, tasks]);
 
+  function budgetPctFor(projectId: string): number {
+    const budget = budgetsByProject.get(projectId);
+    if (!budget) return 0;
+    if (budget.hoursBudget && budget.hoursBudget > 0) {
+      return Math.min(100, Math.round((budget.hoursLogged / budget.hoursBudget) * 100));
+    }
+    if (budget.costBudgetCents && budget.costBudgetCents > 0) {
+      return Math.min(100, Math.round((budget.costLoggedCents / budget.costBudgetCents) * 100));
+    }
+    return 0;
+  }
+
+  function budgetToneFor(projectId: string): string {
+    const pct = budgetPctFor(projectId);
+    if (pct >= 100) return "bg-error";
+    if (pct >= 85) return "bg-warning";
+    return "bg-primary";
+  }
+
+  const isLoading = projectsQuery.isPending || clientsQuery.isPending;
+  const isError = projectsQuery.isError;
+
+  if (isLoading) {
     return (
-      <div className="agency-projects space-y-4">
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-default bg-elevated p-2">
-          <div className="relative min-w-64 flex-1 md:max-w-72">
-            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted" />
-            <Input
-              value={filterTerm}
-              onChange={(e) => setFilterTerm(e.target.value)}
-              placeholder="Search projects"
-              className="h-9 rounded-xl bg-default pl-9 text-sm"
-            />
+      <div className="agency-projects overflow-hidden rounded-2xl border border-default bg-default">
+        {[1, 2, 3, 4, 5, 6].map((rowIndex) => (
+          <div key={rowIndex} className="border-b border-default px-4 py-4 last:border-b-0">
+            <Skeleton className="h-4 w-full" />
           </div>
-
-          <AgencyMultiSelectFilter
-            label="All People"
-            values={selectedPeopleIds}
-            options={peopleOptions}
-            onValuesChange={setSelectedPeopleIds}
-            disabled={tasksQuery.isPending}
-            searchPlaceholder="Search people"
-          />
-          <AgencyMultiSelectFilter
-            label="All Clients"
-            values={selectedClientIds}
-            options={clientOptions}
-            onValuesChange={setSelectedClientIds}
-            disabled={clientsQuery.isPending}
-            searchPlaceholder="Search clients"
-          />
-          <AgencyMultiSelectFilter
-            label="All Projects"
-            values={selectedProjectIds}
-            groups={projectFilterGroups}
-            onValuesChange={setSelectedProjectIds}
-            disabled={projectsQuery.isPending}
-            searchPlaceholder="Search projects or clients"
-          />
-          <AgencyMultiSelectFilter
-            label="All Tasks"
-            values={selectedTaskIds}
-            groups={taskFilterGroups}
-            onValuesChange={setSelectedTaskIds}
-            disabled={tasksQuery.isPending}
-            searchPlaceholder="Search tasks, projects, or clients"
-          />
-
-          {!hideToolbarActions ? (
-            <div className="ml-auto">
-              <Button
-                size="sm"
-                disabled={!teamId || clients.length === 0}
-                onClick={() => setNewProjectOpen(true)}
-              >
-                <Plus />
-                New project
-              </Button>
-            </div>
-          ) : null}
-        </div>
-
-        <AgencyProjectCreateDialog
-          open={newProjectOpen}
-          onOpenChange={setNewProjectOpen}
-          teamId={teamId}
-          clients={clients}
-        />
-
-        {isLoading ? (
-          <div className="overflow-hidden rounded-2xl border border-default bg-default">
-            {[1, 2, 3, 4, 5, 6].map((rowIndex) => (
-              <div key={rowIndex} className="border-b border-default px-4 py-4 last:border-b-0">
-                <Skeleton className="h-4 w-full" />
-              </div>
-            ))}
-          </div>
-        ) : isError ? (
-          <div className={agencyErrorPanelClass} role="alert">
-            <AlertTriangle className="mx-auto size-5 text-error" />
-            <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load projects.</p>
-            <p className="mt-1 text-xs text-muted">
-              {getErrorMessage(projectsQuery.error, "Try refreshing.")}
-            </p>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mt-3"
-              onClick={() => void projectsQuery.refetch()}
-            >
-              Retry
-            </Button>
-          </div>
-        ) : clients.length === 0 ? (
-          <div className={agencyEmptyPanelClass}>
-            <Building2 className="mx-auto size-6 text-muted" />
-            <p className="mt-3 text-sm font-bold text-highlighted">No clients yet.</p>
-            <p className="mt-1 text-xs text-muted">
-              Add a client first, then their projects show up here.
-            </p>
-          </div>
-        ) : projects.length === 0 ? (
-          <div className={agencyEmptyPanelClass}>
-            <FolderKanban className="mx-auto size-6 text-muted" />
-            <p className="mt-3 text-sm font-bold text-highlighted">No projects yet.</p>
-            <p className="mt-1 text-xs text-muted">
-              Create your first project to start tracking time and budgets.
-            </p>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="mt-4"
-              onClick={() => setNewProjectOpen(true)}
-            >
-              <Plus />
-              New project
-            </Button>
-          </div>
-        ) : filteredProjects.length === 0 ? (
-          <div className="rounded-2xl border border-default bg-default p-8 text-center">
-            <p className="text-sm font-bold text-highlighted">No projects match.</p>
-            <p className="mt-1 text-xs text-muted">Try a different search.</p>
-          </div>
-        ) : (
-          <AgencyProjectsVirtualTable
-            projects={filteredProjects}
-            hoursThisWeekByProject={hoursThisWeekByProject}
-            budgetsByProject={budgetsByProject}
-            budgetPctFor={budgetPctFor}
-            budgetToneFor={budgetToneFor}
-            onSelect={onSelect}
-          />
-        )}
+        ))}
       </div>
     );
-  },
-);
+  }
+
+  if (isError) {
+    return (
+      <div className={agencyErrorPanelClass} role="alert">
+        <AlertTriangle className="mx-auto size-5 text-error" />
+        <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load projects.</p>
+        <p className="mt-1 text-xs text-muted">
+          {getErrorMessage(projectsQuery.error, "Try refreshing.")}
+        </p>
+        <Button
+          variant="secondary"
+          size="sm"
+          className="mt-3"
+          onClick={() => void projectsQuery.refetch()}
+        >
+          Retry
+        </Button>
+      </div>
+    );
+  }
+
+  if (clients.length === 0) {
+    return (
+      <div className={agencyEmptyPanelClass}>
+        <Building2 className="mx-auto size-6 text-muted" />
+        <p className="mt-3 text-sm font-bold text-highlighted">No clients yet.</p>
+        <p className="mt-1 text-xs text-muted">
+          Add a client first, then their projects show up here.
+        </p>
+      </div>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <div className={agencyEmptyPanelClass}>
+        <FolderKanban className="mx-auto size-6 text-muted" />
+        <p className="mt-3 text-sm font-bold text-highlighted">No projects yet.</p>
+        <p className="mt-1 text-xs text-muted">
+          Create your first project to start tracking time and budgets.
+        </p>
+        <Button variant="secondary" size="sm" className="mt-4" onClick={openNewProject}>
+          <Plus />
+          New project
+        </Button>
+      </div>
+    );
+  }
+
+  if (filteredProjects.length === 0) {
+    return (
+      <div className="rounded-2xl border border-default bg-default p-8 text-center">
+        <p className="text-sm font-bold text-highlighted">No projects match.</p>
+        <p className="mt-1 text-xs text-muted">Try a different search.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="agency-projects">
+      <AgencyProjectsVirtualTable
+        projects={filteredProjects}
+        hoursThisWeekByProject={hoursThisWeekByProject}
+        budgetsByProject={budgetsByProject}
+        budgetPctFor={budgetPctFor}
+        budgetToneFor={budgetToneFor}
+        onSelect={onSelect}
+      />
+    </div>
+  );
+}
