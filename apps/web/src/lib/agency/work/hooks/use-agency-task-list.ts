@@ -1,5 +1,5 @@
 import { useQuery, useQueries } from "@tanstack/react-query";
-import { useCallback, useEffect, useId, useMemo, useRef } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, type RefObject } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
@@ -27,6 +27,7 @@ import {
 } from "@/lib/utils/agency-task-rail-grouping";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/stores/agency-ops";
 import {
+  resolveDefaultCreateProjectId,
   useAgencyTaskListStore,
 } from "@/stores/agency-task-list";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
@@ -49,13 +50,13 @@ type UseAgencyTaskListOptions = {
 export type { AgencyTaskClientDisplayGroup } from "@/lib/utils/agency-task-rail-grouping";
 
 export type AgencyTaskListCreateViewModel = {
-  expanded: boolean;
-  skipProjectStep: boolean;
   members: AgencyTaskThreadMember[];
   titleDraft: string;
   descriptionDraft: string;
-  showDescriptionField: boolean;
+  createOptionsExpanded: boolean;
+  quickAddFocused: boolean;
   selectedProjectId: string;
+  projectNeedsChoice: boolean;
   assignedToTeam: boolean;
   selectedAssigneeIds: string[];
   createTasks: AgencyProjectTask[];
@@ -63,17 +64,21 @@ export type AgencyTaskListCreateViewModel = {
   /** Open/in-progress task that shares this title; create will reuse it. */
   existingOpenTask: AgencyProjectTask | null;
   disabled: boolean;
+  noProjects: boolean;
   membersLoading: boolean;
   isCreatingTask: boolean;
   zoneId: string;
+  quickAddInputRef: RefObject<HTMLInputElement | null>;
   canSubmit: boolean;
-  onExpand: () => void;
-  onCollapse: () => void;
+  onFocusQuickAdd: () => void;
+  onQuickAddFocusChange: (focused: boolean) => void;
+  onToggleCreateOptions: () => void;
   onTitleChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onProjectChange: (value: string) => void;
   onAssignedToTeamChange: (value: boolean) => void;
   onAssigneeIdsChange: (value: string[]) => void;
+  onPickSuggestion: (task: AgencyProjectTask) => void;
   onSubmit: () => void;
 };
 
@@ -156,7 +161,9 @@ export function useAgencyTaskList({
   const donePanelId = useId();
   const zoneId = useId();
 
-  const createExpanded = useAgencyTaskListStore((s) => s.createExpanded);
+  const createExpanded = useAgencyTaskListStore((s) => s.quickAddFocused);
+  const createOptionsExpanded = useAgencyTaskListStore((s) => s.createOptionsExpanded);
+  const lastUsedProjectIdForCreate = useAgencyTaskListStore((s) => s.lastUsedProjectIdForCreate);
   const doneExpanded = useAgencyTaskListStore((s) => s.doneExpanded);
   const recentlyCompletedTaskId = useAgencyTaskListStore((s) => s.recentlyCompletedTaskId);
   const recentlyCreatedTaskId = useAgencyTaskListStore((s) => s.recentlyCreatedTaskId);
@@ -179,8 +186,12 @@ export function useAgencyTaskList({
   const setAssignedToTeamForCreate = useAgencyTaskListStore((s) => s.setAssignedToTeamForCreate);
   const setClientExpanded = useAgencyTaskListStore((s) => s.setClientExpanded);
   const setProjectExpanded = useAgencyTaskListStore((s) => s.setProjectExpanded);
-  const expandCreateAction = useAgencyTaskListStore((s) => s.expandCreate);
-  const collapseCreateAction = useAgencyTaskListStore((s) => s.collapseCreate);
+  const setQuickAddFocused = useAgencyTaskListStore((s) => s.setQuickAddFocused);
+  const setCreateOptionsExpanded = useAgencyTaskListStore((s) => s.setCreateOptionsExpanded);
+  const setLastUsedProjectIdForCreate = useAgencyTaskListStore((s) => s.setLastUsedProjectIdForCreate);
+  const clearQuickAddAction = useAgencyTaskListStore((s) => s.clearQuickAdd);
+
+  const quickAddInputRef = useRef<HTMLInputElement>(null);
 
   const setTrackerDescription = useAgencyTimeTrackingStore((s) => s.setTrackerDescription);
   const setTrackerProjectId = useAgencyTimeTrackingStore((s) => s.setTrackerProjectId);
@@ -216,8 +227,18 @@ export function useAgencyTaskList({
     [trackingDraft, trackingTimer],
   );
 
-  const skipProjectStep = projects.length === 1;
-  const defaultProjectId = projects[0]?.id ?? "";
+  const defaultProjectId = resolveDefaultCreateProjectId({
+    projects,
+    lastUsedProjectId: lastUsedProjectIdForCreate,
+  });
+  const noProjects = projects.length === 0;
+  const projectNeedsChoice = !noProjects && !selectedProjectIdForCreate;
+
+  useEffect(() => {
+    if (!selectedProjectIdForCreate && defaultProjectId) {
+      setSelectedProjectIdForCreate(defaultProjectId);
+    }
+  }, [defaultProjectId, selectedProjectIdForCreate, setSelectedProjectIdForCreate]);
 
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
@@ -245,7 +266,7 @@ export function useAgencyTaskList({
   });
 
   const titleSuggestionTasksQuery = useAgencyProjectTasksQuery(teamId, {
-    projectId: createExpanded ? selectedProjectIdForCreate : undefined,
+    projectId: selectedProjectIdForCreate || undefined,
     pageSize: 50,
   });
 
@@ -320,12 +341,14 @@ export function useAgencyTaskList({
     [agencyOps, blueprints, teamId],
   );
 
+  const suggestionsActive = createExpanded || Boolean(titleDraft.trim());
+
   const createTasks = useMemo(() => {
-    if (!createExpanded || !selectedProjectIdForCreate) return [];
-    return (titleSuggestionTasksQuery.data?.items ?? []).filter(
-      (task) => task.projectId === selectedProjectIdForCreate,
-    );
-  }, [createExpanded, selectedProjectIdForCreate, titleSuggestionTasksQuery.data?.items]);
+    if (!suggestionsActive) return [];
+    const items = titleSuggestionTasksQuery.data?.items ?? [];
+    if (!selectedProjectIdForCreate) return items;
+    return items.filter((task) => task.projectId === selectedProjectIdForCreate);
+  }, [selectedProjectIdForCreate, suggestionsActive, titleSuggestionTasksQuery.data?.items]);
 
   const existingOpenTask = useMemo(
     () => findOpenTaskByExactTitle(createTasks, titleDraft),
@@ -441,21 +464,50 @@ export function useAgencyTaskList({
     return () => clearTimeout(clearHandle);
   }, [recentlyCreatedBlueprintId, setRecentlyCreatedBlueprintId]);
 
-  const collapseCreate = useCallback(() => {
-    collapseCreateAction({
-      skipProjectStep,
-      defaultProjectId,
+  const clearQuickAdd = useCallback(() => {
+    clearQuickAddAction({
       currentUserId,
+      defaultProjectId: resolveDefaultCreateProjectId({
+        projects,
+        lastUsedProjectId: lastUsedProjectIdForCreate,
+      }),
     });
-  }, [collapseCreateAction, currentUserId, defaultProjectId, skipProjectStep]);
+    requestAnimationFrame(() => quickAddInputRef.current?.focus());
+  }, [
+    clearQuickAddAction,
+    currentUserId,
+    lastUsedProjectIdForCreate,
+    projects,
+  ]);
 
-  const expandCreate = useCallback(() => {
-    expandCreateAction({
-      skipProjectStep,
-      defaultProjectId,
-      currentUserId,
-    });
-  }, [currentUserId, defaultProjectId, expandCreateAction, skipProjectStep]);
+  const focusQuickAdd = useCallback(() => {
+    quickAddInputRef.current?.focus();
+  }, []);
+
+  const handleProjectChange = useCallback(
+    (projectId: string) => {
+      setSelectedProjectIdForCreate(projectId);
+      if (projectId) {
+        setLastUsedProjectIdForCreate(projectId);
+      }
+    },
+    [setLastUsedProjectIdForCreate, setSelectedProjectIdForCreate],
+  );
+
+  const handleSelectSuggestion = useCallback(
+    (task: AgencyProjectTask) => {
+      setTitleDraft(task.title);
+      handleProjectChange(task.projectId);
+      setCreateOptionsExpanded(true);
+      requestAnimationFrame(() => quickAddInputRef.current?.focus());
+    },
+    [
+      handleProjectChange,
+      quickAddInputRef,
+      setCreateOptionsExpanded,
+      setTitleDraft,
+    ],
+  );
 
   const createTask = useCallback(async () => {
     const title = titleDraft.trim();
@@ -480,6 +532,9 @@ export function useAgencyTaskList({
     });
 
     if (createdId) {
+      if (projectId) {
+        setLastUsedProjectIdForCreate(projectId);
+      }
       if (!activeTimer) {
         setTrackerTaskId(teamId, createdId);
         setTrackerProjectId(teamId, projectId);
@@ -488,19 +543,20 @@ export function useAgencyTaskList({
         setTrackerTaskId(teamId, createdId);
       }
       setRecentlyCreatedTaskId(createdId);
-      collapseCreate();
+      clearQuickAdd();
       return;
     }
     setRecentlyCreatedTaskId("");
   }, [
     activeTimer,
     agencyOps,
-    collapseCreate,
+    clearQuickAdd,
     assignedToTeamForCreate,
     createTasks,
     descriptionDraft,
     selectedAssigneeIdsForCreate,
     selectedProjectIdForCreate,
+    setLastUsedProjectIdForCreate,
     setRecentlyCreatedTaskId,
     setRecentlyCreatedBlueprintId,
     setTrackerDescription,
@@ -568,13 +624,16 @@ export function useAgencyTaskList({
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        collapseCreate();
+        setTitleDraft("");
+        setDescriptionDraft("");
+        setCreateOptionsExpanded(false);
+        quickAddInputRef.current?.blur();
       }
     }
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [collapseCreate, createExpanded]);
+  }, [createExpanded, setCreateOptionsExpanded, setDescriptionDraft, setTitleDraft]);
 
   if (!currentUserId) {
     return { status: "unsigned" };
@@ -636,30 +695,34 @@ export function useAgencyTaskList({
     getTaskTrackingState,
     onBlueprintDescriptionChange,
     create: {
-      expanded: createExpanded,
-      skipProjectStep,
       members,
       titleDraft,
       descriptionDraft,
-      showDescriptionField: Boolean(titleDraft.trim()),
+      createOptionsExpanded,
+      quickAddFocused: createExpanded,
       selectedProjectId: selectedProjectIdForCreate,
+      projectNeedsChoice,
       assignedToTeam: assignedToTeamForCreate,
       selectedAssigneeIds: selectedAssigneeIdsForCreate,
       createTasks,
       createTasksLoading: titleSuggestionTasksQuery.isPending,
       existingOpenTask,
-      disabled: !teamId || membersQuery.isPending,
+      disabled: !teamId || membersQuery.isPending || noProjects,
+      noProjects,
       membersLoading: membersQuery.isPending,
       isCreatingTask,
       zoneId,
+      quickAddInputRef,
       canSubmit,
-      onExpand: expandCreate,
-      onCollapse: collapseCreate,
+      onFocusQuickAdd: focusQuickAdd,
+      onQuickAddFocusChange: setQuickAddFocused,
+      onToggleCreateOptions: () => setCreateOptionsExpanded(!createOptionsExpanded),
       onTitleChange: setTitleDraft,
       onDescriptionChange: setDescriptionDraft,
-      onProjectChange: setSelectedProjectIdForCreate,
+      onProjectChange: handleProjectChange,
       onAssignedToTeamChange: setAssignedToTeamForCreate,
       onAssigneeIdsChange: setSelectedAssigneeIdsForCreate,
+      onPickSuggestion: (task) => void handleSelectSuggestion(task),
       onSubmit: () => void createTask(),
     },
   };
