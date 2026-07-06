@@ -3,7 +3,9 @@ import { create } from "zustand";
 export const UNASSIGNED_ASSIGNEE_VALUE = "__unassigned__";
 
 type AgencyTaskListState = {
-  createExpanded: boolean;
+  quickAddFocused: boolean;
+  createOptionsExpanded: boolean;
+  lastUsedProjectIdForCreate: string;
   doneExpanded: boolean;
   recentlyCompletedTaskId: string;
   recentlyCreatedTaskId: string;
@@ -15,7 +17,9 @@ type AgencyTaskListState = {
   selectedAssigneeIdsForCreate: string[];
   collapsedClients: Set<string>;
   collapsedProjects: Set<string>;
-  setCreateExpanded: (expanded: boolean) => void;
+  setQuickAddFocused: (focused: boolean) => void;
+  setCreateOptionsExpanded: (expanded: boolean) => void;
+  setLastUsedProjectIdForCreate: (projectId: string) => void;
   setDoneExpanded: (expanded: boolean) => void;
   setRecentlyCompletedTaskId: (taskId: string) => void;
   setRecentlyCreatedTaskId: (taskId: string) => void;
@@ -27,9 +31,7 @@ type AgencyTaskListState = {
   setSelectedAssigneeIdsForCreate: (value: string[]) => void;
   setClientExpanded: (clientId: string, expanded: boolean) => void;
   setProjectExpanded: (projectId: string, expanded: boolean) => void;
-  resetCreateDraft: (options: { skipProjectStep: boolean; defaultProjectId: string; currentUserId: string }) => void;
-  expandCreate: (options: { skipProjectStep: boolean; defaultProjectId: string; currentUserId: string }) => void;
-  collapseCreate: (options: { skipProjectStep: boolean; defaultProjectId: string; currentUserId: string }) => void;
+  clearQuickAdd: (options: { currentUserId: string; defaultProjectId: string }) => void;
 };
 
 function defaultAssigneeIds(currentUserId: string) {
@@ -37,7 +39,9 @@ function defaultAssigneeIds(currentUserId: string) {
 }
 
 export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
-  createExpanded: false,
+  quickAddFocused: false,
+  createOptionsExpanded: false,
+  lastUsedProjectIdForCreate: "",
   doneExpanded: false,
   recentlyCompletedTaskId: "",
   recentlyCreatedTaskId: "",
@@ -49,7 +53,9 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   selectedAssigneeIdsForCreate: [],
   collapsedClients: new Set(),
   collapsedProjects: new Set(),
-  setCreateExpanded: (expanded) => set({ createExpanded: expanded }),
+  setQuickAddFocused: (focused) => set({ quickAddFocused: focused }),
+  setCreateOptionsExpanded: (expanded) => set({ createOptionsExpanded: expanded }),
+  setLastUsedProjectIdForCreate: (projectId) => set({ lastUsedProjectIdForCreate: projectId }),
   setDoneExpanded: (expanded) => set({ doneExpanded: expanded }),
   setRecentlyCompletedTaskId: (taskId) => set({ recentlyCompletedTaskId: taskId }),
   setRecentlyCreatedTaskId: (taskId) => set({ recentlyCreatedTaskId: taskId }),
@@ -87,30 +93,27 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
       }
       return { collapsedProjects: next };
     }),
-  resetCreateDraft: ({ skipProjectStep, defaultProjectId, currentUserId }) =>
+  clearQuickAdd: ({ currentUserId, defaultProjectId }) =>
     set({
       titleDraft: "",
       descriptionDraft: "",
-      selectedProjectIdForCreate: skipProjectStep ? defaultProjectId : "",
+      createOptionsExpanded: false,
       assignedToTeamForCreate: false,
       selectedAssigneeIdsForCreate: defaultAssigneeIds(currentUserId),
-    }),
-  expandCreate: ({ skipProjectStep, defaultProjectId, currentUserId }) =>
-    set({
-      createExpanded: true,
-      assignedToTeamForCreate: false,
-      selectedAssigneeIdsForCreate: defaultAssigneeIds(currentUserId),
-      selectedProjectIdForCreate: skipProjectStep ? defaultProjectId : "",
-      titleDraft: "",
-      descriptionDraft: "",
-    }),
-  collapseCreate: ({ skipProjectStep, defaultProjectId, currentUserId }) =>
-    set({
-      createExpanded: false,
-      titleDraft: "",
-      descriptionDraft: "",
-      selectedProjectIdForCreate: skipProjectStep ? defaultProjectId : "",
-      assignedToTeamForCreate: false,
-      selectedAssigneeIdsForCreate: defaultAssigneeIds(currentUserId),
+      selectedProjectIdForCreate: defaultProjectId,
     }),
 }));
+
+export function resolveDefaultCreateProjectId(options: {
+  projects: Array<{ id: string }>;
+  lastUsedProjectId: string;
+}): string {
+  const { projects, lastUsedProjectId } = options;
+  if (lastUsedProjectId && projects.some((project) => project.id === lastUsedProjectId)) {
+    return lastUsedProjectId;
+  }
+  if (projects.length === 1) {
+    return projects[0]!.id;
+  }
+  return "";
+}
