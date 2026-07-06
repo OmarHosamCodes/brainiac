@@ -3,22 +3,19 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { AgencyNotifications } from "@/components/agency/agency-notifications";
-import { AgencyClientsSurface } from "@/components/agency/agency-clients-surface";
-import { AgencyDashboardSurface } from "@/components/agency/agency-dashboard-surface";
 import { AgencyManagementSurface } from "@/components/agency/agency-management-surface";
 import { AgencyPlaceholderSurface } from "@/components/agency/agency-placeholder-surface";
 import { AgencyProUpsell } from "@/components/agency/agency-pro-upsell";
-import { AgencyProjectDetail } from "@/components/agency/agency-project-detail";
-import { AgencyProjectsTable } from "@/components/agency/agency-projects-table";
-import { AgencyReportsSurface } from "@/components/agency/agency-reports-surface";
 import { AgencyReportCreatorSurface } from "@/components/agency/agency-report-creator-surface";
+import { AgencySegmentBody } from "@/components/agency/agency-segment-body";
 import { AgencySubtitleBreadcrumb } from "@/components/agency/agency-subtitle-breadcrumb";
 import { AgencyPresenceAvatars } from "@/components/agency/agency-presence-avatars";
 import { AgencyTeamBreadcrumb } from "@/components/agency/agency-team-breadcrumb";
 import { AgencyWorkSurface } from "@/components/agency/agency-work-surface";
-import { AgencyLogoLoader } from "@/components/agency/agency-logo-loader";
+import { LogoLoader } from "@/components/shell/logo-loader";
 import { AppShellTopbarActions, AppShellTopbarSubtitle } from "@/components/app-shell-topbar";
 import { AppShellPage } from "@/components/app-shell-page";
+import { AgencySegmentFiltersRoot } from "@/lib/agency/agency-segment-filters";
 import { useAgencySyncStatus } from "@/lib/queries/agency-sync";
 import { useAgencyJourneyLiveSync } from "@/lib/agency/work/hooks/use-agency-journey-live-sync";
 import { useAgencyBootGate } from "@/lib/agency/use-agency-boot-gate";
@@ -232,7 +229,7 @@ export function AgencyPage() {
           )}
         >
           {isBooting ? (
-            <AgencyLogoLoader />
+            <LogoLoader label="Loading agency" />
           ) : showAgencyUpsell ? (
             <div className={shellContentInClass}>
               <AgencyProUpsell />
@@ -254,42 +251,41 @@ export function AgencyPage() {
                 aria-labelledby={`agency-tab-${segment}`}
                 className={cn(isWorkSegment && "flex min-h-0 flex-1 flex-col")}
               >
-                  {segment === "dashboard" ? (
-                    <AgencyDashboardSurface teamId={selectedTeamId} />
-                  ) : null}
-                  {segment === "work" ? (
-                    <div className={agencyWorkSurfaceShellClass}>
-                      <AgencyWorkSurface
-                        teamId={selectedTeamId}
-                        onSelectProject={openProject}
-                        onSegmentChange={handleSegmentChange}
-                      />
-                    </div>
-                  ) : null}
-                  {segment === "projects" ? (
-                    selectedProjectId ? (
-                      <AgencyProjectDetail
-                        teamId={selectedTeamId}
-                        projectId={selectedProjectId}
-                        onBack={closeProject}
-                      />
-                    ) : (
-                      <AgencyProjectsTable teamId={selectedTeamId} onSelect={openProject} />
-                    )
-                  ) : null}
-                  {segment === "clients" ? (
-                    <AgencyClientsSurface teamId={selectedTeamId} />
-                  ) : null}
-                  {segment === "reports" ? (
-                    searchParams.get("report") === "create" ? (
-                      <AgencyReportCreatorSurface teamId={selectedTeamId} />
-                    ) : (
-                      <AgencyReportsSurface teamId={selectedTeamId} />
-                    )
-                  ) : null}
-                  {segment === "management" ? (
-                    <AgencyManagementSurface teamId={selectedTeamId} />
-                  ) : null}
+              <AgencySegmentFiltersRoot
+                segment={segment}
+                teamId={selectedTeamId}
+                selectedProjectId={selectedProjectId}
+                reportMode={searchParams.get("report")}
+                searchParams={searchParams}
+              >
+                {segment === "work" ? (
+                  <div className={agencyWorkSurfaceShellClass}>
+                    <AgencyWorkSurface
+                      teamId={selectedTeamId}
+                      onSelectProject={openProject}
+                      onSegmentChange={handleSegmentChange}
+                    />
+                  </div>
+                ) : null}
+                {segment === "reports" && searchParams.get("report") === "create" ? (
+                  <AgencyReportCreatorSurface teamId={selectedTeamId} />
+                ) : null}
+                {segment === "management" ? (
+                  <AgencyManagementSurface teamId={selectedTeamId} />
+                ) : null}
+                {segment === "dashboard" ||
+                segment === "clients" ||
+                segment === "projects" ||
+                (segment === "reports" && searchParams.get("report") !== "create") ? (
+                  <AgencySegmentBody
+                    segment={segment}
+                    teamId={selectedTeamId}
+                    selectedProjectId={selectedProjectId}
+                    onSelectProject={openProject}
+                    onCloseProject={closeProject}
+                  />
+                ) : null}
+              </AgencySegmentFiltersRoot>
               </div>
             </div>
           )}
