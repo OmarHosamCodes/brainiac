@@ -3,6 +3,12 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import { AgencyMemberChooser } from "@/components/agency/agency-member-chooser";
 import { AgencyProjectChooser } from "@/components/agency/agency-project-chooser";
+import {
+  AgencyCommandBarActions,
+  AgencyCommandBarResetButton,
+  agencyCommandBarFilterTriggerClass,
+  agencyCommandBarShellClass,
+} from "@/components/agency/agency-command-bar-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -56,10 +62,7 @@ function rangePresets(tenureAvailable: boolean): RangePreset[] {
     : ["week", "month", "last30", "custom"];
 }
 
-const filterTriggerClass = cn(
-  "inline-flex h-9 min-w-32 max-w-44 overflow-hidden items-center justify-between gap-2 rounded-xl border border-default bg-default px-3 text-left text-xs font-semibold transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
-  agencyFocusRingClass,
-);
+const filterTriggerClass = agencyCommandBarFilterTriggerClass;
 
 const filterOptionButtonClass = cn(
   "flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition-colors hover:bg-default/80",
@@ -275,12 +278,7 @@ export function AgencyDashboardCommandBar({
   }));
 
   return (
-    <div
-      className={cn(
-        "flex flex-wrap items-center gap-2 rounded-2xl border border-default bg-elevated p-2",
-        trailingActions ? "justify-center" : undefined,
-      )}
-    >
+    <div className={agencyCommandBarShellClass}>
       {showClientFilter ? (
         <FilterOptionChooser
           label="Client"
@@ -354,30 +352,13 @@ export function AgencyDashboardCommandBar({
         </div>
       ) : null}
 
-      <div
-        className={cn(
-          "flex flex-wrap items-center gap-2",
-          trailingActions ? undefined : "md:ml-auto",
-        )}
-      >
+      <AgencyCommandBarActions>
         <Button variant="secondary" size="sm" disabled={!hasPendingChanges} onClick={onApply}>
           Apply
         </Button>
-        {hasActiveFilters ? (
-          <button
-            type="button"
-            className={cn(
-              "h-9 rounded-xl px-2.5 text-xs font-semibold text-muted transition-colors hover:bg-default hover:text-highlighted",
-              agencyFocusRingClass,
-              "motion-reduce:transition-none",
-            )}
-            onClick={onReset}
-          >
-            Reset
-          </button>
-        ) : null}
+        {hasActiveFilters ? <AgencyCommandBarResetButton onClick={onReset} /> : null}
         {trailingActions}
-      </div>
+      </AgencyCommandBarActions>
     </div>
   );
 }

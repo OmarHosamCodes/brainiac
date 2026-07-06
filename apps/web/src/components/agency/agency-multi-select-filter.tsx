@@ -4,6 +4,7 @@ import { Check, ChevronDown, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
+import { agencyCommandBarFilterTriggerClass } from "@/components/agency/agency-command-bar-ui";
 import { cn } from "@/lib/utils";
 
 export type AgencyFilterOption = {
@@ -140,8 +141,8 @@ export function AgencyMultiSelectFilter({
           type="button"
           disabled={disabled}
           className={cn(
-            "inline-flex h-9 min-w-32 max-w-44 overflow-hidden items-center justify-between gap-2 rounded-xl border border-default bg-default px-3 text-left text-xs font-semibold text-highlighted transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none",
-            agencyFocusRingClass,
+            agencyCommandBarFilterTriggerClass,
+            values.length > 0 ? "text-highlighted" : "text-muted",
           )}
           aria-label={label}
         >
