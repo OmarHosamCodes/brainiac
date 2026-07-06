@@ -1,7 +1,7 @@
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import * as React from "react";
 
-import { liquidGlassPanelClass } from "@/lib/utils/liquid-glass-ui";
+import { LiquidGlassBackdrop, liquidGlassFrameClass } from "@/lib/utils/liquid-glass-ui";
 import { cn } from "@/lib/utils";
 
 function Popover({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
@@ -16,6 +16,7 @@ function PopoverContent({
   className,
   align = "center",
   sideOffset = 4,
+  children,
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Content>) {
   return (
@@ -24,9 +25,12 @@ function PopoverContent({
         data-slot="popover-content"
         align={align}
         sideOffset={sideOffset}
-        className={cn(liquidGlassPanelClass, "w-72 p-1", className)}
+        className={cn(liquidGlassFrameClass, "w-72 p-1", className)}
         {...props}
-      />
+      >
+        <LiquidGlassBackdrop />
+        {children}
+      </PopoverPrimitive.Content>
     </PopoverPrimitive.Portal>
   );
 }

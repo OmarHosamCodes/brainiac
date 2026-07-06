@@ -2,6 +2,7 @@ import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import * as React from "react";
 
 import {
+  LiquidGlassBackdrop,
   liquidGlassMenuContentClass,
   liquidGlassMenuItemClass,
   liquidGlassMenuSeparatorClass,
@@ -22,6 +23,7 @@ function DropdownMenuContent({
   className,
   sideOffset = 4,
   align = "end",
+  children,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Content>) {
   return (
@@ -32,7 +34,10 @@ function DropdownMenuContent({
         align={align}
         className={cn(liquidGlassMenuContentClass, "min-w-[12rem]", className)}
         {...props}
-      />
+      >
+        <LiquidGlassBackdrop />
+        {children}
+      </DropdownMenuPrimitive.Content>
     </DropdownMenuPrimitive.Portal>
   );
 }

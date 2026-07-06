@@ -4,6 +4,7 @@ import { ContextMenu as ContextMenuPrimitive } from "radix-ui"
 
 import { cn } from "@/lib/utils"
 import {
+  LiquidGlassBackdrop,
   liquidGlassMenuContentClass,
   liquidGlassMenuItemClass,
   liquidGlassMenuSeparatorClass,
@@ -86,6 +87,7 @@ function ContextMenuSubTrigger({
 
 function ContextMenuSubContent({
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.SubContent>) {
   return (
@@ -93,12 +95,16 @@ function ContextMenuSubContent({
       data-slot="context-menu-sub-content"
       className={cn(liquidGlassContentClass, "shadow-lg", className)}
       {...props}
-    />
+    >
+      <LiquidGlassBackdrop />
+      {children}
+    </ContextMenuPrimitive.SubContent>
   )
 }
 
 function ContextMenuContent({
   className,
+  children,
   ...props
 }: React.ComponentProps<typeof ContextMenuPrimitive.Content>) {
   return (
@@ -111,7 +117,10 @@ function ContextMenuContent({
           className,
         )}
         {...props}
-      />
+      >
+        <LiquidGlassBackdrop />
+        {children}
+      </ContextMenuPrimitive.Content>
     </ContextMenuPrimitive.Portal>
   )
 }
