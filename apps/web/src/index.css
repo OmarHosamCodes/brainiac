@@ -720,12 +720,14 @@ body {
 .agency-report-command-bar::after {
   content: "";
   position: absolute;
-  inset-inline: 8%;
-  top: 0;
-  height: 45%;
+  inset: 0;
   border-radius: inherit;
-  background: linear-gradient(to bottom, color-mix(in oklab, white 28%, transparent), transparent);
-  opacity: 0.35;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, white 24%, transparent) 0%,
+    transparent 42%
+  );
+  opacity: 0.28;
   pointer-events: none;
 }
 
@@ -743,11 +745,17 @@ body {
     inset 0 1px 0 color-mix(in oklab, white 32%, transparent);
 }
 
-.ui-liquid-glass-surface::before {
+.ui-liquid-glass-surface::before,
+.ui-liquid-glass-surface::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
+  pointer-events: none;
+}
+
+.ui-liquid-glass-surface::before {
+  z-index: 0;
   background: linear-gradient(
     145deg,
     color-mix(in oklab, white 42%, transparent) 0%,
@@ -755,19 +763,69 @@ body {
     transparent 100%
   );
   opacity: 0.55;
-  pointer-events: none;
 }
 
 .ui-liquid-glass-surface::after {
-  content: "";
-  position: absolute;
-  inset-inline: 8%;
-  top: 0;
-  height: 45%;
-  border-radius: inherit;
-  background: linear-gradient(to bottom, color-mix(in oklab, white 28%, transparent), transparent);
-  opacity: 0.35;
-  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, white 24%, transparent) 0%,
+    transparent 42%
+  );
+  opacity: 0.28;
+}
+
+/* Dark: inset highlight was clipping with mismatched radius on narrow panels. */
+.dark .ui-liquid-glass-surface {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, white 10%, transparent),
+    0 10px 38px color-mix(in oklab, black 32%, transparent),
+    inset 0 1px 0 color-mix(in oklab, white 10%, transparent);
+}
+
+.dark .ui-liquid-glass-surface::before {
+  opacity: 0.2;
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, white 16%, transparent) 0%,
+    transparent 36%,
+    transparent 100%
+  );
+}
+
+.dark .ui-liquid-glass-surface::after {
+  opacity: 0.12;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, white 10%, transparent) 0%,
+    transparent 38%
+  );
+}
+
+.dark .agency-report-command-bar {
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, white 10%, transparent),
+    0 10px 38px color-mix(in oklab, black 32%, transparent),
+    inset 0 1px 0 color-mix(in oklab, white 10%, transparent);
+}
+
+.dark .agency-report-command-bar::before {
+  opacity: 0.2;
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, white 16%, transparent) 0%,
+    transparent 36%,
+    transparent 100%
+  );
+}
+
+.dark .agency-report-command-bar::after {
+  opacity: 0.12;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, white 10%, transparent) 0%,
+    transparent 38%
+  );
 }
 
 @keyframes ui-liquid-glass-in {

@@ -1,6 +1,6 @@
 /** Shared liquid-glass panel + enter/exit animation hooks (see index.css). */
 export const liquidGlassPanelClass =
-  "ui-liquid-glass-surface ui-liquid-glass-content z-50 overflow-hidden rounded-xl border border-white/10 text-popover-foreground shadow-md outline-none";
+  "ui-liquid-glass-surface ui-liquid-glass-content z-50 overflow-hidden rounded-xl border border-white/10 dark:border-white/[0.08] text-popover-foreground shadow-md outline-none";
 
 export const liquidGlassMenuContentClass = `${liquidGlassPanelClass} min-w-[8rem] p-1`;
 
