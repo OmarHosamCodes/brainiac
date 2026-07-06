@@ -3,8 +3,10 @@ import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { LogoLoader } from "@/components/shell/logo-loader";
 import { AppShellPage } from "@/components/app-shell-page";
 import { useBilling } from "@/lib/queries/billing";
+import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
 import {
   shellConfirmInClass,
   shellContentInClass,
@@ -14,7 +16,8 @@ import { cn } from "@/lib/utils";
 
 export function BillingSuccessPage() {
   const [searchParams] = useSearchParams();
-  const { refreshBillingState } = useBilling();
+  const { refreshBillingState, billingQuery } = useBilling();
+  const { isBooting } = useShellBootGate(!billingQuery.isPending);
 
   const checkoutId = searchParams.get("checkout_id") ?? undefined;
 
@@ -24,6 +27,9 @@ export function BillingSuccessPage() {
 
   return (
     <AppShellPage subtitle="Success">
+      {isBooting ? (
+        <LogoLoader label="Loading billing" />
+      ) : (
       <div className="flex h-full items-start justify-center overflow-y-auto bg-default px-4 pt-12 sm:px-6 lg:px-8">
         <div className="w-full max-w-md px-6 text-center">
           <div
@@ -62,6 +68,7 @@ export function BillingSuccessPage() {
           </div>
         </div>
       </div>
+      )}
     </AppShellPage>
   );
 }

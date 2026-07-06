@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { LogoLoader } from "@/components/shell/logo-loader";
 import { AppShellPage } from "@/components/app-shell-page";
 import { MarketplaceImportModal } from "@/components/marketplace-import-modal";
 import { MarketplaceItemCard } from "@/components/marketplace-item-card";
@@ -20,9 +21,9 @@ import { MarketplaceSubtitleBreadcrumb } from "@/components/marketplace-subtitle
 import { AppShellTopbarActions, AppShellTopbarSubtitle } from "@/components/app-shell-topbar";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth-client";
+import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
 import { useWorkspaceQuery } from "@/stores/workspace";
 import { orpc } from "@/lib/orpc";
 import {
@@ -112,6 +113,7 @@ export function MarketplacePage() {
   const totalLoaded = allItems.length;
 
   const isInitialLoading = marketplaceQuery.isLoading && !marketplaceQuery.isFetchingNextPage;
+  const { isBooting } = useShellBootGate(!isInitialLoading);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -155,6 +157,8 @@ export function MarketplacePage() {
   return (
     <AppShellPage subtitle={activeTabLabel} slots={["subtitle", "actions"]}>
       <div className="flex h-full flex-col overflow-y-auto bg-default">
+        {!isBooting ? (
+          <>
         <AppShellTopbarSubtitle>
           <MarketplaceSubtitleBreadcrumb
             tabs={filterTabs}
@@ -261,13 +265,7 @@ export function MarketplacePage() {
               </div>
             ) : null}
 
-            {isInitialLoading ? (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <Skeleton key={index} className="h-50 rounded-2xl" />
-                ))}
-              </div>
-            ) : !isInitialLoading &&
+            {isInitialLoading ? null : !isInitialLoading &&
               allItems.length === 0 &&
               !marketplaceQuery.isFetchingNextPage ? (
               <div
@@ -336,6 +334,10 @@ export function MarketplacePage() {
           onOpenChange={setImportModalOpen}
           onImported={onImported}
         />
+          </>
+        ) : (
+          <LogoLoader label="Loading marketplace" />
+        )}
       </div>
     </AppShellPage>
   );

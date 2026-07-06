@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { LogoLoader } from "@/components/shell/logo-loader";
 import { AppShellPage } from "@/components/app-shell-page";
 import { AppShellTopbarActions, AppShellTopbarContext } from "@/components/app-shell-topbar";
 import { AppShellPortal } from "@/components/app-shell-portal";
@@ -20,6 +21,7 @@ import { useAppShellStore } from "@/stores/app-shell";
 import { deriveTeamPermissions, useTeamStore } from "@/stores/team";
 import { useWorkspaceQuery } from "@/stores/workspace";
 import { dashboardErrorAlertClass, dashboardStatusBadgeClass } from "@/lib/utils/dashboard-ui";
+import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
 import { shellContentInClass } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +76,9 @@ export function DashboardPage() {
     void board.preloadWorkspace();
   }, [board.preloadWorkspace]);
 
+  const dataReady = !board.isWorkspaceInitialLoading && !teamListQuery.isPending;
+  const { isBooting } = useShellBootGate(dataReady);
+
   useEffect(() => {
     if (board.isWorkspaceInitialLoading || !canvasRef.current || board.nodes.length === 0) {
       return;
@@ -84,6 +89,8 @@ export function DashboardPage() {
   return (
     <AppShellPage subtitle={selectedTeamName || null} slots={["context", "actions", "dock"]}>
       <div className="relative h-full w-full overflow-hidden bg-default selection:bg-primary/30">
+        {!isBooting ? (
+          <>
         <AppShellTopbarContext>
           <Button
             variant="ghost"
@@ -250,6 +257,10 @@ export function DashboardPage() {
           team={selectedTeam}
           onRefetchWorkspace={() => board.workspaceQuery.refetch()}
         />
+          </>
+        ) : (
+          <LogoLoader label="Loading dashboard" />
+        )}
       </div>
     </AppShellPage>
   );

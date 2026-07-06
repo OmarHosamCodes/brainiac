@@ -12,10 +12,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LogoLoader } from "@/components/shell/logo-loader";
 import { AppShellPage } from "@/components/app-shell-page";
 import { AppShellTopbarActions } from "@/components/app-shell-topbar";
 import { useBilling } from "@/lib/queries/billing";
+import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
 import {
   shellContentInClass,
   shellPageClass,
@@ -25,6 +26,7 @@ import { cn } from "@/lib/utils";
 
 export function BillingPage() {
   const { isPro, subscription, limits, checkout, openPortal, billingQuery } = useBilling();
+  const { isBooting } = useShellBootGate(!billingQuery.isPending);
 
   const formattedRenewalDate = subscription?.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd).toLocaleDateString(undefined, {
@@ -64,21 +66,23 @@ export function BillingPage() {
   return (
     <AppShellPage slots={["actions"]}>
       <div className="h-full overflow-y-auto bg-default">
-        <AppShellTopbarActions>
-          {showManageSubscription ? (
-            <Button variant="secondary" size="sm" onClick={() => void openPortal()}>
-              Manage subscription
-            </Button>
-          ) : showUpgrade ? (
-            <Button size="sm" onClick={() => void checkout("pro")}>
-              Upgrade to Pro
-            </Button>
-          ) : null}
-        </AppShellTopbarActions>
+        {!isBooting ? (
+          <AppShellTopbarActions>
+            {showManageSubscription ? (
+              <Button variant="secondary" size="sm" onClick={() => void openPortal()}>
+                Manage subscription
+              </Button>
+            ) : showUpgrade ? (
+              <Button size="sm" onClick={() => void checkout("pro")}>
+                Upgrade to Pro
+              </Button>
+            ) : null}
+          </AppShellTopbarActions>
+        ) : null}
 
         <div className={cn(shellPageClass, "pt-4")}>
-          {billingQuery.isPending ? (
-            <Skeleton className="h-48 w-full rounded-[32px]" />
+          {isBooting ? (
+            <LogoLoader label="Loading billing" />
           ) : (
             <div className={shellContentInClass}>
               <Card className="mb-6">

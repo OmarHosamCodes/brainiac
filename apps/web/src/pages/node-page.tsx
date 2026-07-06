@@ -5,13 +5,14 @@ import { WorkspaceNodeEditorProvider } from "@/components/workspace/node/context
 import { WorkspaceNodeShell } from "@/components/workspace/node/workspace-node-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LogoLoader } from "@/components/shell/logo-loader";
 import { AppShellPage } from "@/components/app-shell-page";
 import { AppShellPortal } from "@/components/app-shell-portal";
 import { useWorkspaceNodePage } from "@/lib/workspace/use-node-page";
+import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
 import { useAppShellStore } from "@/stores/app-shell";
 import {
   shellContentInClass,
-  shellLoadingPanelClass,
 } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
@@ -19,10 +20,13 @@ import { Loader2 } from "lucide-react";
 export function NodePage() {
   const setAgentDockOpen = useAppShellStore((s) => s.setAgentDockOpen);
   const page = useWorkspaceNodePage();
+  const dataReady = !page.isWorkspaceInitialLoading && page.hasWorkspaceLoaded;
+  const { isBooting } = useShellBootGate(dataReady);
 
   return (
     <AppShellPage subtitle={page.node?.title ?? "Node"} slots={["dock"]}>
       <div className="relative h-full w-full overflow-hidden">
+        {!isBooting ? (
         <AppShellPortal targetId="app-shell-dock-content">
           {page.node ? (
             <div className="flex h-full min-h-0 flex-col">
@@ -46,6 +50,7 @@ export function NodePage() {
             </div>
           ) : null}
         </AppShellPortal>
+        ) : null}
 
         {page.workspaceQuery.status === "error" ? (
           <div className="p-6 text-sm text-destructive">
@@ -53,17 +58,11 @@ export function NodePage() {
           </div>
         ) : null}
 
-        {page.isWorkspaceInitialLoading || !page.hasWorkspaceLoaded ? (
-          <div className="h-full p-6 sm:p-8">
-            <div className={shellLoadingPanelClass}>
-              <div className="h-8 w-48 animate-pulse rounded bg-muted/50" />
-              <div className="mt-4 h-5 w-32 animate-pulse rounded bg-muted/40" />
-              <div className="mt-6 h-36 animate-pulse rounded-2xl bg-muted/40" />
-            </div>
-          </div>
+        {isBooting ? (
+          <LogoLoader label="Loading node" />
         ) : null}
 
-        {page.node && page.activeTab && page.editorContext ? (
+        {!isBooting && page.node && page.activeTab && page.editorContext ? (
           <div className={cn("h-full", shellContentInClass)}>
             <WorkspaceNodeEditorProvider value={page.editorContext}>
               <WorkspaceNodeShell
@@ -92,7 +91,7 @@ export function NodePage() {
           </div>
         ) : null}
 
-        {!page.isWorkspaceInitialLoading && page.hasWorkspaceLoaded && !page.node ? (
+        {!isBooting && !page.isWorkspaceInitialLoading && page.hasWorkspaceLoaded && !page.node ? (
           <div
             className={cn("mx-auto flex max-w-xl flex-col gap-4 px-6 py-16", shellContentInClass)}
           >
