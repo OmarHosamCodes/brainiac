@@ -70,7 +70,7 @@ export function AgencyTaskTitleChooserView({ view }: AgencyTaskTitleChooserViewP
         </button>
       </PopoverTrigger>
       <PopoverContent align={contentAlign} className="w-[22rem] max-w-[calc(100vw-2rem)] p-0">
-        <div className="border-b border-default bg-elevated p-2">
+        <div className="border-b border-white/10 p-2">
           <div className="relative">
             <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />
             <Input
@@ -95,7 +95,7 @@ export function AgencyTaskTitleChooserView({ view }: AgencyTaskTitleChooserViewP
           id={listboxId}
           role="listbox"
           aria-label="Tasks"
-          className="max-h-[24rem] overflow-x-hidden overflow-y-auto bg-elevated py-2"
+          className="max-h-[24rem] overflow-x-hidden overflow-y-auto py-2"
         >
           {loading ? (
             <div className="space-y-2 px-3 py-1">

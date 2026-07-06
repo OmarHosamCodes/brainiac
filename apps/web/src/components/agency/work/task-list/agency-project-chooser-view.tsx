@@ -73,7 +73,7 @@ export function AgencyProjectChooserView({ view }: AgencyProjectChooserViewProps
         </button>
       </PopoverTrigger>
       <PopoverContent align={contentAlign} className="w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden p-0">
-        <div className="border-b border-default bg-elevated p-2">
+        <div className="border-b border-white/10 p-2">
           <div className="relative">
             <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />
             <Input
@@ -88,7 +88,7 @@ export function AgencyProjectChooserView({ view }: AgencyProjectChooserViewProps
             />
           </div>
         </div>
-        <div className="max-h-[24rem] overflow-x-hidden overflow-y-auto bg-elevated px-2 py-2">
+        <div className="max-h-[24rem] overflow-x-hidden overflow-y-auto px-2 py-2">
           {loading ? (
             <div className="space-y-2 py-1">
               {[1, 2, 3, 4].map((rowIndex) => (
