@@ -1,17 +1,13 @@
-import { cn } from "@/lib/utils";
+import { createPortal } from "react-dom";
 
 type LogoLoaderProps = {
-  fullScreen?: boolean;
   label?: string;
 };
 
-export function LogoLoader({ fullScreen = false, label = "Loading" }: LogoLoaderProps) {
-  return (
+export function LogoLoader({ label = "Loading" }: LogoLoaderProps) {
+  return createPortal(
     <div
-      className={cn(
-        "flex items-center justify-center",
-        fullScreen ? "fixed inset-0 z-50 bg-default" : "min-h-0 w-full flex-1",
-      )}
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-default"
       aria-busy="true"
       aria-label={label}
     >
@@ -21,6 +17,7 @@ export function LogoLoader({ fullScreen = false, label = "Loading" }: LogoLoader
         className="size-20 select-none"
         draggable={false}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }

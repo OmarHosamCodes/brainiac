@@ -42,7 +42,7 @@ function ShellSuspenseFallback() {
     startShellBoot();
   }, []);
 
-  return <LogoLoader fullScreen />;
+  return <LogoLoader />;
 }
 
 function ShellLayout() {

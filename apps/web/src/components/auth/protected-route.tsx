@@ -25,7 +25,7 @@ export function ProtectedRoute() {
   }, [ready, session.isPending]);
 
   if (!ready || session.isPending) {
-    return <LogoLoader fullScreen />;
+    return <LogoLoader />;
   }
 
   if (!session.data) {
