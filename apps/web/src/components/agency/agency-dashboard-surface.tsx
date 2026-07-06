@@ -48,34 +48,6 @@ function dateInputToIso(value: string, endOfDay = false): string {
   return date.toISOString();
 }
 
-function formatShortDuration(seconds: number): string {
-  if (seconds <= 0) return "0h";
-  const hours = Math.floor(seconds / 3_600);
-  const minutes = Math.round((seconds % 3_600) / 60);
-  if (hours === 0) return `${minutes}m`;
-  if (minutes === 0) return `${hours}h`;
-  return `${hours}h ${String(minutes).padStart(2, "0")}m`;
-}
-
-function formatChartDateLabel(value: string): string {
-  const date = new Date(`${value}T00:00:00.000Z`);
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(date);
-}
-
-function formatActivityDateLabel(value: string): string {
-  const date = new Date(`${value}T00:00:00.000Z`);
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(date);
-}
-
 function relShare(seconds: number, totalSeconds: number): number {
   if (totalSeconds <= 0) return 0;
   return Math.max(2, Math.min(100, (seconds / totalSeconds) * 100));
@@ -315,10 +287,6 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
 
   const summary = dashboardQuery.data?.summary ?? null;
   const projects = projectsQuery.data?.items ?? [];
-  const maxDaySeconds = Math.max(
-    ...(summary?.dailyBuckets.map((bucket) => bucket.totalSeconds) ?? [0]),
-    1,
-  );
   const rankedProjects = summary?.timeDistributionByProject.slice(0, 10) ?? [];
   const totalProjectHours =
     summary?.timeDistributionByProject.reduce((sum, row) => sum + row.hours, 0) ?? 0;
@@ -338,7 +306,6 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
       <div className="space-y-4">
         <Skeleton className="h-10 w-full max-w-2xl rounded-xl" />
         <Skeleton className="h-[4.25rem] rounded-2xl" />
-        <Skeleton className="h-[28rem] rounded-2xl" />
         <Skeleton className="h-72 rounded-2xl" />
       </div>
     );
@@ -443,43 +410,6 @@ export function AgencyDashboardSurface({ teamId }: AgencyDashboardSurfaceProps) 
         </div>
       ) : (
         <>
-          <section className={cn(agencyPanelClass, "p-4 [content-visibility:auto]")}>
-            <div className="mb-4 flex items-center justify-between">
-              <p className={agencyLabelClass}>Daily timeline</p>
-              <p className="text-[11px] text-muted">Stacked by project</p>
-            </div>
-            <div
-              className="flex h-56 items-end gap-2 overflow-x-auto border-b border-default pb-3"
-              role="img"
-              aria-label="Daily tracked time stacked by project"
-            >
-              {summary.dailyBuckets.map((bucket) => (
-                <div key={bucket.date} className="flex min-w-12 flex-1 flex-col items-center gap-2">
-                  <div
-                    className="flex w-full min-w-8 flex-col-reverse overflow-hidden rounded-sm bg-elevated"
-                    style={{
-                      height: `${Math.max(3, (bucket.totalSeconds / maxDaySeconds) * 100)}%`,
-                    }}
-                    title={`${formatActivityDateLabel(bucket.date)} · ${formatShortDuration(bucket.totalSeconds)}`}
-                    aria-label={`${formatActivityDateLabel(bucket.date)}, ${formatShortDuration(bucket.totalSeconds)}`}
-                  >
-                    {bucket.segments.map((segment) => (
-                      <ProjectHueFill
-                        key={segment.projectId}
-                        projectId={segment.projectId}
-                        className="block w-full"
-                        style={{ height: `${relShare(segment.seconds, bucket.totalSeconds)}%` }}
-                      />
-                    ))}
-                  </div>
-                  <span className="whitespace-nowrap text-[11px] tabular-nums text-muted">
-                    {formatChartDateLabel(bucket.date)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </section>
-
           <section className="grid gap-4 [content-visibility:auto] lg:grid-cols-[22rem_minmax(0,1fr)]">
             <div className={cn(agencyPanelClass, "p-4")}>
               <p className={agencyLabelClass}>Project share</p>
