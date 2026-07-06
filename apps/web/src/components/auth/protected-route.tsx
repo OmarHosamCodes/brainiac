@@ -1,6 +1,8 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 
+import { AgencyLogoLoader } from "@/components/agency/agency-logo-loader";
 import { AppShellTopbarSkeleton } from "@/components/app-shell-topbar";
+import { startAgencyBoot } from "@/lib/agency/agency-boot";
 import { authClient, whenAuthSessionReady } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
 import { APP_SHELL_RAIL_WIDTH_COLLAPSED } from "@/stores/app-shell";
@@ -10,16 +12,31 @@ import {
 } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 
+function isAgencyPath(pathname: string) {
+  return pathname === "/agency" || pathname.startsWith("/agency/");
+}
+
 export function ProtectedRoute() {
   const session = authClient.useSession();
   const location = useLocation();
   const [ready, setReady] = useState(false);
+  const agencyLoading = isAgencyPath(location.pathname);
 
   useEffect(() => {
     void whenAuthSessionReady().then(() => setReady(true));
   }, []);
 
+  useEffect(() => {
+    if (agencyLoading && (!ready || session.isPending)) {
+      startAgencyBoot();
+    }
+  }, [agencyLoading, ready, session.isPending]);
+
   if (!ready || session.isPending) {
+    if (agencyLoading) {
+      return <AgencyLogoLoader fullScreen />;
+    }
+
     return (
       <div
         className="app-shell app-shell--execution bg-default text-default"

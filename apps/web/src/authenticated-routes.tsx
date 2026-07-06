@@ -1,12 +1,18 @@
-import { lazy, Suspense } from "react";
-import { Navigate, Outlet, Route, Routes } from "react-router-dom";
+import { lazy, Suspense, useEffect } from "react";
+import { Navigate, Outlet, Route, Routes, useLocation } from "react-router-dom";
 
+import { AgencyLogoLoader } from "@/components/agency/agency-logo-loader";
 import { AppShell } from "@/components/app-shell";
 import { ShellPageTransition } from "@/components/shell/shell-page-transition";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { AuthProvider } from "@/providers/auth-provider";
+import { startAgencyBoot } from "@/lib/agency/agency-boot";
 
 import { shellLoadingPanelClass } from "@/lib/utils/app-shell-ui";
+
+function isAgencyPath(pathname: string) {
+  return pathname === "/agency" || pathname.startsWith("/agency/");
+}
 
 const DashboardPage = lazy(() =>
   import("@/pages/dashboard-page").then((module) => ({ default: module.DashboardPage })),
@@ -48,10 +54,25 @@ function ShellPageSkeleton() {
   );
 }
 
+function ShellSuspenseFallback() {
+  const { pathname } = useLocation();
+  const agencyLoading = isAgencyPath(pathname);
+
+  useEffect(() => {
+    if (agencyLoading) startAgencyBoot();
+  }, [agencyLoading]);
+
+  if (agencyLoading) {
+    return <AgencyLogoLoader fullScreen />;
+  }
+
+  return <ShellPageSkeleton />;
+}
+
 function ShellLayout() {
   return (
     <AppShell>
-      <Suspense fallback={<ShellPageSkeleton />}>
+      <Suspense fallback={<ShellSuspenseFallback />}>
         <ShellPageTransition />
       </Suspense>
     </AppShell>
