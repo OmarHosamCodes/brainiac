@@ -4,10 +4,7 @@ import {
   agencyFocusRingClass,
   agencyMetricClass,
   agencyTaskRailSummaryClass,
-  agencyTaskRailSummaryDividerClass,
   agencyTaskRailSummaryLabelClass,
-  agencyTaskRailSummaryMetricClass,
-  agencyTaskRailSummaryValueClass,
 } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
@@ -20,25 +17,6 @@ type AgencyTaskRailSummaryProps = {
   compact?: boolean;
   onCollapse?: () => void;
 };
-
-function SummaryMetric({
-  label,
-  value,
-  valueClassName,
-}: {
-  label: string;
-  value: number | null;
-  valueClassName?: string;
-}) {
-  return (
-    <div className={agencyTaskRailSummaryMetricClass}>
-      <span className={agencyTaskRailSummaryLabelClass}>{label}</span>
-      <span className={cn(agencyTaskRailSummaryValueClass, valueClassName)}>
-        {value === null ? "—" : value}
-      </span>
-    </div>
-  );
-}
 
 export function AgencyTaskRailSummary({
   total,
@@ -60,6 +38,13 @@ export function AgencyTaskRailSummary({
     );
   }
 
+  const progressLabel =
+    total === null || done === null
+      ? "—"
+      : total === 0
+        ? "No tasks"
+        : `${done} of ${total} done`;
+
   return (
     <div className={agencyTaskRailSummaryClass} aria-label="Task workload summary">
       <div className="flex min-w-0 flex-col gap-0.5">
@@ -77,12 +62,15 @@ export function AgencyTaskRailSummary({
         ) : null}
       </div>
       <div className="flex min-w-0 items-center gap-2">
-        <div className="flex shrink-0 items-center gap-2">
-          <SummaryMetric label="Total" value={total} />
-          <span className={agencyTaskRailSummaryDividerClass} aria-hidden />
-          <SummaryMetric label="Done" value={done} valueClassName="text-success" />
-          <span className={agencyTaskRailSummaryDividerClass} aria-hidden />
-          <SummaryMetric label="Left" value={left} />
+        <div className="flex shrink-0 flex-col items-end gap-0.5">
+          <span className={cn(agencyMetricClass, "text-[11px] font-semibold text-highlighted")}>
+            {progressLabel}
+          </span>
+          {left !== null && total !== null && total > 0 ? (
+            <span className={cn(agencyTaskRailSummaryLabelClass, "text-[10px] normal-case tracking-normal")}>
+              {left} open
+            </span>
+          ) : null}
         </div>
         {onCollapse ? (
           <button
