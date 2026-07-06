@@ -3,8 +3,9 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * Frosted backdrop layer — must stay transform-free so Firefox applies blur
- * (see ui-liquid-glass-frame for the animated / positioned shell).
+ * Frosted backdrop layer — must stay transform-free so Firefox applies blur.
+ * Inside Radix poppers, frost is applied on [data-radix-popper-content-wrapper]
+ * (see index.css) because the wrapper's transform breaks descendant backdrop-filter.
  */
 export const liquidGlassBackdropClass =
   "ui-liquid-glass-surface pointer-events-none absolute inset-0 z-0 rounded-[inherit]";

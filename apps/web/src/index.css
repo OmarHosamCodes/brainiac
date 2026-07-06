@@ -807,6 +807,54 @@ body {
   opacity: 0.28;
 }
 
+/*
+ * Radix popper sets transform on [data-radix-popper-content-wrapper], which
+ * disables backdrop-filter on descendants. Apply frost on the wrapper itself.
+ */
+[data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame) {
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: color-mix(in oklab, var(--color-elevated) 52%, transparent);
+  backdrop-filter: blur(24px) saturate(1.75);
+  -webkit-backdrop-filter: blur(24px) saturate(1.75);
+  box-shadow: inset 0 1px 0 color-mix(in oklab, white 32%, transparent);
+}
+
+[data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame)::before,
+[data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+[data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame)::before {
+  z-index: 0;
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, white 42%, transparent) 0%,
+    transparent 42%,
+    transparent 100%
+  );
+  opacity: 0.55;
+}
+
+[data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame)::after {
+  z-index: 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, white 24%, transparent) 0%,
+    transparent 42%
+  );
+  opacity: 0.28;
+}
+
+[data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame) .ui-liquid-glass-surface {
+  display: none;
+}
+
 /* Dark: softer edge highlights. */
 .dark .ui-liquid-glass-frame {
   box-shadow:
@@ -830,6 +878,30 @@ body {
 }
 
 .dark .ui-liquid-glass-surface::after {
+  opacity: 0.12;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, white 10%, transparent) 0%,
+    transparent 38%
+  );
+}
+
+.dark [data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame) {
+  background: color-mix(in oklab, var(--color-elevated) 58%, transparent);
+  box-shadow: inset 0 1px 0 color-mix(in oklab, white 10%, transparent);
+}
+
+.dark [data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame)::before {
+  opacity: 0.2;
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, white 16%, transparent) 0%,
+    transparent 36%,
+    transparent 100%
+  );
+}
+
+.dark [data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame)::after {
   opacity: 0.12;
   background: linear-gradient(
     to bottom,
@@ -869,6 +941,7 @@ body {
 /* Firefox: stronger frost when backdrop-filter is weaker than Chromium. */
 @supports (-moz-orient: inline) {
   .ui-liquid-glass-surface,
+  [data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame),
   .agency-report-command-bar::before {
     backdrop-filter: blur(20px) saturate(1.65);
     -webkit-backdrop-filter: blur(20px) saturate(1.65);
@@ -880,6 +953,7 @@ body {
   }
 
   .dark .ui-liquid-glass-surface,
+  .dark [data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame),
   .dark .agency-report-command-bar::before {
     background: color-mix(in oklab, var(--color-elevated) 72%, transparent);
   }
@@ -926,7 +1000,7 @@ body {
 }
 
 .ui-liquid-glass-frame[data-state="closed"] .ui-liquid-glass-body,
-.ui-liquid-glass-frame[data-state="closed"] .ui-liquid-glass-surface {
+[data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame[data-state="closed"]) {
   animation: ui-liquid-glass-out 0.32s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
@@ -1068,13 +1142,15 @@ body {
   .agency-report-command-bar::before,
   .agency-report-command-bar::after,
   .ui-liquid-glass-surface::before,
-  .ui-liquid-glass-surface::after {
+  .ui-liquid-glass-surface::after,
+  [data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame)::before,
+  [data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame)::after {
     opacity: 0.25;
   }
 
   .ui-liquid-glass-frame[data-state="open"] .ui-liquid-glass-body,
   .ui-liquid-glass-frame[data-state="closed"] .ui-liquid-glass-body,
-  .ui-liquid-glass-frame[data-state="closed"] .ui-liquid-glass-surface,
+  [data-radix-popper-content-wrapper]:has(> .ui-liquid-glass-frame[data-state="closed"]),
   .ui-liquid-glass-frame[data-state="open"] [data-slot$="-menu-item"],
   .ui-liquid-glass-frame[data-state="open"] [data-slot="command-item"] {
     animation: none;
