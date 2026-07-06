@@ -1,10 +1,15 @@
-import { Check, Clock, Plus } from "lucide-react";
+import { Check, Clock, Plus, Trash2 } from "lucide-react";
 
 import { AgencyMemberAvatar } from "@/components/agency/agency-member-avatar";
-import { AgencyTaskRowSwipeShell } from "@/components/agency/work/task-list/agency-task-row-swipe-shell";
 import { AgencyMiniTimerContainer } from "@/lib/agency/work/containers/agency-mini-timer-container";
 import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import {
   agencyAvatarStackRingClass,
@@ -128,7 +133,7 @@ export function AgencyTaskRowView({
   const inlineAssigneeStack =
     nested && showAssigneeStack && task.assignees.length > 0;
 
-  const swipeEnabled = !readOnly && Boolean(onDelete) && !isJourneyMilestoneTask(task);
+  const canDelete = !readOnly && Boolean(onDelete) && !isJourneyMilestoneTask(task);
   const inlineNeedsDescriptionHint =
     nested &&
     Boolean(trackingState?.needsDescription) &&
@@ -144,52 +149,32 @@ export function AgencyTaskRowView({
     (!nested && Boolean(onSelectProject));
   const isSingleLineRow = !showDescriptionRow && !showSecondaryMeta;
 
-  return (
-    <li
+  const rowSurface = (
+    <div
       className={cn(
-        "group/task-row",
-        agencyTaskRowClass,
-        isSelected && agencyTaskRowSelectedClass,
-        readOnly && agencyTaskRowDoneClass,
-        highlight && agencyTaskRowCompleteClass,
-        trackingState?.needsDescription && agencyTaskRowNeedsDescriptionClass,
+        nested ? agencyTaskRowNestedContentClass : agencyTaskRowContentClass,
+        isSingleLineRow ? "items-center" : "items-start",
+        isSelected && "ring-1 ring-inset ring-primary/30",
       )}
     >
-      <AgencyTaskRowSwipeShell
-        enabled={swipeEnabled}
-        disabled={isRowPending}
-        deleteLabel={`Delete ${task.title}`}
-        rowLabel={`Open thread for ${task.title}`}
-        surfaceClassName={cn(isSelected && "ring-1 ring-inset ring-primary/30")}
-        onDeleteRequest={() => onDelete?.(task)}
-        onRowActivate={() => onSelect(task.id)}
-      >
-        <div
-          className={cn(
-            nested ? agencyTaskRowNestedContentClass : agencyTaskRowContentClass,
-            isSingleLineRow ? "items-center" : "items-start",
-          )}
-        >
-          {!swipeEnabled ? (
-            <button
-              type="button"
-              className={cn(
-                "absolute inset-0 z-0 rounded-none",
-                agencyFocusRingClass,
-                "motion-reduce:transition-none",
-              )}
-              aria-current={isSelected ? "true" : undefined}
-              aria-label={`Open thread for ${task.title}`}
-              onClick={() => onSelect(task.id)}
-            />
-          ) : null}
+      <button
+        type="button"
+        className={cn(
+          "absolute inset-0 z-0 rounded-none",
+          agencyFocusRingClass,
+          "motion-reduce:transition-none",
+        )}
+        aria-current={isSelected ? "true" : undefined}
+        aria-label={`Open thread for ${task.title}`}
+        onClick={() => onSelect(task.id)}
+      />
 
-          <div
-            className={cn(
-              "pointer-events-none relative z-10 flex w-full min-w-0 gap-1.5",
-              isSingleLineRow ? "items-center" : "items-start",
-            )}
-          >
+      <div
+        className={cn(
+          "pointer-events-none relative z-10 flex w-full min-w-0 gap-1.5",
+          isSingleLineRow ? "items-center" : "items-start",
+        )}
+      >
             <div className={cn("pointer-events-auto shrink-0", !isSingleLineRow && nested && "pt-px")}>
               <AgencyTaskRowCheckbox
                 title={task.title}
@@ -389,8 +374,37 @@ export function AgencyTaskRowView({
               ) : null}
             </div>
           </div>
-        </div>
-      </AgencyTaskRowSwipeShell>
+    </div>
+  );
+
+  return (
+    <li
+      className={cn(
+        "group/task-row",
+        agencyTaskRowClass,
+        isSelected && agencyTaskRowSelectedClass,
+        readOnly && agencyTaskRowDoneClass,
+        highlight && agencyTaskRowCompleteClass,
+        trackingState?.needsDescription && agencyTaskRowNeedsDescriptionClass,
+      )}
+    >
+      {canDelete ? (
+        <ContextMenu>
+          <ContextMenuTrigger asChild>{rowSurface}</ContextMenuTrigger>
+          <ContextMenuContent className="min-w-[10rem]">
+            <ContextMenuItem
+              variant="destructive"
+              disabled={isRowPending}
+              onSelect={() => onDelete?.(task)}
+            >
+              <Trash2 />
+              Delete
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      ) : (
+        rowSurface
+      )}
     </li>
   );
 }
