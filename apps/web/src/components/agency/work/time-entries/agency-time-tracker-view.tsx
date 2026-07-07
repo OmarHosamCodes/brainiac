@@ -13,6 +13,8 @@ import {
   agencyTimeSuggestionChipClass,
   agencyTimeTrackerBarClass,
 } from "@/lib/utils/agency-ui";
+import { projectHuePillStyle } from "@/lib/utils/project-palette";
+import { useTheme } from "@/stores/theme";
 import { cn } from "@/lib/utils";
 
 type AgencyTimeTrackerViewProps = {
@@ -20,6 +22,8 @@ type AgencyTimeTrackerViewProps = {
 };
 
 export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
+  const { isDark } = useTheme();
+
   return (
     <div className={agencyTimeTrackerBarClass}>
       <div className="flex min-w-0 flex-col gap-1.5">
@@ -191,7 +195,10 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                 <span className="max-w-40 truncate font-medium text-highlighted">
                   {suggestion.description}
                 </span>
-                <span className="max-w-28 truncate rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-normal text-muted">
+                <span
+                  className="max-w-28 truncate rounded-full px-1.5 py-0.5 text-[10px] font-normal"
+                  style={projectHuePillStyle(suggestion.projectId, isDark)}
+                >
                   {suggestion.taskTitle || suggestion.projectName}
                 </span>
               </button>

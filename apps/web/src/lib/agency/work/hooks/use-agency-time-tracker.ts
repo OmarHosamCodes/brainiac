@@ -43,6 +43,7 @@ export type AgencyTimeTrackerSuggestion = {
   description: string;
   taskId: string;
   taskTitle: string;
+  projectId: string;
   projectName: string;
 };
 
@@ -259,6 +260,7 @@ export function useAgencyTimeTracker({
           description,
           taskId,
           taskTitle,
+          projectId: entry.projectId,
           projectName: entry.projectName,
           score: startsWithQuery ? 3 : includesQuery ? 2 : normalizedQuery ? 0 : 1,
         };
