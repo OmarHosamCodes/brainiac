@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+
 type AgencyTaskMediaPlayerProps = {
   src: string | null | undefined;
   mimeType: string;
@@ -36,7 +38,7 @@ export function AgencyTaskMediaPlayer({
   const isVideo = !isAudio && (mimeType.startsWith("video/") || hls);
 
   return (
-    <div className={["agency-task-media-player w-full", compact ? "is-compact" : ""].join(" ")}>
+    <div className={cn("agency-task-media-player w-full", compact ? "is-compact" : "")}>
       {isAudio ? (
         <audio
           src={source}

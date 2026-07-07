@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -101,10 +102,10 @@ export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
                 <button
                   key={client.id}
                   type="button"
-                  className={[
+                  className={cn(
                     "w-full rounded-lg border border-default bg-elevated/50 px-3 py-2 text-left text-sm transition-colors hover:bg-elevated",
                     selectedClientId === client.id ? "border-primary/50 bg-primary/10" : "",
-                  ].join(" ")}
+                  )}
                   onClick={() => setSelectedClientId(client.id)}
                 >
                   <p className="font-medium text-highlighted">{client.name}</p>

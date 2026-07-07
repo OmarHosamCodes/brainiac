@@ -1,4 +1,5 @@
 import { Expand, ExternalLink, File, Image } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import { AgencyTaskMediaPlayer } from "@/components/agency/agency-task-media-player";
 import { Button } from "@/components/ui/button";
@@ -125,7 +126,7 @@ export function AgencyAttachmentGridView({
 
   return (
     <>
-      <div className={["flex flex-wrap gap-2", className].filter(Boolean).join(" ")}>
+      <div className={cn("flex flex-wrap gap-2", className)}>
         {imageAttachments.map((attachment) => {
           const url = getAttachmentUrl(attachment);
 

@@ -1,4 +1,5 @@
 import { AlertTriangle, CalendarRange } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -205,10 +206,10 @@ export function AgencyResourcingSurface({ teamId }: AgencyResourcingSurfaceProps
                               <PopoverTrigger asChild>
                                 <button
                                   type="button"
-                                  className={[
+                                  className={cn(
                                     "flex h-12 w-full flex-col items-center justify-center rounded-xl text-[11px] font-bold transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                                     utilizationTone(pct),
-                                  ].join(" ")}
+                                  )}
                                   onClick={() =>
                                     openCellPopover(row.userId, weekIso, cell.capacity)
                                   }

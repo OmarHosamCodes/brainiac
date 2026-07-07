@@ -1,4 +1,5 @@
 import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 
 import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-checkbox";
@@ -171,7 +172,7 @@ export function AgencySettingsTenureMemberDetail({
         </div>
       ) : memberDetail ? (
         <>
-          <div className={[agencyPanelClass, "p-5 sm:p-6"].join(" ")}>
+          <div className={cn(agencyPanelClass, "p-5 sm:p-6")}>
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div className="min-w-0">
                 <h3 className="truncate text-lg font-bold text-highlighted">{memberName}</h3>
@@ -179,10 +180,10 @@ export function AgencySettingsTenureMemberDetail({
               </div>
               {memberDetail.currentQuarter ? (
                 <span
-                  className={[
+                  className={cn(
                     "inline-flex items-center rounded-full border border-default bg-muted px-3 py-1 text-xs font-bold",
                     tenureStatusClass(memberDetail.currentQuarter.status),
-                  ].join(" ")}
+                  )}
                 >
                   {tenureStatusLabel(memberDetail.currentQuarter.status)}
                 </span>
@@ -192,13 +193,13 @@ export function AgencySettingsTenureMemberDetail({
             <dl className="mt-5 grid gap-4 border-t border-default pt-5 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <dt className="text-xs font-semibold text-muted">Net tenure</dt>
-                <dd className={[agencyMetricClass, "mt-1 text-base"].join(" ")}>
+                <dd className={cn(agencyMetricClass, "mt-1 text-base")}>
                   {memberDetail.netTenureLabel}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs font-semibold text-muted">Raw tenure</dt>
-                <dd className={[agencyMetricClass, "mt-1 text-base"].join(" ")}>
+                <dd className={cn(agencyMetricClass, "mt-1 text-base")}>
                   {memberDetail.rawTenureLabel}
                   {memberDetail.penaltyMonths > 0 ? (
                     <span className="text-sm text-error"> −{memberDetail.penaltyMonths}m</span>
@@ -217,7 +218,7 @@ export function AgencySettingsTenureMemberDetail({
                   <p className="text-sm font-semibold text-highlighted">
                     {memberDetail.currentQuarter.label}
                   </p>
-                  <p className={[agencyMetricClass, "text-sm"].join(" ")}>
+                  <p className={cn(agencyMetricClass, "text-sm")}>
                     {formatTenureHours(memberDetail.currentQuarter.loggedHours)} /{" "}
                     {formatTenureHours(memberDetail.currentQuarter.requiredHours)} h
                   </p>
@@ -238,7 +239,7 @@ export function AgencySettingsTenureMemberDetail({
             ) : null}
           </div>
 
-          <div className={[agencyPanelClass, "overflow-hidden"].join(" ")}>
+          <div className={cn(agencyPanelClass, "overflow-hidden")}>
             <Tabs
               value={activeTab}
               onValueChange={(value) => {
@@ -282,13 +283,11 @@ export function AgencySettingsTenureMemberDetail({
                             ) : null}
                           </div>
                           <div className="flex flex-wrap items-center gap-4 text-sm">
-                            <span className={[agencyMetricClass, "text-muted"].join(" ")}>
+                            <span className={cn(agencyMetricClass, "text-muted")}>
                               {formatTenureHours(quarter.loggedHours)} /{" "}
                               {formatTenureHours(quarter.requiredHours)} h
                             </span>
-                            <span
-                              className={["font-bold", tenureStatusClass(quarter.status)].join(" ")}
-                            >
+                            <span className={cn("font-bold", tenureStatusClass(quarter.status))}>
                               {tenureStatusLabel(quarter.status)}
                             </span>
                             {quarter.penaltyMonthsApplied > 0 ? (
@@ -524,10 +523,10 @@ export function AgencySettingsTenureMemberDetail({
                             {exemption.type !== "team_holiday" ? (
                               <button
                                 type="button"
-                                className={[
+                                className={cn(
                                   "shrink-0 rounded-md p-1 text-dimmed hover:text-error",
                                   agencyFocusRingClass,
-                                ].join(" ")}
+                                )}
                                 aria-label="Remove exemption"
                                 onClick={() => onRemoveExemption(exemption.id)}
                               >

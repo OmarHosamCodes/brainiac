@@ -95,6 +95,19 @@ function scanFile(filePath, content) {
         detail: "Use bun run instead of other package managers",
       });
     }
+
+    if (
+      normalized.startsWith("apps/web/src/") &&
+      normalized.endsWith(".tsx") &&
+      /className=\{[^}]*\.join\(" "\)/.test(line)
+    ) {
+      violations.push({
+        file: normalized,
+        line: lineNumber,
+        rule: "cn-classname",
+        detail: 'Use cn() instead of className={[...].join(" ")}',
+      });
+    }
   }
 }
 

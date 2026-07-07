@@ -1,6 +1,11 @@
 import { z } from "zod";
 
+import { requireTeamMembership } from "../../lib/team-membership";
 import { getRedisPublisher, getRedisSubscriber } from "../../lib/redis";
+import {
+  registerAgencyLiveUserConnection,
+  unregisterAgencyLiveUserConnection,
+} from "../notifications/live-bridge";
 import { notificationRecordSchema } from "../../schemas/notifications";
 
 const agencyTaskMessageAttachmentLiveSchema = z.object({
@@ -238,6 +243,22 @@ class AgencyLivePublisher {
 }
 
 export const agencyLivePublisher = new AgencyLivePublisher();
+
+export async function* subscribeAgencyLive(
+  actorUserId: string,
+  input: { teamId: string },
+  signal?: AbortSignal,
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  registerAgencyLiveUserConnection(actorUserId, input.teamId);
+  try {
+    for await (const event of agencyLivePublisher.subscribe(input.teamId, signal)) {
+      yield agencyLiveEventSchema.parse(event);
+    }
+  } finally {
+    unregisterAgencyLiveUserConnection(actorUserId, input.teamId);
+  }
+}
 
 export function liveUpdatedAt(value: string | Date) {
   return typeof value === "string" ? value : value.toISOString();

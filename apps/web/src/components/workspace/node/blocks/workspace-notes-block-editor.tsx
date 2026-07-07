@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import type { WorkspaceNotesBlock } from "@brainiac/workspace";
 import { Eye, Pencil, StickyNote } from "lucide-react";
 import { useMemo } from "react";
@@ -58,7 +59,10 @@ export function WorkspaceNotesBlockEditor({
       </div>
 
       <div
-        className={`min-h-[240px] rounded-3xl border border-muted/20 bg-background/40 shadow-sm transition-all focus-within:border-primary/30 focus-within:bg-background/60 ${isPreview ? "p-8" : ""}`}
+        className={cn(
+          "min-h-[240px] rounded-3xl border border-muted/20 bg-background/40 shadow-sm transition-all focus-within:border-primary/30 focus-within:bg-background/60",
+          isPreview && "p-8",
+        )}
       >
         {!isPreview ? (
           <Textarea

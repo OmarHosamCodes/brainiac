@@ -6,6 +6,7 @@ import {
 import { Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
+import { cn } from "@/lib/utils";
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
 import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-checkbox";
@@ -110,7 +111,10 @@ export function WorkspaceChecklistBlockEditor({
             <Input
               value={item.text}
               placeholder="Checklist item"
-              className={`flex-1 border-0 bg-transparent px-0 font-medium shadow-none focus-visible:ring-0 ${item.completed ? "text-muted-foreground/60 line-through" : "text-foreground"}`}
+              className={cn(
+                "flex-1 border-0 bg-transparent px-0 font-medium shadow-none focus-visible:ring-0",
+                item.completed ? "text-muted-foreground/60 line-through" : "text-foreground",
+              )}
               onChange={(event) =>
                 mutateChecklistItem(item.id, (entry) => {
                   entry.text = event.target.value.slice(0, 240);

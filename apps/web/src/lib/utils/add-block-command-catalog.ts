@@ -1,4 +1,5 @@
 import { workspaceBlockCategories, type WorkspaceBlock } from "@brainiac/workspace";
+import { cn } from "@/lib/utils";
 
 import {
   getDefaultBlockTitle,
@@ -132,10 +133,10 @@ export function matchesAddBlockSearch(item: AddBlockCommandItem, query: string):
   if (!normalized) return true;
 
   if (item.kind === "preset") {
-    const haystack = [item.label, item.description, ...item.blockLabels].join(" ").toLowerCase();
+    const haystack = cn(item.label, item.description, ...item.blockLabels).toLowerCase();
     return haystack.includes(normalized);
   }
 
-  const haystack = [item.label, item.category, item.type, ...item.keywords].join(" ").toLowerCase();
+  const haystack = cn(item.label, item.category, item.type, ...item.keywords).toLowerCase();
   return haystack.includes(normalized);
 }

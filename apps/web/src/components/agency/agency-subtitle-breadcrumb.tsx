@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { cn } from "@/lib/utils";
 
 import { AgencySegmentBar } from "@/components/agency/agency-segment-bar";
 import type { AgencySegmentId } from "@/lib/agency-segments";
@@ -63,7 +64,7 @@ export function AgencySubtitleBreadcrumb({
           aria-live={syncState === "error" ? "assertive" : "polite"}
         >
           <span
-            className={["inline-block size-1.5 rounded-full", syncStatusDotClass].join(" ")}
+            className={cn("inline-block size-1.5 rounded-full", syncStatusDotClass)}
             aria-hidden="true"
           />
         </div>

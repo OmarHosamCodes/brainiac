@@ -19,6 +19,8 @@ import {
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, ilike, inArray, lt, or } from "drizzle-orm";
 
+import { requireTeamMembership } from "../../lib/team-membership";
+
 const TEAM_ROLE_WEIGHT: Record<WorkspaceTeamRole, number> = {
   viewer: 1,
   editor: 2,
@@ -193,6 +195,7 @@ export async function getWorkspaceSnapshot(userId: string) {
 export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[]) {
   const now = new Date();
   const membershipMap = await getMembershipMapByUser(userId);
+  const verifiedEditorTeams = new Set<string>();
   const ownedNodes: WorkspaceNode[] = [];
   const sharedNodesByOwner = new Map<string, WorkspaceNode[]>();
   const accessibleNodesById = new Map<string, WorkspaceNode>();
@@ -219,10 +222,9 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
           throw new ORPCError("BAD_REQUEST");
         }
 
-        const memberRole = membershipMap.get(teamId);
-
-        if (!memberRole || !hasRoleAtLeast(memberRole, "editor")) {
-          throw new ORPCError("UNAUTHORIZED");
+        if (!verifiedEditorTeams.has(teamId)) {
+          await requireTeamMembership(userId, teamId, "editor");
+          verifiedEditorTeams.add(teamId);
         }
       }
 
@@ -318,12 +320,7 @@ export async function shareWorkspaceNode(
   userId: string,
   input: { nodeId: string; teamId: string },
 ) {
-  const membershipMap = await getMembershipMapByUser(userId);
-  const role = membershipMap.get(input.teamId);
-
-  if (!role || !hasRoleAtLeast(role, "owner")) {
-    throw new ORPCError("UNAUTHORIZED");
-  }
+  await requireTeamMembership(userId, input.teamId, "owner");
 
   const [workspace] = await db
     .select({ nodes: dashboardWorkspace.nodes })
@@ -368,8 +365,6 @@ export async function shareWorkspaceNode(
 }
 
 export async function unshareWorkspaceNode(userId: string, input: { nodeId: string }) {
-  const membershipMap = await getMembershipMapByUser(userId);
-
   const [workspace] = await db
     .select({ nodes: dashboardWorkspace.nodes })
     .from(dashboardWorkspace)
@@ -386,11 +381,7 @@ export async function unshareWorkspaceNode(userId: string, input: { nodeId: stri
   }
 
   if (targetNode.visibility === "team" && targetNode.teamId) {
-    const role = membershipMap.get(targetNode.teamId);
-
-    if (!role || !hasRoleAtLeast(role, "owner")) {
-      throw new ORPCError("UNAUTHORIZED");
-    }
+    await requireTeamMembership(userId, targetNode.teamId, "owner");
   }
 
   const now = new Date();
@@ -426,8 +417,6 @@ export async function deleteWorkspaceNode(
   const ownerUserId = input.ownerUserId ?? userId;
 
   if (ownerUserId !== userId) {
-    const membershipMap = await getMembershipMapByUser(userId);
-
     const [ownerWorkspace] = await db
       .select({ nodes: dashboardWorkspace.nodes })
       .from(dashboardWorkspace)
@@ -447,11 +436,7 @@ export async function deleteWorkspaceNode(
       throw new ORPCError("NOT_FOUND");
     }
 
-    const role = membershipMap.get(targetNode.teamId);
-
-    if (!role || !hasRoleAtLeast(role, "editor")) {
-      throw new ORPCError("UNAUTHORIZED");
-    }
+    await requireTeamMembership(userId, targetNode.teamId, "editor");
 
     const now = new Date();
     await upsertWorkspaceNodes(

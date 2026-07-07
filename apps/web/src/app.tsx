@@ -1,12 +1,30 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Outlet, Route, Routes, useLocation } from "react-router-dom";
 
+import { LogoLoader } from "@/components/shell/logo-loader";
 import { AuthProvider } from "@/providers/auth-provider";
 import { AuthenticatedRoutes } from "@/authenticated-routes";
-import { LandingPage } from "@/pages/landing-page";
-import { LoginPage } from "@/pages/login-page";
-import { PrivacyPage } from "@/pages/privacy-page";
-import { TermsPage } from "@/pages/terms-page";
+
+const LandingPage = lazy(() =>
+  import("@/pages/landing-page").then((module) => ({ default: module.LandingPage })),
+);
+const LoginPage = lazy(() =>
+  import("@/pages/login-page").then((module) => ({ default: module.LoginPage })),
+);
+const PrivacyPage = lazy(() =>
+  import("@/pages/privacy-page").then((module) => ({ default: module.PrivacyPage })),
+);
+const TermsPage = lazy(() =>
+  import("@/pages/terms-page").then((module) => ({ default: module.TermsPage })),
+);
+
+function PublicPageFallback() {
+  return (
+    <div className="flex min-h-screen items-center justify-center">
+      <LogoLoader />
+    </div>
+  );
+}
 
 function LoginAuthBoundary() {
   return (
@@ -30,15 +48,17 @@ export function App() {
   return (
     <>
       <ScrollToTopOnNavigate />
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/privacy" element={<PrivacyPage />} />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/login" element={<LoginAuthBoundary />}>
-          <Route index element={<LoginPage />} />
-        </Route>
-        <Route path="/*" element={<AuthenticatedRoutes />} />
-      </Routes>
+      <Suspense fallback={<PublicPageFallback />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/login" element={<LoginAuthBoundary />}>
+            <Route index element={<LoginPage />} />
+          </Route>
+          <Route path="/*" element={<AuthenticatedRoutes />} />
+        </Routes>
+      </Suspense>
     </>
   );
 }

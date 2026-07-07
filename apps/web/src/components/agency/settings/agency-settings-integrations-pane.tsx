@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,16 +41,16 @@ export function AgencySettingsIntegrationsPane({
               <div className="flex items-start justify-between gap-3">
                 <p className="truncate text-sm font-bold text-highlighted">{integration.name}</p>
                 <span
-                  className={[
+                  className={cn(
                     "inline-flex shrink-0 items-center gap-1.5 text-[11px] font-semibold",
                     integration.status === "connected" ? "text-success" : "text-dimmed",
-                  ].join(" ")}
+                  )}
                 >
                   <span
-                    className={[
+                    className={cn(
                       "inline-block size-1.5 rounded-full",
                       integration.status === "connected" ? "bg-success" : "bg-muted",
-                    ].join(" ")}
+                    )}
                     aria-hidden="true"
                   />
                   {integration.status === "connected" ? "Connected" : "Available"}

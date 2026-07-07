@@ -1,4 +1,5 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { cn } from "@/lib/utils";
 import { useRef } from "react";
 
 import { AgencySearchHighlight } from "@/components/agency/agency-search-highlight";
@@ -51,7 +52,10 @@ export function AgencyProjectsVirtualTable({
   return (
     <div ref={parentRef} className="overflow-x-auto rounded-2xl border border-default bg-default">
       <div
-        className={`grid min-w-[40rem] grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-default bg-muted text-xs ${agencyLabelClass}`}
+        className={cn(
+          "grid min-w-[40rem] grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-default bg-muted text-xs",
+          agencyLabelClass,
+        )}
       >
         <div className="px-4 py-2.5 font-bold">Project</div>
         <div className="px-3 py-2.5 font-bold">Client</div>
@@ -103,10 +107,10 @@ export function AgencyProjectsVirtualTable({
                 <div className="flex items-center gap-2">
                   <div className="h-1.5 flex-1 rounded-full bg-elevated">
                     <div
-                      className={[
+                      className={cn(
                         "h-full rounded-full transition-[width] duration-200 ease-out",
                         budgetsByProject.get(project.id) ? budgetToneFor(project.id) : "bg-muted",
-                      ].join(" ")}
+                      )}
                       style={{
                         width: budgetsByProject.get(project.id)
                           ? `${budgetPctFor(project.id)}%`
@@ -121,12 +125,12 @@ export function AgencyProjectsVirtualTable({
               </div>
               <div className="px-3 py-3 text-right" role="cell">
                 <span
-                  className={[
+                  className={cn(
                     "font-mono font-bold tabular-nums",
                     (hoursThisWeekByProject.get(project.id) ?? 0) > 0
                       ? "text-highlighted"
                       : "text-dimmed",
-                  ].join(" ")}
+                  )}
                 >
                   {formatDuration(hoursThisWeekByProject.get(project.id) ?? 0, "short")}
                 </span>

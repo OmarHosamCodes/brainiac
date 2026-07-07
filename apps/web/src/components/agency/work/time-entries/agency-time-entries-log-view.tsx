@@ -16,7 +16,7 @@ type AgencyTimeEntriesLogViewProps = {
 
 export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps) {
   return (
-    <div className={["flex min-h-0 flex-1 flex-col", view.className].filter(Boolean).join(" ")}>
+    <div className={cn("flex min-h-0 flex-1 flex-col", view.className)}>
       {view.logQueryError ? (
         <div
           className="mx-4 mt-4 rounded-xl border border-error/30 bg-error/5 p-4 text-sm"

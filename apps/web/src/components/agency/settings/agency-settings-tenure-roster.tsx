@@ -1,4 +1,5 @@
 import { ChevronRight, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
 import { formatTenureHours, tenureStatusClass, tenureStatusLabel } from "@/lib/tenure-utils";
@@ -64,10 +65,10 @@ export function AgencySettingsTenureRoster({
           <li key={member.userId}>
             <button
               type="button"
-              className={[
+              className={cn(
                 "group grid w-full gap-2 px-1 py-3 text-left transition-colors hover:bg-elevated/50 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,0.8fr)_minmax(0,0.9fr)_minmax(0,0.7fr)_2rem] sm:items-center sm:gap-3",
                 agencyFocusRingClass,
-              ].join(" ")}
+              )}
               onClick={() => onSelect(member.userId)}
             >
               <span className="min-w-0">
@@ -96,10 +97,10 @@ export function AgencySettingsTenureRoster({
               <span>
                 {member.currentQuarter ? (
                   <span
-                    className={[
+                    className={cn(
                       "text-xs font-bold",
                       tenureStatusClass(member.currentQuarter.status),
-                    ].join(" ")}
+                    )}
                   >
                     {tenureStatusLabel(member.currentQuarter.status)}
                   </span>

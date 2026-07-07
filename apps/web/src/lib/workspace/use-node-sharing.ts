@@ -103,7 +103,7 @@ export function useWorkspaceNodeSharing(options: UseWorkspaceNodeSharingOptions)
 
   const nodeVisibilityBadgeClass = useMemo(() => {
     if (!node || node.visibility !== "team") {
-      return "border-neutral-300/70 bg-neutral-100 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300";
+      return "border-muted bg-muted text-muted";
     }
 
     if (!node.ownerUserId || node.ownerUserId === currentUserId) {

@@ -1,4 +1,5 @@
 import type { DashboardAgentToolPreset, DashboardConversationMessage } from "@brainiac/agent";
+import { cn } from "@/lib/utils";
 import type { WorkspaceNode } from "@brainiac/workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -128,7 +129,7 @@ export function useDashboardAgentChat(nodes: WorkspaceNode[], activeTabId?: stri
         return true;
       }
 
-      const haystack = [model.name, model.id, model.creatorLabel ?? ""].join(" ").toLowerCase();
+      const haystack = cn(model.name, model.id, model.creatorLabel ?? "").toLowerCase();
 
       return haystack.includes(normalizedSearch);
     });

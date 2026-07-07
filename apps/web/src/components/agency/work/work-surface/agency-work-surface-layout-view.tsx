@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 import type { AgencyWorkMobilePane } from "@/lib/schemas/agency-work";
 import {
@@ -34,12 +35,12 @@ export function AgencyWorkSurfaceLayoutView({
       {timerStrip}
 
       <div
-        className={[
+        className={cn(
           "flex min-h-0 min-w-0 flex-col overflow-hidden transition-[width,max-width] duration-200 ease-out motion-reduce:transition-none lg:flex-none",
           taskRailCollapsed ? agencyTaskRailCollapsedWidthClass : agencyTaskRailExpandedWidthClass,
           selectedTaskId ? "hidden lg:flex" : "",
           !selectedTaskId && mobilePane !== "tasks" ? "hidden lg:flex" : "",
-        ].join(" ")}
+        )}
       >
         {taskRail}
       </div>
@@ -48,11 +49,11 @@ export function AgencyWorkSurfaceLayoutView({
         <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{taskThread}</div>
       ) : (
         <div
-          className={[
+          className={cn(
             agencyTimePaneStackClass,
             "min-h-0 min-w-0 flex-1 overflow-hidden",
             mobilePane !== "time" ? "hidden lg:flex" : "flex",
-          ].join(" ")}
+          )}
         >
           {timePane}
         </div>

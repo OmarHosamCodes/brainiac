@@ -1,4 +1,5 @@
 import { Check, ChevronDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 
@@ -40,12 +41,12 @@ export function MarketplaceSubtitleBreadcrumb({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={[
+          className={cn(
             shellTopbarChipClass,
             shellFocusRingClass,
             shellBreadcrumbCurrentClass,
             "max-w-[11rem]",
-          ].join(" ")}
+          )}
         >
           <activeTab.icon className="size-3.5 shrink-0 text-muted" />
           <span className="truncate">{activeTab.label}</span>
@@ -59,10 +60,10 @@ export function MarketplaceSubtitleBreadcrumb({
             <button
               key={tab.kind}
               type="button"
-              className={[
+              className={cn(
                 "flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-highlighted",
                 tab.kind === activeKind ? "bg-primary/10 text-primary" : "",
-              ].join(" ")}
+              )}
               onClick={() => selectKind(tab.kind)}
             >
               <span className="inline-flex min-w-0 items-center gap-2">

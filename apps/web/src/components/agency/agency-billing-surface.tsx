@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { cn } from "@/lib/utils";
 import { AlertTriangle, CornerDownRight, Info, Plus, Receipt, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
@@ -170,10 +171,10 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
               <div>
                 <span className={agencyLabelClass}>Outstanding</span>
                 <span
-                  className={[
+                  className={cn(
                     "ml-2 font-mono tabular-nums font-bold",
                     summary.outstandingCents > 0 ? "text-highlighted" : "text-dimmed",
-                  ].join(" ")}
+                  )}
                 >
                   {formatCurrency(summary.outstandingCents, summary.currency)}
                 </span>
@@ -181,11 +182,11 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
               <div>
                 <span className={agencyLabelClass}>Drafts</span>
                 <span
-                  className={[
+                  className={cn(
                     "ml-2",
                     agencyMetricClass,
                     summary.draftCount > 0 ? "" : "text-dimmed",
-                  ].join(" ")}
+                  )}
                 >
                   {summary.draftCount}
                 </span>
@@ -193,11 +194,11 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
               <div>
                 <span className={agencyLabelClass}>Sent</span>
                 <span
-                  className={[
+                  className={cn(
                     "ml-2",
                     agencyMetricClass,
                     summary.sentCount > 0 ? "" : "text-dimmed",
-                  ].join(" ")}
+                  )}
                 >
                   {summary.sentCount}
                 </span>
@@ -205,11 +206,11 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
               <div>
                 <span className={agencyLabelClass}>Paid · all time</span>
                 <span
-                  className={[
+                  className={cn(
                     "ml-2",
                     agencyMetricClass,
                     summary.paidCount > 0 ? "" : "text-dimmed",
-                  ].join(" ")}
+                  )}
                 >
                   {summary.paidCount}
                 </span>
@@ -229,10 +230,10 @@ export function AgencyBillingSurface({ teamId }: AgencyBillingSurfaceProps) {
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <span
-                      className={[
+                      className={cn(
                         "font-mono text-[11px] font-bold tabular-nums",
                         laneCount(lane.id) > 0 ? "text-highlighted" : "text-dimmed",
-                      ].join(" ")}
+                      )}
                     >
                       {laneCount(lane.id)}
                     </span>

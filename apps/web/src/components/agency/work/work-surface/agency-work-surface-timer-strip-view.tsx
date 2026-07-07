@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import {
   agencyFocusRingClass,
   agencyMetricClass,
@@ -14,18 +15,18 @@ export function AgencyWorkSurfaceTimerStripView({
   onOpenTimePane,
 }: AgencyWorkSurfaceTimerStripViewProps) {
   return (
-    <div className={["lg:hidden", agencyTaskRailTrackingStripClass].join(" ")}>
+    <div className={cn("lg:hidden", agencyTaskRailTrackingStripClass)}>
       <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
-      <span className={["flex-1 font-mono tabular-nums", agencyMetricClass].join(" ")}>
+      <span className={cn("flex-1 font-mono tabular-nums", agencyMetricClass)}>
         Tracking · {mobileTrackingLabel}
       </span>
       <button
         type="button"
-        className={[
+        className={cn(
           "shrink-0 text-xs font-semibold text-primary underline-offset-2 hover:underline",
           agencyFocusRingClass,
           "motion-reduce:transition-none",
-        ].join(" ")}
+        )}
         onClick={onOpenTimePane}
       >
         View timer

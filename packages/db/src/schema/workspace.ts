@@ -84,8 +84,8 @@ export const workspaceMarketplaceItem = pgTable(
       .notNull(),
   },
   (table) => [
-    index("workspace_marketplace_kind_idx").on(table.kind),
-    index("workspace_marketplace_created_at_idx").on(table.createdAt),
+    index("workspace_marketplace_item_kind_idx").on(table.kind),
+    index("workspace_marketplace_item_created_at_idx").on(table.createdAt),
   ],
 );
 

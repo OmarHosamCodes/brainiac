@@ -1,4 +1,5 @@
 import { AlertTriangle, Archive, Building2, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -329,12 +330,12 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
                     </td>
                     <td className="px-3 py-3 text-right">
                       <span
-                        className={[
+                        className={cn(
                           "font-mono font-bold tabular-nums",
                           (weekHoursByClient.get(client.id) ?? 0) > 0
                             ? "text-highlighted"
                             : "text-dimmed",
-                        ].join(" ")}
+                        )}
                       >
                         {formatDuration(weekHoursByClient.get(client.id) ?? 0, "short")}
                       </span>

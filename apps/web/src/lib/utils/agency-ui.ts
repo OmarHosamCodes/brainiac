@@ -1,6 +1,7 @@
 /** Shared Tailwind class strings for the Agency dense register. */
 
 import { useLayoutEffect, useState, type RefObject } from "react";
+import { cn } from "@/lib/utils";
 
 import {
   shellEmptyPanelClass,
@@ -99,9 +100,7 @@ export const agencyTaskRailSummaryMetricClass = "flex items-center gap-1.5 text-
 
 export const agencyTaskRailSummaryLabelClass = "text-muted";
 
-export const agencyTaskRailSummaryValueClass = [agencyMetricClass, "text-xs font-semibold"].join(
-  " ",
-);
+export const agencyTaskRailSummaryValueClass = cn(agencyMetricClass, "text-xs font-semibold");
 
 export const agencyTaskRailSummaryDividerClass = "h-3 w-px shrink-0 bg-default";
 
@@ -109,38 +108,38 @@ export const agencyTaskRailSummaryDividerClass = "h-3 w-px shrink-0 bg-default";
 export const AGENCY_TASK_CLIENT_GROUP_HEADER_HEIGHT = 44;
 export const AGENCY_TASK_PROJECT_GROUP_HEADER_HEIGHT = 36;
 
-export const agencyTaskClientGroupHeaderClass = [
+export const agencyTaskClientGroupHeaderClass = cn(
   "flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm",
   "transition-colors hover:bg-default/50",
-].join(" ");
+);
 
-export const agencyTaskProjectGroupHeaderClass = [
+export const agencyTaskProjectGroupHeaderClass = cn(
   "flex w-full items-center justify-between gap-2 px-3 py-2 pl-4 text-left text-xs",
   "transition-colors hover:bg-default/40",
-].join(" ");
+);
 
 export const agencyTaskRowContentClass = "relative flex gap-1.5 px-3 py-2.5";
 
 export const agencyTaskRowNestedContentClass = "relative flex gap-1.5 px-3 py-1.5 pl-7";
 
-export const agencyTaskRowProjectPillClass = [
+export const agencyTaskRowProjectPillClass = cn(
   "inline-flex max-w-[8rem] shrink-0 items-center rounded-full border border-default bg-elevated px-1.5 py-0.5",
   "text-[10px] font-semibold text-highlighted transition-colors hover:bg-default",
-].join(" ");
+);
 
-export const agencyTaskRowCheckboxClass = [
+export const agencyTaskRowCheckboxClass = cn(
   "inline-flex size-3.5 shrink-0 items-center justify-center rounded border border-default bg-elevated",
   "transition-colors hover:border-muted-foreground/40",
   agencyFocusRingClass,
   "motion-reduce:transition-none",
-].join(" ");
+);
 
 export const agencyTaskRowCheckboxCheckedClass = "border-highlighted bg-highlighted text-inverted";
 
-export const agencyTaskRowClass = [
+export const agencyTaskRowClass = cn(
   "transition-[background-color,opacity,transform] duration-200 motion-reduce:transition-none",
   "cursor-pointer hover:bg-default/60",
-].join(" ");
+);
 
 export const agencyTaskRowSelectedClass = "bg-primary/10 hover:bg-primary/10";
 
@@ -162,25 +161,25 @@ export const agencyTimeTrackerPanelClass =
 export const agencyTimeLogPanelClass =
   "flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-default bg-elevated";
 
-export const agencyTimeTrackerBarClass = ["shrink-0 px-4 py-2.5"].join(" ");
+export const agencyTimeTrackerBarClass = cn("shrink-0 px-4 py-2.5");
 
-export const agencyTimeDayHeaderClass = [
+export const agencyTimeDayHeaderClass = cn(
   "flex shrink-0 items-center justify-between border-y border-default bg-muted/55 px-4 py-2 text-xs",
-].join(" ");
+);
 
-export const agencyTimeWeekHeaderClass = [
+export const agencyTimeWeekHeaderClass = cn(
   "flex shrink-0 items-center justify-between px-4 py-2.5 text-xs",
-].join(" ");
+);
 
-export const agencyTimeEntryRowClass = [
+export const agencyTimeEntryRowClass = cn(
   "border-b-[1px] border-dashed border-default bg-card/20 px-4 py-3 transition-colors motion-reduce:transition-none",
-].join(" ");
+);
 
 /** Inline time inputs in entry rows. */
-export const agencyTimeEntryTimeInputClass = [
+export const agencyTimeEntryTimeInputClass = cn(
   "h-7 w-full min-w-0 appearance-none border-0 bg-transparent px-0 font-mono text-sm font-medium tabular-nums tracking-tight text-muted shadow-none focus-visible:ring-0 focus-visible:text-highlighted",
   "[&::-webkit-calendar-picker-indicator]:hidden",
-].join(" ");
+);
 
 /** Shared column grid for time entry rows inside the horizontal scroll region. */
 export const agencyTimeEntryGridClass =
@@ -193,17 +192,17 @@ export const agencyTimeEntryRowHighlightClass =
 
 export const agencyTimeEntryRowEditingClass = "bg-primary/5 hover:bg-primary/5";
 
-export const agencyTimeSuggestionChipClass = [
+export const agencyTimeSuggestionChipClass = cn(
   "inline-flex shrink-0 items-center gap-1.5 rounded-full border border-default bg-elevated px-2 py-1",
   "text-xs font-medium text-muted transition-colors hover:bg-default hover:text-highlighted",
-].join(" ");
+);
 
-export const agencyTimeWeekFooterClass = [
+export const agencyTimeWeekFooterClass = cn(
   "flex shrink-0 items-center justify-between border-t border-default px-4 py-2.5",
   "bg-default/75",
-].join(" ");
+);
 
-export const agencyTimeFooterMetricClass = ["text-sm font-semibold", agencyMetricClass].join(" ");
+export const agencyTimeFooterMetricClass = cn("text-sm font-semibold", agencyMetricClass);
 
 export const agencyTimeLogSkeletonClass =
   "h-11 border-b border-default bg-elevated/40 motion-reduce:animate-none animate-pulse";

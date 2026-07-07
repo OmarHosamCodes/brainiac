@@ -1,4 +1,4 @@
-import { agencyLiveEventSchema, publishAgencyLiveEvent } from "../agency-ops/live";
+import { publishAgencyLiveEvent } from "../agency-ops/live";
 import type { NotificationRecord } from "../../schemas/notifications";
 
 const liveUserTeams = new Map<string, Set<string>>();
@@ -35,5 +35,3 @@ export async function publishNotificationCreated(teamId: string, notification: N
     notification,
   });
 }
-
-export const notificationLiveEventSchema = agencyLiveEventSchema;

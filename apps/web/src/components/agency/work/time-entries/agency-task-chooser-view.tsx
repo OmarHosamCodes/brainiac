@@ -245,10 +245,10 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                                           onClick={() => onSelectTask(task.id)}
                                         >
                                           <span
-                                            className={[
+                                            className={cn(
                                               "size-1.5 shrink-0 rounded-full",
                                               statusDotClass(task.status),
-                                            ].join(" ")}
+                                            )}
                                           />
                                           <span className="min-w-0 flex-1">
                                             <span

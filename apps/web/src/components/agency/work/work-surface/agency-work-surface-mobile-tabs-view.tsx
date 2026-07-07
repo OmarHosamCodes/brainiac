@@ -1,4 +1,5 @@
 import type { AgencyWorkMobilePane } from "@/lib/schemas/agency-work";
+import { cn } from "@/lib/utils";
 
 type AgencyWorkSurfaceMobileTabsViewProps = {
   mobilePane: AgencyWorkMobilePane;
@@ -21,10 +22,10 @@ export function AgencyWorkSurfaceMobileTabsView({
         type="button"
         role="tab"
         aria-selected={mobilePane === "tasks"}
-        className={[
+        className={cn(
           "rounded-full px-3 py-1 text-[11px] font-bold transition-colors motion-reduce:transition-none",
           mobilePane === "tasks" ? "bg-default text-highlighted" : "text-muted",
-        ].join(" ")}
+        )}
         onClick={() => onMobilePaneChange("tasks")}
       >
         Tasks
@@ -33,10 +34,10 @@ export function AgencyWorkSurfaceMobileTabsView({
         type="button"
         role="tab"
         aria-selected={mobilePane === "time"}
-        className={[
+        className={cn(
           "rounded-full px-3 py-1 text-[11px] font-bold transition-colors motion-reduce:transition-none",
           mobilePane === "time" ? "bg-default text-highlighted" : "text-muted",
-        ].join(" ")}
+        )}
         onClick={onOpenTimePane}
       >
         Time

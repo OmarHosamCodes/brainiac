@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 export function AgencyWorkSurfaceLoadingView() {
   return (
     <div
-      className={[shellLoadingPanelClass, "flex h-full min-h-0 flex-col gap-4"].join(" ")}
+      className={cn(shellLoadingPanelClass, "flex h-full min-h-0 flex-col gap-4")}
       aria-busy="true"
       aria-label="Loading work data"
     >

@@ -1,4 +1,5 @@
 import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-checkbox";
@@ -48,7 +49,7 @@ export function AgencySettingsTenurePolicy({
   }
 
   return (
-    <section className={[agencyPanelClass, "p-5 sm:p-6"].join(" ")}>
+    <section className={cn(agencyPanelClass, "p-5 sm:p-6")}>
       <h3 className="text-sm font-bold text-highlighted">Team policy</h3>
       <p className="mt-1 text-sm text-muted">
         Each fiscal month runs from the start day through the day before the next period (UTC).
@@ -140,15 +141,15 @@ export function AgencySettingsTenurePolicy({
         <div className="border-t border-default pt-4">
           <button
             type="button"
-            className={[
+            className={cn(
               "flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors hover:text-highlighted",
               agencyFocusRingClass,
-            ].join(" ")}
+            )}
             aria-expanded={advancedOpen}
             onClick={() => setAdvancedOpen((open) => !open)}
           >
             <ChevronRight
-              className={["size-4 transition-transform", advancedOpen ? "rotate-90" : ""].join(" ")}
+              className={cn("size-4 transition-transform", advancedOpen ? "rotate-90" : "")}
             />
             Advanced
           </button>
@@ -184,7 +185,7 @@ export function AgencySettingsTenurePolicy({
                 />
               </div>
 
-              <div className={[agencyFormFieldClass, "sm:col-span-2"].join(" ")}>
+              <div className={cn(agencyFormFieldClass, "sm:col-span-2")}>
                 <label className={agencyFormLabelClass}>Penalty per missed quarter (months)</label>
                 <Input
                   type="number"

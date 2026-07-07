@@ -1,4 +1,5 @@
 import { Check, UsersRound } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useMemo, useState } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -32,7 +33,7 @@ export function AgencyTeamBreadcrumb({ teamId, teams, onTeamIdChange }: AgencyTe
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={[shellSearchIconButtonClass, shellFocusRingClass].join(" ")}
+          className={cn(shellSearchIconButtonClass, shellFocusRingClass)}
           aria-label={`Switch team (${currentTeam?.name ?? "Team"})`}
           aria-expanded={open}
         >
@@ -44,10 +45,10 @@ export function AgencyTeamBreadcrumb({ teamId, teams, onTeamIdChange }: AgencyTe
           <button
             key={team.id}
             type="button"
-            className={[
+            className={cn(
               "flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-xs font-bold text-muted transition-colors hover:bg-elevated hover:text-highlighted",
               team.id === teamId ? "bg-primary/10 text-primary" : "",
-            ].join(" ")}
+            )}
             onClick={() => selectTeam(team.id)}
           >
             <span className="truncate">{team.name}</span>

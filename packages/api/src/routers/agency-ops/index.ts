@@ -1,11 +1,7 @@
 import { z } from "zod";
 
 import { protectedProProcedure } from "../../procedures";
-import {
-  registerAgencyLiveUserConnection,
-  unregisterAgencyLiveUserConnection,
-} from "../notifications/live-bridge";
-import { agencyLiveEventSchema, agencyLivePublisher } from "./live";
+import { subscribeAgencyLive } from "./live";
 import {
   archiveAgencyClient,
   createAgencyClient,
@@ -46,7 +42,6 @@ import {
   listRecentTaskThreadMessages,
   listTaskThreadMembers,
   listTaskThreadMessages,
-  requireTeamMembership,
   setMemberCapacity,
   startAgencyTimer,
   stopAgencyTimer,
@@ -62,6 +57,7 @@ import {
   upsertClientContact,
   upsertMemberRate,
 } from "./service";
+import { listBudgetsStub, listIntegrationsStub } from "./stubs-service";
 import {
   createSavedReport,
   deleteSavedReport,
@@ -454,16 +450,7 @@ export const agencyOpsRouter = {
       input,
       signal,
     }) {
-      const userId = context.session.user.id;
-      await requireTeamMembership(userId, input.teamId, "viewer");
-      registerAgencyLiveUserConnection(userId, input.teamId);
-      try {
-        for await (const event of agencyLivePublisher.subscribe(input.teamId, signal)) {
-          yield agencyLiveEventSchema.parse(event);
-        }
-      } finally {
-        unregisterAgencyLiveUserConnection(userId, input.teamId);
-      }
+      yield* subscribeAgencyLive(context.session.user.id, input, signal);
     }),
   },
   clients: {
@@ -1260,7 +1247,7 @@ export const agencyOpsRouter = {
           projectId: z.string().min(1).optional(),
         }),
       )
-      .handler(async () => {
+      .handler(async ({ context, input }) => {
         return z
           .object({
             items: z.array(
@@ -1276,7 +1263,7 @@ export const agencyOpsRouter = {
               }),
             ),
           })
-          .parse({ items: [] });
+          .parse(await listBudgetsStub(context.session.user.id, input));
       }),
   },
   rates: {
@@ -1462,7 +1449,7 @@ export const agencyOpsRouter = {
       }),
   },
   integrations: {
-    list: protectedProProcedure.input(teamScopedInputSchema).handler(async () => {
+    list: protectedProProcedure.input(teamScopedInputSchema).handler(async ({ context, input }) => {
       return z
         .object({
           items: z.array(
@@ -1475,38 +1462,7 @@ export const agencyOpsRouter = {
             }),
           ),
         })
-        .parse({
-          items: [
-            {
-              id: "slack",
-              name: "Slack",
-              description: "Daily totals and budget warnings in your channel.",
-              status: "available",
-              connectedAt: null,
-            },
-            {
-              id: "calendar",
-              name: "Calendar",
-              description: "Suggest time entries from Google or Outlook events.",
-              status: "available",
-              connectedAt: null,
-            },
-            {
-              id: "quickbooks",
-              name: "QuickBooks · Xero",
-              description: "Send invoices straight to your books.",
-              status: "available",
-              connectedAt: null,
-            },
-            {
-              id: "webhooks",
-              name: "Webhooks",
-              description: "Stream entries into anything you already script.",
-              status: "available",
-              connectedAt: null,
-            },
-          ],
-        });
+        .parse(await listIntegrationsStub(context.session.user.id, input));
     }),
   },
   tenure: {

@@ -35,7 +35,7 @@ type AgencyMultiSelectFilterProps = {
 };
 
 function optionMatchesQuery(option: AgencyFilterOption, query: string): boolean {
-  const haystack = [option.label, option.searchText ?? ""].join(" ").toLowerCase();
+  const haystack = cn(option.label, option.searchText ?? "").toLowerCase();
   return haystack.includes(query);
 }
 
