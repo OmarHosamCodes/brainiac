@@ -2,11 +2,13 @@ import { create } from "zustand";
 
 export const UNASSIGNED_ASSIGNEE_VALUE = "__unassigned__";
 
+export type AgencyTaskRailStatusFilter = "active" | "done";
+
 type AgencyTaskListState = {
   quickAddFocused: boolean;
   createOptionsExpanded: boolean;
   lastUsedProjectIdForCreate: string;
-  doneExpanded: boolean;
+  railStatusFilter: AgencyTaskRailStatusFilter;
   recentlyCompletedTaskId: string;
   recentlyCreatedTaskId: string;
   recentlyCreatedBlueprintId: string;
@@ -19,7 +21,7 @@ type AgencyTaskListState = {
   setQuickAddFocused: (focused: boolean) => void;
   setCreateOptionsExpanded: (expanded: boolean) => void;
   setLastUsedProjectIdForCreate: (projectId: string) => void;
-  setDoneExpanded: (expanded: boolean) => void;
+  setRailStatusFilter: (filter: AgencyTaskRailStatusFilter) => void;
   setRecentlyCompletedTaskId: (taskId: string) => void;
   setRecentlyCreatedTaskId: (taskId: string) => void;
   setRecentlyCreatedBlueprintId: (blueprintId: string) => void;
@@ -40,7 +42,7 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   quickAddFocused: false,
   createOptionsExpanded: false,
   lastUsedProjectIdForCreate: "",
-  doneExpanded: false,
+  railStatusFilter: "active",
   recentlyCompletedTaskId: "",
   recentlyCreatedTaskId: "",
   recentlyCreatedBlueprintId: "",
@@ -53,7 +55,7 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   setQuickAddFocused: (focused) => set({ quickAddFocused: focused }),
   setCreateOptionsExpanded: (expanded) => set({ createOptionsExpanded: expanded }),
   setLastUsedProjectIdForCreate: (projectId) => set({ lastUsedProjectIdForCreate: projectId }),
-  setDoneExpanded: (expanded) => set({ doneExpanded: expanded }),
+  setRailStatusFilter: (filter) => set({ railStatusFilter: filter }),
   setRecentlyCompletedTaskId: (taskId) => set({ recentlyCompletedTaskId: taskId }),
   setRecentlyCreatedTaskId: (taskId) => set({ recentlyCreatedTaskId: taskId }),
   setRecentlyCreatedBlueprintId: (blueprintId) => set({ recentlyCreatedBlueprintId: blueprintId }),
