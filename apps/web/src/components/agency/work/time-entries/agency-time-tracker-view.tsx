@@ -54,6 +54,10 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
               projects={view.projects}
               tasks={view.tasks}
               placeholder={view.taskChooserLabel}
+              fallbackTaskTitle={
+                view.taskChooserLabel !== "Choose task" ? view.taskChooserLabel : undefined
+              }
+              fallbackProjectId={view.activeTimer?.projectId}
               className={cn(
                 "h-9 w-auto max-w-44 shrink-0 border-0 bg-transparent px-2 font-normal shadow-none hover:bg-transparent",
                 view.taskChooserWarning &&

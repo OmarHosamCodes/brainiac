@@ -66,6 +66,7 @@ import {
   publishAgencyTimerUpdated,
 } from "./live";
 import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
+import { resolveAgencyTimerStopBinding } from "./resolve-agency-timer-stop-binding";
 import { requireTeamMembership } from "./membership";
 
 export { requireTeamMembership };
@@ -3890,14 +3891,24 @@ export async function stopAgencyTimer(
   }
 
   let taskId = active.taskId ?? null;
+  let entryProjectId = active.projectId;
   if (input.taskId) {
     const taskProjectId = await resolveTaskProjectId(active.teamId, input.taskId);
-    if (taskProjectId !== active.projectId) {
+    const binding = resolveAgencyTimerStopBinding({
+      activeProjectId: active.projectId,
+      activeTaskId: active.taskId,
+      inputTaskId: input.taskId,
+      inputTaskProjectId: taskProjectId,
+    });
+
+    if ("error" in binding) {
       throw new ORPCError("BAD_REQUEST", {
         message: "Task must belong to the active timer project.",
       });
     }
-    taskId = active.taskId ?? input.taskId;
+
+    taskId = binding.taskId;
+    entryProjectId = binding.projectId;
   }
 
   if (!input.discard && !taskId) {
@@ -3935,7 +3946,7 @@ export async function stopAgencyTimer(
       .values({
         id: createWorkspaceId("agency-time"),
         teamId: active.teamId,
-        projectId: active.projectId,
+        projectId: entryProjectId,
         taskId,
         journeyStepId,
         userId: actorUserId,
@@ -3976,7 +3987,7 @@ export async function stopAgencyTimer(
   await publishAgencyTimerUpdated(active.teamId, actorUserId, null);
   await emitTimerStoppedNotification(actorUserId, {
     teamId: active.teamId,
-    projectId: active.projectId,
+    projectId: entryProjectId,
     taskId,
     taskTitle: createdEntry?.taskTitle ?? null,
   });

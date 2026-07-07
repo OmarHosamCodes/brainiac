@@ -21,19 +21,60 @@ export function canStartAgencyTimer(input: {
   return Boolean(!input.activeTimer && input.project);
 }
 
+export function resolveAgencyTimerTaskRef(input: {
+  activeTimer: AgencyActiveTimerRef | null;
+  selectedTaskId?: string;
+  selectedTaskTitle?: string | null;
+  catalogTasks?: AgencyTimerTaskRef[];
+}): AgencyTimerTaskRef | null {
+  if (input.activeTimer?.taskId) {
+    return {
+      id: input.activeTimer.taskId,
+      title: input.activeTimer.taskTitle ?? input.selectedTaskTitle?.trim() ?? "",
+    };
+  }
+
+  const draftTaskId = input.selectedTaskId?.trim() ?? "";
+  if (!draftTaskId) {
+    return null;
+  }
+
+  const fromCatalog = input.catalogTasks?.find((task) => task.id === draftTaskId);
+  if (fromCatalog) {
+    return fromCatalog;
+  }
+
+  const draftTitle = input.selectedTaskTitle?.trim() ?? "";
+  if (draftTitle) {
+    return { id: draftTaskId, title: draftTitle };
+  }
+
+  return null;
+}
+
 export function canStopAgencyTimer(input: {
   activeTimer: AgencyActiveTimerRef | null;
   description: string;
-  selectedTask: AgencyTimerTaskRef | null;
+  selectedTask?: AgencyTimerTaskRef | null;
+  selectedTaskId?: string;
+  selectedTaskTitle?: string | null;
+  catalogTasks?: AgencyTimerTaskRef[];
 }): boolean {
   if (!input.activeTimer) {
     return false;
   }
 
   const descriptionTrimmed = input.description.trim();
-  const activeTimerHasTask = Boolean(input.activeTimer.taskId);
+  const task =
+    input.selectedTask ??
+    resolveAgencyTimerTaskRef({
+      activeTimer: input.activeTimer,
+      selectedTaskId: input.selectedTaskId,
+      selectedTaskTitle: input.selectedTaskTitle,
+      catalogTasks: input.catalogTasks,
+    });
 
-  return Boolean(descriptionTrimmed && (activeTimerHasTask || input.selectedTask));
+  return Boolean(descriptionTrimmed && task);
 }
 
 // ponytail: naive fallback chain (draft → recent entry → first project); upgrade path is explicit project picker
@@ -82,20 +123,30 @@ export function getAgencyTimerStartBlockedMessage(input: {
 export function getAgencyTimerStopBlockedMessage(input: {
   activeTimer: AgencyActiveTimerRef | null;
   description: string;
-  selectedTask: AgencyTimerTaskRef | null;
+  selectedTask?: AgencyTimerTaskRef | null;
+  selectedTaskId?: string;
+  selectedTaskTitle?: string | null;
+  catalogTasks?: AgencyTimerTaskRef[];
 }): string | null {
   if (!input.activeTimer) {
     return null;
   }
 
   const descriptionTrimmed = input.description.trim();
-  const activeTimerHasTask = Boolean(input.activeTimer.taskId);
+  const task =
+    input.selectedTask ??
+    resolveAgencyTimerTaskRef({
+      activeTimer: input.activeTimer,
+      selectedTaskId: input.selectedTaskId,
+      selectedTaskTitle: input.selectedTaskTitle,
+      catalogTasks: input.catalogTasks,
+    });
 
   if (!descriptionTrimmed) {
     return "Add a description in the time tracker before stopping the timer.";
   }
 
-  if (!activeTimerHasTask && !input.selectedTask) {
+  if (!task) {
     return "Choose a task in the time tracker before stopping the timer.";
   }
 

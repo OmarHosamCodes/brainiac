@@ -427,6 +427,7 @@ export function useAgencyTaskList({
       if (activeTimer) {
         if (!activeTimer.taskId && task && task.projectId === activeTimer.projectId) {
           setTrackerTaskId(teamId, taskId);
+          setTrackerProjectId(teamId, task.projectId);
         }
         if (blueprint?.description.trim()) {
           setTrackerDescription(teamId, blueprint.description.trim());

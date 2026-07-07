@@ -4,6 +4,7 @@ import {
   canStartAgencyTimer,
   canStopAgencyTimer,
   resolveAgencyTimerStartProject,
+  resolveAgencyTimerTaskRef,
 } from "@/lib/agency/work/timer-validation";
 
 const projectA = { id: "proj-a", name: "Project A" };
@@ -48,6 +49,40 @@ describe("canStopAgencyTimer", () => {
         selectedTask: null,
       }),
     ).toBe(true);
+  });
+
+  it("allows stop for draft task not in assignee-filtered catalog", () => {
+    expect(
+      canStopAgencyTimer({
+        activeTimer: { taskId: null, taskTitle: null, description: "" },
+        description: "Delegated work",
+        selectedTaskId: "task-delegated",
+        selectedTaskTitle: "Planning & Analysis",
+      }),
+    ).toBe(true);
+  });
+});
+
+describe("resolveAgencyTimerTaskRef", () => {
+  it("prefers active timer task over draft selection", () => {
+    expect(
+      resolveAgencyTimerTaskRef({
+        activeTimer: { taskId: "task-1", taskTitle: "Running task", description: "" },
+        selectedTaskId: "task-2",
+        selectedTaskTitle: "Draft task",
+      }),
+    ).toEqual({ id: "task-1", title: "Running task" });
+  });
+
+  it("falls back to draft id and title when task is absent from catalog", () => {
+    expect(
+      resolveAgencyTimerTaskRef({
+        activeTimer: { taskId: null, taskTitle: null, description: "" },
+        selectedTaskId: "task-delegated",
+        selectedTaskTitle: "Planning & Analysis",
+        catalogTasks: [task],
+      }),
+    ).toEqual({ id: "task-delegated", title: "Planning & Analysis" });
   });
 });
 

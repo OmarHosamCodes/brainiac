@@ -1,7 +1,11 @@
 import { useCallback, useMemo } from "react";
 
 import { useAgencyElapsedTimer } from "@/lib/agency/work/hooks/use-agency-elapsed-timer";
-import { canStartAgencyTimer, canStopAgencyTimer } from "@/lib/agency/work/timer-validation";
+import {
+  canStartAgencyTimer,
+  canStopAgencyTimer,
+  resolveAgencyTimerTaskRef,
+} from "@/lib/agency/work/timer-validation";
 import { useAgencyActiveTimerQuery } from "@/lib/queries/agency";
 import {
   selectIsTimerMutationPending,
@@ -60,12 +64,16 @@ export function useAgencyMiniTimer({
   const canStop = canStopAgencyTimer({
     activeTimer,
     description: activeTimer?.description ?? "",
-    selectedTask:
-      activeTimer?.taskId && activeTimer.taskTitle
-        ? { id: activeTimer.taskId, title: activeTimer.taskTitle }
-        : activeTimer?.taskId
-          ? { id: activeTimer.taskId, title: taskTitle ?? "" }
-          : null,
+    selectedTask: resolveAgencyTimerTaskRef({
+      activeTimer,
+      selectedTaskTitle: taskTitle,
+      catalogTasks:
+        activeTimer?.taskId && activeTimer.taskTitle
+          ? [{ id: activeTimer.taskId, title: activeTimer.taskTitle }]
+          : task
+            ? [task]
+            : [],
+    }),
   });
 
   const disabled =

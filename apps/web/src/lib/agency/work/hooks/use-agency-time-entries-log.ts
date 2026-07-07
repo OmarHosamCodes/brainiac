@@ -9,6 +9,7 @@ import {
 } from "@/lib/queries/agency";
 import { getLocalWeekStartKey, todayLocalDateKey } from "@/lib/utils/format-agency-day-label";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { findProjectTaskInCache } from "@/lib/utils/agency-query-cache";
 import { groupEntriesByWeek, type CollapsedEntryGroup } from "@/lib/utils/group-time-entries";
 import {
   draftToIsoRange,
@@ -185,7 +186,27 @@ export function useAgencyTimeEntriesLog({
     if ("error" in range) return;
 
     const entry = entries.find((item) => item.id === entryId);
-    const task = tasks.find((item) => item.id === draft.taskId);
+    const catalogTask = tasks.find((item) => item.id === draft.taskId);
+    const cachedTask =
+      catalogTask ?? (teamId ? findProjectTaskInCache(teamId, draft.taskId) : null);
+    const task =
+      catalogTask ??
+      cachedTask ??
+      (entry?.taskId === draft.taskId && draft.taskId
+        ? {
+            id: draft.taskId,
+            teamId: entry.teamId,
+            projectId: entry.projectId,
+            title: entry.taskTitle ?? entry.description,
+            status: "open" as const,
+            taskKind: "standard" as const,
+            assignedToTeam: false,
+            assignees: [],
+            dueDate: null,
+            createdAt: entry.createdAt,
+            updatedAt: entry.updatedAt,
+          }
+        : null);
     const project = task ? projects.find((item) => item.id === task.projectId) : null;
 
     if (!teamId || !entry || !task || !project) return;

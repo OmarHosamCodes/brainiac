@@ -7,6 +7,7 @@ import {
   canStartAgencyTimer,
   canStopAgencyTimer,
   resolveAgencyTimerStartProject,
+  resolveAgencyTimerTaskRef,
 } from "@/lib/agency/work/timer-validation";
 import type { AgencyProject, AgencyProjectTask } from "@/lib/schemas/agency-work";
 import {
@@ -16,6 +17,7 @@ import {
   useAgencyTimeEntriesQuery,
 } from "@/lib/queries/agency";
 import { formatAgencyDayLabel } from "@/lib/utils/format-agency-day-label";
+import { findProjectTaskInCache } from "@/lib/utils/agency-query-cache";
 import { activeTimerStartToIso, startedAtToDateTimeDraft } from "@/lib/utils/time-entry-draft";
 import {
   selectIsTimerMutationPending,
@@ -129,10 +131,20 @@ export function useAgencyTimeTracker({
   const timerDescription = trackerDraft?.description ?? "";
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const cachedTask =
+    selectedTask ??
+    (selectedTaskId && teamId ? findProjectTaskInCache(teamId, selectedTaskId) : null);
+  const selectedTaskTitle = activeTimer?.taskTitle ?? cachedTask?.title ?? null;
+  const resolvedTimerTask = resolveAgencyTimerTaskRef({
+    activeTimer,
+    selectedTaskId,
+    selectedTaskTitle,
+    catalogTasks: tasks,
+  });
   const recentEntryProjectId = recentEntriesQuery.data?.items[0]?.projectId ?? null;
   const startProject = resolveAgencyTimerStartProject({
     projects,
-    selectedTaskProjectId: selectedTask?.projectId ?? null,
+    selectedTaskProjectId: cachedTask?.projectId ?? selectedTask?.projectId ?? null,
     draftProjectId: trackerDraft?.projectId ?? "",
     recentEntryProjectId,
   });
@@ -163,7 +175,7 @@ export function useAgencyTimeTracker({
   const canStopTimer = canStopAgencyTimer({
     activeTimer,
     description: timerDescription,
-    selectedTask,
+    selectedTask: resolvedTimerTask,
   });
 
   const elapsedLabel = useAgencyElapsedTimer({
@@ -290,7 +302,7 @@ export function useAgencyTimeTracker({
   async function stopTimer(discard = false) {
     if (!teamId || !activeTimer) return;
     if (!discard && !canStopTimer) {
-      if (descriptionTrimmed && !activeTimerHasTask && !selectedTask) revealTaskChooser();
+      if (descriptionTrimmed && !activeTimerHasTask && !resolvedTimerTask) revealTaskChooser();
       return;
     }
 
@@ -300,13 +312,14 @@ export function useAgencyTimeTracker({
       description: timerDescription,
       discard,
       task:
-        !activeTimerHasTask && selectedTask
-          ? { id: selectedTask.id, title: selectedTask.title }
+        !activeTimerHasTask && resolvedTimerTask
+          ? { id: resolvedTimerTask.id, title: resolvedTimerTask.title }
           : null,
     });
   }
 
-  const taskChooserLabel = activeTimer?.taskTitle ?? selectedTask?.title ?? "Choose task";
+  const taskChooserLabel =
+    activeTimer?.taskTitle ?? cachedTask?.title ?? selectedTask?.title ?? "Choose task";
 
   let stopButtonLabel = "Stop";
   if (isTimerMutationPending) {
@@ -341,7 +354,7 @@ export function useAgencyTimeTracker({
     selectedTaskId,
     taskChooserOpen,
     taskChooserLabel,
-    taskChooserWarning: !activeTimerHasTask && !selectedTask && taskChooserOpen,
+    taskChooserWarning: !activeTimerHasTask && !resolvedTimerTask && taskChooserOpen,
     projects,
     tasks,
     projectsLoading: projectsQuery.isPending,
