@@ -154,8 +154,7 @@ export const agencyTaskRowClass = cn(
 
 export const agencyTaskRowSelectedClass = "bg-primary/10 hover:bg-primary/10";
 
-export const agencyTaskRowDoneClass =
-  "bg-success/10 hover:bg-success/15 [&_button>span]:text-success/80";
+export const agencyTaskRowDoneClass = "hover:bg-default/60";
 
 export const agencyTaskRowCompleteClass = "agency-task-row-complete";
 
