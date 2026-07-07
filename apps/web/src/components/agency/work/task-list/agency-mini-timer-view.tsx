@@ -25,8 +25,8 @@ export function AgencyMiniTimerView({ view }: AgencyMiniTimerViewProps) {
         <button
           type="button"
           className={cn(
-            "inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary",
-            "transition-colors hover:bg-primary/15",
+            "inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive",
+            "transition-colors hover:bg-destructive/15",
             agencyFocusRingClass,
             "motion-reduce:transition-none",
             disabled && "cursor-not-allowed opacity-50",
