@@ -9,10 +9,7 @@ import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/sch
 import { Input } from "@/components/ui/input";
 import { agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
 import { statusChipClass, statusLabel } from "@/lib/utils/agency-task-status";
-import {
-  filterTasksByTitleSearch,
-  taskTitleExactlyMatches,
-} from "@/lib/utils/agency-task-title-filter";
+import { taskTitleExactlyMatches } from "@/lib/utils/agency-task-title-filter";
 import { cn } from "@/lib/utils";
 
 type AgencyTaskCreateInlineViewProps = {
@@ -32,6 +29,8 @@ function QuickAddSuggestions({
   onActiveIndexChange,
   onPickTask,
   onCreateFromDraft,
+  projects,
+  showProjectLabels,
 }: {
   listboxId: string;
   titleDraft: string;
@@ -41,14 +40,16 @@ function QuickAddSuggestions({
   onActiveIndexChange: (index: number) => void;
   onPickTask: (task: AgencyProjectTask) => void;
   onCreateFromDraft: () => void;
+  projects: AgencyTaskProject[];
+  showProjectLabels: boolean;
 }) {
   const trimmedTitle = titleDraft.trim();
-  const filteredTasks = useMemo(
-    () => filterTasksByTitleSearch(tasks, titleDraft),
-    [tasks, titleDraft],
+  const projectNameById = useMemo(
+    () => new Map(projects.map((project) => [project.id, project.name])),
+    [projects],
   );
   const showCreateRow = Boolean(trimmedTitle) && !taskTitleExactlyMatches(tasks, trimmedTitle);
-  const showCreateInList = showCreateRow && filteredTasks.length === 0;
+  const showCreateInList = showCreateRow && tasks.length === 0;
 
   if (loading) {
     return (
@@ -58,7 +59,7 @@ function QuickAddSuggestions({
     );
   }
 
-  if (filteredTasks.length === 0 && !showCreateInList) {
+  if (tasks.length === 0 && !showCreateInList) {
     return (
       <div className={cn(suggestionPanelClass, "p-2")}>
         <p className="px-2 py-3 text-center text-xs text-muted">
@@ -75,14 +76,15 @@ function QuickAddSuggestions({
       aria-label="Task suggestions"
       className={cn(suggestionPanelClass, "max-h-48 overflow-y-auto py-1")}
     >
-      {showCreateRow && filteredTasks.length > 0 ? (
+      {showCreateRow && tasks.length > 0 ? (
         <li className="px-3 pb-1.5 pt-1 text-[10px] text-muted">
           Enter to choose · Shift+Enter for new
         </li>
       ) : null}
 
-      {filteredTasks.map((task, index) => {
+      {tasks.map((task, index) => {
         const active = index === activeIndex;
+        const projectName = showProjectLabels ? projectNameById.get(task.projectId) : undefined;
         return (
           <li key={task.id} role="presentation">
             <button
@@ -108,6 +110,11 @@ function QuickAddSuggestions({
               >
                 {task.title}
               </span>
+              {projectName ? (
+                <span className="max-w-[6rem] shrink-0 truncate text-[10px] font-medium text-muted">
+                  {projectName}
+                </span>
+              ) : null}
               <span
                 className={statusChipClass(task.status as TaskStatus)}
                 aria-label={`${statusLabel(task.status as TaskStatus)} status`}
@@ -185,14 +192,13 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
   const trimmedTitle = titleDraft.trim();
   const showSuggestions =
     quickAddFocused && !noProjects && !createOptionsExpanded && Boolean(trimmedTitle);
+  const showCrossProjectLabels = showSuggestions && !selectedProjectId;
 
-  const filteredTasks = useMemo(
-    () => filterTasksByTitleSearch(createTasks, titleDraft),
-    [createTasks, titleDraft],
-  );
   const showCreateRow =
     Boolean(trimmedTitle) && !taskTitleExactlyMatches(createTasks, trimmedTitle);
-  const hasExistingMatches = filteredTasks.length > 0;
+  const hasExistingMatches = createTasks.length > 0;
+  const showPickProjectHint =
+    projectNeedsChoice && quickAddFocused && trimmedTitle && !hasExistingMatches;
 
   useEffect(() => {
     if (hasExistingMatches) {
@@ -236,18 +242,18 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
       if (showSuggestions && hasExistingMatches) {
         if (event.key === "ArrowDown") {
           event.preventDefault();
-          setActiveIndex((current) => (current < filteredTasks.length - 1 ? current + 1 : 0));
+          setActiveIndex((current) => (current < createTasks.length - 1 ? current + 1 : 0));
           return;
         }
         if (event.key === "ArrowUp") {
           event.preventDefault();
-          setActiveIndex((current) => (current > 0 ? current - 1 : filteredTasks.length - 1));
+          setActiveIndex((current) => (current > 0 ? current - 1 : createTasks.length - 1));
           return;
         }
         if (event.key === "Enter") {
           event.preventDefault();
-          const index = activeIndex >= 0 && activeIndex < filteredTasks.length ? activeIndex : 0;
-          handlePickSuggestion(filteredTasks[index]!);
+          const index = activeIndex >= 0 && activeIndex < createTasks.length ? activeIndex : 0;
+          handlePickSuggestion(createTasks[index]!);
           return;
         }
         return;
@@ -260,7 +266,7 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
     },
     [
       activeIndex,
-      filteredTasks,
+      createTasks,
       handlePickSuggestion,
       handleSubmit,
       hasExistingMatches,
@@ -290,16 +296,18 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
             onActiveIndexChange={setActiveIndex}
             onPickTask={handlePickSuggestion}
             onCreateFromDraft={handleSubmit}
+            projects={projects}
+            showProjectLabels={showCrossProjectLabels}
           />
         ) : null}
 
         <div
           className={cn(
             "flex min-w-0 items-center gap-2 rounded-xl border bg-elevated px-2 py-1.5 transition-colors",
-            projectNeedsChoice && quickAddFocused
+            projectNeedsChoice && quickAddFocused && showPickProjectHint
               ? "border-warning/60 ring-1 ring-warning/20"
               : "border-default",
-            quickAddFocused && !projectNeedsChoice && "border-primary/40 ring-1 ring-primary/15",
+            quickAddFocused && !showPickProjectHint && "border-primary/40 ring-1 ring-primary/15",
             "motion-reduce:transition-none",
           )}
         >
@@ -366,7 +374,7 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
         <p className="mt-1.5 px-1 text-[11px] text-muted">Add joins the existing open task.</p>
       ) : null}
 
-      {projectNeedsChoice && quickAddFocused && trimmedTitle ? (
+      {showPickProjectHint ? (
         <p className="mt-1.5 px-1 text-[11px] font-medium text-warning">Pick a project.</p>
       ) : null}
 
