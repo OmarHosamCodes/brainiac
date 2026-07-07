@@ -3,7 +3,8 @@ import { describe, expect, it } from "bun:test";
 import type { AgencyProjectTask, AgencyTaskProject } from "@/lib/schemas/agency-work";
 import {
   buildAgencyTaskRailGroups,
-  countClientDisplayRows,
+  countProjectDisplayRows,
+  countRailDisplayRows,
   summarizeAgencyTaskRailGroups,
 } from "@/lib/utils/agency-task-rail-grouping";
 
@@ -39,7 +40,7 @@ const projects: AgencyTaskProject[] = [
 ];
 
 describe("buildAgencyTaskRailGroups", () => {
-  it("groups client → project → journey cluster + standalone tasks", () => {
+  it("groups project → journey cluster + standalone tasks", () => {
     const tasks = [
       task({ id: "anchor", projectId: "proj-1", title: "Launch", taskKind: "journey_anchor" }),
       task({
@@ -59,17 +60,15 @@ describe("buildAgencyTaskRailGroups", () => {
       expandOptions: { currentUserId: "u1", allTasks: tasks },
     });
 
-    expect(groups).toHaveLength(1);
-    expect(groups[0]?.clientName).toBe("Acme");
-    expect(groups[0]?.projectGroups).toHaveLength(2);
+    expect(groups).toHaveLength(2);
 
-    const website = groups[0]?.projectGroups.find((group) => group.projectId === "proj-1");
+    const website = groups.find((group) => group.projectId === "proj-1");
     expect(website?.journeyCluster?.anchorRow.task.id).toBe("anchor");
     expect(website?.journeyCluster?.milestoneRows).toHaveLength(1);
     expect(website?.standaloneRows).toHaveLength(1);
     expect(website?.standaloneRows[0]?.task.id).toBe("std-1");
 
-    const mobile = groups[0]?.projectGroups.find((group) => group.projectId === "proj-2");
+    const mobile = groups.find((group) => group.projectId === "proj-2");
     expect(mobile?.journeyCluster).toBeNull();
     expect(mobile?.standaloneRows).toHaveLength(1);
   });
@@ -92,7 +91,7 @@ describe("buildAgencyTaskRailGroups", () => {
       expandOptions: { currentUserId: "u1", allTasks: tasks },
     });
 
-    const website = groups[0]?.projectGroups[0];
+    const website = groups[0];
     expect(website?.journeyCluster).toBeNull();
     expect(website?.standaloneRows).toHaveLength(1);
     expect(website?.standaloneRows[0]?.rowKind).toBe("journey_milestone");
@@ -104,8 +103,55 @@ describe("buildAgencyTaskRailGroups", () => {
     ];
 
     const groups = buildAgencyTaskRailGroups({ tasks, projects: [projects[0]!] });
-    expect(groups[0]?.projectGroups).toHaveLength(1);
-    expect(groups[0]?.projectGroups[0]?.standaloneRows).toHaveLength(1);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.standaloneRows).toHaveLength(1);
+  });
+});
+
+describe("countRailDisplayRows", () => {
+  it("counts blueprint splits as separate visible rows", () => {
+    const tasks = [
+      task({
+        id: "std-1",
+        projectId: "proj-1",
+        title: "Account work",
+        taskKind: "standard",
+        viewerBlueprints: [
+          { id: "bp-1", description: "Email client" },
+          { id: "bp-2", description: "Update CRM" },
+        ],
+      }),
+      task({ id: "std-2", projectId: "proj-2", title: "Campaign QA", taskKind: "standard" }),
+    ];
+
+    const groups = buildAgencyTaskRailGroups({ tasks, projects });
+    expect(tasks).toHaveLength(2);
+    expect(countRailDisplayRows(groups)).toBe(3);
+  });
+
+  it("counts done rows from display groups, not completion totals", () => {
+    const tasks = [
+      task({
+        id: "done-1",
+        projectId: "proj-1",
+        title: "Weekly report",
+        taskKind: "standard",
+        status: "done",
+        viewerCompletionCount: 5,
+      }),
+      task({
+        id: "done-2",
+        projectId: "proj-1",
+        title: "Ship fix",
+        taskKind: "standard",
+        status: "done",
+        viewerCompletionCount: 7,
+      }),
+    ];
+
+    const groups = buildAgencyTaskRailGroups({ tasks, projects: [projects[0]!] });
+    expect(tasks.reduce((sum, entry) => sum + (entry.viewerCompletionCount ?? 0), 0)).toBe(12);
+    expect(countRailDisplayRows(groups)).toBe(2);
   });
 });
 
@@ -130,6 +176,6 @@ describe("summarizeAgencyTaskRailGroups", () => {
     });
 
     expect(summarizeAgencyTaskRailGroups(groups)).toEqual({ journeyCount: 1, taskCount: 1 });
-    expect(countClientDisplayRows(groups[0]!)).toBe(2);
+    expect(countProjectDisplayRows(groups[0]!)).toBe(2);
   });
 });

@@ -6,7 +6,7 @@ import {
   type ExpandTasksWithBlueprintsOptions,
 } from "@/lib/utils/agency-task-blueprints";
 import { type JourneyProgressSummary } from "@/lib/utils/agency-task-journey";
-import { groupTasksByClient, isTaskOverdue } from "@/lib/utils/agency-task-utils";
+import { isTaskOverdue } from "@/lib/utils/agency-task-utils";
 
 export type AgencyTaskJourneyCluster = {
   projectId: string;
@@ -126,25 +126,27 @@ export function countProjectDisplayRows(group: AgencyTaskProjectDisplayGroup): n
 }
 
 export function countClientDisplayRows(group: AgencyTaskClientDisplayGroup): number {
-  return group.projectGroups.reduce(
+  return countRailDisplayRows(group.projectGroups);
+}
+
+export function countRailDisplayRows(projectGroups: AgencyTaskProjectDisplayGroup[]): number {
+  return projectGroups.reduce(
     (sum, projectGroup) => sum + countProjectDisplayRows(projectGroup),
     0,
   );
 }
 
 export function summarizeAgencyTaskRailGroups(
-  clientGroups: AgencyTaskClientDisplayGroup[],
+  projectGroups: AgencyTaskProjectDisplayGroup[],
 ): AgencyTaskRailSummaryCounts {
   let journeyCount = 0;
   let taskCount = 0;
 
-  for (const clientGroup of clientGroups) {
-    for (const projectGroup of clientGroup.projectGroups) {
-      if (projectGroup.journeyCluster) {
-        journeyCount += 1;
-      }
-      taskCount += projectGroup.standaloneRows.length;
+  for (const projectGroup of projectGroups) {
+    if (projectGroup.journeyCluster) {
+      journeyCount += 1;
     }
+    taskCount += projectGroup.standaloneRows.length;
   }
 
   return { journeyCount, taskCount };
@@ -155,15 +157,9 @@ export function buildAgencyTaskRailGroups({
   projects,
   blueprints = collectTaskBlueprintsFromTasks(tasks),
   expandOptions = {},
-}: BuildAgencyTaskRailGroupsInput): AgencyTaskClientDisplayGroup[] {
-  return groupTasksByClient(tasks, projects).map((clientGroup) => {
-    const displayRows = expandTasksWithBlueprints(clientGroup.tasks, blueprints, expandOptions);
-    return {
-      clientId: clientGroup.clientId,
-      clientName: clientGroup.clientName,
-      projectGroups: buildProjectGroupsForClient(displayRows, projects),
-    };
-  });
+}: BuildAgencyTaskRailGroupsInput): AgencyTaskProjectDisplayGroup[] {
+  const displayRows = expandTasksWithBlueprints(tasks, blueprints, expandOptions);
+  return buildProjectGroupsForClient(displayRows, projects);
 }
 
 export type EstimateProjectGroupHeightInput = {
