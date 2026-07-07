@@ -227,7 +227,7 @@ export function AgencyDashboardSurface({ teamId, filters }: AgencyDashboardSurfa
   }
 
   return (
-    <div className="pb-6">
+    <div className="space-y-6 pb-6">
       {summary && summary.totalEntries > 0 ? (
         <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2 border-b border-default pb-3 text-xs">
           <div>
@@ -266,7 +266,7 @@ export function AgencyDashboardSurface({ teamId, filters }: AgencyDashboardSurfa
           </p>
         </div>
       ) : (
-        <>
+        <div className="space-y-6">
           <section className="grid gap-4 [content-visibility:auto] lg:grid-cols-[22rem_minmax(0,1fr)]">
             <div className={cn(agencyPanelClass, "p-4")}>
               <p className={agencyLabelClass}>Project share</p>
@@ -430,7 +430,7 @@ export function AgencyDashboardSurface({ teamId, filters }: AgencyDashboardSurfa
               </table>
             </div>
           </section>
-        </>
+        </div>
       )}
     </div>
   );
