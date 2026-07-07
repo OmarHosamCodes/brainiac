@@ -78,7 +78,7 @@ export function AgencyProjectsVirtualTable({
               className="absolute top-0 left-0 grid w-full cursor-pointer grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-default text-xs transition-colors hover:bg-elevated/40"
               style={{
                 height: `${virtualRow.size}px`,
-                transform: `translateY(${virtualRow.start}px)`,
+                transform: `translateY(${virtualRow.start - scrollMargin}px)`,
               }}
               role="row"
               tabIndex={0}
