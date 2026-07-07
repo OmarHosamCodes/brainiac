@@ -86,10 +86,10 @@ export const agencyEmptyPanelClass = shellEmptyPanelClass;
 export const agencyTaskRailClass =
   "flex h-full flex-col overflow-hidden rounded-xl border border-default bg-elevated";
 
-/** Collapsed rail: centered controls over a flat completion fill. */
+/** Collapsed rail: top-aligned progress ring and summary. */
 export const agencyTaskRailCollapsedClass = cn(
   agencyTaskRailClass,
-  "relative items-center justify-center gap-2 px-2 py-2",
+  "relative items-center justify-start gap-2 px-2 pt-2.5 pb-2",
 );
 
 export const agencyTaskRailExpandedWidthClass = "lg:w-[26rem] lg:max-w-[26rem]";
@@ -112,21 +112,26 @@ export const agencyTaskRailSummaryDividerClass = "h-3 w-px shrink-0 bg-default";
 
 /** Virtual-list height estimates — keep in sync with header padding/typography below. */
 export const AGENCY_TASK_CLIENT_GROUP_HEADER_HEIGHT = 44;
-export const AGENCY_TASK_PROJECT_GROUP_HEADER_HEIGHT = 36;
+export const AGENCY_TASK_PROJECT_GROUP_HEADER_HEIGHT = 38;
 
 export const agencyTaskClientGroupHeaderClass = cn(
   "flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm",
   "transition-colors hover:bg-default/50",
 );
 
+/** Muted band headers — time log day groups, task rail project groups, etc. */
+export const agencyMutedSectionHeaderClass = cn(
+  "flex items-center justify-between border-y border-default bg-muted/55 px-4 py-2 text-xs",
+);
+
 export const agencyTaskProjectGroupHeaderClass = cn(
-  "flex w-full items-center justify-between gap-2 px-3 py-2 pl-4 text-left text-xs",
-  "transition-colors hover:bg-default/40",
+  agencyMutedSectionHeaderClass,
+  "w-full shrink-0 gap-2 text-left transition-colors hover:bg-muted/75",
 );
 
 export const agencyTaskRowContentClass = "relative flex gap-1.5 px-3 py-2.5";
 
-export const agencyTaskRowNestedContentClass = "relative flex gap-1.5 px-3 py-1.5 pl-7";
+export const agencyTaskRowNestedContentClass = "relative flex gap-1.5 px-3 py-1.5";
 
 export const agencyTaskRowProjectPillClass = cn(
   "inline-flex max-w-[8rem] shrink-0 items-center rounded-full border border-default bg-elevated px-1.5 py-0.5",
@@ -169,9 +174,7 @@ export const agencyTimeLogPanelClass =
 
 export const agencyTimeTrackerBarClass = cn("shrink-0 px-4 py-2.5");
 
-export const agencyTimeDayHeaderClass = cn(
-  "flex shrink-0 items-center justify-between border-y border-default bg-muted/55 px-4 py-2 text-xs",
-);
+export const agencyTimeDayHeaderClass = cn(agencyMutedSectionHeaderClass, "shrink-0");
 
 export const agencyTimeWeekHeaderClass = cn(
   "flex shrink-0 items-center justify-between px-4 py-2.5 text-xs",
