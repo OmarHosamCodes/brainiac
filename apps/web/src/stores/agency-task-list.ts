@@ -2,7 +2,7 @@ import { create } from "zustand";
 
 export const UNASSIGNED_ASSIGNEE_VALUE = "__unassigned__";
 
-export type AgencyTaskRailStatusFilter = "active" | "done";
+export type AgencyTaskRailStatusFilter = "active" | "done" | "assigned" | "new";
 
 type AgencyTaskListState = {
   quickAddFocused: boolean;

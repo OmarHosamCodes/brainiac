@@ -51,6 +51,23 @@ export function shouldShowJourneyAnchor(
   );
 }
 
+/** Anchor row when the viewer has no milestone on the project (discovery rail). */
+export function shouldShowJourneyAnchorForDiscovery(
+  task: AgencyProjectTask,
+  allTasks: AgencyProjectTask[],
+  userId: string,
+): boolean {
+  if (!isJourneyAnchorTask(task)) return true;
+  if (!userId) return false;
+
+  return !allTasks.some(
+    (candidate) =>
+      candidate.projectId === task.projectId &&
+      isJourneyMilestoneTask(candidate) &&
+      candidate.assignees.some((assignee) => assignee.userId === userId),
+  );
+}
+
 export function collectMilestoneAssigneesForProject(
   tasks: AgencyProjectTask[],
   projectId: string,

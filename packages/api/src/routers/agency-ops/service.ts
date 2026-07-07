@@ -35,6 +35,7 @@ import {
   gte,
   inArray,
   isNull,
+  isNotNull,
   lt,
   lte,
   or,
@@ -124,6 +125,7 @@ type AgencyProjectTaskRecord = {
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   isWaste: boolean;
+  createdByUserId: string;
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
   viewerCompletionCount?: number;
@@ -534,6 +536,7 @@ function mapProjectTaskRow(row: {
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   isWaste: boolean;
+  createdByUserId: string;
   assignees: AgencyProjectTaskAssigneeRecord[];
   viewerStatus?: "open" | "in_progress" | "done";
   viewerCompletionCount?: number;
@@ -551,6 +554,7 @@ function mapProjectTaskRow(row: {
     taskKind: row.taskKind,
     assignedToTeam: row.assignedToTeam,
     isWaste: row.isWaste,
+    createdByUserId: row.createdByUserId,
     assignees: row.assignees,
     ...(row.viewerStatus !== undefined ? { viewerStatus: row.viewerStatus } : {}),
     ...(row.viewerCompletionCount !== undefined
@@ -770,6 +774,7 @@ async function buildProjectTaskRecord(
     taskKind: "standard" | "journey_anchor" | "journey_milestone";
     assignedToTeam: boolean;
     isWaste: boolean;
+    createdByUserId: string;
     dueDate: Date | null;
     createdAt: Date;
     updatedAt: Date;
@@ -869,6 +874,7 @@ const projectTaskColumns = {
   taskKind: agencyOpsProjectTask.taskKind,
   assignedToTeam: agencyOpsProjectTask.assignedToTeam,
   isWaste: agencyOpsProjectTask.isWaste,
+  createdByUserId: agencyOpsProjectTask.createdByUserId,
   dueDate: agencyOpsProjectTask.dueDate,
   createdAt: agencyOpsProjectTask.createdAt,
   updatedAt: agencyOpsProjectTask.updatedAt,
@@ -883,6 +889,7 @@ type ProjectTaskRow = {
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   isWaste: boolean;
+  createdByUserId: string;
   dueDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -1159,14 +1166,24 @@ async function getReportRows(
   };
 }
 
+export type AgencyClientArchiveFilter = "all" | "archived" | "nonarchived";
+
 export async function listAgencyClients(
   actorUserId: string,
-  input: { teamId: string; includeArchived?: boolean },
+  input: {
+    teamId: string;
+    includeArchived?: boolean;
+    archiveFilter?: AgencyClientArchiveFilter;
+  },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
+  const archiveFilter = input.archiveFilter ?? (input.includeArchived ? "all" : "nonarchived");
+
   const filters = [eq(agencyOpsClient.teamId, input.teamId)];
-  if (!input.includeArchived) {
+  if (archiveFilter === "archived") {
+    filters.push(isNotNull(agencyOpsClient.archivedAt));
+  } else if (archiveFilter === "nonarchived") {
     filters.push(isNull(agencyOpsClient.archivedAt));
   }
 
@@ -1276,9 +1293,18 @@ export async function listAgencyProjects(
   input: {
     teamId: string;
     clientId?: string;
+    archiveFilter?: AgencyClientArchiveFilter;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const archiveFilter = input.archiveFilter ?? "nonarchived";
+  const clientArchiveFilters = [];
+  if (archiveFilter === "archived") {
+    clientArchiveFilters.push(isNotNull(agencyOpsClient.archivedAt));
+  } else if (archiveFilter === "nonarchived") {
+    clientArchiveFilters.push(isNull(agencyOpsClient.archivedAt));
+  }
 
   const rows = await db
     .select({
@@ -1295,7 +1321,7 @@ export async function listAgencyProjects(
     .where(
       and(
         eq(agencyOpsProject.teamId, input.teamId),
-        isNull(agencyOpsClient.archivedAt),
+        ...clientArchiveFilters,
         input.clientId ? eq(agencyOpsProject.clientId, input.clientId) : undefined,
       ),
     )
@@ -2274,6 +2300,8 @@ export async function listAgencyProjectTasks(
     status?: "open" | "in_progress" | "done" | "archived";
     statuses?: ("open" | "in_progress" | "done" | "archived")[];
     assigneeUserId?: string;
+    delegatedByUserId?: string;
+    journeyDiscoveryForUserId?: string;
     search?: string;
     page?: number;
     pageSize?: number;
@@ -2358,6 +2386,38 @@ export async function listAgencyProjectTasks(
       );
     filters.push(or(eq(agencyOpsProjectTask.assignedToTeam, true), exists(assigneeSubquery))!);
   }
+
+  if (input.delegatedByUserId) {
+    filters.push(eq(agencyOpsProjectTask.createdByUserId, input.delegatedByUserId));
+    const otherAssigneeSubquery = db
+      .select({ one: sql`1` })
+      .from(agencyOpsProjectTaskAssignee)
+      .where(
+        and(
+          eq(agencyOpsProjectTaskAssignee.taskId, agencyOpsProjectTask.id),
+          sql`${agencyOpsProjectTaskAssignee.userId} <> ${input.delegatedByUserId}`,
+        ),
+      );
+    filters.push(or(eq(agencyOpsProjectTask.assignedToTeam, true), exists(otherAssigneeSubquery))!);
+  }
+
+  if (input.journeyDiscoveryForUserId) {
+    filters.push(inArray(agencyOpsProjectTask.taskKind, ["journey_anchor", "journey_milestone"]));
+    // ponytail: correlated subquery on projectId; fine at team journey scale.
+    filters.push(
+      sql`not exists (
+        select 1
+        from ${agencyOpsProjectTask} milestone_task
+        inner join ${agencyOpsProjectTaskAssignee} milestone_assignee
+          on milestone_assignee.task_id = milestone_task.id
+        where milestone_task.team_id = ${input.teamId}
+          and milestone_task.project_id = ${agencyOpsProjectTask.projectId}
+          and milestone_task.task_kind = 'journey_milestone'
+          and milestone_assignee.user_id = ${input.journeyDiscoveryForUserId}
+      )`,
+    );
+  }
+
   if (searchTerm) {
     filters.push(sql`lower(${agencyOpsProjectTask.title}) like ${`%${searchTerm}%`}`);
   }

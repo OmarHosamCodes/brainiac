@@ -118,6 +118,7 @@ const agencyProjectTaskSchema = z.object({
   taskKind: z.enum(["standard", "journey_anchor", "journey_milestone"]),
   assignedToTeam: z.boolean(),
   isWaste: z.boolean(),
+  createdByUserId: z.string().min(1),
   assignees: z.array(
     z.object({
       userId: z.string().min(1),
@@ -458,6 +459,7 @@ export const agencyOpsRouter = {
       .input(
         teamScopedInputSchema.extend({
           includeArchived: z.boolean().optional(),
+          archiveFilter: z.enum(["all", "archived", "nonarchived"]).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -518,6 +520,7 @@ export const agencyOpsRouter = {
       .input(
         teamScopedInputSchema.extend({
           clientId: z.string().min(1).optional(),
+          archiveFilter: z.enum(["all", "archived", "nonarchived"]).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -658,6 +661,8 @@ export const agencyOpsRouter = {
           status: z.enum(["open", "in_progress", "done", "archived"]).optional(),
           statuses: z.array(z.enum(["open", "in_progress", "done", "archived"])).optional(),
           assigneeUserId: z.string().min(1).optional(),
+          delegatedByUserId: z.string().min(1).optional(),
+          journeyDiscoveryForUserId: z.string().min(1).optional(),
           search: z.string().optional(),
           page: z.number().int().min(1).optional(),
           pageSize: z.number().int().min(1).max(100).optional(),

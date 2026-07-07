@@ -74,13 +74,72 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
   const [deleteTarget, setDeleteTarget] = useState<AgencyProjectTask | null>(null);
 
   const deleting = deleteTarget !== null && deletingTaskIds.includes(deleteTarget.id);
-  const showingDone = view.railStatusFilter === "done";
-  const displayedGroups = showingDone ? view.doneClientGroups : view.clientGroups;
-  const listLoading = showingDone ? view.doneTasksLoading : view.isLoading;
-  const listQueryError = showingDone ? view.doneTasksQueryError : view.activeTasksQueryError;
-  const listErrorMessage = showingDone ? view.doneTasksErrorMessage : view.activeTasksErrorMessage;
-  const onRetryList = showingDone ? view.onRetryDoneTasks : view.onRetryActiveTasks;
+
+  const railFilter = view.railStatusFilter;
+  const displayedGroups =
+    railFilter === "done"
+      ? view.doneClientGroups
+      : railFilter === "assigned"
+        ? view.assignedClientGroups
+        : railFilter === "new"
+          ? view.newClientGroups
+          : view.clientGroups;
+
+  const listLoading =
+    railFilter === "done"
+      ? view.doneTasksLoading
+      : railFilter === "assigned"
+        ? view.assignedTasksLoading
+        : railFilter === "new"
+          ? view.newJourneysLoading
+          : view.isLoading;
+
+  const listQueryError =
+    railFilter === "done"
+      ? view.doneTasksQueryError
+      : railFilter === "assigned"
+        ? view.assignedTasksQueryError
+        : railFilter === "new"
+          ? view.newJourneysQueryError
+          : view.activeTasksQueryError;
+
+  const listErrorMessage =
+    railFilter === "done"
+      ? view.doneTasksErrorMessage
+      : railFilter === "assigned"
+        ? view.assignedTasksErrorMessage
+        : railFilter === "new"
+          ? view.newJourneysErrorMessage
+          : view.activeTasksErrorMessage;
+
+  const onRetryList =
+    railFilter === "done"
+      ? view.onRetryDoneTasks
+      : railFilter === "assigned"
+        ? view.onRetryAssignedTasks
+        : railFilter === "new"
+          ? view.onRetryNewJourneys
+          : view.onRetryActiveTasks;
+
   const listEmpty = displayedGroups.length === 0;
+  const readOnly = railFilter === "done" || railFilter === "assigned" || railFilter === "new";
+  const listAriaLabel =
+    railFilter === "done"
+      ? "Done tasks"
+      : railFilter === "assigned"
+        ? "Assigned tasks"
+        : railFilter === "new"
+          ? "New team journeys"
+          : "My tasks";
+
+  const emptyMessage =
+    railFilter === "done"
+      ? "Nothing completed yet."
+      : railFilter === "assigned"
+        ? "Nothing delegated yet."
+        : railFilter === "new"
+          ? "No new team journeys."
+          : "No tasks assigned to you.";
 
   async function confirmDelete() {
     if (!deleteTarget) return;
@@ -125,6 +184,8 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
             railStatusFilter={view.railStatusFilter}
             activeCount={view.activeCount}
             doneCount={view.doneCount}
+            assignedCount={view.assignedCount}
+            newCount={view.newCount}
             onRailStatusFilterChange={view.onRailStatusFilterChange}
           />
         </div>
@@ -155,14 +216,12 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
         ) : listEmpty ? (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 py-6 text-center">
             <ListChecks className="size-6 text-muted" aria-hidden />
-            <p className="mt-3 text-xs text-muted">
-              {showingDone ? "Nothing completed yet." : "No tasks assigned to you."}
-            </p>
-            {!showingDone ? (
+            <p className="mt-3 text-xs text-muted">{emptyMessage}</p>
+            {railFilter === "active" ? (
               <p className="mt-1 text-xs text-muted">Type below to add one.</p>
             ) : null}
           </div>
-        ) : showingDone ? (
+        ) : readOnly ? (
           <AgencyTaskGroupsList
             clientGroups={displayedGroups}
             allTasks={view.allListedTasks}
@@ -172,7 +231,9 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
             teamId={view.teamId}
             selectedTaskId={view.selectedTaskId}
             highlightBlueprintId={view.recentlyCreatedBlueprintId}
-            highlightTaskId={view.recentlyCompletedTaskId}
+            highlightTaskId={
+              railFilter === "done" ? view.recentlyCompletedTaskId : view.recentlyCreatedTaskId
+            }
             isRowPending={(taskId) => view.isRowPending(taskId) || deletingTaskIds.includes(taskId)}
             onClientExpandedChange={view.onClientExpandedChange}
             onProjectExpandedChange={view.onProjectExpandedChange}
@@ -180,8 +241,8 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
             onSelectProject={view.onSelectProject}
             onStatusChange={view.onStatusChange}
             readOnly
-            onReopenToActive={view.onReopenDoneTask}
-            listAriaLabel="Done tasks"
+            onReopenToActive={railFilter === "done" ? view.onReopenDoneTask : undefined}
+            listAriaLabel={listAriaLabel}
           />
         ) : (
           <AgencyTaskVirtualList
@@ -207,7 +268,7 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
             onBlueprintDescriptionChange={view.onBlueprintDescriptionChange}
             onTrackerDescriptionChange={view.onTrackerDescriptionChange}
             onAssociateTrackerForDescription={view.onAssociateTrackerForDescription}
-            listAriaLabel="My tasks"
+            listAriaLabel={listAriaLabel}
           />
         )}
 

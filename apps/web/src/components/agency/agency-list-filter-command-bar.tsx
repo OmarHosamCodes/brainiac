@@ -1,6 +1,7 @@
 import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { AgencyClientArchiveFilter as AgencyClientArchiveFilterPills } from "@/components/agency/agency-client-archive-filter";
 import {
   AgencyCommandBarActions,
   AgencyCommandBarResetButton,
@@ -12,12 +13,16 @@ import {
 } from "@/components/agency/agency-multi-select-filter";
 import { Input } from "@/components/ui/input";
 import { agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
+import type { AgencyClientArchiveFilter } from "@/lib/agency/agency-client-archive-filter";
 import { cn } from "@/lib/utils";
 
 type AgencyListFilterCommandBarProps = {
   searchPlaceholder: string;
   filterTerm: string;
   onFilterTermChange: (value: string) => void;
+  archiveFilter?: AgencyClientArchiveFilter;
+  onArchiveFilterChange?: (filter: AgencyClientArchiveFilter) => void;
+  showArchiveFilter?: boolean;
   selectedPeopleIds: string[];
   onSelectedPeopleIdsChange: (values: string[]) => void;
   selectedClientIds: string[];
@@ -43,6 +48,9 @@ export function AgencyListFilterCommandBar({
   searchPlaceholder,
   filterTerm,
   onFilterTermChange,
+  archiveFilter = "nonarchived",
+  onArchiveFilterChange,
+  showArchiveFilter = false,
   selectedPeopleIds,
   onSelectedPeopleIdsChange,
   selectedClientIds,
@@ -78,6 +86,13 @@ export function AgencyListFilterCommandBar({
           )}
         />
       </div>
+
+      {showArchiveFilter && onArchiveFilterChange ? (
+        <AgencyClientArchiveFilterPills
+          archiveFilter={archiveFilter}
+          onArchiveFilterChange={onArchiveFilterChange}
+        />
+      ) : null}
 
       <AgencyMultiSelectFilter
         label="All People"

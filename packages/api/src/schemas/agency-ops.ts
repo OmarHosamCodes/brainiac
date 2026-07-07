@@ -96,6 +96,7 @@ export const agencyProjectTaskSchema = z.object({
   taskKind: agencyProjectTaskKindSchema,
   assignedToTeam: z.boolean(),
   isWaste: z.boolean(),
+  createdByUserId: z.string().min(1),
   assignees: z.array(agencyProjectTaskAssigneeSchema),
   viewerStatus: agencyProjectTaskMemberStatusSchema.optional(),
   viewerCompletionCount: z.number().int().nonnegative().optional(),

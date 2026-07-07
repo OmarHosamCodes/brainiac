@@ -17,6 +17,8 @@ type AgencyProjectTask = {
   status: "open" | "in_progress" | "done" | "archived";
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
+  isWaste: boolean;
+  createdByUserId: string;
   assignees: Array<{
     userId: string;
     userName: string;
@@ -46,13 +48,6 @@ type AgencyProjectTasksInfiniteQueryData = {
 type AgencyProjectTasksCacheData =
   | AgencyProjectTasksListQueryData
   | AgencyProjectTasksInfiniteQueryData;
-
-type ProjectTasksListInput = {
-  teamId: string;
-  projectId?: string;
-  assigneeUserId?: string;
-  statuses?: AgencyProjectTask["status"][];
-};
 
 function isListQueryData(data: unknown): data is AgencyProjectTasksListQueryData {
   return (
@@ -163,6 +158,8 @@ export function isAgencyTimeEntriesListQueryKey(queryKey: QueryKey, teamId: stri
   return getOrpcQueryMeta(queryKey)?.input?.teamId === teamId;
 }
 
+import { isJourneyMilestoneTask } from "@/lib/utils/agency-task-journey";
+
 export function taskVisibleToAssignee(
   task: Pick<AgencyProjectTask, "assignedToTeam" | "assignees">,
   assigneeUserId: string,
@@ -229,6 +226,25 @@ export function taskMatchesQueryInput(
   ) {
     return false;
   }
+
+  if (typeof input.delegatedByUserId === "string") {
+    if (task.createdByUserId !== input.delegatedByUserId) return false;
+    if (task.assignedToTeam) return true;
+    return task.assignees.some((assignee) => assignee.userId !== input.delegatedByUserId);
+  }
+
+  if (typeof input.journeyDiscoveryForUserId === "string") {
+    if (task.taskKind !== "journey_anchor" && task.taskKind !== "journey_milestone") {
+      return false;
+    }
+    if (
+      isJourneyMilestoneTask(task) &&
+      task.assignees.some((assignee) => assignee.userId === input.journeyDiscoveryForUserId)
+    ) {
+      return false;
+    }
+  }
+
   return true;
 }
 

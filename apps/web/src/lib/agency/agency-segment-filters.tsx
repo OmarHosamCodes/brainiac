@@ -250,6 +250,7 @@ function ClientsFiltersRoot({
             ) : (
               <AgencyListFilterCommandBar
                 {...listFilters.barProps}
+                showArchiveFilter
                 searchPlaceholder="Filter clients"
                 trailingActions={
                   <Popover open={newClientOpen} onOpenChange={setNewClientOpen}>
@@ -330,6 +331,7 @@ function ProjectsFiltersRoot({
             ) : (
               <AgencyListFilterCommandBar
                 {...listFilters.barProps}
+                showArchiveFilter
                 searchPlaceholder="Search projects"
                 trailingActions={
                   <Button

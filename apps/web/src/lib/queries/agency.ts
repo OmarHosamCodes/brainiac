@@ -19,6 +19,7 @@ import {
   useMergedAgencyTimeEntriesQuery,
 } from "@/lib/queries/agency-optimistic";
 import { getQueryClient } from "@/lib/query-client";
+import type { AgencyClientArchiveFilter } from "@/lib/agency/agency-client-archive-filter";
 import { orpc, orpcClient } from "@/lib/orpc";
 import {
   adjustPaginatedTotal,
@@ -42,6 +43,8 @@ export type AgencyProjectTaskStatus = "open" | "in_progress" | "done" | "archive
 export type AgencyProjectTasksFilters = {
   projectId?: string;
   assigneeUserId?: string;
+  delegatedByUserId?: string;
+  journeyDiscoveryForUserId?: string;
   statuses?: AgencyProjectTaskStatus[];
   search?: string;
   page?: number;
@@ -146,16 +149,21 @@ export async function invalidateAgencyTeamQueries(teamId: string) {
   });
 }
 
-export function useAgencyProjectsQuery(teamId: string, clientId?: string) {
+export function useAgencyProjectsQuery(
+  teamId: string,
+  options: { clientId?: string; archiveFilter?: AgencyClientArchiveFilter } = {},
+) {
+  const archiveFilter = options.archiveFilter ?? "nonarchived";
   const registerProjectsQuery = useAgencyOpsStore((s) => s.registerProjectsQuery);
   const unregisterProjectsQuery = useAgencyOpsStore((s) => s.unregisterProjectsQuery);
 
   const input = useMemo(
     () => ({
       teamId,
-      ...(clientId ? { clientId } : {}),
+      archiveFilter,
+      ...(options.clientId ? { clientId: options.clientId } : {}),
     }),
-    [teamId, clientId],
+    [teamId, archiveFilter, options.clientId],
   );
 
   const queryKey = orpc.agencyOps.projects.list.queryOptions({ input }).queryKey;
@@ -174,23 +182,29 @@ export function useAgencyProjectsQuery(teamId: string, clientId?: string) {
 
   useEffect(() => {
     if (!teamId) return;
-    registerProjectsQuery({ queryKey, teamId, clientId });
+    registerProjectsQuery({ queryKey, teamId, clientId: options.clientId });
     return () => unregisterProjectsQuery(queryKey);
-  }, [teamId, clientId, queryKey, registerProjectsQuery, unregisterProjectsQuery]);
+  }, [teamId, queryKey, options.clientId, registerProjectsQuery, unregisterProjectsQuery]);
 
-  return useMergedAgencyProjectsQuery(query, teamId, clientId);
+  return useMergedAgencyProjectsQuery(query, teamId, options.clientId);
 }
 
-export function useAgencyClientsQuery(teamId: string) {
+export function useAgencyClientsQuery(
+  teamId: string,
+  options: { archiveFilter?: AgencyClientArchiveFilter } = {},
+) {
+  const archiveFilter = options.archiveFilter ?? "nonarchived";
   const registerClientsQuery = useAgencyOpsStore((s) => s.registerClientsQuery);
   const unregisterClientsQuery = useAgencyOpsStore((s) => s.unregisterClientsQuery);
 
-  const queryKey = orpc.agencyOps.clients.list.queryOptions({ input: { teamId } }).queryKey;
+  const input = useMemo(() => ({ teamId, archiveFilter }), [teamId, archiveFilter]);
+
+  const queryKey = orpc.agencyOps.clients.list.queryOptions({ input }).queryKey;
 
   const query = useQuery(
     withAgencySyncQueryOptions(
       {
-        ...orpc.agencyOps.clients.list.queryOptions({ input: { teamId } }),
+        ...orpc.agencyOps.clients.list.queryOptions({ input }),
         enabled: Boolean(teamId),
         placeholderData: keepPreviousData,
       },
@@ -373,6 +387,8 @@ export function useAgencyProjectTasksQuery(
     () => ({
       projectId: filters.projectId,
       assigneeUserId: filters.assigneeUserId,
+      delegatedByUserId: filters.delegatedByUserId,
+      journeyDiscoveryForUserId: filters.journeyDiscoveryForUserId,
       statuses: filters.statuses,
       search: filters.search,
       page: filters.page,
@@ -381,6 +397,8 @@ export function useAgencyProjectTasksQuery(
     [
       filters.projectId,
       filters.assigneeUserId,
+      filters.delegatedByUserId,
+      filters.journeyDiscoveryForUserId,
       statusesKey,
       filters.statuses,
       filters.search,
@@ -394,6 +412,12 @@ export function useAgencyProjectTasksQuery(
       teamId,
       ...(stableFilters.projectId ? { projectId: stableFilters.projectId } : {}),
       ...(stableFilters.assigneeUserId ? { assigneeUserId: stableFilters.assigneeUserId } : {}),
+      ...(stableFilters.delegatedByUserId
+        ? { delegatedByUserId: stableFilters.delegatedByUserId }
+        : {}),
+      ...(stableFilters.journeyDiscoveryForUserId
+        ? { journeyDiscoveryForUserId: stableFilters.journeyDiscoveryForUserId }
+        : {}),
       ...(stableFilters.statuses ? { statuses: stableFilters.statuses } : {}),
       ...(stableFilters.search ? { search: stableFilters.search } : {}),
       ...(stableFilters.page ? { page: stableFilters.page } : {}),
@@ -411,6 +435,9 @@ export function useAgencyProjectTasksQuery(
     Boolean(teamId) &&
     (stableFilters.projectId === undefined || Boolean(stableFilters.projectId)) &&
     (stableFilters.assigneeUserId === undefined || Boolean(stableFilters.assigneeUserId)) &&
+    (stableFilters.delegatedByUserId === undefined || Boolean(stableFilters.delegatedByUserId)) &&
+    (stableFilters.journeyDiscoveryForUserId === undefined ||
+      Boolean(stableFilters.journeyDiscoveryForUserId)) &&
     (filters.enabled === undefined || filters.enabled);
 
   const query = useQuery(
@@ -462,6 +489,10 @@ export function useAgencyProjectTasksInfiniteQuery(
       pageSize,
       ...(filters.projectId ? { projectId: filters.projectId } : {}),
       ...(filters.assigneeUserId ? { assigneeUserId: filters.assigneeUserId } : {}),
+      ...(filters.delegatedByUserId ? { delegatedByUserId: filters.delegatedByUserId } : {}),
+      ...(filters.journeyDiscoveryForUserId
+        ? { journeyDiscoveryForUserId: filters.journeyDiscoveryForUserId }
+        : {}),
       ...(filters.statuses ? { statuses: filters.statuses } : {}),
       ...(filters.search ? { search: filters.search } : {}),
     }),
@@ -470,6 +501,8 @@ export function useAgencyProjectTasksInfiniteQuery(
       pageSize,
       filters.projectId,
       filters.assigneeUserId,
+      filters.delegatedByUserId,
+      filters.journeyDiscoveryForUserId,
       statusesKey,
       filters.statuses,
       filters.search,
@@ -479,7 +512,9 @@ export function useAgencyProjectTasksInfiniteQuery(
   const queryEnabled =
     Boolean(teamId) &&
     (filters.projectId === undefined || Boolean(filters.projectId)) &&
-    (filters.assigneeUserId === undefined || Boolean(filters.assigneeUserId));
+    (filters.assigneeUserId === undefined || Boolean(filters.assigneeUserId)) &&
+    (filters.delegatedByUserId === undefined || Boolean(filters.delegatedByUserId)) &&
+    (filters.journeyDiscoveryForUserId === undefined || Boolean(filters.journeyDiscoveryForUserId));
 
   const queryKey = useMemo(
     () =>
@@ -541,9 +576,18 @@ export function useAgencyProjectTasksInfiniteQuery(
       taskMatchesAgencyFilters(task, {
         projectId: filters.projectId,
         assigneeUserId: filters.assigneeUserId,
+        delegatedByUserId: filters.delegatedByUserId,
+        journeyDiscoveryForUserId: filters.journeyDiscoveryForUserId,
         statuses: filters.statuses,
       }),
-    [filters.projectId, filters.assigneeUserId, filters.statuses, statusesKey],
+    [
+      filters.projectId,
+      filters.assigneeUserId,
+      filters.delegatedByUserId,
+      filters.journeyDiscoveryForUserId,
+      filters.statuses,
+      statusesKey,
+    ],
   );
 
   const serverItems = useMemo(

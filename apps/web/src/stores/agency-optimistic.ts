@@ -34,6 +34,7 @@ export type AgencyOptimisticTask = {
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   isWaste: boolean;
+  createdByUserId: string;
   assignees: Array<{
     userId: string;
     userName: string;
@@ -764,12 +765,16 @@ export function taskMatchesAgencyFilters(
   filters: {
     projectId?: string;
     assigneeUserId?: string;
+    delegatedByUserId?: string;
+    journeyDiscoveryForUserId?: string;
     statuses?: AgencyOptimisticTask["status"][];
   },
 ) {
   return taskMatchesQueryInput(task, {
     projectId: filters.projectId,
     assigneeUserId: filters.assigneeUserId,
+    delegatedByUserId: filters.delegatedByUserId,
+    journeyDiscoveryForUserId: filters.journeyDiscoveryForUserId,
     statuses: filters.statuses,
   });
 }

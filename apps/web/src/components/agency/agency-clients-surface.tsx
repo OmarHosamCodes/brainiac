@@ -62,7 +62,7 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
   const [contactPhone, setContactPhone] = useState("");
   const [contactDirty, setContactDirty] = useState(false);
 
-  const clientsQuery = useAgencyClientsQuery(teamId);
+  const clientsQuery = useAgencyClientsQuery(teamId, { archiveFilter: filters.archiveFilter });
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
   const tasksQuery = useAgencyProjectTasksQuery(teamId, {

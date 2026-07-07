@@ -109,6 +109,8 @@ export type AgencyTaskListViewModel =
       onRailStatusFilterChange: (filter: AgencyTaskRailStatusFilter) => void;
       activeCount: number | null;
       doneCount: number | null;
+      assignedCount: number | null;
+      newCount: number | null;
       totalCount: number | null;
       journeyCount: number;
       standaloneTaskCount: number;
@@ -119,6 +121,8 @@ export type AgencyTaskListViewModel =
       onRetryActiveTasks: () => void;
       clientGroups: AgencyTaskClientDisplayGroup[];
       doneClientGroups: AgencyTaskClientDisplayGroup[];
+      assignedClientGroups: AgencyTaskClientDisplayGroup[];
+      newClientGroups: AgencyTaskClientDisplayGroup[];
       allListedTasks: AgencyProjectTask[];
       collapsedProjects: Set<string>;
       collapsedClients: Set<string>;
@@ -132,6 +136,20 @@ export type AgencyTaskListViewModel =
       doneTasksQueryError: boolean;
       doneTasksErrorMessage: string;
       onRetryDoneTasks: () => void;
+      assignedTasksLoading: boolean;
+      assignedTasksQueryError: boolean;
+      assignedTasksErrorMessage: string;
+      onRetryAssignedTasks: () => void;
+      hasMoreAssignedTasks: boolean;
+      isFetchingMoreAssignedTasks: boolean;
+      onFetchMoreAssignedTasks: () => void;
+      newJourneysLoading: boolean;
+      newJourneysQueryError: boolean;
+      newJourneysErrorMessage: string;
+      onRetryNewJourneys: () => void;
+      hasMoreNewJourneys: boolean;
+      isFetchingMoreNewJourneys: boolean;
+      onFetchMoreNewJourneys: () => void;
       doneTasks: AgencyProjectTask[];
       recentlyCompletedTaskId: string;
       recentlyCreatedTaskId: string;
@@ -288,6 +306,16 @@ export function useAgencyTaskList({
     statuses: DONE_TASK_STATUSES,
   });
 
+  const assignedTasksQuery = useAgencyProjectTasksInfiniteQuery(teamId, {
+    delegatedByUserId: currentUserId,
+    statuses: ACTIVE_TASK_STATUSES,
+  });
+
+  const newJourneysQuery = useAgencyProjectTasksInfiniteQuery(teamId, {
+    journeyDiscoveryForUserId: currentUserId,
+    statuses: ACTIVE_TASK_STATUSES,
+  });
+
   const suggestionsActive = Boolean(titleDraft.trim());
   const titleSuggestionQuery = buildTaskSuggestionQueryFilters({
     suggestionsActive,
@@ -302,14 +330,21 @@ export function useAgencyTaskList({
 
   const activeTasks = activeTasksQuery.items;
   const doneTasks = doneTasksQuery.items;
-  const allListedTasks = useMemo(() => [...activeTasks, ...doneTasks], [activeTasks, doneTasks]);
+  const assignedTasks = assignedTasksQuery.items;
+  const newJourneyTasks = newJourneysQuery.items;
+  const allListedTasks = useMemo(
+    () => [...activeTasks, ...doneTasks, ...assignedTasks, ...newJourneyTasks],
+    [activeTasks, assignedTasks, doneTasks, newJourneyTasks],
+  );
   const anchorProjectIds = useMemo(
     () => [
       ...new Set(
-        activeTasks.filter((task) => isJourneyAnchorTask(task)).map((task) => task.projectId),
+        [...activeTasks, ...newJourneyTasks]
+          .filter((task) => isJourneyAnchorTask(task))
+          .map((task) => task.projectId),
       ),
     ],
-    [activeTasks],
+    [activeTasks, newJourneyTasks],
   );
   const journeyQueries = useQueries({
     queries: anchorProjectIds.map((projectId) =>
@@ -384,7 +419,9 @@ export function useAgencyTaskList({
 
       const task =
         activeTasks.find((entry) => entry.id === taskId) ??
-        doneTasks.find((entry) => entry.id === taskId);
+        doneTasks.find((entry) => entry.id === taskId) ??
+        assignedTasks.find((entry) => entry.id === taskId) ??
+        newJourneyTasks.find((entry) => entry.id === taskId);
       const blueprint = blueprintId ? blueprints.find((entry) => entry.id === blueprintId) : null;
 
       if (activeTimer) {
@@ -406,8 +443,10 @@ export function useAgencyTaskList({
     [
       activeTasks,
       activeTimer,
+      assignedTasks,
       blueprints,
       doneTasks,
+      newJourneyTasks,
       onSelect,
       setTrackerDescription,
       setTrackerProjectId,
@@ -446,6 +485,51 @@ export function useAgencyTaskList({
     [allListedTasks, blueprints, currentUserId, doneTasks, journeyProgressByProjectId, projects],
   );
 
+  const assignedClientGroups = useMemo(
+    (): AgencyTaskClientDisplayGroup[] =>
+      buildAgencyTaskClientRailGroups({
+        tasks: assignedTasks,
+        projects,
+        blueprints,
+        expandOptions: {
+          currentUserId,
+          allTasks: allListedTasks,
+          journeyProgressByProjectId,
+        },
+      }),
+    [
+      allListedTasks,
+      assignedTasks,
+      blueprints,
+      currentUserId,
+      journeyProgressByProjectId,
+      projects,
+    ],
+  );
+
+  const newClientGroups = useMemo(
+    (): AgencyTaskClientDisplayGroup[] =>
+      buildAgencyTaskClientRailGroups({
+        tasks: newJourneyTasks,
+        projects,
+        blueprints,
+        expandOptions: {
+          currentUserId,
+          allTasks: allListedTasks,
+          journeyProgressByProjectId,
+          journeyAnchorMode: "discovery",
+        },
+      }),
+    [
+      allListedTasks,
+      blueprints,
+      currentUserId,
+      journeyProgressByProjectId,
+      newJourneyTasks,
+      projects,
+    ],
+  );
+
   const railSummaryCounts = useMemo(
     () => summarizeAgencyTaskRailGroups(clientGroups.flatMap((group) => group.projectGroups)),
     [clientGroups],
@@ -460,6 +544,14 @@ export function useAgencyTaskList({
     doneTasksQuery.isPending && doneTasks.length === 0
       ? null
       : countClientRailDisplayRows(doneClientGroups);
+  const assignedCount =
+    assignedTasksQuery.isPending && assignedTasks.length === 0
+      ? null
+      : countClientRailDisplayRows(assignedClientGroups);
+  const newCount =
+    newJourneysQuery.isPending && newJourneyTasks.length === 0
+      ? null
+      : countClientRailDisplayRows(newClientGroups);
   const totalCount =
     activeCount === null && doneCount === null ? null : (activeCount ?? 0) + (doneCount ?? 0);
 
@@ -583,7 +675,9 @@ export function useAgencyTaskList({
   const updateTaskStatus = useCallback(
     async (task: AgencyProjectTask, status: TaskStatus) => {
       if (status === "done") {
-        setRailStatusFilter("done");
+        if (railStatusFilter === "active") {
+          setRailStatusFilter("done");
+        }
         setRecentlyCompletedTaskId(task.id);
         await agencyOps.completeProjectTaskForMember({
           teamId,
@@ -597,7 +691,7 @@ export function useAgencyTaskList({
         status,
       });
     },
-    [agencyOps, setRailStatusFilter, setRecentlyCompletedTaskId, teamId],
+    [agencyOps, railStatusFilter, setRailStatusFilter, setRecentlyCompletedTaskId, teamId],
   );
 
   const reopenDoneTask = useCallback(
@@ -685,6 +779,8 @@ export function useAgencyTaskList({
     onRailStatusFilterChange: setRailStatusFilter,
     activeCount,
     doneCount,
+    assignedCount,
+    newCount,
     totalCount,
     journeyCount: railSummaryCounts.journeyCount,
     standaloneTaskCount: railSummaryCounts.taskCount,
@@ -695,6 +791,8 @@ export function useAgencyTaskList({
     onRetryActiveTasks: () => void activeTasksQuery.refetch(),
     clientGroups,
     doneClientGroups,
+    assignedClientGroups,
+    newClientGroups,
     allListedTasks,
     collapsedProjects,
     collapsedClients,
@@ -708,6 +806,20 @@ export function useAgencyTaskList({
     doneTasksQueryError: doneTasksQuery.isError,
     doneTasksErrorMessage: doneTasksQuery.isError ? String(doneTasksQuery.error) : "",
     onRetryDoneTasks: () => void doneTasksQuery.refetch(),
+    assignedTasksLoading: assignedTasksQuery.isPending && assignedTasks.length === 0,
+    assignedTasksQueryError: assignedTasksQuery.isError,
+    assignedTasksErrorMessage: assignedTasksQuery.isError ? String(assignedTasksQuery.error) : "",
+    onRetryAssignedTasks: () => void assignedTasksQuery.refetch(),
+    hasMoreAssignedTasks: Boolean(assignedTasksQuery.hasNextPage),
+    isFetchingMoreAssignedTasks: assignedTasksQuery.isFetchingNextPage,
+    onFetchMoreAssignedTasks: () => void assignedTasksQuery.fetchNextPage(),
+    newJourneysLoading: newJourneysQuery.isPending && newJourneyTasks.length === 0,
+    newJourneysQueryError: newJourneysQuery.isError,
+    newJourneysErrorMessage: newJourneysQuery.isError ? String(newJourneysQuery.error) : "",
+    onRetryNewJourneys: () => void newJourneysQuery.refetch(),
+    hasMoreNewJourneys: Boolean(newJourneysQuery.hasNextPage),
+    isFetchingMoreNewJourneys: newJourneysQuery.isFetchingNextPage,
+    onFetchMoreNewJourneys: () => void newJourneysQuery.fetchNextPage(),
     doneTasks,
     recentlyCompletedTaskId,
     recentlyCreatedTaskId: activeHighlightTaskId,

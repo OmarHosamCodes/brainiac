@@ -37,8 +37,8 @@ function getWeekStartUtc(): Date {
 export function AgencyProjectsTable({ teamId, filters, onSelect }: AgencyProjectsTableProps) {
   const { openNewProject } = useAgencyProjectsActions();
 
-  const projectsQuery = useAgencyProjectsQuery(teamId);
-  const clientsQuery = useAgencyClientsQuery(teamId);
+  const projectsQuery = useAgencyProjectsQuery(teamId, { archiveFilter: filters.archiveFilter });
+  const clientsQuery = useAgencyClientsQuery(teamId, { archiveFilter: filters.archiveFilter });
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 100);
   const tasksQuery = useAgencyProjectTasksQuery(teamId, {
     search: filters.filterTerm.trim() || undefined,

@@ -10,6 +10,8 @@ const baseTask = {
   status: "open" as const,
   taskKind: "standard" as const,
   assignedToTeam: false,
+  isWaste: false,
+  createdByUserId: "user-1",
   assignees: [],
   dueDate: null,
   createdAt: "2026-01-01T00:00:00.000Z",

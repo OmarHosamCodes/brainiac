@@ -5,6 +5,7 @@ import { create } from "zustand";
 import { toast } from "sonner";
 
 import { getQueryClient } from "@/lib/query-client";
+import { authClient } from "@/lib/auth-client";
 import { orpc, orpcClient } from "@/lib/orpc";
 import {
   cancelAgencyProjectTaskListQueries,
@@ -51,6 +52,7 @@ type AgencyProjectTask = {
   taskKind: "standard" | "journey_anchor" | "journey_milestone";
   assignedToTeam: boolean;
   isWaste: boolean;
+  createdByUserId: string;
   assignees: Array<{
     userId: string;
     userName: string;
@@ -715,6 +717,7 @@ function createAgencyOpsActions(
     title: string,
     taskKind: AgencyProjectTask["taskKind"],
     assigneeUserIds: string[],
+    createdByUserId: string,
     nowIso: string,
   ): AgencyProjectTask {
     const assigneeIds = [...new Set(assigneeUserIds)];
@@ -727,6 +730,7 @@ function createAgencyOpsActions(
       taskKind,
       assignedToTeam: false,
       isWaste: false,
+      createdByUserId,
       assignees: assigneeIds.map((userId) => ({
         userId,
         userName: "",
@@ -769,6 +773,7 @@ function createAgencyOpsActions(
     const optimisticProjectSnapshot = optimistic().snapshotProjects(payload.teamId);
     const optimisticTaskSnapshot = optimistic().snapshotTasks(payload.teamId);
     const nowIso = new Date().toISOString();
+    const createdByUserId = (await authClient.getSession()).data?.user?.id ?? "";
     const optimisticProject: AgencyProject = {
       id: optimisticId("project"),
       teamId: payload.teamId,
@@ -793,6 +798,7 @@ function createAgencyOpsActions(
         milestone.title,
         "journey_milestone",
         milestone.assigneeUserIds,
+        createdByUserId,
         nowIso,
       ),
     );
@@ -802,6 +808,7 @@ function createAgencyOpsActions(
       name,
       "journey_anchor",
       [...allAssigneeIds],
+      createdByUserId,
       nowIso,
     );
     const optimisticTasks = [...optimisticMilestoneTasks, optimisticAnchorTask];
@@ -860,6 +867,7 @@ function createAgencyOpsActions(
     const snapshots = snapshotQueries(registryPayloads(projectTasksQueryRegistry));
     const optimisticSnapshot = optimistic().snapshotTasks(payload.teamId);
     const nowIso = new Date().toISOString();
+    const createdByUserId = (await authClient.getSession()).data?.user?.id ?? "";
     const assignedToTeam = payload.assignedToTeam ?? false;
     const assigneeUserIds = assignedToTeam ? [] : [...new Set(payload.assigneeUserIds ?? [])];
     const trimmedDescription = payload.description?.trim() ?? "";
@@ -873,6 +881,7 @@ function createAgencyOpsActions(
       taskKind: "standard",
       assignedToTeam,
       isWaste: false,
+      createdByUserId,
       // Assignees required so assignee-filtered active lists accept the optimistic row.
       assignees: assigneeUserIds.map((userId) => ({
         userId,

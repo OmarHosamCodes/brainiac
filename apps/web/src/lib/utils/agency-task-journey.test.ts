@@ -4,6 +4,7 @@ import {
   dedupeAssignees,
   resolveFocusedJourneyStep,
   shouldShowJourneyAnchor,
+  shouldShowJourneyAnchorForDiscovery,
   unlinkTimeEntriesFromJourneyStep,
 } from "@/lib/utils/agency-task-journey";
 import type { AgencyProjectJourney, AgencyProjectTask } from "@/lib/schemas/agency-work";
@@ -12,6 +13,8 @@ const baseTask = {
   teamId: "team-1",
   status: "open" as const,
   assignedToTeam: false,
+  isWaste: false,
+  createdByUserId: "u1",
   dueDate: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
@@ -42,6 +45,27 @@ describe("shouldShowJourneyAnchor", () => {
 
     expect(shouldShowJourneyAnchor(anchor, [anchor, milestone], "u1")).toBe(false);
     expect(shouldShowJourneyAnchor(anchor, [anchor, milestone], "u2")).toBe(true);
+  });
+});
+
+describe("shouldShowJourneyAnchorForDiscovery", () => {
+  it("shows anchor when viewer has no milestone on the project", () => {
+    const anchor = task({
+      id: "anchor",
+      projectId: "proj-1",
+      title: "Launch",
+      taskKind: "journey_anchor",
+    });
+    const milestone = task({
+      id: "ms-1",
+      projectId: "proj-1",
+      title: "Design",
+      taskKind: "journey_milestone",
+      assignees: [{ userId: "u2", userName: "Alex", userAvatar: null, status: "open" }],
+    });
+
+    expect(shouldShowJourneyAnchorForDiscovery(anchor, [anchor, milestone], "u1")).toBe(true);
+    expect(shouldShowJourneyAnchorForDiscovery(anchor, [anchor, milestone], "u2")).toBe(false);
   });
 });
 

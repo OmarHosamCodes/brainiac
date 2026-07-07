@@ -3,6 +3,7 @@ import {
   isJourneyAnchorTask,
   isJourneyMilestoneTask,
   shouldShowJourneyAnchor,
+  shouldShowJourneyAnchorForDiscovery,
   type JourneyProgressSummary,
 } from "@/lib/utils/agency-task-journey";
 
@@ -30,6 +31,7 @@ export type ExpandTasksWithBlueprintsOptions = {
   currentUserId?: string;
   allTasks?: AgencyProjectTask[];
   journeyProgressByProjectId?: Map<string, JourneyProgressSummary>;
+  journeyAnchorMode?: "assigned" | "discovery";
 };
 
 export function collectTaskBlueprintsFromTasks(
@@ -59,7 +61,12 @@ export function expandTasksWithBlueprints(
   blueprints: AgencyTaskBlueprintEntry[],
   options: ExpandTasksWithBlueprintsOptions = {},
 ): AgencyTaskDisplayRow[] {
-  const { currentUserId = "", allTasks = tasks, journeyProgressByProjectId } = options;
+  const {
+    currentUserId = "",
+    allTasks = tasks,
+    journeyProgressByProjectId,
+    journeyAnchorMode = "assigned",
+  } = options;
   const byTaskId = new Map<string, AgencyTaskBlueprintEntry[]>();
 
   for (const blueprint of blueprints) {
@@ -71,8 +78,12 @@ export function expandTasksWithBlueprints(
   const rows: AgencyTaskDisplayRow[] = [];
 
   for (const task of tasks) {
-    if (isJourneyAnchorTask(task) && !shouldShowJourneyAnchor(task, allTasks, currentUserId)) {
-      continue;
+    if (isJourneyAnchorTask(task)) {
+      const showAnchor =
+        journeyAnchorMode === "discovery"
+          ? shouldShowJourneyAnchorForDiscovery(task, allTasks, currentUserId)
+          : shouldShowJourneyAnchor(task, allTasks, currentUserId);
+      if (!showAnchor) continue;
     }
 
     const rowKind = resolveRowKind(task);
