@@ -38,8 +38,8 @@ export function AgencyProjectsVirtualTable({
   searchQuery = "",
   onSelect,
 }: AgencyProjectsVirtualTableProps) {
-  const parentRef = useRef<HTMLDivElement>(null);
-  const scrollMargin = useAgencyPageScrollMargin(parentRef);
+  const listRef = useRef<HTMLDivElement>(null);
+  const scrollMargin = useAgencyPageScrollMargin(listRef);
 
   const virtualizer = useVirtualizer({
     count: projects.length,
@@ -50,7 +50,7 @@ export function AgencyProjectsVirtualTable({
   });
 
   return (
-    <div ref={parentRef} className="overflow-x-auto rounded-2xl border border-default bg-default">
+    <div className="overflow-x-auto rounded-2xl border border-default bg-default">
       <div
         className={cn(
           "grid min-w-[40rem] grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] border-b border-default bg-muted text-xs",
@@ -63,7 +63,11 @@ export function AgencyProjectsVirtualTable({
         <div className="px-3 py-2.5 text-right font-bold">Hours · this week</div>
       </div>
 
-      <div className="relative min-w-[40rem]" style={{ height: `${virtualizer.getTotalSize()}px` }}>
+      <div
+        ref={listRef}
+        className="relative min-w-[40rem]"
+        style={{ height: `${virtualizer.getTotalSize()}px` }}
+      >
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const project = projects[virtualRow.index];
           if (!project) return null;

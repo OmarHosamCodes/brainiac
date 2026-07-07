@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { AlertTriangle, Building2, FolderKanban, Plus } from "lucide-react";
 import { useMemo } from "react";
 
