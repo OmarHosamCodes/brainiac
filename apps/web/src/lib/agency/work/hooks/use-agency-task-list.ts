@@ -33,7 +33,11 @@ import {
   type AgencyTaskProjectDisplayGroup,
 } from "@/lib/utils/agency-task-rail-grouping";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/stores/agency-ops";
-import { resolveDefaultCreateProjectId, useAgencyTaskListStore } from "@/stores/agency-task-list";
+import {
+  resolveDefaultCreateProjectId,
+  useAgencyTaskListStore,
+  type AgencyTaskRailStatusFilter,
+} from "@/stores/agency-task-list";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 import { EMPTY_LIST_OVERLAY } from "@/lib/utils/agency-optimistic-merge";
 import { useAgencyTimeTrackingStore, useTrackerDraft } from "@/stores/agency-time-tracking";
@@ -101,7 +105,8 @@ export type AgencyTaskListViewModel =
       currentUserId: string;
       projects: AgencyTaskProject[];
       selectedTaskId: string;
-      donePanelId: string;
+      railStatusFilter: AgencyTaskRailStatusFilter;
+      onRailStatusFilterChange: (filter: AgencyTaskRailStatusFilter) => void;
       activeCount: number | null;
       doneCount: number | null;
       totalCount: number | null;
@@ -121,8 +126,6 @@ export type AgencyTaskListViewModel =
       onSelectProject: (projectId: string) => void;
       onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
       isRowPending: (taskId: string) => boolean;
-      doneExpanded: boolean;
-      onDoneExpandedChange: (expanded: boolean) => void;
       doneTasksLoading: boolean;
       doneTasksQueryError: boolean;
       doneTasksErrorMessage: string;
@@ -138,6 +141,8 @@ export type AgencyTaskListViewModel =
       onCollapseRail: () => void;
       getTaskTrackingState: (taskId: string, blueprintDescription?: string) => TaskTrackingState;
       onBlueprintDescriptionChange: (blueprintId: string, value: string) => void;
+      onTrackerDescriptionChange: (value: string) => void;
+      onAssociateTrackerForDescription: (task: AgencyProjectTask) => void;
       create: AgencyTaskListCreateViewModel;
     };
 
@@ -160,13 +165,12 @@ export function useAgencyTaskList({
 
   const session = authClient.useSession();
   const currentUserId = session.data?.user?.id ?? "";
-  const donePanelId = useId();
   const zoneId = useId();
 
   const createExpanded = useAgencyTaskListStore((s) => s.quickAddFocused);
   const createOptionsExpanded = useAgencyTaskListStore((s) => s.createOptionsExpanded);
   const lastUsedProjectIdForCreate = useAgencyTaskListStore((s) => s.lastUsedProjectIdForCreate);
-  const doneExpanded = useAgencyTaskListStore((s) => s.doneExpanded);
+  const railStatusFilter = useAgencyTaskListStore((s) => s.railStatusFilter);
   const recentlyCompletedTaskId = useAgencyTaskListStore((s) => s.recentlyCompletedTaskId);
   const recentlyCreatedTaskId = useAgencyTaskListStore((s) => s.recentlyCreatedTaskId);
   const recentlyCreatedBlueprintId = useAgencyTaskListStore((s) => s.recentlyCreatedBlueprintId);
@@ -178,7 +182,7 @@ export function useAgencyTaskList({
   );
   const assignedToTeamForCreate = useAgencyTaskListStore((s) => s.assignedToTeamForCreate);
   const collapsedProjects = useAgencyTaskListStore((s) => s.collapsedProjects);
-  const setDoneExpanded = useAgencyTaskListStore((s) => s.setDoneExpanded);
+  const setRailStatusFilter = useAgencyTaskListStore((s) => s.setRailStatusFilter);
   const setRecentlyCompletedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCompletedTaskId);
   const setRecentlyCreatedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCreatedTaskId);
   const setRecentlyCreatedBlueprintId = useAgencyTaskListStore(
@@ -575,7 +579,7 @@ export function useAgencyTaskList({
   const updateTaskStatus = useCallback(
     async (task: AgencyProjectTask, status: TaskStatus) => {
       if (status === "done") {
-        setDoneExpanded(true);
+        setRailStatusFilter("done");
         setRecentlyCompletedTaskId(task.id);
         await agencyOps.completeProjectTaskForMember({
           teamId,
@@ -589,7 +593,7 @@ export function useAgencyTaskList({
         status,
       });
     },
-    [agencyOps, setDoneExpanded, setRecentlyCompletedTaskId, teamId],
+    [agencyOps, setRailStatusFilter, setRecentlyCompletedTaskId, teamId],
   );
 
   const reopenDoneTask = useCallback(
@@ -619,6 +623,14 @@ export function useAgencyTaskList({
       setRecentlyCreatedTaskId("");
     },
     [agencyOps, currentUserId, isCreatingTask, setRecentlyCreatedTaskId, teamId],
+  );
+
+  const associateTrackerForDescription = useCallback(
+    (task: AgencyProjectTask) => {
+      setTrackerTaskId(teamId, task.id);
+      setTrackerProjectId(teamId, task.projectId);
+    },
+    [setTrackerProjectId, setTrackerTaskId, teamId],
   );
 
   const canSubmit = Boolean(
@@ -665,7 +677,8 @@ export function useAgencyTaskList({
     currentUserId,
     projects,
     selectedTaskId,
-    donePanelId,
+    railStatusFilter,
+    onRailStatusFilterChange: setRailStatusFilter,
     activeCount,
     doneCount,
     totalCount,
@@ -685,8 +698,6 @@ export function useAgencyTaskList({
     onSelectProject,
     onStatusChange: (task, status) => void updateTaskStatus(task, status),
     isRowPending,
-    doneExpanded,
-    onDoneExpandedChange: setDoneExpanded,
     doneTasksLoading: doneTasksQuery.isPending && doneTasks.length === 0,
     doneTasksQueryError: doneTasksQuery.isError,
     doneTasksErrorMessage: doneTasksQuery.isError ? String(doneTasksQuery.error) : "",
@@ -702,6 +713,8 @@ export function useAgencyTaskList({
     onCollapseRail: () => onCollapsedChange(true),
     getTaskTrackingState,
     onBlueprintDescriptionChange,
+    onTrackerDescriptionChange: (value) => setTrackerDescription(teamId, value),
+    onAssociateTrackerForDescription: associateTrackerForDescription,
     create: {
       members,
       titleDraft,
