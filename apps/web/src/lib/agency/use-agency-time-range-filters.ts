@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
 import type { RangePreset } from "@/components/agency/agency-dashboard-command-bar";
+import type { AgencyFilterOptionGroup } from "@/components/agency/agency-multi-select-filter";
 import {
   allAgencyReportFieldIds,
   areSameReportFieldSets,
@@ -41,6 +42,9 @@ export type AgencyTimeRangeFilters = {
   projectId?: string;
   memberUserId?: string;
   clientId?: string;
+  clientIds?: string[];
+  projectIds?: string[];
+  memberUserIds?: string[];
   fields?: AgencyReportFieldId[];
 };
 
@@ -53,6 +57,9 @@ export type AgencyTimeRangeFilterSnapshot = {
   clientId: string;
   projectId: string;
   memberUserId: string;
+  clientIds: string[];
+  projectIds: string[];
+  memberUserIds: string[];
   fieldIds: AgencyReportFieldId[];
   range: { from: string; to: string };
 };
@@ -62,8 +69,36 @@ type UseAgencyTimeRangeFiltersOptions = {
   includeClientFilter?: boolean;
   includeFieldsFilter?: boolean;
   fetchEntries?: boolean;
+  multiSelectEntityFilters?: boolean;
   onFiltersApplied?: (snapshot: Omit<AgencyTimeRangeFilterSnapshot, "id" | "savedAt">) => void;
 };
+
+function sameIdList(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+  const leftSet = new Set(left);
+  return right.every((value) => leftSet.has(value));
+}
+
+function buildProjectFilterGroups(
+  projects: Array<{ id: string; name: string; clientName: string }>,
+): AgencyFilterOptionGroup[] {
+  const sortedProjects = [...projects].sort(
+    (left, right) =>
+      left.clientName.localeCompare(right.clientName) || left.name.localeCompare(right.name),
+  );
+  const groups: AgencyFilterOptionGroup[] = [];
+  let currentGroup: AgencyFilterOptionGroup | null = null;
+
+  for (const project of sortedProjects) {
+    if (!currentGroup || currentGroup.groupLabel !== project.clientName) {
+      currentGroup = { groupLabel: project.clientName, options: [] };
+      groups.push(currentGroup);
+    }
+    currentGroup.options!.push({ value: project.id, label: project.name });
+  }
+
+  return groups;
+}
 
 function resolveRangeFromPreset(
   preset: RangePreset,
@@ -116,6 +151,7 @@ export function useAgencyTimeRangeFilters({
   includeClientFilter = false,
   includeFieldsFilter = false,
   fetchEntries = false,
+  multiSelectEntityFilters = false,
   onFiltersApplied,
 }: UseAgencyTimeRangeFiltersOptions) {
   const defaultFieldIds = allAgencyReportFieldIds();
@@ -140,6 +176,9 @@ export function useAgencyTimeRangeFilters({
   const [appliedProjectId, setAppliedProjectId] = useState("");
   const [appliedMemberUserId, setAppliedMemberUserId] = useState("");
   const [appliedClientId, setAppliedClientId] = useState("");
+  const [appliedClientIds, setAppliedClientIds] = useState<string[]>([]);
+  const [appliedProjectIds, setAppliedProjectIds] = useState<string[]>([]);
+  const [appliedMemberUserIds, setAppliedMemberUserIds] = useState<string[]>([]);
   const [appliedFieldIds, setAppliedFieldIds] = useState<AgencyReportFieldId[]>(defaultFieldIds);
 
   const [draftRangePreset, setDraftRangePreset] = useState<RangePreset | null>(null);
@@ -151,13 +190,20 @@ export function useAgencyTimeRangeFilters({
   const [draftProjectId, setDraftProjectId] = useState("");
   const [draftMemberUserId, setDraftMemberUserId] = useState("");
   const [draftClientId, setDraftClientId] = useState("");
+  const [draftClientIds, setDraftClientIds] = useState<string[]>([]);
+  const [draftProjectIds, setDraftProjectIds] = useState<string[]>([]);
+  const [draftMemberUserIds, setDraftMemberUserIds] = useState<string[]>([]);
   const [draftFieldIds, setDraftFieldIds] = useState<AgencyReportFieldId[]>(defaultFieldIds);
 
   const hasPendingFilterChanges =
     effectiveDraftRangePreset !== effectiveAppliedRangePreset ||
-    draftProjectId !== appliedProjectId ||
-    draftMemberUserId !== appliedMemberUserId ||
-    (includeClientFilter && draftClientId !== appliedClientId) ||
+    (multiSelectEntityFilters
+      ? !sameIdList(draftProjectIds, appliedProjectIds) ||
+        !sameIdList(draftMemberUserIds, appliedMemberUserIds) ||
+        (includeClientFilter && !sameIdList(draftClientIds, appliedClientIds))
+      : draftProjectId !== appliedProjectId ||
+        draftMemberUserId !== appliedMemberUserId ||
+        (includeClientFilter && draftClientId !== appliedClientId)) ||
     (includeFieldsFilter && !areSameReportFieldSets(draftFieldIds, appliedFieldIds)) ||
     (effectiveDraftRangePreset === "custom" &&
       (draftCustomFromDate !== appliedCustomFromDate || draftCustomToDate !== appliedCustomToDate));
@@ -177,18 +223,30 @@ export function useAgencyTimeRangeFilters({
   const applied: AgencyTimeRangeFilters = useMemo(
     () => ({
       range,
-      projectId: appliedProjectId || undefined,
-      memberUserId: appliedMemberUserId || undefined,
-      ...(includeClientFilter ? { clientId: appliedClientId || undefined } : {}),
+      ...(multiSelectEntityFilters
+        ? {
+            clientIds: appliedClientIds.length > 0 ? appliedClientIds : undefined,
+            projectIds: appliedProjectIds.length > 0 ? appliedProjectIds : undefined,
+            memberUserIds: appliedMemberUserIds.length > 0 ? appliedMemberUserIds : undefined,
+          }
+        : {
+            projectId: appliedProjectId || undefined,
+            memberUserId: appliedMemberUserId || undefined,
+            ...(includeClientFilter ? { clientId: appliedClientId || undefined } : {}),
+          }),
       ...(includeFieldsFilter ? { fields: appliedFieldIds } : {}),
     }),
     [
       appliedClientId,
+      appliedClientIds,
       appliedFieldIds,
       appliedMemberUserId,
+      appliedMemberUserIds,
       appliedProjectId,
+      appliedProjectIds,
       includeClientFilter,
       includeFieldsFilter,
+      multiSelectEntityFilters,
       range,
     ],
   );
@@ -210,15 +268,23 @@ export function useAgencyTimeRangeFilters({
       teamId,
       range.from,
       range.to,
-      appliedClientId,
-      appliedProjectId,
-      appliedMemberUserId,
+      multiSelectEntityFilters ? appliedClientIds : appliedClientId,
+      multiSelectEntityFilters ? appliedProjectIds : appliedProjectId,
+      multiSelectEntityFilters ? appliedMemberUserIds : appliedMemberUserId,
     ],
     queryFn: () =>
       fetchAllReportEntries(teamId, range, {
-        clientId: appliedClientId || undefined,
-        projectId: appliedProjectId || undefined,
-        memberUserId: appliedMemberUserId || undefined,
+        ...(multiSelectEntityFilters
+          ? {
+              clientIds: appliedClientIds.length > 0 ? appliedClientIds : undefined,
+              projectIds: appliedProjectIds.length > 0 ? appliedProjectIds : undefined,
+              memberUserIds: appliedMemberUserIds.length > 0 ? appliedMemberUserIds : undefined,
+            }
+          : {
+              clientId: appliedClientId || undefined,
+              projectId: appliedProjectId || undefined,
+              memberUserId: appliedMemberUserId || undefined,
+            }),
       }),
     enabled: Boolean(teamId) && fetchEntries,
     placeholderData: keepPreviousData,
@@ -230,9 +296,19 @@ export function useAgencyTimeRangeFilters({
     name: client.name,
   }));
   const filteredProjects = useMemo(() => {
-    if (!includeClientFilter || !draftClientId) return projects;
+    if (!includeClientFilter) return projects;
+    if (multiSelectEntityFilters) {
+      if (draftClientIds.length === 0) return projects;
+      const clientSet = new Set(draftClientIds);
+      return projects.filter((project) => clientSet.has(project.clientId));
+    }
+    if (!draftClientId) return projects;
     return projects.filter((project) => project.clientId === draftClientId);
-  }, [draftClientId, includeClientFilter, projects]);
+  }, [draftClientId, draftClientIds, includeClientFilter, multiSelectEntityFilters, projects]);
+  const projectFilterGroups = useMemo(
+    () => buildProjectFilterGroups(filteredProjects),
+    [filteredProjects],
+  );
   const members = (membersQuery.data?.items ?? []).map((member) => ({
     userId: member.userId,
     userName: member.userName,
@@ -248,6 +324,19 @@ export function useAgencyTimeRangeFilters({
     }
   }
 
+  function handleClientIdsChange(clientIds: string[]) {
+    setDraftClientIds(clientIds);
+    if (clientIds.length === 0 || draftProjectIds.length === 0) return;
+    const clientSet = new Set(clientIds);
+    const nextProjectIds = draftProjectIds.filter((projectId) => {
+      const project = projects.find((entry) => entry.id === projectId);
+      return project ? clientSet.has(project.clientId) : false;
+    });
+    if (!sameIdList(nextProjectIds, draftProjectIds)) {
+      setDraftProjectIds(nextProjectIds);
+    }
+  }
+
   function buildSnapshot(
     preset: RangePreset,
     customFromDate: string,
@@ -255,6 +344,9 @@ export function useAgencyTimeRangeFilters({
     projectId: string,
     memberUserId: string,
     clientId: string,
+    clientIds: string[],
+    projectIds: string[],
+    memberUserIds: string[],
     fieldIds: AgencyReportFieldId[],
   ): Omit<AgencyTimeRangeFilterSnapshot, "id" | "savedAt"> {
     return {
@@ -264,6 +356,9 @@ export function useAgencyTimeRangeFilters({
       projectId,
       memberUserId,
       clientId,
+      clientIds,
+      projectIds,
+      memberUserIds,
       fieldIds,
       range: resolveRangeFromPreset(preset, customFromDate, customToDate, tenurePolicy, now),
     };
@@ -279,6 +374,9 @@ export function useAgencyTimeRangeFilters({
           draftProjectId,
           draftMemberUserId,
           draftClientId,
+          draftClientIds,
+          draftProjectIds,
+          draftMemberUserIds,
           draftFieldIds,
         ),
       );
@@ -286,10 +384,16 @@ export function useAgencyTimeRangeFilters({
     setAppliedRangePreset(draftRangePreset);
     setAppliedCustomFromDate(draftCustomFromDate);
     setAppliedCustomToDate(draftCustomToDate);
-    setAppliedProjectId(draftProjectId);
-    setAppliedMemberUserId(draftMemberUserId);
-    if (includeClientFilter) {
-      setAppliedClientId(draftClientId);
+    if (multiSelectEntityFilters) {
+      setAppliedClientIds(draftClientIds);
+      setAppliedProjectIds(draftProjectIds);
+      setAppliedMemberUserIds(draftMemberUserIds);
+    } else {
+      setAppliedProjectId(draftProjectId);
+      setAppliedMemberUserId(draftMemberUserId);
+      if (includeClientFilter) {
+        setAppliedClientId(draftClientId);
+      }
     }
     if (includeFieldsFilter) {
       setAppliedFieldIds(draftFieldIds);
@@ -298,23 +402,28 @@ export function useAgencyTimeRangeFilters({
 
   function handleReset() {
     setDraftRangePreset(null);
-    setDraftProjectId("");
-    setDraftMemberUserId("");
-    if (includeClientFilter) {
-      setDraftClientId("");
+    if (multiSelectEntityFilters) {
+      setDraftClientIds([]);
+      setDraftProjectIds([]);
+      setDraftMemberUserIds([]);
+      setAppliedClientIds([]);
+      setAppliedProjectIds([]);
+      setAppliedMemberUserIds([]);
+    } else {
+      setDraftProjectId("");
+      setDraftMemberUserId("");
+      setAppliedProjectId("");
+      setAppliedMemberUserId("");
+      if (includeClientFilter) {
+        setDraftClientId("");
+        setAppliedClientId("");
+      }
     }
     if (includeFieldsFilter) {
       setDraftFieldIds(defaultFieldIds);
-    }
-    setAppliedRangePreset(null);
-    setAppliedProjectId("");
-    setAppliedMemberUserId("");
-    if (includeClientFilter) {
-      setAppliedClientId("");
-    }
-    if (includeFieldsFilter) {
       setAppliedFieldIds(defaultFieldIds);
     }
+    setAppliedRangePreset(null);
   }
 
   function captureAppliedSnapshot(): Omit<AgencyTimeRangeFilterSnapshot, "id" | "savedAt"> {
@@ -325,6 +434,9 @@ export function useAgencyTimeRangeFilters({
       appliedProjectId,
       appliedMemberUserId,
       appliedClientId,
+      appliedClientIds,
+      appliedProjectIds,
+      appliedMemberUserIds,
       appliedFieldIds,
     );
   }
@@ -337,6 +449,9 @@ export function useAgencyTimeRangeFilters({
     setDraftProjectId(snapshot.projectId);
     setDraftMemberUserId(snapshot.memberUserId);
     setDraftClientId(snapshot.clientId);
+    setDraftClientIds(snapshot.clientIds);
+    setDraftProjectIds(snapshot.projectIds);
+    setDraftMemberUserIds(snapshot.memberUserIds);
     setDraftFieldIds(snapshot.fieldIds);
     setAppliedRangePreset(storedPreset);
     setAppliedCustomFromDate(snapshot.customFromDate);
@@ -344,6 +459,9 @@ export function useAgencyTimeRangeFilters({
     setAppliedProjectId(snapshot.projectId);
     setAppliedMemberUserId(snapshot.memberUserId);
     setAppliedClientId(snapshot.clientId);
+    setAppliedClientIds(snapshot.clientIds);
+    setAppliedProjectIds(snapshot.projectIds);
+    setAppliedMemberUserIds(snapshot.memberUserIds);
     setAppliedFieldIds(snapshot.fieldIds);
   }
 
@@ -359,10 +477,6 @@ export function useAgencyTimeRangeFilters({
     onCustomFromChange: setDraftCustomFromDate,
     customToDate: draftCustomToDate,
     onCustomToChange: setDraftCustomToDate,
-    projectId: draftProjectId,
-    onProjectChange: setDraftProjectId,
-    memberUserId: draftMemberUserId,
-    onMemberChange: setDraftMemberUserId,
     onApply: handleApply,
     hasPendingChanges: hasPendingFilterChanges,
     onReset: handleReset,
@@ -371,13 +485,35 @@ export function useAgencyTimeRangeFilters({
     projects: filteredProjects,
     members,
     projectsLoading: projectsQuery.isPending,
-    ...(includeClientFilter
+    ...(multiSelectEntityFilters
       ? {
-          clientId: draftClientId,
-          onClientChange: handleClientChange,
-          clients,
-          clientsLoading: clientsQuery.isPending,
+          multiSelectEntityFilters: true as const,
+          clientIds: draftClientIds,
+          onClientIdsChange: handleClientIdsChange,
+          projectIds: draftProjectIds,
+          onProjectIdsChange: setDraftProjectIds,
+          memberUserIds: draftMemberUserIds,
+          onMemberUserIdsChange: setDraftMemberUserIds,
+          projectFilterGroups,
         }
+      : {
+          projectId: draftProjectId,
+          onProjectChange: setDraftProjectId,
+          memberUserId: draftMemberUserId,
+          onMemberChange: setDraftMemberUserId,
+        }),
+    ...(includeClientFilter
+      ? multiSelectEntityFilters
+        ? {
+            clients,
+            clientsLoading: clientsQuery.isPending,
+          }
+        : {
+            clientId: draftClientId,
+            onClientChange: handleClientChange,
+            clients,
+            clientsLoading: clientsQuery.isPending,
+          }
       : {}),
     ...(includeFieldsFilter
       ? {

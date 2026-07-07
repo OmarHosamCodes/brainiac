@@ -359,6 +359,9 @@ const reportsInputSchema = teamScopedInputSchema.extend({
   clientId: z.string().min(1).optional(),
   projectId: z.string().min(1).optional(),
   memberUserId: z.string().min(1).optional(),
+  clientIds: z.array(z.string().min(1)).optional(),
+  projectIds: z.array(z.string().min(1)).optional(),
+  memberUserIds: z.array(z.string().min(1)).optional(),
 });
 
 const savedReportActivityActionSchema = z.enum([

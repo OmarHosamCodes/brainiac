@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 
+import { AgencyReportDescriptionCell } from "@/components/agency/agency-report-description-cell";
 import { AgencyReportDurationCell } from "@/components/agency/agency-report-duration-cell";
+import { AgencyReportRowActions } from "@/components/agency/agency-report-row-actions";
 import { AgencyReportTaskCell } from "@/components/agency/agency-report-task-cell";
 import type { AgencyProject, AgencyProjectTask } from "@/lib/schemas/agency-work";
 import { agencyMetricClass } from "@/lib/utils/agency-ui";
@@ -37,7 +39,12 @@ type AgencyReportsTableProps = {
   >;
   tasksLoading?: boolean;
   updatingRowKeys?: ReadonlySet<string>;
+  deletingEntryIds?: readonly string[];
+  wastePendingRowKeys?: ReadonlySet<string>;
   onTaskChange?: (row: AggregatedReportRow, taskId: string) => void;
+  onDescriptionChange?: (row: AggregatedReportRow, description: string) => void;
+  onDeleteRow?: (row: AggregatedReportRow) => void;
+  onToggleWaste?: (row: AggregatedReportRow) => void;
 };
 
 export function AgencyReportsTable({
@@ -49,7 +56,12 @@ export function AgencyReportsTable({
   tasks = [],
   tasksLoading = false,
   updatingRowKeys,
+  deletingEntryIds = [],
+  wastePendingRowKeys,
   onTaskChange,
+  onDescriptionChange,
+  onDeleteRow,
+  onToggleWaste,
 }: AgencyReportsTableProps) {
   const clientGroups = clientGroupsProp ?? groupEntriesForDisplay(entries);
   const totalSeconds = entries.reduce((sum, entry) => sum + entry.durationSeconds, 0);
@@ -58,6 +70,8 @@ export function AgencyReportsTable({
   const showDescription = isReportFieldVisible(visibleFields, "description");
   const showDuration = isReportFieldVisible(visibleFields, "duration");
   const showAssignee = isReportFieldVisible(visibleFields, "assignee");
+  const showActions = Boolean(onDeleteRow || onToggleWaste);
+  const deletingEntryIdSet = new Set(deletingEntryIds);
 
   return (
     <div className="space-y-6">
@@ -102,6 +116,11 @@ export function AgencyReportsTable({
                   {showAssignee ? (
                     <th scope="col" className="w-36 px-4 py-2.5 font-bold">
                       {AGENCY_REPORT_FIELD_LABELS.assignee}
+                    </th>
+                  ) : null}
+                  {showActions ? (
+                    <th scope="col" className="w-10 px-2 py-2.5">
+                      <span className="sr-only">Actions</span>
                     </th>
                   ) : null}
                 </tr>
@@ -152,12 +171,18 @@ export function AgencyReportsTable({
                         </td>
                       ) : null}
                       {showDescription ? (
-                        <td
-                          className="max-w-md truncate px-4 py-3 text-highlighted"
-                          title={row.description || undefined}
-                          dir="auto"
-                        >
-                          {row.description || "—"}
+                        <td className="max-w-md px-4 py-3 text-highlighted" dir="auto">
+                          {onDescriptionChange ? (
+                            <AgencyReportDescriptionCell
+                              value={row.description}
+                              disabled={updatingRowKeys?.has(row.key)}
+                              onSave={(description) => onDescriptionChange(row, description)}
+                            />
+                          ) : (
+                            <span className="block truncate" title={row.description || undefined}>
+                              {row.description || "—"}
+                            </span>
+                          )}
                         </td>
                       ) : null}
                       {showDuration ? (
@@ -167,6 +192,21 @@ export function AgencyReportsTable({
                       ) : null}
                       {showAssignee ? (
                         <td className="px-4 py-3 text-highlighted">{row.userName}</td>
+                      ) : null}
+                      {showActions ? (
+                        <td className="px-2 py-3 text-right">
+                          <AgencyReportRowActions
+                            label={row.taskTitle || row.description || row.projectName}
+                            taskId={row.taskId}
+                            taskIsWaste={row.taskIsWaste}
+                            deleting={row.entries.some((entry) => deletingEntryIdSet.has(entry.id))}
+                            wastePending={wastePendingRowKeys?.has(row.key)}
+                            onDelete={() => onDeleteRow?.(row)}
+                            onToggleWaste={
+                              row.taskId && onToggleWaste ? () => onToggleWaste(row) : undefined
+                            }
+                          />
+                        </td>
                       ) : null}
                     </tr>
                   )),

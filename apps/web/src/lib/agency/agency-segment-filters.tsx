@@ -110,6 +110,7 @@ function ReportsFiltersRoot({
     includeClientFilter: true,
     includeFieldsFilter: true,
     fetchEntries: true,
+    multiSelectEntityFilters: true,
   });
 
   const searchContext = {
@@ -141,8 +142,14 @@ function ReportsFiltersRoot({
       const name = suggestAgencyReportName(
         {
           range: snapshot.range,
-          clientId: snapshot.clientId || undefined,
-          memberUserId: snapshot.memberUserId || undefined,
+          clientId:
+            snapshot.clientIds.length === 1
+              ? snapshot.clientIds[0]
+              : snapshot.clientId || undefined,
+          memberUserId:
+            snapshot.memberUserIds.length === 1
+              ? snapshot.memberUserIds[0]
+              : snapshot.memberUserId || undefined,
         },
         searchContext,
       );
@@ -155,9 +162,9 @@ function ReportsFiltersRoot({
         customToDate: snapshot.customToDate,
         rangeFrom: snapshot.range.from,
         rangeTo: snapshot.range.to,
-        clientId: snapshot.clientId || undefined,
-        projectId: snapshot.projectId || undefined,
-        memberUserId: snapshot.memberUserId || undefined,
+        clientId: snapshot.clientIds.join(",") || snapshot.clientId || undefined,
+        projectId: snapshot.projectIds.join(",") || snapshot.projectId || undefined,
+        memberUserId: snapshot.memberUserIds.join(",") || snapshot.memberUserId || undefined,
         fieldIds: snapshot.fieldIds,
       });
 

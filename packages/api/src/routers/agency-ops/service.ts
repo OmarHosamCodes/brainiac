@@ -1077,15 +1077,56 @@ async function getClientByIdForTeam(teamId: string, clientId: string) {
   }
 }
 
+export type ReportEntityFilterInput = {
+  clientId?: string;
+  projectId?: string;
+  memberUserId?: string;
+  clientIds?: string[];
+  projectIds?: string[];
+  memberUserIds?: string[];
+};
+
+function resolveReportEntityIds(
+  singular: string | undefined,
+  plural: string[] | undefined,
+): string[] {
+  if (plural && plural.length > 0) return plural;
+  if (singular) return [singular];
+  return [];
+}
+
+function applyReportEntityFilters(
+  filters: Parameters<typeof and>[0][],
+  input: ReportEntityFilterInput,
+) {
+  const clientIds = resolveReportEntityIds(input.clientId, input.clientIds);
+  if (clientIds.length === 1) {
+    filters.push(eq(agencyOpsProject.clientId, clientIds[0]!));
+  } else if (clientIds.length > 1) {
+    filters.push(inArray(agencyOpsProject.clientId, clientIds));
+  }
+
+  const projectIds = resolveReportEntityIds(input.projectId, input.projectIds);
+  if (projectIds.length === 1) {
+    filters.push(eq(agencyOpsProject.id, projectIds[0]!));
+  } else if (projectIds.length > 1) {
+    filters.push(inArray(agencyOpsProject.id, projectIds));
+  }
+
+  const memberUserIds = resolveReportEntityIds(input.memberUserId, input.memberUserIds);
+  if (memberUserIds.length === 1) {
+    filters.push(eq(agencyOpsTimeEntry.userId, memberUserIds[0]!));
+  } else if (memberUserIds.length > 1) {
+    filters.push(inArray(agencyOpsTimeEntry.userId, memberUserIds));
+  }
+}
+
 async function getReportRows(
   actorUserId: string,
-  input: {
+  input: ReportEntityFilterInput & {
     teamId: string;
     from: string;
     to: string;
-    clientId?: string;
-    projectId?: string;
-    memberUserId?: string;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -1106,17 +1147,7 @@ async function getReportRows(
     lte(agencyOpsTimeEntry.startedAt, to),
   ];
 
-  if (input.clientId) {
-    filters.push(eq(agencyOpsProject.clientId, input.clientId));
-  }
-
-  if (input.projectId) {
-    filters.push(eq(agencyOpsProject.id, input.projectId));
-  }
-
-  if (input.memberUserId) {
-    filters.push(eq(agencyOpsTimeEntry.userId, input.memberUserId));
-  }
+  applyReportEntityFilters(filters, input);
 
   const rows = await db
     .select({
@@ -1155,8 +1186,22 @@ async function getReportRows(
     .where(
       and(
         eq(agencyOpsProject.teamId, input.teamId),
-        input.clientId ? eq(agencyOpsProject.clientId, input.clientId) : undefined,
-        input.projectId ? eq(agencyOpsProject.id, input.projectId) : undefined,
+        ...(() => {
+          const scopedFilters: Parameters<typeof and>[0][] = [];
+          const clientIds = resolveReportEntityIds(input.clientId, input.clientIds);
+          if (clientIds.length === 1) {
+            scopedFilters.push(eq(agencyOpsProject.clientId, clientIds[0]!));
+          } else if (clientIds.length > 1) {
+            scopedFilters.push(inArray(agencyOpsProject.clientId, clientIds));
+          }
+          const projectIds = resolveReportEntityIds(input.projectId, input.projectIds);
+          if (projectIds.length === 1) {
+            scopedFilters.push(eq(agencyOpsProject.id, projectIds[0]!));
+          } else if (projectIds.length > 1) {
+            scopedFilters.push(inArray(agencyOpsProject.id, projectIds));
+          }
+          return scopedFilters;
+        })(),
       ),
     )
     .orderBy(asc(agencyOpsProject.name));
@@ -5225,13 +5270,10 @@ export async function deleteMyAgencyTimeEntry(
 
 export async function getAgencyReportsSummary(
   actorUserId: string,
-  input: {
+  input: ReportEntityFilterInput & {
     teamId: string;
     from: string;
     to: string;
-    clientId?: string;
-    projectId?: string;
-    memberUserId?: string;
   },
 ) {
   const { rows } = await getReportRows(actorUserId, input);
@@ -5324,13 +5366,10 @@ export async function getAgencyReportsSummary(
 
 export async function getAgencyDashboardSummary(
   actorUserId: string,
-  input: {
+  input: ReportEntityFilterInput & {
     teamId: string;
     from: string;
     to: string;
-    clientId?: string;
-    projectId?: string;
-    memberUserId?: string;
   },
 ) {
   const { rows } = await getReportRows(actorUserId, input);
@@ -5728,15 +5767,12 @@ export async function exportAgencyReportsCsv(
 
 export async function listAllAgencyTimeEntries(
   actorUserId: string,
-  input: {
+  input: ReportEntityFilterInput & {
     teamId: string;
     from: string;
     to: string;
     page?: number;
     pageSize?: number;
-    clientId?: string;
-    projectId?: string;
-    memberUserId?: string;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "editor");
@@ -5761,17 +5797,7 @@ export async function listAllAgencyTimeEntries(
     lte(agencyOpsTimeEntry.startedAt, to),
   ];
 
-  if (input.clientId) {
-    filters.push(eq(agencyOpsProject.clientId, input.clientId));
-  }
-
-  if (input.projectId) {
-    filters.push(eq(agencyOpsProject.id, input.projectId));
-  }
-
-  if (input.memberUserId) {
-    filters.push(eq(agencyOpsTimeEntry.userId, input.memberUserId));
-  }
+  applyReportEntityFilters(filters, input);
 
   const rows = await db
     .select({

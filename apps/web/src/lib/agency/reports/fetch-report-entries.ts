@@ -5,6 +5,9 @@ export type ReportEntryFilters = {
   clientId?: string;
   projectId?: string;
   memberUserId?: string;
+  clientIds?: string[];
+  projectIds?: string[];
+  memberUserIds?: string[];
 };
 
 const ENTRIES_PAGE_SIZE = 100;
@@ -26,6 +29,9 @@ export async function fetchAllReportEntries(
       clientId: filters.clientId,
       projectId: filters.projectId,
       memberUserId: filters.memberUserId,
+      clientIds: filters.clientIds?.length ? filters.clientIds : undefined,
+      projectIds: filters.projectIds?.length ? filters.projectIds : undefined,
+      memberUserIds: filters.memberUserIds?.length ? filters.memberUserIds : undefined,
       page,
       pageSize: ENTRIES_PAGE_SIZE,
     });
