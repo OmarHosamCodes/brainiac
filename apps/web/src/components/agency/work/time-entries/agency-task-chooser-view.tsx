@@ -86,6 +86,14 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
             ) : (
               <span className="min-w-0 truncate text-muted">{placeholder}</span>
             )
+          ) : triggerFormat === "task-only" ? (
+            loading ? (
+              <span className="min-w-0 truncate text-muted">Loading…</span>
+            ) : triggerTaskTitle ? (
+              <span className="min-w-0 truncate">{triggerTaskTitle}</span>
+            ) : (
+              <span className="min-w-0 truncate text-muted">{placeholder}</span>
+            )
           ) : loading ? (
             <span className="min-w-0 truncate text-muted">Loading…</span>
           ) : triggerProject && triggerTaskTitle ? (

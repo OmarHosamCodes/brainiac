@@ -14,8 +14,8 @@ describe("notification fanout helpers", () => {
     expect(messageCoalesceTaskId("task.message", undefined)).toBeNull();
   });
 
-  test("timer activity defaults to in-app only", () => {
-    expect(defaultNotificationChannels("timer.activity")).toEqual({ inApp: true, push: false });
+  test("timer activity defaults to off for in-app and push", () => {
+    expect(defaultNotificationChannels("timer.activity")).toEqual({ inApp: false, push: false });
     expect(defaultNotificationChannels("task.assigned")).toEqual({ inApp: true, push: true });
   });
 });

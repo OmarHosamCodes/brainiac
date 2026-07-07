@@ -18,7 +18,7 @@ type AgencyTask = Pick<
   createdAt?: string;
 };
 
-export type AgencyTaskChooserTriggerFormat = "task-project" | "project-client";
+export type AgencyTaskChooserTriggerFormat = "task-project" | "project-client" | "task-only";
 
 type UseAgencyTaskChooserOptions = {
   value: string;

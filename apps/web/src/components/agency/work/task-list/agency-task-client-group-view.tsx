@@ -30,6 +30,8 @@ export type AgencyTaskClientGroupViewProps = {
   highlightBlueprintId?: string;
   getTaskTrackingState?: (taskId: string, blueprintDescription?: string) => TaskTrackingState;
   onBlueprintDescriptionChange?: (blueprintId: string, value: string) => void;
+  onTrackerDescriptionChange?: (value: string) => void;
+  onAssociateTrackerForDescription?: (task: AgencyProjectTask) => void;
   readOnly?: boolean;
   onReopenToActive?: (task: AgencyProjectTask) => void;
   highlightTaskId?: string;
@@ -53,6 +55,8 @@ export function AgencyTaskClientGroupView({
   highlightBlueprintId = "",
   getTaskTrackingState,
   onBlueprintDescriptionChange,
+  onTrackerDescriptionChange,
+  onAssociateTrackerForDescription,
   readOnly = false,
   onReopenToActive,
   highlightTaskId = "",
@@ -111,6 +115,8 @@ export function AgencyTaskClientGroupView({
               highlightBlueprintId={highlightBlueprintId}
               getTaskTrackingState={getTaskTrackingState}
               onBlueprintDescriptionChange={onBlueprintDescriptionChange}
+              onTrackerDescriptionChange={onTrackerDescriptionChange}
+              onAssociateTrackerForDescription={onAssociateTrackerForDescription}
               readOnly={readOnly}
               onReopenToActive={onReopenToActive}
               highlightTaskId={highlightTaskId}

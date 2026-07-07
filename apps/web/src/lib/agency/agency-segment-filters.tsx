@@ -180,16 +180,7 @@ function ReportsFiltersRoot({
           ) : (
             <AgencyDashboardCommandBar
               {...timeRange.barProps}
-              createReportAction={{
-                onSelect: () => void openReportCreator(),
-                disabled:
-                  timeRange.entriesCount === 0 || timeRange.entriesFetching || creatingReport,
-              }}
-              historyMenu={{
-                teamId,
-                searchContext,
-                onSelectReport: openSavedReport,
-              }}
+              contextMenuEnabled={false}
               trailingActions={
                 <>
                   <Button

@@ -188,8 +188,8 @@ export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
 
   const notificationsQuery = useAgencyNotificationsQuery(teamId, open);
   const unreadQuery = useAgencyNotificationUnreadCountQuery(teamId);
-  const preferencesQuery = useAgencyNotificationPreferencesQuery(teamId, showSettings);
-  const markSeenMutation = useMarkNotificationsSeenMutation(teamId);
+  const preferencesQuery = useAgencyNotificationPreferencesQuery(teamId, open);
+  const { mutate: markSeen } = useMarkNotificationsSeenMutation(teamId);
   const markReadMutation = useMarkNotificationReadMutation(teamId);
   const markAllReadMutation = useMarkAllNotificationsReadMutation(teamId);
   const setPreferencesMutation = useSetNotificationPreferencesMutation(teamId);
@@ -198,12 +198,13 @@ export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
   const unreadCount = unreadQuery.data?.count ?? 0;
   const badgeLabel = unreadCount > 9 ? "9+" : String(unreadCount);
   const items = notificationsQuery.data?.items ?? [];
+  const hasUnread = items.some((item) => !item.readAt);
   const groups = useMemo(() => groupNotifications(items), [items]);
 
   useEffect(() => {
     if (!open || !teamId) return;
-    markSeenMutation.mutate();
-  }, [open, teamId, markSeenMutation]);
+    markSeen();
+  }, [open, teamId, markSeen]);
 
   if (!teamId) return null;
 
@@ -295,7 +296,7 @@ export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
               variant="ghost"
               size="sm"
               className="h-8 rounded-full px-2 text-xs"
-              disabled={items.length === 0 || markAllReadMutation.isPending}
+              disabled={!hasUnread || markAllReadMutation.isPending}
               onClick={() => void markAllReadMutation.mutateAsync()}
             >
               Mark all read
@@ -304,47 +305,55 @@ export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
         </div>
 
         {showSettings ? (
-          <div className="max-h-[420px] space-y-2 overflow-y-auto px-3 py-3">
-            {(preferencesQuery.data?.items ?? []).map((pref) => (
-              <div
-                key={pref.type}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border/50 px-3 py-2"
-              >
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {pref.type.replace(".", " ")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    In-app {pref.inApp ? "on" : "off"} · Push {pref.push ? "on" : "off"}
-                  </p>
+          preferencesQuery.isPending && !preferencesQuery.data ? (
+            <div className="space-y-2 px-3 py-3">
+              <Skeleton className="h-14 w-full rounded-xl" />
+              <Skeleton className="h-14 w-full rounded-xl" />
+              <Skeleton className="h-14 w-full rounded-xl" />
+            </div>
+          ) : (
+            <div className="max-h-[420px] space-y-2 overflow-y-auto px-3 py-3">
+              {(preferencesQuery.data?.items ?? []).map((pref) => (
+                <div
+                  key={pref.type}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-border/50 px-3 py-2"
+                >
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      {pref.type.replace(".", " ")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      In-app {pref.inApp ? "on" : "off"} · Push {pref.push ? "on" : "off"}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={pref.inApp ? "secondary" : "ghost"}
+                      className="h-7 rounded-full px-2 text-[11px]"
+                      onClick={() =>
+                        void setPreferencesMutation.mutateAsync([{ ...pref, inApp: !pref.inApp }])
+                      }
+                    >
+                      In-app
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={pref.push ? "secondary" : "ghost"}
+                      className="h-7 rounded-full px-2 text-[11px]"
+                      onClick={() =>
+                        void setPreferencesMutation.mutateAsync([{ ...pref, push: !pref.push }])
+                      }
+                    >
+                      Push
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={pref.inApp ? "secondary" : "ghost"}
-                    className="h-7 rounded-full px-2 text-[11px]"
-                    onClick={() =>
-                      void setPreferencesMutation.mutateAsync([{ ...pref, inApp: !pref.inApp }])
-                    }
-                  >
-                    In-app
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={pref.push ? "secondary" : "ghost"}
-                    className="h-7 rounded-full px-2 text-[11px]"
-                    onClick={() =>
-                      void setPreferencesMutation.mutateAsync([{ ...pref, push: !pref.push }])
-                    }
-                  >
-                    Push
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
         ) : notificationsQuery.isPending ? (
           <div className="space-y-2 px-3 py-3">
             <Skeleton className="h-14 w-full rounded-xl" />

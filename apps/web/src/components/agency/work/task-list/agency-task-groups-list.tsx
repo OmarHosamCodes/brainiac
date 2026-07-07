@@ -1,10 +1,11 @@
-import { AgencyTaskProjectGroupView } from "@/components/agency/work/task-list/agency-task-project-group-view";
-import type { AgencyTaskProjectDisplayGroup } from "@/lib/utils/agency-task-rail-grouping";
+import { AgencyTaskClientGroupView } from "@/components/agency/work/task-list/agency-task-client-group-view";
+import type { AgencyTaskClientDisplayGroup } from "@/lib/utils/agency-task-rail-grouping";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 
 type AgencyTaskGroupsListProps = {
-  projectGroups: AgencyTaskProjectDisplayGroup[];
+  clientGroups: AgencyTaskClientDisplayGroup[];
   allTasks: AgencyProjectTask[];
+  collapsedClients: Set<string>;
   collapsedProjects: Set<string>;
   projects: AgencyTaskProject[];
   teamId: string;
@@ -12,6 +13,7 @@ type AgencyTaskGroupsListProps = {
   highlightBlueprintId: string;
   highlightTaskId?: string;
   isRowPending: (taskId: string) => boolean;
+  onClientExpandedChange: (clientId: string, expanded: boolean) => void;
   onProjectExpandedChange: (projectId: string, expanded: boolean) => void;
   onSelect: (taskId: string, blueprintId?: string | null) => void;
   onSelectProject: (projectId: string) => void;
@@ -22,8 +24,9 @@ type AgencyTaskGroupsListProps = {
 };
 
 export function AgencyTaskGroupsList({
-  projectGroups,
+  clientGroups,
   allTasks,
+  collapsedClients,
   collapsedProjects,
   projects,
   teamId,
@@ -31,6 +34,7 @@ export function AgencyTaskGroupsList({
   highlightBlueprintId,
   highlightTaskId,
   isRowPending,
+  onClientExpandedChange,
   onProjectExpandedChange,
   onSelect,
   onSelectProject,
@@ -41,17 +45,19 @@ export function AgencyTaskGroupsList({
 }: AgencyTaskGroupsListProps) {
   return (
     <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto" aria-label={listAriaLabel}>
-      {projectGroups.map((group) => (
-        <AgencyTaskProjectGroupView
-          key={group.projectId}
+      {clientGroups.map((group) => (
+        <AgencyTaskClientGroupView
+          key={group.clientId}
           group={group}
-          expanded={!collapsedProjects.has(group.projectId)}
+          expanded={!collapsedClients.has(group.clientId)}
+          collapsedProjects={collapsedProjects}
           allTasks={allTasks}
           projects={projects}
           teamId={teamId}
           selectedTaskId={selectedTaskId}
           isRowPending={isRowPending}
-          onExpandedChange={(expanded) => onProjectExpandedChange(group.projectId, expanded)}
+          onExpandedChange={(expanded) => onClientExpandedChange(group.clientId, expanded)}
+          onProjectExpandedChange={onProjectExpandedChange}
           onSelect={onSelect}
           onSelectProject={onSelectProject}
           onStatusChange={onStatusChange}

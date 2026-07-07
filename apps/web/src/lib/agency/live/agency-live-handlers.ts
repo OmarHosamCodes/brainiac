@@ -2,6 +2,7 @@ import type { AgencyLiveEvent } from "@brainiac/api/routers/agency-ops/live";
 
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
+import { NOTIFICATION_LIST_LIMIT } from "@/lib/queries/notifications";
 import { getQueryClient } from "@/lib/query-client";
 import {
   patchActiveMembersFromLiveTimer,
@@ -50,7 +51,7 @@ function handleNotificationCreated(
     const teamId = event.teamId;
 
     queryClient.setQueryData(
-      orpc.notifications.list.queryKey({ input: { teamId, limit: 40 } }),
+      orpc.notifications.list.queryKey({ input: { teamId, limit: NOTIFICATION_LIST_LIMIT } }),
       (current) => {
         if (!current || !Array.isArray(current.items)) {
           return current;
@@ -59,7 +60,7 @@ function handleNotificationCreated(
         const withoutDuplicate = current.items.filter((item) => item.id !== event.notification.id);
         return {
           ...current,
-          items: [event.notification, ...withoutDuplicate].slice(0, 40),
+          items: [event.notification, ...withoutDuplicate].slice(0, NOTIFICATION_LIST_LIMIT),
         };
       },
     );

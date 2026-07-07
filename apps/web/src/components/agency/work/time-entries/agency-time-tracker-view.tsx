@@ -52,7 +52,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
               value={view.selectedTaskId}
               onValueChange={view.onTaskChange}
               projects={view.projects}
-              tasks={view.tasksForChooser}
+              tasks={view.tasks}
               placeholder={view.taskChooserLabel}
               className={cn(
                 "h-9 w-auto max-w-44 shrink-0 border-0 bg-transparent px-2 font-normal shadow-none hover:bg-transparent",

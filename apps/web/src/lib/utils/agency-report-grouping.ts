@@ -6,6 +6,7 @@ export type ProjectGroup = {
   projectId: string;
   projectName: string;
   rows: AgencyReportEntry[];
+  totalSeconds: number;
 };
 
 export type ClientGroup = {
@@ -34,6 +35,7 @@ export type AggregatedProjectGroup = {
   projectId: string;
   projectName: string;
   rows: AggregatedReportRow[];
+  totalSeconds: number;
 };
 
 export type DisplayClientGroup = {
@@ -80,9 +82,11 @@ export function groupEntriesByClient(entries: AgencyReportEntry[]): ClientGroup[
         projectId: entry.projectId,
         projectName: entry.projectName,
         rows: [],
+        totalSeconds: 0,
       };
       client.byProject.set(entry.projectId, project);
     }
+    project.totalSeconds += entry.durationSeconds;
     project.rows.push(entry);
   }
 
@@ -145,11 +149,15 @@ export function groupEntriesForDisplay(entries: AgencyReportEntry[]): DisplayCli
     clientId: client.clientId,
     clientName: client.clientName,
     totalSeconds: client.totalSeconds,
-    projects: client.projects.map((project) => ({
-      projectId: project.projectId,
-      projectName: project.projectName,
-      rows: aggregateSimilarReportRows(project.rows),
-    })),
+    projects: client.projects.map((project) => {
+      const rows = aggregateSimilarReportRows(project.rows);
+      return {
+        projectId: project.projectId,
+        projectName: project.projectName,
+        rows,
+        totalSeconds: rows.reduce((sum, row) => sum + row.durationSeconds, 0),
+      };
+    }),
   }));
 }
 

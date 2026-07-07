@@ -1,11 +1,16 @@
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, BarChart2 } from "lucide-react";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
 
 import { AgencyReportsTable } from "@/components/agency/agency-reports-table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchAllReportEntries } from "@/lib/agency/reports/fetch-report-entries";
 import type { AgencyTimeRangeFilters } from "@/lib/agency/use-agency-time-range-filters";
+import { orpcClient } from "@/lib/orpc";
+import { useAgencyProjectTasksForChooserQuery, useAgencyProjectsQuery } from "@/lib/queries/agency";
+import type { AggregatedReportRow } from "@/lib/utils/agency-report-grouping";
 import { agencyEmptyPanelClass, agencyErrorPanelClass } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
@@ -15,7 +20,9 @@ type AgencyReportsSurfaceProps = {
 };
 
 export function AgencyReportsSurface({ teamId, filters }: AgencyReportsSurfaceProps) {
+  const queryClient = useQueryClient();
   const { range, projectId, memberUserId, clientId, fields } = filters;
+  const [updatingRowKeys, setUpdatingRowKeys] = useState<Set<string>>(() => new Set());
 
   const appliedFilters = {
     clientId,
@@ -38,6 +45,58 @@ export function AgencyReportsSurface({ teamId, filters }: AgencyReportsSurfacePr
     enabled: Boolean(teamId),
     placeholderData: keepPreviousData,
   });
+
+  const projectsQuery = useAgencyProjectsQuery(teamId);
+  const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId);
+  const projects = projectsQuery.data?.items ?? [];
+  const tasks = tasksQuery.items ?? [];
+
+  const taskChangeMutation = useMutation({
+    mutationFn: async ({ row, taskId }: { row: AggregatedReportRow; taskId: string }) => {
+      const task = tasks.find((item) => item.id === taskId);
+      const project = task ? projects.find((item) => item.id === task.projectId) : null;
+      if (!task || !project) {
+        throw new Error("Task not found.");
+      }
+
+      await Promise.all(
+        row.entries.map((entry) =>
+          orpcClient.agencyOps.reports.updateEntry({
+            teamId,
+            entryId: entry.id,
+            projectId: project.id,
+            taskId: task.id,
+          }),
+        ),
+      );
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
+    },
+    onError: (error) => {
+      toast.error("Couldn't update task", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    },
+  });
+
+  const handleTaskChange = useCallback(
+    async (row: AggregatedReportRow, taskId: string) => {
+      if (!teamId || row.taskId === taskId) return;
+
+      setUpdatingRowKeys((current) => new Set(current).add(row.key));
+      try {
+        await taskChangeMutation.mutateAsync({ row, taskId });
+      } finally {
+        setUpdatingRowKeys((current) => {
+          const next = new Set(current);
+          next.delete(row.key);
+          return next;
+        });
+      }
+    },
+    [taskChangeMutation, teamId],
+  );
 
   const entries = entriesQuery.data ?? [];
 
@@ -79,7 +138,15 @@ export function AgencyReportsSurface({ teamId, filters }: AgencyReportsSurfacePr
           </p>
         </div>
       ) : (
-        <AgencyReportsTable entries={entries} visibleFields={fields} />
+        <AgencyReportsTable
+          entries={entries}
+          visibleFields={fields}
+          projects={projects}
+          tasks={tasks}
+          tasksLoading={tasksQuery.isLoading}
+          updatingRowKeys={updatingRowKeys}
+          onTaskChange={handleTaskChange}
+        />
       )}
     </div>
   );

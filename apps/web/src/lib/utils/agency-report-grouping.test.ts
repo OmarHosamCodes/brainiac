@@ -68,5 +68,51 @@ describe("groupEntriesForDisplay", () => {
     expect(groups.map((group) => group.clientName)).toEqual(["Alpha", "Beta"]);
     expect(groups[0]?.projects[0]?.rows[0]?.durationSeconds).toBe(7_200);
     expect(groups[0]?.projects[0]?.rows[0]?.entryCount).toBe(2);
+    expect(groups[0]?.totalSeconds).toBe(7_200);
+    expect(groups[0]?.projects[0]?.totalSeconds).toBe(7_200);
+  });
+
+  test("sums project totals across multiple tasks and aggregated rows", () => {
+    const groups = groupEntriesForDisplay([
+      makeEntry({
+        id: "e1",
+        projectId: "project-a",
+        projectName: "Soul In",
+        taskId: "task-a",
+        taskTitle: "CRM Management",
+        description: "prep",
+        durationSeconds: 1_800,
+      }),
+      makeEntry({
+        id: "e2",
+        projectId: "project-a",
+        projectName: "Soul In",
+        taskId: "task-b",
+        taskTitle: "QA",
+        description: "review",
+        durationSeconds: 900,
+      }),
+      makeEntry({
+        id: "e3",
+        projectId: "project-a",
+        projectName: "Soul In",
+        taskId: "task-a",
+        taskTitle: "CRM Management",
+        description: "prep",
+        durationSeconds: 600,
+      }),
+      makeEntry({
+        id: "e4",
+        projectId: "project-b",
+        projectName: "Website",
+        description: "other",
+        durationSeconds: 300,
+      }),
+    ]);
+
+    const soulIn = groups[0]?.projects.find((project) => project.projectName === "Soul In");
+    expect(soulIn?.rows).toHaveLength(2);
+    expect(soulIn?.totalSeconds).toBe(3_300);
+    expect(groups[0]?.totalSeconds).toBe(3_600);
   });
 });

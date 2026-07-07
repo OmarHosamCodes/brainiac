@@ -75,7 +75,7 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
 
   const deleting = deleteTarget !== null && deletingTaskIds.includes(deleteTarget.id);
   const showingDone = view.railStatusFilter === "done";
-  const displayedGroups = showingDone ? view.doneProjectGroups : view.projectGroups;
+  const displayedGroups = showingDone ? view.doneClientGroups : view.clientGroups;
   const listLoading = showingDone ? view.doneTasksLoading : view.isLoading;
   const listQueryError = showingDone ? view.doneTasksQueryError : view.activeTasksQueryError;
   const listErrorMessage = showingDone ? view.doneTasksErrorMessage : view.activeTasksErrorMessage;
@@ -164,8 +164,9 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
           </div>
         ) : showingDone ? (
           <AgencyTaskGroupsList
-            projectGroups={displayedGroups}
+            clientGroups={displayedGroups}
             allTasks={view.allListedTasks}
+            collapsedClients={view.collapsedClients}
             collapsedProjects={view.collapsedProjects}
             projects={view.projects}
             teamId={view.teamId}
@@ -173,6 +174,7 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
             highlightBlueprintId={view.recentlyCreatedBlueprintId}
             highlightTaskId={view.recentlyCompletedTaskId}
             isRowPending={(taskId) => view.isRowPending(taskId) || deletingTaskIds.includes(taskId)}
+            onClientExpandedChange={view.onClientExpandedChange}
             onProjectExpandedChange={view.onProjectExpandedChange}
             onSelect={view.onSelect}
             onSelectProject={view.onSelectProject}
@@ -183,14 +185,16 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
           />
         ) : (
           <AgencyTaskVirtualList
-            projectGroups={displayedGroups}
+            clientGroups={displayedGroups}
             allTasks={view.allListedTasks}
+            collapsedClients={view.collapsedClients}
             collapsedProjects={view.collapsedProjects}
             projects={view.projects}
             teamId={view.teamId}
             selectedTaskId={view.selectedTaskId}
             highlightBlueprintId={view.recentlyCreatedBlueprintId}
             isRowPending={(taskId) => view.isRowPending(taskId) || deletingTaskIds.includes(taskId)}
+            onClientExpandedChange={view.onClientExpandedChange}
             onProjectExpandedChange={view.onProjectExpandedChange}
             onSelect={view.onSelect}
             onSelectProject={view.onSelectProject}

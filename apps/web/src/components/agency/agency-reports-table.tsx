@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 
 import { AgencyReportDurationCell } from "@/components/agency/agency-report-duration-cell";
+import { AgencyReportTaskCell } from "@/components/agency/agency-report-task-cell";
+import type { AgencyProject, AgencyProjectTask } from "@/lib/schemas/agency-work";
 import { agencyMetricClass } from "@/lib/utils/agency-ui";
 import {
   AGENCY_REPORT_FIELD_LABELS,
@@ -13,6 +15,7 @@ import {
   isReportEntryWaste,
   reportEntryWasteRowClass,
   type AgencyReportEntry,
+  type AggregatedReportRow,
   type DisplayClientGroup,
 } from "@/lib/utils/agency-report-grouping";
 import { formatDuration } from "@/lib/utils/format-duration";
@@ -23,6 +26,18 @@ type AgencyReportsTableProps = {
   clientGroups?: DisplayClientGroup[];
   visibleFields?: AgencyReportFieldId[];
   footer?: ReactNode;
+  projects?: Array<Pick<AgencyProject, "id" | "clientName" | "name">>;
+  tasks?: Array<
+    Pick<
+      AgencyProjectTask,
+      "id" | "projectId" | "title" | "status" | "assignedToTeam" | "assignees"
+    > & {
+      dueDate?: string | null;
+    }
+  >;
+  tasksLoading?: boolean;
+  updatingRowKeys?: ReadonlySet<string>;
+  onTaskChange?: (row: AggregatedReportRow, taskId: string) => void;
 };
 
 export function AgencyReportsTable({
@@ -30,6 +45,11 @@ export function AgencyReportsTable({
   clientGroups: clientGroupsProp,
   visibleFields = allAgencyReportFieldIds(),
   footer,
+  projects = [],
+  tasks = [],
+  tasksLoading = false,
+  updatingRowKeys,
+  onTaskChange,
 }: AgencyReportsTableProps) {
   const clientGroups = clientGroupsProp ?? groupEntriesForDisplay(entries);
   const totalSeconds = entries.reduce((sum, entry) => sum + entry.durationSeconds, 0);
@@ -99,18 +119,36 @@ export function AgencyReportsTable({
                       {showProject && rowIndex === 0 ? (
                         <td
                           rowSpan={project.rows.length}
-                          className="border-r border-default bg-elevated/40 px-4 py-3 align-middle text-xs font-bold text-highlighted"
+                          className="border-r border-default bg-elevated/40 px-4 py-3 align-top text-xs"
                         >
-                          {project.projectName}
+                          <div className="flex flex-col gap-1.5">
+                            <span className="font-bold text-highlighted">
+                              {project.projectName}
+                            </span>
+                            {showDuration ? (
+                              <span className={cn("text-[10px] text-muted", agencyMetricClass)}>
+                                {formatDuration(project.totalSeconds, "clock")}
+                              </span>
+                            ) : null}
+                          </div>
                         </td>
                       ) : null}
                       {showTask ? (
-                        <td
-                          className="max-w-48 truncate px-4 py-3 text-highlighted"
-                          title={row.taskTitle || undefined}
-                          dir="auto"
-                        >
-                          {row.taskTitle || "—"}
+                        <td className="max-w-48 px-4 py-3 text-highlighted" dir="auto">
+                          {onTaskChange ? (
+                            <AgencyReportTaskCell
+                              row={row}
+                              projects={projects}
+                              tasks={tasks}
+                              loading={tasksLoading}
+                              disabled={updatingRowKeys?.has(row.key)}
+                              onTaskChange={(taskId) => onTaskChange(row, taskId)}
+                            />
+                          ) : (
+                            <span className="block truncate" title={row.taskTitle || undefined}>
+                              {row.taskTitle || "—"}
+                            </span>
+                          )}
                         </td>
                       ) : null}
                       {showDescription ? (

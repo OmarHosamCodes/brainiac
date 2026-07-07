@@ -18,6 +18,7 @@ type AgencyTaskListState = {
   assignedToTeamForCreate: boolean;
   selectedAssigneeIdsForCreate: string[];
   collapsedProjects: Set<string>;
+  collapsedClients: Set<string>;
   setQuickAddFocused: (focused: boolean) => void;
   setCreateOptionsExpanded: (expanded: boolean) => void;
   setLastUsedProjectIdForCreate: (projectId: string) => void;
@@ -31,6 +32,7 @@ type AgencyTaskListState = {
   setAssignedToTeamForCreate: (value: boolean) => void;
   setSelectedAssigneeIdsForCreate: (value: string[]) => void;
   setProjectExpanded: (projectId: string, expanded: boolean) => void;
+  setClientExpanded: (clientId: string, expanded: boolean) => void;
   clearQuickAdd: (options: { currentUserId: string; defaultProjectId: string }) => void;
 };
 
@@ -52,6 +54,7 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   assignedToTeamForCreate: false,
   selectedAssigneeIdsForCreate: [],
   collapsedProjects: new Set(),
+  collapsedClients: new Set(),
   setQuickAddFocused: (focused) => set({ quickAddFocused: focused }),
   setCreateOptionsExpanded: (expanded) => set({ createOptionsExpanded: expanded }),
   setLastUsedProjectIdForCreate: (projectId) => set({ lastUsedProjectIdForCreate: projectId }),
@@ -81,6 +84,16 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
         next.add(projectId);
       }
       return { collapsedProjects: next };
+    }),
+  setClientExpanded: (clientId, expanded) =>
+    set((state) => {
+      const next = new Set(state.collapsedClients);
+      if (expanded) {
+        next.delete(clientId);
+      } else {
+        next.add(clientId);
+      }
+      return { collapsedClients: next };
     }),
   clearQuickAdd: ({ currentUserId, defaultProjectId }) =>
     set({

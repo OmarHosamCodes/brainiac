@@ -27,10 +27,10 @@ import { findOpenTaskByExactTitle } from "@/lib/utils/agency-task-title-filter";
 import { collectTaskBlueprintsFromTasks } from "@/lib/utils/agency-task-blueprints";
 import { isJourneyAnchorTask } from "@/lib/utils/agency-task-journey";
 import {
-  buildAgencyTaskRailGroups,
-  countRailDisplayRows,
+  buildAgencyTaskClientRailGroups,
+  countClientRailDisplayRows,
   summarizeAgencyTaskRailGroups,
-  type AgencyTaskProjectDisplayGroup,
+  type AgencyTaskClientDisplayGroup,
 } from "@/lib/utils/agency-task-rail-grouping";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/stores/agency-ops";
 import {
@@ -55,7 +55,7 @@ type UseAgencyTaskListOptions = {
   onSelectProject: (projectId: string) => void;
 };
 
-export type { AgencyTaskProjectDisplayGroup } from "@/lib/utils/agency-task-rail-grouping";
+export type { AgencyTaskClientDisplayGroup } from "@/lib/utils/agency-task-rail-grouping";
 
 export type AgencyTaskListCreateViewModel = {
   members: AgencyTaskThreadMember[];
@@ -117,11 +117,13 @@ export type AgencyTaskListViewModel =
       activeTasksQueryError: boolean;
       activeTasksErrorMessage: string;
       onRetryActiveTasks: () => void;
-      projectGroups: AgencyTaskProjectDisplayGroup[];
-      doneProjectGroups: AgencyTaskProjectDisplayGroup[];
+      clientGroups: AgencyTaskClientDisplayGroup[];
+      doneClientGroups: AgencyTaskClientDisplayGroup[];
       allListedTasks: AgencyProjectTask[];
       collapsedProjects: Set<string>;
+      collapsedClients: Set<string>;
       onProjectExpandedChange: (projectId: string, expanded: boolean) => void;
+      onClientExpandedChange: (clientId: string, expanded: boolean) => void;
       onSelect: (taskId: string, blueprintId?: string | null) => void;
       onSelectProject: (projectId: string) => void;
       onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
@@ -182,6 +184,7 @@ export function useAgencyTaskList({
   );
   const assignedToTeamForCreate = useAgencyTaskListStore((s) => s.assignedToTeamForCreate);
   const collapsedProjects = useAgencyTaskListStore((s) => s.collapsedProjects);
+  const collapsedClients = useAgencyTaskListStore((s) => s.collapsedClients);
   const setRailStatusFilter = useAgencyTaskListStore((s) => s.setRailStatusFilter);
   const setRecentlyCompletedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCompletedTaskId);
   const setRecentlyCreatedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCreatedTaskId);
@@ -198,6 +201,7 @@ export function useAgencyTaskList({
   );
   const setAssignedToTeamForCreate = useAgencyTaskListStore((s) => s.setAssignedToTeamForCreate);
   const setProjectExpanded = useAgencyTaskListStore((s) => s.setProjectExpanded);
+  const setClientExpanded = useAgencyTaskListStore((s) => s.setClientExpanded);
   const setQuickAddFocused = useAgencyTaskListStore((s) => s.setQuickAddFocused);
   const setCreateOptionsExpanded = useAgencyTaskListStore((s) => s.setCreateOptionsExpanded);
   const setLastUsedProjectIdForCreate = useAgencyTaskListStore(
@@ -412,9 +416,9 @@ export function useAgencyTaskList({
     ],
   );
 
-  const projectGroups = useMemo(
-    (): AgencyTaskProjectDisplayGroup[] =>
-      buildAgencyTaskRailGroups({
+  const clientGroups = useMemo(
+    (): AgencyTaskClientDisplayGroup[] =>
+      buildAgencyTaskClientRailGroups({
         tasks: activeTasks,
         projects,
         blueprints,
@@ -427,9 +431,9 @@ export function useAgencyTaskList({
     [activeTasks, allListedTasks, blueprints, currentUserId, journeyProgressByProjectId, projects],
   );
 
-  const doneProjectGroups = useMemo(
-    (): AgencyTaskProjectDisplayGroup[] =>
-      buildAgencyTaskRailGroups({
+  const doneClientGroups = useMemo(
+    (): AgencyTaskClientDisplayGroup[] =>
+      buildAgencyTaskClientRailGroups({
         tasks: doneTasks,
         projects,
         blueprints,
@@ -443,19 +447,19 @@ export function useAgencyTaskList({
   );
 
   const railSummaryCounts = useMemo(
-    () => summarizeAgencyTaskRailGroups(projectGroups),
-    [projectGroups],
+    () => summarizeAgencyTaskRailGroups(clientGroups.flatMap((group) => group.projectGroups)),
+    [clientGroups],
   );
 
   // Count visible rail rows (blueprint splits, milestones) — not raw API task totals.
   const activeCount =
     activeTasksQuery.isPending && activeTasks.length === 0
       ? null
-      : countRailDisplayRows(projectGroups);
+      : countClientRailDisplayRows(clientGroups);
   const doneCount =
     doneTasksQuery.isPending && doneTasks.length === 0
       ? null
-      : countRailDisplayRows(doneProjectGroups);
+      : countClientRailDisplayRows(doneClientGroups);
   const totalCount =
     activeCount === null && doneCount === null ? null : (activeCount ?? 0) + (doneCount ?? 0);
 
@@ -689,11 +693,13 @@ export function useAgencyTaskList({
     activeTasksQueryError: activeTasksQuery.isError,
     activeTasksErrorMessage: activeTasksQuery.isError ? String(activeTasksQuery.error) : "",
     onRetryActiveTasks: () => void activeTasksQuery.refetch(),
-    projectGroups,
-    doneProjectGroups,
+    clientGroups,
+    doneClientGroups,
     allListedTasks,
     collapsedProjects,
+    collapsedClients,
     onProjectExpandedChange: setProjectExpanded,
+    onClientExpandedChange: setClientExpanded,
     onSelect: handleSelect,
     onSelectProject,
     onStatusChange: (task, status) => void updateTaskStatus(task, status),

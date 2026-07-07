@@ -14,7 +14,6 @@ import {
   useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
-  type AgencyProjectTaskStatus,
 } from "@/lib/queries/agency";
 import { formatAgencyDayLabel } from "@/lib/utils/format-agency-day-label";
 import { activeTimerStartToIso, startedAtToDateTimeDraft } from "@/lib/utils/time-entry-draft";
@@ -24,7 +23,6 @@ import {
   useTrackerDraft,
 } from "@/stores/agency-time-tracking";
 
-const OPEN_TASK_STATUSES: AgencyProjectTaskStatus[] = ["open", "in_progress"];
 const TRACKER_SUGGESTION_LIMIT = 3;
 const START_TIME_DEBOUNCE_MS = 300;
 
@@ -55,7 +53,7 @@ export type AgencyTimeTrackerViewModel = {
   taskChooserLabel: string;
   taskChooserWarning: boolean;
   projects: AgencyProject[];
-  tasksForChooser: AgencyProjectTask[];
+  tasks: AgencyProjectTask[];
   projectsLoading: boolean;
   tasksLoading: boolean;
   activeTimer: NonNullable<
@@ -117,9 +115,7 @@ export function useAgencyTimeTracker({
   const pendingDraftRef = useRef<AgencyTimerStartDraft | null>(null);
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
-  const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId, {
-    statuses: OPEN_TASK_STATUSES,
-  });
+  const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId);
   const recentEntriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 50);
   const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
 
@@ -142,11 +138,6 @@ export function useAgencyTimeTracker({
   });
   const activeTimerHasTask = Boolean(activeTimer?.taskId);
   const descriptionTrimmed = timerDescription.trim();
-  const tasksForChooser =
-    activeTimer && !activeTimer.taskId
-      ? tasks.filter((task) => task.projectId === activeTimer.projectId)
-      : tasks;
-
   useEffect(() => {
     if (!teamId) return;
     ensureTrackerDraft(teamId);
@@ -352,7 +343,7 @@ export function useAgencyTimeTracker({
     taskChooserLabel,
     taskChooserWarning: !activeTimerHasTask && !selectedTask && taskChooserOpen,
     projects,
-    tasksForChooser,
+    tasks,
     projectsLoading: projectsQuery.isPending,
     tasksLoading: tasksQuery.isPending,
     activeTimer,

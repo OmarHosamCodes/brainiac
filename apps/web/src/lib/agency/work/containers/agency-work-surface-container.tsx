@@ -106,5 +106,5 @@ export function AgencyWorkSurface({
 }: AgencyWorkSurfaceProps) {
   useAgencyJourneyLiveSync({ teamId });
   const view = useAgencyWorkSurface({ teamId, onSelectProject, onSegmentChange });
-  return renderWorkSurfaceView(view);
+  return <div className="flex min-h-0 flex-1 flex-col pb-4">{renderWorkSurfaceView(view)}</div>;
 }

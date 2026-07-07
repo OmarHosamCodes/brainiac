@@ -162,6 +162,7 @@ type AgencyDashboardCommandBarProps = {
   onFieldIdsChange?: (fieldIds: AgencyReportFieldId[]) => void;
   defaultFieldIds?: AgencyReportFieldId[];
   trailingActions?: ReactNode;
+  contextMenuEnabled?: boolean;
   createReportAction?: {
     onSelect: () => void;
     disabled?: boolean;
@@ -631,6 +632,7 @@ export function AgencyDashboardCommandBar({
   onFieldIdsChange,
   defaultFieldIds = allAgencyReportFieldIds(),
   trailingActions,
+  contextMenuEnabled = true,
   createReportAction,
   historyMenu,
 }: AgencyDashboardCommandBarProps) {
@@ -651,107 +653,113 @@ export function AgencyDashboardCommandBar({
     userAvatar: member.avatar ?? null,
   }));
 
+  const filterBar = (
+    <div className={agencyCommandBarShellClass}>
+      {showClientFilter ? (
+        <FilterOptionChooser
+          label="Client"
+          value={clientId}
+          onChange={onClientChange!}
+          emptyLabel="All Clients"
+          searchPlaceholder="Search clients"
+          disabled={clientsLoading}
+          loading={clientsLoading}
+          options={clients!.map((client) => ({
+            value: client.id,
+            label: client.name,
+          }))}
+        />
+      ) : null}
+      <AgencyProjectChooser
+        value={projectId}
+        onValueChange={onProjectChange}
+        projects={projects}
+        allowEmpty
+        emptyLabel="All Projects"
+        placeholder="All Projects"
+        searchPlaceholder="Search projects or clients"
+        loading={projectsLoading}
+        disabled={projectsLoading}
+        className={cn(filterTriggerClass, projectId ? "text-highlighted" : "text-muted")}
+      />
+      <AgencyMemberChooser
+        value={memberUserId}
+        onValueChange={onMemberChange}
+        members={memberOptions}
+        placeholder="Team"
+        searchPlaceholder="Search members"
+        allowUnassigned={false}
+        allowEmpty
+        className={cn(
+          filterTriggerClass,
+          "h-9 w-auto max-w-44",
+          memberUserId ? "text-highlighted" : "text-muted",
+        )}
+      />
+      {showFieldsFilter ? (
+        <AgencyMultiSelectFilter
+          label="Fields"
+          values={fieldIds!}
+          options={defaultFieldIds.map((field) => ({
+            value: field,
+            label: AGENCY_REPORT_FIELD_LABELS[field],
+          }))}
+          onValuesChange={(values) => {
+            const next = values.filter(isAgencyReportFieldId);
+            onFieldIdsChange!(next.length > 0 ? next : defaultFieldIds);
+          }}
+          searchPlaceholder="Search fields"
+        />
+      ) : null}
+      <RangePresetChooser
+        value={rangePreset}
+        onChange={onRangePresetChange}
+        tenureAvailable={tenureAvailable}
+      />
+
+      {rangePreset === "custom" ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="sr-only" htmlFor="agency-dashboard-from">
+            From date
+          </label>
+          <Input
+            id="agency-dashboard-from"
+            type="date"
+            value={customFromDate}
+            className="h-9 w-auto min-w-32 rounded-xl border-default bg-default px-2 text-xs font-semibold text-highlighted"
+            onChange={(event) => onCustomFromChange(event.target.value)}
+          />
+          <span className="text-xs text-muted">–</span>
+          <label className="sr-only" htmlFor="agency-dashboard-to">
+            To date
+          </label>
+          <Input
+            id="agency-dashboard-to"
+            type="date"
+            value={customToDate}
+            className="h-9 w-auto min-w-32 rounded-xl border-default bg-default px-2 text-xs font-semibold text-highlighted"
+            onChange={(event) => onCustomToChange(event.target.value)}
+          />
+        </div>
+      ) : null}
+
+      <AgencyCommandBarActions>
+        <Button variant="secondary" size="sm" disabled={!hasPendingChanges} onClick={onApply}>
+          Apply
+        </Button>
+        {hasActiveFilters ? <AgencyCommandBarResetButton onClick={onReset} /> : null}
+        {trailingActions}
+      </AgencyCommandBarActions>
+    </div>
+  );
+
+  if (!contextMenuEnabled) {
+    return filterBar;
+  }
+
   return (
     <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <div className={agencyCommandBarShellClass}>
-          {showClientFilter ? (
-            <FilterOptionChooser
-              label="Client"
-              value={clientId}
-              onChange={onClientChange!}
-              emptyLabel="All Clients"
-              searchPlaceholder="Search clients"
-              disabled={clientsLoading}
-              loading={clientsLoading}
-              options={clients!.map((client) => ({
-                value: client.id,
-                label: client.name,
-              }))}
-            />
-          ) : null}
-          <AgencyProjectChooser
-            value={projectId}
-            onValueChange={onProjectChange}
-            projects={projects}
-            allowEmpty
-            emptyLabel="All Projects"
-            placeholder="All Projects"
-            searchPlaceholder="Search projects or clients"
-            loading={projectsLoading}
-            disabled={projectsLoading}
-            className={cn(filterTriggerClass, projectId ? "text-highlighted" : "text-muted")}
-          />
-          <AgencyMemberChooser
-            value={memberUserId}
-            onValueChange={onMemberChange}
-            members={memberOptions}
-            placeholder="Team"
-            searchPlaceholder="Search members"
-            allowUnassigned={false}
-            allowEmpty
-            className={cn(
-              filterTriggerClass,
-              "h-9 w-auto max-w-44",
-              memberUserId ? "text-highlighted" : "text-muted",
-            )}
-          />
-          {showFieldsFilter ? (
-            <AgencyMultiSelectFilter
-              label="Fields"
-              values={fieldIds!}
-              options={defaultFieldIds.map((field) => ({
-                value: field,
-                label: AGENCY_REPORT_FIELD_LABELS[field],
-              }))}
-              onValuesChange={(values) => {
-                const next = values.filter(isAgencyReportFieldId);
-                onFieldIdsChange!(next.length > 0 ? next : defaultFieldIds);
-              }}
-              searchPlaceholder="Search fields"
-            />
-          ) : null}
-          <RangePresetChooser
-            value={rangePreset}
-            onChange={onRangePresetChange}
-            tenureAvailable={tenureAvailable}
-          />
-
-          {rangePreset === "custom" ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="sr-only" htmlFor="agency-dashboard-from">
-                From date
-              </label>
-              <Input
-                id="agency-dashboard-from"
-                type="date"
-                value={customFromDate}
-                className="h-9 w-auto min-w-32 rounded-xl border-default bg-default px-2 text-xs font-semibold text-highlighted"
-                onChange={(event) => onCustomFromChange(event.target.value)}
-              />
-              <span className="text-xs text-muted">–</span>
-              <label className="sr-only" htmlFor="agency-dashboard-to">
-                To date
-              </label>
-              <Input
-                id="agency-dashboard-to"
-                type="date"
-                value={customToDate}
-                className="h-9 w-auto min-w-32 rounded-xl border-default bg-default px-2 text-xs font-semibold text-highlighted"
-                onChange={(event) => onCustomToChange(event.target.value)}
-              />
-            </div>
-          ) : null}
-
-          <AgencyCommandBarActions>
-            <Button variant="secondary" size="sm" disabled={!hasPendingChanges} onClick={onApply}>
-              Apply
-            </Button>
-            {hasActiveFilters ? <AgencyCommandBarResetButton onClick={onReset} /> : null}
-            {trailingActions}
-          </AgencyCommandBarActions>
-        </div>
-      </ContextMenuTrigger>
+      <ContextMenuTrigger asChild>{filterBar}</ContextMenuTrigger>
       <AgencyDashboardCommandBarMenu
         rangePreset={rangePreset}
         onRangePresetChange={onRangePresetChange}

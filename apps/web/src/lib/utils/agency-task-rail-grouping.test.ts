@@ -2,7 +2,9 @@ import { describe, expect, it } from "bun:test";
 
 import type { AgencyProjectTask, AgencyTaskProject } from "@/lib/schemas/agency-work";
 import {
+  buildAgencyTaskClientRailGroups,
   buildAgencyTaskRailGroups,
+  countClientRailDisplayRows,
   countProjectDisplayRows,
   countRailDisplayRows,
   summarizeAgencyTaskRailGroups,
@@ -38,6 +40,40 @@ const projects: AgencyTaskProject[] = [
     name: "Mobile",
   },
 ];
+
+describe("buildAgencyTaskClientRailGroups", () => {
+  it("groups client → project → tasks", () => {
+    const tasks = [
+      task({ id: "std-1", projectId: "proj-1", title: "Fix bug", taskKind: "standard" }),
+      task({ id: "std-2", projectId: "proj-2", title: "QA pass", taskKind: "standard" }),
+    ];
+
+    const groups = buildAgencyTaskClientRailGroups({ tasks, projects });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.clientName).toBe("Acme");
+    expect(groups[0]?.projectGroups).toHaveLength(2);
+    expect(countClientRailDisplayRows(groups)).toBe(2);
+  });
+
+  it("sorts clients alphabetically", () => {
+    const multiClientProjects: AgencyTaskProject[] = [
+      { id: "proj-a", clientId: "client-b", clientName: "Beta", name: "Site" },
+      { id: "proj-b", clientId: "client-a", clientName: "Alpha", name: "App" },
+    ];
+    const tasks = [
+      task({ id: "std-1", projectId: "proj-a", title: "Work", taskKind: "standard" }),
+      task({ id: "std-2", projectId: "proj-b", title: "Build", taskKind: "standard" }),
+    ];
+
+    const groups = buildAgencyTaskClientRailGroups({
+      tasks,
+      projects: multiClientProjects,
+    });
+
+    expect(groups.map((group) => group.clientName)).toEqual(["Alpha", "Beta"]);
+  });
+});
 
 describe("buildAgencyTaskRailGroups", () => {
   it("groups project → journey cluster + standalone tasks", () => {

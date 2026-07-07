@@ -162,6 +162,40 @@ export function buildAgencyTaskRailGroups({
   return buildProjectGroupsForClient(displayRows, projects);
 }
 
+export function buildAgencyTaskClientRailGroups(
+  input: BuildAgencyTaskRailGroupsInput,
+): AgencyTaskClientDisplayGroup[] {
+  const projectGroups = buildAgencyTaskRailGroups(input);
+  const projectById = new Map(input.projects.map((project) => [project.id, project]));
+  const groupsByClient = new Map<string, AgencyTaskClientDisplayGroup>();
+
+  for (const projectGroup of projectGroups) {
+    const project = projectById.get(projectGroup.projectId);
+    const clientId = project?.clientId ?? `unknown:${projectGroup.projectId}`;
+    const clientName = project?.clientName ?? "Unknown client";
+
+    const existing = groupsByClient.get(clientId);
+    if (existing) {
+      existing.projectGroups.push(projectGroup);
+      continue;
+    }
+
+    groupsByClient.set(clientId, {
+      clientId,
+      clientName,
+      projectGroups: [projectGroup],
+    });
+  }
+
+  return [...groupsByClient.values()].sort((left, right) =>
+    left.clientName.localeCompare(right.clientName),
+  );
+}
+
+export function countClientRailDisplayRows(clientGroups: AgencyTaskClientDisplayGroup[]): number {
+  return clientGroups.reduce((sum, group) => sum + countClientDisplayRows(group), 0);
+}
+
 export type EstimateProjectGroupHeightInput = {
   group: AgencyTaskProjectDisplayGroup;
   estimateRowHeight: (row: AgencyTaskDisplayRow) => number;
