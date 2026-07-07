@@ -33,6 +33,7 @@ export {
 
 export const APP_SHELL_CONTEXT_SLOT_ID = "app-shell-context";
 export const APP_SHELL_ACTIONS_SLOT_ID = "app-shell-actions";
+export const APP_SHELL_TRAILING_SLOT_ID = "app-shell-trailing";
 
 export function AppShellTopbarContext({ children }: { children: ReactNode }) {
   return (
@@ -45,6 +46,14 @@ export function AppShellTopbarContext({ children }: { children: ReactNode }) {
 export function AppShellTopbarActions({ children }: { children: ReactNode }) {
   return (
     <AppShellPortal targetId={APP_SHELL_ACTIONS_SLOT_ID}>
+      <div className={shellActionsSlotClass}>{children}</div>
+    </AppShellPortal>
+  );
+}
+
+export function AppShellTopbarTrailing({ children }: { children: ReactNode }) {
+  return (
+    <AppShellPortal targetId={APP_SHELL_TRAILING_SLOT_ID}>
       <div className={shellActionsSlotClass}>{children}</div>
     </AppShellPortal>
   );
@@ -96,6 +105,7 @@ export function AppShellTopbar() {
       <div className={shellUtilityClusterClass}>
         <div id={APP_SHELL_ACTIONS_SLOT_ID} className={shellHeaderActionsRegionClass} />
         {hasPageActions ? <span className={shellContextDividerClass} aria-hidden="true" /> : null}
+        <div id={APP_SHELL_TRAILING_SLOT_ID} className={shellHeaderActionsRegionClass} />
         {agentButtonHidden ? null : (
           <Button
             type="button"

@@ -13,7 +13,11 @@ import { AgencyPresenceAvatars } from "@/components/agency/agency-presence-avata
 import { AgencyTeamBreadcrumb } from "@/components/agency/agency-team-breadcrumb";
 import { AgencyWorkSurface } from "@/components/agency/agency-work-surface";
 import { LogoLoader } from "@/components/shell/logo-loader";
-import { AppShellTopbarActions, AppShellTopbarSubtitle } from "@/components/app-shell-topbar";
+import {
+  AppShellTopbarActions,
+  AppShellTopbarSubtitle,
+  AppShellTopbarTrailing,
+} from "@/components/app-shell-topbar";
 import { AppShellPage } from "@/components/app-shell-page";
 import { AgencySegmentFiltersRoot } from "@/lib/agency/agency-segment-filters";
 import { useAgencySyncStatus } from "@/lib/queries/agency-sync";
@@ -207,7 +211,6 @@ export function AgencyPage() {
             </AppShellTopbarSubtitle>
 
             <AppShellTopbarActions>
-              {selectedTeamId ? <AgencyNotifications teamId={selectedTeamId} /> : null}
               <AgencyTeamBreadcrumb
                 teamId={selectedTeamId}
                 teams={teams}
@@ -215,6 +218,10 @@ export function AgencyPage() {
               />
               {selectedTeamId ? <AgencyPresenceAvatars teamId={selectedTeamId} /> : null}
             </AppShellTopbarActions>
+
+            <AppShellTopbarTrailing>
+              {selectedTeamId ? <AgencyNotifications teamId={selectedTeamId} /> : null}
+            </AppShellTopbarTrailing>
           </>
         ) : null}
 
