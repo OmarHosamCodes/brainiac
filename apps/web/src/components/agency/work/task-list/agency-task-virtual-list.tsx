@@ -1,29 +1,30 @@
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useEffect, useMemo, useRef } from "react";
 
-import { AgencyTaskClientGroupView } from "@/components/agency/work/task-list/agency-task-client-group-view";
-import type { AgencyTaskClientDisplayGroup } from "@/lib/agency/work/hooks/use-agency-task-list";
+import { AgencyTaskProjectGroupView } from "@/components/agency/work/task-list/agency-task-project-group-view";
+import type { AgencyTaskProjectDisplayGroup } from "@/lib/utils/agency-task-rail-grouping";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
 import { estimateDisplayRowHeight } from "@/lib/utils/agency-task-status";
-import { estimateClientGroupHeight } from "@/lib/utils/agency-task-rail-grouping";
+import {
+  AGENCY_TASK_PROJECT_HEADER_HEIGHT,
+  estimateProjectGroupHeight,
+} from "@/lib/utils/agency-task-rail-grouping";
 import type { AgencyTaskDisplayRow } from "@/lib/utils/agency-task-blueprints";
 
 type FlatRow =
-  | { kind: "group"; key: string; group: AgencyTaskClientDisplayGroup; expanded: boolean }
+  | { kind: "group"; key: string; group: AgencyTaskProjectDisplayGroup; expanded: boolean }
   | { kind: "spacer"; key: string };
 
 type AgencyTaskVirtualListProps = {
-  clientGroups: AgencyTaskClientDisplayGroup[];
+  projectGroups: AgencyTaskProjectDisplayGroup[];
   allTasks: AgencyProjectTask[];
-  collapsedClients: Set<string>;
   collapsedProjects: Set<string>;
   projects: AgencyTaskProject[];
   teamId: string;
   selectedTaskId: string;
   highlightBlueprintId: string;
   isRowPending: (taskId: string) => boolean;
-  onClientExpandedChange: (clientId: string, expanded: boolean) => void;
   onProjectExpandedChange: (projectId: string, expanded: boolean) => void;
   onSelect: (taskId: string, blueprintId?: string | null) => void;
   onSelectProject: (projectId: string) => void;
@@ -45,30 +46,26 @@ function estimateRowHeight(
 }
 
 function estimateGroupHeight(
-  group: AgencyTaskClientDisplayGroup,
+  group: AgencyTaskProjectDisplayGroup,
   expanded: boolean,
-  collapsedProjects: Set<string>,
   getTaskTrackingState?: (taskId: string, blueprintDescription?: string) => TaskTrackingState,
 ) {
-  return estimateClientGroupHeight({
+  if (!expanded) return AGENCY_TASK_PROJECT_HEADER_HEIGHT;
+  return estimateProjectGroupHeight({
     group,
-    expanded,
-    collapsedProjects,
     estimateRowHeight: (row) => estimateRowHeight(row, getTaskTrackingState),
   });
 }
 
 export function AgencyTaskVirtualList({
-  clientGroups,
+  projectGroups,
   allTasks,
-  collapsedClients,
   collapsedProjects,
   projects,
   teamId,
   selectedTaskId,
   highlightBlueprintId,
   isRowPending,
-  onClientExpandedChange,
   onProjectExpandedChange,
   onSelect,
   onSelectProject,
@@ -83,17 +80,17 @@ export function AgencyTaskVirtualList({
   const parentRef = useRef<HTMLDivElement>(null);
 
   const flatRows = useMemo((): FlatRow[] => {
-    const rows: FlatRow[] = clientGroups.map((group) => ({
+    const rows: FlatRow[] = projectGroups.map((group) => ({
       kind: "group",
-      key: group.clientId,
+      key: group.projectId,
       group,
-      expanded: !collapsedClients.has(group.clientId),
+      expanded: !collapsedProjects.has(group.projectId),
     }));
     if (hasMore) {
       rows.push({ kind: "spacer", key: "__fetch-more__" });
     }
     return rows;
-  }, [clientGroups, collapsedClients, hasMore]);
+  }, [projectGroups, collapsedProjects, hasMore]);
 
   const virtualizer = useVirtualizer({
     count: flatRows.length,
@@ -101,7 +98,7 @@ export function AgencyTaskVirtualList({
     estimateSize: (index) => {
       const row = flatRows[index];
       if (!row || row.kind === "spacer") return 24;
-      return estimateGroupHeight(row.group, row.expanded, collapsedProjects, getTaskTrackingState);
+      return estimateGroupHeight(row.group, row.expanded, getTaskTrackingState);
     },
     overscan: 4,
   });
@@ -148,19 +145,17 @@ export function AgencyTaskVirtualList({
               ref={virtualizer.measureElement}
               data-index={virtualRow.index}
             >
-              <AgencyTaskClientGroupView
+              <AgencyTaskProjectGroupView
                 group={row.group}
                 expanded={row.expanded}
-                collapsedProjects={collapsedProjects}
                 allTasks={allTasks}
                 projects={projects}
                 teamId={teamId}
                 selectedTaskId={selectedTaskId}
                 isRowPending={isRowPending}
                 onExpandedChange={(expanded) =>
-                  onClientExpandedChange(row.group.clientId, expanded)
+                  onProjectExpandedChange(row.group.projectId, expanded)
                 }
-                onProjectExpandedChange={onProjectExpandedChange}
                 onSelect={onSelect}
                 onSelectProject={onSelectProject}
                 onStatusChange={onStatusChange}

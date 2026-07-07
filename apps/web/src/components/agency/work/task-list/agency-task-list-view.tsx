@@ -3,7 +3,7 @@ import { AlertTriangle, ChevronDown, ListChecks, Loader2 } from "lucide-react";
 
 import { AgencyTaskVirtualList } from "@/components/agency/work/task-list/agency-task-virtual-list";
 import { AgencyTaskCreateInlineView } from "@/components/agency/work/task-list/agency-task-create-inline-view";
-import { AgencyTaskClientGroupView } from "@/components/agency/work/task-list/agency-task-client-group-view";
+import { AgencyTaskProjectGroupView } from "@/components/agency/work/task-list/agency-task-project-group-view";
 import { AgencyTaskRailExpandButton } from "@/components/agency/work/task-list/agency-task-rail-expand-button";
 import { AgencyTaskRailSummary } from "@/components/agency/agency-task-rail-summary";
 import { Button } from "@/components/ui/button";
@@ -154,16 +154,14 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
           </div>
         ) : (
           <AgencyTaskVirtualList
-            clientGroups={view.clientGroups}
+            projectGroups={view.projectGroups}
             allTasks={view.allListedTasks}
-            collapsedClients={view.collapsedClients}
             collapsedProjects={view.collapsedProjects}
             projects={view.projects}
             teamId={view.teamId}
             selectedTaskId={view.selectedTaskId}
             highlightBlueprintId={view.recentlyCreatedBlueprintId}
             isRowPending={(taskId) => view.isRowPending(taskId) || deletingTaskIds.includes(taskId)}
-            onClientExpandedChange={view.onClientExpandedChange}
             onProjectExpandedChange={view.onProjectExpandedChange}
             onSelect={view.onSelect}
             onSelectProject={view.onSelectProject}
@@ -228,7 +226,7 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
                     Retry
                   </Button>
                 </div>
-              ) : view.doneClientGroups.length === 0 ? (
+              ) : view.doneProjectGroups.length === 0 ? (
                 <div className="border-t border-default px-4 py-3 text-center">
                   <p className="text-xs text-muted">Nothing completed yet.</p>
                 </div>
@@ -237,12 +235,11 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
                   className="max-h-48 overflow-x-hidden overflow-y-auto border-t border-default"
                   aria-label="Done tasks"
                 >
-                  {view.doneClientGroups.map((group) => (
-                    <AgencyTaskClientGroupView
-                      key={group.clientId}
+                  {view.doneProjectGroups.map((group) => (
+                    <AgencyTaskProjectGroupView
+                      key={group.projectId}
                       group={group}
-                      expanded={!view.collapsedClients.has(group.clientId)}
-                      collapsedProjects={view.collapsedProjects}
+                      expanded={!view.collapsedProjects.has(group.projectId)}
                       allTasks={view.allListedTasks}
                       projects={view.projects}
                       teamId={view.teamId}
@@ -253,11 +250,11 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
                         view.isRowPending(taskId) || view.create.isCreatingTask
                       }
                       onExpandedChange={(expanded) =>
-                        view.onClientExpandedChange(group.clientId, expanded)
+                        view.onProjectExpandedChange(group.projectId, expanded)
                       }
-                      onProjectExpandedChange={view.onProjectExpandedChange}
                       onSelect={view.onSelect}
                       onSelectProject={view.onSelectProject}
+                      onStatusChange={view.onStatusChange}
                       onReopenToActive={view.onReopenDoneTask}
                     />
                   ))}

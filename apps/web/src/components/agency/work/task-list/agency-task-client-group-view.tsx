@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react";
 
 import { AgencyTaskProjectGroupView } from "@/components/agency/work/task-list/agency-task-project-group-view";
-import type { AgencyTaskClientDisplayGroup } from "@/lib/agency/work/hooks/use-agency-task-list";
+import type { AgencyTaskClientDisplayGroup } from "@/lib/utils/agency-task-rail-grouping";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
 import {
