@@ -35,6 +35,12 @@ type AgencyTaskVirtualListProps = {
   onFetchMore?: () => void;
   getTaskTrackingState?: (taskId: string, blueprintDescription?: string) => TaskTrackingState;
   onBlueprintDescriptionChange?: (blueprintId: string, value: string) => void;
+  onTrackerDescriptionChange?: (value: string) => void;
+  onAssociateTrackerForDescription?: (task: AgencyProjectTask) => void;
+  readOnly?: boolean;
+  onReopenToActive?: (task: AgencyProjectTask) => void;
+  highlightTaskId?: string;
+  listAriaLabel?: string;
 };
 
 function estimateRowHeight(
@@ -76,6 +82,12 @@ export function AgencyTaskVirtualList({
   onFetchMore,
   getTaskTrackingState,
   onBlueprintDescriptionChange,
+  onTrackerDescriptionChange,
+  onAssociateTrackerForDescription,
+  readOnly = false,
+  onReopenToActive,
+  highlightTaskId,
+  listAriaLabel = "My tasks",
 }: AgencyTaskVirtualListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -118,7 +130,7 @@ export function AgencyTaskVirtualList({
     <div
       ref={parentRef}
       className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
-      aria-label="My tasks"
+      aria-label={listAriaLabel}
     >
       <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
         {virtualItems.map((virtualRow) => {
@@ -163,6 +175,11 @@ export function AgencyTaskVirtualList({
                 highlightBlueprintId={highlightBlueprintId}
                 getTaskTrackingState={getTaskTrackingState}
                 onBlueprintDescriptionChange={onBlueprintDescriptionChange}
+                onTrackerDescriptionChange={onTrackerDescriptionChange}
+                onAssociateTrackerForDescription={onAssociateTrackerForDescription}
+                readOnly={readOnly}
+                onReopenToActive={onReopenToActive}
+                highlightTaskId={highlightTaskId}
               />
             </div>
           );
