@@ -41,6 +41,7 @@ describe("resolveTaskTrackingState", () => {
     expect(state).toEqual({
       isTrackingTask: false,
       description: "",
+      trackerDescription: "",
       hasDescription: false,
       needsDescription: false,
       canEditDescription: false,

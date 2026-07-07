@@ -11,6 +11,7 @@ export type TaskTrackingDraftRef = {
 export type TaskTrackingState = {
   isTrackingTask: boolean;
   description: string;
+  trackerDescription: string;
   hasDescription: boolean;
   needsDescription: boolean;
   canEditDescription: boolean;
@@ -32,6 +33,7 @@ export function resolveTaskTrackingState(input: {
   return {
     isTrackingTask,
     description: blueprintDescription,
+    trackerDescription,
     hasDescription: blueprintDescription.trim().length > 0,
     needsDescription: isTrackingTask && hasActiveTimer && !trackerDescription.trim(),
     canEditDescription: false,
