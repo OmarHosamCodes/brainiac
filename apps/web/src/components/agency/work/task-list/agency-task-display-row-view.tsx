@@ -21,6 +21,8 @@ export type AgencyTaskDisplayRowViewProps = {
   onDelete?: (task: AgencyProjectTask) => void;
   trackingState?: TaskTrackingState;
   onBlueprintDescriptionChange?: (value: string) => void;
+  onTrackerDescriptionChange?: (value: string) => void;
+  onAssociateTrackerForDescription?: (task: AgencyProjectTask) => void;
 };
 
 export function AgencyTaskDisplayRowView({
@@ -40,6 +42,8 @@ export function AgencyTaskDisplayRowView({
   onDelete,
   trackingState,
   onBlueprintDescriptionChange,
+  onTrackerDescriptionChange,
+  onAssociateTrackerForDescription,
 }: AgencyTaskDisplayRowViewProps) {
   if (row.rowKind === "journey_anchor") {
     return (
@@ -76,6 +80,8 @@ export function AgencyTaskDisplayRowView({
       onReopenToActive={onReopenToActive}
       onDelete={onDelete}
       onBlueprintDescriptionChange={onBlueprintDescriptionChange}
+      onTrackerDescriptionChange={onTrackerDescriptionChange}
+      onAssociateTrackerForDescription={onAssociateTrackerForDescription}
     />
   );
 }

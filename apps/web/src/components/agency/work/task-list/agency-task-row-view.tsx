@@ -1,4 +1,4 @@
-import { Check, Clock, Plus, Trash2 } from "lucide-react";
+import { Check, Clock, CornerDownLeft, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { AgencyMemberAvatar } from "@/components/agency/agency-member-avatar";
@@ -91,6 +91,8 @@ export type AgencyTaskRowViewProps = {
   nested?: boolean;
   trackingState?: TaskTrackingState;
   onBlueprintDescriptionChange?: (value: string) => void;
+  onTrackerDescriptionChange?: (value: string) => void;
+  onAssociateTrackerForDescription?: (task: AgencyProjectTask) => void;
 };
 
 export function AgencyTaskRowView({
@@ -112,6 +114,8 @@ export function AgencyTaskRowView({
   nested = false,
   trackingState,
   onBlueprintDescriptionChange,
+  onTrackerDescriptionChange,
+  onAssociateTrackerForDescription,
 }: AgencyTaskRowViewProps) {
   const project = projects.find((p) => p.id === task.projectId);
   const projectName = project?.name ?? "Project";
@@ -128,37 +132,64 @@ export function AgencyTaskRowView({
   const inlineAssigneeStack = nested && showAssigneeStack && task.assignees.length > 0;
 
   const canDelete = !readOnly && Boolean(onDelete) && !isJourneyMilestoneTask(task);
-  const canEditDescription = Boolean(blueprintId && onBlueprintDescriptionChange && !readOnly);
+  const canEditBlueprint = Boolean(blueprintId && onBlueprintDescriptionChange && !readOnly);
+  const canEditTracker = Boolean(!readOnly && onTrackerDescriptionChange);
   const [editingDescription, setEditingDescription] = useState(false);
   const descriptionInputRef = useRef<HTMLInputElement>(null);
-  const showDescriptionInput =
-    canEditDescription &&
-    (editingDescription ||
-      (Boolean(trackingState?.needsDescription) && !blueprintDescription.trim()));
+  const descriptionInputValue = canEditBlueprint
+    ? blueprintDescription
+    : (trackingState?.trackerDescription ?? "");
+  const hasDescription = Boolean(descriptionInputValue.trim());
+  const showDescriptionInput = editingDescription && !readOnly;
 
   useEffect(() => {
     if (editingDescription) {
       descriptionInputRef.current?.focus();
     }
   }, [editingDescription]);
-  const inlineNeedsDescriptionHint =
-    nested &&
-    Boolean(trackingState?.needsDescription) &&
-    !blueprintId &&
-    !blueprintDescription.trim();
-  const showDescriptionRow =
-    Boolean(blueprintId) ||
-    Boolean(blueprintDescription.trim()) ||
-    (Boolean(trackingState?.needsDescription) && !inlineNeedsDescriptionHint);
+  const showDescriptionRow = readOnly
+    ? Boolean(blueprintDescription.trim())
+    : hasDescription || showDescriptionInput;
   const showSecondaryMeta =
-    Boolean(dueLabel) ||
-    (showAssigneeStack && task.assignees.length > 0 && !inlineAssigneeStack) ||
-    (!nested && Boolean(onSelectProject));
+    !readOnly &&
+    (Boolean(dueLabel) ||
+      (showAssigneeStack && task.assignees.length > 0 && !inlineAssigneeStack) ||
+      (!nested && Boolean(onSelectProject)));
   const isSingleLineRow = !showDescriptionRow && !showSecondaryMeta;
-  const alignRowCenter = isSingleLineRow || readOnly;
+  const alignRowCenter = isSingleLineRow;
+  const showDescriptionTrigger = !readOnly && !hasDescription && !showDescriptionInput;
+
+  const beginDescriptionEdit = () => {
+    if (!canEditBlueprint) {
+      onAssociateTrackerForDescription?.(task);
+    }
+    setEditingDescription(true);
+  };
 
   const rowActions = (
     <div className="pointer-events-auto flex shrink-0 items-center gap-1">
+      {showDescriptionTrigger ? (
+        <button
+          type="button"
+          aria-label={`Add note for ${task.title}`}
+          disabled={isRowPending}
+          className={cn(
+            "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted",
+            "opacity-0 transition-[opacity,colors] group-hover/task-row:opacity-100 group-focus-within/task-row:opacity-100",
+            isSelected && "opacity-100",
+            "hover:bg-default hover:text-highlighted",
+            agencyFocusRingClass,
+            "motion-reduce:transition-none",
+            isRowPending && "cursor-not-allowed opacity-50",
+          )}
+          onClick={(event) => {
+            event.stopPropagation();
+            beginDescriptionEdit();
+          }}
+        >
+          <CornerDownLeft className="size-3.5" strokeWidth={2.25} aria-hidden />
+        </button>
+      ) : null}
       {canDelete ? (
         <button
           type="button"
@@ -261,21 +292,13 @@ export function AgencyTaskRowView({
           <div className="flex min-w-0 items-center gap-1.5">
             <span
               className={cn(
-                "min-w-0 flex-1 truncate text-sm leading-tight text-highlighted",
+                "min-w-0 flex-1 truncate text-sm leading-tight",
                 nested ? "font-medium" : "font-semibold",
-                readOnly && "text-muted line-through",
+                readOnly ? "text-muted line-through decoration-muted/50" : "text-highlighted",
               )}
             >
               {task.title}
             </span>
-            {inlineNeedsDescriptionHint ? (
-              <span
-                className="shrink-0 truncate text-[10px] font-medium text-warning"
-                title="Add a description in the tracker to stop"
-              >
-                Needs note
-              </span>
-            ) : null}
             {inlineAssigneeStack ? (
               <span className="inline-flex shrink-0 items-center">
                 {assigneeStack.map((member, index) => (
@@ -376,8 +399,17 @@ export function AgencyTaskRowView({
               {showDescriptionInput ? (
                 <Input
                   ref={descriptionInputRef}
-                  value={blueprintDescription}
-                  onChange={(event) => onBlueprintDescriptionChange?.(event.target.value)}
+                  value={descriptionInputValue}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (canEditBlueprint) {
+                      onBlueprintDescriptionChange?.(value);
+                      return;
+                    }
+                    if (canEditTracker) {
+                      onTrackerDescriptionChange?.(value);
+                    }
+                  }}
                   onClick={(event) => event.stopPropagation()}
                   onKeyDown={(event) => {
                     event.stopPropagation();
@@ -395,43 +427,28 @@ export function AgencyTaskRowView({
                   )}
                   aria-label="Task note"
                 />
-              ) : blueprintDescription.trim() ? (
-                <button
-                  type="button"
-                  className={cn(
-                    "block w-full truncate text-left text-[11px] leading-tight text-muted",
-                    canEditDescription && "hover:text-highlighted",
-                    agencyFocusRingClass,
-                  )}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    if (!canEditDescription) return;
-                    setEditingDescription(true);
-                  }}
-                >
-                  {blueprintDescription}
-                </button>
-              ) : trackingState?.needsDescription ? (
-                <p className="truncate text-[11px] leading-tight text-warning">
-                  Add a description in the tracker to stop.
-                </p>
-              ) : canEditDescription ? (
-                <button
-                  type="button"
-                  className={cn(
-                    "block w-full truncate text-left text-[11px] leading-tight text-muted",
-                    "opacity-0 transition-opacity group-hover/task-row:opacity-100 group-focus-within/task-row:opacity-100",
-                    isSelected && "opacity-100",
-                    agencyFocusRingClass,
-                    "motion-reduce:transition-none",
-                  )}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setEditingDescription(true);
-                  }}
-                >
-                  Add note
-                </button>
+              ) : descriptionInputValue.trim() ? (
+                readOnly ? (
+                  <span className="block truncate text-[11px] leading-tight text-muted/80">
+                    {descriptionInputValue}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className={cn(
+                      "block w-full truncate text-left text-[11px] leading-tight text-muted",
+                      (canEditBlueprint || canEditTracker) && "hover:text-highlighted",
+                      agencyFocusRingClass,
+                    )}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      if (!canEditBlueprint && !canEditTracker) return;
+                      beginDescriptionEdit();
+                    }}
+                  >
+                    {descriptionInputValue}
+                  </button>
+                )
               ) : null}
             </div>
           ) : null}
@@ -450,7 +467,7 @@ export function AgencyTaskRowView({
         isSelected && agencyTaskRowSelectedClass,
         readOnly && agencyTaskRowDoneClass,
         highlight && agencyTaskRowCompleteClass,
-        trackingState?.needsDescription && agencyTaskRowNeedsDescriptionClass,
+        trackingState?.needsDescription && !readOnly && agencyTaskRowNeedsDescriptionClass,
       )}
     >
       {rowSurface}
