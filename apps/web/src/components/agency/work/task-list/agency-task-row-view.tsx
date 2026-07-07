@@ -1,15 +1,10 @@
 import { Check, Clock, Plus, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 import { AgencyMemberAvatar } from "@/components/agency/agency-member-avatar";
 import { AgencyMiniTimerContainer } from "@/lib/agency/work/containers/agency-mini-timer-container";
 import type { TaskTrackingState } from "@/lib/agency/work/task-tracking-state";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import {
   agencyAvatarStackRingClass,
@@ -133,6 +128,19 @@ export function AgencyTaskRowView({
   const inlineAssigneeStack = nested && showAssigneeStack && task.assignees.length > 0;
 
   const canDelete = !readOnly && Boolean(onDelete) && !isJourneyMilestoneTask(task);
+  const canEditDescription = Boolean(blueprintId && onBlueprintDescriptionChange && !readOnly);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const descriptionInputRef = useRef<HTMLInputElement>(null);
+  const showDescriptionInput =
+    canEditDescription &&
+    (editingDescription ||
+      (Boolean(trackingState?.needsDescription) && !blueprintDescription.trim()));
+
+  useEffect(() => {
+    if (editingDescription) {
+      descriptionInputRef.current?.focus();
+    }
+  }, [editingDescription]);
   const inlineNeedsDescriptionHint =
     nested &&
     Boolean(trackingState?.needsDescription) &&
@@ -147,12 +155,78 @@ export function AgencyTaskRowView({
     (showAssigneeStack && task.assignees.length > 0 && !inlineAssigneeStack) ||
     (!nested && Boolean(onSelectProject));
   const isSingleLineRow = !showDescriptionRow && !showSecondaryMeta;
+  const alignRowCenter = isSingleLineRow || readOnly;
+
+  const rowActions = (
+    <div className="pointer-events-auto flex shrink-0 items-center gap-1">
+      {canDelete ? (
+        <button
+          type="button"
+          aria-label={`Delete ${task.title}`}
+          disabled={isRowPending}
+          className={cn(
+            "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted",
+            "opacity-0 transition-[opacity,colors] group-hover/task-row:opacity-100 group-focus-within/task-row:opacity-100",
+            isSelected && "opacity-100",
+            "hover:bg-default hover:text-error",
+            agencyFocusRingClass,
+            "motion-reduce:transition-none",
+            isRowPending && "cursor-not-allowed opacity-50",
+          )}
+          onClick={(event) => {
+            event.stopPropagation();
+            onDelete?.(task);
+          }}
+        >
+          <Trash2 className="size-3.5" strokeWidth={2} aria-hidden />
+        </button>
+      ) : null}
+      {showCompletionMultiplier ? (
+        <span
+          className="inline-flex h-6 shrink-0 items-center rounded-full bg-muted px-1.5 text-[10px] font-semibold leading-none text-muted"
+          aria-label={`Completed ${completionCount} times`}
+        >
+          ×{completionCount}
+        </span>
+      ) : null}
+      {readOnly && onReopenToActive ? (
+        <button
+          type="button"
+          aria-label={`Add ${task.title} to open tasks`}
+          disabled={isRowPending}
+          className={cn(
+            "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted",
+            "transition-colors hover:bg-default hover:text-highlighted",
+            agencyFocusRingClass,
+            "motion-reduce:transition-none",
+            isRowPending && "cursor-not-allowed opacity-50",
+          )}
+          onClick={(event) => {
+            event.stopPropagation();
+            onReopenToActive(task);
+          }}
+        >
+          <Plus className="size-3.5" strokeWidth={2.5} aria-hidden />
+        </button>
+      ) : null}
+      {!readOnly ? (
+        <AgencyMiniTimerContainer
+          variant="compact"
+          teamId={teamId}
+          taskId={task.id}
+          projectId={task.projectId}
+          taskTitle={task.title}
+          projectName={projectName}
+        />
+      ) : null}
+    </div>
+  );
 
   const rowSurface = (
     <div
       className={cn(
         nested ? agencyTaskRowNestedContentClass : agencyTaskRowContentClass,
-        isSingleLineRow ? "items-center" : "items-start",
+        "items-center",
         isSelected && "ring-1 ring-inset ring-primary/30",
       )}
     >
@@ -168,13 +242,8 @@ export function AgencyTaskRowView({
         onClick={() => onSelect(task.id)}
       />
 
-      <div
-        className={cn(
-          "pointer-events-none relative z-10 flex w-full min-w-0 gap-1.5",
-          isSingleLineRow ? "items-center" : "items-start",
-        )}
-      >
-        <div className={cn("pointer-events-auto shrink-0", !isSingleLineRow && nested && "pt-px")}>
+      <div className="pointer-events-none relative z-10 flex w-full min-w-0 items-center gap-1.5">
+        <div className={cn("pointer-events-auto shrink-0", !alignRowCenter && "self-start")}>
           <AgencyTaskRowCheckbox
             title={task.title}
             checked={isDone}
@@ -207,14 +276,6 @@ export function AgencyTaskRowView({
                 Needs note
               </span>
             ) : null}
-            {showCompletionMultiplier ? (
-              <span
-                className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted"
-                aria-label={`Completed ${completionCount} times`}
-              >
-                ×{completionCount}
-              </span>
-            ) : null}
             {inlineAssigneeStack ? (
               <span className="inline-flex shrink-0 items-center">
                 {assigneeStack.map((member, index) => (
@@ -245,38 +306,6 @@ export function AgencyTaskRowView({
                 ) : null}
               </span>
             ) : null}
-            <div className="pointer-events-auto ml-auto flex shrink-0 items-center gap-1">
-              {readOnly && onReopenToActive ? (
-                <button
-                  type="button"
-                  aria-label={`Add ${task.title} to open tasks`}
-                  disabled={isRowPending}
-                  className={cn(
-                    "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted",
-                    "transition-colors hover:bg-default hover:text-highlighted",
-                    agencyFocusRingClass,
-                    "motion-reduce:transition-none",
-                    isRowPending && "cursor-not-allowed opacity-50",
-                  )}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onReopenToActive(task);
-                  }}
-                >
-                  <Plus className="size-3.5" strokeWidth={2.5} aria-hidden />
-                </button>
-              ) : null}
-              {!readOnly ? (
-                <AgencyMiniTimerContainer
-                  variant="compact"
-                  teamId={teamId}
-                  taskId={task.id}
-                  projectId={task.projectId}
-                  taskTitle={task.title}
-                  projectName={projectName}
-                />
-              ) : null}
-            </div>
           </div>
 
           {showSecondaryMeta ? (
@@ -344,32 +373,71 @@ export function AgencyTaskRowView({
 
           {showDescriptionRow ? (
             <div className="pointer-events-auto min-w-0">
-              {blueprintId && onBlueprintDescriptionChange ? (
+              {showDescriptionInput ? (
                 <Input
+                  ref={descriptionInputRef}
                   value={blueprintDescription}
-                  onChange={(e) => onBlueprintDescriptionChange(e.target.value)}
+                  onChange={(event) => onBlueprintDescriptionChange?.(event.target.value)}
                   onClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => {
+                    event.stopPropagation();
+                    if (event.key === "Escape") {
+                      setEditingDescription(false);
+                      event.currentTarget.blur();
+                    }
+                  }}
+                  onBlur={() => setEditingDescription(false)}
                   placeholder="What are you working on?"
                   className={cn(
                     "h-6 min-w-0 border-0 bg-transparent px-0 text-[11px] leading-tight shadow-none focus-visible:ring-0",
                     agencyInputPlaceholderClass,
                     trackingState?.needsDescription ? "text-warning" : "text-muted",
                   )}
-                  aria-label="Task blueprint description"
+                  aria-label="Task note"
                 />
               ) : blueprintDescription.trim() ? (
-                <p className="truncate text-[11px] leading-tight text-muted">
+                <button
+                  type="button"
+                  className={cn(
+                    "block w-full truncate text-left text-[11px] leading-tight text-muted",
+                    canEditDescription && "hover:text-highlighted",
+                    agencyFocusRingClass,
+                  )}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (!canEditDescription) return;
+                    setEditingDescription(true);
+                  }}
+                >
                   {blueprintDescription}
-                </p>
+                </button>
               ) : trackingState?.needsDescription ? (
                 <p className="truncate text-[11px] leading-tight text-warning">
                   Add a description in the tracker to stop.
                 </p>
+              ) : canEditDescription ? (
+                <button
+                  type="button"
+                  className={cn(
+                    "block w-full truncate text-left text-[11px] leading-tight text-muted",
+                    "opacity-0 transition-opacity group-hover/task-row:opacity-100 group-focus-within/task-row:opacity-100",
+                    isSelected && "opacity-100",
+                    agencyFocusRingClass,
+                    "motion-reduce:transition-none",
+                  )}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setEditingDescription(true);
+                  }}
+                >
+                  Add note
+                </button>
               ) : null}
             </div>
           ) : null}
         </div>
+
+        {rowActions}
       </div>
     </div>
   );
@@ -385,23 +453,7 @@ export function AgencyTaskRowView({
         trackingState?.needsDescription && agencyTaskRowNeedsDescriptionClass,
       )}
     >
-      {canDelete ? (
-        <ContextMenu>
-          <ContextMenuTrigger asChild>{rowSurface}</ContextMenuTrigger>
-          <ContextMenuContent className="min-w-[10rem]">
-            <ContextMenuItem
-              variant="destructive"
-              disabled={isRowPending}
-              onSelect={() => onDelete?.(task)}
-            >
-              <Trash2 />
-              Delete
-            </ContextMenuItem>
-          </ContextMenuContent>
-        </ContextMenu>
-      ) : (
-        rowSurface
-      )}
+      {rowSurface}
     </li>
   );
 }
