@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
-import { AlertTriangle, ChevronDown, ListChecks, Loader2, PanelLeftOpen } from "lucide-react";
+import { useState } from "react";
+import { AlertTriangle, ChevronDown, ListChecks, Loader2 } from "lucide-react";
 
 import { AgencyTaskVirtualList } from "@/components/agency/work/task-list/agency-task-virtual-list";
 import { AgencyTaskCreateInlineView } from "@/components/agency/work/task-list/agency-task-create-inline-view";
 import { AgencyTaskClientGroupView } from "@/components/agency/work/task-list/agency-task-client-group-view";
+import { AgencyTaskRailExpandButton } from "@/components/agency/work/task-list/agency-task-rail-expand-button";
 import { AgencyTaskRailSummary } from "@/components/agency/agency-task-rail-summary";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,12 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AgencyTaskListViewModel } from "@/lib/agency/work/hooks/use-agency-task-list";
-import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import type { AgencyProjectTask } from "@/lib/schemas/agency-work";
 import {
   agencyFocusRingClass,
   agencyMetricClass,
   agencyTaskRailClass,
+  agencyTaskRailCollapsedClass,
 } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { cn } from "@/lib/utils";
@@ -30,42 +31,6 @@ import { useAgencyOpsStore } from "@/stores/agency-ops";
 type AgencyTaskListViewProps = {
   view: AgencyTaskListViewModel;
 };
-
-function AgencyTaskRailLiquidDone({ donePct }: { donePct: number }) {
-  const prefersReducedMotion = usePrefersReducedMotion();
-  const [fillPct, setFillPct] = useState(0);
-
-  useEffect(() => {
-    if (prefersReducedMotion) {
-      setFillPct(donePct);
-      return;
-    }
-
-    // Double rAF so the browser paints height 0% before easing upward.
-    let frame2 = 0;
-    const frame1 = requestAnimationFrame(() => {
-      frame2 = requestAnimationFrame(() => {
-        setFillPct(donePct);
-      });
-    });
-    return () => {
-      cancelAnimationFrame(frame1);
-      cancelAnimationFrame(frame2);
-    };
-  }, [donePct, prefersReducedMotion]);
-
-  const heightPct = prefersReducedMotion ? donePct : fillPct;
-  if (donePct <= 0 && heightPct <= 0) return null;
-
-  return (
-    <div
-      className="agency-task-rail-liquid__done absolute bottom-0 left-0 right-0 top-auto"
-      style={{ height: `${heightPct}%` }}
-    >
-      <div className="agency-task-rail-liquid__shine" />
-    </div>
-  );
-}
 
 function AgencyTaskDeleteDialog({
   task,
@@ -326,49 +291,14 @@ export function AgencyTaskListView({ view }: AgencyTaskListViewProps) {
         </section>
       );
     case "collapsed": {
-      const total = view.totalCount;
-      const done = view.doneCount;
-      const active = view.activeCount;
-      const hasCounts = total !== null && total > 0;
-      const donePct = hasCounts ? ((done ?? 0) / total) * 100 : 0;
-      const progressLabel =
-        total === null
-          ? "Loading task progress"
-          : total === 0
-            ? "No tasks"
-            : `${done ?? 0} done, ${active ?? 0} open of ${total}`;
-
       return (
-        <section className={cn(agencyTaskRailClass, "relative items-center gap-3 px-2 py-3")}>
-          <div
-            className="agency-task-rail-liquid pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={total ?? 0}
-            aria-valuenow={done ?? 0}
-            aria-valuetext={progressLabel}
-            aria-label="Task completion"
-          >
-            {hasCounts ? (
-              <>
-                <div className="agency-task-rail-liquid__active absolute inset-x-0 bottom-0 h-full" />
-                <AgencyTaskRailLiquidDone donePct={donePct} />
-              </>
-            ) : null}
-          </div>
-
-          <button
-            type="button"
-            className={cn(
-              "relative z-10 flex size-11 items-center justify-center rounded-xl border border-default bg-default text-muted transition-colors hover:bg-elevated hover:text-highlighted",
-              agencyFocusRingClass,
-              "motion-reduce:transition-none",
-            )}
-            aria-label="Expand task list"
+        <section className={agencyTaskRailCollapsedClass}>
+          <AgencyTaskRailExpandButton
+            activeCount={view.activeCount}
+            doneCount={view.doneCount}
+            totalCount={view.totalCount}
             onClick={view.onExpand}
-          >
-            <PanelLeftOpen className="size-4" />
-          </button>
+          />
 
           <div className="relative z-10 flex flex-col items-center" title="My tasks">
             <AgencyTaskRailSummary

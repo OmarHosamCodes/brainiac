@@ -33,10 +33,10 @@ export function AgencyTaskRailSummary({
         className="flex flex-col items-center gap-0.5 text-center"
         aria-label="Task workload summary"
       >
-        <span className={cn(agencyMetricClass, "text-[10px] font-semibold text-highlighted")}>
+        <span className={cn(agencyMetricClass, "text-[11px] font-semibold")}>
           {done === null ? "—" : done}
         </span>
-        <span className="text-[9px] text-muted">of {total === null ? "—" : total}</span>
+        <span className="text-[10px] text-muted">of {total === null ? "—" : total}</span>
       </div>
     );
   }

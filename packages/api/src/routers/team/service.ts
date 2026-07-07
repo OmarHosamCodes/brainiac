@@ -1,7 +1,12 @@
 import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 
-import { createWorkspaceId, normalizeWorkspaceNode, type WorkspaceNode, type WorkspaceTeamRole } from "@brainiac/workspace";
+import {
+  createWorkspaceId,
+  normalizeWorkspaceNode,
+  type WorkspaceNode,
+  type WorkspaceTeamRole,
+} from "@brainiac/workspace";
 import { db } from "@brainiac/db";
 import { dashboardWorkspace, user, workspaceTeam, workspaceTeamMember } from "@brainiac/db/schema";
 
