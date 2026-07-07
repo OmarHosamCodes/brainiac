@@ -7,7 +7,11 @@ import { AgencyProjectHueDot } from "@/components/agency/agency-project-hue-dot"
 import type { AgencyTaskListCreateViewModel } from "@/lib/agency/work/hooks/use-agency-task-list";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import { Input } from "@/components/ui/input";
-import { agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
+import {
+  agencyFocusRingClass,
+  agencyInputPlaceholderClass,
+  agencyTaskRowProjectPillClass,
+} from "@/lib/utils/agency-ui";
 import { statusChipClass, statusLabel } from "@/lib/utils/agency-task-status";
 import { taskTitleExactlyMatches } from "@/lib/utils/agency-task-title-filter";
 import { cn } from "@/lib/utils";
@@ -18,7 +22,10 @@ type AgencyTaskCreateInlineViewProps = {
 };
 
 const suggestionPanelClass =
-  "absolute inset-x-0 bottom-full z-20 mb-1 rounded-lg border border-default bg-elevated shadow-md";
+  "absolute inset-x-0 bottom-full z-20 mb-1 overflow-hidden rounded-xl border border-default bg-default shadow-md";
+
+const suggestionOptionClass =
+  "flex w-full min-w-0 items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-elevated";
 
 function QuickAddSuggestions({
   listboxId,
@@ -74,7 +81,7 @@ function QuickAddSuggestions({
       id={listboxId}
       role="listbox"
       aria-label="Task suggestions"
-      className={cn(suggestionPanelClass, "max-h-48 overflow-y-auto py-1")}
+      className={cn(suggestionPanelClass, "max-h-48 overflow-y-auto px-1 py-1")}
     >
       {showCreateRow && tasks.length > 0 ? (
         <li className="px-3 pb-1.5 pt-1 text-[10px] text-muted">
@@ -93,8 +100,8 @@ function QuickAddSuggestions({
               role="option"
               aria-selected={active}
               className={cn(
-                "flex w-full min-w-0 items-center gap-2 px-3 py-1.5 text-left transition-colors hover:bg-default/80",
-                active && "bg-primary/10",
+                suggestionOptionClass,
+                active && "bg-primary/10 hover:bg-primary/10",
                 agencyFocusRingClass,
                 "motion-reduce:transition-none",
               )}
@@ -111,8 +118,9 @@ function QuickAddSuggestions({
                 {task.title}
               </span>
               {projectName ? (
-                <span className="max-w-[6rem] shrink-0 truncate text-[10px] font-medium text-muted">
-                  {projectName}
+                <span className={cn(agencyTaskRowProjectPillClass, "gap-1")}>
+                  <AgencyProjectHueDot projectId={task.projectId} />
+                  <span className="truncate">{projectName}</span>
                 </span>
               ) : null}
               <span
@@ -134,8 +142,8 @@ function QuickAddSuggestions({
             role="option"
             aria-selected={activeIndex === 0}
             className={cn(
-              "flex w-full min-w-0 items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-default/80",
-              activeIndex === 0 && "bg-primary/10",
+              suggestionOptionClass,
+              activeIndex === 0 && "bg-primary/10 hover:bg-primary/10",
               agencyFocusRingClass,
               "motion-reduce:transition-none",
             )}
@@ -283,7 +291,7 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
       id={zoneId}
       role="region"
       aria-label="Add task"
-      className="shrink-0 border-t border-default bg-default/55 px-3 py-2.5"
+      className="shrink-0 border-t border-primary/15 bg-primary/5 px-3 py-2.5"
     >
       <div className="relative min-w-0">
         {showSuggestions ? (
@@ -306,7 +314,7 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
             "flex min-w-0 items-center gap-2 rounded-xl border bg-elevated px-2 py-1.5 transition-colors",
             projectNeedsChoice && quickAddFocused && showPickProjectHint
               ? "border-warning/60 ring-1 ring-warning/20"
-              : "border-default",
+              : "border-primary/20",
             quickAddFocused && !showPickProjectHint && "border-primary/40 ring-1 ring-primary/15",
             "motion-reduce:transition-none",
           )}
@@ -355,8 +363,8 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
           <button
             type="button"
             className={cn(
-              "inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-default hover:text-highlighted",
-              createOptionsExpanded && "bg-default text-highlighted",
+              "inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-primary/10 hover:text-primary",
+              createOptionsExpanded && "bg-primary/10 text-primary",
               agencyFocusRingClass,
               "motion-reduce:transition-none",
             )}
