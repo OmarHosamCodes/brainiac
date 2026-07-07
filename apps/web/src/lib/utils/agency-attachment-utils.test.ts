@@ -72,8 +72,18 @@ describe("selectAttachmentVariant", () => {
     expect(
       selectAttachmentVariant(
         [
-          { fileName: "a.jpg", mimeType: "image/jpeg", sizeBytes: 100, metadata: { mediaKind: "image" } },
-          { fileName: "b.png", mimeType: "image/png", sizeBytes: 200, metadata: { mediaKind: "image" } },
+          {
+            fileName: "a.jpg",
+            mimeType: "image/jpeg",
+            sizeBytes: 100,
+            metadata: { mediaKind: "image" },
+          },
+          {
+            fileName: "b.png",
+            mimeType: "image/png",
+            sizeBytes: 200,
+            metadata: { mediaKind: "image" },
+          },
         ],
         "message",
       ),

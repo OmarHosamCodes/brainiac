@@ -103,9 +103,7 @@ function sameDay(left: string, right: string) {
 
 function getComposerPlaceholder(agentEnabled: boolean, hasAttachments: boolean): string {
   if (hasAttachments) {
-    return agentEnabled
-      ? "Describe what you want to do with these files..."
-      : "Add a message...";
+    return agentEnabled ? "Describe what you want to do with these files..." : "Add a message...";
   }
   return agentEnabled ? "Ask the agent about this task..." : "Write a message...";
 }
@@ -205,9 +203,7 @@ export function useTaskThreadMessaging({
   }, [session.data?.user]);
   const { connectionState: liveConnectionState } = useTaskThreadLiveSync({ teamId, taskId });
   const messageOverlayKey = `${teamId}:${taskId}`;
-  const messageOverlay = useAgencyOptimisticStore(
-    (state) => state.taskMessages[messageOverlayKey],
-  );
+  const messageOverlay = useAgencyOptimisticStore((state) => state.taskMessages[messageOverlayKey]);
 
   const [content, setContent] = useState("");
   const [isDragging, setIsDragging] = useState(false);

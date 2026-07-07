@@ -52,7 +52,9 @@ export function NeuralCanvasArtifact({ className }: NeuralCanvasArtifactProps) {
       });
     };
 
-    const idle = window.requestIdleCallback ?? ((callback: IdleRequestCallback) => window.setTimeout(callback, 1));
+    const idle =
+      window.requestIdleCallback ??
+      ((callback: IdleRequestCallback) => window.setTimeout(callback, 1));
     const idleId = idle(run);
     return () => {
       if (window.cancelIdleCallback) window.cancelIdleCallback(idleId as number);

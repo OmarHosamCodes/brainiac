@@ -213,7 +213,9 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             aria-label="Duration"
           />
         ) : (
-          <span className="font-mono text-sm font-medium tabular-nums text-muted">{durationLabel}</span>
+          <span className="font-mono text-sm font-medium tabular-nums text-muted">
+            {durationLabel}
+          </span>
         )}
         {editError ? <p className="text-xs text-error">{editError}</p> : null}
       </div>

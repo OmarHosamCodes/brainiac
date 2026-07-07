@@ -17,7 +17,7 @@ export function marketingPrerenderShell(): Plugin {
     apply: "build",
     transformIndexHtml(html) {
       const withShell = html.replace(
-        "<div id=\"root\"></div>",
+        '<div id="root"></div>',
         `${MARKETING_SHELL}\n    <div id="root"></div>`,
       );
       return withShell.replace(

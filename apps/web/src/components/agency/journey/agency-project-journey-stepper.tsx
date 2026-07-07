@@ -1,18 +1,5 @@
-import {
-  Flag,
-  GripVertical,
-  Loader2,
-  Plus,
-  Trash2,
-} from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { Flag, GripVertical, Loader2, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
 import {
   useAgencyProjectJourney,
@@ -90,9 +77,7 @@ function getNodeTone(step: AgencyProjectJourneyStep) {
 }
 
 function getMiddleStepIds(steps: AgencyProjectJourneyStep[]): string[] {
-  return steps
-    .filter((step) => isJourneyStepReorderable(step.stepKind))
-    .map((step) => step.id);
+  return steps.filter((step) => isJourneyStepReorderable(step.stepKind)).map((step) => step.id);
 }
 
 export function AgencyProjectJourneyStepper({
@@ -531,7 +516,8 @@ function HorizontalJourneyGraph({
                   tone.fill,
                   tone.ring,
                   isSelected && (compact ? "stroke-[2.5px]" : "stroke-[3px]"),
-                  !prefersReducedMotion && "transition-[r,stroke-width] duration-200 motion-reduce:transition-none",
+                  !prefersReducedMotion &&
+                    "transition-[r,stroke-width] duration-200 motion-reduce:transition-none",
                 )}
               />
               {isEndpoint ? (
@@ -682,9 +668,7 @@ function VerticalJourneyList({
         const reorderable = isJourneyStepReorderable(step.stepKind);
         const previousStep = steps[index - 1];
         const segmentCompleted =
-          index > 0 && previousStep
-            ? isJourneySegmentCompleted(step.status)
-            : false;
+          index > 0 && previousStep ? isJourneySegmentCompleted(step.status) : false;
 
         return (
           <li
@@ -753,11 +737,7 @@ function VerticalJourneyList({
               ) : (
                 <button
                   type="button"
-                  className={cn(
-                    "w-full text-left",
-                    agencyFocusRingClass,
-                    "rounded-md px-1 py-0.5",
-                  )}
+                  className={cn("w-full text-left", agencyFocusRingClass, "rounded-md px-1 py-0.5")}
                   onClick={() => onSelectStep(step.id)}
                   onDoubleClick={() => {
                     onSelectStep(step.id);

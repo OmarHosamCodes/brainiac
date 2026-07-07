@@ -50,13 +50,7 @@ export function LiquidGlassBackdrop({ className }: { className?: string }) {
     return () => observer.disconnect();
   }, []);
 
-  return (
-    <div
-      ref={surfaceRef}
-      aria-hidden
-      className={cn(liquidGlassBackdropClass, className)}
-    />
-  );
+  return <div ref={surfaceRef} aria-hidden className={cn(liquidGlassBackdropClass, className)} />;
 }
 
 /** Content layer above the frosted backdrop — safe target for enter/exit animation. */

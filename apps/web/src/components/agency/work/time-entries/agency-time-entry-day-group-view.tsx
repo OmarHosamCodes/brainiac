@@ -1,5 +1,9 @@
 import { AgencyTimeEntryRowContainer } from "@/lib/agency/work/containers/agency-time-entry-row-container";
-import { agencyMetricClass, agencyTimeDayHeaderClass, agencyTimeEntryScrollClass } from "@/lib/utils/agency-ui";
+import {
+  agencyMetricClass,
+  agencyTimeDayHeaderClass,
+  agencyTimeEntryScrollClass,
+} from "@/lib/utils/agency-ui";
 import { formatAgencyDayLabel } from "@/lib/utils/format-agency-day-label";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { cn } from "@/lib/utils";

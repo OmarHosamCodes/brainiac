@@ -63,16 +63,17 @@ export function AgencyProjectChooserView({ view }: AgencyProjectChooserViewProps
             <span className="truncate">Loading…</span>
           ) : (
             <>
-              {selectedProject ? (
-                <AgencyProjectHueDot projectId={selectedProject.id} />
-              ) : null}
+              {selectedProject ? <AgencyProjectHueDot projectId={selectedProject.id} /> : null}
               <span className="min-w-0 flex-1 truncate">{triggerLabel}</span>
             </>
           )}
           <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden />
         </button>
       </PopoverTrigger>
-      <PopoverContent align={contentAlign} className="w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden p-0">
+      <PopoverContent
+        align={contentAlign}
+        className="w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden p-0"
+      >
         <div className="border-b border-white/10 p-2">
           <div className="relative">
             <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />

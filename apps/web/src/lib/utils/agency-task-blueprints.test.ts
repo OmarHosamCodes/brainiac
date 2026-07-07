@@ -22,10 +22,13 @@ function task(id: string): AgencyProjectTask {
 
 describe("expandTasksWithBlueprints", () => {
   it("shows one row per blueprint for the same task id", () => {
-    const rows = expandTasksWithBlueprints([task("task-1")], [
-      { id: "bp-1", taskId: "task-1", description: "Client call" },
-      { id: "bp-2", taskId: "task-1", description: "Internal sync" },
-    ]);
+    const rows = expandTasksWithBlueprints(
+      [task("task-1")],
+      [
+        { id: "bp-1", taskId: "task-1", description: "Client call" },
+        { id: "bp-2", taskId: "task-1", description: "Internal sync" },
+      ],
+    );
 
     expect(rows).toHaveLength(2);
     expect(rows.map((row) => row.blueprintDescription)).toEqual(["Client call", "Internal sync"]);

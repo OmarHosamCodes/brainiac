@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 
-import {
-  isShellAnimationReady,
-  resetShellBoot,
-  startShellBoot,
-} from "@/lib/shell/shell-boot";
+import { isShellAnimationReady, resetShellBoot, startShellBoot } from "@/lib/shell/shell-boot";
 
 export function useShellBootGate(dataReady: boolean) {
   const [animationReady, setAnimationReady] = useState(() => isShellAnimationReady());

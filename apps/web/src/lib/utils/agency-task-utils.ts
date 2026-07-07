@@ -26,7 +26,9 @@ export function getTaskGroupKey(task: Pick<AgencyProjectTask, "projectId" | "tit
   return `${task.projectId}::${normalizeTaskTitle(task.title)}`;
 }
 
-export function groupTasksByProjectTitle<T extends TaskGroupItem>(tasks: T[]): AgencyProjectTaskGroup<T>[] {
+export function groupTasksByProjectTitle<T extends TaskGroupItem>(
+  tasks: T[],
+): AgencyProjectTaskGroup<T>[] {
   const groups = new Map<string, AgencyProjectTaskGroup<T>>();
 
   for (const task of tasks) {
@@ -63,7 +65,9 @@ export function groupTasksByProjectTitle<T extends TaskGroupItem>(tasks: T[]): A
     .sort((left, right) => left.title.localeCompare(right.title));
 }
 
-export function groupTasksWithinClient<T extends TaskGroupItem>(tasks: T[]): AgencyProjectTaskGroup<T>[] {
+export function groupTasksWithinClient<T extends TaskGroupItem>(
+  tasks: T[],
+): AgencyProjectTaskGroup<T>[] {
   return groupTasksByProjectTitle(tasks);
 }
 

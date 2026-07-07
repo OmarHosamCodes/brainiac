@@ -23,15 +23,17 @@ import {
 } from "./service";
 
 export const notificationsRouter = {
-  list: protectedProProcedure.input(notificationListInputSchema).handler(async ({ context, input }) => {
-    const result = await listNotifications(context.session.user.id, input);
-    return z
-      .object({
-        items: z.array(notificationRecordSchema),
-        nextCursor: z.string().datetime().nullable(),
-      })
-      .parse(result);
-  }),
+  list: protectedProProcedure
+    .input(notificationListInputSchema)
+    .handler(async ({ context, input }) => {
+      const result = await listNotifications(context.session.user.id, input);
+      return z
+        .object({
+          items: z.array(notificationRecordSchema),
+          nextCursor: z.string().datetime().nullable(),
+        })
+        .parse(result);
+    }),
   unreadCount: protectedProProcedure
     .input(teamScopedNotificationInputSchema)
     .handler(async ({ context, input }) => {
@@ -79,11 +81,13 @@ export const notificationsRouter = {
       }),
   },
   push: {
-    subscribe: protectedProProcedure.input(pushSubscribeInputSchema).handler(async ({ context, input }) => {
-      return z
-        .object({ subscribed: z.boolean() })
-        .parse(await subscribePush(context.session.user.id, input));
-    }),
+    subscribe: protectedProProcedure
+      .input(pushSubscribeInputSchema)
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ subscribed: z.boolean() })
+          .parse(await subscribePush(context.session.user.id, input));
+      }),
     unsubscribe: protectedProProcedure
       .input(pushUnsubscribeInputSchema)
       .handler(async ({ context, input }) => {

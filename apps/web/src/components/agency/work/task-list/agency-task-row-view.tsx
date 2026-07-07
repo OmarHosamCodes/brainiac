@@ -130,8 +130,7 @@ export function AgencyTaskRowView({
   const showAssigneeStack = showAllAssignees || isJourneyMilestoneTask(task);
   const assigneeStack = task.assignees.slice(0, STACK_AVATAR_LIMIT);
   const assigneeOverflow = task.assignees.length - assigneeStack.length;
-  const inlineAssigneeStack =
-    nested && showAssigneeStack && task.assignees.length > 0;
+  const inlineAssigneeStack = nested && showAssigneeStack && task.assignees.length > 0;
 
   const canDelete = !readOnly && Boolean(onDelete) && !isJourneyMilestoneTask(task);
   const inlineNeedsDescriptionHint =
@@ -175,205 +174,203 @@ export function AgencyTaskRowView({
           isSingleLineRow ? "items-center" : "items-start",
         )}
       >
-            <div className={cn("pointer-events-auto shrink-0", !isSingleLineRow && nested && "pt-px")}>
-              <AgencyTaskRowCheckbox
-                title={task.title}
-                checked={isDone}
-                disabled={isRowPending || readOnly}
-                onToggle={() => onStatusChange?.(task, "done")}
-              />
-            </div>
+        <div className={cn("pointer-events-auto shrink-0", !isSingleLineRow && nested && "pt-px")}>
+          <AgencyTaskRowCheckbox
+            title={task.title}
+            checked={isDone}
+            disabled={isRowPending || readOnly}
+            onToggle={() => onStatusChange?.(task, "done")}
+          />
+        </div>
 
-            <div
+        <div
+          className={cn(
+            "min-w-0 flex-1",
+            !isSingleLineRow && cn("flex flex-col", nested ? "gap-0.5" : "gap-1.5"),
+          )}
+        >
+          <div className="flex min-w-0 items-center gap-1.5">
+            <span
               className={cn(
-                "min-w-0 flex-1",
-                !isSingleLineRow && cn("flex flex-col", nested ? "gap-0.5" : "gap-1.5"),
+                "min-w-0 flex-1 truncate text-sm leading-tight text-highlighted",
+                nested ? "font-medium" : "font-semibold",
+                readOnly && "text-muted line-through",
               )}
             >
-              <div className="flex min-w-0 items-center gap-1.5">
-                <span
-                  className={cn(
-                    "min-w-0 flex-1 truncate text-sm leading-tight text-highlighted",
-                    nested ? "font-medium" : "font-semibold",
-                    readOnly && "text-muted line-through",
-                  )}
-                >
-                  {task.title}
-                </span>
-                {inlineNeedsDescriptionHint ? (
+              {task.title}
+            </span>
+            {inlineNeedsDescriptionHint ? (
+              <span
+                className="shrink-0 truncate text-[10px] font-medium text-warning"
+                title="Add a description in the tracker to stop"
+              >
+                Needs note
+              </span>
+            ) : null}
+            {showCompletionMultiplier ? (
+              <span
+                className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted"
+                aria-label={`Completed ${completionCount} times`}
+              >
+                ×{completionCount}
+              </span>
+            ) : null}
+            {inlineAssigneeStack ? (
+              <span className="inline-flex shrink-0 items-center">
+                {assigneeStack.map((member, index) => (
                   <span
-                    className="shrink-0 truncate text-[10px] font-medium text-warning"
-                    title="Add a description in the tracker to stop"
+                    key={member.userId}
+                    className={cn("relative", index > 0 && "-ml-1.5")}
+                    style={{ zIndex: index + 1 }}
                   >
-                    Needs note
-                  </span>
-                ) : null}
-                {showCompletionMultiplier ? (
-                  <span
-                    className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted"
-                    aria-label={`Completed ${completionCount} times`}
-                  >
-                    ×{completionCount}
-                  </span>
-                ) : null}
-                {inlineAssigneeStack ? (
-                  <span className="inline-flex shrink-0 items-center">
-                    {assigneeStack.map((member, index) => (
-                      <span
-                        key={member.userId}
-                        className={cn("relative", index > 0 && "-ml-1.5")}
-                        style={{ zIndex: index + 1 }}
-                      >
-                        <AgencyMemberAvatar
-                          name={member.userName}
-                          avatarUrl={member.userAvatar}
-                          size="sm"
-                          className={cn("size-5 rounded-full", agencyAvatarStackRingClass)}
-                        />
-                      </span>
-                    ))}
-                    {assigneeOverflow > 0 ? (
-                      <span
-                        className={cn(
-                          "relative z-10 -ml-1.5 flex size-5 shrink-0 items-center justify-center rounded-full",
-                          "bg-muted text-[9px] font-bold text-foreground",
-                          agencyAvatarStackRingClass,
-                        )}
-                        aria-hidden
-                      >
-                        +{assigneeOverflow}
-                      </span>
-                    ) : null}
-                  </span>
-                ) : null}
-                <div className="pointer-events-auto ml-auto flex shrink-0 items-center gap-1">
-                  {readOnly && onReopenToActive ? (
-                    <button
-                      type="button"
-                      aria-label={`Add ${task.title} to open tasks`}
-                      disabled={isRowPending}
-                      className={cn(
-                        "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted",
-                        "transition-colors hover:bg-default hover:text-highlighted",
-                        agencyFocusRingClass,
-                        "motion-reduce:transition-none",
-                        isRowPending && "cursor-not-allowed opacity-50",
-                      )}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onReopenToActive(task);
-                      }}
-                    >
-                      <Plus className="size-3.5" strokeWidth={2.5} aria-hidden />
-                    </button>
-                  ) : null}
-                  {!readOnly ? (
-                    <AgencyMiniTimerContainer
-                      variant="compact"
-                      teamId={teamId}
-                      taskId={task.id}
-                      projectId={task.projectId}
-                      taskTitle={task.title}
-                      projectName={projectName}
+                    <AgencyMemberAvatar
+                      name={member.userName}
+                      avatarUrl={member.userAvatar}
+                      size="sm"
+                      className={cn("size-5 rounded-full", agencyAvatarStackRingClass)}
                     />
-                  ) : null}
-                </div>
-              </div>
-
-              {showSecondaryMeta ? (
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  {onSelectProject && !nested ? (
-                    <button
-                      type="button"
-                      className={cn(
-                        agencyTaskRowProjectPillClass,
-                        agencyFocusRingClass,
-                        "pointer-events-auto motion-reduce:transition-none",
-                      )}
-                      onClick={() => onSelectProject(task.projectId)}
-                    >
-                      <span className="truncate">{projectName}</span>
-                    </button>
-                  ) : !nested ? (
-                    <span className={cn(agencyTaskRowProjectPillClass, "truncate")}>
-                      {projectName}
-                    </span>
-                  ) : null}
-
-                {dueLabel ? (
+                  </span>
+                ))}
+                {assigneeOverflow > 0 ? (
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1 text-[11px]",
-                      overdue ? "text-error" : "text-muted",
+                      "relative z-10 -ml-1.5 flex size-5 shrink-0 items-center justify-center rounded-full",
+                      "bg-muted text-[9px] font-bold text-foreground",
+                      agencyAvatarStackRingClass,
                     )}
+                    aria-hidden
                   >
-                    <Clock className="size-3 shrink-0" aria-hidden />
-                    <span className="font-mono tabular-nums">
-                      {overdue ? "Overdue" : dueLabel}
-                    </span>
+                    +{assigneeOverflow}
                   </span>
                 ) : null}
-
-                {showAssigneeStack && task.assignees.length > 0 ? (
-                  <span className="inline-flex shrink-0 items-center">
-                    {assigneeStack.map((member, index) => (
-                      <span
-                        key={member.userId}
-                        className={cn("relative", index > 0 && "-ml-1.5")}
-                        style={{ zIndex: index + 1 }}
-                      >
-                        <AgencyMemberAvatar
-                          name={member.userName}
-                          avatarUrl={member.userAvatar}
-                          size="sm"
-                          className={cn("rounded-full", agencyAvatarStackRingClass)}
-                        />
-                      </span>
-                    ))}
-                    {assigneeOverflow > 0 ? (
-                      <span
-                        className={cn(
-                          "relative z-10 -ml-1.5 flex size-5 shrink-0 items-center justify-center rounded-full",
-                          "bg-muted text-[9px] font-bold text-foreground",
-                          agencyAvatarStackRingClass,
-                        )}
-                        aria-hidden
-                      >
-                        +{assigneeOverflow}
-                      </span>
-                    ) : null}
-                  </span>
-                ) : null}
-                </div>
+              </span>
+            ) : null}
+            <div className="pointer-events-auto ml-auto flex shrink-0 items-center gap-1">
+              {readOnly && onReopenToActive ? (
+                <button
+                  type="button"
+                  aria-label={`Add ${task.title} to open tasks`}
+                  disabled={isRowPending}
+                  className={cn(
+                    "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted",
+                    "transition-colors hover:bg-default hover:text-highlighted",
+                    agencyFocusRingClass,
+                    "motion-reduce:transition-none",
+                    isRowPending && "cursor-not-allowed opacity-50",
+                  )}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onReopenToActive(task);
+                  }}
+                >
+                  <Plus className="size-3.5" strokeWidth={2.5} aria-hidden />
+                </button>
               ) : null}
-
-              {showDescriptionRow ? (
-                <div className="pointer-events-auto min-w-0">
-                  {blueprintId && onBlueprintDescriptionChange ? (
-                    <Input
-                      value={blueprintDescription}
-                      onChange={(e) => onBlueprintDescriptionChange(e.target.value)}
-                      onClick={(event) => event.stopPropagation()}
-                      onKeyDown={(event) => event.stopPropagation()}
-                      placeholder="What are you working on?"
-                      className={cn(
-                        "h-6 min-w-0 border-0 bg-transparent px-0 text-[11px] leading-tight shadow-none focus-visible:ring-0",
-                        agencyInputPlaceholderClass,
-                        trackingState?.needsDescription ? "text-warning" : "text-muted",
-                      )}
-                      aria-label="Task blueprint description"
-                    />
-                  ) : blueprintDescription.trim() ? (
-                    <p className="truncate text-[11px] leading-tight text-muted">{blueprintDescription}</p>
-                  ) : trackingState?.needsDescription ? (
-                    <p className="truncate text-[11px] leading-tight text-warning">
-                      Add a description in the tracker to stop.
-                    </p>
-                  ) : null}
-                </div>
+              {!readOnly ? (
+                <AgencyMiniTimerContainer
+                  variant="compact"
+                  teamId={teamId}
+                  taskId={task.id}
+                  projectId={task.projectId}
+                  taskTitle={task.title}
+                  projectName={projectName}
+                />
               ) : null}
             </div>
           </div>
+
+          {showSecondaryMeta ? (
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              {onSelectProject && !nested ? (
+                <button
+                  type="button"
+                  className={cn(
+                    agencyTaskRowProjectPillClass,
+                    agencyFocusRingClass,
+                    "pointer-events-auto motion-reduce:transition-none",
+                  )}
+                  onClick={() => onSelectProject(task.projectId)}
+                >
+                  <span className="truncate">{projectName}</span>
+                </button>
+              ) : !nested ? (
+                <span className={cn(agencyTaskRowProjectPillClass, "truncate")}>{projectName}</span>
+              ) : null}
+
+              {dueLabel ? (
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1 text-[11px]",
+                    overdue ? "text-error" : "text-muted",
+                  )}
+                >
+                  <Clock className="size-3 shrink-0" aria-hidden />
+                  <span className="font-mono tabular-nums">{overdue ? "Overdue" : dueLabel}</span>
+                </span>
+              ) : null}
+
+              {showAssigneeStack && task.assignees.length > 0 ? (
+                <span className="inline-flex shrink-0 items-center">
+                  {assigneeStack.map((member, index) => (
+                    <span
+                      key={member.userId}
+                      className={cn("relative", index > 0 && "-ml-1.5")}
+                      style={{ zIndex: index + 1 }}
+                    >
+                      <AgencyMemberAvatar
+                        name={member.userName}
+                        avatarUrl={member.userAvatar}
+                        size="sm"
+                        className={cn("rounded-full", agencyAvatarStackRingClass)}
+                      />
+                    </span>
+                  ))}
+                  {assigneeOverflow > 0 ? (
+                    <span
+                      className={cn(
+                        "relative z-10 -ml-1.5 flex size-5 shrink-0 items-center justify-center rounded-full",
+                        "bg-muted text-[9px] font-bold text-foreground",
+                        agencyAvatarStackRingClass,
+                      )}
+                      aria-hidden
+                    >
+                      +{assigneeOverflow}
+                    </span>
+                  ) : null}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+
+          {showDescriptionRow ? (
+            <div className="pointer-events-auto min-w-0">
+              {blueprintId && onBlueprintDescriptionChange ? (
+                <Input
+                  value={blueprintDescription}
+                  onChange={(e) => onBlueprintDescriptionChange(e.target.value)}
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                  placeholder="What are you working on?"
+                  className={cn(
+                    "h-6 min-w-0 border-0 bg-transparent px-0 text-[11px] leading-tight shadow-none focus-visible:ring-0",
+                    agencyInputPlaceholderClass,
+                    trackingState?.needsDescription ? "text-warning" : "text-muted",
+                  )}
+                  aria-label="Task blueprint description"
+                />
+              ) : blueprintDescription.trim() ? (
+                <p className="truncate text-[11px] leading-tight text-muted">
+                  {blueprintDescription}
+                </p>
+              ) : trackingState?.needsDescription ? (
+                <p className="truncate text-[11px] leading-tight text-warning">
+                  Add a description in the tracker to stop.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 

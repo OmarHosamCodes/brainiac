@@ -31,10 +31,16 @@ function memberStatusLabel(status: MemberStatus) {
 }
 
 function resolveViewerStatus(task: AgencyProjectTask): MemberStatus {
-  return task.viewerStatus ?? (task.status === "done" || task.status === "archived" ? "done" : task.status);
+  return (
+    task.viewerStatus ??
+    (task.status === "done" || task.status === "archived" ? "done" : task.status)
+  );
 }
 
-function countDoneStatuses(group: AgencyProjectTaskGroup, currentUserId?: string): { done: number; total: number } {
+function countDoneStatuses(
+  group: AgencyProjectTaskGroup,
+  currentUserId?: string,
+): { done: number; total: number } {
   let done = 0;
   let total = 0;
 

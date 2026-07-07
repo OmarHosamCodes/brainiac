@@ -6,7 +6,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AgencyMemberChooserViewModel } from "@/lib/agency/work/hooks/use-agency-member-chooser";
 import { UNASSIGNED_ASSIGNEE_VALUE } from "@/stores/agency-task-list";
-import { agencyAvatarStackRingClass, agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
+import {
+  agencyAvatarStackRingClass,
+  agencyFocusRingClass,
+  agencyInputPlaceholderClass,
+} from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
 const STACK_AVATAR_LIMIT = 4;
@@ -59,7 +63,9 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
               "motion-reduce:transition-none",
               className,
             )}
-            aria-label={triggerLabel === "Unassigned" ? "Add assignees" : `Assignees: ${triggerLabel}`}
+            aria-label={
+              triggerLabel === "Unassigned" ? "Add assignees" : `Assignees: ${triggerLabel}`
+            }
           >
             {assignedToTeam ? (
               <span
@@ -122,7 +128,8 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
               agencyFocusRingClass,
               mode === "single" && selectedMember
                 ? "text-highlighted"
-                : mode === "multiple" && (assignedToTeam || (multiple?.selectedUserIds.length ?? 0) > 0)
+                : mode === "multiple" &&
+                    (assignedToTeam || (multiple?.selectedUserIds.length ?? 0) > 0)
                   ? "text-highlighted"
                   : "text-muted",
               "motion-reduce:transition-none",
@@ -198,7 +205,9 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                   >
                     Entire team
                   </span>
-                  {assignedToTeam ? <Check className="size-3.5 shrink-0 text-primary" aria-hidden /> : null}
+                  {assignedToTeam ? (
+                    <Check className="size-3.5 shrink-0 text-primary" aria-hidden />
+                  ) : null}
                 </button>
               ) : null}
 
@@ -261,7 +270,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                   const selected =
                     mode === "single"
                       ? member.userId === single?.value
-                      : multiple?.isMemberSelected(member.userId) ?? false;
+                      : (multiple?.isMemberSelected(member.userId) ?? false);
 
                   return (
                     <button

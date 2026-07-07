@@ -102,12 +102,7 @@ export function groupEntriesByClient(entries: AgencyReportEntry[]): ClientGroup[
 }
 
 export function reportRowAggregationKey(entry: AgencyReportEntry): string {
-  return [
-    entry.projectId,
-    entry.taskId ?? "",
-    entry.userId,
-    entry.description.trim(),
-  ].join("\0");
+  return [entry.projectId, entry.taskId ?? "", entry.userId, entry.description.trim()].join("\0");
 }
 
 export function aggregateSimilarReportRows(rows: AgencyReportEntry[]): AggregatedReportRow[] {
@@ -162,5 +157,4 @@ export function isReportEntryWaste(entry: Pick<AgencyReportEntry, "taskIsWaste">
   return entry.taskIsWaste === true;
 }
 
-export const reportEntryWasteRowClass =
-  "text-muted line-through decoration-muted/60 opacity-70";
+export const reportEntryWasteRowClass = "text-muted line-through decoration-muted/60 opacity-70";

@@ -1196,8 +1196,7 @@ function createAgencyTimeTrackingActions(
     const entryOverlaySnapshot = optimistic().snapshotTimeEntries(payload.teamId);
     const previousUpdatingIds = [...get().updatingEntryIds];
 
-    const previousEntry =
-      payload.previousEntry ?? findTimeEntry(payload.teamId, payload.entryId);
+    const previousEntry = payload.previousEntry ?? findTimeEntry(payload.teamId, payload.entryId);
 
     if (!previousEntry) {
       toast.error("Unable to update entry", { description: "Entry not found." });

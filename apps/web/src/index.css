@@ -355,7 +355,8 @@ body {
 
 @media (min-width: 768px) {
   .app-shell {
-    grid-template-columns: var(--app-shell-rail-width, 3rem) minmax(0, 1fr)
+    grid-template-columns:
+      var(--app-shell-rail-width, 3rem) minmax(0, 1fr)
       var(--app-shell-dock-width, 0px);
     transition: grid-template-columns var(--motion-duration-rail) var(--motion-ease-rail);
   }
@@ -748,7 +749,10 @@ body {
   backdrop-filter: blur(24px) saturate(1.75);
   transform-origin: var(
     --radix-context-menu-content-transform-origin,
-    var(--radix-dropdown-menu-content-transform-origin, var(--radix-popover-content-transform-origin, center))
+    var(
+      --radix-dropdown-menu-content-transform-origin,
+      var(--radix-popover-content-transform-origin, center)
+    )
   );
   box-shadow:
     0 0 0 1px color-mix(in oklab, white 22%, transparent),

@@ -50,8 +50,7 @@ export function useAgencyProjectJourney(
     },
   });
 
-  const isLegacyProject =
-    journeyQuery.isError && isOrpcNotFoundError(journeyQuery.error);
+  const isLegacyProject = journeyQuery.isError && isOrpcNotFoundError(journeyQuery.error);
   const hasJourney = journeyQuery.isSuccess;
   const journey = journeyQuery.data ?? null;
 

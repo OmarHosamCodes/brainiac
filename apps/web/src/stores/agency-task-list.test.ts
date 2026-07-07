@@ -6,9 +6,7 @@ describe("resolveDefaultCreateProjectId", () => {
   const projects = [{ id: "a" }, { id: "b" }];
 
   test("prefers last-used when still valid", () => {
-    expect(
-      resolveDefaultCreateProjectId({ projects, lastUsedProjectId: "b" }),
-    ).toBe("b");
+    expect(resolveDefaultCreateProjectId({ projects, lastUsedProjectId: "b" })).toBe("b");
   });
 
   test("falls back to sole project", () => {
@@ -21,8 +19,6 @@ describe("resolveDefaultCreateProjectId", () => {
   });
 
   test("returns empty when ambiguous", () => {
-    expect(
-      resolveDefaultCreateProjectId({ projects, lastUsedProjectId: "stale" }),
-    ).toBe("");
+    expect(resolveDefaultCreateProjectId({ projects, lastUsedProjectId: "stale" })).toBe("");
   });
 });

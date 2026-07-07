@@ -54,14 +54,21 @@ export function AgencyAttachmentListView({
             </div>
 
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-semibold text-highlighted">{attachment.fileName}</p>
+              <p className="truncate text-sm font-semibold text-highlighted">
+                {attachment.fileName}
+              </p>
               <p className="truncate text-xs text-muted">{attachment.mimeType}</p>
             </div>
 
             <div className="flex shrink-0 items-center gap-1">
               {isLink && url ? (
                 <Button variant="ghost" size="sm" asChild>
-                  <a href={url} target="_blank" rel="noreferrer" aria-label={`Open ${attachment.fileName}`}>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Open ${attachment.fileName}`}
+                  >
                     <ExternalLink />
                   </a>
                 </Button>
@@ -76,7 +83,12 @@ export function AgencyAttachmentListView({
                 </Button>
               ) : url && !isLink ? (
                 <Button variant="ghost" size="sm" asChild>
-                  <a href={url} target="_blank" rel="noreferrer" aria-label={`Open ${attachment.fileName}`}>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Open ${attachment.fileName}`}
+                  >
                     <ExternalLink />
                   </a>
                 </Button>

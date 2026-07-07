@@ -39,10 +39,8 @@ export function useAgencyBootGate({
   const [animationReady, setAnimationReady] = useState(() => isShellAnimationReady());
 
   const isTeamReady = teamsCount === 0 || Boolean(teamId);
-  const isPageReady =
-    !teamsQuery.isPending && !billingQuery.isPending && isTeamReady;
-  const skipSegmentBoot =
-    showAgencyUpsell || teamsCount === 0 || !agencyEnabled || !teamId;
+  const isPageReady = !teamsQuery.isPending && !billingQuery.isPending && isTeamReady;
+  const skipSegmentBoot = showAgencyUpsell || teamsCount === 0 || !agencyEnabled || !teamId;
 
   useEffect(() => {
     startShellBoot();

@@ -34,12 +34,7 @@ export function AgencyAttachmentChipView({
   const content = (
     <>
       {isImage && url ? (
-        <img
-          src={url}
-          alt=""
-          className="size-5 shrink-0 rounded object-cover"
-          aria-hidden
-        />
+        <img src={url} alt="" className="size-5 shrink-0 rounded object-cover" aria-hidden />
       ) : (
         <Icon className="size-3.5 shrink-0 text-muted" aria-hidden />
       )}
@@ -77,12 +72,7 @@ export function AgencyAttachmentChipView({
 
   if (mediaKind === "link" && url) {
     return (
-      <a
-        href={url}
-        target="_blank"
-        rel="noreferrer"
-        className={cn(chipClass, "hover:bg-default")}
-      >
+      <a href={url} target="_blank" rel="noreferrer" className={cn(chipClass, "hover:bg-default")}>
         {content}
       </a>
     );

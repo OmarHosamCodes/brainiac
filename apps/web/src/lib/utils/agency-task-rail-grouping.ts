@@ -126,7 +126,10 @@ export function countProjectDisplayRows(group: AgencyTaskProjectDisplayGroup): n
 }
 
 export function countClientDisplayRows(group: AgencyTaskClientDisplayGroup): number {
-  return group.projectGroups.reduce((sum, projectGroup) => sum + countProjectDisplayRows(projectGroup), 0);
+  return group.projectGroups.reduce(
+    (sum, projectGroup) => sum + countProjectDisplayRows(projectGroup),
+    0,
+  );
 }
 
 export function summarizeAgencyTaskRailGroups(

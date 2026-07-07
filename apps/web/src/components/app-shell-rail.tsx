@@ -1,10 +1,4 @@
-import {
-  Briefcase,
-  CreditCard,
-  LayoutDashboard,
-  Search,
-  ShoppingBag,
-} from "lucide-react";
+import { Briefcase, CreditCard, LayoutDashboard, Search, ShoppingBag } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 import { AppShellAccountMenu } from "@/components/app-shell-account-menu";
@@ -83,9 +77,7 @@ export function AppShellRail({ onOpenSearch }: AppShellRailProps) {
           onClick={onOpenSearch}
         >
           <Search className={shellRailIconClass} />
-          <span
-            className={cn("app-shell__rail-label truncate", !railExpanded && "sr-only")}
-          >
+          <span className={cn("app-shell__rail-label truncate", !railExpanded && "sr-only")}>
             Search
           </span>
         </button>
@@ -119,9 +111,7 @@ export function AppShellRail({ onOpenSearch }: AppShellRailProps) {
                 title={railExpanded ? undefined : item.label}
               >
                 <Icon className={shellRailIconClass} />
-                <span
-                  className={cn("app-shell__rail-label truncate", !railExpanded && "sr-only")}
-                >
+                <span className={cn("app-shell__rail-label truncate", !railExpanded && "sr-only")}>
                   {item.label}
                 </span>
               </Link>
@@ -129,12 +119,7 @@ export function AppShellRail({ onOpenSearch }: AppShellRailProps) {
           })}
         </nav>
 
-        <div
-          className={cn(
-            shellRailFooterClass,
-            railExpanded ? "px-0.5" : "items-center",
-          )}
-        >
+        <div className={cn(shellRailFooterClass, railExpanded ? "px-0.5" : "items-center")}>
           <AppShellAccountMenu variant="rail" expanded={railExpanded} />
         </div>
       </div>

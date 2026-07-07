@@ -73,8 +73,7 @@ export const useAppShellStore = create<AppShellState>((set, get) => ({
   releasePageCrumbSlot: () =>
     set({ pageCrumbOwnerCount: Math.max(0, get().pageCrumbOwnerCount - 1) }),
   acquireSubtitleSlot: () => set({ subtitleOwnerCount: get().subtitleOwnerCount + 1 }),
-  releaseSubtitleSlot: () =>
-    set({ subtitleOwnerCount: Math.max(0, get().subtitleOwnerCount - 1) }),
+  releaseSubtitleSlot: () => set({ subtitleOwnerCount: Math.max(0, get().subtitleOwnerCount - 1) }),
   acquireActionsSlot: () => set({ actionsOwnerCount: get().actionsOwnerCount + 1 }),
   releaseActionsSlot: () => set({ actionsOwnerCount: Math.max(0, get().actionsOwnerCount - 1) }),
   acquireAgentButtonHidden: () =>

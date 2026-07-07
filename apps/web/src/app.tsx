@@ -31,13 +31,13 @@ export function App() {
     <>
       <ScrollToTopOnNavigate />
       <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/privacy" element={<PrivacyPage />} />
-      <Route path="/terms" element={<TermsPage />} />
-      <Route path="/login" element={<LoginAuthBoundary />}>
-        <Route index element={<LoginPage />} />
-      </Route>
-      <Route path="/*" element={<AuthenticatedRoutes />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/login" element={<LoginAuthBoundary />}>
+          <Route index element={<LoginPage />} />
+        </Route>
+        <Route path="/*" element={<AuthenticatedRoutes />} />
       </Routes>
     </>
   );

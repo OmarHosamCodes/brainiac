@@ -1,0 +1,54 @@
+---
+description: Drizzle schema conventions and migration workflow
+globs: packages/db/**
+alwaysApply: false
+---
+
+# Database / Drizzle Conventions
+
+## Schema patterns
+
+```typescript
+export const agencyOpsClient = pgTable(
+  "agency_ops_client",
+  {
+    id: text("id").primaryKey(),                    // prefixed IDs via createWorkspaceId()
+    teamId: text("team_id")
+      .notNull()
+      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("agency_ops_client_team_idx").on(table.teamId),
+  ],
+);
+```
+
+## Naming
+
+- Postgres: `snake_case` tables/columns with domain prefixes (`agency_ops_*`, `workspace_*`)
+- TypeScript exports: `camelCase` (`agencyOpsClient`)
+- Indexes: `{table}_{columns}_idx`
+- Enums: `$type<Union>()` on text columns
+
+## Workflow
+
+| Environment | Command |
+|-------------|---------|
+| Local dev | `bun run db:push` |
+| Committed migrations | `bun run db:generate` → `bun run db:migrate` |
+
+Export new tables from `packages/db/src/schema/index.ts`.
+
+## Query patterns
+
+No repository layer — query directly in `packages/api/src/routers/*/service.ts`:
+
+```typescript
+import { db } from "@brainiac/db";
+import { agencyOpsClient } from "@brainiac/db/schema";
+```

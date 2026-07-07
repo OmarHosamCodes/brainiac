@@ -65,8 +65,7 @@ export function findOpenTaskByExactTitle(
   if (!normalizedQuery) return null;
   return (
     tasks.find(
-      (task) =>
-        isOpenOrInProgressTask(task) && normalizeTaskTitle(task.title) === normalizedQuery,
+      (task) => isOpenOrInProgressTask(task) && normalizeTaskTitle(task.title) === normalizedQuery,
     ) ?? null
   );
 }

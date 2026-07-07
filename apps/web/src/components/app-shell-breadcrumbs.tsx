@@ -29,10 +29,7 @@ export function AppShellBreadcrumbs({ pathname }: AppShellBreadcrumbsProps) {
   const hasPageCrumbContent = useHasPageCrumbContent();
   const hasSubtitleContent = useHasSubtitleContent();
 
-  const activeNavigationItem = useMemo(
-    () => findActiveNavItem(pathname),
-    [pathname],
-  );
+  const activeNavigationItem = useMemo(() => findActiveNavItem(pathname), [pathname]);
   const pageLabel = activeNavigationItem?.label ?? "Workspace";
   const subtitleLabel = pageSubtitle?.trim() || null;
   const showSubtitle = hasSubtitleContent || Boolean(subtitleLabel);
@@ -89,13 +86,9 @@ export function AppShellBreadcrumbs({ pathname }: AppShellBreadcrumbsProps) {
 }
 
 export function AppShellTopbarPageCrumb({ children }: { children: React.ReactNode }) {
-  return (
-    <AppShellPortal targetId={APP_SHELL_PAGE_CRUMB_SLOT_ID}>{children}</AppShellPortal>
-  );
+  return <AppShellPortal targetId={APP_SHELL_PAGE_CRUMB_SLOT_ID}>{children}</AppShellPortal>;
 }
 
 export function AppShellTopbarSubtitle({ children }: { children: React.ReactNode }) {
-  return (
-    <AppShellPortal targetId={APP_SHELL_SUBTITLE_SLOT_ID}>{children}</AppShellPortal>
-  );
+  return <AppShellPortal targetId={APP_SHELL_SUBTITLE_SLOT_ID}>{children}</AppShellPortal>;
 }

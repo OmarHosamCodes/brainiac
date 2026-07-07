@@ -140,8 +140,7 @@ export function useAgencyTimeRangeFilters({
   const [appliedProjectId, setAppliedProjectId] = useState("");
   const [appliedMemberUserId, setAppliedMemberUserId] = useState("");
   const [appliedClientId, setAppliedClientId] = useState("");
-  const [appliedFieldIds, setAppliedFieldIds] =
-    useState<AgencyReportFieldId[]>(defaultFieldIds);
+  const [appliedFieldIds, setAppliedFieldIds] = useState<AgencyReportFieldId[]>(defaultFieldIds);
 
   const [draftRangePreset, setDraftRangePreset] = useState<RangePreset | null>(null);
   const effectiveDraftRangePreset = draftRangePreset ?? defaultRangePreset;
@@ -152,19 +151,16 @@ export function useAgencyTimeRangeFilters({
   const [draftProjectId, setDraftProjectId] = useState("");
   const [draftMemberUserId, setDraftMemberUserId] = useState("");
   const [draftClientId, setDraftClientId] = useState("");
-  const [draftFieldIds, setDraftFieldIds] =
-    useState<AgencyReportFieldId[]>(defaultFieldIds);
+  const [draftFieldIds, setDraftFieldIds] = useState<AgencyReportFieldId[]>(defaultFieldIds);
 
   const hasPendingFilterChanges =
     effectiveDraftRangePreset !== effectiveAppliedRangePreset ||
     draftProjectId !== appliedProjectId ||
     draftMemberUserId !== appliedMemberUserId ||
     (includeClientFilter && draftClientId !== appliedClientId) ||
-    (includeFieldsFilter &&
-      !areSameReportFieldSets(draftFieldIds, appliedFieldIds)) ||
+    (includeFieldsFilter && !areSameReportFieldSets(draftFieldIds, appliedFieldIds)) ||
     (effectiveDraftRangePreset === "custom" &&
-      (draftCustomFromDate !== appliedCustomFromDate ||
-        draftCustomToDate !== appliedCustomToDate));
+      (draftCustomFromDate !== appliedCustomFromDate || draftCustomToDate !== appliedCustomToDate));
 
   const range = useMemo(
     () =>
@@ -334,8 +330,7 @@ export function useAgencyTimeRangeFilters({
   }
 
   function restoreSnapshot(snapshot: AgencyTimeRangeFilterSnapshot) {
-    const storedPreset =
-      snapshot.rangePreset === defaultRangePreset ? null : snapshot.rangePreset;
+    const storedPreset = snapshot.rangePreset === defaultRangePreset ? null : snapshot.rangePreset;
     setDraftRangePreset(storedPreset);
     setDraftCustomFromDate(snapshot.customFromDate);
     setDraftCustomToDate(snapshot.customToDate);

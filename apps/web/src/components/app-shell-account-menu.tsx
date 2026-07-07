@@ -30,7 +30,12 @@ import { authClient } from "@/lib/auth-client";
 import { getServerUrl } from "@/lib/env";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { getUserAvatarPublicUrl } from "@/lib/user-avatar-url";
-import { shellFocusRingClass, shellRailAvatarClass, shellRailAvatarCollapsedClass, shellRailExpandedLinkClass } from "@/lib/utils/app-shell-ui";
+import {
+  shellFocusRingClass,
+  shellRailAvatarClass,
+  shellRailAvatarCollapsedClass,
+  shellRailExpandedLinkClass,
+} from "@/lib/utils/app-shell-ui";
 import { useTheme } from "@/stores/theme";
 import { cn } from "@/lib/utils";
 
@@ -133,10 +138,7 @@ export function AppShellAccountMenu({
   if (session.isPending) {
     return (
       <Skeleton
-        className={cn(
-          "rounded-full",
-          variant === "rail" && expanded ? "h-8 w-full" : "size-8",
-        )}
+        className={cn("rounded-full", variant === "rail" && expanded ? "h-8 w-full" : "size-8")}
       />
     );
   }
@@ -147,7 +149,10 @@ export function AppShellAccountMenu({
         <Button
           asChild
           variant="secondary"
-          className={cn("h-8 w-full justify-start rounded-full px-2.5 text-[13px]", shellFocusRingClass)}
+          className={cn(
+            "h-8 w-full justify-start rounded-full px-2.5 text-[13px]",
+            shellFocusRingClass,
+          )}
         >
           <Link to="/login">
             <LogIn className="size-3.5" />

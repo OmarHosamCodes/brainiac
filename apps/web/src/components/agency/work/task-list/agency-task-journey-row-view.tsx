@@ -57,18 +57,12 @@ export function AgencyTaskJourneyRowView({
     completedSteps !== undefined && totalSteps !== undefined
       ? `${completedSteps}/${totalSteps}`
       : "—";
-  const showSecondaryMeta =
-    !nested &&
-    (assignees.length > 0 || Boolean(onSelectProject));
+  const showSecondaryMeta = !nested && (assignees.length > 0 || Boolean(onSelectProject));
   const isSingleLineRow = nested || !showSecondaryMeta;
 
   return (
     <li
-      className={cn(
-        "group/task-row",
-        agencyTaskRowClass,
-        isSelected && agencyTaskRowSelectedClass,
-      )}
+      className={cn("group/task-row", agencyTaskRowClass, isSelected && agencyTaskRowSelectedClass)}
     >
       <div
         className={cn(
@@ -121,10 +115,7 @@ export function AgencyTaskJourneyRowView({
               </span>
               {!nested ? (
                 <span
-                  className={cn(
-                    agencyMetricClass,
-                    "shrink-0 text-[11px] font-semibold text-muted",
-                  )}
+                  className={cn(agencyMetricClass, "shrink-0 text-[11px] font-semibold text-muted")}
                   aria-label={`${progressLabel} steps complete`}
                 >
                   {progressLabel}
@@ -134,50 +125,52 @@ export function AgencyTaskJourneyRowView({
 
             {showSecondaryMeta ? (
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="inline-flex shrink-0 items-center gap-1">
-                {stackVisible.map((member, index) => (
-                  <span
-                    key={member.userId}
-                    className={cn("relative", index > 0 && "-ml-2")}
-                    style={{ zIndex: index + 1 }}
-                  >
-                    <AgencyMemberAvatar
-                      name={member.userName}
-                      avatarUrl={member.userAvatar}
-                      size="sm"
-                      className={cn("size-6 rounded-full", agencyAvatarStackRingClass)}
-                    />
-                  </span>
-                ))}
-                {stackOverflow > 0 ? (
-                  <span
-                    className={cn(
-                      "relative z-10 -ml-2 flex size-6 shrink-0 items-center justify-center rounded-full",
-                      "bg-muted text-[9px] font-bold text-foreground",
-                      agencyAvatarStackRingClass,
-                    )}
-                    aria-hidden
-                  >
-                    +{stackOverflow}
-                  </span>
-                ) : null}
-              </span>
+                <span className="inline-flex shrink-0 items-center gap-1">
+                  {stackVisible.map((member, index) => (
+                    <span
+                      key={member.userId}
+                      className={cn("relative", index > 0 && "-ml-2")}
+                      style={{ zIndex: index + 1 }}
+                    >
+                      <AgencyMemberAvatar
+                        name={member.userName}
+                        avatarUrl={member.userAvatar}
+                        size="sm"
+                        className={cn("size-6 rounded-full", agencyAvatarStackRingClass)}
+                      />
+                    </span>
+                  ))}
+                  {stackOverflow > 0 ? (
+                    <span
+                      className={cn(
+                        "relative z-10 -ml-2 flex size-6 shrink-0 items-center justify-center rounded-full",
+                        "bg-muted text-[9px] font-bold text-foreground",
+                        agencyAvatarStackRingClass,
+                      )}
+                      aria-hidden
+                    >
+                      +{stackOverflow}
+                    </span>
+                  ) : null}
+                </span>
 
-              {onSelectProject ? (
-                <button
-                  type="button"
-                  className={cn(
-                    agencyTaskRowProjectPillClass,
-                    agencyFocusRingClass,
-                    "pointer-events-auto motion-reduce:transition-none",
-                  )}
-                  onClick={() => onSelectProject(task.projectId)}
-                >
-                  <span className="truncate">{projectName}</span>
-                </button>
-              ) : (
-                <span className={cn(agencyTaskRowProjectPillClass, "truncate")}>{projectName}</span>
-              )}
+                {onSelectProject ? (
+                  <button
+                    type="button"
+                    className={cn(
+                      agencyTaskRowProjectPillClass,
+                      agencyFocusRingClass,
+                      "pointer-events-auto motion-reduce:transition-none",
+                    )}
+                    onClick={() => onSelectProject(task.projectId)}
+                  >
+                    <span className="truncate">{projectName}</span>
+                  </button>
+                ) : (
+                  <span className={cn(agencyTaskRowProjectPillClass, "truncate")}>
+                    {projectName}
+                  </span>
+                )}
               </div>
             ) : null}
           </div>

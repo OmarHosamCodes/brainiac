@@ -74,12 +74,8 @@ export function useAgencyReportAutosave({
   initialBaseline,
   onSaved,
 }: UseAgencyReportAutosaveOptions) {
-  const [state, setState] = useState<AgencyReportAutosaveState>(
-    initialBaseline ? "saved" : "idle",
-  );
-  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(
-    initialBaseline ? new Date() : null,
-  );
+  const [state, setState] = useState<AgencyReportAutosaveState>(initialBaseline ? "saved" : "idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(initialBaseline ? new Date() : null);
 
   const lastSavedNameRef = useRef(initialBaseline?.name ?? name);
   const lastSavedExcludedRef = useRef<Set<string>>(

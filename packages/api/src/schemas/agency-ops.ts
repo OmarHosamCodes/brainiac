@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-export const agencyProjectTaskStatusSchema = z.enum([
-  "open",
-  "in_progress",
-  "done",
-  "archived",
-]);
+export const agencyProjectTaskStatusSchema = z.enum(["open", "in_progress", "done", "archived"]);
 
 export const agencyProjectTaskKindSchema = z.enum([
   "standard",
@@ -20,12 +15,7 @@ export const agencyJourneyStepKindSchema = z.enum([
   "destination",
 ]);
 
-export const agencyJourneyStepStatusSchema = z.enum([
-  "planned",
-  "active",
-  "done",
-  "blocked",
-]);
+export const agencyJourneyStepStatusSchema = z.enum(["planned", "active", "done", "blocked"]);
 
 export const agencyTimeEntrySourceSchema = z.enum(["timer", "manual"]);
 

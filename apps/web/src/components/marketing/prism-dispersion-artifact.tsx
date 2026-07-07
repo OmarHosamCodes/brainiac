@@ -200,7 +200,15 @@ export function PrismDispersionArtifact({ className }: PrismDispersionArtifactPr
       const progOut = clamp((cycleElapsed - DUR_IN - DUR_INT) / DUR_OUT);
       const shimmer = reducedMotion ? 1 : 1 + 0.08 * Math.sin(time / 280);
 
-      drawGlowingLine(pIn, pFace1, progIn, "rgba(255,255,255,0.9)", "rgba(255,255,255,0.35)", 1.75, shimmer);
+      drawGlowingLine(
+        pIn,
+        pFace1,
+        progIn,
+        "rgba(255,255,255,0.9)",
+        "rgba(255,255,255,0.35)",
+        1.75,
+        shimmer,
+      );
 
       if (progInt > 0) {
         drawGlowingLine(
@@ -250,7 +258,8 @@ export function PrismDispersionArtifact({ className }: PrismDispersionArtifactPr
       ([entry]) => {
         if (!entry?.isIntersecting) return;
         const idle =
-          window.requestIdleCallback ?? ((callback: IdleRequestCallback) => window.setTimeout(callback, 1));
+          window.requestIdleCallback ??
+          ((callback: IdleRequestCallback) => window.setTimeout(callback, 1));
         idle(() => startAnimation());
       },
       { rootMargin: "120px" },

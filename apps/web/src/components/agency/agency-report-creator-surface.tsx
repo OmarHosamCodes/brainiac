@@ -169,13 +169,7 @@ function AgencyReportCreatorLoaded({
   });
 
   const saveEditMutation = useMutation({
-    mutationFn: async ({
-      entryId,
-      draft,
-    }: {
-      entryId: string;
-      draft: TimeEntryDraft;
-    }) => {
+    mutationFn: async ({ entryId, draft }: { entryId: string; draft: TimeEntryDraft }) => {
       const rangeResult = draftToIsoRange(draft);
       if ("error" in rangeResult) {
         throw new Error(rangeResult.error);

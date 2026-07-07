@@ -6,7 +6,13 @@ import {
   type AgencyListOverlay,
 } from "./agency-optimistic-merge";
 
-type Item = { id: string; title: string; status: string; updatedAt: string; viewerCompletionCount?: number };
+type Item = {
+  id: string;
+  title: string;
+  status: string;
+  updatedAt: string;
+  viewerCompletionCount?: number;
+};
 
 describe("mergeListWithOverlay", () => {
   test("keeps reconciled create visible before server list includes it", () => {

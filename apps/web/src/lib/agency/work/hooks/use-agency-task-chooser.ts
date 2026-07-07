@@ -120,10 +120,7 @@ export function useAgencyTaskChooser({
     }
   }
 
-  const chooserTasks = useMemo(
-    () => tasks.filter((task) => task.status !== "archived"),
-    [tasks],
-  );
+  const chooserTasks = useMemo(() => tasks.filter((task) => task.status !== "archived"), [tasks]);
 
   const projectsById = useMemo(
     () => new Map(projects.map((project) => [project.id, project])),

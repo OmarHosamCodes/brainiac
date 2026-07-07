@@ -12,8 +12,7 @@ const polarClient = new Polar({
 });
 
 const loginErrorUrl = new URL("/login", primaryCorsOrigin).toString();
-const isSplitDeployment =
-  new URL(primaryCorsOrigin).origin !== new URL(env.BETTER_AUTH_URL).origin;
+const isSplitDeployment = new URL(primaryCorsOrigin).origin !== new URL(env.BETTER_AUTH_URL).origin;
 
 function schedulePolarCustomerSetup(user: { id: string; email: string; name: string }) {
   void (async () => {

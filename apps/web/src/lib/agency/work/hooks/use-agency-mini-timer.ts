@@ -1,10 +1,7 @@
 import { useCallback, useMemo } from "react";
 
 import { useAgencyElapsedTimer } from "@/lib/agency/work/hooks/use-agency-elapsed-timer";
-import {
-  canStartAgencyTimer,
-  canStopAgencyTimer,
-} from "@/lib/agency/work/timer-validation";
+import { canStartAgencyTimer, canStopAgencyTimer } from "@/lib/agency/work/timer-validation";
 import { useAgencyActiveTimerQuery } from "@/lib/queries/agency";
 import {
   selectIsTimerMutationPending,
@@ -72,7 +69,10 @@ export function useAgencyMiniTimer({
   });
 
   const disabled =
-    !projectId || !taskId || isTimerMutationPending || (isRunningForThisTask ? !canStop : !canStart);
+    !projectId ||
+    !taskId ||
+    isTimerMutationPending ||
+    (isRunningForThisTask ? !canStop : !canStart);
 
   const onToggle = useCallback(() => {
     if (!teamId || !projectId || !taskId || disabled) return;

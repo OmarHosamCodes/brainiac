@@ -29,7 +29,10 @@ export function AgencyTaskRailSummary({
 }: AgencyTaskRailSummaryProps) {
   if (compact) {
     return (
-      <div className="flex flex-col items-center gap-0.5 text-center" aria-label="Task workload summary">
+      <div
+        className="flex flex-col items-center gap-0.5 text-center"
+        aria-label="Task workload summary"
+      >
         <span className={cn(agencyMetricClass, "text-[10px] font-semibold text-highlighted")}>
           {done === null ? "—" : done}
         </span>
@@ -39,11 +42,7 @@ export function AgencyTaskRailSummary({
   }
 
   const progressLabel =
-    total === null || done === null
-      ? "—"
-      : total === 0
-        ? "No tasks"
-        : `${done} of ${total} done`;
+    total === null || done === null ? "—" : total === 0 ? "No tasks" : `${done} of ${total} done`;
 
   return (
     <div className={agencyTaskRailSummaryClass} aria-label="Task workload summary">
@@ -67,7 +66,12 @@ export function AgencyTaskRailSummary({
             {progressLabel}
           </span>
           {left !== null && total !== null && total > 0 ? (
-            <span className={cn(agencyTaskRailSummaryLabelClass, "text-[10px] normal-case tracking-normal")}>
+            <span
+              className={cn(
+                agencyTaskRailSummaryLabelClass,
+                "text-[10px] normal-case tracking-normal",
+              )}
+            >
               {left} open
             </span>
           ) : null}

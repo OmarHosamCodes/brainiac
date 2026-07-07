@@ -1,9 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  parseBeforeDate,
-  resolveTaskConflicts,
-  type ImportCatalog,
-} from "./clockify-import";
+import { parseBeforeDate, resolveTaskConflicts, type ImportCatalog } from "./clockify-import";
 
 describe("parseBeforeDate", () => {
   test("parses YYYY-MM-DD as UTC midnight", () => {
@@ -37,9 +33,7 @@ describe("resolveTaskConflicts", () => {
       taskConflicts: [],
     };
 
-    const existing = new Map([
-      ["clockify-project-abc|design", "manual-task-id"],
-    ]);
+    const existing = new Map([["clockify-project-abc|design", "manual-task-id"]]);
 
     const remapped = resolveTaskConflicts(catalog, existing);
     expect(remapped.get("clockify-task-name-design")).toBe("manual-task-id");

@@ -174,7 +174,9 @@ export function AgencyMultiSelectFilter({
             type="button"
             className={cn(
               "flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-colors hover:bg-default/80",
-              values.length === 0 ? "bg-primary/10 text-primary hover:bg-primary/10" : "text-muted hover:text-highlighted",
+              values.length === 0
+                ? "bg-primary/10 text-primary hover:bg-primary/10"
+                : "text-muted hover:text-highlighted",
               agencyFocusRingClass,
             )}
             onClick={() => onValuesChange([])}
@@ -210,7 +212,9 @@ export function AgencyMultiSelectFilter({
                               type="button"
                               className={cn(
                                 "flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-colors hover:bg-default/80",
-                                checked ? "bg-primary/10 text-primary hover:bg-primary/10" : "text-muted hover:text-highlighted",
+                                checked
+                                  ? "bg-primary/10 text-primary hover:bg-primary/10"
+                                  : "text-muted hover:text-highlighted",
                                 agencyFocusRingClass,
                               )}
                               onClick={() => toggleValue(option.value)}
@@ -231,7 +235,9 @@ export function AgencyMultiSelectFilter({
                           type="button"
                           className={cn(
                             "flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-colors hover:bg-default/80",
-                            checked ? "bg-primary/10 text-primary hover:bg-primary/10" : "text-muted hover:text-highlighted",
+                            checked
+                              ? "bg-primary/10 text-primary hover:bg-primary/10"
+                              : "text-muted hover:text-highlighted",
                             agencyFocusRingClass,
                           )}
                           onClick={() => toggleValue(option.value)}
@@ -253,7 +259,9 @@ export function AgencyMultiSelectFilter({
                   type="button"
                   className={cn(
                     "flex w-full min-w-0 items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-xs font-bold transition-colors hover:bg-default/80",
-                    checked ? "bg-primary/10 text-primary hover:bg-primary/10" : "text-muted hover:text-highlighted",
+                    checked
+                      ? "bg-primary/10 text-primary hover:bg-primary/10"
+                      : "text-muted hover:text-highlighted",
                     agencyFocusRingClass,
                   )}
                   onClick={() => toggleValue(option.value)}

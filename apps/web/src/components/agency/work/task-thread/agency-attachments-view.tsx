@@ -30,12 +30,8 @@ export function AgencyAttachmentsView({
   onCloseViewer,
 }: AgencyAttachmentsViewProps) {
   const audioAttachments = attachments.filter((a) => isAudioAttachment(a));
-  const videoAttachments = attachments.filter(
-    (a) => isVideoAttachment(a) && !isAudioAttachment(a),
-  );
-  const fileAttachments = attachments.filter(
-    (a) => !isAudioAttachment(a) && !isVideoAttachment(a),
-  );
+  const videoAttachments = attachments.filter((a) => isVideoAttachment(a) && !isAudioAttachment(a));
+  const fileAttachments = attachments.filter((a) => !isAudioAttachment(a) && !isVideoAttachment(a));
 
   return (
     <>

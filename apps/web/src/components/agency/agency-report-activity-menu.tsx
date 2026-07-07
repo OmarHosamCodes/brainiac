@@ -60,8 +60,7 @@ export function AgencyReportActivityMenu({
 
   const activityQuery = useQuery({
     queryKey: ["agency-reports", "saved", reportId, "activity"],
-    queryFn: () =>
-      orpcClient.agencyOps.reports.saved.listActivity({ teamId, reportId, limit: 50 }),
+    queryFn: () => orpcClient.agencyOps.reports.saved.listActivity({ teamId, reportId, limit: 50 }),
     enabled: open && Boolean(teamId && reportId),
   });
 

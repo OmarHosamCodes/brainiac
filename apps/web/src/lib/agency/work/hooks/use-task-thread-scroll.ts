@@ -65,11 +65,7 @@ export function useTaskThreadScroll({
     function handleScroll() {
       updateNearBottom();
 
-      if (
-        hasOlderMessages &&
-        !isFetchingOlder &&
-        container.scrollTop <= LOAD_OLDER_THRESHOLD_PX
-      ) {
+      if (hasOlderMessages && !isFetchingOlder && container.scrollTop <= LOAD_OLDER_THRESHOLD_PX) {
         previousScrollHeightRef.current = container.scrollHeight;
         onLoadOlder();
       }

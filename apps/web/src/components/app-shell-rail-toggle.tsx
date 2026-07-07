@@ -24,10 +24,16 @@ export function AppShellRailToggle({ expanded, onClick }: AppShellRailToggleProp
       title={expanded ? "Close sidebar" : "Open sidebar"}
       onClick={onClick}
     >
-      <span className="app-shell__rail-toggle-layer app-shell__rail-toggle-layer--brand" aria-hidden="true">
+      <span
+        className="app-shell__rail-toggle-layer app-shell__rail-toggle-layer--brand"
+        aria-hidden="true"
+      >
         <BrandMark className="size-5 rounded-[6px]" />
       </span>
-      <span className="app-shell__rail-toggle-layer app-shell__rail-toggle-layer--action" aria-hidden="true">
+      <span
+        className="app-shell__rail-toggle-layer app-shell__rail-toggle-layer--action"
+        aria-hidden="true"
+      >
         <ActionIcon className={shellRailIconClass} />
       </span>
     </button>

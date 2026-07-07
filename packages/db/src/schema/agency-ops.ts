@@ -194,10 +194,7 @@ export const agencyOpsProjectTaskMemberStatus = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    status: text("status")
-      .$type<AgencyOpsProjectTaskMemberStatus>()
-      .notNull()
-      .default("open"),
+    status: text("status").$type<AgencyOpsProjectTaskMemberStatus>().notNull().default("open"),
     completionCount: integer("completion_count").notNull().default(0),
     completedAt: timestamp("completed_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),

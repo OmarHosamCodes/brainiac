@@ -67,11 +67,12 @@ export function AgencyReportEntryContextMenu({
           Edit entry
           <ContextMenuShortcut>E</ContextMenuShortcut>
         </ContextMenuItem>
-        <ContextMenuItem
-          disabled={!canMarkWaste || wastePending}
-          onSelect={onToggleWaste}
-        >
-          {wastePending ? <Loader2 className="animate-spin motion-reduce:animate-none" /> : <TrashIcon />}
+        <ContextMenuItem disabled={!canMarkWaste || wastePending} onSelect={onToggleWaste}>
+          {wastePending ? (
+            <Loader2 className="animate-spin motion-reduce:animate-none" />
+          ) : (
+            <TrashIcon />
+          )}
           {isWaste ? "Unmark waste" : "Mark as waste"}
           <ContextMenuShortcut>W</ContextMenuShortcut>
         </ContextMenuItem>

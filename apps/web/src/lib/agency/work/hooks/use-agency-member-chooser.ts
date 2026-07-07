@@ -126,12 +126,8 @@ export function useAgencyMemberChooser(
   }, [members, searchTerm]);
 
   if (options.mode === "multiple") {
-    const {
-      assignedToTeam,
-      selectedUserIds,
-      onAssignedToTeamChange,
-      onSelectedUserIdsChange,
-    } = options;
+    const { assignedToTeam, selectedUserIds, onAssignedToTeamChange, onSelectedUserIdsChange } =
+      options;
 
     function toggleEntireTeam() {
       // Parent clears selectedUserIds when assignedToTeam becomes true.
@@ -179,10 +175,10 @@ export function useAgencyMemberChooser(
   }
 
   const { value, onValueChange, allowUnassigned = true, allowEmpty = false } = options;
-  const isUnassigned =
-    !allowEmpty && (value === UNASSIGNED_ASSIGNEE_VALUE || !value);
+  const isUnassigned = !allowEmpty && (value === UNASSIGNED_ASSIGNEE_VALUE || !value);
   const selectedMember = useMemo(
-    () => (isUnassigned || !value ? null : (members.find((member) => member.userId === value) ?? null)),
+    () =>
+      isUnassigned || !value ? null : (members.find((member) => member.userId === value) ?? null),
     [isUnassigned, members, value],
   );
 

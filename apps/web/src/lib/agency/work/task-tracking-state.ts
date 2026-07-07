@@ -23,8 +23,7 @@ export function resolveTaskTrackingState(input: {
   blueprintDescription?: string;
 }): TaskTrackingState {
   const draftTaskId = input.trackerDraft?.taskId ?? "";
-  const isTrackingTask =
-    draftTaskId === input.taskId || input.activeTimer?.taskId === input.taskId;
+  const isTrackingTask = draftTaskId === input.taskId || input.activeTimer?.taskId === input.taskId;
 
   const blueprintDescription = input.blueprintDescription ?? "";
   const trackerDescription = isTrackingTask ? (input.trackerDraft?.description ?? "") : "";

@@ -64,9 +64,7 @@ function MarketingHealthStatus() {
           healthCheck.isSuccess ? "bg-primary" : "bg-muted-foreground/40",
         )}
       />
-      <span>
-        {healthCheck.isSuccess ? "All systems operational" : "Status unavailable"}
-      </span>
+      <span>{healthCheck.isSuccess ? "All systems operational" : "Status unavailable"}</span>
       {healthCheck.isSuccess ? (
         <span className="text-muted-foreground/50">· {String(healthCheck.data)}ms</span>
       ) : null}
@@ -141,9 +139,7 @@ export function MarketingPageShell({
             <p className="text-xs text-muted-foreground">
               &copy; {year} Brainiac. All rights reserved.
             </p>
-            <p className="text-xs text-muted-foreground">
-              Built for people who think on canvases.
-            </p>
+            <p className="text-xs text-muted-foreground">Built for people who think on canvases.</p>
           </div>
         </div>
       </footer>

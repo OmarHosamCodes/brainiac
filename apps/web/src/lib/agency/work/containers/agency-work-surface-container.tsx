@@ -13,10 +13,7 @@ import { AgencyWorkSurfaceLayoutView } from "@/components/agency/work/work-surfa
 import { AgencyWorkSurfaceLoadingView } from "@/components/agency/work/work-surface/agency-work-surface-loading-view";
 import { AgencyWorkSurfaceMobileTabsView } from "@/components/agency/work/work-surface/agency-work-surface-mobile-tabs-view";
 import { AgencyWorkSurfaceTimerStripView } from "@/components/agency/work/work-surface/agency-work-surface-timer-strip-view";
-import {
-  agencyTimeLogPanelClass,
-  agencyTimeTrackerPanelClass,
-} from "@/lib/utils/agency-ui";
+import { agencyTimeLogPanelClass, agencyTimeTrackerPanelClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
 type AgencyWorkSurfaceProps = {

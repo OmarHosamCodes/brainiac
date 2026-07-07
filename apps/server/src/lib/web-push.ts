@@ -59,7 +59,9 @@ export async function sendWebPushForNotification(notification: NotificationRecor
             ? Number(error.statusCode)
             : null;
         if (statusCode === 404 || statusCode === 410) {
-          await db.delete(pushSubscription).where(eq(pushSubscription.endpoint, subscription.endpoint));
+          await db
+            .delete(pushSubscription)
+            .where(eq(pushSubscription.endpoint, subscription.endpoint));
         } else {
           console.error("Web push delivery failed:", error);
         }

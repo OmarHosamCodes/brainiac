@@ -10,15 +10,11 @@ export type JourneyProgressSummary = {
   totalSteps: number;
 };
 
-export function isJourneyAnchorTask(
-  task: Pick<AgencyProjectTask, "taskKind">,
-): boolean {
+export function isJourneyAnchorTask(task: Pick<AgencyProjectTask, "taskKind">): boolean {
   return task.taskKind === "journey_anchor";
 }
 
-export function isJourneyMilestoneTask(
-  task: Pick<AgencyProjectTask, "taskKind">,
-): boolean {
+export function isJourneyMilestoneTask(task: Pick<AgencyProjectTask, "taskKind">): boolean {
   return task.taskKind === "journey_milestone";
 }
 
@@ -108,9 +104,10 @@ export function sumStepHoursFromEntries(
 }
 
 /** Mirrors removeStep unlink semantics: null journeyStepId, preserve entry rows. */
-export function unlinkTimeEntriesFromJourneyStep<
-  T extends { journeyStepId: string | null },
->(entries: T[], stepId: string): T[] {
+export function unlinkTimeEntriesFromJourneyStep<T extends { journeyStepId: string | null }>(
+  entries: T[],
+  stepId: string,
+): T[] {
   return entries.map((entry) =>
     entry.journeyStepId === stepId ? { ...entry, journeyStepId: null } : entry,
   );

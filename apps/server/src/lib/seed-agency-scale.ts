@@ -105,7 +105,8 @@ export function resolveAgencySeedScale(value?: string | null): AgencySeedScale {
 export function appendMassiveAgencyData(ctx: SeedContext, data: SeedDataBundle): SeedDataBundle {
   const { now, members } = ctx;
   const memberIds = members.map((member) => member.userId);
-  const pickMember = () => memberIds[Math.floor(Math.random() * memberIds.length)] ?? memberIds[0] ?? "";
+  const pickMember = () =>
+    memberIds[Math.floor(Math.random() * memberIds.length)] ?? memberIds[0] ?? "";
   const daysAgo = (days: number) => shiftDate(now, { days: -days });
 
   while (data.clients.length < MASSIVE_SCALE_TARGETS.clients) {

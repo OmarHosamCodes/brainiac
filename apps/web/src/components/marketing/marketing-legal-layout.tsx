@@ -21,10 +21,7 @@ type MarketingLegalLayoutProps = {
 
 function LegalSectionContent({ section }: { section: LegalSection }) {
   return (
-    <section
-      id={section.id}
-      className="scroll-mt-28 border-b border-border py-10 first:pt-0"
-    >
+    <section id={section.id} className="scroll-mt-28 border-b border-border py-10 first:pt-0">
       <h2 className="text-xl font-bold tracking-tight text-foreground md:text-2xl">
         {section.title}
       </h2>
@@ -75,7 +72,9 @@ export function MarketingLegalLayout({
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-[var(--marketing-ink-muted)]">
             {description}
           </p>
-          <p className="mt-6 text-sm text-[var(--marketing-ink-muted)]">Effective {effectiveDate}</p>
+          <p className="mt-6 text-sm text-[var(--marketing-ink-muted)]">
+            Effective {effectiveDate}
+          </p>
         </div>
         <div className="border-b border-[var(--marketing-ink-border)]" />
       </section>

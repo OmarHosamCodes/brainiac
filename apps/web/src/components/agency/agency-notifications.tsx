@@ -63,9 +63,7 @@ function notificationSentence(notification: NotificationRecord) {
       return (
         <>
           <span className="font-semibold text-foreground">{actor}</span> assigned you{" "}
-          <span className="font-semibold text-foreground">
-            {payload.taskTitle ?? "a task"}
-          </span>
+          <span className="font-semibold text-foreground">{payload.taskTitle ?? "a task"}</span>
         </>
       );
     case "task.message": {
@@ -74,9 +72,7 @@ function notificationSentence(notification: NotificationRecord) {
         return (
           <>
             <span className="font-semibold text-foreground">{actor}</span> sent {count} messages in{" "}
-            <span className="font-semibold text-foreground">
-              {payload.taskTitle ?? "a task"}
-            </span>
+            <span className="font-semibold text-foreground">{payload.taskTitle ?? "a task"}</span>
           </>
         );
       }
@@ -90,7 +86,9 @@ function notificationSentence(notification: NotificationRecord) {
     case "journey.milestone":
       return (
         <>
-          <span className="font-semibold text-foreground">{payload.journeyStepLabel ?? "Milestone"}</span>{" "}
+          <span className="font-semibold text-foreground">
+            {payload.journeyStepLabel ?? "Milestone"}
+          </span>{" "}
           completed on {payload.projectName ?? "a project"}
         </>
       );
@@ -264,11 +262,7 @@ export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
           variant="ghost"
           size="icon"
           className="relative rounded-full"
-          aria-label={
-            unreadCount > 0
-              ? `Notifications, ${unreadCount} unread`
-              : "Notifications"
-          }
+          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
         >
           <Bell className="size-4" aria-hidden />
           {unreadCount > 0 ? (
@@ -331,9 +325,7 @@ export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
                     variant={pref.inApp ? "secondary" : "ghost"}
                     className="h-7 rounded-full px-2 text-[11px]"
                     onClick={() =>
-                      void setPreferencesMutation.mutateAsync([
-                        { ...pref, inApp: !pref.inApp },
-                      ])
+                      void setPreferencesMutation.mutateAsync([{ ...pref, inApp: !pref.inApp }])
                     }
                   >
                     In-app
@@ -387,12 +379,7 @@ export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
 
                     return (
                       <li key={notification.id}>
-                        <div
-                          className={cn(
-                            "flex gap-2 px-3 py-2.5",
-                            unread && "bg-primary/5",
-                          )}
-                        >
+                        <div className={cn("flex gap-2 px-3 py-2.5", unread && "bg-primary/5")}>
                           <AgencyMemberAvatar
                             name={notification.actorName ?? "Team"}
                             avatarUrl={notification.actorAvatar}
@@ -451,9 +438,7 @@ export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
 
         {showPushPrompt ? (
           <div className="border-t border-border/60 px-3 py-2.5">
-            <p className="text-xs text-muted-foreground">
-              Get notified when this tab is closed.
-            </p>
+            <p className="text-xs text-muted-foreground">Get notified when this tab is closed.</p>
             <div className="mt-2 flex items-center gap-2">
               <Button
                 type="button"

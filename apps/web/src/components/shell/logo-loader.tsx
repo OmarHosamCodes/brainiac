@@ -11,12 +11,7 @@ export function LogoLoader({ label = "Loading" }: LogoLoaderProps) {
       aria-busy="true"
       aria-label={label}
     >
-      <img
-        src="/logo-animation.svg"
-        alt=""
-        className="size-20 select-none"
-        draggable={false}
-      />
+      <img src="/logo-animation.svg" alt="" className="size-20 select-none" draggable={false} />
     </div>,
     document.body,
   );

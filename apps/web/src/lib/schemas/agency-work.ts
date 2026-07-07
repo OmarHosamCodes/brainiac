@@ -60,9 +60,7 @@ export type AgencyWorkSurfaceView =
     }
   | AgencyWorkSurfaceReadyProps;
 
-export function assertAgencyWorkSurfaceViewExhaustive(
-  view: AgencyWorkSurfaceView,
-): void {
+export function assertAgencyWorkSurfaceViewExhaustive(view: AgencyWorkSurfaceView): void {
   switch (view.status) {
     case "loading":
     case "error":

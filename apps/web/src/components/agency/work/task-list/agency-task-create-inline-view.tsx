@@ -47,8 +47,7 @@ function QuickAddSuggestions({
     () => filterTasksByTitleSearch(tasks, titleDraft),
     [tasks, titleDraft],
   );
-  const showCreateRow =
-    Boolean(trimmedTitle) && !taskTitleExactlyMatches(tasks, trimmedTitle);
+  const showCreateRow = Boolean(trimmedTitle) && !taskTitleExactlyMatches(tasks, trimmedTitle);
   const showCreateInList = showCreateRow && filteredTasks.length === 0;
 
   if (loading) {
@@ -237,22 +236,17 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
       if (showSuggestions && hasExistingMatches) {
         if (event.key === "ArrowDown") {
           event.preventDefault();
-          setActiveIndex((current) =>
-            current < filteredTasks.length - 1 ? current + 1 : 0,
-          );
+          setActiveIndex((current) => (current < filteredTasks.length - 1 ? current + 1 : 0));
           return;
         }
         if (event.key === "ArrowUp") {
           event.preventDefault();
-          setActiveIndex((current) =>
-            current > 0 ? current - 1 : filteredTasks.length - 1,
-          );
+          setActiveIndex((current) => (current > 0 ? current - 1 : filteredTasks.length - 1));
           return;
         }
         if (event.key === "Enter") {
           event.preventDefault();
-          const index =
-            activeIndex >= 0 && activeIndex < filteredTasks.length ? activeIndex : 0;
+          const index = activeIndex >= 0 && activeIndex < filteredTasks.length ? activeIndex : 0;
           handlePickSuggestion(filteredTasks[index]!);
           return;
         }
@@ -369,9 +363,7 @@ export function AgencyTaskCreateInlineView({ projects, create }: AgencyTaskCreat
       </div>
 
       {existingOpenTask && trimmedTitle && createOptionsExpanded ? (
-        <p className="mt-1.5 px-1 text-[11px] text-muted">
-          Add joins the existing open task.
-        </p>
+        <p className="mt-1.5 px-1 text-[11px] text-muted">Add joins the existing open task.</p>
       ) : null}
 
       {projectNeedsChoice && quickAddFocused && trimmedTitle ? (

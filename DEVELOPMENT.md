@@ -8,68 +8,68 @@ Quick reference for common development tasks, workflows, and troubleshooting.
 
 ### Development Server
 
-| Command                      | Purpose                                    |
-| ---------------------------- | ------------------------------------------ |
-| `bun run dev`                | Start all apps (web + server)              |
-| `bun run dev:web`            | Frontend only (Vite on port 7001)           |
-| `bun run dev:server`         | Backend only (Bun on port 7000)            |
-| `bun run dev:web -- --port 7002` | Frontend on a different port           |
+| Command                          | Purpose                           |
+| -------------------------------- | --------------------------------- |
+| `bun run dev`                    | Start all apps (web + server)     |
+| `bun run dev:web`                | Frontend only (Vite on port 7001) |
+| `bun run dev:server`             | Backend only (Bun on port 7000)   |
+| `bun run dev:web -- --port 7002` | Frontend on a different port      |
 
 ### Building and Checking
 
-| Command               | Purpose                        |
-| --------------------- | ------------------------------ |
-| `bun run build`       | Build for production           |
-| `bun run check-types` | Check TypeScript types         |
-| `bun run check`       | Lint + format (Oxlint + Oxfmt) |
-| `bun run test:api:bruno` | Run Bruno API tests         |
-| `bun run perf`        | Run frontend perf benchmarks   |
+| Command                  | Purpose                        |
+| ------------------------ | ------------------------------ |
+| `bun run build`          | Build for production           |
+| `bun run check-types`    | Check TypeScript types         |
+| `bun run check`          | Lint + format (Oxlint + Oxfmt) |
+| `bun run test:api:bruno` | Run Bruno API tests            |
+| `bun run perf`           | Run frontend perf benchmarks   |
 
 ### Database
 
-| Command               | Purpose                    |
-| --------------------- | -------------------------- |
-| `bun run db:start`    | Start PostgreSQL in Docker |
-| `bun run db:push`     | Apply schema changes       |
-| `bun run db:generate` | Generate migration files   |
-| `bun run db:migrate`  | Run pending migrations     |
-| `bun run db:seed`     | Load demo data             |
-| `bun run db:seed:agency` | Load agency demo data   |
-| `bun run db:studio`   | Open Drizzle Studio UI     |
+| Command                  | Purpose                    |
+| ------------------------ | -------------------------- |
+| `bun run db:start`       | Start PostgreSQL in Docker |
+| `bun run db:push`        | Apply schema changes       |
+| `bun run db:generate`    | Generate migration files   |
+| `bun run db:migrate`     | Run pending migrations     |
+| `bun run db:seed`        | Load demo data             |
+| `bun run db:seed:agency` | Load agency demo data      |
+| `bun run db:studio`      | Open Drizzle Studio UI     |
 
 ---
 
 ## Where to Find Things
 
-| What             | Where                                      |
-| ---------------- | ------------------------------------------ |
-| Frontend pages   | `apps/web/src/pages/`                      |
-| Components       | `apps/web/src/components/`                 |
-| Frontend hooks   | `apps/web/src/lib/`                        |
-| oRPC client      | `apps/web/src/lib/orpc.ts`                 |
-| API routers      | `packages/api/src/routers/`                |
-| API procedures   | `packages/api/src/procedures.ts`           |
-| Database schema  | `packages/db/src/schema/`                  |
-| Auth config      | `packages/auth/src/`                       |
-| Server env       | `packages/env/src/server.ts`               |
-| Vite env         | `packages/env/src/vite.ts`                 |
-| Server setup     | `apps/server/src/app.ts`                   |
-| Workspace types  | `packages/workspace/src/`                  |
-| Agent tools      | `packages/agent/src/`                      |
+| What            | Where                            |
+| --------------- | -------------------------------- |
+| Frontend pages  | `apps/web/src/pages/`            |
+| Components      | `apps/web/src/components/`       |
+| Frontend hooks  | `apps/web/src/lib/`              |
+| oRPC client     | `apps/web/src/lib/orpc.ts`       |
+| API routers     | `packages/api/src/routers/`      |
+| API procedures  | `packages/api/src/procedures.ts` |
+| Database schema | `packages/db/src/schema/`        |
+| Auth config     | `packages/auth/src/`             |
+| Server env      | `packages/env/src/server.ts`     |
+| Vite env        | `packages/env/src/vite.ts`       |
+| Server setup    | `apps/server/src/app.ts`         |
+| Workspace types | `packages/workspace/src/`        |
+| Agent tools     | `packages/agent/src/`            |
 
 ---
 
 ## App Routes
 
-| Path | Page |
-| ---- | ---- |
-| `/` | Landing |
-| `/login` | Login |
-| `/dashboard` | Canvas workspace |
-| `/agency` | Agency operations |
-| `/marketplace` | Node marketplace |
-| `/billing` | Billing |
-| `/node/:id` | Single node editor |
+| Path           | Page               |
+| -------------- | ------------------ |
+| `/`            | Landing            |
+| `/login`       | Login              |
+| `/dashboard`   | Canvas workspace   |
+| `/agency`      | Agency operations  |
+| `/marketplace` | Node marketplace   |
+| `/billing`     | Billing            |
+| `/node/:id`    | Single node editor |
 
 Routes are defined in `apps/web/src/app.tsx` and `apps/web/src/authenticated-routes.tsx`.
 

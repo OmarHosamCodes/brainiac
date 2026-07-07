@@ -99,15 +99,13 @@ export function AgencyProjectCreateDialog({
   const members: AgencyTaskThreadMember[] = membersQuery.data?.items ?? [];
 
   const resolvedClientId = lockClientId ?? clientId;
-  const selectedClient =
-    clients.find((client) => client.id === resolvedClientId) ?? null;
+  const selectedClient = clients.find((client) => client.id === resolvedClientId) ?? null;
   const clientLocked = Boolean(lockClientId);
 
   useEffect(() => {
     if (!open) return;
 
-    const initialClientId =
-      lockClientId ?? defaultClientId ?? clients[0]?.id ?? "";
+    const initialClientId = lockClientId ?? defaultClientId ?? clients[0]?.id ?? "";
     setMode("journey");
     setClientId(initialClientId);
     setProjectName("");
@@ -199,7 +197,11 @@ export function AgencyProjectCreateDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form id={formId} className="flex min-h-0 flex-1 flex-col" onSubmit={(e) => void handleSubmit(e)}>
+        <form
+          id={formId}
+          className="flex min-h-0 flex-1 flex-col"
+          onSubmit={(e) => void handleSubmit(e)}
+        >
           <div className="space-y-4 overflow-y-auto px-5 py-4">
             <div className="inline-flex rounded-full border border-default bg-elevated p-1">
               {CREATE_MODE_OPTIONS.map((option) => (
@@ -247,7 +249,9 @@ export function AgencyProjectCreateDialog({
               ) : selectedClient ? (
                 <div className={agencyFormFieldClass}>
                   <span className={agencyFormLabelClass}>Client</span>
-                  <p className="truncate text-sm font-semibold text-highlighted">{selectedClient.name}</p>
+                  <p className="truncate text-sm font-semibold text-highlighted">
+                    {selectedClient.name}
+                  </p>
                 </div>
               ) : null}
 
@@ -262,7 +266,10 @@ export function AgencyProjectCreateDialog({
                   placeholder="Project name"
                   autoFocus
                   disabled={isProjectMutationPending}
-                  className={cn("h-9 rounded-xl border-default bg-default text-sm", agencyInputPlaceholderClass)}
+                  className={cn(
+                    "h-9 rounded-xl border-default bg-default text-sm",
+                    agencyInputPlaceholderClass,
+                  )}
                 />
               </div>
             </div>

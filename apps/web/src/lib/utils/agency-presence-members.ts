@@ -44,7 +44,7 @@ export function mergeAgencyPresenceMembers(
   return [
     {
       userId: timer.userId,
-      userName: isCurrentUser ? (user?.name?.trim() || "You") : "Member",
+      userName: isCurrentUser ? user?.name?.trim() || "You" : "Member",
       userAvatar:
         isCurrentUser && user?.image && user.id && serverUrl
           ? getUserAvatarPublicUrl({

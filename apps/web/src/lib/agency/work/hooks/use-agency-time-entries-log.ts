@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  useAgencyTimeEntriesLogStore,
-} from "@/stores/agency-time-entries-log";
+import { useAgencyTimeEntriesLogStore } from "@/stores/agency-time-entries-log";
 import type { AgencyProject, AgencyProjectTask } from "@/lib/schemas/agency-work";
 import {
   useAgencyProjectTasksForChooserQuery,

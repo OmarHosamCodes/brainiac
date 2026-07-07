@@ -209,8 +209,7 @@ function FilterOptionChooser({
   const [open, setOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const selectedLabel =
-    options.find((option) => option.value === value)?.label ?? emptyLabel;
+  const selectedLabel = options.find((option) => option.value === value)?.label ?? emptyLabel;
 
   const filteredOptions = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -238,13 +237,14 @@ function FilterOptionChooser({
           className={cn(filterTriggerClass, value ? "text-highlighted" : "text-muted")}
           aria-label={label}
         >
-          <span className="min-w-0 flex-1 truncate">
-            {loading ? "Loading…" : selectedLabel}
-          </span>
+          <span className="min-w-0 flex-1 truncate">{loading ? "Loading…" : selectedLabel}</span>
           <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden p-0">
+      <PopoverContent
+        align="start"
+        className="w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden p-0"
+      >
         <div className="border-b border-white/10 p-2">
           <div className="relative">
             <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />
@@ -332,10 +332,7 @@ function RangePresetChooser({
             <button
               key={preset}
               type="button"
-              className={cn(
-                filterOptionButtonClass,
-                selected && "bg-primary/10 text-primary",
-              )}
+              className={cn(filterOptionButtonClass, selected && "bg-primary/10 text-primary")}
               onClick={() => {
                 onChange(preset);
                 setOpen(false);
@@ -568,10 +565,7 @@ function AgencyDashboardCommandBarMenu({
         </MenuItemWithTooltip>
 
         {hasActiveFilters ? (
-          <MenuItemWithTooltip
-            onSelect={onReset}
-            tooltip="Restore default filter settings."
-          >
+          <MenuItemWithTooltip onSelect={onReset} tooltip="Restore default filter settings.">
             Reset
           </MenuItemWithTooltip>
         ) : null}
@@ -588,9 +582,7 @@ function AgencyDashboardCommandBarMenu({
 
         {historyMenu ? (
           <ContextMenuSub onOpenChange={setHistoryOpen}>
-            <SubTriggerWithTooltip tooltip="Open a saved report.">
-              Reports
-            </SubTriggerWithTooltip>
+            <SubTriggerWithTooltip tooltip="Open a saved report.">Reports</SubTriggerWithTooltip>
             <ContextMenuSubContent className="w-80 overflow-hidden p-0">
               {reportsQuery.isPending ? (
                 <SavedReportsListSkeleton />
@@ -647,12 +639,10 @@ export function AgencyDashboardCommandBar({
 
   const hasActiveFilters = Boolean(
     rangePreset !== defaultRangePreset ||
-      clientId !== "" ||
-      projectId !== "" ||
-      memberUserId !== "" ||
-      (showFieldsFilter &&
-        fieldIds &&
-        !areSameReportFieldSets(fieldIds, defaultFieldIds)),
+    clientId !== "" ||
+    projectId !== "" ||
+    memberUserId !== "" ||
+    (showFieldsFilter && fieldIds && !areSameReportFieldSets(fieldIds, defaultFieldIds)),
   );
 
   const memberOptions = members.map((member) => ({

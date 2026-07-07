@@ -103,8 +103,7 @@ export function estimateDisplayRowHeight(
   }
   const hasBlueprintDescriptionRow =
     Boolean(row.blueprintId) || Boolean(row.blueprintDescription.trim());
-  const hasDescriptionRow =
-    hasBlueprintDescriptionRow || (needsDescription && !nested);
+  const hasDescriptionRow = hasBlueprintDescriptionRow || (needsDescription && !nested);
   if (hasDescriptionRow) return TASK_ROW_WITH_DESC_HEIGHT;
   return nested ? TASK_ROW_COMPACT_HEIGHT : TASK_ROW_BASE_HEIGHT;
 }
@@ -121,9 +120,7 @@ if (import.meta.env.DEV) {
       readOnly: true,
     }) === "done",
   );
-  console.assert(
-    estimateDisplayRowHeight({ blueprintId: "b1", blueprintDescription: "" }) === 48,
-  );
+  console.assert(estimateDisplayRowHeight({ blueprintId: "b1", blueprintDescription: "" }) === 48);
   console.assert(
     estimateDisplayRowHeight(
       { blueprintId: null, blueprintDescription: "", rowKind: "standard" },

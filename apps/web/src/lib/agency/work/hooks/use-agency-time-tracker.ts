@@ -17,10 +17,7 @@ import {
   type AgencyProjectTaskStatus,
 } from "@/lib/queries/agency";
 import { formatAgencyDayLabel } from "@/lib/utils/format-agency-day-label";
-import {
-  activeTimerStartToIso,
-  startedAtToDateTimeDraft,
-} from "@/lib/utils/time-entry-draft";
+import { activeTimerStartToIso, startedAtToDateTimeDraft } from "@/lib/utils/time-entry-draft";
 import {
   selectIsTimerMutationPending,
   useAgencyTimeTrackingStore,
@@ -97,7 +94,9 @@ export function useAgencyTrackingFavicon(isTracking: boolean) {
   }, [isTracking]);
 }
 
-export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): AgencyTimeTrackerViewModel {
+export function useAgencyTimeTracker({
+  teamId,
+}: UseAgencyTimeTrackerOptions): AgencyTimeTrackerViewModel {
   const setTrackerDescription = useAgencyTimeTrackingStore((s) => s.setTrackerDescription);
   const setTrackerProjectId = useAgencyTimeTrackingStore((s) => s.setTrackerProjectId);
   const setTrackerTaskId = useAgencyTimeTrackingStore((s) => s.setTrackerTaskId);
@@ -164,10 +163,10 @@ export function useAgencyTimeTracker({ teamId }: UseAgencyTimeTrackerOptions): A
 
   const canStartTimer = Boolean(
     teamId &&
-      canStartAgencyTimer({
-        activeTimer,
-        project: startProject,
-      }),
+    canStartAgencyTimer({
+      activeTimer,
+      project: startProject,
+    }),
   );
   const canStopTimer = canStopAgencyTimer({
     activeTimer,

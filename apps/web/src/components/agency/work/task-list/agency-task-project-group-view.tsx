@@ -64,10 +64,7 @@ export function AgencyTaskProjectGroupView({
 }: AgencyTaskProjectGroupViewProps) {
   const panelId = `agency-task-project-group-${group.projectId}`;
   const countLabel = formatProjectCounts(group);
-  const displayRows = [
-    ...(group.journeyCluster?.milestoneRows ?? []),
-    ...group.standaloneRows,
-  ];
+  const displayRows = [...(group.journeyCluster?.milestoneRows ?? []), ...group.standaloneRows];
 
   return (
     <section aria-labelledby={`${panelId}-label`}>
@@ -114,7 +111,9 @@ export function AgencyTaskProjectGroupView({
               teamId={teamId}
               selectedTaskId={selectedTaskId}
               readOnly={readOnly}
-              highlight={row.blueprintId === highlightBlueprintId || row.task.id === highlightTaskId}
+              highlight={
+                row.blueprintId === highlightBlueprintId || row.task.id === highlightTaskId
+              }
               isRowPending={isRowPending(row.task.id)}
               nested
               trackingState={getTaskTrackingState?.(row.task.id, row.blueprintDescription)}

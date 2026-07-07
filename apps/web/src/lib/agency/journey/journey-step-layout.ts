@@ -118,9 +118,7 @@ export function buildReorderPayload(
   const start = steps.find((step) => step.stepKind === "start");
   const destination = steps.find((step) => step.stepKind === "destination");
   const middleById = new Map(
-    steps
-      .filter((step) => isJourneyStepReorderable(step.stepKind))
-      .map((step) => [step.id, step]),
+    steps.filter((step) => isJourneyStepReorderable(step.stepKind)).map((step) => [step.id, step]),
   );
 
   const orderedMiddle = orderedMiddleIds

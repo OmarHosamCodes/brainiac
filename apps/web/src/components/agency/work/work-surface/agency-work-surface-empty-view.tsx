@@ -17,8 +17,8 @@ export function AgencyWorkSurfaceEmptyView({
       <Briefcase className="mx-auto size-7 text-muted" />
       <p className="mt-4 text-sm font-bold text-highlighted">No projects yet.</p>
       <p className="mt-1 text-xs text-muted">
-        Go to Clients to add a client, then Projects to create your first project and start
-        tracking work and time.
+        Go to Clients to add a client, then Projects to create your first project and start tracking
+        work and time.
       </p>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
         <Button variant="secondary" size="sm" onClick={onGoToClients}>

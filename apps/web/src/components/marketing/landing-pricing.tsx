@@ -31,13 +31,7 @@ const features: PricingFeature[] = [
   { kind: "flag", label: "Marketplace publishing", free: false, pro: true },
 ];
 
-function PlanCell({
-  included,
-  value,
-}: {
-  included?: boolean;
-  value?: string;
-}) {
+function PlanCell({ included, value }: { included?: boolean; value?: string }) {
   if (value !== undefined) {
     return (
       <span className="font-mono text-sm font-semibold tabular-nums text-highlighted">{value}</span>
@@ -72,10 +66,7 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
   }
 
   return (
-    <section
-      id="pricing"
-      className="w-full scroll-mt-8 border-t border-border bg-background"
-    >
+    <section id="pricing" className="w-full scroll-mt-8 border-t border-border bg-background">
       <div className="mx-auto max-w-4xl px-6 py-20 md:px-10 md:py-28 lg:px-16">
         <div className="max-w-2xl">
           <h2 className="text-3xl leading-[1.1] font-bold tracking-tight md:text-5xl">
@@ -92,7 +83,10 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
             <caption className="sr-only">Brainiac plan comparison</caption>
             <thead>
               <tr className="border-b border-border bg-muted/60">
-                <th scope="col" className="w-[44%] px-5 py-4 text-sm font-semibold text-muted-foreground">
+                <th
+                  scope="col"
+                  className="w-[44%] px-5 py-4 text-sm font-semibold text-muted-foreground"
+                >
                   Plan
                 </th>
                 <th
@@ -135,14 +129,8 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
             </thead>
             <tbody>
               {features.map((feature) => (
-                <tr
-                  key={feature.label}
-                  className="border-b border-border last:border-b-0"
-                >
-                  <th
-                    scope="row"
-                    className="px-5 py-4 text-sm font-medium text-muted-foreground"
-                  >
+                <tr key={feature.label} className="border-b border-border last:border-b-0">
+                  <th scope="row" className="px-5 py-4 text-sm font-medium text-muted-foreground">
                     {feature.label}
                   </th>
                   <td className="px-5 py-4 text-center">

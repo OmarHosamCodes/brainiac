@@ -26,7 +26,9 @@ function extractMetrics(lhr) {
  * @param {number[]} values
  */
 function median(values) {
-  const sorted = values.filter((value) => value != null && !Number.isNaN(value)).sort((a, b) => a - b);
+  const sorted = values
+    .filter((value) => value != null && !Number.isNaN(value))
+    .sort((a, b) => a - b);
   if (sorted.length === 0) return null;
   const mid = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];

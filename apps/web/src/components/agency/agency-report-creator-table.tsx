@@ -25,10 +25,7 @@ import {
   reportEntryWasteRowClass,
   type AggregatedReportRow,
 } from "@/lib/utils/agency-report-grouping";
-import {
-  applyDurationToDraft,
-  entryToDraft,
-} from "@/lib/utils/time-entry-draft";
+import { applyDurationToDraft, entryToDraft } from "@/lib/utils/time-entry-draft";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { cn } from "@/lib/utils";
 
@@ -154,11 +151,9 @@ export function AgencyReportCreatorTable({
                           )}
                           isEditing={Boolean(
                             creator.editingEntryId &&
-                              row.entries.some((entry) => entry.id === creator.editingEntryId),
+                            row.entries.some((entry) => entry.id === creator.editingEntryId),
                           )}
-                          isSaving={Boolean(
-                            activeEntryId && savingEntryId === activeEntryId,
-                          )}
+                          isSaving={Boolean(activeEntryId && savingEntryId === activeEntryId)}
                           prefersReducedMotion={prefersReducedMotion}
                           wastePending={wastePending}
                           onSelectEntry={creator.selectEntry}
@@ -287,9 +282,7 @@ function ReportCreatorRow({
       initial={false}
       data-report-creator-row
       exit={
-        prefersReducedMotion
-          ? undefined
-          : { opacity: 0, height: 0, transition: { duration: 0.2 } }
+        prefersReducedMotion ? undefined : { opacity: 0, height: 0, transition: { duration: 0.2 } }
       }
       className={cn(
         "border-b border-default transition-colors duration-150 last:border-b-0",
@@ -318,13 +311,18 @@ function ReportCreatorRow({
       ) : null}
       {showDescription ? (
         <td
-          className={cn("max-w-md px-4 py-3", reportCreatorCellSelectionClass(isSelected, "description"))}
+          className={cn(
+            "max-w-md px-4 py-3",
+            reportCreatorCellSelectionClass(isSelected, "description"),
+          )}
           dir="auto"
         >
           {isEditing ? (
             <Input
               value={draft.description}
-              onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
+              onChange={(event) =>
+                setDraft((current) => ({ ...current, description: event.target.value }))
+              }
               onKeyDown={handleKeyDown}
               disabled={isSaving}
               className="h-7 text-xs"
@@ -360,9 +358,7 @@ function ReportCreatorRow({
                 aria-label="Duration"
                 onClick={(event) => event.stopPropagation()}
               />
-              {editError ? (
-                <p className="mt-1 text-[10px] text-error">{editError}</p>
-              ) : null}
+              {editError ? <p className="mt-1 text-[10px] text-error">{editError}</p> : null}
             </>
           ) : (
             <AgencyReportDurationCell row={row} />

@@ -10,7 +10,10 @@ export function messageCoalesceTaskId(type: NotificationType, taskId: string | u
   return taskId;
 }
 
-export function defaultNotificationChannels(type: NotificationType): { inApp: boolean; push: boolean } {
+export function defaultNotificationChannels(type: NotificationType): {
+  inApp: boolean;
+  push: boolean;
+} {
   switch (type) {
     case "timer.activity":
       return { inApp: true, push: false };

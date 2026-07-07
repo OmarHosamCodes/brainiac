@@ -62,10 +62,8 @@ mock.module("@/lib/utils/agency-live-rpc", () => ({
   }),
 }));
 
-const {
-  resetAgencyLiveConnectionsForTest,
-  subscribeAgencyLive,
-} = await import("./agency-live-connection");
+const { resetAgencyLiveConnectionsForTest, subscribeAgencyLive } =
+  await import("./agency-live-connection");
 
 afterEach(() => {
   resetAgencyLiveConnectionsForTest();

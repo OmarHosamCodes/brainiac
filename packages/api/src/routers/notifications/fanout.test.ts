@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  defaultNotificationChannels,
-  excludeActor,
-  messageCoalesceTaskId,
-} from "./fanout-helpers";
+import { defaultNotificationChannels, excludeActor, messageCoalesceTaskId } from "./fanout-helpers";
 
 describe("notification fanout helpers", () => {
   test("excludeActor removes the actor and dedupes recipients", () => {

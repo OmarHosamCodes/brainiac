@@ -1,0 +1,46 @@
+---
+description: Hono server middleware order, mounts, and boot side effects
+globs: apps/server/**
+alwaysApply: false
+---
+
+# Server / Hono Conventions
+
+## Middleware order in `app.ts`
+
+Setup order matters — do not reorder without reason:
+
+1. `onError` — catches and logs all errors
+2. `logger()` — request logging
+3. `cors()` — cross-origin from frontend
+4. Better Auth — `GET|POST /api/auth/*`
+5. Billing/error redirects — `/billing/success`, `/error`
+6. Attachment/avatar routes
+7. oRPC middleware — `createContext` + `handleAppRouterRequest`
+8. Health check — `GET /` returns `"OK"`
+
+## Mount points
+
+| Path | Handler |
+|------|---------|
+| `/api/auth/*` | Better Auth (`auth.handler`) |
+| `/rpc` | oRPC (`handleAppRouterRequest`) |
+| `/rpc/ws` | Bun WebSocket (auth in `open`) |
+
+## Environment
+
+```typescript
+import { corsOrigins, env, primaryCorsOrigin } from "@brainiac/env/server";
+```
+
+Never import `@brainiac/env/server` from frontend code.
+
+## Boot side effects
+
+Keep startup side effects explicit at module level in `app.ts`:
+
+- `bootstrapAgencyLiveRedisSubscriber()`
+- `registerNotificationPushHandler()`
+- `startNotificationDigestScheduler()`
+
+WebSocket auth happens in `websocket.open` via `authenticateWebSocket` — not in the HTTP middleware chain.

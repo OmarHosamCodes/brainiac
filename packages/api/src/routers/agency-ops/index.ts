@@ -1191,11 +1191,13 @@ export const agencyOpsRouter = {
             await createSavedReport(context.session.user.id, input),
           );
         }),
-      list: protectedProProcedure.input(teamScopedInputSchema).handler(async ({ context, input }) => {
-        return z
-          .object({ items: z.array(savedReportListItemSchema) })
-          .parse(await listSavedReports(context.session.user.id, input));
-      }),
+      list: protectedProProcedure
+        .input(teamScopedInputSchema)
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ items: z.array(savedReportListItemSchema) })
+            .parse(await listSavedReports(context.session.user.id, input));
+        }),
       get: protectedProProcedure
         .input(teamScopedInputSchema.extend({ reportId: z.string().min(1) }))
         .handler(async ({ context, input }) => {

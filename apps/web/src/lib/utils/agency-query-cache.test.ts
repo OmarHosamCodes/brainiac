@@ -6,9 +6,7 @@ mock.module("@/lib/env", () => ({
   getRpcBaseUrl: () => "http://localhost:7000",
 }));
 
-const {
-  bindQueryClient,
-} = await import("@/lib/query-client");
+const { bindQueryClient } = await import("@/lib/query-client");
 const {
   findProjectTaskInCache,
   patchActiveTimerInCache,
@@ -74,7 +72,9 @@ describe("patchInsertedProjectTaskInCache", () => {
 
     patchInsertedProjectTaskInCache(teamId, makeTask("new-task"));
 
-    const data = client.getQueryData<{ items: Array<{ id: string }>; total?: number }>(listQueryKey);
+    const data = client.getQueryData<{ items: Array<{ id: string }>; total?: number }>(
+      listQueryKey,
+    );
     expect(data?.items.map((item) => item.id)).toEqual(["new-task", "existing"]);
     expect(data?.total).toBe(2);
   });

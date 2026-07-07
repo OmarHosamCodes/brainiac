@@ -50,27 +50,19 @@ export function AgencyTimeEntryRowContainer({
 
   const expandedChildGroups = useMemo(
     () =>
-      view.expanded
-        ? props.group.entries.map((entry) => singleEntryGroup(props.group, entry))
-        : [],
+      view.expanded ? props.group.entries.map((entry) => singleEntryGroup(props.group, entry)) : [],
     [props.group, view.expanded],
   );
 
   if (!view.isMulti) {
     return (
-      <AgencyTimeEntryRowView
-        view={view}
-        className={omitBottomBorder ? "border-b-0" : undefined}
-      />
+      <AgencyTimeEntryRowView view={view} className={omitBottomBorder ? "border-b-0" : undefined} />
     );
   }
 
   return (
     <div className="ml-1 border-b-2 border-l-2 border-solid border-default border-l-primary/40 pl-1">
-      <AgencyTimeEntryRowView
-        view={view}
-        className={view.expanded ? undefined : "border-b-0"}
-      />
+      <AgencyTimeEntryRowView view={view} className={view.expanded ? undefined : "border-b-0"} />
       {expandedChildGroups.map((childGroup, index) => (
         <AgencyTimeEntryRowContainer
           key={childGroup.entries[0]!.id}

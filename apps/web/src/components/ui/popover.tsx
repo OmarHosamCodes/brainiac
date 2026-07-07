@@ -1,7 +1,11 @@
 import * as PopoverPrimitive from "@radix-ui/react-popover";
 import * as React from "react";
 
-import { LiquidGlassBackdrop, LiquidGlassBody, liquidGlassFrameClass } from "@/lib/utils/liquid-glass-ui";
+import {
+  LiquidGlassBackdrop,
+  LiquidGlassBody,
+  liquidGlassFrameClass,
+} from "@/lib/utils/liquid-glass-ui";
 import { cn } from "@/lib/utils";
 
 function Popover({ ...props }: React.ComponentProps<typeof PopoverPrimitive.Root>) {

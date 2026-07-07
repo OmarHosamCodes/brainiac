@@ -129,14 +129,18 @@ async function loadImportMembers(outputDir: string): Promise<ClockifyMember[]> {
 async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   if (options.help) {
-    console.log(`Usage: bun run src/import-clockify-backfill.ts [--dry-run] [--before YYYY-MM-DD] [--output-dir path]`);
+    console.log(
+      `Usage: bun run src/import-clockify-backfill.ts [--dry-run] [--before YYYY-MM-DD] [--output-dir path]`,
+    );
     return;
   }
 
   const selectedMembers = await loadImportMembers(options.outputDir);
   const team = await resolveClockifyTeamId();
   const teamMembers = await loadTeamMembers(team.teamId);
-  const byEmail = new Map(teamMembers.map((member) => [member.userEmail.toLowerCase(), member.userId]));
+  const byEmail = new Map(
+    teamMembers.map((member) => [member.userEmail.toLowerCase(), member.userId]),
+  );
 
   const userIdByClockifyUserId = new Map<string, string>();
   for (const member of selectedMembers) {
@@ -159,7 +163,9 @@ async function main(): Promise<void> {
   console.log(`Team: ${team.teamName} (${team.teamId})`);
   console.log(`Catalog source: ${usedWorkspaceCatalog ? "catalog.json" : "time entries"}`);
   console.log(`Members mapped: ${userIdByClockifyUserId.size}/${selectedMembers.length}`);
-  console.log(`Clients: ${catalog.clients.size}, Projects: ${catalog.projects.size}, Tasks: ${catalog.tasks.size}`);
+  console.log(
+    `Clients: ${catalog.clients.size}, Projects: ${catalog.projects.size}, Tasks: ${catalog.tasks.size}`,
+  );
   console.log(`Time entries (import window): ${catalog.timeEntries.length}`);
   console.log(`Skipped by before: ${catalog.skippedByBefore}`);
 
@@ -177,9 +183,13 @@ async function main(): Promise<void> {
   console.log("");
   console.log(options.dryRun ? "Dry-run results:" : "Import results:");
   console.log(`  Clients inserted:  ${stats.clientsInserted} (${stats.clientsAlreadyExist} exist)`);
-  console.log(`  Projects inserted: ${stats.projectsInserted} (${stats.projectsAlreadyExist} exist)`);
+  console.log(
+    `  Projects inserted: ${stats.projectsInserted} (${stats.projectsAlreadyExist} exist)`,
+  );
   console.log(`  Tasks inserted:    ${stats.tasksInserted} (${stats.tasksAlreadyExist} exist)`);
-  console.log(`  Entries inserted:  ${stats.timeEntriesInserted} (${stats.timeEntriesAlreadyExist} exist)`);
+  console.log(
+    `  Entries inserted:  ${stats.timeEntriesInserted} (${stats.timeEntriesAlreadyExist} exist)`,
+  );
   console.log(`  Task remapped:     ${stats.taskConflictsRemapped}`);
 }
 

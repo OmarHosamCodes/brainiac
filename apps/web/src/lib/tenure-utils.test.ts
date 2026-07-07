@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  getCurrentTenurePeriodRange,
-  resolveDefaultDashboardRangePreset,
-} from "./tenure-utils";
+import { getCurrentTenurePeriodRange, resolveDefaultDashboardRangePreset } from "./tenure-utils";
 
 describe("resolveDefaultDashboardRangePreset", () => {
   test("uses tenure when policy is enabled", () => {

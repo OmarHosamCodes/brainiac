@@ -2,7 +2,13 @@ import { useEffect, useLayoutEffect, type ReactNode } from "react";
 
 import { useAppShellStore } from "@/stores/app-shell";
 
-export type AppShellPageSlot = "context" | "pageCrumb" | "subtitle" | "actions" | "dock" | "hideAgent";
+export type AppShellPageSlot =
+  | "context"
+  | "pageCrumb"
+  | "subtitle"
+  | "actions"
+  | "dock"
+  | "hideAgent";
 
 type AppShellPageProps = {
   /** Second breadcrumb — current tab or section inside the page. */
@@ -80,12 +86,7 @@ export function AppShellPage({ subtitle = null, slots = [], children }: AppShell
     setAgentDockOpen(false);
     acquireAgentButtonHidden();
     return () => releaseAgentButtonHidden();
-  }, [
-    wantsHideAgent,
-    setAgentDockOpen,
-    acquireAgentButtonHidden,
-    releaseAgentButtonHidden,
-  ]);
+  }, [wantsHideAgent, setAgentDockOpen, acquireAgentButtonHidden, releaseAgentButtonHidden]);
 
   return children;
 }

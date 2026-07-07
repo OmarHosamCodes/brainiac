@@ -87,7 +87,11 @@ export function useAgencyProjectChooser({
     if (!query) return projects;
 
     return projects.filter((project) => {
-      const searchableText = [project.name, project.clientName, `${project.clientName} · ${project.name}`]
+      const searchableText = [
+        project.name,
+        project.clientName,
+        `${project.clientName} · ${project.name}`,
+      ]
         .join(" ")
         .toLowerCase();
       return searchableText.includes(query);

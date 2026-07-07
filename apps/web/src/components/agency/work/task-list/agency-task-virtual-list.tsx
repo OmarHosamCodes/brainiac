@@ -101,12 +101,7 @@ export function AgencyTaskVirtualList({
     estimateSize: (index) => {
       const row = flatRows[index];
       if (!row || row.kind === "spacer") return 24;
-      return estimateGroupHeight(
-        row.group,
-        row.expanded,
-        collapsedProjects,
-        getTaskTrackingState,
-      );
+      return estimateGroupHeight(row.group, row.expanded, collapsedProjects, getTaskTrackingState);
     },
     overscan: 4,
   });
@@ -128,10 +123,7 @@ export function AgencyTaskVirtualList({
       className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto"
       aria-label="My tasks"
     >
-      <div
-        className="relative w-full"
-        style={{ height: `${virtualizer.getTotalSize()}px` }}
-      >
+      <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
         {virtualItems.map((virtualRow) => {
           const row = flatRows[virtualRow.index];
           if (!row) return null;

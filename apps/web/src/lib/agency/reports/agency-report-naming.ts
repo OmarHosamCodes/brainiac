@@ -101,8 +101,7 @@ export function formatReportHeaderMeta(
   }
   if (input.memberUserId) {
     scopeParts.push(
-      context.members.find((member) => member.userId === input.memberUserId)?.userName ??
-        "Member",
+      context.members.find((member) => member.userId === input.memberUserId)?.userName ?? "Member",
     );
   }
 
@@ -124,9 +123,7 @@ export function suggestAgencyReportName(
   const parts = [formatPeriodRange(from, to)];
 
   if (snapshot.clientId) {
-    parts.push(
-      context.clients.find((client) => client.id === snapshot.clientId)?.name ?? "Client",
-    );
+    parts.push(context.clients.find((client) => client.id === snapshot.clientId)?.name ?? "Client");
   }
   if (snapshot.memberUserId) {
     parts.push(
@@ -204,8 +201,9 @@ export function filterSavedReports(
     const clientName =
       context.clients.find((client) => client.id === item.clientId)?.name?.toLowerCase() ?? "";
     const memberName =
-      context.members.find((member) => member.userId === item.memberUserId)?.userName?.toLowerCase() ??
-      "";
+      context.members
+        .find((member) => member.userId === item.memberUserId)
+        ?.userName?.toLowerCase() ?? "";
 
     return (
       item.name.toLowerCase().includes(normalized) ||
@@ -221,7 +219,9 @@ export type SavedReportGroupedSection = {
   items: SavedReportListItem[];
 };
 
-export function groupSavedReportsByPeriod(items: SavedReportListItem[]): SavedReportGroupedSection[] {
+export function groupSavedReportsByPeriod(
+  items: SavedReportListItem[],
+): SavedReportGroupedSection[] {
   const sections = new Map<string, SavedReportGroupedSection>();
 
   for (const item of items) {
@@ -254,7 +254,10 @@ export function formatRelativeReportTime(iso: string): string {
 
 export function sanitizeReportFileName(name: string): string {
   const trimmed = name.trim().slice(0, 120);
-  const sanitized = trimmed.replace(/[^\w\s·\-]/g, "").replace(/\s+/g, " ").trim();
+  const sanitized = trimmed
+    .replace(/[^\w\s·\-]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
   return sanitized.length > 0 ? sanitized : "report";
 }
 

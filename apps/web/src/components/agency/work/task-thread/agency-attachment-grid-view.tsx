@@ -172,7 +172,12 @@ export function AgencyAttachmentExpandButton({
   onOpen: (attachment: AgencyTaskMessageAttachment) => void;
 }) {
   return (
-    <Button variant="ghost" size="sm" aria-label="Open in viewer" onClick={() => onOpen(attachment)}>
+    <Button
+      variant="ghost"
+      size="sm"
+      aria-label="Open in viewer"
+      onClick={() => onOpen(attachment)}
+    >
       <Expand />
     </Button>
   );

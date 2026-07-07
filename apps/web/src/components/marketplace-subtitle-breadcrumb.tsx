@@ -40,9 +40,12 @@ export function MarketplaceSubtitleBreadcrumb({
       <PopoverTrigger asChild>
         <button
           type="button"
-          className={[shellTopbarChipClass, shellFocusRingClass, shellBreadcrumbCurrentClass, "max-w-[11rem]"].join(
-            " ",
-          )}
+          className={[
+            shellTopbarChipClass,
+            shellFocusRingClass,
+            shellBreadcrumbCurrentClass,
+            "max-w-[11rem]",
+          ].join(" ")}
         >
           <activeTab.icon className="size-3.5 shrink-0 text-muted" />
           <span className="truncate">{activeTab.label}</span>

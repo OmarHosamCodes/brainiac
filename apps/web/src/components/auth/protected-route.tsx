@@ -4,9 +4,7 @@ import { LogoLoader } from "@/components/shell/logo-loader";
 import { startShellBoot } from "@/lib/shell/shell-boot";
 import { authClient, whenAuthSessionReady } from "@/lib/auth-client";
 import { useEffect, useState } from "react";
-import {
-  shellContentInClass,
-} from "@/lib/utils/app-shell-ui";
+import { shellContentInClass } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 
 export function ProtectedRoute() {

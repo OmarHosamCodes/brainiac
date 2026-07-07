@@ -26,11 +26,13 @@ import {
   mergeListWithOverlay,
 } from "@/lib/utils/agency-optimistic-merge";
 import { isAgencyLiveConnected } from "@/lib/agency/live/agency-live-connected";
-import { withAgencySyncQueryOptions, prefetchAgencySyncQueryOptions, AGENCY_POLL, AGENCY_STALE_TIME } from "@/lib/utils/agency-query-options";
 import {
-  taskMatchesAgencyFilters,
-  useAgencyOptimisticStore,
-} from "@/stores/agency-optimistic";
+  withAgencySyncQueryOptions,
+  prefetchAgencySyncQueryOptions,
+  AGENCY_POLL,
+  AGENCY_STALE_TIME,
+} from "@/lib/utils/agency-query-options";
+import { taskMatchesAgencyFilters, useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 import { useAgencyTaskMessagesStore } from "@/stores/agency-task-messages";
 import { useAgencyOpsStore } from "@/stores/agency-ops";
 import { useAgencyTimeTrackingStore } from "@/stores/agency-time-tracking";
@@ -298,9 +300,7 @@ export function useAgencyProjectJourneyQuery(teamId: string, projectId: string) 
 }
 
 export function useAgencyTaskMessagesInfiniteQuery(teamId: string, taskId: string, pageSize = 50) {
-  const registerTaskMessagesQuery = useAgencyTaskMessagesStore(
-    (s) => s.registerTaskMessagesQuery,
-  );
+  const registerTaskMessagesQuery = useAgencyTaskMessagesStore((s) => s.registerTaskMessagesQuery);
   const unregisterTaskMessagesQuery = useAgencyTaskMessagesStore(
     (s) => s.unregisterTaskMessagesQuery,
   );
@@ -579,14 +579,7 @@ export function useAgencyProjectTasksInfiniteQuery(
       !filters.statuses?.includes("done");
     if (!isActiveRail) return;
     pruneTasks(teamId, serverItems);
-  }, [
-    teamId,
-    query.isSuccess,
-    pruneTasks,
-    serverItems,
-    filters.assigneeUserId,
-    filters.statuses,
-  ]);
+  }, [teamId, query.isSuccess, pruneTasks, serverItems, filters.assigneeUserId, filters.statuses]);
 
   return { ...query, items, total };
 }
@@ -614,8 +607,7 @@ export function useAgencyProjectTasksForChooserQuery(
     infiniteQuery.data?.pages.length,
   ]);
 
-  const isFetchingAll =
-    infiniteQuery.isFetchingNextPage || Boolean(infiniteQuery.hasNextPage);
+  const isFetchingAll = infiniteQuery.isFetchingNextPage || Boolean(infiniteQuery.hasNextPage);
 
   return {
     ...infiniteQuery,

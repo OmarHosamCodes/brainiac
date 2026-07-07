@@ -171,10 +171,7 @@ export function TeamSettingsModal({
   const actionButtonDisabled = addingMember || !inviteEmail.trim();
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={handleOpenChange}
-    >
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Team settings</DialogTitle>
@@ -194,7 +191,9 @@ export function TeamSettingsModal({
                 <div className="min-w-0 flex-1">
                   <p className={dashboardLabelClass}>Team</p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    <Badge variant="secondary">{teamRole === "owner" ? "Owner" : teamRole === "editor" ? "Editor" : "Viewer"}</Badge>
+                    <Badge variant="secondary">
+                      {teamRole === "owner" ? "Owner" : teamRole === "editor" ? "Editor" : "Viewer"}
+                    </Badge>
                     <span className="text-xs text-muted">
                       {displayMemberCount} {displayMemberCount === 1 ? "member" : "members"}
                     </span>
@@ -219,11 +218,7 @@ export function TeamSettingsModal({
                         if (e.key === "Enter" && nameDirty) void handleSaveName();
                       }}
                     />
-                    <Button
-                      size="sm"
-                      disabled={!nameDirty || savingName}
-                      onClick={handleSaveName}
-                    >
+                    <Button size="sm" disabled={!nameDirty || savingName} onClick={handleSaveName}>
                       {savingName ? <Loader2 className="size-4 animate-spin" /> : null}
                       Save
                     </Button>
@@ -338,13 +333,17 @@ export function TeamSettingsModal({
           </section>
 
           {/* Confirm remove */}
-          {confirmRemoveUserId && !sortedMembers.find((m) => m.userId === confirmRemoveUserId) ? null : null}
+          {confirmRemoveUserId && !sortedMembers.find((m) => m.userId === confirmRemoveUserId)
+            ? null
+            : null}
           {confirmRemoveUserId ? (
             <section className={dashboardSectionClass}>
               <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
                 <p className="text-sm font-semibold text-destructive">
                   Remove{" "}
-                  {sortedMembers.find((m) => m.userId === confirmRemoveUserId)?.userName || "member"}?
+                  {sortedMembers.find((m) => m.userId === confirmRemoveUserId)?.userName ||
+                    "member"}
+                  ?
                 </p>
                 <p className="mt-1 text-xs text-destructive/80">
                   This will revoke access to all shared nodes immediately.
@@ -358,11 +357,7 @@ export function TeamSettingsModal({
                     <UserMinus className="size-4" />
                     Remove
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setConfirmRemoveUserId(null)}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => setConfirmRemoveUserId(null)}>
                     Cancel
                   </Button>
                 </div>
@@ -419,12 +414,12 @@ export function TeamSettingsModal({
                     </div>
                   </div>
 
-                  <Button
-                    size="sm"
-                    disabled={actionButtonDisabled}
-                    onClick={handleAddMember}
-                  >
-                    {addingMember ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}
+                  <Button size="sm" disabled={actionButtonDisabled} onClick={handleAddMember}>
+                    {addingMember ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Mail className="size-4" />
+                    )}
                     Add member
                   </Button>
                 </div>

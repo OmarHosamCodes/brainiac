@@ -52,11 +52,7 @@ export function AgencySubtitleBreadcrumb({
 
   return (
     <div className="flex min-w-0 items-center gap-1.5">
-      <AgencySegmentBar
-        segment={segment}
-        onSegmentChange={onSegmentChange}
-        variant="breadcrumb"
-      />
+      <AgencySegmentBar segment={segment} onSegmentChange={onSegmentChange} variant="breadcrumb" />
 
       {syncState ? (
         <div

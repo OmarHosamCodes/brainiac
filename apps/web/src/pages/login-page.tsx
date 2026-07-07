@@ -247,9 +247,7 @@ export function LoginPage() {
                       <span className="w-full border-t border-border" />
                     </div>
                     <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">
-                        or
-                      </span>
+                      <span className="bg-background px-2 text-muted-foreground">or</span>
                     </div>
                   </div>
 
@@ -309,7 +307,9 @@ export function LoginPage() {
                               />
                             </FormControl>
                             {isSignUp ? (
-                              <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+                              <p className="text-xs text-muted-foreground">
+                                At least 8 characters.
+                              </p>
                             ) : null}
                             <FormMessage />
                           </FormItem>
@@ -346,16 +346,10 @@ export function LoginPage() {
             <Link to="/" className="transition-colors hover:text-foreground">
               Home
             </Link>
-            <Link
-              to="/terms"
-              className="transition-colors hover:text-foreground"
-            >
+            <Link to="/terms" className="transition-colors hover:text-foreground">
               Terms
             </Link>
-            <Link
-              to="/privacy"
-              className="transition-colors hover:text-foreground"
-            >
+            <Link to="/privacy" className="transition-colors hover:text-foreground">
               Privacy
             </Link>
           </div>

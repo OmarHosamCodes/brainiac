@@ -92,7 +92,9 @@ export function SavedReportsListBody({
                   className={reportItemClass}
                   onClick={() => onSelect(item.id)}
                 >
-                  <span className="truncate text-xs font-semibold text-highlighted">{item.name}</span>
+                  <span className="truncate text-xs font-semibold text-highlighted">
+                    {item.name}
+                  </span>
                   <span className="text-[11px] text-muted">
                     {item.createdByUserName} · edited {formatRelativeReportTime(item.updatedAt)}
                   </span>

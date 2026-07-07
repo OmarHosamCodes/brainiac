@@ -10,7 +10,11 @@ import budgets from "../../apps/web/perf/budgets.json" with { type: "json" };
 import { runGlobalSetup, storageStatePath } from "../../apps/web/perf/global-setup.mjs";
 import { buildReport, writeBaselineFromReport, writeReports } from "../../apps/web/perf/report.mjs";
 import { resolveRoutes } from "../../apps/web/perf/routes.mjs";
-import { auditRoute, cookiesForStorageState, formatCookieHeader } from "../../apps/web/perf/run-lighthouse.mjs";
+import {
+  auditRoute,
+  cookiesForStorageState,
+  formatCookieHeader,
+} from "../../apps/web/perf/run-lighthouse.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..", "..");
@@ -20,9 +24,9 @@ const baselinePath = resolve(perfDir, "baseline.json");
 
 const PERF_ENV = {
   ...process.env,
-  DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://postgres:password@localhost:5440/brainiac",
-  BETTER_AUTH_SECRET:
-    process.env.BETTER_AUTH_SECRET ?? "perf-benchmark-secret-key-32chars!",
+  DATABASE_URL:
+    process.env.DATABASE_URL ?? "postgresql://postgres:password@localhost:5440/brainiac",
+  BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "perf-benchmark-secret-key-32chars!",
   BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? "http://localhost:7001",
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "http://localhost:7001",
   VITE_PUBLIC_SERVER_URL: process.env.VITE_PUBLIC_SERVER_URL ?? "http://localhost:7001",

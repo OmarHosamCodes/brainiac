@@ -3,7 +3,11 @@ import { useCallback, useEffect, useId, useMemo, useRef, type RefObject } from "
 
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
-import { useAgencyActiveTimerQuery, useAgencyProjectTasksInfiniteQuery, useAgencyProjectTasksQuery } from "@/lib/queries/agency";
+import {
+  useAgencyActiveTimerQuery,
+  useAgencyProjectTasksInfiniteQuery,
+  useAgencyProjectTasksQuery,
+} from "@/lib/queries/agency";
 import {
   resolveTaskTrackingState,
   type TaskTrackingState,
@@ -16,9 +20,7 @@ import type {
 } from "@/lib/schemas/agency-work";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
 import { findOpenTaskByExactTitle } from "@/lib/utils/agency-task-title-filter";
-import {
-  collectTaskBlueprintsFromTasks,
-} from "@/lib/utils/agency-task-blueprints";
+import { collectTaskBlueprintsFromTasks } from "@/lib/utils/agency-task-blueprints";
 import { isJourneyAnchorTask } from "@/lib/utils/agency-task-journey";
 import {
   buildAgencyTaskRailGroups,
@@ -26,10 +28,7 @@ import {
   type AgencyTaskClientDisplayGroup,
 } from "@/lib/utils/agency-task-rail-grouping";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/stores/agency-ops";
-import {
-  resolveDefaultCreateProjectId,
-  useAgencyTaskListStore,
-} from "@/stores/agency-task-list";
+import { resolveDefaultCreateProjectId, useAgencyTaskListStore } from "@/stores/agency-task-list";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
 import { EMPTY_LIST_OVERLAY } from "@/lib/utils/agency-optimistic-merge";
 import { useAgencyTimeTrackingStore, useTrackerDraft } from "@/stores/agency-time-tracking";
@@ -171,24 +170,34 @@ export function useAgencyTaskList({
   const titleDraft = useAgencyTaskListStore((s) => s.titleDraft);
   const descriptionDraft = useAgencyTaskListStore((s) => s.descriptionDraft);
   const selectedProjectIdForCreate = useAgencyTaskListStore((s) => s.selectedProjectIdForCreate);
-  const selectedAssigneeIdsForCreate = useAgencyTaskListStore((s) => s.selectedAssigneeIdsForCreate);
+  const selectedAssigneeIdsForCreate = useAgencyTaskListStore(
+    (s) => s.selectedAssigneeIdsForCreate,
+  );
   const assignedToTeamForCreate = useAgencyTaskListStore((s) => s.assignedToTeamForCreate);
   const collapsedClients = useAgencyTaskListStore((s) => s.collapsedClients);
   const collapsedProjects = useAgencyTaskListStore((s) => s.collapsedProjects);
   const setDoneExpanded = useAgencyTaskListStore((s) => s.setDoneExpanded);
   const setRecentlyCompletedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCompletedTaskId);
   const setRecentlyCreatedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCreatedTaskId);
-  const setRecentlyCreatedBlueprintId = useAgencyTaskListStore((s) => s.setRecentlyCreatedBlueprintId);
+  const setRecentlyCreatedBlueprintId = useAgencyTaskListStore(
+    (s) => s.setRecentlyCreatedBlueprintId,
+  );
   const setTitleDraft = useAgencyTaskListStore((s) => s.setTitleDraft);
   const setDescriptionDraft = useAgencyTaskListStore((s) => s.setDescriptionDraft);
-  const setSelectedProjectIdForCreate = useAgencyTaskListStore((s) => s.setSelectedProjectIdForCreate);
-  const setSelectedAssigneeIdsForCreate = useAgencyTaskListStore((s) => s.setSelectedAssigneeIdsForCreate);
+  const setSelectedProjectIdForCreate = useAgencyTaskListStore(
+    (s) => s.setSelectedProjectIdForCreate,
+  );
+  const setSelectedAssigneeIdsForCreate = useAgencyTaskListStore(
+    (s) => s.setSelectedAssigneeIdsForCreate,
+  );
   const setAssignedToTeamForCreate = useAgencyTaskListStore((s) => s.setAssignedToTeamForCreate);
   const setClientExpanded = useAgencyTaskListStore((s) => s.setClientExpanded);
   const setProjectExpanded = useAgencyTaskListStore((s) => s.setProjectExpanded);
   const setQuickAddFocused = useAgencyTaskListStore((s) => s.setQuickAddFocused);
   const setCreateOptionsExpanded = useAgencyTaskListStore((s) => s.setCreateOptionsExpanded);
-  const setLastUsedProjectIdForCreate = useAgencyTaskListStore((s) => s.setLastUsedProjectIdForCreate);
+  const setLastUsedProjectIdForCreate = useAgencyTaskListStore(
+    (s) => s.setLastUsedProjectIdForCreate,
+  );
   const clearQuickAddAction = useAgencyTaskListStore((s) => s.clearQuickAdd);
 
   const quickAddInputRef = useRef<HTMLInputElement>(null);
@@ -209,10 +218,7 @@ export function useAgencyTaskList({
   );
 
   const trackingTimer = useMemo(
-    () =>
-      activeTimer
-        ? { taskId: activeTimer.taskId, projectId: activeTimer.projectId }
-        : null,
+    () => (activeTimer ? { taskId: activeTimer.taskId, projectId: activeTimer.projectId } : null),
     [activeTimer],
   );
 
@@ -280,17 +286,13 @@ export function useAgencyTaskList({
 
   const activeTasks = activeTasksQuery.items;
   const doneTasks = doneTasksQuery.items;
-  const allListedTasks = useMemo(
-    () => [...activeTasks, ...doneTasks],
-    [activeTasks, doneTasks],
-  );
+  const allListedTasks = useMemo(() => [...activeTasks, ...doneTasks], [activeTasks, doneTasks]);
   const anchorProjectIds = useMemo(
-    () =>
-      [
-        ...new Set(
-          activeTasks.filter((task) => isJourneyAnchorTask(task)).map((task) => task.projectId),
-        ),
-      ],
+    () => [
+      ...new Set(
+        activeTasks.filter((task) => isJourneyAnchorTask(task)).map((task) => task.projectId),
+      ),
+    ],
     [activeTasks],
   );
   const journeyQueries = useQueries({
@@ -370,9 +372,7 @@ export function useAgencyTaskList({
       const task =
         activeTasks.find((entry) => entry.id === taskId) ??
         doneTasks.find((entry) => entry.id === taskId);
-      const blueprint = blueprintId
-        ? blueprints.find((entry) => entry.id === blueprintId)
-        : null;
+      const blueprint = blueprintId ? blueprints.find((entry) => entry.id === blueprintId) : null;
 
       if (activeTimer) {
         if (!activeTimer.taskId && task && task.projectId === activeTimer.projectId) {
@@ -410,9 +410,7 @@ export function useAgencyTaskList({
   const doneCount =
     doneTasksQuery.isPending && doneTasks.length === 0 ? null : doneTasksQuery.total;
   const totalCount =
-    activeCount === null && doneCount === null
-      ? null
-      : (activeCount ?? 0) + (doneCount ?? 0);
+    activeCount === null && doneCount === null ? null : (activeCount ?? 0) + (doneCount ?? 0);
 
   const clientGroups = useMemo(
     (): AgencyTaskClientDisplayGroup[] =>
@@ -449,7 +447,9 @@ export function useAgencyTaskList({
     [clientGroups],
   );
 
-  const taskOverlay = useAgencyOptimisticStore((state) => state.tasks[teamId] ?? EMPTY_LIST_OVERLAY);
+  const taskOverlay = useAgencyOptimisticStore(
+    (state) => state.tasks[teamId] ?? EMPTY_LIST_OVERLAY,
+  );
   // Keep create highlight across optimistic → real id reconcile.
   const activeHighlightTaskId =
     (recentlyCreatedTaskId && taskOverlay.idMap[recentlyCreatedTaskId]) || recentlyCreatedTaskId;
@@ -481,12 +481,7 @@ export function useAgencyTaskList({
       }),
     });
     requestAnimationFrame(() => quickAddInputRef.current?.focus());
-  }, [
-    clearQuickAddAction,
-    currentUserId,
-    lastUsedProjectIdForCreate,
-    projects,
-  ]);
+  }, [clearQuickAddAction, currentUserId, lastUsedProjectIdForCreate, projects]);
 
   const focusQuickAdd = useCallback(() => {
     quickAddInputRef.current?.focus();
@@ -509,12 +504,7 @@ export function useAgencyTaskList({
       setCreateOptionsExpanded(true);
       requestAnimationFrame(() => quickAddInputRef.current?.focus());
     },
-    [
-      handleProjectChange,
-      quickAddInputRef,
-      setCreateOptionsExpanded,
-      setTitleDraft,
-    ],
+    [handleProjectChange, quickAddInputRef, setCreateOptionsExpanded, setTitleDraft],
   );
 
   const createTask = useCallback(async () => {
@@ -624,7 +614,11 @@ export function useAgencyTaskList({
   );
 
   const canSubmit = Boolean(
-    titleDraft.trim() && selectedProjectIdForCreate && teamId && !membersQuery.isPending && !isCreatingTask,
+    titleDraft.trim() &&
+    selectedProjectIdForCreate &&
+    teamId &&
+    !membersQuery.isPending &&
+    !isCreatingTask,
   );
 
   useEffect(() => {

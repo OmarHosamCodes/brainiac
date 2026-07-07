@@ -14,17 +14,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { suggestAgencyReportName } from "@/lib/agency/reports/agency-report-naming";
 import type { AgencyListFiltersApplied } from "@/lib/agency/use-agency-list-filters";
 import { useAgencyListFilters } from "@/lib/agency/use-agency-list-filters";
-import type {
-  AgencyTimeRangeFilters,
-} from "@/lib/agency/use-agency-time-range-filters";
+import type { AgencyTimeRangeFilters } from "@/lib/agency/use-agency-time-range-filters";
 import { useAgencyTimeRangeFilters } from "@/lib/agency/use-agency-time-range-filters";
 import type { AgencySegmentId } from "@/lib/agency-segments";
 import { orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import {
-  selectIsClientMutationPending,
-  useAgencyOpsStore,
-} from "@/stores/agency-ops";
+import { selectIsClientMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
 export type AgencySegmentSurfaceFilters =
   | { kind: "timeRange"; applied: AgencyTimeRangeFilters }
@@ -57,7 +52,12 @@ function commandBarVisible(
   if (segment === "work" || segment === "management") return false;
   if (segment === "projects" && selectedProjectId) return false;
   if (segment === "reports" && reportMode) return false;
-  return segment === "dashboard" || segment === "reports" || segment === "clients" || segment === "projects";
+  return (
+    segment === "dashboard" ||
+    segment === "reports" ||
+    segment === "clients" ||
+    segment === "projects"
+  );
 }
 
 function CommandBarSkeleton() {
@@ -76,9 +76,7 @@ function DashboardFiltersRoot({
   const timeRange = useAgencyTimeRangeFilters({ teamId, includeClientFilter: true });
 
   return (
-    <AgencySegmentFiltersContext.Provider
-      value={{ kind: "timeRange", applied: timeRange.applied }}
-    >
+    <AgencySegmentFiltersContext.Provider value={{ kind: "timeRange", applied: timeRange.applied }}>
       <div className="space-y-4">
         {showBar ? (
           timeRange.isLoading ? (
@@ -174,9 +172,7 @@ function ReportsFiltersRoot({
   }
 
   return (
-    <AgencySegmentFiltersContext.Provider
-      value={{ kind: "timeRange", applied: timeRange.applied }}
-    >
+    <AgencySegmentFiltersContext.Provider value={{ kind: "timeRange", applied: timeRange.applied }}>
       <div className="space-y-4">
         {showBar ? (
           timeRange.isLoading ? (
@@ -254,9 +250,7 @@ function ClientsFiltersRoot({
   }
 
   return (
-    <AgencySegmentFiltersContext.Provider
-      value={{ kind: "list", applied: listFilters.applied }}
-    >
+    <AgencySegmentFiltersContext.Provider value={{ kind: "list", applied: listFilters.applied }}>
       <AgencyClientsActionsContext.Provider value={{ openNewClient: () => setNewClientOpen(true) }}>
         <div className="space-y-4">
           {showBar ? (
@@ -334,10 +328,10 @@ function ProjectsFiltersRoot({
   const [newProjectOpen, setNewProjectOpen] = useState(false);
 
   return (
-    <AgencySegmentFiltersContext.Provider
-      value={{ kind: "list", applied: listFilters.applied }}
-    >
-      <AgencyProjectsActionsContext.Provider value={{ openNewProject: () => setNewProjectOpen(true) }}>
+    <AgencySegmentFiltersContext.Provider value={{ kind: "list", applied: listFilters.applied }}>
+      <AgencyProjectsActionsContext.Provider
+        value={{ openNewProject: () => setNewProjectOpen(true) }}
+      >
         <div className="space-y-4">
           {showBar ? (
             listFilters.isLoading ? (

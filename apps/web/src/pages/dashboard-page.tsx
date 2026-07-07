@@ -91,172 +91,175 @@ export function DashboardPage() {
       <div className="relative h-full w-full overflow-hidden bg-default selection:bg-primary/30">
         {!isBooting ? (
           <>
-        <AppShellTopbarContext>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="shrink-0"
-            aria-expanded={!isTeamAsideCompact}
-            onClick={() => setIsTeamAsideCompact(!isTeamAsideCompact)}
-          >
-            {isTeamAsideCompact ? (
-              <PanelLeftOpen className="size-4" />
-            ) : (
-              <PanelLeftClose className="size-4" />
-            )}
-            <span className="hidden lg:inline">Workspace</span>
-          </Button>
-        </AppShellTopbarContext>
+            <AppShellTopbarContext>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0"
+                aria-expanded={!isTeamAsideCompact}
+                onClick={() => setIsTeamAsideCompact(!isTeamAsideCompact)}
+              >
+                {isTeamAsideCompact ? (
+                  <PanelLeftOpen className="size-4" />
+                ) : (
+                  <PanelLeftClose className="size-4" />
+                )}
+                <span className="hidden lg:inline">Workspace</span>
+              </Button>
+            </AppShellTopbarContext>
 
-        <AppShellTopbarActions>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => canvasRef.current?.createNodeAtViewportCenter()}
-          >
-            <Plus className="size-4" />
-            Add
-          </Button>
-        </AppShellTopbarActions>
+            <AppShellTopbarActions>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => canvasRef.current?.createNodeAtViewportCenter()}
+              >
+                <Plus className="size-4" />
+                Add
+              </Button>
+            </AppShellTopbarActions>
 
-        <AppShellPortal targetId="app-shell-dock-content">
-          <div className="flex h-full min-h-0 flex-col">
-            <DashboardAgentChatPanel nodes={board.nodes} onClose={() => setAgentDockOpen(false)} />
-          </div>
-        </AppShellPortal>
+            <AppShellPortal targetId="app-shell-dock-content">
+              <div className="flex h-full min-h-0 flex-col">
+                <DashboardAgentChatPanel
+                  nodes={board.nodes}
+                  onClose={() => setAgentDockOpen(false)}
+                />
+              </div>
+            </AppShellPortal>
 
-        <main className="h-full w-full">
-          <div className="flex h-full w-full overflow-hidden">
-            <DashboardWorkspaceSidebar
-              compact={isTeamAsideCompact}
-              teamsCount={teams.length}
-              createTeamPending={createTeamPending}
-              selectedTeamName={selectedTeamName}
-              selectedTeamRole={selectedTeamRole}
-              memberCount={selectedTeamMemberCount}
-              selectedNode={selectedNode}
-              canInvite={canInvite}
-              canManageSelectedNodeSharing={selectedTeamRole === "owner"}
-              isSelectedNodeShared={Boolean(isSelectedNodeShared)}
-              isNodeShareActionPending={Boolean(isNodeShareActionPending)}
-              nodeShareActionLabel={isSelectedNodeShared ? "Unshare node" : "Share node"}
-              nodeShareActionDisabled={!selectedNode || selectedTeamRole !== "owner"}
-              onCompactChange={setIsTeamAsideCompact}
-              onCreateTeam={createTeam}
-              onOpenTeamSettings={() => setTeamSettingsOpen(true)}
-              onToggleSelectedNodeSharing={() => {}}
+            <main className="h-full w-full">
+              <div className="flex h-full w-full overflow-hidden">
+                <DashboardWorkspaceSidebar
+                  compact={isTeamAsideCompact}
+                  teamsCount={teams.length}
+                  createTeamPending={createTeamPending}
+                  selectedTeamName={selectedTeamName}
+                  selectedTeamRole={selectedTeamRole}
+                  memberCount={selectedTeamMemberCount}
+                  selectedNode={selectedNode}
+                  canInvite={canInvite}
+                  canManageSelectedNodeSharing={selectedTeamRole === "owner"}
+                  isSelectedNodeShared={Boolean(isSelectedNodeShared)}
+                  isNodeShareActionPending={Boolean(isNodeShareActionPending)}
+                  nodeShareActionLabel={isSelectedNodeShared ? "Unshare node" : "Share node"}
+                  nodeShareActionDisabled={!selectedNode || selectedTeamRole !== "owner"}
+                  onCompactChange={setIsTeamAsideCompact}
+                  onCreateTeam={createTeam}
+                  onOpenTeamSettings={() => setTeamSettingsOpen(true)}
+                  onToggleSelectedNodeSharing={() => {}}
+                />
+
+                <div className="min-h-0 min-w-0 flex-1 h-full">
+                  <LazyInfiniteCanvas
+                    ref={canvasRef}
+                    nodes={board.nodes}
+                    selectedNodeIds={board.selectedNodeIds}
+                    loading={board.isWorkspaceInitialLoading}
+                    onNodesChange={(nextNodes) =>
+                      board.updateNodes((draft) => {
+                        const positionById = new Map(nextNodes.map((node) => [node.id, node]));
+                        draft.forEach((node, index) => {
+                          const updated = positionById.get(node.id);
+                          if (!updated) return;
+                          draft[index] = {
+                            ...node,
+                            x: updated.x,
+                            y: updated.y,
+                            width: updated.width,
+                            height: updated.height,
+                          };
+                        });
+                      })
+                    }
+                    onSelectedNodeIdsChange={board.setSelectedNodeIds}
+                    onCreateNode={board.openCreateNode}
+                    onEditNode={board.openEditNode}
+                    onConnectNodePair={board.connectNodePair}
+                    onDisconnectNodePair={board.disconnectNodePair}
+                    onRemoveNode={board.removeNode}
+                    onOpenNode={(payload) => navigate(`/node/${payload.nodeId}`)}
+                    renderNode={(node, selected, allNodes) => (
+                      <WorkspaceNodeCard node={node} selected={selected} allNodes={allNodes} />
+                    )}
+                  />
+                </div>
+              </div>
+            </main>
+
+            <div className="pointer-events-none absolute bottom-4 left-4 z-30 flex max-w-xs flex-col gap-3 md:bottom-6 md:left-6">
+              <div className="pointer-events-auto flex flex-wrap items-center gap-2">
+                <span className={cn(dashboardStatusBadgeClass, board.saveBadge.className)}>
+                  {board.saveBadge.label}
+                </span>
+                {board.isWorkspaceRefreshing && board.saveBadge.label !== "Syncing" ? (
+                  <Badge
+                    key="refreshing"
+                    variant="secondary"
+                    className={cn("gap-1.5", shellContentInClass)}
+                  >
+                    <Loader2 className="size-3 animate-spin" />
+                    Refreshing
+                  </Badge>
+                ) : null}
+              </div>
+
+              {board.saveError ? (
+                <div
+                  key={board.saveError}
+                  className={cn(
+                    dashboardErrorAlertClass,
+                    shellContentInClass,
+                    "pointer-events-auto rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive",
+                  )}
+                >
+                  {board.saveError}
+                </div>
+              ) : null}
+
+              {board.workspaceQuery.status === "error" ? (
+                <div
+                  key={board.workspaceQuery.error?.message ?? "workspace-error"}
+                  className={cn(
+                    dashboardErrorAlertClass,
+                    shellContentInClass,
+                    "pointer-events-auto rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive",
+                  )}
+                >
+                  <div className="flex items-center gap-2 font-semibold">
+                    <AlertCircle className="size-4" />
+                    Couldn&apos;t load workspace
+                  </div>
+                  <p className="mt-1">{board.workspaceQuery.error?.message}</p>
+                </div>
+              ) : null}
+            </div>
+
+            <WorkspaceEditorModal
+              availableBlocks={board.editorBlockOptions}
+              content={board.nodeDraft.content}
+              featuredBlocks={board.nodeDraft.featuredBlocks}
+              mode={board.editorMode}
+              nodeType={board.nodeDraft.nodeType}
+              open={board.editorOpen}
+              tint={board.nodeDraft.tint}
+              title={board.nodeDraft.title}
+              valid={board.isDraftValid}
+              onClose={board.closeEditor}
+              onSubmit={board.submitNodeEditor}
+              onFeaturedBlocksChange={(featuredBlocks) => board.patchNodeDraft({ featuredBlocks })}
+              onContentChange={(content) => board.patchNodeDraft({ content })}
+              onNodeTypeChange={(nodeType) => board.patchNodeDraft({ nodeType })}
+              onTintChange={(tint) => board.patchNodeDraft({ tint })}
+              onTitleChange={(title) => board.patchNodeDraft({ title })}
             />
 
-            <div className="min-h-0 min-w-0 flex-1 h-full">
-              <LazyInfiniteCanvas
-                ref={canvasRef}
-                nodes={board.nodes}
-                selectedNodeIds={board.selectedNodeIds}
-                loading={board.isWorkspaceInitialLoading}
-                onNodesChange={(nextNodes) =>
-                  board.updateNodes((draft) => {
-                    const positionById = new Map(nextNodes.map((node) => [node.id, node]));
-                    draft.forEach((node, index) => {
-                      const updated = positionById.get(node.id);
-                      if (!updated) return;
-                      draft[index] = {
-                        ...node,
-                        x: updated.x,
-                        y: updated.y,
-                        width: updated.width,
-                        height: updated.height,
-                      };
-                    });
-                  })
-                }
-                onSelectedNodeIdsChange={board.setSelectedNodeIds}
-                onCreateNode={board.openCreateNode}
-                onEditNode={board.openEditNode}
-                onConnectNodePair={board.connectNodePair}
-                onDisconnectNodePair={board.disconnectNodePair}
-                onRemoveNode={board.removeNode}
-                onOpenNode={(payload) => navigate(`/node/${payload.nodeId}`)}
-                renderNode={(node, selected, allNodes) => (
-                  <WorkspaceNodeCard node={node} selected={selected} allNodes={allNodes} />
-                )}
-              />
-            </div>
-          </div>
-        </main>
-
-        <div className="pointer-events-none absolute bottom-4 left-4 z-30 flex max-w-xs flex-col gap-3 md:bottom-6 md:left-6">
-          <div className="pointer-events-auto flex flex-wrap items-center gap-2">
-            <span className={cn(dashboardStatusBadgeClass, board.saveBadge.className)}>
-              {board.saveBadge.label}
-            </span>
-            {board.isWorkspaceRefreshing && board.saveBadge.label !== "Syncing" ? (
-              <Badge
-                key="refreshing"
-                variant="secondary"
-                className={cn("gap-1.5", shellContentInClass)}
-              >
-                <Loader2 className="size-3 animate-spin" />
-                Refreshing
-              </Badge>
-            ) : null}
-          </div>
-
-          {board.saveError ? (
-            <div
-              key={board.saveError}
-              className={cn(
-                dashboardErrorAlertClass,
-                shellContentInClass,
-                "pointer-events-auto rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive",
-              )}
-            >
-              {board.saveError}
-            </div>
-          ) : null}
-
-          {board.workspaceQuery.status === "error" ? (
-            <div
-              key={board.workspaceQuery.error?.message ?? "workspace-error"}
-              className={cn(
-                dashboardErrorAlertClass,
-                shellContentInClass,
-                "pointer-events-auto rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive",
-              )}
-            >
-              <div className="flex items-center gap-2 font-semibold">
-                <AlertCircle className="size-4" />
-                Couldn&apos;t load workspace
-              </div>
-              <p className="mt-1">{board.workspaceQuery.error?.message}</p>
-            </div>
-          ) : null}
-        </div>
-
-        <WorkspaceEditorModal
-          availableBlocks={board.editorBlockOptions}
-          content={board.nodeDraft.content}
-          featuredBlocks={board.nodeDraft.featuredBlocks}
-          mode={board.editorMode}
-          nodeType={board.nodeDraft.nodeType}
-          open={board.editorOpen}
-          tint={board.nodeDraft.tint}
-          title={board.nodeDraft.title}
-          valid={board.isDraftValid}
-          onClose={board.closeEditor}
-          onSubmit={board.submitNodeEditor}
-          onFeaturedBlocksChange={(featuredBlocks) => board.patchNodeDraft({ featuredBlocks })}
-          onContentChange={(content) => board.patchNodeDraft({ content })}
-          onNodeTypeChange={(nodeType) => board.patchNodeDraft({ nodeType })}
-          onTintChange={(tint) => board.patchNodeDraft({ tint })}
-          onTitleChange={(title) => board.patchNodeDraft({ title })}
-        />
-
-        <TeamSettingsModal
-          open={teamSettingsOpen}
-          onOpenChange={setTeamSettingsOpen}
-          team={selectedTeam}
-          onRefetchWorkspace={() => board.workspaceQuery.refetch()}
-        />
+            <TeamSettingsModal
+              open={teamSettingsOpen}
+              onOpenChange={setTeamSettingsOpen}
+              team={selectedTeam}
+              onRefetchWorkspace={() => board.workspaceQuery.refetch()}
+            />
           </>
         ) : (
           <LogoLoader label="Loading dashboard" />

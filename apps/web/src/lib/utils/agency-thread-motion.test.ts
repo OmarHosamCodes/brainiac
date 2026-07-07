@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import {
-  isOptimisticTaskMessage,
-  resolveMessageAnimationKey,
-} from "./agency-thread-motion";
+import { isOptimisticTaskMessage, resolveMessageAnimationKey } from "./agency-thread-motion";
 import { createEmptyListOverlay } from "./agency-optimistic-merge";
 
 describe("resolveMessageAnimationKey", () => {

@@ -49,25 +49,26 @@ function handleNotificationCreated(
     const queryClient = getQueryClient();
     const teamId = event.teamId;
 
-    queryClient.setQueryData(orpc.notifications.list.queryKey({ input: { teamId, limit: 40 } }), (current) => {
-      if (!current || !Array.isArray(current.items)) {
-        return current;
-      }
+    queryClient.setQueryData(
+      orpc.notifications.list.queryKey({ input: { teamId, limit: 40 } }),
+      (current) => {
+        if (!current || !Array.isArray(current.items)) {
+          return current;
+        }
 
-      const withoutDuplicate = current.items.filter((item) => item.id !== event.notification.id);
-      return {
-        ...current,
-        items: [event.notification, ...withoutDuplicate].slice(0, 40),
-      };
-    });
+        const withoutDuplicate = current.items.filter((item) => item.id !== event.notification.id);
+        return {
+          ...current,
+          items: [event.notification, ...withoutDuplicate].slice(0, 40),
+        };
+      },
+    );
 
     queryClient.setQueryData(
       orpc.notifications.unreadCount.queryKey({ input: { teamId } }),
       (current) => {
         const base =
-          current && typeof current === "object" && "count" in current
-            ? Number(current.count)
-            : 0;
+          current && typeof current === "object" && "count" in current ? Number(current.count) : 0;
         if (event.notification.seenAt) return { count: base };
         return { count: base + 1 };
       },

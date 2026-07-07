@@ -18,11 +18,7 @@ import type { NotificationRecord } from "../../schemas/notifications";
 import { getUserAvatarPublicUrl } from "../../storage";
 import { env } from "@brainiac/env/server";
 import { requireTeamMembership } from "../agency-ops/membership";
-import {
-  defaultNotificationChannels,
-  excludeActor,
-  messageCoalesceTaskId,
-} from "./fanout-helpers";
+import { defaultNotificationChannels, excludeActor, messageCoalesceTaskId } from "./fanout-helpers";
 import { deliverNotificationPush } from "./delivery";
 import { isUserLiveOnTeam, publishNotificationCreated } from "./live-bridge";
 
@@ -147,7 +143,7 @@ export async function listNotifications(
   const hasMore = rows.length > limit;
   const pageRows = hasMore ? rows.slice(0, limit) : rows;
   const items = await mapNotificationRows(pageRows);
-  const nextCursor = hasMore ? items.at(-1)?.createdAt ?? null : null;
+  const nextCursor = hasMore ? (items.at(-1)?.createdAt ?? null) : null;
 
   return { items, nextCursor };
 }
@@ -359,7 +355,8 @@ async function upsertNotificationForRecipient(input: {
   coalesceTaskId?: string | null;
 }) {
   const now = new Date();
-  const coalesceTaskId = input.coalesceTaskId ?? messageCoalesceTaskId(input.type, input.payload.taskId);
+  const coalesceTaskId =
+    input.coalesceTaskId ?? messageCoalesceTaskId(input.type, input.payload.taskId);
 
   if (coalesceTaskId) {
     const [existing] = await db

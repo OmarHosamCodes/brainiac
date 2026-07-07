@@ -15,10 +15,7 @@ import {
   useAgencyTimeEntriesQuery,
 } from "@/lib/queries/agency";
 import { orpc } from "@/lib/orpc";
-import {
-  agencyEmptyPanelClass,
-  agencyErrorPanelClass,
-} from "@/lib/utils/agency-ui";
+import { agencyEmptyPanelClass, agencyErrorPanelClass } from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { getTaskGroupKey } from "@/lib/utils/agency-task-utils";
 import { agencyListSearchMatches } from "@/lib/utils/agency-list-search";
@@ -89,17 +86,13 @@ export function AgencyProjectsTable({ teamId, filters, onSelect }: AgencyProject
       if (projectsSet.size > 0 && !projectsSet.has(project.id)) return false;
       if (
         peopleSet.size > 0 &&
-        !entries.some(
-          (entry) => entry.projectId === project.id && peopleSet.has(entry.userId),
-        )
+        !entries.some((entry) => entry.projectId === project.id && peopleSet.has(entry.userId))
       ) {
         return false;
       }
       if (
         tasksSet.size > 0 &&
-        !tasks.some(
-          (task) => task.projectId === project.id && tasksSet.has(getTaskGroupKey(task)),
-        )
+        !tasks.some((task) => task.projectId === project.id && tasksSet.has(getTaskGroupKey(task)))
       ) {
         return false;
       }

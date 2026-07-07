@@ -2,9 +2,7 @@ import type { KeyboardEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 import type { AgencyProject, AgencyProjectTask } from "@/lib/schemas/agency-work";
-import {
-  canStartAgencyTimer,
-} from "@/lib/agency/work/timer-validation";
+import { canStartAgencyTimer } from "@/lib/agency/work/timer-validation";
 import { useAgencyActiveTimerQuery } from "@/lib/queries/agency";
 import {
   draftToIsoRange,
@@ -148,8 +146,7 @@ export function useAgencyTimeEntryRow({
   const [editSaving, setEditSaving] = useState(false);
   const groupDescription = group.description;
   const groupTaskTitle = group.taskTitle;
-  const resolvedTitle =
-    groupDescription.trim().length > 0 ? groupDescription : groupTaskTitle;
+  const resolvedTitle = groupDescription.trim().length > 0 ? groupDescription : groupTaskTitle;
 
   const [descriptionDraft, setDescriptionDraft] = useState(() => resolvedTitle);
 
@@ -245,13 +242,13 @@ export function useAgencyTimeEntryRow({
   const project = projects.find((projectEntry) => projectEntry.id === group.projectId) ?? null;
   const canRestart = Boolean(
     teamId &&
-      group.taskId &&
-      project &&
-      !isTimerMutationPending &&
-      canStartAgencyTimer({
-        activeTimer,
-        project,
-      }),
+    group.taskId &&
+    project &&
+    !isTimerMutationPending &&
+    canStartAgencyTimer({
+      activeTimer,
+      project,
+    }),
   );
 
   return {

@@ -25,11 +25,7 @@ export function AgencyPresenceAvatars({ teamId, className }: AgencyPresenceAvata
       : `${members.length} team members tracking time`;
 
   return (
-    <div
-      className={cn("inline-flex items-center", className)}
-      role="img"
-      aria-label={groupLabel}
-    >
+    <div className={cn("inline-flex items-center", className)} role="img" aria-label={groupLabel}>
       {visibleMembers.map((member, index) => (
         <span
           key={member.userId}

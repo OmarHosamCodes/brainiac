@@ -8,10 +8,7 @@ type AgencyWorkSurfaceErrorViewProps = {
   onRetry: () => void;
 };
 
-export function AgencyWorkSurfaceErrorView({
-  message,
-  onRetry,
-}: AgencyWorkSurfaceErrorViewProps) {
+export function AgencyWorkSurfaceErrorView({ message, onRetry }: AgencyWorkSurfaceErrorViewProps) {
   return (
     <div className={agencyErrorPanelClass} role="alert">
       <AlertTriangle className="mx-auto size-5 text-error" />

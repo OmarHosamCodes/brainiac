@@ -5,7 +5,12 @@ import { useLocation } from "react-router-dom";
 import { AppShellBreadcrumbs } from "@/components/app-shell-breadcrumbs";
 import { AppShellPortal } from "@/components/app-shell-portal";
 import { Button } from "@/components/ui/button";
-import { useAppShellStore, useHasContextContent, useShellMode, useAgentButtonHidden } from "@/stores/app-shell";
+import {
+  useAppShellStore,
+  useHasContextContent,
+  useShellMode,
+  useAgentButtonHidden,
+} from "@/stores/app-shell";
 import {
   shellActionsSlotClass,
   shellContextDividerClass,
@@ -47,10 +52,7 @@ export function AppShellTopbarActions({ children }: { children: ReactNode }) {
 
 export function AppShellTopbarSkeleton() {
   return (
-    <header
-      className={cn(shellTopbarBaseClass, shellTopbarExecutionClass)}
-      aria-hidden="true"
-    >
+    <header className={cn(shellTopbarBaseClass, shellTopbarExecutionClass)} aria-hidden="true">
       <div className={shellHeaderContextRegionClass}>
         <div className="h-4 w-32 animate-pulse rounded bg-muted/50" />
       </div>

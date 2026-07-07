@@ -77,10 +77,7 @@ export function useAgencyTaskTitleChooser({
     }
   }
 
-  const chooserTasks = useMemo(
-    () => tasks.filter((task) => task.status !== "archived"),
-    [tasks],
-  );
+  const chooserTasks = useMemo(() => tasks.filter((task) => task.status !== "archived"), [tasks]);
 
   const filteredTasks = useMemo(
     () => filterTasksByTitleSearch(chooserTasks, searchTerm),

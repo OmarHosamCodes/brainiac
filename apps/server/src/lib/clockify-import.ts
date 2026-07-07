@@ -180,7 +180,9 @@ export async function loadManifest(outputDir: string): Promise<ScrapeManifest> {
   return (await file.json()) as ScrapeManifest;
 }
 
-export async function loadWorkspaceCatalog(outputDir: string): Promise<WorkspaceCatalogFile | null> {
+export async function loadWorkspaceCatalog(
+  outputDir: string,
+): Promise<WorkspaceCatalogFile | null> {
   const catalogPath = join(outputDir, "catalog.json");
   const file = Bun.file(catalogPath);
   if (!(await file.exists())) {
@@ -249,7 +251,11 @@ function mergeWorkspaceCatalog(
   }
 }
 
-async function readJsonlLines(outputDir: string, clockifyUserId: string, filename: string): Promise<unknown[]> {
+async function readJsonlLines(
+  outputDir: string,
+  clockifyUserId: string,
+  filename: string,
+): Promise<unknown[]> {
   const path = join(outputDir, clockifyUserId, filename);
   const file = Bun.file(path);
   if (!(await file.exists())) {
@@ -272,7 +278,9 @@ async function readJsonlLines(outputDir: string, clockifyUserId: string, filenam
   return records;
 }
 
-function parseTimeInterval(raw: unknown): { startedAt: Date; endedAt: Date; durationSeconds: number } | null {
+function parseTimeInterval(
+  raw: unknown,
+): { startedAt: Date; endedAt: Date; durationSeconds: number } | null {
   if (!raw || typeof raw !== "object") return null;
   const interval = raw as Record<string, unknown>;
   const start = readString(interval.start);
@@ -338,7 +346,9 @@ function parseClockifyEntry(raw: unknown, clockifyUserId: string): ParsedClockif
   const projectId =
     readString(entry.projectId) ??
     readNestedId(projectObj) ??
-    (projectName === NO_PROJECT_NAME ? NO_PROJECT_ID : `name-${slugify(`${clientId}-${projectName}`)}`);
+    (projectName === NO_PROJECT_NAME
+      ? NO_PROJECT_ID
+      : `name-${slugify(`${clientId}-${projectName}`)}`);
 
   const taskName = readString(entry.taskName) ?? readNestedName(taskObj);
   // Key by project + normalized title so same-named Clockify tasks collapse to one row.

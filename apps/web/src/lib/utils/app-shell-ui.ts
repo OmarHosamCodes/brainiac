@@ -24,10 +24,7 @@ export const shellRailLinkBaseClass =
 
 export const shellRailLinkActiveClass = "bg-primary/10 text-primary border border-primary/30";
 
-export const shellRailToggleClass = [
-  shellRailLinkBaseClass,
-  "border border-transparent",
-].join(" ");
+export const shellRailToggleClass = [shellRailLinkBaseClass, "border border-transparent"].join(" ");
 
 export const shellRailExpandedLinkClass = [
   "flex h-8 w-full min-w-0 items-center gap-2.5 rounded-full px-2.5 text-[13px] font-medium text-muted transition-[background-color,border-color,color,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-elevated hover:text-highlighted active:scale-[0.98]",

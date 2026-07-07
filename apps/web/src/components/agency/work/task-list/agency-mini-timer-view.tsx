@@ -10,8 +10,14 @@ type AgencyMiniTimerViewProps = {
 };
 
 export function AgencyMiniTimerView({ view }: AgencyMiniTimerViewProps) {
-  const { variant, isRunningForThisTask, elapsedLabel, disabled, isTimerMutationPending, onToggle } =
-    view;
+  const {
+    variant,
+    isRunningForThisTask,
+    elapsedLabel,
+    disabled,
+    isTimerMutationPending,
+    onToggle,
+  } = view;
 
   if (variant === "compact") {
     if (isRunningForThisTask) {

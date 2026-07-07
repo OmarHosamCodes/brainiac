@@ -35,7 +35,10 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
         </div>
       ) : null}
 
-      <div ref={view.scrollContainerRef} className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain">
+      <div
+        ref={view.scrollContainerRef}
+        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain"
+      >
         {view.isLoading ? (
           <div className="space-y-0">
             {[1, 2, 3, 4, 5].map((rowIndex) => (

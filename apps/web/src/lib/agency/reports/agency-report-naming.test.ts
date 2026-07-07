@@ -106,8 +106,5 @@ const headerMeta = formatReportHeaderMeta(
   },
   headerLabelContext,
 );
-assert.equal(
-  headerMeta.scopeLine,
-  "Q3 2026 · Jul 1 – Sep 30 · Acme · Sara · 142 entries",
-);
+assert.equal(headerMeta.scopeLine, "Q3 2026 · Jul 1 – Sep 30 · Acme · Sara · 142 entries");
 assert.equal(headerMeta.attributionLine, "Created by Sara");

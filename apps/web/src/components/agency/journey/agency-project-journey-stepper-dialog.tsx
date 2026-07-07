@@ -1,10 +1,5 @@
 import { AgencyProjectJourneyStepper } from "@/components/agency/journey/agency-project-journey-stepper";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 type AgencyProjectJourneyStepperDialogProps = {

@@ -288,15 +288,10 @@ export function findProjectTaskInCacheByTitle(
   for (const query of queryClient.getQueryCache().findAll()) {
     if (!isAgencyProjectTasksListQueryKey(query.queryKey, teamId)) continue;
     const data = queryClient.getQueryData(query.queryKey);
-    const pages = isInfiniteQueryData(data)
-      ? data.pages
-      : isListQueryData(data)
-        ? [data]
-        : [];
+    const pages = isInfiniteQueryData(data) ? data.pages : isListQueryData(data) ? [data] : [];
     for (const page of pages) {
       const task = pageItems(page).find(
-        (item) =>
-          item.projectId === projectId && normalizeTitleKey(item.title) === titleKey,
+        (item) => item.projectId === projectId && normalizeTitleKey(item.title) === titleKey,
       );
       if (task) return task;
     }
@@ -305,7 +300,10 @@ export function findProjectTaskInCacheByTitle(
   return null;
 }
 
-export async function refetchAgencyProjectTaskListQueries(teamId: string, _assigneeUserId?: string) {
+export async function refetchAgencyProjectTaskListQueries(
+  teamId: string,
+  _assigneeUserId?: string,
+) {
   const queryClient = getQueryClient();
   // Refetch in place (list + infinite). Do not invalidate: that drops infinite
   // pages and flashes the rail empty until the refetch finishes.
@@ -355,7 +353,10 @@ export function patchAllProjectTasksListData(
       // Infinite lists must keep { pages } shape; seeding a list shape breaks the rail.
       const seeded =
         current == null && isInfiniteProjectTasksQueryKey(queryKey)
-          ? { pages: [{ items: [] as AgencyProjectTask[], total: 0, page: 1, pageSize: 50 }], pageParams: [1] }
+          ? {
+              pages: [{ items: [] as AgencyProjectTask[], total: 0, page: 1, pageSize: 50 }],
+              pageParams: [1],
+            }
           : current;
       return apply(seeded, input);
     });
@@ -529,9 +530,7 @@ function reconcileCreatedTaskInPage(
       ...page,
       items: withoutOptimistic.map((task) => (task.id === created.id ? created : task)),
       total:
-        typeof page.total === "number" && hadOptimistic
-          ? Math.max(0, page.total - 1)
-          : page.total,
+        typeof page.total === "number" && hadOptimistic ? Math.max(0, page.total - 1) : page.total,
     };
   }
 
@@ -540,9 +539,7 @@ function reconcileCreatedTaskInPage(
       ...page,
       items: withoutOptimistic,
       total:
-        typeof page.total === "number" && hadOptimistic
-          ? Math.max(0, page.total - 1)
-          : page.total,
+        typeof page.total === "number" && hadOptimistic ? Math.max(0, page.total - 1) : page.total,
     };
   }
 
@@ -573,9 +570,7 @@ export function reconcileCreatedProjectTaskInCache(
       list: (data) => reconcileCreatedTaskInPage(data, optimisticIdValue, created, matches, true),
       infinite: (pages) => {
         const hasCreated = pages.some((page) =>
-          page.items.some(
-            (task) => task.id === created.id || task.id === optimisticIdValue,
-          ),
+          page.items.some((task) => task.id === created.id || task.id === optimisticIdValue),
         );
         return pages.map((page, index) =>
           reconcileCreatedTaskInPage(

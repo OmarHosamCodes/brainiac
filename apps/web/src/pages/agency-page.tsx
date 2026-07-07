@@ -34,11 +34,7 @@ import {
 } from "@/lib/agency-segments";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
-import {
-  shellContentInClass,
-  shellPageBodyClass,
-  shellPageClass,
-} from "@/lib/utils/app-shell-ui";
+import { shellContentInClass, shellPageBodyClass, shellPageClass } from "@/lib/utils/app-shell-ui";
 import { AGENCY_PAGE_SCROLL_ATTR, agencyWorkSurfaceShellClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 import { setAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
@@ -223,10 +219,7 @@ export function AgencyPage() {
         ) : null}
 
         <main
-          className={cn(
-            shellPageClass,
-            isWorkSegment && "min-h-0 flex-1 overflow-hidden pb-0",
-          )}
+          className={cn(shellPageClass, isWorkSegment && "min-h-0 flex-1 overflow-hidden pb-0")}
         >
           {isBooting ? (
             <LogoLoader label="Loading agency" />
@@ -251,41 +244,41 @@ export function AgencyPage() {
                 aria-labelledby={`agency-tab-${segment}`}
                 className={cn(isWorkSegment && "flex min-h-0 flex-1 flex-col")}
               >
-              <AgencySegmentFiltersRoot
-                segment={segment}
-                teamId={selectedTeamId}
-                selectedProjectId={selectedProjectId}
-                reportMode={searchParams.get("report")}
-                searchParams={searchParams}
-              >
-                {segment === "work" ? (
-                  <div className={agencyWorkSurfaceShellClass}>
-                    <AgencyWorkSurface
+                <AgencySegmentFiltersRoot
+                  segment={segment}
+                  teamId={selectedTeamId}
+                  selectedProjectId={selectedProjectId}
+                  reportMode={searchParams.get("report")}
+                  searchParams={searchParams}
+                >
+                  {segment === "work" ? (
+                    <div className={agencyWorkSurfaceShellClass}>
+                      <AgencyWorkSurface
+                        teamId={selectedTeamId}
+                        onSelectProject={openProject}
+                        onSegmentChange={handleSegmentChange}
+                      />
+                    </div>
+                  ) : null}
+                  {segment === "reports" && searchParams.get("report") ? (
+                    <AgencyReportCreatorSurface teamId={selectedTeamId} />
+                  ) : null}
+                  {segment === "management" ? (
+                    <AgencyManagementSurface teamId={selectedTeamId} />
+                  ) : null}
+                  {segment === "dashboard" ||
+                  segment === "clients" ||
+                  segment === "projects" ||
+                  (segment === "reports" && !searchParams.get("report")) ? (
+                    <AgencySegmentBody
+                      segment={segment}
                       teamId={selectedTeamId}
+                      selectedProjectId={selectedProjectId}
                       onSelectProject={openProject}
-                      onSegmentChange={handleSegmentChange}
+                      onCloseProject={closeProject}
                     />
-                  </div>
-                ) : null}
-                {segment === "reports" && searchParams.get("report") ? (
-                  <AgencyReportCreatorSurface teamId={selectedTeamId} />
-                ) : null}
-                {segment === "management" ? (
-                  <AgencyManagementSurface teamId={selectedTeamId} />
-                ) : null}
-                {segment === "dashboard" ||
-                segment === "clients" ||
-                segment === "projects" ||
-                (segment === "reports" && !searchParams.get("report")) ? (
-                  <AgencySegmentBody
-                    segment={segment}
-                    teamId={selectedTeamId}
-                    selectedProjectId={selectedProjectId}
-                    onSelectProject={openProject}
-                    onCloseProject={closeProject}
-                  />
-                ) : null}
-              </AgencySegmentFiltersRoot>
+                  ) : null}
+                </AgencySegmentFiltersRoot>
               </div>
             </div>
           )}

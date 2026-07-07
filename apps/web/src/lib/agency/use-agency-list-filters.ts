@@ -9,7 +9,11 @@ import {
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
 } from "@/lib/queries/agency";
-import { getTaskGroupKey, groupTasksByClient, groupTasksByProjectTitle } from "@/lib/utils/agency-task-utils";
+import {
+  getTaskGroupKey,
+  groupTasksByClient,
+  groupTasksByProjectTitle,
+} from "@/lib/utils/agency-task-utils";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
 
 export type AgencyListFiltersApplied = {
@@ -108,15 +112,18 @@ export function useAgencyListFilters({ teamId }: UseAgencyListFiltersOptions) {
         groupLabel: clientGroup.clientName,
         sections: projects
           .filter(
-            (project) => project.clientId === clientGroup.clientId && tasksByProject.has(project.id),
+            (project) =>
+              project.clientId === clientGroup.clientId && tasksByProject.has(project.id),
           )
           .sort((left, right) => left.name.localeCompare(right.name))
           .map((project) => ({
             sectionLabel: project.name,
-            options: groupTasksByProjectTitle(tasksByProject.get(project.id) ?? []).map((group) => ({
-              value: group.groupKey,
-              label: group.title,
-            })),
+            options: groupTasksByProjectTitle(tasksByProject.get(project.id) ?? []).map(
+              (group) => ({
+                value: group.groupKey,
+                label: group.title,
+              }),
+            ),
           })),
       };
     });
@@ -134,13 +141,7 @@ export function useAgencyListFilters({ teamId }: UseAgencyListFiltersOptions) {
       projectsSet: new Set(selectedProjectIds),
       tasksSet: new Set(selectedTaskIds),
     }),
-    [
-      filterTerm,
-      selectedClientIds,
-      selectedPeopleIds,
-      selectedProjectIds,
-      selectedTaskIds,
-    ],
+    [filterTerm, selectedClientIds, selectedPeopleIds, selectedProjectIds, selectedTaskIds],
   );
 
   const hasActiveFilters =

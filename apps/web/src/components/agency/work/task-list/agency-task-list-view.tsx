@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  AlertTriangle,
-  ChevronDown,
-  ListChecks,
-  Loader2,
-  PanelLeftOpen,
-} from "lucide-react";
+import { AlertTriangle, ChevronDown, ListChecks, Loader2, PanelLeftOpen } from "lucide-react";
 
 import { AgencyTaskVirtualList } from "@/components/agency/work/task-list/agency-task-virtual-list";
 import { AgencyTaskCreateInlineView } from "@/components/agency/work/task-list/agency-task-create-inline-view";
@@ -119,8 +113,7 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
   const deletingTaskIds = useAgencyOpsStore((state) => state.deletingTaskIds);
   const [deleteTarget, setDeleteTarget] = useState<AgencyProjectTask | null>(null);
 
-  const deleting =
-    deleteTarget !== null && deletingTaskIds.includes(deleteTarget.id);
+  const deleting = deleteTarget !== null && deletingTaskIds.includes(deleteTarget.id);
 
   async function confirmDelete() {
     if (!deleteTarget) return;
@@ -179,7 +172,12 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
             <p className="mt-1 text-xs text-muted">
               {getErrorMessage(view.activeTasksErrorMessage, "Try refreshing.")}
             </p>
-            <Button variant="secondary" size="sm" className="mt-3" onClick={view.onRetryActiveTasks}>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-3"
+              onClick={view.onRetryActiveTasks}
+            >
               Retry
             </Button>
           </div>
@@ -199,9 +197,7 @@ function AgencyTaskListReadyView({ view }: AgencyTaskListReadyViewProps) {
             teamId={view.teamId}
             selectedTaskId={view.selectedTaskId}
             highlightBlueprintId={view.recentlyCreatedBlueprintId}
-            isRowPending={(taskId) =>
-              view.isRowPending(taskId) || deletingTaskIds.includes(taskId)
-            }
+            isRowPending={(taskId) => view.isRowPending(taskId) || deletingTaskIds.includes(taskId)}
             onClientExpandedChange={view.onClientExpandedChange}
             onProjectExpandedChange={view.onProjectExpandedChange}
             onSelect={view.onSelect}

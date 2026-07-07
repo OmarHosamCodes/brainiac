@@ -4,10 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TaskThreadComposerUploadHandler } from "@/lib/agency/work/hooks/use-task-thread-messaging";
 import { useTaskThreadMessaging } from "@/lib/agency/work/hooks/use-task-thread-messaging";
 import type { AgencyVoiceRecorderViewModel } from "@/lib/agency/work/hooks/use-agency-voice-recorder";
-import type {
-  AgencyTaskProject,
-  AgencyTaskThreadMember,
-} from "@/lib/schemas/agency-work";
+import type { AgencyTaskProject, AgencyTaskThreadMember } from "@/lib/schemas/agency-work";
 import { useAgencyTaskThreadContextQuery } from "@/lib/queries/agency";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";

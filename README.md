@@ -78,28 +78,28 @@ Visit [http://localhost:7001](http://localhost:7001) for the web app. The API ru
 
 ## Product Surfaces
 
-| Surface | Route | Purpose |
-| ------- | ----- | ------- |
-| **Dashboard** | `/dashboard` | Infinite canvas for spatial knowledge work: nodes, blocks, and agent chat |
-| **Agency** | `/agency` | Time tracking, projects, clients, reports, and team operations |
-| **Marketplace** | `/marketplace` | Shared workspace node templates |
-| **Billing** | `/billing` | Subscription and plan management |
+| Surface         | Route          | Purpose                                                                   |
+| --------------- | -------------- | ------------------------------------------------------------------------- |
+| **Dashboard**   | `/dashboard`   | Infinite canvas for spatial knowledge work: nodes, blocks, and agent chat |
+| **Agency**      | `/agency`      | Time tracking, projects, clients, reports, and team operations            |
+| **Marketplace** | `/marketplace` | Shared workspace node templates                                           |
+| **Billing**     | `/billing`     | Subscription and plan management                                          |
 
 ---
 
 ## Tech Stack
 
-| Layer        | Technology                    | Purpose                                     |
-| ------------ | ----------------------------- | ------------------------------------------- |
-| **Frontend** | React 19 + Vite + Tailwind 4  | SPA with utility-first styling              |
-| **Backend**  | Hono + oRPC                   | Lightweight API with end-to-end type safety |
-| **Database** | PostgreSQL + Drizzle          | Type-safe ORM and relational data           |
-| **Runtime**  | Bun v1.3.10                   | Fast JavaScript runtime                     |
-| **Build**    | Turborepo                     | Optimized monorepo builds                   |
-| **Data**     | TanStack Query + oRPC client  | Typed queries and mutations in the UI       |
-| **Auth**     | Better-Auth                   | Session auth with Google OAuth              |
-| **Tooling**  | Oxlint + Oxfmt                | Fast Rust-based linting and formatting      |
-| **Types**    | TypeScript                    | Full type safety across the stack           |
+| Layer        | Technology                   | Purpose                                     |
+| ------------ | ---------------------------- | ------------------------------------------- |
+| **Frontend** | React 19 + Vite + Tailwind 4 | SPA with utility-first styling              |
+| **Backend**  | Hono + oRPC                  | Lightweight API with end-to-end type safety |
+| **Database** | PostgreSQL + Drizzle         | Type-safe ORM and relational data           |
+| **Runtime**  | Bun v1.3.10                  | Fast JavaScript runtime                     |
+| **Build**    | Turborepo                    | Optimized monorepo builds                   |
+| **Data**     | TanStack Query + oRPC client | Typed queries and mutations in the UI       |
+| **Auth**     | Better-Auth                  | Session auth with Google OAuth              |
+| **Tooling**  | Oxlint + Oxfmt               | Fast Rust-based linting and formatting      |
+| **Types**    | TypeScript                   | Full type safety across the stack           |
 
 ---
 
@@ -216,12 +216,12 @@ See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed workflows and troubleshootin
 
 Some features need additional infrastructure beyond PostgreSQL:
 
-| Service | Used for | Env var |
-| ------- | -------- | ------- |
-| **Redis** | Agency task thread live sync | `REDIS_URL` |
-| **S3-compatible storage** | Agency task attachments | `S3_*` |
-| **OpenRouter** | AI agent | `OPENROUTER_API_KEY` |
-| **Polar** | Billing | `POLAR_*` |
+| Service                   | Used for                     | Env var              |
+| ------------------------- | ---------------------------- | -------------------- |
+| **Redis**                 | Agency task thread live sync | `REDIS_URL`          |
+| **S3-compatible storage** | Agency task attachments      | `S3_*`               |
+| **OpenRouter**            | AI agent                     | `OPENROUTER_API_KEY` |
+| **Polar**                 | Billing                      | `POLAR_*`            |
 
 See `.env.example` and `apps/server/.env.example` for the full list.
 

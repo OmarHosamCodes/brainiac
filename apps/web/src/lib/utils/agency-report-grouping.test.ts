@@ -6,7 +6,9 @@ import {
   type AgencyReportEntry,
 } from "@/lib/utils/agency-report-grouping";
 
-function makeEntry(overrides: Partial<AgencyReportEntry> & Pick<AgencyReportEntry, "id">): AgencyReportEntry {
+function makeEntry(
+  overrides: Partial<AgencyReportEntry> & Pick<AgencyReportEntry, "id">,
+): AgencyReportEntry {
   return {
     teamId: "team-1",
     userId: "user-1",

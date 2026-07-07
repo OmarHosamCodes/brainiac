@@ -1,13 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import {
-  checkRegression,
-  computeRouteScore,
-  formatCls,
-  formatMs,
-  scoreToGrade,
-} from "./score.mjs";
+import { checkRegression, computeRouteScore, formatCls, formatMs, scoreToGrade } from "./score.mjs";
 
 /**
  * @param {{
@@ -173,7 +167,9 @@ export function buildReport(input) {
         failures.push(`${route.displayPath}: bundle over budget`);
       }
       if (regressionIssues.length > 0) {
-        failures.push(`${route.displayPath}: regressed vs baseline (${regressionIssues.join(", ")})`);
+        failures.push(
+          `${route.displayPath}: regressed vs baseline (${regressionIssues.join(", ")})`,
+        );
       }
       if (targetIssues.length > 0) {
         failures.push(`${route.displayPath}: target miss (${targetIssues.join(", ")})`);

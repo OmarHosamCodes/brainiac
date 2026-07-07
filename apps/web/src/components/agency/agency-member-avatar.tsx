@@ -24,13 +24,7 @@ export function AgencyMemberAvatar({
   const { box, text } = sizeClasses[size];
 
   if (avatarUrl) {
-    return (
-      <img
-        src={avatarUrl}
-        alt=""
-        className={cn(box, "shrink-0 object-cover", className)}
-      />
-    );
+    return <img src={avatarUrl} alt="" className={cn(box, "shrink-0 object-cover", className)} />;
   }
 
   return (

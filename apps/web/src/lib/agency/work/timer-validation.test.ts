@@ -37,9 +37,7 @@ describe("canStopAgencyTimer", () => {
     expect(canStopAgencyTimer({ activeTimer, description: "Work", selectedTask: null })).toBe(
       false,
     );
-    expect(
-      canStopAgencyTimer({ activeTimer, description: "Work", selectedTask: task }),
-    ).toBe(true);
+    expect(canStopAgencyTimer({ activeTimer, description: "Work", selectedTask: task })).toBe(true);
   });
 
   it("allows stop when active timer already has a task", () => {

@@ -55,8 +55,7 @@ export function useAgencyPageScrollMargin(listRef: RefObject<HTMLElement | null>
 }
 
 /** Work surface fills the agency page body so nested rails scroll independently. */
-export const agencyWorkSurfaceShellClass =
-  "flex h-full min-h-0 flex-1 flex-col overflow-hidden";
+export const agencyWorkSurfaceShellClass = "flex h-full min-h-0 flex-1 flex-col overflow-hidden";
 
 export const agencyLabelClass = shellLabelClass;
 
@@ -100,10 +99,9 @@ export const agencyTaskRailSummaryMetricClass = "flex items-center gap-1.5 text-
 
 export const agencyTaskRailSummaryLabelClass = "text-muted";
 
-export const agencyTaskRailSummaryValueClass = [
-  agencyMetricClass,
-  "text-xs font-semibold",
-].join(" ");
+export const agencyTaskRailSummaryValueClass = [agencyMetricClass, "text-xs font-semibold"].join(
+  " ",
+);
 
 export const agencyTaskRailSummaryDividerClass = "h-3 w-px shrink-0 bg-default";
 
@@ -137,8 +135,7 @@ export const agencyTaskRowCheckboxClass = [
   "motion-reduce:transition-none",
 ].join(" ");
 
-export const agencyTaskRowCheckboxCheckedClass =
-  "border-highlighted bg-highlighted text-inverted";
+export const agencyTaskRowCheckboxCheckedClass = "border-highlighted bg-highlighted text-inverted";
 
 export const agencyTaskRowClass = [
   "transition-[background-color,opacity,transform] duration-200 motion-reduce:transition-none",
@@ -157,8 +154,7 @@ export const agencySearchHighlightMarkClass = "agency-search-highlight-mark";
 export const agencyTaskRowNeedsDescriptionClass = "bg-warning/5";
 
 /** Time column beside the task rail — stacks tracker and log as separate panels. */
-export const agencyTimePaneStackClass =
-  "flex min-h-0 flex-1 flex-col gap-3 overflow-hidden";
+export const agencyTimePaneStackClass = "flex min-h-0 flex-1 flex-col gap-3 overflow-hidden";
 
 export const agencyTimeTrackerPanelClass =
   "shrink-0 overflow-hidden rounded-xl border border-default bg-default";

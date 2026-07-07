@@ -46,7 +46,13 @@ export function AgencySegmentBody({
       );
     }
     if (surfaceFilters.kind === "list") {
-      return <AgencyProjectsTable teamId={teamId} filters={surfaceFilters.applied} onSelect={onSelectProject} />;
+      return (
+        <AgencyProjectsTable
+          teamId={teamId}
+          filters={surfaceFilters.applied}
+          onSelect={onSelectProject}
+        />
+      );
     }
   }
 

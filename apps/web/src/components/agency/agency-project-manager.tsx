@@ -123,7 +123,9 @@ export function AgencyProjectManager({ teamId }: AgencyProjectManagerProps) {
             <h3 className="text-sm font-semibold text-highlighted">
               Projects
               {selectedClient ? (
-                <span className="ml-1 text-xs font-normal text-muted">for {selectedClient.name}</span>
+                <span className="ml-1 text-xs font-normal text-muted">
+                  for {selectedClient.name}
+                </span>
               ) : null}
             </h3>
             {selectedClientId ? (

@@ -1,0 +1,49 @@
+---
+description: Testing conventions — Bun test for unit logic, Bruno for API integration
+alwaysApply: false
+---
+
+# Testing Conventions
+
+## Unit tests (Bun test)
+
+Co-located `*.test.ts` files next to the code they test. Focus on pure logic — no component render tests.
+
+```bash
+bun test packages/api/src/billing.test.ts
+bun test apps/web/src/lib/utils/agency-query-cache.test.ts
+```
+
+```typescript
+import { describe, expect, test } from "bun:test";
+
+describe("myUtil", () => {
+  test("handles edge case", () => {
+    expect(myUtil(input)).toBe(expected);
+  });
+});
+```
+
+**New non-trivial logic ships with one small test** — the smallest thing that fails if the logic breaks.
+
+## API integration (Bruno)
+
+```bash
+bun run test:api:bruno        # local
+bun run test:api:bruno:ci     # CI
+```
+
+Tests live in `tests/bruno/brainiac-api/`.
+
+## What we don't test here
+
+- No Playwright E2E suite (Playwright is used for perf benchmarks only: `bun run perf`)
+- No component rendering tests — test the logic, not the DOM
+
+## Before PR
+
+```bash
+bun run check
+bun run check-types
+bun test <path-to-new-test>   # if you added logic
+```

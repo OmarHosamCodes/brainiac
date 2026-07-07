@@ -17,7 +17,8 @@ const baseTask = {
 };
 
 function task(
-  overrides: Partial<AgencyProjectTask> & Pick<AgencyProjectTask, "id" | "projectId" | "title" | "taskKind">,
+  overrides: Partial<AgencyProjectTask> &
+    Pick<AgencyProjectTask, "id" | "projectId" | "title" | "taskKind">,
 ): AgencyProjectTask {
   return { ...baseTask, assignees: [], ...overrides };
 }

@@ -59,10 +59,7 @@ export function AgencyProjectsVirtualTable({
         <div className="px-3 py-2.5 text-right font-bold">Hours · this week</div>
       </div>
 
-      <div
-        className="relative min-w-[40rem]"
-        style={{ height: `${virtualizer.getTotalSize()}px` }}
-      >
+      <div className="relative min-w-[40rem]" style={{ height: `${virtualizer.getTotalSize()}px` }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const project = projects[virtualRow.index];
           if (!project) return null;
@@ -117,11 +114,9 @@ export function AgencyProjectsVirtualTable({
                       }}
                     />
                   </div>
-                        <span className="w-8 shrink-0 text-right text-[11px] text-muted">
-                          {budgetsByProject.get(project.id)
-                            ? `${budgetPctFor(project.id)}%`
-                            : "Not set"}
-                        </span>
+                  <span className="w-8 shrink-0 text-right text-[11px] text-muted">
+                    {budgetsByProject.get(project.id) ? `${budgetPctFor(project.id)}%` : "Not set"}
+                  </span>
                 </div>
               </div>
               <div className="px-3 py-3 text-right" role="cell">

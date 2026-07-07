@@ -526,8 +526,7 @@ export const useAgencyTaskMessagesStore = create<AgencyTaskMessagesState>((set) 
       optimistic().restoreTaskMessages(payload.teamId, payload.taskId, createEmptyListOverlay());
       await invalidateTaskMessageQueries(payload.teamId, payload.taskId);
       set({
-        lastError:
-          processingError instanceof Error ? processingError.message : "Agent error.",
+        lastError: processingError instanceof Error ? processingError.message : "Agent error.",
       });
       throw processingError;
     } finally {

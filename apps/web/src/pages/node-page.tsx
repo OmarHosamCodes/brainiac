@@ -11,9 +11,7 @@ import { AppShellPortal } from "@/components/app-shell-portal";
 import { useWorkspaceNodePage } from "@/lib/workspace/use-node-page";
 import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
 import { useAppShellStore } from "@/stores/app-shell";
-import {
-  shellContentInClass,
-} from "@/lib/utils/app-shell-ui";
+import { shellContentInClass } from "@/lib/utils/app-shell-ui";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
@@ -27,29 +25,29 @@ export function NodePage() {
     <AppShellPage subtitle={page.node?.title ?? "Node"} slots={["dock"]}>
       <div className="relative h-full w-full overflow-hidden">
         {!isBooting ? (
-        <AppShellPortal targetId="app-shell-dock-content">
-          {page.node ? (
-            <div className="flex h-full min-h-0 flex-col">
-              <DashboardAgentChatPanel
-                nodes={page.agentChatNodes}
-                activeTabId={page.activeTabId}
-                scopeKind="blocks"
-                onClose={() => setAgentDockOpen(false)}
-                scopeBadges={
-                  page.agentContextBadgeItems.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5">
-                      {page.agentContextBadgeItems.map((item) => (
-                        <Badge key={item.id} variant="secondary" className="rounded-full">
-                          {item.label}
-                        </Badge>
-                      ))}
-                    </div>
-                  ) : null
-                }
-              />
-            </div>
-          ) : null}
-        </AppShellPortal>
+          <AppShellPortal targetId="app-shell-dock-content">
+            {page.node ? (
+              <div className="flex h-full min-h-0 flex-col">
+                <DashboardAgentChatPanel
+                  nodes={page.agentChatNodes}
+                  activeTabId={page.activeTabId}
+                  scopeKind="blocks"
+                  onClose={() => setAgentDockOpen(false)}
+                  scopeBadges={
+                    page.agentContextBadgeItems.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {page.agentContextBadgeItems.map((item) => (
+                          <Badge key={item.id} variant="secondary" className="rounded-full">
+                            {item.label}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : null
+                  }
+                />
+              </div>
+            ) : null}
+          </AppShellPortal>
         ) : null}
 
         {page.workspaceQuery.status === "error" ? (
@@ -58,9 +56,7 @@ export function NodePage() {
           </div>
         ) : null}
 
-        {isBooting ? (
-          <LogoLoader label="Loading node" />
-        ) : null}
+        {isBooting ? <LogoLoader label="Loading node" /> : null}
 
         {!isBooting && page.node && page.activeTab && page.editorContext ? (
           <div className={cn("h-full", shellContentInClass)}>

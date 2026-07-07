@@ -135,10 +135,7 @@ async function startTeamSubscription(teamId: string, generation: number) {
   connection.abortController = new AbortController();
   const subscriptionSignal = connection.abortController.signal;
 
-  updateConnectionState(
-    teamId,
-    connection.reconnectAttempt > 0 ? "reconnecting" : "connecting",
-  );
+  updateConnectionState(teamId, connection.reconnectAttempt > 0 ? "reconnecting" : "connecting");
 
   let websocket: WebSocket | null = null;
   let onWebSocketClose: (() => void) | null = null;
