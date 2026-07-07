@@ -46,6 +46,7 @@ export type AgencyProjectTasksFilters = {
   search?: string;
   page?: number;
   pageSize?: number;
+  enabled?: boolean;
 };
 
 export type AgencyProjectTasksListPage = {
@@ -409,7 +410,8 @@ export function useAgencyProjectTasksQuery(
   const queryEnabled =
     Boolean(teamId) &&
     (stableFilters.projectId === undefined || Boolean(stableFilters.projectId)) &&
-    (stableFilters.assigneeUserId === undefined || Boolean(stableFilters.assigneeUserId));
+    (stableFilters.assigneeUserId === undefined || Boolean(stableFilters.assigneeUserId)) &&
+    (filters.enabled === undefined || filters.enabled);
 
   const query = useQuery(
     withAgencySyncQueryOptions(
