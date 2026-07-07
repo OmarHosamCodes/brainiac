@@ -1,3 +1,4 @@
+import { ORPCError } from "@orpc/server";
 import { workspaceTeamRoleSchema } from "@brainiac/workspace";
 import { z } from "zod";
 
@@ -41,7 +42,6 @@ export const teamRouter = {
     const existing = await listUserTeams(context.session.user.id);
 
     if (existing.length >= billing.limits.teams) {
-      const { ORPCError } = await import("@orpc/server");
       throw new ORPCError("FORBIDDEN", {
         message: `Your ${billing.tier} plan allows up to ${billing.limits.teams} team(s)`,
         data: { limit: billing.limits.teams, current: existing.length },

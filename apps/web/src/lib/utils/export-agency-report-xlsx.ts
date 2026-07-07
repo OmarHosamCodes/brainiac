@@ -76,6 +76,7 @@ export async function exportAgencyReportXlsx({
   entryOverrides,
   visibleFields,
 }: ExportAgencyReportXlsxInput): Promise<{ fileName: string; blob: Blob }> {
+  // ponytail: dynamic import keeps exceljs off the main bundle; upgrade path is a dedicated export chunk route
   const ExcelJS = await import("exceljs");
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Report");

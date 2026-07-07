@@ -1,3 +1,4 @@
+import { assertNever } from "@brainiac/config/assert-never";
 import type { LucideIcon } from "lucide-react";
 import { File, FileText, Globe, Image, Music, Video } from "lucide-react";
 
@@ -10,17 +11,20 @@ export type AttachmentMediaKind =
   | "other"
   | "link";
 
-export type AttachmentMetadataLike = {
-  imageWidth?: number;
-  imageHeight?: number;
-  videoWidth?: number;
-  videoHeight?: number;
-  durationSeconds?: number;
-  fileExtension?: string;
-  lastModified?: string;
-  mediaKind?: AttachmentMediaKind;
-  sourceUrl?: string;
-} | null | undefined;
+export type AttachmentMetadataLike =
+  | {
+      imageWidth?: number;
+      imageHeight?: number;
+      videoWidth?: number;
+      videoHeight?: number;
+      durationSeconds?: number;
+      fileExtension?: string;
+      lastModified?: string;
+      mediaKind?: AttachmentMediaKind;
+      sourceUrl?: string;
+    }
+  | null
+  | undefined;
 
 export type AgencyAttachmentLike = {
   fileName: string;
@@ -71,7 +75,9 @@ export function collectClipboardFiles(dataTransfer: DataTransfer | null | undefi
     .filter((file): file is File => file !== null && file.size > 0);
 }
 
-export function getMediaKindFromMetadata(metadata: AttachmentMetadataLike): AttachmentMediaKind | null {
+export function getMediaKindFromMetadata(
+  metadata: AttachmentMetadataLike,
+): AttachmentMediaKind | null {
   if (!metadata?.mediaKind) return null;
   return metadata.mediaKind;
 }
@@ -130,7 +136,8 @@ export function getAttachmentMediaKind(attachment: AgencyAttachmentLike): Attach
 }
 
 export function getAttachmentIcon(attachment: AgencyAttachmentLike): LucideIcon {
-  switch (getAttachmentMediaKind(attachment)) {
+  const kind = getAttachmentMediaKind(attachment);
+  switch (kind) {
     case "link":
       return Globe;
     case "image":
@@ -144,6 +151,8 @@ export function getAttachmentIcon(attachment: AgencyAttachmentLike): LucideIcon 
     case "archive":
     case "other":
       return File;
+    default:
+      return assertNever(kind);
   }
 }
 
@@ -174,12 +183,8 @@ export function selectAttachmentVariant(
 
   if (fileAttachments.length >= 4) return "list";
 
-  const hasNonImage = fileAttachments.some(
-    (a) => !isImageAttachment(a) && !isVideoAttachment(a),
-  );
-  const hasLinkOrDoc = fileAttachments.some(
-    (a) => isLinkAttachment(a) || isDocumentAttachment(a),
-  );
+  const hasNonImage = fileAttachments.some((a) => !isImageAttachment(a) && !isVideoAttachment(a));
+  const hasLinkOrDoc = fileAttachments.some((a) => isLinkAttachment(a) || isDocumentAttachment(a));
 
   if (hasLinkOrDoc) return "list";
   if (hasNonImage && fileAttachments.length >= 2) return "list";

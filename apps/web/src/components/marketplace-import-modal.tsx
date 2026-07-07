@@ -1,3 +1,4 @@
+import { assertNever } from "@brainiac/config/assert-never";
 import {
   WORKSPACE_NODE_LIMIT,
   createDefaultWorkspaceTab,
@@ -40,8 +41,10 @@ function kindIcon(kind: WorkspaceMarketplaceItem["payload"]["kind"] | null) {
       return Layout;
     case "block":
       return Component;
-    default:
+    case null:
       return HelpCircle;
+    default:
+      return assertNever(kind);
   }
 }
 
@@ -53,8 +56,10 @@ function kindIconClass(kind: WorkspaceMarketplaceItem["payload"]["kind"] | null)
       return "bg-success/10 text-success";
     case "block":
       return "bg-warning/10 text-warning";
-    default:
+    case null:
       return "bg-muted text-muted";
+    default:
+      return assertNever(kind);
   }
 }
 
@@ -66,8 +71,10 @@ function kindBadgeVariant(kind: WorkspaceMarketplaceItem["payload"]["kind"] | nu
       return "success" as const;
     case "block":
       return "warning" as const;
-    default:
+    case null:
       return "secondary" as const;
+    default:
+      return assertNever(kind);
   }
 }
 
@@ -340,7 +347,7 @@ export function MarketplaceImportModal({
         insertBlock();
         break;
       default:
-        break;
+        assertNever(kind);
     }
   }
 

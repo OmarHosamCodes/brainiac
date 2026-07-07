@@ -26,6 +26,7 @@ import {
   type WorkspaceTeamRole,
 } from "@brainiac/db/schema";
 import { createWorkspaceId } from "@brainiac/workspace";
+import { env } from "@brainiac/env/server";
 import { and, eq } from "drizzle-orm";
 import { ensureCredentialAccount } from "./lib/ensure-credential-account";
 import {
@@ -34,15 +35,13 @@ import {
   resolveAgencySeedScale,
   type AgencySeedScale,
 } from "./lib/seed-agency-scale";
-type SeedUserKey = import("./lib/seed-agency-types").SeedUserKey;
+import type { MemberRecord, SeedActor, SeedContext, SeedUserKey } from "./lib/seed-agency-types";
 
 type SeedUserDefinition = {
   key: SeedUserKey;
   name: string;
   email: string;
 };
-
-type SeedActor = import("./lib/seed-agency-types").SeedActor;
 
 const SEED_USERS: SeedUserDefinition[] = [
   { key: "founder", name: "Avery Founder", email: "founder@brainiac.test" },
@@ -59,13 +58,8 @@ const SEED_ATTACHMENT_BYTES = {
     "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNk+M9Qz0AEYBxVSF+FABJADbad3QAAAABJRU5ErkJggg==",
     "base64",
   ),
-  wav: Buffer.from(
-    "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=",
-    "base64",
-  ),
-  pdf: Buffer.from(
-    "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF",
-  ),
+  wav: Buffer.from("UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=", "base64"),
+  pdf: Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"),
   zip: Buffer.from([0x50, 0x4b, 0x05, 0x06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 } as const;
 
@@ -95,8 +89,6 @@ async function uploadSeedAttachmentIfPossible(args: {
     console.warn(`Seed attachment upload skipped for ${args.fileName}:`, error);
   }
 }
-
-type MemberRecord = import("./lib/seed-agency-types").MemberRecord;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -433,8 +425,6 @@ async function manageMembers(
 // Agency data seeders
 // ---------------------------------------------------------------------------
 
-type SeedContext = import("./lib/seed-agency-types").SeedContext;
-
 type ClientDef = {
   id: string;
   name: string;
@@ -594,8 +584,7 @@ async function buildShowcaseThreadMessages(ctx: SeedContext): Promise<SeedMessag
         {
           id: createWorkspaceId("agency-attachment"),
           fileName: "asset-tracker.xlsx",
-          mimeType:
-            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           sizeBytes: SEED_ATTACHMENT_BYTES.zip.byteLength,
           metadata: { mediaKind: "document", fileExtension: "xlsx" },
           buffer: SEED_ATTACHMENT_BYTES.zip,
@@ -722,7 +711,7 @@ async function buildShowcaseThreadMessages(ctx: SeedContext): Promise<SeedMessag
         "Here's how the thread attachments map to layouts:",
         "",
         "```typescript",
-        "const variant = selectAttachmentVariant(attachments, \"message\");",
+        'const variant = selectAttachmentVariant(attachments, "message");',
         "// image-only -> grid",
         "// links / 4+ files -> list",
         "// small mixed sets -> inline",
@@ -1139,9 +1128,7 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
 
   s.message("Seeding tasks, threads, and messages...");
   for (const t of data.tasks) {
-    const taskMessages = t.showcaseThread
-      ? await buildShowcaseThreadMessages(ctx)
-      : t.messages;
+    const taskMessages = t.showcaseThread ? await buildShowcaseThreadMessages(ctx) : t.messages;
     const firstMessageAt = taskMessages[0]?.createdAt ?? now;
     const lastMessageAt = taskMessages[taskMessages.length - 1]?.createdAt ?? now;
 
@@ -1450,7 +1437,7 @@ function parseAgencyCli(argv: string[]): AgencyCliOptions {
   let yes = false;
   let teamId: string | null = null;
   let help = false;
-  let scale = resolveAgencySeedScale(process.env.BRAINIAC_SEED_SCALE);
+  let scale = resolveAgencySeedScale(env.BRAINIAC_SEED_SCALE);
 
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
@@ -1510,7 +1497,7 @@ async function main() {
 
   intro("Brainiac Agency Seed");
 
-  const password = process.env.BRAINIAC_SEED_PASSWORD?.trim() || DEFAULT_SEED_PASSWORD;
+  const password = env.BRAINIAC_SEED_PASSWORD?.trim() || DEFAULT_SEED_PASSWORD;
 
   // 1. Ensure seed users exist
   const actors = await ensureSeedUsers(password);

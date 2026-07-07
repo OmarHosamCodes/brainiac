@@ -3,7 +3,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { authClient } from "@/lib/auth-client";
-import { orpc } from "@/lib/orpc";
+import { orpc, orpcClient } from "@/lib/orpc";
 
 export const DEFAULT_BILLING_LIMITS: TierLimits = {
   workspaceNodes: 10,
@@ -16,7 +16,7 @@ export const DEFAULT_BILLING_LIMITS: TierLimits = {
   marketplacePublish: false,
 };
 
-type BillingState = Awaited<ReturnType<typeof import("@/lib/orpc").orpcClient.billing.state>>;
+type BillingState = Awaited<ReturnType<typeof orpcClient.billing.state>>;
 
 export function billingStateQueryOptions(authEnabled: boolean) {
   return {

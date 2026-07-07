@@ -25,7 +25,22 @@ import {
 } from "@brainiac/db/schema";
 import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
-import { and, asc, count, desc, eq, exists, gte, inArray, isNull, lt, lte, or, sql, sum } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  or,
+  sql,
+  sum,
+} from "drizzle-orm";
 
 import {
   createTaskAttachmentUploadToken,
@@ -42,7 +57,13 @@ import {
   notifyTaskMessage,
   notifyTimerActivity,
 } from "../notifications/fanout";
-import { liveUpdatedAt, publishAgencyJourneyStepUpdated, publishAgencyLiveEvent, publishAgencyTaskUpdated, publishAgencyTimerUpdated } from "./live";
+import {
+  liveUpdatedAt,
+  publishAgencyJourneyStepUpdated,
+  publishAgencyLiveEvent,
+  publishAgencyTaskUpdated,
+  publishAgencyTimerUpdated,
+} from "./live";
 import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
 import { requireTeamMembership } from "./membership";
 
@@ -385,16 +406,6 @@ function getDurationSeconds(startedAt: Date, endedAt: Date) {
   return Math.max(1, Math.floor((endedAt.getTime() - startedAt.getTime()) / 1_000));
 }
 
-function getWeekStartUtc(anchor: Date) {
-  const utcDay = anchor.getUTCDay();
-  const diff = utcDay === 0 ? -6 : 1 - utcDay;
-  const start = new Date(
-    Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate() + diff, 0, 0, 0, 0),
-  );
-
-  return start;
-}
-
 /** Local calendar date (YYYY-MM-DD) for an instant using JS getTimezoneOffset() semantics. */
 function localDateKeyFromInstant(instant: Date, utcOffsetMinutes: number): string {
   const localMs = instant.getTime() - utcOffsetMinutes * 60_000;
@@ -694,10 +705,7 @@ async function upsertTaskMemberStatus(
       updatedAt: now,
     })
     .onConflictDoUpdate({
-      target: [
-        agencyOpsProjectTaskMemberStatus.taskId,
-        agencyOpsProjectTaskMemberStatus.userId,
-      ],
+      target: [agencyOpsProjectTaskMemberStatus.taskId, agencyOpsProjectTaskMemberStatus.userId],
       set: {
         status,
         completedAt: status === "done" ? now : null,
@@ -1356,7 +1364,9 @@ async function getJourneyRowForProject(teamId: string, projectId: string) {
     })
     .from(agencyOpsProjectJourney)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectJourney.projectId))
-    .where(and(eq(agencyOpsProjectJourney.projectId, projectId), eq(agencyOpsProject.teamId, teamId)))
+    .where(
+      and(eq(agencyOpsProjectJourney.projectId, projectId), eq(agencyOpsProject.teamId, teamId)),
+    )
     .limit(1);
 
   if (!row) {
@@ -1488,7 +1498,9 @@ async function syncJourneyStepStatuses(teamId: string, projectId: string) {
     .where(eq(agencyOpsProjectJourneyStep.journeyId, journey.id))
     .orderBy(asc(agencyOpsProjectJourneyStep.sortOrder));
 
-  const taskIds = steps.map((step) => step.taskId).filter((taskId): taskId is string => Boolean(taskId));
+  const taskIds = steps
+    .map((step) => step.taskId)
+    .filter((taskId): taskId is string => Boolean(taskId));
   const tasksById = new Map<string, ProjectTaskRow>();
   if (taskIds.length > 0) {
     const taskRows = await db
@@ -1518,7 +1530,9 @@ async function syncJourneyStepStatuses(teamId: string, projectId: string) {
     changed = true;
     if (
       nextStatus === "done" &&
-      (step.stepKind === "milestone" || step.stepKind === "checkpoint" || step.stepKind === "destination")
+      (step.stepKind === "milestone" ||
+        step.stepKind === "checkpoint" ||
+        step.stepKind === "destination")
     ) {
       completedMilestones.push({
         journeyStepId: step.id,
@@ -1588,9 +1602,7 @@ async function maybeSyncJourneyForTask(teamId: string, taskId: string) {
       eq(agencyOpsProjectJourney.id, agencyOpsProjectJourneyStep.journeyId),
     )
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectJourney.projectId))
-    .where(
-      and(eq(agencyOpsProjectJourneyStep.taskId, taskId), eq(agencyOpsProject.teamId, teamId)),
-    )
+    .where(and(eq(agencyOpsProjectJourneyStep.taskId, taskId), eq(agencyOpsProject.teamId, teamId)))
     .limit(1);
 
   if (!step) return;
@@ -1748,9 +1760,7 @@ async function resolveJourneyStepIdForTask(teamId: string, taskId: string | null
       eq(agencyOpsProjectJourney.id, agencyOpsProjectJourneyStep.journeyId),
     )
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectJourney.projectId))
-    .where(
-      and(eq(agencyOpsProjectJourneyStep.taskId, taskId), eq(agencyOpsProject.teamId, teamId)),
-    )
+    .where(and(eq(agencyOpsProjectJourneyStep.taskId, taskId), eq(agencyOpsProject.teamId, teamId)))
     .limit(1);
 
   return step?.id ?? null;
@@ -2131,10 +2141,7 @@ export async function previewRemoveAgencyProjectJourneyStep(
     .select({ entryCount: count() })
     .from(agencyOpsTimeEntry)
     .where(
-      and(
-        eq(agencyOpsTimeEntry.journeyStepId, step.id),
-        isNull(agencyOpsTimeEntry.deletedAt),
-      ),
+      and(eq(agencyOpsTimeEntry.journeyStepId, step.id), isNull(agencyOpsTimeEntry.deletedAt)),
     );
 
   return {
@@ -2197,9 +2204,7 @@ export async function removeAgencyProjectJourneyStep(
         .where(eq(agencyOpsProjectTask.id, step.taskId));
     }
 
-    await tx
-      .delete(agencyOpsProjectJourneyStep)
-      .where(eq(agencyOpsProjectJourneyStep.id, step.id));
+    await tx.delete(agencyOpsProjectJourneyStep).where(eq(agencyOpsProjectJourneyStep.id, step.id));
 
     await tx
       .update(agencyOpsProjectJourney)
@@ -2294,8 +2299,7 @@ export async function listAgencyProjectTasks(
       status === "open" || status === "in_progress" || status === "done",
   );
   const activeMemberStatuses = memberStatusList.filter(
-    (status): status is "open" | "in_progress" =>
-      status === "open" || status === "in_progress",
+    (status): status is "open" | "in_progress" => status === "open" || status === "in_progress",
   );
   const wantsDoneByCompletion =
     filterByMemberStatus && memberStatusList.includes("done") && activeMemberStatuses.length === 0;
@@ -2352,9 +2356,7 @@ export async function listAgencyProjectTasks(
           eq(agencyOpsProjectTaskAssignee.userId, input.assigneeUserId),
         ),
       );
-    filters.push(
-      or(eq(agencyOpsProjectTask.assignedToTeam, true), exists(assigneeSubquery))!,
-    );
+    filters.push(or(eq(agencyOpsProjectTask.assignedToTeam, true), exists(assigneeSubquery))!);
   }
   if (searchTerm) {
     filters.push(sql`lower(${agencyOpsProjectTask.title}) like ${`%${searchTerm}%`}`);
@@ -2590,7 +2592,6 @@ export async function completeAgencyProjectTaskForMember(
     taskId: string;
   },
 ) {
-
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
   const current = await getTaskByIdForTeam(input.teamId, input.taskId);
@@ -2635,10 +2636,7 @@ export async function completeAgencyProjectTaskForMember(
       updatedAt: now,
     })
     .onConflictDoUpdate({
-      target: [
-        agencyOpsProjectTaskMemberStatus.taskId,
-        agencyOpsProjectTaskMemberStatus.userId,
-      ],
+      target: [agencyOpsProjectTaskMemberStatus.taskId, agencyOpsProjectTaskMemberStatus.userId],
       set: {
         status: "done",
         completionCount: sql`${agencyOpsProjectTaskMemberStatus.completionCount} + 1`,
@@ -2732,8 +2730,9 @@ export async function updateAgencyProjectTask(
 
   const current = await getTaskByIdForTeam(input.teamId, input.taskId);
   const previousAssigneeIds = new Set(
-    (await loadTaskAssignees([input.taskId])).get(input.taskId)?.map((assignee) => assignee.userId) ??
-      [],
+    (await loadTaskAssignees([input.taskId]))
+      .get(input.taskId)
+      ?.map((assignee) => assignee.userId) ?? [],
   );
 
   const title = input.title?.trim();
@@ -2792,7 +2791,10 @@ export async function updateAgencyProjectTask(
         updatedAt: now,
       })
       .where(
-        and(eq(agencyOpsProjectTask.teamId, input.teamId), eq(agencyOpsProjectTask.id, input.taskId)),
+        and(
+          eq(agencyOpsProjectTask.teamId, input.teamId),
+          eq(agencyOpsProjectTask.id, input.taskId),
+        ),
       )
       .returning(projectTaskColumns);
 
@@ -2814,14 +2816,20 @@ export async function updateAgencyProjectTask(
   const assigneesByTask = await loadTaskAssignees([updated.id]);
   const task = await buildProjectTaskRecord(updated, assigneesByTask.get(updated.id) ?? []);
 
-  if (input.status !== undefined || input.assigneeUserIds !== undefined || input.assignedToTeam !== undefined) {
+  if (
+    input.status !== undefined ||
+    input.assigneeUserIds !== undefined ||
+    input.assignedToTeam !== undefined
+  ) {
     await publishAgencyTaskUpdated(input.teamId, task);
   }
 
   if (nextAssigneeUserIds !== null || input.assignedToTeam === true) {
     const newlyAssigned = task.assignedToTeam
       ? []
-      : task.assignees.map((assignee) => assignee.userId).filter((id) => !previousAssigneeIds.has(id));
+      : task.assignees
+          .map((assignee) => assignee.userId)
+          .filter((id) => !previousAssigneeIds.has(id));
     if (task.assignedToTeam || newlyAssigned.length > 0) {
       await emitTaskAssignedNotification(
         actorUserId,

@@ -104,9 +104,9 @@ function printUsage() {
   );
   console.log("");
   console.log("Root workspace command:");
-  console.log("  pnpm db:import:clockify");
+  console.log("  bun run db:import:clockify");
   console.log(
-    "  pnpm db:import:clockify -- --dry-run --before 2026-06-25 --output-dir ../Clockify-Scrapper/output",
+    "  bun run db:import:clockify -- --dry-run --before 2026-06-25 --output-dir ../Clockify-Scrapper/output",
   );
 }
 
@@ -217,9 +217,7 @@ async function createNewTeam(): Promise<{
   return {
     teamId,
     teamName: teamName as string,
-    members: [
-      { userId: owner!.id, userName: owner!.name, userEmail: owner!.email, role: "owner" },
-    ],
+    members: [{ userId: owner!.id, userName: owner!.name, userEmail: owner!.email, role: "owner" }],
   };
 }
 
@@ -499,11 +497,7 @@ async function mapClockifyUsers(
       password = customPassword as string;
     }
 
-    const created = await createBrainiacUser(
-      clockifyMember.name,
-      clockifyMember.email,
-      password,
-    );
+    const created = await createBrainiacUser(clockifyMember.name, clockifyMember.email, password);
     await addTeamMember(teamId, created.id, "editor");
     s.stop(`Created ${created.email}`);
 
@@ -637,11 +631,7 @@ async function main() {
     return;
   }
 
-  const userIdByClockifyUserId = await mapClockifyUsers(
-    team.teamId,
-    selectedMembers,
-    team.members,
-  );
+  const userIdByClockifyUserId = await mapClockifyUsers(team.teamId, selectedMembers, team.members);
 
   printMappingSummary(selectedMembers, userIdByClockifyUserId);
 
@@ -654,7 +644,13 @@ async function main() {
     before: options.before ?? undefined,
   });
   const usedWorkspaceCatalog = (await loadWorkspaceCatalog(outputDir)) !== null;
-  printPreview(catalog, selectedMembers, userIdByClockifyUserId, options.before, usedWorkspaceCatalog);
+  printPreview(
+    catalog,
+    selectedMembers,
+    userIdByClockifyUserId,
+    options.before,
+    usedWorkspaceCatalog,
+  );
 
   const proceed = await confirm({
     message: options.dryRun

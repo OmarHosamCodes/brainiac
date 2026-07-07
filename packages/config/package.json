@@ -2,6 +2,10 @@
   "name": "@brainiac/config",
   "version": "0.0.0",
   "private": true,
+  "exports": {
+    "./assert-never": "./src/assert-never.ts",
+    "./tsconfig.base.json": "./tsconfig.base.json"
+  },
   "scripts": {
     "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"
   }

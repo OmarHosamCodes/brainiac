@@ -1,5 +1,6 @@
+import { assertNever } from "@brainiac/config/assert-never";
 import type { WorkspaceMarketplaceItem } from "@brainiac/workspace";
-import { Box, Component, Download, HelpCircle, Layout, Plus } from "lucide-react";
+import { Box, Component, Download, Layout, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,7 @@ function kindIcon(kind: WorkspaceMarketplaceItem["payload"]["kind"]) {
     case "block":
       return Component;
     default:
-      return HelpCircle;
+      return assertNever(kind);
   }
 }
 
@@ -33,7 +34,7 @@ function kindBadgeVariant(kind: WorkspaceMarketplaceItem["payload"]["kind"]) {
     case "block":
       return "warning" as const;
     default:
-      return "secondary" as const;
+      return assertNever(kind);
   }
 }
 
@@ -46,7 +47,7 @@ function kindIconClass(kind: WorkspaceMarketplaceItem["payload"]["kind"]) {
     case "block":
       return "bg-warning/10 text-warning";
     default:
-      return "bg-muted text-muted";
+      return assertNever(kind);
   }
 }
 

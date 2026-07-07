@@ -1,3 +1,4 @@
+import { assertNever } from "@brainiac/config/assert-never";
 import {
   cloneWorkspaceNodes,
   createDefaultWorkspaceTab,
@@ -424,10 +425,6 @@ function truncate(value: string, length = 240) {
 
 const BLOCK_CONTENT_PREVIEW_LENGTH = 180;
 const SEARCH_EXCERPT_LENGTH = 260;
-
-function assertNever(value: never): never {
-  throw new Error(`Unhandled workspace block type: ${JSON.stringify(value)}`);
-}
 
 type BlockPatchOperation = z.infer<typeof blockPatchOperationSchema>;
 type BlockPatchTarget = {
@@ -1376,6 +1373,8 @@ function describeBlockEditGuide(
             : "Keep definitionId aligned with a real custom block template on the node.",
         ],
       });
+    default:
+      return assertNever(block);
   }
 }
 
@@ -1760,6 +1759,8 @@ function collectBlockSearchDetails(
         ...collectPromptOutputFragments(block.outputHistory),
       ]);
     }
+    default:
+      return assertNever(block);
   }
 }
 
@@ -1905,6 +1906,8 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return `${block.invoices.length} receivables with filter ${block.filter}`;
     case "custom":
       return truncate(block.notes || block.latestAiOutput || JSON.stringify(block.values));
+    default:
+      return assertNever(block);
   }
 }
 

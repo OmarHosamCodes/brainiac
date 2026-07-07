@@ -1,7 +1,7 @@
 import { auth } from "@brainiac/auth";
 import { db } from "@brainiac/db";
 import { dashboardWorkspace, user, workspaceMarketplaceItem } from "@brainiac/db/schema";
-import { primaryCorsOrigin } from "@brainiac/env/server";
+import { env, primaryCorsOrigin } from "@brainiac/env/server";
 import {
   cloneWorkspaceNodes,
   createWorkspace2x2MatrixBlock,
@@ -316,7 +316,7 @@ function parseCliArgs(argv: string[]): SeedCliOptions {
   let email: string | null = null;
   let help = false;
   let scale: SeedCliOptions["scale"] =
-    process.env.BRAINIAC_SEED_SCALE?.trim().toLowerCase() === "massive" ? "massive" : "default";
+    env.BRAINIAC_SEED_SCALE === "massive" ? "massive" : "default";
 
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
@@ -1633,7 +1633,7 @@ async function seedExistingUser(email: string, content: SeedContent, now: Date) 
 }
 
 async function seedDemoUsers(content: SeedContent, now: Date, scale: SeedCliOptions["scale"]) {
-  const password = process.env.BRAINIAC_SEED_PASSWORD?.trim() || DEFAULT_SEED_PASSWORD;
+  const password = env.BRAINIAC_SEED_PASSWORD?.trim() || DEFAULT_SEED_PASSWORD;
 
   console.log("Rebuilding reserved Brainiac demo accounts and seed data...");
 

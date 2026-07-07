@@ -1,3 +1,4 @@
+import { hashPassword } from "better-auth/crypto";
 import { db } from "@brainiac/db";
 import { account } from "@brainiac/db/schema";
 import { createWorkspaceId } from "@brainiac/workspace";
@@ -11,7 +12,6 @@ export type EnsureCredentialAccountOptions = {
 };
 
 async function hashAuthPassword(password: string): Promise<string> {
-  const { hashPassword } = await import("better-auth/crypto");
   return hashPassword(password);
 }
 

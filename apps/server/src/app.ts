@@ -143,7 +143,7 @@ function createApp() {
 }
 
 const app = createApp();
-const port = Number(process.env.PORT || 7000);
+const port = env.PORT ?? 7000;
 
 await bootstrapAgencyLiveRedisSubscriber();
 registerNotificationPushHandler(sendWebPushForNotification);

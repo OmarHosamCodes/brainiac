@@ -11,10 +11,6 @@ function run(command: string, args: string[]) {
     const child = spawn(command, args, {
       cwd: serverDir,
       stdio: "inherit",
-      env: {
-        ...process.env,
-        BRAINIAC_SEED_SCALE: "massive",
-      },
     });
 
     child.on("error", reject);

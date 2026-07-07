@@ -104,8 +104,8 @@ function printUsage() {
   console.log("  bun run src/clear-team-data.ts [--dry-run]");
   console.log("");
   console.log("Root workspace command:");
-  console.log("  pnpm db:clear:team");
-  console.log("  pnpm db:clear:team -- --dry-run");
+  console.log("  bun run db:clear:team");
+  console.log("  bun run db:clear:team -- --dry-run");
 }
 
 function resolveDependencies(selected: Set<DataCategory>): Set<DataCategory> {

@@ -15,6 +15,7 @@
   "dependencies": {
     "@brainiac/agent": "workspace:*",
     "@brainiac/api": "workspace:*",
+    "@brainiac/config": "workspace:*",
     "@brainiac/env": "workspace:*",
     "@brainiac/workspace": "workspace:*",
     "@hookform/resolvers": "^5.4.0",

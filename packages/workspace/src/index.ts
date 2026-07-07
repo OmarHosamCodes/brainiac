@@ -1,3 +1,4 @@
+import { assertNever } from "@brainiac/config/assert-never";
 import {
   DEFAULT_WORKSPACE_NODE_HEIGHT,
   DEFAULT_WORKSPACE_NODE_MIN_HEIGHT,
@@ -2816,7 +2817,7 @@ export function normalizeWorkspaceBlock(block: WorkspaceBlock): WorkspaceBlock {
         outputHistory: block.outputHistory ?? [],
       });
     default:
-      throw new Error(`Unknown block type: ${(block as any).type}`);
+      return assertNever(block);
   }
 }
 
@@ -3535,7 +3536,7 @@ export function cloneWorkspaceBlockForInsertion(
         updatedAt: timestamp,
       });
     default:
-      throw new Error(`Unknown block type: ${(block as any).type}`);
+      return assertNever(block);
   }
 }
 

@@ -4,6 +4,7 @@ import {
   workspaceMarketplaceSaveInputSchema,
   workspaceSaveInputSchema,
 } from "@brainiac/workspace";
+import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 
 import { getBillingStateForUser } from "../../billing-guard";
@@ -40,7 +41,6 @@ export const workspaceRouter = {
     const billing = await getBillingStateForUser(context.session.user.id);
 
     if (input.nodes.length > billing.limits.workspaceNodes) {
-      const { ORPCError } = await import("@orpc/server");
       throw new ORPCError("FORBIDDEN", {
         message: `Your ${billing.tier} plan allows up to ${billing.limits.workspaceNodes} workspace nodes`,
         data: { limit: billing.limits.workspaceNodes, current: input.nodes.length },

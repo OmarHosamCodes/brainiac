@@ -39,10 +39,15 @@ export const env = createEnv({
     S3_BUCKET: z.string().min(1, "S3_BUCKET is required for file storage"),
     S3_ACCESS_KEY_ID: z.string().min(1, "S3_ACCESS_KEY_ID is required for file storage"),
     S3_SECRET_ACCESS_KEY: z.string().min(1, "S3_SECRET_ACCESS_KEY is required for file storage"),
-    REDIS_URL: z.string().min(1, "REDIS_URL is required for live sync (e.g., redis://localhost:6379)"),
+    REDIS_URL: z
+      .string()
+      .min(1, "REDIS_URL is required for live sync (e.g., redis://localhost:6379)"),
     VAPID_PUBLIC_KEY: z.string().optional(),
     VAPID_PRIVATE_KEY: z.string().optional(),
     VAPID_SUBJECT: z.string().optional(),
+    PORT: z.coerce.number().optional(),
+    BRAINIAC_SEED_SCALE: z.enum(["default", "massive"]).optional(),
+    BRAINIAC_SEED_PASSWORD: z.string().optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,

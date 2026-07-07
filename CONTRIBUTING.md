@@ -132,9 +132,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { orpc, orpcClient } from "@/lib/orpc";
 
 function MyFeatureList({ teamId }: { teamId: string }) {
-  const { data } = useQuery(
-    orpc.myFeature.list.queryOptions({ input: { teamId } }),
-  );
+  const { data } = useQuery(orpc.myFeature.list.queryOptions({ input: { teamId } }));
 
   const create = useMutation(orpc.myFeature.create.mutationOptions());
 
@@ -255,7 +253,7 @@ git push origin feat/my-feature
 
 ### PR Checklist
 
-- [ ] `bun run check` passes
+- [ ] `bun run check` passes (oxlint, conventions, oxfmt)
 - [ ] `bun run check-types` passes
 - [ ] Commit messages follow conventions
 - [ ] PR description explains what and why

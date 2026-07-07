@@ -1,7 +1,25 @@
 {
-  "plugins": null,
+  "plugins": ["node"],
   "categories": {},
-  "rules": {},
+  "rules": {
+    "node/no-process-env": ["error", { "allowedVariables": [] }]
+  },
+  "overrides": [
+    {
+      "files": [
+        "packages/env/**",
+        "packages/db/drizzle.config.ts",
+        "apps/web/vite.config.ts",
+        "apps/web/scripts/**",
+        "apps/web/perf/**",
+        "scripts/**",
+        ".agents/**"
+      ],
+      "rules": {
+        "node/no-process-env": "off"
+      }
+    }
+  ],
   "settings": {
     "jsx-a11y": {
       "polymorphicPropName": null,
@@ -35,5 +53,5 @@
     "builtin": true
   },
   "globals": {},
-  "ignorePatterns": []
+  "ignorePatterns": [".agents/**"]
 }
