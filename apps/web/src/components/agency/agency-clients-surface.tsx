@@ -26,6 +26,7 @@ import {
   useAgencyTimeEntriesQuery,
 } from "@/lib/queries/agency";
 import { formatDuration } from "@/lib/utils/format-duration";
+import { formatRate, parseBillableRateCents } from "@/lib/utils/format-rate";
 import { projectHueStyle } from "@/lib/utils/project-palette";
 import {
   selectIsClientMutationPending,
@@ -37,6 +38,22 @@ type AgencyClientsSurfaceProps = {
   teamId: string;
   filters: AgencyListFiltersApplied;
 };
+
+type AgencyClientCategory = "internal" | "external";
+
+function ClientCategoryBadge({ category }: { category: AgencyClientCategory }) {
+  const isInternal = category === "internal";
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-full px-2 py-1 text-[11px] font-bold capitalize",
+        isInternal ? "border border-default bg-default text-muted" : "bg-elevated text-highlighted",
+      )}
+    >
+      {isInternal ? "Internal" : "External"}
+    </span>
+  );
+}
 
 function getWeekStartUtc(): Date {
   const now = new Date();
@@ -53,10 +70,12 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
   const isClientMutationPending = useAgencyOpsStore(selectIsClientMutationPending);
   const isContactMutationPending = useAgencyOpsStore(selectIsContactMutationPending);
 
-  const [renameClientId, setRenameClientId] = useState("");
+  const [editClientId, setEditClientId] = useState("");
   const [createProjectClientId, setCreateProjectClientId] = useState("");
   const [contactClientId, setContactClientId] = useState("");
-  const [renameDraft, setRenameDraft] = useState("");
+  const [editNameDraft, setEditNameDraft] = useState("");
+  const [editCategoryDraft, setEditCategoryDraft] = useState<AgencyClientCategory>("external");
+  const [editBillableRateDraft, setEditBillableRateDraft] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [contactPhone, setContactPhone] = useState("");
@@ -159,22 +178,51 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
   }, [contactClientId]);
 
   useEffect(() => {
-    const client = clients.find((entry) => entry.id === renameClientId);
+    const client = clients.find((entry) => entry.id === editClientId);
     if (client) {
-      setRenameDraft(client.name);
+      setEditNameDraft(client.name);
+      setEditCategoryDraft(client.category);
+      setEditBillableRateDraft(
+        client.billableRateCents === null ? "" : String(client.billableRateCents / 100),
+      );
     }
-  }, [clients, renameClientId]);
+  }, [clients, editClientId]);
 
-  async function renameClient(clientId: string) {
+  async function saveClientEdits(clientId: string) {
     const client = clients.find((entry) => entry.id === clientId);
     if (!client || !teamId) return;
-    const name = renameDraft.trim();
-    if (!name || name === client.name) {
-      setRenameClientId("");
+
+    const name = editNameDraft.trim();
+    if (!name) return;
+
+    const billableRateCents = parseBillableRateCents(editBillableRateDraft);
+    if (editBillableRateDraft.trim() && billableRateCents === null) return;
+
+    const patch: {
+      teamId: string;
+      clientId: string;
+      name?: string;
+      category?: AgencyClientCategory;
+      billableRateCents?: number | null;
+    } = { teamId, clientId };
+
+    if (name !== client.name) {
+      patch.name = name;
+    }
+    if (editCategoryDraft !== client.category) {
+      patch.category = editCategoryDraft;
+    }
+    if (billableRateCents !== client.billableRateCents) {
+      patch.billableRateCents = billableRateCents;
+    }
+
+    if (Object.keys(patch).length === 2) {
+      setEditClientId("");
       return;
     }
-    setRenameClientId("");
-    await agencyOps.updateClient({ teamId, clientId, name });
+
+    setEditClientId("");
+    await agencyOps.updateClient(patch);
   }
 
   async function saveContact() {
@@ -252,11 +300,17 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
         </div>
       ) : (
         <div className="overflow-x-auto rounded-2xl border border-default bg-default">
-          <table className="w-full min-w-[54rem] text-xs">
+          <table className="w-full min-w-[68rem] text-xs">
             <thead className="border-b border-default bg-muted">
               <tr className={agencyLabelClass}>
                 <th scope="col" className="px-4 py-2.5 font-bold">
                   Client
+                </th>
+                <th scope="col" className="px-3 py-2.5 font-bold">
+                  Category
+                </th>
+                <th scope="col" className="px-3 py-2.5 font-bold">
+                  Billable / hour
                 </th>
                 <th scope="col" className="px-3 py-2.5 font-bold">
                   Projects
@@ -295,6 +349,19 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
                     <td className="px-4 py-3">
                       <span className="truncate font-bold text-highlighted">
                         <AgencySearchHighlight text={client.name} query={filters.filterTerm} />
+                      </span>
+                    </td>
+                    <td className="px-3 py-3">
+                      <ClientCategoryBadge category={client.category} />
+                    </td>
+                    <td className="px-3 py-3">
+                      <span
+                        className={cn(
+                          "font-mono font-bold tabular-nums",
+                          client.billableRateCents === null ? "text-dimmed" : "text-highlighted",
+                        )}
+                      >
+                        {formatRate(client.billableRateCents, client.currency, { perHour: true })}
                       </span>
                     </td>
                     <td className="px-3 py-3">
@@ -426,35 +493,76 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
                         </Button>
 
                         <Popover
-                          open={renameClientId === client.id}
-                          onOpenChange={(open) => setRenameClientId(open ? client.id : "")}
+                          open={editClientId === client.id}
+                          onOpenChange={(open) => setEditClientId(open ? client.id : "")}
                         >
                           <PopoverTrigger asChild>
                             <Button variant="ghost" size="sm">
-                              Rename
+                              Edit
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent align="end" className="w-72 space-y-2 p-3">
                             <form
                               onSubmit={(e) => {
                                 e.preventDefault();
-                                void renameClient(client.id);
+                                void saveClientEdits(client.id);
                               }}
                             >
                               <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted">
-                                Rename client
+                                Edit client
                               </p>
-                              <Input
-                                value={renameDraft}
-                                onChange={(e) => setRenameDraft(e.target.value)}
-                                className="mt-2"
-                                autoFocus
-                              />
+                              <div className="mt-2 space-y-2">
+                                <div>
+                                  <label className="text-[11px] font-bold text-muted">Name</label>
+                                  <Input
+                                    value={editNameDraft}
+                                    onChange={(e) => setEditNameDraft(e.target.value)}
+                                    className="mt-1"
+                                    autoFocus
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[11px] font-bold text-muted">
+                                    Category
+                                  </label>
+                                  <select
+                                    value={editCategoryDraft}
+                                    onChange={(e) =>
+                                      setEditCategoryDraft(e.target.value as AgencyClientCategory)
+                                    }
+                                    className="mt-1 flex h-9 w-full rounded-md border border-default bg-default px-3 text-sm text-highlighted"
+                                  >
+                                    <option value="external">External</option>
+                                    <option value="internal">Internal</option>
+                                  </select>
+                                </div>
+                                <div>
+                                  <label className="text-[11px] font-bold text-muted">
+                                    Billable rate / hour
+                                  </label>
+                                  <Input
+                                    value={editBillableRateDraft}
+                                    onChange={(e) => setEditBillableRateDraft(e.target.value)}
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    placeholder="Leave blank if not set"
+                                    className="mt-1"
+                                  />
+                                </div>
+                              </div>
                               <Button
                                 type="submit"
                                 size="sm"
                                 className="mt-2 w-full"
-                                disabled={!renameDraft.trim() || isClientMutationPending}
+                                disabled={
+                                  !editNameDraft.trim() ||
+                                  isClientMutationPending ||
+                                  Boolean(
+                                    editBillableRateDraft.trim() &&
+                                    parseBillableRateCents(editBillableRateDraft) === null,
+                                  )
+                                }
                               >
                                 Save
                               </Button>
