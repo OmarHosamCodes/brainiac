@@ -54,10 +54,15 @@ export const agencyTaskThreadAttachmentInputSchema = z.object({
   metadata: attachmentMetadataSchema,
 });
 
+export const agencyClientCategorySchema = z.enum(["internal", "external"]);
+
 export const agencyClientSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
   name: z.string().min(1),
+  category: agencyClientCategorySchema,
+  billableRateCents: z.number().int().nonnegative().nullable(),
+  currency: z.string().min(1),
   archivedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
