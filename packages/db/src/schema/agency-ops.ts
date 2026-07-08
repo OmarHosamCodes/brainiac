@@ -21,6 +21,7 @@ export type AgencyOpsJourneyStepStatus = "planned" | "active" | "done" | "blocke
 export type AgencyOpsProjectTaskMemberStatus = "open" | "in_progress" | "done";
 export type AgencyOpsTaskMessageType = "text" | "voice" | "attachment";
 export type AgencyOpsTaskMessageSenderType = "user" | "agent";
+export type AgencyOpsClientCategory = "internal" | "external";
 
 export type AttachmentMetadata = {
   imageWidth?: number;
@@ -42,6 +43,9 @@ export const agencyOpsClient = pgTable(
       .notNull()
       .references(() => workspaceTeam.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
+    category: text("category").$type<AgencyOpsClientCategory>().notNull().default("external"),
+    billableRateCents: integer("billable_rate_cents"),
+    currency: text("currency").notNull().default("USD"),
     createdByUserId: text("created_by_user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),

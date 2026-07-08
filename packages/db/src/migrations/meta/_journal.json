@@ -148,6 +148,13 @@
       "when": 1783396298448,
       "tag": "0020_index_renames",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787800000000,
+      "tag": "0021_agency_client_rate_category",
+      "breakpoints": true
     }
   ]
 }
