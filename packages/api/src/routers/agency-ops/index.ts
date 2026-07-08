@@ -85,10 +85,15 @@ const teamScopedInputSchema = z.object({
   teamId: z.string().min(1),
 });
 
+const agencyClientCategorySchema = z.enum(["internal", "external"]);
+
 const agencyClientSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
   name: z.string().min(1),
+  category: agencyClientCategorySchema,
+  billableRateCents: z.number().int().nonnegative().nullable(),
+  currency: z.string().min(1),
   archivedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -474,6 +479,9 @@ export const agencyOpsRouter = {
       .input(
         teamScopedInputSchema.extend({
           name: z.string().trim().min(1).max(120),
+          category: agencyClientCategorySchema.optional(),
+          billableRateCents: z.number().int().nonnegative().nullable().optional(),
+          currency: z.string().min(1).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -487,6 +495,9 @@ export const agencyOpsRouter = {
         teamScopedInputSchema.extend({
           clientId: z.string().min(1),
           name: z.string().trim().min(1).max(120).optional(),
+          category: agencyClientCategorySchema.optional(),
+          billableRateCents: z.number().int().nonnegative().nullable().optional(),
+          currency: z.string().min(1).optional(),
         }),
       )
       .handler(async ({ context, input }) => {

@@ -91,6 +91,9 @@ type AgencyClientRecord = {
   id: string;
   teamId: string;
   name: string;
+  category: "internal" | "external";
+  billableRateCents: number | null;
+  currency: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -496,6 +499,9 @@ function mapClientRow(row: {
   id: string;
   teamId: string;
   name: string;
+  category: "internal" | "external";
+  billableRateCents: number | null;
+  currency: string;
   createdAt: Date;
   updatedAt: Date;
 }): AgencyClientRecord {
@@ -503,6 +509,9 @@ function mapClientRow(row: {
     id: row.id,
     teamId: row.teamId,
     name: row.name,
+    category: row.category,
+    billableRateCents: row.billableRateCents,
+    currency: row.currency,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -1238,6 +1247,9 @@ export async function listAgencyClients(
       id: agencyOpsClient.id,
       teamId: agencyOpsClient.teamId,
       name: agencyOpsClient.name,
+      category: agencyOpsClient.category,
+      billableRateCents: agencyOpsClient.billableRateCents,
+      currency: agencyOpsClient.currency,
       archivedAt: agencyOpsClient.archivedAt,
       createdAt: agencyOpsClient.createdAt,
       updatedAt: agencyOpsClient.updatedAt,
@@ -1256,7 +1268,13 @@ export async function listAgencyClients(
 
 export async function createAgencyClient(
   actorUserId: string,
-  input: { teamId: string; name: string },
+  input: {
+    teamId: string;
+    name: string;
+    category?: "internal" | "external";
+    billableRateCents?: number | null;
+    currency?: string;
+  },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
@@ -1267,6 +1285,9 @@ export async function createAgencyClient(
       id: createWorkspaceId("agency-client"),
       teamId: input.teamId,
       name: input.name.trim(),
+      category: input.category ?? "external",
+      billableRateCents: input.billableRateCents ?? null,
+      currency: input.currency ?? "USD",
       createdByUserId: actorUserId,
       createdAt: now,
       updatedAt: now,
@@ -1275,6 +1296,9 @@ export async function createAgencyClient(
       id: agencyOpsClient.id,
       teamId: agencyOpsClient.teamId,
       name: agencyOpsClient.name,
+      category: agencyOpsClient.category,
+      billableRateCents: agencyOpsClient.billableRateCents,
+      currency: agencyOpsClient.currency,
       archivedAt: agencyOpsClient.archivedAt,
       createdAt: agencyOpsClient.createdAt,
       updatedAt: agencyOpsClient.updatedAt,
@@ -1293,6 +1317,9 @@ export async function updateAgencyClient(
     teamId: string;
     clientId: string;
     name?: string;
+    category?: "internal" | "external";
+    billableRateCents?: number | null;
+    currency?: string;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -1309,19 +1336,49 @@ export async function updateAgencyClient(
     throw new ORPCError("NOT_FOUND");
   }
 
+  const hasPatch =
+    input.name !== undefined ||
+    input.category !== undefined ||
+    input.billableRateCents !== undefined ||
+    input.currency !== undefined;
+
+  if (!hasPatch) {
+    throw new ORPCError("BAD_REQUEST", { message: "No fields to update." });
+  }
+
   const now = new Date();
+  const patch: {
+    updatedAt: Date;
+    name?: string;
+    category?: "internal" | "external";
+    billableRateCents?: number | null;
+    currency?: string;
+  } = { updatedAt: now };
+
+  if (input.name !== undefined) {
+    patch.name = input.name.trim();
+  }
+  if (input.category !== undefined) {
+    patch.category = input.category;
+  }
+  if (input.billableRateCents !== undefined) {
+    patch.billableRateCents = input.billableRateCents;
+  }
+  if (input.currency !== undefined) {
+    patch.currency = input.currency;
+  }
 
   const [updated] = await db
     .update(agencyOpsClient)
-    .set({
-      name: input.name?.trim(),
-      updatedAt: now,
-    })
+    .set(patch)
     .where(and(eq(agencyOpsClient.teamId, input.teamId), eq(agencyOpsClient.id, input.clientId)))
     .returning({
       id: agencyOpsClient.id,
       teamId: agencyOpsClient.teamId,
       name: agencyOpsClient.name,
+      category: agencyOpsClient.category,
+      billableRateCents: agencyOpsClient.billableRateCents,
+      currency: agencyOpsClient.currency,
       archivedAt: agencyOpsClient.archivedAt,
       createdAt: agencyOpsClient.createdAt,
       updatedAt: agencyOpsClient.updatedAt,
