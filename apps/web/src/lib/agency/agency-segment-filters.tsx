@@ -19,6 +19,7 @@ import { useAgencyTimeRangeFilters } from "@/lib/agency/use-agency-time-range-fi
 import type { AgencySegmentId } from "@/lib/agency-segments";
 import { orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { parseBillableRateCents } from "@/lib/utils/format-rate";
 import { selectIsClientMutationPending, useAgencyOpsStore } from "@/stores/agency-ops";
 
 export type AgencySegmentSurfaceFilters =
@@ -238,13 +239,30 @@ function ClientsFiltersRoot({
   const listFilters = useAgencyListFilters({ teamId });
   const [newClientOpen, setNewClientOpen] = useState(false);
   const [newClientName, setNewClientName] = useState("");
+  const [newClientCategory, setNewClientCategory] = useState<"internal" | "external">("external");
+  const [newClientBillableRate, setNewClientBillableRate] = useState("");
+
+  function resetNewClientForm() {
+    setNewClientName("");
+    setNewClientCategory("external");
+    setNewClientBillableRate("");
+  }
 
   async function createClient() {
     const name = newClientName.trim();
     if (!name || !teamId) return;
-    setNewClientName("");
+
+    const billableRateCents = parseBillableRateCents(newClientBillableRate);
+    if (newClientBillableRate.trim() && billableRateCents === null) return;
+
+    resetNewClientForm();
     setNewClientOpen(false);
-    await agencyOps.createClient({ teamId, name });
+    await agencyOps.createClient({
+      teamId,
+      name,
+      category: newClientCategory,
+      billableRateCents,
+    });
   }
 
   return (
@@ -284,11 +302,45 @@ function ClientsFiltersRoot({
                           className="mt-2"
                           autoFocus
                         />
+                        <div className="mt-2">
+                          <label className="text-[11px] font-bold text-muted">Category</label>
+                          <select
+                            value={newClientCategory}
+                            onChange={(event) =>
+                              setNewClientCategory(event.target.value as "internal" | "external")
+                            }
+                            className="mt-1 flex h-9 w-full rounded-md border border-default bg-default px-3 text-sm text-highlighted"
+                          >
+                            <option value="external">External</option>
+                            <option value="internal">Internal</option>
+                          </select>
+                        </div>
+                        <div className="mt-2">
+                          <label className="text-[11px] font-bold text-muted">
+                            Billable rate / hour
+                          </label>
+                          <Input
+                            value={newClientBillableRate}
+                            onChange={(event) => setNewClientBillableRate(event.target.value)}
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="Optional"
+                            className="mt-1"
+                          />
+                        </div>
                         <Button
                           type="submit"
                           size="sm"
                           className="mt-2 w-full"
-                          disabled={!newClientName.trim() || isClientMutationPending}
+                          disabled={
+                            !newClientName.trim() ||
+                            isClientMutationPending ||
+                            Boolean(
+                              newClientBillableRate.trim() &&
+                              parseBillableRateCents(newClientBillableRate) === null,
+                            )
+                          }
                         >
                           Create
                         </Button>
