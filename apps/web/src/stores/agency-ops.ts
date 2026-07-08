@@ -29,6 +29,9 @@ type AgencyClient = {
   id: string;
   teamId: string;
   name: string;
+  category: "internal" | "external";
+  billableRateCents: number | null;
+  currency: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -150,12 +153,18 @@ type RegisteredContactQuery = {
 type CreateClientPayload = {
   teamId: string;
   name: string;
+  category?: "internal" | "external";
+  billableRateCents?: number | null;
+  currency?: string;
 };
 
 type UpdateClientPayload = {
   teamId: string;
   clientId: string;
-  name: string;
+  name?: string;
+  category?: "internal" | "external";
+  billableRateCents?: number | null;
+  currency?: string;
 };
 
 type CreateProjectPayload = {
@@ -601,6 +610,9 @@ function createAgencyOpsActions(
       id: optimisticId("client"),
       teamId: payload.teamId,
       name: payload.name.trim(),
+      category: payload.category ?? "external",
+      billableRateCents: payload.billableRateCents ?? null,
+      currency: payload.currency ?? "USD",
       createdAt: nowIso,
       updatedAt: nowIso,
     };
@@ -613,6 +625,9 @@ function createAgencyOpsActions(
       const created = (await orpcClient.agencyOps.clients.create({
         teamId: payload.teamId,
         name: payload.name.trim(),
+        category: payload.category,
+        billableRateCents: payload.billableRateCents,
+        currency: payload.currency,
       })) as AgencyClient;
 
       reconcileCreatedClient(payload.teamId, optimisticClient.id, created);
@@ -632,33 +647,57 @@ function createAgencyOpsActions(
   }
 
   async function updateClient(payload: UpdateClientPayload) {
-    if (!payload.teamId || !payload.name.trim()) return;
+    if (!payload.teamId || !payload.clientId) return;
+
+    const hasPatch =
+      payload.name !== undefined ||
+      payload.category !== undefined ||
+      payload.billableRateCents !== undefined ||
+      payload.currency !== undefined;
+
+    if (!hasPatch) return;
 
     const snapshots = snapshotQueries(registryPayloads(clientsQueryRegistry));
     const optimisticSnapshot = optimistic().snapshotClients(payload.teamId);
     const nowIso = new Date().toISOString();
+    const optimisticPatch: Partial<AgencyClient> = { updatedAt: nowIso };
+
+    if (payload.name !== undefined) {
+      optimisticPatch.name = payload.name.trim();
+    }
+    if (payload.category !== undefined) {
+      optimisticPatch.category = payload.category;
+    }
+    if (payload.billableRateCents !== undefined) {
+      optimisticPatch.billableRateCents = payload.billableRateCents;
+    }
+    if (payload.currency !== undefined) {
+      optimisticPatch.currency = payload.currency;
+    }
 
     set((state) => ({ ...state, clientMutationCount: state.clientMutationCount + 1 }));
 
     try {
-      patchUpdatedClient(payload.teamId, payload.clientId, {
-        name: payload.name.trim(),
-        updatedAt: nowIso,
-      });
+      patchUpdatedClient(payload.teamId, payload.clientId, optimisticPatch);
 
       const updated = (await orpcClient.agencyOps.clients.update({
         teamId: payload.teamId,
         clientId: payload.clientId,
-        name: payload.name.trim(),
+        name: payload.name?.trim(),
+        category: payload.category,
+        billableRateCents: payload.billableRateCents,
+        currency: payload.currency,
       })) as AgencyClient;
 
       patchUpdatedClient(payload.teamId, payload.clientId, updated);
 
-      toast.success("Renamed", { description: payload.name.trim() });
+      toast.success("Client updated", {
+        description: updated.name,
+      });
     } catch (error) {
       restoreQuerySnapshots(snapshots);
       optimistic().restoreClients(payload.teamId, optimisticSnapshot);
-      toast.error("Couldn't rename", { description: getErrorMessage(error, "Try again.") });
+      toast.error("Couldn't update client", { description: getErrorMessage(error, "Try again.") });
     } finally {
       set((state) => ({
         ...state,
