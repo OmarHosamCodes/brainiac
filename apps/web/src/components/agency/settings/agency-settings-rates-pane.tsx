@@ -4,20 +4,12 @@ import { DollarSign } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { orpc } from "@/lib/orpc";
 import { agencyEmptyPanelClass, agencySectionTitleClass } from "@/lib/utils/agency-ui";
+import { formatRate } from "@/lib/utils/format-rate";
 
 type AgencySettingsRatesPaneProps = {
   teamId: string;
   active: boolean;
 };
-
-function formatRate(cents: number | null, currency: string): string {
-  if (cents === null) return "Not set";
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(cents / 100);
-}
 
 export function AgencySettingsRatesPane({ teamId, active }: AgencySettingsRatesPaneProps) {
   const ratesQuery = useQuery({
