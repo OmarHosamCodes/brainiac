@@ -1,4 +1,4 @@
-import { Loader2, MoreVertical, Play, Trash2, TrashIcon } from "lucide-react";
+import { Copy, Loader2, MoreVertical, Play, Trash2, TrashIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -16,9 +16,11 @@ type AgencyTimeEntryActionsProps = {
   };
   canRestart?: boolean;
   deleting?: boolean;
+  duplicating?: boolean;
   wastePending?: boolean;
   onRestart: () => void;
   onDelete: () => void;
+  onDuplicate?: () => void;
   onToggleWaste?: () => void;
 };
 
@@ -26,9 +28,11 @@ export function AgencyTimeEntryActions({
   entry,
   canRestart = true,
   deleting = false,
+  duplicating = false,
   wastePending = false,
   onRestart,
   onDelete,
+  onDuplicate,
   onToggleWaste,
 }: AgencyTimeEntryActionsProps) {
   const entryLabel = entry.taskTitle || entry.projectName;
@@ -55,11 +59,11 @@ export function AgencyTimeEntryActions({
             variant="ghost"
             size="sm"
             className={cn("h-8 w-8 p-0", agencyFocusRingClass)}
-            disabled={deleting || wastePending}
+            disabled={deleting || wastePending || duplicating}
             aria-label={`Actions for ${entryLabel}`}
             onClick={() => setMenuOpen(true)}
           >
-            {deleting || wastePending ? (
+            {deleting || wastePending || duplicating ? (
               <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
             ) : (
               <MoreVertical className="size-3.5" />
@@ -81,6 +85,21 @@ export function AgencyTimeEntryActions({
             >
               <TrashIcon className="size-3.5" />
               {isWaste ? "Unmark as waste" : "Mark as waste"}
+            </Button>
+          ) : null}
+          {onDuplicate ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start"
+              disabled={duplicating || deleting}
+              onClick={() => {
+                setMenuOpen(false);
+                onDuplicate();
+              }}
+            >
+              <Copy className="size-3.5" />
+              Duplicate
             </Button>
           ) : null}
           <Button

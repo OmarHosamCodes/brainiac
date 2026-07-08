@@ -88,11 +88,13 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
                 isTimerMutationPending={view.isTimerMutationPending}
                 deletingEntryIds={view.deletingEntryIds}
                 updatingEntryIds={view.updatingEntryIds}
+                duplicatingEntryIds={view.duplicatingEntryIds}
                 highlightedEntryId={view.highlightedEntryId}
                 onToggleGroupExpand={view.onToggleGroupExpand}
                 onRestart={view.onRestart}
                 onDeleteGroup={view.onDeleteGroup}
                 onDeleteEntry={view.onDeleteEntry}
+                onDuplicate={view.onDuplicate}
                 onSaveEdit={view.onSaveEdit}
                 onToggleWaste={view.onToggleWaste}
                 togglingWasteEntryIds={view.togglingWasteEntryIds}

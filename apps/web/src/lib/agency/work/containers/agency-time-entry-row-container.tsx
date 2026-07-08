@@ -16,10 +16,12 @@ type AgencyTimeEntryRowContainerProps = {
   isTimerMutationPending: boolean;
   deletingEntryIds: string[];
   updatingEntryIds: string[];
+  duplicatingEntryIds: string[];
   onToggleExpand: () => void;
   onRestart: (group: CollapsedEntryGroup) => void;
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
+  onDuplicate: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
   onToggleWaste: (entryId: string) => Promise<void>;
   togglingWasteEntryIds: string[];

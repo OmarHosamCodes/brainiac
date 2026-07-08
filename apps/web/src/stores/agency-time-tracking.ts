@@ -171,6 +171,11 @@ type UpdateEntryPayload = {
   durationSeconds: number;
 };
 
+type DuplicateEntryPayload = {
+  teamId: string;
+  entry: AgencyTimeEntry;
+};
+
 const OPTIMISTIC_CLIENT_ID = "optimistic-client";
 const OPTIMISTIC_CLIENT_NAME = "Unknown client";
 const OPTIMISTIC_USER_NAME = "You";
@@ -197,6 +202,7 @@ type AgencyTimeTrackingState = {
   timerAdjustCount: number;
   deletingEntryIds: string[];
   updatingEntryIds: string[];
+  duplicatingEntryIds: string[];
   trackerDraftsByTeam: Record<string, TrackerDraft>;
   lastHighlightedEntryId: string | null;
   taskChooserOpenRequest: number;
@@ -874,6 +880,18 @@ function createAgencyTimeTrackingActions(
     } satisfies AgencyTimeEntry;
   }
 
+  function createOptimisticDuplicateEntry(source: AgencyTimeEntry) {
+    const now = new Date().toISOString();
+
+    return {
+      ...source,
+      id: createOptimisticId("agency-time"),
+      source: "manual",
+      createdAt: now,
+      updatedAt: now,
+    } satisfies AgencyTimeEntry;
+  }
+
   function getDurationSeconds(startedAt: string, endedAt: string) {
     const startedAtMs = new Date(startedAt).getTime();
     const endedAtMs = new Date(endedAt).getTime();
@@ -1191,6 +1209,45 @@ function createAgencyTimeTrackingActions(
     return null;
   }
 
+  async function duplicateEntry(payload: DuplicateEntryPayload) {
+    const { teamId, entry } = payload;
+    const previousDuplicatingIds = [...get().duplicatingEntryIds];
+    const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([teamId])));
+    const entryOverlaySnapshot = optimistic().snapshotTimeEntries(teamId);
+    const optimisticEntry = createOptimisticDuplicateEntry(entry);
+
+    set((s) => ({
+      ...s,
+      duplicatingEntryIds: [...new Set([...s.duplicatingEntryIds, entry.id])],
+    }));
+
+    try {
+      patchInsertedEntry(teamId, optimisticEntry);
+
+      const created = (await orpcClient.agencyOps.timeEntries.createManual({
+        teamId,
+        projectId: entry.projectId,
+        taskId: entry.taskId ?? undefined,
+        startAt: entry.startedAt,
+        endAt: entry.endedAt,
+        description: entry.description,
+      })) as AgencyTimeEntry;
+
+      reconcileCreatedEntry(teamId, optimisticEntry.id, created);
+      set((s) => ({ ...s, lastHighlightedEntryId: created.id }));
+    } catch (error) {
+      patchDeletedEntries(teamId, [optimisticEntry]);
+      restoreQuerySnapshots(logSnapshots);
+      optimistic().restoreTimeEntries(teamId, entryOverlaySnapshot);
+
+      toast.error("Unable to duplicate entry", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+    } finally {
+      set((s) => ({ ...s, duplicatingEntryIds: previousDuplicatingIds }));
+    }
+  }
+
   async function updateEntry(payload: UpdateEntryPayload) {
     const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([payload.teamId])));
     const entryOverlaySnapshot = optimistic().snapshotTimeEntries(payload.teamId);
@@ -1274,6 +1331,7 @@ function createAgencyTimeTrackingActions(
     stopTimer,
     updateActiveTimerStart,
     deleteEntries,
+    duplicateEntry,
     updateEntry,
     clearHighlightedEntry,
     requestOpenTaskChooser,
@@ -1286,6 +1344,7 @@ export const useAgencyTimeTrackingStore = create<AgencyTimeTrackingState>((set, 
   timerAdjustCount: 0,
   deletingEntryIds: [],
   updatingEntryIds: [],
+  duplicatingEntryIds: [],
   trackerDraftsByTeam: {},
   lastHighlightedEntryId: null,
   taskChooserOpenRequest: 0,

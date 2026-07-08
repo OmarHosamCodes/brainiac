@@ -20,10 +20,12 @@ type AgencyTimeEntryDayGroupViewProps = {
   isTimerMutationPending: boolean;
   deletingEntryIds: string[];
   updatingEntryIds: string[];
+  duplicatingEntryIds: string[];
   onToggleGroupExpand: (collapseKey: string) => void;
   onRestart: (group: CollapsedEntryGroup) => void;
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
+  onDuplicate: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
   onToggleWaste: (entryId: string) => Promise<void>;
   togglingWasteEntryIds: string[];
@@ -39,10 +41,12 @@ export function AgencyTimeEntryDayGroupView({
   isTimerMutationPending,
   deletingEntryIds,
   updatingEntryIds,
+  duplicatingEntryIds,
   onToggleGroupExpand,
   onRestart,
   onDeleteGroup,
   onDeleteEntry,
+  onDuplicate,
   onSaveEdit,
   onToggleWaste,
   togglingWasteEntryIds,
@@ -75,11 +79,13 @@ export function AgencyTimeEntryDayGroupView({
                 isTimerMutationPending={isTimerMutationPending}
                 deletingEntryIds={deletingEntryIds}
                 updatingEntryIds={updatingEntryIds}
+                duplicatingEntryIds={duplicatingEntryIds}
                 highlighted={highlightedEntryId === primaryEntryId}
                 onToggleExpand={() => onToggleGroupExpand(groupExpandKey)}
                 onRestart={onRestart}
                 onDeleteGroup={onDeleteGroup}
                 onDeleteEntry={onDeleteEntry}
+                onDuplicate={onDuplicate}
                 onSaveEdit={onSaveEdit}
                 onToggleWaste={onToggleWaste}
                 togglingWasteEntryIds={togglingWasteEntryIds}

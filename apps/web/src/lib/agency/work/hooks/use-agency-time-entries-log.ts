@@ -44,11 +44,13 @@ export type AgencyTimeEntriesLogViewModel = {
   isTimerMutationPending: boolean;
   deletingEntryIds: string[];
   updatingEntryIds: string[];
+  duplicatingEntryIds: string[];
   highlightedEntryId: string | null;
   onToggleGroupExpand: (collapseKey: string) => void;
   onRestart: (group: CollapsedEntryGroup) => void;
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
+  onDuplicate: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
   onToggleWaste: (entryId: string) => Promise<void>;
   togglingWasteEntryIds: string[];
@@ -74,6 +76,7 @@ export function useAgencyTimeEntriesLog({
   const agencyTimeTrackingStore = useAgencyTimeTrackingStore();
   const deletingEntryIds = useAgencyTimeTrackingStore((s) => s.deletingEntryIds);
   const updatingEntryIds = useAgencyTimeTrackingStore((s) => s.updatingEntryIds);
+  const duplicatingEntryIds = useAgencyTimeTrackingStore((s) => s.duplicatingEntryIds);
   const isTimerMutationPending = useAgencyTimeTrackingStore(selectIsTimerMutationPending);
   const lastHighlightedEntryId = useAgencyTimeTrackingStore((s) => s.lastHighlightedEntryId);
   const clearHighlightedEntry = useAgencyTimeTrackingStore((s) => s.clearHighlightedEntry);
@@ -226,6 +229,12 @@ export function useAgencyTimeEntriesLog({
     });
   }
 
+  async function duplicateEntry(entryId: string) {
+    const entry = entries.find((item) => item.id === entryId);
+    if (!teamId || !entry) return;
+    await agencyTimeTrackingStore.duplicateEntry({ teamId, entry });
+  }
+
   async function toggleWaste(entryId: string) {
     const entry = entries.find((item) => item.id === entryId);
     if (!teamId || !entry?.taskId) return;
@@ -257,11 +266,13 @@ export function useAgencyTimeEntriesLog({
     isTimerMutationPending,
     deletingEntryIds,
     updatingEntryIds,
+    duplicatingEntryIds,
     highlightedEntryId: lastHighlightedEntryId,
     onToggleGroupExpand: toggleGroupExpand,
     onRestart: (group) => void restartEntry(group),
     onDeleteGroup: (entryIds) => void deleteGroupEntries(entryIds),
     onDeleteEntry: (entryId) => void deleteEntry(entryId),
+    onDuplicate: (entryId) => void duplicateEntry(entryId),
     onSaveEdit: saveEdit,
     onToggleWaste: toggleWaste,
     togglingWasteEntryIds,

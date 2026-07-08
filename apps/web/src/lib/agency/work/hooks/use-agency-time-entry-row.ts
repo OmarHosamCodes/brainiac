@@ -70,10 +70,12 @@ type UseAgencyTimeEntryRowOptions = {
   isTimerMutationPending: boolean;
   deletingEntryIds: string[];
   updatingEntryIds: string[];
+  duplicatingEntryIds: string[];
   onToggleExpand: () => void;
   onRestart: (group: CollapsedEntryGroup) => void;
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
+  onDuplicate: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
   onToggleWaste: (entryId: string) => Promise<void>;
   togglingWasteEntryIds: string[];
@@ -97,6 +99,7 @@ export type AgencyTimeEntryRowViewModel = {
   editSaving: boolean;
   rowDeleting: boolean;
   rowUpdating: boolean;
+  rowDuplicating: boolean;
   rowWastePending: boolean;
   isWaste: boolean;
   timeRange: string;
@@ -106,6 +109,7 @@ export type AgencyTimeEntryRowViewModel = {
   onRestart: () => void;
   onDeleteGroup: () => void;
   onDeleteEntry: (entryId: string) => void;
+  onDuplicate: () => void;
   onToggleWaste: () => void;
   onDescriptionChange: (value: string) => void;
   onDescriptionBlur: () => void;
@@ -128,10 +132,12 @@ export function useAgencyTimeEntryRow({
   isTimerMutationPending,
   deletingEntryIds,
   updatingEntryIds,
+  duplicatingEntryIds,
   onToggleExpand,
   onRestart,
   onDeleteGroup,
   onDeleteEntry,
+  onDuplicate,
   onSaveEdit,
   onToggleWaste,
   togglingWasteEntryIds,
@@ -233,6 +239,7 @@ export function useAgencyTimeEntryRow({
 
   const rowDeleting = group.entries.some((entry) => deletingEntryIds.includes(entry.id));
   const rowUpdating = group.entries.some((entry) => updatingEntryIds.includes(entry.id));
+  const rowDuplicating = group.entries.some((entry) => duplicatingEntryIds.includes(entry.id));
   const rowWastePending = group.entries.some((entry) => togglingWasteEntryIds.includes(entry.id));
   const isWaste = primaryEntry.taskIsWaste === true;
   const timeRange = isMulti
@@ -268,6 +275,7 @@ export function useAgencyTimeEntryRow({
     editSaving,
     rowDeleting,
     rowUpdating,
+    rowDuplicating,
     rowWastePending,
     isWaste,
     timeRange,
@@ -277,6 +285,7 @@ export function useAgencyTimeEntryRow({
     onRestart: () => onRestart(group),
     onDeleteGroup: () => onDeleteGroup(group.entries.map((entry) => entry.id)),
     onDeleteEntry,
+    onDuplicate: () => onDuplicate(primaryEntry.id),
     onToggleWaste: () => void onToggleWaste(primaryEntry.id),
     onDescriptionChange: setDescriptionDraft,
     onDescriptionBlur: () => void saveDescriptionEdit(),

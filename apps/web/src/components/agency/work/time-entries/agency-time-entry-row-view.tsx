@@ -41,6 +41,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     editSaving,
     rowDeleting,
     rowUpdating,
+    rowDuplicating,
     rowWastePending,
     isWaste,
     timeRange,
@@ -49,6 +50,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onToggleExpand,
     onRestart,
     onDeleteGroup,
+    onDuplicate,
     onToggleWaste,
     onDescriptionChange,
     onDescriptionBlur,
@@ -277,9 +279,11 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             }}
             canRestart={canRestart}
             deleting={rowDeleting || rowUpdating || editSaving}
+            duplicating={rowDuplicating}
             wastePending={rowWastePending}
             onRestart={onRestart}
             onDelete={() => onDeleteGroup()}
+            onDuplicate={!isMulti ? onDuplicate : undefined}
             onToggleWaste={group.taskId ? onToggleWaste : undefined}
           />
         )}
