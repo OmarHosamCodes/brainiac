@@ -25,7 +25,7 @@ import {
   useTrackerDraft,
 } from "@/stores/agency-time-tracking";
 
-const TRACKER_SUGGESTION_LIMIT = 5;
+const TRACKER_SUGGESTION_LIMIT = 10;
 const START_TIME_DEBOUNCE_MS = 300;
 
 const emptyStartDraft = { date: "", startTime: "" };
@@ -273,7 +273,8 @@ export function useAgencyTimeTracker({
       })
       .filter((entry) => {
         if (!entry.description || entry.score <= 0) return false;
-        const key = `${normalizeSuggestionText(entry.description)}||${entry.taskId || entry.projectId}`;
+        // Collapse by visible identity (description + project); keep first = most recent.
+        const key = `${normalizeSuggestionText(entry.description)}||${entry.projectId}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;

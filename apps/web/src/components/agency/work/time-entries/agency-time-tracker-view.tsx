@@ -68,7 +68,7 @@ function DescriptionSuggestionMenu({
               const active = index === activeIndex;
 
               return (
-                <li key={`${suggestion.taskId}-${suggestion.description}`} role="presentation">
+                <li key={`${suggestion.projectId}-${suggestion.description}`} role="presentation">
                   <button
                     id={`${listboxId}-option-${index}`}
                     type="button"
