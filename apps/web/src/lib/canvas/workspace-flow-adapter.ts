@@ -2,7 +2,10 @@ import type { WorkspaceNodeTint } from "@brainiac/workspace";
 import type { Connection, Edge, Node, NodeChange } from "@xyflow/react";
 
 import type { CanvasNodeModel } from "@/lib/canvas/canvas-types";
-import { getCanonicalConnectionPair, hasConnection } from "@/lib/utils/workspace-node-connections";
+import {
+  getCanonicalConnectionPair,
+  hasConnection,
+} from "@/features/workspace/utils/workspace-node-connections";
 
 export const WORKSPACE_FLOW_NODE_TYPE = "workspace" as const;
 export const WORKSPACE_FLOW_EDGE_TYPE = "workspace" as const;

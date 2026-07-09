@@ -7,6 +7,7 @@ import type { AgencyTaskListViewModel } from "@/features/task-management/hooks/u
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
 
 export type AgencyWorkSurfaceDelegatedViewModel = {
+  view: Extract<AgencyTaskListViewModel, { status: "ready" }>;
   delegatedTasks: AgencyProjectTask[];
   sections: ReturnType<typeof groupDelegatedTasks>;
   totalLoaded: number;
@@ -85,6 +86,7 @@ export function useAgencyWorkSurfaceDelegated({
   }
 
   return {
+    view,
     delegatedTasks,
     sections,
     totalLoaded,

@@ -6,7 +6,7 @@ import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { getWorkspaceBlockRegistryEntry } from "@/lib/utils/workspace-block-registry";
+import { getWorkspaceBlockRegistryEntry } from "@/features/workspace/utils/workspace-block-registry";
 
 type WorkspaceNodeBlockRendererProps = {
   block: WorkspaceBlock;

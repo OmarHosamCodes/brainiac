@@ -1,7 +1,7 @@
 import { useAgencyTaskList } from "@/features/task-management/hooks/use-agency-task-list";
 import type { AgencyTaskProject } from "@/features/task-management/agency-work";
 
-import { AgencyWorkSurfaceDelegatedView } from "@/features/task-management/work-surface/agency-work-surface-delegated-view";
+import { AgencyWorkSurfaceDelegatedContainer } from "@/features/task-management/work-surface/containers/agency-work-surface-delegated-container";
 import { AgencyWorkSurfaceDoneView } from "@/features/task-management/work-surface/agency-work-surface-done-view";
 import { AgencyWorkSurfaceMyTasksView } from "@/features/task-management/work-surface/agency-work-surface-my-tasks-view";
 import type { AgencyWorkSurfaceTab } from "@/features/task-management/agency-work";
@@ -43,7 +43,7 @@ export function AgencyWorkSurfaceTaskPane({
     case "done":
       return <AgencyWorkSurfaceDoneView view={view} />;
     case "delegated":
-      return <AgencyWorkSurfaceDelegatedView view={view} />;
+      return <AgencyWorkSurfaceDelegatedContainer view={view} />;
     default: {
       const _exhaustive: never = tab;
       return _exhaustive;

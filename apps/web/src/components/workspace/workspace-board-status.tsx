@@ -15,7 +15,6 @@ export function WorkspaceBoardStatus({ badge, nodesCount, userName }: WorkspaceB
       <div className="flex size-10 items-center justify-center rounded-xl border border-default bg-muted text-highlighted">
         <LayoutGrid className="size-5" />
       </div>
-
       <div className="min-w-0 flex-1">
         <p className="mb-1 text-[10px] font-bold uppercase leading-none tracking-[0.2em] text-muted">
           {userName ? `${userName}'s Workspace` : "Personal Workspace"}

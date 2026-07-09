@@ -11,15 +11,15 @@ import { DashboardAgentChatPanel } from "@/components/dashboard/dashboard-agent-
 import { DashboardWorkspaceSidebar } from "@/components/dashboard/dashboard-workspace-sidebar";
 import { LazyInfiniteCanvas, type InfiniteCanvasHandle } from "@/components/lazy-infinite-canvas";
 import { TeamSettingsModal } from "@/components/team/team-settings-modal";
-import { WorkspaceEditorModal } from "@/components/workspace/workspace-editor-modal";
-import { WorkspaceNodeCard } from "@/components/workspace/workspace-node-card";
+import { WorkspaceEditorModal } from "@/features/workspace/workspace-editor-modal";
+import { WorkspaceNodeCard } from "@/features/workspace/workspace-node-card";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { teamDetailQueryOptions, teamListQueryOptions } from "@/lib/queries/team";
 import { useAppShellStore } from "@/stores/app-shell";
 import { deriveTeamPermissions, useTeamStore } from "@/stores/team";
-import { useWorkspaceQuery } from "@/stores/workspace";
+import { useWorkspaceQuery } from "@/features/workspace/hooks/use-workspace-query";
 import { dashboardErrorAlertClass, dashboardStatusBadgeClass } from "@/lib/utils/dashboard-ui";
 import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
 import { shellContentInClass } from "@/lib/utils/app-shell-ui";

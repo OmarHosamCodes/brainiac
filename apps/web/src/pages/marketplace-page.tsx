@@ -24,7 +24,7 @@ import { Input } from "@/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/ui/tabs";
 import { authClient } from "@/lib/auth-client";
 import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
-import { useWorkspaceQuery } from "@/stores/workspace";
+import { useWorkspaceQuery } from "@/features/workspace/hooks/use-workspace-query";
 import { orpc } from "@/lib/orpc";
 import {
   shellContentInClass,

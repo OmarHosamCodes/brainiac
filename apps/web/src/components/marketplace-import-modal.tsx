@@ -29,8 +29,8 @@ import {
   cloneMarketplaceTabPayload,
   getMarketplacePayloadSummary,
   getMarketplacePayloadTypeLabel,
-} from "@/lib/utils/workspace-marketplace";
-import { useWorkspaceQuery } from "@/stores/workspace";
+} from "@/features/workspace/utils/workspace-marketplace";
+import { useWorkspaceQuery } from "@/features/workspace/hooks/use-workspace-query";
 import { cn } from "@/lib/utils";
 
 function kindIcon(kind: WorkspaceMarketplaceItem["payload"]["kind"] | null) {

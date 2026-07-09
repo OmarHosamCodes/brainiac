@@ -24,7 +24,6 @@ const DYNAMIC_IMPORT_ALLOWLIST = [
 // Allowlists for Golden File conventions.
 // Each entry maps to the Phase that will resolve/remove it.
 const GOLDEN_VIEW_ALLOWLIST = new Set([
-  "apps/web/src/features/task-management/work-surface/agency-work-surface-delegated-view.tsx",
   "apps/web/src/features/task-management/task-list/agency-task-list-view.tsx",
   "apps/web/src/features/task-management/work-surface/agency-work-surface-my-tasks-view.tsx",
   "apps/web/src/features/task-management/work-surface/agency-work-surface-task-table-row-view.tsx",

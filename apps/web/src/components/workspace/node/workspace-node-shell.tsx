@@ -32,12 +32,7 @@ import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/lib/utils";
 
-type WorkspaceTeamSummary = {
-  id: string;
-  name: string;
-  role: WorkspaceTeamRole;
-};
-
+type WorkspaceTeamSummary = { id: string; name: string; role: WorkspaceTeamRole };
 type WorkspaceNodeShellProps = {
   node: WorkspaceNode;
   activeTab: WorkspaceNodeTab;
@@ -90,32 +85,24 @@ export function WorkspaceNodeShell({
     saveActiveTabToMarketplace,
     getDisplayTabTitle,
   } = useWorkspaceNodeEditorContext();
-
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [addBlockCommandOpen, setAddBlockCommandOpen] = useState(false);
   const [addBlockCommandView, setAddBlockCommandView] =
     useState<WorkspaceAddBlockCommandView>("search");
   const [pendingFocusBlockId, setPendingFocusBlockId] = useState<string | null>(null);
-
   const handleBlockInserted = useCallback((blockIds: string[]) => {
     const firstBlockId = blockIds[0];
-    if (firstBlockId) {
-      setPendingFocusBlockId(firstBlockId);
-    }
+    if (firstBlockId) setPendingFocusBlockId(firstBlockId);
   }, []);
-
   const handleFocusHandled = useCallback((blockId: string) => {
     setPendingFocusBlockId((current) => (current === blockId ? null : current));
   }, []);
-
   const openAddBlockCommand = useCallback((view: WorkspaceAddBlockCommandView = "search") => {
     setAddBlockCommandView(view);
     setAddBlockCommandOpen(true);
   }, []);
-
   useEffect(() => {
     if (!canEditNodeContent) return;
-
     function handleKeyDown(event: KeyboardEvent) {
       const target = event.target;
       if (
@@ -124,30 +111,24 @@ export function WorkspaceNodeShell({
           target.tagName === "INPUT" ||
           target.tagName === "TEXTAREA" ||
           target.tagName === "SELECT")
-      ) {
+      )
         return;
-      }
-
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setAddBlockCommandOpen((open) => !open);
       }
     }
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [canEditNodeContent]);
-
   const isNodeSharedWithTeam = node.visibility === "team";
   const isShareTogglePending = sharePending || unsharePending;
-
   const activeTeamRoleLabel = useMemo(() => {
     if (!activeTeamRole) return null;
     if (activeTeamRole === "owner") return "Owner";
     if (activeTeamRole === "editor") return "Editor";
     return "Viewer";
   }, [activeTeamRole]);
-
   return (
     <div className="flex h-full w-full gap-0 overflow-hidden">
       <aside
@@ -163,11 +144,9 @@ export function WorkspaceNodeShell({
               Dashboard
             </Link>
           </Button>
-
           <div className="mb-8 mt-4 space-y-4">
             <Badge className={saveBadge.className}>{saveBadge.label}</Badge>
             <h1 className="text-2xl font-bold tracking-tight text-highlighted">{node.title}</h1>
-
             <div className="rounded-2xl border border-default bg-default p-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -194,7 +173,6 @@ export function WorkspaceNodeShell({
                 </div>
                 <ShieldCheck className="mt-0.5 size-4 text-muted" />
               </div>
-
               {canManageNodeSharing ? (
                 <div className="mt-2.5 flex items-center gap-2">
                   <select
@@ -223,7 +201,6 @@ export function WorkspaceNodeShell({
               ) : null}
             </div>
           </div>
-
           <div className="mb-8 space-y-1">
             <p className="mb-2 px-2 text-[11px] font-bold uppercase tracking-widest text-muted">
               Workspaces
@@ -257,7 +234,6 @@ export function WorkspaceNodeShell({
               Add workspace
             </button>
           </div>
-
           <div className="mt-auto space-y-1">
             <Button
               variant="ghost"
@@ -286,7 +262,6 @@ export function WorkspaceNodeShell({
           </div>
         </div>
       </aside>
-
       <main className="relative flex flex-1 flex-col overflow-hidden bg-elevated/5">
         <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-default bg-default px-4 py-4 sm:px-6">
           <div className="flex items-center gap-4">
@@ -312,7 +287,6 @@ export function WorkspaceNodeShell({
             </kbd>
           </Button>
         </header>
-
         <WorkspaceAddBlockCommand
           open={addBlockCommandOpen}
           canEdit={canEditNodeContent}
@@ -320,14 +294,12 @@ export function WorkspaceNodeShell({
           onOpenChange={setAddBlockCommandOpen}
           onInserted={handleBlockInserted}
         />
-
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-6 sm:px-8">
           {saveError ? (
             <div className="mb-4 rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
               {saveError}
             </div>
           ) : null}
-
           <div className="mx-auto flex max-w-5xl flex-col gap-6">
             {visibleBlocks.map((block) => (
               <WorkspaceNodeBlockRenderer
@@ -342,9 +314,7 @@ export function WorkspaceNodeShell({
               <WorkspaceNodeEmptyState
                 canEdit={canEditNodeContent}
                 onQuickAdd={(_type, blockId) => {
-                  if (blockId) {
-                    setPendingFocusBlockId(blockId);
-                  }
+                  if (blockId) setPendingFocusBlockId(blockId);
                 }}
                 onBrowseAll={(view) => openAddBlockCommand(view)}
               />

@@ -9,7 +9,7 @@ import { formatDateTime } from "@/lib/utils/format-date-time";
 import {
   getMarketplacePayloadSummary,
   getMarketplacePayloadTypeLabel,
-} from "@/lib/utils/workspace-marketplace";
+} from "@/features/workspace/utils/workspace-marketplace";
 import { cn } from "@/lib/utils";
 
 function kindIcon(kind: WorkspaceMarketplaceItem["payload"]["kind"]) {

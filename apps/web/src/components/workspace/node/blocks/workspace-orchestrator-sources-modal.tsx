@@ -26,7 +26,7 @@ import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-sel
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/ui/dialog";
-import { getEligibleConnectionTargetIds } from "@/lib/utils/workspace-node-connections";
+import { getEligibleConnectionTargetIds } from "@/features/workspace/utils/workspace-node-connections";
 import { cn } from "@/lib/utils";
 
 type GroupMode = "source" | "domain" | "flat";

@@ -1,109 +1,37 @@
 import { AlertTriangle, Calendar, CircleDot, MoreHorizontal, UserRound } from "lucide-react";
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 
 import { AgencyWorkSurfacePaginationFooter } from "@/features/task-management/work-surface/agency-work-surface-pagination-footer";
 import { AgencyWorkSurfaceTableHeaderView } from "@/features/task-management/work-surface/agency-work-surface-table-header-view";
 import { AgencyWorkSurfaceTaskTableRowView } from "@/features/task-management/work-surface/agency-work-surface-task-table-row-view";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
-import type { AgencyTaskListViewModel } from "@/features/task-management/hooks/use-agency-task-list";
-import type { AgencyProjectTask } from "@/features/task-management/agency-work";
-import { orpc } from "@/lib/orpc";
 import {
   agencyMutedSectionHeaderClass,
   agencyWorkTableBodyScrollClass,
   agencyWorkTableListClass,
   agencyWorkTableStackClass,
 } from "@/features/shared/agency-ui";
-import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-options";
-import { groupDelegatedTasks } from "@/features/task-management/group-tasks-by-recency";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+import type { AgencyWorkSurfaceDelegatedViewModel } from "./hooks/use-agency-work-surface-delegated";
 
-type AgencyWorkSurfaceDelegatedViewProps = {
-  view: Extract<AgencyTaskListViewModel, { status: "ready" }>;
-};
-
-export function AgencyWorkSurfaceDelegatedView({ view }: AgencyWorkSurfaceDelegatedViewProps) {
-  const doneDelegatedQuery = useQuery(
-    withAgencySyncQueryOptions(
-      {
-        ...orpc.agencyOps.projectTasks.list.queryOptions({
-          input: {
-            teamId: view.teamId,
-            delegatedByUserId: view.currentUserId,
-            statuses: ["done"],
-            pageSize: 50,
-          },
-        }),
-        enabled: Boolean(view.teamId && view.currentUserId),
-      },
-      "warm",
-      { liveGated: true, teamId: view.teamId },
-    ),
-  );
-
-  const delegatedTasks = useMemo(() => {
-    const active: AgencyProjectTask[] = [];
-    const seen = new Set<string>();
-
-    for (const group of view.assignedClientGroups) {
-      for (const projectGroup of group.projectGroups) {
-        for (const row of projectGroup.standaloneRows) {
-          if (seen.has(row.task.id)) continue;
-          seen.add(row.task.id);
-          active.push(row.task);
-        }
-        if (projectGroup.journeyCluster) {
-          const anchor = projectGroup.journeyCluster.anchorRow.task;
-          if (!seen.has(anchor.id)) {
-            seen.add(anchor.id);
-            active.push(anchor);
-          }
-          for (const milestone of projectGroup.journeyCluster.milestoneRows) {
-            if (seen.has(milestone.task.id)) continue;
-            seen.add(milestone.task.id);
-            active.push(milestone.task);
-          }
-        }
-      }
-    }
-
-    const completed = doneDelegatedQuery.data?.items ?? [];
-    return [...active, ...completed.filter((task) => !seen.has(task.id))];
-  }, [doneDelegatedQuery.data?.items, view.assignedClientGroups]);
-
-  const sections = useMemo(() => groupDelegatedTasks(delegatedTasks), [delegatedTasks]);
-  const totalLoaded = delegatedTasks.length;
-
-  const loading =
-    view.assignedTasksLoading || (doneDelegatedQuery.isPending && delegatedTasks.length === 0);
-  const queryError = view.assignedTasksQueryError || doneDelegatedQuery.isError;
-
-  if (queryError) {
+export function AgencyWorkSurfaceDelegatedView({
+  viewModel,
+}: {
+  viewModel: AgencyWorkSurfaceDelegatedViewModel;
+}) {
+  const { sections, totalLoaded, loading, queryError, error, retry } = viewModel;
+  if (queryError)
     return (
       <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
         <AlertTriangle className="size-5 text-warning" aria-hidden />
         <p className="text-sm text-muted">
-          {getErrorMessage(
-            view.assignedTasksErrorMessage || doneDelegatedQuery.error,
-            "Could not load delegated tasks.",
-          )}
+          {getErrorMessage(error, "Could not load delegated tasks.")}
         </p>
-        <Button
-          size="sm"
-          variant="secondary"
-          onClick={() => {
-            view.onRetryAssignedTasks();
-            void doneDelegatedQuery.refetch();
-          }}
-        >
+        <Button size="sm" variant="secondary" onClick={retry}>
           Retry
         </Button>
       </div>
     );
-  }
-
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className={agencyWorkTableBodyScrollClass}>
@@ -142,11 +70,11 @@ export function AgencyWorkSurfaceDelegatedView({ view }: AgencyWorkSurfaceDelega
                   <AgencyWorkSurfaceTaskTableRowView
                     key={task.id}
                     task={task}
-                    projects={view.projects}
-                    teamId={view.teamId}
+                    projects={viewModel.view.projects}
+                    teamId={viewModel.view.teamId}
                     variant="delegated"
-                    isRowPending={view.isRowPending(task.id)}
-                    onSelect={(taskId) => view.onSelect(taskId)}
+                    isRowPending={viewModel.view.isRowPending(task.id)}
+                    onSelect={(taskId) => viewModel.view.onSelect(taskId)}
                   />
                 ))}
               </div>
@@ -154,14 +82,13 @@ export function AgencyWorkSurfaceDelegatedView({ view }: AgencyWorkSurfaceDelega
           </div>
         )}
       </div>
-
       <AgencyWorkSurfacePaginationFooter
         rangeStart={totalLoaded === 0 ? 0 : 1}
         rangeEnd={totalLoaded}
-        total={Math.max(view.assignedTasksTotal, totalLoaded)}
+        total={Math.max(viewModel.view.assignedTasksTotal, totalLoaded)}
         previousDisabled
-        nextDisabled={!view.hasMoreAssignedTasks}
-        onNext={view.onFetchMoreAssignedTasks}
+        nextDisabled={!viewModel.view.hasMoreAssignedTasks}
+        onNext={viewModel.view.onFetchMoreAssignedTasks}
       />
     </div>
   );

@@ -1,15 +1,9 @@
-import { useAgencySettingsIntegrationsPane } from "../hooks/use-agency-settings-integrations-pane";
 import { AgencySettingsIntegrationsPaneView } from "../agency-settings-integrations-pane-view";
+import { useAgencySettingsIntegrationsPane } from "../hooks/use-agency-settings-integrations-pane";
 
-type AgencySettingsIntegrationsPaneContainerProps = {
-  teamId: string;
-  active: boolean;
-};
+type Props = { teamId: string; active: boolean };
 
-export function AgencySettingsIntegrationsPaneContainer({
-  teamId,
-  active,
-}: AgencySettingsIntegrationsPaneContainerProps) {
-  const viewModel = useAgencySettingsIntegrationsPane({ teamId, active });
+export function AgencySettingsIntegrationsPaneContainer(props: Props) {
+  const viewModel = useAgencySettingsIntegrationsPane(props);
   return <AgencySettingsIntegrationsPaneView viewModel={viewModel} />;
 }

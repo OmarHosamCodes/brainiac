@@ -74,18 +74,23 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
   );
   const rangeReady = Boolean(range.from && range.to);
 
+  const resolvedRange = {
+    from: range.from ?? "",
+    to: range.to ?? "",
+  };
+
   const entriesQuery = useQuery({
     queryKey: [
       "agency-reports",
       "entries",
       teamId,
-      range.from,
-      range.to,
+      resolvedRange.from,
+      resolvedRange.to,
       filters.clientId,
       filters.projectId,
       filters.memberUserId,
     ],
-    queryFn: () => fetchAllReportEntries(teamId, range, filters),
+    queryFn: () => fetchAllReportEntries(teamId, resolvedRange, filters),
     enabled: Boolean(teamId && rangeReady && report),
   });
 

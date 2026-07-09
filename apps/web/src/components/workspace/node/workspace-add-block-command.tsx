@@ -22,8 +22,8 @@ import {
   matchesAddBlockSearch,
   type AddBlockCommandBlockItem,
   type AddBlockCommandItem,
-} from "@/lib/utils/add-block-command-catalog";
-import { getWorkspaceBlockRegistryEntry } from "@/lib/utils/workspace-block-registry";
+} from "@/features/workspace/utils/add-block-command-catalog";
+import { getWorkspaceBlockRegistryEntry } from "@/features/workspace/utils/workspace-block-registry";
 import { cn } from "@/lib/utils";
 
 export type WorkspaceAddBlockCommandView = "search" | "browse";

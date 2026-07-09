@@ -27,12 +27,12 @@ import {
   shellSegmentTabActiveClass,
   shellSegmentTabClass,
 } from "@/lib/utils/app-shell-ui";
-import { getWorkspaceBlockRegistryEntry } from "@/lib/utils/workspace-block-registry";
+import { getWorkspaceBlockRegistryEntry } from "@/features/workspace/utils/workspace-block-registry";
 import {
   getWorkspaceNodeTintOption,
   getWorkspaceNodeTintStyle,
   workspaceNodeTintOptions,
-} from "@/lib/utils/workspace-node-dashboard";
+} from "@/features/workspace/utils/workspace-node-dashboard";
 import { cn } from "@/lib/utils";
 
 type WorkspaceEditorModalProps = {
@@ -78,13 +78,9 @@ export function WorkspaceEditorModal({
   onTitleChange,
 }: WorkspaceEditorModalProps) {
   const [submitAttempted, setSubmitAttempted] = useState(false);
-
   useEffect(() => {
-    if (open) {
-      setSubmitAttempted(false);
-    }
+    if (open) setSubmitAttempted(false);
   }, [open]);
-
   const selectedBlockKeys = useMemo(
     () => new Set(featuredBlocks.map((entry) => `${entry.tabId}:${entry.blockId}`)),
     [featuredBlocks],
@@ -95,32 +91,22 @@ export function WorkspaceEditorModal({
     availableBlocks.length === 0
       ? "No blocks"
       : `${selectedCount}/${WORKSPACE_NODE_DASHBOARD_DETAIL_LIMIT}`;
-
   const groupedBlockOptions = useMemo(() => {
     const groups: Array<{
       tabId: string;
       tabTitle: string;
       options: WorkspaceNodeDashboardSelectableBlock[];
     }> = [];
-
     for (const option of availableBlocks) {
       const existingGroup = groups.find((entry) => entry.tabId === option.tabId);
-
       if (existingGroup) {
         existingGroup.options.push(option);
         continue;
       }
-
-      groups.push({
-        tabId: option.tabId,
-        tabTitle: option.tabTitle,
-        options: [option],
-      });
+      groups.push({ tabId: option.tabId, tabTitle: option.tabTitle, options: [option] });
     }
-
     return groups;
   }, [availableBlocks]);
-
   const titleFieldError =
     submitAttempted && !valid && !title.trim() ? "Title is required" : undefined;
   const nodeTypeDescription =
@@ -128,11 +114,9 @@ export function WorkspaceEditorModal({
       ? "Coordinates linked nodes on the canvas."
       : "Standalone node for focused work.";
   const selectedTintMeta = getWorkspaceNodeTintOption(tint);
-
   function toggleFeaturedBlock(option: WorkspaceNodeDashboardSelectableBlock) {
     const key = `${option.tabId}:${option.blockId}`;
     const isSelected = selectedBlockKeys.has(key);
-
     if (isSelected) {
       onFeaturedBlocksChange(
         featuredBlocks.filter(
@@ -141,28 +125,13 @@ export function WorkspaceEditorModal({
       );
       return;
     }
-
-    if (selectionLimitReached) {
-      return;
-    }
-
-    onFeaturedBlocksChange([
-      ...featuredBlocks,
-      {
-        tabId: option.tabId,
-        blockId: option.blockId,
-      },
-    ]);
+    if (selectionLimitReached) return;
+    onFeaturedBlocksChange([...featuredBlocks, { tabId: option.tabId, blockId: option.blockId }]);
   }
-
   function handleSubmitClick() {
     setSubmitAttempted(true);
-
-    if (valid) {
-      onSubmit();
-    }
+    if (valid) onSubmit();
   }
-
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
@@ -174,7 +143,6 @@ export function WorkspaceEditorModal({
               : "Update the node and choose what shows on its dashboard card."}
           </DialogDescription>
         </DialogHeader>
-
         <div
           className={cn(
             mode === "edit"
@@ -197,7 +165,6 @@ export function WorkspaceEditorModal({
                   <p className="text-sm text-destructive">{titleFieldError}</p>
                 ) : null}
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="node-content">Summary</Label>
                 <Textarea
@@ -209,7 +176,6 @@ export function WorkspaceEditorModal({
                 />
               </div>
             </section>
-
             <section className="space-y-3">
               <div>
                 <p className="text-sm font-semibold text-highlighted">Node type</p>
@@ -217,7 +183,6 @@ export function WorkspaceEditorModal({
                   Standard for focused work, or orchestrator to coordinate linked nodes.
                 </p>
               </div>
-
               <div
                 className="inline-flex max-w-full flex-wrap gap-1 rounded-full border border-muted/60 bg-elevated/40 p-0.5"
                 role="radiogroup"
@@ -240,16 +205,13 @@ export function WorkspaceEditorModal({
                   </button>
                 ))}
               </div>
-
               <p className="text-sm text-muted">{nodeTypeDescription}</p>
             </section>
-
             <section className="space-y-3">
               <div>
                 <p className="text-sm font-semibold text-highlighted">Tint</p>
                 <p className="mt-1 text-sm text-muted">Color accent for this node on the canvas.</p>
               </div>
-
               <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Node tint">
                 {workspaceNodeTintOptions.map((option) => (
                   <button
@@ -276,13 +238,11 @@ export function WorkspaceEditorModal({
                   </button>
                 ))}
               </div>
-
               <p className="text-sm text-muted">
                 {selectedTintMeta.label} — {selectedTintMeta.description}
               </p>
             </section>
           </div>
-
           {mode === "edit" ? (
             <div className="rounded-2xl border border-muted/30 bg-elevated/20 p-4">
               <div className="space-y-3">
@@ -298,14 +258,12 @@ export function WorkspaceEditorModal({
                     {selectionBadgeLabel}
                   </Badge>
                 </div>
-
                 {selectionLimitReached && groupedBlockOptions.length > 0 ? (
                   <p className="text-sm text-muted">
                     Limit reached. Deselect a block to choose another.
                   </p>
                 ) : null}
               </div>
-
               <div className="mt-4">
                 {groupedBlockOptions.length === 0 ? (
                   <p className="rounded-xl border border-dashed border-muted/40 bg-muted/20 px-4 py-6 text-sm text-muted">
@@ -324,7 +282,6 @@ export function WorkspaceEditorModal({
                             const isDisabled = selectionLimitReached && !isSelected;
                             const entry = getWorkspaceBlockRegistryEntry(option.blockType);
                             const OptionIcon = entry.icon;
-
                             return (
                               <button
                                 key={option.blockId}
@@ -366,7 +323,6 @@ export function WorkspaceEditorModal({
             </div>
           ) : null}
         </div>
-
         <DialogFooter className="gap-2 sm:gap-0">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel

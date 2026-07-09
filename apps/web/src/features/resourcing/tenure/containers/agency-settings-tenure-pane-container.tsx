@@ -1,15 +1,9 @@
-import { useAgencySettingsTenurePane } from "../hooks/use-agency-settings-tenure-pane";
 import { AgencySettingsTenurePaneView } from "../agency-settings-tenure-pane-view";
+import { useAgencySettingsTenurePane } from "../hooks/use-agency-settings-tenure-pane";
 
-type AgencySettingsTenurePaneContainerProps = {
-  teamId: string;
-  active: boolean;
-};
+type Props = { teamId: string; active: boolean };
 
-export function AgencySettingsTenurePaneContainer({
-  teamId,
-  active,
-}: AgencySettingsTenurePaneContainerProps) {
-  const viewModel = useAgencySettingsTenurePane({ teamId, active });
+export function AgencySettingsTenurePaneContainer(props: Props) {
+  const viewModel = useAgencySettingsTenurePane(props);
   return <AgencySettingsTenurePaneView viewModel={viewModel} />;
 }

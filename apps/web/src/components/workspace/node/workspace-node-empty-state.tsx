@@ -6,7 +6,7 @@ import { Button } from "@/ui/button";
 import {
   getWorkspaceBlockRegistryEntry,
   workspacePrimaryBlockTypes,
-} from "@/lib/utils/workspace-block-registry";
+} from "@/features/workspace/utils/workspace-block-registry";
 import type { WorkspaceAddBlockCommandView } from "@/components/workspace/node/workspace-add-block-command";
 
 type WorkspaceNodeEmptyStateProps = {

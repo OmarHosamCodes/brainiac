@@ -1,17 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-
 import { orpc } from "@/lib/orpc";
-
-export type UseAgencyTimeSummaryProps = {
-  teamId: string;
-};
 
 export type DatePreset = "this-week" | "last-month" | "year-to-date" | "custom";
 
-export type AgencyTimeSummaryViewModel = ReturnType<typeof useAgencyTimeSummary>;
+type Props = { teamId: string };
 
-export function useAgencyTimeSummary({ teamId }: UseAgencyTimeSummaryProps) {
+export function useAgencyTimeSummary({ teamId }: Props) {
   const [datePreset, setDatePreset] = useState<DatePreset>("this-week");
   const [customFromDate, setCustomFromDate] = useState("");
   const [customToDate, setCustomToDate] = useState("");
@@ -23,7 +18,6 @@ export function useAgencyTimeSummary({ teamId }: UseAgencyTimeSummaryProps) {
     const now = new Date();
     let from: Date;
     let to: Date;
-
     switch (datePreset) {
       case "this-week": {
         const dayOfWeek = now.getDay();
@@ -33,29 +27,21 @@ export function useAgencyTimeSummary({ teamId }: UseAgencyTimeSummaryProps) {
         to.setDate(to.getDate() + 6);
         break;
       }
-      case "last-month": {
+      case "last-month":
         from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         to = new Date(now.getFullYear(), now.getMonth(), 0);
         break;
-      }
-      case "year-to-date": {
+      case "year-to-date":
         from = new Date(now.getFullYear(), 0, 1);
         to = now;
         break;
-      }
-      case "custom": {
+      case "custom":
         from = customFromDate
           ? new Date(customFromDate)
           : new Date(now.getFullYear(), now.getMonth(), 1);
         to = customToDate ? new Date(customToDate) : now;
         break;
-      }
-      default: {
-        const _exhaustive: never = datePreset;
-        return _exhaustive;
-      }
     }
-
     return { from, to };
   }, [customFromDate, customToDate, datePreset]);
 
@@ -63,14 +49,12 @@ export function useAgencyTimeSummary({ teamId }: UseAgencyTimeSummaryProps) {
     ...orpc.agencyOps.clients.list.queryOptions({ input: { teamId } }),
     enabled: Boolean(teamId),
   });
-
   const projectsQuery = useQuery({
     ...orpc.agencyOps.projects.list.queryOptions({
       input: { teamId, clientId: selectedClientId || undefined },
     }),
     enabled: Boolean(teamId),
   });
-
   const summaryQuery = useQuery({
     ...orpc.agencyOps.summary.list.queryOptions({
       input: {
@@ -85,10 +69,6 @@ export function useAgencyTimeSummary({ teamId }: UseAgencyTimeSummaryProps) {
     enabled: Boolean(teamId),
   });
 
-  const clients = clientsQuery.data?.items ?? [];
-  const projects = projectsQuery.data?.items ?? [];
-  const summaryData = summaryQuery.data?.summary ?? null;
-
   return {
     datePreset,
     setDatePreset,
@@ -102,9 +82,10 @@ export function useAgencyTimeSummary({ teamId }: UseAgencyTimeSummaryProps) {
     setSelectedProjectId,
     selectedMemberUserId,
     setSelectedMemberUserId,
-    clients,
-    projects,
-    summaryData,
-    isSummaryPending: summaryQuery.isPending,
+    clients: clientsQuery.data?.items ?? [],
+    projects: projectsQuery.data?.items ?? [],
+    summaryData: summaryQuery.data?.summary ?? null,
   };
 }
+
+export type AgencyTimeSummaryViewModel = ReturnType<typeof useAgencyTimeSummary>;

@@ -1,15 +1,9 @@
-import { useAgencySettingsRatesPane } from "../hooks/use-agency-settings-rates-pane";
 import { AgencySettingsRatesPaneView } from "../agency-settings-rates-pane-view";
+import { useAgencySettingsRatesPane } from "../hooks/use-agency-settings-rates-pane";
 
-type AgencySettingsRatesPaneContainerProps = {
-  teamId: string;
-  active: boolean;
-};
+type Props = { teamId: string; active: boolean };
 
-export function AgencySettingsRatesPaneContainer({
-  teamId,
-  active,
-}: AgencySettingsRatesPaneContainerProps) {
-  const viewModel = useAgencySettingsRatesPane({ teamId, active });
+export function AgencySettingsRatesPaneContainer(props: Props) {
+  const viewModel = useAgencySettingsRatesPane(props);
   return <AgencySettingsRatesPaneView viewModel={viewModel} />;
 }
