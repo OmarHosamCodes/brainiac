@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { AgencyTaskCreateInlineView } from "@/components/agency/work/task-list/agency-task-create-inline-view";
 import { AgencyWorkSurfacePaginationFooter } from "@/components/agency/work/work-surface/agency-work-surface-pagination-footer";
 import { AgencyWorkSurfaceTableHeaderView } from "@/components/agency/work/work-surface/agency-work-surface-table-header-view";
 import { AgencyWorkSurfaceTaskTableRowView } from "@/components/agency/work/work-surface/agency-work-surface-task-table-row-view";
@@ -138,12 +137,6 @@ export function AgencyWorkSurfaceMyTasksView({ view }: AgencyWorkSurfaceMyTasksV
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      {view.create.quickAddFocused ? (
-        <div className="shrink-0 border-b border-default px-4 py-3">
-          <AgencyTaskCreateInlineView projects={view.projects} create={view.create} />
-        </div>
-      ) : null}
-
       <div className={agencyWorkTableBodyScrollClass}>
         {view.isLoading ? (
           <div className="space-y-2">
@@ -157,6 +150,7 @@ export function AgencyWorkSurfaceMyTasksView({ view }: AgencyWorkSurfaceMyTasksV
           <div className={agencyWorkTableStackClass}>
             <div className={agencyWorkTableListClass}>
               <AgencyWorkSurfaceTableHeaderView
+                variant="active"
                 meta={[
                   { icon: FolderKanban, label: "Project / Category" },
                   { icon: Calendar, label: "Due / Scheduled" },
@@ -178,6 +172,7 @@ export function AgencyWorkSurfaceMyTasksView({ view }: AgencyWorkSurfaceMyTasksV
                   onSelectProject={view.onSelectProject}
                   onStatusChange={view.onStatusChange}
                   onDueDateChange={view.onDueDateChange}
+                  onDescriptionChange={view.onTaskDescriptionChange}
                   onDelete={setDeleteTarget}
                 />
               ))}

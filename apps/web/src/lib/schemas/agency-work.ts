@@ -49,7 +49,6 @@ export type AgencyWorkSurfaceReadyProps = {
   selectedTaskId: string;
   onTabChange: (tab: AgencyWorkSurfaceTab) => void;
   onSelectTask: (taskId: string) => void;
-  onAddNewTask: () => void;
   onSelectProject: (projectId: string) => void;
 };
 

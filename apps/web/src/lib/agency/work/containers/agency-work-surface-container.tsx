@@ -67,9 +67,10 @@ function renderWorkSurfaceView(view: AgencyWorkSurfaceView) {
           }
           tabBar={
             <AgencyWorkSurfaceTabsView
+              teamId={view.teamId}
+              projects={view.projects}
               activeTab={view.activeTab}
               onTabChange={view.onTabChange}
-              onAddNewTask={view.onAddNewTask}
             />
           }
           contentPane={

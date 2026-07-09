@@ -1,9 +1,8 @@
-import { CheckCircle2, ClipboardList, Clock, Plus, Users } from "lucide-react";
+import { CheckCircle2, ClipboardList, Clock, Users } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import type { AgencyWorkSurfaceTab } from "@/lib/schemas/agency-work";
+import { AgencyWorkSurfaceCreateTaskPopover } from "@/components/agency/work/work-surface/agency-work-surface-create-task-popover";
+import type { AgencyProject, AgencyWorkSurfaceTab } from "@/lib/schemas/agency-work";
 import {
-  agencyFocusRingClass,
   agencyWorkTabActiveClass,
   agencyWorkTabBarClass,
   agencyWorkTabClass,
@@ -23,15 +22,17 @@ const TABS: Array<{
 ];
 
 type AgencyWorkSurfaceTabsViewProps = {
+  teamId: string;
+  projects: Array<Pick<AgencyProject, "id" | "clientName" | "name">>;
   activeTab: AgencyWorkSurfaceTab;
   onTabChange: (tab: AgencyWorkSurfaceTab) => void;
-  onAddNewTask: () => void;
 };
 
 export function AgencyWorkSurfaceTabsView({
+  teamId,
+  projects,
   activeTab,
   onTabChange,
-  onAddNewTask,
 }: AgencyWorkSurfaceTabsViewProps) {
   return (
     <div className={agencyWorkTabShellClass}>
@@ -62,14 +63,7 @@ export function AgencyWorkSurfaceTabsView({
           })}
         </div>
 
-        <Button
-          size="sm"
-          className={cn("h-9 shrink-0 rounded-xl px-3", agencyFocusRingClass)}
-          onClick={onAddNewTask}
-        >
-          <Plus className="size-4" aria-hidden />
-          Add New Task
-        </Button>
+        <AgencyWorkSurfaceCreateTaskPopover teamId={teamId} projects={projects} />
       </div>
     </div>
   );

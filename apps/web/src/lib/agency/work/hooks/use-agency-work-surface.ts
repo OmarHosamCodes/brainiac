@@ -40,7 +40,6 @@ export function useAgencyWorkSurface({
   const activeTab = parseAgencyWorkSurfaceTab(searchParams.get("tab"));
   const selectedTaskId = searchParams.get("task") ?? "";
   const setRailStatusFilter = useAgencyTaskListStore((s) => s.setRailStatusFilter);
-  const setQuickAddFocused = useAgencyTaskListStore((s) => s.setQuickAddFocused);
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const projects = projectsQuery.data?.items ?? [];
@@ -94,11 +93,6 @@ export function useAgencyWorkSurface({
     [searchParams, setRailStatusFilter, setSearchParams],
   );
 
-  const onAddNewTask = useCallback(() => {
-    setQuickAddFocused(true);
-    onTabChange("my-tasks");
-  }, [onTabChange, setQuickAddFocused]);
-
   if (projectsQuery.isError) {
     return {
       status: "error",
@@ -130,7 +124,6 @@ export function useAgencyWorkSurface({
     selectedTaskId,
     onTabChange,
     onSelectTask,
-    onAddNewTask,
     onSelectProject,
   };
 }
