@@ -7,6 +7,7 @@ import type { AgencyTimeEntriesLogViewModel } from "@/lib/agency/work/hooks/use-
 import {
   agencyMetricClass,
   agencyTimeLogSkeletonClass,
+  agencyWorkTableBodyScrollClass,
   agencyWorkTableStackClass,
 } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
@@ -36,10 +37,7 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
         </div>
       ) : null}
 
-      <div
-        ref={view.scrollContainerRef}
-        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain"
-      >
+      <div ref={view.scrollContainerRef} className={agencyWorkTableBodyScrollClass}>
         {view.isLoading ? (
           <div className="overflow-hidden">
             {[1, 2, 3, 4, 5].map((rowIndex) => (

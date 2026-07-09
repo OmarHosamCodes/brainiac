@@ -1,8 +1,8 @@
 import { AgencyTimeEntryRowContainer } from "@/lib/agency/work/containers/agency-time-entry-row-container";
 import {
   agencyMetricClass,
-  agencyTimeDayHeaderClass,
-  agencyTimeEntryScrollClass,
+  agencyTimeEntrySectionHeaderClass,
+  agencyWorkTableListClass,
 } from "@/lib/utils/agency-ui";
 import { formatAgencyDayLabel } from "@/lib/utils/format-agency-day-label";
 import { formatDuration } from "@/lib/utils/format-duration";
@@ -53,28 +53,31 @@ export function AgencyTimeEntryDayGroupView({
   highlightedEntryId = null,
 }: AgencyTimeEntryDayGroupViewProps) {
   const visibleRowCount = day.groups.length;
+  const lastGroupIndex = day.groups.length - 1;
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-default bg-elevated/25">
-      <header className={agencyTimeDayHeaderClass}>
+    <section className={agencyWorkTableListClass}>
+      <header className={agencyTimeEntrySectionHeaderClass}>
         <div className="flex min-w-0 items-center gap-2">
           <span className="font-semibold text-highlighted">
             {formatAgencyDayLabel(day.dateKey)}
           </span>
-          <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-elevated px-1.5 font-mono text-xs font-semibold tabular-nums text-muted">
+          <span className="rounded-full bg-elevated px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted">
             {visibleRowCount}
           </span>
         </div>
+        <span className="hidden sm:block" aria-hidden />
         <span className="inline-flex items-baseline gap-1.5 text-muted">
-          <span>Total:</span>
-          <span className={cn("text-base font-semibold", agencyMetricClass)}>
+          <span>Total</span>
+          <span className={cn("text-sm font-semibold", agencyMetricClass)}>
             {formatDuration(day.totalSeconds, "clock")}
           </span>
         </span>
+        <span className="hidden sm:block" aria-hidden />
       </header>
 
-      <ul className={cn(agencyTimeEntryScrollClass, "flex flex-col")}>
-        {day.groups.map((group) => {
+      <ul className="flex min-w-0 flex-col">
+        {day.groups.map((group, index) => {
           const groupExpandKey = `${day.dateKey}||${group.collapseKey}`;
           const primaryEntryId = group.entries[0]?.id ?? "";
           return (
@@ -90,6 +93,7 @@ export function AgencyTimeEntryDayGroupView({
                 updatingEntryIds={updatingEntryIds}
                 duplicatingEntryIds={duplicatingEntryIds}
                 highlighted={highlightedEntryId === primaryEntryId}
+                omitBottomBorder={index === lastGroupIndex}
                 onToggleExpand={() => onToggleGroupExpand(groupExpandKey)}
                 onRestart={onRestart}
                 onDeleteGroup={onDeleteGroup}

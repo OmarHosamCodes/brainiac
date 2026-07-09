@@ -122,7 +122,7 @@ export const agencyTaskClientGroupHeaderClass = cn(
 
 /** Muted band headers — time log day groups, task rail project groups, etc. */
 export const agencyMutedSectionHeaderClass = cn(
-  "flex items-center justify-between border-y border-default bg-muted/55 px-4 py-2 text-xs rounded-t-md",
+  "flex items-center justify-between gap-3 border-b border-default bg-muted/55 px-4 py-2 text-xs",
 );
 
 export const agencyTaskProjectGroupHeaderClass = cn(
@@ -287,11 +287,15 @@ export const agencyTimeEntryTimeInputClass = cn(
   "[&::-webkit-calendar-picker-indicator]:hidden",
 );
 
-/** Shared column grid for time entry rows inside the horizontal scroll region. */
+/** Shared column grid for time entry rows and day-section totals. */
 export const agencyTimeEntryGridClass =
   "grid w-full grid-cols-[minmax(0,1fr)_4.25rem] gap-x-3 gap-y-2 sm:grid-cols-[minmax(14rem,1.35fr)_minmax(12rem,0.7fr)_minmax(6rem,0.35fr)_4.5rem] sm:items-center sm:gap-y-0";
 
-export const agencyTimeEntryScrollClass = "min-w-0 overflow-x-hidden";
+/** Day-section header: label/count left; total aligns to the duration column from sm up. */
+export const agencyTimeEntrySectionHeaderClass = cn(
+  "flex items-center justify-between gap-3 border-b border-default bg-muted/55 px-4 py-2 text-xs",
+  "sm:grid sm:grid-cols-[minmax(14rem,1.35fr)_minmax(12rem,0.7fr)_minmax(6rem,0.35fr)_4.5rem] sm:gap-x-3 sm:items-center",
+);
 
 export const agencyTimeEntryRowHighlightClass =
   "bg-success/10 motion-reduce:transition-none transition-colors duration-500";
