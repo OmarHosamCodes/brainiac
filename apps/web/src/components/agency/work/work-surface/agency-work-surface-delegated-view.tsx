@@ -121,6 +121,7 @@ export function AgencyWorkSurfaceDelegatedView({ view }: AgencyWorkSurfaceDelega
               <div key={section.id} className={agencyWorkTableListClass}>
                 {sectionIndex === 0 ? (
                   <AgencyWorkSurfaceTableHeaderView
+                    variant="delegated"
                     meta={[
                       { icon: UserRound, label: "Assigned To" },
                       { icon: Calendar, label: "Due" },

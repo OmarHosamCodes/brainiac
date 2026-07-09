@@ -58,6 +58,7 @@ export function AgencyWorkSurfaceDoneView({ view }: AgencyWorkSurfaceDoneViewPro
               <div key={section.id} className={agencyWorkTableListClass}>
                 {sectionIndex === 0 ? (
                   <AgencyWorkSurfaceTableHeaderView
+                    variant="done"
                     meta={[
                       { icon: Calendar, label: "Completed At" },
                       { icon: Timer, label: "Duration" },
@@ -82,6 +83,7 @@ export function AgencyWorkSurfaceDoneView({ view }: AgencyWorkSurfaceDoneViewPro
                     highlight={task.id === view.recentlyCompletedTaskId}
                     isRowPending={view.isRowPending(task.id)}
                     onSelect={(taskId) => view.onSelect(taskId)}
+                    onDescriptionChange={view.onTaskDescriptionChange}
                     onReopenToActive={view.onReopenDoneTask}
                   />
                 ))}

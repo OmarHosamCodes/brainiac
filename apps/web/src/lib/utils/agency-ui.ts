@@ -200,15 +200,9 @@ export const agencyWorkTableGridDoneClass =
 export const agencyWorkTableGridDelegatedClass =
   "grid w-full grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.85fr)_4.5rem] items-center gap-x-3 px-4 py-3";
 
-export const agencyWorkTableHeaderGridClass =
-  "grid w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-center gap-x-3 px-4 py-3";
-
-export const agencyWorkTableHeaderMetaClass = "flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1";
-
-export const agencyWorkTableHeaderClass = cn(
-  agencyWorkTableHeaderGridClass,
-  "border-b border-default bg-muted/45 text-xs font-semibold uppercase tracking-wide text-muted",
-);
+/** Visual chrome only — pair with the matching row grid class so header cells align. */
+export const agencyWorkTableHeaderClass =
+  "border-b border-default bg-muted/45 text-xs font-semibold uppercase tracking-wide text-muted";
 
 export const agencyWorkTableBodyScrollClass = "min-h-0 flex-1 overflow-y-auto p-2";
 
