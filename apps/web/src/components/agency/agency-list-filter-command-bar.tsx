@@ -1,7 +1,6 @@
 import { Search } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { AgencyClientArchiveFilter as AgencyClientArchiveFilterPills } from "@/components/agency/agency-client-archive-filter";
 import {
   AgencyCommandBarActions,
   AgencyCommandBarResetButton,
@@ -10,11 +9,18 @@ import {
 import {
   AgencyMultiSelectFilter,
   type AgencyFilterOptionGroup,
+  type AgencyMultiSelectStatusFilter,
 } from "@/components/agency/agency-multi-select-filter";
 import { Input } from "@/components/ui/input";
 import { agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
 import type { AgencyClientArchiveFilter } from "@/lib/agency/agency-client-archive-filter";
 import { cn } from "@/lib/utils";
+
+const ARCHIVE_STATUS_OPTIONS: AgencyMultiSelectStatusFilter["options"] = [
+  { value: "all", label: "All" },
+  { value: "nonarchived", label: "Active" },
+  { value: "archived", label: "Archived" },
+];
 
 type AgencyListFilterCommandBarProps = {
   searchPlaceholder: string;
@@ -71,6 +77,16 @@ export function AgencyListFilterCommandBar({
   onReset,
   trailingActions,
 }: AgencyListFilterCommandBarProps) {
+  const archiveStatusFilter: AgencyMultiSelectStatusFilter | undefined =
+    showArchiveFilter && onArchiveFilterChange
+      ? {
+          label: "Show",
+          value: archiveFilter,
+          options: ARCHIVE_STATUS_OPTIONS,
+          onChange: (value) => onArchiveFilterChange(value as AgencyClientArchiveFilter),
+        }
+      : undefined;
+
   return (
     <div className={agencyCommandBarShellClass}>
       <div className="relative min-w-64 flex-1 md:max-w-72">
@@ -87,20 +103,13 @@ export function AgencyListFilterCommandBar({
         />
       </div>
 
-      {showArchiveFilter && onArchiveFilterChange ? (
-        <AgencyClientArchiveFilterPills
-          archiveFilter={archiveFilter}
-          onArchiveFilterChange={onArchiveFilterChange}
-        />
-      ) : null}
-
       <AgencyMultiSelectFilter
         label="All People"
         values={selectedPeopleIds}
         options={peopleOptions}
         onValuesChange={onSelectedPeopleIdsChange}
         disabled={peopleLoading}
-        searchPlaceholder="Search people"
+        searchPlaceholder="Search users or groups"
       />
       <AgencyMultiSelectFilter
         label="All Clients"
@@ -109,6 +118,7 @@ export function AgencyListFilterCommandBar({
         onValuesChange={onSelectedClientIdsChange}
         disabled={clientsLoading}
         searchPlaceholder="Search clients"
+        statusFilter={archiveStatusFilter}
       />
       <AgencyMultiSelectFilter
         label="All Projects"
@@ -117,6 +127,7 @@ export function AgencyListFilterCommandBar({
         onValuesChange={onSelectedProjectIdsChange}
         disabled={projectsLoading}
         searchPlaceholder="Search projects or clients"
+        statusFilter={archiveStatusFilter}
       />
       <AgencyMultiSelectFilter
         label="All Tasks"
