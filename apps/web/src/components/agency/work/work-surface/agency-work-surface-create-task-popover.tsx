@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useMemo, useState, type FormEvent } from "react";
 
+import { AgencyDescriptionSuggestionMenu } from "@/components/agency/agency-description-suggestion-menu";
 import { AgencyMemberChooser } from "@/components/agency/agency-member-chooser";
 import { AgencyProjectChooser } from "@/components/agency/agency-project-chooser";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { authClient } from "@/lib/auth-client";
+import {
+  buildDescriptionSuggestions,
+  type AgencyDescriptionSuggestion,
+} from "@/lib/agency/work/description-suggestions";
 import { orpc } from "@/lib/orpc";
+import { useAgencyTimeEntriesQuery } from "@/lib/queries/agency";
 import type { AgencyProject } from "@/lib/schemas/agency-work";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
 import {
@@ -43,6 +49,7 @@ export function AgencyWorkSurfaceCreateTaskPopover({
 }: AgencyWorkSurfaceCreateTaskPopoverProps) {
   const formTitleId = useId();
   const titleFieldId = useId();
+  const suggestionListboxId = useId();
   const session = authClient.useSession();
   const currentUserId = session.data?.user?.id ?? "";
   const agencyOps = useAgencyOpsStore();
@@ -57,6 +64,9 @@ export function AgencyWorkSurfaceCreateTaskPopover({
   const [projectId, setProjectId] = useState("");
   const [assignedToTeam, setAssignedToTeam] = useState(false);
   const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>([]);
+  const [titleFocused, setTitleFocused] = useState(false);
+  const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
 
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
@@ -72,6 +82,20 @@ export function AgencyWorkSurfaceCreateTaskPopover({
   );
   const members = membersQuery.data?.items ?? [];
 
+  // Same recent-entry source as the time tracker; only fetch while the popover is open.
+  const recentEntriesQuery = useAgencyTimeEntriesQuery(open ? teamId : "", 1, 50);
+
+  const titleSuggestions = useMemo(
+    () =>
+      buildDescriptionSuggestions(recentEntriesQuery.data?.items ?? [], title, {
+        projectId,
+      }),
+    [projectId, recentEntriesQuery.data?.items, title],
+  );
+
+  const suggestionsReady = !suggestionsDismissed && titleSuggestions.length > 0;
+  const suggestionsOpen = suggestionsReady && titleFocused;
+
   useEffect(() => {
     if (!open) return;
     const defaultProjectId = resolveDefaultCreateProjectId({
@@ -82,7 +106,55 @@ export function AgencyWorkSurfaceCreateTaskPopover({
     setProjectId(defaultProjectId);
     setAssignedToTeam(false);
     setAssigneeUserIds(currentUserId ? [currentUserId] : []);
+    setSuggestionsDismissed(false);
+    setActiveSuggestionIndex(0);
   }, [currentUserId, lastUsedProjectIdForCreate, open, projects]);
+
+  useEffect(() => {
+    setActiveSuggestionIndex(0);
+    setSuggestionsDismissed(false);
+  }, [titleSuggestions, title]);
+
+  function applySuggestion(suggestion: AgencyDescriptionSuggestion) {
+    setTitle(suggestion.description);
+    // Match tracker: always sync project from the suggestion when it carries one.
+    if (suggestion.projectId) {
+      setProjectId(suggestion.projectId);
+    }
+    setSuggestionsDismissed(true);
+  }
+
+  function handleTitleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (!suggestionsOpen) return;
+
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        setActiveSuggestionIndex((current) => (current + 1) % titleSuggestions.length);
+        return;
+      case "ArrowUp":
+        event.preventDefault();
+        setActiveSuggestionIndex(
+          (current) => (current - 1 + titleSuggestions.length) % titleSuggestions.length,
+        );
+        return;
+      case "Enter": {
+        const suggestion = titleSuggestions[activeSuggestionIndex];
+        if (suggestion) {
+          event.preventDefault();
+          applySuggestion(suggestion);
+        }
+        return;
+      }
+      case "Escape":
+        event.preventDefault();
+        event.stopPropagation();
+        setSuggestionsDismissed(true);
+        return;
+      default:
+        break;
+    }
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -112,7 +184,12 @@ export function AgencyWorkSurfaceCreateTaskPopover({
           Add New Task
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" sideOffset={6} className="w-80 p-3" aria-labelledby={formTitleId}>
+      <PopoverContent
+        align="end"
+        sideOffset={6}
+        className="w-80 !overflow-visible p-3"
+        aria-labelledby={formTitleId}
+      >
         <form className="flex flex-col gap-3" onSubmit={(event) => void handleSubmit(event)}>
           <p id={formTitleId} className={agencyLabelClass}>
             New task
@@ -132,23 +209,52 @@ export function AgencyWorkSurfaceCreateTaskPopover({
             />
           </div>
 
-          <div className={agencyFormFieldClass}>
+          <div className={agencyFormFieldClass} data-create-task-title>
             <Label htmlFor={titleFieldId} className={createTaskFieldLabelClass}>
               Task name
             </Label>
-            <Input
-              id={titleFieldId}
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
-              placeholder="What needs doing?"
-              autoFocus
-              disabled={isCreatingTask}
-              className={cn(
-                "h-9 rounded-xl border-default bg-default text-sm font-medium",
-                agencyInputPlaceholderClass,
-                agencyFocusRingClass,
-              )}
-            />
+            <div className="relative">
+              <Input
+                id={titleFieldId}
+                value={title}
+                onChange={(event) => setTitle(event.target.value)}
+                onKeyDown={handleTitleKeyDown}
+                onFocus={() => {
+                  setTitleFocused(true);
+                  setSuggestionsDismissed(false);
+                }}
+                onBlur={(event) => {
+                  if (
+                    !event.currentTarget
+                      .closest("[data-create-task-title]")
+                      ?.contains(event.relatedTarget)
+                  ) {
+                    setTitleFocused(false);
+                  }
+                }}
+                placeholder="What needs doing?"
+                autoFocus
+                disabled={isCreatingTask}
+                aria-autocomplete="list"
+                aria-controls={suggestionsOpen ? suggestionListboxId : undefined}
+                aria-expanded={suggestionsOpen}
+                className={cn(
+                  "h-9 rounded-xl border-default bg-default text-sm font-medium",
+                  agencyInputPlaceholderClass,
+                  agencyFocusRingClass,
+                )}
+              />
+              {suggestionsOpen ? (
+                <AgencyDescriptionSuggestionMenu
+                  listboxId={suggestionListboxId}
+                  suggestions={titleSuggestions}
+                  activeIndex={activeSuggestionIndex}
+                  ariaLabel="Recent task names"
+                  onActiveIndexChange={setActiveSuggestionIndex}
+                  onSelect={applySuggestion}
+                />
+              ) : null}
+            </div>
           </div>
 
           <div className={agencyFormFieldClass}>
