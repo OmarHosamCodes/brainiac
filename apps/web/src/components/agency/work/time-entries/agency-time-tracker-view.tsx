@@ -1,6 +1,7 @@
 import { MoreVertical, Trash2 } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 
+import { AgencyDescriptionSuggestionMenu } from "@/components/agency/agency-description-suggestion-menu";
 import { AgencyTaskChooser } from "@/components/agency/agency-task-chooser";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,6 @@ import {
   agencyFocusRingClass,
   agencyInputPlaceholderClass,
   agencyLabelClass,
-  agencyTaskRowProjectPillClass,
   agencyTimeTrackerActionsZoneClass,
   agencyTimeTrackerActiveRowClass,
   agencyTimeTrackerControlsCardClass,
@@ -24,99 +24,12 @@ import {
   agencyTimeTrackerSplitClass,
   agencyTimeTrackerStatusDividerClass,
   agencyTimeTrackerStatusZoneClass,
-  agencyTimeTrackerSuggestionAnchorClass,
-  agencyTimeTrackerSuggestionOptionClass,
-  agencyTimeTrackerSuggestionPanelClass,
 } from "@/lib/utils/agency-ui";
-import {
-  LiquidGlassBackdrop,
-  LiquidGlassBody,
-  liquidGlassMenuItemClass,
-} from "@/lib/utils/liquid-glass-ui";
-import { projectHuePillStyle } from "@/lib/utils/project-palette";
-import { useTheme } from "@/stores/theme";
 import { cn } from "@/lib/utils";
 
 type AgencyTimeTrackerViewProps = {
   view: AgencyTimeTrackerViewModel;
 };
-
-type DescriptionSuggestionMenuProps = {
-  listboxId: string;
-  suggestions: AgencyTimeTrackerSuggestion[];
-  activeIndex: number;
-  onActiveIndexChange: (index: number) => void;
-  onSelect: (suggestion: AgencyTimeTrackerSuggestion) => void;
-};
-
-function DescriptionSuggestionMenu({
-  listboxId,
-  suggestions,
-  activeIndex,
-  onActiveIndexChange,
-  onSelect,
-}: DescriptionSuggestionMenuProps) {
-  const { isDark } = useTheme();
-
-  return (
-    <div className={agencyTimeTrackerSuggestionAnchorClass}>
-      <div className={agencyTimeTrackerSuggestionPanelClass} data-state="open">
-        <LiquidGlassBackdrop />
-        <LiquidGlassBody className="p-1">
-          <ul id={listboxId} role="listbox" aria-label="Recent descriptions" className="min-w-0">
-            {suggestions.map((suggestion, index) => {
-              const active = index === activeIndex;
-
-              return (
-                <li key={`${suggestion.projectId}-${suggestion.description}`} role="presentation">
-                  <button
-                    id={`${listboxId}-option-${index}`}
-                    type="button"
-                    role="option"
-                    data-slot="tracker-suggestion-menu-item"
-                    aria-selected={active}
-                    className={cn(
-                      liquidGlassMenuItemClass,
-                      agencyTimeTrackerSuggestionOptionClass,
-                      active && "bg-accent/35 hover:bg-accent/35",
-                    )}
-                    onMouseEnter={() => onActiveIndexChange(index)}
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => onSelect(suggestion)}
-                  >
-                    <span
-                      className={cn(
-                        "block max-w-full truncate text-sm font-semibold",
-                        active ? "text-primary" : "text-highlighted",
-                      )}
-                    >
-                      {suggestion.description}
-                    </span>
-                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                      {suggestion.projectName ? (
-                        <span
-                          className={cn(agencyTaskRowProjectPillClass, "max-w-[9rem] truncate")}
-                          style={projectHuePillStyle(suggestion.projectId, isDark)}
-                        >
-                          {suggestion.projectName}
-                        </span>
-                      ) : null}
-                      {suggestion.clientName ? (
-                        <span className="inline-flex max-w-[9rem] truncate rounded-full border border-default bg-elevated px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-                          {suggestion.clientName}
-                        </span>
-                      ) : null}
-                    </div>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </LiquidGlassBody>
-      </div>
-    </div>
-  );
-}
 
 export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
   const suggestionListboxId = useId();
@@ -220,7 +133,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
         </div>
 
         {suggestionsOpen ? (
-          <DescriptionSuggestionMenu
+          <AgencyDescriptionSuggestionMenu
             listboxId={suggestionListboxId}
             suggestions={view.descriptionSuggestions}
             activeIndex={activeSuggestionIndex}

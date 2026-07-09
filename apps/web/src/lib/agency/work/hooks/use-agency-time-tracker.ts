@@ -2,6 +2,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { setTrackingFavicon } from "@/lib/favicon";
 
+import {
+  buildDescriptionSuggestions,
+  type AgencyDescriptionSuggestion,
+} from "@/lib/agency/work/description-suggestions";
 import { useAgencyElapsedTimer } from "@/lib/agency/work/hooks/use-agency-elapsed-timer";
 import {
   canStartAgencyTimer,
@@ -25,7 +29,6 @@ import {
   useTrackerDraft,
 } from "@/stores/agency-time-tracking";
 
-const TRACKER_SUGGESTION_LIMIT = 10;
 const START_TIME_DEBOUNCE_MS = 300;
 
 const emptyStartDraft = { date: "", startTime: "" };
@@ -39,14 +42,7 @@ type UseAgencyTimeTrackerOptions = {
   teamId: string;
 };
 
-export type AgencyTimeTrackerSuggestion = {
-  description: string;
-  taskId: string;
-  taskTitle: string;
-  projectId: string;
-  projectName: string;
-  clientName: string;
-};
+export type AgencyTimeTrackerSuggestion = AgencyDescriptionSuggestion;
 
 export type AgencyTimeTrackerViewModel = {
   teamId: string;
@@ -86,10 +82,6 @@ export type AgencyTimeTrackerViewModel = {
   onDiscardTimer: () => void;
   onApplySuggestion: (suggestion: AgencyTimeTrackerSuggestion) => void;
 };
-
-function normalizeSuggestionText(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
 
 export function useAgencyTrackingFavicon(isTracking: boolean) {
   useEffect(() => {
@@ -248,40 +240,10 @@ export function useAgencyTimeTracker({
     }
   }, [activeTimer]);
 
-  const descriptionSuggestions = useMemo(() => {
-    const entries = recentEntriesQuery.data?.items ?? [];
-    const normalizedQuery = normalizeSuggestionText(timerDescription);
-    const seen = new Set<string>();
-
-    return entries
-      .map((entry) => {
-        const description = entry.description.trim() || entry.taskTitle?.trim() || "";
-        const taskId = entry.taskId ?? "";
-        const taskTitle = entry.taskTitle ?? "";
-        const searchable = normalizeSuggestionText(`${description} ${taskTitle}`);
-        const startsWithQuery = normalizedQuery ? searchable.startsWith(normalizedQuery) : false;
-        const includesQuery = normalizedQuery ? searchable.includes(normalizedQuery) : false;
-        return {
-          description,
-          taskId,
-          taskTitle,
-          projectId: entry.projectId,
-          projectName: entry.projectName,
-          clientName: entry.clientName,
-          score: startsWithQuery ? 3 : includesQuery ? 2 : normalizedQuery ? 0 : 1,
-        };
-      })
-      .filter((entry) => {
-        if (!entry.description || entry.score <= 0) return false;
-        // Collapse by visible identity (description + project); keep first = most recent.
-        const key = `${normalizeSuggestionText(entry.description)}||${entry.projectId}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .sort((left, right) => right.score - left.score)
-      .slice(0, TRACKER_SUGGESTION_LIMIT);
-  }, [recentEntriesQuery.data?.items, timerDescription]);
+  const descriptionSuggestions = useMemo(
+    () => buildDescriptionSuggestions(recentEntriesQuery.data?.items ?? [], timerDescription),
+    [recentEntriesQuery.data?.items, timerDescription],
+  );
 
   useEffect(() => {
     if (selectedTaskId || activeTimerHasTask) {
@@ -332,7 +294,7 @@ export function useAgencyTimeTracker({
   const trackerStatusLine =
     activeTimer || selectedTaskId
       ? `${trackerProject?.clientName ?? "Project"} · ${trackerProject?.name ?? taskChooserLabel}`
-      : "Ready · Choose task";
+      : "Choose task";
 
   let stopButtonLabel = "Stop";
   if (isTimerMutationPending) {
