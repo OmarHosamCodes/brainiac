@@ -13,6 +13,7 @@ It closes by pointing the user at the best command to run next. Every other impe
 Check what already exists. PRODUCT.md and DESIGN.md live at the project root, or under `.agents/context/` or `docs/` (case-insensitive). Read whichever are present with your native file tool. Also note whether `.impeccable/live/config.json` already exists (Step 6 leaves it untouched if so).
 
 Decision tree:
+
 - **Neither file exists (empty project or no context yet)**: do Steps 2-4 (write PRODUCT.md), then decide on DESIGN.md based on whether there's code to analyze.
 - **PRODUCT.md exists, DESIGN.md missing**: skip to Step 5 and offer to run `$impeccable document` for DESIGN.md.
 - **PRODUCT.md exists but has no `## Register` section (legacy)**: add it. Infer a hypothesis from the codebase (see Step 2), confirm with the user, write the field.
@@ -74,7 +75,7 @@ Ask enough to complete PRODUCT.md. At minimum, cover register confirmation, **pl
 
 Every design task is either **brand** (marketing, landing, campaign, long-form content, portfolio: design IS the product) or **product** (app UI, admin, dashboards, tools: design SERVES the product).
 
-If Step 2 produced a clear hypothesis, lead with it: *"From the codebase, this looks like a [brand / product] surface. Does that match your intent, or should we treat it differently?"*
+If Step 2 produced a clear hypothesis, lead with it: _"From the codebase, this looks like a [brand / product] surface. Does that match your intent, or should we treat it differently?"_
 
 If the signal is genuinely split (e.g. a product with a big marketing landing), STOP and use Codex's structured user-input/question tool when available; if unavailable, ask directly in chat to clarify what you cannot infer. Ask which register describes the **primary** surface. The register can be overridden per task later, but PRODUCT.md carries one default.
 
@@ -82,23 +83,26 @@ If the signal is genuinely split (e.g. a product with a big marketing landing), 
 
 Every project targets **web** (includes responsive mobile web), **ios**, **android**, or **adaptive** (one codebase, ships both, adapts per OS: Flutter, React Native, KMP). Platform picks the native rulebook: HIG for `ios`, Material 3 for `android`, both for `adaptive`, none for `web`.
 
-If Step 2 produced a clear hypothesis, lead with it: *"From the codebase, this looks like a [web / ios / android / adaptive] project. Does that match?"* For cross-platform apps, decide by the **design language the app renders**, not the toolchain: one look on both platforms (Flutter's Material-everywhere default) takes that platform's value; genuine per-OS adaptation (Cupertino on iOS, Material on Android) is `adaptive`. When in doubt, `web`.
+If Step 2 produced a clear hypothesis, lead with it: _"From the codebase, this looks like a [web / ios / android / adaptive] project. Does that match?"_ For cross-platform apps, decide by the **design language the app renders**, not the toolchain: one look on both platforms (Flutter's Material-everywhere default) takes that platform's value; genuine per-OS adaptation (Cupertino on iOS, Material on Android) is `adaptive`. When in doubt, `web`.
 
 A monorepo shipping both a website and a native app gets a PRODUCT.md per app, each with its own `## Platform`; the root PRODUCT.md carries the primary surface's platform.
 
 ### Users & Purpose
+
 - Who uses this? What's their context when using it?
 - What job are they trying to get done?
 - For brand: what emotions should the interface evoke? (confidence, delight, calm, urgency)
 - For product: what workflow are they in? What's the primary task on any given screen?
 
 ### Brand & Personality
+
 - How would you describe the brand personality in 3 words?
 - Reference sites or apps that capture the right feel? What specifically about them?
-  - Push for specific named references with the *specific* thing about them that fits this brand, not generic "modern" adjectives or category-bucket lanes.
+  - Push for specific named references with the _specific_ thing about them that fits this brand, not generic "modern" adjectives or category-bucket lanes.
 - What should this explicitly NOT look like? Any anti-references?
 
 ### Accessibility & Inclusion
+
 - Specific accessibility requirements? (WCAG level, known user needs)
 - Considerations for reduced motion, color blindness, or other accommodations?
 
@@ -122,21 +126,27 @@ product
 web
 
 ## Users
+
 [Who they are, their context, the job to be done]
 
 ## Product Purpose
+
 [What this product does, why it exists, what success looks like]
 
 ## Brand Personality
+
 [Voice, tone, 3-word personality, emotional goals]
 
 ## Anti-references
+
 [What this should NOT look like. Specific bad-example sites or patterns to avoid.]
 
 ## Design Principles
+
 [3-5 strategic principles derived from the conversation. Principles like "practice what you preach", "show, don't tell", "expert confidence". NOT visual rules like "use OKLCH" or "magenta accent".]
 
 ## Accessibility & Inclusion
+
 [WCAG level, known user needs, considerations]
 ```
 
@@ -176,6 +186,7 @@ Writing the config file is harmless and needs no consent; only the CSP **source-
 ## Step 7: Recommend starting points, then wrap up
 
 Summarize tersely:
+
 - Register captured (brand / product) and platform captured (web / ios / android / adaptive)
 - What was written (PRODUCT.md, DESIGN.md, live config, or a subset)
 - The 3-5 strategic principles from PRODUCT.md that will guide future work
