@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AgencyTimeRangeFilters } from "@/lib/agency/use-agency-time-range-filters";
 import { orpc } from "@/lib/orpc";
+import { useAgencyPresenceMembers } from "@/lib/queries/agency";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
@@ -165,7 +166,9 @@ type AgencyDashboardSurfaceProps = {
 };
 
 export function AgencyDashboardSurface({ teamId, filters }: AgencyDashboardSurfaceProps) {
-  const { range, projectId, memberUserId, clientId } = filters;
+  const { range, projectId, memberUserId, clientId, clientIds, projectIds, memberUserIds } =
+    filters;
+  const { members: presenceMembers } = useAgencyPresenceMembers(teamId);
 
   const dashboardQuery = useQuery({
     ...orpc.agencyOps.reports.dashboard.queryOptions({
@@ -176,6 +179,9 @@ export function AgencyDashboardSurface({ teamId, filters }: AgencyDashboardSurfa
         clientId,
         projectId,
         memberUserId,
+        clientIds,
+        projectIds,
+        memberUserIds,
       },
     }),
     enabled: Boolean(teamId),
@@ -186,6 +192,11 @@ export function AgencyDashboardSurface({ teamId, filters }: AgencyDashboardSurfa
   const rankedProjects = summary?.timeDistributionByProject.slice(0, 10) ?? [];
   const totalProjectHours =
     summary?.timeDistributionByProject.reduce((sum, row) => sum + row.hours, 0) ?? 0;
+
+  const activeTimerByUserId = useMemo(
+    () => new Map(presenceMembers.map((member) => [member.userId, member])),
+    [presenceMembers],
+  );
 
   const sortedTeamMembers = useMemo(() => {
     const members = summary?.teamMembers ?? [];
@@ -343,89 +354,113 @@ export function AgencyDashboardSurface({ teamId, filters }: AgencyDashboardSurfa
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-default">
-                  {sortedTeamMembers.map((member) => (
-                    <tr
-                      key={member.userId}
-                      className="transition-colors hover:bg-elevated/55 motion-reduce:transition-none"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          {member.avatar ? (
-                            <img
-                              src={member.avatar}
-                              alt={member.userName}
-                              className="size-8 rounded-xl object-cover"
-                            />
-                          ) : (
-                            <span
-                              className="flex size-8 items-center justify-center rounded-xl bg-muted text-[11px] font-bold text-highlighted"
-                              aria-hidden
-                            >
-                              {initials(member.userName)}
-                            </span>
-                          )}
-                          <div className="min-w-0">
-                            <p className="truncate font-bold text-highlighted">{member.userName}</p>
-                            <p className="truncate text-[11px] text-muted">{member.userEmail}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="max-w-sm px-4 py-3">
-                        {member.latestEntry ? (
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-highlighted">
-                              {member.latestEntry.description || "(no description)"}
-                            </p>
-                            <p className="truncate text-[11px] text-muted">
-                              {member.latestEntry.projectName} · {member.latestEntry.clientName}
-                            </p>
-                          </div>
-                        ) : (
-                          <span className="text-muted">No activity</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className="inline-flex items-center gap-1.5 rounded-full bg-elevated px-2 py-1 text-[11px] font-bold text-muted"
-                          aria-label={member.isActive ? "Timer running" : "Idle"}
-                        >
-                          <span
-                            className={cn(
-                              "size-1.5 rounded-full",
-                              member.isActive ? "bg-primary" : "bg-muted",
-                            )}
-                            aria-hidden
-                          />
-                          {member.isActive ? "In progress" : "Idle"}
-                        </span>
-                      </td>
-                      <td className={cn("px-4 py-3 text-right", agencyMetricClass)}>
-                        {formatDuration(member.totalSeconds)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div
-                          className="flex h-4 overflow-hidden rounded-sm bg-elevated"
-                          role="img"
-                          aria-label={`Project allocation for ${member.userName}`}
-                        >
-                          {member.projectBreakdown.length === 0 ? (
-                            <span className="h-full w-full bg-muted/30" />
-                          ) : (
-                            member.projectBreakdown.map((project) => (
-                              <ProjectHueFill
-                                key={project.projectId}
-                                projectId={project.projectId}
-                                className="block h-full min-w-1"
-                                style={{
-                                  width: `${relShare(project.seconds, member.totalSeconds)}%`,
-                                }}
+                  {sortedTeamMembers.map((member) => {
+                    const liveTimer = activeTimerByUserId.get(member.userId);
+                    const isTracking = Boolean(liveTimer) || member.isActive;
+                    const activity = liveTimer
+                      ? {
+                          description: liveTimer.description,
+                          projectName: liveTimer.projectName,
+                          clientName: liveTimer.clientName ?? null,
+                        }
+                      : member.latestEntry;
+
+                    return (
+                      <tr
+                        key={member.userId}
+                        className="transition-colors hover:bg-elevated/55 motion-reduce:transition-none"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            {member.avatar ? (
+                              <img
+                                src={member.avatar}
+                                alt={member.userName}
+                                className="size-8 rounded-xl object-cover"
                               />
-                            ))
+                            ) : (
+                              <span
+                                className="flex size-8 items-center justify-center rounded-xl bg-muted text-[11px] font-bold text-highlighted"
+                                aria-hidden
+                              >
+                                {initials(member.userName)}
+                              </span>
+                            )}
+                            <div className="min-w-0">
+                              <p className="truncate font-bold text-highlighted">
+                                {member.userName}
+                              </p>
+                              <p className="truncate text-[11px] text-muted">{member.userEmail}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="max-w-sm px-4 py-3">
+                          {activity ? (
+                            <div className="min-w-0">
+                              <div className="flex min-w-0 items-center gap-1.5">
+                                {isTracking ? (
+                                  <span
+                                    className="size-1.5 shrink-0 rounded-full bg-primary"
+                                    aria-hidden
+                                  />
+                                ) : null}
+                                <p className="truncate font-semibold text-highlighted">
+                                  {activity.description || "(no description)"}
+                                </p>
+                              </div>
+                              <p className="truncate text-[11px] text-muted">
+                                {activity.clientName
+                                  ? `${activity.projectName} · ${activity.clientName}`
+                                  : activity.projectName}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-muted">No activity</span>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className="inline-flex items-center gap-1.5 rounded-full bg-elevated px-2 py-1 text-[11px] font-bold text-muted"
+                            aria-label={isTracking ? "Timer running" : "Idle"}
+                          >
+                            <span
+                              className={cn(
+                                "size-1.5 rounded-full",
+                                isTracking ? "bg-primary" : "bg-muted",
+                              )}
+                              aria-hidden
+                            />
+                            {isTracking ? "In progress" : "Idle"}
+                          </span>
+                        </td>
+                        <td className={cn("px-4 py-3 text-right", agencyMetricClass)}>
+                          {formatDuration(member.totalSeconds)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div
+                            className="flex h-4 overflow-hidden rounded-sm bg-elevated"
+                            role="img"
+                            aria-label={`Project allocation for ${member.userName}`}
+                          >
+                            {member.projectBreakdown.length === 0 ? (
+                              <span className="h-full w-full bg-muted/30" />
+                            ) : (
+                              member.projectBreakdown.map((project) => (
+                                <ProjectHueFill
+                                  key={project.projectId}
+                                  projectId={project.projectId}
+                                  className="block h-full min-w-1"
+                                  style={{
+                                    width: `${relShare(project.seconds, member.totalSeconds)}%`,
+                                  }}
+                                />
+                              ))
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
