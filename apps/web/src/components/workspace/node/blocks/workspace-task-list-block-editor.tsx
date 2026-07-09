@@ -14,9 +14,9 @@ import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-c
 import { BlockFieldLabel } from "@/components/workspace/node/blocks/shared/block-field-label";
 import { BlockProgressBar } from "@/components/workspace/node/blocks/shared/block-progress-bar";
 import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
 import { cn } from "@/lib/utils";
 
 function toTaskPriority(value: string): WorkspaceTaskPriority | null {

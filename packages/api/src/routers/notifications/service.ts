@@ -17,7 +17,7 @@ import { and, desc, eq, isNull, lt, sql } from "drizzle-orm";
 import type { NotificationRecord } from "../../schemas/notifications";
 import { getUserAvatarPublicUrl } from "../../storage";
 import { env } from "@brainiac/env/server";
-import { requireTeamMembership } from "../agency-ops/membership";
+import { requireTeamMembership } from "../agency-ops/shared/membership";
 import { defaultNotificationChannels, excludeActor, messageCoalesceTaskId } from "./fanout-helpers";
 import { deliverNotificationPush } from "./delivery";
 import { isUserLiveOnTeam, publishNotificationCreated } from "./live-bridge";

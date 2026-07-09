@@ -1,6 +1,6 @@
 import type { DashboardAgentChatState } from "@/stores/dashboard-agent-chat";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -8,8 +8,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from "@/ui/dialog";
+import { Input } from "@/ui/input";
 import { Loader2 } from "lucide-react";
 
 type DashboardAgentConversationDialogsProps = {

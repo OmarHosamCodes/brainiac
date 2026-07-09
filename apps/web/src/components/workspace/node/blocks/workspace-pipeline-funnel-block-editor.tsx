@@ -15,9 +15,9 @@ import { useMemo } from "react";
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
 import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
 import { cn } from "@/lib/utils";
 
 const stageOptions = WORKSPACE_SALES_PIPELINE_STAGES.map((stage) => ({

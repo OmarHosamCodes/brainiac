@@ -3,8 +3,8 @@ import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/ui/badge";
+import { Textarea } from "@/ui/textarea";
 import { cn } from "@/lib/utils";
 
 const quadrants = [

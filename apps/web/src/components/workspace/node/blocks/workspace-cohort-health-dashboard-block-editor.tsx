@@ -15,10 +15,10 @@ import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-c
 import { BlockFieldLabel } from "@/components/workspace/node/blocks/shared/block-field-label";
 import { BlockProgressBar } from "@/components/workspace/node/blocks/shared/block-progress-bar";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
 import { cn } from "@/lib/utils";
 
 const statusOptions: WorkspaceCohortStatus[] = ["planning", "selling", "running", "completed"];

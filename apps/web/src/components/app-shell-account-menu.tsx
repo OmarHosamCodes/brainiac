@@ -15,7 +15,7 @@ import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,9 +23,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useBilling } from "@/lib/queries/billing";
+} from "@/ui/dropdown-menu";
+import { Skeleton } from "@/ui/skeleton";
+import { useBilling } from "@/features/billing/billing-queries";
 import { authClient } from "@/lib/auth-client";
 import { getServerUrl } from "@/lib/env";
 import { getErrorMessage } from "@/lib/utils/get-error-message";

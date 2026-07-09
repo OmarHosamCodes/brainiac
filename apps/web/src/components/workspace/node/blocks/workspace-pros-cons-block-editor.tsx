@@ -12,9 +12,9 @@ import {
   ProsConsBalanceBar,
   ProsConsWeightButtons,
 } from "@/components/workspace/node/blocks/shared/pros-cons-helpers";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
 import { cn } from "@/lib/utils";
 
 export function WorkspaceProsConsBlockEditor({

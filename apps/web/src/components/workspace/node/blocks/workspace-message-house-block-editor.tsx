@@ -9,10 +9,10 @@ import { toast } from "sonner";
 
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Textarea } from "@/ui/textarea";
 import { formatDateTime } from "@/lib/utils/format-date-time";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 

@@ -10,7 +10,7 @@ import { MarketingBrandLockup } from "@/components/marketing/marketing-brand-loc
 import { NeuralCanvasArtifact } from "@/components/marketing/neural-canvas-artifact";
 import { PrismDispersionArtifact } from "@/components/marketing/prism-dispersion-artifact";
 import { MarketingPageShell } from "@/components/marketing-page-shell";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 import { authClient } from "@/lib/auth-client";
 
 export function LandingPage() {
@@ -23,13 +23,13 @@ export function LandingPage() {
       });
     };
 
-    if ("requestIdleCallback" in window) {
-      const idleId = window.requestIdleCallback(resolveSession);
-      return () => window.cancelIdleCallback(idleId);
+    if ("requestIdleCallback" in (window as any)) {
+      const idleId = (window as any).requestIdleCallback(resolveSession);
+      return () => (window as any).cancelIdleCallback(idleId);
     }
 
-    const timeoutId = window.setTimeout(resolveSession, 1);
-    return () => window.clearTimeout(timeoutId);
+    const timeoutId = setTimeout(resolveSession, 1);
+    return () => clearTimeout(timeoutId);
   }, []);
 
   return (

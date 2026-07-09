@@ -17,8 +17,8 @@ import { useMemo, useState } from "react";
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
 import { WorkspaceOrchestratorSourcesModal } from "@/components/workspace/node/blocks/workspace-orchestrator-sources-modal";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
 import { cn } from "@/lib/utils";
 
 function formatMinutes(minutes: number) {

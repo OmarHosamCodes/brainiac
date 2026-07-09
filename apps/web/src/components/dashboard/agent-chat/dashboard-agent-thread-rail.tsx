@@ -1,6 +1,6 @@
 import type { DashboardAgentChatState } from "@/stores/dashboard-agent-chat";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 import {
   agentChatLabelClass,
   agentChatRailClass,
@@ -11,7 +11,7 @@ import {
 } from "@/lib/utils/dashboard-agent-ui";
 import { cn } from "@/lib/utils";
 import { PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/ui/skeleton";
 
 type DashboardAgentThreadRailProps = {
   chat: DashboardAgentChatState;

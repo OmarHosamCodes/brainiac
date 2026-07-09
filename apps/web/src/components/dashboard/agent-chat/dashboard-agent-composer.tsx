@@ -1,9 +1,9 @@
 import type { DashboardAgentChatState } from "@/stores/dashboard-agent-chat";
 
 import { DashboardAgentMentionMenu } from "@/components/dashboard/agent-chat/dashboard-agent-mention-menu";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Textarea } from "@/ui/textarea";
 import {
   agentChatComposerClass,
   agentChatPresetButtonActiveClass,

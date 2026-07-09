@@ -2,7 +2,7 @@ import type { WorkspaceBlock } from "@brainiac/workspace";
 import { Blocks } from "lucide-react";
 
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 import {
   getWorkspaceBlockRegistryEntry,
   workspacePrimaryBlockTypes,

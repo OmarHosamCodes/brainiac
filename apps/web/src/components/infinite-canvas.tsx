@@ -28,7 +28,7 @@ import { LayoutGrid, Link2, Minus, Plus, Scan } from "lucide-react";
 import { CanvasFlowProvider } from "@/components/canvas/canvas-flow-context";
 import { WorkspaceFlowEdge } from "@/components/canvas/workspace-flow-edge";
 import { WorkspaceFlowNode } from "@/components/canvas/workspace-flow-node";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 import { useCanvasKeyboard } from "@/lib/canvas/use-canvas-keyboard";
 import { useTheme } from "@/stores/theme";
 import type { CanvasNodeModel } from "@/lib/canvas/canvas-types";
@@ -47,7 +47,7 @@ import {
 } from "@/lib/utils/workspace-node-connections";
 import { cn } from "@/lib/utils";
 
-type InfiniteCanvasProps = {
+export type InfiniteCanvasProps = {
   nodes: CanvasNodeModel[];
   selectedNodeIds?: string[];
   loading?: boolean;

@@ -3,7 +3,7 @@ import type { DashboardAgentChatState } from "@/stores/dashboard-agent-chat";
 import { DashboardAgentMessage } from "@/components/dashboard/agent-chat/dashboard-agent-message";
 import { DashboardAgentEmptyState } from "@/components/dashboard/agent-chat/dashboard-agent-empty-state";
 import { agentChatErrorPanelClass } from "@/lib/utils/dashboard-agent-ui";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/ui/skeleton";
 import { Loader2 } from "lucide-react";
 import { useEffect, useRef } from "react";
 

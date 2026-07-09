@@ -6,7 +6,7 @@ import {
   EMPTY_LIST_OVERLAY,
   mergeListWithOverlay,
   type AgencyListOverlay,
-} from "@/lib/utils/agency-optimistic-merge";
+} from "@/features/shared/agency-optimistic-merge";
 import {
   projectMatchesClientFilter,
   taskMatchesAgencyFilters,
@@ -18,7 +18,7 @@ import {
   type AgencyOptimisticTask,
   type AgencyOptimisticTaskMessage,
   type AgencyOptimisticTimeEntry,
-} from "@/stores/agency-optimistic";
+} from "@/features/shared/stores/agency-optimistic";
 
 type ListQueryData<T> = {
   items: T[];

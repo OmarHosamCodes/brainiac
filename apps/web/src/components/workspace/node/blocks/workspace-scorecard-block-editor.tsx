@@ -5,9 +5,9 @@ import { useMemo } from "react";
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
 import { BlockProgressBar } from "@/components/workspace/node/blocks/shared/block-progress-bar";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
 import { cn } from "@/lib/utils";
 
 function toNumber(value: string, fallback = 0) {

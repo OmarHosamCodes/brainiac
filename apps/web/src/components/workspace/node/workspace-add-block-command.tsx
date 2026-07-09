@@ -3,7 +3,7 @@ import { ArrowLeft, LayoutTemplate } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 import {
   Command,
   CommandDialog,
@@ -13,8 +13,8 @@ import {
   CommandItem,
   CommandList,
   CommandShortcut,
-} from "@/components/ui/command";
-import { Input } from "@/components/ui/input";
+} from "@/ui/command";
+import { Input } from "@/ui/input";
 import {
   buildAddBlockCommandCatalog,
   getAddBlockItemDefaultTitle,

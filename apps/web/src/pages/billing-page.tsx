@@ -9,13 +9,13 @@ import {
   Users,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Card, CardContent } from "@/ui/card";
 import { LogoLoader } from "@/components/shell/logo-loader";
 import { AppShellPage } from "@/components/app-shell-page";
 import { AppShellTopbarActions } from "@/components/app-shell-topbar";
-import { useBilling } from "@/lib/queries/billing";
+import { useBilling } from "@/features/billing/billing-queries";
 import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
 import {
   shellContentInClass,

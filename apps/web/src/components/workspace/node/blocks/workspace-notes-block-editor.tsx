@@ -5,9 +5,9 @@ import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Textarea } from "@/ui/textarea";
 
 export function WorkspaceNotesBlockEditor({
   block,

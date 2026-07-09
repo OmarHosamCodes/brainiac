@@ -33,9 +33,9 @@ import { BlockProgressBar } from "@/components/workspace/node/blocks/shared/bloc
 import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
 import { WorkspaceOrchestratorSourcesModal } from "@/components/workspace/node/blocks/workspace-orchestrator-sources-modal";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
 import { formatDateTime } from "@/lib/utils/format-date-time";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { renderSimpleMarkdown } from "@/lib/utils/render-simple-markdown";

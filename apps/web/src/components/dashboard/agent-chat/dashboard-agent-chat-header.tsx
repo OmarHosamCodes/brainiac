@@ -1,6 +1,6 @@
 import type { DashboardAgentChatState } from "@/stores/dashboard-agent-chat";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 import { agentChatLabelClass } from "@/lib/utils/dashboard-agent-ui";
 import { Pencil, Trash2, X } from "lucide-react";
 

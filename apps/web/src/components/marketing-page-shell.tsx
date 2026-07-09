@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 
 import { MarketingBrandLockup } from "@/components/marketing/marketing-brand-lockup";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 import { useTheme } from "@/stores/theme";
 import { orpc } from "@/lib/orpc";
 import { cn } from "@/lib/utils";
@@ -42,13 +42,13 @@ function MarketingHealthStatus() {
   const [enabled, setEnabled] = useState(false);
 
   useEffect(() => {
-    if ("requestIdleCallback" in window) {
-      const idleId = window.requestIdleCallback(() => setEnabled(true));
-      return () => window.cancelIdleCallback(idleId);
+    if ("requestIdleCallback" in (window as any)) {
+      const idleId = (window as any).requestIdleCallback(() => setEnabled(true));
+      return () => (window as any).cancelIdleCallback(idleId);
     }
 
-    const timeoutId = window.setTimeout(() => setEnabled(true), 1);
-    return () => window.clearTimeout(timeoutId);
+    const timeoutId = setTimeout(() => setEnabled(true), 1);
+    return () => clearTimeout(timeoutId);
   }, []);
 
   const healthCheck = useQuery({

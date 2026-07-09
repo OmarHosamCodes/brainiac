@@ -6,7 +6,7 @@ import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/ui/input";
 import { cn } from "@/lib/utils";
 
 const controls = [

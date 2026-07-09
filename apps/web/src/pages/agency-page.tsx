@@ -2,16 +2,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { AgencyNotifications } from "@/components/agency/agency-notifications";
-import { AgencyManagementSurface } from "@/components/agency/agency-management-surface";
-import { AgencyPlaceholderSurface } from "@/components/agency/agency-placeholder-surface";
-import { AgencyProUpsell } from "@/components/agency/agency-pro-upsell";
-import { AgencyReportCreatorSurface } from "@/components/agency/agency-report-creator-surface";
-import { AgencySegmentBody } from "@/components/agency/agency-segment-body";
-import { AgencySubtitleBreadcrumb } from "@/components/agency/agency-subtitle-breadcrumb";
-import { AgencyPresenceAvatars } from "@/components/agency/agency-presence-avatars";
-import { AgencyTeamBreadcrumb } from "@/components/agency/agency-team-breadcrumb";
-import { AgencyWorkSurface } from "@/components/agency/agency-work-surface";
+import { AgencyNotifications } from "@/features/notifications/agency-notifications";
+import { AgencyManagementSurface } from "@/features/settings/agency-management-surface";
+import { AgencyPlaceholderSurface } from "@/features/shared/agency-placeholder-surface";
+import { AgencyProUpsell } from "@/features/billing/agency-pro-upsell";
+import { AgencyReportCreatorSurface } from "@/features/reports/creator/agency-report-creator-surface";
+import { AgencySegmentBody } from "@/features/shared/segment/agency-segment-body";
+import { AgencySubtitleBreadcrumb } from "@/features/shared/agency-subtitle-breadcrumb";
+import { AgencyPresenceAvatars } from "@/features/shared/live/agency-presence-avatars";
+import { AgencyTeamBreadcrumb } from "@/features/shared/agency-team-breadcrumb";
+import { AgencyWorkSurface } from "@/features/task-management/agency-work-surface";
 import { LogoLoader } from "@/components/shell/logo-loader";
 import {
   AppShellTopbarActions,
@@ -19,13 +19,13 @@ import {
   AppShellTopbarTrailing,
 } from "@/components/app-shell-topbar";
 import { AppShellPage } from "@/components/app-shell-page";
-import { AgencySegmentFiltersRoot } from "@/lib/agency/agency-segment-filters";
+import { AgencySegmentFiltersRoot } from "@/features/shared/agency-segment-filters";
 import { useAgencySyncStatus } from "@/lib/queries/agency-sync";
-import { useAgencyJourneyLiveSync } from "@/lib/agency/work/hooks/use-agency-journey-live-sync";
-import { useAgencyBootGate } from "@/lib/agency/use-agency-boot-gate";
-import { useAgencyActiveTimerQuery } from "@/lib/queries/agency";
-import { useBilling } from "@/lib/queries/billing";
-import { useCurrentAgencyTeam } from "@/stores/agency-timer";
+import { useAgencyJourneyLiveSync } from "@/features/task-management/hooks/use-agency-journey-live-sync";
+import { useAgencyBootGate } from "@/features/shared/use-agency-boot-gate";
+import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
+import { useBilling } from "@/features/billing/billing-queries";
+import { useCurrentAgencyTeam } from "@/features/time-tracking/stores/agency-timer";
 import {
   managementPaneForLegacySection,
   type AgencyManagementPaneId,
@@ -39,10 +39,10 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import { shellContentInClass, shellPageBodyClass, shellPageClass } from "@/lib/utils/app-shell-ui";
-import { AGENCY_PAGE_SCROLL_ATTR, agencyWorkSurfaceShellClass } from "@/lib/utils/agency-ui";
+import { AGENCY_PAGE_SCROLL_ATTR, agencyWorkSurfaceShellClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
-import { setAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
-import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
+import { setAgencyTimeTrackingUserId } from "@/features/time-tracking/stores/agency-time-tracking";
+import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
 
 function isAgencySegmentId(value: string | null): value is AgencySegmentId {
   return AGENCY_SEGMENTS.some((entry) => entry.id === value);

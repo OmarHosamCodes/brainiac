@@ -1,0 +1,1377 @@
+import { ORPCError } from "@orpc/server";
+import { db } from "@brainiac/db";
+import { agencyOpsActiveTimer, agencyOpsProjectTask, agencyOpsProject, agencyOpsProjectJourneyStep, agencyOpsProjectJourney, user, agencyOpsClient, agencyOpsTimeEntry, workspaceTeamMember } from "@brainiac/db/schema";
+import { eq, and, asc, isNull, desc, sql, gte, lte } from "drizzle-orm";
+import { createWorkspaceId } from "@brainiac/workspace";
+import { notifyTimerActivity } from "../../notifications/fanout";
+import { formatAvatarUrl, getProjectByIdForTeam, parseIsoDateTime, type ReportEntityFilterInput, applyReportEntityFilters } from "../shared/utils";
+import { requireTeamMembership } from "../shared/membership";
+import { resolveAgencyTimerStopBinding } from "./resolve-agency-timer-stop-binding";
+import { publishAgencyTimerUpdated } from "../live/live";
+
+type AgencyTimeEntrySource = "timer" | "manual";
+
+type AgencyTimeEntryRecord = {
+  id: string;
+  teamId: string;
+  userId: string;
+  userName: string;
+  projectId: string;
+  taskId: string | null;
+  taskTitle: string | null;
+  taskIsWaste: boolean | null;
+  projectName: string;
+  clientId: string;
+  clientName: string;
+  source: AgencyTimeEntrySource;
+  description: string;
+  startedAt: string;
+  endedAt: string;
+  durationSeconds: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function mapAgencyTimeEntryRow(row: {
+  id: string;
+  teamId: string;
+  userId: string;
+  userName: string | null;
+  projectId: string;
+  taskId: string | null;
+  taskTitle: string | null;
+  taskIsWaste: boolean | null;
+  projectName: string;
+  clientId: string;
+  clientName: string;
+  source: AgencyTimeEntrySource;
+  description: string;
+  startedAt: Date;
+  endedAt: Date;
+  durationSeconds: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): AgencyTimeEntryRecord {
+  return {
+    id: row.id,
+    teamId: row.teamId,
+    userId: row.userId,
+    userName: row.userName ?? "Unknown",
+    projectId: row.projectId,
+    taskId: row.taskId ?? null,
+    taskTitle: row.taskTitle ?? null,
+    taskIsWaste: row.taskId ? (row.taskIsWaste ?? false) : null,
+    projectName: row.projectName,
+    clientId: row.clientId,
+    clientName: row.clientName,
+    source: row.source,
+    description: row.description,
+    startedAt: row.startedAt.toISOString(),
+    endedAt: row.endedAt.toISOString(),
+    durationSeconds: row.durationSeconds,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+type AgencyActiveTimerRecord = {
+  id: string;
+  teamId: string;
+  userId: string;
+  projectId: string;
+  taskId: string | null;
+  taskTitle: string | null;
+  projectName: string;
+  description: string;
+  startedAt: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function validateDateRange(startedAt: Date, endedAt: Date) {
+  if (startedAt >= endedAt) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "startAt must be before endAt.",
+    });
+  }
+}
+
+function getDurationSeconds(startedAt: Date, endedAt: Date) {
+  return Math.max(1, Math.floor((endedAt.getTime() - startedAt.getTime()) / 1_000));
+}
+
+/** Local calendar date (YYYY-MM-DD) for an instant using JS getTimezoneOffset() semantics. */
+function localDateKeyFromInstant(instant: Date, utcOffsetMinutes: number): string {
+  const localMs = instant.getTime() - utcOffsetMinutes * 60_000;
+  const local = new Date(localMs);
+  const year = local.getUTCFullYear();
+  const month = String(local.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(local.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDaysToDateKey(dateKey: string, days: number): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const next = new Date(Date.UTC(year!, month! - 1, day! + days));
+  const nextYear = next.getUTCFullYear();
+  const nextMonth = String(next.getUTCMonth() + 1).padStart(2, "0");
+  const nextDay = String(next.getUTCDate()).padStart(2, "0");
+  return `${nextYear}-${nextMonth}-${nextDay}`;
+}
+
+function getLocalWeekStartKeyFromDateKey(dateKey: string): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = new Date(Date.UTC(year!, month! - 1, day!));
+  const dayOfWeek = date.getUTCDay();
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  date.setUTCDate(date.getUTCDate() + diff);
+  const weekYear = date.getUTCFullYear();
+  const weekMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const weekDay = String(date.getUTCDate()).padStart(2, "0");
+  return `${weekYear}-${weekMonth}-${weekDay}`;
+}
+
+function localInstantFromDateKey(
+  dateKey: string,
+  utcOffsetMinutes: number,
+  endOfDay = false,
+): Date {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const ms =
+    Date.UTC(
+      year!,
+      month! - 1,
+      day!,
+      endOfDay ? 23 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 999 : 0,
+    ) +
+    utcOffsetMinutes * 60_000;
+  return new Date(ms);
+}
+
+function getLocalWeekBounds(anchor: Date, utcOffsetMinutes: number) {
+  const anchorDateKey = localDateKeyFromInstant(anchor, utcOffsetMinutes);
+  const weekStartKey = getLocalWeekStartKeyFromDateKey(anchorDateKey);
+  const weekEndKey = addDaysToDateKey(weekStartKey, 6);
+  return {
+    weekStartKey,
+    weekStart: localInstantFromDateKey(weekStartKey, utcOffsetMinutes),
+    weekEnd: localInstantFromDateKey(weekEndKey, utcOffsetMinutes, true),
+  };
+}
+
+async function getActiveTimerByUser(userId: string) {
+  const [timer] = await db
+    .select({
+      id: agencyOpsActiveTimer.id,
+      teamId: agencyOpsActiveTimer.teamId,
+      userId: agencyOpsActiveTimer.userId,
+      projectId: agencyOpsActiveTimer.projectId,
+      taskId: agencyOpsActiveTimer.taskId,
+      taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
+      projectName: agencyOpsProject.name,
+      description: agencyOpsActiveTimer.description,
+      startedAt: agencyOpsActiveTimer.startedAt,
+      createdAt: agencyOpsActiveTimer.createdAt,
+      updatedAt: agencyOpsActiveTimer.updatedAt,
+    })
+    .from(agencyOpsActiveTimer)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsActiveTimer.taskId))
+    .where(eq(agencyOpsActiveTimer.userId, userId))
+    .limit(1);
+
+  if (!timer) {
+    return null;
+  }
+
+  return {
+    id: timer.id,
+    teamId: timer.teamId,
+    userId: timer.userId,
+    projectId: timer.projectId,
+    taskId: timer.taskId,
+    taskTitle: timer.taskTitle ?? null,
+    projectName: timer.projectName,
+    description: timer.description,
+    startedAt: timer.startedAt.toISOString(),
+    createdAt: timer.createdAt.toISOString(),
+    updatedAt: timer.updatedAt.toISOString(),
+  } satisfies AgencyActiveTimerRecord;
+}
+
+async function resolveTaskProjectId(teamId: string, taskId: string) {
+  const [task] = await db
+    .select({ projectId: agencyOpsProjectTask.projectId })
+    .from(agencyOpsProjectTask)
+    .where(and(eq(agencyOpsProjectTask.id, taskId), eq(agencyOpsProjectTask.teamId, teamId)))
+    .limit(1);
+  if (!task) {
+    throw new ORPCError("NOT_FOUND", { message: "Task was not found." });
+  }
+  return task.projectId;
+}
+
+async function resolveJourneyStepIdForTask(teamId: string, taskId: string | null | undefined) {
+  if (!taskId) return null;
+
+  const [step] = await db
+    .select({ id: agencyOpsProjectJourneyStep.id })
+    .from(agencyOpsProjectJourneyStep)
+    .innerJoin(
+      agencyOpsProjectJourney,
+      eq(agencyOpsProjectJourney.id, agencyOpsProjectJourneyStep.journeyId),
+    )
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectJourney.projectId))
+    .where(and(eq(agencyOpsProjectJourneyStep.taskId, taskId), eq(agencyOpsProject.teamId, teamId)))
+    .limit(1);
+
+  return step?.id ?? null;
+}
+
+export async function getAgencyActiveTimer(actorUserId: string, input: { teamId?: string }) {
+  const timer = await getActiveTimerByUser(actorUserId);
+
+  if (!timer) {
+    return {
+      timer: null,
+    };
+  }
+
+  await requireTeamMembership(actorUserId, timer.teamId, "viewer");
+
+  if (input.teamId && timer.teamId !== input.teamId) {
+    return {
+      timer: null,
+    };
+  }
+
+  return {
+    timer,
+  };
+}
+
+export async function listAgencyActiveMembers(
+  actorUserId: string,
+  input: {
+    teamId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const rows = await db
+    .select({
+      userId: agencyOpsActiveTimer.userId,
+      userName: user.name,
+      userAvatar: user.image,
+      projectName: agencyOpsProject.name,
+      clientName: agencyOpsClient.name,
+      description: agencyOpsActiveTimer.description,
+      startedAt: agencyOpsActiveTimer.startedAt,
+    })
+    .from(agencyOpsActiveTimer)
+    .innerJoin(user, eq(user.id, agencyOpsActiveTimer.userId))
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .where(eq(agencyOpsActiveTimer.teamId, input.teamId))
+    .orderBy(asc(user.name));
+
+  return {
+    items: rows.map((row) => ({
+      userId: row.userId,
+      userName: row.userName ?? "Unknown",
+      userAvatar: formatAvatarUrl(row.userAvatar),
+      projectName: row.projectName,
+      clientName: row.clientName,
+      description: row.description,
+      startedAt: row.startedAt.toISOString(),
+    })),
+  };
+}
+
+export async function startAgencyTimer(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId?: string;
+    taskId?: string;
+    description?: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  let projectId = input.projectId;
+  if (input.taskId) {
+    const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
+    if (projectId && projectId !== taskProjectId) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "taskId does not belong to the provided projectId.",
+      });
+    }
+    projectId = taskProjectId;
+  } else if (!projectId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "projectId or taskId is required.",
+    });
+  }
+
+  await getProjectByIdForTeam(input.teamId, projectId);
+
+  const now = new Date();
+
+  const [existing] = await db
+    .select({
+      id: agencyOpsActiveTimer.id,
+      teamId: agencyOpsActiveTimer.teamId,
+      projectId: agencyOpsActiveTimer.projectId,
+      taskId: agencyOpsActiveTimer.taskId,
+      description: agencyOpsActiveTimer.description,
+      startedAt: agencyOpsActiveTimer.startedAt,
+    })
+    .from(agencyOpsActiveTimer)
+    .where(eq(agencyOpsActiveTimer.userId, actorUserId))
+    .limit(1);
+
+  let rolledOverEntryId: string | null = null;
+
+  await db.transaction(async (tx) => {
+    if (existing) {
+      if (existing.taskId) {
+        const durationSeconds = getDurationSeconds(existing.startedAt, now);
+        rolledOverEntryId = createWorkspaceId("agency-time");
+        const journeyStepId = await resolveJourneyStepIdForTask(existing.teamId, existing.taskId);
+
+        await tx.insert(agencyOpsTimeEntry).values({
+          id: rolledOverEntryId,
+          teamId: existing.teamId,
+          projectId: existing.projectId,
+          taskId: existing.taskId,
+          journeyStepId,
+          userId: actorUserId,
+          source: "timer",
+          description: existing.description,
+          startedAt: existing.startedAt,
+          endedAt: now,
+          durationSeconds,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, existing.id));
+    }
+
+    await tx.insert(agencyOpsActiveTimer).values({
+      id: createWorkspaceId("agency-active-timer"),
+      teamId: input.teamId,
+      projectId,
+      taskId: input.taskId ?? null,
+      userId: actorUserId,
+      description: input.description?.trim() ?? "",
+      startedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    if (input.taskId) {
+      await tx
+        .update(agencyOpsProjectTask)
+        .set({ status: "in_progress", updatedAt: now })
+        .where(
+          and(
+            eq(agencyOpsProjectTask.id, input.taskId),
+            eq(agencyOpsProjectTask.teamId, input.teamId),
+            eq(agencyOpsProjectTask.status, "open"),
+          ),
+        );
+    }
+  });
+
+  const timer = await getActiveTimerByUser(actorUserId);
+  const createdEntry = rolledOverEntryId
+    ? await fetchAgencyTimeEntryRecord(rolledOverEntryId)
+    : null;
+
+  await publishAgencyTimerUpdated(input.teamId, actorUserId, timer);
+
+  if (timer) {
+    await notifyTimerActivity({
+      teamId: input.teamId,
+      actorUserId,
+      projectId: timer.projectId,
+      projectName: timer.projectName,
+      taskId: timer.taskId,
+      taskTitle: timer.taskTitle,
+      timerAction: "started",
+    });
+  }
+
+  return {
+    timer,
+    createdEntry,
+  };
+}
+
+async function emitTimerStoppedNotification(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+    taskId: string | null;
+    taskTitle: string | null;
+  },
+) {
+  const [project] = await db
+    .select({ name: agencyOpsProject.name })
+    .from(agencyOpsProject)
+    .where(eq(agencyOpsProject.id, input.projectId))
+    .limit(1);
+
+  await notifyTimerActivity({
+    teamId: input.teamId,
+    actorUserId,
+    projectId: input.projectId,
+    projectName: project?.name ?? "Project",
+    taskId: input.taskId,
+    taskTitle: input.taskTitle,
+    timerAction: "stopped",
+  });
+}
+
+async function fetchAgencyTimeEntryRecord(entryId: string) {
+  const [row] = await db
+    .select({
+      id: agencyOpsTimeEntry.id,
+      teamId: agencyOpsTimeEntry.teamId,
+      userId: agencyOpsTimeEntry.userId,
+      userName: user.name,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
+      projectName: agencyOpsProject.name,
+      clientId: agencyOpsClient.id,
+      clientName: agencyOpsClient.name,
+      source: agencyOpsTimeEntry.source,
+      description: agencyOpsTimeEntry.description,
+      startedAt: agencyOpsTimeEntry.startedAt,
+      endedAt: agencyOpsTimeEntry.endedAt,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+      createdAt: agencyOpsTimeEntry.createdAt,
+      updatedAt: agencyOpsTimeEntry.updatedAt,
+    })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
+    .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+    .where(eq(agencyOpsTimeEntry.id, entryId))
+    .limit(1);
+
+  if (!row) {
+    return null;
+  }
+
+  return mapAgencyTimeEntryRow(row);
+}
+
+export async function stopAgencyTimer(
+  actorUserId: string,
+  input: {
+    teamId?: string;
+    taskId?: string;
+    description?: string;
+    discard?: boolean;
+  },
+) {
+  const [active] = await db
+    .select({
+      id: agencyOpsActiveTimer.id,
+      teamId: agencyOpsActiveTimer.teamId,
+      projectId: agencyOpsActiveTimer.projectId,
+      taskId: agencyOpsActiveTimer.taskId,
+      description: agencyOpsActiveTimer.description,
+      startedAt: agencyOpsActiveTimer.startedAt,
+    })
+    .from(agencyOpsActiveTimer)
+    .where(eq(agencyOpsActiveTimer.userId, actorUserId))
+    .limit(1);
+
+  if (!active) {
+    return {
+      timer: null,
+      createdEntry: null,
+    };
+  }
+
+  await requireTeamMembership(actorUserId, active.teamId, "viewer");
+
+  if (input.teamId && active.teamId !== input.teamId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Active timer belongs to a different team.",
+    });
+  }
+
+  let taskId = active.taskId ?? null;
+  let entryProjectId = active.projectId;
+  if (input.taskId) {
+    const taskProjectId = await resolveTaskProjectId(active.teamId, input.taskId);
+    const binding = resolveAgencyTimerStopBinding({
+      activeProjectId: active.projectId,
+      activeTaskId: active.taskId,
+      inputTaskId: input.taskId,
+      inputTaskProjectId: taskProjectId,
+    });
+
+    if ("error" in binding) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Task must belong to the active timer project.",
+      });
+    }
+
+    taskId = binding.taskId;
+    entryProjectId = binding.projectId;
+  }
+
+  if (!input.discard && !taskId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Choose a task before stopping this timer.",
+    });
+  }
+
+  const now = new Date();
+  const description = input.description?.trim() ?? active.description;
+
+  if (!input.discard && !description) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Add a description before stopping this timer.",
+    });
+  }
+
+  const durationSeconds = getDurationSeconds(active.startedAt, now);
+
+  if (input.discard) {
+    await db.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, active.id));
+
+    await publishAgencyTimerUpdated(active.teamId, actorUserId, null);
+
+    return {
+      timer: null,
+      createdEntry: null,
+    };
+  }
+
+  const [entry] = await db.transaction(async (tx) => {
+    const journeyStepId = await resolveJourneyStepIdForTask(active.teamId, taskId);
+    const [created] = await tx
+      .insert(agencyOpsTimeEntry)
+      .values({
+        id: createWorkspaceId("agency-time"),
+        teamId: active.teamId,
+        projectId: entryProjectId,
+        taskId,
+        journeyStepId,
+        userId: actorUserId,
+        source: "timer",
+        description,
+        startedAt: active.startedAt,
+        endedAt: now,
+        durationSeconds,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: agencyOpsTimeEntry.id });
+
+    await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, active.id));
+
+    if (taskId) {
+      await tx
+        .update(agencyOpsProjectTask)
+        .set({ status: "in_progress", updatedAt: now })
+        .where(
+          and(
+            eq(agencyOpsProjectTask.id, taskId),
+            eq(agencyOpsProjectTask.teamId, active.teamId),
+            eq(agencyOpsProjectTask.status, "open"),
+          ),
+        );
+    }
+
+    return [created];
+  });
+
+  if (!entry) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
+  }
+
+  const createdEntry = await fetchAgencyTimeEntryRecord(entry.id);
+
+  await publishAgencyTimerUpdated(active.teamId, actorUserId, null);
+  await emitTimerStoppedNotification(actorUserId, {
+    teamId: active.teamId,
+    projectId: entryProjectId,
+    taskId,
+    taskTitle: createdEntry?.taskTitle ?? null,
+  });
+
+  return {
+    timer: null,
+    createdEntry,
+  };
+}
+
+export async function updateAgencyActiveTimerStart(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    startedAt: string;
+  },
+) {
+  const [active] = await db
+    .select({ id: agencyOpsActiveTimer.id, teamId: agencyOpsActiveTimer.teamId })
+    .from(agencyOpsActiveTimer)
+    .where(eq(agencyOpsActiveTimer.userId, actorUserId))
+    .limit(1);
+
+  if (!active) {
+    throw new ORPCError("NOT_FOUND", { message: "No active timer." });
+  }
+
+  await requireTeamMembership(actorUserId, active.teamId, "viewer");
+
+  if (active.teamId !== input.teamId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Active timer belongs to a different team.",
+    });
+  }
+
+  const nextStartedAt = parseIsoDateTime(input.startedAt, "startedAt");
+  const now = new Date();
+
+  if (nextStartedAt.getTime() > now.getTime()) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Start time can't be in the future.",
+    });
+  }
+
+  await db
+    .update(agencyOpsActiveTimer)
+    .set({ startedAt: nextStartedAt, updatedAt: now })
+    .where(eq(agencyOpsActiveTimer.id, active.id));
+
+  const timer = await getActiveTimerByUser(actorUserId);
+
+  if (!timer) {
+    throw new ORPCError("NOT_FOUND", { message: "No active timer." });
+  }
+
+  await publishAgencyTimerUpdated(input.teamId, actorUserId, timer);
+
+  return { timer };
+}
+
+export async function listMyAgencyTimeEntries(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    page?: number;
+    pageSize?: number;
+    anchorDate?: string;
+    utcOffsetMinutes?: number;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const page = Math.max(1, input.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 25));
+  const offset = (page - 1) * pageSize;
+
+  const rows = await db
+    .select({
+      id: agencyOpsTimeEntry.id,
+      teamId: agencyOpsTimeEntry.teamId,
+      userId: agencyOpsTimeEntry.userId,
+      userName: user.name,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
+      projectName: agencyOpsProject.name,
+      clientId: agencyOpsClient.id,
+      clientName: agencyOpsClient.name,
+      source: agencyOpsTimeEntry.source,
+      description: agencyOpsTimeEntry.description,
+      startedAt: agencyOpsTimeEntry.startedAt,
+      endedAt: agencyOpsTimeEntry.endedAt,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+      createdAt: agencyOpsTimeEntry.createdAt,
+      updatedAt: agencyOpsTimeEntry.updatedAt,
+    })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
+    .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        eq(agencyOpsTimeEntry.userId, actorUserId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .orderBy(desc(agencyOpsTimeEntry.startedAt))
+    .limit(pageSize)
+    .offset(offset);
+
+  const items = rows.map((row) => mapAgencyTimeEntryRow(row));
+
+  // Count total for pagination
+  const [countRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        eq(agencyOpsTimeEntry.userId, actorUserId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    );
+
+  const parsedTotal = Number(countRow?.count ?? 0);
+  const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
+
+  // Compute week summary for the anchor date (or current week) in the viewer's local timezone.
+  const anchor = input.anchorDate ? parseIsoDateTime(input.anchorDate, "anchorDate") : new Date();
+  const utcOffsetMinutes = input.utcOffsetMinutes ?? 0;
+  const { weekStartKey, weekStart, weekEnd } = getLocalWeekBounds(anchor, utcOffsetMinutes);
+
+  const weekRows = await db
+    .select({
+      startedAt: agencyOpsTimeEntry.startedAt,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+    })
+    .from(agencyOpsTimeEntry)
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        eq(agencyOpsTimeEntry.userId, actorUserId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+        gte(agencyOpsTimeEntry.startedAt, weekStart),
+        lte(agencyOpsTimeEntry.startedAt, weekEnd),
+      ),
+    );
+
+  const dailyMap = new Map<string, number>();
+  for (let i = 0; i < 7; i++) {
+    dailyMap.set(addDaysToDateKey(weekStartKey, i), 0);
+  }
+  let weekTotalSeconds = 0;
+  for (const wr of weekRows) {
+    const dateKey = localDateKeyFromInstant(wr.startedAt, utcOffsetMinutes);
+    dailyMap.set(dateKey, (dailyMap.get(dateKey) ?? 0) + wr.durationSeconds);
+    weekTotalSeconds += wr.durationSeconds;
+  }
+
+  const weekSummary = {
+    startDate: weekStart.toISOString(),
+    endDate: weekEnd.toISOString(),
+    totalSeconds: weekTotalSeconds,
+    daily: [...dailyMap.entries()].map(([date, totalSeconds]) => ({ date, totalSeconds })),
+  };
+
+  return {
+    items,
+    page,
+    pageSize,
+    total,
+    weekSummary,
+  };
+}
+
+export async function createManualAgencyTimeEntry(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId?: string;
+    taskId?: string;
+    startAt: string;
+    endAt: string;
+    description?: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  let projectId = input.projectId;
+  if (input.taskId) {
+    const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
+    if (projectId && projectId !== taskProjectId) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "taskId does not belong to the provided projectId.",
+      });
+    }
+    projectId = taskProjectId;
+  } else if (!projectId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "projectId or taskId is required.",
+    });
+  }
+
+  await getProjectByIdForTeam(input.teamId, projectId);
+
+  const startAt = parseIsoDateTime(input.startAt, "startAt");
+  const endAt = parseIsoDateTime(input.endAt, "endAt");
+  validateDateRange(startAt, endAt);
+
+  const now = new Date();
+  const durationSeconds = getDurationSeconds(startAt, endAt);
+  const journeyStepId = await resolveJourneyStepIdForTask(input.teamId, input.taskId ?? null);
+
+  const [created] = await db
+    .insert(agencyOpsTimeEntry)
+    .values({
+      id: createWorkspaceId("agency-time"),
+      teamId: input.teamId,
+      projectId,
+      taskId: input.taskId ?? null,
+      journeyStepId,
+      userId: actorUserId,
+      source: "manual",
+      description: input.description?.trim() ?? "",
+      startedAt: startAt,
+      endedAt: endAt,
+      durationSeconds,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning({ id: agencyOpsTimeEntry.id });
+
+  if (!created) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
+  }
+
+  const [row] = await db
+    .select({
+      id: agencyOpsTimeEntry.id,
+      teamId: agencyOpsTimeEntry.teamId,
+      userId: agencyOpsTimeEntry.userId,
+      userName: user.name,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
+      projectName: agencyOpsProject.name,
+      clientId: agencyOpsClient.id,
+      clientName: agencyOpsClient.name,
+      source: agencyOpsTimeEntry.source,
+      description: agencyOpsTimeEntry.description,
+      startedAt: agencyOpsTimeEntry.startedAt,
+      endedAt: agencyOpsTimeEntry.endedAt,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+      createdAt: agencyOpsTimeEntry.createdAt,
+      updatedAt: agencyOpsTimeEntry.updatedAt,
+    })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
+    .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+    .where(eq(agencyOpsTimeEntry.id, created.id))
+    .limit(1);
+
+  if (!row) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  return mapAgencyTimeEntryRow(row);
+}
+
+export async function updateMyAgencyTimeEntry(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    entryId: string;
+    projectId?: string;
+    taskId?: string | null;
+    startAt?: string;
+    endAt?: string;
+    description?: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const [current] = await db
+    .select({
+      startedAt: agencyOpsTimeEntry.startedAt,
+      endedAt: agencyOpsTimeEntry.endedAt,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
+    })
+    .from(agencyOpsTimeEntry)
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.id, input.entryId),
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        eq(agencyOpsTimeEntry.userId, actorUserId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!current) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  if (input.projectId) {
+    await getProjectByIdForTeam(input.teamId, input.projectId);
+  }
+
+  let resolvedProjectId = input.projectId;
+  let taskIdUpdate: { taskId: string | null } | undefined;
+  if (input.taskId !== undefined) {
+    if (input.taskId === null) {
+      taskIdUpdate = { taskId: null };
+    } else {
+      const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
+      if (resolvedProjectId && resolvedProjectId !== taskProjectId) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "taskId does not belong to the provided projectId.",
+        });
+      }
+      resolvedProjectId = taskProjectId;
+      taskIdUpdate = { taskId: input.taskId };
+    }
+  } else if (input.projectId && input.projectId !== current.projectId && current.taskId) {
+    taskIdUpdate = { taskId: null };
+  }
+
+  const nextStartedAt = input.startAt
+    ? parseIsoDateTime(input.startAt, "startAt")
+    : current.startedAt;
+  const nextEndedAt = input.endAt ? parseIsoDateTime(input.endAt, "endAt") : current.endedAt;
+  validateDateRange(nextStartedAt, nextEndedAt);
+
+  const now = new Date();
+  const durationSeconds = getDurationSeconds(nextStartedAt, nextEndedAt);
+
+  const [updated] = await db
+    .update(agencyOpsTimeEntry)
+    .set({
+      ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
+      ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
+      startedAt: nextStartedAt,
+      endedAt: nextEndedAt,
+      durationSeconds,
+      description: input.description?.trim(),
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.id, input.entryId),
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        eq(agencyOpsTimeEntry.userId, actorUserId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .returning({ id: agencyOpsTimeEntry.id });
+
+  if (!updated) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  const [row] = await db
+    .select({
+      id: agencyOpsTimeEntry.id,
+      teamId: agencyOpsTimeEntry.teamId,
+      userId: agencyOpsTimeEntry.userId,
+      userName: user.name,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
+      projectName: agencyOpsProject.name,
+      clientId: agencyOpsClient.id,
+      clientName: agencyOpsClient.name,
+      source: agencyOpsTimeEntry.source,
+      description: agencyOpsTimeEntry.description,
+      startedAt: agencyOpsTimeEntry.startedAt,
+      endedAt: agencyOpsTimeEntry.endedAt,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+      createdAt: agencyOpsTimeEntry.createdAt,
+      updatedAt: agencyOpsTimeEntry.updatedAt,
+    })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
+    .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+    .where(eq(agencyOpsTimeEntry.id, updated.id))
+    .limit(1);
+
+  if (!row) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  return mapAgencyTimeEntryRow(row);
+}
+
+export async function deleteMyAgencyTimeEntry(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    entryId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const now = new Date();
+  const [deleted] = await db
+    .update(agencyOpsTimeEntry)
+    .set({
+      deletedAt: now,
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.id, input.entryId),
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        eq(agencyOpsTimeEntry.userId, actorUserId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .returning({ id: agencyOpsTimeEntry.id });
+
+  return {
+    entryId: deleted?.id ?? input.entryId,
+    deleted: Boolean(deleted),
+  };
+}
+
+export async function getAgencyTimeSummary(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    from: string;
+    to: string;
+    clientId?: string;
+    projectId?: string;
+    memberUserId?: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const from = parseIsoDateTime(input.from, "from");
+  const to = parseIsoDateTime(input.to, "to");
+
+  // Team members
+  const members = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+    })
+    .from(workspaceTeamMember)
+    .innerJoin(user, eq(user.id, workspaceTeamMember.userId))
+    .where(eq(workspaceTeamMember.teamId, input.teamId))
+    .orderBy(asc(user.name));
+
+  // Active timers for the whole team
+  const activeTimers = await db
+    .select({
+      userId: agencyOpsActiveTimer.userId,
+      projectName: agencyOpsProject.name,
+      description: agencyOpsActiveTimer.description,
+    })
+    .from(agencyOpsActiveTimer)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+    .where(eq(agencyOpsActiveTimer.teamId, input.teamId));
+
+  const activeTimerByUser = new Map(activeTimers.map((t) => [t.userId, t]));
+
+  // Time entry filters
+  const entryFilters = [
+    eq(agencyOpsTimeEntry.teamId, input.teamId),
+    isNull(agencyOpsTimeEntry.deletedAt),
+    gte(agencyOpsTimeEntry.startedAt, from),
+    lte(agencyOpsTimeEntry.startedAt, to),
+  ];
+
+  if (input.clientId) {
+    entryFilters.push(eq(agencyOpsProject.clientId, input.clientId));
+  }
+  if (input.projectId) {
+    entryFilters.push(eq(agencyOpsProject.id, input.projectId));
+  }
+  if (input.memberUserId) {
+    entryFilters.push(eq(agencyOpsTimeEntry.userId, input.memberUserId));
+  }
+
+  const entries = await db
+    .select({
+      userId: agencyOpsTimeEntry.userId,
+      projectName: agencyOpsProject.name,
+      description: agencyOpsTimeEntry.description,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+    })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .where(and(...entryFilters))
+    .orderBy(desc(agencyOpsTimeEntry.startedAt));
+
+  const totalSecondsPerMember = new Map<string, number>();
+  const latestEntryPerMember = new Map<string, { projectName: string; description: string }>();
+
+  for (const entry of entries) {
+    totalSecondsPerMember.set(
+      entry.userId,
+      (totalSecondsPerMember.get(entry.userId) ?? 0) + Number(entry.durationSeconds),
+    );
+    if (!latestEntryPerMember.has(entry.userId)) {
+      latestEntryPerMember.set(entry.userId, {
+        projectName: entry.projectName,
+        description: entry.description,
+      });
+    }
+  }
+
+  const totalSeconds = [...totalSecondsPerMember.values()].reduce((a, b) => a + b, 0);
+
+  return {
+    summary: {
+      totalSeconds,
+      activeCount: activeTimers.length,
+      teamMembers: members.map((member) => {
+        const activeTimer = activeTimerByUser.get(member.id);
+        return {
+          id: member.id,
+          avatar: formatAvatarUrl(member.image),
+          name: member.name ?? "Unknown",
+          email: member.email,
+          isActive: Boolean(activeTimer),
+          totalSeconds: totalSecondsPerMember.get(member.id) ?? 0,
+          // Prefer the live timer over the last completed entry in-range.
+          latestEntry: activeTimer
+            ? { projectName: activeTimer.projectName, description: activeTimer.description }
+            : (latestEntryPerMember.get(member.id) ?? null),
+        };
+      }),
+    },
+  };
+}
+
+export async function listAllAgencyTimeEntries(
+  actorUserId: string,
+  input: ReportEntityFilterInput & {
+    teamId: string;
+    from: string;
+    to: string;
+    page?: number;
+    pageSize?: number;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "editor");
+
+  const from = parseIsoDateTime(input.from, "from");
+  const to = parseIsoDateTime(input.to, "to");
+
+  if (from > to) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "from must be before or equal to to.",
+    });
+  }
+
+  const page = Math.max(1, input.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 25));
+  const offset = (page - 1) * pageSize;
+
+  const filters = [
+    eq(agencyOpsTimeEntry.teamId, input.teamId),
+    isNull(agencyOpsTimeEntry.deletedAt),
+    gte(agencyOpsTimeEntry.startedAt, from),
+    lte(agencyOpsTimeEntry.startedAt, to),
+  ];
+
+  applyReportEntityFilters(filters, input);
+
+  const rows = await db
+    .select({
+      id: agencyOpsTimeEntry.id,
+      teamId: agencyOpsTimeEntry.teamId,
+      userId: agencyOpsTimeEntry.userId,
+      userName: user.name,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
+      projectName: agencyOpsProject.name,
+      clientId: agencyOpsClient.id,
+      clientName: agencyOpsClient.name,
+      source: agencyOpsTimeEntry.source,
+      description: agencyOpsTimeEntry.description,
+      startedAt: agencyOpsTimeEntry.startedAt,
+      endedAt: agencyOpsTimeEntry.endedAt,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+      createdAt: agencyOpsTimeEntry.createdAt,
+      updatedAt: agencyOpsTimeEntry.updatedAt,
+    })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
+    .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+    .where(and(...filters))
+    .orderBy(desc(agencyOpsTimeEntry.startedAt))
+    .limit(pageSize)
+    .offset(offset);
+
+  const items = rows.map((row) => mapAgencyTimeEntryRow(row));
+
+  const [countRow] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .where(and(...filters));
+
+  const parsedTotal = Number(countRow?.count ?? 0);
+  const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
+
+  return {
+    items,
+    page,
+    pageSize,
+    total,
+  };
+}
+
+export async function updateAnyAgencyTimeEntry(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    entryId: string;
+    startAt?: string;
+    endAt?: string;
+    description?: string;
+    projectId?: string;
+    taskId?: string | null;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+  const [current] = await db
+    .select({
+      startedAt: agencyOpsTimeEntry.startedAt,
+      endedAt: agencyOpsTimeEntry.endedAt,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
+    })
+    .from(agencyOpsTimeEntry)
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.id, input.entryId),
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!current) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  if (input.projectId) {
+    await getProjectByIdForTeam(input.teamId, input.projectId);
+  }
+
+  let resolvedProjectId = input.projectId;
+  let taskIdUpdate: { taskId: string | null } | undefined;
+  if (input.taskId !== undefined) {
+    if (input.taskId === null) {
+      taskIdUpdate = { taskId: null };
+    } else {
+      const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
+      if (resolvedProjectId && resolvedProjectId !== taskProjectId) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "taskId does not belong to the provided projectId.",
+        });
+      }
+      resolvedProjectId = taskProjectId;
+      taskIdUpdate = { taskId: input.taskId };
+    }
+  } else if (input.projectId && input.projectId !== current.projectId && current.taskId) {
+    taskIdUpdate = { taskId: null };
+  }
+
+  const nextStartedAt = input.startAt
+    ? parseIsoDateTime(input.startAt, "startAt")
+    : current.startedAt;
+  const nextEndedAt = input.endAt ? parseIsoDateTime(input.endAt, "endAt") : current.endedAt;
+  validateDateRange(nextStartedAt, nextEndedAt);
+
+  const now = new Date();
+  const durationSeconds = getDurationSeconds(nextStartedAt, nextEndedAt);
+
+  const [updated] = await db
+    .update(agencyOpsTimeEntry)
+    .set({
+      ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
+      ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
+      startedAt: nextStartedAt,
+      endedAt: nextEndedAt,
+      durationSeconds,
+      description: input.description?.trim(),
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.id, input.entryId),
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .returning({ id: agencyOpsTimeEntry.id });
+
+  if (!updated) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  const [row] = await db
+    .select({
+      id: agencyOpsTimeEntry.id,
+      teamId: agencyOpsTimeEntry.teamId,
+      userId: agencyOpsTimeEntry.userId,
+      userName: user.name,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
+      projectName: agencyOpsProject.name,
+      clientId: agencyOpsClient.id,
+      clientName: agencyOpsClient.name,
+      source: agencyOpsTimeEntry.source,
+      description: agencyOpsTimeEntry.description,
+      startedAt: agencyOpsTimeEntry.startedAt,
+      endedAt: agencyOpsTimeEntry.endedAt,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+      createdAt: agencyOpsTimeEntry.createdAt,
+      updatedAt: agencyOpsTimeEntry.updatedAt,
+    })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
+    .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+    .where(eq(agencyOpsTimeEntry.id, updated.id))
+    .limit(1);
+
+  if (!row) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  return mapAgencyTimeEntryRow(row);
+}

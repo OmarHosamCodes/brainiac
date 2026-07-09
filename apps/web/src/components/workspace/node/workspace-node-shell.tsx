@@ -28,8 +28,8 @@ import {
 import { WorkspaceNodeEmptyState } from "@/components/workspace/node/workspace-node-empty-state";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
 import type { WorkspaceSaveBadge } from "@/components/workspace/node/context";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
 import { cn } from "@/lib/utils";
 
 type WorkspaceTeamSummary = {

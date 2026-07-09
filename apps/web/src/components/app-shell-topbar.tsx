@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 
 import { AppShellBreadcrumbs } from "@/components/app-shell-breadcrumbs";
 import { AppShellPortal } from "@/components/app-shell-portal";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 import {
   useAppShellStore,
   useHasContextContent,

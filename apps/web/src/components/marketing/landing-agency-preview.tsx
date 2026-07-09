@@ -1,4 +1,4 @@
-import { AgencyTimeEntryProjectLabel } from "@/components/agency/agency-time-entry-project-label";
+import { AgencyTimeEntryProjectLabel } from "@/features/time-tracking/entries/agency-time-entry-project-label";
 import {
   marketingAgencyDayTotalSeconds,
   marketingAgencyRows,
@@ -8,8 +8,8 @@ import {
   agencyTimeDayHeaderClass,
   agencyTimeEntryRowClass,
   agencyTimeLogPanelClass,
-} from "@/lib/utils/agency-ui";
-import { formatAgencyDayLabel } from "@/lib/utils/format-agency-day-label";
+} from "@/features/shared/agency-ui";
+import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { cn } from "@/lib/utils";
 

@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 
 import { App } from "@/app";
-import { Toaster } from "@/components/ui/sonner";
+import { Toaster } from "@/ui/sonner";
 import { dismissMarketingPrerenderShell } from "@/lib/marketing-prerender";
 import { subscribeThemeDomSync } from "@/stores/theme";
 import { QueryProvider } from "@/providers/query-provider";

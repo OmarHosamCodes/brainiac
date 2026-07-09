@@ -19,9 +19,9 @@ import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/bloc
 import { BlockProgressBar } from "@/components/workspace/node/blocks/shared/block-progress-bar";
 import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
 import { cn } from "@/lib/utils";
 
 const rowGridStyle = {

@@ -2,10 +2,10 @@ import { CheckCircle } from "lucide-react";
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/ui/button";
 import { LogoLoader } from "@/components/shell/logo-loader";
 import { AppShellPage } from "@/components/app-shell-page";
-import { useBilling } from "@/lib/queries/billing";
+import { useBilling } from "@/features/billing/billing-queries";
 import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
 import {
   shellConfirmInClass,

@@ -4,23 +4,23 @@ import { useMemo, useState } from "react";
 import type { workspaceTeamRoleSchema } from "@brainiac/workspace";
 import type { z } from "zod";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@/ui/dropdown-menu";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
 import { authClient } from "@/lib/auth-client";
 import {
   dashboardCardClass,

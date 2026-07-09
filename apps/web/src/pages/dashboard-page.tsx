@@ -13,8 +13,8 @@ import { LazyInfiniteCanvas, type InfiniteCanvasHandle } from "@/components/lazy
 import { TeamSettingsModal } from "@/components/team/team-settings-modal";
 import { WorkspaceEditorModal } from "@/components/workspace/workspace-editor-modal";
 import { WorkspaceNodeCard } from "@/components/workspace/workspace-node-card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
 import { authClient } from "@/lib/auth-client";
 import { teamDetailQueryOptions, teamListQueryOptions } from "@/lib/queries/team";
 import { useAppShellStore } from "@/stores/app-shell";
@@ -156,11 +156,11 @@ export function DashboardPage() {
                     nodes={board.nodes}
                     selectedNodeIds={board.selectedNodeIds}
                     loading={board.isWorkspaceInitialLoading}
-                    onNodesChange={(nextNodes) =>
+                    onNodesChange={(nextNodes: any[]) =>
                       board.updateNodes((draft) => {
-                        const positionById = new Map(nextNodes.map((node) => [node.id, node]));
+                        const positionById = new Map(nextNodes.map((node: any) => [node.id, node]));
                         draft.forEach((node, index) => {
-                          const updated = positionById.get(node.id);
+                          const updated = positionById.get(node.id) as any;
                           if (!updated) return;
                           draft[index] = {
                             ...node,
@@ -178,8 +178,8 @@ export function DashboardPage() {
                     onConnectNodePair={board.connectNodePair}
                     onDisconnectNodePair={board.disconnectNodePair}
                     onRemoveNode={board.removeNode}
-                    onOpenNode={(payload) => navigate(`/node/${payload.nodeId}`)}
-                    renderNode={(node, selected, allNodes) => (
+                    onOpenNode={(payload: any) => navigate(`/node/${payload.nodeId}`)}
+                    renderNode={(node: any, selected: any, allNodes: any) => (
                       <WorkspaceNodeCard node={node} selected={selected} allNodes={allNodes} />
                     )}
                   />

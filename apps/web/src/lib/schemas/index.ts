@@ -1,7 +1,7 @@
 export * from "./auth";
 export * from "./workspace-node";
-export * from "./agency-work";
-export * from "./agency-time-entry";
+export * from "../../features/task-management/agency-work";
+export * from "../../features/time-tracking/agency-time-entry";
 export {
   agencyProjectSchema,
   agencyProjectTaskSchema,

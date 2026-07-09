@@ -2,9 +2,9 @@ import type { WorkspaceBlock } from "@brainiac/workspace";
 import { Loader2, Plus, Search, Store, Trash2 } from "lucide-react";
 import { Suspense, useEffect, useRef } from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
 import { getWorkspaceBlockRegistryEntry } from "@/lib/utils/workspace-block-registry";
 

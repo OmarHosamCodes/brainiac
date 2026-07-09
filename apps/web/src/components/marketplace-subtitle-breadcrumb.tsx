@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import {
   shellBreadcrumbCurrentClass,
   shellFocusRingClass,

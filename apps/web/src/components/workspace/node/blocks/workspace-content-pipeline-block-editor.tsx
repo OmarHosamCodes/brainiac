@@ -33,9 +33,9 @@ import { useMemo, useState } from "react";
 import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
 import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Textarea } from "@/ui/textarea";
 import { cn } from "@/lib/utils";
 
 const columnConfigs: Array<{

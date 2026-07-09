@@ -21,7 +21,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from "@/ui/command";
 import {
   APP_SHELL_RAIL_WIDTH_COLLAPSED,
   APP_SHELL_RAIL_WIDTH_EXPANDED,
@@ -36,10 +36,10 @@ import {
   shellMobileNavLinkClass,
   shellMobileNavLinkIdleClass,
 } from "@/lib/utils/app-shell-ui";
-import { useAgencyTrackingFavicon } from "@/lib/agency/work/hooks/use-agency-time-tracker";
-import { useAgencyActiveTimerQuery } from "@/lib/queries/agency";
+import { useAgencyTrackingFavicon } from "@/features/time-tracking/hooks/use-agency-time-tracker";
+import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
 import { cn } from "@/lib/utils";
-import { useCurrentAgencyTeamStore } from "@/stores/agency-timer";
+import { useCurrentAgencyTeamStore } from "@/features/time-tracking/stores/agency-timer";
 
 const NAV_ICONS = {
   "/dashboard": LayoutDashboard,

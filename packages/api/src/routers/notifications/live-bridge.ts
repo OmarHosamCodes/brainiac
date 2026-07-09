@@ -1,4 +1,4 @@
-import { publishAgencyLiveEvent } from "../agency-ops/live";
+import { publishAgencyLiveEvent } from "../agency-ops/live/live";
 import type { NotificationRecord } from "../../schemas/notifications";
 
 const liveUserTeams = new Map<string, Set<string>>();

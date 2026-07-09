@@ -23,15 +23,15 @@ import {
 import { useMemo, useState } from "react";
 
 import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@/ui/dialog";
 import { getEligibleConnectionTargetIds } from "@/lib/utils/workspace-node-connections";
 import { cn } from "@/lib/utils";
 

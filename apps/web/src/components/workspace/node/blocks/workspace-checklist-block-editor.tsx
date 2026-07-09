@@ -11,9 +11,9 @@ import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/bloc
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
 import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-checkbox";
 import { BlockProgressBar } from "@/components/workspace/node/blocks/shared/block-progress-bar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
 
 export function WorkspaceChecklistBlockEditor({
   block,

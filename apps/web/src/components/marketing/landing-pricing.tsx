@@ -1,8 +1,8 @@
 import { Check, Minus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { Button } from "@/components/ui/button";
-import { useBilling } from "@/lib/queries/billing";
+import { Button } from "@/ui/button";
+import { useBilling } from "@/features/billing/billing-queries";
 
 type LimitFeature = {
   kind: "limit";

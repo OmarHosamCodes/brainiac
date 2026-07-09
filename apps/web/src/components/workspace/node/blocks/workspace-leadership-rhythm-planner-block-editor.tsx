@@ -22,10 +22,10 @@ import { BlockFieldLabel } from "@/components/workspace/node/blocks/shared/block
 import { BlockProgressBar } from "@/components/workspace/node/blocks/shared/block-progress-bar";
 import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
 import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Textarea } from "@/ui/textarea";
 import { cn } from "@/lib/utils";
 
 const rhythmOptions: Array<{ label: string; value: WorkspaceLeadershipRhythm }> = [
