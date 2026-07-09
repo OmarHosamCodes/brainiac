@@ -6,6 +6,7 @@ export type AgencyPresenceMember = {
   userName: string;
   userAvatar: string | null;
   projectName: string;
+  clientName?: string;
   description: string;
   startedAt: string;
 };
@@ -14,6 +15,7 @@ type AgencyPresenceTimer = {
   teamId: string;
   userId: string;
   projectName: string;
+  clientName?: string;
   description: string;
   startedAt: string;
 };
@@ -35,7 +37,17 @@ export function mergeAgencyPresenceMembers(
   }
 
   if (items.some((member) => member.userId === timer.userId)) {
-    return items;
+    return items.map((member) =>
+      member.userId === timer.userId
+        ? {
+            ...member,
+            projectName: timer.projectName,
+            clientName: timer.clientName ?? member.clientName,
+            description: timer.description,
+            startedAt: timer.startedAt,
+          }
+        : member,
+    );
   }
 
   const isCurrentUser = user?.id === timer.userId;
@@ -54,6 +66,7 @@ export function mergeAgencyPresenceMembers(
             })
           : null,
       projectName: timer.projectName,
+      clientName: timer.clientName,
       description: timer.description,
       startedAt: timer.startedAt,
     },

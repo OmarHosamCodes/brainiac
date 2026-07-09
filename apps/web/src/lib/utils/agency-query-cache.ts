@@ -671,6 +671,7 @@ type AgencyActiveMemberItem = {
   userName: string;
   userAvatar: string | null;
   projectName: string;
+  clientName?: string;
   description: string;
   startedAt: string;
 };
@@ -695,6 +696,10 @@ function applyActiveMembersCachePatch(
       userName: existing?.userName ?? "Member",
       userAvatar: existing?.userAvatar ?? null,
       projectName: String(timer.projectName ?? ""),
+      clientName:
+        typeof timer.clientName === "string"
+          ? timer.clientName
+          : (existing?.clientName ?? undefined),
       description: String(timer.description ?? ""),
       startedAt: String(timer.startedAt ?? new Date().toISOString()),
     };

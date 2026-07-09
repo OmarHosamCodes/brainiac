@@ -3788,12 +3788,14 @@ export async function listAgencyActiveMembers(
       userName: user.name,
       userAvatar: user.image,
       projectName: agencyOpsProject.name,
+      clientName: agencyOpsClient.name,
       description: agencyOpsActiveTimer.description,
       startedAt: agencyOpsActiveTimer.startedAt,
     })
     .from(agencyOpsActiveTimer)
     .innerJoin(user, eq(user.id, agencyOpsActiveTimer.userId))
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
     .where(eq(agencyOpsActiveTimer.teamId, input.teamId))
     .orderBy(asc(user.name));
 
@@ -3803,6 +3805,7 @@ export async function listAgencyActiveMembers(
       userName: row.userName ?? "Unknown",
       userAvatar: formatAvatarUrl(row.userAvatar),
       projectName: row.projectName,
+      clientName: row.clientName,
       description: row.description,
       startedAt: row.startedAt.toISOString(),
     })),
@@ -5652,18 +5655,17 @@ export async function getAgencyDashboardSummary(
           userName: member.name ?? "Unknown",
           userEmail: member.email,
           avatar: formatAvatarUrl(member.image),
-          isActive: activeTimerByUser.has(member.id),
+          isActive: Boolean(activeTimer),
           totalSeconds: memberSeconds.get(member.email) ?? 0,
-          latestEntry:
-            latestEntryByMember.get(member.email) ??
-            (activeTimer
-              ? {
-                  projectName: activeTimer.projectName,
-                  clientName: activeTimer.clientName,
-                  description: activeTimer.description,
-                  startedAt: activeTimer.startedAt.toISOString(),
-                }
-              : null),
+          // Prefer the live timer over the last completed entry in-range.
+          latestEntry: activeTimer
+            ? {
+                projectName: activeTimer.projectName,
+                clientName: activeTimer.clientName,
+                description: activeTimer.description,
+                startedAt: activeTimer.startedAt.toISOString(),
+              }
+            : (latestEntryByMember.get(member.email) ?? null),
           projectBreakdown: [...(memberProjectSeconds.get(member.email)?.values() ?? [])].sort(
             (left, right) => right.seconds - left.seconds,
           ),
@@ -5779,13 +5781,12 @@ export async function getAgencyTimeSummary(
           avatar: formatAvatarUrl(member.image),
           name: member.name ?? "Unknown",
           email: member.email,
-          isActive: activeTimerByUser.has(member.id),
+          isActive: Boolean(activeTimer),
           totalSeconds: totalSecondsPerMember.get(member.id) ?? 0,
-          latestEntry:
-            latestEntryPerMember.get(member.id) ??
-            (activeTimer
-              ? { projectName: activeTimer.projectName, description: activeTimer.description }
-              : null),
+          // Prefer the live timer over the last completed entry in-range.
+          latestEntry: activeTimer
+            ? { projectName: activeTimer.projectName, description: activeTimer.description }
+            : (latestEntryPerMember.get(member.id) ?? null),
         };
       }),
     },

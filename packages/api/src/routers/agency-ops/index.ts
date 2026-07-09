@@ -985,6 +985,7 @@ export const agencyOpsRouter = {
                 userName: z.string().min(1),
                 userAvatar: z.string().nullable(),
                 projectName: z.string().min(1),
+                clientName: z.string().min(1),
                 description: z.string(),
                 startedAt: z.string().datetime(),
               }),

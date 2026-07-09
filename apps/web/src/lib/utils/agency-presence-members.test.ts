@@ -42,14 +42,18 @@ describe("mergeAgencyPresenceMembers", () => {
       {
         teamId: "team-1",
         userId: "user-1",
-        projectName: "Project Alpha",
-        description: "Working",
-        startedAt: "2026-07-04T12:00:00.000Z",
+        projectName: "Project Beta",
+        clientName: "Acme",
+        description: "Updated work",
+        startedAt: "2026-07-04T13:00:00.000Z",
       },
       "team-1",
       { id: "user-1", name: "Omar", image: null },
     );
 
     expect(members).toHaveLength(1);
+    expect(members[0]?.projectName).toBe("Project Beta");
+    expect(members[0]?.clientName).toBe("Acme");
+    expect(members[0]?.description).toBe("Updated work");
   });
 });
