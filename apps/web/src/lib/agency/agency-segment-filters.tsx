@@ -74,7 +74,10 @@ function DashboardFiltersRoot({
   showBar: boolean;
   children: ReactNode;
 }) {
-  const timeRange = useAgencyTimeRangeFilters({ teamId, includeClientFilter: true });
+  const timeRange = useAgencyTimeRangeFilters({
+    teamId,
+    includeClientFilter: true,
+  });
 
   return (
     <AgencySegmentFiltersContext.Provider value={{ kind: "timeRange", applied: timeRange.applied }}>
@@ -111,7 +114,6 @@ function ReportsFiltersRoot({
     includeClientFilter: true,
     includeFieldsFilter: true,
     fetchEntries: true,
-    multiSelectEntityFilters: true,
   });
 
   const searchContext = {
@@ -188,7 +190,6 @@ function ReportsFiltersRoot({
           ) : (
             <AgencyDashboardCommandBar
               {...timeRange.barProps}
-              contextMenuEnabled={false}
               trailingActions={
                 <>
                   <Button

@@ -1,8 +1,6 @@
-import { Check, ChevronDown, Search } from "lucide-react";
-import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { Check, ChevronDown } from "lucide-react";
+import { useState, type ReactNode } from "react";
 
-import { AgencyMemberChooser } from "@/components/agency/agency-member-chooser";
-import { AgencyProjectChooser } from "@/components/agency/agency-project-chooser";
 import {
   AgencyCommandBarActions,
   AgencyCommandBarResetButton,
@@ -14,30 +12,9 @@ import {
   type AgencyFilterOptionGroup,
 } from "@/components/agency/agency-multi-select-filter";
 import { Button } from "@/components/ui/button";
-import {
-  ContextMenu,
-  ContextMenuCheckboxItem,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuLabel,
-  ContextMenuRadioGroup,
-  ContextMenuRadioItem,
-  ContextMenuSeparator,
-  ContextMenuSub,
-  ContextMenuSubContent,
-  ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from "@/components/ui/context-menu";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import {
-  SavedReportsListBody,
-  SavedReportsListSkeleton,
-  useSavedReportsList,
-} from "@/lib/agency/reports/agency-saved-reports-list";
-import type { SavedReportSearchContext } from "@/lib/agency/reports/agency-report-naming";
-import { agencyFocusRingClass, agencyInputPlaceholderClass } from "@/lib/utils/agency-ui";
+import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
 import {
   AGENCY_REPORT_FIELD_LABELS,
   allAgencyReportFieldIds,
@@ -47,159 +24,22 @@ import {
 } from "@/lib/agency/reports/agency-report-fields";
 import { cn } from "@/lib/utils";
 
-export type RangePreset = "tenure" | "week" | "month" | "last30" | "custom";
+export type RangePreset = "tenure" | "today" | "week" | "month" | "last30" | "custom";
 
 export const RANGE_LABEL: Record<RangePreset, string> = {
   tenure: "Tenure period",
+  today: "Today",
   week: "This week",
   month: "This month",
   last30: "Last 30 days",
   custom: "Custom",
 };
 
-const RANGE_TOOLTIP: Record<RangePreset, string> = {
-  tenure: "Use the active tenure policy window.",
-  week: "Monday through today.",
-  month: "First of the month through today.",
-  last30: "Rolling 30-day window ending today.",
-  custom: "Pick explicit start and end dates.",
-};
-
-const FIELD_TOOLTIP: Record<AgencyReportFieldId, string> = {
-  project: "Show the project name column.",
-  task: "Show the linked task column.",
-  description: "Show the entry description column.",
-  duration: "Show the time spent column.",
-  assignee: "Show the assigned member column.",
-};
-
-function MenuItemWithTooltip({
-  tooltip,
-  children,
-  ...props
-}: { tooltip: string; children: ReactNode } & ComponentProps<typeof ContextMenuItem>) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <ContextMenuItem {...props}>{children}</ContextMenuItem>
-      </TooltipTrigger>
-      <TooltipContent side="right">{tooltip}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-function SubTriggerWithTooltip({
-  tooltip,
-  children,
-  ...props
-}: { tooltip: string; children: ReactNode } & ComponentProps<typeof ContextMenuSubTrigger>) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <ContextMenuSubTrigger {...props}>{children}</ContextMenuSubTrigger>
-      </TooltipTrigger>
-      <TooltipContent side="right">{tooltip}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-function CheckboxItemWithTooltip({
-  tooltip,
-  children,
-  ...props
-}: { tooltip: string; children: ReactNode } & ComponentProps<typeof ContextMenuCheckboxItem>) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <ContextMenuCheckboxItem {...props}>{children}</ContextMenuCheckboxItem>
-      </TooltipTrigger>
-      <TooltipContent side="right">{tooltip}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-function RadioItemWithTooltip({
-  tooltip,
-  children,
-  ...props
-}: { tooltip: string; children: ReactNode } & ComponentProps<typeof ContextMenuRadioItem>) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <ContextMenuRadioItem {...props}>{children}</ContextMenuRadioItem>
-      </TooltipTrigger>
-      <TooltipContent side="right">{tooltip}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-type FilterOption = {
-  value: string;
-  label: string;
-};
-
-type AgencyDashboardCommandBarBaseProps = {
-  rangePreset: RangePreset;
-  onRangePresetChange: (preset: RangePreset) => void;
-  customFromDate: string;
-  onCustomFromChange: (value: string) => void;
-  customToDate: string;
-  onCustomToChange: (value: string) => void;
-  clients?: Array<{ id: string; name: string }>;
-  clientsLoading?: boolean;
-  onApply: () => void;
-  hasPendingChanges: boolean;
-  onReset: () => void;
-  defaultRangePreset: RangePreset;
-  tenureAvailable: boolean;
-  projects: Array<{ id: string; name: string; clientName: string }>;
-  members: Array<{ userId: string; userName: string; avatar?: string | null }>;
-  projectsLoading?: boolean;
-  fieldIds?: AgencyReportFieldId[];
-  onFieldIdsChange?: (fieldIds: AgencyReportFieldId[]) => void;
-  defaultFieldIds?: AgencyReportFieldId[];
-  trailingActions?: ReactNode;
-  contextMenuEnabled?: boolean;
-  createReportAction?: {
-    onSelect: () => void;
-    disabled?: boolean;
-  };
-  historyMenu?: {
-    teamId: string;
-    searchContext: SavedReportSearchContext;
-    onSelectReport: (reportId: string) => void;
-  };
-};
-
-type AgencyDashboardCommandBarSingleProps = AgencyDashboardCommandBarBaseProps & {
-  multiSelectEntityFilters?: false;
-  clientId?: string;
-  onClientChange?: (clientId: string) => void;
-  projectId: string;
-  onProjectChange: (projectId: string) => void;
-  memberUserId: string;
-  onMemberChange: (memberUserId: string) => void;
-};
-
-type AgencyDashboardCommandBarMultiProps = AgencyDashboardCommandBarBaseProps & {
-  multiSelectEntityFilters: true;
-  clientIds?: string[];
-  onClientIdsChange?: (clientIds: string[]) => void;
-  projectIds: string[];
-  onProjectIdsChange: (projectIds: string[]) => void;
-  memberUserIds: string[];
-  onMemberUserIdsChange: (memberUserIds: string[]) => void;
-  projectFilterGroups: AgencyFilterOptionGroup[];
-};
-
-type AgencyDashboardCommandBarProps =
-  | AgencyDashboardCommandBarSingleProps
-  | AgencyDashboardCommandBarMultiProps;
-
-function rangePresets(tenureAvailable: boolean): RangePreset[] {
+export function rangePresets(tenureAvailable: boolean): RangePreset[] {
+  // Tenure supersedes "This month" — never offer both.
   return tenureAvailable
-    ? ["tenure", "week", "month", "last30", "custom"]
-    : ["week", "month", "last30", "custom"];
+    ? ["tenure", "today", "week", "last30", "custom"]
+    : ["today", "week", "month", "last30", "custom"];
 }
 
 const filterTriggerClass = agencyCommandBarFilterTriggerClass;
@@ -210,119 +50,34 @@ const filterOptionButtonClass = cn(
   "motion-reduce:transition-none",
 );
 
-function FilterOptionChooser({
-  label,
-  value,
-  onChange,
-  options,
-  emptyLabel,
-  searchPlaceholder,
-  disabled,
-  loading,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: FilterOption[];
-  emptyLabel: string;
-  searchPlaceholder: string;
-  disabled?: boolean;
-  loading?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const selectedLabel = options.find((option) => option.value === value)?.label ?? emptyLabel;
-
-  const filteredOptions = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return options;
-    return options.filter((option) => option.label.toLowerCase().includes(query));
-  }, [options, searchTerm]);
-
-  function handleOpenChange(nextOpen: boolean) {
-    setOpen(nextOpen);
-    if (!nextOpen) setSearchTerm("");
-  }
-
-  function selectOption(optionValue: string) {
-    onChange(optionValue);
-    setOpen(false);
-    setSearchTerm("");
-  }
-
-  return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          disabled={disabled || loading}
-          className={cn(filterTriggerClass, value ? "text-highlighted" : "text-muted")}
-          aria-label={label}
-        >
-          <span className="min-w-0 flex-1 truncate">{loading ? "Loading…" : selectedLabel}</span>
-          <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden p-0"
-      >
-        <div className="border-b border-white/10 p-2">
-          <div className="relative">
-            <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted" />
-            <Input
-              autoFocus
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder={searchPlaceholder}
-              className={cn(
-                "h-9 rounded-lg border-default bg-default pl-8 text-sm",
-                agencyInputPlaceholderClass,
-              )}
-            />
-          </div>
-        </div>
-        <div className="max-h-60 overflow-y-auto p-1">
-          <button
-            type="button"
-            className={cn(filterOptionButtonClass, !value && "bg-primary/10 text-primary")}
-            onClick={() => selectOption("")}
-          >
-            <span className="truncate">{emptyLabel}</span>
-            {!value ? (
-              <Check className="size-3.5 shrink-0" aria-hidden />
-            ) : (
-              <span className="size-3.5 shrink-0" aria-hidden />
-            )}
-          </button>
-          {filteredOptions.length === 0 ? (
-            <p className="px-2 py-3 text-center text-xs text-muted">No matches.</p>
-          ) : (
-            filteredOptions.map((option) => {
-              const selected = option.value === value;
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={cn(filterOptionButtonClass, selected && "bg-primary/10 text-primary")}
-                  onClick={() => selectOption(option.value)}
-                >
-                  <span className="truncate">{option.label}</span>
-                  {selected ? (
-                    <Check className="size-3.5 shrink-0" aria-hidden />
-                  ) : (
-                    <span className="size-3.5 shrink-0" aria-hidden />
-                  )}
-                </button>
-              );
-            })
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
+type AgencyDashboardCommandBarProps = {
+  rangePreset: RangePreset;
+  onRangePresetChange: (preset: RangePreset) => void;
+  customFromDate: string;
+  onCustomFromChange: (value: string) => void;
+  customToDate: string;
+  onCustomToChange: (value: string) => void;
+  clients?: Array<{ id: string; name: string }>;
+  clientsLoading?: boolean;
+  clientIds?: string[];
+  onClientIdsChange?: (clientIds: string[]) => void;
+  projectIds: string[];
+  onProjectIdsChange: (projectIds: string[]) => void;
+  memberUserIds: string[];
+  onMemberUserIdsChange: (memberUserIds: string[]) => void;
+  projectFilterGroups: AgencyFilterOptionGroup[];
+  onApply: () => void;
+  hasPendingChanges: boolean;
+  onReset: () => void;
+  defaultRangePreset: RangePreset;
+  tenureAvailable: boolean;
+  members: Array<{ userId: string; userName: string; avatar?: string | null }>;
+  projectsLoading?: boolean;
+  fieldIds?: AgencyReportFieldId[];
+  onFieldIdsChange?: (fieldIds: AgencyReportFieldId[]) => void;
+  defaultFieldIds?: AgencyReportFieldId[];
+  trailingActions?: ReactNode;
+};
 
 function RangePresetChooser({
   value,
@@ -375,511 +130,78 @@ function RangePresetChooser({
   );
 }
 
-function entityFilterLabel(
-  selectedIds: string[],
-  options: Array<{ value: string; label: string }>,
-  emptyLabel: string,
-): string {
-  if (selectedIds.length === 0) return emptyLabel;
-  if (selectedIds.length === 1) {
-    return options.find((option) => option.value === selectedIds[0])?.label ?? emptyLabel;
-  }
-  return `${selectedIds.length} selected`;
-}
-
-type AgencyDashboardCommandBarMenuProps = {
-  rangePreset: RangePreset;
-  onRangePresetChange: (preset: RangePreset) => void;
-  multiSelectEntityFilters: boolean;
-  clientId?: string;
-  onClientChange?: (clientId: string) => void;
-  clientIds?: string[];
-  onClientIdsChange?: (clientIds: string[]) => void;
-  clients?: Array<{ id: string; name: string }>;
-  projectId?: string;
-  onProjectChange?: (projectId: string) => void;
-  projectIds?: string[];
-  onProjectIdsChange?: (projectIds: string[]) => void;
-  memberUserId?: string;
-  onMemberChange?: (memberUserId: string) => void;
-  memberUserIds?: string[];
-  onMemberUserIdsChange?: (memberUserIds: string[]) => void;
-  onApply: () => void;
-  hasPendingChanges: boolean;
-  onReset: () => void;
-  tenureAvailable: boolean;
-  projects: Array<{ id: string; name: string; clientName: string }>;
-  fieldIds?: AgencyReportFieldId[];
-  onFieldIdsChange?: (fieldIds: AgencyReportFieldId[]) => void;
-  defaultFieldIds?: AgencyReportFieldId[];
-  showClientFilter: boolean;
-  showFieldsFilter: boolean;
-  hasActiveFilters: boolean;
-  memberOptions: Array<{ userId: string; userName: string; userAvatar: string | null }>;
-  createReportAction?: AgencyDashboardCommandBarProps["createReportAction"];
-  historyMenu?: AgencyDashboardCommandBarProps["historyMenu"];
-};
-
-function AgencyDashboardCommandBarMenu({
+export function AgencyDashboardCommandBar({
   rangePreset,
   onRangePresetChange,
-  multiSelectEntityFilters,
-  clientId = "",
-  onClientChange,
+  customFromDate,
+  onCustomFromChange,
+  customToDate,
+  onCustomToChange,
+  clients,
+  clientsLoading,
   clientIds = [],
   onClientIdsChange,
-  clients,
-  projectId = "",
-  onProjectChange,
-  projectIds = [],
+  projectIds,
   onProjectIdsChange,
-  memberUserId = "",
-  onMemberChange,
-  memberUserIds = [],
+  memberUserIds,
   onMemberUserIdsChange,
+  projectFilterGroups,
   onApply,
   hasPendingChanges,
   onReset,
+  defaultRangePreset,
   tenureAvailable,
-  projects,
+  members,
+  projectsLoading,
   fieldIds,
   onFieldIdsChange,
   defaultFieldIds = allAgencyReportFieldIds(),
-  showClientFilter,
-  showFieldsFilter,
-  hasActiveFilters,
-  memberOptions,
-  createReportAction,
-  historyMenu,
-}: AgencyDashboardCommandBarMenuProps) {
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const reportsQuery = useSavedReportsList({
-    teamId: historyMenu?.teamId ?? "",
-    enabled: historyOpen && Boolean(historyMenu?.teamId),
-  });
-  const selectedFields = new Set(fieldIds ?? []);
-  const presets = rangePresets(tenureAvailable);
-  const clientOptions = clients?.map((client) => ({ value: client.id, label: client.name })) ?? [];
-  const projectOptions = projects.map((project) => ({
-    value: project.id,
-    label: project.name,
-  }));
-  const peopleOptions = memberOptions.map((member) => ({
-    value: member.userId,
-    label: member.userName,
-  }));
-  const selectedClientLabel = multiSelectEntityFilters
-    ? entityFilterLabel(clientIds, clientOptions, "All Clients")
-    : (clients?.find((client) => client.id === clientId)?.name ?? "All Clients");
-  const selectedProjectLabel = multiSelectEntityFilters
-    ? entityFilterLabel(projectIds, projectOptions, "All Projects")
-    : (projects.find((project) => project.id === projectId)?.name ?? "All Projects");
-  const selectedMemberLabel = multiSelectEntityFilters
-    ? entityFilterLabel(memberUserIds, peopleOptions, "Team")
-    : (memberOptions.find((member) => member.userId === memberUserId)?.userName ?? "Team");
-
-  function toggleEntityFilter(
-    current: string[],
-    value: string,
-    onChange?: (values: string[]) => void,
-  ) {
-    if (!onChange) return;
-    onChange(
-      current.includes(value) ? current.filter((entry) => entry !== value) : [...current, value],
-    );
-  }
-
-  function toggleField(field: AgencyReportFieldId) {
-    if (!onFieldIdsChange || !fieldIds) return;
-    const next = selectedFields.has(field)
-      ? fieldIds.filter((entry) => entry !== field)
-      : [...fieldIds, field];
-    onFieldIdsChange(next.length > 0 ? next : defaultFieldIds);
-  }
-
-  return (
-    <ContextMenuContent className="w-56">
-      <TooltipProvider delayDuration={200}>
-        <ContextMenuLabel>Filters</ContextMenuLabel>
-
-        {showClientFilter ? (
-          <ContextMenuSub>
-            <SubTriggerWithTooltip tooltip="Limit results to specific clients.">
-              Client
-              <span className="ml-auto truncate pl-2 text-xs text-muted-foreground">
-                {selectedClientLabel}
-              </span>
-            </SubTriggerWithTooltip>
-            <ContextMenuSubContent className="max-h-64 overflow-y-auto">
-              {multiSelectEntityFilters ? (
-                <>
-                  <CheckboxItemWithTooltip
-                    checked={clientIds.length === 0}
-                    onCheckedChange={() => onClientIdsChange?.([])}
-                    onSelect={(event) => event.preventDefault()}
-                    tooltip="Show work across every client."
-                  >
-                    All Clients
-                  </CheckboxItemWithTooltip>
-                  {clients!.map((client) => (
-                    <CheckboxItemWithTooltip
-                      key={client.id}
-                      checked={clientIds.includes(client.id)}
-                      onCheckedChange={() =>
-                        toggleEntityFilter(clientIds, client.id, onClientIdsChange)
-                      }
-                      onSelect={(event) => event.preventDefault()}
-                      tooltip={`Include ${client.name}.`}
-                    >
-                      {client.name}
-                    </CheckboxItemWithTooltip>
-                  ))}
-                </>
-              ) : (
-                <ContextMenuRadioGroup value={clientId} onValueChange={onClientChange}>
-                  <RadioItemWithTooltip value="" tooltip="Show work across every client.">
-                    All Clients
-                  </RadioItemWithTooltip>
-                  {clients!.map((client) => (
-                    <RadioItemWithTooltip
-                      key={client.id}
-                      value={client.id}
-                      tooltip={`Show only ${client.name}.`}
-                    >
-                      {client.name}
-                    </RadioItemWithTooltip>
-                  ))}
-                </ContextMenuRadioGroup>
-              )}
-            </ContextMenuSubContent>
-          </ContextMenuSub>
-        ) : null}
-
-        <ContextMenuSub>
-          <SubTriggerWithTooltip tooltip="Limit results to specific projects.">
-            Project
-            <span className="ml-auto truncate pl-2 text-xs text-muted-foreground">
-              {selectedProjectLabel}
-            </span>
-          </SubTriggerWithTooltip>
-          <ContextMenuSubContent className="max-h-64 overflow-y-auto">
-            {multiSelectEntityFilters ? (
-              <>
-                <CheckboxItemWithTooltip
-                  checked={projectIds.length === 0}
-                  onCheckedChange={() => onProjectIdsChange?.([])}
-                  onSelect={(event) => event.preventDefault()}
-                  tooltip="Show work across every project."
-                >
-                  All Projects
-                </CheckboxItemWithTooltip>
-                {projects.map((project) => (
-                  <CheckboxItemWithTooltip
-                    key={project.id}
-                    checked={projectIds.includes(project.id)}
-                    onCheckedChange={() =>
-                      toggleEntityFilter(projectIds, project.id, onProjectIdsChange)
-                    }
-                    onSelect={(event) => event.preventDefault()}
-                    tooltip={`Include ${project.name}.`}
-                  >
-                    {project.name}
-                  </CheckboxItemWithTooltip>
-                ))}
-              </>
-            ) : (
-              <ContextMenuRadioGroup value={projectId} onValueChange={onProjectChange}>
-                <RadioItemWithTooltip value="" tooltip="Show work across every project.">
-                  All Projects
-                </RadioItemWithTooltip>
-                {projects.map((project) => (
-                  <RadioItemWithTooltip
-                    key={project.id}
-                    value={project.id}
-                    tooltip={`Show only ${project.name}.`}
-                  >
-                    {project.name}
-                  </RadioItemWithTooltip>
-                ))}
-              </ContextMenuRadioGroup>
-            )}
-          </ContextMenuSubContent>
-        </ContextMenuSub>
-
-        <ContextMenuSub>
-          <SubTriggerWithTooltip tooltip="Limit results to team members.">
-            Team
-            <span className="ml-auto truncate pl-2 text-xs text-muted-foreground">
-              {selectedMemberLabel}
-            </span>
-          </SubTriggerWithTooltip>
-          <ContextMenuSubContent className="max-h-64 overflow-y-auto">
-            {multiSelectEntityFilters ? (
-              <>
-                <CheckboxItemWithTooltip
-                  checked={memberUserIds.length === 0}
-                  onCheckedChange={() => onMemberUserIdsChange?.([])}
-                  onSelect={(event) => event.preventDefault()}
-                  tooltip="Show every team member."
-                >
-                  Team
-                </CheckboxItemWithTooltip>
-                {memberOptions.map((member) => (
-                  <CheckboxItemWithTooltip
-                    key={member.userId}
-                    checked={memberUserIds.includes(member.userId)}
-                    onCheckedChange={() =>
-                      toggleEntityFilter(memberUserIds, member.userId, onMemberUserIdsChange)
-                    }
-                    onSelect={(event) => event.preventDefault()}
-                    tooltip={`Include ${member.userName}.`}
-                  >
-                    {member.userName}
-                  </CheckboxItemWithTooltip>
-                ))}
-              </>
-            ) : (
-              <ContextMenuRadioGroup value={memberUserId} onValueChange={onMemberChange}>
-                <RadioItemWithTooltip value="" tooltip="Show every team member.">
-                  Team
-                </RadioItemWithTooltip>
-                {memberOptions.map((member) => (
-                  <RadioItemWithTooltip
-                    key={member.userId}
-                    value={member.userId}
-                    tooltip={`Show only ${member.userName}.`}
-                  >
-                    {member.userName}
-                  </RadioItemWithTooltip>
-                ))}
-              </ContextMenuRadioGroup>
-            )}
-          </ContextMenuSubContent>
-        </ContextMenuSub>
-
-        {showFieldsFilter ? (
-          <ContextMenuSub>
-            <SubTriggerWithTooltip tooltip="Choose which columns appear in the report table.">
-              Fields
-              <span className="ml-auto truncate pl-2 text-xs text-muted-foreground">
-                {fieldIds!.length === defaultFieldIds.length
-                  ? "All fields"
-                  : `${fieldIds!.length} selected`}
-              </span>
-            </SubTriggerWithTooltip>
-            <ContextMenuSubContent className="max-h-64 overflow-y-auto">
-              {defaultFieldIds.map((field) => (
-                <CheckboxItemWithTooltip
-                  key={field}
-                  checked={selectedFields.has(field)}
-                  onCheckedChange={() => toggleField(field)}
-                  onSelect={(event) => event.preventDefault()}
-                  tooltip={FIELD_TOOLTIP[field]}
-                >
-                  {AGENCY_REPORT_FIELD_LABELS[field]}
-                </CheckboxItemWithTooltip>
-              ))}
-            </ContextMenuSubContent>
-          </ContextMenuSub>
-        ) : null}
-
-        <ContextMenuSub>
-          <SubTriggerWithTooltip tooltip="Set the reporting period.">
-            Time range
-            <span className="ml-auto truncate pl-2 text-xs text-muted-foreground">
-              {RANGE_LABEL[rangePreset]}
-            </span>
-          </SubTriggerWithTooltip>
-          <ContextMenuSubContent>
-            <ContextMenuRadioGroup
-              value={rangePreset}
-              onValueChange={(value) => onRangePresetChange(value as RangePreset)}
-            >
-              {presets.map((preset) => (
-                <RadioItemWithTooltip key={preset} value={preset} tooltip={RANGE_TOOLTIP[preset]}>
-                  {RANGE_LABEL[preset]}
-                </RadioItemWithTooltip>
-              ))}
-            </ContextMenuRadioGroup>
-          </ContextMenuSubContent>
-        </ContextMenuSub>
-
-        <ContextMenuSeparator />
-
-        <MenuItemWithTooltip
-          disabled={!hasPendingChanges}
-          onSelect={onApply}
-          tooltip="Fetch data with the pending filter changes."
-        >
-          Apply
-        </MenuItemWithTooltip>
-
-        {hasActiveFilters ? (
-          <MenuItemWithTooltip onSelect={onReset} tooltip="Restore default filter settings.">
-            Reset
-          </MenuItemWithTooltip>
-        ) : null}
-
-        {createReportAction ? (
-          <MenuItemWithTooltip
-            disabled={createReportAction.disabled}
-            onSelect={createReportAction.onSelect}
-            tooltip="Open the report builder with the current filters."
-          >
-            Create report
-          </MenuItemWithTooltip>
-        ) : null}
-
-        {historyMenu ? (
-          <ContextMenuSub onOpenChange={setHistoryOpen}>
-            <SubTriggerWithTooltip tooltip="Open a saved report.">Reports</SubTriggerWithTooltip>
-            <ContextMenuSubContent className="w-80 overflow-hidden p-0">
-              {reportsQuery.isPending ? (
-                <SavedReportsListSkeleton />
-              ) : reportsQuery.isError ? (
-                <ContextMenuItem disabled>Couldn't load reports.</ContextMenuItem>
-              ) : (
-                <SavedReportsListBody
-                  items={reportsQuery.data?.items ?? []}
-                  searchContext={historyMenu.searchContext}
-                  onSelect={historyMenu.onSelectReport}
-                  compact
-                />
-              )}
-            </ContextMenuSubContent>
-          </ContextMenuSub>
-        ) : null}
-      </TooltipProvider>
-    </ContextMenuContent>
-  );
-}
-
-export function AgencyDashboardCommandBar(props: AgencyDashboardCommandBarProps) {
-  const {
-    rangePreset,
-    onRangePresetChange,
-    customFromDate,
-    onCustomFromChange,
-    customToDate,
-    onCustomToChange,
-    clients,
-    clientsLoading,
-    onApply,
-    hasPendingChanges,
-    onReset,
-    defaultRangePreset,
-    tenureAvailable,
-    projects,
-    members,
-    projectsLoading,
-    fieldIds,
-    onFieldIdsChange,
-    defaultFieldIds = allAgencyReportFieldIds(),
-    trailingActions,
-    contextMenuEnabled = true,
-    createReportAction,
-    historyMenu,
-    multiSelectEntityFilters = false,
-  } = props;
-
-  const showClientFilter = Boolean(clients && (multiSelectEntityFilters || props.onClientChange));
+  trailingActions,
+}: AgencyDashboardCommandBarProps) {
+  const showClientFilter = Boolean(clients && onClientIdsChange);
   const showFieldsFilter = Boolean(onFieldIdsChange && fieldIds);
 
   const hasActiveFilters = Boolean(
     rangePreset !== defaultRangePreset ||
-    (multiSelectEntityFilters
-      ? (props.clientIds?.length ?? 0) > 0 ||
-        props.projectIds.length > 0 ||
-        props.memberUserIds.length > 0
-      : (props.clientId ?? "") !== "" || props.projectId !== "" || props.memberUserId !== "") ||
+    clientIds.length > 0 ||
+    projectIds.length > 0 ||
+    memberUserIds.length > 0 ||
     (showFieldsFilter && fieldIds && !areSameReportFieldSets(fieldIds, defaultFieldIds)),
   );
 
-  const memberOptions = members.map((member) => ({
-    userId: member.userId,
-    userName: member.userName,
-    userAvatar: member.avatar ?? null,
-  }));
-
   const clientOptions = clients?.map((client) => ({ value: client.id, label: client.name })) ?? [];
-  const memberSelectOptions = memberOptions.map((member) => ({
+  const memberSelectOptions = members.map((member) => ({
     value: member.userId,
     label: member.userName,
   }));
 
-  const filterBar = (
+  return (
     <div className={agencyCommandBarShellClass}>
       {showClientFilter ? (
-        multiSelectEntityFilters ? (
-          <AgencyMultiSelectFilter
-            label="All Clients"
-            values={props.clientIds ?? []}
-            options={clientOptions}
-            onValuesChange={props.onClientIdsChange ?? (() => {})}
-            disabled={clientsLoading}
-            searchPlaceholder="Search clients"
-          />
-        ) : (
-          <FilterOptionChooser
-            label="Client"
-            value={props.clientId ?? ""}
-            onChange={props.onClientChange!}
-            emptyLabel="All Clients"
-            searchPlaceholder="Search clients"
-            disabled={clientsLoading}
-            loading={clientsLoading}
-            options={clientOptions}
-          />
-        )
+        <AgencyMultiSelectFilter
+          label="All Clients"
+          values={clientIds}
+          options={clientOptions}
+          onValuesChange={onClientIdsChange!}
+          disabled={clientsLoading}
+          searchPlaceholder="Search clients"
+        />
       ) : null}
-      {multiSelectEntityFilters ? (
-        <>
-          <AgencyMultiSelectFilter
-            label="All Projects"
-            values={props.projectIds}
-            groups={props.projectFilterGroups}
-            onValuesChange={props.onProjectIdsChange}
-            disabled={projectsLoading}
-            searchPlaceholder="Search projects or clients"
-          />
-          <AgencyMultiSelectFilter
-            label="Team"
-            values={props.memberUserIds}
-            options={memberSelectOptions}
-            onValuesChange={props.onMemberUserIdsChange}
-            searchPlaceholder="Search members"
-          />
-        </>
-      ) : (
-        <>
-          <AgencyProjectChooser
-            value={props.projectId}
-            onValueChange={props.onProjectChange}
-            projects={projects}
-            allowEmpty
-            emptyLabel="All Projects"
-            placeholder="All Projects"
-            searchPlaceholder="Search projects or clients"
-            loading={projectsLoading}
-            disabled={projectsLoading}
-            className={cn(filterTriggerClass, props.projectId ? "text-highlighted" : "text-muted")}
-          />
-          <AgencyMemberChooser
-            value={props.memberUserId}
-            onValueChange={props.onMemberChange}
-            members={memberOptions}
-            placeholder="Team"
-            searchPlaceholder="Search members"
-            allowUnassigned={false}
-            allowEmpty
-            className={cn(
-              filterTriggerClass,
-              "h-9 w-auto max-w-44",
-              props.memberUserId ? "text-highlighted" : "text-muted",
-            )}
-          />
-        </>
-      )}
+      <AgencyMultiSelectFilter
+        label="All Projects"
+        values={projectIds}
+        groups={projectFilterGroups}
+        onValuesChange={onProjectIdsChange}
+        disabled={projectsLoading}
+        searchPlaceholder="Search projects or clients"
+      />
+      <AgencyMultiSelectFilter
+        label="Team"
+        values={memberUserIds}
+        options={memberSelectOptions}
+        onValuesChange={onMemberUserIdsChange}
+        searchPlaceholder="Search users or groups"
+      />
       {showFieldsFilter ? (
         <AgencyMultiSelectFilter
           label="Fields"
@@ -935,47 +257,5 @@ export function AgencyDashboardCommandBar(props: AgencyDashboardCommandBarProps)
         {trailingActions}
       </AgencyCommandBarActions>
     </div>
-  );
-
-  if (!contextMenuEnabled) {
-    return filterBar;
-  }
-
-  return (
-    <ContextMenu>
-      <ContextMenuTrigger asChild>{filterBar}</ContextMenuTrigger>
-      <AgencyDashboardCommandBarMenu
-        rangePreset={rangePreset}
-        onRangePresetChange={onRangePresetChange}
-        multiSelectEntityFilters={multiSelectEntityFilters}
-        clientId={multiSelectEntityFilters ? undefined : props.clientId}
-        onClientChange={multiSelectEntityFilters ? undefined : props.onClientChange}
-        clientIds={multiSelectEntityFilters ? props.clientIds : undefined}
-        onClientIdsChange={multiSelectEntityFilters ? props.onClientIdsChange : undefined}
-        clients={clients}
-        projectId={multiSelectEntityFilters ? undefined : props.projectId}
-        onProjectChange={multiSelectEntityFilters ? undefined : props.onProjectChange}
-        projectIds={multiSelectEntityFilters ? props.projectIds : undefined}
-        onProjectIdsChange={multiSelectEntityFilters ? props.onProjectIdsChange : undefined}
-        memberUserId={multiSelectEntityFilters ? undefined : props.memberUserId}
-        onMemberChange={multiSelectEntityFilters ? undefined : props.onMemberChange}
-        memberUserIds={multiSelectEntityFilters ? props.memberUserIds : undefined}
-        onMemberUserIdsChange={multiSelectEntityFilters ? props.onMemberUserIdsChange : undefined}
-        onApply={onApply}
-        hasPendingChanges={hasPendingChanges}
-        onReset={onReset}
-        tenureAvailable={tenureAvailable}
-        projects={projects}
-        fieldIds={fieldIds}
-        onFieldIdsChange={onFieldIdsChange}
-        defaultFieldIds={defaultFieldIds}
-        showClientFilter={showClientFilter}
-        showFieldsFilter={showFieldsFilter}
-        hasActiveFilters={hasActiveFilters}
-        memberOptions={memberOptions}
-        createReportAction={createReportAction}
-        historyMenu={historyMenu}
-      />
-    </ContextMenu>
   );
 }
