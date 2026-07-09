@@ -18,11 +18,6 @@ import {
 import { formatDuration } from "@/lib/utils/format-duration";
 import type { CollapsedEntryGroup } from "@/lib/utils/group-time-entries";
 
-const timeRangeFormatter = new Intl.DateTimeFormat("en-US", {
-  hour: "numeric",
-  minute: "2-digit",
-});
-
 function localDateKey(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -30,12 +25,19 @@ function localDateKey(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function formatTimeLabel(date: Date): string {
+  return date
+    .toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+    .replace(/\sAM/g, " am")
+    .replace(/\sPM/g, " pm");
+}
+
 function formatTimeRange(startedAt: string, endedAt: string) {
   const start = new Date(startedAt);
   const end = new Date(endedAt);
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return "";
   const overnight = localDateKey(start) !== localDateKey(end);
-  const range = `${timeRangeFormatter.format(start)} - ${timeRangeFormatter.format(end)}`;
+  const range = `${formatTimeLabel(start)} - ${formatTimeLabel(end)}`;
   return overnight ? `${range} +1` : range;
 }
 

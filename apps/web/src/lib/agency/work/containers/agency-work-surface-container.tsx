@@ -1,18 +1,16 @@
 import type { AgencySegmentId } from "@/lib/agency-segments";
 import { useAgencyJourneyLiveSync } from "@/lib/agency/work/hooks/use-agency-journey-live-sync";
 import { useAgencyWorkSurface } from "@/lib/agency/work/hooks/use-agency-work-surface";
+import { AgencyWorkSurfaceTaskPane } from "@/lib/agency/work/containers/agency-work-surface-task-pane-container";
 import type { AgencyWorkSurfaceView } from "@/lib/schemas/agency-work";
 
-import { AgencyTaskList } from "@/components/agency/agency-task-list";
-import { AgencyTaskThread } from "@/components/agency/agency-task-thread";
 import { AgencyTimeEntriesLog } from "@/components/agency/agency-time-entries-log";
 import { AgencyTimeTracker } from "@/components/agency/agency-time-tracker";
 import { AgencyWorkSurfaceEmptyView } from "@/components/agency/work/work-surface/agency-work-surface-empty-view";
 import { AgencyWorkSurfaceErrorView } from "@/components/agency/work/work-surface/agency-work-surface-error-view";
 import { AgencyWorkSurfaceLayoutView } from "@/components/agency/work/work-surface/agency-work-surface-layout-view";
 import { AgencyWorkSurfaceLoadingView } from "@/components/agency/work/work-surface/agency-work-surface-loading-view";
-import { AgencyWorkSurfaceMobileTabsView } from "@/components/agency/work/work-surface/agency-work-surface-mobile-tabs-view";
-import { AgencyWorkSurfaceTimerStripView } from "@/components/agency/work/work-surface/agency-work-surface-timer-strip-view";
+import { AgencyWorkSurfaceTabsView } from "@/components/agency/work/work-surface/agency-work-surface-tabs-view";
 import { agencyTimeLogPanelClass, agencyTimeTrackerPanelClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +19,30 @@ type AgencyWorkSurfaceProps = {
   onSelectProject: (projectId: string) => void;
   onSegmentChange: (segment: AgencySegmentId) => void;
 };
+
+function renderWorkSurfaceContent(view: Extract<AgencyWorkSurfaceView, { status: "ready" }>) {
+  switch (view.activeTab) {
+    case "sessions":
+      return <AgencyTimeEntriesLog teamId={view.teamId} />;
+    case "my-tasks":
+    case "done":
+    case "delegated":
+      return (
+        <AgencyWorkSurfaceTaskPane
+          tab={view.activeTab}
+          teamId={view.teamId}
+          projects={view.projects}
+          selectedTaskId={view.selectedTaskId}
+          onSelectTask={view.onSelectTask}
+          onSelectProject={view.onSelectProject}
+        />
+      );
+    default: {
+      const _exhaustive: never = view.activeTab;
+      return _exhaustive;
+    }
+  }
+}
 
 function renderWorkSurfaceView(view: AgencyWorkSurfaceView) {
   switch (view.status) {
@@ -36,58 +58,29 @@ function renderWorkSurfaceView(view: AgencyWorkSurfaceView) {
         />
       );
     case "ready": {
-      const showMobileTimerStrip = Boolean(view.mobileTrackingLabel);
       return (
         <AgencyWorkSurfaceLayoutView
-          selectedTaskId={view.selectedTaskId}
-          mobilePane={view.mobilePane}
-          taskRailCollapsed={view.taskRailCollapsed}
-          mobileTabs={
-            <AgencyWorkSurfaceMobileTabsView
-              mobilePane={view.mobilePane}
-              onMobilePaneChange={view.onMobilePaneChange}
-              onOpenTimePane={view.onOpenTimePane}
+          trackerPane={
+            <div className={agencyTimeTrackerPanelClass}>
+              <AgencyTimeTracker teamId={view.teamId} />
+            </div>
+          }
+          tabBar={
+            <AgencyWorkSurfaceTabsView
+              activeTab={view.activeTab}
+              onTabChange={view.onTabChange}
+              onAddNewTask={view.onAddNewTask}
             />
           }
-          timerStrip={
-            showMobileTimerStrip && view.mobileTrackingLabel ? (
-              <AgencyWorkSurfaceTimerStripView
-                mobileTrackingLabel={view.mobileTrackingLabel}
-                onOpenTimePane={view.onOpenTimePane}
-              />
-            ) : null
-          }
-          taskRail={
-            <AgencyTaskList
-              teamId={view.teamId}
-              projects={view.projects}
-              selectedTaskId={view.selectedTaskId}
-              collapsed={view.taskRailCollapsed}
-              onSelect={view.onSelectTask}
-              onCollapsedChange={view.onCollapsedChange}
-              onSelectProject={view.onSelectProject}
-            />
-          }
-          taskThread={
-            view.selectedTaskId ? (
-              <AgencyTaskThread
-                key={view.selectedTaskId}
-                teamId={view.teamId}
-                taskId={view.selectedTaskId}
-                projects={view.projects}
-                onBack={() => view.onSelectTask("")}
-              />
-            ) : null
-          }
-          timePane={
-            <>
-              <div className={agencyTimeTrackerPanelClass}>
-                <AgencyTimeTracker teamId={view.teamId} />
-              </div>
-              <div className={cn(agencyTimeLogPanelClass, "min-h-0")}>
-                <AgencyTimeEntriesLog teamId={view.teamId} />
-              </div>
-            </>
+          contentPane={
+            <div
+              role="tabpanel"
+              id={`agency-work-panel-${view.activeTab}`}
+              aria-labelledby={`agency-work-tab-${view.activeTab}`}
+              className={cn(agencyTimeLogPanelClass, "min-h-0 rounded-t-none border-t-0")}
+            >
+              {renderWorkSurfaceContent(view)}
+            </div>
           }
         />
       );

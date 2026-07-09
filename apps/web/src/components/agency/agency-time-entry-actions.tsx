@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
+import { agencyFocusRingClass, agencyWorkPlayButtonClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
 type AgencyTimeEntryActionsProps = {
@@ -42,16 +42,15 @@ export function AgencyTimeEntryActions({
 
   return (
     <div className="flex shrink-0 items-center gap-0.5">
-      <Button
-        variant="ghost"
-        size="sm"
-        className={cn("h-8 w-8 p-0", agencyFocusRingClass)}
+      <button
+        type="button"
+        className={cn(agencyWorkPlayButtonClass, !canRestart && "cursor-not-allowed opacity-50")}
         disabled={!canRestart}
         aria-label={`Restart timer for ${entryLabel}`}
         onClick={onRestart}
       >
         <Play className="size-3.5" />
-      </Button>
+      </button>
 
       <Popover open={menuOpen} onOpenChange={setMenuOpen}>
         <PopoverTrigger asChild>

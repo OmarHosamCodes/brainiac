@@ -162,38 +162,81 @@ export const agencySearchHighlightMarkClass = "agency-search-highlight-mark";
 
 export const agencyTaskRowNeedsDescriptionClass = "bg-warning/5";
 
-/** Time column beside the task rail — stacks tracker and log as separate panels. */
-export const agencyTimePaneStackClass = "flex min-h-0 flex-1 flex-col gap-3 overflow-hidden";
+/** Work time surface — stacks tracker and log as separate panels. */
+export const agencyTimePaneStackClass =
+  "flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden";
 
-export const agencyTimeTrackerPanelClass =
-  "shrink-0 overflow-hidden rounded-xl border border-default bg-default";
+export const agencyTimeTrackerPanelClass = "shrink-0 overflow-visible";
 
 export const agencyTimeLogPanelClass =
-  "flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-default bg-elevated";
+  "flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-default bg-default";
 
-export const agencyTimeTrackerBarClass = cn("shrink-0 px-4 py-2.5");
+export const agencyWorkTrackerCardClass =
+  "shrink-0 overflow-hidden rounded-2xl border border-default bg-default";
 
-export const agencyTimeDayHeaderClass = cn(agencyMutedSectionHeaderClass, "shrink-0");
+export const agencyWorkTabBarClass =
+  "flex shrink-0 items-center justify-between gap-3 border-b border-default px-1";
 
-export const agencyTimeWeekHeaderClass = cn(
-  "flex shrink-0 items-center justify-between px-4 py-2.5 text-xs",
+export const agencyWorkTabClass = cn(
+  "inline-flex shrink-0 items-center gap-2 border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-muted transition-colors",
+  "hover:text-highlighted",
+  agencyFocusRingClass,
+  "motion-reduce:transition-none",
 );
 
+export const agencyWorkTabActiveClass = "border-primary text-highlighted [&_svg]:text-primary";
+
+export const agencyWorkTableGridClass =
+  "grid w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.75fr)_4.5rem] items-center gap-x-3 gap-y-2 px-4 py-3";
+
+export const agencyWorkTableGridDoneClass =
+  "grid w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.6fr)_minmax(0,0.75fr)_4.5rem] items-center gap-x-3 gap-y-2 px-4 py-3";
+
+export const agencyWorkTableGridDelegatedClass =
+  "grid w-full grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.85fr)_4.5rem] items-center gap-x-3 gap-y-2 px-4 py-3";
+
+export const agencyWorkTableHeaderClass = cn(
+  agencyWorkTableGridClass,
+  "border-b border-default bg-muted/45 text-xs font-semibold uppercase tracking-wide text-muted",
+);
+
+export const agencyWorkTableRowClass = cn(
+  agencyWorkTableGridClass,
+  "border-b border-default transition-colors hover:bg-elevated/45 motion-reduce:transition-none",
+);
+
+export const agencyWorkPlayButtonClass = cn(
+  "inline-flex size-8 shrink-0 items-center justify-center rounded-full border border-default bg-elevated text-muted",
+  "transition-colors hover:bg-default hover:text-highlighted",
+  agencyFocusRingClass,
+  "motion-reduce:transition-none",
+);
+
+export const agencyTimeTrackerBarClass = cn(
+  "grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.55fr)] lg:items-stretch",
+);
+
+export const agencyTimeDayHeaderClass = cn(
+  "flex shrink-0 items-center justify-between gap-3 border-b border-default bg-muted/45 px-4 py-3 text-sm",
+);
+
+export const agencyTimeWeekHeaderClass = "sr-only";
+
 export const agencyTimeEntryRowClass = cn(
-  "border-b-[1px] border-dashed border-default bg-card/20 px-4 py-3 transition-colors motion-reduce:transition-none",
+  "border-b border-default px-4 py-3 transition-colors hover:bg-elevated/45 motion-reduce:transition-none",
 );
 
 /** Inline time inputs in entry rows. */
 export const agencyTimeEntryTimeInputClass = cn(
-  "h-7 w-full min-w-0 appearance-none border-0 bg-transparent px-0 font-mono text-sm font-medium tabular-nums tracking-tight text-muted shadow-none focus-visible:ring-0 focus-visible:text-highlighted",
+  "h-7 w-full min-w-0 appearance-none border-0 bg-transparent px-0 font-mono text-sm font-medium tabular-nums text-muted shadow-none focus-visible:ring-0 focus-visible:text-highlighted",
   "[&::-webkit-calendar-picker-indicator]:hidden",
 );
 
 /** Shared column grid for time entry rows inside the horizontal scroll region. */
 export const agencyTimeEntryGridClass =
-  "grid w-full min-w-[46rem] grid-cols-[minmax(12rem,1.35fr)_minmax(10rem,0.9fr)_minmax(11rem,auto)_minmax(6.5rem,7rem)_5.5rem] items-center gap-0";
+  "grid w-full grid-cols-[minmax(0,1fr)_4.25rem] gap-x-3 gap-y-2 sm:grid-cols-[minmax(14rem,1.35fr)_minmax(12rem,0.7fr)_minmax(6rem,0.35fr)_4.5rem] sm:items-center sm:gap-y-0";
 
-export const agencyTimeEntryScrollClass = "min-w-0 overflow-x-auto";
+export const agencyTimeEntryScrollClass = "min-w-0 overflow-x-hidden";
 
 export const agencyTimeEntryRowHighlightClass =
   "bg-success/10 motion-reduce:transition-none transition-colors duration-500";
@@ -213,7 +256,7 @@ export const agencyTimeWeekFooterClass = cn(
 export const agencyTimeFooterMetricClass = cn("text-sm font-semibold", agencyMetricClass);
 
 export const agencyTimeLogSkeletonClass =
-  "h-11 border-b border-default bg-elevated/40 motion-reduce:animate-none animate-pulse";
+  "h-16 border-b border-default bg-elevated/35 motion-reduce:animate-none animate-pulse";
 
 /** Structured agency task agent reply card. */
 export const agencyAgentMessageCardClass =

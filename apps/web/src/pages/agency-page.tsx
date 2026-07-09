@@ -43,7 +43,6 @@ import { AGENCY_PAGE_SCROLL_ATTR, agencyWorkSurfaceShellClass } from "@/lib/util
 import { cn } from "@/lib/utils";
 import { setAgencyTimeTrackingUserId } from "@/stores/agency-time-tracking";
 import { useAgencyOptimisticStore } from "@/stores/agency-optimistic";
-import { useAgencyWorkSurfaceStore } from "@/stores/agency-work-surface";
 
 function isAgencySegmentId(value: string | null): value is AgencySegmentId {
   return AGENCY_SEGMENTS.some((entry) => entry.id === value);
@@ -82,15 +81,6 @@ export function AgencyPage() {
 
   const selectedProjectId =
     typeof searchParams.get("project") === "string" ? searchParams.get("project")! : "";
-  const selectedTaskId =
-    typeof searchParams.get("task") === "string" ? searchParams.get("task")! : "";
-
-  useEffect(() => {
-    if (segment === "work" && selectedTaskId) {
-      useAgencyWorkSurfaceStore.getState().setSelectedTaskId(selectedTaskId);
-    }
-  }, [segment, selectedTaskId]);
-
   useEffect(() => {
     if (sectionParam === "settings") {
       const next = new URLSearchParams(searchParams);

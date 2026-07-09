@@ -1,13 +1,10 @@
-import { AlertTriangle, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
-import { AgencyTimeEntryWeekGroupView } from "@/components/agency/work/time-entries/agency-time-entry-week-group-view";
+import { AgencyTimeEntryRecencySectionView } from "@/components/agency/work/time-entries/agency-time-entry-recency-section-view";
+import { AgencyWorkSurfacePaginationFooter } from "@/components/agency/work/work-surface/agency-work-surface-pagination-footer";
 import { Button } from "@/components/ui/button";
 import type { AgencyTimeEntriesLogViewModel } from "@/lib/agency/work/hooks/use-agency-time-entries-log";
-import {
-  agencyMetricClass,
-  agencyTimeLogSkeletonClass,
-  agencyTimeWeekFooterClass,
-} from "@/lib/utils/agency-ui";
+import { agencyMetricClass, agencyTimeLogSkeletonClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
 type AgencyTimeEntriesLogViewProps = {
@@ -40,17 +37,16 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
         className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain"
       >
         {view.isLoading ? (
-          <div className="space-y-0">
+          <div className="overflow-hidden">
             {[1, 2, 3, 4, 5].map((rowIndex) => (
               <div key={rowIndex} className={agencyTimeLogSkeletonClass} />
             ))}
           </div>
         ) : view.entriesEmpty ? (
-          <div className="px-4 py-10 text-center">
+          <div className="border-b border-dashed border-default bg-elevated/25 px-4 py-10 text-center">
             <p className="text-sm font-semibold text-highlighted">No time logged yet</p>
             <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-              Press Start in the tracker above to begin tracking; add a description and task before
-              you stop.
+              Start the tracker, write a short description, and choose a task before stopping.
             </p>
             <ol className="mx-auto mt-4 max-w-xs space-y-2 text-left text-sm text-muted">
               <li className="flex gap-2">
@@ -76,11 +72,11 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
             </Button>
           </div>
         ) : (
-          <div className="flex min-w-0 flex-col gap-6">
-            {view.weekGroups.map((week) => (
-              <AgencyTimeEntryWeekGroupView
-                key={week.weekStartKey}
-                week={week}
+          <div className="flex min-w-0 flex-col">
+            {view.recencySections.map((section) => (
+              <AgencyTimeEntryRecencySectionView
+                key={section.id}
+                section={section}
                 teamId={view.teamId}
                 projects={view.projects}
                 tasks={view.tasks}
@@ -105,55 +101,18 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
       </div>
 
       {view.showPagination ? (
-        <div className={agencyTimeWeekFooterClass}>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              disabled={view.page <= 1}
-              aria-label="Previous page"
-              onClick={view.onPreviousPage}
-            >
-              <ChevronLeft className="size-4" />
-            </Button>
-            <p className="font-mono text-xs tabular-nums text-muted">
-              {view.rangeStart}-{view.rangeEnd} of {view.totalEntries}
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-              disabled={view.page >= view.maxPage}
-              aria-label="Next page"
-              onClick={view.onNextPage}
-            >
-              <ChevronRight className="size-4" />
-            </Button>
-          </div>
-
-          <label className="flex items-center gap-2 text-xs text-muted">
-            <span>Show</span>
-            <span className="relative inline-flex items-center">
-              <select
-                value={view.pageSize}
-                onChange={(e) => view.onPageSizeChange(Number(e.target.value))}
-                className="appearance-none rounded-md border border-default bg-default py-1 pl-2 pr-6 font-mono text-xs tabular-nums leading-none text-highlighted"
-                aria-label="Entries per page"
-              >
-                {view.pageSizeOptions.map((size) => (
-                  <option key={size} value={size}>
-                    {size}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="pointer-events-none absolute right-1.5 top-1/2 size-3 shrink-0 -translate-y-1/2 text-muted"
-                aria-hidden
-              />
-            </span>
-          </label>
-        </div>
+        <AgencyWorkSurfacePaginationFooter
+          rangeStart={view.rangeStart}
+          rangeEnd={view.rangeEnd}
+          total={view.totalEntries}
+          previousDisabled={view.page <= 1}
+          nextDisabled={view.page >= view.maxPage}
+          onPrevious={view.onPreviousPage}
+          onNext={view.onNextPage}
+          pageSize={view.pageSize}
+          pageSizeOptions={view.pageSizeOptions}
+          onPageSizeChange={view.onPageSizeChange}
+        />
       ) : null}
     </div>
   );

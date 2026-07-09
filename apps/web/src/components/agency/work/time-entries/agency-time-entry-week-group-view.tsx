@@ -1,7 +1,5 @@
 import { AgencyTimeEntryDayGroupView } from "@/components/agency/work/time-entries/agency-time-entry-day-group-view";
-import { agencyMetricClass, agencyTimeWeekHeaderClass } from "@/lib/utils/agency-ui";
-import { formatDuration } from "@/lib/utils/format-duration";
-import { cn } from "@/lib/utils";
+import { agencyTimeWeekHeaderClass } from "@/lib/utils/agency-ui";
 import type { CollapsedEntryGroup, TimeEntryWeekGroup } from "@/lib/utils/group-time-entries";
 import type { TimeEntryDraft } from "@/lib/schemas/agency-time-entry";
 import type { AgencyProject, AgencyProjectTask } from "@/lib/schemas/agency-work";
@@ -49,17 +47,9 @@ export function AgencyTimeEntryWeekGroupView({
 }: AgencyTimeEntryWeekGroupViewProps) {
   return (
     <section>
-      <header className={agencyTimeWeekHeaderClass}>
-        <span className="text-sm font-medium text-highlighted">{week.label}</span>
-        <span className="inline-flex items-baseline gap-1.5 text-muted">
-          <span>Week total:</span>
-          <span className={cn("text-base font-semibold", agencyMetricClass)}>
-            {formatDuration(week.totalSeconds, "clock")}
-          </span>
-        </span>
-      </header>
+      <h2 className={agencyTimeWeekHeaderClass}>{week.label}</h2>
 
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4">
         {week.days.map((day) => (
           <AgencyTimeEntryDayGroupView
             key={day.dateKey}

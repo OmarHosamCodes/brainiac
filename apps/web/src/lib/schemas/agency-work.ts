@@ -30,24 +30,27 @@ export type {
   AgencyTimeEntry,
 };
 
-export const agencyWorkMobilePaneSchema = z.enum(["tasks", "time"]);
-export type AgencyWorkMobilePane = z.infer<typeof agencyWorkMobilePaneSchema>;
-
 export type TaskStatus = AgencyProjectTaskStatus;
+
+export const agencyWorkSurfaceTabSchema = z.enum(["sessions", "my-tasks", "done", "delegated"]);
+
+export type AgencyWorkSurfaceTab = z.infer<typeof agencyWorkSurfaceTabSchema>;
+
+export function parseAgencyWorkSurfaceTab(value: string | null): AgencyWorkSurfaceTab {
+  const parsed = agencyWorkSurfaceTabSchema.safeParse(value);
+  return parsed.success ? parsed.data : "sessions";
+}
 
 export type AgencyWorkSurfaceReadyProps = {
   status: "ready";
   teamId: string;
   projects: AgencyProject[];
+  activeTab: AgencyWorkSurfaceTab;
   selectedTaskId: string;
-  mobilePane: AgencyWorkMobilePane;
-  taskRailCollapsed: boolean;
-  mobileTrackingLabel: string | null;
+  onTabChange: (tab: AgencyWorkSurfaceTab) => void;
   onSelectTask: (taskId: string) => void;
-  onCollapsedChange: (collapsed: boolean) => void;
+  onAddNewTask: () => void;
   onSelectProject: (projectId: string) => void;
-  onMobilePaneChange: (pane: AgencyWorkMobilePane) => void;
-  onOpenTimePane: () => void;
 };
 
 export type AgencyWorkSurfaceView =

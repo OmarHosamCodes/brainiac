@@ -134,6 +134,7 @@ type AgencyProjectTaskRecord = {
   viewerStatus?: "open" | "in_progress" | "done";
   viewerCompletionCount?: number;
   viewerBlueprints?: AgencyProjectTaskBlueprintRecord[];
+  totalTrackedSeconds?: number;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
@@ -551,6 +552,7 @@ function mapProjectTaskRow(row: {
   viewerStatus?: "open" | "in_progress" | "done";
   viewerCompletionCount?: number;
   viewerBlueprints?: AgencyProjectTaskBlueprintRecord[];
+  totalTrackedSeconds?: number;
   dueDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -571,6 +573,9 @@ function mapProjectTaskRow(row: {
       ? { viewerCompletionCount: row.viewerCompletionCount }
       : {}),
     ...(row.viewerBlueprints !== undefined ? { viewerBlueprints: row.viewerBlueprints } : {}),
+    ...(row.totalTrackedSeconds !== undefined
+      ? { totalTrackedSeconds: row.totalTrackedSeconds }
+      : {}),
     dueDate: row.dueDate?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
@@ -1612,6 +1617,34 @@ async function loadJourneyStepTimeEntryCounts(stepIds: string[]) {
   return counts;
 }
 
+async function loadTaskTrackedSeconds(taskIds: string[], userId: string) {
+  const totals = new Map<string, number>();
+  if (taskIds.length === 0 || !userId) return totals;
+
+  const rows = await db
+    .select({
+      taskId: agencyOpsTimeEntry.taskId,
+      totalSeconds: sql<number>`coalesce(sum(${agencyOpsTimeEntry.durationSeconds}), 0)`,
+    })
+    .from(agencyOpsTimeEntry)
+    .where(
+      and(
+        inArray(agencyOpsTimeEntry.taskId, taskIds),
+        eq(agencyOpsTimeEntry.userId, userId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .groupBy(agencyOpsTimeEntry.taskId);
+
+  for (const row of rows) {
+    if (row.taskId) {
+      totals.set(row.taskId, Number(row.totalSeconds));
+    }
+  }
+
+  return totals;
+}
+
 async function syncJourneyStepStatuses(teamId: string, projectId: string) {
   const journey = await getJourneyRowForProject(teamId, projectId);
   const steps = await db
@@ -2560,6 +2593,10 @@ export async function listAgencyProjectTasks(
         input.assigneeUserId,
       )
     : undefined;
+  const trackedSecondsByTask = await loadTaskTrackedSeconds(
+    rows.map((row) => row.id),
+    actorUserId,
+  );
 
   return {
     items: await Promise.all(
@@ -2570,7 +2607,10 @@ export async function listAgencyProjectTasks(
           input.assigneeUserId,
           memberStatusesByTask?.get(row.id),
           blueprintsByTask?.get(row.id),
-        ),
+        ).then((task) => ({
+          ...task,
+          totalTrackedSeconds: trackedSecondsByTask.get(row.id) ?? 0,
+        })),
       ),
     ),
     page,

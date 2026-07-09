@@ -143,6 +143,9 @@ export type AgencyTaskListViewModel =
       hasMoreAssignedTasks: boolean;
       isFetchingMoreAssignedTasks: boolean;
       onFetchMoreAssignedTasks: () => void;
+      activeTasksTotal: number;
+      doneTasksTotal: number;
+      assignedTasksTotal: number;
       newJourneysLoading: boolean;
       newJourneysQueryError: boolean;
       newJourneysErrorMessage: string;
@@ -155,6 +158,9 @@ export type AgencyTaskListViewModel =
       recentlyCreatedTaskId: string;
       recentlyCreatedBlueprintId: string;
       onReopenDoneTask: (task: AgencyProjectTask) => void;
+      hasMoreDoneTasks: boolean;
+      isFetchingMoreDoneTasks: boolean;
+      onFetchMoreDoneTasks: () => void;
       hasMoreActiveTasks: boolean;
       isFetchingMoreActiveTasks: boolean;
       onFetchMoreActiveTasks: () => void;
@@ -826,9 +832,15 @@ export function useAgencyTaskList({
     recentlyCreatedTaskId: activeHighlightTaskId,
     recentlyCreatedBlueprintId,
     onReopenDoneTask: (task) => void reopenDoneTask(task),
+    hasMoreDoneTasks: Boolean(doneTasksQuery.hasNextPage),
+    isFetchingMoreDoneTasks: doneTasksQuery.isFetchingNextPage,
+    onFetchMoreDoneTasks: () => void doneTasksQuery.fetchNextPage(),
     hasMoreActiveTasks: Boolean(activeTasksQuery.hasNextPage),
     isFetchingMoreActiveTasks: activeTasksQuery.isFetchingNextPage,
     onFetchMoreActiveTasks: () => void activeTasksQuery.fetchNextPage(),
+    activeTasksTotal: activeTasksQuery.total,
+    doneTasksTotal: doneTasksQuery.total,
+    assignedTasksTotal: assignedTasksQuery.total,
     onCollapseRail: () => onCollapsedChange(true),
     getTaskTrackingState,
     onBlueprintDescriptionChange,

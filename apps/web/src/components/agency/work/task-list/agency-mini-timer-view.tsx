@@ -2,7 +2,7 @@ import { Play, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { AgencyMiniTimerViewModel } from "@/lib/agency/work/hooks/use-agency-mini-timer";
-import { agencyFocusRingClass } from "@/lib/utils/agency-ui";
+import { agencyFocusRingClass, agencyWorkPlayButtonClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
 type AgencyMiniTimerViewProps = {
@@ -48,9 +48,7 @@ export function AgencyMiniTimerView({ view }: AgencyMiniTimerViewProps) {
       <button
         type="button"
         className={cn(
-          "inline-flex size-6 shrink-0 items-center justify-center rounded-full text-muted",
-          "transition-colors hover:bg-elevated hover:text-highlighted",
-          agencyFocusRingClass,
+          agencyWorkPlayButtonClass,
           "motion-reduce:transition-none",
           disabled && "cursor-not-allowed opacity-50",
         )}

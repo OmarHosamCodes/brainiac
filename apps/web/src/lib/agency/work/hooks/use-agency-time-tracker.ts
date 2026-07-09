@@ -73,8 +73,9 @@ export type AgencyTimeTrackerViewModel = {
   startTimeDayLabel: string;
   startTimeError: string | null;
   descriptionSuggestions: AgencyTimeTrackerSuggestion[];
+  trackerStatusLine: string;
   onDescriptionChange: (value: string) => void;
-  onDescriptionKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  onDescriptionKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onTaskChange: (taskId: string) => void;
   onTaskChooserOpenChange: (open: boolean) => void;
   onStartTimePopoverOpenChange: (open: boolean) => void;
@@ -321,6 +322,14 @@ export function useAgencyTimeTracker({
   const taskChooserLabel =
     activeTimer?.taskTitle ?? cachedTask?.title ?? selectedTask?.title ?? "Choose task";
 
+  const trackerProjectId =
+    activeTimer?.projectId ?? cachedTask?.projectId ?? selectedTask?.projectId ?? "";
+  const trackerProject = projects.find((project) => project.id === trackerProjectId) ?? null;
+  const trackerStatusLine =
+    activeTimer || selectedTaskId
+      ? `${trackerProject?.clientName ?? "Project"} · ${trackerProject?.name ?? taskChooserLabel}`
+      : "Ready · Choose task";
+
   let stopButtonLabel = "Stop";
   if (isTimerMutationPending) {
     stopButtonLabel = "…";
@@ -372,6 +381,7 @@ export function useAgencyTimeTracker({
     startTimeDayLabel,
     startTimeError,
     descriptionSuggestions,
+    trackerStatusLine,
     onDescriptionChange: (value) => setTrackerDescription(teamId, value),
     onDescriptionKeyDown: (event) => {
       if (event.key === "Enter" && canStartTimer) {

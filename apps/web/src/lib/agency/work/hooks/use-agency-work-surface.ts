@@ -1,11 +1,12 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import type { AgencySegmentId } from "@/lib/agency-segments";
-import { useAgencyElapsedTimer } from "@/lib/agency/work/hooks/use-agency-elapsed-timer";
-import type { AgencyWorkSurfaceView } from "@/lib/schemas/agency-work";
-import { useAgencyActiveTimerQuery, useAgencyProjectsQuery } from "@/lib/queries/agency";
+import type { AgencyWorkSurfaceTab, AgencyWorkSurfaceView } from "@/lib/schemas/agency-work";
+import { parseAgencyWorkSurfaceTab } from "@/lib/schemas/agency-work";
+import { useAgencyProjectsQuery } from "@/lib/queries/agency";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { useAgencyWorkSurfaceStore } from "@/stores/agency-work-surface";
+import { useAgencyTaskListStore, type AgencyTaskRailStatusFilter } from "@/stores/agency-task-list";
 
 type UseAgencyWorkSurfaceOptions = {
   teamId: string;
@@ -13,36 +14,90 @@ type UseAgencyWorkSurfaceOptions = {
   onSegmentChange: (segment: AgencySegmentId) => void;
 };
 
+function tabToRailFilter(tab: AgencyWorkSurfaceTab): AgencyTaskRailStatusFilter | null {
+  switch (tab) {
+    case "my-tasks":
+      return "active";
+    case "done":
+      return "done";
+    case "delegated":
+      return "assigned";
+    case "sessions":
+      return null;
+    default: {
+      const _exhaustive: never = tab;
+      return _exhaustive;
+    }
+  }
+}
+
 export function useAgencyWorkSurface({
   teamId,
-  onSelectProject,
   onSegmentChange,
+  onSelectProject,
 }: UseAgencyWorkSurfaceOptions): AgencyWorkSurfaceView {
-  const selectedTaskId = useAgencyWorkSurfaceStore((s) => s.selectedTaskId);
-  const mobilePane = useAgencyWorkSurfaceStore((s) => s.mobilePane);
-  const taskRailCollapsed = useAgencyWorkSurfaceStore((s) => s.taskRailCollapsed);
-  const setSelectedTaskId = useAgencyWorkSurfaceStore((s) => s.setSelectedTaskId);
-  const setMobilePane = useAgencyWorkSurfaceStore((s) => s.setMobilePane);
-  const setTaskRailCollapsed = useAgencyWorkSurfaceStore((s) => s.setTaskRailCollapsed);
-  const openTimePane = useAgencyWorkSurfaceStore((s) => s.openTimePane);
-  const resetForTeam = useAgencyWorkSurfaceStore((s) => s.resetForTeam);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = parseAgencyWorkSurfaceTab(searchParams.get("tab"));
+  const selectedTaskId = searchParams.get("task") ?? "";
+  const setRailStatusFilter = useAgencyTaskListStore((s) => s.setRailStatusFilter);
+  const setQuickAddFocused = useAgencyTaskListStore((s) => s.setQuickAddFocused);
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
-  const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
   const projects = projectsQuery.data?.items ?? [];
-  const activeTimer = activeTimerQuery.data?.timer ?? null;
-
-  const timerStartedAt =
-    activeTimer && activeTimer.teamId === teamId ? activeTimer.startedAt : null;
-
-  const mobileTrackingLabel = useAgencyElapsedTimer({
-    startedAt: timerStartedAt,
-    enabled: Boolean(timerStartedAt),
-  });
 
   useEffect(() => {
-    resetForTeam();
-  }, [teamId, resetForTeam]);
+    const filter = tabToRailFilter(activeTab);
+    if (filter) {
+      setRailStatusFilter(filter);
+    }
+  }, [activeTab, setRailStatusFilter]);
+
+  useEffect(() => {
+    const taskId = searchParams.get("task");
+    if (!taskId || searchParams.get("tab") === "my-tasks") return;
+    const next = new URLSearchParams(searchParams);
+    next.set("section", "work");
+    next.set("tab", "my-tasks");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const onTabChange = useCallback(
+    (tab: AgencyWorkSurfaceTab) => {
+      const next = new URLSearchParams(searchParams);
+      next.set("section", "work");
+      next.set("tab", tab);
+      if (tab !== "my-tasks") {
+        next.delete("task");
+      }
+      setSearchParams(next, { replace: true });
+      const filter = tabToRailFilter(tab);
+      if (filter) {
+        setRailStatusFilter(filter);
+      }
+    },
+    [searchParams, setRailStatusFilter, setSearchParams],
+  );
+
+  const onSelectTask = useCallback(
+    (taskId: string) => {
+      const next = new URLSearchParams(searchParams);
+      next.set("section", "work");
+      next.set("tab", "my-tasks");
+      if (taskId) {
+        next.set("task", taskId);
+      } else {
+        next.delete("task");
+      }
+      setSearchParams(next, { replace: true });
+      setRailStatusFilter("active");
+    },
+    [searchParams, setRailStatusFilter, setSearchParams],
+  );
+
+  const onAddNewTask = useCallback(() => {
+    setQuickAddFocused(true);
+    onTabChange("my-tasks");
+  }, [onTabChange, setQuickAddFocused]);
 
   if (projectsQuery.isError) {
     return {
@@ -71,14 +126,11 @@ export function useAgencyWorkSurface({
     status: "ready",
     teamId,
     projects,
+    activeTab,
     selectedTaskId,
-    mobilePane,
-    taskRailCollapsed,
-    mobileTrackingLabel,
-    onSelectTask: setSelectedTaskId,
-    onCollapsedChange: setTaskRailCollapsed,
+    onTabChange,
+    onSelectTask,
+    onAddNewTask,
     onSelectProject,
-    onMobilePaneChange: setMobilePane,
-    onOpenTimePane: openTimePane,
   };
 }

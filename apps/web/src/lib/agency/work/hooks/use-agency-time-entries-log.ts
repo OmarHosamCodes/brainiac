@@ -10,7 +10,13 @@ import {
 import { getLocalWeekStartKey, todayLocalDateKey } from "@/lib/utils/format-agency-day-label";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { findProjectTaskInCache } from "@/lib/utils/agency-query-cache";
-import { groupEntriesByWeek, type CollapsedEntryGroup } from "@/lib/utils/group-time-entries";
+import {
+  groupEntriesByDay,
+  groupEntriesByWeek,
+  groupTimeEntryDaysByRecency,
+  type CollapsedEntryGroup,
+  type TimeEntryRecencySection,
+} from "@/lib/utils/group-time-entries";
 import {
   draftToIsoRange,
   validateTimeEntryDraft,
@@ -37,6 +43,7 @@ export type AgencyTimeEntriesLogViewModel = {
   onRetry: () => void;
   isLoading: boolean;
   entriesEmpty: boolean;
+  recencySections: TimeEntryRecencySection[];
   weekGroups: ReturnType<typeof groupEntriesByWeek>;
   projects: AgencyProject[];
   tasks: AgencyProjectTask[];
@@ -120,6 +127,27 @@ export function useAgencyTimeEntriesLog({
 
       return { ...week, days, totalSeconds: apiWeekTotal };
     });
+  }, [entries, weekSummary]);
+
+  const recencySections = useMemo(() => {
+    const dayGroups = groupEntriesByDay(entries);
+    const currentWeekStart = getLocalWeekStartKey(todayLocalDateKey());
+    const apiDaily = weekSummary
+      ? new Map(weekSummary.daily.map((daily) => [daily.date, daily.totalSeconds]))
+      : null;
+
+    const adjustedDays = apiDaily
+      ? dayGroups.map((day) => {
+          const weekStart = getLocalWeekStartKey(day.dateKey);
+          if (weekStart !== currentWeekStart) return day;
+          return {
+            ...day,
+            totalSeconds: Math.max(day.totalSeconds, apiDaily.get(day.dateKey) ?? 0),
+          };
+        })
+      : dayGroups;
+
+    return groupTimeEntryDaysByRecency(adjustedDays);
   }, [entries, weekSummary]);
 
   const maxPage = useMemo(() => {
@@ -259,6 +287,7 @@ export function useAgencyTimeEntriesLog({
     onRetry: () => void entriesQuery.refetch(),
     isLoading: entriesQuery.isPending && entries.length === 0,
     entriesEmpty: entries.length === 0,
+    recencySections,
     weekGroups,
     projects,
     tasks,

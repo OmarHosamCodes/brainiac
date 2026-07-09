@@ -1,18 +1,17 @@
 import { AgencyTimeEntryRowContainer } from "@/lib/agency/work/containers/agency-time-entry-row-container";
 import {
   agencyMetricClass,
-  agencyTimeDayHeaderClass,
+  agencyMutedSectionHeaderClass,
   agencyTimeEntryScrollClass,
 } from "@/lib/utils/agency-ui";
-import { formatAgencyDayLabel } from "@/lib/utils/format-agency-day-label";
 import { formatDuration } from "@/lib/utils/format-duration";
-import { cn } from "@/lib/utils";
-import type { CollapsedEntryGroup, TimeEntryDayGroup } from "@/lib/utils/group-time-entries";
+import type { CollapsedEntryGroup, TimeEntryRecencySection } from "@/lib/utils/group-time-entries";
 import type { TimeEntryDraft } from "@/lib/schemas/agency-time-entry";
 import type { AgencyProject, AgencyProjectTask } from "@/lib/schemas/agency-work";
+import { cn } from "@/lib/utils";
 
-type AgencyTimeEntryDayGroupViewProps = {
-  day: TimeEntryDayGroup;
+type AgencyTimeEntryRecencySectionViewProps = {
+  section: TimeEntryRecencySection;
   teamId: string;
   projects: AgencyProject[];
   tasks: AgencyProjectTask[];
@@ -32,8 +31,8 @@ type AgencyTimeEntryDayGroupViewProps = {
   highlightedEntryId?: string | null;
 };
 
-export function AgencyTimeEntryDayGroupView({
-  day,
+export function AgencyTimeEntryRecencySectionView({
+  section,
   teamId,
   projects,
   tasks,
@@ -51,32 +50,29 @@ export function AgencyTimeEntryDayGroupView({
   onToggleWaste,
   togglingWasteEntryIds,
   highlightedEntryId = null,
-}: AgencyTimeEntryDayGroupViewProps) {
-  const visibleRowCount = day.groups.length;
-
+}: AgencyTimeEntryRecencySectionViewProps) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-default bg-elevated/25">
-      <header className={agencyTimeDayHeaderClass}>
+    <section>
+      <header className={agencyMutedSectionHeaderClass}>
         <div className="flex min-w-0 items-center gap-2">
-          <span className="font-semibold text-highlighted">
-            {formatAgencyDayLabel(day.dateKey)}
-          </span>
+          <span className="font-semibold text-highlighted">{section.label}</span>
           <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-elevated px-1.5 font-mono text-xs font-semibold tabular-nums text-muted">
-            {visibleRowCount}
+            {section.groups.length}
           </span>
         </div>
         <span className="inline-flex items-baseline gap-1.5 text-muted">
           <span>Total:</span>
           <span className={cn("text-base font-semibold", agencyMetricClass)}>
-            {formatDuration(day.totalSeconds, "clock")}
+            {formatDuration(section.totalSeconds, "clock")}
           </span>
         </span>
       </header>
 
       <ul className={cn(agencyTimeEntryScrollClass, "flex flex-col")}>
-        {day.groups.map((group) => {
-          const groupExpandKey = `${day.dateKey}||${group.collapseKey}`;
-          const primaryEntryId = group.entries[0]?.id ?? "";
+        {section.groups.map((group) => {
+          const primaryEntry = group.entries[0];
+          if (!primaryEntry) return null;
+          const groupExpandKey = `${primaryEntry.startedAt.slice(0, 10)}||${group.collapseKey}`;
           return (
             <li key={groupExpandKey}>
               <AgencyTimeEntryRowContainer
@@ -89,7 +85,7 @@ export function AgencyTimeEntryDayGroupView({
                 deletingEntryIds={deletingEntryIds}
                 updatingEntryIds={updatingEntryIds}
                 duplicatingEntryIds={duplicatingEntryIds}
-                highlighted={highlightedEntryId === primaryEntryId}
+                highlighted={highlightedEntryId === primaryEntry.id}
                 onToggleExpand={() => onToggleGroupExpand(groupExpandKey)}
                 onRestart={onRestart}
                 onDeleteGroup={onDeleteGroup}

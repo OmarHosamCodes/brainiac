@@ -63,7 +63,7 @@ export function AgencyTimeEntryRowContainer({
   }
 
   return (
-    <div className="ml-1 border-b-2 border-l-2 border-solid border-default border-l-primary/40 pl-1">
+    <div className="border-b border-default bg-elevated/20">
       <AgencyTimeEntryRowView view={view} className={view.expanded ? undefined : "border-b-0"} />
       {expandedChildGroups.map((childGroup, index) => (
         <AgencyTimeEntryRowContainer

@@ -106,6 +106,7 @@ export const agencyProjectTaskSchema = z.object({
   viewerStatus: agencyProjectTaskMemberStatusSchema.optional(),
   viewerCompletionCount: z.number().int().nonnegative().optional(),
   viewerBlueprints: z.array(agencyProjectTaskBlueprintSchema).optional(),
+  totalTrackedSeconds: z.number().int().nonnegative().optional(),
   dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
