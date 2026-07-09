@@ -279,7 +279,8 @@ export const agencyTimeEntryRowClass = cn(
   "border-b border-default px-4 py-3 transition-colors hover:bg-elevated/45 motion-reduce:transition-none",
 );
 
-export const agencyTimeEntryMultiAccentClass = "border-l-4 border-l-primary/50";
+/** Nested child row inside an expanded multi-entry group. */
+export const agencyTimeEntryMultiChildClass = "bg-elevated/25 pl-8";
 
 /** Inline time inputs in entry rows. */
 export const agencyTimeEntryTimeInputClass = cn(

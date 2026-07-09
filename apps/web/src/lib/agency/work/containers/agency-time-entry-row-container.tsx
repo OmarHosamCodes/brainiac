@@ -6,7 +6,7 @@ import type { TimeEntryDraft } from "@/lib/schemas/agency-time-entry";
 import type { CollapsedEntryGroup, TimeEntryRecord } from "@/lib/utils/group-time-entries";
 
 import { AgencyTimeEntryRowView } from "@/components/agency/work/time-entries/agency-time-entry-row-view";
-import { agencyTimeEntryMultiAccentClass } from "@/lib/utils/agency-ui";
+import { agencyTimeEntryMultiChildClass } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
 type AgencyTimeEntryRowContainerProps = {
@@ -28,7 +28,7 @@ type AgencyTimeEntryRowContainerProps = {
   onToggleWaste: (entryId: string) => Promise<void>;
   togglingWasteEntryIds: string[];
   highlighted?: boolean;
-  /** Suppress the row's dashed bottom border (group wrapper supplies a solid one). */
+  /** Suppress the row bottom border (last row in a day card, or last child in a multi group). */
   omitBottomBorder?: boolean;
   /** Child row inside an expanded multi-entry group. */
   multiGroupChild?: boolean;
@@ -67,18 +67,15 @@ export function AgencyTimeEntryRowContainer({
         view={view}
         className={cn(
           omitBottomBorder ? "border-b-0" : undefined,
-          multiGroupChild && agencyTimeEntryMultiAccentClass,
+          multiGroupChild && agencyTimeEntryMultiChildClass,
         )}
       />
     );
   }
 
   return (
-    <div className="border-b border-default bg-elevated/20">
-      <AgencyTimeEntryRowView
-        view={view}
-        className={cn(agencyTimeEntryMultiAccentClass, view.expanded ? undefined : "border-b-0")}
-      />
+    <div className={cn("bg-elevated/20", omitBottomBorder ? undefined : "border-b border-default")}>
+      <AgencyTimeEntryRowView view={view} className="border-b-0" />
       {expandedChildGroups.map((childGroup, index) => (
         <AgencyTimeEntryRowContainer
           key={childGroup.entries[0]!.id}
