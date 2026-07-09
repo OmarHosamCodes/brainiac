@@ -7,7 +7,7 @@ import {
   MoreVertical,
   Trash2,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { AgencyMemberAvatar } from "@/components/agency/agency-member-avatar";
 import { AgencyMiniTimerContainer } from "@/lib/agency/work/containers/agency-mini-timer-container";
@@ -17,6 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import {
   agencyFocusRingClass,
+  agencyInputPlaceholderClass,
   agencyTaskRowProjectPillClass,
   agencyTaskRowSelectedClass,
   agencyWorkTableGridClass,
@@ -57,6 +58,7 @@ type AgencyWorkSurfaceTaskTableRowViewProps = {
   onSelectProject?: (projectId: string) => void;
   onStatusChange?: (task: AgencyProjectTask, status: TaskStatus) => void;
   onDueDateChange?: (task: AgencyProjectTask, dueDate: string | null) => void;
+  onDescriptionChange?: (task: AgencyProjectTask, description: string) => void;
   onReopenToActive?: (task: AgencyProjectTask) => void;
   onDelete?: (task: AgencyProjectTask) => void;
 };
@@ -210,6 +212,7 @@ export function AgencyWorkSurfaceTaskTableRowView({
   onSelectProject,
   onStatusChange,
   onDueDateChange,
+  onDescriptionChange,
   onReopenToActive,
   onDelete,
 }: AgencyWorkSurfaceTaskTableRowViewProps) {
@@ -217,6 +220,10 @@ export function AgencyWorkSurfaceTaskTableRowView({
   const [menuOpen, setMenuOpen] = useState(false);
   const [dueEditorOpen, setDueEditorOpen] = useState(false);
   const [dueDraft, setDueDraft] = useState<TaskDueDateDraft>({ date: "", time: "" });
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionDraft, setDescriptionDraft] = useState("");
+  const descriptionInputRef = useRef<HTMLInputElement>(null);
+  const skipDescriptionCommitRef = useRef(false);
   const project = projects.find((entry) => entry.id === task.projectId);
   const projectName = project?.name ?? "Project";
   const categoryLabel = project?.clientName ?? "General";
@@ -226,11 +233,60 @@ export function AgencyWorkSurfaceTaskTableRowView({
   const delegatedStatus = resolveDelegatedStatusLabel(task);
   const primaryAssignee = task.assignees[0] ?? null;
   const completedAt = formatCompletedAt(task.updatedAt);
+  // Done rows: edit only when a blueprint already exists (create-reuse would reopen the task).
+  const canEditDescription =
+    Boolean(onDescriptionChange) &&
+    variant !== "delegated" &&
+    (variant !== "done" || Boolean(description));
 
   useEffect(() => {
     if (!dueEditorOpen) return;
     setDueDraft(taskDueDateToDraft(task.dueDate));
   }, [dueEditorOpen, task.dueDate, task.id]);
+
+  useEffect(() => {
+    if (!editingDescription) return;
+    descriptionInputRef.current?.focus();
+  }, [editingDescription]);
+
+  const beginDescriptionEdit = () => {
+    if (!canEditDescription || isRowPending) return;
+    skipDescriptionCommitRef.current = false;
+    setDescriptionDraft(description);
+    setEditingDescription(true);
+  };
+
+  const cancelDescriptionEdit = () => {
+    skipDescriptionCommitRef.current = true;
+    setDescriptionDraft(description);
+    setEditingDescription(false);
+  };
+
+  const commitDescriptionEdit = () => {
+    if (skipDescriptionCommitRef.current) {
+      skipDescriptionCommitRef.current = false;
+      return;
+    }
+    if (!onDescriptionChange) return;
+    const next = descriptionDraft.trim();
+    const previous = description;
+    setEditingDescription(false);
+    if (next === previous) return;
+    onDescriptionChange(task, next);
+  };
+
+  const onDescriptionKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    event.stopPropagation();
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitDescriptionEdit();
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelDescriptionEdit();
+    }
+  };
 
   const commitDueDate = () => {
     if (!onDueDateChange) return;
@@ -294,7 +350,58 @@ export function AgencyWorkSurfaceTaskTableRowView({
             >
               {task.title}
             </button>
-            {description && variant !== "delegated" ? (
+            {canEditDescription ? (
+              editingDescription ? (
+                <Input
+                  ref={descriptionInputRef}
+                  value={descriptionDraft}
+                  onChange={(event) => setDescriptionDraft(event.target.value)}
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={onDescriptionKeyDown}
+                  onBlur={commitDescriptionEdit}
+                  disabled={isRowPending}
+                  placeholder="Add description"
+                  className={cn(
+                    "mt-0.5 h-6 min-w-0 border-0 bg-transparent px-0 text-xs leading-tight shadow-none focus-visible:ring-0",
+                    agencyInputPlaceholderClass,
+                    "text-muted",
+                  )}
+                  aria-label={`Description for ${task.title}`}
+                />
+              ) : description ? (
+                <button
+                  type="button"
+                  className={cn(
+                    "mt-0.5 block w-full truncate text-left text-xs leading-tight text-muted hover:text-highlighted",
+                    agencyFocusRingClass,
+                  )}
+                  disabled={isRowPending}
+                  aria-label={`Edit description for ${task.title}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    beginDescriptionEdit();
+                  }}
+                >
+                  {description}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={cn(
+                    "mt-0.5 block text-left text-xs leading-tight text-muted hover:text-highlighted",
+                    agencyFocusRingClass,
+                  )}
+                  disabled={isRowPending}
+                  aria-label={`Add description for ${task.title}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    beginDescriptionEdit();
+                  }}
+                >
+                  Add description
+                </button>
+              )
+            ) : description && variant !== "delegated" ? (
               <p className="mt-0.5 line-clamp-1 text-xs text-muted">{description}</p>
             ) : null}
             {variant === "active" ? (
@@ -519,6 +626,20 @@ export function AgencyWorkSurfaceTaskTableRowView({
               >
                 <Check className="size-3.5" />
                 Mark done
+              </Button>
+            ) : null}
+            {canEditDescription ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start"
+                disabled={isRowPending}
+                onClick={() => {
+                  setMenuOpen(false);
+                  beginDescriptionEdit();
+                }}
+              >
+                {description ? "Edit description" : "Add description"}
               </Button>
             ) : null}
             {variant === "done" && onReopenToActive ? (

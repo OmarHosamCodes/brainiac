@@ -132,6 +132,7 @@ export type AgencyTaskListViewModel =
       onSelectProject: (projectId: string) => void;
       onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
       onDueDateChange: (task: AgencyProjectTask, dueDate: string | null) => void;
+      onTaskDescriptionChange: (task: AgencyProjectTask, description: string) => void;
       isRowPending: (taskId: string) => boolean;
       doneTasksLoading: boolean;
       doneTasksQueryError: boolean;
@@ -713,6 +714,32 @@ export function useAgencyTaskList({
     [agencyOps, teamId],
   );
 
+  const updateTaskDescription = useCallback(
+    (task: AgencyProjectTask, description: string) => {
+      const blueprint = task.viewerBlueprints?.[0];
+      if (blueprint) {
+        onBlueprintDescriptionChange(blueprint.id, description);
+        return;
+      }
+
+      const trimmed = description.trim();
+      if (!trimmed || isCreatingTask) return;
+      // createProjectTask reuses the title and would reopen done tasks — only for active.
+      if (task.status === "done" || task.viewerStatus === "done") return;
+
+      void agencyOps.createProjectTask({
+        teamId,
+        projectId: task.projectId,
+        title: task.title,
+        description: trimmed,
+        assignedToTeam: task.assignedToTeam,
+        assigneeUserIds: task.assignees.map((assignee) => assignee.userId),
+        reusesExistingTitle: true,
+      });
+    },
+    [agencyOps, isCreatingTask, onBlueprintDescriptionChange, teamId],
+  );
+
   const reopenDoneTask = useCallback(
     async (task: AgencyProjectTask) => {
       if (!teamId || isCreatingTask) return;
@@ -821,6 +848,7 @@ export function useAgencyTaskList({
     onSelectProject,
     onStatusChange: (task, status) => void updateTaskStatus(task, status),
     onDueDateChange: (task, dueDate) => void updateTaskDueDate(task, dueDate),
+    onTaskDescriptionChange: updateTaskDescription,
     isRowPending,
     doneTasksLoading: doneTasksQuery.isPending && doneTasks.length === 0,
     doneTasksQueryError: doneTasksQuery.isError,
