@@ -52,7 +52,7 @@ export function AgencyTimeEntryRecencySectionView({
   highlightedEntryId = null,
 }: AgencyTimeEntryRecencySectionViewProps) {
   return (
-    <section>
+    <section className="p-2">
       <header className={agencyMutedSectionHeaderClass}>
         <div className="flex min-w-0 items-center gap-2">
           <span className="font-semibold text-highlighted">{section.label}</span>
@@ -68,7 +68,7 @@ export function AgencyTimeEntryRecencySectionView({
         </span>
       </header>
 
-      <ul className={cn(agencyTimeEntryScrollClass, "flex flex-col")}>
+      <ul className={cn(agencyTimeEntryScrollClass, "flex flex-col rounded-b-md")}>
         {section.groups.map((group) => {
           const primaryEntry = group.entries[0];
           if (!primaryEntry) return null;

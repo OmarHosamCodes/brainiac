@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { agencyTimePaneStackClass } from "@/lib/utils/agency-ui";
+import { agencyTimePaneBodyClass, agencyTimePaneStackClass } from "@/lib/utils/agency-ui";
 
 type AgencyWorkSurfaceLayoutViewProps = {
   trackerPane: ReactNode;
@@ -15,8 +15,10 @@ export function AgencyWorkSurfaceLayoutView({
   return (
     <div className={agencyTimePaneStackClass}>
       {trackerPane}
-      {tabBar}
-      {contentPane}
+      <div className={agencyTimePaneBodyClass}>
+        {tabBar}
+        {contentPane}
+      </div>
     </div>
   );
 }

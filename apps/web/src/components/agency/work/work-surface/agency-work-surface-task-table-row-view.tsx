@@ -2,16 +2,17 @@ import {
   Calendar,
   CalendarCheck,
   Check,
-  Clock,
+  CircleCheck,
   MoreHorizontal,
   MoreVertical,
   Trash2,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { AgencyMemberAvatar } from "@/components/agency/agency-member-avatar";
 import { AgencyMiniTimerContainer } from "@/lib/agency/work/containers/agency-mini-timer-container";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/lib/schemas/agency-work";
 import {
@@ -21,9 +22,18 @@ import {
   agencyWorkTableGridClass,
   agencyWorkTableGridDelegatedClass,
   agencyWorkTableGridDoneClass,
+  agencyTimeEntryTimeInputClass,
 } from "@/lib/utils/agency-ui";
-import { resolveTaskDisplayStatus, statusChipClass } from "@/lib/utils/agency-task-status";
-import { isTaskOverdue } from "@/lib/utils/agency-task-utils";
+import {
+  resolveTaskDisplayStatus,
+  agencyWorkSurfaceStatusChipClass,
+} from "@/lib/utils/agency-task-status";
+import {
+  isTaskOverdue,
+  taskDueDateDraftToIso,
+  taskDueDateToDraft,
+  type TaskDueDateDraft,
+} from "@/lib/utils/agency-task-utils";
 import {
   formatAgencyDayLabel,
   localDateKeyFromIso,
@@ -46,6 +56,7 @@ type AgencyWorkSurfaceTaskTableRowViewProps = {
   onSelect?: (taskId: string) => void;
   onSelectProject?: (projectId: string) => void;
   onStatusChange?: (task: AgencyProjectTask, status: TaskStatus) => void;
+  onDueDateChange?: (task: AgencyProjectTask, dueDate: string | null) => void;
   onReopenToActive?: (task: AgencyProjectTask) => void;
   onDelete?: (task: AgencyProjectTask) => void;
 };
@@ -117,19 +128,20 @@ function resolveMyTasksStatusLabel(task: AgencyProjectTask): {
 } {
   const displayStatus = resolveTaskDisplayStatus({ task });
   if (displayStatus === "in_progress") {
-    return { label: "In Progress", className: statusChipClass("in_progress") };
+    return {
+      label: "In Progress",
+      className: agencyWorkSurfaceStatusChipClass("in_progress"),
+    };
   }
   if (isTaskOverdue(task.dueDate)) {
     return {
       label: "Due Soon",
-      className:
-        "inline-flex rounded-full bg-warning/15 px-2 py-0.5 text-[11px] font-medium text-warning",
+      className: agencyWorkSurfaceStatusChipClass("due_soon"),
     };
   }
   return {
     label: "Planned",
-    className:
-      "inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary",
+    className: agencyWorkSurfaceStatusChipClass("planned"),
   };
 }
 
@@ -140,34 +152,33 @@ function resolveDelegatedStatusLabel(task: AgencyProjectTask): {
   if (task.status === "done" || task.viewerStatus === "done") {
     return {
       label: "Completed",
-      className:
-        "inline-flex rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success",
+      className: agencyWorkSurfaceStatusChipClass("completed"),
     };
   }
 
   const assigneeStatus = task.assignees[0]?.status;
   switch (assigneeStatus) {
     case "in_progress":
-      return { label: "In Progress", className: statusChipClass("in_progress") };
+      return {
+        label: "In Progress",
+        className: agencyWorkSurfaceStatusChipClass("in_progress"),
+      };
     case "done":
       return {
         label: "Completed",
-        className:
-          "inline-flex rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success",
+        className: agencyWorkSurfaceStatusChipClass("completed"),
       };
     case "open":
       return {
         label: "Waiting",
-        className:
-          "inline-flex rounded-full bg-warning/15 px-2 py-0.5 text-[11px] font-medium text-warning",
+        className: agencyWorkSurfaceStatusChipClass("waiting"),
       };
     default: {
       const _exhaustive: never | undefined = assigneeStatus;
       void _exhaustive;
       return {
         label: "In Review",
-        className:
-          "inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary",
+        className: agencyWorkSurfaceStatusChipClass("in_review"),
       };
     }
   }
@@ -198,11 +209,14 @@ export function AgencyWorkSurfaceTaskTableRowView({
   onSelect,
   onSelectProject,
   onStatusChange,
+  onDueDateChange,
   onReopenToActive,
   onDelete,
 }: AgencyWorkSurfaceTaskTableRowViewProps) {
   const { isDark } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dueEditorOpen, setDueEditorOpen] = useState(false);
+  const [dueDraft, setDueDraft] = useState<TaskDueDateDraft>({ date: "", time: "" });
   const project = projects.find((entry) => entry.id === task.projectId);
   const projectName = project?.name ?? "Project";
   const categoryLabel = project?.clientName ?? "General";
@@ -212,6 +226,30 @@ export function AgencyWorkSurfaceTaskTableRowView({
   const delegatedStatus = resolveDelegatedStatusLabel(task);
   const primaryAssignee = task.assignees[0] ?? null;
   const completedAt = formatCompletedAt(task.updatedAt);
+
+  useEffect(() => {
+    if (!dueEditorOpen) return;
+    setDueDraft(taskDueDateToDraft(task.dueDate));
+  }, [dueEditorOpen, task.dueDate, task.id]);
+
+  const commitDueDate = () => {
+    if (!onDueDateChange) return;
+
+    if (!dueDraft.date) {
+      if (task.dueDate) onDueDateChange(task, null);
+      return;
+    }
+
+    const nextDueDate = taskDueDateDraftToIso({
+      date: dueDraft.date,
+      time: dueDraft.time || "12:00",
+    });
+    if (nextDueDate !== task.dueDate) {
+      onDueDateChange(task, nextDueDate);
+    }
+  };
+
+  const dueLabel = due.time ? `${due.date}, ${due.time}` : due.date;
   const isDoneTask = task.status === "done" || task.viewerStatus === "done";
   const canTrack =
     variant === "active" && !task.isWaste && task.status !== "archived" && Boolean(project);
@@ -236,27 +274,15 @@ export function AgencyWorkSurfaceTaskTableRowView({
       )}
     >
       <div className="min-w-0">
-        <div className="flex min-w-0 items-start gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {variant === "done" ? (
             <span
-              className="mt-0.5 inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-success/15 text-success"
+              className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-success/20 text-success"
               aria-hidden
             >
-              <Check className="size-3" strokeWidth={3} />
+              <CircleCheck className="size-4 stroke-3 stroke-green-500 " />
             </span>
-          ) : (
-            <span
-              className={cn(
-                "mt-1.5 size-2.5 shrink-0 rounded-full",
-                resolveTaskDisplayStatus({ task }) === "in_progress"
-                  ? "bg-primary"
-                  : isTaskOverdue(task.dueDate)
-                    ? "bg-warning"
-                    : "bg-muted-foreground/50",
-              )}
-              aria-hidden
-            />
-          )}
+          ) : null}
           <div className="min-w-0">
             <button
               type="button"
@@ -268,10 +294,10 @@ export function AgencyWorkSurfaceTaskTableRowView({
             >
               {task.title}
             </button>
-            {description ? (
+            {description && variant !== "delegated" ? (
               <p className="mt-0.5 line-clamp-1 text-xs text-muted">{description}</p>
             ) : null}
-            {variant !== "delegated" ? (
+            {variant === "active" ? (
               <div className="mt-1.5 flex flex-wrap gap-1.5 lg:hidden">
                 <span
                   className={cn(agencyTaskRowProjectPillClass, "max-w-[8rem] truncate")}
@@ -280,7 +306,7 @@ export function AgencyWorkSurfaceTaskTableRowView({
                   {projectName}
                 </span>
               </div>
-            ) : (
+            ) : variant === "delegated" ? (
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 <span
                   className={cn(agencyTaskRowProjectPillClass, "max-w-[9rem] truncate")}
@@ -292,7 +318,7 @@ export function AgencyWorkSurfaceTaskTableRowView({
                   {categoryLabel}
                 </span>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -360,34 +386,87 @@ export function AgencyWorkSurfaceTaskTableRowView({
             </div>
           </LabeledCell>
         ) : (
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5 text-sm text-highlighted">
-              <Calendar className="size-3.5 shrink-0 text-muted" aria-hidden />
-              <span className="truncate">{due.date}</span>
-            </div>
-            {due.time ? (
-              <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted">
-                <Clock className="size-3 shrink-0" aria-hidden />
-                <span>{due.time}</span>
+          <Popover
+            open={dueEditorOpen}
+            onOpenChange={(open) => {
+              setDueEditorOpen(open);
+              if (!open) commitDueDate();
+            }}
+          >
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "inline-flex h-8 min-w-0 max-w-full items-center gap-1.5 rounded-lg px-2 text-left text-sm text-highlighted transition-colors hover:bg-elevated",
+                  agencyFocusRingClass,
+                )}
+                disabled={!onDueDateChange || isRowPending}
+                aria-label={`Set due date for ${task.title}, currently ${dueLabel}`}
+              >
+                <Calendar className="size-3.5 shrink-0 text-muted" aria-hidden />
+                <span className="truncate">{dueLabel}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-auto min-w-[17rem] p-3">
+              <div className="grid gap-3">
+                <label className="grid gap-1 text-xs font-semibold text-muted">
+                  <span>Date</span>
+                  <Input
+                    type="date"
+                    value={dueDraft.date}
+                    onChange={(event) =>
+                      setDueDraft((current) => ({ ...current, date: event.target.value }))
+                    }
+                    disabled={isRowPending}
+                    className="h-8 font-mono text-sm tabular-nums"
+                    aria-label="Due date"
+                  />
+                </label>
+                <label className="grid gap-1 text-xs font-semibold text-muted">
+                  <span>Time</span>
+                  <Input
+                    type="time"
+                    value={dueDraft.time}
+                    onChange={(event) =>
+                      setDueDraft((current) => ({ ...current, time: event.target.value }))
+                    }
+                    disabled={isRowPending}
+                    className={agencyTimeEntryTimeInputClass}
+                    aria-label="Due time"
+                  />
+                </label>
+                {task.dueDate ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="justify-start px-2"
+                    disabled={isRowPending}
+                    onClick={() => {
+                      onDueDateChange?.(task, null);
+                      setDueEditorOpen(false);
+                    }}
+                  >
+                    Clear due date
+                  </Button>
+                ) : null}
               </div>
-            ) : null}
-          </div>
+            </PopoverContent>
+          </Popover>
         )}
       </div>
 
-      <div className="hidden min-w-0 sm:block">
-        {variant === "done" ? (
+      {variant === "done" ? (
+        <div className="hidden min-w-0 sm:block">
           <span className="font-mono text-sm tabular-nums text-muted">
             {formatTrackedDuration(task.totalTrackedSeconds ?? 0)}
           </span>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
 
       <div className="hidden min-w-0 sm:block">
         {variant === "done" ? (
-          <span className="inline-flex rounded-full border border-success/40 bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
-            Completed
-          </span>
+          <span className={agencyWorkSurfaceStatusChipClass("completed")}>Completed</span>
         ) : variant === "delegated" ? (
           <LabeledCell label="Status">
             <span className={delegatedStatus.className}>{delegatedStatus.label}</span>

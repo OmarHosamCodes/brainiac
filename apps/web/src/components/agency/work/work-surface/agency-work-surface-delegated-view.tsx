@@ -1,29 +1,30 @@
-import { AlertTriangle, ChevronUp } from "lucide-react";
-import { useMemo, useState } from "react";
+import { AlertTriangle, Calendar, CircleDot, MoreHorizontal, UserRound } from "lucide-react";
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import { AgencyWorkSurfacePaginationFooter } from "@/components/agency/work/work-surface/agency-work-surface-pagination-footer";
+import { AgencyWorkSurfaceTableHeaderView } from "@/components/agency/work/work-surface/agency-work-surface-table-header-view";
 import { AgencyWorkSurfaceTaskTableRowView } from "@/components/agency/work/work-surface/agency-work-surface-task-table-row-view";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AgencyTaskListViewModel } from "@/lib/agency/work/hooks/use-agency-task-list";
 import type { AgencyProjectTask } from "@/lib/schemas/agency-work";
 import { orpc } from "@/lib/orpc";
-import { agencyMutedSectionHeaderClass } from "@/lib/utils/agency-ui";
+import {
+  agencyMutedSectionHeaderClass,
+  agencyWorkTableBodyScrollClass,
+  agencyWorkTableListClass,
+  agencyWorkTableStackClass,
+} from "@/lib/utils/agency-ui";
 import { withAgencySyncQueryOptions } from "@/lib/utils/agency-query-options";
-import { groupDelegatedTasks, type DelegatedTaskGroupId } from "@/lib/utils/group-tasks-by-recency";
+import { groupDelegatedTasks } from "@/lib/utils/group-tasks-by-recency";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { cn } from "@/lib/utils";
 
 type AgencyWorkSurfaceDelegatedViewProps = {
   view: Extract<AgencyTaskListViewModel, { status: "ready" }>;
 };
 
 export function AgencyWorkSurfaceDelegatedView({ view }: AgencyWorkSurfaceDelegatedViewProps) {
-  const [collapsedSections, setCollapsedSections] = useState<Set<DelegatedTaskGroupId>>(
-    () => new Set(),
-  );
-
   const doneDelegatedQuery = useQuery(
     withAgencySyncQueryOptions(
       {
@@ -79,18 +80,6 @@ export function AgencyWorkSurfaceDelegatedView({ view }: AgencyWorkSurfaceDelega
     view.assignedTasksLoading || (doneDelegatedQuery.isPending && delegatedTasks.length === 0);
   const queryError = view.assignedTasksQueryError || doneDelegatedQuery.isError;
 
-  function toggleSection(sectionId: DelegatedTaskGroupId) {
-    setCollapsedSections((current) => {
-      const next = new Set(current);
-      if (next.has(sectionId)) {
-        next.delete(sectionId);
-      } else {
-        next.add(sectionId);
-      }
-      return next;
-    });
-  }
-
   if (queryError) {
     return (
       <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
@@ -117,24 +106,29 @@ export function AgencyWorkSurfaceDelegatedView({ view }: AgencyWorkSurfaceDelega
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <p className="shrink-0 border-b border-default px-4 py-2.5 text-sm text-muted">
-        Tasks you have delegated to other team members.
-      </p>
-
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className={agencyWorkTableBodyScrollClass}>
         {loading ? (
-          <div className="space-y-2 p-4">
+          <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, index) => (
               <Skeleton key={index} className="h-14 w-full rounded-lg" />
             ))}
           </div>
         ) : sections.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-muted">No delegated tasks yet.</p>
+          <p className="py-10 text-center text-sm text-muted">No delegated tasks yet.</p>
         ) : (
-          sections.map((section) => {
-            const collapsed = collapsedSections.has(section.id);
-            return (
-              <section key={section.id}>
+          <div className={agencyWorkTableStackClass}>
+            {sections.map((section, sectionIndex) => (
+              <div key={section.id} className={agencyWorkTableListClass}>
+                {sectionIndex === 0 ? (
+                  <AgencyWorkSurfaceTableHeaderView
+                    meta={[
+                      { icon: UserRound, label: "Assigned To" },
+                      { icon: Calendar, label: "Due" },
+                      { icon: CircleDot, label: "Status" },
+                      { icon: MoreHorizontal, label: "Actions" },
+                    ]}
+                  />
+                ) : null}
                 <div className={agencyMutedSectionHeaderClass}>
                   <div className="flex min-w-0 items-center gap-2">
                     <span className="font-semibold text-highlighted">{section.label}</span>
@@ -142,34 +136,21 @@ export function AgencyWorkSurfaceDelegatedView({ view }: AgencyWorkSurfaceDelega
                       {section.tasks.length}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1 text-xs font-medium text-muted transition-colors hover:text-highlighted"
-                    onClick={() => toggleSection(section.id)}
-                  >
-                    {collapsed ? "Expand" : "Collapse"}
-                    <ChevronUp
-                      className={cn("size-3.5 transition-transform", collapsed && "rotate-180")}
-                      aria-hidden
-                    />
-                  </button>
                 </div>
-                {!collapsed
-                  ? section.tasks.map((task) => (
-                      <AgencyWorkSurfaceTaskTableRowView
-                        key={task.id}
-                        task={task}
-                        projects={view.projects}
-                        teamId={view.teamId}
-                        variant="delegated"
-                        isRowPending={view.isRowPending(task.id)}
-                        onSelect={(taskId) => view.onSelect(taskId)}
-                      />
-                    ))
-                  : null}
-              </section>
-            );
-          })
+                {section.tasks.map((task) => (
+                  <AgencyWorkSurfaceTaskTableRowView
+                    key={task.id}
+                    task={task}
+                    projects={view.projects}
+                    teamId={view.teamId}
+                    variant="delegated"
+                    isRowPending={view.isRowPending(task.id)}
+                    onSelect={(taskId) => view.onSelect(taskId)}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
         )}
       </div>
 

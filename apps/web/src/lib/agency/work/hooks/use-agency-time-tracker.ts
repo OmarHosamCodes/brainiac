@@ -25,7 +25,7 @@ import {
   useTrackerDraft,
 } from "@/stores/agency-time-tracking";
 
-const TRACKER_SUGGESTION_LIMIT = 3;
+const TRACKER_SUGGESTION_LIMIT = 5;
 const START_TIME_DEBOUNCE_MS = 300;
 
 const emptyStartDraft = { date: "", startTime: "" };
@@ -45,6 +45,7 @@ export type AgencyTimeTrackerSuggestion = {
   taskTitle: string;
   projectId: string;
   projectName: string;
+  clientName: string;
 };
 
 export type AgencyTimeTrackerViewModel = {
@@ -75,7 +76,7 @@ export type AgencyTimeTrackerViewModel = {
   descriptionSuggestions: AgencyTimeTrackerSuggestion[];
   trackerStatusLine: string;
   onDescriptionChange: (value: string) => void;
-  onDescriptionKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  onDescriptionKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   onTaskChange: (taskId: string) => void;
   onTaskChooserOpenChange: (open: boolean) => void;
   onStartTimePopoverOpenChange: (open: boolean) => void;
@@ -254,7 +255,7 @@ export function useAgencyTimeTracker({
 
     return entries
       .map((entry) => {
-        const description = entry.description.trim();
+        const description = entry.description.trim() || entry.taskTitle?.trim() || "";
         const taskId = entry.taskId ?? "";
         const taskTitle = entry.taskTitle ?? "";
         const searchable = normalizeSuggestionText(`${description} ${taskTitle}`);
@@ -266,16 +267,18 @@ export function useAgencyTimeTracker({
           taskTitle,
           projectId: entry.projectId,
           projectName: entry.projectName,
+          clientName: entry.clientName,
           score: startsWithQuery ? 3 : includesQuery ? 2 : normalizedQuery ? 0 : 1,
         };
       })
       .filter((entry) => {
-        if (!entry.description || !entry.taskId || entry.score <= 0) return false;
-        const key = `${normalizeSuggestionText(entry.description)}||${entry.taskId}`;
+        if (!entry.description || entry.score <= 0) return false;
+        const key = `${normalizeSuggestionText(entry.description)}||${entry.taskId || entry.projectId}`;
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       })
+      .sort((left, right) => right.score - left.score)
       .slice(0, TRACKER_SUGGESTION_LIMIT);
   }, [recentEntriesQuery.data?.items, timerDescription]);
 
@@ -404,10 +407,12 @@ export function useAgencyTimeTracker({
     onDiscardTimer: () => void stopTimer(true),
     onApplySuggestion: (suggestion) => {
       setTrackerDescription(teamId, suggestion.description);
-      setTrackerTaskId(teamId, suggestion.taskId);
-      const task = tasks.find((entry) => entry.id === suggestion.taskId);
-      if (task) {
-        setTrackerProjectId(teamId, task.projectId);
+      if (suggestion.taskId) {
+        setTrackerTaskId(teamId, suggestion.taskId);
+        const task = tasks.find((entry) => entry.id === suggestion.taskId);
+        if (task) {
+          setTrackerProjectId(teamId, task.projectId);
+        }
       }
     },
   };

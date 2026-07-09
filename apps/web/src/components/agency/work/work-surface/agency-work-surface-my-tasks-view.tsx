@@ -1,8 +1,17 @@
-import { AlertTriangle, Loader2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Calendar,
+  CircleDot,
+  FolderKanban,
+  Loader2,
+  MoreHorizontal,
+  Play,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AgencyTaskCreateInlineView } from "@/components/agency/work/task-list/agency-task-create-inline-view";
 import { AgencyWorkSurfacePaginationFooter } from "@/components/agency/work/work-surface/agency-work-surface-pagination-footer";
+import { AgencyWorkSurfaceTableHeaderView } from "@/components/agency/work/work-surface/agency-work-surface-table-header-view";
 import { AgencyWorkSurfaceTaskTableRowView } from "@/components/agency/work/work-surface/agency-work-surface-task-table-row-view";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,10 +27,13 @@ import type { AgencyTaskListViewModel } from "@/lib/agency/work/hooks/use-agency
 import type { AgencyProjectTask } from "@/lib/schemas/agency-work";
 import type { AgencyTaskClientDisplayGroup } from "@/lib/utils/agency-task-rail-grouping";
 import { isTaskOverdue } from "@/lib/utils/agency-task-utils";
-import { agencyWorkTableHeaderClass } from "@/lib/utils/agency-ui";
+import {
+  agencyWorkTableBodyScrollClass,
+  agencyWorkTableListClass,
+  agencyWorkTableStackClass,
+} from "@/lib/utils/agency-ui";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { useAgencyOpsStore } from "@/stores/agency-ops";
-import { cn } from "@/lib/utils";
 
 type AgencyWorkSurfaceMyTasksViewProps = {
   view: Extract<AgencyTaskListViewModel, { status: "ready" }>;
@@ -132,40 +144,45 @@ export function AgencyWorkSurfaceMyTasksView({ view }: AgencyWorkSurfaceMyTasksV
         </div>
       ) : null}
 
-      <div className={cn(agencyWorkTableHeaderClass, "hidden sm:grid")}>
-        <span>Task</span>
-        <span className="hidden lg:block">Project / Category</span>
-        <span>Due / Scheduled</span>
-        <span>Status</span>
-        <span className="sr-only">Action</span>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className={agencyWorkTableBodyScrollClass}>
         {view.isLoading ? (
-          <div className="space-y-2 p-4">
+          <div className="space-y-2">
             {Array.from({ length: 5 }).map((_, index) => (
               <Skeleton key={index} className="h-14 w-full rounded-lg" />
             ))}
           </div>
         ) : tasks.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-muted">No active tasks yet.</p>
+          <p className="py-10 text-center text-sm text-muted">No active tasks yet.</p>
         ) : (
-          tasks.map((task) => (
-            <AgencyWorkSurfaceTaskTableRowView
-              key={task.id}
-              task={task}
-              projects={view.projects}
-              teamId={view.teamId}
-              variant="active"
-              selected={task.id === view.selectedTaskId}
-              highlight={task.id === view.recentlyCreatedTaskId}
-              isRowPending={view.isRowPending(task.id)}
-              onSelect={(taskId) => view.onSelect(taskId)}
-              onSelectProject={view.onSelectProject}
-              onStatusChange={view.onStatusChange}
-              onDelete={setDeleteTarget}
-            />
-          ))
+          <div className={agencyWorkTableStackClass}>
+            <div className={agencyWorkTableListClass}>
+              <AgencyWorkSurfaceTableHeaderView
+                meta={[
+                  { icon: FolderKanban, label: "Project / Category" },
+                  { icon: Calendar, label: "Due / Scheduled" },
+                  { icon: CircleDot, label: "Status" },
+                  { icon: Play, label: "Actions", secondaryIcon: MoreHorizontal },
+                ]}
+              />
+              {tasks.map((task) => (
+                <AgencyWorkSurfaceTaskTableRowView
+                  key={task.id}
+                  task={task}
+                  projects={view.projects}
+                  teamId={view.teamId}
+                  variant="active"
+                  selected={task.id === view.selectedTaskId}
+                  highlight={task.id === view.recentlyCreatedTaskId}
+                  isRowPending={view.isRowPending(task.id)}
+                  onSelect={(taskId) => view.onSelect(taskId)}
+                  onSelectProject={view.onSelectProject}
+                  onStatusChange={view.onStatusChange}
+                  onDueDateChange={view.onDueDateChange}
+                  onDelete={setDeleteTarget}
+                />
+              ))}
+            </div>
+          </div>
         )}
       </div>
 

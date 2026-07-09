@@ -131,6 +131,7 @@ export type AgencyTaskListViewModel =
       onSelect: (taskId: string, blueprintId?: string | null) => void;
       onSelectProject: (projectId: string) => void;
       onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
+      onDueDateChange: (task: AgencyProjectTask, dueDate: string | null) => void;
       isRowPending: (taskId: string) => boolean;
       doneTasksLoading: boolean;
       doneTasksQueryError: boolean;
@@ -701,6 +702,17 @@ export function useAgencyTaskList({
     [agencyOps, railStatusFilter, setRailStatusFilter, setRecentlyCompletedTaskId, teamId],
   );
 
+  const updateTaskDueDate = useCallback(
+    async (task: AgencyProjectTask, dueDate: string | null) => {
+      await agencyOps.updateProjectTask({
+        teamId,
+        taskId: task.id,
+        dueDate,
+      });
+    },
+    [agencyOps, teamId],
+  );
+
   const reopenDoneTask = useCallback(
     async (task: AgencyProjectTask) => {
       if (!teamId || isCreatingTask) return;
@@ -808,6 +820,7 @@ export function useAgencyTaskList({
     onSelect: handleSelect,
     onSelectProject,
     onStatusChange: (task, status) => void updateTaskStatus(task, status),
+    onDueDateChange: (task, dueDate) => void updateTaskDueDate(task, dueDate),
     isRowPending,
     doneTasksLoading: doneTasksQuery.isPending && doneTasks.length === 0,
     doneTasksQueryError: doneTasksQuery.isError,

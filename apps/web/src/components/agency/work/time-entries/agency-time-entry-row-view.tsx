@@ -31,7 +31,8 @@ type AgencyTimeEntryRowViewProps = {
 export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowViewProps) {
   const { isDark } = useTheme();
   const [editingDescription, setEditingDescription] = useState(false);
-  const [editingFields, setEditingFields] = useState(false);
+  const [timeEditorOpen, setTimeEditorOpen] = useState(false);
+  const [editingDuration, setEditingDuration] = useState(false);
 
   const {
     group,
@@ -77,15 +78,15 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         agencyTimeEntryRowClass,
         agencyTimeEntryGridClass,
         highlighted && agencyTimeEntryRowHighlightClass,
-        (editingDescription || editingFields) && agencyTimeEntryRowEditingClass,
+        (editingDescription || timeEditorOpen || editingDuration) && agencyTimeEntryRowEditingClass,
         isWaste && reportEntryWasteRowClass,
         className,
       )}
     >
       <div className="col-start-1 row-start-1 min-w-0 sm:col-auto sm:row-auto">
         <div className="flex min-w-0 items-start gap-3">
-          <div className={cn(descriptionLeadingSlotClass, "pt-1")}>
-            {isMulti ? (
+          {isMulti ? (
+            <div className={cn(descriptionLeadingSlotClass, "pt-1")}>
               <button
                 type="button"
                 className={cn(
@@ -98,16 +99,8 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               >
                 {group.entries.length}
               </button>
-            ) : (
-              <span
-                className={cn(
-                  "mt-1.5 size-2.5 rounded-full",
-                  isWaste ? "bg-warning" : "bg-primary",
-                )}
-                aria-hidden
-              />
-            )}
-          </div>
+            </div>
+          ) : null}
 
           <div className="min-w-0 flex-1">
             {!isMulti ? (
@@ -165,89 +158,72 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
 
       <div className="col-start-1 row-start-2 min-w-0 sm:col-auto sm:row-auto">
         {!isMulti ? (
-          editingFields ? (
-            <Popover
-              open={editingFields}
-              onOpenChange={(open) => {
-                setEditingFields(open);
-                if (!open) onInlineBlur();
-              }}
-            >
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    "inline-flex h-8 min-w-0 max-w-full items-center gap-2 rounded-lg px-2 text-left font-mono text-sm font-medium tabular-nums text-muted transition-colors hover:bg-elevated hover:text-highlighted",
-                    agencyFocusRingClass,
-                  )}
-                  disabled={editSaving || rowUpdating}
-                  aria-label={`Edit time range, ${timeRange || "no time range"}`}
-                >
-                  <Calendar className="size-4 shrink-0 text-muted" aria-hidden />
-                  <span className="min-w-0 truncate">{timeRange || "-"}</span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-auto min-w-[19rem] p-3">
-                <div className="grid gap-3">
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="grid gap-1 text-xs font-semibold text-muted">
-                      <span>Start</span>
-                      <Input
-                        type="time"
-                        value={editDraft.startTime}
-                        onChange={(e) => onStartTimeChange(e.target.value)}
-                        onBlur={onInlineBlur}
-                        onKeyDown={onInlineKeyDown}
-                        disabled={editSaving || rowUpdating}
-                        className={agencyTimeEntryTimeInputClass}
-                        aria-label="Start time"
-                      />
-                    </label>
-                    <label className="grid gap-1 text-xs font-semibold text-muted">
-                      <span>End</span>
-                      <Input
-                        type="time"
-                        value={editDraft.endTime}
-                        onChange={(e) => onEndTimeChange(e.target.value)}
-                        onBlur={onInlineBlur}
-                        onKeyDown={onInlineKeyDown}
-                        disabled={editSaving || rowUpdating}
-                        className={agencyTimeEntryTimeInputClass}
-                        aria-label="End time"
-                      />
-                    </label>
-                  </div>
+          <Popover
+            open={timeEditorOpen}
+            onOpenChange={(open) => {
+              setTimeEditorOpen(open);
+              if (!open) onInlineBlur();
+            }}
+          >
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "inline-flex h-8 min-w-0 max-w-full items-center gap-2 rounded-lg px-2 text-left font-mono text-sm font-medium tabular-nums text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+                  agencyFocusRingClass,
+                )}
+                disabled={editSaving || rowUpdating}
+                aria-label={`Edit time range, ${timeRange || "no time range"}`}
+              >
+                <Calendar className="size-4 shrink-0 text-muted" aria-hidden />
+                <span className="min-w-0 truncate">{timeRange || "-"}</span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-auto min-w-[19rem] p-3">
+              <div className="grid gap-3">
+                <label className="grid gap-1 text-xs font-semibold text-muted">
+                  <span>Date</span>
+                  <Input
+                    type="date"
+                    value={editDraft.date}
+                    onChange={(e) => onStartDateChange(e.target.value)}
+                    onKeyDown={onInlineKeyDown}
+                    disabled={editSaving || rowUpdating}
+                    className="h-8 font-mono text-sm tabular-nums"
+                    aria-label="Start date"
+                  />
+                </label>
+                <div className="grid grid-cols-2 gap-2">
                   <label className="grid gap-1 text-xs font-semibold text-muted">
-                    <span>Date</span>
+                    <span>Start</span>
                     <Input
-                      type="date"
-                      value={editDraft.date}
-                      onChange={(e) => onStartDateChange(e.target.value)}
+                      type="time"
+                      value={editDraft.startTime}
+                      onChange={(e) => onStartTimeChange(e.target.value)}
                       onBlur={onInlineBlur}
                       onKeyDown={onInlineKeyDown}
                       disabled={editSaving || rowUpdating}
-                      className="h-8 font-mono text-sm tabular-nums"
-                      aria-label="Start date"
+                      className={agencyTimeEntryTimeInputClass}
+                      aria-label="Start time"
+                    />
+                  </label>
+                  <label className="grid gap-1 text-xs font-semibold text-muted">
+                    <span>End</span>
+                    <Input
+                      type="time"
+                      value={editDraft.endTime}
+                      onChange={(e) => onEndTimeChange(e.target.value)}
+                      onBlur={onInlineBlur}
+                      onKeyDown={onInlineKeyDown}
+                      disabled={editSaving || rowUpdating}
+                      className={agencyTimeEntryTimeInputClass}
+                      aria-label="End time"
                     />
                   </label>
                 </div>
-              </PopoverContent>
-            </Popover>
-          ) : (
-            <button
-              type="button"
-              className={cn(
-                "inline-flex h-8 min-w-0 max-w-full items-center gap-2 rounded-lg px-2 text-left font-mono text-sm font-medium tabular-nums text-muted transition-colors hover:bg-elevated hover:text-highlighted",
-                agencyFocusRingClass,
-              )}
-              disabled={editSaving || rowUpdating}
-              onClick={() => setEditingFields(true)}
-              aria-label={`Edit time range, ${timeRange || "no time range"}`}
-            >
-              <Calendar className="size-4 shrink-0 text-muted" aria-hidden />
-              <span className="min-w-0 truncate">{timeRange || "-"}</span>
-            </button>
-          )
+              </div>
+            </PopoverContent>
+          </Popover>
         ) : timeRange ? (
           <span className="inline-flex min-w-0 items-center gap-2 truncate font-mono text-sm font-medium tabular-nums text-muted">
             <Calendar className="size-4 shrink-0 text-muted" aria-hidden />
@@ -260,20 +236,20 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
 
       <div className="col-start-1 row-start-3 min-w-0 sm:col-auto sm:row-auto">
         {!isMulti ? (
-          editingFields ? (
+          editingDuration ? (
             <div className="inline-flex items-center gap-2">
               <Timer className="size-4 shrink-0 text-muted" aria-hidden />
               <Input
                 value={editDraft.durationInput}
                 onChange={(e) => onDurationChange(e.target.value)}
                 onBlur={() => {
-                  setEditingFields(false);
+                  setEditingDuration(false);
                   onInlineBlur();
                 }}
                 onKeyDown={(event) => {
                   onInlineKeyDown(event);
                   if (event.key === "Enter" || event.key === "Escape") {
-                    setEditingFields(false);
+                    setEditingDuration(false);
                   }
                 }}
                 disabled={editSaving || rowUpdating}
@@ -289,7 +265,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 "inline-flex items-center gap-2 font-mono text-sm font-medium tabular-nums text-muted hover:text-highlighted",
                 agencyFocusRingClass,
               )}
-              onClick={() => setEditingFields(true)}
+              onClick={() => setEditingDuration(true)}
             >
               <Timer className="size-4 shrink-0 text-muted" aria-hidden />
               {editDraft.durationInput || durationLabel}

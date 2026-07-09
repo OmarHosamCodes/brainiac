@@ -4,7 +4,11 @@ import { AgencyTimeEntryRecencySectionView } from "@/components/agency/work/time
 import { AgencyWorkSurfacePaginationFooter } from "@/components/agency/work/work-surface/agency-work-surface-pagination-footer";
 import { Button } from "@/components/ui/button";
 import type { AgencyTimeEntriesLogViewModel } from "@/lib/agency/work/hooks/use-agency-time-entries-log";
-import { agencyMetricClass, agencyTimeLogSkeletonClass } from "@/lib/utils/agency-ui";
+import {
+  agencyMetricClass,
+  agencyTimeLogSkeletonClass,
+  agencyWorkTableStackClass,
+} from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
 type AgencyTimeEntriesLogViewProps = {
@@ -72,7 +76,7 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
             </Button>
           </div>
         ) : (
-          <div className="flex min-w-0 flex-col">
+          <div className={agencyWorkTableStackClass}>
             {view.recencySections.map((section) => (
               <AgencyTimeEntryRecencySectionView
                 key={section.id}

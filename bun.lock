@@ -487,7 +487,7 @@
 
     "@nodable/entities": ["@nodable/entities@2.1.1", "", {}, "sha512-Pig3HxDIoMgjdEH8OCf/dkcTmLFjJRjWuq8jSnklu284/TKOPibSRERmOykiwmyXTtv61mP+44f3GMx0tLAyjg=="],
 
-    "@openrouter/sdk": ["@openrouter/sdk@0.13.24", "", { "dependencies": { "zod": "^3.25.0 || ^4.0.0" } }, "sha512-E/gdhaUl9UKn1ngm+kw21ybnqB5iAAwbxnsDzE2iTZzQCbR7J0REZa65HJY8TxYwpaOs3rLpiHyi4w8LNKpvmQ=="],
+    "@openrouter/sdk": ["@openrouter/sdk@0.13.32", "", { "dependencies": { "zod": "^3.25.0 || ^4.0.0" } }, "sha512-5lvd4fqU5sz0U14FqhNlY2NYlYTVo9hK7FIasW3JGLgqZqpdiUQGwt1/AbmmBbly1qqBFlaihD8I5G9xoUX+yQ=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.1", "", {}, "sha512-gLyJlPHPZYdAk1JENA9LeHejZe1Ti77/pTeFm/nMXmQH/HFZlcS/O2XJB+L8fkbrNSqhdtlvjBVjxwUYanNH5Q=="],
 

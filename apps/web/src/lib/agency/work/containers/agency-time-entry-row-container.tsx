@@ -6,6 +6,8 @@ import type { TimeEntryDraft } from "@/lib/schemas/agency-time-entry";
 import type { CollapsedEntryGroup, TimeEntryRecord } from "@/lib/utils/group-time-entries";
 
 import { AgencyTimeEntryRowView } from "@/components/agency/work/time-entries/agency-time-entry-row-view";
+import { agencyTimeEntryMultiAccentClass } from "@/lib/utils/agency-ui";
+import { cn } from "@/lib/utils";
 
 type AgencyTimeEntryRowContainerProps = {
   group: CollapsedEntryGroup;
@@ -28,6 +30,8 @@ type AgencyTimeEntryRowContainerProps = {
   highlighted?: boolean;
   /** Suppress the row's dashed bottom border (group wrapper supplies a solid one). */
   omitBottomBorder?: boolean;
+  /** Child row inside an expanded multi-entry group. */
+  multiGroupChild?: boolean;
 };
 
 function singleEntryGroup(group: CollapsedEntryGroup, entry: TimeEntryRecord): CollapsedEntryGroup {
@@ -46,6 +50,7 @@ function singleEntryGroup(group: CollapsedEntryGroup, entry: TimeEntryRecord): C
 
 export function AgencyTimeEntryRowContainer({
   omitBottomBorder = false,
+  multiGroupChild = false,
   ...props
 }: AgencyTimeEntryRowContainerProps) {
   const view = useAgencyTimeEntryRow(props);
@@ -58,19 +63,29 @@ export function AgencyTimeEntryRowContainer({
 
   if (!view.isMulti) {
     return (
-      <AgencyTimeEntryRowView view={view} className={omitBottomBorder ? "border-b-0" : undefined} />
+      <AgencyTimeEntryRowView
+        view={view}
+        className={cn(
+          omitBottomBorder ? "border-b-0" : undefined,
+          multiGroupChild && agencyTimeEntryMultiAccentClass,
+        )}
+      />
     );
   }
 
   return (
     <div className="border-b border-default bg-elevated/20">
-      <AgencyTimeEntryRowView view={view} className={view.expanded ? undefined : "border-b-0"} />
+      <AgencyTimeEntryRowView
+        view={view}
+        className={cn(agencyTimeEntryMultiAccentClass, view.expanded ? undefined : "border-b-0")}
+      />
       {expandedChildGroups.map((childGroup, index) => (
         <AgencyTimeEntryRowContainer
           key={childGroup.entries[0]!.id}
           {...props}
           group={childGroup}
           expanded={false}
+          multiGroupChild
           highlighted={
             props.highlighted === true && childGroup.entries[0]?.id === props.group.entries[0]?.id
           }

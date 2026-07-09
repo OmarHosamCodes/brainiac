@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import type { AgencyWorkSurfaceTab } from "@/lib/schemas/agency-work";
 import {
   agencyFocusRingClass,
-  agencyTimeLogPanelClass,
   agencyWorkTabActiveClass,
   agencyWorkTabBarClass,
   agencyWorkTabClass,
+  agencyWorkTabShellClass,
 } from "@/lib/utils/agency-ui";
 import { cn } from "@/lib/utils";
 
@@ -34,12 +34,12 @@ export function AgencyWorkSurfaceTabsView({
   onAddNewTask,
 }: AgencyWorkSurfaceTabsViewProps) {
   return (
-    <div className={cn(agencyTimeLogPanelClass, "shrink-0 rounded-b-none border-b-0")}>
+    <div className={agencyWorkTabShellClass}>
       <div className={agencyWorkTabBarClass}>
         <div
           role="tablist"
           aria-label="Work surface"
-          className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto"
+          className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto no-scrollbar"
         >
           {TABS.map((tab) => {
             const Icon = tab.icon;

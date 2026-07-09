@@ -1,19 +1,20 @@
-import { AlertTriangle, Calendar, Timer } from "lucide-react";
+import { AlertTriangle, Calendar, CircleDot, MoreHorizontal, Timer } from "lucide-react";
 import { useMemo } from "react";
 
 import { AgencyWorkSurfacePaginationFooter } from "@/components/agency/work/work-surface/agency-work-surface-pagination-footer";
+import { AgencyWorkSurfaceTableHeaderView } from "@/components/agency/work/work-surface/agency-work-surface-table-header-view";
 import { AgencyWorkSurfaceTaskTableRowView } from "@/components/agency/work/work-surface/agency-work-surface-task-table-row-view";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AgencyTaskListViewModel } from "@/lib/agency/work/hooks/use-agency-task-list";
 import {
   agencyMutedSectionHeaderClass,
-  agencyWorkTableGridDoneClass,
-  agencyWorkTableHeaderClass,
+  agencyWorkTableBodyScrollClass,
+  agencyWorkTableListClass,
+  agencyWorkTableStackClass,
 } from "@/lib/utils/agency-ui";
 import { groupTasksByRecency } from "@/lib/utils/group-tasks-by-recency";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { cn } from "@/lib/utils";
 
 type AgencyWorkSurfaceDoneViewProps = {
   view: Extract<AgencyTaskListViewModel, { status: "ready" }>;
@@ -42,55 +43,51 @@ export function AgencyWorkSurfaceDoneView({ view }: AgencyWorkSurfaceDoneViewPro
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div
-        className={cn(agencyWorkTableHeaderClass, agencyWorkTableGridDoneClass, "hidden sm:grid")}
-      >
-        <span>Task</span>
-        <span className="inline-flex items-center gap-1.5">
-          <Calendar className="size-3.5" aria-hidden />
-          Completed At
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <Timer className="size-3.5" aria-hidden />
-          Duration
-        </span>
-        <span>Status</span>
-        <span className="sr-only">Action</span>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className={agencyWorkTableBodyScrollClass}>
         {view.doneTasksLoading ? (
-          <div className="space-y-2 p-4">
+          <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, index) => (
               <Skeleton key={index} className="h-14 w-full rounded-lg" />
             ))}
           </div>
         ) : sections.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-muted">No completed tasks yet.</p>
+          <p className="py-10 text-center text-sm text-muted">No completed tasks yet.</p>
         ) : (
-          sections.map((section) => (
-            <section key={section.id}>
-              <div className={agencyMutedSectionHeaderClass}>
-                <span className="font-semibold text-highlighted">{section.label}</span>
-                <span className="rounded-full bg-elevated px-2 py-0.5 text-[11px] font-semibold text-muted">
-                  {section.tasks.length}
-                </span>
+          <div className={agencyWorkTableStackClass}>
+            {sections.map((section, sectionIndex) => (
+              <div key={section.id} className={agencyWorkTableListClass}>
+                {sectionIndex === 0 ? (
+                  <AgencyWorkSurfaceTableHeaderView
+                    meta={[
+                      { icon: Calendar, label: "Completed At" },
+                      { icon: Timer, label: "Duration" },
+                      { icon: CircleDot, label: "Status" },
+                      { icon: MoreHorizontal, label: "Actions" },
+                    ]}
+                  />
+                ) : null}
+                <div className={agencyMutedSectionHeaderClass}>
+                  <span className="font-semibold text-highlighted">{section.label}</span>
+                  <span className="rounded-full bg-elevated px-2 py-0.5 text-[11px] font-semibold text-muted">
+                    {section.tasks.length}
+                  </span>
+                </div>
+                {section.tasks.map((task) => (
+                  <AgencyWorkSurfaceTaskTableRowView
+                    key={task.id}
+                    task={task}
+                    projects={view.projects}
+                    teamId={view.teamId}
+                    variant="done"
+                    highlight={task.id === view.recentlyCompletedTaskId}
+                    isRowPending={view.isRowPending(task.id)}
+                    onSelect={(taskId) => view.onSelect(taskId)}
+                    onReopenToActive={view.onReopenDoneTask}
+                  />
+                ))}
               </div>
-              {section.tasks.map((task) => (
-                <AgencyWorkSurfaceTaskTableRowView
-                  key={task.id}
-                  task={task}
-                  projects={view.projects}
-                  teamId={view.teamId}
-                  variant="done"
-                  highlight={task.id === view.recentlyCompletedTaskId}
-                  isRowPending={view.isRowPending(task.id)}
-                  onSelect={(taskId) => view.onSelect(taskId)}
-                  onReopenToActive={view.onReopenDoneTask}
-                />
-              ))}
-            </section>
-          ))
+            ))}
+          </div>
         )}
       </div>
 

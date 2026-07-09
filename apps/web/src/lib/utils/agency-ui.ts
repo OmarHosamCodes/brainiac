@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useState, type RefObject } from "react";
 import { cn } from "@/lib/utils";
+import { liquidGlassFrameClass } from "@/lib/utils/liquid-glass-ui";
 
 import {
   shellEmptyPanelClass,
@@ -121,7 +122,7 @@ export const agencyTaskClientGroupHeaderClass = cn(
 
 /** Muted band headers — time log day groups, task rail project groups, etc. */
 export const agencyMutedSectionHeaderClass = cn(
-  "flex items-center justify-between border-y border-default bg-muted/55 px-4 py-2 text-xs",
+  "flex items-center justify-between border-y border-default bg-muted/55 px-4 py-2 text-xs rounded-t-md",
 );
 
 export const agencyTaskProjectGroupHeaderClass = cn(
@@ -163,19 +164,23 @@ export const agencySearchHighlightMarkClass = "agency-search-highlight-mark";
 export const agencyTaskRowNeedsDescriptionClass = "bg-warning/5";
 
 /** Work time surface — stacks tracker and log as separate panels. */
-export const agencyTimePaneStackClass =
-  "flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-hidden";
+export const agencyTimePaneStackClass = "flex min-h-0 min-w-0 flex-1 flex-col gap-4";
 
-export const agencyTimeTrackerPanelClass = "shrink-0 overflow-visible";
+export const agencyTimePaneBodyClass = "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden";
+
+export const agencyTimeTrackerPanelClass = "relative z-20 shrink-0 overflow-visible";
 
 export const agencyTimeLogPanelClass =
   "flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-default bg-default";
+
+export const agencyWorkTabShellClass =
+  "shrink-0 overflow-hidden rounded-2xl rounded-b-none border border-default border-b-0 bg-default";
 
 export const agencyWorkTrackerCardClass =
   "shrink-0 overflow-hidden rounded-2xl border border-default bg-default";
 
 export const agencyWorkTabBarClass =
-  "flex shrink-0 items-center justify-between gap-3 border-b border-default px-1";
+  "flex shrink-0 items-center justify-between gap-4 border-b border-default px-4 py-2";
 
 export const agencyWorkTabClass = cn(
   "inline-flex shrink-0 items-center gap-2 border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-muted transition-colors",
@@ -187,18 +192,30 @@ export const agencyWorkTabClass = cn(
 export const agencyWorkTabActiveClass = "border-primary text-highlighted [&_svg]:text-primary";
 
 export const agencyWorkTableGridClass =
-  "grid w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.75fr)_4.5rem] items-center gap-x-3 gap-y-2 px-4 py-3";
+  "grid w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.75fr)_4.5rem] items-center gap-x-3 px-4 py-3";
 
 export const agencyWorkTableGridDoneClass =
-  "grid w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.6fr)_minmax(0,0.75fr)_4.5rem] items-center gap-x-3 gap-y-2 px-4 py-3";
+  "grid w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.6fr)_minmax(0,0.75fr)_4.5rem] items-center gap-x-3 px-4 py-3";
 
 export const agencyWorkTableGridDelegatedClass =
-  "grid w-full grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.85fr)_4.5rem] items-center gap-x-3 gap-y-2 px-4 py-3";
+  "grid w-full grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.85fr)_4.5rem] items-center gap-x-3 px-4 py-3";
+
+export const agencyWorkTableHeaderGridClass =
+  "grid w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-center gap-x-3 px-4 py-3";
+
+export const agencyWorkTableHeaderMetaClass = "flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1";
 
 export const agencyWorkTableHeaderClass = cn(
-  agencyWorkTableGridClass,
+  agencyWorkTableHeaderGridClass,
   "border-b border-default bg-muted/45 text-xs font-semibold uppercase tracking-wide text-muted",
 );
+
+export const agencyWorkTableBodyScrollClass = "min-h-0 flex-1 overflow-y-auto p-2";
+
+export const agencyWorkTableStackClass = "flex flex-col gap-2";
+
+export const agencyWorkTableListClass =
+  "overflow-hidden rounded-xl border border-default bg-default";
 
 export const agencyWorkTableRowClass = cn(
   agencyWorkTableGridClass,
@@ -212,8 +229,50 @@ export const agencyWorkPlayButtonClass = cn(
   "motion-reduce:transition-none",
 );
 
-export const agencyTimeTrackerBarClass = cn(
-  "grid gap-0 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.55fr)] lg:items-stretch",
+export const agencyTimeTrackerSplitClass =
+  "flex min-w-0 flex-col gap-2 lg:flex-row lg:items-stretch lg:gap-3";
+
+export const agencyTimeTrackerDescriptionCardClass = cn(
+  agencyWorkTrackerCardClass,
+  "group/desc relative flex min-h-16 min-w-0 flex-[1.65] flex-col justify-center gap-0 overflow-visible rounded-lg px-3 py-2",
+);
+
+export const agencyTimeTrackerControlsCardClass = cn(
+  agencyWorkTrackerCardClass,
+  "flex min-h-16 min-w-0 flex-1 items-center rounded-lg px-3 py-2 lg:min-w-[18rem]",
+);
+
+export const agencyTimeTrackerDescriptionLabelClass =
+  "text-xs font-semibold leading-none text-muted";
+
+export const agencyTimeTrackerDescriptionInputClass =
+  "mt-1 block h-8 rounded-none border-0 bg-transparent px-0.5 py-0 text-sm leading-snug shadow-none";
+
+export const agencyTimeTrackerActiveRowClass = "flex w-full min-w-0 items-center gap-2";
+
+export const agencyTimeTrackerStatusZoneClass =
+  "flex min-w-0 max-w-[45%] shrink items-center gap-1.5";
+
+export const agencyTimeTrackerActionsZoneClass = "ml-auto flex shrink-0 items-center gap-2";
+
+export const agencyTimeTrackerStatusDividerClass = "h-5 w-px shrink-0 bg-default";
+
+export const agencyTimeTrackerMetricClass = cn(
+  agencyMetricClass,
+  "text-lg font-semibold tabular-nums",
+);
+
+export const agencyTimeTrackerSuggestionAnchorClass =
+  "absolute top-full right-0 left-0 z-50 mt-1 max-h-48";
+
+export const agencyTimeTrackerSuggestionPanelClass = cn(
+  liquidGlassFrameClass,
+  "max-h-48 overflow-y-auto shadow-lg",
+);
+
+export const agencyTimeTrackerSuggestionOptionClass = cn(
+  "flex w-full min-w-0 flex-col items-start gap-1.5 rounded-lg px-2.5 py-2.5 text-left",
+  agencyFocusRingClass,
 );
 
 export const agencyTimeDayHeaderClass = cn(
@@ -225,6 +284,8 @@ export const agencyTimeWeekHeaderClass = "sr-only";
 export const agencyTimeEntryRowClass = cn(
   "border-b border-default px-4 py-3 transition-colors hover:bg-elevated/45 motion-reduce:transition-none",
 );
+
+export const agencyTimeEntryMultiAccentClass = "border-l-4 border-l-primary/50";
 
 /** Inline time inputs in entry rows. */
 export const agencyTimeEntryTimeInputClass = cn(
