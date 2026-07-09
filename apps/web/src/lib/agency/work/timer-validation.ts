@@ -197,3 +197,22 @@ export function getAgencyTimerStopBlockedMessage(input: {
 
   return null;
 }
+
+/** Stop CTA while a timer is running: Stop, or a guided next step that stays clickable when it opens the chooser. */
+export function getAgencyTimerStopButtonPresentation(input: {
+  isPending: boolean;
+  canStop: boolean;
+  descriptionTrimmed: boolean;
+}): { label: string; disabled: boolean } {
+  if (input.isPending) {
+    return { label: "…", disabled: true };
+  }
+  if (input.canStop) {
+    return { label: "Stop", disabled: false };
+  }
+  // Keep "Choose task" enabled so the click opens the chooser (stop is still blocked until a task is set).
+  if (input.descriptionTrimmed) {
+    return { label: "Choose task", disabled: false };
+  }
+  return { label: "Add details", disabled: true };
+}

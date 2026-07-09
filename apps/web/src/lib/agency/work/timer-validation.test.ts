@@ -3,6 +3,7 @@ import { describe, expect, it } from "bun:test";
 import {
   canStartAgencyTimer,
   canStopAgencyTimer,
+  getAgencyTimerStopButtonPresentation,
   resolveAgencyTimerStartProject,
   resolveAgencyTimerTaskRef,
 } from "@/lib/agency/work/timer-validation";
@@ -94,6 +95,38 @@ describe("canStopAgencyTimer", () => {
         selectedTaskTitle: "Planning & Analysis",
       }),
     ).toBe(true);
+  });
+});
+
+describe("getAgencyTimerStopButtonPresentation", () => {
+  it("keeps Choose task clickable so the tracker can open the chooser", () => {
+    expect(
+      getAgencyTimerStopButtonPresentation({
+        isPending: false,
+        canStop: false,
+        descriptionTrimmed: true,
+      }),
+    ).toEqual({ label: "Choose task", disabled: false });
+  });
+
+  it("disables Add details until a description exists", () => {
+    expect(
+      getAgencyTimerStopButtonPresentation({
+        isPending: false,
+        canStop: false,
+        descriptionTrimmed: false,
+      }),
+    ).toEqual({ label: "Add details", disabled: true });
+  });
+
+  it("shows Stop when the timer can be saved", () => {
+    expect(
+      getAgencyTimerStopButtonPresentation({
+        isPending: false,
+        canStop: true,
+        descriptionTrimmed: true,
+      }),
+    ).toEqual({ label: "Stop", disabled: false });
   });
 });
 

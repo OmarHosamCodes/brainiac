@@ -153,28 +153,36 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
               )}
               aria-hidden
             />
-            {view.activeTimer ? (
-              <span className="min-w-0 truncate text-xs">
-                <span className="font-semibold text-primary">{statusPrefix}</span>
-                {statusSuffix ? (
-                  <>
-                    <span className="text-muted"> · </span>
-                    <span className="font-medium text-muted">{statusSuffix}</span>
-                  </>
-                ) : null}
-              </span>
-            ) : (
-              <button
-                type="button"
-                className={cn(
-                  "min-w-0 truncate text-left text-xs font-medium text-muted transition-colors hover:text-highlighted",
-                  agencyFocusRingClass,
-                )}
-                onClick={() => view.onTaskChooserOpenChange(true)}
-              >
-                {view.trackerStatusLine}
-              </button>
-            )}
+            <button
+              type="button"
+              className={cn(
+                "min-w-0 truncate text-left text-xs transition-colors hover:text-highlighted",
+                agencyFocusRingClass,
+                view.activeTimer ? "font-semibold" : "font-medium text-muted",
+              )}
+              onClick={() => view.onTaskChooserOpenChange(true)}
+              aria-haspopup="dialog"
+              aria-expanded={view.taskChooserOpen}
+              aria-label={
+                view.activeTimer
+                  ? `Change task, currently ${view.trackerStatusLine}`
+                  : "Choose task"
+              }
+            >
+              {view.activeTimer ? (
+                <span className="min-w-0 truncate">
+                  <span className="text-primary">{statusPrefix}</span>
+                  {statusSuffix ? (
+                    <>
+                      <span className="font-medium text-muted"> · </span>
+                      <span className="font-medium text-muted">{statusSuffix}</span>
+                    </>
+                  ) : null}
+                </span>
+              ) : (
+                view.trackerStatusLine
+              )}
+            </button>
             <span className="sr-only">
               <AgencyTaskChooser
                 value={view.selectedTaskId}
@@ -279,7 +287,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                     view.stopButtonWarningRing &&
                       "ring-2 ring-warning/30 ring-offset-1 ring-offset-background",
                   )}
-                  disabled={view.isTimerMutationPending || !view.teamId || !view.canStopTimer}
+                  disabled={view.stopButtonDisabled}
                   onClick={view.onStopTimer}
                 >
                   {view.stopButtonLabel}

@@ -10,6 +10,7 @@ import { useAgencyElapsedTimer } from "@/lib/agency/work/hooks/use-agency-elapse
 import {
   canStartAgencyTimer,
   canStopAgencyTimer,
+  getAgencyTimerStopButtonPresentation,
   resolveAgencyTimerStartProject,
   resolveAgencyTimerTaskRef,
 } from "@/lib/agency/work/timer-validation";
@@ -62,6 +63,7 @@ export type AgencyTimeTrackerViewModel = {
   canStartTimer: boolean;
   canStopTimer: boolean;
   stopButtonLabel: string;
+  stopButtonDisabled: boolean;
   stopButtonWarningRing: boolean;
   isTimerMutationPending: boolean;
   isStartTimeSaving: boolean;
@@ -298,12 +300,12 @@ export function useAgencyTimeTracker({
       ? `${trackerProject?.clientName ?? "Project"} · ${trackerProject?.name ?? taskChooserLabel}`
       : "Choose task";
 
-  let stopButtonLabel = "Stop";
-  if (isTimerMutationPending) {
-    stopButtonLabel = "…";
-  } else if (!canStopTimer) {
-    stopButtonLabel = descriptionTrimmed ? "Choose task" : "Add details";
-  }
+  const stopButton = getAgencyTimerStopButtonPresentation({
+    isPending: isTimerMutationPending,
+    canStop: canStopTimer,
+    descriptionTrimmed: Boolean(descriptionTrimmed),
+  });
+  const stopButtonLabel = stopButton.label;
 
   function onStartTimePopoverOpenChange(open: boolean) {
     if (open && activeTimer?.startedAt) {
@@ -341,6 +343,7 @@ export function useAgencyTimeTracker({
     canStartTimer,
     canStopTimer,
     stopButtonLabel,
+    stopButtonDisabled: !teamId || stopButton.disabled,
     stopButtonWarningRing: Boolean(activeTimer && !canStopTimer),
     isTimerMutationPending,
     isStartTimeSaving: timerAdjustCount > 0,
