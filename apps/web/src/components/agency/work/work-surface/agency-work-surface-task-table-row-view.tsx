@@ -333,10 +333,10 @@ export function AgencyWorkSurfaceTaskTableRowView({
         <div className="flex min-w-0 items-center gap-2">
           {variant === "done" ? (
             <span
-              className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-success/20 text-success"
+              className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/20 text-primary"
               aria-hidden
             >
-              <CircleCheck className="size-4 stroke-3 stroke-green-500 " />
+              <CircleCheck className="size-4 stroke-3 stroke-primary" />
             </span>
           ) : null}
           <div className="min-w-0">
