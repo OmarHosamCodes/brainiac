@@ -159,10 +159,12 @@ export function useAgencyTimeTracker({
     setTaskChooserOpen(true);
   }, [taskChooserOpenRequest]);
 
+  // Tracker Start is idle-only; switching while running is done from task rows / restart / etc.
   const canStartTimer = Boolean(
     teamId &&
+    !activeTimer &&
     canStartAgencyTimer({
-      activeTimer,
+      activeTimer: null,
       project: startProject,
     }),
   );
@@ -256,7 +258,7 @@ export function useAgencyTimeTracker({
   }
 
   async function startTimer() {
-    if (!teamId || activeTimer || !startProject) return;
+    if (!teamId || !startProject || !canStartTimer) return;
 
     await startTimerAction({
       teamId,

@@ -10,6 +10,7 @@ import { useAgencyActiveTimerQuery } from "@/lib/queries/agency";
 import {
   selectIsTimerMutationPending,
   useAgencyTimeTrackingStore,
+  useTrackerDraft,
 } from "@/stores/agency-time-tracking";
 
 type UseAgencyMiniTimerOptions = {
@@ -43,6 +44,8 @@ export function useAgencyMiniTimer({
 
   const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
   const activeTimer = activeTimerQuery.data?.timer ?? null;
+  const activeTimerTeamId = activeTimer?.teamId ?? teamId;
+  const trackerDraft = useTrackerDraft(activeTimerTeamId);
   const isRunningForThisTask = activeTimer?.taskId === taskId && activeTimer.teamId === teamId;
 
   const elapsedLabel =
@@ -60,20 +63,32 @@ export function useAgencyMiniTimer({
     [taskId, taskTitle],
   );
 
-  const canStart = canStartAgencyTimer({ activeTimer, project });
+  const activeDescription = trackerDraft?.description ?? activeTimer?.description ?? "";
+  const activeSelectedTaskId = trackerDraft?.taskId?.trim() || undefined;
+  const activeDraftTask =
+    !activeTimer?.taskId && activeSelectedTaskId ? { id: activeSelectedTaskId, title: "" } : null;
+
+  const canStart = canStartAgencyTimer({
+    activeTimer,
+    project,
+    description: activeDescription,
+    selectedTask: activeDraftTask,
+  });
   const canStop = canStopAgencyTimer({
     activeTimer,
-    description: activeTimer?.description ?? "",
-    selectedTask: resolveAgencyTimerTaskRef({
-      activeTimer,
-      selectedTaskTitle: taskTitle,
-      catalogTasks:
-        activeTimer?.taskId && activeTimer.taskTitle
-          ? [{ id: activeTimer.taskId, title: activeTimer.taskTitle }]
-          : task
-            ? [task]
-            : [],
-    }),
+    description: activeDescription,
+    selectedTask:
+      activeDraftTask ??
+      resolveAgencyTimerTaskRef({
+        activeTimer,
+        selectedTaskTitle: isRunningForThisTask ? taskTitle : undefined,
+        catalogTasks:
+          activeTimer?.taskId && activeTimer.taskTitle
+            ? [{ id: activeTimer.taskId, title: activeTimer.taskTitle }]
+            : isRunningForThisTask && task
+              ? [task]
+              : [],
+      }),
   });
 
   const disabled =
@@ -89,7 +104,11 @@ export function useAgencyMiniTimer({
       void agencyTimeTrackingStore.stopTimer({
         teamId,
         activeTimer,
-        description: activeTimer.description,
+        description: activeDescription,
+        task:
+          !activeTimer.taskId && activeSelectedTaskId
+            ? { id: activeSelectedTaskId, title: taskTitle ?? "" }
+            : null,
       });
       return;
     }
@@ -102,6 +121,8 @@ export function useAgencyMiniTimer({
       successDescription: "Timer started for this task.",
     });
   }, [
+    activeDescription,
+    activeSelectedTaskId,
     activeTimer,
     agencyTimeTrackingStore,
     disabled,

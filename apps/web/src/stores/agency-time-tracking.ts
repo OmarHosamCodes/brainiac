@@ -5,7 +5,6 @@ import { getQueryClient } from "@/lib/query-client";
 import {
   cancelAgencyProjectTaskListQueries,
   findProjectTaskInCache,
-  isAgencyProjectsListQueryKey,
   isAgencyTimeEntriesListQueryKey,
   patchActiveTimerInCache,
   patchUpdatedProjectTaskInCache,
@@ -435,14 +434,58 @@ function createAgencyTimeTrackingActions(
 
   async function startTimer(payload: StartTimerPayload) {
     const previousActiveTimer = getCachedActiveTimer();
+    // Prefer tracker draft for the running timer's team so typed desc/task unlock switch.
+    const previousTimerDraft = previousActiveTimer
+      ? get().trackerDraftsByTeam[previousActiveTimer.teamId]
+      : null;
+    const previousDraftTaskId = previousTimerDraft?.taskId?.trim() ?? "";
+    const previousDraftTask =
+      !previousActiveTimer?.taskId && previousDraftTaskId
+        ? { id: previousDraftTaskId, title: "" }
+        : null;
     const startBlockedMessage = getAgencyTimerStartBlockedMessage({
       activeTimer: previousActiveTimer,
       project: payload.project,
+      description: previousTimerDraft?.description ?? previousActiveTimer?.description,
+      selectedTask: previousDraftTask,
     });
 
     if (startBlockedMessage) {
       toast.error("Can't start timer", { description: startBlockedMessage });
       return;
+    }
+
+    // Stop-then-start so draft description/task are saved; API start rollover only uses DB fields.
+    if (previousActiveTimer) {
+      const stopDescription =
+        previousTimerDraft?.description ?? previousActiveTimer.description ?? "";
+      let stopTask: { id: string; title: string } | null = null;
+
+      if (previousActiveTimer.taskId) {
+        stopTask = {
+          id: previousActiveTimer.taskId,
+          title: previousActiveTimer.taskTitle ?? "",
+        };
+      } else if (previousDraftTaskId) {
+        const cachedTask =
+          optimistic().findTask(previousActiveTimer.teamId, previousDraftTaskId) ??
+          findProjectTaskInCache(previousActiveTimer.teamId, previousDraftTaskId);
+        stopTask = {
+          id: previousDraftTaskId,
+          title: cachedTask?.title ?? "",
+        };
+      }
+
+      await stopTimer({
+        teamId: previousActiveTimer.teamId,
+        activeTimer: previousActiveTimer,
+        description: stopDescription,
+        task: stopTask,
+      });
+
+      if (getCachedActiveTimer()) {
+        return;
+      }
     }
 
     const previousDraft = getTrackerDraftSnapshot(payload.teamId);
@@ -451,14 +494,8 @@ function createAgencyTimeTrackingActions(
       [...activeTimerQueryRegistry.values()].map((entry) => entry.payload),
     );
 
-    if (previousActiveTimer) {
-      affectedLogTeams.add(previousActiveTimer.teamId);
-    }
-
     const logSnapshots = snapshotQueries(getRegisteredLogQueries(affectedLogTeams));
-    const timerOverlaySnapshots = captureTimerOverlaySnapshots(
-      previousActiveTimer ? [payload.teamId, previousActiveTimer.teamId] : [payload.teamId],
-    );
+    const timerOverlaySnapshots = captureTimerOverlaySnapshots([payload.teamId]);
     const entryOverlaySnapshots = captureEntryOverlaySnapshots(affectedLogTeams);
     const taskOverlaySnapshot = optimistic().snapshotTasks(payload.teamId);
     const nowIso = new Date().toISOString();
@@ -469,15 +506,6 @@ function createAgencyTimeTrackingActions(
       description: payload.description,
       startedAt: nowIso,
     });
-    const previousTimerClient = previousActiveTimer
-      ? resolveProjectClientFromCache(previousActiveTimer.teamId, previousActiveTimer.projectId)
-      : null;
-    const optimisticPreviousEntry = previousActiveTimer
-      ? createOptimisticEntryFromTimer(previousActiveTimer, {
-          endedAt: nowIso,
-          ...(previousTimerClient ?? {}),
-        })
-      : null;
     const draft = ensureTrackerDraft(payload.teamId);
 
     if (!draft) {
@@ -489,10 +517,6 @@ function createAgencyTimeTrackingActions(
     try {
       await cancelQueries([...activeTimerQueryRegistry.values()].map((entry) => entry.payload));
       await cancelQueries(getRegisteredLogQueries(affectedLogTeams));
-
-      if (optimisticPreviousEntry) {
-        patchInsertedEntry(optimisticPreviousEntry.teamId, optimisticPreviousEntry);
-      }
 
       patchActiveTimerCaches(optimisticTimer);
 
@@ -533,16 +557,6 @@ function createAgencyTimeTrackingActions(
 
       patchActiveTimerCaches(result.timer);
       syncDraftFromActiveTimer(payload.teamId, result.timer);
-
-      if (optimisticPreviousEntry && result.createdEntry) {
-        reconcileCreatedEntry(
-          optimisticPreviousEntry.teamId,
-          optimisticPreviousEntry.id,
-          result.createdEntry,
-        );
-      } else if (optimisticPreviousEntry) {
-        patchDeletedEntries(optimisticPreviousEntry.teamId, [optimisticPreviousEntry]);
-      }
 
       void refetchAgencyActiveTimerQueries(payload.teamId);
       // Do not refetch task lists here: it races the in_progress optimistic
@@ -901,28 +915,6 @@ function createAgencyTimeTrackingActions(
     }
 
     return Math.max(1, Math.floor((endedAtMs - startedAtMs) / 1_000));
-  }
-
-  function resolveProjectClientFromCache(
-    teamId: string,
-    projectId: string,
-  ): { clientId: string; clientName: string } | null {
-    const queryClient = getQueryClient();
-
-    for (const query of queryClient.getQueryCache().getAll()) {
-      if (!isAgencyProjectsListQueryKey(query.queryKey, teamId)) {
-        continue;
-      }
-
-      const data = query.state.data as { items?: AgencyProjectSummary[] } | undefined;
-      const project = data?.items?.find((item) => item.id === projectId);
-
-      if (project) {
-        return { clientId: project.clientId, clientName: project.clientName };
-      }
-    }
-
-    return null;
   }
 
   function snapshotQueries(queries: Iterable<{ queryKey: QueryKey }>) {

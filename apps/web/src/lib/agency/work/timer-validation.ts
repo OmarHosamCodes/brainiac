@@ -17,8 +17,31 @@ export type AgencyActiveTimerRef = {
 export function canStartAgencyTimer(input: {
   activeTimer: AgencyActiveTimerRef | null;
   project: AgencyTimerProjectRef | null;
+  /** Tracker draft description when switching; defaults to active timer description. */
+  description?: string;
+  selectedTask?: AgencyTimerTaskRef | null;
+  selectedTaskId?: string;
+  selectedTaskTitle?: string | null;
+  catalogTasks?: AgencyTimerTaskRef[];
 }): boolean {
-  return Boolean(!input.activeTimer && input.project);
+  if (!input.project) {
+    return false;
+  }
+
+  // Allow start while another timer runs only when that timer is stoppable;
+  // API startAgencyTimer then rolls it into an entry and starts the new one.
+  if (!input.activeTimer) {
+    return true;
+  }
+
+  return canStopAgencyTimer({
+    activeTimer: input.activeTimer,
+    description: input.description ?? input.activeTimer.description,
+    selectedTask: input.selectedTask,
+    selectedTaskId: input.selectedTaskId,
+    selectedTaskTitle: input.selectedTaskTitle,
+    catalogTasks: input.catalogTasks,
+  });
 }
 
 export function resolveAgencyTimerTaskRef(input: {
@@ -108,16 +131,38 @@ export function resolveAgencyTimerStartProject(input: {
 export function getAgencyTimerStartBlockedMessage(input: {
   activeTimer: AgencyActiveTimerRef | null;
   project: AgencyTimerProjectRef | null;
+  description?: string;
+  selectedTask?: AgencyTimerTaskRef | null;
+  selectedTaskId?: string;
+  selectedTaskTitle?: string | null;
+  catalogTasks?: AgencyTimerTaskRef[];
 }): string | null {
-  if (input.activeTimer) {
-    return "Stop the active timer in the time tracker before starting another.";
-  }
-
   if (!input.project) {
     return "No project available to start the timer.";
   }
 
-  return null;
+  if (!input.activeTimer) {
+    return null;
+  }
+
+  const stopInput = {
+    activeTimer: input.activeTimer,
+    description: input.description ?? input.activeTimer.description,
+    selectedTask: input.selectedTask,
+    selectedTaskId: input.selectedTaskId,
+    selectedTaskTitle: input.selectedTaskTitle,
+    catalogTasks: input.catalogTasks,
+  };
+
+  if (canStopAgencyTimer(stopInput)) {
+    return null;
+  }
+
+  const stopBlockedMessage = getAgencyTimerStopBlockedMessage(stopInput);
+
+  return (
+    stopBlockedMessage ?? "Finish the active timer in the time tracker before starting another."
+  );
 }
 
 export function getAgencyTimerStopBlockedMessage(input: {

@@ -258,9 +258,9 @@ export const agencyTimeTrackerMetricClass = cn(
 export const agencyTimeTrackerSuggestionAnchorClass =
   "absolute top-full right-0 left-0 z-50 mt-1 max-h-48";
 
-/** Solid elevated surface — glass over in-popover form controls ghosts Assign/Create through. */
+/** Opaque popover surface — liquid-glass / missing elevated tokens ghost Assign/Create through. */
 export const agencyTimeTrackerSuggestionPanelClass = cn(
-  "relative z-50 max-h-48 overflow-y-auto overflow-x-hidden rounded-xl border border-default bg-elevated text-popover-foreground shadow-lg outline-none",
+  "relative z-50 max-h-48 overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-lg outline-none",
 );
 
 export const agencyTimeTrackerSuggestionOptionClass = cn(

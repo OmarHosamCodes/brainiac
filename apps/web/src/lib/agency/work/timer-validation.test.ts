@@ -16,13 +16,47 @@ describe("canStartAgencyTimer", () => {
     expect(canStartAgencyTimer({ activeTimer: null, project: projectA })).toBe(true);
   });
 
-  it("blocks start when a timer is already active", () => {
+  it("blocks start when active timer is not stoppable", () => {
     expect(
       canStartAgencyTimer({
         activeTimer: { taskId: null, taskTitle: null, description: "" },
         project: projectA,
       }),
     ).toBe(false);
+
+    expect(
+      canStartAgencyTimer({
+        activeTimer: { taskId: "task-1", taskTitle: "Task 1", description: "" },
+        project: projectA,
+      }),
+    ).toBe(false);
+
+    expect(
+      canStartAgencyTimer({
+        activeTimer: { taskId: null, taskTitle: null, description: "Work" },
+        project: projectA,
+      }),
+    ).toBe(false);
+  });
+
+  it("allows start when active timer can be stopped (switch)", () => {
+    expect(
+      canStartAgencyTimer({
+        activeTimer: { taskId: "task-1", taskTitle: "Task 1", description: "Work" },
+        project: projectA,
+      }),
+    ).toBe(true);
+  });
+
+  it("allows start when draft description and task make active timer stoppable", () => {
+    expect(
+      canStartAgencyTimer({
+        activeTimer: { taskId: null, taskTitle: null, description: "" },
+        project: projectA,
+        description: "Work",
+        selectedTask: task,
+      }),
+    ).toBe(true);
   });
 
   it("blocks start when no project is available", () => {

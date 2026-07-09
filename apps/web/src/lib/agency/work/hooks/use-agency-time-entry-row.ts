@@ -17,6 +17,7 @@ import {
 } from "@/lib/utils/time-entry-draft";
 import { formatDuration } from "@/lib/utils/format-duration";
 import type { CollapsedEntryGroup } from "@/lib/utils/group-time-entries";
+import { useTrackerDraft } from "@/stores/agency-time-tracking";
 
 function localDateKey(date: Date): string {
   const year = date.getFullYear();
@@ -146,6 +147,8 @@ export function useAgencyTimeEntryRow({
   highlighted = false,
 }: UseAgencyTimeEntryRowOptions): AgencyTimeEntryRowViewModel {
   const activeTimer = useAgencyActiveTimerQuery(teamId).data?.timer ?? null;
+  const activeTimerTeamId = activeTimer?.teamId ?? teamId;
+  const trackerDraft = useTrackerDraft(activeTimerTeamId);
   const isMulti = group.entries.length > 1;
   const primaryEntry = group.entries[0]!;
 
@@ -257,6 +260,11 @@ export function useAgencyTimeEntryRow({
     canStartAgencyTimer({
       activeTimer,
       project,
+      description: trackerDraft?.description ?? activeTimer?.description,
+      selectedTask:
+        !activeTimer?.taskId && trackerDraft?.taskId?.trim()
+          ? { id: trackerDraft.taskId.trim(), title: "" }
+          : null,
     }),
   );
 
