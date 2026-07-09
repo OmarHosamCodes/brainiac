@@ -1,13 +1,13 @@
 import type { WorkspaceBlock } from "@brainiac/workspace";
 import { Blocks } from "lucide-react";
 
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { Button } from "@/ui/button";
 import {
   getWorkspaceBlockRegistryEntry,
   workspacePrimaryBlockTypes,
 } from "@/features/workspace/utils/workspace-block-registry";
-import type { WorkspaceAddBlockCommandView } from "@/components/workspace/node/workspace-add-block-command";
+import type { WorkspaceAddBlockCommandView } from "@/features/workspace/node/workspace-add-block-command";
 
 type WorkspaceNodeEmptyStateProps = {
   canEdit: boolean;

@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
-import { useWorkspaceStore } from "@/stores/workspace";
+import { useWorkspaceStore } from "@/features/workspace/workspace-local-state";
 import {
   getActiveDashboardNodeMention,
   getDashboardNodeMentionSuggestions,

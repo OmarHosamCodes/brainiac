@@ -7,8 +7,8 @@ import { Loader2, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
+import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";

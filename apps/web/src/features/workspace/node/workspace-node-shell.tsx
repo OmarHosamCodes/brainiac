@@ -20,14 +20,14 @@ import {
 import { Link } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { WorkspaceNodeBlockRenderer } from "@/components/workspace/node/workspace-node-block-renderer";
+import { WorkspaceNodeBlockRenderer } from "@/features/workspace/node/workspace-node-block-renderer";
 import {
   WorkspaceAddBlockCommand,
   type WorkspaceAddBlockCommandView,
-} from "@/components/workspace/node/workspace-add-block-command";
-import { WorkspaceNodeEmptyState } from "@/components/workspace/node/workspace-node-empty-state";
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import type { WorkspaceSaveBadge } from "@/components/workspace/node/context";
+} from "@/features/workspace/node/workspace-add-block-command";
+import { WorkspaceNodeEmptyState } from "@/features/workspace/node/workspace-node-empty-state";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
+import type { WorkspaceSaveBadge } from "@/features/workspace/node/context";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { cn } from "@/lib/utils";

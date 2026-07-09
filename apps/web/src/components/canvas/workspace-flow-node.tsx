@@ -8,7 +8,7 @@ import {
   NODE_MIN_WIDTH,
   type WorkspaceFlowNodeData,
 } from "@/lib/canvas/workspace-flow-adapter";
-import { getWorkspaceNodeTintStyle } from "@/lib/utils/workspace-node-dashboard";
+import { getWorkspaceNodeTintStyle } from "@/features/workspace/utils/workspace-node-dashboard";
 import { cn } from "@/lib/utils";
 
 export type WorkspaceFlowNode = Node<WorkspaceFlowNodeData, "workspace">;

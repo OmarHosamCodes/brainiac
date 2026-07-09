@@ -46,7 +46,7 @@ import {
 import {
   getWorkspaceBlockPreset,
   type WorkspaceBlockPresetId,
-} from "@/lib/utils/workspace-block-presets";
+} from "@/features/workspace/utils/workspace-block-presets";
 
 export type CreateWorkspaceBlockOptions = {
   title?: string;

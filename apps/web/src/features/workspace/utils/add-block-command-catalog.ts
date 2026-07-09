@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils";
 import {
   getDefaultBlockTitle,
   createWorkspaceBlockByType,
-} from "@/lib/utils/create-workspace-block";
+} from "@/features/workspace/utils/create-workspace-block";
 import {
   workspaceBlockPresets,
   type WorkspaceBlockPresetId,
-} from "@/lib/utils/workspace-block-presets";
+} from "@/features/workspace/utils/workspace-block-presets";
 import {
   getWorkspaceBlockRegistryEntry,
   workspacePrimaryBlockTypes,

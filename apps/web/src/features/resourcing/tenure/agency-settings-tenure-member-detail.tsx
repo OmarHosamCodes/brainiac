@@ -2,8 +2,8 @@ import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEffect, useMemo, useState } from "react";
 
-import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-checkbox";
-import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
+import { BlockCheckbox } from "@/features/workspace/node/blocks/shared/block-checkbox";
+import { BlockSelect } from "@/features/workspace/node/blocks/shared/block-select";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";

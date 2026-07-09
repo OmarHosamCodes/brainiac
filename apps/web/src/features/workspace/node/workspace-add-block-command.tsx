@@ -2,7 +2,7 @@ import type { WorkspaceBlock } from "@brainiac/workspace";
 import { ArrowLeft, LayoutTemplate } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { Button } from "@/ui/button";
 import {
   Command,

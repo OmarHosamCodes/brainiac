@@ -32,25 +32,15 @@ const GOLDEN_VIEW_ALLOWLIST = new Set([
 ]);
 
 const GOLDEN_LIB_STORE_ALLOWLIST = new Set([
-  "apps/web/src/stores/workspace.ts",
-  "apps/web/src/lib/workspace/use-node-page.ts",
-  "apps/web/src/lib/workspace/use-node-sharing.ts",
   "apps/web/src/stores/dashboard-agent-chat.ts",
   "apps/web/src/stores/team.ts",
   "apps/web/src/pages/billing-page.tsx",
   "apps/web/src/pages/marketplace-page.tsx",
   "apps/web/src/pages/login-page.tsx",
-  // Workspace files to move in Phase 4
+  // Phase 4 move targets — workspace files
   "apps/web/src/lib/canvas/workspace-flow-adapter.ts",
   "apps/web/src/lib/constants/workspace-node-options.ts",
   "apps/web/src/lib/schemas/workspace-node.ts",
-  "apps/web/src/lib/utils/workspace-block-presets.ts",
-  "apps/web/src/lib/utils/workspace-block-registry.ts",
-  "apps/web/src/lib/utils/workspace-marketplace.ts",
-  "apps/web/src/lib/utils/workspace-node-connections.test.ts",
-  "apps/web/src/lib/utils/workspace-node-connections.ts",
-  "apps/web/src/lib/utils/workspace-node-dashboard.ts",
-  "apps/web/src/lib/utils/workspace-node-formatters.ts",
 ]);
 
 /** @type {{ file: string; line: number; rule: string; detail: string }[]} */

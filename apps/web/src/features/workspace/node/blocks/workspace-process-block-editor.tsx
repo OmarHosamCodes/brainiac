@@ -6,9 +6,9 @@ import {
 import { ChevronDown, ChevronUp, ListChecks, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { BlockProgressBar } from "@/components/workspace/node/blocks/shared/block-progress-bar";
+import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
+import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";

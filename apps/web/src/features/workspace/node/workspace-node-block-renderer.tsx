@@ -5,7 +5,7 @@ import { Suspense, useEffect, useRef } from "react";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { getWorkspaceBlockRegistryEntry } from "@/features/workspace/utils/workspace-block-registry";
 
 type WorkspaceNodeBlockRendererProps = {

@@ -57,174 +57,171 @@ function lazyBlockEditor(
 }
 
 const WorkspaceTaskListBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-task-list-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-task-list-block-editor"),
   "WorkspaceTaskListBlockEditor",
 );
 const WorkspaceNotesBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-notes-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-notes-block-editor"),
   "WorkspaceNotesBlockEditor",
 );
 const WorkspaceTableBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-table-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-table-block-editor"),
   "WorkspaceTableBlockEditor",
 );
 const WorkspaceChecklistBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-checklist-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-checklist-block-editor"),
   "WorkspaceChecklistBlockEditor",
 );
 const WorkspaceDecisionBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-decision-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-decision-block-editor"),
   "WorkspaceDecisionBlockEditor",
 );
 const WorkspaceProsConsBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-pros-cons-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-pros-cons-block-editor"),
   "WorkspaceProsConsBlockEditor",
 );
 const WorkspaceSwotBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-swot-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-swot-block-editor"),
   "WorkspaceSwotBlockEditor",
 );
 const WorkspaceTrackerBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-tracker-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-tracker-block-editor"),
   "WorkspaceTrackerBlockEditor",
 );
 const WorkspaceAiPromptBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-ai-prompt-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-ai-prompt-block-editor"),
   "WorkspaceAiPromptBlockEditor",
 );
 const WorkspaceHabitGridBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-habit-grid-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-habit-grid-block-editor"),
   "WorkspaceHabitGridBlockEditor",
 );
 const WorkspaceProcessBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-process-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-process-block-editor"),
   "WorkspaceProcessBlockEditor",
 );
 const Workspace2x2MatrixBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-2x2-matrix-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-2x2-matrix-block-editor"),
   "Workspace2x2MatrixBlockEditor",
 );
 const WorkspaceCourseRoadmapBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-course-roadmap-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-course-roadmap-block-editor"),
   "WorkspaceCourseRoadmapBlockEditor",
 );
 const WorkspaceLearningOutcomesMatrixBlockEditor = lazyBlockEditor(
-  () =>
-    import("@/components/workspace/node/blocks/workspace-learning-outcomes-matrix-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-learning-outcomes-matrix-block-editor"),
   "WorkspaceLearningOutcomesMatrixBlockEditor",
 );
 const WorkspaceTimeOrchestratorBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-time-orchestrator-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-time-orchestrator-block-editor"),
   "WorkspaceTimeOrchestratorBlockEditor",
 );
 const WorkspaceCohortHealthDashboardBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-cohort-health-dashboard-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-cohort-health-dashboard-block-editor"),
   "WorkspaceCohortHealthDashboardBlockEditor",
 );
 const WorkspaceEisenhowerMatrixBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-eisenhower-matrix-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-eisenhower-matrix-block-editor"),
   "WorkspaceEisenhowerMatrixBlockEditor",
 );
 const WorkspaceLeadershipRhythmPlannerBlockEditor = lazyBlockEditor(
-  () =>
-    import("@/components/workspace/node/blocks/workspace-leadership-rhythm-planner-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-leadership-rhythm-planner-block-editor"),
   "WorkspaceLeadershipRhythmPlannerBlockEditor",
 );
 const WorkspaceKanbanBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-kanban-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-kanban-block-editor"),
   "WorkspaceKanbanBlockEditor",
 );
 const WorkspaceTimelineBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-timeline-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-timeline-block-editor"),
   "WorkspaceTimelineBlockEditor",
 );
 const WorkspaceSkillsHeatMapBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-skills-heat-map-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-skills-heat-map-block-editor"),
   "WorkspaceSkillsHeatMapBlockEditor",
 );
 const WorkspaceDelegationMatrixBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-delegation-matrix-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-delegation-matrix-block-editor"),
   "WorkspaceDelegationMatrixBlockEditor",
 );
 const WorkspaceTalentGridBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-talent-grid-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-talent-grid-block-editor"),
   "WorkspaceTalentGridBlockEditor",
 );
 const WorkspaceSeatPlannerBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-seat-planner-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-seat-planner-block-editor"),
   "WorkspaceSeatPlannerBlockEditor",
 );
 const WorkspaceDealScoringMatrixBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-deal-scoring-matrix-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-deal-scoring-matrix-block-editor"),
   "WorkspaceDealScoringMatrixBlockEditor",
 );
 const WorkspacePipelineFunnelBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-pipeline-funnel-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-pipeline-funnel-block-editor"),
   "WorkspacePipelineFunnelBlockEditor",
 );
 const WorkspaceForecastConfidenceBoardBlockEditor = lazyBlockEditor(
-  () =>
-    import("@/components/workspace/node/blocks/workspace-forecast-confidence-board-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-forecast-confidence-board-block-editor"),
   "WorkspaceForecastConfidenceBoardBlockEditor",
 );
 const WorkspaceContentPipelineBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-content-pipeline-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-content-pipeline-block-editor"),
   "WorkspaceContentPipelineBlockEditor",
 );
 const WorkspaceContentQualityRadarBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-content-quality-radar-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-content-quality-radar-block-editor"),
   "WorkspaceContentQualityRadarBlockEditor",
 );
 const WorkspaceContentRoiTrackerBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-content-roi-tracker-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-content-roi-tracker-block-editor"),
   "WorkspaceContentRoiTrackerBlockEditor",
 );
 const WorkspaceAuthorityScorecardBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-authority-scorecard-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-authority-scorecard-block-editor"),
   "WorkspaceAuthorityScorecardBlockEditor",
 );
 const WorkspaceHookBankBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-hook-bank-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-hook-bank-block-editor"),
   "WorkspaceHookBankBlockEditor",
 );
 const WorkspaceMessageHouseBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-message-house-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-message-house-block-editor"),
   "WorkspaceMessageHouseBlockEditor",
 );
 const WorkspaceScorecardBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-scorecard-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-scorecard-block-editor"),
   "WorkspaceScorecardBlockEditor",
 );
 const WorkspaceOkrTrackerBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-okr-tracker-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-okr-tracker-block-editor"),
   "WorkspaceOkrTrackerBlockEditor",
 );
 const WorkspaceDecisionMatrixBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-decision-matrix-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-decision-matrix-block-editor"),
   "WorkspaceDecisionMatrixBlockEditor",
 );
 const WorkspaceBusinessModelCanvasBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-business-model-canvas-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-business-model-canvas-block-editor"),
   "WorkspaceBusinessModelCanvasBlockEditor",
 );
 const WorkspaceAssumptionTrackerBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-assumption-tracker-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-assumption-tracker-block-editor"),
   "WorkspaceAssumptionTrackerBlockEditor",
 );
 const WorkspaceProfitabilityCashFlowBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-profitability-cash-flow-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-profitability-cash-flow-block-editor"),
   "WorkspaceProfitabilityCashFlowBlockEditor",
 );
 const WorkspacePricingSimulatorBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-pricing-simulator-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-pricing-simulator-block-editor"),
   "WorkspacePricingSimulatorBlockEditor",
 );
 const WorkspaceCollectionsTrackerBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-collections-tracker-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-collections-tracker-block-editor"),
   "WorkspaceCollectionsTrackerBlockEditor",
 );
 const WorkspaceCustomBlockEditor = lazyBlockEditor(
-  () => import("@/components/workspace/node/blocks/workspace-custom-block-editor"),
+  () => import("@/features/workspace/node/blocks/workspace-custom-block-editor"),
   "WorkspaceCustomBlockEditor",
 );
 

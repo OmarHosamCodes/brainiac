@@ -6,13 +6,13 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 
-import type { WorkspaceNodeEditorContextValue } from "@/components/workspace/node/context";
+import type { WorkspaceNodeEditorContextValue } from "@/features/workspace/node/context";
 import { useWorkspaceNodeSharing } from "./use-workspace-node-sharing";
 import {
   createWorkspaceBlockByType,
   createWorkspaceBlocksFromPreset,
-} from "@/lib/utils/create-workspace-block";
-import type { WorkspaceBlockPresetId } from "@/lib/utils/workspace-block-presets";
+} from "@/features/workspace/utils/create-workspace-block";
+import type { WorkspaceBlockPresetId } from "@/features/workspace/utils/workspace-block-presets";
 import { useWorkspaceQuery } from "@/features/workspace/hooks/use-workspace-query";
 
 export function useWorkspaceNodePage() {

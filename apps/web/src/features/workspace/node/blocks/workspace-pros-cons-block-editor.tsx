@@ -6,12 +6,12 @@ import {
 import { MinusCircle, Plus, PlusCircle, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
-import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
+import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import {
   ProsConsBalanceBar,
   ProsConsWeightButtons,
-} from "@/components/workspace/node/blocks/shared/pros-cons-helpers";
+} from "@/features/workspace/node/blocks/shared/pros-cons-helpers";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";

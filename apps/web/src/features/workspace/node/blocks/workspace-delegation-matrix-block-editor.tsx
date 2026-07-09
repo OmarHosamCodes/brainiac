@@ -8,10 +8,10 @@ import {
 import { ArrowRight, BadgeDollarSign, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
-import { BlockFieldLabel } from "@/components/workspace/node/blocks/shared/block-field-label";
-import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
+import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { BlockFieldLabel } from "@/features/workspace/node/blocks/shared/block-field-label";
+import { BlockSelect } from "@/features/workspace/node/blocks/shared/block-select";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";

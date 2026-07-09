@@ -1,6 +1,6 @@
 import { LayoutGrid } from "lucide-react";
 
-import type { WorkspaceSaveBadge } from "@/stores/workspace";
+import type { WorkspaceSaveBadge } from "@/features/workspace/workspace-local-state";
 import { cn } from "@/lib/utils";
 
 type WorkspaceBoardStatusProps = {

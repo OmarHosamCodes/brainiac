@@ -16,7 +16,7 @@ import type {
 } from "@brainiac/workspace";
 import { createContext, useContext, type ReactNode } from "react";
 
-import type { WorkspaceBlockPresetId } from "@/lib/utils/workspace-block-presets";
+import type { WorkspaceBlockPresetId } from "@/features/workspace/utils/workspace-block-presets";
 
 export type WorkspaceBlockOperationState = {
   pending: boolean;

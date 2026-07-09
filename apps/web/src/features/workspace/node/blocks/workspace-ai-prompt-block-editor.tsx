@@ -2,9 +2,9 @@ import type { WorkspaceAiPromptBlock } from "@brainiac/workspace";
 import { AlertCircle, History, Sparkles, Terminal, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-checkbox";
+import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
+import { BlockCheckbox } from "@/features/workspace/node/blocks/shared/block-checkbox";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Textarea } from "@/ui/textarea";

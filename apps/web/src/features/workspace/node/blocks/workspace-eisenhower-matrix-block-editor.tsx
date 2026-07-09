@@ -27,12 +27,12 @@ import {
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
-import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-checkbox";
-import { BlockProgressBar } from "@/components/workspace/node/blocks/shared/block-progress-bar";
-import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
-import { WorkspaceOrchestratorSourcesModal } from "@/components/workspace/node/blocks/workspace-orchestrator-sources-modal";
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
+import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { BlockCheckbox } from "@/features/workspace/node/blocks/shared/block-checkbox";
+import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
+import { BlockSelect } from "@/features/workspace/node/blocks/shared/block-select";
+import { WorkspaceOrchestratorSourcesModal } from "@/features/workspace/node/blocks/workspace-orchestrator-sources-modal";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";

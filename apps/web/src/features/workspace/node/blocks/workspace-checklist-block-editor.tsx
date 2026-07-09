@@ -7,10 +7,10 @@ import { Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
 import { cn } from "@/lib/utils";
-import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-checkbox";
-import { BlockProgressBar } from "@/components/workspace/node/blocks/shared/block-progress-bar";
+import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
+import { BlockCheckbox } from "@/features/workspace/node/blocks/shared/block-checkbox";
+import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";

@@ -2,8 +2,8 @@ import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-checkbox";
-import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
+import { BlockCheckbox } from "@/features/workspace/node/blocks/shared/block-checkbox";
+import { BlockSelect } from "@/features/workspace/node/blocks/shared/block-select";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import {

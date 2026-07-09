@@ -1,6 +1,6 @@
 import { getWorkspaceNodePreview, type WorkspaceNode } from "@brainiac/workspace";
 
-import { getWorkspaceNodeTintStyle } from "@/lib/utils/workspace-node-dashboard";
+import { getWorkspaceNodeTintStyle } from "@/features/workspace/utils/workspace-node-dashboard";
 import { cn } from "@/lib/utils";
 
 type MarketingNodeCardProps = {

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 
 import { DashboardAgentChatPanel } from "@/components/dashboard/dashboard-agent-chat-panel";
-import { WorkspaceNodeEditorProvider } from "@/components/workspace/node/context";
+import { WorkspaceNodeEditorProvider } from "@/features/workspace/node/context";
 import { WorkspaceNodeShell } from "@/features/workspace/node/workspace-node-shell";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";

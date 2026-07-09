@@ -3,7 +3,7 @@ import { WORKSPACE_TASK_DOMAINS, getWorkspaceTaskDomainLabel } from "@brainiac/w
 import type {
   WorkspaceNodeDomainOption,
   WorkspaceNodePriorityOption,
-} from "@/components/workspace/node/context";
+} from "@/features/workspace/node/context";
 
 export const workspaceNodePriorityOptions = [
   { label: "None", value: "" },

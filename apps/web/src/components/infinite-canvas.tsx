@@ -44,7 +44,7 @@ import { dashboardEmptyPanelClass, dashboardFocusRingClass } from "@/lib/utils/d
 import {
   getCanonicalConnectionPair,
   getEligibleConnectionTargetIds,
-} from "@/lib/utils/workspace-node-connections";
+} from "@/features/workspace/utils/workspace-node-connections";
 import { cn } from "@/lib/utils";
 
 export type InfiniteCanvasProps = {

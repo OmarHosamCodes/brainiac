@@ -10,9 +10,9 @@ import {
 import { Plus, Target, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 
-import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
-import { BlockProgressBar } from "@/components/workspace/node/blocks/shared/block-progress-bar";
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
+import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { cn } from "@/lib/utils";

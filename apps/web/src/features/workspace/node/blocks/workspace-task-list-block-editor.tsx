@@ -8,12 +8,12 @@ import {
 import { Calendar, ChevronUp, Clock, Plus, Settings2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
-import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-checkbox";
-import { BlockFieldLabel } from "@/components/workspace/node/blocks/shared/block-field-label";
-import { BlockProgressBar } from "@/components/workspace/node/blocks/shared/block-progress-bar";
-import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
+import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
+import { BlockCheckbox } from "@/features/workspace/node/blocks/shared/block-checkbox";
+import { BlockFieldLabel } from "@/features/workspace/node/blocks/shared/block-field-label";
+import { BlockProgressBar } from "@/features/workspace/node/blocks/shared/block-progress-bar";
+import { BlockSelect } from "@/features/workspace/node/blocks/shared/block-select";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";

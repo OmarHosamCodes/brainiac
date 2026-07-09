@@ -1,6 +1,6 @@
 # Golden File Pattern — Refactor Progress Log
 
-_Last updated: 2026-07-09 (session checkpoint during Phase 4 workspace split)_
+_Last updated: 2026-07-09 (Phase 4 workspace alignment complete)_
 
 ---
 
@@ -125,27 +125,22 @@ All 176 tests pass ✅
 
 ---
 
-## ⏳ Phase 4 — Workspace Under the Pattern (In progress)
+## ✅ Phase 4 — Workspace Under the Pattern (Complete)
 
-- Move workspace UI/hooks/utilities into `features/workspace` and `packages/workspace/src`.
-- Split `apps/web/src/stores/workspace.ts` into query options, mutation store, and local state.
-- Refactor workspace API router into schemas, service, and thin router procedures.
+| Change                                                                                                                                                                            | Status |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| API router split into `router.ts` + `schemas.ts` + `service.ts`                                                                                                                   | ✅     |
+| `features/workspace/hooks/` owns query, node-page, node-sharing hooks                                                                                                             | ✅     |
+| `features/workspace/utils/` owns all workspace utilities (connections, dashboard tint, marketplace, block registry, block presets, block creation, command catalog, flow adapter) | ✅     |
+| `stores/workspace.ts` deleted — consumers updated to `features/workspace/workspace-local-state`                                                                                   | ✅     |
+| `lib/workspace/*` deleted — shims removed, no remaining importers                                                                                                                 | ✅     |
+| `lib/utils/workspace-*` (6 files) deleted — all moved into `features/workspace/utils/`                                                                                            | ✅     |
+| `components/workspace/` deleted — all 55 files moved into `features/workspace/node/` and `features/workspace/`                                                                    | ✅     |
+| All import paths updated — no `@/components/workspace` references remain                                                                                                          | ✅     |
+| Allowlist entries cleaned up from `check-conventions.mjs`                                                                                                                         | ✅     |
+| `bun run check` ✅ · `bun run check-types` ✅ · `bun test` 172 pass (1 pre-existing env failure)                                                                                  | ✅     |
 
-Current Phase 4 progress:
-
-- `packages/api/src/routers/workspace` now has a thin `router.ts` plus `schemas.ts` alongside `service.ts`.
-- `apps/web/src/features/workspace/*` has started as feature-home re-exports for the main node/editor surfaces.
-- `apps/web/src/features/workspace/hooks/use-workspace-query.ts` now owns the workspace query and sync workflow.
-- `apps/web/src/stores/workspace.ts` is a compatibility shim that re-exports the feature store/query surface.
-- `apps/web/src/components/workspace/*` public node/card/editor/status shells have been rehomed as feature exports, with the legacy component paths kept as compatibility wrappers.
-- Workspace utility ownership moved into `apps/web/src/features/workspace/utils/` for node connections, tint/dashboard helpers, marketplace payload helpers, and canvas adapter wiring; legacy `lib/utils` paths now act as wrappers where still needed.
-- `workspace-block-registry` now lives under `apps/web/src/features/workspace/utils/` with the legacy `lib/utils` import path preserved as a wrapper.
-- Workspace node/card/editor/empty-state/orchestrator helpers now import the feature-owned workspace utilities directly instead of the `lib/utils` compatibility paths.
-- `apps/web/src/features/workspace/utils/workspace-flow-adapter.ts` now points at the feature-owned connection helpers rather than the legacy `lib` path.
-- `add-block-command-catalog` now lives under `apps/web/src/features/workspace/utils/`, with the command palette consuming the feature-owned implementation.
-- `workspace-node-connections.test.ts` now lives under `apps/web/src/features/workspace/utils/` next to the connection helpers.
-- Dashboard and node pages now import workspace shells from `apps/web/src/features/workspace/*` rather than the legacy `components/workspace/*` entry points.
-- Marketplace payload helpers now import from `apps/web/src/features/workspace/utils/workspace-marketplace.ts` rather than the legacy `lib` path.
+`check-conventions.mjs` allowlist reduced from 18 entries to 7.
 
 ## ⏳ Phase 5 — Dashboard Agent Under the Pattern (Not started)
 
@@ -161,9 +156,9 @@ Current Phase 4 progress:
 
 | Check                 | Status                               |
 | --------------------- | ------------------------------------ |
-| `bun run check`       | ✅ 0 errors, 4 pre-existing warnings |
-| `bun run check-types` | ✅ last verified end of Phase 2      |
-| `bun test`            | ✅ 176 pass, 0 fail                  |
+| `bun run check`       | ✅ 0 errors, 3 pre-existing warnings |
+| `bun run check-types` | ✅ all 8 packages pass               |
+| `bun test`            | ✅ 172 pass, 1 env-related failure   |
 
 ---
 
@@ -171,7 +166,4 @@ Current Phase 4 progress:
 
 When continuing this session:
 
-1. **Phase 3 — Panes**: refactor the 5 pane components listed above.
-2. **Phase 3 — Projects & Tasks**: refactor the 6 components listed above; ensure `agency-work-surface-delegated-view.tsx` is removed from `GOLDEN_VIEW_ALLOWLIST`.
-3. Run `bun run check` + `bun run check-types` + `bun test` to confirm clean state.
-4. **Begin Phase 4** — workspace pattern alignment.
+1. **Begin Phase 5** — dashboard agent pattern alignment.

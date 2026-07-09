@@ -2,9 +2,9 @@ import type { WorkspaceCustomBlock, WorkspaceCustomBlockField } from "@brainiac/
 import { AlertCircle, AlertTriangle, Loader2, Play } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
-import { BlockCheckbox } from "@/components/workspace/node/blocks/shared/block-checkbox";
-import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
+import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";
+import { BlockCheckbox } from "@/features/workspace/node/blocks/shared/block-checkbox";
+import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";

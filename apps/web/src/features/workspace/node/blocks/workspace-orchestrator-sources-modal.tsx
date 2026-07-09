@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
+import { BlockSelect } from "@/features/workspace/node/blocks/shared/block-select";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/ui/dialog";
