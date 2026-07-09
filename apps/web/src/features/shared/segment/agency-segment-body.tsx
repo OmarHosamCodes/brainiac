@@ -3,7 +3,7 @@ import { AgencyDashboardSurface } from "@/features/dashboard/agency-dashboard-su
 import { AgencyProjectDetail } from "@/features/projects/agency-project-detail";
 import { AgencyProjectsTable } from "@/features/projects/agency-projects-table";
 import { AgencyReportsSurface } from "@/features/reports/agency-reports-surface";
-import type { AgencySegmentId } from "@/lib/agency-segments";
+import type { AgencySegmentId } from "@/features/shared/agency-segments";
 import { useAgencySegmentSurfaceFilters } from "@/features/shared/agency-segment-filters";
 
 type AgencySegmentBodyProps = {

@@ -3,7 +3,8 @@ import { agencyOpsClient, agencyOpsClientContact } from "@brainiac/db/schema";
 import { db } from "@brainiac/db";
 import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
-import { type AgencyClientArchiveFilter, getClientByIdForTeam } from "../shared/utils";
+import { getClientByIdForTeam } from "../shared/lookup-helpers";
+import { type AgencyClientArchiveFilter } from "../shared/report-helpers";
 import { requireTeamMembership } from "../shared/membership";
 
 type AgencyClientRecord = {

@@ -21,6 +21,39 @@ const DYNAMIC_IMPORT_ALLOWLIST = [
   /\.test\.(ts|tsx)$/,
 ];
 
+// Allowlists for Golden File conventions.
+// Each entry maps to the Phase that will resolve/remove it.
+const GOLDEN_VIEW_ALLOWLIST = new Set([
+  "apps/web/src/features/task-management/work-surface/agency-work-surface-delegated-view.tsx",
+  "apps/web/src/features/task-management/task-list/agency-task-list-view.tsx",
+  "apps/web/src/features/task-management/work-surface/agency-work-surface-my-tasks-view.tsx",
+  "apps/web/src/features/task-management/work-surface/agency-work-surface-task-table-row-view.tsx",
+  "apps/web/src/features/time-tracking/entries/agency-time-entry-row-view.tsx",
+  "apps/web/src/features/shared/choosers/agency-member-chooser-view.tsx",
+]);
+
+const GOLDEN_LIB_STORE_ALLOWLIST = new Set([
+  "apps/web/src/stores/workspace.ts",
+  "apps/web/src/lib/workspace/use-node-page.ts",
+  "apps/web/src/lib/workspace/use-node-sharing.ts",
+  "apps/web/src/stores/dashboard-agent-chat.ts",
+  "apps/web/src/stores/team.ts",
+  "apps/web/src/pages/billing-page.tsx",
+  "apps/web/src/pages/marketplace-page.tsx",
+  "apps/web/src/pages/login-page.tsx",
+  // Workspace files to move in Phase 4
+  "apps/web/src/lib/canvas/workspace-flow-adapter.ts",
+  "apps/web/src/lib/constants/workspace-node-options.ts",
+  "apps/web/src/lib/schemas/workspace-node.ts",
+  "apps/web/src/lib/utils/workspace-block-presets.ts",
+  "apps/web/src/lib/utils/workspace-block-registry.ts",
+  "apps/web/src/lib/utils/workspace-marketplace.ts",
+  "apps/web/src/lib/utils/workspace-node-connections.test.ts",
+  "apps/web/src/lib/utils/workspace-node-connections.ts",
+  "apps/web/src/lib/utils/workspace-node-dashboard.ts",
+  "apps/web/src/lib/utils/workspace-node-formatters.ts",
+]);
+
 /** @type {{ file: string; line: number; rule: string; detail: string }[]} */
 const violations = [];
 
@@ -60,9 +93,57 @@ function scanFile(filePath, content) {
   const lines = content.split("\n");
   const isTypeScript = /\.tsx?$/.test(normalized);
 
+  const isViewFile = normalized.endsWith("-view.tsx") || normalized.endsWith("/view.tsx");
+  const isRouterFile =
+    normalized.startsWith("packages/api/src/routers/") &&
+    (normalized.endsWith("/router.ts") ||
+      normalized.endsWith("/index.ts") ||
+      normalized.endsWith("Router.ts"));
+  const isGenericFeatureUtil =
+    normalized.startsWith("apps/web/src/features/") &&
+    (normalized.endsWith("/utils.ts") ||
+      normalized.endsWith("/helpers.ts") ||
+      normalized.endsWith("/data.ts") ||
+      normalized.endsWith("/utils.tsx") ||
+      normalized.endsWith("/helpers.tsx") ||
+      normalized.endsWith("/data.tsx"));
+
+  if (isGenericFeatureUtil) {
+    violations.push({
+      file: normalized,
+      line: 1,
+      rule: "golden-no-generic-utils",
+      detail: "Generic utils/helpers/data files inside features are blocked",
+    });
+  }
+
+  const isUnderLibOrStores =
+    normalized.startsWith("apps/web/src/lib/") || normalized.startsWith("apps/web/src/stores/");
+  const hasFeaturePrefix =
+    /^(agency|workspace|agent|team)-/.test(normalized.split("/").pop() || "") ||
+    normalized.includes("/workspace/") ||
+    normalized.includes("/queries/agency") ||
+    normalized.startsWith("apps/web/src/stores/workspace") ||
+    normalized.startsWith("apps/web/src/stores/dashboard-agent-chat") ||
+    normalized.startsWith("apps/web/src/stores/team");
+
+  if (isUnderLibOrStores && hasFeaturePrefix && !GOLDEN_LIB_STORE_ALLOWLIST.has(normalized)) {
+    violations.push({
+      file: normalized,
+      line: 1,
+      rule: "golden-no-feature-lib-store",
+      detail: "Feature-specific file must live inside features/ folder, not lib/ or stores/",
+    });
+  }
+
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     const lineNumber = index + 1;
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("/*")) {
+      continue;
+    }
 
     if (line.includes("await import(") && !isAllowed(filePath, DYNAMIC_IMPORT_ALLOWLIST)) {
       violations.push({
@@ -107,6 +188,66 @@ function scanFile(filePath, content) {
         rule: "cn-classname",
         detail: 'Use cn() instead of className={[...].join(" ")}',
       });
+    }
+
+    if (isViewFile && !GOLDEN_VIEW_ALLOWLIST.has(normalized)) {
+      const isImport = trimmed.startsWith("import ");
+      const isTypeImport = trimmed.startsWith("import type") || /\bimport\s+type\s+/.test(line);
+
+      if (isImport && !isTypeImport) {
+        const importsQueryOrOrpc =
+          trimmed.includes("@tanstack/react-query") ||
+          trimmed.includes("@tanstack/vue-query") ||
+          trimmed.includes("@tanstack/query") ||
+          trimmed.includes("@/lib/orpc") ||
+          trimmed.includes("@orpc/") ||
+          trimmed.includes("orpcClient") ||
+          trimmed.includes("zustand");
+        const importsStore = trimmed.includes("/stores/") || trimmed.includes("@/stores/");
+
+        if (importsQueryOrOrpc) {
+          violations.push({
+            file: normalized,
+            line: lineNumber,
+            rule: "golden-view-no-query-orpc",
+            detail: "View file cannot import TanStack Query, oRPC or Zustand directly",
+          });
+        }
+        if (importsStore) {
+          violations.push({
+            file: normalized,
+            line: lineNumber,
+            rule: "golden-view-no-stores",
+            detail: "View file cannot import feature or global stores directly",
+          });
+        }
+      }
+    }
+
+    if (isRouterFile) {
+      const isImport = trimmed.startsWith("import ");
+      if (isImport) {
+        const importsDbOrDrizzle =
+          trimmed.includes("@brainiac/db") || trimmed.includes("drizzle-orm");
+        const importsStore = trimmed.includes("/stores/") || trimmed.includes("@/stores/");
+
+        if (importsDbOrDrizzle) {
+          violations.push({
+            file: normalized,
+            line: lineNumber,
+            rule: "golden-router-no-db",
+            detail: "Router file cannot import DB or Drizzle directly",
+          });
+        }
+        if (importsStore) {
+          violations.push({
+            file: normalized,
+            line: lineNumber,
+            rule: "golden-router-no-stores",
+            detail: "Router file cannot import feature or global stores directly",
+          });
+        }
+      }
     }
   }
 }

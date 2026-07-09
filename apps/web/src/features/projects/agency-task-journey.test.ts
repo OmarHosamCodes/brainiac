@@ -7,7 +7,10 @@ import {
   shouldShowJourneyAnchorForDiscovery,
   unlinkTimeEntriesFromJourneyStep,
 } from "@/features/projects/agency-task-journey";
-import type { AgencyProjectJourney, AgencyProjectTask } from "@/features/task-management/agency-work";
+import type {
+  AgencyProjectJourney,
+  AgencyProjectTask,
+} from "@/features/task-management/agency-work";
 
 const baseTask = {
   teamId: "team-1",

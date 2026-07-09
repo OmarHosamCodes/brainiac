@@ -20,7 +20,7 @@ import {
 } from "@/components/app-shell-topbar";
 import { AppShellPage } from "@/components/app-shell-page";
 import { AgencySegmentFiltersRoot } from "@/features/shared/agency-segment-filters";
-import { useAgencySyncStatus } from "@/lib/queries/agency-sync";
+import { useAgencySyncStatus } from "@/features/shared/agency-sync";
 import { useAgencyJourneyLiveSync } from "@/features/task-management/hooks/use-agency-journey-live-sync";
 import { useAgencyBootGate } from "@/features/shared/use-agency-boot-gate";
 import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
@@ -29,13 +29,13 @@ import { useCurrentAgencyTeam } from "@/features/time-tracking/stores/agency-tim
 import {
   managementPaneForLegacySection,
   type AgencyManagementPaneId,
-} from "@/lib/agency-management-sections";
+} from "@/features/shared/agency-management-sections";
 import {
   AGENCY_SEGMENTS,
   LEGACY_AGENCY_SEGMENT_MAP,
   isLegacyAgencySegmentId,
   type AgencySegmentId,
-} from "@/lib/agency-segments";
+} from "@/features/shared/agency-segments";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import { shellContentInClass, shellPageBodyClass, shellPageClass } from "@/lib/utils/app-shell-ui";

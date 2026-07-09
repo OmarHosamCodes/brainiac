@@ -9,7 +9,10 @@ import { Skeleton } from "@/ui/skeleton";
 import { useAgencyCapacityQuery } from "@/features/shared/agency-queries";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { selectIsCapacityMutationPending, useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
+import {
+  selectIsCapacityMutationPending,
+  useAgencyOpsStore,
+} from "@/features/shared/stores/agency-ops";
 
 type AgencyResourcingSurfaceProps = {
   teamId: string;

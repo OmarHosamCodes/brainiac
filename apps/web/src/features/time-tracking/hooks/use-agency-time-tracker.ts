@@ -23,7 +23,10 @@ import {
 } from "@/features/shared/agency-queries";
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
-import { activeTimerStartToIso, startedAtToDateTimeDraft } from "@/features/time-tracking/time-entry-draft";
+import {
+  activeTimerStartToIso,
+  startedAtToDateTimeDraft,
+} from "@/features/time-tracking/time-entry-draft";
 import {
   selectIsTimerMutationPending,
   useAgencyTimeTrackingStore,

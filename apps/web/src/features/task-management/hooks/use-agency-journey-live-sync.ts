@@ -1,4 +1,4 @@
-import type { AgencyLiveEvent } from "@brainiac/api/routers/agency-ops/live";
+import type { AgencyLiveEvent } from "@brainiac/api/routers/agency-ops/live/live";
 import { useEffect } from "react";
 
 import {

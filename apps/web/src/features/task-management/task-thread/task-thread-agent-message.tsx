@@ -1,7 +1,10 @@
 import { Bot, Loader2 } from "lucide-react";
 
 import { renderSimpleMarkdown } from "@/lib/utils/render-simple-markdown";
-import { agencyAgentMessageCardClass, agencyAgentMessageCodeClass } from "@/features/shared/agency-ui";
+import {
+  agencyAgentMessageCardClass,
+  agencyAgentMessageCodeClass,
+} from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
 type TaskThreadAgentMessageProps = {

@@ -3,7 +3,11 @@ import { useEffect, useMemo, useRef } from "react";
 
 import { AgencyTaskClientGroupView } from "@/features/task-management/task-list/agency-task-client-group-view";
 import type { AgencyTaskClientDisplayGroup } from "@/features/task-management/agency-task-rail-grouping";
-import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/features/task-management/agency-work";
+import type {
+  AgencyProjectTask,
+  AgencyTaskProject,
+  TaskStatus,
+} from "@/features/task-management/agency-work";
 import type { TaskTrackingState } from "@/features/time-tracking/task-tracking-state";
 import { estimateDisplayRowHeight } from "@/features/task-management/agency-task-status";
 import { estimateClientGroupHeight } from "@/features/task-management/agency-task-rail-grouping";

@@ -3,7 +3,10 @@ import { useMemo } from "react";
 import { useAgencyTimeEntryRow } from "@/features/time-tracking/hooks/use-agency-time-entry-row";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import type { TimeEntryDraft } from "@/features/time-tracking/agency-time-entry";
-import type { CollapsedEntryGroup, TimeEntryRecord } from "@/features/time-tracking/group-time-entries";
+import type {
+  CollapsedEntryGroup,
+  TimeEntryRecord,
+} from "@/features/time-tracking/group-time-entries";
 
 import { AgencyTimeEntryRowView } from "@/features/time-tracking/entries/agency-time-entry-row-view";
 import { agencyTimeEntryMultiChildClass } from "@/features/shared/agency-ui";

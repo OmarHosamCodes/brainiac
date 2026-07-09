@@ -1,4 +1,4 @@
-import type { AgencySegmentId } from "@/lib/agency-segments";
+import type { AgencySegmentId } from "@/features/shared/agency-segments";
 import { useAgencyJourneyLiveSync } from "@/features/task-management/hooks/use-agency-journey-live-sync";
 import { useAgencyWorkSurface } from "@/features/task-management/hooks/use-agency-work-surface";
 import { AgencyWorkSurfaceTaskPane } from "@/features/task-management/containers/agency-work-surface-task-pane-container";

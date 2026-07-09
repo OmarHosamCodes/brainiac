@@ -1,6 +1,9 @@
 import { AgencyTimeEntryDayGroupView } from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
 import { agencyTimeWeekHeaderClass } from "@/features/shared/agency-ui";
-import type { CollapsedEntryGroup, TimeEntryWeekGroup } from "@/features/time-tracking/group-time-entries";
+import type {
+  CollapsedEntryGroup,
+  TimeEntryWeekGroup,
+} from "@/features/time-tracking/group-time-entries";
 import type { TimeEntryDraft } from "@/features/time-tracking/agency-time-entry";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 

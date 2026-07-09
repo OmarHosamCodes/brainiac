@@ -1,7 +1,19 @@
 import { z } from "zod";
 import { protectedProProcedure } from "../../../procedures";
-import { teamScopedInputSchema, agencyClientCategorySchema, agencyClientSchema } from "../shared/schemas";
-import { listAgencyClients, createAgencyClient, updateAgencyClient, archiveAgencyClient, unarchiveAgencyClient, getClientContact, upsertClientContact } from "./service";
+import {
+  teamScopedInputSchema,
+  agencyClientCategorySchema,
+  agencyClientSchema,
+} from "../shared/schemas";
+import {
+  listAgencyClients,
+  createAgencyClient,
+  updateAgencyClient,
+  archiveAgencyClient,
+  unarchiveAgencyClient,
+  getClientContact,
+  upsertClientContact,
+} from "./service";
 
 export const clientsRouter = {
   clients: {

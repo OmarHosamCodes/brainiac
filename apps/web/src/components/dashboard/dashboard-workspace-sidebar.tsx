@@ -14,14 +14,7 @@ import { useForm } from "react-hook-form";
 
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/ui/form";
 import { Input } from "@/ui/input";
 import { teamCreateFormSchema } from "@/lib/schemas";
 import {

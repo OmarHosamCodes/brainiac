@@ -1,10 +1,23 @@
 import { ORPCError } from "@orpc/server";
 import { db } from "@brainiac/db";
-import { agencyOpsActiveTimer, agencyOpsProjectTask, agencyOpsProject, agencyOpsProjectJourneyStep, agencyOpsProjectJourney, user, agencyOpsClient, agencyOpsTimeEntry, workspaceTeamMember } from "@brainiac/db/schema";
+import {
+  agencyOpsActiveTimer,
+  agencyOpsProjectTask,
+  agencyOpsProject,
+  agencyOpsProjectJourneyStep,
+  agencyOpsProjectJourney,
+  user,
+  agencyOpsClient,
+  agencyOpsTimeEntry,
+  workspaceTeamMember,
+} from "@brainiac/db/schema";
 import { eq, and, asc, isNull, desc, sql, gte, lte } from "drizzle-orm";
 import { createWorkspaceId } from "@brainiac/workspace";
 import { notifyTimerActivity } from "../../notifications/fanout";
-import { formatAvatarUrl, getProjectByIdForTeam, parseIsoDateTime, type ReportEntityFilterInput, applyReportEntityFilters } from "../shared/utils";
+import { formatAvatarUrl } from "../shared/avatar-helpers";
+import { getProjectByIdForTeam } from "../shared/lookup-helpers";
+import { parseIsoDateTime } from "../shared/date-helpers";
+import { type ReportEntityFilterInput, applyReportEntityFilters } from "../shared/report-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import { resolveAgencyTimerStopBinding } from "./resolve-agency-timer-stop-binding";
 import { publishAgencyTimerUpdated } from "../live/live";

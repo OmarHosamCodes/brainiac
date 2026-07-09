@@ -1,7 +1,11 @@
 import { AgencyTaskJourneyRowView } from "@/features/task-management/task-list/agency-task-journey-row-view";
 import { AgencyTaskRowView } from "@/features/task-management/task-list/agency-task-row-view";
 import type { TaskTrackingState } from "@/features/time-tracking/task-tracking-state";
-import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/features/task-management/agency-work";
+import type {
+  AgencyProjectTask,
+  AgencyTaskProject,
+  TaskStatus,
+} from "@/features/task-management/agency-work";
 import type { AgencyTaskDisplayRow } from "@/features/task-management/agency-task-blueprints";
 
 export type AgencyTaskDisplayRowViewProps = {

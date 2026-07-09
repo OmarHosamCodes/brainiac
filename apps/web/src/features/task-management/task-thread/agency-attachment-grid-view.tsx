@@ -3,13 +3,7 @@ import { cn } from "@/lib/utils";
 
 import { AgencyTaskMediaPlayer } from "@/features/task-management/task-thread/agency-task-media-player";
 import { Button } from "@/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/ui/dialog";
 import type { AgencyTaskMessageAttachment } from "@/features/task-management/agency-work";
 import {
   getAttachmentUrl,

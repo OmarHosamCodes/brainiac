@@ -1,5 +1,8 @@
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
-import { localDateKeyFromIso, todayLocalDateKey } from "@/features/time-tracking/format-agency-day-label";
+import {
+  localDateKeyFromIso,
+  todayLocalDateKey,
+} from "@/features/time-tracking/format-agency-day-label";
 
 export type TaskRecencyGroupId = "today" | "yesterday" | "earlier";
 

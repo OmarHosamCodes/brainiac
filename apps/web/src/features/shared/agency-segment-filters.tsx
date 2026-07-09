@@ -16,11 +16,14 @@ import type { AgencyListFiltersApplied } from "@/features/shared/use-agency-list
 import { useAgencyListFilters } from "@/features/shared/use-agency-list-filters";
 import type { AgencyTimeRangeFilters } from "@/features/shared/use-agency-time-range-filters";
 import { useAgencyTimeRangeFilters } from "@/features/shared/use-agency-time-range-filters";
-import type { AgencySegmentId } from "@/lib/agency-segments";
+import type { AgencySegmentId } from "@/features/shared/agency-segments";
 import { orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { parseBillableRateCents } from "@/lib/utils/format-rate";
-import { selectIsClientMutationPending, useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
+import {
+  selectIsClientMutationPending,
+  useAgencyOpsStore,
+} from "@/features/shared/stores/agency-ops";
 
 export type AgencySegmentSurfaceFilters =
   | { kind: "timeRange"; applied: AgencyTimeRangeFilters }

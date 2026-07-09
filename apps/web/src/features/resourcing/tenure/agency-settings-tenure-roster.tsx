@@ -2,7 +2,11 @@ import { ChevronRight, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import { agencyFocusRingClass } from "@/features/shared/agency-ui";
-import { formatTenureHours, tenureStatusClass, tenureStatusLabel } from "@/features/resourcing/tenure-utils";
+import {
+  formatTenureHours,
+  tenureStatusClass,
+  tenureStatusLabel,
+} from "@/features/resourcing/tenure-utils";
 
 type TenureMemberSummary = {
   userId: string;

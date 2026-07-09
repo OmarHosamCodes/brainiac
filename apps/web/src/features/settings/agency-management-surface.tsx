@@ -10,7 +10,7 @@ import {
   AGENCY_MANAGEMENT_PANES,
   isAgencyManagementPaneId,
   type AgencyManagementPaneId,
-} from "@/lib/agency-management-sections";
+} from "@/features/shared/agency-management-sections";
 import { LucideIcon } from "@/lib/lucide-icon";
 
 type AgencyManagementSurfaceProps = {

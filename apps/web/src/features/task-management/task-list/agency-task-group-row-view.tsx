@@ -2,7 +2,11 @@ import { Check, ChevronDown, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { AgencyTaskRowView } from "@/features/task-management/task-list/agency-task-row-view";
-import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/features/task-management/agency-work";
+import type {
+  AgencyProjectTask,
+  AgencyTaskProject,
+  TaskStatus,
+} from "@/features/task-management/agency-work";
 import type { TaskTrackingState } from "@/features/time-tracking/task-tracking-state";
 import type { AgencyProjectTaskGroup } from "@/features/task-management/agency-task-utils";
 import {

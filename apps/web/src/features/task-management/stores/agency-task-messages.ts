@@ -6,9 +6,7 @@ import { create } from "zustand";
 
 import { getQueryClient } from "@/lib/query-client";
 import { orpcClient } from "@/lib/orpc";
-import {
-  buildAgentPendingMessage,
-} from "@/features/task-management/agency-thread-motion";
+import { buildAgentPendingMessage } from "@/features/task-management/agency-thread-motion";
 import { createEmptyListOverlay } from "@/features/shared/agency-optimistic-merge";
 import { insertLiveTaskMessageIntoInfiniteCache } from "@/features/task-management/agency-task-messages-cache";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";

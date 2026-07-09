@@ -6,13 +6,7 @@ import type { z } from "zod";
 
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,

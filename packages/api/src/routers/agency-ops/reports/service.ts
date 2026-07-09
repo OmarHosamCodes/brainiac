@@ -1,8 +1,22 @@
 import { ORPCError } from "@orpc/server";
 import { eq, isNull, gte, lte, and, desc, inArray, asc } from "drizzle-orm";
-import { agencyOpsTimeEntry, user, agencyOpsClient, agencyOpsProject, agencyOpsProjectTask, workspaceTeamMember, agencyOpsActiveTimer } from "@brainiac/db/schema";
+import {
+  agencyOpsTimeEntry,
+  user,
+  agencyOpsClient,
+  agencyOpsProject,
+  agencyOpsProjectTask,
+  workspaceTeamMember,
+  agencyOpsActiveTimer,
+} from "@brainiac/db/schema";
 import { db } from "@brainiac/db";
-import { type ReportEntityFilterInput, parseIsoDateTime, applyReportEntityFilters, resolveReportEntityIds, formatAvatarUrl } from "../shared/utils";
+import {
+  type ReportEntityFilterInput,
+  applyReportEntityFilters,
+  resolveReportEntityIds,
+} from "../shared/report-helpers";
+import { parseIsoDateTime } from "../shared/date-helpers";
+import { formatAvatarUrl } from "../shared/avatar-helpers";
 import { requireTeamMembership } from "../shared/membership";
 
 type AgencyReportSummary = {
@@ -563,4 +577,23 @@ export async function exportAgencyReportsCsv(
     csv: `${lines.join("\n")}\n`,
     totalRows: records.length,
   };
+}
+
+import {
+  listAllAgencyTimeEntries as listAllTimeEntries,
+  updateAnyAgencyTimeEntry as updateAnyTimeEntry,
+} from "../time-tracking/service";
+
+export async function listAllAgencyTimeEntries(
+  actorUserId: string,
+  input: Parameters<typeof listAllTimeEntries>[1],
+) {
+  return listAllTimeEntries(actorUserId, input);
+}
+
+export async function updateAnyAgencyTimeEntry(
+  actorUserId: string,
+  input: Parameters<typeof updateAnyTimeEntry>[1],
+) {
+  return updateAnyTimeEntry(actorUserId, input);
 }

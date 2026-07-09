@@ -3,9 +3,7 @@ import { keepPreviousData, useInfiniteQuery, useQuery } from "@tanstack/react-qu
 import { useEffect, useMemo } from "react";
 
 import { authClient } from "@/lib/auth-client";
-import {
-  mergeAgencyPresenceMembers,
-} from "@/features/shared/agency-presence-members";
+import { mergeAgencyPresenceMembers } from "@/features/shared/agency-presence-members";
 import {
   useMergedAgencyActiveTimerQuery,
   useMergedAgencyCapacityQuery,
@@ -15,7 +13,7 @@ import {
   useMergedAgencyProjectsQuery,
   useMergedAgencyTaskMessagesInfiniteQuery,
   useMergedAgencyTimeEntriesQuery,
-} from "@/lib/queries/agency-optimistic";
+} from "@/features/shared/agency-optimistic";
 import { getQueryClient } from "@/lib/query-client";
 import type { AgencyClientArchiveFilter } from "@/features/shared/agency-client-archive-filter";
 import { orpc, orpcClient } from "@/lib/orpc";
@@ -31,7 +29,10 @@ import {
   AGENCY_POLL,
   AGENCY_STALE_TIME,
 } from "@/features/shared/agency-query-options";
-import { taskMatchesAgencyFilters, useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
+import {
+  taskMatchesAgencyFilters,
+  useAgencyOptimisticStore,
+} from "@/features/shared/stores/agency-optimistic";
 import { useAgencyTaskMessagesStore } from "@/features/task-management/stores/agency-task-messages";
 import { useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";

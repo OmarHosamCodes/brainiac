@@ -12,7 +12,7 @@
  */
 
 import { createContext } from "@brainiac/api/context";
-import { bootstrapAgencyLiveRedisSubscriber } from "@brainiac/api/routers/agency-ops/live";
+import { bootstrapAgencyLiveRedisSubscriber } from "@brainiac/api/routers/agency-ops/live/live";
 import { registerNotificationPushHandler } from "@brainiac/api/routers/notifications/delivery";
 import { auth } from "@brainiac/auth";
 import { corsOrigins, env, primaryCorsOrigin } from "@brainiac/env/server";

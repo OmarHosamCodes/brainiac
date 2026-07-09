@@ -40,7 +40,10 @@ import {
 } from "@/features/task-management/stores/agency-task-list";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
 import { EMPTY_LIST_OVERLAY } from "@/features/shared/agency-optimistic-merge";
-import { useAgencyTimeTrackingStore, useTrackerDraft } from "@/features/time-tracking/stores/agency-time-tracking";
+import {
+  useAgencyTimeTrackingStore,
+  useTrackerDraft,
+} from "@/features/time-tracking/stores/agency-time-tracking";
 
 const ACTIVE_TASK_STATUSES: TaskStatus[] = ["open", "in_progress"];
 const DONE_TASK_STATUSES: TaskStatus[] = ["done"];

@@ -7,7 +7,10 @@ import {
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
 } from "@/features/shared/agency-queries";
-import { getLocalWeekStartKey, todayLocalDateKey } from "@/features/time-tracking/format-agency-day-label";
+import {
+  getLocalWeekStartKey,
+  todayLocalDateKey,
+} from "@/features/time-tracking/format-agency-day-label";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import {

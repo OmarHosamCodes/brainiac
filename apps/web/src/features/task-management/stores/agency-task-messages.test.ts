@@ -1,6 +1,9 @@
 import { describe, expect, it } from "bun:test";
 
-import { mergeListWithOverlay, createEmptyListOverlay } from "@/features/shared/agency-optimistic-merge";
+import {
+  mergeListWithOverlay,
+  createEmptyListOverlay,
+} from "@/features/shared/agency-optimistic-merge";
 import {
   buildAgentPendingMessage,
   isAgentPendingMessageId,

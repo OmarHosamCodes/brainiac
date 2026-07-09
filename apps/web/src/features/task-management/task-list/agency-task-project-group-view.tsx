@@ -2,7 +2,11 @@ import { ChevronDown, Route } from "lucide-react";
 import { AgencyProjectHueDot } from "@/features/shared/agency-project-hue-dot";
 import { AgencyTaskDisplayRowView } from "@/features/task-management/task-list/agency-task-display-row-view";
 import type { AgencyTaskProjectDisplayGroup } from "@/features/task-management/agency-task-rail-grouping";
-import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/features/task-management/agency-work";
+import type {
+  AgencyProjectTask,
+  AgencyTaskProject,
+  TaskStatus,
+} from "@/features/task-management/agency-work";
 import type { TaskTrackingState } from "@/features/time-tracking/task-tracking-state";
 import {
   agencyFocusRingClass,

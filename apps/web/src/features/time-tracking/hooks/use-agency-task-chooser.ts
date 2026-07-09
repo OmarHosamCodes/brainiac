@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { formatTaskAssigneeLabel } from "@brainiac/api/schemas/agency-ops";
-import type { AgencyProject, AgencyProjectTask, TaskStatus } from "@/features/task-management/agency-work";
+import type {
+  AgencyProject,
+  AgencyProjectTask,
+  TaskStatus,
+} from "@/features/task-management/agency-work";
 import {
   getTaskGroupKey,
   groupTasksByProjectTitle,

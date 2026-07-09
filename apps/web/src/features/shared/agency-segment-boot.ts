@@ -3,8 +3,8 @@ import type { QueryClient } from "@tanstack/react-query";
 import {
   isAgencyManagementPaneId,
   type AgencyManagementPaneId,
-} from "@/lib/agency-management-sections";
-import type { AgencySegmentId } from "@/lib/agency-segments";
+} from "@/features/shared/agency-management-sections";
+import type { AgencySegmentId } from "@/features/shared/agency-segments";
 import { ensureAgencyWorkBootQueries } from "@/features/shared/agency-queries";
 import {
   getCurrentTenurePeriodRange,

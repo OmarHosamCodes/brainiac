@@ -4,7 +4,10 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TaskThreadComposerUploadHandler } from "@/features/task-management/hooks/use-task-thread-messaging";
 import { useTaskThreadMessaging } from "@/features/task-management/hooks/use-task-thread-messaging";
 import type { AgencyVoiceRecorderViewModel } from "@/features/task-management/hooks/use-agency-voice-recorder";
-import type { AgencyTaskProject, AgencyTaskThreadMember } from "@/features/task-management/agency-work";
+import type {
+  AgencyTaskProject,
+  AgencyTaskThreadMember,
+} from "@/features/task-management/agency-work";
 import { useAgencyTaskThreadContextQuery } from "@/features/shared/agency-queries";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";

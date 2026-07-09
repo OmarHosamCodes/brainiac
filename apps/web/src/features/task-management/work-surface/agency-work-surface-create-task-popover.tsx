@@ -26,7 +26,10 @@ import {
 } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
-import { resolveDefaultCreateProjectId, useAgencyTaskListStore } from "@/features/task-management/stores/agency-task-list";
+import {
+  resolveDefaultCreateProjectId,
+  useAgencyTaskListStore,
+} from "@/features/task-management/stores/agency-task-list";
 
 type AgencyWorkSurfaceCreateTaskPopoverProps = {
   teamId: string;

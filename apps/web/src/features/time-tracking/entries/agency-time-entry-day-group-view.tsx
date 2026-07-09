@@ -7,7 +7,10 @@ import {
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { cn } from "@/lib/utils";
-import type { CollapsedEntryGroup, TimeEntryDayGroup } from "@/features/time-tracking/group-time-entries";
+import type {
+  CollapsedEntryGroup,
+  TimeEntryDayGroup,
+} from "@/features/time-tracking/group-time-entries";
 import type { TimeEntryDraft } from "@/features/time-tracking/agency-time-entry";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 

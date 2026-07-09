@@ -5,7 +5,10 @@ import {
   agencyWorkTableListClass,
 } from "@/features/shared/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
-import type { CollapsedEntryGroup, TimeEntryRecencySection } from "@/features/time-tracking/group-time-entries";
+import type {
+  CollapsedEntryGroup,
+  TimeEntryRecencySection,
+} from "@/features/time-tracking/group-time-entries";
 import type { TimeEntryDraft } from "@/features/time-tracking/agency-time-entry";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import { cn } from "@/lib/utils";

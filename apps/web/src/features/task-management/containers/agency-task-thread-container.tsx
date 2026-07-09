@@ -4,7 +4,10 @@ import { useAgencyTaskThread } from "@/features/task-management/hooks/use-agency
 import { useAgencyProjectJourneyQuery } from "@/features/shared/agency-queries";
 import type { AgencyTaskProject } from "@/features/task-management/agency-work";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
-import { isJourneyTaskKind, resolveFocusedJourneyStep } from "@/features/projects/agency-task-journey";
+import {
+  isJourneyTaskKind,
+  resolveFocusedJourneyStep,
+} from "@/features/projects/agency-task-journey";
 
 import { AgencyProjectJourneyStepperDialog } from "@/features/projects/journey/agency-project-journey-stepper-dialog";
 import { TaskThreadView } from "@/features/task-management/task-thread/task-thread-view";

@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 
 import { AgencySegmentBar } from "@/features/shared/segment/agency-segment-bar";
-import type { AgencySegmentId } from "@/lib/agency-segments";
-import type { AgencySyncState } from "@/lib/queries/agency-sync";
+import type { AgencySegmentId } from "@/features/shared/agency-segments";
+import type { AgencySyncState } from "@/features/shared/agency-sync";
 
 type AgencySubtitleBreadcrumbProps = {
   segment: AgencySegmentId;

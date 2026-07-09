@@ -9,7 +9,7 @@ import {
   startShellBoot,
 } from "@/lib/shell/shell-boot";
 import { ensureAgencySegmentBootQueries } from "@/features/shared/agency-segment-boot";
-import type { AgencySegmentId } from "@/lib/agency-segments";
+import type { AgencySegmentId } from "@/features/shared/agency-segments";
 
 type UseAgencyBootGateOptions = {
   segment: AgencySegmentId;

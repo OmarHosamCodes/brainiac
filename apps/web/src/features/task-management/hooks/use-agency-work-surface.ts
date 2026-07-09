@@ -1,12 +1,18 @@
 import { useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import type { AgencySegmentId } from "@/lib/agency-segments";
-import type { AgencyWorkSurfaceTab, AgencyWorkSurfaceView } from "@/features/task-management/agency-work";
+import type { AgencySegmentId } from "@/features/shared/agency-segments";
+import type {
+  AgencyWorkSurfaceTab,
+  AgencyWorkSurfaceView,
+} from "@/features/task-management/agency-work";
 import { parseAgencyWorkSurfaceTab } from "@/features/task-management/agency-work";
 import { useAgencyProjectsQuery } from "@/features/shared/agency-queries";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { useAgencyTaskListStore, type AgencyTaskRailStatusFilter } from "@/features/task-management/stores/agency-task-list";
+import {
+  useAgencyTaskListStore,
+  type AgencyTaskRailStatusFilter,
+} from "@/features/task-management/stores/agency-task-list";
 
 type UseAgencyWorkSurfaceOptions = {
   teamId: string;

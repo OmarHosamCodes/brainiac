@@ -4,7 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import { AgencyMiniTimerContainer } from "@/features/time-tracking/containers/agency-mini-timer-container";
 import type { TaskTrackingState } from "@/features/time-tracking/task-tracking-state";
-import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/features/task-management/agency-work";
+import type {
+  AgencyProjectTask,
+  AgencyTaskProject,
+  TaskStatus,
+} from "@/features/task-management/agency-work";
 import { Input } from "@/ui/input";
 import {
   agencyAvatarStackRingClass,

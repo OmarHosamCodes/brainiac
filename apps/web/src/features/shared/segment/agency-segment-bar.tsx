@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
-import type { AgencySegmentId } from "@/lib/agency-segments";
-import { AGENCY_SEGMENTS } from "@/lib/agency-segments";
+import type { AgencySegmentId } from "@/features/shared/agency-segments";
+import { AGENCY_SEGMENTS } from "@/features/shared/agency-segments";
 import { LucideIcon } from "@/lib/lucide-icon";
 import {
   shellFocusRingClass,

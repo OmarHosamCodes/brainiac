@@ -8,14 +8,7 @@ import { toast } from "sonner";
 import { MarketingBrandLockup } from "@/components/marketing/marketing-brand-lockup";
 import { NeuralCanvasArtifact } from "@/components/marketing/neural-canvas-artifact";
 import { Button } from "@/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/ui/form";
 import { Input } from "@/ui/input";
 import { authClient } from "@/lib/auth-client";
 import {

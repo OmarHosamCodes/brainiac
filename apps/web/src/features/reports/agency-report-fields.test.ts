@@ -1,5 +1,4 @@
-import assert from "node:assert/strict";
-
+import { describe, expect, test } from "bun:test";
 import {
   allAgencyReportFieldIds,
   areSameReportFieldSets,
@@ -8,17 +7,21 @@ import {
   serializeReportFieldsParam,
 } from "./agency-report-fields";
 
-assert.deepEqual(allAgencyReportFieldIds(), [
-  "project",
-  "task",
-  "description",
-  "duration",
-  "assignee",
-]);
-assert.equal(parseReportFieldsParam(null).length, 5);
-assert.deepEqual(parseReportFieldsParam("project,duration"), ["project", "duration"]);
-assert.deepEqual(parseReportFieldsParam("bad,values"), allAgencyReportFieldIds());
-assert.equal(serializeReportFieldsParam(["project", "task"]), "project,task");
-assert.equal(areSameReportFieldSets(["project", "task"], ["task", "project"]), true);
-assert.equal(isReportCreatorSelectionHighlightField("project"), false);
-assert.equal(isReportCreatorSelectionHighlightField("task"), true);
+describe("agency-report-fields", () => {
+  test("field ids and operations", () => {
+    expect(allAgencyReportFieldIds()).toEqual([
+      "project",
+      "task",
+      "description",
+      "duration",
+      "assignee",
+    ]);
+    expect(parseReportFieldsParam(null).length).toBe(5);
+    expect(parseReportFieldsParam("project,duration")).toEqual(["project", "duration"]);
+    expect(parseReportFieldsParam("bad,values")).toEqual(allAgencyReportFieldIds());
+    expect(serializeReportFieldsParam(["project", "task"])).toBe("project,task");
+    expect(areSameReportFieldSets(["project", "task"], ["task", "project"])).toBe(true);
+    expect(isReportCreatorSelectionHighlightField("project")).toBe(false);
+    expect(isReportCreatorSelectionHighlightField("task")).toBe(true);
+  });
+});

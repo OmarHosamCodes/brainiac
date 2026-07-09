@@ -1,6 +1,10 @@
 import { AgencyTaskClientGroupView } from "@/features/task-management/task-list/agency-task-client-group-view";
 import type { AgencyTaskClientDisplayGroup } from "@/features/task-management/agency-task-rail-grouping";
-import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/features/task-management/agency-work";
+import type {
+  AgencyProjectTask,
+  AgencyTaskProject,
+  TaskStatus,
+} from "@/features/task-management/agency-work";
 
 type AgencyTaskGroupsListProps = {
   clientGroups: AgencyTaskClientDisplayGroup[];

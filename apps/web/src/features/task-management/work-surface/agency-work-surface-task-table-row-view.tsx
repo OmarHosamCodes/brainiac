@@ -14,7 +14,11 @@ import { AgencyMiniTimerContainer } from "@/features/time-tracking/containers/ag
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
-import type { AgencyProjectTask, AgencyTaskProject, TaskStatus } from "@/features/task-management/agency-work";
+import type {
+  AgencyProjectTask,
+  AgencyTaskProject,
+  TaskStatus,
+} from "@/features/task-management/agency-work";
 import {
   agencyFocusRingClass,
   agencyInputPlaceholderClass,
