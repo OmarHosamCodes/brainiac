@@ -90,8 +90,7 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
   }
 
   function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    const suggestionsOpen =
-      taskChooserOpen && !suggestionsDismissed && titleSuggestions.length > 0;
+    const suggestionsOpen = taskChooserOpen && !suggestionsDismissed && titleSuggestions.length > 0;
 
     if (!suggestionsOpen) return;
 
@@ -150,8 +149,7 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
     setOpen(false);
   }
 
-  const suggestionsOpen =
-    taskChooserOpen && !suggestionsDismissed && titleSuggestions.length > 0;
+  const suggestionsOpen = taskChooserOpen && !suggestionsDismissed && titleSuggestions.length > 0;
 
   return {
     projects,

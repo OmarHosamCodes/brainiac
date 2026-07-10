@@ -34,10 +34,7 @@ export function sortProjectsByClientThenName<T extends ProjectWithClient & { nam
   return clientSort || left.name.localeCompare(right.name);
 }
 
-export function projectSearchableText(project: {
-  name: string;
-  clientName: string;
-}): string {
+export function projectSearchableText(project: { name: string; clientName: string }): string {
   return [project.name, project.clientName, `${project.clientName} · ${project.name}`]
     .join(" ")
     .toLowerCase();
@@ -137,12 +134,16 @@ export function useAgencyChooserExpandedProjects(selectedProjectId: string | nul
     return expandedProjectIds.has(projectId);
   }
 
-  return { isProjectExpanded, toggleProject, expandProject: (projectId: string) => {
-    setExpandedProjectIds((current) => {
-      if (current.has(projectId)) return current;
-      const next = new Set(current);
-      next.add(projectId);
-      return next;
-    });
-  } };
+  return {
+    isProjectExpanded,
+    toggleProject,
+    expandProject: (projectId: string) => {
+      setExpandedProjectIds((current) => {
+        if (current.has(projectId)) return current;
+        const next = new Set(current);
+        next.add(projectId);
+        return next;
+      });
+    },
+  };
 }
