@@ -35,12 +35,9 @@ export function AgencyReportTaskCell({
       projects={projects}
       tasks={tasks}
       loading={loading}
-      fallbackTaskTitle={row.taskTitle ?? undefined}
-      fallbackProjectId={row.projectId}
-      fallbackProjectName={row.projectName}
       placeholder="—"
-      triggerFormat="task-only"
       contentAlign="start"
+      highlightSearch
       disabled={disabled}
       className={cn(
         "h-auto min-h-0 w-full max-w-full justify-start border-0 bg-transparent px-0 py-0 text-xs font-normal shadow-none hover:bg-muted/60",
