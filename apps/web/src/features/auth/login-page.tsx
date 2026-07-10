@@ -1,13 +1,14 @@
 import { ChevronDown, Loader2 } from "lucide-react";
 import { Navigate, Link } from "react-router-dom";
 
+import Aurora from "@/components/marketing/bits/Aurora";
 import { MarketingBrandLockup } from "@/components/marketing/marketing-brand-lockup";
-import { NeuralCanvasArtifact } from "@/components/marketing/neural-canvas-artifact";
 import { Button } from "@/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/ui/form";
 import { Input } from "@/ui/input";
 import { useLoginPage } from "@/features/auth/hooks/use-login-page";
 import type { SignUpFormValues } from "@/features/auth/auth-schemas";
+import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import { cn } from "@/lib/utils";
 
 const GOOGLE_LOGO_URL =
@@ -29,6 +30,7 @@ export function LoginPage() {
     switchMode,
     toggleEmailAuth,
   } = useLoginPage();
+  const reducedMotion = usePrefersReducedMotion();
 
   if (!session.isPending && session.data) {
     return <Navigate to={redirectTo} replace />;
@@ -37,14 +39,23 @@ export function LoginPage() {
   return (
     <div className="flex min-h-screen bg-background text-foreground">
       <aside className="relative hidden flex-1 flex-col justify-between overflow-hidden bg-[var(--marketing-ink)] p-12 text-[var(--marketing-ink-foreground)] lg:flex xl:p-16">
-        <NeuralCanvasArtifact className="opacity-40" />
+        {!reducedMotion ? (
+          <div className="pointer-events-none absolute inset-0 opacity-50" aria-hidden="true">
+            <Aurora
+              colorStops={["#059669", "#10b981", "#34d399"]}
+              amplitude={0.7}
+              blend={0.5}
+              speed={0.45}
+            />
+          </div>
+        ) : null}
 
         <div className="relative z-10">
           <MarketingBrandLockup linkToHome />
         </div>
 
         <div className="relative z-10 max-w-lg">
-          <h2 className="text-4xl leading-[1.05] font-bold tracking-[-0.02em] text-balance xl:text-5xl">
+          <h2 className="text-4xl leading-[1.05] font-semibold tracking-[-0.03em] text-balance xl:text-5xl">
             Map your thinking.
             <br />
             Run your agency.
