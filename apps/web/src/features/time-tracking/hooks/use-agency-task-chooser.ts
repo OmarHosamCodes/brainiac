@@ -1,4 +1,4 @@
-import { useMemo, useRef, type KeyboardEvent, type ReactNode, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 
 import { formatTaskAssigneeLabel } from "@brainiac/api/schemas/agency-ops";
 import type {
@@ -35,6 +35,8 @@ type AgencyTaskChooserCreateOptions = {
   projectId: string;
   onProjectIdChange: (value: string) => void;
   onExistingTaskSelect?: (taskId: string) => void;
+  /** Expand this project when the chooser opens (does not select it for create). */
+  preferredProjectId?: string;
 };
 
 export type AgencyTaskChooserTriggerFormat = "task-only" | "project-client" | "task-client";
@@ -56,8 +58,6 @@ type UseAgencyTaskChooserBaseOptions = {
   fallbackProjectId?: string;
   fallbackProjectName?: string;
   fallbackClientName?: string;
-  suggestionMenu?: ReactNode;
-  onSearchKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
   /** When true, mark search matches in project/task labels like the clients surface. */
   highlightSearch?: boolean;
 };
@@ -94,21 +94,30 @@ export type AgencyTaskChooserViewModel = {
   projectId: string;
   groupedProjects: AgencyTaskChooserClientGroup[];
   searchInputRef: RefObject<HTMLInputElement | null>;
+  createInputRef: RefObject<HTMLInputElement | null>;
   listRef: RefObject<HTMLDivElement | null>;
   isProjectExpanded: (projectId: string) => boolean;
   isProjectSelectedForCreate: (projectId: string) => boolean;
+  creatingInProjectId: string | null;
+  createInputValue: string;
   onOpenChange: (open: boolean) => void;
   onSearchChange: (value: string) => void;
   onSelectTask: (taskId: string) => void;
   onSelectProject: (projectId: string) => void;
   onToggleProject: (projectId: string) => void;
-  suggestionMenu?: ReactNode;
-  onSearchKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  onStartCreateInProject: (projectId: string) => void;
+  onCancelCreateInProject: () => void;
+  onCreateInputChange: (value: string) => void;
+  onConfirmCreateInProject: () => void;
   highlightSearch: boolean;
   statusLabel: (status: TaskStatus | undefined) => string;
   statusDotClass: (status: TaskStatus | undefined) => string;
   formatAssigneeLabel: (task: AgencyTask) => string;
 };
+
+function sortTasksByTitle(left: AgencyTask, right: AgencyTask) {
+  return left.title.localeCompare(right.title);
+}
 
 export function useAgencyTaskChooser(
   options: UseAgencyTaskChooserOptions,
@@ -129,8 +138,6 @@ export function useAgencyTaskChooser(
     fallbackProjectId,
     fallbackProjectName,
     fallbackClientName,
-    suggestionMenu,
-    onSearchKeyDown,
     highlightSearch = false,
   } = options;
 
@@ -143,11 +150,15 @@ export function useAgencyTaskChooser(
   const createProjectId = options.mode === "create" ? options.projectId : "";
   const onProjectIdChange = options.mode === "create" ? options.onProjectIdChange : undefined;
   const onExistingTaskSelect = options.mode === "create" ? options.onExistingTaskSelect : undefined;
+  const preferredProjectId = options.mode === "create" ? (options.preferredProjectId ?? "") : "";
 
   const { open, searchTerm, setSearchTerm, setOpen } = useAgencyChooserOpenState({
     controlledOpen,
     onOpenChange,
   });
+
+  const [creatingInProjectId, setCreatingInProjectId] = useState<string | null>(null);
+  const [createInputValue, setCreateInputValue] = useState("");
 
   const chooserTasks = useMemo(() => {
     const seen = new Set<string>();
@@ -163,6 +174,19 @@ export function useAgencyTaskChooser(
     () => new Map(projects.map((project) => [project.id, project])),
     [projects],
   );
+
+  const tasksByProjectId = useMemo(() => {
+    const map = new Map<string, AgencyTask[]>();
+    for (const task of chooserTasks) {
+      const existing = map.get(task.projectId) ?? [];
+      existing.push(task);
+      map.set(task.projectId, existing);
+    }
+    for (const [projectId, projectTasks] of map) {
+      map.set(projectId, [...projectTasks].sort(sortTasksByTitle));
+    }
+    return map;
+  }, [chooserTasks]);
 
   const selectedTask = useMemo(
     () => (isCreateMode ? null : (tasks.find((task) => task.id === selectValue) ?? null)),
@@ -191,7 +215,7 @@ export function useAgencyTaskChooser(
     : (selectedTask?.title ?? fallbackTaskTitle ?? null);
 
   const selectedProjectIdForExpand = isCreateMode
-    ? createProjectId
+    ? (creatingInProjectId ?? (createProjectId || preferredProjectId || null))
     : (selectedTask?.projectId ?? null);
 
   const { isProjectExpanded, toggleProject, expandProject } = useAgencyChooserExpandedProjects(
@@ -199,8 +223,7 @@ export function useAgencyTaskChooser(
     open,
   );
 
-  // Create mode binds the search input to draftTitle; select mode uses local searchTerm.
-  const filterQuery = (isCreateMode ? draftTitle : searchTerm).trim().toLowerCase();
+  const filterQuery = searchTerm.trim().toLowerCase();
 
   const filteredTasks = useMemo(() => {
     if (!filterQuery) return chooserTasks;
@@ -222,42 +245,52 @@ export function useAgencyTaskChooser(
   }, [chooserTasks, filterQuery, projectsById]);
 
   const groupedProjects = useMemo(() => {
-    const tasksByProject = new Map<string, AgencyTask[]>();
+    const filteredTasksByProject = new Map<string, AgencyTask[]>();
 
     for (const task of filteredTasks) {
-      const existing = tasksByProject.get(task.projectId) ?? [];
+      const existing = filteredTasksByProject.get(task.projectId) ?? [];
       existing.push(task);
-      tasksByProject.set(task.projectId, existing);
+      filteredTasksByProject.set(task.projectId, existing);
     }
 
-    const matchedProjects = isCreateMode
-      ? projects.filter((project) => {
-          if (!filterQuery) return true;
-          if (projectSearchableText(project).includes(filterQuery)) return true;
-          return (tasksByProject.get(project.id) ?? []).length > 0;
-        })
-      : projects.filter((project) => tasksByProject.has(project.id));
+    if (!isCreateMode) {
+      const matchedProjects = projects.filter((project) => filteredTasksByProject.has(project.id));
+      const sortedProjects = [...matchedProjects].sort(sortProjectsByClientThenName);
+      return groupItemsByClient(sortedProjects).map((group) => ({
+        clientName: group.clientName,
+        projects: group.projects.map((project) => ({
+          project,
+          tasks: (filteredTasksByProject.get(project.id) ?? []).sort(sortTasksByTitle),
+        })),
+      }));
+    }
 
-    // Create mode: if the draft title matches nothing, still show projects so the user can place the new task.
+    // Create mode: project/client match → all tasks; task-only match → filtered tasks.
+    const matchedProjects = projects.filter((project) => {
+      if (!filterQuery) return true;
+      if (projectSearchableText(project).includes(filterQuery)) return true;
+      return (filteredTasksByProject.get(project.id) ?? []).length > 0;
+    });
+
     const visibleProjects =
-      isCreateMode && filterQuery && matchedProjects.length === 0 ? projects : matchedProjects;
+      filterQuery && matchedProjects.length === 0 ? projects : matchedProjects;
 
     const sortedProjects = [...visibleProjects].sort(sortProjectsByClientThenName);
 
-    const clientGroups = groupItemsByClient(sortedProjects);
-
-    return clientGroups.map((group) => ({
+    return groupItemsByClient(sortedProjects).map((group) => ({
       clientName: group.clientName,
-      projects: group.projects.map((project) => ({
-        project,
-        tasks: (tasksByProject.get(project.id) ?? []).sort((left, right) =>
-          left.title.localeCompare(right.title),
-        ),
-      })),
+      projects: group.projects.map((project) => {
+        const projectMatched = !filterQuery || projectSearchableText(project).includes(filterQuery);
+        const tasksForProject = projectMatched
+          ? (tasksByProjectId.get(project.id) ?? [])
+          : (filteredTasksByProject.get(project.id) ?? []).sort(sortTasksByTitle);
+        return { project, tasks: tasksForProject };
+      }),
     }));
-  }, [filteredTasks, filterQuery, isCreateMode, projects]);
+  }, [filteredTasks, filterQuery, isCreateMode, projects, tasksByProjectId]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const createInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   useAgencyChooserScrollReveal({
@@ -270,17 +303,29 @@ export function useAgencyTaskChooser(
     revealDeps: [selectedProjectIdForExpand, selectValue],
   });
 
-  function handleSearchChange(value: string) {
-    if (isCreateMode) {
-      onDraftTitleChange?.(value);
-      return;
+  useEffect(() => {
+    if (!open) {
+      setCreatingInProjectId(null);
+      setCreateInputValue("");
     }
+  }, [open]);
+
+  useEffect(() => {
+    if (!creatingInProjectId) return;
+    const frame = requestAnimationFrame(() => {
+      createInputRef.current?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [creatingInProjectId]);
+
+  function handleSearchChange(value: string) {
     setSearchTerm(value);
   }
 
   function selectTask(taskId: string) {
     if (isCreateMode) {
       onExistingTaskSelect?.(taskId);
+      setCreatingInProjectId(null);
       setOpen(false);
       return;
     }
@@ -290,7 +335,6 @@ export function useAgencyTaskChooser(
 
   function selectProject(projectId: string) {
     if (isCreateMode) {
-      onProjectIdChange?.(projectId);
       expandProject(projectId);
       return;
     }
@@ -299,11 +343,44 @@ export function useAgencyTaskChooser(
 
   function handleToggleProject(projectId: string) {
     if (isCreateMode) {
-      onProjectIdChange?.(projectId);
-      expandProject(projectId);
+      if (creatingInProjectId && creatingInProjectId !== projectId) {
+        setCreatingInProjectId(null);
+        setCreateInputValue("");
+      }
+      toggleProject(projectId);
       return;
     }
     toggleProject(projectId);
+  }
+
+  function onStartCreateInProject(projectId: string) {
+    if (!isCreateMode) return;
+    expandProject(projectId);
+    setCreatingInProjectId(projectId);
+    setCreateInputValue(draftTitle);
+    onDraftTitleChange?.(draftTitle);
+  }
+
+  function onCancelCreateInProject() {
+    setCreatingInProjectId(null);
+    setCreateInputValue("");
+    onDraftTitleChange?.("");
+  }
+
+  function onCreateInputChange(value: string) {
+    setCreateInputValue(value);
+    onDraftTitleChange?.(value);
+  }
+
+  function onConfirmCreateInProject() {
+    if (!isCreateMode || !creatingInProjectId) return;
+    const trimmed = createInputValue.trim();
+    if (!trimmed) return;
+    onProjectIdChange?.(creatingInProjectId);
+    onDraftTitleChange?.(trimmed);
+    setCreatingInProjectId(null);
+    setCreateInputValue("");
+    setOpen(false);
   }
 
   return {
@@ -317,7 +394,7 @@ export function useAgencyTaskChooser(
     contentAlign,
     triggerFormat,
     open,
-    searchTerm: isCreateMode ? draftTitle : searchTerm,
+    searchTerm,
     selectedProject,
     triggerProject,
     selectedTask,
@@ -325,16 +402,21 @@ export function useAgencyTaskChooser(
     projectId: isCreateMode ? createProjectId : (selectedTask?.projectId ?? ""),
     groupedProjects,
     searchInputRef,
+    createInputRef,
     listRef,
     isProjectExpanded,
     isProjectSelectedForCreate: (projectId) => isCreateMode && createProjectId === projectId,
+    creatingInProjectId,
+    createInputValue,
     onOpenChange: setOpen,
     onSearchChange: handleSearchChange,
     onSelectTask: selectTask,
     onSelectProject: selectProject,
     onToggleProject: handleToggleProject,
-    suggestionMenu,
-    onSearchKeyDown,
+    onStartCreateInProject,
+    onCancelCreateInProject,
+    onCreateInputChange,
+    onConfirmCreateInProject,
     highlightSearch,
     statusLabel,
     statusDotClass,

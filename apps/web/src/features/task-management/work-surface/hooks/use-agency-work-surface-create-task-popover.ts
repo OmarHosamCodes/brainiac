@@ -1,16 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState, useId, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useState, useId, type FormEvent } from "react";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-options";
-import {
-  buildDescriptionSuggestions,
-  type AgencyDescriptionSuggestion,
-} from "@/features/time-tracking/description-suggestions";
-import {
-  useAgencyProjectTasksForChooserQuery,
-  useAgencyTimeEntriesQuery,
-} from "@/features/shared/agency-queries";
+import { useAgencyProjectTasksForChooserQuery } from "@/features/shared/agency-queries";
 import {
   resolveDefaultCreateProjectId,
   useAgencyTaskListStore,
@@ -24,7 +17,6 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
 ) {
   const formTitleId = useId();
   const taskContextId = useId();
-  const suggestionListboxId = useId();
   const session = authClient.useSession();
   const currentUserId = session.data?.user?.id ?? "";
   const agencyOps = useAgencyOpsStore();
@@ -39,8 +31,6 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
   const [assignedToTeam, setAssignedToTeam] = useState(false);
   const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>([]);
   const [taskChooserOpen, setTaskChooserOpen] = useState(false);
-  const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
-  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const [existingTaskConflict, setExistingTaskConflict] = useState<string | null>(null);
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
@@ -53,11 +43,6 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
     ),
   );
   const tasksQuery = useAgencyProjectTasksForChooserQuery(open ? teamId : "");
-  const recentEntriesQuery = useAgencyTimeEntriesQuery(open ? teamId : "", 1, 50);
-  const titleSuggestions = useMemo(
-    () => buildDescriptionSuggestions(recentEntriesQuery.data?.items ?? [], title, { projectId }),
-    [projectId, recentEntriesQuery.data?.items, title],
-  );
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === projectId) ?? null,
     [projectId, projects],
@@ -65,63 +50,28 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
   const projectContextLabel = selectedProject
     ? `${selectedProject.clientName} · ${selectedProject.name}`
     : null;
+  const preferredProjectId = useMemo(
+    () =>
+      resolveDefaultCreateProjectId({
+        projects,
+        lastUsedProjectId: lastUsedProjectIdForCreate,
+      }),
+    [lastUsedProjectIdForCreate, projects],
+  );
 
   useEffect(() => {
     if (!open) return;
-    const defaultProjectId = resolveDefaultCreateProjectId({
-      projects,
-      lastUsedProjectId: lastUsedProjectIdForCreate,
-    });
     setTitle("");
-    setProjectId(defaultProjectId);
+    setProjectId("");
     setAssignedToTeam(false);
     setAssigneeUserIds(currentUserId ? [currentUserId] : []);
-    setSuggestionsDismissed(false);
-    setActiveSuggestionIndex(0);
     setExistingTaskConflict(null);
     setTaskChooserOpen(false);
-  }, [currentUserId, lastUsedProjectIdForCreate, open, projects]);
-
-  function applySuggestion(suggestion: AgencyDescriptionSuggestion) {
-    setTitle(suggestion.description);
-    if (suggestion.projectId) setProjectId(suggestion.projectId);
-    setExistingTaskConflict(null);
-    setSuggestionsDismissed(true);
-  }
-
-  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    const suggestionsOpen = taskChooserOpen && !suggestionsDismissed && titleSuggestions.length > 0;
-
-    if (!suggestionsOpen) return;
-
-    switch (event.key) {
-      case "ArrowDown":
-        event.preventDefault();
-        setActiveSuggestionIndex((current) => (current + 1) % titleSuggestions.length);
-        return;
-      case "ArrowUp":
-        event.preventDefault();
-        setActiveSuggestionIndex(
-          (current) => (current - 1 + titleSuggestions.length) % titleSuggestions.length,
-        );
-        return;
-      case "Escape":
-        setSuggestionsDismissed(true);
-        return;
-      case "Enter":
-        event.preventDefault();
-        applySuggestion(titleSuggestions[activeSuggestionIndex]!);
-        return;
-      default:
-        return;
-    }
-  }
+  }, [currentUserId, open, projects]);
 
   function handleTitleChange(value: string) {
     setTitle(value);
     setExistingTaskConflict(null);
-    setSuggestionsDismissed(false);
-    setActiveSuggestionIndex(0);
   }
 
   function handleProjectChange(value: string) {
@@ -149,15 +99,12 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
     setOpen(false);
   }
 
-  const suggestionsOpen = taskChooserOpen && !suggestionsDismissed && titleSuggestions.length > 0;
-
   return {
     projects,
     tasks: tasksQuery.items ?? [],
     tasksLoading: tasksQuery.isLoading,
     formTitleId,
     taskContextId,
-    suggestionListboxId,
     open,
     setOpen,
     title,
@@ -170,20 +117,13 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
     setAssigneeUserIds,
     taskChooserOpen,
     setTaskChooserOpen,
-    suggestionsDismissed,
-    setSuggestionsDismissed,
-    activeSuggestionIndex,
-    setActiveSuggestionIndex,
     existingTaskConflict,
     projectContextLabel,
     members: membersQuery.data?.items ?? [],
-    suggestions: titleSuggestions,
-    suggestionsOpen,
-    handleSearchKeyDown,
     handleSubmit,
-    applySuggestion,
     handleExistingTaskSelect,
     isCreatingTask,
+    preferredProjectId,
     canSubmit: Boolean(title.trim() && projectId && !isCreatingTask && !existingTaskConflict),
   };
 }

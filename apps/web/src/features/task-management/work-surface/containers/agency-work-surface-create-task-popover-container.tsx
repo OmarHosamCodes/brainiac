@@ -1,6 +1,5 @@
 import type { AgencyProject } from "@/features/task-management/agency-work";
 import { AgencyMemberChooser } from "@/features/shared/choosers/agency-member-chooser";
-import { AgencyDescriptionSuggestionMenu } from "@/features/time-tracking/agency-description-suggestion-menu";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import { AgencyWorkSurfaceCreateTaskPopoverView } from "../agency-work-surface-create-task-popover-view";
@@ -27,28 +26,16 @@ export function AgencyWorkSurfaceCreateTaskPopoverContainer({
           projectId={vm.projectId}
           onProjectIdChange={vm.setProjectId}
           onExistingTaskSelect={vm.handleExistingTaskSelect}
+          preferredProjectId={vm.preferredProjectId}
           projects={projects}
           tasks={vm.tasks}
           loading={vm.tasksLoading}
-          placeholder="What needs doing?"
-          searchPlaceholder="Search tasks, projects, or clients"
+          placeholder="Search project or task"
+          searchPlaceholder="Search projects or tasks"
           highlightSearch
           disabled={vm.isCreatingTask}
           open={vm.taskChooserOpen}
           onOpenChange={vm.setTaskChooserOpen}
-          onSearchKeyDown={vm.handleSearchKeyDown}
-          suggestionMenu={
-            vm.suggestionsOpen ? (
-              <AgencyDescriptionSuggestionMenu
-                listboxId={vm.suggestionListboxId}
-                suggestions={vm.suggestions}
-                activeIndex={vm.activeSuggestionIndex}
-                ariaLabel="Recent task names"
-                onActiveIndexChange={vm.setActiveSuggestionIndex}
-                onSelect={vm.applySuggestion}
-              />
-            ) : null
-          }
           className={cn(
             "h-9 w-full max-w-none justify-between gap-1.5 rounded-xl border border-default bg-default px-3 text-sm font-medium shadow-none",
             "transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50",

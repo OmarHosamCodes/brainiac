@@ -1,4 +1,5 @@
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown, Plus, Search } from "lucide-react";
+import type { KeyboardEvent } from "react";
 
 import { AgencyProjectHueDot } from "@/features/shared/agency-project-hue-dot";
 import { AgencySearchHighlight } from "@/features/shared/agency-search-highlight";
@@ -32,16 +33,21 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     triggerTaskTitle,
     groupedProjects,
     searchInputRef,
+    createInputRef,
     listRef,
     isProjectExpanded,
     isProjectSelectedForCreate,
+    creatingInProjectId,
+    createInputValue,
     onOpenChange,
     onSearchChange,
     onSelectTask,
     onToggleProject,
+    onStartCreateInProject,
+    onCancelCreateInProject,
+    onCreateInputChange,
+    onConfirmCreateInProject,
     statusDotClass,
-    suggestionMenu,
-    onSearchKeyDown,
     highlightSearch,
   } = view;
 
@@ -50,6 +56,21 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
   function renderHighlightedLabel(text: string) {
     if (!highlightSearch) return text;
     return <AgencySearchHighlight text={text} query={searchTerm} />;
+  }
+
+  function handleCreateInputKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    switch (event.key) {
+      case "Enter":
+        event.preventDefault();
+        onConfirmCreateInProject();
+        return;
+      case "Escape":
+        event.preventDefault();
+        onCancelCreateInProject();
+        return;
+      default:
+        return;
+    }
   }
 
   function renderTriggerLabel() {
@@ -115,7 +136,6 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
               autoFocus
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
-              onKeyDown={onSearchKeyDown}
               placeholder={searchPlaceholder}
               className={cn(
                 "h-9 rounded-lg border-default bg-default pl-8 text-sm",
@@ -123,7 +143,6 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
               )}
             />
           </div>
-          {suggestionMenu}
         </div>
         <div ref={listRef} className="max-h-[24rem] overflow-y-auto py-2">
           {loading ? (
@@ -155,6 +174,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                 {group.projects.map(({ project, tasks: projectTasks }) => {
                   const expanded = isProjectExpanded(project.id);
                   const projectSelected = isProjectSelectedForCreate(project.id);
+                  const creatingHere = creatingInProjectId === project.id;
                   return (
                     <div key={project.id}>
                       <button
@@ -187,11 +207,6 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
 
                       {expanded ? (
                         <div className="pb-1">
-                          {projectTasks.length === 0 && isCreateMode ? (
-                            <p className="px-7 py-1.5 text-[11px] text-muted">
-                              New task will be created in this project.
-                            </p>
-                          ) : null}
                           {projectTasks.map((task) => {
                             const selected = !isCreateMode && task.id === value;
                             return (
@@ -224,6 +239,52 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                               </button>
                             );
                           })}
+
+                          {isCreateMode ? (
+                            creatingHere ? (
+                              <div className="flex items-center gap-2 px-7 py-1">
+                                <Input
+                                  ref={createInputRef}
+                                  value={createInputValue}
+                                  onChange={(e) => onCreateInputChange(e.target.value)}
+                                  onKeyDown={handleCreateInputKeyDown}
+                                  placeholder="New task title"
+                                  className={cn(
+                                    "h-8 min-w-0 flex-1 rounded-lg border-default bg-default text-xs",
+                                    agencyInputPlaceholderClass,
+                                  )}
+                                />
+                                <button
+                                  type="button"
+                                  aria-label="Confirm new task"
+                                  disabled={!createInputValue.trim()}
+                                  className={cn(
+                                    "inline-flex size-6 shrink-0 items-center justify-center rounded-full border border-default text-muted transition-colors hover:bg-default hover:text-highlighted disabled:pointer-events-none disabled:opacity-40",
+                                    agencyFocusRingClass,
+                                    "motion-reduce:transition-none",
+                                  )}
+                                  onClick={() => onConfirmCreateInProject()}
+                                >
+                                  <Plus className="size-3.5" aria-hidden />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center py-1 pl-7">
+                                <button
+                                  type="button"
+                                  aria-label="Create task"
+                                  className={cn(
+                                    "inline-flex size-6 items-center justify-center rounded-full border border-default text-muted transition-colors hover:bg-default hover:text-highlighted",
+                                    agencyFocusRingClass,
+                                    "motion-reduce:transition-none",
+                                  )}
+                                  onClick={() => onStartCreateInProject(project.id)}
+                                >
+                                  <Plus className="size-3.5" aria-hidden />
+                                </button>
+                              </div>
+                            )
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
