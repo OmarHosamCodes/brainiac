@@ -22,43 +22,43 @@ colors:
   state-info: "#3b82f6"
 typography:
   display:
-    fontFamily: "Public Sans, system-ui, -apple-system, sans-serif"
+    fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
     fontSize: "clamp(2.5rem, 7vw, 5.5rem)"
     fontWeight: 700
     lineHeight: 1.02
     letterSpacing: "-0.02em"
   headline:
-    fontFamily: "Public Sans, system-ui, -apple-system, sans-serif"
+    fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
     fontSize: "clamp(1.875rem, 4vw, 3rem)"
     fontWeight: 700
     lineHeight: 1.1
     letterSpacing: "-0.015em"
   title:
-    fontFamily: "Public Sans, system-ui, -apple-system, sans-serif"
+    fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
     lineHeight: 1.3
     letterSpacing: "normal"
   body:
-    fontFamily: "Public Sans, system-ui, -apple-system, sans-serif"
+    fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.6
     letterSpacing: "normal"
   body-lg:
-    fontFamily: "Public Sans, system-ui, -apple-system, sans-serif"
+    fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 400
     lineHeight: 1.6
     letterSpacing: "normal"
   label:
-    fontFamily: "Public Sans, system-ui, -apple-system, sans-serif"
+    fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
     fontSize: "0.6875rem"
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "0.18em"
   mono:
-    fontFamily: "JetBrains Mono, ui-monospace, monospace"
+    fontFamily: "IBM Plex Mono, ui-monospace, monospace"
     fontSize: "0.8125rem"
     fontWeight: 500
     lineHeight: 1.5
@@ -144,7 +144,7 @@ The marketing register (landing, pricing, legal) is allowed editorial confidence
 **Key Characteristics:**
 
 - Restrained color: tinted neutrals, one accent (Operator Emerald) used on ≤10% of any product surface.
-- Typographic hierarchy carries the system. Public Sans across roles, JetBrains Mono for tool traces and metric values.
+- Typographic hierarchy carries the system. IBM Plex Sans across roles, IBM Plex Mono for tool traces and metric values.
 - Flat by default. Hairlines (1px) separate content; shadows appear only as a response to state (hover, focus, lift).
 - Generous radii on containers (32px cards, full pills on buttons and badges) keep the system feeling crafted, not clinical.
 - Two registers, one component vocabulary. A button looks the same on the landing page and inside the canvas toolbar.
@@ -193,10 +193,10 @@ A small, restrained palette built on zinc-tinted neutrals plus a single saturate
 
 ## 3. Typography
 
-**Display Font:** Public Sans (with `system-ui, -apple-system, sans-serif` fallback)
-**Mono Font:** JetBrains Mono (with `ui-monospace, monospace` fallback)
+**Display Font:** IBM Plex Sans (with `system-ui, -apple-system, sans-serif` fallback)
+**Mono Font:** IBM Plex Mono (with `ui-monospace, monospace` fallback)
 
-**Character:** Public Sans is a quiet, modern sans with neutral letterforms. It carries display, headline, body, and label without needing a paired serif or display face. JetBrains Mono shows up where structure matters: tool call traces in the agent rail, latency values in the system status, code blocks in notes, numeric data in agency tables.
+**Character:** IBM Plex Sans is a quiet, modern sans with neutral letterforms. It carries display, headline, body, and label without needing a paired serif or display face. IBM Plex Mono shows up where structure matters: tool call traces in the agent rail, latency values in the system status, code blocks in notes, numeric data in agency tables.
 
 ### Hierarchy
 
@@ -212,9 +212,9 @@ A small, restrained palette built on zinc-tinted neutrals plus a single saturate
 
 **The Eyebrow Rule.** Section eyebrows (the small uppercase line above a heading) are rendered in Label scale at `text-neutral-400` / `dark:text-neutral-500`. Never colored, never emerald, never bolder. They are the system's whisper.
 
-**The Single Family Rule.** No display/serif pairing. Public Sans across the entire scale. Hierarchy comes from weight (400/600/700) and size (1.25× minimum step ratio).
+**The Single Family Rule.** No display/serif pairing. IBM Plex Sans across the entire scale. Hierarchy comes from weight (400/600/700) and size (1.25× minimum step ratio).
 
-**The Mono For Truth Rule.** JetBrains Mono is reserved for things the system reports, not things the system says. Latencies, IDs, paths, code, tool calls. Never running prose, never headings.
+**The Mono For Truth Rule.** IBM Plex Mono is reserved for things the system reports, not things the system says. Latencies, IDs, paths, code, tool calls. Never running prose, never headings.
 
 ## 4. Elevation
 
@@ -237,7 +237,7 @@ The system is flat at rest. Surfaces lie on the page; depth is established throu
 
 ### Buttons
 
-- **Shape:** Full-pill (radius `9999px`). Set globally in `app.config.ts` so every button across the product wears the same shape.
+- **Shape:** Full-pill (radius `9999px`). Enforced via shared `Button` variants in `apps/web/src/components/ui/` and Tailwind utilities.
 - **Primary:** Operator Emerald background, white text, weight `700` (bold). Padding scales with size (`sm` 8×16px, `md` 10×20px, `lg` 12×24px, `xl` 14×28px).
 - **Hover / Focus:** Background shifts to Operator Emerald Deep. Focus shows the focus-ring at 20% opacity. No transform on hover; no scale-up.
 - **Ghost:** Transparent background, ink text, hover fills Surface Elevated. Used for tertiary actions.
@@ -252,7 +252,7 @@ The system is flat at rest. Surfaces lie on the page; depth is established throu
 
 ### Cards / Containers
 
-- **Corner Style:** Generous (`32px` radius). Set globally; overriding to a smaller radius is a deliberate choice, not a default.
+- **Corner Style:** Generous (`32px` radius). Defined in `apps/web/src/index.css` and shared card primitives; overriding to a smaller radius is a deliberate choice, not a default.
 - **Background:** Paper Pure in light, surface-darkest in dark.
 - **Shadow Strategy:** None at rest. See Elevation: shadows on state only.
 - **Border:** 1px hairline at 20% opacity (`border-muted/20`). Visible enough to define, quiet enough to recede.
@@ -280,7 +280,7 @@ The system is flat at rest. Surfaces lie on the page; depth is established throu
 
 ### Tool Trace (Signature Component)
 
-The agent rail's tool-call rendering. A multi-line block with: a small Label-scale tool name in mono, an Operator Emerald running indicator while live, a hairline separator, and a JetBrains Mono body for arguments and results. Tool traces are plain prose-shaped; they are the agent's working notes, not a magic trick. Selectable text. No badge soup. No icon explosion.
+The agent rail's tool-call rendering. A multi-line block with: a small Label-scale tool name in mono, an Operator Emerald running indicator while live, a hairline separator, and a IBM Plex Mono body for arguments and results. Tool traces are plain prose-shaped; they are the agent's working notes, not a magic trick. Selectable text. No badge soup. No icon explosion.
 
 ## 6. Do's and Don'ts
 
@@ -291,7 +291,7 @@ The agent rail's tool-call rendering. A multi-line block with: a small Label-sca
 - **Do** use hairlines (`1px solid var(--hairline)`) as the default separator. Walk the elevation ladder before reaching for shadow.
 - **Do** render every interactive element with all seven states: default, hover, focus-visible, active, disabled, loading, error.
 - **Do** use full-pill radii for buttons and badges, generous (32px) radii for cards. Set them globally.
-- **Do** use Public Sans for everything that speaks; use JetBrains Mono for everything the system reports.
+- **Do** use IBM Plex Sans for everything that speaks; use IBM Plex Mono for everything the system reports.
 - **Do** put a quiet inline system-status indicator in the footer (marketing) or rail (product), never a floating chrome.
 - **Do** place navigation in the footer on marketing surfaces and in a standard top-bar or rail in product surfaces.
 - **Do** make tool traces selectable, plain-prose-shaped, and free of decorative badges.

@@ -1,16 +1,10 @@
 import { auth } from "@brainiac/auth";
 import { db } from "@brainiac/db";
 import { dashboardWorkspace, user, workspaceMarketplaceItem } from "@brainiac/db/schema";
-import { env } from "@brainiac/env/server";
+import { env, primaryCorsOrigin } from "@brainiac/env/server";
 import {
   cloneWorkspaceNodes,
   createWorkspace2x2MatrixBlock,
-  createWorkspaceAgencyBillingReportBlock,
-  createWorkspaceAgencyProjectManagerBlock,
-  createWorkspaceAgencySettingsBlock,
-  createWorkspaceAgencyTimeEntriesLogBlock,
-  createWorkspaceAgencyTimeSummaryBlock,
-  createWorkspaceAgencyTimeTrackerBlock,
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceAuthorityScorecardBlock,
@@ -97,6 +91,7 @@ type SeedActor = {
 type SeedCliOptions = {
   email: string | null;
   help: boolean;
+  scale: "default" | "massive";
 };
 
 type SeedContent = {
@@ -153,12 +148,6 @@ const categorizedBlockFactories: Record<
 > = {
   "2x2-matrix": createWorkspace2x2MatrixBlock,
   "ai-prompt": createWorkspaceAiPromptBlock,
-  "agency-project-manager": createWorkspaceAgencyProjectManagerBlock,
-  "agency-billing-report": createWorkspaceAgencyBillingReportBlock,
-  "agency-time-entries-log": createWorkspaceAgencyTimeEntriesLogBlock,
-  "agency-time-summary": createWorkspaceAgencyTimeSummaryBlock,
-  "agency-time-tracker": createWorkspaceAgencyTimeTrackerBlock,
-  "agency-settings": createWorkspaceAgencySettingsBlock,
   "assumption-tracker": createWorkspaceAssumptionTrackerBlock,
   "authority-scorecard": createWorkspaceAuthorityScorecardBlock,
   "business-model-canvas": createWorkspaceBusinessModelCanvasBlock,
@@ -326,6 +315,8 @@ function createBlockCatalogNode(now: Date) {
 function parseCliArgs(argv: string[]): SeedCliOptions {
   let email: string | null = null;
   let help = false;
+  let scale: SeedCliOptions["scale"] =
+    env.BRAINIAC_SEED_SCALE === "massive" ? "massive" : "default";
 
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
@@ -336,6 +327,22 @@ function parseCliArgs(argv: string[]): SeedCliOptions {
 
     if (argument === "--help" || argument === "-h") {
       help = true;
+      continue;
+    }
+
+    if (argument === "--scale") {
+      const nextValue = argv[index + 1]?.trim().toLowerCase();
+      if (!nextValue) {
+        throw new Error("Missing value for --scale.");
+      }
+      scale = nextValue === "massive" ? "massive" : "default";
+      index += 1;
+      continue;
+    }
+
+    if (argument.startsWith("--scale=")) {
+      const value = argument.slice("--scale=".length).trim().toLowerCase();
+      scale = value === "massive" ? "massive" : "default";
       continue;
     }
 
@@ -368,6 +375,7 @@ function parseCliArgs(argv: string[]): SeedCliOptions {
   return {
     email,
     help,
+    scale,
   };
 }
 
@@ -386,7 +394,7 @@ function printUsage() {
   console.log("");
   console.log("Root workspace command:");
   console.log("  bun run db:seed");
-  console.log("  bun run db:seed -- --email you@example.com");
+  console.log("  bun run db:seed -- --scale massive");
 }
 
 function buildSeedContent(now: Date): SeedContent {
@@ -1216,6 +1224,137 @@ function requireSeedUser(users: Map<SeedUserKey, SeedActor>, key: SeedUserKey) {
   return seedUser;
 }
 
+function buildMassiveFounderVizNodes(now: Date): WorkspaceNode[] {
+  const massiveKanbanColumn = createWorkspaceKanbanColumn({
+    id: seedId("massive", "column", "todo"),
+    title: "Todo",
+  });
+
+  const vizNodes = [
+    {
+      id: seedId("node", "massive-kanban"),
+      title: "Delivery Kanban",
+      x: 40,
+      y: 40,
+      block: createWorkspaceKanbanBlock({
+        id: seedId("massive", "block", "kanban"),
+        title: "Delivery board",
+        columns: [massiveKanbanColumn],
+        cards: [
+          createWorkspaceKanbanCard({
+            id: seedId("massive", "card", "one"),
+            title: "Ship onboarding",
+            columnId: massiveKanbanColumn.id,
+          }),
+        ],
+        createdAt: isoTimestampFromNow(now, { days: -3 }),
+        updatedAt: isoTimestampFromNow(now, { hours: -2 }),
+      }),
+    },
+    {
+      id: seedId("node", "massive-funnel"),
+      title: "Pipeline Funnel",
+      x: 420,
+      y: 40,
+      block: createWorkspacePipelineFunnelBlock({
+        id: seedId("massive", "block", "funnel"),
+        title: "Pipeline funnel",
+        createdAt: isoTimestampFromNow(now, { days: -3 }),
+        updatedAt: isoTimestampFromNow(now, { hours: -2 }),
+      }),
+    },
+    {
+      id: seedId("node", "massive-radar"),
+      title: "Quality Radar",
+      x: 800,
+      y: 40,
+      block: createWorkspaceContentQualityRadarBlock({
+        id: seedId("massive", "block", "radar"),
+        title: "Quality radar",
+        createdAt: isoTimestampFromNow(now, { days: -3 }),
+        updatedAt: isoTimestampFromNow(now, { hours: -2 }),
+      }),
+    },
+    {
+      id: seedId("node", "massive-heatmap"),
+      title: "Skills Heat Map",
+      x: 40,
+      y: 320,
+      block: createWorkspaceSkillsHeatMapBlock({
+        id: seedId("massive", "block", "heatmap"),
+        title: "Skills heat map",
+        createdAt: isoTimestampFromNow(now, { days: -3 }),
+        updatedAt: isoTimestampFromNow(now, { hours: -2 }),
+      }),
+    },
+    {
+      id: seedId("node", "massive-tracker"),
+      title: "Growth Tracker",
+      x: 420,
+      y: 320,
+      block: createWorkspaceTrackerBlock({
+        id: seedId("massive", "block", "tracker"),
+        title: "Growth tracker",
+        createdAt: isoTimestampFromNow(now, { days: -3 }),
+        updatedAt: isoTimestampFromNow(now, { hours: -2 }),
+      }),
+    },
+  ] as const;
+
+  return vizNodes.map((entry) =>
+    createSeedNode({
+      id: entry.id,
+      title: entry.title,
+      x: entry.x,
+      y: entry.y,
+      width: 360,
+      height: 240,
+      createdAt: isoTimestampFromNow(now, { days: -3 }),
+      updatedAt: isoTimestampFromNow(now, { hours: -1 }),
+      tabs: [
+        createWorkspaceNodeTab({
+          id: seedId(entry.id, "tab", "main"),
+          title: "Main",
+          createdAt: isoTimestampFromNow(now, { days: -3 }),
+          updatedAt: isoTimestampFromNow(now, { hours: -1 }),
+          blocks: [entry.block],
+        }),
+      ],
+    }),
+  );
+}
+
+function expandMarketplaceItems(
+  items: WorkspaceMarketplaceItem[],
+  users: Map<SeedUserKey, SeedActor>,
+  now: Date,
+  targetCount: number,
+) {
+  if (items.length >= targetCount) return items;
+
+  const expanded = [...items];
+  const founder = requireSeedUser(users, "founder");
+
+  while (expanded.length < targetCount) {
+    const source = items[expanded.length % items.length];
+    if (!source) break;
+
+    expanded.push(
+      createSeedMarketplaceItem({
+        id: seedId("marketplace", "massive", String(expanded.length)),
+        title: `${source.title} (${expanded.length})`,
+        summary: source.summary,
+        createdBy: founder,
+        payload: source.payload,
+        createdAt: isoTimestampFromNow(now, { hours: -(expanded.length + 1) }),
+        updatedAt: isoTimestampFromNow(now, { hours: -1 }),
+      }),
+    );
+  }
+
+  return expanded;
+}
+
 function buildSeedActorAliases(targetUser: SeedActor) {
   return new Map<SeedUserKey, SeedActor>(SEED_USERS.map((seedUser) => [seedUser.key, targetUser]));
 }
@@ -1225,9 +1364,7 @@ async function recreateSeedUsers(password: string) {
     "user-agent": "brainiac-seed-script",
   });
 
-  if (env.CORS_ORIGIN) {
-    requestHeaders.set("origin", env.CORS_ORIGIN);
-  }
+  requestHeaders.set("origin", primaryCorsOrigin);
 
   await db.delete(user).where(
     inArray(
@@ -1282,14 +1419,12 @@ async function findUserByEmail(email: string) {
   return existingUser satisfies SeedActor;
 }
 
-function buildExistingUserWorkspace(content: SeedContent) {
-  const nodes = cloneWorkspaceNodes([content.shared.blockCatalogNode]);
-
+function layoutWorkspaceNodes(nodes: WorkspaceNode[]) {
   let currentX = GRID_START_X;
   let currentY = GRID_START_Y;
   let currentRowHeight = 0;
 
-  return nodes.map((node) => {
+  return cloneWorkspaceNodes(nodes).map((node) => {
     if (currentX > GRID_START_X && currentX + node.width > GRID_START_X + GRID_MAX_WIDTH) {
       currentX = GRID_START_X;
       currentY += currentRowHeight + GRID_ROW_GAP;
@@ -1307,6 +1442,10 @@ function buildExistingUserWorkspace(content: SeedContent) {
 
     return positionedNode;
   });
+}
+
+function buildExistingUserWorkspace(content: SeedContent) {
+  return layoutWorkspaceNodes([content.shared.blockCatalogNode]);
 }
 
 async function saveWorkspaceSnapshot(userId: string, nodes: WorkspaceNode[]) {
@@ -1493,20 +1632,32 @@ async function seedExistingUser(email: string, content: SeedContent, now: Date) 
   );
 }
 
-async function seedDemoUsers(content: SeedContent, now: Date) {
-  const password = process.env.BRAINIAC_SEED_PASSWORD?.trim() || DEFAULT_SEED_PASSWORD;
+async function seedDemoUsers(content: SeedContent, now: Date, scale: SeedCliOptions["scale"]) {
+  const password = env.BRAINIAC_SEED_PASSWORD?.trim() || DEFAULT_SEED_PASSWORD;
 
   console.log("Rebuilding reserved Brainiac demo accounts and seed data...");
 
   const users = await recreateSeedUsers(password);
 
+  const founderNodes =
+    scale === "massive"
+      ? layoutWorkspaceNodes([
+          content.shared.blockCatalogNode,
+          ...content.founder.nodes,
+          ...buildMassiveFounderVizNodes(now),
+        ])
+      : [content.shared.blockCatalogNode];
+
   await Promise.all([
-    saveWorkspaceSnapshot(requireSeedUser(users, "founder").id, [content.shared.blockCatalogNode]),
+    saveWorkspaceSnapshot(requireSeedUser(users, "founder").id, founderNodes),
     saveWorkspaceSnapshot(requireSeedUser(users, "ops").id, [content.shared.blockCatalogNode]),
     saveWorkspaceSnapshot(requireSeedUser(users, "analyst").id, [content.shared.blockCatalogNode]),
   ]);
 
-  const marketplaceItems = buildMarketplaceItems(content, users, now);
+  const marketplaceItems =
+    scale === "massive"
+      ? expandMarketplaceItems(buildMarketplaceItems(content, users, now), users, now, 50)
+      : buildMarketplaceItems(content, users, now);
   await replaceMarketplaceItems(marketplaceItems);
 
   console.log("");
@@ -1542,7 +1693,7 @@ async function seed() {
     return;
   }
 
-  await seedDemoUsers(content, now);
+  await seedDemoUsers(content, now, options.scale);
 }
 
 void seed()

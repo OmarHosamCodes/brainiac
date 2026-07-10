@@ -1,0 +1,12 @@
+[variables]
+NIXPACKS_NO_MUSL = "1"
+
+[phases.setup]
+nixPkgs = ["bun"]
+
+[phases.install]
+cmds = ["bun install --frozen-lockfile"]
+cacheDirectories = ["/root/.bun/install/cache"]
+
+[phases.build]
+cmds = ["bun run build"]

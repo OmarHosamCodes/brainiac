@@ -1,6 +1,6 @@
 import { db } from "@brainiac/db";
 import * as schema from "@brainiac/db/schema/auth";
-import { env } from "@brainiac/env/server";
+import { corsOrigins, env, primaryCorsOrigin } from "@brainiac/env/server";
 import { checkout, polar, portal, webhooks } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import { betterAuth } from "better-auth";
@@ -11,15 +11,72 @@ const polarClient = new Polar({
   server: env.POLAR_SERVER,
 });
 
+const loginErrorUrl = new URL("/login", primaryCorsOrigin).toString();
+const isSplitDeployment = new URL(primaryCorsOrigin).origin !== new URL(env.BETTER_AUTH_URL).origin;
+
+function schedulePolarCustomerSetup(user: { id: string; email: string; name: string }) {
+  void (async () => {
+    try {
+      const { result } = await polarClient.customers.list({ email: user.email });
+      const existing = result.items[0];
+
+      if (!existing) {
+        await polarClient.customers.create({
+          email: user.email,
+          name: user.name,
+          externalId: user.id,
+        });
+        return;
+      }
+
+      if (existing.externalId !== user.id) {
+        await polarClient.customers.update({
+          id: existing.id,
+          customerUpdate: { externalId: user.id },
+        });
+      }
+    } catch (error) {
+      console.error("Polar customer setup failed:", error);
+    }
+  })();
+}
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
 
     schema: schema,
   }),
-  trustedOrigins: [env.CORS_ORIGIN],
+  trustedOrigins: corsOrigins,
   emailAndPassword: {
     enabled: true,
+  },
+  socialProviders: {
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+    },
+  },
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google"],
+    },
+    // Split web/API: store OAuth state in the DB and skip the signed state cookie
+    // check (that cookie is not sent on the cross-origin sign-in request).
+    skipStateCookieCheck: isSplitDeployment,
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          schedulePolarCustomerSetup(user);
+        },
+      },
+    },
+  },
+  onAPIError: {
+    errorURL: loginErrorUrl,
   },
   session: {
     // Cache the resolved session in a signed cookie so `getSession` can verify
@@ -35,7 +92,7 @@ export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   advanced: {
     defaultCookieAttributes: {
-      sameSite: env.BETTER_AUTH_URL.startsWith("https://") ? "none" : "lax",
+      sameSite: isSplitDeployment ? "none" : "lax",
       secure: env.BETTER_AUTH_URL.startsWith("https://"),
       httpOnly: true,
     },
@@ -43,7 +100,7 @@ export const auth = betterAuth({
   plugins: [
     polar({
       client: polarClient,
-      createCustomerOnSignUp: true,
+      createCustomerOnSignUp: false,
       use: [
         checkout({
           products: [
@@ -54,10 +111,10 @@ export const auth = betterAuth({
           ],
           successUrl: "/billing/success?checkout_id={CHECKOUT_ID}",
           authenticatedUsersOnly: true,
-          returnUrl: new URL("/pricing", env.CORS_ORIGIN).toString(),
+          returnUrl: new URL("/pricing", primaryCorsOrigin).toString(),
         }),
         portal({
-          returnUrl: new URL("/dashboard", env.CORS_ORIGIN).toString(),
+          returnUrl: new URL("/dashboard", primaryCorsOrigin).toString(),
         }),
         webhooks({
           secret: env.POLAR_WEBHOOK_SECRET,

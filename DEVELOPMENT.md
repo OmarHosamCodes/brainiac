@@ -4,72 +4,83 @@ Quick reference for common development tasks, workflows, and troubleshooting.
 
 ---
 
-## ⚡ Command Cheat Sheet
+## Command Cheat Sheet
 
 ### Development Server
 
-| Command                      | Purpose                       |
-| ---------------------------- | ----------------------------- |
-| `bun run dev`                | Start all apps (web + server) |
-| `bun run dev:web`            | Frontend only (Nuxt)          |
-| `bun run dev:server`         | Backend only (Hono)           |
-| `bun run dev:web -- -p 3002` | Frontend on different port    |
+| Command                          | Purpose                           |
+| -------------------------------- | --------------------------------- |
+| `bun run dev`                    | Start all apps (web + server)     |
+| `bun run dev:web`                | Frontend only (Vite on port 7001) |
+| `bun run dev:server`             | Backend only (Bun on port 7000)   |
+| `bun run dev:web -- --port 7002` | Frontend on a different port      |
 
-### Building & Checking
+### Building and Checking
 
-| Command               | Purpose                        |
-| --------------------- | ------------------------------ |
-| `bun run build`       | Build for production           |
-| `bun run check-types` | Check TypeScript types         |
-| `bun run check`       | Lint + format (Oxlint + Oxfmt) |
+| Command                  | Purpose                        |
+| ------------------------ | ------------------------------ |
+| `bun run build`          | Build for production           |
+| `bun run check-types`    | Check TypeScript types         |
+| `bun run check`          | Lint + format (Oxlint + Oxfmt) |
+| `bun run test:api:bruno` | Run Bruno API tests            |
+| `bun run perf`           | Run frontend perf benchmarks   |
 
 ### Database
 
-| Command               | Purpose                    |
-| --------------------- | -------------------------- |
-| `bun run db:start`    | Start PostgreSQL in Docker |
-| `bun run db:push`     | Apply schema changes       |
-| `bun run db:generate` | Generate database types    |
-| `bun run db:migrate`  | Run pending migrations     |
-| `bun run db:seed`     | Load demo data             |
-| `bun run db:studio`   | Open Drizzle Studio UI     |
+| Command                  | Purpose                    |
+| ------------------------ | -------------------------- |
+| `bun run db:start`       | Start PostgreSQL in Docker |
+| `bun run db:push`        | Apply schema changes       |
+| `bun run db:generate`    | Generate migration files   |
+| `bun run db:migrate`     | Run pending migrations     |
+| `bun run db:seed`        | Load demo data             |
+| `bun run db:seed:agency` | Load agency demo data      |
+| `bun run db:studio`      | Open Drizzle Studio UI     |
 
 ---
 
-## 📍 Where to Find Things
+## Where to Find Things
 
-| What             | Where                       |
-| ---------------- | --------------------------- |
-| Frontend pages   | `apps/web/app/pages/`       |
-| Components       | `apps/web/app/components/`  |
-| API routes       | `packages/api/src/routes/`  |
-| Database schema  | `packages/db/src/schema/`   |
-| Auth config      | `packages/auth/src/`        |
-| Environment vars | `packages/env/src/index.ts` |
-| Server setup     | `apps/server/src/app.ts`    |
+| What            | Where                            |
+| --------------- | -------------------------------- |
+| Frontend pages  | `apps/web/src/pages/`            |
+| Components      | `apps/web/src/components/`       |
+| Frontend hooks  | `apps/web/src/lib/`              |
+| oRPC client     | `apps/web/src/lib/orpc.ts`       |
+| API routers     | `packages/api/src/routers/`      |
+| API procedures  | `packages/api/src/procedures.ts` |
+| Database schema | `packages/db/src/schema/`        |
+| Auth config     | `packages/auth/src/`             |
+| Server env      | `packages/env/src/server.ts`     |
+| Vite env        | `packages/env/src/vite.ts`       |
+| Server setup    | `apps/server/src/app.ts`         |
+| Workspace types | `packages/workspace/src/`        |
+| Agent tools     | `packages/agent/src/`            |
 
 ---
 
-## 🔄 Common Development Workflows
+## App Routes
 
-### Debugging TypeScript Errors
+| Path           | Page               |
+| -------------- | ------------------ |
+| `/`            | Landing            |
+| `/login`       | Login              |
+| `/dashboard`   | Canvas workspace   |
+| `/agency`      | Agency operations  |
+| `/marketplace` | Node marketplace   |
+| `/billing`     | Billing            |
+| `/node/:id`    | Single node editor |
 
-**Issue**: Type errors appear in editor but `bun run check-types` passes
+Routes are defined in `apps/web/src/app.tsx` and `apps/web/src/authenticated-routes.tsx`.
 
-**Solution**: TypeScript in Bun can be stricter in some cases. Run:
+---
 
-```bash
-bun run check-types --force    # Force clear cache
-```
+## Common Development Workflows
 
 ### Hot Reload Not Working
 
-**Issue**: Changes don't reflect without restarting
-
-**Solution**: This should work automatically. If stuck:
-
 1. Stop the dev server (`Ctrl+C`)
-2. Clear cache: `rm -rf .nuxt node_modules/.turbo`
+2. Clear cache: `rm -rf apps/web/dist apps/web/.output node_modules/.turbo`
 3. Restart: `bun run dev`
 
 ### Database Connection Issues
@@ -80,155 +91,159 @@ bun run check-types --force    # Force clear cache
 
 1. Check PostgreSQL is running: `bun run db:start`
 2. Verify `.env` has correct `DATABASE_URL`
-3. Check Docker: `docker ps` should show postgres container
+3. Check Docker: `docker ps` should show the postgres container
 4. View logs: `docker logs <container-id>`
 
-**Connection string format**:
+**Connection string format** (default Docker setup):
 
 ```
-postgresql://user:password@localhost:5432/dbname
+postgresql://postgres:password@localhost:5440/brainiac
 ```
 
 ### Port Already in Use
 
-**Issue**: `Address already in use` on 3001 or 3000
-
-**Solution**:
+**Issue**: `Address already in use` on 7001 or 7000
 
 ```bash
-# Kill process on port 3001 (frontend)
-lsof -i :3001
+# Kill process on port 7001 (frontend)
+lsof -i :7001
 kill -9 <PID>
 
-# Or start on different port
-bun run dev:web -- -p 3002
+# Or start on a different port
+bun run dev:web -- --port 7002
 ```
 
 ---
 
-## 📝 Common Tasks
+## Common Tasks
 
 ### Add a New Environment Variable
 
-1. Update `packages/env/src/index.ts`:
+1. Add to `packages/env/src/server.ts` (backend) or `packages/env/src/vite.ts` (frontend):
 
 ```typescript
-export const env = z.object({
-  DATABASE_URL: z.string(),
-  API_KEY: z.string(), // Add new var
-  // ... other vars
+// packages/env/src/server.ts
+export const env = createEnv({
+  server: {
+    MY_NEW_VAR: z.string().min(1),
+    // ...
+  },
 });
 ```
 
-2. Add to `.env` and `.env.example`:
+2. Add to `.env.example` and the relevant app `.env.example`
 
-```env
-API_KEY=your_key_here
-```
-
-3. Use in code:
+3. Use in server code:
 
 ```typescript
-import { env } from "@brainiac/env";
+import { env } from "@brainiac/env/server";
 
-const apiKey = env.API_KEY;
+const value = env.MY_NEW_VAR;
 ```
+
+Frontend vars use the `VITE_PUBLIC_` prefix and are read via `@/lib/env`.
 
 ### Update Database Schema
 
-1. Modify schema in `packages/db/src/schema/`:
-
-```typescript
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  newColumn: text("new_column"), // Add new column
-});
-```
-
-2. Push changes:
-
-```bash
-bun run db:push
-```
-
-3. If you need a migration file (not generated):
-
-```bash
-bun run db:migrate
-```
+1. Modify schema in `packages/db/src/schema/`
+2. Push changes: `bun run db:push`
+3. For a migration file: `bun run db:generate` then `bun run db:migrate`
 
 ### Add an oRPC Endpoint
 
-1. Create or update router in `packages/api/src/routes/`:
+1. Create or extend a router in `packages/api/src/routers/`:
 
 ```typescript
-import { createRouter } from "@brainiac/api";
 import { z } from "zod";
+import { protectedProcedure } from "../../procedures";
 
-export const meRouter = createRouter({
-  getProfile: router.query({
-    input: z.void(),
-    resolve: async () => {
-      // Logic here
-      return profile;
-    },
-  }),
-});
+export const myFeatureRouter = {
+  list: protectedProcedure
+    .input(z.object({ teamId: z.string() }))
+    .handler(async ({ input, context }) => {
+      return { items: [], teamId: input.teamId, userId: context.session.user.id };
+    }),
+};
 ```
 
-2. Register in `apps/server/src/app.ts`:
+2. Register in `packages/api/src/routers/index.ts`:
 
 ```typescript
-import { meRouter } from "@brainiac/api/routes/me";
+import { myFeatureRouter } from "./my-feature";
 
-app.rpc("/me", meRouter);
+export const appRouter = {
+  // ...
+  myFeature: myFeatureRouter,
+};
 ```
 
-3. Use in frontend (types are automatic):
+No server wiring needed beyond that; `apps/server/src/lib/handlers.ts` serves the full `appRouter` at `/rpc`.
+
+3. Use in the frontend:
 
 ```typescript
-const profile = await $rpc.me.getProfile();
+import { orpc, orpcClient } from "@/lib/orpc";
+import { useQuery, useMutation } from "@tanstack/react-query";
+
+// Query
+const { data } = useQuery(orpc.myFeature.list.queryOptions({ input: { teamId } }));
+
+// Mutation
+const create = useMutation(orpc.myFeature.create.mutationOptions());
+await orpcClient.myFeature.create({ teamId, name: "Example" });
 ```
 
-### Run Database Studio UI
-
-Drizzle Studio is a visual tool for browsing your database:
+### Run Database Studio
 
 ```bash
 bun run db:studio
 ```
 
-This opens a web interface at `https://local.drizzle.studio` where you can browse tables and run queries.
+Opens at `https://local.drizzle.studio`.
 
 ---
 
-## 🐛 Troubleshooting
+## Optional Services
+
+### Redis (agency live sync)
+
+Agency task thread updates use Redis pub/sub. Without Redis, live sync falls back to polling.
+
+```env
+REDIS_URL=redis://localhost:6379
+```
+
+### S3 (task attachments)
+
+Agency task attachments need S3-compatible storage:
+
+```env
+S3_ENDPOINT=https://s3.example.com
+S3_REGION=auto
+S3_BUCKET=brainiac-task-attachments
+S3_ACCESS_KEY_ID=...
+S3_SECRET_ACCESS_KEY=...
+```
+
+### AI agent
+
+Set `OPENROUTER_API_KEY` in `apps/server/.env`. The agent rail on the dashboard requires it.
+
+---
+
+## Troubleshooting
 
 ### Build Fails with Module Not Found
 
-**Issue**: `Error: Cannot find module '@brainiac/...'`
-
-**Solution**:
-
 ```bash
-bun install              # Reinstall dependencies
-bun run check-types      # Verify types are correct
+bun install
+bun run check-types
 ```
 
 ### Seed Data Doesn't Load
 
-**Issue**: `bun run db:seed` fails or doesn't create data
-
-**Solution**:
-
 ```bash
-# Check if database exists
-bun run db:studio
-
-# Re-push schema
 bun run db:push
-
-# Try seeding again
 bun run db:seed
 ```
 
@@ -246,107 +261,46 @@ bun run db:seed -- --email your@email.com
 
 ### Frontend Can't Reach Backend
 
-**Issue**: Network request fails (CORS, connection refused)
+1. Is the backend running? `curl http://localhost:7000`
+2. Is the frontend at `http://localhost:7001`?
+3. Vite proxies `/rpc` and `/api/auth` to port 7000 in dev (see `apps/web/vite.config.ts`)
 
-**Check**:
-
-1. Is backend running? `curl http://localhost:3000`
-2. Is frontend at correct URL? (`http://localhost:3001`)
-3. Check `.env` in `apps/web` for correct API URL
-
-**Common fix**:
-
-```env
-# apps/web/.env
-NUXT_PUBLIC_API_BASE=http://localhost:3000
-```
-
-### TypeScript Strict Mode Errors
-
-**Issue**: Type errors even in working code
-
-**Solution**: Ensure `tsconfig.json` has `strict: true` and fix the type:
-
-```typescript
-// Before (error)
-const data = response.data;
-
-// After (fixed)
-const data: MyType = response.data;
-```
+In production, RPC and auth route through the web origin. `getRpcBaseUrl()` in `apps/web/src/lib/env.ts` handles this.
 
 ### Performance Issues During Development
 
-**Issue**: Dev server slow, rebuilds take forever
-
-**Try**:
-
 ```bash
-# Rebuild from scratch
-rm -rf node_modules .nuxt .turbo bun.lock
+rm -rf node_modules apps/web/dist apps/web/.output .turbo bun.lock
 bun install
 bun run dev
-
-# Or just clear cache
-bun run check -- --cache=false
 ```
 
 ---
 
-## 🔍 Useful Debug Tips
-
-### Check All Services Running
+## Useful Debug Tips
 
 ```bash
-# Database
-docker ps
-
-# Ports in use
-lsof -i :3000      # Backend
-lsof -i :3001      # Frontend
-
-# Git status
-git status
-```
-
-### View Database Logs
-
-```bash
-docker logs <postgres-container-id>
-```
-
-### Check Environment Variables
-
-```typescript
-// In any file
-import { env } from "@brainiac/env";
-console.log(env);
-```
-
-### TypeScript Help
-
-```bash
-# Check all types
-bun run check-types
-
-# Show unused code
-bun run check
+docker ps              # Database container
+lsof -i :7000          # Backend
+lsof -i :7001          # Frontend
+bun run check-types    # Type check
+bun run check          # Lint + format
 ```
 
 ---
 
-## 📚 Related Documentation
+## Related Documentation
 
 - **[README.md](./README.md)** — Project overview and quick start
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** — How to contribute, code standards
-- **Tech Stack**: Nuxt, Hono, oRPC, Drizzle, PostgreSQL
+- **[PRODUCT.md](./PRODUCT.md)** — Product purpose and principles
+- **[DESIGN.md](./DESIGN.md)** — Visual system and component rules
 
 ---
 
 ## Still Stuck?
 
-1. **Check logs**: Most errors are in terminal output
-2. **Clear cache**: `bun run build --cache=false`
-3. **Restart everything**: Stop, delete `.nuxt/.turbo`, restart
-4. **Search GitHub issues**: Your problem might be solved there
-5. **Open an issue**: Describe what you tried, share errors
+1. Check terminal logs for the failing service
+2. Clear caches and restart
+3. Search GitHub issues
+4. Open an issue with what you tried and the error output

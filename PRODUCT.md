@@ -2,7 +2,7 @@
 
 ## Register
 
-product
+Spatial knowledge workspace with embedded AI and agency operations
 
 ## Users
 

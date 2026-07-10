@@ -10,8 +10,14 @@
     "dev": "bun run --hot src/index.ts",
     "dev:portless": "portless server.brainiac bun run --hot src/index.ts",
     "grant:lifetime-pro": "bun run src/grant-lifetime-pro.ts",
+    "db:seed:agency": "bun run src/seed-agency.ts",
+    "db:clear:team": "bun run src/clear-team-data.ts",
+    "db:import:clockify": "bun run src/import-clockify.ts",
+    "db:import:clockify-backfill": "bun run src/import-clockify-backfill.ts",
+    "db:verify:clockify-backfill": "bun run src/verify-clockify-backfill.ts",
     "cleanup:agency-operator-nodes": "bun run src/cleanup-agency-operator-nodes.ts",
     "db:seed": "bun run src/seed.ts",
+    "db:seed:massive": "bun run src/seed-massive.ts",
     "start": "bun run dist/index.mjs",
     "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"
   },
@@ -21,17 +27,21 @@
     "@brainiac/db": "workspace:*",
     "@brainiac/env": "workspace:*",
     "@brainiac/workspace": "workspace:*",
+    "@clack/prompts": "^1.6.0",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
+    "better-auth": "catalog:",
     "drizzle-orm": "catalog:",
     "hono": "catalog:",
+    "sharp": "^0.35.3",
+    "web-push": "^3.6.7",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@brainiac/config": "workspace:*",
     "@types/bun": "catalog:",
-    "tsdown": "^0.16.5",
+    "tsdown": "^0.22.3",
     "typescript": "catalog:"
   }
 }

@@ -1,0 +1,56 @@
+---
+description: React frontend patterns — data fetching, styling, forms, routing
+globs: apps/web/**
+alwaysApply: false
+---
+
+# Web Frontend Conventions
+
+## Data fetching
+
+**TanStack Query** for server state via `orpc` utils:
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { orpc } from "@/lib/orpc";
+
+const { data } = useQuery(
+  orpc.agencyOps.clients.list.queryOptions({ input: { teamId } }),
+);
+```
+
+**Zustand** only for UI state and optimistic orchestration — use `orpcClient` + cache helpers in `lib/utils/agency-query-cache.ts`.
+
+## Styling
+
+- `cn()` from `@/lib/utils` for all class merging
+- `cva()` only inside `components/ui/*` (shadcn primitives)
+- Semantic tokens: `text-muted`, `bg-background`, `text-primary` — never raw gray classes
+- Follow [DESIGN.md](../../DESIGN.md): flat UI, hairline borders, no gradients/glassmorphism
+
+## Forms
+
+```tsx
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { loginSchema } from "@/lib/schemas/auth";
+```
+
+Schemas live in `apps/web/src/lib/schemas/`. Use shadcn `Form*` components.
+
+## Routing
+
+- Pages in `src/pages/`, lazy-loaded in `app.tsx`
+- Protected routes in `authenticated-routes.tsx` behind `ProtectedRoute`
+- App-local imports use `@/` alias
+
+## Folder structure
+
+```
+src/
+  pages/          # route pages
+  components/     # UI by domain (agency/, dashboard/, ui/)
+  lib/            # orpc client, hooks, utils, schemas/
+  stores/         # Zustand stores
+  providers/      # React context
+```

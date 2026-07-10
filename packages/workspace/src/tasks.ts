@@ -1,3 +1,4 @@
+import { assertNever } from "@brainiac/config/assert-never";
 import { WORKSPACE_TASK_DOMAINS, WORKSPACE_TASK_QUADRANTS } from "./constants";
 import {
   workspaceLeadershipRhythmFilterSchema,
@@ -72,6 +73,8 @@ function mapContentPipelineStatusToTaskPriority(status: WorkspaceContentPipeline
     case "ideas":
     case "published":
       return "low" as const;
+    default:
+      return assertNever(status);
   }
 }
 
@@ -87,6 +90,8 @@ function mapContentPipelineStatusToTaskUrgency(status: WorkspaceContentPipelineS
       return 4;
     case "published":
       return 1;
+    default:
+      return assertNever(status);
   }
 }
 
@@ -102,6 +107,8 @@ function mapContentPipelineStatusToTaskImportance(status: WorkspaceContentPipeli
       return 5;
     case "published":
       return 1;
+    default:
+      return assertNever(status);
   }
 }
 

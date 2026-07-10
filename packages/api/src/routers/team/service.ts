@@ -10,39 +10,7 @@ import {
 import { db } from "@brainiac/db";
 import { dashboardWorkspace, user, workspaceTeam, workspaceTeamMember } from "@brainiac/db/schema";
 
-const TEAM_ROLE_WEIGHT: Record<WorkspaceTeamRole, number> = {
-  viewer: 1,
-  editor: 2,
-  owner: 3,
-};
-
-function assertRoleAtLeast(role: WorkspaceTeamRole, required: WorkspaceTeamRole) {
-  if (TEAM_ROLE_WEIGHT[role] < TEAM_ROLE_WEIGHT[required]) {
-    throw new ORPCError("UNAUTHORIZED");
-  }
-}
-
-async function requireActorMembership(
-  actorUserId: string,
-  teamId: string,
-  requiredRole?: WorkspaceTeamRole,
-) {
-  const [actorMembership] = await db
-    .select({ role: workspaceTeamMember.role })
-    .from(workspaceTeamMember)
-    .where(and(eq(workspaceTeamMember.teamId, teamId), eq(workspaceTeamMember.userId, actorUserId)))
-    .limit(1);
-
-  if (!actorMembership) {
-    throw new ORPCError("UNAUTHORIZED");
-  }
-
-  if (requiredRole) {
-    assertRoleAtLeast(actorMembership.role, requiredRole);
-  }
-
-  return actorMembership;
-}
+import { requireTeamMembership } from "../../lib/team-membership";
 
 async function touchTeam(teamId: string, now: Date) {
   await db
@@ -76,6 +44,8 @@ export async function listUserTeams(userId: string) {
 }
 
 export async function getTeam(userId: string, teamId: string) {
+  await requireTeamMembership(userId, teamId, "viewer");
+
   const [membership] = await db
     .select({
       role: workspaceTeamMember.role,
@@ -143,7 +113,7 @@ export async function updateTeam(
     name: string;
   },
 ) {
-  await requireActorMembership(actorUserId, input.teamId, "owner");
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const now = new Date();
   const [updated] = await db
@@ -219,7 +189,7 @@ async function cleanupSharedNodesForDeletedTeam(teamId: string, now: Date) {
 }
 
 export async function deleteTeam(actorUserId: string, input: { teamId: string }) {
-  await requireActorMembership(actorUserId, input.teamId, "owner");
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const now = new Date();
 
@@ -244,7 +214,7 @@ export async function deleteTeam(actorUserId: string, input: { teamId: string })
 }
 
 export async function listTeamMembers(actorUserId: string, teamId: string) {
-  await requireActorMembership(actorUserId, teamId);
+  await requireTeamMembership(actorUserId, teamId);
 
   const members = await db
     .select({
@@ -278,7 +248,7 @@ export async function addTeamMember(
     role: WorkspaceTeamRole;
   },
 ) {
-  await requireActorMembership(actorUserId, input.teamId, "owner");
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const [targetUser] = await db
     .select({ id: user.id, name: user.name, email: user.email })
@@ -329,7 +299,7 @@ export async function updateTeamMemberRole(
     role: WorkspaceTeamRole;
   },
 ) {
-  await requireActorMembership(actorUserId, input.teamId, "owner");
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   if (input.userId === actorUserId && input.role !== "owner") {
     const ownerCountRows = await db
@@ -379,7 +349,7 @@ export async function removeTeamMember(
     userId: string;
   },
 ) {
-  await requireActorMembership(actorUserId, input.teamId, "owner");
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   if (input.userId === actorUserId) {
     const ownerCountRows = await db

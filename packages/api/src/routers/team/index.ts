@@ -1,8 +1,21 @@
+import { ORPCError } from "@orpc/server";
 import { workspaceTeamRoleSchema } from "@brainiac/workspace";
 import { z } from "zod";
 
 import { getBillingStateForUser } from "../../billing-guard";
 import { protectedProcedure } from "../../procedures";
+import {
+  teamAddMemberInputSchema,
+  teamCreateInputSchema,
+  teamDeleteInputSchema,
+  teamDetailSchema,
+  teamGetInputSchema,
+  teamMemberSchema,
+  teamRemoveMemberInputSchema,
+  teamSummarySchema,
+  teamUpdateInputSchema,
+  teamUpdateMemberRoleInputSchema,
+} from "../../schemas/team";
 import {
   addTeamMember,
   createTeam,
@@ -14,62 +27,6 @@ import {
   updateTeam,
   updateTeamMemberRole,
 } from "./service";
-
-const teamMemberSchema = z.object({
-  teamId: z.string().min(1),
-  userId: z.string().min(1),
-  userName: z.string().min(1),
-  userEmail: z.email(),
-  role: workspaceTeamRoleSchema,
-  joinedAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-const teamSummarySchema = z.object({
-  id: z.string().min(1),
-  name: z.string().trim().min(1).max(120),
-  role: workspaceTeamRoleSchema,
-  createdByUserId: z.string().min(1),
-  updatedAt: z.string().datetime(),
-});
-
-const teamDetailSchema = teamSummarySchema.extend({
-  members: z.array(teamMemberSchema),
-});
-
-const teamCreateInputSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-});
-
-const teamGetInputSchema = z.object({
-  teamId: z.string().min(1),
-});
-
-const teamUpdateInputSchema = z.object({
-  teamId: z.string().min(1),
-  name: z.string().trim().min(1).max(120),
-});
-
-const teamDeleteInputSchema = z.object({
-  teamId: z.string().min(1),
-});
-
-const teamAddMemberInputSchema = z.object({
-  teamId: z.string().min(1),
-  userEmail: z.email(),
-  role: workspaceTeamRoleSchema,
-});
-
-const teamUpdateMemberRoleInputSchema = z.object({
-  teamId: z.string().min(1),
-  userId: z.string().min(1),
-  role: workspaceTeamRoleSchema,
-});
-
-const teamRemoveMemberInputSchema = z.object({
-  teamId: z.string().min(1),
-  userId: z.string().min(1),
-});
 
 export const teamRouter = {
   list: protectedProcedure.handler(async ({ context }) => {
@@ -85,7 +42,6 @@ export const teamRouter = {
     const existing = await listUserTeams(context.session.user.id);
 
     if (existing.length >= billing.limits.teams) {
-      const { ORPCError } = await import("@orpc/server");
       throw new ORPCError("FORBIDDEN", {
         message: `Your ${billing.tier} plan allows up to ${billing.limits.teams} team(s)`,
         data: { limit: billing.limits.teams, current: existing.length },

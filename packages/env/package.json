@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     "./server": "./src/server.ts",
-    "./web": "./src/web.ts"
+    "./web": "./src/web.ts",
+    "./vite": "./src/vite.ts"
   },
   "scripts": {
     "check-types": "tsc -p tsconfig.json --noEmit",

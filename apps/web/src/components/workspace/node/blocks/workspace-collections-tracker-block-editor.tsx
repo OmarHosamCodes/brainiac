@@ -1,0 +1,435 @@
+import {
+  WORKSPACE_RECEIVABLE_FILTERS,
+  createWorkspaceReceivableInvoice,
+  getCollectionsTrackerSummary,
+  getReceivableDaysOverdue,
+  getReceivableRiskLevel,
+  matchesReceivableFilter,
+  sortReceivableInvoices,
+  workspaceReceivableFilterLabels,
+  workspaceReceivableRiskLevelLabels,
+  workspaceReceivableStatusLabels,
+  type WorkspaceCollectionsTrackerBlock,
+  type WorkspaceReceivableFilter,
+} from "@brainiac/workspace";
+import { Plus, Trash2 } from "lucide-react";
+import { useMemo } from "react";
+
+import type { WorkspaceBlockEditorProps } from "@/components/workspace/node/block-editor-props";
+import { BlockSelect } from "@/components/workspace/node/blocks/shared/block-select";
+import { useWorkspaceNodeEditorContext } from "@/components/workspace/node/context";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+
+const rowGridStyle = {
+  gridTemplateColumns:
+    "minmax(12rem,1.1fr) minmax(8rem,0.8fr) minmax(9rem,0.9fr) minmax(7rem,0.6fr) minmax(9rem,0.8fr) minmax(9rem,0.8fr) minmax(8rem,0.8fr) minmax(8rem,0.8fr) minmax(18rem,1.3fr) auto",
+};
+
+const statusOptions = Object.entries(workspaceReceivableStatusLabels).map(([value, label]) => ({
+  label,
+  value,
+}));
+
+const headerLabels = [
+  "Client",
+  "Amount",
+  "Due Date",
+  "Overdue",
+  "Owner",
+  "Follow-up",
+  "Status",
+  "Risk",
+  "Notes",
+  "Actions",
+];
+
+function formatCurrency(value: number) {
+  return `${Math.round(value).toLocaleString("en-US")} EGP`;
+}
+
+function toInteger(value: string | number | undefined, fallback = 0) {
+  const numeric = Number(value);
+
+  if (!Number.isFinite(numeric)) {
+    return fallback;
+  }
+
+  return Math.max(0, Math.round(numeric));
+}
+
+function getRiskBadgeVariant(risk: ReturnType<typeof getReceivableRiskLevel>) {
+  switch (risk) {
+    case "high":
+      return "destructive" as const;
+    case "medium":
+      return "warning" as const;
+    default:
+      return "success" as const;
+  }
+}
+
+export function WorkspaceCollectionsTrackerBlockEditor({
+  block,
+  tabId,
+}: WorkspaceBlockEditorProps<WorkspaceCollectionsTrackerBlock>) {
+  const { mutateTypedBlock } = useWorkspaceNodeEditorContext();
+
+  const summary = useMemo(() => getCollectionsTrackerSummary(block), [block]);
+
+  const filteredInvoices = useMemo(
+    () =>
+      sortReceivableInvoices(block.invoices).filter((invoice) =>
+        matchesReceivableFilter(invoice, block.filter),
+      ),
+    [block.filter, block.invoices],
+  );
+
+  const overdueCount = useMemo(
+    () => block.invoices.filter((invoice) => getReceivableDaysOverdue(invoice) > 0).length,
+    [block.invoices],
+  );
+
+  const highRiskCount = useMemo(
+    () => block.invoices.filter((invoice) => getReceivableRiskLevel(invoice) === "high").length,
+    [block.invoices],
+  );
+
+  const paidCount = useMemo(
+    () => block.invoices.filter((invoice) => invoice.status === "paid").length,
+    [block.invoices],
+  );
+
+  function mutateTrackerBlock(mutator: (entry: WorkspaceCollectionsTrackerBlock) => void) {
+    mutateTypedBlock(tabId, block.id, "collections-tracker", mutator);
+  }
+
+  function mutateInvoice(
+    invoiceId: string,
+    mutator: (invoice: WorkspaceCollectionsTrackerBlock["invoices"][number]) => void,
+  ) {
+    mutateTrackerBlock((entry) => {
+      const target = entry.invoices.find((candidate) => candidate.id === invoiceId);
+      if (target) {
+        mutator(target);
+      }
+    });
+  }
+
+  function addInvoice() {
+    mutateTrackerBlock((entry) => {
+      entry.invoices.unshift(createWorkspaceReceivableInvoice());
+    });
+  }
+
+  function removeInvoice(invoiceId: string) {
+    mutateTrackerBlock((entry) => {
+      entry.invoices = entry.invoices.filter((invoice) => invoice.id !== invoiceId);
+    });
+  }
+
+  function updateStatus(invoiceId: string, value: string) {
+    mutateInvoice(invoiceId, (invoice) => {
+      invoice.status =
+        value === "due-soon" || value === "partial" || value === "overdue" || value === "paid"
+          ? value
+          : "due-soon";
+
+      if (invoice.status !== "paid") {
+        invoice.paidAt = null;
+      }
+    });
+  }
+
+  function setFilter(filter: WorkspaceReceivableFilter) {
+    mutateTrackerBlock((entry) => {
+      entry.filter = filter;
+    });
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="rounded-3xl border border-primary/20 bg-primary/10 p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/70">
+            Outstanding
+          </p>
+          <p className="mt-2 text-xl font-black tracking-tight text-primary sm:text-2xl">
+            {formatCurrency(summary.totalOutstanding)}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {block.invoices.length} tracked invoices
+          </p>
+        </div>
+
+        <div className="rounded-3xl border border-destructive/20 bg-destructive/10 p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-destructive/70">
+            Overdue
+          </p>
+          <p className="mt-2 text-xl font-black tracking-tight text-destructive sm:text-2xl">
+            {formatCurrency(summary.overdueAmount)}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {overdueCount} invoices need follow-up
+          </p>
+        </div>
+
+        <div className="rounded-3xl border border-warning/20 bg-warning/10 p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-warning/70">
+            Due This Week
+          </p>
+          <p className="mt-2 text-xl font-black tracking-tight text-warning sm:text-2xl">
+            {formatCurrency(summary.dueThisWeekAmount)}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{highRiskCount} high-risk exposures</p>
+        </div>
+
+        <div className="rounded-3xl border border-success/20 bg-success/10 p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-success/70">
+            Collected This Month
+          </p>
+          <p className="mt-2 text-xl font-black tracking-tight text-success sm:text-2xl">
+            {formatCurrency(summary.collectedThisMonth)}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{paidCount} invoices marked paid</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-start justify-between gap-3 px-1">
+        <div className="space-y-2">
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Collections & receivables tracker
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Risk is highlighted automatically from invoice size, status, and delay length so the
+              team can focus follow-up where cash exposure is highest.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="rounded-2xl">
+              {filteredInvoices.length} visible
+            </Badge>
+            <Badge variant="secondary" className="rounded-2xl">
+              Filter: {workspaceReceivableFilterLabels[block.filter]}
+            </Badge>
+            {highRiskCount > 0 ? (
+              <Badge variant="warning" className="rounded-2xl">
+                {highRiskCount} high risk
+              </Badge>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {WORKSPACE_RECEIVABLE_FILTERS.map((filter) => (
+            <Button
+              key={filter}
+              type="button"
+              variant={block.filter === filter ? "secondary" : "ghost"}
+              size="sm"
+              className="rounded-full px-4"
+              aria-label={`Show ${workspaceReceivableFilterLabels[filter]} invoices`}
+              onClick={() => setFilter(filter)}
+            >
+              {workspaceReceivableFilterLabels[filter]}
+            </Button>
+          ))}
+
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="rounded-full px-4"
+            aria-label="Add receivable invoice"
+            onClick={addInvoice}
+          >
+            <Plus />
+            Add Invoice
+          </Button>
+        </div>
+      </div>
+
+      {filteredInvoices.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-muted/20 bg-muted/5 py-12 text-center">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/40">
+            No invoices match the current filter
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Add a receivable or switch the filter to review another part of the cash pipeline.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto pb-4">
+          <div
+            className="grid min-w-[1560px] gap-px overflow-hidden rounded-3xl border border-muted/20 bg-muted/20"
+            style={rowGridStyle}
+          >
+            {headerLabels.map((label) => (
+              <div
+                key={label}
+                className="bg-muted/10 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60"
+              >
+                {label}
+              </div>
+            ))}
+
+            {filteredInvoices.map((invoice) => {
+              const daysOverdue = getReceivableDaysOverdue(invoice);
+              const riskLevel = getReceivableRiskLevel(invoice);
+
+              return (
+                <div key={invoice.id} className="contents">
+                  <div className="bg-background/40 p-3">
+                    <Input
+                      value={invoice.clientName}
+                      placeholder="Client"
+                      className="border-0 bg-transparent px-0 font-semibold text-foreground shadow-none placeholder:text-muted-foreground/60 focus-visible:ring-0"
+                      aria-label={`Client name for invoice ${invoice.clientName || "draft"}`}
+                      onChange={(event) =>
+                        mutateInvoice(invoice.id, (entry) => {
+                          entry.clientName = event.target.value.slice(0, 120);
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="bg-background/40 p-3">
+                    <Input
+                      type="number"
+                      value={String(invoice.amountEgp)}
+                      className="rounded-2xl"
+                      aria-label={`Amount for ${invoice.clientName || "invoice"}`}
+                      onChange={(event) =>
+                        mutateInvoice(invoice.id, (entry) => {
+                          entry.amountEgp = toInteger(event.target.value, entry.amountEgp);
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="bg-background/40 p-3">
+                    <Input
+                      type="date"
+                      value={invoice.dueDate ?? ""}
+                      className="rounded-2xl"
+                      aria-label={`Due date for ${invoice.clientName || "invoice"}`}
+                      onChange={(event) =>
+                        mutateInvoice(invoice.id, (entry) => {
+                          entry.dueDate = event.target.value || null;
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="bg-background/40 p-3">
+                    <p
+                      className={cn(
+                        "rounded-2xl border px-3 py-2 text-center text-[10px] font-bold uppercase tracking-[0.1em]",
+                        daysOverdue > 0
+                          ? "border-destructive/20 bg-destructive/10 text-destructive"
+                          : "border-muted/20 bg-muted/10 text-muted-foreground/60",
+                      )}
+                    >
+                      {daysOverdue > 0 ? `${daysOverdue}d` : "0d"}
+                    </p>
+                  </div>
+
+                  <div className="bg-background/40 p-3">
+                    <Input
+                      value={invoice.owner}
+                      placeholder="Owner"
+                      className="rounded-2xl"
+                      aria-label={`Owner for ${invoice.clientName || "invoice"}`}
+                      onChange={(event) =>
+                        mutateInvoice(invoice.id, (entry) => {
+                          entry.owner = event.target.value.slice(0, 120);
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="bg-background/40 p-3">
+                    <Input
+                      type="date"
+                      value={invoice.nextFollowUpDate ?? ""}
+                      className="rounded-2xl"
+                      aria-label={`Next follow-up date for ${invoice.clientName || "invoice"}`}
+                      onChange={(event) =>
+                        mutateInvoice(invoice.id, (entry) => {
+                          entry.nextFollowUpDate = event.target.value || null;
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="bg-background/40 p-3">
+                    <BlockSelect
+                      value={invoice.status}
+                      options={statusOptions}
+                      className="rounded-2xl"
+                      aria-label={`Status for ${invoice.clientName || "invoice"}`}
+                      onValueChange={(value) => updateStatus(invoice.id, value)}
+                    />
+                  </div>
+
+                  <div className="bg-background/40 p-3">
+                    <Badge variant={getRiskBadgeVariant(riskLevel)} className="rounded-2xl px-3">
+                      {workspaceReceivableRiskLevelLabels[riskLevel]}
+                    </Badge>
+
+                    {invoice.status === "paid" ? (
+                      <Input
+                        type="date"
+                        value={invoice.paidAt ?? ""}
+                        className="mt-2 rounded-2xl"
+                        aria-label={`Paid date for ${invoice.clientName || "invoice"}`}
+                        onChange={(event) =>
+                          mutateInvoice(invoice.id, (entry) => {
+                            entry.paidAt = event.target.value || null;
+                          })
+                        }
+                      />
+                    ) : null}
+                  </div>
+
+                  <div className="bg-background/40 p-3">
+                    <Textarea
+                      value={invoice.notes}
+                      rows={1}
+                      className="min-h-0 resize-none rounded-2xl bg-muted/10 text-sm"
+                      placeholder="Follow-up notes"
+                      aria-label={`Follow-up notes for ${invoice.clientName || "invoice"}`}
+                      onChange={(event) =>
+                        mutateInvoice(invoice.id, (entry) => {
+                          entry.notes = event.target.value.slice(0, 2000);
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="bg-background/40 p-3">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="rounded-xl transition-colors hover:text-destructive"
+                      aria-label={`Remove ${invoice.clientName || "invoice"}`}
+                      onClick={() => removeInvoice(invoice.id)}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

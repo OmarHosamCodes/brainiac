@@ -1,20 +1,18 @@
 # Contributing to Brainiac
 
-Thank you for your interest in contributing to Brainiac! This guide will help you get started.
+Thank you for your interest in contributing. This guide covers setup, project layout, and common workflows.
 
 ## Prerequisites
 
-Before you begin, ensure you have:
-
 - **Bun** v1.3.10+ ([install here](https://bun.sh))
-- **Git** for version control
-- **Docker** (optional, for PostgreSQL; we can use a local instance)
-- **TypeScript** knowledge (for backend and shared packages)
-- **Vue 3** or **React** knowledge (for frontend)
+- **Git**
+- **Docker** (optional; for local PostgreSQL)
+- **TypeScript** knowledge
+- **React** knowledge (frontend is React 19 + Vite, not Nuxt)
 
 ## Getting Started
 
-### 1. Fork & Clone
+### 1. Fork and Clone
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/brainiac.git
@@ -29,19 +27,20 @@ bun install
 
 ### 3. Setup Local Environment
 
-Copy `.env.example` to `.env` files in both `apps/server` and `apps/web`:
-
 ```bash
-cp .env.example apps/server/.env
-cp .env.example apps/web/.env
+cp .env.example .env
+cp apps/server/.env.example apps/server/.env
+cp apps/web/.env.example apps/web/.env
 ```
+
+Review the `.env` files. At minimum, set `BETTER_AUTH_SECRET` (32+ chars) and `OPENROUTER_API_KEY` if you need the agent.
 
 ### 4. Setup Database
 
 ```bash
-bun run db:start      # Start PostgreSQL in Docker
-bun run db:push       # Apply schema
-bun run db:seed       # Load demo data (optional)
+bun run db:start
+bun run db:push
+bun run db:seed       # optional
 ```
 
 ### 5. Start Development
@@ -50,35 +49,37 @@ bun run db:seed       # Load demo data (optional)
 bun run dev
 ```
 
-Visit [http://localhost:3001](http://localhost:3001) to see the app. The API runs at [http://localhost:3000](http://localhost:3000).
+Visit [http://localhost:7001](http://localhost:7001). The API runs at [http://localhost:7000](http://localhost:7000).
 
 ---
 
 ## Project Structure
 
-Understanding the layout helps you know where to make changes:
-
 ```
 brainiac/
-├── apps/web/            # Frontend (Nuxt 4)
-│   ├── app/             # Pages, components, layouts
-│   ├── server/          # Nuxt server routes
-│   └── public/          # Static files
-│
-├── apps/server/         # Backend (Hono)
+├── apps/web/                    # Frontend (React + Vite)
 │   └── src/
-│       ├── app.ts       # Main Hono app setup
-│       ├── lib/         # Utilities and helpers
-│       └── seed.ts      # Database seeding
+│       ├── pages/               # Route pages
+│       ├── components/          # UI (dashboard, agency, canvas, ui, …)
+│       ├── lib/                 # oRPC client, hooks, utilities
+│       └── stores/              # Zustand stores
+│
+├── apps/server/                 # Backend (Hono on Bun)
+│   └── src/
+│       ├── app.ts               # Hono app, auth, RPC, WebSocket
+│       └── seed.ts              # Database seeding
 │
 ├── packages/
-│   ├── api/             # API types and logic (shared)
-│   ├── db/              # Database schema & ORM (shared)
-│   ├── auth/            # Auth setup & utilities (shared)
-│   └── env/             # Environment validation (shared)
+│   ├── api/                     # oRPC routers and business logic
+│   ├── db/                      # Drizzle schema and migrations
+│   ├── auth/                    # Better-Auth setup
+│   ├── env/                     # Environment validation
+│   ├── agent/                   # AI agent tools
+│   ├── workspace/               # Workspace types and block schemas
+│   └── config/                  # Shared TS config
 ```
 
-**Key**: Packages are shared—changes affect both frontend and backend.
+Packages are shared between frontend and backend.
 
 ---
 
@@ -86,91 +87,94 @@ brainiac/
 
 ### Adding a Backend Endpoint
 
-Backend endpoints are defined using Hono + oRPC for end-to-end type safety.
+Routers live in `packages/api/src/routers/` and are composed in `packages/api/src/routers/index.ts`.
 
-#### 1. Define Your API in `packages/api/src`
-
-```typescript
-// packages/api/src/routes/myFeature.ts
-import { createRouter } from "@brainiac/api";
-
-export const myFeatureRouter = createRouter({
-  getItems: router.query({
-    input: z.object({ workspaceId: z.string() }),
-    resolve: async ({ input }) => {
-      // Your logic here
-      return items;
-    },
-  }),
-
-  createItem: router.mutation({
-    input: z.object({ name: z.string() }),
-    resolve: async ({ input }) => {
-      // Your logic here
-      return newItem;
-    },
-  }),
-});
-```
-
-#### 2. Register in Backend (`apps/server/src/app.ts`)
+#### 1. Define the router
 
 ```typescript
-import { myFeatureRouter } from "@brainiac/api/routes/myFeature";
+// packages/api/src/routers/my-feature.ts
+import { z } from "zod";
+import { protectedProcedure } from "../procedures";
 
-app.rpc("/my-feature", myFeatureRouter);
+export const myFeatureRouter = {
+  list: protectedProcedure
+    .input(z.object({ teamId: z.string() }))
+    .handler(async ({ input, context }) => {
+      return { items: [], teamId: input.teamId };
+    }),
+
+  create: protectedProcedure
+    .input(z.object({ teamId: z.string(), name: z.string() }))
+    .handler(async ({ input, context }) => {
+      return { id: "new-id", name: input.name };
+    }),
+};
 ```
 
-#### 3. Use in Frontend (Nuxt)
+#### 2. Register in the app router
 
-The types are automatically inferred:
+```typescript
+// packages/api/src/routers/index.ts
+import { myFeatureRouter } from "./my-feature";
 
-```vue
-<script setup lang="ts">
-const items = await $rpc.myFeature.getItems({
-  workspaceId: "workspace-123",
-});
-</script>
+export const appRouter = {
+  // ...
+  myFeature: myFeatureRouter,
+};
+```
+
+The server picks this up automatically via `handleAppRouterRequest` at `/rpc`.
+
+#### 3. Use in the frontend
+
+```tsx
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { orpc, orpcClient } from "@/lib/orpc";
+
+function MyFeatureList({ teamId }: { teamId: string }) {
+  const { data } = useQuery(orpc.myFeature.list.queryOptions({ input: { teamId } }));
+
+  const create = useMutation(orpc.myFeature.create.mutationOptions());
+
+  return (
+    <ul>
+      {data?.items.map((item) => (
+        <li key={item.id}>{item.name}</li>
+      ))}
+    </ul>
+  );
+}
 ```
 
 ### Adding a Frontend Component
 
-Components go in `apps/web/app/components/`:
+Components go in `apps/web/src/components/`:
 
-```vue
-<!-- apps/web/app/components/MyComponent.vue -->
-<template>
-  <div class="flex flex-col gap-4">
-    <h2>{{ title }}</h2>
-    <slot />
-  </div>
-</template>
-
-<script setup lang="ts">
-defineProps<{
+```tsx
+// apps/web/src/components/my-component.tsx
+type MyComponentProps = {
   title: string;
-}>();
-</script>
+  children?: React.ReactNode;
+};
+
+export function MyComponent({ title, children }: MyComponentProps) {
+  return (
+    <div className="flex flex-col gap-4">
+      <h2 className="text-title font-semibold">{title}</h2>
+      {children}
+    </div>
+  );
+}
 ```
 
-Use it in pages or other components:
-
-```vue
-<template>
-  <MyComponent title="Example">
-    <p>Content goes here</p>
-  </MyComponent>
-</template>
-```
+Use `@/` imports for app-local modules. Match existing Tailwind patterns and the design rules in [DESIGN.md](./DESIGN.md).
 
 ### Adding a Database Table
 
-Database schema is defined using Drizzle ORM in `packages/db/src/schema/`.
-
-#### 1. Create the Schema
+#### 1. Create the schema
 
 ```typescript
-// packages/db/src/schema/myTable.ts
+// packages/db/src/schema/my-table.ts
 import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const myTable = pgTable("my_table", {
@@ -180,14 +184,15 @@ export const myTable = pgTable("my_table", {
 });
 ```
 
-#### 2. Generate & Migrate
+Export it from `packages/db/src/schema/index.ts`.
+
+#### 2. Apply
 
 ```bash
-bun run db:generate    # Generate types
-bun run db:push        # Apply to database
+bun run db:push
 ```
 
-#### 3. Use in Queries
+#### 3. Query
 
 ```typescript
 import { db } from "@brainiac/db";
@@ -198,22 +203,9 @@ const items = await db.select().from(myTable);
 
 ### Adding an Environment Variable
 
-1. Add to `packages/env/src/index.ts`:
-
-```typescript
-export const env = z.object({
-  DATABASE_URL: z.string(),
-  MY_NEW_VAR: z.string(),
-});
-```
-
-2. Use in code:
-
-```typescript
-import { env } from "@brainiac/env";
-
-console.log(env.MY_NEW_VAR);
-```
+1. Add to `packages/env/src/server.ts` (backend) or `packages/env/src/vite.ts` (frontend `VITE_PUBLIC_*` vars)
+2. Document in `.env.example`
+3. Use via `@brainiac/env/server` or `@/lib/env`
 
 ---
 
@@ -221,30 +213,27 @@ console.log(env.MY_NEW_VAR);
 
 ### TypeScript
 
-- Use **strict mode** (`"strict": true` in tsconfig.json)
-- Type all function parameters and returns
-- Avoid `any` type—use generics or unions instead
+- Strict mode enabled
+- Type function parameters and returns
+- Avoid `any`; use generics or unions
 
-### Formatting & Linting
+### Formatting and Linting
 
 ```bash
-bun run check          # Run Oxlint and Oxfmt
+bun run check
 ```
 
-This automatically fixes formatting issues. We use:
-
-- **Oxlint** for linting (fast, Rust-based)
-- **Oxfmt** for formatting (compatible with Prettier)
+Uses **Oxlint** for linting and **Oxfmt** for formatting.
 
 ### Commits
 
-Follow conventional commits for clarity:
+Follow conventional commits:
 
 ```
-feat: Add user dashboard page
-fix: Resolve database connection timeout
-docs: Update getting started guide
-refactor: Simplify API response handling
+feat: add agency client filter
+fix: resolve timer drift on stop
+docs: update development guide
+refactor: simplify workspace save path
 ```
 
 ---
@@ -253,60 +242,40 @@ refactor: Simplify API response handling
 
 ### Before You Submit
 
-1. **Create a branch** from `main`:
-
 ```bash
 git checkout -b feat/my-feature
-```
-
-2. **Make your changes** and test locally:
-
-```bash
-bun run dev              # Start dev server
-bun run check-types      # Check TypeScript
-bun run check            # Lint & format
-```
-
-3. **Commit with clear messages**:
-
-```bash
-git add .
-git commit -m "feat: Add user dashboard"
-```
-
-4. **Push and open a PR**:
-
-```bash
+bun run dev
+bun run check-types
+bun run check
+git commit -m "feat: add my feature"
 git push origin feat/my-feature
 ```
 
 ### PR Checklist
 
-- [ ] Code follows style guide (`bun run check` passes)
-- [ ] TypeScript types are correct (`bun run check-types` passes)
-- [ ] Tests pass (if applicable)
+- [ ] `bun run check` passes (oxlint, conventions, oxfmt)
+- [ ] `bun run check-types` passes
 - [ ] Commit messages follow conventions
 - [ ] PR description explains what and why
 
 ### What We Look For
 
-- **Clarity**: Code is easy to understand
-- **Type Safety**: Full TypeScript coverage
-- **Consistency**: Follows project patterns
-- **Testing**: Changes are validated
-- **Documentation**: Complex logic is explained
+- **Clarity**: Code is easy to follow
+- **Type safety**: Full TypeScript coverage
+- **Consistency**: Matches existing patterns
+- **Documentation**: Complex logic is explained where needed
 
 ---
 
 ## Getting Help
 
-- **Stuck on setup?** Check [DEVELOPMENT.md](./DEVELOPMENT.md) for troubleshooting
-- **Questions about architecture?** See the [Project Structure](#project-structure) section
-- **Found a bug?** Open an issue on GitHub
-- **Want to discuss ideas?** Start a discussion or ping maintainers
+- **Setup issues**: [DEVELOPMENT.md](./DEVELOPMENT.md)
+- **Product context**: [PRODUCT.md](./PRODUCT.md)
+- **Visual rules**: [DESIGN.md](./DESIGN.md)
+- **Bugs**: Open a GitHub issue
 
 ---
 
 ## Thank You
 
-Your contributions help make Brainiac better. We appreciate your effort!
+Your contributions help make Brainiac better.

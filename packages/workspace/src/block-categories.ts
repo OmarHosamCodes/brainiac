@@ -20,43 +20,6 @@ export type WorkspaceBlockCategory = {
 
 export const workspaceBlockCategories = [
   {
-    id: "agency-operations",
-    label: "Agency Operations",
-    items: [
-      {
-        blockType: "agency-project-manager",
-        label: "Agency project manager",
-        icon: "i-lucide-briefcase-business",
-      },
-      {
-        blockType: "agency-time-tracker",
-        label: "Agency time tracker",
-        icon: "i-lucide-timer",
-      },
-      {
-        blockType: "agency-time-entries-log",
-        label: "Agency time entries log",
-        icon: "i-lucide-logs",
-      },
-      {
-        blockType: "agency-time-summary",
-        label: "Agency time summary",
-        icon: "i-lucide-chart-pie",
-      },
-      {
-        blockType: "agency-settings",
-        label: "Agency settings",
-        icon: "i-lucide-settings-2",
-      },
-      {
-        blockType: "agency-billing-report",
-        label: "Agency billing report",
-        icon: "i-lucide-file-clock",
-        teamOnly: true,
-      },
-    ],
-  },
-  {
     id: "strategy",
     label: "Strategy",
     items: [

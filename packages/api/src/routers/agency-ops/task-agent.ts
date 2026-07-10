@@ -4,11 +4,13 @@ import {
   agencyOpsClient,
   agencyOpsProject,
   agencyOpsProjectTask,
+  agencyOpsProjectTaskAssignee,
   agencyOpsTaskAttachment,
   agencyOpsTaskMessage,
   agencyOpsTaskThread,
   user,
 } from "@brainiac/db/schema";
+import { formatTaskAssigneeLabel } from "../../schemas/agency-ops";
 import type { AttachmentMetadata } from "@brainiac/db/schema/agency-ops";
 import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
@@ -16,10 +18,11 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import {
   ensureTaskThreadByTaskId,
-  listRecentTaskThreadMessages,
+  getTaskThreadMessageById,
   requireTeamMembership,
+  validateTaskAttachmentUploadReferences,
 } from "./service";
-import { publishAgencyLiveEvent } from "./live";
+import { liveUpdatedAt, publishAgencyLiveEvent } from "./live";
 
 function formatAttachmentSummary(
   attachments: Array<{
@@ -33,6 +36,10 @@ function formatAttachmentSummary(
   const lines = attachments.map((a) => {
     const parts: string[] = [a.fileName];
     const meta = a.metadata;
+    if (meta?.mediaKind === "link" && meta.sourceUrl) {
+      parts.push(`(${meta.sourceUrl})`);
+      return `  - ${parts.join(" ")}`;
+    }
     if (meta?.mediaKind) {
       parts.push(`(${meta.mediaKind}`);
       if (meta.imageWidth && meta.imageHeight) {
@@ -74,6 +81,7 @@ export async function askTaskAgent(
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  validateTaskAttachmentUploadReferences(input);
 
   const [context] = await db
     .select({
@@ -81,12 +89,11 @@ export async function askTaskAgent(
       taskStatus: agencyOpsProjectTask.status,
       projectName: agencyOpsProject.name,
       clientName: agencyOpsClient.name,
-      assigneeName: user.name,
+      assignedToTeam: agencyOpsProjectTask.assignedToTeam,
     })
     .from(agencyOpsProjectTask)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
-    .leftJoin(user, eq(user.id, agencyOpsProjectTask.assigneeUserId))
     .where(
       and(eq(agencyOpsProjectTask.id, input.taskId), eq(agencyOpsProjectTask.teamId, input.teamId)),
     )
@@ -97,6 +104,22 @@ export async function askTaskAgent(
       message: "Task was not found.",
     });
   }
+
+  const assigneeRows = await db
+    .select({
+      userId: agencyOpsProjectTaskAssignee.userId,
+      userName: user.name,
+    })
+    .from(agencyOpsProjectTaskAssignee)
+    .innerJoin(user, eq(user.id, agencyOpsProjectTaskAssignee.userId))
+    .where(eq(agencyOpsProjectTaskAssignee.taskId, input.taskId));
+
+  const assigneeName = formatTaskAssigneeLabel({
+    assignedToTeam: context.assignedToTeam,
+    assignees: assigneeRows.map((row) => ({
+      userName: row.userName ?? "Unknown",
+    })),
+  });
 
   const thread = await ensureTaskThreadByTaskId(input.teamId, input.taskId);
 
@@ -197,7 +220,7 @@ export async function askTaskAgent(
       taskStatus: context.taskStatus,
       projectName: context.projectName,
       clientName: context.clientName,
-      assigneeName: context.assigneeName ?? null,
+      assigneeName: assigneeName === "Unassigned" ? null : assigneeName,
       recentMessages,
     },
     { model: input.model },
@@ -208,6 +231,7 @@ export async function askTaskAgent(
   // ------------------------------------------------------------------
   const now = new Date();
   const userMessageId = createWorkspaceId("agency-task-message");
+  const agentMessageId = createWorkspaceId("agency-task-message");
 
   await db.transaction(async (tx) => {
     await tx.insert(agencyOpsTaskMessage).values([
@@ -223,7 +247,7 @@ export async function askTaskAgent(
         updatedAt: now,
       },
       {
-        id: createWorkspaceId("agency-task-message"),
+        id: agentMessageId,
         teamId: input.teamId,
         threadId: thread.id,
         userId: actorUserId,
@@ -258,24 +282,32 @@ export async function askTaskAgent(
       .where(eq(agencyOpsTaskThread.id, thread.id));
   });
 
-  const recent = await listRecentTaskThreadMessages(actorUserId, {
-    teamId: input.teamId,
-    taskId: input.taskId,
-    limit: 2,
-  });
+  const [userMessage, agentMessage] = await Promise.all([
+    getTaskThreadMessageById(actorUserId, { teamId: input.teamId, messageId: userMessageId }),
+    getTaskThreadMessageById(actorUserId, { teamId: input.teamId, messageId: agentMessageId }),
+  ]);
 
-  for (const message of recent.items) {
+  await Promise.all([
     publishAgencyLiveEvent(input.teamId, {
       type: "taskMessage.created",
       teamId: input.teamId,
-      updatedAt: message.updatedAt,
       taskId: input.taskId,
-      message,
-    });
-  }
+      updatedAt: liveUpdatedAt(userMessage.updatedAt),
+      message: userMessage,
+    }),
+    publishAgencyLiveEvent(input.teamId, {
+      type: "taskMessage.created",
+      teamId: input.teamId,
+      taskId: input.taskId,
+      updatedAt: liveUpdatedAt(agentMessage.updatedAt),
+      message: agentMessage,
+    }),
+  ]);
 
   return {
-    response: result.response,
+    userMessage,
+    agentMessage,
     model: result.model,
+    response: result.response,
   };
 }

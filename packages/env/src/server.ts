@@ -19,8 +19,11 @@ export const env = createEnv({
         32,
         "BETTER_AUTH_SECRET must be at least 32 characters (generate with: openssl rand -hex 16)",
       ),
-    BETTER_AUTH_URL: z.url("BETTER_AUTH_URL must be a valid URL (e.g., http://localhost:7000)"),
+    BETTER_AUTH_URL: z.url("BETTER_AUTH_URL must be a valid URL (e.g., http://localhost:7001)"),
+    GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required for Google OAuth"),
+    GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required for Google OAuth"),
     CORS_ORIGIN: z.url("CORS_ORIGIN must be a valid URL (e.g., http://localhost:7001)"),
+    CORS_ORIGINS: z.string().optional(),
     OPENROUTER_API_KEY: z
       .string()
       .min(1, "OPENROUTER_API_KEY is required. Get one from https://openrouter.ai/keys"),
@@ -36,8 +39,39 @@ export const env = createEnv({
     S3_BUCKET: z.string().min(1, "S3_BUCKET is required for file storage"),
     S3_ACCESS_KEY_ID: z.string().min(1, "S3_ACCESS_KEY_ID is required for file storage"),
     S3_SECRET_ACCESS_KEY: z.string().min(1, "S3_SECRET_ACCESS_KEY is required for file storage"),
+    REDIS_URL: z
+      .string()
+      .min(1, "REDIS_URL is required for live sync (e.g., redis://localhost:6379)"),
+    VAPID_PUBLIC_KEY: z.string().optional(),
+    VAPID_PRIVATE_KEY: z.string().optional(),
+    VAPID_SUBJECT: z.string().optional(),
+    PORT: z.coerce.number().optional(),
+    BRAINIAC_SEED_SCALE: z.enum(["default", "massive"]).optional(),
+    BRAINIAC_SEED_PASSWORD: z.string().optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
   skipValidation: true,
 });
+
+function parseCorsOrigins(): string[] {
+  const origins = [env.CORS_ORIGIN, env.CORS_ORIGINS]
+    .filter((value): value is string => Boolean(value))
+    .flatMap((value) => value.split(","))
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return [...new Set(origins)];
+}
+
+export const corsOrigins = parseCorsOrigins();
+
+const firstCorsOrigin = corsOrigins[0];
+
+if (!firstCorsOrigin) {
+  throw new Error(
+    "CORS_ORIGIN is required. Set it to the deployed web app origin, for example https://web-brainiac.up.railway.app",
+  );
+}
+
+export const primaryCorsOrigin = firstCorsOrigin;

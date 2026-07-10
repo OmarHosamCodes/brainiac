@@ -1,23 +1,27 @@
 import { z } from "zod";
 
 import { protectedProProcedure } from "../../procedures";
-import { agencyLivePublisher, liveUpdatedAt, publishAgencyLiveEvent } from "./live";
+import { subscribeAgencyLive } from "./live";
 import {
   archiveAgencyClient,
   createAgencyClient,
   createAgencyProject,
+  createAgencyProjectWithJourney,
   createAgencyProjectTask,
+  completeAgencyProjectTaskForMember,
   createInvoice,
   createManualAgencyTimeEntry,
   createTaskAttachmentPresignedUrl,
+  createTaskLinkAttachment,
   createTaskThreadMessage,
   deleteAgencyProjectTask,
-  createTag,
   deleteMyAgencyTimeEntry,
-  deleteTag,
   deleteTaskAttachment,
   exportAgencyReportsCsv,
   getAgencyActiveTimer,
+  getAgencyProjectJourney,
+  listAgencyActiveMembers,
+  getAgencyDashboardSummary,
   getAgencyReportsSummary,
   getAgencyTimeSummary,
   getClientContact,
@@ -25,6 +29,10 @@ import {
   getTaskThreadContext,
   listAgencyClients,
   listAgencyProjects,
+  addAgencyProjectJourneyStep,
+  previewRemoveAgencyProjectJourneyStep,
+  removeAgencyProjectJourneyStep,
+  updateAgencyProjectJourneySteps,
   listAgencyProjectTasks,
   listAllAgencyTimeEntries,
   listInvoices,
@@ -32,23 +40,32 @@ import {
   listMemberRates,
   listMyAgencyTimeEntries,
   listRecentTaskThreadMessages,
-  listTags,
   listTaskThreadMembers,
   listTaskThreadMessages,
-  requireTeamMembership,
   setMemberCapacity,
   startAgencyTimer,
   stopAgencyTimer,
+  updateAgencyActiveTimerStart,
   unarchiveAgencyClient,
   updateAgencyClient,
   updateAgencyProject,
   updateAgencyProjectTask,
+  updateAgencyProjectTaskBlueprint,
   updateAnyAgencyTimeEntry,
   updateInvoiceStatus,
   updateMyAgencyTimeEntry,
   upsertClientContact,
   upsertMemberRate,
 } from "./service";
+import { listBudgetsStub, listIntegrationsStub } from "./stubs-service";
+import {
+  createSavedReport,
+  deleteSavedReport,
+  getSavedReport,
+  listSavedReportActivity,
+  listSavedReports,
+  updateSavedReport,
+} from "./saved-reports-service";
 import { askTaskAgent } from "./task-agent";
 import {
   deleteTenureExemption,
@@ -60,7 +77,6 @@ import {
   upsertTenureExemption,
   upsertTenurePolicy,
   upsertTenureProfile,
-  publishTenureInvalidation,
 } from "./tenure-service";
 
 const agencyTimeEntrySourceSchema = z.enum(["timer", "manual"]);
@@ -69,10 +85,15 @@ const teamScopedInputSchema = z.object({
   teamId: z.string().min(1),
 });
 
+const agencyClientCategorySchema = z.enum(["internal", "external"]);
+
 const agencyClientSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
   name: z.string().min(1),
+  category: agencyClientCategorySchema,
+  billableRateCents: z.number().int().nonnegative().nullable(),
+  currency: z.string().min(1),
   archivedAt: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -88,18 +109,60 @@ const agencyProjectSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
+const agencyProjectTaskBlueprintSchema = z.object({
+  id: z.string().min(1),
+  description: z.string(),
+});
+
 const agencyProjectTaskSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
   projectId: z.string().min(1),
   title: z.string().min(1),
   status: z.enum(["open", "in_progress", "done", "archived"]),
-  assigneeUserId: z.string().nullable(),
-  assigneeName: z.string().nullable(),
-  assigneeAvatar: z.string().nullable(),
+  taskKind: z.enum(["standard", "journey_anchor", "journey_milestone"]),
+  assignedToTeam: z.boolean(),
+  isWaste: z.boolean(),
+  createdByUserId: z.string().min(1),
+  assignees: z.array(
+    z.object({
+      userId: z.string().min(1),
+      userName: z.string().min(1),
+      userAvatar: z.string().nullable(),
+      status: z.enum(["open", "in_progress", "done"]),
+    }),
+  ),
+  viewerStatus: z.enum(["open", "in_progress", "done"]).optional(),
+  viewerCompletionCount: z.number().int().nonnegative().optional(),
+  viewerBlueprints: z.array(agencyProjectTaskBlueprintSchema).optional(),
+  totalTrackedSeconds: z.number().int().nonnegative().optional(),
   dueDate: z.string().datetime().nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
+});
+
+const agencyProjectJourneyStepSchema = z.object({
+  id: z.string().min(1),
+  journeyId: z.string().min(1),
+  sortOrder: z.number().int(),
+  label: z.string().min(1),
+  stepKind: z.enum(["start", "milestone", "checkpoint", "destination"]),
+  status: z.enum(["planned", "active", "done", "blocked"]),
+  taskId: z.string().nullable(),
+  task: agencyProjectTaskSchema.nullable().optional(),
+  timeEntryCount: z.number().int().nonnegative(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+const agencyProjectJourneySchema = z.object({
+  id: z.string().min(1),
+  projectId: z.string().min(1),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+  steps: z.array(agencyProjectJourneyStepSchema),
+  completedSteps: z.number().int().nonnegative(),
+  totalSteps: z.number().int().nonnegative(),
 });
 
 const attachmentMetadataSchema = z
@@ -111,10 +174,23 @@ const attachmentMetadataSchema = z
     durationSeconds: z.number().nonnegative().optional(),
     fileExtension: z.string().optional(),
     lastModified: z.string().optional(),
-    mediaKind: z.enum(["image", "video", "audio", "document", "archive", "other"]).optional(),
+    mediaKind: z
+      .enum(["image", "video", "audio", "document", "archive", "other", "link"])
+      .optional(),
+    sourceUrl: z.string().url().optional(),
   })
   .nullable()
   .optional();
+
+const agencyTaskThreadAttachmentInputSchema = z.object({
+  fileName: z.string().min(1),
+  mimeType: z.string().min(1),
+  storageKey: z.string().min(1),
+  sizeBytes: z.number().int().nonnegative(),
+  durationSeconds: z.number().int().nonnegative().optional(),
+  uploadToken: z.string().min(1),
+  metadata: attachmentMetadataSchema,
+});
 
 const agencyTaskMessageAttachmentSchema = z.object({
   id: z.string().min(1),
@@ -145,18 +221,17 @@ const agencyTaskMessageSchema = z.object({
   attachments: z.array(agencyTaskMessageAttachmentSchema),
 });
 
+const agencyTaskAgentAskResponseSchema = z.object({
+  userMessage: agencyTaskMessageSchema,
+  agentMessage: agencyTaskMessageSchema,
+  model: z.string(),
+  response: z.string(),
+});
+
 const agencyTaskThreadMemberSchema = z.object({
   userId: z.string().min(1),
   userName: z.string().min(1),
   userAvatar: z.string().nullable(),
-});
-
-const agencyTagSchema = z.object({
-  id: z.string().min(1),
-  teamId: z.string().min(1),
-  name: z.string().min(1),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
 });
 
 const agencyTimeEntrySchema = z.object({
@@ -167,16 +242,15 @@ const agencyTimeEntrySchema = z.object({
   projectId: z.string().min(1),
   taskId: z.string().nullable(),
   taskTitle: z.string().nullable(),
+  taskIsWaste: z.boolean().nullable(),
   projectName: z.string().min(1),
   clientId: z.string().min(1),
   clientName: z.string().min(1),
-  tags: z.array(agencyTagSchema),
   source: agencyTimeEntrySourceSchema,
   description: z.string(),
-  linkUrl: z.string().url().nullable(),
   startedAt: z.string().datetime(),
   endedAt: z.string().datetime(),
-  durationSeconds: z.number().int().positive(),
+  durationSeconds: z.number().int().nonnegative(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -189,9 +263,7 @@ const agencyActiveTimerSchema = z.object({
   taskId: z.string().nullable(),
   taskTitle: z.string().nullable(),
   projectName: z.string().min(1),
-  tags: z.array(agencyTagSchema),
   description: z.string(),
-  linkUrl: z.string().url().nullable(),
   startedAt: z.string().datetime(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -226,13 +298,138 @@ const reportsSummarySchema = z.object({
   ),
 });
 
+const reportsDashboardSummarySchema = reportsSummarySchema.extend({
+  totalSeconds: z.number().int().nonnegative(),
+  activeTimerCount: z.number().int().nonnegative(),
+  topClient: z
+    .object({
+      clientId: z.string().min(1),
+      clientName: z.string().min(1),
+      seconds: z.number().int().nonnegative(),
+    })
+    .nullable(),
+  topProject: z
+    .object({
+      projectId: z.string().min(1),
+      projectName: z.string().min(1),
+      clientId: z.string().min(1),
+      clientName: z.string().min(1),
+      seconds: z.number().int().nonnegative(),
+    })
+    .nullable(),
+  dailyBuckets: z.array(
+    z.object({
+      date: z.string().min(1),
+      totalSeconds: z.number().int().nonnegative(),
+      segments: z.array(
+        z.object({
+          projectId: z.string().min(1),
+          projectName: z.string().min(1),
+          clientName: z.string().min(1),
+          seconds: z.number().int().nonnegative(),
+        }),
+      ),
+    }),
+  ),
+  teamMembers: z.array(
+    z.object({
+      userId: z.string().min(1),
+      userName: z.string().min(1),
+      userEmail: z.email(),
+      avatar: z.string().nullable(),
+      isActive: z.boolean(),
+      totalSeconds: z.number().int().nonnegative(),
+      latestEntry: z
+        .object({
+          projectName: z.string().min(1),
+          clientName: z.string().min(1),
+          description: z.string(),
+          startedAt: z.string().datetime(),
+        })
+        .nullable(),
+      projectBreakdown: z.array(
+        z.object({
+          projectId: z.string().min(1),
+          projectName: z.string().min(1),
+          clientName: z.string().min(1),
+          seconds: z.number().int().nonnegative(),
+        }),
+      ),
+    }),
+  ),
+});
+
 const reportsInputSchema = teamScopedInputSchema.extend({
   from: z.string().datetime(),
   to: z.string().datetime(),
   clientId: z.string().min(1).optional(),
   projectId: z.string().min(1).optional(),
   memberUserId: z.string().min(1).optional(),
-  tagIds: z.array(z.string().min(1)).optional(),
+  clientIds: z.array(z.string().min(1)).optional(),
+  projectIds: z.array(z.string().min(1)).optional(),
+  memberUserIds: z.array(z.string().min(1)).optional(),
+});
+
+const savedReportActivityActionSchema = z.enum([
+  "created",
+  "renamed",
+  "entries_excluded",
+  "entries_restored",
+  "entry_edited",
+  "waste_toggled",
+  "exported",
+]);
+
+const savedReportSnapshotInputSchema = teamScopedInputSchema.extend({
+  name: z.string().trim().min(1).max(240),
+  rangePreset: z.string().min(1),
+  customFromDate: z.string().optional(),
+  customToDate: z.string().optional(),
+  rangeFrom: z.string().datetime(),
+  rangeTo: z.string().datetime(),
+  clientId: z.string().optional(),
+  projectId: z.string().optional(),
+  memberUserId: z.string().optional(),
+  fieldIds: z.array(z.string().min(1)),
+});
+
+const savedReportRecordSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  name: z.string().min(1),
+  rangePreset: z.string().min(1),
+  customFromDate: z.string(),
+  customToDate: z.string(),
+  rangeFrom: z.string().datetime(),
+  rangeTo: z.string().datetime(),
+  clientId: z.string(),
+  projectId: z.string(),
+  memberUserId: z.string(),
+  fieldIds: z.array(z.string().min(1)),
+  excludedEntryIds: z.array(z.string().min(1)),
+  createdByUserName: z.string().min(1),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+const savedReportListItemSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  rangeFrom: z.string().datetime(),
+  rangeTo: z.string().datetime(),
+  clientId: z.string(),
+  projectId: z.string(),
+  memberUserId: z.string(),
+  createdByUserName: z.string().min(1),
+  updatedAt: z.string().datetime(),
+});
+
+const savedReportActivityRecordSchema = z.object({
+  id: z.string().min(1),
+  action: savedReportActivityActionSchema,
+  payload: z.record(z.string(), z.unknown()),
+  actorUserName: z.string().min(1),
+  createdAt: z.string().datetime(),
 });
 
 const timeSummarySchema = z.object({
@@ -257,11 +454,21 @@ const timeSummarySchema = z.object({
 });
 
 export const agencyOpsRouter = {
+  live: {
+    subscribe: protectedProProcedure.input(teamScopedInputSchema).handler(async function* ({
+      context,
+      input,
+      signal,
+    }) {
+      yield* subscribeAgencyLive(context.session.user.id, input, signal);
+    }),
+  },
   clients: {
     list: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
           includeArchived: z.boolean().optional(),
+          archiveFilter: z.enum(["all", "archived", "nonarchived"]).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -273,18 +480,15 @@ export const agencyOpsRouter = {
       .input(
         teamScopedInputSchema.extend({
           name: z.string().trim().min(1).max(120),
+          category: agencyClientCategorySchema.optional(),
+          billableRateCents: z.number().int().nonnegative().nullable().optional(),
+          currency: z.string().min(1).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         const client = agencyClientSchema.parse(
           await createAgencyClient(context.session.user.id, input),
         );
-        publishAgencyLiveEvent(input.teamId, {
-          type: "client.created",
-          teamId: input.teamId,
-          updatedAt: client.updatedAt,
-          client,
-        });
         return client;
       }),
     update: protectedProProcedure
@@ -292,18 +496,15 @@ export const agencyOpsRouter = {
         teamScopedInputSchema.extend({
           clientId: z.string().min(1),
           name: z.string().trim().min(1).max(120).optional(),
+          category: agencyClientCategorySchema.optional(),
+          billableRateCents: z.number().int().nonnegative().nullable().optional(),
+          currency: z.string().min(1).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         const client = agencyClientSchema.parse(
           await updateAgencyClient(context.session.user.id, input),
         );
-        publishAgencyLiveEvent(input.teamId, {
-          type: "client.updated",
-          teamId: input.teamId,
-          updatedAt: client.updatedAt,
-          client,
-        });
         return client;
       }),
     archive: protectedProProcedure
@@ -312,12 +513,6 @@ export const agencyOpsRouter = {
         const result = z
           .object({ clientId: z.string().min(1), archived: z.boolean() })
           .parse(await archiveAgencyClient(context.session.user.id, input));
-        publishAgencyLiveEvent(input.teamId, {
-          type: "client.archived",
-          teamId: input.teamId,
-          updatedAt: liveUpdatedAt(new Date()),
-          clientId: result.clientId,
-        });
         return result;
       }),
     unarchive: protectedProProcedure
@@ -331,12 +526,6 @@ export const agencyOpsRouter = {
         });
         const client = clients.items.find((item) => item.id === result.clientId);
         if (client) {
-          publishAgencyLiveEvent(input.teamId, {
-            type: "client.unarchived",
-            teamId: input.teamId,
-            updatedAt: client.updatedAt,
-            client: agencyClientSchema.parse(client),
-          });
         }
         return result;
       }),
@@ -346,6 +535,7 @@ export const agencyOpsRouter = {
       .input(
         teamScopedInputSchema.extend({
           clientId: z.string().min(1).optional(),
+          archiveFilter: z.enum(["all", "archived", "nonarchived"]).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -364,14 +554,105 @@ export const agencyOpsRouter = {
         const project = agencyProjectSchema.parse(
           await createAgencyProject(context.session.user.id, input),
         );
-        publishAgencyLiveEvent(input.teamId, {
-          type: "project.created",
-          teamId: input.teamId,
-          updatedAt: project.updatedAt,
-          project,
-        });
         return project;
       }),
+    createWithJourney: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          clientId: z.string().min(1),
+          name: z.string().trim().min(1).max(160),
+          milestones: z
+            .array(
+              z.object({
+                title: z.string().trim().min(1).max(240),
+                assigneeUserIds: z.array(z.string().min(1)).default([]),
+              }),
+            )
+            .min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            project: agencyProjectSchema,
+            journey: agencyProjectJourneySchema,
+          })
+          .parse(await createAgencyProjectWithJourney(context.session.user.id, input));
+      }),
+    journey: {
+      get: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            projectId: z.string().min(1),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return agencyProjectJourneySchema.parse(
+            await getAgencyProjectJourney(context.session.user.id, input),
+          );
+        }),
+      updateSteps: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            projectId: z.string().min(1),
+            steps: z.array(
+              z.object({
+                id: z.string().min(1),
+                sortOrder: z.number().int().nonnegative().optional(),
+                label: z.string().trim().min(1).max(240).optional(),
+              }),
+            ),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return agencyProjectJourneySchema.parse(
+            await updateAgencyProjectJourneySteps(context.session.user.id, input),
+          );
+        }),
+      addStep: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            projectId: z.string().min(1),
+            label: z.string().trim().min(1).max(240),
+            assigneeUserIds: z.array(z.string().min(1)).optional(),
+            sortOrder: z.number().int().nonnegative().optional(),
+            stepKind: z.enum(["milestone", "checkpoint"]).optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return agencyProjectJourneySchema.parse(
+            await addAgencyProjectJourneyStep(context.session.user.id, input),
+          );
+        }),
+      removeStep: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            projectId: z.string().min(1),
+            stepId: z.string().min(1),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return agencyProjectJourneySchema.parse(
+            await removeAgencyProjectJourneyStep(context.session.user.id, input),
+          );
+        }),
+      previewRemoveStep: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            projectId: z.string().min(1),
+            stepId: z.string().min(1),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({
+              stepId: z.string().min(1),
+              label: z.string().min(1),
+              timeEntryCount: z.number().int().nonnegative(),
+            })
+            .parse(await previewRemoveAgencyProjectJourneyStep(context.session.user.id, input));
+        }),
+    },
     update: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
@@ -384,12 +665,6 @@ export const agencyOpsRouter = {
         const project = agencyProjectSchema.parse(
           await updateAgencyProject(context.session.user.id, input),
         );
-        publishAgencyLiveEvent(input.teamId, {
-          type: "project.updated",
-          teamId: input.teamId,
-          updatedAt: project.updatedAt,
-          project,
-        });
         return project;
       }),
   },
@@ -401,12 +676,21 @@ export const agencyOpsRouter = {
           status: z.enum(["open", "in_progress", "done", "archived"]).optional(),
           statuses: z.array(z.enum(["open", "in_progress", "done", "archived"])).optional(),
           assigneeUserId: z.string().min(1).optional(),
+          delegatedByUserId: z.string().min(1).optional(),
+          journeyDiscoveryForUserId: z.string().min(1).optional(),
           search: z.string().optional(),
+          page: z.number().int().min(1).optional(),
+          pageSize: z.number().int().min(1).max(100).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         return z
-          .object({ items: z.array(agencyProjectTaskSchema) })
+          .object({
+            items: z.array(agencyProjectTaskSchema),
+            page: z.number().int().min(1),
+            pageSize: z.number().int().min(1),
+            total: z.number().int().nonnegative(),
+          })
           .parse(await listAgencyProjectTasks(context.session.user.id, input));
       }),
     create: protectedProProcedure
@@ -415,20 +699,16 @@ export const agencyOpsRouter = {
           projectId: z.string().min(1),
           title: z.string().trim().min(1).max(240),
           status: z.enum(["open", "in_progress", "done", "archived"]).optional(),
-          assigneeUserId: z.string().min(1).optional(),
+          assignedToTeam: z.boolean().optional(),
+          assigneeUserIds: z.array(z.string().min(1)).optional(),
           dueDate: z.string().datetime().optional(),
+          description: z.string().max(4000).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         const task = agencyProjectTaskSchema.parse(
           await createAgencyProjectTask(context.session.user.id, input),
         );
-        publishAgencyLiveEvent(input.teamId, {
-          type: "projectTask.created",
-          teamId: input.teamId,
-          updatedAt: task.updatedAt,
-          task,
-        });
         return task;
       }),
     update: protectedProProcedure
@@ -437,20 +717,16 @@ export const agencyOpsRouter = {
           taskId: z.string().min(1),
           title: z.string().trim().min(1).max(240).optional(),
           status: z.enum(["open", "in_progress", "done", "archived"]).optional(),
-          assigneeUserId: z.string().min(1).nullable().optional(),
+          assignedToTeam: z.boolean().optional(),
+          assigneeUserIds: z.array(z.string().min(1)).optional(),
           dueDate: z.string().datetime().nullable().optional(),
+          isWaste: z.boolean().optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         const task = agencyProjectTaskSchema.parse(
           await updateAgencyProjectTask(context.session.user.id, input),
         );
-        publishAgencyLiveEvent(input.teamId, {
-          type: "projectTask.updated",
-          teamId: input.teamId,
-          updatedAt: task.updatedAt,
-          task,
-        });
         return task;
       }),
     delete: protectedProProcedure
@@ -466,13 +742,32 @@ export const agencyOpsRouter = {
             deleted: z.boolean(),
           })
           .parse(await deleteAgencyProjectTask(context.session.user.id, input));
-        publishAgencyLiveEvent(input.teamId, {
-          type: "projectTask.deleted",
-          teamId: input.teamId,
-          updatedAt: liveUpdatedAt(new Date()),
-          taskId: result.taskId,
-        });
         return result;
+      }),
+    completeForMember: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          taskId: z.string().min(1),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        const task = agencyProjectTaskSchema.parse(
+          await completeAgencyProjectTaskForMember(context.session.user.id, input),
+        );
+        return task;
+      }),
+    updateBlueprint: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          blueprintId: z.string().min(1),
+          description: z.string().max(4000),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        const blueprint = agencyProjectTaskBlueprintSchema.parse(
+          await updateAgencyProjectTaskBlueprint(context.session.user.id, input),
+        );
+        return blueprint;
       }),
   },
   taskThreads: {
@@ -501,45 +796,13 @@ export const agencyOpsRouter = {
             taskId: z.string().min(1),
             content: z.string().max(10_000),
             type: z.enum(["text", "voice", "attachment"]).optional(),
-            attachments: z
-              .array(
-                z.object({
-                  fileName: z.string().min(1),
-                  mimeType: z.string().min(1),
-                  storageKey: z.string().min(1),
-                  sizeBytes: z.number().int().nonnegative(),
-                  durationSeconds: z.number().int().nonnegative().optional(),
-                  uploadToken: z.string().min(1),
-                  metadata: z
-                    .object({
-                      imageWidth: z.number().int().positive().optional(),
-                      imageHeight: z.number().int().positive().optional(),
-                      videoWidth: z.number().int().positive().optional(),
-                      videoHeight: z.number().int().positive().optional(),
-                      durationSeconds: z.number().nonnegative().optional(),
-                      fileExtension: z.string().optional(),
-                      lastModified: z.string().optional(),
-                      mediaKind: z
-                        .enum(["image", "video", "audio", "document", "archive", "other"])
-                        .optional(),
-                    })
-                    .optional(),
-                }),
-              )
-              .optional(),
+            attachments: z.array(agencyTaskThreadAttachmentInputSchema).optional(),
           }),
         )
         .handler(async ({ context, input }) => {
           const message = agencyTaskMessageSchema.parse(
             await createTaskThreadMessage(context.session.user.id, input),
           );
-          publishAgencyLiveEvent(input.teamId, {
-            type: "taskMessage.created",
-            teamId: input.teamId,
-            updatedAt: message.updatedAt,
-            taskId: input.taskId,
-            message,
-          });
           return message;
         }),
     },
@@ -562,6 +825,27 @@ export const agencyOpsRouter = {
               uploadToken: z.string().min(1),
             })
             .parse(await createTaskAttachmentPresignedUrl(context.session.user.id, input));
+        }),
+      createLink: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            taskId: z.string().min(1),
+            url: z.string().trim().min(1).max(2048),
+            label: z.string().trim().max(260).optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({
+              storageKey: z.string().min(1),
+              publicUrl: z.string().url(),
+              fileName: z.string().min(1),
+              mimeType: z.string().min(1),
+              sizeBytes: z.number().int().nonnegative(),
+              uploadToken: z.string().min(1),
+              metadata: attachmentMetadataSchema,
+            })
+            .parse(await createTaskLinkAttachment(context.session.user.id, input));
         }),
       delete: protectedProProcedure
         .input(
@@ -600,6 +884,8 @@ export const agencyOpsRouter = {
               projectName: z.string().min(1),
               clientId: z.string().min(1),
               clientName: z.string().min(1),
+              assignedToTeam: z.boolean(),
+              assignees: z.array(agencyTaskThreadMemberSchema),
               assigneeName: z.string().nullable(),
             })
             .parse(await getTaskThreadContext(context.session.user.id, input));
@@ -627,41 +913,13 @@ export const agencyOpsRouter = {
           taskId: z.string().min(1),
           content: z.string().trim().min(1).max(10_000),
           model: z.string().trim().min(1).optional(),
-          attachments: z
-            .array(
-              z.object({
-                fileName: z.string().min(1),
-                mimeType: z.string().min(1),
-                storageKey: z.string().min(1),
-                sizeBytes: z.number().int().nonnegative(),
-                durationSeconds: z.number().int().nonnegative().optional(),
-                uploadToken: z.string().min(1),
-                metadata: z
-                  .object({
-                    imageWidth: z.number().int().positive().optional(),
-                    imageHeight: z.number().int().positive().optional(),
-                    videoWidth: z.number().int().positive().optional(),
-                    videoHeight: z.number().int().positive().optional(),
-                    durationSeconds: z.number().nonnegative().optional(),
-                    fileExtension: z.string().optional(),
-                    lastModified: z.string().optional(),
-                    mediaKind: z
-                      .enum(["image", "video", "audio", "document", "archive", "other"])
-                      .optional(),
-                  })
-                  .optional(),
-              }),
-            )
-            .optional(),
+          attachments: z.array(agencyTaskThreadAttachmentInputSchema).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
-        return z
-          .object({
-            response: z.string(),
-            model: z.string(),
-          })
-          .parse(await askTaskAgent(context.session.user.id, input));
+        return agencyTaskAgentAskResponseSchema.parse(
+          await askTaskAgent(context.session.user.id, input),
+        );
       }),
   },
   contacts: {
@@ -705,44 +963,7 @@ export const agencyOpsRouter = {
         const contact = contactSchema.parse(
           await upsertClientContact(context.session.user.id, input),
         );
-        publishAgencyLiveEvent(input.teamId, {
-          type: "contact.upserted",
-          teamId: input.teamId,
-          updatedAt: contact.updatedAt,
-          clientId: input.clientId,
-          contact,
-        });
         return contact;
-      }),
-  },
-  tags: {
-    list: protectedProProcedure.input(teamScopedInputSchema).handler(async ({ context, input }) => {
-      return z
-        .object({ items: z.array(agencyTagSchema) })
-        .parse(await listTags(context.session.user.id, input));
-    }),
-    create: protectedProProcedure
-      .input(
-        teamScopedInputSchema.extend({
-          name: z.string().trim().min(1).max(50),
-        }),
-      )
-      .handler(async ({ context, input }) => {
-        return agencyTagSchema.parse(await createTag(context.session.user.id, input));
-      }),
-    delete: protectedProProcedure
-      .input(
-        teamScopedInputSchema.extend({
-          tagId: z.string().min(1),
-        }),
-      )
-      .handler(async ({ context, input }) => {
-        return z
-          .object({
-            tagId: z.string().min(1),
-            deleted: z.boolean(),
-          })
-          .parse(await deleteTag(context.session.user.id, input));
       }),
   },
   timer: {
@@ -753,36 +974,48 @@ export const agencyOpsRouter = {
           .object({ timer: agencyActiveTimerSchema.nullable() })
           .parse(await getAgencyActiveTimer(context.session.user.id, input));
       }),
+    listActiveMembers: protectedProProcedure
+      .input(teamScopedInputSchema)
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            items: z.array(
+              z.object({
+                userId: z.string().min(1),
+                userName: z.string().min(1),
+                userAvatar: z.string().nullable(),
+                projectName: z.string().min(1),
+                clientName: z.string().min(1),
+                description: z.string(),
+                startedAt: z.string().datetime(),
+              }),
+            ),
+          })
+          .parse(await listAgencyActiveMembers(context.session.user.id, input));
+      }),
     start: protectedProProcedure
       .input(
         teamScopedInputSchema.extend({
           projectId: z.string().min(1).optional(),
           taskId: z.string().min(1).optional(),
           description: z.string().max(2_000).optional(),
-          linkUrl: z.string().max(2_048).nullable().optional(),
-          tagIds: z.array(z.string().min(1)).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         const result = z
-          .object({ timer: agencyActiveTimerSchema.nullable() })
+          .object({
+            timer: agencyActiveTimerSchema.nullable(),
+            createdEntry: agencyTimeEntrySchema.nullable(),
+          })
           .parse(await startAgencyTimer(context.session.user.id, input));
-        publishAgencyLiveEvent(input.teamId, {
-          type: "timer.started",
-          teamId: input.teamId,
-          updatedAt: liveUpdatedAt(new Date()),
-          userId: context.session.user.id,
-          timer: result.timer,
-        });
         return result;
       }),
     stop: protectedProProcedure
       .input(
         z.object({
           teamId: z.string().min(1).optional(),
+          taskId: z.string().min(1).optional(),
           description: z.string().max(2_000).optional(),
-          linkUrl: z.string().max(2_048).nullable().optional(),
-          tagIds: z.array(z.string().min(1)).optional(),
           discard: z.boolean().optional(),
         }),
       )
@@ -795,19 +1028,21 @@ export const agencyOpsRouter = {
           .parse(await stopAgencyTimer(context.session.user.id, input));
         const teamId = input.teamId ?? result.createdEntry?.teamId ?? result.timer?.teamId;
         if (teamId) {
-          publishAgencyLiveEvent(teamId, {
-            type: "timer.stopped",
-            teamId,
-            updatedAt: liveUpdatedAt(new Date()),
-            userId: context.session.user.id,
-            timer: result.timer,
-            createdEntry: result.createdEntry,
-          });
           if (result.createdEntry) {
-            publishTenureInvalidation(teamId);
           }
         }
         return result;
+      }),
+    updateStart: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          startedAt: z.string().datetime(),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ timer: agencyActiveTimerSchema })
+          .parse(await updateAgencyActiveTimerStart(context.session.user.id, input));
       }),
   },
   timeEntries: {
@@ -817,6 +1052,7 @@ export const agencyOpsRouter = {
           page: z.number().int().min(1).optional(),
           pageSize: z.number().int().min(1).max(100).optional(),
           anchorDate: z.string().datetime().optional(),
+          utcOffsetMinutes: z.number().int().min(-840).max(840).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -848,21 +1084,12 @@ export const agencyOpsRouter = {
           startAt: z.string().datetime(),
           endAt: z.string().datetime(),
           description: z.string().max(2_000).optional(),
-          linkUrl: z.string().max(2_048).nullable().optional(),
-          tagIds: z.array(z.string().min(1)).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         const entry = agencyTimeEntrySchema.parse(
           await createManualAgencyTimeEntry(context.session.user.id, input),
         );
-        publishAgencyLiveEvent(input.teamId, {
-          type: "timeEntry.created",
-          teamId: input.teamId,
-          updatedAt: entry.updatedAt,
-          entry,
-        });
-        publishTenureInvalidation(input.teamId);
         return entry;
       }),
     updateMine: protectedProProcedure
@@ -874,21 +1101,12 @@ export const agencyOpsRouter = {
           startAt: z.string().datetime().optional(),
           endAt: z.string().datetime().optional(),
           description: z.string().max(2_000).optional(),
-          linkUrl: z.string().max(2_048).nullable().optional(),
-          tagIds: z.array(z.string().min(1)).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         const entry = agencyTimeEntrySchema.parse(
           await updateMyAgencyTimeEntry(context.session.user.id, input),
         );
-        publishAgencyLiveEvent(input.teamId, {
-          type: "timeEntry.updated",
-          teamId: input.teamId,
-          updatedAt: entry.updatedAt,
-          entry,
-        });
-        publishTenureInvalidation(input.teamId);
         return entry;
       }),
     deleteMine: protectedProProcedure
@@ -900,14 +1118,6 @@ export const agencyOpsRouter = {
             deleted: z.boolean(),
           })
           .parse(await deleteMyAgencyTimeEntry(context.session.user.id, input));
-        publishAgencyLiveEvent(input.teamId, {
-          type: "timeEntry.deleted",
-          teamId: input.teamId,
-          updatedAt: liveUpdatedAt(new Date()),
-          entryId: result.entryId,
-          userId: context.session.user.id,
-        });
-        publishTenureInvalidation(input.teamId);
         return result;
       }),
   },
@@ -919,6 +1129,15 @@ export const agencyOpsRouter = {
     }),
   },
   reports: {
+    dashboard: protectedProProcedure
+      .input(reportsInputSchema)
+      .handler(async ({ context, input }) => {
+        return z
+          .object({
+            summary: reportsDashboardSummarySchema,
+          })
+          .parse(await getAgencyDashboardSummary(context.session.user.id, input));
+      }),
     summary: protectedProProcedure.input(reportsInputSchema).handler(async ({ context, input }) => {
       return z
         .object({
@@ -962,25 +1181,79 @@ export const agencyOpsRouter = {
           startAt: z.string().datetime().optional(),
           endAt: z.string().datetime().optional(),
           description: z.string().max(2_000).optional(),
-          linkUrl: z.string().max(2_048).nullable().optional(),
           projectId: z.string().min(1).optional(),
           taskId: z.string().min(1).nullable().optional(),
-          tagIds: z.array(z.string().min(1)).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
         const entry = agencyTimeEntrySchema.parse(
           await updateAnyAgencyTimeEntry(context.session.user.id, input),
         );
-        publishAgencyLiveEvent(input.teamId, {
-          type: "timeEntry.updated",
-          teamId: input.teamId,
-          updatedAt: entry.updatedAt,
-          entry,
-        });
-        publishTenureInvalidation(input.teamId);
         return entry;
       }),
+    saved: {
+      create: protectedProProcedure
+        .input(savedReportSnapshotInputSchema)
+        .handler(async ({ context, input }) => {
+          return savedReportRecordSchema.parse(
+            await createSavedReport(context.session.user.id, input),
+          );
+        }),
+      list: protectedProProcedure
+        .input(teamScopedInputSchema)
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ items: z.array(savedReportListItemSchema) })
+            .parse(await listSavedReports(context.session.user.id, input));
+        }),
+      get: protectedProProcedure
+        .input(teamScopedInputSchema.extend({ reportId: z.string().min(1) }))
+        .handler(async ({ context, input }) => {
+          return savedReportRecordSchema.parse(
+            await getSavedReport(context.session.user.id, input),
+          );
+        }),
+      update: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            reportId: z.string().min(1),
+            name: z.string().trim().min(1).max(240).optional(),
+            excludedEntryIds: z.array(z.string().min(1)).optional(),
+            actions: z
+              .array(
+                z.object({
+                  action: savedReportActivityActionSchema,
+                  payload: z.record(z.string(), z.unknown()).optional(),
+                }),
+              )
+              .optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return savedReportRecordSchema.parse(
+            await updateSavedReport(context.session.user.id, input),
+          );
+        }),
+      delete: protectedProProcedure
+        .input(teamScopedInputSchema.extend({ reportId: z.string().min(1) }))
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ reportId: z.string().min(1), deleted: z.boolean() })
+            .parse(await deleteSavedReport(context.session.user.id, input));
+        }),
+      listActivity: protectedProProcedure
+        .input(
+          teamScopedInputSchema.extend({
+            reportId: z.string().min(1),
+            limit: z.number().int().min(1).max(50).optional(),
+          }),
+        )
+        .handler(async ({ context, input }) => {
+          return z
+            .object({ items: z.array(savedReportActivityRecordSchema) })
+            .parse(await listSavedReportActivity(context.session.user.id, input));
+        }),
+    },
   },
   // Phase 4 stubs.
   //
@@ -995,7 +1268,7 @@ export const agencyOpsRouter = {
           projectId: z.string().min(1).optional(),
         }),
       )
-      .handler(async () => {
+      .handler(async ({ context, input }) => {
         return z
           .object({
             items: z.array(
@@ -1011,7 +1284,7 @@ export const agencyOpsRouter = {
               }),
             ),
           })
-          .parse({ items: [] });
+          .parse(await listBudgetsStub(context.session.user.id, input));
       }),
   },
   rates: {
@@ -1100,12 +1373,6 @@ export const agencyOpsRouter = {
             capacitySeconds: z.number().int().nonnegative(),
           })
           .parse(await setMemberCapacity(context.session.user.id, input));
-        publishAgencyLiveEvent(input.teamId, {
-          type: "capacity.set",
-          teamId: input.teamId,
-          updatedAt: liveUpdatedAt(new Date()),
-          capacity: result,
-        });
         return result;
       }),
   },
@@ -1203,7 +1470,7 @@ export const agencyOpsRouter = {
       }),
   },
   integrations: {
-    list: protectedProProcedure.input(teamScopedInputSchema).handler(async () => {
+    list: protectedProProcedure.input(teamScopedInputSchema).handler(async ({ context, input }) => {
       return z
         .object({
           items: z.array(
@@ -1216,38 +1483,7 @@ export const agencyOpsRouter = {
             }),
           ),
         })
-        .parse({
-          items: [
-            {
-              id: "slack",
-              name: "Slack",
-              description: "Daily totals and budget warnings in your channel.",
-              status: "available",
-              connectedAt: null,
-            },
-            {
-              id: "calendar",
-              name: "Calendar",
-              description: "Suggest time entries from Google or Outlook events.",
-              status: "available",
-              connectedAt: null,
-            },
-            {
-              id: "quickbooks",
-              name: "QuickBooks · Xero",
-              description: "Send invoices straight to your books.",
-              status: "available",
-              connectedAt: null,
-            },
-            {
-              id: "webhooks",
-              name: "Webhooks",
-              description: "Stream entries into anything you already script.",
-              status: "available",
-              connectedAt: null,
-            },
-          ],
-        });
+        .parse(await listIntegrationsStub(context.session.user.id, input));
     }),
   },
   tenure: {
@@ -1593,18 +1829,5 @@ export const agencyOpsRouter = {
             .parse(await getTenureMember(context.session.user.id, input));
         }),
     },
-  },
-  live: {
-    subscribe: protectedProProcedure.input(teamScopedInputSchema).handler(async function* ({
-      context,
-      input,
-      signal,
-    }) {
-      await requireTeamMembership(context.session.user.id, input.teamId, "viewer");
-
-      for await (const event of agencyLivePublisher.subscribe(input.teamId, signal)) {
-        yield event;
-      }
-    }),
   },
 };

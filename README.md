@@ -1,31 +1,29 @@
 # Brainiac
 
-Modern fullstack AI application platform with end-to-end type safety, built on Nuxt, Hono, and oRPC.
+Spatial knowledge workspace with an embedded AI agent and agency operations surface. End-to-end type safety across a Turborepo monorepo built on React, Hono, and oRPC.
 
 > **New here?** Start with the [Quick Start Guide](#quick-start--5-minutes) below, then check out [CONTRIBUTING.md](./CONTRIBUTING.md) for how to contribute.
 
-## 🚀 Quick Start (5 Minutes)
+## Quick Start (5 Minutes)
 
 **Prerequisites**: [Bun](https://bun.sh) v1.3.10+
 
 ### Automated Setup (Recommended)
 
-We provide an automated setup script that handles everything:
-
 ```bash
-git clone <repository-url>
+git clone https://github.com/OmarHosamCodes/brainiac.git
 cd brainiac
 bun run setup
 ```
 
 This script will:
 
-- ✅ Copy and setup environment files
-- ✅ Install dependencies
-- ✅ Start PostgreSQL (if Docker is installed)
-- ✅ Apply database schema
-- ✅ Optionally load demo data
-- ✅ Verify TypeScript types
+- Copy and setup environment files
+- Install dependencies
+- Start PostgreSQL (if Docker is installed)
+- Apply database schema
+- Optionally load demo data
+- Verify TypeScript types
 
 Then start the dev server:
 
@@ -34,8 +32,6 @@ bun run dev
 ```
 
 ### Manual Setup
-
-If you prefer to do it step-by-step:
 
 ```bash
 # 1. Clone and install dependencies
@@ -61,7 +57,7 @@ bun run db:seed
 bun run dev
 ```
 
-Visit [http://localhost:3001](http://localhost:3001) to see the app. The API is at [http://localhost:3000](http://localhost:3000).
+Visit [http://localhost:7001](http://localhost:7001) for the web app. The API runs at [http://localhost:7000](http://localhost:7000). Vite proxies `/api/auth` and `/rpc` to the API in development.
 
 **Demo accounts** (if seeded):
 
@@ -71,47 +67,55 @@ Visit [http://localhost:3001](http://localhost:3001) to see the app. The API is 
 
 ---
 
-## 📚 Documentation
+## Documentation
 
+- **[PRODUCT.md](./PRODUCT.md)** — Product purpose, users, and design principles
+- **[DESIGN.md](./DESIGN.md)** — Visual system, tokens, and component rules
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** — How to contribute, code standards, and PR process
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** — Dev workflows, common issues, and cheat sheet
 
 ---
 
-## 🏗️ Tech Stack
+## Product Surfaces
 
-| Layer        | Technology           | Purpose                                     |
-| ------------ | -------------------- | ------------------------------------------- |
-| **Frontend** | Nuxt 4 + Vue 3       | Modern, reactive UI framework               |
-| **Backend**  | Hono + oRPC          | Lightweight API with end-to-end type safety |
-| **Database** | PostgreSQL + Drizzle | Type-safe ORM and relational data           |
-| **Runtime**  | Bun v1.3.10          | Fast JavaScript runtime                     |
-| **Build**    | Turborepo            | Optimized monorepo builds                   |
-| **Styling**  | TailwindCSS          | Utility-first CSS framework                 |
-| **Auth**     | Better-Auth          | Modern authentication framework             |
-| **Tooling**  | Oxlint + Oxfmt       | Fast Rust-based linting & formatting        |
-| **Types**    | TypeScript           | Full type safety across the stack           |
+| Surface         | Route          | Purpose                                                                   |
+| --------------- | -------------- | ------------------------------------------------------------------------- |
+| **Dashboard**   | `/dashboard`   | Infinite canvas for spatial knowledge work: nodes, blocks, and agent chat |
+| **Agency**      | `/agency`      | Time tracking, projects, clients, reports, and team operations            |
+| **Marketplace** | `/marketplace` | Shared workspace node templates                                           |
+| **Billing**     | `/billing`     | Subscription and plan management                                          |
+
+---
+
+## Tech Stack
+
+| Layer        | Technology                   | Purpose                                     |
+| ------------ | ---------------------------- | ------------------------------------------- |
+| **Frontend** | React 19 + Vite + Tailwind 4 | SPA with utility-first styling              |
+| **Backend**  | Hono + oRPC                  | Lightweight API with end-to-end type safety |
+| **Database** | PostgreSQL + Drizzle         | Type-safe ORM and relational data           |
+| **Runtime**  | Bun v1.3.10                  | Fast JavaScript runtime                     |
+| **Build**    | Turborepo                    | Optimized monorepo builds                   |
+| **Data**     | TanStack Query + oRPC client | Typed queries and mutations in the UI       |
+| **Auth**     | Better-Auth                  | Session auth with Google OAuth              |
+| **Tooling**  | Oxlint + Oxfmt               | Fast Rust-based linting and formatting      |
+| **Types**    | TypeScript                   | Full type safety across the stack           |
+
+---
 
 ## Database Management
 
 ### Initial Setup
 
-This project uses PostgreSQL with Drizzle ORM.
+PostgreSQL runs in Docker on port `5440` by default.
 
 ```bash
-# Start PostgreSQL in Docker
-bun run db:start
-
-# Apply the schema to your database
-bun run db:push
-
-# Seed demo data (recommended for development)
-bun run db:seed
+bun run db:start    # Start PostgreSQL in Docker
+bun run db:push     # Apply the schema
+bun run db:seed     # Seed demo data (recommended)
 ```
 
 ### Demo Accounts
-
-If you ran `bun run db:seed`, three demo accounts are created:
 
 | Email                   | Password       | Role       |
 | ----------------------- | -------------- | ---------- |
@@ -127,60 +131,69 @@ If you ran `bun run db:seed`, three demo accounts are created:
 bun run db:seed -- --email you@example.com
 ```
 
-This replaces that user's workspace snapshot without creating new users.
-
 ### Database Tools
 
 ```bash
-bun run db:generate    # Generate database client/types
+bun run db:generate    # Generate migration files from schema
 bun run db:migrate     # Run pending migrations
 bun run db:studio      # Open Drizzle Studio UI
+bun run db:seed:agency # Seed agency demo data
 ```
 
 See [DEVELOPMENT.md](./DEVELOPMENT.md) for more database workflows.
 
-## 📁 Project Structure
+---
 
-The project is organized as a **Turborepo monorepo** with 2 apps and 7 shared packages:
+## Project Structure
+
+Turborepo monorepo with 2 apps and 7 shared packages:
 
 ```
 brainiac/
 ├── apps/
-│   ├── web/              # Frontend (Nuxt 4 + Vue 3 + TailwindCSS)
-│   │   └── pages/        # Route pages
-│   └── server/           # Backend (Hono + oRPC)
-│       └── routes/       # API endpoints
+│   ├── web/                    # Frontend (React + Vite + Tailwind)
+│   │   └── src/
+│   │       ├── pages/          # Route pages
+│   │       ├── components/     # UI components (dashboard, agency, canvas, …)
+│   │       ├── lib/            # oRPC client, hooks, utilities
+│   │       └── stores/         # Zustand stores
+│   └── server/                 # Backend (Hono + oRPC on Bun)
+│       └── src/
+│           ├── app.ts          # Hono app, auth, RPC, WebSocket
+│           └── seed.ts         # Database seeding
 │
 ├── packages/
-│   ├── api/              # Shared API types & business logic
-│   ├── db/               # Database schema (Drizzle) & queries
-│   ├── auth/             # Authentication (Better-Auth) setup
-│   ├── env/              # Environment variable validation
-│   ├── agent/            # Agent/AI logic
-│   ├── workspace/        # Workspace utilities
-│   └── config/           # Shared config files
+│   ├── api/                    # oRPC routers, procedures, business logic
+│   ├── db/                     # Drizzle schema, migrations, queries
+│   ├── auth/                   # Better-Auth setup
+│   ├── env/                    # Environment validation (server + Vite)
+│   ├── agent/                  # AI agent tools and model config
+│   ├── workspace/              # Workspace types, block schemas, constants
+│   └── config/                 # Shared TypeScript config
 ```
 
 **Key principle**: Packages are shared between frontend and backend. Keep them lean and focused.
 
 ---
 
-## ⚙️ Available Commands
+## Available Commands
 
 ### Development
 
 ```bash
 bun run dev              # Start all apps (frontend + backend)
-bun run dev:web          # Start frontend only
-bun run dev:server       # Start backend only
+bun run dev:web          # Start frontend only (port 7001)
+bun run dev:server       # Start backend only (port 7000)
 ```
 
-### Building & Checking
+### Building and Checking
 
 ```bash
 bun run build            # Build all apps
 bun run check-types      # Check TypeScript types
-bun run check            # Run Oxlint and Oxfmt (linting & formatting)
+bun run check            # Run Oxlint and Oxfmt
+bun run test:api:bruno   # Run API integration tests (Bruno)
+bun run perf             # Run frontend performance benchmarks
 ```
 
 ### Database
@@ -188,27 +201,38 @@ bun run check            # Run Oxlint and Oxfmt (linting & formatting)
 ```bash
 bun run db:start         # Start PostgreSQL in Docker
 bun run db:push          # Apply schema changes
-bun run db:generate      # Generate database types
+bun run db:generate      # Generate migration files
 bun run db:migrate       # Run migrations
 bun run db:seed          # Seed demo data
+bun run db:seed:agency   # Seed agency demo data
 bun run db:studio        # Open Drizzle Studio UI
 ```
 
-See [DEVELOPMENT.md](./DEVELOPMENT.md) for more detailed workflows and common issues.
+See [DEVELOPMENT.md](./DEVELOPMENT.md) for detailed workflows and troubleshooting.
 
 ---
 
-## 🤝 Contributing
+## Optional Services
 
-This is an open source project and we welcome contributions! Check out [CONTRIBUTING.md](./CONTRIBUTING.md) to learn:
+Some features need additional infrastructure beyond PostgreSQL:
 
-- How to set up your development environment
-- Code standards and style guidelines
-- How to add features or fix bugs
-- The PR review process
+| Service                   | Used for                     | Env var              |
+| ------------------------- | ---------------------------- | -------------------- |
+| **Redis**                 | Agency task thread live sync | `REDIS_URL`          |
+| **S3-compatible storage** | Agency task attachments      | `S3_*`               |
+| **OpenRouter**            | AI agent                     | `OPENROUTER_API_KEY` |
+| **Polar**                 | Billing                      | `POLAR_*`            |
+
+See `.env.example` and `apps/server/.env.example` for the full list.
 
 ---
 
-## 📝 License
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup, code standards, and the PR process.
+
+---
+
+## License
 
 Built with [Better-T-Stack](https://github.com/AmanVarshney01/create-better-t-stack)

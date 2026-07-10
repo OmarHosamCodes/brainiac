@@ -1,13 +1,8 @@
+import { assertNever } from "@brainiac/config/assert-never";
 import {
   cloneWorkspaceNodes,
   createDefaultWorkspaceTab,
   createWorkspace2x2MatrixBlock,
-  createWorkspaceAgencyBillingReportBlock,
-  createWorkspaceAgencyProjectManagerBlock,
-  createWorkspaceAgencySettingsBlock,
-  createWorkspaceAgencyTimeEntriesLogBlock,
-  createWorkspaceAgencyTimeSummaryBlock,
-  createWorkspaceAgencyTimeTrackerBlock,
   createWorkspaceAiPromptBlock,
   createWorkspaceAssumptionTrackerBlock,
   createWorkspaceAuthorityScorecardBlock,
@@ -128,12 +123,6 @@ const WORKSPACE_AGENT_BLOCK_TYPES = [
   "profitability-cash-flow",
   "pricing-simulator",
   "collections-tracker",
-  "agency-project-manager",
-  "agency-time-tracker",
-  "agency-time-entries-log",
-  "agency-time-summary",
-  "agency-billing-report",
-  "agency-settings",
   "custom",
 ] as const;
 
@@ -436,10 +425,6 @@ function truncate(value: string, length = 240) {
 
 const BLOCK_CONTENT_PREVIEW_LENGTH = 180;
 const SEARCH_EXCERPT_LENGTH = 260;
-
-function assertNever(value: never): never {
-  throw new Error(`Unhandled workspace block type: ${JSON.stringify(value)}`);
-}
 
 type BlockPatchOperation = z.infer<typeof blockPatchOperationSchema>;
 type BlockPatchTarget = {
@@ -1368,74 +1353,6 @@ function describeBlockEditGuide(
           "invoices[].paidAt",
         ],
       });
-    case "agency-project-manager":
-      return createBlockEditGuide({
-        blockType: block.type,
-        editableFieldPaths: ["title", "teamId"],
-        referenceFieldPaths: ["teamId"],
-        notes: [
-          "Clients, projects, and tags are managed through live backend actions in the current editor; this block only persists the linked team.",
-        ],
-      });
-    case "agency-time-tracker":
-      return createBlockEditGuide({
-        blockType: block.type,
-        editableFieldPaths: ["title", "teamId"],
-        referenceFieldPaths: ["teamId"],
-        notes: [
-          "The current editor keeps the timer description, selected project, and selected tags in session/store state instead of persisting them on the block.",
-        ],
-      });
-    case "agency-time-entries-log":
-      return createBlockEditGuide({
-        blockType: block.type,
-        editableFieldPaths: ["title", "teamId", "pageSize"],
-        referenceFieldPaths: ["teamId"],
-        notes: [
-          "The current editor only writes the linked team and page size back to the block; entry filters are derived from live query state.",
-        ],
-      });
-    case "agency-time-summary":
-      return createBlockEditGuide({
-        blockType: block.type,
-        editableFieldPaths: ["title", "teamId", "datePreset"],
-        referenceFieldPaths: ["teamId"],
-        notes: [
-          "The current editor only persists the linked team and date preset.",
-          "Client, project, member, tag, and custom date inputs currently live in local UI state and are not written back to the block payload.",
-        ],
-      });
-    case "agency-billing-report":
-      return createBlockEditGuide({
-        blockType: block.type,
-        editableFieldPaths: [
-          "title",
-          "teamId",
-          "periodOffset",
-          "billingPeriodStartDay",
-          "billingPeriodEndDay",
-          "pageSize",
-          "selectedClientId",
-          "selectedProjectId",
-          "selectedMemberUserId",
-          "reviewedEntryIds[]",
-        ],
-        referenceFieldPaths: [
-          "teamId",
-          "selectedClientId",
-          "selectedProjectId",
-          "selectedMemberUserId",
-        ],
-        notes: [
-          "Use reviewedEntryIds only for persisted review state; billing totals are computed from live backend data.",
-        ],
-      });
-    case "agency-settings":
-      return createBlockEditGuide({
-        blockType: block.type,
-        editableFieldPaths: ["title", "teamId", "billingPeriodStartDay", "billingPeriodEndDay"],
-        referenceFieldPaths: ["teamId"],
-      });
     case "custom":
       return createBlockEditGuide({
         blockType: block.type,
@@ -1456,6 +1373,8 @@ function describeBlockEditGuide(
             : "Keep definitionId aligned with a real custom block template on the node.",
         ],
       });
+    default:
+      return assertNever(block);
   }
 }
 
@@ -1827,32 +1746,6 @@ function collectBlockSearchDetails(
           invoice.paidAt ?? "",
         ]),
       ]);
-    case "agency-project-manager":
-      return normalizeSearchFragments([block.teamId ?? ""]);
-    case "agency-time-tracker":
-      return normalizeSearchFragments([block.teamId ?? ""]);
-    case "agency-time-entries-log":
-      return normalizeSearchFragments([block.teamId ?? "", block.pageSize]);
-    case "agency-time-summary":
-      return normalizeSearchFragments([block.teamId ?? "", block.datePreset]);
-    case "agency-billing-report":
-      return normalizeSearchFragments([
-        block.teamId ?? "",
-        block.periodOffset,
-        block.billingPeriodStartDay,
-        block.billingPeriodEndDay,
-        block.pageSize,
-        block.selectedClientId ?? "",
-        block.selectedProjectId ?? "",
-        block.selectedMemberUserId ?? "",
-        ...block.reviewedEntryIds,
-      ]);
-    case "agency-settings":
-      return normalizeSearchFragments([
-        block.teamId ?? "",
-        block.billingPeriodStartDay,
-        block.billingPeriodEndDay,
-      ]);
     case "custom": {
       const template = getCustomBlockTemplate(customTemplates, block.definitionId);
 
@@ -1866,6 +1759,8 @@ function collectBlockSearchDetails(
         ...collectPromptOutputFragments(block.outputHistory),
       ]);
     }
+    default:
+      return assertNever(block);
   }
 }
 
@@ -2009,30 +1904,10 @@ export function summarizeBlock(block: WorkspaceBlock) {
       return `${block.activeClients} active clients at ${block.hourlyRateEgp} EGP/hour`;
     case "collections-tracker":
       return `${block.invoices.length} receivables with filter ${block.filter}`;
-    case "agency-project-manager":
-      return block.teamId
-        ? "Team-linked project manager"
-        : "Agency project manager awaiting team link";
-    case "agency-time-tracker":
-      return block.teamId ? "Live team time tracker" : "Agency time tracker awaiting team link";
-    case "agency-time-entries-log":
-      return block.teamId
-        ? `Personal entries log (${block.pageSize} rows per page)`
-        : "Agency time entries log awaiting team link";
-    case "agency-time-summary":
-      return block.teamId
-        ? `Team time summary (${block.datePreset})`
-        : "Agency time summary awaiting team link";
-    case "agency-billing-report":
-      return block.teamId
-        ? `Agency billing report (${block.reviewedEntryIds.length} reviewed, ${block.pageSize} per page)`
-        : "Agency billing report awaiting team link";
-    case "agency-settings":
-      return block.teamId
-        ? `Agency settings (${block.billingPeriodStartDay}-${block.billingPeriodEndDay})`
-        : "Agency settings awaiting team link";
     case "custom":
       return truncate(block.notes || block.latestAiOutput || JSON.stringify(block.values));
+    default:
+      return assertNever(block);
   }
 }
 
@@ -2430,18 +2305,6 @@ function createBlockByType(args: {
       return createWorkspacePricingSimulatorBlock(titleInput);
     case "collections-tracker":
       return createWorkspaceCollectionsTrackerBlock(titleInput);
-    case "agency-project-manager":
-      return createWorkspaceAgencyProjectManagerBlock(titleInput);
-    case "agency-time-tracker":
-      return createWorkspaceAgencyTimeTrackerBlock(titleInput);
-    case "agency-time-entries-log":
-      return createWorkspaceAgencyTimeEntriesLogBlock(titleInput);
-    case "agency-time-summary":
-      return createWorkspaceAgencyTimeSummaryBlock(titleInput);
-    case "agency-billing-report":
-      return createWorkspaceAgencyBillingReportBlock(titleInput);
-    case "agency-settings":
-      return createWorkspaceAgencySettingsBlock(titleInput);
     case "custom": {
       if (!args.customTemplateId) {
         throw new Error("A customTemplateId is required when creating a custom block.");

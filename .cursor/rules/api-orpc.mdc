@@ -1,0 +1,57 @@
+---
+description: oRPC procedure tiers, authorization, and error handling
+globs: packages/api/**
+alwaysApply: false
+---
+
+# API / oRPC Conventions
+
+## Procedure tiers
+
+Use the tier from `packages/api/src/procedures.ts` — never hand-roll session checks:
+
+- `publicProcedure` — session optional
+- `protectedProcedure` — requires `context.session.user`
+- `protectedProProcedure` — auth + Pro billing tier
+
+```typescript
+import { protectedProcedure } from "../procedures";
+
+export const myRouter = {
+  list: protectedProcedure
+    .input(z.object({ teamId: z.string().min(1) }))
+    .handler(async ({ context, input }) => {
+      return service.list(context.session.user.id, input);
+    }),
+};
+```
+
+## Team authorization (security-critical)
+
+Every team-scoped endpoint MUST call `requireTeamMembership` in the **service layer**:
+
+```typescript
+import { requireTeamMembership } from "./membership";
+
+export async function listItems(actorUserId: string, input: { teamId: string }) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  // ... query
+}
+```
+
+## Error handling
+
+Throw `ORPCError` for expected failures — never catch-and-swallow in handlers:
+
+```typescript
+throw new ORPCError("UNAUTHORIZED");
+throw new ORPCError("FORBIDDEN", { message: "Requires Pro" });
+```
+
+Unknown errors are handled by `devErrorMiddleware` in `procedures.ts`.
+
+## Router structure
+
+- Thin handlers: Zod input → call `service.ts` → `.parse()` output with Zod
+- Register in `routers/index.ts` with **camelCase** keys (`agencyOps`, `team`)
+- Team-scoped inputs always include `teamId: z.string().min(1)`

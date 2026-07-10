@@ -71,6 +71,90 @@
       "when": 1781200000000,
       "tag": "0009_agency_tenure_fiscal_day",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781800000000,
+      "tag": "0010_drop_agency_tags_and_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1782400000000,
+      "tag": "0011_task_multi_assign",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783000000000,
+      "tag": "0012_task_member_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1783600000000,
+      "tag": "0013_unique_task_title_per_project",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1784200000000,
+      "tag": "0014_member_completion_count",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1784800000000,
+      "tag": "0015_task_blueprint",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1785400000000,
+      "tag": "0016_project_journey",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1786000000000,
+      "tag": "0017_task_is_waste",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1786600000000,
+      "tag": "0018_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787200000000,
+      "tag": "0019_agency_saved_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1783396298448,
+      "tag": "0020_index_renames",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1787800000000,
+      "tag": "0021_agency_client_rate_category",
+      "breakpoints": true
     }
   ]
 }

@@ -79,11 +79,7 @@ export function getFiscalQuarterRange(
   quarter: FiscalQuarter,
 ): DateRange {
   const fiscalYearStart = getFiscalYearStartDate(fiscalYear, calendar);
-  const start = addFiscalMonths(
-    fiscalYearStart,
-    (quarter - 1) * 3,
-    calendar.fiscalYearStartDay,
-  );
+  const start = addFiscalMonths(fiscalYearStart, (quarter - 1) * 3, calendar.fiscalYearStartDay);
   const end = addFiscalMonths(fiscalYearStart, quarter * 3, calendar.fiscalYearStartDay);
   return { start, end };
 }
@@ -167,10 +163,7 @@ export type MemberTenureResult = {
 
 const MS_PER_DAY = 86_400_000;
 
-function getCompletionQuarterEnd(
-  internEnd: Date | null,
-  calendar: FiscalCalendar,
-): Date | null {
+function getCompletionQuarterEnd(internEnd: Date | null, calendar: FiscalCalendar): Date | null {
   if (!internEnd) {
     return null;
   }

@@ -1,10 +1,12 @@
 {
-  "$schema": "https://turbo.build/schema.json",
+  "$schema": "https://v2-10-2.turborepo.dev/schema.json",
   "ui": "tui",
   "globalPassThroughEnv": [
     "DATABASE_URL",
     "DATABASE_PRIVATE_URL",
+    "NUXT_PUBLIC_SERVER_URL",
     "POSTGRES_URL",
+    "VITE_PUBLIC_SERVER_URL",
     "PGDATABASE",
     "PGHOST",
     "PGPASSWORD",
@@ -15,7 +17,7 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": ["dist/**", ".nuxt/**", ".output/**"]
+      "outputs": ["dist/**", ".output/**"]
     },
     "lint": {
       "dependsOn": ["^lint"]
@@ -50,6 +52,15 @@
     "db:seed": {
       "cache": false
     },
+    "db:seed:massive": {
+      "cache": false
+    },
+    "db:seed:agency": {
+      "cache": false
+    },
+    "db:clear:team": {
+      "cache": false
+    },
     "grant:lifetime-pro": {
       "cache": false
     },
@@ -69,6 +80,10 @@
       "persistent": true
     },
     "db:down": {
+      "cache": false
+    },
+    "perf": {
+      "dependsOn": ["build"],
       "cache": false
     },
     "clean": {

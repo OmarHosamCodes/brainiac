@@ -1,0 +1,45 @@
+---
+description: Core monorepo conventions, commands, and definition of done
+alwaysApply: true
+---
+
+# Brainiac Core Conventions
+
+## Monorepo layout
+
+- `apps/web` — React 19 + Vite frontend
+- `apps/server` — Hono on Bun
+- `packages/api` — oRPC routers and business logic
+- `packages/db` — Drizzle schema and migrations
+- `packages/auth` — Better Auth
+- `packages/env` — Zod-validated environment
+- `packages/agent`, `packages/workspace`, `packages/config` — shared libs
+
+## Commands (Bun only — never npm/pnpm/yarn)
+
+```bash
+bun install
+bun run dev              # web + server
+bun run check            # oxlint + oxfmt
+bun run check-types      # turbo typecheck
+bun run db:push          # local schema sync
+```
+
+## Definition of done
+
+Before finishing any change:
+
+1. `bun run check` passes
+2. `bun run check-types` passes
+3. Conventional commit message (`feat:`, `fix:`, `refactor:`, `docs:`)
+
+## Environment access
+
+- **Server/API/DB:** `import { env } from "@brainiac/env/server"`
+- **Web runtime:** `import { getRpcBaseUrl } from "@/lib/env"`
+- Never read raw `process.env` in app code — add vars to `packages/env` first
+
+## Further reading
+
+- [CONTRIBUTING.md](../../CONTRIBUTING.md) — workflows and PR checklist
+- [DESIGN.md](../../DESIGN.md) — visual design system

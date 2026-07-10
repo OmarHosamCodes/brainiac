@@ -2,7 +2,6 @@ import { env } from "@brainiac/env/server";
 import { db } from "@brainiac/db";
 import {
   agencyOpsActiveTimer,
-  agencyOpsActiveTimerTag,
   agencyOpsClient,
   agencyOpsClientContact,
   agencyOpsInvoice,
@@ -10,27 +9,67 @@ import {
   agencyOpsMemberCapacity,
   agencyOpsMemberRate,
   agencyOpsProject,
+  agencyOpsProjectJourney,
+  agencyOpsProjectJourneyStep,
   agencyOpsProjectTask,
-  agencyOpsTag,
+  agencyOpsProjectTaskAssignee,
+  agencyOpsProjectTaskBlueprint,
+  agencyOpsProjectTaskMemberStatus,
   agencyOpsTaskAttachment,
   agencyOpsTaskMessage,
   agencyOpsTaskThread,
   agencyOpsTimeEntry,
-  agencyOpsTimeEntryTag,
+  type AgencyOpsJourneyStepKind,
   user,
   workspaceTeamMember,
 } from "@brainiac/db/schema";
-import { createWorkspaceId, type WorkspaceTeamRole } from "@brainiac/workspace";
+import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
-import { and, asc, desc, eq, gte, inArray, isNull, lt, lte, sql, sum } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  exists,
+  gte,
+  inArray,
+  isNull,
+  isNotNull,
+  lt,
+  lte,
+  or,
+  sql,
+  sum,
+} from "drizzle-orm";
 
 import {
   createTaskAttachmentUploadToken,
   createTaskAttachmentPresignedUploadUrl,
   deleteTaskAttachmentFromStorage,
   getTaskAttachmentReadUrl,
+  getUserAvatarPublicUrl,
   verifyTaskAttachmentUploadToken,
 } from "../../storage";
+import { applyMemberTaskCompletion } from "../../schemas/agency-ops";
+import {
+  notifyJourneyMilestone,
+  notifyTaskAssigned,
+  notifyTaskMessage,
+  notifyTimerActivity,
+} from "../notifications/fanout";
+import {
+  liveUpdatedAt,
+  publishAgencyJourneyStepUpdated,
+  publishAgencyLiveEvent,
+  publishAgencyTaskUpdated,
+  publishAgencyTimerUpdated,
+} from "./live";
+import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
+import { resolveAgencyTimerStopBinding } from "./resolve-agency-timer-stop-binding";
+import { requireTeamMembership } from "./membership";
+
+export { requireTeamMembership };
 
 const AVATAR_KEY_PREFIX = "user-avatars/";
 
@@ -39,14 +78,12 @@ function formatAvatarUrl(image: string | null): string | null {
   const parts = image.split("/");
   const userId = parts[1];
   if (!userId) return null;
-  return `${env.BETTER_AUTH_URL}/api/user-avatars/${userId}`;
+  return getUserAvatarPublicUrl({
+    baseUrl: env.BETTER_AUTH_URL,
+    userId,
+    storageKey: image,
+  });
 }
-
-const TEAM_ROLE_WEIGHT: Record<WorkspaceTeamRole, number> = {
-  viewer: 1,
-  editor: 2,
-  owner: 3,
-};
 
 type AgencyTimeEntrySource = "timer" | "manual";
 
@@ -54,6 +91,9 @@ type AgencyClientRecord = {
   id: string;
   teamId: string;
   name: string;
+  category: "internal" | "external";
+  billableRateCents: number | null;
+  currency: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -68,18 +108,65 @@ type AgencyProjectRecord = {
   updatedAt: string;
 };
 
+type AgencyProjectTaskAssigneeRecord = {
+  userId: string;
+  userName: string;
+  userAvatar: string | null;
+  status: "open" | "in_progress" | "done";
+};
+
+type AgencyProjectTaskBlueprintRecord = {
+  id: string;
+  description: string;
+};
+
 type AgencyProjectTaskRecord = {
   id: string;
   teamId: string;
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
-  assigneeUserId: string | null;
-  assigneeName: string | null;
-  assigneeAvatar: string | null;
+  taskKind: "standard" | "journey_anchor" | "journey_milestone";
+  assignedToTeam: boolean;
+  isWaste: boolean;
+  createdByUserId: string;
+  assignees: AgencyProjectTaskAssigneeRecord[];
+  viewerStatus?: "open" | "in_progress" | "done";
+  viewerCompletionCount?: number;
+  viewerBlueprints?: AgencyProjectTaskBlueprintRecord[];
+  totalTrackedSeconds?: number;
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
+};
+
+type AgencyProjectJourneyStepRecord = {
+  id: string;
+  journeyId: string;
+  sortOrder: number;
+  label: string;
+  stepKind: "start" | "milestone" | "checkpoint" | "destination";
+  status: "planned" | "active" | "done" | "blocked";
+  taskId: string | null;
+  task?: AgencyProjectTaskRecord | null;
+  timeEntryCount: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type AgencyProjectJourneyRecord = {
+  id: string;
+  projectId: string;
+  createdAt: string;
+  updatedAt: string;
+  steps: AgencyProjectJourneyStepRecord[];
+  completedSteps: number;
+  totalSteps: number;
+};
+
+type MemberStatusEntry = {
+  status: "open" | "in_progress" | "done";
+  completionCount: number;
 };
 
 type AgencyTaskMessageRecord = {
@@ -105,8 +192,45 @@ type AttachmentMetadata = {
   durationSeconds?: number;
   fileExtension?: string;
   lastModified?: string;
-  mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other";
+  mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other" | "link";
+  sourceUrl?: string;
 };
+
+function isTaskLinkStorageKey(storageKey: string) {
+  return storageKey.startsWith("task-links/");
+}
+
+function normalizeTaskLinkUrl(input: string): string {
+  const trimmed = input.trim();
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const parsed = new URL(withProtocol);
+  if (parsed.protocol !== "https:") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Link attachments must use HTTPS URLs.",
+    });
+  }
+  return parsed.href;
+}
+
+function deriveTaskLinkLabel(url: string, label?: string | null): string {
+  if (label?.trim()) return label.trim().slice(0, 260);
+  const parsed = new URL(url);
+  const path =
+    parsed.pathname !== "/" && parsed.pathname.length > 1
+      ? parsed.pathname.replace(/\/$/, "").slice(0, 48)
+      : "";
+  return (path ? `${parsed.hostname}${path}` : parsed.hostname).slice(0, 260);
+}
+
+async function resolveTaskAttachmentUrl(args: {
+  storageKey: string;
+  metadata: AttachmentMetadata | null;
+}): Promise<string | null> {
+  if (isTaskLinkStorageKey(args.storageKey)) {
+    return args.metadata?.sourceUrl ?? null;
+  }
+  return getTaskAttachmentReadUrl(args.storageKey);
+}
 
 type AgencyTaskAttachmentRecord = {
   id: string;
@@ -122,14 +246,6 @@ type AgencyTaskAttachmentRecord = {
   url: string | null;
 };
 
-type AgencyTagRecord = {
-  id: string;
-  teamId: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-};
-
 type AgencyTimeEntryRecord = {
   id: string;
   teamId: string;
@@ -138,19 +254,60 @@ type AgencyTimeEntryRecord = {
   projectId: string;
   taskId: string | null;
   taskTitle: string | null;
+  taskIsWaste: boolean | null;
   projectName: string;
   clientId: string;
   clientName: string;
-  tags: AgencyTagRecord[];
   source: AgencyTimeEntrySource;
   description: string;
-  linkUrl: string | null;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
   createdAt: string;
   updatedAt: string;
 };
+
+function mapAgencyTimeEntryRow(row: {
+  id: string;
+  teamId: string;
+  userId: string;
+  userName: string | null;
+  projectId: string;
+  taskId: string | null;
+  taskTitle: string | null;
+  taskIsWaste: boolean | null;
+  projectName: string;
+  clientId: string;
+  clientName: string;
+  source: AgencyTimeEntrySource;
+  description: string;
+  startedAt: Date;
+  endedAt: Date;
+  durationSeconds: number;
+  createdAt: Date;
+  updatedAt: Date;
+}): AgencyTimeEntryRecord {
+  return {
+    id: row.id,
+    teamId: row.teamId,
+    userId: row.userId,
+    userName: row.userName ?? "Unknown",
+    projectId: row.projectId,
+    taskId: row.taskId ?? null,
+    taskTitle: row.taskTitle ?? null,
+    taskIsWaste: row.taskId ? (row.taskIsWaste ?? false) : null,
+    projectName: row.projectName,
+    clientId: row.clientId,
+    clientName: row.clientName,
+    source: row.source,
+    description: row.description,
+    startedAt: row.startedAt.toISOString(),
+    endedAt: row.endedAt.toISOString(),
+    durationSeconds: row.durationSeconds,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
 
 type AgencyActiveTimerRecord = {
   id: string;
@@ -160,9 +317,7 @@ type AgencyActiveTimerRecord = {
   taskId: string | null;
   taskTitle: string | null;
   projectName: string;
-  tags: AgencyTagRecord[];
   description: string;
-  linkUrl: string | null;
   startedAt: string;
   createdAt: string;
   updatedAt: string;
@@ -191,31 +346,48 @@ type AgencyReportSummary = {
   }>;
 };
 
-function hasRoleAtLeast(role: WorkspaceTeamRole, required: WorkspaceTeamRole) {
-  return TEAM_ROLE_WEIGHT[role] >= TEAM_ROLE_WEIGHT[required];
-}
-
-export async function requireTeamMembership(
-  actorUserId: string,
-  teamId: string,
-  requiredRole: WorkspaceTeamRole = "viewer",
-) {
-  const [membership] = await db
-    .select({ role: workspaceTeamMember.role })
-    .from(workspaceTeamMember)
-    .where(and(eq(workspaceTeamMember.teamId, teamId), eq(workspaceTeamMember.userId, actorUserId)))
-    .limit(1);
-
-  if (!membership) {
-    throw new ORPCError("UNAUTHORIZED");
-  }
-
-  if (!hasRoleAtLeast(membership.role, requiredRole)) {
-    throw new ORPCError("UNAUTHORIZED");
-  }
-
-  return membership.role;
-}
+type AgencyDashboardSummary = AgencyReportSummary & {
+  totalSeconds: number;
+  activeTimerCount: number;
+  topClient: { clientId: string; clientName: string; seconds: number } | null;
+  topProject: {
+    projectId: string;
+    projectName: string;
+    clientId: string;
+    clientName: string;
+    seconds: number;
+  } | null;
+  dailyBuckets: Array<{
+    date: string;
+    totalSeconds: number;
+    segments: Array<{
+      projectId: string;
+      projectName: string;
+      clientName: string;
+      seconds: number;
+    }>;
+  }>;
+  teamMembers: Array<{
+    userId: string;
+    userName: string;
+    userEmail: string;
+    avatar: string | null;
+    isActive: boolean;
+    totalSeconds: number;
+    latestEntry: {
+      projectName: string;
+      clientName: string;
+      description: string;
+      startedAt: string;
+    } | null;
+    projectBreakdown: Array<{
+      projectId: string;
+      projectName: string;
+      clientName: string;
+      seconds: number;
+    }>;
+  }>;
+};
 
 function parseIsoDateTime(value: string, fieldName: string) {
   const parsed = new Date(value);
@@ -227,40 +399,6 @@ function parseIsoDateTime(value: string, fieldName: string) {
   }
 
   return parsed;
-}
-
-function normalizeAgencyLinkUrl(value: string | null | undefined) {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  const trimmedValue = value?.trim() ?? "";
-
-  if (!trimmedValue) {
-    return null;
-  }
-
-  const candidate = /^[a-zA-Z][a-zA-Z\d+.-]*:/.test(trimmedValue)
-    ? trimmedValue
-    : `https://${trimmedValue}`;
-
-  let parsed: URL;
-
-  try {
-    parsed = new URL(candidate);
-  } catch {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Invalid link URL.",
-    });
-  }
-
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Link URL must use http or https.",
-    });
-  }
-
-  return parsed.toString();
 }
 
 function validateDateRange(startedAt: Date, endedAt: Date) {
@@ -275,14 +413,66 @@ function getDurationSeconds(startedAt: Date, endedAt: Date) {
   return Math.max(1, Math.floor((endedAt.getTime() - startedAt.getTime()) / 1_000));
 }
 
-function getWeekStartUtc(anchor: Date) {
-  const utcDay = anchor.getUTCDay();
-  const diff = utcDay === 0 ? -6 : 1 - utcDay;
-  const start = new Date(
-    Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth(), anchor.getUTCDate() + diff, 0, 0, 0, 0),
-  );
+/** Local calendar date (YYYY-MM-DD) for an instant using JS getTimezoneOffset() semantics. */
+function localDateKeyFromInstant(instant: Date, utcOffsetMinutes: number): string {
+  const localMs = instant.getTime() - utcOffsetMinutes * 60_000;
+  const local = new Date(localMs);
+  const year = local.getUTCFullYear();
+  const month = String(local.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(local.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
-  return start;
+function addDaysToDateKey(dateKey: string, days: number): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const next = new Date(Date.UTC(year!, month! - 1, day! + days));
+  const nextYear = next.getUTCFullYear();
+  const nextMonth = String(next.getUTCMonth() + 1).padStart(2, "0");
+  const nextDay = String(next.getUTCDate()).padStart(2, "0");
+  return `${nextYear}-${nextMonth}-${nextDay}`;
+}
+
+function getLocalWeekStartKeyFromDateKey(dateKey: string): string {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = new Date(Date.UTC(year!, month! - 1, day!));
+  const dayOfWeek = date.getUTCDay();
+  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  date.setUTCDate(date.getUTCDate() + diff);
+  const weekYear = date.getUTCFullYear();
+  const weekMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const weekDay = String(date.getUTCDate()).padStart(2, "0");
+  return `${weekYear}-${weekMonth}-${weekDay}`;
+}
+
+function localInstantFromDateKey(
+  dateKey: string,
+  utcOffsetMinutes: number,
+  endOfDay = false,
+): Date {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const ms =
+    Date.UTC(
+      year!,
+      month! - 1,
+      day!,
+      endOfDay ? 23 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 59 : 0,
+      endOfDay ? 999 : 0,
+    ) +
+    utcOffsetMinutes * 60_000;
+  return new Date(ms);
+}
+
+function getLocalWeekBounds(anchor: Date, utcOffsetMinutes: number) {
+  const anchorDateKey = localDateKeyFromInstant(anchor, utcOffsetMinutes);
+  const weekStartKey = getLocalWeekStartKeyFromDateKey(anchorDateKey);
+  const weekEndKey = addDaysToDateKey(weekStartKey, 6);
+  return {
+    weekStartKey,
+    weekStart: localInstantFromDateKey(weekStartKey, utcOffsetMinutes),
+    weekEnd: localInstantFromDateKey(weekEndKey, utcOffsetMinutes, true),
+  };
 }
 
 function addDaysUtc(date: Date, days: number) {
@@ -310,6 +500,9 @@ function mapClientRow(row: {
   id: string;
   teamId: string;
   name: string;
+  category: "internal" | "external";
+  billableRateCents: number | null;
+  currency: string;
   createdAt: Date;
   updatedAt: Date;
 }): AgencyClientRecord {
@@ -317,6 +510,9 @@ function mapClientRow(row: {
     id: row.id,
     teamId: row.teamId,
     name: row.name,
+    category: row.category,
+    billableRateCents: row.billableRateCents,
+    currency: row.currency,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -348,9 +544,15 @@ function mapProjectTaskRow(row: {
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
-  assigneeUserId: string | null;
-  assigneeName: string | null;
-  assigneeAvatar: string | null;
+  taskKind: "standard" | "journey_anchor" | "journey_milestone";
+  assignedToTeam: boolean;
+  isWaste: boolean;
+  createdByUserId: string;
+  assignees: AgencyProjectTaskAssigneeRecord[];
+  viewerStatus?: "open" | "in_progress" | "done";
+  viewerCompletionCount?: number;
+  viewerBlueprints?: AgencyProjectTaskBlueprintRecord[];
+  totalTrackedSeconds?: number;
   dueDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -361,29 +563,444 @@ function mapProjectTaskRow(row: {
     projectId: row.projectId,
     title: row.title,
     status: row.status,
-    assigneeUserId: row.assigneeUserId,
-    assigneeName: row.assigneeName,
-    assigneeAvatar: row.assigneeAvatar,
+    taskKind: row.taskKind,
+    assignedToTeam: row.assignedToTeam,
+    isWaste: row.isWaste,
+    createdByUserId: row.createdByUserId,
+    assignees: row.assignees,
+    ...(row.viewerStatus !== undefined ? { viewerStatus: row.viewerStatus } : {}),
+    ...(row.viewerCompletionCount !== undefined
+      ? { viewerCompletionCount: row.viewerCompletionCount }
+      : {}),
+    ...(row.viewerBlueprints !== undefined ? { viewerBlueprints: row.viewerBlueprints } : {}),
+    ...(row.totalTrackedSeconds !== undefined
+      ? { totalTrackedSeconds: row.totalTrackedSeconds }
+      : {}),
     dueDate: row.dueDate?.toISOString() ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
 }
 
-function mapTagRow(row: {
+async function loadTaskBlueprintsForViewer(
+  taskIds: string[],
+  viewerUserId: string,
+): Promise<Map<string, AgencyProjectTaskBlueprintRecord[]>> {
+  const result = new Map<string, AgencyProjectTaskBlueprintRecord[]>();
+  if (taskIds.length === 0 || !viewerUserId) return result;
+
+  const rows = await db
+    .select({
+      id: agencyOpsProjectTaskBlueprint.id,
+      taskId: agencyOpsProjectTaskBlueprint.taskId,
+      description: agencyOpsProjectTaskBlueprint.description,
+    })
+    .from(agencyOpsProjectTaskBlueprint)
+    .where(
+      and(
+        inArray(agencyOpsProjectTaskBlueprint.taskId, taskIds),
+        eq(agencyOpsProjectTaskBlueprint.userId, viewerUserId),
+      ),
+    )
+    .orderBy(asc(agencyOpsProjectTaskBlueprint.createdAt));
+
+  for (const row of rows) {
+    const existing = result.get(row.taskId) ?? [];
+    existing.push({ id: row.id, description: row.description });
+    result.set(row.taskId, existing);
+  }
+
+  return result;
+}
+
+async function createTaskBlueprintForViewer(
+  teamId: string,
+  taskId: string,
+  viewerUserId: string,
+  description: string,
+): Promise<AgencyProjectTaskBlueprintRecord | null> {
+  const trimmed = description.trim();
+  if (!trimmed) return null;
+
+  const now = new Date();
+  const [row] = await db
+    .insert(agencyOpsProjectTaskBlueprint)
+    .values({
+      id: createWorkspaceId("agency-task-blueprint"),
+      teamId,
+      taskId,
+      userId: viewerUserId,
+      description: trimmed,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning({
+      id: agencyOpsProjectTaskBlueprint.id,
+      description: agencyOpsProjectTaskBlueprint.description,
+    });
+
+  return row ?? null;
+}
+
+async function loadTaskMemberStatuses(
+  taskIds: string[],
+): Promise<Map<string, Map<string, MemberStatusEntry>>> {
+  const result = new Map<string, Map<string, MemberStatusEntry>>();
+  if (taskIds.length === 0) return result;
+
+  const rows = await db
+    .select({
+      taskId: agencyOpsProjectTaskMemberStatus.taskId,
+      userId: agencyOpsProjectTaskMemberStatus.userId,
+      status: agencyOpsProjectTaskMemberStatus.status,
+      completionCount: agencyOpsProjectTaskMemberStatus.completionCount,
+    })
+    .from(agencyOpsProjectTaskMemberStatus)
+    .where(inArray(agencyOpsProjectTaskMemberStatus.taskId, taskIds));
+
+  for (const row of rows) {
+    const byUser = result.get(row.taskId) ?? new Map<string, MemberStatusEntry>();
+    byUser.set(row.userId, {
+      status: row.status,
+      completionCount: row.completionCount,
+    });
+    result.set(row.taskId, byUser);
+  }
+
+  return result;
+}
+
+async function loadTaskAssignees(
+  taskIds: string[],
+): Promise<Map<string, AgencyProjectTaskAssigneeRecord[]>> {
+  const result = new Map<string, AgencyProjectTaskAssigneeRecord[]>();
+  if (taskIds.length === 0) return result;
+
+  const memberStatuses = await loadTaskMemberStatuses(taskIds);
+
+  const rows = await db
+    .select({
+      taskId: agencyOpsProjectTaskAssignee.taskId,
+      userId: agencyOpsProjectTaskAssignee.userId,
+      userName: user.name,
+      userAvatar: user.image,
+    })
+    .from(agencyOpsProjectTaskAssignee)
+    .innerJoin(user, eq(user.id, agencyOpsProjectTaskAssignee.userId))
+    .where(inArray(agencyOpsProjectTaskAssignee.taskId, taskIds))
+    .orderBy(asc(user.name));
+
+  for (const row of rows) {
+    const assignees = result.get(row.taskId) ?? [];
+    assignees.push({
+      userId: row.userId,
+      userName: row.userName ?? "Unknown",
+      userAvatar: formatAvatarUrl(row.userAvatar),
+      status: memberStatuses.get(row.taskId)?.get(row.userId)?.status ?? "open",
+    });
+    result.set(row.taskId, assignees);
+  }
+
+  return result;
+}
+
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function upsertTaskMemberStatus(
+  tx: DbTransaction,
+  taskId: string,
+  userId: string,
+  status: "open" | "in_progress" | "done",
+) {
+  const now = new Date();
+  await tx
+    .insert(agencyOpsProjectTaskMemberStatus)
+    .values({
+      taskId,
+      userId,
+      status,
+      completedAt: status === "done" ? now : null,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [agencyOpsProjectTaskMemberStatus.taskId, agencyOpsProjectTaskMemberStatus.userId],
+      set: {
+        status,
+        completedAt: status === "done" ? now : null,
+        updatedAt: now,
+      },
+    });
+}
+
+async function setTaskMemberStatusesForUsers(
+  tx: DbTransaction,
+  taskId: string,
+  userIds: string[],
+  status: "open" | "in_progress" | "done" = "open",
+) {
+  for (const userId of userIds) {
+    await upsertTaskMemberStatus(tx, taskId, userId, status);
+  }
+}
+
+async function deleteTaskMemberStatusesForUsers(
+  tx: DbTransaction,
+  taskId: string,
+  userIds: string[],
+) {
+  if (userIds.length === 0) return;
+  await tx
+    .delete(agencyOpsProjectTaskMemberStatus)
+    .where(
+      and(
+        eq(agencyOpsProjectTaskMemberStatus.taskId, taskId),
+        inArray(agencyOpsProjectTaskMemberStatus.userId, userIds),
+      ),
+    );
+}
+
+function resolveViewerMemberStatus(
+  task: {
+    status: "open" | "in_progress" | "done" | "archived";
+    assignedToTeam: boolean;
+  },
+  memberStatuses: Map<string, MemberStatusEntry> | undefined,
+  viewerUserId: string,
+): "open" | "in_progress" | "done" {
+  if (task.status === "archived") return "done";
+  return memberStatuses?.get(viewerUserId)?.status ?? "open";
+}
+
+function resolveViewerCompletionCount(
+  memberStatuses: Map<string, MemberStatusEntry> | undefined,
+  viewerUserId: string,
+): number {
+  return memberStatuses?.get(viewerUserId)?.completionCount ?? 0;
+}
+
+async function buildProjectTaskRecord(
+  row: {
+    id: string;
+    teamId: string;
+    projectId: string;
+    title: string;
+    status: "open" | "in_progress" | "done" | "archived";
+    taskKind: "standard" | "journey_anchor" | "journey_milestone";
+    assignedToTeam: boolean;
+    isWaste: boolean;
+    createdByUserId: string;
+    dueDate: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+  assignees: AgencyProjectTaskAssigneeRecord[],
+  viewerUserId?: string,
+  memberStatuses?: Map<string, MemberStatusEntry>,
+  viewerBlueprints?: AgencyProjectTaskBlueprintRecord[],
+): Promise<AgencyProjectTaskRecord> {
+  return mapProjectTaskRow({
+    ...row,
+    assignees,
+    ...(viewerUserId
+      ? {
+          viewerStatus: resolveViewerMemberStatus(row, memberStatuses, viewerUserId),
+          viewerCompletionCount: resolveViewerCompletionCount(memberStatuses, viewerUserId),
+          viewerBlueprints: viewerBlueprints ?? [],
+        }
+      : {}),
+  });
+}
+
+async function setTaskAssignees(tx: DbTransaction, taskId: string, userIds: string[]) {
+  const existingRows = await tx
+    .select({ userId: agencyOpsProjectTaskAssignee.userId })
+    .from(agencyOpsProjectTaskAssignee)
+    .where(eq(agencyOpsProjectTaskAssignee.taskId, taskId));
+  const existingUserIds = existingRows.map((row) => row.userId);
+
+  await tx
+    .delete(agencyOpsProjectTaskAssignee)
+    .where(eq(agencyOpsProjectTaskAssignee.taskId, taskId));
+
+  const uniqueUserIds = [...new Set(userIds)];
+  const removedUserIds = existingUserIds.filter((userId) => !uniqueUserIds.includes(userId));
+  const addedUserIds = uniqueUserIds.filter((userId) => !existingUserIds.includes(userId));
+
+  if (removedUserIds.length > 0) {
+    await deleteTaskMemberStatusesForUsers(tx, taskId, removedUserIds);
+  }
+
+  if (uniqueUserIds.length === 0) return;
+
+  await tx.insert(agencyOpsProjectTaskAssignee).values(
+    uniqueUserIds.map((userId) => ({
+      taskId,
+      userId,
+    })),
+  );
+
+  if (addedUserIds.length > 0) {
+    await setTaskMemberStatusesForUsers(tx, taskId, addedUserIds, "open");
+  }
+}
+
+async function addTaskAssignees(tx: DbTransaction, taskId: string, userIds: string[]) {
+  const uniqueUserIds = [...new Set(userIds)];
+  if (uniqueUserIds.length === 0) return;
+
+  const existingRows = await tx
+    .select({ userId: agencyOpsProjectTaskAssignee.userId })
+    .from(agencyOpsProjectTaskAssignee)
+    .where(eq(agencyOpsProjectTaskAssignee.taskId, taskId));
+  const existingUserIds = new Set(existingRows.map((row) => row.userId));
+  const addedUserIds = uniqueUserIds.filter((userId) => !existingUserIds.has(userId));
+  if (addedUserIds.length === 0) return;
+
+  await tx.insert(agencyOpsProjectTaskAssignee).values(
+    addedUserIds.map((userId) => ({
+      taskId,
+      userId,
+    })),
+  );
+  await setTaskMemberStatusesForUsers(tx, taskId, addedUserIds, "open");
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 4 && current && typeof current === "object"; depth += 1) {
+    if ("code" in current && current.code === "23505") return true;
+    current = "cause" in current ? current.cause : undefined;
+  }
+  return false;
+}
+
+/** SQL expression matching normalizeTaskTitle() / unique index. */
+function taskTitleKeySql() {
+  return sql`lower(trim(regexp_replace(${agencyOpsProjectTask.title}, '\\s+', ' ', 'g')))`;
+}
+
+const projectTaskColumns = {
+  id: agencyOpsProjectTask.id,
+  teamId: agencyOpsProjectTask.teamId,
+  projectId: agencyOpsProjectTask.projectId,
+  title: agencyOpsProjectTask.title,
+  status: agencyOpsProjectTask.status,
+  taskKind: agencyOpsProjectTask.taskKind,
+  assignedToTeam: agencyOpsProjectTask.assignedToTeam,
+  isWaste: agencyOpsProjectTask.isWaste,
+  createdByUserId: agencyOpsProjectTask.createdByUserId,
+  dueDate: agencyOpsProjectTask.dueDate,
+  createdAt: agencyOpsProjectTask.createdAt,
+  updatedAt: agencyOpsProjectTask.updatedAt,
+} as const;
+
+type ProjectTaskRow = {
   id: string;
   teamId: string;
-  name: string;
+  projectId: string;
+  title: string;
+  status: "open" | "in_progress" | "done" | "archived";
+  taskKind: "standard" | "journey_anchor" | "journey_milestone";
+  assignedToTeam: boolean;
+  isWaste: boolean;
+  createdByUserId: string;
+  dueDate: Date | null;
   createdAt: Date;
   updatedAt: Date;
-}): AgencyTagRecord {
-  return {
-    id: row.id,
-    teamId: row.teamId,
-    name: row.name,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  };
+};
+
+async function findProjectTaskByTitleKey(
+  teamId: string,
+  projectId: string,
+  titleKey: string,
+): Promise<ProjectTaskRow | null> {
+  const [task] = await db
+    .select(projectTaskColumns)
+    .from(agencyOpsProjectTask)
+    .where(
+      and(
+        eq(agencyOpsProjectTask.teamId, teamId),
+        eq(agencyOpsProjectTask.projectId, projectId),
+        sql`${taskTitleKeySql()} = ${titleKey}`,
+      ),
+    )
+    .limit(1);
+
+  return task ?? null;
+}
+
+async function mergeAssigneesIntoExistingTask(
+  task: ProjectTaskRow,
+  input: {
+    assignedToTeam: boolean;
+    assigneeUserIds: string[];
+  },
+): Promise<ProjectTaskRow> {
+  const existingAssigneeRows = await db
+    .select({ userId: agencyOpsProjectTaskAssignee.userId })
+    .from(agencyOpsProjectTaskAssignee)
+    .where(eq(agencyOpsProjectTaskAssignee.taskId, task.id));
+
+  const plan = planAssigneeMerge({
+    existingAssignedToTeam: task.assignedToTeam,
+    existingAssigneeIds: existingAssigneeRows.map((row) => row.userId),
+    wantAssignedToTeam: input.assignedToTeam,
+    wantAssigneeIds: input.assigneeUserIds,
+  });
+
+  if (plan.kind === "noop") return task;
+
+  const now = new Date();
+  const [updated] = await db.transaction(async (tx) => {
+    if (plan.kind === "team") {
+      await setTaskAssignees(tx, task.id, []);
+      const [row] = await tx
+        .update(agencyOpsProjectTask)
+        .set({ assignedToTeam: true, updatedAt: now })
+        .where(eq(agencyOpsProjectTask.id, task.id))
+        .returning(projectTaskColumns);
+      return [row];
+    }
+
+    await addTaskAssignees(tx, task.id, plan.userIds);
+    const [row] = await tx
+      .update(agencyOpsProjectTask)
+      .set({ updatedAt: now })
+      .where(eq(agencyOpsProjectTask.id, task.id))
+      .returning(projectTaskColumns);
+    return [row];
+  });
+
+  return updated ?? task;
+}
+
+async function reopenMemberTaskForActor(taskId: string, actorUserId: string) {
+  const now = new Date();
+  await db
+    .update(agencyOpsProjectTaskMemberStatus)
+    .set({ status: "open", updatedAt: now })
+    .where(
+      and(
+        eq(agencyOpsProjectTaskMemberStatus.taskId, taskId),
+        eq(agencyOpsProjectTaskMemberStatus.userId, actorUserId),
+        eq(agencyOpsProjectTaskMemberStatus.status, "done"),
+      ),
+    );
+}
+
+async function buildTaskRecordForActor(task: ProjectTaskRow, actorUserId: string) {
+  await reopenMemberTaskForActor(task.id, actorUserId);
+  const assigneesByTask = await loadTaskAssignees([task.id]);
+  const memberStatuses = await loadTaskMemberStatuses([task.id]);
+  const blueprintsByTask = await loadTaskBlueprintsForViewer([task.id], actorUserId);
+  return buildProjectTaskRecord(
+    task,
+    assigneesByTask.get(task.id) ?? [],
+    actorUserId,
+    memberStatuses.get(task.id),
+    blueprintsByTask.get(task.id),
+  );
 }
 
 async function getActiveTimerByUser(userId: string) {
@@ -395,9 +1012,9 @@ async function getActiveTimerByUser(userId: string) {
       projectId: agencyOpsActiveTimer.projectId,
       taskId: agencyOpsActiveTimer.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       description: agencyOpsActiveTimer.description,
-      linkUrl: agencyOpsActiveTimer.linkUrl,
       startedAt: agencyOpsActiveTimer.startedAt,
       createdAt: agencyOpsActiveTimer.createdAt,
       updatedAt: agencyOpsActiveTimer.updatedAt,
@@ -412,18 +1029,6 @@ async function getActiveTimerByUser(userId: string) {
     return null;
   }
 
-  const tags = await db
-    .select({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    })
-    .from(agencyOpsActiveTimerTag)
-    .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsActiveTimerTag.tagId))
-    .where(eq(agencyOpsActiveTimerTag.activeTimerId, timer.id));
-
   return {
     id: timer.id,
     teamId: timer.teamId,
@@ -432,9 +1037,7 @@ async function getActiveTimerByUser(userId: string) {
     taskId: timer.taskId,
     taskTitle: timer.taskTitle ?? null,
     projectName: timer.projectName,
-    tags: tags.map(mapTagRow),
     description: timer.description,
-    linkUrl: timer.linkUrl,
     startedAt: timer.startedAt.toISOString(),
     createdAt: timer.createdAt.toISOString(),
     updatedAt: timer.updatedAt.toISOString(),
@@ -488,15 +1091,56 @@ async function getClientByIdForTeam(teamId: string, clientId: string) {
   }
 }
 
+export type ReportEntityFilterInput = {
+  clientId?: string;
+  projectId?: string;
+  memberUserId?: string;
+  clientIds?: string[];
+  projectIds?: string[];
+  memberUserIds?: string[];
+};
+
+function resolveReportEntityIds(
+  singular: string | undefined,
+  plural: string[] | undefined,
+): string[] {
+  if (plural && plural.length > 0) return plural;
+  if (singular) return [singular];
+  return [];
+}
+
+function applyReportEntityFilters(
+  filters: Parameters<typeof and>[0][],
+  input: ReportEntityFilterInput,
+) {
+  const clientIds = resolveReportEntityIds(input.clientId, input.clientIds);
+  if (clientIds.length === 1) {
+    filters.push(eq(agencyOpsProject.clientId, clientIds[0]!));
+  } else if (clientIds.length > 1) {
+    filters.push(inArray(agencyOpsProject.clientId, clientIds));
+  }
+
+  const projectIds = resolveReportEntityIds(input.projectId, input.projectIds);
+  if (projectIds.length === 1) {
+    filters.push(eq(agencyOpsProject.id, projectIds[0]!));
+  } else if (projectIds.length > 1) {
+    filters.push(inArray(agencyOpsProject.id, projectIds));
+  }
+
+  const memberUserIds = resolveReportEntityIds(input.memberUserId, input.memberUserIds);
+  if (memberUserIds.length === 1) {
+    filters.push(eq(agencyOpsTimeEntry.userId, memberUserIds[0]!));
+  } else if (memberUserIds.length > 1) {
+    filters.push(inArray(agencyOpsTimeEntry.userId, memberUserIds));
+  }
+}
+
 async function getReportRows(
   actorUserId: string,
-  input: {
+  input: ReportEntityFilterInput & {
     teamId: string;
     from: string;
     to: string;
-    clientId?: string;
-    projectId?: string;
-    memberUserId?: string;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -517,17 +1161,7 @@ async function getReportRows(
     lte(agencyOpsTimeEntry.startedAt, to),
   ];
 
-  if (input.clientId) {
-    filters.push(eq(agencyOpsProject.clientId, input.clientId));
-  }
-
-  if (input.projectId) {
-    filters.push(eq(agencyOpsProject.id, input.projectId));
-  }
-
-  if (input.memberUserId) {
-    filters.push(eq(agencyOpsTimeEntry.userId, input.memberUserId));
-  }
+  applyReportEntityFilters(filters, input);
 
   const rows = await db
     .select({
@@ -541,6 +1175,7 @@ async function getReportRows(
       clientName: agencyOpsClient.name,
       projectId: agencyOpsProject.id,
       taskId: agencyOpsTimeEntry.taskId,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
@@ -549,6 +1184,7 @@ async function getReportRows(
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
     .innerJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
     .where(and(...filters))
     .orderBy(desc(agencyOpsTimeEntry.startedAt));
 
@@ -564,8 +1200,22 @@ async function getReportRows(
     .where(
       and(
         eq(agencyOpsProject.teamId, input.teamId),
-        input.clientId ? eq(agencyOpsProject.clientId, input.clientId) : undefined,
-        input.projectId ? eq(agencyOpsProject.id, input.projectId) : undefined,
+        ...(() => {
+          const scopedFilters: Parameters<typeof and>[0][] = [];
+          const clientIds = resolveReportEntityIds(input.clientId, input.clientIds);
+          if (clientIds.length === 1) {
+            scopedFilters.push(eq(agencyOpsProject.clientId, clientIds[0]!));
+          } else if (clientIds.length > 1) {
+            scopedFilters.push(inArray(agencyOpsProject.clientId, clientIds));
+          }
+          const projectIds = resolveReportEntityIds(input.projectId, input.projectIds);
+          if (projectIds.length === 1) {
+            scopedFilters.push(eq(agencyOpsProject.id, projectIds[0]!));
+          } else if (projectIds.length > 1) {
+            scopedFilters.push(inArray(agencyOpsProject.id, projectIds));
+          }
+          return scopedFilters;
+        })(),
       ),
     )
     .orderBy(asc(agencyOpsProject.name));
@@ -576,14 +1226,24 @@ async function getReportRows(
   };
 }
 
+export type AgencyClientArchiveFilter = "all" | "archived" | "nonarchived";
+
 export async function listAgencyClients(
   actorUserId: string,
-  input: { teamId: string; includeArchived?: boolean },
+  input: {
+    teamId: string;
+    includeArchived?: boolean;
+    archiveFilter?: AgencyClientArchiveFilter;
+  },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
+  const archiveFilter = input.archiveFilter ?? (input.includeArchived ? "all" : "nonarchived");
+
   const filters = [eq(agencyOpsClient.teamId, input.teamId)];
-  if (!input.includeArchived) {
+  if (archiveFilter === "archived") {
+    filters.push(isNotNull(agencyOpsClient.archivedAt));
+  } else if (archiveFilter === "nonarchived") {
     filters.push(isNull(agencyOpsClient.archivedAt));
   }
 
@@ -592,6 +1252,9 @@ export async function listAgencyClients(
       id: agencyOpsClient.id,
       teamId: agencyOpsClient.teamId,
       name: agencyOpsClient.name,
+      category: agencyOpsClient.category,
+      billableRateCents: agencyOpsClient.billableRateCents,
+      currency: agencyOpsClient.currency,
       archivedAt: agencyOpsClient.archivedAt,
       createdAt: agencyOpsClient.createdAt,
       updatedAt: agencyOpsClient.updatedAt,
@@ -610,7 +1273,13 @@ export async function listAgencyClients(
 
 export async function createAgencyClient(
   actorUserId: string,
-  input: { teamId: string; name: string },
+  input: {
+    teamId: string;
+    name: string;
+    category?: "internal" | "external";
+    billableRateCents?: number | null;
+    currency?: string;
+  },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
@@ -621,6 +1290,9 @@ export async function createAgencyClient(
       id: createWorkspaceId("agency-client"),
       teamId: input.teamId,
       name: input.name.trim(),
+      category: input.category ?? "external",
+      billableRateCents: input.billableRateCents ?? null,
+      currency: input.currency ?? "USD",
       createdByUserId: actorUserId,
       createdAt: now,
       updatedAt: now,
@@ -629,6 +1301,9 @@ export async function createAgencyClient(
       id: agencyOpsClient.id,
       teamId: agencyOpsClient.teamId,
       name: agencyOpsClient.name,
+      category: agencyOpsClient.category,
+      billableRateCents: agencyOpsClient.billableRateCents,
+      currency: agencyOpsClient.currency,
       archivedAt: agencyOpsClient.archivedAt,
       createdAt: agencyOpsClient.createdAt,
       updatedAt: agencyOpsClient.updatedAt,
@@ -647,6 +1322,9 @@ export async function updateAgencyClient(
     teamId: string;
     clientId: string;
     name?: string;
+    category?: "internal" | "external";
+    billableRateCents?: number | null;
+    currency?: string;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -663,19 +1341,49 @@ export async function updateAgencyClient(
     throw new ORPCError("NOT_FOUND");
   }
 
+  const hasPatch =
+    input.name !== undefined ||
+    input.category !== undefined ||
+    input.billableRateCents !== undefined ||
+    input.currency !== undefined;
+
+  if (!hasPatch) {
+    throw new ORPCError("BAD_REQUEST", { message: "No fields to update." });
+  }
+
   const now = new Date();
+  const patch: {
+    updatedAt: Date;
+    name?: string;
+    category?: "internal" | "external";
+    billableRateCents?: number | null;
+    currency?: string;
+  } = { updatedAt: now };
+
+  if (input.name !== undefined) {
+    patch.name = input.name.trim();
+  }
+  if (input.category !== undefined) {
+    patch.category = input.category;
+  }
+  if (input.billableRateCents !== undefined) {
+    patch.billableRateCents = input.billableRateCents;
+  }
+  if (input.currency !== undefined) {
+    patch.currency = input.currency;
+  }
 
   const [updated] = await db
     .update(agencyOpsClient)
-    .set({
-      name: input.name?.trim(),
-      updatedAt: now,
-    })
+    .set(patch)
     .where(and(eq(agencyOpsClient.teamId, input.teamId), eq(agencyOpsClient.id, input.clientId)))
     .returning({
       id: agencyOpsClient.id,
       teamId: agencyOpsClient.teamId,
       name: agencyOpsClient.name,
+      category: agencyOpsClient.category,
+      billableRateCents: agencyOpsClient.billableRateCents,
+      currency: agencyOpsClient.currency,
       archivedAt: agencyOpsClient.archivedAt,
       createdAt: agencyOpsClient.createdAt,
       updatedAt: agencyOpsClient.updatedAt,
@@ -693,9 +1401,18 @@ export async function listAgencyProjects(
   input: {
     teamId: string;
     clientId?: string;
+    archiveFilter?: AgencyClientArchiveFilter;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const archiveFilter = input.archiveFilter ?? "nonarchived";
+  const clientArchiveFilters = [];
+  if (archiveFilter === "archived") {
+    clientArchiveFilters.push(isNotNull(agencyOpsClient.archivedAt));
+  } else if (archiveFilter === "nonarchived") {
+    clientArchiveFilters.push(isNull(agencyOpsClient.archivedAt));
+  }
 
   const rows = await db
     .select({
@@ -712,6 +1429,7 @@ export async function listAgencyProjects(
     .where(
       and(
         eq(agencyOpsProject.teamId, input.teamId),
+        ...clientArchiveFilters,
         input.clientId ? eq(agencyOpsProject.clientId, input.clientId) : undefined,
       ),
     )
@@ -768,6 +1486,897 @@ export async function createAgencyProject(
     ...created,
     clientName: client?.name ?? "Unknown",
   });
+}
+
+async function getJourneyRowForProject(teamId: string, projectId: string) {
+  const [row] = await db
+    .select({
+      id: agencyOpsProjectJourney.id,
+      projectId: agencyOpsProjectJourney.projectId,
+      createdAt: agencyOpsProjectJourney.createdAt,
+      updatedAt: agencyOpsProjectJourney.updatedAt,
+    })
+    .from(agencyOpsProjectJourney)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectJourney.projectId))
+    .where(
+      and(eq(agencyOpsProjectJourney.projectId, projectId), eq(agencyOpsProject.teamId, teamId)),
+    )
+    .limit(1);
+
+  if (!row) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Project journey was not found.",
+    });
+  }
+
+  return row;
+}
+
+function isJourneyStepComplete(
+  step: {
+    stepKind: "start" | "milestone" | "checkpoint" | "destination";
+    taskId: string | null;
+  },
+  task: ProjectTaskRow | null,
+  assignees: AgencyProjectTaskAssigneeRecord[],
+): boolean {
+  switch (step.stepKind) {
+    case "start":
+      return true;
+    case "destination":
+      return false;
+    case "milestone":
+    case "checkpoint":
+      if (task?.status === "done") return true;
+      if (assignees.length > 0 && assignees.every((assignee) => assignee.status === "done")) {
+        return true;
+      }
+      return false;
+    default: {
+      const _exhaustive: never = step.stepKind;
+      return _exhaustive;
+    }
+  }
+}
+
+function deriveJourneyStepStatuses(
+  steps: Array<{
+    id: string;
+    sortOrder: number;
+    stepKind: "start" | "milestone" | "checkpoint" | "destination";
+    taskId: string | null;
+    status: "planned" | "active" | "done" | "blocked";
+  }>,
+  tasksById: Map<string, ProjectTaskRow>,
+  assigneesByTask: Map<string, AgencyProjectTaskAssigneeRecord[]>,
+): Map<string, "planned" | "active" | "done" | "blocked"> {
+  const result = new Map<string, "planned" | "active" | "done" | "blocked">();
+  const sorted = [...steps].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const completionById = new Map<string, boolean>();
+  for (const step of sorted) {
+    if (step.stepKind === "destination") continue;
+    const task = step.taskId ? (tasksById.get(step.taskId) ?? null) : null;
+    const assignees = step.taskId ? (assigneesByTask.get(step.taskId) ?? []) : [];
+    completionById.set(step.id, isJourneyStepComplete(step, task, assignees));
+  }
+
+  let foundActive = false;
+  for (const step of sorted) {
+    if (step.status === "blocked") {
+      result.set(step.id, "blocked");
+      continue;
+    }
+
+    if (step.stepKind === "destination") {
+      const priorDone = sorted
+        .filter((candidate) => candidate.stepKind !== "destination")
+        .every((candidate) => completionById.get(candidate.id));
+      result.set(step.id, priorDone ? "done" : "planned");
+      continue;
+    }
+
+    const complete = completionById.get(step.id) ?? false;
+    if (complete) {
+      result.set(step.id, "done");
+      continue;
+    }
+
+    if (!foundActive) {
+      result.set(step.id, "active");
+      foundActive = true;
+    } else {
+      result.set(step.id, "planned");
+    }
+  }
+
+  return result;
+}
+
+async function loadJourneyStepTimeEntryCounts(stepIds: string[]) {
+  const counts = new Map<string, number>();
+  if (stepIds.length === 0) return counts;
+
+  const rows = await db
+    .select({
+      journeyStepId: agencyOpsTimeEntry.journeyStepId,
+      entryCount: count(),
+    })
+    .from(agencyOpsTimeEntry)
+    .where(
+      and(inArray(agencyOpsTimeEntry.journeyStepId, stepIds), isNull(agencyOpsTimeEntry.deletedAt)),
+    )
+    .groupBy(agencyOpsTimeEntry.journeyStepId);
+
+  for (const row of rows) {
+    if (row.journeyStepId) {
+      counts.set(row.journeyStepId, Number(row.entryCount));
+    }
+  }
+
+  return counts;
+}
+
+async function loadTaskTrackedSeconds(taskIds: string[], userId: string) {
+  const totals = new Map<string, number>();
+  if (taskIds.length === 0 || !userId) return totals;
+
+  const rows = await db
+    .select({
+      taskId: agencyOpsTimeEntry.taskId,
+      totalSeconds: sql<number>`coalesce(sum(${agencyOpsTimeEntry.durationSeconds}), 0)`,
+    })
+    .from(agencyOpsTimeEntry)
+    .where(
+      and(
+        inArray(agencyOpsTimeEntry.taskId, taskIds),
+        eq(agencyOpsTimeEntry.userId, userId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .groupBy(agencyOpsTimeEntry.taskId);
+
+  for (const row of rows) {
+    if (row.taskId) {
+      totals.set(row.taskId, Number(row.totalSeconds));
+    }
+  }
+
+  return totals;
+}
+
+async function syncJourneyStepStatuses(teamId: string, projectId: string) {
+  const journey = await getJourneyRowForProject(teamId, projectId);
+  const steps = await db
+    .select({
+      id: agencyOpsProjectJourneyStep.id,
+      label: agencyOpsProjectJourneyStep.label,
+      sortOrder: agencyOpsProjectJourneyStep.sortOrder,
+      stepKind: agencyOpsProjectJourneyStep.stepKind,
+      status: agencyOpsProjectJourneyStep.status,
+      taskId: agencyOpsProjectJourneyStep.taskId,
+    })
+    .from(agencyOpsProjectJourneyStep)
+    .where(eq(agencyOpsProjectJourneyStep.journeyId, journey.id))
+    .orderBy(asc(agencyOpsProjectJourneyStep.sortOrder));
+
+  const taskIds = steps
+    .map((step) => step.taskId)
+    .filter((taskId): taskId is string => Boolean(taskId));
+  const tasksById = new Map<string, ProjectTaskRow>();
+  if (taskIds.length > 0) {
+    const taskRows = await db
+      .select(projectTaskColumns)
+      .from(agencyOpsProjectTask)
+      .where(
+        and(eq(agencyOpsProjectTask.teamId, teamId), inArray(agencyOpsProjectTask.id, taskIds)),
+      );
+    for (const task of taskRows) {
+      tasksById.set(task.id, task);
+    }
+  }
+
+  const assigneesByTask = await loadTaskAssignees(taskIds);
+  const derived = deriveJourneyStepStatuses(steps, tasksById, assigneesByTask);
+  const now = new Date();
+  let changed = false;
+  const completedMilestones: Array<{
+    journeyStepId: string;
+    journeyStepLabel: string;
+    stepKind: AgencyOpsJourneyStepKind;
+  }> = [];
+
+  for (const step of steps) {
+    const nextStatus = derived.get(step.id);
+    if (!nextStatus || nextStatus === step.status) continue;
+    changed = true;
+    if (
+      nextStatus === "done" &&
+      (step.stepKind === "milestone" ||
+        step.stepKind === "checkpoint" ||
+        step.stepKind === "destination")
+    ) {
+      completedMilestones.push({
+        journeyStepId: step.id,
+        journeyStepLabel: step.label,
+        stepKind: step.stepKind,
+      });
+    }
+    await db
+      .update(agencyOpsProjectJourneyStep)
+      .set({ status: nextStatus, updatedAt: now })
+      .where(eq(agencyOpsProjectJourneyStep.id, step.id));
+  }
+
+  if (changed) {
+    await db
+      .update(agencyOpsProjectJourney)
+      .set({ updatedAt: now })
+      .where(eq(agencyOpsProjectJourney.id, journey.id));
+  }
+
+  return { changed, completedMilestones };
+}
+
+async function applyJourneySyncNotifications(
+  teamId: string,
+  projectId: string,
+  actorUserId: string | null,
+  syncResult: {
+    changed: boolean;
+    completedMilestones: Array<{
+      journeyStepId: string;
+      journeyStepLabel: string;
+      stepKind: AgencyOpsJourneyStepKind;
+    }>;
+  },
+) {
+  if (!syncResult.changed) return;
+
+  await publishAgencyJourneyStepUpdated(teamId, projectId);
+  if (syncResult.completedMilestones.length === 0) return;
+
+  const [project] = await db
+    .select({ name: agencyOpsProject.name })
+    .from(agencyOpsProject)
+    .where(and(eq(agencyOpsProject.teamId, teamId), eq(agencyOpsProject.id, projectId)))
+    .limit(1);
+
+  const projectName = project?.name ?? "Project";
+  for (const milestone of syncResult.completedMilestones) {
+    await notifyJourneyMilestone({
+      teamId,
+      actorUserId,
+      projectId,
+      projectName,
+      journeyStepId: milestone.journeyStepId,
+      journeyStepLabel: milestone.journeyStepLabel,
+    });
+  }
+}
+
+async function maybeSyncJourneyForTask(teamId: string, taskId: string) {
+  const [step] = await db
+    .select({ projectId: agencyOpsProjectJourney.projectId })
+    .from(agencyOpsProjectJourneyStep)
+    .innerJoin(
+      agencyOpsProjectJourney,
+      eq(agencyOpsProjectJourney.id, agencyOpsProjectJourneyStep.journeyId),
+    )
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectJourney.projectId))
+    .where(and(eq(agencyOpsProjectJourneyStep.taskId, taskId), eq(agencyOpsProject.teamId, teamId)))
+    .limit(1);
+
+  if (!step) return;
+
+  const syncResult = await syncJourneyStepStatuses(teamId, step.projectId);
+  await applyJourneySyncNotifications(teamId, step.projectId, null, syncResult);
+}
+
+async function buildAgencyProjectJourneyRecord(
+  teamId: string,
+  projectId: string,
+  actorUserId?: string,
+): Promise<AgencyProjectJourneyRecord> {
+  const journey = await getJourneyRowForProject(teamId, projectId);
+  await syncJourneyStepStatuses(teamId, projectId);
+
+  const stepRows = await db
+    .select({
+      id: agencyOpsProjectJourneyStep.id,
+      journeyId: agencyOpsProjectJourneyStep.journeyId,
+      sortOrder: agencyOpsProjectJourneyStep.sortOrder,
+      label: agencyOpsProjectJourneyStep.label,
+      stepKind: agencyOpsProjectJourneyStep.stepKind,
+      status: agencyOpsProjectJourneyStep.status,
+      taskId: agencyOpsProjectJourneyStep.taskId,
+      createdAt: agencyOpsProjectJourneyStep.createdAt,
+      updatedAt: agencyOpsProjectJourneyStep.updatedAt,
+    })
+    .from(agencyOpsProjectJourneyStep)
+    .where(eq(agencyOpsProjectJourneyStep.journeyId, journey.id))
+    .orderBy(asc(agencyOpsProjectJourneyStep.sortOrder));
+
+  const taskIds = stepRows
+    .map((step) => step.taskId)
+    .filter((taskId): taskId is string => Boolean(taskId));
+  const tasksById = new Map<string, ProjectTaskRow>();
+  if (taskIds.length > 0) {
+    const taskRows = await db
+      .select(projectTaskColumns)
+      .from(agencyOpsProjectTask)
+      .where(
+        and(eq(agencyOpsProjectTask.teamId, teamId), inArray(agencyOpsProjectTask.id, taskIds)),
+      );
+    for (const task of taskRows) {
+      tasksById.set(task.id, task);
+    }
+  }
+
+  const assigneesByTask = await loadTaskAssignees(taskIds);
+  const memberStatusesByTask = actorUserId ? await loadTaskMemberStatuses(taskIds) : undefined;
+  const blueprintsByTask =
+    actorUserId && taskIds.length > 0
+      ? await loadTaskBlueprintsForViewer(taskIds, actorUserId)
+      : undefined;
+  const entryCounts = await loadJourneyStepTimeEntryCounts(stepRows.map((step) => step.id));
+
+  const steps: AgencyProjectJourneyStepRecord[] = await Promise.all(
+    stepRows.map(async (step) => {
+      const taskRow = step.taskId ? (tasksById.get(step.taskId) ?? null) : null;
+      const task = taskRow
+        ? await buildProjectTaskRecord(
+            taskRow,
+            assigneesByTask.get(taskRow.id) ?? [],
+            actorUserId,
+            memberStatusesByTask?.get(taskRow.id),
+            blueprintsByTask?.get(taskRow.id),
+          )
+        : null;
+
+      return {
+        id: step.id,
+        journeyId: step.journeyId,
+        sortOrder: step.sortOrder,
+        label: step.label,
+        stepKind: step.stepKind,
+        status: step.status,
+        taskId: step.taskId,
+        ...(task ? { task } : {}),
+        timeEntryCount: entryCounts.get(step.id) ?? 0,
+        createdAt: step.createdAt.toISOString(),
+        updatedAt: step.updatedAt.toISOString(),
+      };
+    }),
+  );
+
+  const completedSteps = steps.filter((step) => step.status === "done").length;
+
+  return {
+    id: journey.id,
+    projectId: journey.projectId,
+    createdAt: journey.createdAt.toISOString(),
+    updatedAt: journey.updatedAt.toISOString(),
+    steps,
+    completedSteps,
+    totalSteps: steps.length,
+  };
+}
+
+async function insertJourneyLinkedTask(
+  tx: DbTransaction,
+  args: {
+    teamId: string;
+    projectId: string;
+    actorUserId: string;
+    title: string;
+    taskKind: "journey_anchor" | "journey_milestone";
+    assigneeUserIds: string[];
+    now: Date;
+  },
+) {
+  const taskId = createWorkspaceId("agency-project-task");
+  const [task] = await tx
+    .insert(agencyOpsProjectTask)
+    .values({
+      id: taskId,
+      teamId: args.teamId,
+      projectId: args.projectId,
+      title: args.title,
+      status: "open",
+      taskKind: args.taskKind,
+      assignedToTeam: false,
+      createdByUserId: args.actorUserId,
+      createdAt: args.now,
+      updatedAt: args.now,
+    })
+    .returning(projectTaskColumns);
+
+  if (!task) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
+  }
+
+  if (args.assigneeUserIds.length > 0) {
+    await setTaskAssignees(tx, task.id, args.assigneeUserIds);
+  }
+
+  await tx.insert(agencyOpsTaskThread).values({
+    id: createWorkspaceId("agency-task-thread"),
+    teamId: args.teamId,
+    taskId: task.id,
+    createdAt: args.now,
+    updatedAt: args.now,
+  });
+
+  return task;
+}
+
+async function resolveJourneyStepIdForTask(teamId: string, taskId: string | null | undefined) {
+  if (!taskId) return null;
+
+  const [step] = await db
+    .select({ id: agencyOpsProjectJourneyStep.id })
+    .from(agencyOpsProjectJourneyStep)
+    .innerJoin(
+      agencyOpsProjectJourney,
+      eq(agencyOpsProjectJourney.id, agencyOpsProjectJourneyStep.journeyId),
+    )
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectJourney.projectId))
+    .where(and(eq(agencyOpsProjectJourneyStep.taskId, taskId), eq(agencyOpsProject.teamId, teamId)))
+    .limit(1);
+
+  return step?.id ?? null;
+}
+
+export async function createAgencyProjectWithJourney(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    clientId: string;
+    name: string;
+    milestones: Array<{
+      title: string;
+      assigneeUserIds: string[];
+    }>;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  await getClientByIdForTeam(input.teamId, input.clientId);
+
+  if (input.milestones.length === 0) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Add at least one milestone.",
+    });
+  }
+
+  const projectName = input.name.trim();
+  const now = new Date();
+  const projectId = createWorkspaceId("agency-project");
+  const journeyId = createWorkspaceId("agency-project-journey");
+  const allAssigneeIds = new Set<string>();
+
+  for (const milestone of input.milestones) {
+    const title = milestone.title.trim();
+    if (!title) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Milestone title is required.",
+      });
+    }
+    for (const userId of milestone.assigneeUserIds) {
+      await requireTeamMember(input.teamId, userId);
+      allAssigneeIds.add(userId);
+    }
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.insert(agencyOpsProject).values({
+      id: projectId,
+      teamId: input.teamId,
+      clientId: input.clientId,
+      name: projectName,
+      createdByUserId: actorUserId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await tx.insert(agencyOpsProjectJourney).values({
+      id: journeyId,
+      projectId,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await tx.insert(agencyOpsProjectJourneyStep).values({
+      id: createWorkspaceId("agency-journey-step"),
+      journeyId,
+      sortOrder: 0,
+      label: "Start",
+      stepKind: "start",
+      status: "done",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    let sortOrder = 1;
+    for (const milestone of input.milestones) {
+      const task = await insertJourneyLinkedTask(tx, {
+        teamId: input.teamId,
+        projectId,
+        actorUserId,
+        title: milestone.title.trim(),
+        taskKind: "journey_milestone",
+        assigneeUserIds: [...new Set(milestone.assigneeUserIds)],
+        now,
+      });
+
+      await tx.insert(agencyOpsProjectJourneyStep).values({
+        id: createWorkspaceId("agency-journey-step"),
+        journeyId,
+        sortOrder,
+        label: milestone.title.trim(),
+        stepKind: "milestone",
+        status: "planned",
+        taskId: task.id,
+        createdAt: now,
+        updatedAt: now,
+      });
+      sortOrder += 1;
+    }
+
+    await tx.insert(agencyOpsProjectJourneyStep).values({
+      id: createWorkspaceId("agency-journey-step"),
+      journeyId,
+      sortOrder,
+      label: "Destination",
+      stepKind: "destination",
+      status: "planned",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await insertJourneyLinkedTask(tx, {
+      teamId: input.teamId,
+      projectId,
+      actorUserId,
+      title: projectName,
+      taskKind: "journey_anchor",
+      assigneeUserIds: [...allAssigneeIds],
+      now,
+    });
+  });
+
+  const syncResult = await syncJourneyStepStatuses(input.teamId, projectId);
+  await applyJourneySyncNotifications(input.teamId, projectId, actorUserId, syncResult);
+
+  const [client] = await db
+    .select({ name: agencyOpsClient.name })
+    .from(agencyOpsClient)
+    .where(eq(agencyOpsClient.id, input.clientId))
+    .limit(1);
+
+  const [createdProject] = await db
+    .select({
+      id: agencyOpsProject.id,
+      teamId: agencyOpsProject.teamId,
+      clientId: agencyOpsProject.clientId,
+      name: agencyOpsProject.name,
+      createdAt: agencyOpsProject.createdAt,
+      updatedAt: agencyOpsProject.updatedAt,
+    })
+    .from(agencyOpsProject)
+    .where(eq(agencyOpsProject.id, projectId))
+    .limit(1);
+
+  if (!createdProject) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR");
+  }
+
+  return {
+    project: mapProjectRow({
+      ...createdProject,
+      clientName: client?.name ?? "Unknown",
+    }),
+    journey: await buildAgencyProjectJourneyRecord(input.teamId, projectId, actorUserId),
+  };
+}
+
+export async function getAgencyProjectJourney(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
+  return buildAgencyProjectJourneyRecord(input.teamId, input.projectId, actorUserId);
+}
+
+export async function updateAgencyProjectJourneySteps(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+    steps: Array<{
+      id: string;
+      sortOrder?: number;
+      label?: string;
+    }>;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
+  const journey = await getJourneyRowForProject(input.teamId, input.projectId);
+
+  const existingSteps = await db
+    .select({
+      id: agencyOpsProjectJourneyStep.id,
+      stepKind: agencyOpsProjectJourneyStep.stepKind,
+    })
+    .from(agencyOpsProjectJourneyStep)
+    .where(eq(agencyOpsProjectJourneyStep.journeyId, journey.id));
+
+  const existingIds = new Set(existingSteps.map((step) => step.id));
+  for (const step of input.steps) {
+    if (!existingIds.has(step.id)) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Journey step was not found.",
+      });
+    }
+  }
+
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    for (const step of input.steps) {
+      const patch: {
+        sortOrder?: number;
+        label?: string;
+        updatedAt: Date;
+      } = { updatedAt: now };
+      if (step.sortOrder !== undefined) patch.sortOrder = step.sortOrder;
+      if (step.label !== undefined) {
+        const trimmed = step.label.trim();
+        if (!trimmed) {
+          throw new ORPCError("BAD_REQUEST", {
+            message: "Step label is required.",
+          });
+        }
+        patch.label = trimmed;
+      }
+      if (patch.sortOrder === undefined && patch.label === undefined) continue;
+
+      await tx
+        .update(agencyOpsProjectJourneyStep)
+        .set(patch)
+        .where(
+          and(
+            eq(agencyOpsProjectJourneyStep.id, step.id),
+            eq(agencyOpsProjectJourneyStep.journeyId, journey.id),
+          ),
+        );
+    }
+
+    await tx
+      .update(agencyOpsProjectJourney)
+      .set({ updatedAt: now })
+      .where(eq(agencyOpsProjectJourney.id, journey.id));
+  });
+
+  const syncResult = await syncJourneyStepStatuses(input.teamId, input.projectId);
+  await applyJourneySyncNotifications(input.teamId, input.projectId, actorUserId, syncResult);
+  return buildAgencyProjectJourneyRecord(input.teamId, input.projectId, actorUserId);
+}
+
+export async function addAgencyProjectJourneyStep(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+    label: string;
+    assigneeUserIds?: string[];
+    sortOrder?: number;
+    stepKind?: "milestone" | "checkpoint";
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
+  const journey = await getJourneyRowForProject(input.teamId, input.projectId);
+
+  const label = input.label.trim();
+  if (!label) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Step label is required.",
+    });
+  }
+
+  const stepKind = input.stepKind ?? "milestone";
+  const assigneeUserIds = [...new Set(input.assigneeUserIds ?? [])];
+  for (const userId of assigneeUserIds) {
+    await requireTeamMember(input.teamId, userId);
+  }
+
+  const existingSteps = await db
+    .select({
+      id: agencyOpsProjectJourneyStep.id,
+      sortOrder: agencyOpsProjectJourneyStep.sortOrder,
+      stepKind: agencyOpsProjectJourneyStep.stepKind,
+    })
+    .from(agencyOpsProjectJourneyStep)
+    .where(eq(agencyOpsProjectJourneyStep.journeyId, journey.id))
+    .orderBy(asc(agencyOpsProjectJourneyStep.sortOrder));
+
+  const destinationIndex = existingSteps.findIndex((step) => step.stepKind === "destination");
+  const insertAt =
+    input.sortOrder ??
+    (destinationIndex >= 0 ? existingSteps[destinationIndex]!.sortOrder : existingSteps.length);
+
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    for (const step of existingSteps) {
+      if (step.sortOrder >= insertAt && step.stepKind !== "destination") {
+        await tx
+          .update(agencyOpsProjectJourneyStep)
+          .set({ sortOrder: step.sortOrder + 1, updatedAt: now })
+          .where(eq(agencyOpsProjectJourneyStep.id, step.id));
+      }
+      if (step.stepKind === "destination" && step.sortOrder >= insertAt) {
+        await tx
+          .update(agencyOpsProjectJourneyStep)
+          .set({ sortOrder: step.sortOrder + 1, updatedAt: now })
+          .where(eq(agencyOpsProjectJourneyStep.id, step.id));
+      }
+    }
+
+    const task = await insertJourneyLinkedTask(tx, {
+      teamId: input.teamId,
+      projectId: input.projectId,
+      actorUserId,
+      title: label,
+      taskKind: "journey_milestone",
+      assigneeUserIds,
+      now,
+    });
+
+    await tx.insert(agencyOpsProjectJourneyStep).values({
+      id: createWorkspaceId("agency-journey-step"),
+      journeyId: journey.id,
+      sortOrder: insertAt,
+      label,
+      stepKind,
+      status: "planned",
+      taskId: task.id,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    await tx
+      .update(agencyOpsProjectJourney)
+      .set({ updatedAt: now })
+      .where(eq(agencyOpsProjectJourney.id, journey.id));
+  });
+
+  const syncResult = await syncJourneyStepStatuses(input.teamId, input.projectId);
+  await applyJourneySyncNotifications(input.teamId, input.projectId, actorUserId, syncResult);
+  return buildAgencyProjectJourneyRecord(input.teamId, input.projectId, actorUserId);
+}
+
+export async function previewRemoveAgencyProjectJourneyStep(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+    stepId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
+  const journey = await getJourneyRowForProject(input.teamId, input.projectId);
+
+  const [step] = await db
+    .select({
+      id: agencyOpsProjectJourneyStep.id,
+      label: agencyOpsProjectJourneyStep.label,
+      stepKind: agencyOpsProjectJourneyStep.stepKind,
+    })
+    .from(agencyOpsProjectJourneyStep)
+    .where(
+      and(
+        eq(agencyOpsProjectJourneyStep.id, input.stepId),
+        eq(agencyOpsProjectJourneyStep.journeyId, journey.id),
+      ),
+    )
+    .limit(1);
+
+  if (!step) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Journey step was not found.",
+    });
+  }
+
+  if (step.stepKind === "start" || step.stepKind === "destination") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Start and destination steps cannot be removed.",
+    });
+  }
+
+  const [countRow] = await db
+    .select({ entryCount: count() })
+    .from(agencyOpsTimeEntry)
+    .where(
+      and(eq(agencyOpsTimeEntry.journeyStepId, step.id), isNull(agencyOpsTimeEntry.deletedAt)),
+    );
+
+  return {
+    stepId: step.id,
+    label: step.label,
+    timeEntryCount: Number(countRow?.entryCount ?? 0),
+  };
+}
+
+export async function removeAgencyProjectJourneyStep(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+    stepId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "owner");
+  await getProjectByIdForTeam(input.teamId, input.projectId);
+  const journey = await getJourneyRowForProject(input.teamId, input.projectId);
+
+  const [step] = await db
+    .select({
+      id: agencyOpsProjectJourneyStep.id,
+      taskId: agencyOpsProjectJourneyStep.taskId,
+      stepKind: agencyOpsProjectJourneyStep.stepKind,
+    })
+    .from(agencyOpsProjectJourneyStep)
+    .where(
+      and(
+        eq(agencyOpsProjectJourneyStep.id, input.stepId),
+        eq(agencyOpsProjectJourneyStep.journeyId, journey.id),
+      ),
+    )
+    .limit(1);
+
+  if (!step) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Journey step was not found.",
+    });
+  }
+
+  if (step.stepKind === "start" || step.stepKind === "destination") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Start and destination steps cannot be removed.",
+    });
+  }
+
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    await tx
+      .update(agencyOpsTimeEntry)
+      .set({ journeyStepId: null, updatedAt: now })
+      .where(eq(agencyOpsTimeEntry.journeyStepId, step.id));
+
+    if (step.taskId) {
+      await tx
+        .update(agencyOpsProjectTask)
+        .set({ taskKind: "standard", updatedAt: now })
+        .where(eq(agencyOpsProjectTask.id, step.taskId));
+    }
+
+    await tx.delete(agencyOpsProjectJourneyStep).where(eq(agencyOpsProjectJourneyStep.id, step.id));
+
+    await tx
+      .update(agencyOpsProjectJourney)
+      .set({ updatedAt: now })
+      .where(eq(agencyOpsProjectJourney.id, journey.id));
+  });
+
+  const syncResult = await syncJourneyStepStatuses(input.teamId, input.projectId);
+  await applyJourneySyncNotifications(input.teamId, input.projectId, actorUserId, syncResult);
+  return buildAgencyProjectJourneyRecord(input.teamId, input.projectId, actorUserId);
 }
 
 export async function updateAgencyProject(
@@ -827,7 +2436,11 @@ export async function listAgencyProjectTasks(
     status?: "open" | "in_progress" | "done" | "archived";
     statuses?: ("open" | "in_progress" | "done" | "archived")[];
     assigneeUserId?: string;
+    delegatedByUserId?: string;
+    journeyDiscoveryForUserId?: string;
     search?: string;
+    page?: number;
+    pageSize?: number;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -842,61 +2455,173 @@ export async function listAgencyProjectTasks(
   if (input.projectId) {
     filters.push(eq(agencyOpsProjectTask.projectId, input.projectId));
   }
-  if (input.statuses && input.statuses.length > 0) {
-    filters.push(inArray(agencyOpsProjectTask.status, input.statuses));
-  } else if (input.status) {
-    filters.push(eq(agencyOpsProjectTask.status, input.status));
+
+  const requestedStatuses = input.statuses ?? (input.status ? [input.status] : []);
+  const filterByMemberStatus = Boolean(input.assigneeUserId && requestedStatuses.length > 0);
+  const memberStatusList = requestedStatuses.filter(
+    (status): status is "open" | "in_progress" | "done" =>
+      status === "open" || status === "in_progress" || status === "done",
+  );
+  const activeMemberStatuses = memberStatusList.filter(
+    (status): status is "open" | "in_progress" => status === "open" || status === "in_progress",
+  );
+  const wantsDoneByCompletion =
+    filterByMemberStatus && memberStatusList.includes("done") && activeMemberStatuses.length === 0;
+
+  const viewerCompletionCountSql = sql`coalesce(
+    (
+      select ${agencyOpsProjectTaskMemberStatus.completionCount}
+      from ${agencyOpsProjectTaskMemberStatus}
+      where ${agencyOpsProjectTaskMemberStatus.taskId} = ${agencyOpsProjectTask.id}
+        and ${agencyOpsProjectTaskMemberStatus.userId} = ${input.assigneeUserId!}
+      limit 1
+    ),
+    0
+  )`;
+
+  if (filterByMemberStatus) {
+    if (!requestedStatuses.includes("archived")) {
+      filters.push(sql`${agencyOpsProjectTask.status} <> 'archived'`);
+    }
+    if (wantsDoneByCompletion) {
+      filters.push(sql`${viewerCompletionCountSql} > 0`);
+    } else if (activeMemberStatuses.length > 0) {
+      filters.push(
+        sql`coalesce(
+          (
+            select ${agencyOpsProjectTaskMemberStatus.status}
+            from ${agencyOpsProjectTaskMemberStatus}
+            where ${agencyOpsProjectTaskMemberStatus.taskId} = ${agencyOpsProjectTask.id}
+              and ${agencyOpsProjectTaskMemberStatus.userId} = ${input.assigneeUserId!}
+            limit 1
+          ),
+          'open'
+        ) in (${sql.join(
+          activeMemberStatuses.map((status) => sql`${status}`),
+          sql`, `,
+        )})`,
+      );
+    } else if (requestedStatuses.includes("archived")) {
+      filters.push(eq(agencyOpsProjectTask.status, "archived"));
+    }
+  } else if (requestedStatuses.length > 0) {
+    filters.push(inArray(agencyOpsProjectTask.status, requestedStatuses));
+  } else {
+    filters.push(sql`${agencyOpsProjectTask.status} <> 'archived'`);
   }
+
   if (input.assigneeUserId) {
-    filters.push(eq(agencyOpsProjectTask.assigneeUserId, input.assigneeUserId));
+    const assigneeSubquery = db
+      .select({ one: sql`1` })
+      .from(agencyOpsProjectTaskAssignee)
+      .where(
+        and(
+          eq(agencyOpsProjectTaskAssignee.taskId, agencyOpsProjectTask.id),
+          eq(agencyOpsProjectTaskAssignee.userId, input.assigneeUserId),
+        ),
+      );
+    filters.push(or(eq(agencyOpsProjectTask.assignedToTeam, true), exists(assigneeSubquery))!);
   }
+
+  if (input.delegatedByUserId) {
+    filters.push(eq(agencyOpsProjectTask.createdByUserId, input.delegatedByUserId));
+    const otherAssigneeSubquery = db
+      .select({ one: sql`1` })
+      .from(agencyOpsProjectTaskAssignee)
+      .where(
+        and(
+          eq(agencyOpsProjectTaskAssignee.taskId, agencyOpsProjectTask.id),
+          sql`${agencyOpsProjectTaskAssignee.userId} <> ${input.delegatedByUserId}`,
+        ),
+      );
+    filters.push(or(eq(agencyOpsProjectTask.assignedToTeam, true), exists(otherAssigneeSubquery))!);
+  }
+
+  if (input.journeyDiscoveryForUserId) {
+    filters.push(inArray(agencyOpsProjectTask.taskKind, ["journey_anchor", "journey_milestone"]));
+    // ponytail: correlated subquery on projectId; fine at team journey scale.
+    filters.push(
+      sql`not exists (
+        select 1
+        from ${agencyOpsProjectTask} milestone_task
+        inner join ${agencyOpsProjectTaskAssignee} milestone_assignee
+          on milestone_assignee.task_id = milestone_task.id
+        where milestone_task.team_id = ${input.teamId}
+          and milestone_task.project_id = ${agencyOpsProjectTask.projectId}
+          and milestone_task.task_kind = 'journey_milestone'
+          and milestone_assignee.user_id = ${input.journeyDiscoveryForUserId}
+      )`,
+    );
+  }
+
   if (searchTerm) {
     filters.push(sql`lower(${agencyOpsProjectTask.title}) like ${`%${searchTerm}%`}`);
   }
 
-  const rows = await db
+  const page = Math.max(1, input.page ?? 1);
+  const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 50));
+  const offset = (page - 1) * pageSize;
+  const whereClause = and(...filters);
+
+  const [countRow] = await db
     .select({
-      id: agencyOpsProjectTask.id,
-      teamId: agencyOpsProjectTask.teamId,
-      projectId: agencyOpsProjectTask.projectId,
-      title: agencyOpsProjectTask.title,
-      status: agencyOpsProjectTask.status,
-      assigneeUserId: agencyOpsProjectTask.assigneeUserId,
-      assigneeName: user.name,
-      assigneeAvatar: user.image,
-      dueDate: agencyOpsProjectTask.dueDate,
-      createdAt: agencyOpsProjectTask.createdAt,
-      updatedAt: agencyOpsProjectTask.updatedAt,
+      count: wantsDoneByCompletion
+        ? sql<number>`coalesce(sum(${viewerCompletionCountSql}), 0)`
+        : sql<number>`count(*)`,
     })
     .from(agencyOpsProjectTask)
-    .leftJoin(user, eq(user.id, agencyOpsProjectTask.assigneeUserId))
-    .where(and(...filters))
-    .orderBy(desc(agencyOpsProjectTask.createdAt));
+    .where(whereClause);
+
+  const parsedTotal = Number(countRow?.count ?? 0);
+  const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
+
+  const rows = await db
+    .select(projectTaskColumns)
+    .from(agencyOpsProjectTask)
+    .where(whereClause)
+    .orderBy(desc(agencyOpsProjectTask.createdAt))
+    .limit(pageSize)
+    .offset(offset);
+
+  const assigneesByTask = await loadTaskAssignees(rows.map((row) => row.id));
+  const memberStatusesByTask = input.assigneeUserId
+    ? await loadTaskMemberStatuses(rows.map((row) => row.id))
+    : undefined;
+  const blueprintsByTask = input.assigneeUserId
+    ? await loadTaskBlueprintsForViewer(
+        rows.map((row) => row.id),
+        input.assigneeUserId,
+      )
+    : undefined;
+  const trackedSecondsByTask = await loadTaskTrackedSeconds(
+    rows.map((row) => row.id),
+    actorUserId,
+  );
 
   return {
-    items: rows.map((row) =>
-      mapProjectTaskRow({
-        ...row,
-        assigneeName: row.assigneeName ?? null,
-        assigneeAvatar: formatAvatarUrl(row.assigneeAvatar) ?? null,
-      }),
+    items: await Promise.all(
+      rows.map((row) =>
+        buildProjectTaskRecord(
+          row,
+          assigneesByTask.get(row.id) ?? [],
+          input.assigneeUserId,
+          memberStatusesByTask?.get(row.id),
+          blueprintsByTask?.get(row.id),
+        ).then((task) => ({
+          ...task,
+          totalTrackedSeconds: trackedSecondsByTask.get(row.id) ?? 0,
+        })),
+      ),
     ),
+    page,
+    pageSize,
+    total,
   };
 }
 
 async function getTaskByIdForTeam(teamId: string, taskId: string) {
   const [task] = await db
-    .select({
-      id: agencyOpsProjectTask.id,
-      teamId: agencyOpsProjectTask.teamId,
-      projectId: agencyOpsProjectTask.projectId,
-      title: agencyOpsProjectTask.title,
-      status: agencyOpsProjectTask.status,
-      assigneeUserId: agencyOpsProjectTask.assigneeUserId,
-      dueDate: agencyOpsProjectTask.dueDate,
-      createdAt: agencyOpsProjectTask.createdAt,
-      updatedAt: agencyOpsProjectTask.updatedAt,
-    })
+    .select(projectTaskColumns)
     .from(agencyOpsProjectTask)
     .where(and(eq(agencyOpsProjectTask.id, taskId), eq(agencyOpsProjectTask.teamId, teamId)))
     .limit(1);
@@ -910,6 +2635,36 @@ async function getTaskByIdForTeam(teamId: string, taskId: string) {
   return task;
 }
 
+async function emitTaskAssignedNotification(
+  actorUserId: string,
+  teamId: string,
+  task: {
+    id: string;
+    title: string;
+    projectId: string;
+    assignedToTeam: boolean;
+    assignees: Array<{ userId: string }>;
+  },
+  recipientUserIds?: string[],
+) {
+  const [project] = await db
+    .select({ name: agencyOpsProject.name })
+    .from(agencyOpsProject)
+    .where(eq(agencyOpsProject.id, task.projectId))
+    .limit(1);
+
+  await notifyTaskAssigned({
+    teamId,
+    actorUserId,
+    taskId: task.id,
+    taskTitle: task.title,
+    projectId: task.projectId,
+    projectName: project?.name ?? "Project",
+    assigneeUserIds: recipientUserIds ?? task.assignees.map((assignee) => assignee.userId),
+    assignedToTeam: task.assignedToTeam,
+  });
+}
+
 export async function createAgencyProjectTask(
   actorUserId: string,
   input: {
@@ -917,8 +2672,10 @@ export async function createAgencyProjectTask(
     projectId: string;
     title: string;
     status?: "open" | "in_progress" | "done" | "archived";
-    assigneeUserId?: string | null;
+    assignedToTeam?: boolean;
+    assigneeUserIds?: string[];
     dueDate?: string | null;
+    description?: string;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -931,63 +2688,232 @@ export async function createAgencyProjectTask(
     });
   }
 
-  if (input.assigneeUserId) {
-    await requireTeamMember(input.teamId, input.assigneeUserId);
+  const titleKey = normalizeTaskTitle(title);
+  const assignedToTeam = input.assignedToTeam ?? false;
+  const assigneeUserIds = assignedToTeam ? [] : [...new Set(input.assigneeUserIds ?? [])];
+
+  if (!assignedToTeam) {
+    for (const userId of assigneeUserIds) {
+      await requireTeamMember(input.teamId, userId);
+    }
+  }
+
+  const existing = await findProjectTaskByTitleKey(input.teamId, input.projectId, titleKey);
+  if (existing) {
+    const merged = await mergeAssigneesIntoExistingTask(existing, {
+      assignedToTeam,
+      assigneeUserIds,
+    });
+    await createTaskBlueprintForViewer(
+      input.teamId,
+      merged.id,
+      actorUserId,
+      input.description ?? "",
+    );
+    return buildTaskRecordForActor(merged, actorUserId);
   }
 
   const now = new Date();
   const taskId = createWorkspaceId("agency-project-task");
   const dueDate = input.dueDate ? parseIsoDateTime(input.dueDate, "dueDate") : null;
 
-  const [created] = await db.transaction(async (tx) => {
-    const [task] = await tx
-      .insert(agencyOpsProjectTask)
-      .values({
-        id: taskId,
-        teamId: input.teamId,
-        projectId: input.projectId,
-        title,
-        status: input.status ?? "open",
-        assigneeUserId: input.assigneeUserId ?? null,
-        dueDate,
-        createdByUserId: actorUserId,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning({
-        id: agencyOpsProjectTask.id,
-        teamId: agencyOpsProjectTask.teamId,
-        projectId: agencyOpsProjectTask.projectId,
-        title: agencyOpsProjectTask.title,
-        status: agencyOpsProjectTask.status,
-        assigneeUserId: agencyOpsProjectTask.assigneeUserId,
-        dueDate: agencyOpsProjectTask.dueDate,
-        createdAt: agencyOpsProjectTask.createdAt,
-        updatedAt: agencyOpsProjectTask.updatedAt,
-      });
+  try {
+    const [created] = await db.transaction(async (tx) => {
+      const [task] = await tx
+        .insert(agencyOpsProjectTask)
+        .values({
+          id: taskId,
+          teamId: input.teamId,
+          projectId: input.projectId,
+          title,
+          status: input.status ?? "open",
+          assignedToTeam,
+          dueDate,
+          createdByUserId: actorUserId,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning(projectTaskColumns);
 
-    if (task) {
-      await tx.insert(agencyOpsTaskThread).values({
-        id: createWorkspaceId("agency-task-thread"),
-        teamId: input.teamId,
-        taskId: task.id,
-        createdAt: now,
-        updatedAt: now,
-      });
+      if (task) {
+        if (assigneeUserIds.length > 0) {
+          await setTaskAssignees(tx, task.id, assigneeUserIds);
+        }
+
+        await tx.insert(agencyOpsTaskThread).values({
+          id: createWorkspaceId("agency-task-thread"),
+          teamId: input.teamId,
+          taskId: task.id,
+          createdAt: now,
+          updatedAt: now,
+        });
+      }
+
+      return [task];
+    });
+
+    if (!created) {
+      throw new ORPCError("INTERNAL_SERVER_ERROR");
     }
 
-    return [task];
-  });
+    await createTaskBlueprintForViewer(
+      input.teamId,
+      created.id,
+      actorUserId,
+      input.description ?? "",
+    );
 
-  if (!created) {
-    throw new ORPCError("INTERNAL_SERVER_ERROR");
+    const record = await buildTaskRecordForActor(created, actorUserId);
+    if (record.assignees.length > 0 || record.assignedToTeam) {
+      await emitTaskAssignedNotification(actorUserId, input.teamId, record);
+    }
+    return record;
+  } catch (error) {
+    if (!isUniqueViolation(error)) throw error;
+
+    const raced = await findProjectTaskByTitleKey(input.teamId, input.projectId, titleKey);
+    if (!raced) throw error;
+
+    const merged = await mergeAssigneesIntoExistingTask(raced, {
+      assignedToTeam,
+      assigneeUserIds,
+    });
+    await createTaskBlueprintForViewer(
+      input.teamId,
+      merged.id,
+      actorUserId,
+      input.description ?? "",
+    );
+    return buildTaskRecordForActor(merged, actorUserId);
+  }
+}
+
+export async function completeAgencyProjectTaskForMember(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    taskId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const current = await getTaskByIdForTeam(input.teamId, input.taskId);
+  if (current.status === "archived") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Archived tasks cannot be updated.",
+    });
   }
 
-  return mapProjectTaskRow({
-    ...created,
-    assigneeName: null,
-    assigneeAvatar: null,
-  });
+  const canWork =
+    current.assignedToTeam ||
+    (
+      await db
+        .select({ userId: agencyOpsProjectTaskAssignee.userId })
+        .from(agencyOpsProjectTaskAssignee)
+        .where(
+          and(
+            eq(agencyOpsProjectTaskAssignee.taskId, input.taskId),
+            eq(agencyOpsProjectTaskAssignee.userId, actorUserId),
+          ),
+        )
+        .limit(1)
+    ).length > 0;
+
+  if (!canWork) {
+    throw new ORPCError("FORBIDDEN", {
+      message: "You are not assigned to this task.",
+    });
+  }
+
+  const now = new Date();
+  const firstCompletion = applyMemberTaskCompletion({ completionCount: 0 });
+  await db
+    .insert(agencyOpsProjectTaskMemberStatus)
+    .values({
+      taskId: input.taskId,
+      userId: actorUserId,
+      status: firstCompletion.status,
+      completionCount: firstCompletion.completionCount,
+      completedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: [agencyOpsProjectTaskMemberStatus.taskId, agencyOpsProjectTaskMemberStatus.userId],
+      set: {
+        status: "done",
+        completionCount: sql`${agencyOpsProjectTaskMemberStatus.completionCount} + 1`,
+        completedAt: now,
+        updatedAt: now,
+      },
+    });
+
+  const assigneesByTask = await loadTaskAssignees([current.id]);
+  const memberStatuses = await loadTaskMemberStatuses([current.id]);
+  const blueprintsByTask = await loadTaskBlueprintsForViewer([current.id], actorUserId);
+
+  await maybeSyncJourneyForTask(input.teamId, input.taskId);
+
+  return buildProjectTaskRecord(
+    current,
+    assigneesByTask.get(current.id) ?? [],
+    actorUserId,
+    memberStatuses.get(current.id),
+    blueprintsByTask.get(current.id),
+  );
+}
+
+export async function updateAgencyProjectTaskBlueprint(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    blueprintId: string;
+    description: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const [existing] = await db
+    .select({
+      id: agencyOpsProjectTaskBlueprint.id,
+      taskId: agencyOpsProjectTaskBlueprint.taskId,
+    })
+    .from(agencyOpsProjectTaskBlueprint)
+    .where(
+      and(
+        eq(agencyOpsProjectTaskBlueprint.id, input.blueprintId),
+        eq(agencyOpsProjectTaskBlueprint.teamId, input.teamId),
+        eq(agencyOpsProjectTaskBlueprint.userId, actorUserId),
+      ),
+    )
+    .limit(1);
+
+  if (!existing) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Task blueprint was not found.",
+    });
+  }
+
+  const now = new Date();
+  const [updated] = await db
+    .update(agencyOpsProjectTaskBlueprint)
+    .set({
+      description: input.description,
+      updatedAt: now,
+    })
+    .where(eq(agencyOpsProjectTaskBlueprint.id, input.blueprintId))
+    .returning({
+      id: agencyOpsProjectTaskBlueprint.id,
+      description: agencyOpsProjectTaskBlueprint.description,
+    });
+
+  if (!updated) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "Task blueprint was not found.",
+    });
+  }
+
+  return updated;
 }
 
 export async function updateAgencyProjectTask(
@@ -997,23 +2923,39 @@ export async function updateAgencyProjectTask(
     taskId: string;
     title?: string;
     status?: "open" | "in_progress" | "done" | "archived";
-    assigneeUserId?: string | null;
+    assignedToTeam?: boolean;
+    assigneeUserIds?: string[];
     dueDate?: string | null;
+    isWaste?: boolean;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
 
   const current = await getTaskByIdForTeam(input.teamId, input.taskId);
-
-  if (input.assigneeUserId) {
-    await requireTeamMember(input.teamId, input.assigneeUserId);
-  }
+  const previousAssigneeIds = new Set(
+    (await loadTaskAssignees([input.taskId]))
+      .get(input.taskId)
+      ?.map((assignee) => assignee.userId) ?? [],
+  );
 
   const title = input.title?.trim();
   if (title === "") {
     throw new ORPCError("BAD_REQUEST", {
       message: "Task title cannot be empty.",
     });
+  }
+
+  if (title && normalizeTaskTitle(title) !== normalizeTaskTitle(current.title)) {
+    const collision = await findProjectTaskByTitleKey(
+      input.teamId,
+      current.projectId,
+      normalizeTaskTitle(title),
+    );
+    if (collision && collision.id !== current.id) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "A task with this name already exists on this project.",
+      });
+    }
   }
 
   const dueDate =
@@ -1023,46 +2965,85 @@ export async function updateAgencyProjectTask(
         : null
       : current.dueDate;
 
+  let nextAssignedToTeam = current.assignedToTeam;
+  let nextAssigneeUserIds: string[] | null = null;
+
+  if (input.assignedToTeam === true) {
+    nextAssignedToTeam = true;
+    nextAssigneeUserIds = [];
+  } else if (input.assignedToTeam === false || input.assigneeUserIds !== undefined) {
+    nextAssignedToTeam = false;
+    nextAssigneeUserIds = [...new Set(input.assigneeUserIds ?? [])];
+    for (const userId of nextAssigneeUserIds) {
+      await requireTeamMember(input.teamId, userId);
+    }
+  }
+
   const now = new Date();
-  const [updated] = await db
-    .update(agencyOpsProjectTask)
-    .set({
-      ...(title ? { title } : {}),
-      ...(input.status ? { status: input.status } : {}),
-      ...(input.assigneeUserId !== undefined ? { assigneeUserId: input.assigneeUserId } : {}),
-      dueDate,
-      updatedAt: now,
-    })
-    .where(
-      and(eq(agencyOpsProjectTask.teamId, input.teamId), eq(agencyOpsProjectTask.id, input.taskId)),
-    )
-    .returning({
-      id: agencyOpsProjectTask.id,
-      teamId: agencyOpsProjectTask.teamId,
-      projectId: agencyOpsProjectTask.projectId,
-      title: agencyOpsProjectTask.title,
-      status: agencyOpsProjectTask.status,
-      assigneeUserId: agencyOpsProjectTask.assigneeUserId,
-      dueDate: agencyOpsProjectTask.dueDate,
-      createdAt: agencyOpsProjectTask.createdAt,
-      updatedAt: agencyOpsProjectTask.updatedAt,
-    });
+  const [updated] = await db.transaction(async (tx) => {
+    const [task] = await tx
+      .update(agencyOpsProjectTask)
+      .set({
+        ...(title ? { title } : {}),
+        ...(input.status ? { status: input.status } : {}),
+        ...(input.isWaste !== undefined ? { isWaste: input.isWaste } : {}),
+        ...(input.assignedToTeam !== undefined || input.assigneeUserIds !== undefined
+          ? { assignedToTeam: nextAssignedToTeam }
+          : {}),
+        dueDate,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(agencyOpsProjectTask.teamId, input.teamId),
+          eq(agencyOpsProjectTask.id, input.taskId),
+        ),
+      )
+      .returning(projectTaskColumns);
+
+    if (task && nextAssigneeUserIds !== null) {
+      await setTaskAssignees(tx, task.id, nextAssigneeUserIds);
+    }
+
+    return [task];
+  });
 
   if (!updated) {
     throw new ORPCError("NOT_FOUND");
   }
 
-  const [assignee] = await db
-    .select({ name: user.name, image: user.image })
-    .from(user)
-    .where(eq(user.id, updated.assigneeUserId ?? ""))
-    .limit(1);
+  if (input.status === "done") {
+    await maybeSyncJourneyForTask(input.teamId, input.taskId);
+  }
 
-  return mapProjectTaskRow({
-    ...updated,
-    assigneeName: assignee?.name ?? null,
-    assigneeAvatar: formatAvatarUrl(assignee?.image ?? null),
-  });
+  const assigneesByTask = await loadTaskAssignees([updated.id]);
+  const task = await buildProjectTaskRecord(updated, assigneesByTask.get(updated.id) ?? []);
+
+  if (
+    input.status !== undefined ||
+    input.assigneeUserIds !== undefined ||
+    input.assignedToTeam !== undefined
+  ) {
+    await publishAgencyTaskUpdated(input.teamId, task);
+  }
+
+  if (nextAssigneeUserIds !== null || input.assignedToTeam === true) {
+    const newlyAssigned = task.assignedToTeam
+      ? []
+      : task.assignees
+          .map((assignee) => assignee.userId)
+          .filter((id) => !previousAssigneeIds.has(id));
+    if (task.assignedToTeam || newlyAssigned.length > 0) {
+      await emitTaskAssignedNotification(
+        actorUserId,
+        input.teamId,
+        task,
+        newlyAssigned.length > 0 ? newlyAssigned : undefined,
+      );
+    }
+  }
+
+  return task;
 }
 
 export async function deleteAgencyProjectTask(
@@ -1205,7 +3186,10 @@ async function mapTaskMessageRow(row: {
         durationSeconds: a.durationSeconds,
         metadata: a.metadata as AttachmentMetadata | null,
         createdAt: a.createdAt.toISOString(),
-        url: await getTaskAttachmentReadUrl(a.storageKey),
+        url: await resolveTaskAttachmentUrl({
+          storageKey: a.storageKey,
+          metadata: a.metadata as AttachmentMetadata | null,
+        }),
       })),
     ),
   };
@@ -1281,6 +3265,50 @@ export async function listTaskThreadMessages(
   };
 }
 
+export async function getTaskThreadMessageById(
+  actorUserId: string,
+  input: { teamId: string; messageId: string },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const [row] = await db
+    .select({
+      id: agencyOpsTaskMessage.id,
+      teamId: agencyOpsTaskMessage.teamId,
+      threadId: agencyOpsTaskMessage.threadId,
+      userId: agencyOpsTaskMessage.userId,
+      userName: user.name,
+      userAvatar: user.image,
+      content: agencyOpsTaskMessage.content,
+      type: agencyOpsTaskMessage.type,
+      senderType: agencyOpsTaskMessage.senderType,
+      createdAt: agencyOpsTaskMessage.createdAt,
+      updatedAt: agencyOpsTaskMessage.updatedAt,
+    })
+    .from(agencyOpsTaskMessage)
+    .leftJoin(user, eq(user.id, agencyOpsTaskMessage.userId))
+    .where(
+      and(
+        eq(agencyOpsTaskMessage.id, input.messageId),
+        eq(agencyOpsTaskMessage.teamId, input.teamId),
+        isNull(agencyOpsTaskMessage.deletedAt),
+      ),
+    )
+    .limit(1);
+
+  if (!row) {
+    throw new ORPCError("NOT_FOUND", { message: "Message was not found." });
+  }
+
+  return mapTaskMessageRow({
+    ...row,
+    userName: row.userName ?? null,
+    userAvatar: row.userAvatar ?? null,
+    type: row.type as "text" | "voice" | "attachment",
+    senderType: row.senderType as "user" | "agent",
+  });
+}
+
 export async function createTaskThreadMessage(
   actorUserId: string,
   input: {
@@ -1312,24 +3340,7 @@ export async function createTaskThreadMessage(
     });
   }
 
-  for (const attachment of input.attachments ?? []) {
-    const expectedPrefix = `task-attachments/${input.teamId}/${input.taskId}/`;
-    if (
-      !attachment.storageKey.startsWith(expectedPrefix) ||
-      !verifyTaskAttachmentUploadToken(attachment.uploadToken, {
-        teamId: input.teamId,
-        taskId: input.taskId,
-        fileName: attachment.fileName,
-        mimeType: attachment.mimeType,
-        storageKey: attachment.storageKey,
-        sizeBytes: attachment.sizeBytes,
-      })
-    ) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Attachment upload reference is invalid or expired.",
-      });
-    }
-  }
+  validateTaskAttachmentUploadReferences(input);
 
   const now = new Date();
   const messageId = createWorkspaceId("agency-task-message");
@@ -1388,13 +3399,93 @@ export async function createTaskThreadMessage(
     .set({ updatedAt: now })
     .where(eq(agencyOpsTaskThread.id, thread.id));
 
-  return mapTaskMessageRow({
-    ...created,
-    userName: null,
-    userAvatar: null,
-    type: created.type as "text" | "voice" | "attachment",
-    senderType: "user",
+  const message = await getTaskThreadMessageById(actorUserId, {
+    teamId: input.teamId,
+    messageId: created.id,
   });
+
+  await publishAgencyLiveEvent(input.teamId, {
+    type: "taskMessage.created",
+    teamId: input.teamId,
+    taskId: input.taskId,
+    updatedAt: liveUpdatedAt(message.updatedAt),
+    message,
+  });
+
+  const task = await getTaskByIdForTeam(input.teamId, input.taskId);
+  const assignees = (await loadTaskAssignees([input.taskId])).get(input.taskId) ?? [];
+  const [project] = await db
+    .select({ name: agencyOpsProject.name })
+    .from(agencyOpsProject)
+    .where(eq(agencyOpsProject.id, task.projectId))
+    .limit(1);
+  const preview = message.content.trim().slice(0, 140);
+
+  await notifyTaskMessage({
+    teamId: input.teamId,
+    actorUserId,
+    taskId: input.taskId,
+    taskTitle: task.title,
+    projectId: task.projectId,
+    projectName: project?.name ?? "Project",
+    messageId: message.id,
+    messagePreview: preview,
+    assigneeUserIds: assignees.map((assignee) => assignee.userId),
+  });
+
+  return message;
+}
+
+export function validateTaskAttachmentUploadReferences(input: {
+  teamId: string;
+  taskId: string;
+  attachments?: Array<{
+    fileName: string;
+    mimeType: string;
+    storageKey: string;
+    sizeBytes: number;
+    uploadToken: string;
+  }>;
+}) {
+  for (const attachment of input.attachments ?? []) {
+    const linkPrefix = `task-links/${input.teamId}/${input.taskId}/`;
+    if (attachment.storageKey.startsWith(linkPrefix)) {
+      if (
+        attachment.mimeType !== "text/uri-list" ||
+        attachment.sizeBytes !== 0 ||
+        !verifyTaskAttachmentUploadToken(attachment.uploadToken, {
+          teamId: input.teamId,
+          taskId: input.taskId,
+          fileName: attachment.fileName,
+          mimeType: attachment.mimeType,
+          storageKey: attachment.storageKey,
+          sizeBytes: attachment.sizeBytes,
+        })
+      ) {
+        throw new ORPCError("BAD_REQUEST", {
+          message: "Link attachment reference is invalid or expired.",
+        });
+      }
+      continue;
+    }
+
+    const expectedPrefix = `task-attachments/${input.teamId}/${input.taskId}/`;
+    if (
+      !attachment.storageKey.startsWith(expectedPrefix) ||
+      !verifyTaskAttachmentUploadToken(attachment.uploadToken, {
+        teamId: input.teamId,
+        taskId: input.taskId,
+        fileName: attachment.fileName,
+        mimeType: attachment.mimeType,
+        storageKey: attachment.storageKey,
+        sizeBytes: attachment.sizeBytes,
+      })
+    ) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Attachment upload reference is invalid or expired.",
+      });
+    }
+  }
 }
 
 export async function createTaskAttachmentPresignedUrl(
@@ -1430,6 +3521,44 @@ export async function createTaskAttachmentPresignedUrl(
       mimeType: input.mimeType,
       storageKey,
       sizeBytes: input.sizeBytes,
+    }),
+  };
+}
+
+export async function createTaskLinkAttachment(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    taskId: string;
+    url: string;
+    label?: string | null;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  await getTaskByIdForTeam(input.teamId, input.taskId);
+
+  const sourceUrl = normalizeTaskLinkUrl(input.url);
+  const fileName = deriveTaskLinkLabel(sourceUrl, input.label);
+  const storageKey = `task-links/${input.teamId}/${input.taskId}/${createWorkspaceId("link")}`;
+  const mimeType = "text/uri-list";
+
+  return {
+    storageKey,
+    publicUrl: sourceUrl,
+    fileName,
+    mimeType,
+    sizeBytes: 0,
+    metadata: {
+      mediaKind: "link" as const,
+      sourceUrl,
+    },
+    uploadToken: createTaskAttachmentUploadToken({
+      teamId: input.teamId,
+      taskId: input.taskId,
+      fileName,
+      mimeType,
+      storageKey,
+      sizeBytes: 0,
     }),
   };
 }
@@ -1474,7 +3603,9 @@ export async function deleteTaskAttachment(
 
   const now = new Date();
 
-  await deleteTaskAttachmentFromStorage(attachment.storageKey);
+  if (!isTaskLinkStorageKey(attachment.storageKey)) {
+    await deleteTaskAttachmentFromStorage(attachment.storageKey);
+  }
   await db
     .update(agencyOpsTaskAttachment)
     .set({ deletedAt: now })
@@ -1527,17 +3658,17 @@ export async function getTaskThreadContext(
     .select({
       taskId: agencyOpsProjectTask.id,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       taskStatus: agencyOpsProjectTask.status,
       projectId: agencyOpsProject.id,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
-      assigneeName: user.name,
+      assignedToTeam: agencyOpsProjectTask.assignedToTeam,
     })
     .from(agencyOpsProjectTask)
     .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsProjectTask.projectId))
     .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
-    .leftJoin(user, eq(user.id, agencyOpsProjectTask.assigneeUserId))
     .where(
       and(eq(agencyOpsProjectTask.id, input.taskId), eq(agencyOpsProjectTask.teamId, input.teamId)),
     )
@@ -1549,7 +3680,23 @@ export async function getTaskThreadContext(
     });
   }
 
-  return context;
+  const assigneesByTask = await loadTaskAssignees([context.taskId]);
+  const assignees = assigneesByTask.get(context.taskId) ?? [];
+
+  return {
+    ...context,
+    assignees: assignees.map((assignee) => ({
+      userId: assignee.userId,
+      userName: assignee.userName,
+      userAvatar: assignee.userAvatar,
+    })),
+    assigneeName:
+      context.assignedToTeam || assignees.length > 0
+        ? context.assignedToTeam
+          ? "Entire team"
+          : assignees.map((assignee) => assignee.userName).join(", ")
+        : null,
+  };
 }
 
 export async function listRecentTaskThreadMessages(
@@ -1605,78 +3752,6 @@ export async function listRecentTaskThreadMessages(
   };
 }
 
-export async function listTags(actorUserId: string, input: { teamId: string }) {
-  await requireTeamMembership(actorUserId, input.teamId, "viewer");
-
-  const rows = await db
-    .select({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    })
-    .from(agencyOpsTag)
-    .where(eq(agencyOpsTag.teamId, input.teamId))
-    .orderBy(asc(agencyOpsTag.name));
-
-  return {
-    items: rows.map(mapTagRow),
-  };
-}
-
-export async function createTag(actorUserId: string, input: { teamId: string; name: string }) {
-  await requireTeamMembership(actorUserId, input.teamId, "owner");
-
-  const now = new Date();
-  const [created] = await db
-    .insert(agencyOpsTag)
-    .values({
-      id: createWorkspaceId("agency-tag"),
-      teamId: input.teamId,
-      name: input.name.trim(),
-      createdByUserId: actorUserId,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    });
-
-  if (!created) {
-    throw new ORPCError("INTERNAL_SERVER_ERROR");
-  }
-
-  return mapTagRow(created);
-}
-
-export async function deleteTag(actorUserId: string, input: { teamId: string; tagId: string }) {
-  await requireTeamMembership(actorUserId, input.teamId, "owner");
-
-  const [tag] = await db
-    .select({ id: agencyOpsTag.id })
-    .from(agencyOpsTag)
-    .where(and(eq(agencyOpsTag.id, input.tagId), eq(agencyOpsTag.teamId, input.teamId)))
-    .limit(1);
-
-  if (!tag) {
-    throw new ORPCError("NOT_FOUND", {
-      message: "Tag was not found.",
-    });
-  }
-
-  await db.delete(agencyOpsTag).where(eq(agencyOpsTag.id, input.tagId));
-
-  return {
-    tagId: input.tagId,
-    deleted: true,
-  };
-}
-
 export async function getAgencyActiveTimer(actorUserId: string, input: { teamId?: string }) {
   const timer = await getActiveTimerByUser(actorUserId);
 
@@ -1699,15 +3774,51 @@ export async function getAgencyActiveTimer(actorUserId: string, input: { teamId?
   };
 }
 
+export async function listAgencyActiveMembers(
+  actorUserId: string,
+  input: {
+    teamId: string;
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const rows = await db
+    .select({
+      userId: agencyOpsActiveTimer.userId,
+      userName: user.name,
+      userAvatar: user.image,
+      projectName: agencyOpsProject.name,
+      clientName: agencyOpsClient.name,
+      description: agencyOpsActiveTimer.description,
+      startedAt: agencyOpsActiveTimer.startedAt,
+    })
+    .from(agencyOpsActiveTimer)
+    .innerJoin(user, eq(user.id, agencyOpsActiveTimer.userId))
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .where(eq(agencyOpsActiveTimer.teamId, input.teamId))
+    .orderBy(asc(user.name));
+
+  return {
+    items: rows.map((row) => ({
+      userId: row.userId,
+      userName: row.userName ?? "Unknown",
+      userAvatar: formatAvatarUrl(row.userAvatar),
+      projectName: row.projectName,
+      clientName: row.clientName,
+      description: row.description,
+      startedAt: row.startedAt.toISOString(),
+    })),
+  };
+}
+
 export async function startAgencyTimer(
   actorUserId: string,
   input: {
     teamId: string;
     projectId?: string;
     taskId?: string;
-    tagIds?: string[];
     description?: string;
-    linkUrl?: string | null;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -1728,7 +3839,6 @@ export async function startAgencyTimer(
   }
 
   await getProjectByIdForTeam(input.teamId, projectId);
-  const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
   const now = new Date();
 
@@ -1739,96 +3849,161 @@ export async function startAgencyTimer(
       projectId: agencyOpsActiveTimer.projectId,
       taskId: agencyOpsActiveTimer.taskId,
       description: agencyOpsActiveTimer.description,
-      linkUrl: agencyOpsActiveTimer.linkUrl,
       startedAt: agencyOpsActiveTimer.startedAt,
     })
     .from(agencyOpsActiveTimer)
     .where(eq(agencyOpsActiveTimer.userId, actorUserId))
     .limit(1);
 
+  let rolledOverEntryId: string | null = null;
+
   await db.transaction(async (tx) => {
     if (existing) {
-      const durationSeconds = getDurationSeconds(existing.startedAt, now);
+      if (existing.taskId) {
+        const durationSeconds = getDurationSeconds(existing.startedAt, now);
+        rolledOverEntryId = createWorkspaceId("agency-time");
+        const journeyStepId = await resolveJourneyStepIdForTask(existing.teamId, existing.taskId);
 
-      const [timeEntry] = await tx
-        .insert(agencyOpsTimeEntry)
-        .values({
-          id: createWorkspaceId("agency-time"),
+        await tx.insert(agencyOpsTimeEntry).values({
+          id: rolledOverEntryId,
           teamId: existing.teamId,
           projectId: existing.projectId,
           taskId: existing.taskId,
+          journeyStepId,
           userId: actorUserId,
           source: "timer",
           description: existing.description,
-          linkUrl: existing.linkUrl,
           startedAt: existing.startedAt,
           endedAt: now,
           durationSeconds,
           createdAt: now,
           updatedAt: now,
-        })
-        .returning({ id: agencyOpsTimeEntry.id });
-
-      // Copy tags from active timer to time entry
-      if (timeEntry) {
-        const existingTags = await tx
-          .select({ tagId: agencyOpsActiveTimerTag.tagId })
-          .from(agencyOpsActiveTimerTag)
-          .where(eq(agencyOpsActiveTimerTag.activeTimerId, existing.id));
-
-        if (existingTags.length > 0) {
-          await tx.insert(agencyOpsTimeEntryTag).values(
-            existingTags.map((tag) => ({
-              timeEntryId: timeEntry.id,
-              tagId: tag.tagId,
-            })),
-          );
-        }
+        });
       }
 
       await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, existing.id));
     }
 
-    const [newTimer] = await tx
-      .insert(agencyOpsActiveTimer)
-      .values({
-        id: createWorkspaceId("agency-active-timer"),
-        teamId: input.teamId,
-        projectId,
-        taskId: input.taskId ?? null,
-        userId: actorUserId,
-        description: input.description?.trim() ?? "",
-        linkUrl: normalizedLinkUrl ?? null,
-        startedAt: now,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning({ id: agencyOpsActiveTimer.id });
+    await tx.insert(agencyOpsActiveTimer).values({
+      id: createWorkspaceId("agency-active-timer"),
+      teamId: input.teamId,
+      projectId,
+      taskId: input.taskId ?? null,
+      userId: actorUserId,
+      description: input.description?.trim() ?? "",
+      startedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
 
-    if (newTimer && input.tagIds && input.tagIds.length > 0) {
-      await tx.insert(agencyOpsActiveTimerTag).values(
-        input.tagIds.map((tagId) => ({
-          activeTimerId: newTimer.id,
-          tagId,
-        })),
-      );
+    if (input.taskId) {
+      await tx
+        .update(agencyOpsProjectTask)
+        .set({ status: "in_progress", updatedAt: now })
+        .where(
+          and(
+            eq(agencyOpsProjectTask.id, input.taskId),
+            eq(agencyOpsProjectTask.teamId, input.teamId),
+            eq(agencyOpsProjectTask.status, "open"),
+          ),
+        );
     }
   });
 
   const timer = await getActiveTimerByUser(actorUserId);
+  const createdEntry = rolledOverEntryId
+    ? await fetchAgencyTimeEntryRecord(rolledOverEntryId)
+    : null;
+
+  await publishAgencyTimerUpdated(input.teamId, actorUserId, timer);
+
+  if (timer) {
+    await notifyTimerActivity({
+      teamId: input.teamId,
+      actorUserId,
+      projectId: timer.projectId,
+      projectName: timer.projectName,
+      taskId: timer.taskId,
+      taskTitle: timer.taskTitle,
+      timerAction: "started",
+    });
+  }
 
   return {
     timer,
+    createdEntry,
   };
+}
+
+async function emitTimerStoppedNotification(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    projectId: string;
+    taskId: string | null;
+    taskTitle: string | null;
+  },
+) {
+  const [project] = await db
+    .select({ name: agencyOpsProject.name })
+    .from(agencyOpsProject)
+    .where(eq(agencyOpsProject.id, input.projectId))
+    .limit(1);
+
+  await notifyTimerActivity({
+    teamId: input.teamId,
+    actorUserId,
+    projectId: input.projectId,
+    projectName: project?.name ?? "Project",
+    taskId: input.taskId,
+    taskTitle: input.taskTitle,
+    timerAction: "stopped",
+  });
+}
+
+async function fetchAgencyTimeEntryRecord(entryId: string) {
+  const [row] = await db
+    .select({
+      id: agencyOpsTimeEntry.id,
+      teamId: agencyOpsTimeEntry.teamId,
+      userId: agencyOpsTimeEntry.userId,
+      userName: user.name,
+      projectId: agencyOpsTimeEntry.projectId,
+      taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
+      projectName: agencyOpsProject.name,
+      clientId: agencyOpsClient.id,
+      clientName: agencyOpsClient.name,
+      source: agencyOpsTimeEntry.source,
+      description: agencyOpsTimeEntry.description,
+      startedAt: agencyOpsTimeEntry.startedAt,
+      endedAt: agencyOpsTimeEntry.endedAt,
+      durationSeconds: agencyOpsTimeEntry.durationSeconds,
+      createdAt: agencyOpsTimeEntry.createdAt,
+      updatedAt: agencyOpsTimeEntry.updatedAt,
+    })
+    .from(agencyOpsTimeEntry)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
+    .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
+    .where(eq(agencyOpsTimeEntry.id, entryId))
+    .limit(1);
+
+  if (!row) {
+    return null;
+  }
+
+  return mapAgencyTimeEntryRow(row);
 }
 
 export async function stopAgencyTimer(
   actorUserId: string,
   input: {
     teamId?: string;
+    taskId?: string;
     description?: string;
-    linkUrl?: string | null;
-    tagIds?: string[];
     discard?: boolean;
   },
 ) {
@@ -1839,7 +4014,6 @@ export async function stopAgencyTimer(
       projectId: agencyOpsActiveTimer.projectId,
       taskId: agencyOpsActiveTimer.taskId,
       description: agencyOpsActiveTimer.description,
-      linkUrl: agencyOpsActiveTimer.linkUrl,
       startedAt: agencyOpsActiveTimer.startedAt,
     })
     .from(agencyOpsActiveTimer)
@@ -1861,14 +4035,48 @@ export async function stopAgencyTimer(
     });
   }
 
+  let taskId = active.taskId ?? null;
+  let entryProjectId = active.projectId;
+  if (input.taskId) {
+    const taskProjectId = await resolveTaskProjectId(active.teamId, input.taskId);
+    const binding = resolveAgencyTimerStopBinding({
+      activeProjectId: active.projectId,
+      activeTaskId: active.taskId,
+      inputTaskId: input.taskId,
+      inputTaskProjectId: taskProjectId,
+    });
+
+    if ("error" in binding) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Task must belong to the active timer project.",
+      });
+    }
+
+    taskId = binding.taskId;
+    entryProjectId = binding.projectId;
+  }
+
+  if (!input.discard && !taskId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Choose a task before stopping this timer.",
+    });
+  }
+
   const now = new Date();
   const description = input.description?.trim() ?? active.description;
-  const normalizedLinkUrl = input.discard ? null : normalizeAgencyLinkUrl(input.linkUrl);
-  const resolvedLinkUrl = normalizedLinkUrl === undefined ? active.linkUrl : normalizedLinkUrl;
+
+  if (!input.discard && !description) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Add a description before stopping this timer.",
+    });
+  }
+
   const durationSeconds = getDurationSeconds(active.startedAt, now);
 
   if (input.discard) {
     await db.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, active.id));
+
+    await publishAgencyTimerUpdated(active.teamId, actorUserId, null);
 
     return {
       timer: null,
@@ -1877,17 +4085,18 @@ export async function stopAgencyTimer(
   }
 
   const [entry] = await db.transaction(async (tx) => {
+    const journeyStepId = await resolveJourneyStepIdForTask(active.teamId, taskId);
     const [created] = await tx
       .insert(agencyOpsTimeEntry)
       .values({
         id: createWorkspaceId("agency-time"),
         teamId: active.teamId,
-        projectId: active.projectId,
-        taskId: active.taskId,
+        projectId: entryProjectId,
+        taskId,
+        journeyStepId,
         userId: actorUserId,
         source: "timer",
         description,
-        linkUrl: resolvedLinkUrl,
         startedAt: active.startedAt,
         endedAt: now,
         durationSeconds,
@@ -1896,32 +4105,20 @@ export async function stopAgencyTimer(
       })
       .returning({ id: agencyOpsTimeEntry.id });
 
-    // Copy tags from active timer to time entry or use provided tags
-    if (created) {
-      let tagsToInsert: Array<{ tagId: string }> = [];
-
-      if (input.tagIds && input.tagIds.length > 0) {
-        tagsToInsert = input.tagIds.map((tagId) => ({ tagId }));
-      } else {
-        const existingTags = await tx
-          .select({ tagId: agencyOpsActiveTimerTag.tagId })
-          .from(agencyOpsActiveTimerTag)
-          .where(eq(agencyOpsActiveTimerTag.activeTimerId, active.id));
-
-        tagsToInsert = existingTags;
-      }
-
-      if (tagsToInsert.length > 0) {
-        await tx.insert(agencyOpsTimeEntryTag).values(
-          tagsToInsert.map((tag) => ({
-            timeEntryId: created.id,
-            tagId: tag.tagId,
-          })),
-        );
-      }
-    }
-
     await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, active.id));
+
+    if (taskId) {
+      await tx
+        .update(agencyOpsProjectTask)
+        .set({ status: "in_progress", updatedAt: now })
+        .where(
+          and(
+            eq(agencyOpsProjectTask.id, taskId),
+            eq(agencyOpsProjectTask.teamId, active.teamId),
+            eq(agencyOpsProjectTask.status, "open"),
+          ),
+        );
+    }
 
     return [created];
   });
@@ -1930,76 +4127,70 @@ export async function stopAgencyTimer(
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
 
-  // Fetch the complete time entry with tags
-  const [row] = await db
-    .select({
-      id: agencyOpsTimeEntry.id,
-      teamId: agencyOpsTimeEntry.teamId,
-      userId: agencyOpsTimeEntry.userId,
-      userName: user.name,
-      projectId: agencyOpsTimeEntry.projectId,
-      taskId: agencyOpsTimeEntry.taskId,
-      taskTitle: agencyOpsProjectTask.title,
-      projectName: agencyOpsProject.name,
-      clientId: agencyOpsClient.id,
-      clientName: agencyOpsClient.name,
-      source: agencyOpsTimeEntry.source,
-      description: agencyOpsTimeEntry.description,
-      linkUrl: agencyOpsTimeEntry.linkUrl,
-      startedAt: agencyOpsTimeEntry.startedAt,
-      endedAt: agencyOpsTimeEntry.endedAt,
-      durationSeconds: agencyOpsTimeEntry.durationSeconds,
-      createdAt: agencyOpsTimeEntry.createdAt,
-      updatedAt: agencyOpsTimeEntry.updatedAt,
-    })
-    .from(agencyOpsTimeEntry)
-    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsTimeEntry.projectId))
-    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
-    .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsTimeEntry.taskId))
-    .leftJoin(user, eq(user.id, agencyOpsTimeEntry.userId))
-    .where(eq(agencyOpsTimeEntry.id, entry.id))
-    .limit(1);
+  const createdEntry = await fetchAgencyTimeEntryRecord(entry.id);
 
-  const tags = await db
-    .select({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    })
-    .from(agencyOpsTimeEntryTag)
-    .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-    .where(eq(agencyOpsTimeEntryTag.timeEntryId, entry.id));
-
-  const createdEntry = row
-    ? ({
-        id: row.id,
-        teamId: row.teamId,
-        userId: row.userId,
-        userName: row.userName ?? "Unknown",
-        projectId: row.projectId,
-        taskId: row.taskId ?? null,
-        taskTitle: row.taskTitle ?? null,
-        projectName: row.projectName,
-        clientId: row.clientId,
-        clientName: row.clientName,
-        tags: tags.map(mapTagRow),
-        source: row.source,
-        description: row.description,
-        linkUrl: row.linkUrl,
-        startedAt: row.startedAt.toISOString(),
-        endedAt: row.endedAt.toISOString(),
-        durationSeconds: row.durationSeconds,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      } satisfies AgencyTimeEntryRecord)
-    : null;
+  await publishAgencyTimerUpdated(active.teamId, actorUserId, null);
+  await emitTimerStoppedNotification(actorUserId, {
+    teamId: active.teamId,
+    projectId: entryProjectId,
+    taskId,
+    taskTitle: createdEntry?.taskTitle ?? null,
+  });
 
   return {
     timer: null,
     createdEntry,
   };
+}
+
+export async function updateAgencyActiveTimerStart(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    startedAt: string;
+  },
+) {
+  const [active] = await db
+    .select({ id: agencyOpsActiveTimer.id, teamId: agencyOpsActiveTimer.teamId })
+    .from(agencyOpsActiveTimer)
+    .where(eq(agencyOpsActiveTimer.userId, actorUserId))
+    .limit(1);
+
+  if (!active) {
+    throw new ORPCError("NOT_FOUND", { message: "No active timer." });
+  }
+
+  await requireTeamMembership(actorUserId, active.teamId, "viewer");
+
+  if (active.teamId !== input.teamId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Active timer belongs to a different team.",
+    });
+  }
+
+  const nextStartedAt = parseIsoDateTime(input.startedAt, "startedAt");
+  const now = new Date();
+
+  if (nextStartedAt.getTime() > now.getTime()) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Start time can't be in the future.",
+    });
+  }
+
+  await db
+    .update(agencyOpsActiveTimer)
+    .set({ startedAt: nextStartedAt, updatedAt: now })
+    .where(eq(agencyOpsActiveTimer.id, active.id));
+
+  const timer = await getActiveTimerByUser(actorUserId);
+
+  if (!timer) {
+    throw new ORPCError("NOT_FOUND", { message: "No active timer." });
+  }
+
+  await publishAgencyTimerUpdated(input.teamId, actorUserId, timer);
+
+  return { timer };
 }
 
 export async function listMyAgencyTimeEntries(
@@ -2009,6 +4200,7 @@ export async function listMyAgencyTimeEntries(
     page?: number;
     pageSize?: number;
     anchorDate?: string;
+    utcOffsetMinutes?: number;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -2026,12 +4218,12 @@ export async function listMyAgencyTimeEntries(
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
-      linkUrl: agencyOpsTimeEntry.linkUrl,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -2054,44 +4246,7 @@ export async function listMyAgencyTimeEntries(
     .limit(pageSize)
     .offset(offset);
 
-  // Fetch tags for each entry
-  const entriesWithTags = await Promise.all(
-    rows.map(async (row) => {
-      const tags = await db
-        .select({
-          id: agencyOpsTag.id,
-          teamId: agencyOpsTag.teamId,
-          name: agencyOpsTag.name,
-          createdAt: agencyOpsTag.createdAt,
-          updatedAt: agencyOpsTag.updatedAt,
-        })
-        .from(agencyOpsTimeEntryTag)
-        .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-        .where(eq(agencyOpsTimeEntryTag.timeEntryId, row.id));
-
-      return {
-        id: row.id,
-        teamId: row.teamId,
-        userId: row.userId,
-        userName: row.userName ?? "Unknown",
-        projectId: row.projectId,
-        taskId: row.taskId ?? null,
-        taskTitle: row.taskTitle ?? null,
-        projectName: row.projectName,
-        clientId: row.clientId,
-        clientName: row.clientName,
-        tags: tags.map(mapTagRow),
-        source: row.source,
-        description: row.description,
-        linkUrl: row.linkUrl,
-        startedAt: row.startedAt.toISOString(),
-        endedAt: row.endedAt.toISOString(),
-        durationSeconds: row.durationSeconds,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      } satisfies AgencyTimeEntryRecord;
-    }),
-  );
+  const items = rows.map((row) => mapAgencyTimeEntryRow(row));
 
   // Count total for pagination
   const [countRow] = await db
@@ -2110,11 +4265,10 @@ export async function listMyAgencyTimeEntries(
   const parsedTotal = Number(countRow?.count ?? 0);
   const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
 
-  // Compute week summary for the anchor date (or current week)
+  // Compute week summary for the anchor date (or current week) in the viewer's local timezone.
   const anchor = input.anchorDate ? parseIsoDateTime(input.anchorDate, "anchorDate") : new Date();
-  const weekStart = getWeekStartUtc(anchor);
-  const weekEnd = addDaysUtc(weekStart, 6);
-  weekEnd.setUTCHours(23, 59, 59, 999);
+  const utcOffsetMinutes = input.utcOffsetMinutes ?? 0;
+  const { weekStartKey, weekStart, weekEnd } = getLocalWeekBounds(anchor, utcOffsetMinutes);
 
   const weekRows = await db
     .select({
@@ -2134,12 +4288,11 @@ export async function listMyAgencyTimeEntries(
 
   const dailyMap = new Map<string, number>();
   for (let i = 0; i < 7; i++) {
-    const day = addDaysUtc(weekStart, i);
-    dailyMap.set(day.toISOString().slice(0, 10), 0);
+    dailyMap.set(addDaysToDateKey(weekStartKey, i), 0);
   }
   let weekTotalSeconds = 0;
   for (const wr of weekRows) {
-    const dateKey = wr.startedAt.toISOString().slice(0, 10);
+    const dateKey = localDateKeyFromInstant(wr.startedAt, utcOffsetMinutes);
     dailyMap.set(dateKey, (dailyMap.get(dateKey) ?? 0) + wr.durationSeconds);
     weekTotalSeconds += wr.durationSeconds;
   }
@@ -2152,7 +4305,7 @@ export async function listMyAgencyTimeEntries(
   };
 
   return {
-    items: entriesWithTags,
+    items,
     page,
     pageSize,
     total,
@@ -2966,8 +5119,6 @@ export async function createManualAgencyTimeEntry(
     startAt: string;
     endAt: string;
     description?: string;
-    linkUrl?: string | null;
-    tagIds?: string[];
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -2992,42 +5143,29 @@ export async function createManualAgencyTimeEntry(
   const startAt = parseIsoDateTime(input.startAt, "startAt");
   const endAt = parseIsoDateTime(input.endAt, "endAt");
   validateDateRange(startAt, endAt);
-  const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
   const now = new Date();
   const durationSeconds = getDurationSeconds(startAt, endAt);
+  const journeyStepId = await resolveJourneyStepIdForTask(input.teamId, input.taskId ?? null);
 
-  const [created] = await db.transaction(async (tx) => {
-    const [timeEntry] = await tx
-      .insert(agencyOpsTimeEntry)
-      .values({
-        id: createWorkspaceId("agency-time"),
-        teamId: input.teamId,
-        projectId,
-        taskId: input.taskId ?? null,
-        userId: actorUserId,
-        source: "manual",
-        description: input.description?.trim() ?? "",
-        linkUrl: normalizedLinkUrl ?? null,
-        startedAt: startAt,
-        endedAt: endAt,
-        durationSeconds,
-        createdAt: now,
-        updatedAt: now,
-      })
-      .returning({ id: agencyOpsTimeEntry.id });
-
-    if (timeEntry && input.tagIds && input.tagIds.length > 0) {
-      await tx.insert(agencyOpsTimeEntryTag).values(
-        input.tagIds.map((tagId) => ({
-          timeEntryId: timeEntry.id,
-          tagId,
-        })),
-      );
-    }
-
-    return [timeEntry];
-  });
+  const [created] = await db
+    .insert(agencyOpsTimeEntry)
+    .values({
+      id: createWorkspaceId("agency-time"),
+      teamId: input.teamId,
+      projectId,
+      taskId: input.taskId ?? null,
+      journeyStepId,
+      userId: actorUserId,
+      source: "manual",
+      description: input.description?.trim() ?? "",
+      startedAt: startAt,
+      endedAt: endAt,
+      durationSeconds,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning({ id: agencyOpsTimeEntry.id });
 
   if (!created) {
     throw new ORPCError("INTERNAL_SERVER_ERROR");
@@ -3042,12 +5180,12 @@ export async function createManualAgencyTimeEntry(
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
-      linkUrl: agencyOpsTimeEntry.linkUrl,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -3066,39 +5204,7 @@ export async function createManualAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  const tags = await db
-    .select({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    })
-    .from(agencyOpsTimeEntryTag)
-    .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-    .where(eq(agencyOpsTimeEntryTag.timeEntryId, created.id));
-
-  return {
-    id: row.id,
-    teamId: row.teamId,
-    userId: row.userId,
-    userName: row.userName ?? "Unknown",
-    projectId: row.projectId,
-    taskId: row.taskId ?? null,
-    taskTitle: row.taskTitle ?? null,
-    projectName: row.projectName,
-    clientId: row.clientId,
-    clientName: row.clientName,
-    tags: tags.map(mapTagRow),
-    source: row.source,
-    description: row.description,
-    linkUrl: row.linkUrl,
-    startedAt: row.startedAt.toISOString(),
-    endedAt: row.endedAt.toISOString(),
-    durationSeconds: row.durationSeconds,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  } satisfies AgencyTimeEntryRecord;
+  return mapAgencyTimeEntryRow(row);
 }
 
 export async function updateMyAgencyTimeEntry(
@@ -3111,8 +5217,6 @@ export async function updateMyAgencyTimeEntry(
     startAt?: string;
     endAt?: string;
     description?: string;
-    linkUrl?: string | null;
-    tagIds?: string[];
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -3167,51 +5271,30 @@ export async function updateMyAgencyTimeEntry(
     : current.startedAt;
   const nextEndedAt = input.endAt ? parseIsoDateTime(input.endAt, "endAt") : current.endedAt;
   validateDateRange(nextStartedAt, nextEndedAt);
-  const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
   const now = new Date();
   const durationSeconds = getDurationSeconds(nextStartedAt, nextEndedAt);
 
-  const [updated] = await db.transaction(async (tx) => {
-    const [timeEntry] = await tx
-      .update(agencyOpsTimeEntry)
-      .set({
-        ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
-        ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
-        startedAt: nextStartedAt,
-        endedAt: nextEndedAt,
-        durationSeconds,
-        description: input.description?.trim(),
-        ...(normalizedLinkUrl !== undefined ? { linkUrl: normalizedLinkUrl } : {}),
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(agencyOpsTimeEntry.id, input.entryId),
-          eq(agencyOpsTimeEntry.teamId, input.teamId),
-          eq(agencyOpsTimeEntry.userId, actorUserId),
-          isNull(agencyOpsTimeEntry.deletedAt),
-        ),
-      )
-      .returning({ id: agencyOpsTimeEntry.id });
-
-    if (input.tagIds !== undefined && timeEntry) {
-      await tx
-        .delete(agencyOpsTimeEntryTag)
-        .where(eq(agencyOpsTimeEntryTag.timeEntryId, timeEntry.id));
-
-      if (input.tagIds.length > 0) {
-        await tx.insert(agencyOpsTimeEntryTag).values(
-          input.tagIds.map((tagId) => ({
-            timeEntryId: timeEntry.id,
-            tagId,
-          })),
-        );
-      }
-    }
-
-    return [timeEntry];
-  });
+  const [updated] = await db
+    .update(agencyOpsTimeEntry)
+    .set({
+      ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
+      ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
+      startedAt: nextStartedAt,
+      endedAt: nextEndedAt,
+      durationSeconds,
+      description: input.description?.trim(),
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.id, input.entryId),
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        eq(agencyOpsTimeEntry.userId, actorUserId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .returning({ id: agencyOpsTimeEntry.id });
 
   if (!updated) {
     throw new ORPCError("NOT_FOUND");
@@ -3226,12 +5309,12 @@ export async function updateMyAgencyTimeEntry(
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
-      linkUrl: agencyOpsTimeEntry.linkUrl,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -3250,39 +5333,7 @@ export async function updateMyAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  const tags = await db
-    .select({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    })
-    .from(agencyOpsTimeEntryTag)
-    .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-    .where(eq(agencyOpsTimeEntryTag.timeEntryId, updated.id));
-
-  return {
-    id: row.id,
-    teamId: row.teamId,
-    userId: row.userId,
-    userName: row.userName ?? "Unknown",
-    projectId: row.projectId,
-    taskId: row.taskId ?? null,
-    taskTitle: row.taskTitle ?? null,
-    projectName: row.projectName,
-    clientId: row.clientId,
-    clientName: row.clientName,
-    tags: tags.map(mapTagRow),
-    source: row.source,
-    description: row.description,
-    linkUrl: row.linkUrl,
-    startedAt: row.startedAt.toISOString(),
-    endedAt: row.endedAt.toISOString(),
-    durationSeconds: row.durationSeconds,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  } satisfies AgencyTimeEntryRecord;
+  return mapAgencyTimeEntryRow(row);
 }
 
 export async function deleteMyAgencyTimeEntry(
@@ -3319,13 +5370,10 @@ export async function deleteMyAgencyTimeEntry(
 
 export async function getAgencyReportsSummary(
   actorUserId: string,
-  input: {
+  input: ReportEntityFilterInput & {
     teamId: string;
     from: string;
     to: string;
-    clientId?: string;
-    projectId?: string;
-    memberUserId?: string;
   },
 ) {
   const { rows } = await getReportRows(actorUserId, input);
@@ -3416,6 +5464,222 @@ export async function getAgencyReportsSummary(
   };
 }
 
+export async function getAgencyDashboardSummary(
+  actorUserId: string,
+  input: ReportEntityFilterInput & {
+    teamId: string;
+    from: string;
+    to: string;
+  },
+) {
+  const { rows } = await getReportRows(actorUserId, input);
+
+  const members = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+    })
+    .from(workspaceTeamMember)
+    .innerJoin(user, eq(user.id, workspaceTeamMember.userId))
+    .where(eq(workspaceTeamMember.teamId, input.teamId))
+    .orderBy(asc(user.name));
+
+  const activeTimers = await db
+    .select({
+      userId: agencyOpsActiveTimer.userId,
+      projectName: agencyOpsProject.name,
+      clientName: agencyOpsClient.name,
+      description: agencyOpsActiveTimer.description,
+      startedAt: agencyOpsActiveTimer.startedAt,
+    })
+    .from(agencyOpsActiveTimer)
+    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .where(eq(agencyOpsActiveTimer.teamId, input.teamId));
+
+  const activeTimerByUser = new Map(activeTimers.map((timer) => [timer.userId, timer]));
+  const clientSeconds = new Map<
+    string,
+    { clientId: string; clientName: string; seconds: number }
+  >();
+  const projectSeconds = new Map<
+    string,
+    {
+      projectId: string;
+      projectName: string;
+      clientId: string;
+      clientName: string;
+      seconds: number;
+    }
+  >();
+  const memberSeconds = new Map<string, number>();
+  const memberProjectSeconds = new Map<
+    string,
+    Map<string, { projectId: string; projectName: string; clientName: string; seconds: number }>
+  >();
+  const latestEntryByMember = new Map<
+    string,
+    { projectName: string; clientName: string; description: string; startedAt: string }
+  >();
+  const dailyBuckets = new Map<
+    string,
+    Map<string, { projectId: string; projectName: string; clientName: string; seconds: number }>
+  >();
+
+  let totalSeconds = 0;
+
+  for (const row of rows) {
+    totalSeconds += row.durationSeconds;
+
+    const clientEntry = clientSeconds.get(row.clientId) ?? {
+      clientId: row.clientId,
+      clientName: row.clientName,
+      seconds: 0,
+    };
+    clientEntry.seconds += row.durationSeconds;
+    clientSeconds.set(row.clientId, clientEntry);
+
+    const projectEntry = projectSeconds.get(row.projectId) ?? {
+      projectId: row.projectId,
+      projectName: row.projectName,
+      clientId: row.clientId,
+      clientName: row.clientName,
+      seconds: 0,
+    };
+    projectEntry.seconds += row.durationSeconds;
+    projectSeconds.set(row.projectId, projectEntry);
+
+    memberSeconds.set(
+      row.memberEmail,
+      (memberSeconds.get(row.memberEmail) ?? 0) + row.durationSeconds,
+    );
+
+    const memberProjects = memberProjectSeconds.get(row.memberEmail) ?? new Map();
+    const memberProjectEntry = memberProjects.get(row.projectId) ?? {
+      projectId: row.projectId,
+      projectName: row.projectName,
+      clientName: row.clientName,
+      seconds: 0,
+    };
+    memberProjectEntry.seconds += row.durationSeconds;
+    memberProjects.set(row.projectId, memberProjectEntry);
+    memberProjectSeconds.set(row.memberEmail, memberProjects);
+
+    if (!latestEntryByMember.has(row.memberEmail)) {
+      latestEntryByMember.set(row.memberEmail, {
+        projectName: row.projectName,
+        clientName: row.clientName,
+        description: row.description,
+        startedAt: row.startedAt.toISOString(),
+      });
+    }
+
+    const dateKey = formatUtcDateKey(row.startedAt);
+    const dayProjects = dailyBuckets.get(dateKey) ?? new Map();
+    const dayProjectEntry = dayProjects.get(row.projectId) ?? {
+      projectId: row.projectId,
+      projectName: row.projectName,
+      clientName: row.clientName,
+      seconds: 0,
+    };
+    dayProjectEntry.seconds += row.durationSeconds;
+    dayProjects.set(row.projectId, dayProjectEntry);
+    dailyBuckets.set(dateKey, dayProjects);
+  }
+
+  const topClient =
+    [...clientSeconds.values()].sort((left, right) => right.seconds - left.seconds)[0] ?? null;
+  const topProject =
+    [...projectSeconds.values()].sort((left, right) => right.seconds - left.seconds)[0] ?? null;
+  const fromDate = parseIsoDateTime(input.from, "from");
+  const toDate = parseIsoDateTime(input.to, "to");
+  const filledDailyBuckets = [];
+  for (
+    let cursor = new Date(
+      Date.UTC(fromDate.getUTCFullYear(), fromDate.getUTCMonth(), fromDate.getUTCDate()),
+    );
+    cursor <= toDate && filledDailyBuckets.length < 370;
+    cursor = addDaysUtc(cursor, 1)
+  ) {
+    const date = formatUtcDateKey(cursor);
+    const projects = dailyBuckets.get(date) ?? new Map();
+    filledDailyBuckets.push({
+      date,
+      totalSeconds: [...projects.values()].reduce(
+        (sumSeconds, project) => sumSeconds + project.seconds,
+        0,
+      ),
+      segments: [...projects.values()].sort((left, right) => right.seconds - left.seconds),
+    });
+  }
+
+  const summary: AgencyDashboardSummary = {
+    totalHours: Number((totalSeconds / 3_600).toFixed(2)),
+    totalSeconds,
+    totalEntries: rows.length,
+    activeTimerCount: activeTimers.length,
+    topClient,
+    topProject,
+    timeDistributionByClient: [...clientSeconds.values()]
+      .map((entry) => ({
+        clientId: entry.clientId,
+        clientName: entry.clientName,
+        hours: Number((entry.seconds / 3_600).toFixed(2)),
+      }))
+      .sort((left, right) => right.hours - left.hours),
+    timeDistributionByProject: [...projectSeconds.values()]
+      .map((entry) => ({
+        projectId: entry.projectId,
+        projectName: entry.projectName,
+        clientId: entry.clientId,
+        clientName: entry.clientName,
+        hours: Number((entry.seconds / 3_600).toFixed(2)),
+      }))
+      .sort((left, right) => right.hours - left.hours),
+    teamActivity: [...memberSeconds.entries()]
+      .map(([userEmail, seconds]) => ({
+        userId: userEmail,
+        userName: members.find((member) => member.email === userEmail)?.name ?? "Unknown",
+        userEmail,
+        hours: Number((seconds / 3_600).toFixed(2)),
+      }))
+      .sort((left, right) => right.hours - left.hours),
+    dailyBuckets: filledDailyBuckets,
+    teamMembers: members
+      .map((member) => {
+        const activeTimer = activeTimerByUser.get(member.id);
+        return {
+          userId: member.id,
+          userName: member.name ?? "Unknown",
+          userEmail: member.email,
+          avatar: formatAvatarUrl(member.image),
+          isActive: Boolean(activeTimer),
+          totalSeconds: memberSeconds.get(member.email) ?? 0,
+          // Prefer the live timer over the last completed entry in-range.
+          latestEntry: activeTimer
+            ? {
+                projectName: activeTimer.projectName,
+                clientName: activeTimer.clientName,
+                description: activeTimer.description,
+                startedAt: activeTimer.startedAt.toISOString(),
+              }
+            : (latestEntryByMember.get(member.email) ?? null),
+          projectBreakdown: [...(memberProjectSeconds.get(member.email)?.values() ?? [])].sort(
+            (left, right) => right.seconds - left.seconds,
+          ),
+        };
+      })
+      .sort(
+        (left, right) =>
+          Number(right.isActive) - Number(left.isActive) || right.totalSeconds - left.totalSeconds,
+      ),
+  };
+
+  return { summary };
+}
+
 export async function getAgencyTimeSummary(
   actorUserId: string,
   input: {
@@ -3425,7 +5689,6 @@ export async function getAgencyTimeSummary(
     clientId?: string;
     projectId?: string;
     memberUserId?: string;
-    tagIds?: string[];
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -3476,17 +5739,6 @@ export async function getAgencyTimeSummary(
   if (input.memberUserId) {
     entryFilters.push(eq(agencyOpsTimeEntry.userId, input.memberUserId));
   }
-  if (input.tagIds && input.tagIds.length > 0) {
-    entryFilters.push(
-      inArray(
-        agencyOpsTimeEntry.id,
-        db
-          .select({ timeEntryId: agencyOpsTimeEntryTag.timeEntryId })
-          .from(agencyOpsTimeEntryTag)
-          .where(inArray(agencyOpsTimeEntryTag.tagId, input.tagIds)),
-      ),
-    );
-  }
 
   const entries = await db
     .select({
@@ -3529,13 +5781,12 @@ export async function getAgencyTimeSummary(
           avatar: formatAvatarUrl(member.image),
           name: member.name ?? "Unknown",
           email: member.email,
-          isActive: activeTimerByUser.has(member.id),
+          isActive: Boolean(activeTimer),
           totalSeconds: totalSecondsPerMember.get(member.id) ?? 0,
-          latestEntry:
-            latestEntryPerMember.get(member.id) ??
-            (activeTimer
-              ? { projectName: activeTimer.projectName, description: activeTimer.description }
-              : null),
+          // Prefer the live timer over the last completed entry in-range.
+          latestEntry: activeTimer
+            ? { projectName: activeTimer.projectName, description: activeTimer.description }
+            : (latestEntryPerMember.get(member.id) ?? null),
         };
       }),
     },
@@ -3614,16 +5865,12 @@ export async function exportAgencyReportsCsv(
 
 export async function listAllAgencyTimeEntries(
   actorUserId: string,
-  input: {
+  input: ReportEntityFilterInput & {
     teamId: string;
     from: string;
     to: string;
     page?: number;
     pageSize?: number;
-    clientId?: string;
-    projectId?: string;
-    memberUserId?: string;
-    tagIds?: string[];
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "editor");
@@ -3648,17 +5895,7 @@ export async function listAllAgencyTimeEntries(
     lte(agencyOpsTimeEntry.startedAt, to),
   ];
 
-  if (input.clientId) {
-    filters.push(eq(agencyOpsProject.clientId, input.clientId));
-  }
-
-  if (input.projectId) {
-    filters.push(eq(agencyOpsProject.id, input.projectId));
-  }
-
-  if (input.memberUserId) {
-    filters.push(eq(agencyOpsTimeEntry.userId, input.memberUserId));
-  }
+  applyReportEntityFilters(filters, input);
 
   const rows = await db
     .select({
@@ -3669,12 +5906,12 @@ export async function listAllAgencyTimeEntries(
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
-      linkUrl: agencyOpsTimeEntry.linkUrl,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -3691,50 +5928,7 @@ export async function listAllAgencyTimeEntries(
     .limit(pageSize)
     .offset(offset);
 
-  // Filter by tagIds if provided (post-query, since tags are in a join table)
-  const tagFilter = input.tagIds && input.tagIds.length > 0 ? new Set(input.tagIds) : null;
-
-  const entriesWithTags = await Promise.all(
-    rows.map(async (row) => {
-      const tags = await db
-        .select({
-          id: agencyOpsTag.id,
-          teamId: agencyOpsTag.teamId,
-          name: agencyOpsTag.name,
-          createdAt: agencyOpsTag.createdAt,
-          updatedAt: agencyOpsTag.updatedAt,
-        })
-        .from(agencyOpsTimeEntryTag)
-        .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-        .where(eq(agencyOpsTimeEntryTag.timeEntryId, row.id));
-
-      return {
-        id: row.id,
-        teamId: row.teamId,
-        userId: row.userId,
-        userName: row.userName ?? "Unknown",
-        projectId: row.projectId,
-        taskId: row.taskId ?? null,
-        taskTitle: row.taskTitle ?? null,
-        projectName: row.projectName,
-        clientId: row.clientId,
-        clientName: row.clientName,
-        tags: tags.map(mapTagRow),
-        source: row.source,
-        description: row.description,
-        linkUrl: row.linkUrl,
-        startedAt: row.startedAt.toISOString(),
-        endedAt: row.endedAt.toISOString(),
-        durationSeconds: row.durationSeconds,
-        createdAt: row.createdAt.toISOString(),
-        updatedAt: row.updatedAt.toISOString(),
-      } satisfies AgencyTimeEntryRecord;
-    }),
-  );
-
-  const filteredEntries = tagFilter
-    ? entriesWithTags.filter((e) => e.tags.some((t) => tagFilter.has(t.id)))
-    : entriesWithTags;
+  const items = rows.map((row) => mapAgencyTimeEntryRow(row));
 
   const [countRow] = await db
     .select({ count: sql<number>`count(*)` })
@@ -3747,7 +5941,7 @@ export async function listAllAgencyTimeEntries(
   const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
 
   return {
-    items: filteredEntries,
+    items,
     page,
     pageSize,
     total,
@@ -3762,10 +5956,8 @@ export async function updateAnyAgencyTimeEntry(
     startAt?: string;
     endAt?: string;
     description?: string;
-    linkUrl?: string | null;
     projectId?: string;
     taskId?: string | null;
-    tagIds?: string[];
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -3819,50 +6011,29 @@ export async function updateAnyAgencyTimeEntry(
     : current.startedAt;
   const nextEndedAt = input.endAt ? parseIsoDateTime(input.endAt, "endAt") : current.endedAt;
   validateDateRange(nextStartedAt, nextEndedAt);
-  const normalizedLinkUrl = normalizeAgencyLinkUrl(input.linkUrl);
 
   const now = new Date();
   const durationSeconds = getDurationSeconds(nextStartedAt, nextEndedAt);
 
-  const [updated] = await db.transaction(async (tx) => {
-    const [timeEntry] = await tx
-      .update(agencyOpsTimeEntry)
-      .set({
-        ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
-        ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
-        startedAt: nextStartedAt,
-        endedAt: nextEndedAt,
-        durationSeconds,
-        description: input.description?.trim(),
-        ...(normalizedLinkUrl !== undefined ? { linkUrl: normalizedLinkUrl } : {}),
-        updatedAt: now,
-      })
-      .where(
-        and(
-          eq(agencyOpsTimeEntry.id, input.entryId),
-          eq(agencyOpsTimeEntry.teamId, input.teamId),
-          isNull(agencyOpsTimeEntry.deletedAt),
-        ),
-      )
-      .returning({ id: agencyOpsTimeEntry.id });
-
-    if (input.tagIds !== undefined && timeEntry) {
-      await tx
-        .delete(agencyOpsTimeEntryTag)
-        .where(eq(agencyOpsTimeEntryTag.timeEntryId, timeEntry.id));
-
-      if (input.tagIds.length > 0) {
-        await tx.insert(agencyOpsTimeEntryTag).values(
-          input.tagIds.map((tagId) => ({
-            timeEntryId: timeEntry.id,
-            tagId,
-          })),
-        );
-      }
-    }
-
-    return [timeEntry];
-  });
+  const [updated] = await db
+    .update(agencyOpsTimeEntry)
+    .set({
+      ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
+      ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
+      startedAt: nextStartedAt,
+      endedAt: nextEndedAt,
+      durationSeconds,
+      description: input.description?.trim(),
+      updatedAt: now,
+    })
+    .where(
+      and(
+        eq(agencyOpsTimeEntry.id, input.entryId),
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    )
+    .returning({ id: agencyOpsTimeEntry.id });
 
   if (!updated) {
     throw new ORPCError("NOT_FOUND");
@@ -3877,12 +6048,12 @@ export async function updateAnyAgencyTimeEntry(
       projectId: agencyOpsTimeEntry.projectId,
       taskId: agencyOpsTimeEntry.taskId,
       taskTitle: agencyOpsProjectTask.title,
+      taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
-      linkUrl: agencyOpsTimeEntry.linkUrl,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -3901,37 +6072,5 @@ export async function updateAnyAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  const tags = await db
-    .select({
-      id: agencyOpsTag.id,
-      teamId: agencyOpsTag.teamId,
-      name: agencyOpsTag.name,
-      createdAt: agencyOpsTag.createdAt,
-      updatedAt: agencyOpsTag.updatedAt,
-    })
-    .from(agencyOpsTimeEntryTag)
-    .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-    .where(eq(agencyOpsTimeEntryTag.timeEntryId, updated.id));
-
-  return {
-    id: row.id,
-    teamId: row.teamId,
-    userId: row.userId,
-    userName: row.userName ?? "Unknown",
-    projectId: row.projectId,
-    taskId: row.taskId ?? null,
-    taskTitle: row.taskTitle ?? null,
-    projectName: row.projectName,
-    clientId: row.clientId,
-    clientName: row.clientName,
-    tags: tags.map(mapTagRow),
-    source: row.source,
-    description: row.description,
-    linkUrl: row.linkUrl,
-    startedAt: row.startedAt.toISOString(),
-    endedAt: row.endedAt.toISOString(),
-    durationSeconds: row.durationSeconds,
-    createdAt: row.createdAt.toISOString(),
-    updatedAt: row.updatedAt.toISOString(),
-  } satisfies AgencyTimeEntryRecord;
+  return mapAgencyTimeEntryRow(row);
 }

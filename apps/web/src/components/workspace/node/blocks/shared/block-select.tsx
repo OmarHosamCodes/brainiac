@@ -1,0 +1,40 @@
+import { cn } from "@/lib/utils";
+
+type BlockSelectOption = {
+  label: string;
+  value: string;
+};
+
+type BlockSelectProps = {
+  value: string;
+  options: BlockSelectOption[];
+  onValueChange: (value: string) => void;
+  className?: string;
+  "aria-label"?: string;
+};
+
+export function BlockSelect({
+  value,
+  options,
+  onValueChange,
+  className,
+  "aria-label": ariaLabel,
+}: BlockSelectProps) {
+  return (
+    <select
+      value={value}
+      aria-label={ariaLabel}
+      className={cn(
+        "flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/20",
+        className,
+      )}
+      onChange={(event) => onValueChange(event.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value || "__empty"} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
+  );
+}

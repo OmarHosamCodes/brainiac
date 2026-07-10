@@ -1,45 +1,12 @@
 import { z } from "zod";
 
-const agencyTagLiveSchema = z.object({
-  id: z.string().min(1),
-  teamId: z.string().min(1),
-  name: z.string().min(1),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-const agencyClientLiveSchema = z.object({
-  id: z.string().min(1),
-  teamId: z.string().min(1),
-  name: z.string().min(1),
-  archivedAt: z.string().datetime().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-const agencyProjectLiveSchema = z.object({
-  id: z.string().min(1),
-  teamId: z.string().min(1),
-  clientId: z.string().min(1),
-  clientName: z.string().min(1),
-  name: z.string().min(1),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-const agencyProjectTaskLiveSchema = z.object({
-  id: z.string().min(1),
-  teamId: z.string().min(1),
-  projectId: z.string().min(1),
-  title: z.string().min(1),
-  status: z.enum(["open", "in_progress", "done", "archived"]),
-  assigneeUserId: z.string().nullable(),
-  assigneeName: z.string().nullable(),
-  assigneeAvatar: z.string().nullable(),
-  dueDate: z.string().datetime().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
+import { requireTeamMembership } from "../../lib/team-membership";
+import { getRedisPublisher, getRedisSubscriber } from "../../lib/redis";
+import {
+  registerAgencyLiveUserConnection,
+  unregisterAgencyLiveUserConnection,
+} from "../notifications/live-bridge";
+import { notificationRecordSchema } from "../../schemas/notifications";
 
 const agencyTaskMessageAttachmentLiveSchema = z.object({
   id: z.string().min(1),
@@ -70,17 +37,6 @@ const agencyTaskMessageLiveSchema = z.object({
   attachments: z.array(agencyTaskMessageAttachmentLiveSchema),
 });
 
-const agencyContactLiveSchema = z.object({
-  id: z.string().min(1),
-  teamId: z.string().min(1),
-  clientId: z.string().min(1),
-  name: z.string(),
-  email: z.string(),
-  phone: z.string(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
 const agencyActiveTimerLiveSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
@@ -88,185 +44,96 @@ const agencyActiveTimerLiveSchema = z.object({
   projectId: z.string().min(1),
   taskId: z.string().nullable(),
   taskTitle: z.string().nullable(),
-  projectName: z.string().min(1),
-  tags: z.array(agencyTagLiveSchema),
+  projectName: z.string(),
   description: z.string(),
-  linkUrl: z.string().nullable(),
   startedAt: z.string().datetime(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
 
-const agencyTimeEntryLiveSchema = z.object({
-  id: z.string().min(1),
-  teamId: z.string().min(1),
+const agencyProjectTaskAssigneeLiveSchema = z.object({
   userId: z.string().min(1),
   userName: z.string().min(1),
-  projectId: z.string().min(1),
-  taskId: z.string().nullable(),
-  taskTitle: z.string().nullable(),
-  projectName: z.string().min(1),
-  clientId: z.string().min(1),
-  clientName: z.string().min(1),
-  tags: z.array(agencyTagLiveSchema),
-  source: z.enum(["timer", "manual"]),
-  description: z.string(),
-  linkUrl: z.string().nullable(),
-  startedAt: z.string().datetime(),
-  endedAt: z.string().datetime(),
-  durationSeconds: z.number().int().positive(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  userAvatar: z.string().nullable(),
+  status: z.enum(["open", "in_progress", "done"]),
 });
 
-const agencyCapacitySetLiveSchema = z.object({
-  userId: z.string().min(1),
-  weekStart: z.string().datetime(),
-  capacitySeconds: z.number().int().nonnegative(),
+const agencyProjectTaskLiveSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  projectId: z.string().min(1),
+  title: z.string().min(1),
+  status: z.enum(["open", "in_progress", "done", "archived"]),
+  taskKind: z.enum(["standard", "journey_anchor", "journey_milestone"]),
+  assignedToTeam: z.boolean(),
+  isWaste: z.boolean(),
+  createdByUserId: z.string().min(1),
+  assignees: z.array(agencyProjectTaskAssigneeLiveSchema),
+  viewerStatus: z.enum(["open", "in_progress", "done"]).optional(),
+  viewerCompletionCount: z.number().int().nonnegative().optional(),
+  dueDate: z.string().datetime().nullable(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
 });
 
 export const agencyLiveEventSchema = z.discriminatedUnion("type", [
   z.object({
-    type: z.literal("client.created"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    client: agencyClientLiveSchema,
-  }),
-  z.object({
-    type: z.literal("client.updated"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    client: agencyClientLiveSchema,
-  }),
-  z.object({
-    type: z.literal("client.archived"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    clientId: z.string().min(1),
-  }),
-  z.object({
-    type: z.literal("client.unarchived"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    client: agencyClientLiveSchema,
-  }),
-  z.object({
-    type: z.literal("project.created"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    project: agencyProjectLiveSchema,
-  }),
-  z.object({
-    type: z.literal("project.updated"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    project: agencyProjectLiveSchema,
-  }),
-  z.object({
-    type: z.literal("projectTask.created"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    task: agencyProjectTaskLiveSchema,
-  }),
-  z.object({
-    type: z.literal("projectTask.updated"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    task: agencyProjectTaskLiveSchema,
-  }),
-  z.object({
-    type: z.literal("projectTask.deleted"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    taskId: z.string().min(1),
-    projectId: z.string().min(1).optional(),
-  }),
-  z.object({
     type: z.literal("taskMessage.created"),
     teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
     taskId: z.string().min(1),
+    updatedAt: z.string().datetime(),
     message: agencyTaskMessageLiveSchema,
   }),
   z.object({
-    type: z.literal("contact.upserted"),
+    type: z.literal("journey.step.updated"),
     teamId: z.string().min(1),
+    projectId: z.string().min(1),
     updatedAt: z.string().datetime(),
-    clientId: z.string().min(1),
-    contact: agencyContactLiveSchema,
   }),
   z.object({
-    type: z.literal("timer.started"),
+    type: z.literal("timer.updated"),
     teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
     userId: z.string().min(1),
+    updatedAt: z.string().datetime(),
     timer: agencyActiveTimerLiveSchema.nullable(),
-    createdEntry: agencyTimeEntryLiveSchema.nullable().optional(),
   }),
   z.object({
-    type: z.literal("timer.stopped"),
+    type: z.literal("task.updated"),
     teamId: z.string().min(1),
+    taskId: z.string().min(1),
     updatedAt: z.string().datetime(),
-    userId: z.string().min(1),
-    timer: agencyActiveTimerLiveSchema.nullable(),
-    createdEntry: agencyTimeEntryLiveSchema.nullable().optional(),
+    task: agencyProjectTaskLiveSchema,
   }),
   z.object({
-    type: z.literal("timeEntry.created"),
+    type: z.literal("notification.created"),
     teamId: z.string().min(1),
     updatedAt: z.string().datetime(),
-    entry: agencyTimeEntryLiveSchema,
-  }),
-  z.object({
-    type: z.literal("timeEntry.updated"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    entry: agencyTimeEntryLiveSchema,
-  }),
-  z.object({
-    type: z.literal("timeEntry.deleted"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    entryId: z.string().min(1),
-    userId: z.string().min(1),
-  }),
-  z.object({
-    type: z.literal("capacity.set"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    capacity: agencyCapacitySetLiveSchema,
-  }),
-  z.object({
-    type: z.literal("tenure.policy.updated"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-  }),
-  z.object({
-    type: z.literal("tenure.profile.updated"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    userId: z.string().min(1),
-  }),
-  z.object({
-    type: z.literal("tenure.exemption.updated"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    exemptionId: z.string().min(1),
-  }),
-  z.object({
-    type: z.literal("tenure.exemption.deleted"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    exemptionId: z.string().min(1),
-  }),
-  z.object({
-    type: z.literal("tenure.recomputed"),
-    teamId: z.string().min(1),
-    updatedAt: z.string().datetime(),
+    notification: notificationRecordSchema,
   }),
 ]);
 
 export type AgencyLiveEvent = z.infer<typeof agencyLiveEventSchema>;
+
+const MAX_SUBSCRIBER_QUEUE = 50;
+
+function liveEventCoalesceKey(event: AgencyLiveEvent): string | null {
+  switch (event.type) {
+    case "journey.step.updated":
+      return `journey.step.updated:${event.projectId}`;
+    case "taskMessage.created":
+      return `taskMessage.created:${event.taskId}`;
+    case "timer.updated":
+      return `timer.updated:${event.userId}`;
+    case "task.updated":
+      return `task.updated:${event.taskId}`;
+    case "notification.created":
+      return `notification.created:${event.notification.id}`;
+    default: {
+      const _exhaustive: never = event;
+      return _exhaustive;
+    }
+  }
+}
 
 type Subscriber = {
   push: (event: AgencyLiveEvent) => void;
@@ -275,6 +142,10 @@ type Subscriber = {
 
 function teamChannel(teamId: string) {
   return `team:${teamId}`;
+}
+
+function redisTeamChannel(teamId: string) {
+  return `agency:live:team:${teamId}`;
 }
 
 class AgencyLivePublisher {
@@ -292,7 +163,19 @@ class AgencyLivePublisher {
         const subscriber: Subscriber = {
           signal,
           push(event) {
+            const key = liveEventCoalesceKey(event);
+            if (key) {
+              const idx = queue.findIndex((queued) => liveEventCoalesceKey(queued) === key);
+              if (idx !== -1) {
+                queue.splice(idx, 1);
+              }
+            }
             queue.push(event);
+            // ponytail: cap at 50 events per slow subscriber; drop oldest on overflow.
+            // Upgrade path: persistent replay buffer + client cursor/resume token.
+            while (queue.length > MAX_SUBSCRIBER_QUEUE) {
+              queue.shift();
+            }
             notify?.();
             notify = null;
           },
@@ -340,27 +223,140 @@ class AgencyLivePublisher {
   }
 
   publish(teamId: string, event: AgencyLiveEvent) {
-    const subscribers = this.subscribers.get(teamChannel(teamId));
+    const channel = teamChannel(teamId);
+    const subscribers = this.subscribers.get(channel);
     if (!subscribers) {
       return;
     }
 
-    for (const subscriber of subscribers) {
+    for (const subscriber of [...subscribers]) {
       if (subscriber.signal?.aborted) {
+        subscribers.delete(subscriber);
         continue;
       }
       subscriber.push(event);
+    }
+
+    if (subscribers.size === 0) {
+      this.subscribers.delete(channel);
     }
   }
 }
 
 export const agencyLivePublisher = new AgencyLivePublisher();
 
-export function publishAgencyLiveEvent(teamId: string, event: AgencyLiveEvent) {
-  agencyLiveEventSchema.parse(event);
-  agencyLivePublisher.publish(teamId, event);
+export async function* subscribeAgencyLive(
+  actorUserId: string,
+  input: { teamId: string },
+  signal?: AbortSignal,
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  registerAgencyLiveUserConnection(actorUserId, input.teamId);
+  try {
+    for await (const event of agencyLivePublisher.subscribe(input.teamId, signal)) {
+      yield agencyLiveEventSchema.parse(event);
+    }
+  } finally {
+    unregisterAgencyLiveUserConnection(actorUserId, input.teamId);
+  }
 }
 
 export function liveUpdatedAt(value: string | Date) {
   return typeof value === "string" ? value : value.toISOString();
+}
+
+export async function publishAgencyLiveEvent(teamId: string, event: AgencyLiveEvent) {
+  agencyLiveEventSchema.parse(event);
+  await getRedisPublisher().publish(redisTeamChannel(teamId), JSON.stringify(event));
+}
+
+export async function publishAgencyJourneyStepUpdated(teamId: string, projectId: string) {
+  await publishAgencyLiveEvent(teamId, {
+    type: "journey.step.updated",
+    teamId,
+    projectId,
+    updatedAt: liveUpdatedAt(new Date()),
+  });
+}
+
+export async function publishAgencyTimerUpdated(
+  teamId: string,
+  userId: string,
+  timer: {
+    id: string;
+    teamId: string;
+    userId: string;
+    projectId: string;
+    taskId: string | null;
+    taskTitle: string | null;
+    projectName: string;
+    description: string;
+    startedAt: string;
+    createdAt: string;
+    updatedAt: string;
+  } | null,
+) {
+  await publishAgencyLiveEvent(teamId, {
+    type: "timer.updated",
+    teamId,
+    userId,
+    timer,
+    updatedAt: liveUpdatedAt(new Date()),
+  });
+}
+
+export async function publishAgencyTaskUpdated(
+  teamId: string,
+  task: {
+    id: string;
+    teamId: string;
+    projectId: string;
+    title: string;
+    status: "open" | "in_progress" | "done" | "archived";
+    taskKind: "standard" | "journey_anchor" | "journey_milestone";
+    assignedToTeam: boolean;
+    isWaste: boolean;
+    createdByUserId: string;
+    assignees: Array<{
+      userId: string;
+      userName: string;
+      userAvatar: string | null;
+      status: "open" | "in_progress" | "done";
+    }>;
+    viewerStatus?: "open" | "in_progress" | "done";
+    viewerCompletionCount?: number;
+    dueDate: string | null;
+    createdAt: string;
+    updatedAt: string;
+  },
+) {
+  await publishAgencyLiveEvent(teamId, {
+    type: "task.updated",
+    teamId,
+    taskId: task.id,
+    task,
+    updatedAt: liveUpdatedAt(new Date()),
+  });
+}
+
+let redisSubscriberBootstrapped = false;
+
+export async function bootstrapAgencyLiveRedisSubscriber() {
+  if (redisSubscriberBootstrapped) {
+    return;
+  }
+  redisSubscriberBootstrapped = true;
+
+  const subscriber = getRedisSubscriber();
+  await subscriber.psubscribe("agency:live:team:*");
+
+  subscriber.on("pmessage", (_pattern, channel, message) => {
+    try {
+      const event = agencyLiveEventSchema.parse(JSON.parse(message));
+      const teamId = channel.replace("agency:live:team:", "");
+      agencyLivePublisher.publish(teamId, event);
+    } catch (error) {
+      console.error("Invalid agency live event from Redis:", error);
+    }
+  });
 }

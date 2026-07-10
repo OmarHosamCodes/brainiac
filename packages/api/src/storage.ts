@@ -169,10 +169,17 @@ export async function getUserAvatarStream(storageKey: string) {
       Key: storageKey,
     }),
   );
+
+  if (!response.Body) {
+    throw new Error("Missing avatar object body");
+  }
+
+  const body = await response.Body.transformToByteArray();
+
   return {
-    body: response.Body as ReadableStream,
+    body,
     contentType: response.ContentType ?? "application/octet-stream",
-    contentLength: response.ContentLength,
+    contentLength: body.byteLength,
   };
 }
 
@@ -183,4 +190,18 @@ export async function deleteUserAvatarFromStorage(storageKey: string) {
       Key: storageKey,
     }),
   );
+}
+
+export function getUserAvatarPublicUrl(args: {
+  baseUrl: string;
+  userId: string;
+  storageKey?: string | null;
+}) {
+  const base = `${args.baseUrl.replace(/\/$/, "")}/api/user-avatars/${args.userId}`;
+  if (!args.storageKey?.startsWith("user-avatars/")) {
+    return base;
+  }
+
+  const version = args.storageKey.split("/").pop()?.split(".")[0];
+  return version ? `${base}?v=${version}` : base;
 }

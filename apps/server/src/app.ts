@@ -12,8 +12,10 @@
  */
 
 import { createContext } from "@brainiac/api/context";
+import { bootstrapAgencyLiveRedisSubscriber } from "@brainiac/api/routers/agency-ops/live";
+import { registerNotificationPushHandler } from "@brainiac/api/routers/notifications/delivery";
 import { auth } from "@brainiac/auth";
-import { env } from "@brainiac/env/server";
+import { corsOrigins, env, primaryCorsOrigin } from "@brainiac/env/server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -22,6 +24,14 @@ import { handleAppRouterRequest } from "./lib/handlers";
 import { logStartup } from "./lib/startup";
 import { registerTaskAttachmentUploadRoute } from "./lib/task-attachments";
 import { registerUserAvatarRoutes } from "./lib/user-avatar";
+import {
+  authenticateWebSocket,
+  handleWebSocketClose,
+  handleWebSocketMessage,
+  type AgencyWebSocketData,
+} from "./lib/ws-handler";
+import { startNotificationDigestScheduler } from "./lib/notification-digest";
+import { sendWebPushForNotification } from "./lib/web-push";
 
 function getRpcDebugResponse(error: unknown, path: string) {
   /**
@@ -90,7 +100,7 @@ function createApp() {
   app.use(
     "/*",
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: corsOrigins,
       allowMethods: ["GET", "POST", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization"],
       credentials: true,
@@ -100,7 +110,13 @@ function createApp() {
   app.on(["GET", "POST"], "/api/auth/*", (context) => auth.handler(context.req.raw));
 
   app.get("/billing/success", (context) => {
-    const url = new URL("/billing/success", env.CORS_ORIGIN);
+    const url = new URL("/billing/success", primaryCorsOrigin);
+    url.search = new URL(context.req.url).search;
+    return context.redirect(url.toString(), 302);
+  });
+
+  app.get("/error", (context) => {
+    const url = new URL("/login", primaryCorsOrigin);
     url.search = new URL(context.req.url).search;
     return context.redirect(url.toString(), 302);
   });
@@ -127,35 +143,23 @@ function createApp() {
 }
 
 const app = createApp();
+const port = env.PORT ?? 7000;
+
+await bootstrapAgencyLiveRedisSubscriber();
+registerNotificationPushHandler(sendWebPushForNotification);
+startNotificationDigestScheduler();
 
 // Log startup information in development
 if (env.NODE_ENV === "development") {
   logStartup({
-    port: 7000,
+    port,
     baseUrl: env.BETTER_AUTH_URL,
-    corsOrigin: env.CORS_ORIGIN,
+    corsOrigin: corsOrigins.join(", "),
   });
 }
 
-/**
- * Server export for Bun
- *
- * Port 7000 is configured for development via Traefik TCP proxy.
- * The actual Bun dev server runs on port 3000 and is proxied through
- * Traefik to 7000 for consistent URLs.
- *
- * To disable Traefik proxy and run on actual ports (3000/3001), use:
- *   bun run dev:portless
- */
-import {
-  authenticateWebSocket,
-  handleWebSocketClose,
-  handleWebSocketMessage,
-  type AgencyWebSocketData,
-} from "./lib/ws-handler";
-
 export default {
-  port: 7000, // Proxied via Traefik (actual dev server is on 3000)
+  port,
   fetch(request: Request, server: Bun.Server<AgencyWebSocketData>) {
     const url = new URL(request.url);
 
