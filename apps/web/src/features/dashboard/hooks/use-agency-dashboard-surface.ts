@@ -2,6 +2,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import type { AgencyTimeRangeFilters } from "@/features/shared/use-agency-time-range-filters";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { orpc } from "@/lib/orpc";
 import { useAgencyPresenceMembers } from "@/features/shared/agency-queries";
 import { useTheme } from "@/stores/theme";
@@ -57,10 +58,12 @@ export function useAgencyDashboardSurface({ teamId, filters }: UseAgencyDashboar
     return list.sort((a, b) => b.hours - a.hours);
   }, [rankedProjects]);
 
+  const errorMessage = getErrorMessage(dashboardQuery.error, "Try refreshing.");
+
   return {
     isLoading: dashboardQuery.isLoading,
     isError: dashboardQuery.isError,
-    error: dashboardQuery.error,
+    errorMessage,
     summary,
     rankedProjects,
     totalProjectHours,

@@ -13,7 +13,6 @@ import { projectHueFor } from "@/features/shared/project-palette";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
 import { formatDuration } from "@/lib/utils/format-duration";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { cn } from "@/lib/utils";
 import { type AgencyDashboardSurfaceViewModel } from "./hooks/use-agency-dashboard-surface";
 
@@ -166,7 +165,7 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
   const {
     isLoading,
     isError,
-    error,
+    errorMessage,
     summary,
     rankedProjects,
     totalProjectHours,
@@ -191,7 +190,7 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
       <div className={agencyErrorPanelClass} role="alert">
         <AlertTriangle className="mx-auto size-5 text-error" />
         <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load dashboard.</p>
-        <p className="mt-1 text-xs text-muted">{getErrorMessage(error, "Try refreshing.")}</p>
+        <p className="mt-1 text-xs text-muted">{errorMessage}</p>
         <Button variant="secondary" size="sm" className="mt-3" onClick={refetch}>
           Retry
         </Button>
