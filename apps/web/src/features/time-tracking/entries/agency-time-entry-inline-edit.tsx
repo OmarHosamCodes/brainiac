@@ -73,6 +73,7 @@ export function AgencyTimeEntryEditPopover({
             tasks={tasks}
             placeholder="+ Task"
             className="w-full"
+            highlightSearch
             disabled={saving}
           />
         </div>

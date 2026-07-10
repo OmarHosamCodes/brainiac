@@ -149,9 +149,11 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             <div className="mt-2 min-w-0">
               {isMulti ? (
                 <AgencyTimeEntryProjectLabel
+                  format="task-client"
                   projectId={group.projectId}
                   projectName={group.projectName}
                   clientName={group.clientName || "General"}
+                  taskTitle={group.taskTitle}
                   className="max-w-full"
                 />
               ) : (
@@ -163,8 +165,10 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                   fallbackTaskTitle={group.taskTitle}
                   fallbackProjectId={group.projectId}
                   fallbackProjectName={group.projectName}
+                  fallbackClientName={group.clientName || "General"}
                   placeholder="Choose task"
-                  triggerFormat="project-client"
+                  triggerFormat="task-client"
+                  highlightSearch
                   contentAlign="start"
                   disabled={editSaving || rowUpdating}
                   className={cn(taskChooserTriggerClass, "max-w-full")}

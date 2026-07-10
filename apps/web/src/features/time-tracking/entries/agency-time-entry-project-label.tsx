@@ -7,7 +7,7 @@ type AgencyTimeEntryProjectLabelProps = {
   projectName: string;
   clientName?: string;
   taskTitle?: string;
-  format?: "project-client" | "task-project";
+  format?: "project-client" | "task-project" | "task-client";
   className?: string;
 };
 
@@ -20,6 +20,21 @@ export function AgencyTimeEntryProjectLabel({
   className,
 }: AgencyTimeEntryProjectLabelProps) {
   const projectStyle = projectHueStyle(projectId);
+
+  if (format === "task-client") {
+    return (
+      <span className={cn("inline-flex min-w-0 items-center gap-1 truncate text-xs", className)}>
+        <AgencyProjectHueDot projectId={projectId} />
+        <span
+          className="truncate font-medium text-[var(--project-hue)] dark:text-[var(--project-hue-dark)]"
+          style={projectStyle}
+        >
+          {taskTitle ?? projectName}
+        </span>
+        <span className="truncate text-muted">. {clientName || "General"}</span>
+      </span>
+    );
+  }
 
   if (format === "task-project") {
     return (
