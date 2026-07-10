@@ -233,8 +233,7 @@ export const agencyTimeTrackerDescriptionZoneClass =
 export const agencyTimeTrackerControlsZoneClass =
   "flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2";
 
-export const agencyTimeTrackerSplitClass =
-  "flex min-w-0 flex-row items-center gap-2 sm:gap-3";
+export const agencyTimeTrackerSplitClass = "flex min-w-0 flex-row items-center gap-2 sm:gap-3";
 
 export const agencyTimeTrackerDescriptionCardClass = cn(
   agencyWorkTrackerCardClass,
@@ -258,8 +257,7 @@ export const agencyTimeTrackerActiveRowClass =
 export const agencyTimeTrackerStatusZoneClass =
   "flex min-w-0 max-w-[10rem] shrink items-center gap-1.5 sm:max-w-[13rem]";
 
-export const agencyTimeTrackerActionsZoneClass =
-  "flex shrink-0 items-center gap-3 pl-0.5";
+export const agencyTimeTrackerActionsZoneClass = "flex shrink-0 items-center gap-3 pl-0.5";
 
 export const agencyTimeTrackerStatusDividerClass = "mx-0.5 h-6 w-px shrink-0 bg-border";
 

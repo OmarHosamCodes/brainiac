@@ -21,12 +21,7 @@
         "vite.config.ts",
         "scripts/write-railway-server.mjs"
       ],
-      "project": [
-        "src/**/*.{ts,tsx}",
-        "vite*.ts",
-        "scripts/**/*.mjs",
-        "perf/**/*.mjs"
-      ],
+      "project": ["src/**/*.{ts,tsx}", "vite*.ts", "scripts/**/*.mjs", "perf/**/*.mjs"],
       "ignoreDependencies": ["tailwindcss"]
     },
     "apps/server": {

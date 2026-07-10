@@ -13,10 +13,7 @@ import { dashboardWorkspace, user, workspaceTeam, workspaceTeamMember } from "@b
 import { requireTeamMembership } from "../../lib/team-membership";
 import { getBillingStateForUser } from "../../billing-guard";
 
-export async function assertCanCreateTeam(
-  actorUserId: string,
-  _input: Record<string, never>,
-) {
+export async function assertCanCreateTeam(actorUserId: string, _input: Record<string, never>) {
   const billing = await getBillingStateForUser(actorUserId);
   const existing = await listUserTeams(actorUserId, {});
 
