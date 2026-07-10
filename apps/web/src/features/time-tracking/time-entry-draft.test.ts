@@ -5,6 +5,7 @@ import {
   applyStartTimeToDraft,
   draftSpansNextDay,
   draftToIsoRange,
+  formatDurationInput,
   type TimeEntryDraft,
 } from "./time-entry-draft";
 
@@ -18,6 +19,12 @@ const baseDraft: TimeEntryDraft = {
 };
 
 describe("time-entry-draft", () => {
+  test("formatDurationInput uses hh:mm:ss", () => {
+    expect(formatDurationInput(848)).toBe("00:14:08");
+    expect(formatDurationInput(840)).toBe("00:14:00");
+    expect(formatDurationInput(3_600)).toBe("01:00:00");
+  });
+
   test("overnightRange", () => {
     const overnightRange = draftToIsoRange({
       ...baseDraft,
@@ -39,7 +46,7 @@ describe("time-entry-draft", () => {
     );
     expect(endDraft.date).toBe("2026-07-04");
     expect(endDraft.endTime).toBe("01:00");
-    expect(endDraft.durationInput).toBe("2:00:00");
+    expect(endDraft.durationInput).toBe("02:00:00");
   });
 
   test("applyDurationToDraft", () => {
@@ -49,7 +56,7 @@ describe("time-entry-draft", () => {
     );
     expect(durationDraft.date).toBe("2026-07-04");
     expect(durationDraft.endTime).toBe("01:00");
-    expect(durationDraft.durationInput).toBe("2:00");
+    expect(durationDraft.durationInput).toBe("02:00:00");
   });
 
   test("draftSpansNextDay", () => {
@@ -85,7 +92,7 @@ describe("time-entry-draft", () => {
     );
     expect(sameDayDraft.date).toBe("2026-07-04");
     expect(sameDayDraft.endTime).toBe("17:00");
-    expect(sameDayDraft.durationInput).toBe("8:00:00");
+    expect(sameDayDraft.durationInput).toBe("08:00:00");
     expect(draftSpansNextDay(sameDayDraft)).toBe(false);
   });
 
@@ -108,6 +115,6 @@ describe("time-entry-draft", () => {
       "11:00",
     );
     expect(startDraft.endTime).toBe("13:32");
-    expect(startDraft.durationInput).toBe("2:32:00");
+    expect(startDraft.durationInput).toBe("02:32:00");
   });
 });

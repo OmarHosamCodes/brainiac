@@ -320,7 +320,7 @@ export function AgencyWorkSurfaceTaskTableRowView({
               <p className="mt-0.5 line-clamp-1 text-xs text-muted">{description}</p>
             ) : null}
             {variant === "active" ? (
-              <div className="mt-1.5 flex flex-wrap gap-1.5 lg:hidden">
+              <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
                 <span
                   className={cn(agencyTaskRowProjectPillClass, "max-w-[8rem] truncate")}
                   style={projectHuePillStyle(task.projectId, isDark)}
@@ -329,7 +329,7 @@ export function AgencyWorkSurfaceTaskTableRowView({
                 </span>
               </div>
             ) : variant === "delegated" ? (
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <span
                   className={cn(agencyTaskRowProjectPillClass, "max-w-[9rem] truncate")}
                   style={projectHuePillStyle(task.projectId, isDark)}

@@ -1,9 +1,8 @@
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import { useAgencyPresenceMembers } from "@/features/shared/agency-queries";
-import { agencyAvatarStackRingClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
-const STACK_AVATAR_LIMIT = 4;
+const GRID_CAPACITY = 4;
 
 type AgencyPresenceAvatarsProps = {
   teamId: string;
@@ -17,37 +16,40 @@ export function AgencyPresenceAvatars({ teamId, className }: AgencyPresenceAvata
     return null;
   }
 
-  const visibleMembers = members.slice(0, STACK_AVATAR_LIMIT);
-  const overflowCount = members.length - visibleMembers.length;
+  const showOverflow = members.length > GRID_CAPACITY;
+  const visibleMembers = showOverflow ? members.slice(0, 3) : members.slice(0, GRID_CAPACITY);
+  const overflowCount = showOverflow ? members.length - 3 : 0;
   const groupLabel =
     members.length === 1
       ? `${members[0]?.userName ?? "Member"} is tracking time`
       : `${members.length} team members tracking time`;
 
   return (
-    <div className={cn("inline-flex items-center", className)} role="img" aria-label={groupLabel}>
-      {visibleMembers.map((member, index) => (
+    <div
+      className={cn(
+        "grid size-9 shrink-0 grid-cols-2 gap-px overflow-hidden rounded-md border border-default bg-elevated p-px",
+        className,
+      )}
+      role="img"
+      aria-label={groupLabel}
+    >
+      {visibleMembers.map((member) => (
         <span
           key={member.userId}
-          className={cn(index > 0 && "-ml-2")}
-          style={{ zIndex: index + 1 }}
+          className="size-full min-h-0 min-w-0 overflow-hidden rounded-[3px]"
           title={`${member.userName} · ${member.projectName}`}
         >
           <AgencyMemberAvatar
             name={member.userName}
             avatarUrl={member.userAvatar}
             size="sm"
-            className={cn("size-7 rounded-full", agencyAvatarStackRingClass)}
+            className="size-full rounded-[3px]"
           />
         </span>
       ))}
       {overflowCount > 0 ? (
         <span
-          className={cn(
-            "relative z-10 -ml-2 flex size-7 shrink-0 items-center justify-center rounded-full",
-            "bg-muted text-[10px] font-bold text-foreground",
-            agencyAvatarStackRingClass,
-          )}
+          className="flex size-full items-center justify-center rounded-[3px] bg-muted text-[9px] font-bold leading-none text-foreground"
           title={`${overflowCount} more tracking time`}
           aria-hidden
         >

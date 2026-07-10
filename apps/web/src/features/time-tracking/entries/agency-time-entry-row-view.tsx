@@ -1,13 +1,14 @@
 import { Calendar, MoreVertical, Play, Timer, Trash2 } from "lucide-react";
 
+import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { AgencyTimeEntryActions } from "@/features/time-tracking/entries/agency-time-entry-actions";
+import { AgencyTimeEntryProjectLabel } from "@/features/time-tracking/entries/agency-time-entry-project-label";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import type { AgencyTimeEntryRowViewModel } from "@/features/time-tracking/hooks/use-agency-time-entry-row";
 import {
   agencyFocusRingClass,
-  agencyTaskRowProjectPillClass,
   agencyTimeEntryGridClass,
   agencyTimeEntryRowClass,
   agencyTimeEntryRowEditingClass,
@@ -16,7 +17,6 @@ import {
   agencyWorkPlayButtonClass,
 } from "@/features/shared/agency-ui";
 import { reportEntryWasteRowClass } from "@/features/reports/agency-report-grouping";
-import { projectHuePillStyle } from "@/features/shared/project-palette";
 import { cn } from "@/lib/utils";
 
 const descriptionLeadingSlotClass = "flex w-8 shrink-0 items-center justify-start";
@@ -29,9 +29,10 @@ type AgencyTimeEntryRowViewProps = {
 export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowViewProps) {
   const {
     group,
+    projects,
+    tasks,
     expanded,
     highlighted,
-    isDark,
     isMulti,
     canRestart,
     primaryEntryId,
@@ -57,6 +58,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onDescriptionChange,
     onDescriptionBlur,
     onDescriptionKeyDown,
+    onTaskChange,
     onStartTimeChange,
     onEndTimeChange,
     onStartDateChange,
@@ -68,8 +70,11 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onEditingDurationChange,
   } = view;
 
-  const categoryLabel = group.clientName || "General";
-  const projectLabel = group.projectName;
+  const taskChooserTriggerClass = cn(
+    "h-auto min-h-0 w-auto max-w-full justify-start gap-1 border-0 bg-transparent px-0 py-0 text-xs font-normal shadow-none hover:bg-muted/60",
+    agencyFocusRingClass,
+    "motion-reduce:transition-none",
+  );
 
   return (
     <div
@@ -83,10 +88,10 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         className,
       )}
     >
-      <div className="col-start-1 row-start-1 min-w-0 sm:col-auto sm:row-auto">
-        <div className="flex min-w-0 items-start gap-3">
+      <div className="col-start-1 row-start-1 flex min-w-0 items-center sm:col-auto sm:row-auto">
+        <div className="flex min-w-0 flex-1 items-center gap-3.5">
           {isMulti ? (
-            <div className={cn(descriptionLeadingSlotClass, "pt-1")}>
+            <div className={descriptionLeadingSlotClass}>
               <button
                 type="button"
                 className={cn(
@@ -141,22 +146,36 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               </span>
             )}
 
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              <span
-                className={cn(agencyTaskRowProjectPillClass, "max-w-[9rem] truncate")}
-                style={projectHuePillStyle(group.projectId, isDark)}
-              >
-                {group.taskTitle || projectLabel}
-              </span>
-              <span className="inline-flex max-w-[8rem] truncate rounded-full border border-default bg-elevated px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-                {categoryLabel}
-              </span>
+            <div className="mt-2 min-w-0">
+              {isMulti ? (
+                <AgencyTimeEntryProjectLabel
+                  projectId={group.projectId}
+                  projectName={group.projectName}
+                  clientName={group.clientName || "General"}
+                  className="max-w-full"
+                />
+              ) : (
+                <AgencyTaskChooser
+                  value={editDraft.taskId}
+                  onValueChange={onTaskChange}
+                  projects={projects}
+                  tasks={tasks}
+                  fallbackTaskTitle={group.taskTitle}
+                  fallbackProjectId={group.projectId}
+                  fallbackProjectName={group.projectName}
+                  placeholder="Choose task"
+                  triggerFormat="project-client"
+                  contentAlign="start"
+                  disabled={editSaving || rowUpdating}
+                  className={cn(taskChooserTriggerClass, "max-w-full")}
+                />
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="col-start-1 row-start-2 min-w-0 sm:col-auto sm:row-auto">
+      <div className="col-start-1 row-start-2 flex min-w-0 items-center sm:col-auto sm:row-auto">
         {!isMulti ? (
           <Popover
             open={timeEditorOpen}
@@ -234,43 +253,24 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         )}
       </div>
 
-      <div className="col-start-1 row-start-3 min-w-0 sm:col-auto sm:row-auto">
+      <div className="col-start-1 row-start-3 flex min-w-0 items-center sm:col-auto sm:row-auto">
         {!isMulti ? (
-          editingDuration ? (
-            <div className="inline-flex items-center gap-2">
-              <Timer className="size-4 shrink-0 text-muted" aria-hidden />
-              <Input
-                value={editDraft.durationInput}
-                onChange={(e) => onDurationChange(e.target.value)}
-                onBlur={() => {
-                  onEditingDurationChange(false);
-                  onInlineBlur();
-                }}
-                onKeyDown={(event) => {
-                  onInlineKeyDown(event);
-                  if (event.key === "Enter" || event.key === "Escape") {
-                    onEditingDurationChange(false);
-                  }
-                }}
-                disabled={editSaving || rowUpdating}
-                autoFocus
-                className="h-7 min-w-[4rem] border-0 bg-transparent px-0 font-mono text-sm font-medium tabular-nums text-muted shadow-none focus-visible:text-highlighted focus-visible:ring-0"
-                aria-label="Duration"
-              />
-            </div>
-          ) : (
-            <button
-              type="button"
-              className={cn(
-                "inline-flex items-center gap-2 font-mono text-sm font-medium tabular-nums text-muted hover:text-highlighted",
-                agencyFocusRingClass,
-              )}
-              onClick={() => onEditingDurationChange(true)}
-            >
-              <Timer className="size-4 shrink-0 text-muted" aria-hidden />
-              {editDraft.durationInput || durationLabel}
-            </button>
-          )
+          <div className="inline-flex h-8 min-w-0 max-w-full items-center gap-2 rounded-lg px-2 transition-colors hover:bg-elevated focus-within:bg-elevated">
+            <Timer className="size-4 shrink-0 text-muted" aria-hidden />
+            <Input
+              value={editDraft.durationInput}
+              onChange={(e) => onDurationChange(e.target.value)}
+              onFocus={() => onEditingDurationChange(true)}
+              onBlur={() => {
+                onEditingDurationChange(false);
+                onInlineBlur();
+              }}
+              onKeyDown={onInlineKeyDown}
+              disabled={editSaving || rowUpdating}
+              className="h-7 min-w-[4.5rem] border-0 bg-transparent px-0 font-mono text-sm font-medium tabular-nums text-muted shadow-none focus-visible:text-highlighted focus-visible:ring-0"
+              aria-label="Duration"
+            />
+          </div>
         ) : (
           <span className="inline-flex items-center gap-2 font-mono text-sm font-medium tabular-nums text-muted">
             <Timer className="size-4 shrink-0 text-muted" aria-hidden />
@@ -280,7 +280,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         {editError ? <p className="text-xs text-error">{editError}</p> : null}
       </div>
 
-      <div className="col-start-2 row-span-3 row-start-1 flex min-w-0 shrink-0 items-start justify-end gap-1 sm:col-auto sm:row-auto sm:items-center">
+      <div className="col-start-2 row-span-3 row-start-1 flex min-w-0 shrink-0 items-center justify-end gap-1.5 self-center sm:col-auto sm:row-auto">
         {isMulti && !expanded ? (
           <div className="flex shrink-0 items-center gap-0.5">
             <Button

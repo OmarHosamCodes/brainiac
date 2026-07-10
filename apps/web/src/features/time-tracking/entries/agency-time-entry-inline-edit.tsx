@@ -129,7 +129,7 @@ export function AgencyTimeEntryEditPopover({
             value={draft.durationInput}
             onChange={(e) => onDraftChange(applyDurationToDraft(draft, e.target.value))}
             className={cn("font-mono tabular-nums", agencyInputPlaceholderClass)}
-            placeholder="1:00"
+            placeholder="01:00:00"
             aria-label="Duration"
             disabled={saving}
           />

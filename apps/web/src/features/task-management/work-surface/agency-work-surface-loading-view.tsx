@@ -4,9 +4,11 @@ import {
   agencyTimeLogPanelClass,
   agencyTimePaneBodyClass,
   agencyTimePaneStackClass,
-  agencyTimeTrackerControlsCardClass,
-  agencyTimeTrackerDescriptionCardClass,
-  agencyTimeTrackerSplitClass,
+  agencyTimeTrackerActionsZoneClass,
+  agencyTimeTrackerCardClass,
+  agencyTimeTrackerDescriptionZoneClass,
+  agencyTimeTrackerStatusDividerClass,
+  agencyTimeTrackerStatusZoneClass,
   agencyTimeWeekFooterClass,
   agencyWorkTabBarClass,
   agencyWorkTabShellClass,
@@ -18,18 +20,18 @@ import { cn } from "@/lib/utils";
 
 function TrackerSkeleton() {
   return (
-    <div className={agencyTimeTrackerSplitClass} aria-hidden>
-      <div className={agencyTimeTrackerDescriptionCardClass}>
-        <Skeleton className="h-3 w-16" />
-        <Skeleton className="mt-2 h-5 w-3/4 max-w-xs" />
+    <div className={agencyTimeTrackerCardClass} aria-hidden>
+      <div className={agencyTimeTrackerDescriptionZoneClass}>
+        <Skeleton className="h-5 w-3/4 max-w-xs" />
       </div>
-      <div className={agencyTimeTrackerControlsCardClass}>
-        <div className="flex w-full min-w-0 items-center gap-2">
-          <Skeleton className="h-4 w-40 max-w-[45%]" />
-          <Skeleton className="ml-auto h-6 w-24" />
-          <Skeleton className="h-9 w-16 rounded-full" />
-          <Skeleton className="size-9 shrink-0 rounded-full" />
-        </div>
+      <div className={agencyTimeTrackerStatusDividerClass} />
+      <div className={agencyTimeTrackerStatusZoneClass}>
+        <Skeleton className="h-4 w-full" />
+      </div>
+      <div className={agencyTimeTrackerStatusDividerClass} />
+      <div className={agencyTimeTrackerActionsZoneClass}>
+        <Skeleton className="h-6 w-[5rem]" />
+        <Skeleton className="h-8 w-16 rounded-full" />
       </div>
     </div>
   );
@@ -67,7 +69,7 @@ function SessionSectionSkeleton({ rows }: { rows: number }) {
         {Array.from({ length: rows }, (_, index) => (
           <li
             key={index}
-            className="flex items-center gap-3 border-b border-default px-4 py-3 last:border-b-0"
+            className="flex items-center gap-3 border-b border-default px-5 py-3.5 last:border-b-0"
           >
             <Skeleton className="size-6 shrink-0 rounded-full" />
             <div className="min-w-0 flex-1 space-y-2">

@@ -37,7 +37,7 @@ export function AgencyWorkSurfaceDelegatedView({
         {loading ? (
           <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-14 w-full rounded-lg" />
+              <Skeleton key={index} className="h-[4.5rem] w-full rounded-lg" />
             ))}
           </div>
         ) : sections.length === 0 ? (

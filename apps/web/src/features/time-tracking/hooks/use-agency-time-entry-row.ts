@@ -264,12 +264,14 @@ export function useAgencyTimeEntryRow({
     (event: KeyboardEvent<HTMLInputElement>) => {
       if (event.key === "Enter") {
         event.preventDefault();
+        setEditingDuration(false);
         void saveInlineDraft();
       }
       if (event.key === "Escape") {
         event.preventDefault();
         resetEditDraft();
         cancelDescriptionEdit();
+        setEditingDuration(false);
       }
     },
     [cancelDescriptionEdit, resetEditDraft, saveInlineDraft],

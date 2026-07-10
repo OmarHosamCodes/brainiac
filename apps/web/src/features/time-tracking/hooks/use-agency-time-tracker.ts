@@ -19,7 +19,6 @@ import { useAgencyElapsedTimer } from "@/features/time-tracking/hooks/use-agency
 import {
   canStartAgencyTimer,
   canStopAgencyTimer,
-  getAgencyTimerStopButtonPresentation,
   resolveAgencyTimerStartProject,
   resolveAgencyTimerTaskRef,
 } from "@/features/time-tracking/timer-validation";
@@ -75,7 +74,7 @@ export type AgencyTimeTrackerViewModel = {
   canStartTimer: boolean;
   canStopTimer: boolean;
   stopButtonLabel: string;
-  stopButtonDisabled: boolean;
+  stopButtonHint: string | null;
   stopButtonWarningRing: boolean;
   isTimerMutationPending: boolean;
   isStartTimeSaving: boolean;
@@ -133,6 +132,7 @@ export function useAgencyTimeTracker({
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDraftRef = useRef<AgencyTimerStartDraft | null>(null);
+  const taskExplicitlyChosenRef = useRef(false);
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId);
@@ -279,12 +279,6 @@ export function useAgencyTimeTracker({
     setSuggestionsDismissed(false);
   }, [descriptionSuggestions, timerDescription]);
 
-  useEffect(() => {
-    if (selectedTaskId || activeTimerHasTask) {
-      setTaskChooserOpen(false);
-    }
-  }, [activeTimerHasTask, selectedTaskId]);
-
   function revealTaskChooser() {
     setTaskChooserOpen(true);
   }
@@ -295,14 +289,16 @@ export function useAgencyTimeTracker({
     await startTimerAction({
       teamId,
       project: startProject,
-      task: selectedTask,
+      task: taskExplicitlyChosenRef.current && selectedTask ? selectedTask : null,
       description: timerDescription,
     });
+    taskExplicitlyChosenRef.current = false;
   }
 
   function applyDescriptionSuggestion(suggestion: AgencyTimeTrackerSuggestion) {
     setTrackerDescription(teamId, suggestion.description);
     if (suggestion.taskId) {
+      taskExplicitlyChosenRef.current = true;
       setTrackerTaskId(teamId, suggestion.taskId);
       const task = tasks.find((entry) => entry.id === suggestion.taskId);
       if (task) {
@@ -367,10 +363,9 @@ export function useAgencyTimeTracker({
       activeTimer,
       description: timerDescription,
       discard,
-      task:
-        !activeTimerHasTask && resolvedTimerTask
-          ? { id: resolvedTimerTask.id, title: resolvedTimerTask.title }
-          : null,
+      task: resolvedTimerTask
+        ? { id: resolvedTimerTask.id, title: resolvedTimerTask.title }
+        : null,
     });
   }
 
@@ -385,12 +380,16 @@ export function useAgencyTimeTracker({
       ? `${trackerProject?.clientName ?? "Project"} · ${trackerProject?.name ?? taskChooserLabel}`
       : "Choose task";
 
-  const stopButton = getAgencyTimerStopButtonPresentation({
-    isPending: isTimerMutationPending,
-    canStop: canStopTimer,
-    descriptionTrimmed: Boolean(descriptionTrimmed),
-  });
-  const stopButtonLabel = stopButton.label;
+  let stopButtonLabel = "Stop";
+  let stopButtonHint: string | null = null;
+  if (isTimerMutationPending) {
+    stopButtonLabel = "…";
+  } else if (!canStopTimer) {
+    stopButtonLabel = descriptionTrimmed ? "Task" : "Details";
+    stopButtonHint = descriptionTrimmed
+      ? "Choose a task to save this entry."
+      : "Enter what you're working on.";
+  }
 
   function onStartTimePopoverOpenChange(open: boolean) {
     if (open && activeTimer?.startedAt) {
@@ -428,7 +427,7 @@ export function useAgencyTimeTracker({
     canStartTimer,
     canStopTimer,
     stopButtonLabel,
-    stopButtonDisabled: !teamId || stopButton.disabled,
+    stopButtonHint,
     stopButtonWarningRing: Boolean(activeTimer && !canStopTimer),
     isTimerMutationPending,
     isStartTimeSaving: timerAdjustCount > 0,
@@ -450,6 +449,7 @@ export function useAgencyTimeTracker({
     onDescriptionKeyDown: handleDescriptionKeyDown,
     onSuggestionActiveIndexChange: setActiveSuggestionIndex,
     onTaskChange: (value) => {
+      taskExplicitlyChosenRef.current = Boolean(value);
       setTrackerTaskId(teamId, value || "");
       const task = tasks.find((entry) => entry.id === value);
       if (task) {

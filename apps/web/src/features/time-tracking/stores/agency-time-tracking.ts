@@ -290,6 +290,7 @@ function createAgencyTimeTrackingActions(
         },
       };
     });
+    mirrorTrackerDraftToActiveTimer(teamId);
   }
 
   function setTrackerProjectId(teamId: string, projectId: string) {
@@ -307,6 +308,7 @@ function createAgencyTimeTrackingActions(
         },
       };
     });
+    mirrorTrackerDraftToActiveTimer(teamId);
   }
 
   function setTrackerTaskId(teamId: string, taskId: string) {
@@ -323,6 +325,65 @@ function createAgencyTimeTrackingActions(
           [teamId]: { ...existing, taskId },
         },
       };
+    });
+    mirrorTrackerDraftToActiveTimer(teamId);
+  }
+
+  function getActiveTimerForTeam(teamId: string): AgencyActiveTimer | null {
+    const optimisticTimer = useAgencyOptimisticStore.getState().activeTimers[teamId];
+    if (optimisticTimer) {
+      return optimisticTimer;
+    }
+
+    const queryClient = getQueryClient();
+
+    for (const query of queryClient.getQueryCache().findAll()) {
+      const path = query.queryKey[0];
+      if (
+        !Array.isArray(path) ||
+        path[0] !== "agencyOps" ||
+        path[1] !== "timer" ||
+        path[2] !== "getActive"
+      ) {
+        continue;
+      }
+
+      const cached = queryClient.getQueryData<AgencyActiveTimerQueryData>(query.queryKey);
+      if (cached?.timer?.teamId === teamId) {
+        return cached.timer;
+      }
+    }
+
+    return null;
+  }
+
+  function mirrorTrackerDraftToActiveTimer(teamId: string) {
+    if (!teamId) {
+      return;
+    }
+
+    const draft = get().trackerDraftsByTeam[teamId];
+    if (!draft) {
+      return;
+    }
+
+    const activeTimer = getActiveTimerForTeam(teamId);
+    if (!activeTimer || draft.syncedTimerId !== activeTimer.id) {
+      return;
+    }
+
+    const taskId = draft.taskId.trim() || null;
+    const cachedTask = taskId ? findProjectTaskInCache(teamId, taskId) : null;
+    const projectId = cachedTask?.projectId ?? (draft.projectId || activeTimer.projectId);
+
+    patchActiveTimerCaches({
+      ...activeTimer,
+      description: draft.description,
+      taskId,
+      taskTitle: cachedTask?.title ?? (taskId ? activeTimer.taskTitle : null),
+      projectId,
+      projectName: activeTimer.projectName,
+      updatedAt: new Date().toISOString(),
     });
   }
 

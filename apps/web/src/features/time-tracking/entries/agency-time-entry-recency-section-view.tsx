@@ -24,7 +24,7 @@ export function AgencyTimeEntryRecencySectionView({
   return (
     <section className={agencyWorkTableListClass}>
       <header className={agencyTimeEntrySectionHeaderClass}>
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2.5">
           <span className="font-semibold text-highlighted">{section.label}</span>
           <span className="rounded-full bg-elevated px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted">
             {section.groups.length}

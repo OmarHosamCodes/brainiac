@@ -1,3 +1,5 @@
+import { formatDuration } from "@/lib/utils/format-duration";
+
 export type TimeEntryDraft = {
   taskId: string;
   date: string;
@@ -28,14 +30,7 @@ function toTimeInputValue(date: Date) {
 }
 
 export function formatDurationInput(seconds: number): string {
-  const safeSeconds = Math.max(0, Math.round(seconds));
-  const hours = Math.floor(safeSeconds / 3_600);
-  const minutes = Math.floor((safeSeconds % 3_600) / 60);
-  const secs = safeSeconds % 60;
-  if (hours > 0 || secs > 0) {
-    return `${hours}:${pad2(minutes)}:${pad2(secs)}`;
-  }
-  return `${hours}:${pad2(minutes)}`;
+  return formatDuration(seconds, "clock");
 }
 
 export function parseDurationInput(value: string): number | null {
@@ -117,7 +112,7 @@ export function applyDurationToDraft(draft: TimeEntryDraft, durationInput: strin
   const end = new Date(start.getTime() + seconds * 1_000);
   return {
     ...draft,
-    durationInput,
+    durationInput: formatDurationInput(seconds),
     endTime: toTimeInputValue(end),
   };
 }
