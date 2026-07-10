@@ -11,7 +11,7 @@ import {
   workspaceReceivableStatusLabels,
   type WorkspaceCollectionsTrackerBlock,
   type WorkspaceReceivableFilter,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

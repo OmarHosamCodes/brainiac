@@ -1,4 +1,4 @@
-# Contributing to Brainiac
+# Contributing to Orch
 
 Thank you for your interest in contributing. This guide covers setup, project layout, and common workflows.
 
@@ -214,8 +214,8 @@ bun run db:push
 #### 3. Query
 
 ```typescript
-import { db } from "@brainiac/db";
-import { myTable } from "@brainiac/db/schema";
+import { db } from "@orch/db";
+import { myTable } from "@orch/db/schema";
 
 const items = await db.select().from(myTable);
 ```
@@ -224,7 +224,7 @@ const items = await db.select().from(myTable);
 
 1. Add to `packages/env/src/server.ts` (backend) or `packages/env/src/vite.ts` (frontend `VITE_PUBLIC_*` vars)
 2. Document in `.env.example`
-3. Use via `@brainiac/env/server` or `@/lib/env`
+3. Use via `@orch/env/server` or `@/lib/env`
 
 ---
 
@@ -297,4 +297,4 @@ git push origin feat/my-feature
 
 ## Thank You
 
-Your contributions help make Brainiac better.
+Your contributions help make Orch better.

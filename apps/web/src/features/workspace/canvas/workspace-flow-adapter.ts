@@ -1,4 +1,4 @@
-import type { WorkspaceNodeTint } from "@brainiac/workspace";
+import type { WorkspaceNodeTint } from "@orch/workspace";
 import type { Connection, Edge, Node, NodeChange } from "@xyflow/react";
 
 import type { CanvasNodeModel } from "@/features/workspace/canvas/canvas-types";

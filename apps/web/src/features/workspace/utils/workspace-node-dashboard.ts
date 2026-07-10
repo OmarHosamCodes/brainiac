@@ -1,4 +1,4 @@
-import type { WorkspaceNodeTint } from "@brainiac/workspace";
+import type { WorkspaceNodeTint } from "@orch/workspace";
 import type { CSSProperties } from "react";
 
 export type WorkspaceNodeTintOption = {

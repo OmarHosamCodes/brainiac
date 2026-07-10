@@ -13,16 +13,16 @@ import {
   type DashboardConversationSummary,
   type DashboardConversationUsageLatest,
   type DashboardConversationUsageSummary,
-} from "@brainiac/agent";
-import { db } from "@brainiac/db";
+} from "@orch/agent";
+import { db } from "@orch/db";
 import {
   dashboardConversation,
   dashboardConversationMessage,
   type DashboardConversationMessageContextNodeTitlesRecord,
   type DashboardConversationMessageToolsCalledRecord,
   type DashboardConversationUsageSummaryRecord,
-} from "@brainiac/db/schema";
-import { createWorkspaceId } from "@brainiac/workspace";
+} from "@orch/db/schema";
+import { createWorkspaceId } from "@orch/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 

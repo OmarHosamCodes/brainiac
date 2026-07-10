@@ -1,11 +1,11 @@
-import { db } from "@brainiac/db";
+import { db } from "@orch/db";
 import {
   agencyOpsProjectJourney,
   agencyOpsProjectJourneyStep,
   agencyOpsProjectTask,
   agencyOpsProject,
   type AgencyOpsJourneyStepKind,
-} from "@brainiac/db/schema";
+} from "@orch/db/schema";
 import { ORPCError } from "@orpc/server";
 import { and, eq, inArray, asc } from "drizzle-orm";
 import { notifyJourneyMilestone } from "../../notifications/fanout";

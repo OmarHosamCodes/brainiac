@@ -1,5 +1,5 @@
 import { and, inArray, eq } from "drizzle-orm";
-import { agencyOpsProject, agencyOpsTimeEntry } from "@brainiac/db/schema";
+import { agencyOpsProject, agencyOpsTimeEntry } from "@orch/db/schema";
 
 export type ReportEntityFilterInput = {
   clientId?: string;

@@ -3,7 +3,7 @@ import {
   createWorkspaceDecisionMatrixOption,
   getDecisionMatrixSummary,
   type WorkspaceDecisionMatrixBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Columns2, Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

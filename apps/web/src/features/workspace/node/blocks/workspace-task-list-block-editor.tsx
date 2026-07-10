@@ -4,7 +4,7 @@ import {
   type WorkspaceTaskDomain,
   type WorkspaceTaskListBlock,
   type WorkspaceTaskPriority,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Calendar, ChevronUp, Clock, Plus, Settings2, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 

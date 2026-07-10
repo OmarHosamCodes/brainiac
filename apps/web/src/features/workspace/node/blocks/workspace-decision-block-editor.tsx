@@ -1,4 +1,4 @@
-import { getDecisionSummary, type WorkspaceDecisionBlock } from "@brainiac/workspace";
+import { getDecisionSummary, type WorkspaceDecisionBlock } from "@orch/workspace";
 import { CheckCircle2, MinusCircle, Plus, PlusCircle, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

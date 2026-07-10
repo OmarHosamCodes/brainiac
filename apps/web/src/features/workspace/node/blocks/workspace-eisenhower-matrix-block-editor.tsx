@@ -13,7 +13,7 @@ import {
   type WorkspaceTask,
   type WorkspaceTaskDomain,
   type WorkspaceTaskQuadrant,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import {
   ArrowUpRight,
   LayoutGrid,

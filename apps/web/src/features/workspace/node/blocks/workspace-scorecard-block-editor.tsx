@@ -1,4 +1,4 @@
-import type { WorkspaceScorecardBlock } from "@brainiac/workspace";
+import type { WorkspaceScorecardBlock } from "@orch/workspace";
 import { BarChart3, Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

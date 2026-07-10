@@ -6,7 +6,7 @@ import {
   workspaceSalesForecastBucketLabels,
   type WorkspaceForecastConfidenceBoardBlock,
   type WorkspaceSalesForecastBucket,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import {
   AlertTriangle,
   ArrowLeft,

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { eq } from "drizzle-orm";
 
-Bun.env.DATABASE_URL ??= "postgresql://postgres:password@localhost:5440/brainiac";
+Bun.env.DATABASE_URL ??= "postgresql://postgres:password@localhost:5440/orch";
 
-const realAgent = await import("@brainiac/agent");
+const realAgent = await import("@orch/agent");
 const runDashboardAgent = mock(async () => ({
   response: "The sprint plan is ready.",
   model: "test-model",
@@ -22,11 +22,11 @@ const runDashboardAgent = mock(async () => ({
   workspaceSnapshot: null,
 }));
 
-mock.module("@brainiac/agent", () => ({ ...realAgent, runDashboardAgent }));
+mock.module("@orch/agent", () => ({ ...realAgent, runDashboardAgent }));
 
 const [{ db }, { user }, service] = await Promise.all([
-  import("@brainiac/db"),
-  import("@brainiac/db/schema/auth"),
+  import("@orch/db"),
+  import("@orch/db/schema/auth"),
   import("./service"),
 ]);
 

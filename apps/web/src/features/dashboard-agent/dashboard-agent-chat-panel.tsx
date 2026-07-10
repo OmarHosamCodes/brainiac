@@ -1,4 +1,4 @@
-import type { WorkspaceNode } from "@brainiac/workspace";
+import type { WorkspaceNode } from "@orch/workspace";
 import { useEffect, useState } from "react";
 
 import { DashboardAgentChatHeader } from "@/features/dashboard-agent/agent-chat/dashboard-agent-chat-header";

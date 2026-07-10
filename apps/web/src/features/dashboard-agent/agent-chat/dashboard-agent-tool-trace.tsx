@@ -1,4 +1,4 @@
-import type { AgentToolCallEntry } from "@brainiac/agent";
+import type { AgentToolCallEntry } from "@orch/agent";
 
 import { agentChatToolTraceClass } from "@/features/dashboard-agent/dashboard-agent-ui";
 import { getDashboardAgentToolTraceViewModel } from "@/features/dashboard-agent/dashboard-agent-view-models";

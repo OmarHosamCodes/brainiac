@@ -60,7 +60,7 @@ export function AppShellRail({ onOpenSearch }: AppShellRailProps) {
               !railExpanded && "sr-only",
             )}
           >
-            Brainiac
+            Orch
           </span>
         </div>
 

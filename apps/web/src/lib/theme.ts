@@ -1,6 +1,6 @@
 export type ThemePreference = "light" | "dark";
 
-const STORAGE_KEY = "brainiac-theme";
+const STORAGE_KEY = "orch-theme";
 
 function systemPrefersDark(): boolean {
   if (typeof window === "undefined" || !window.matchMedia) return false;

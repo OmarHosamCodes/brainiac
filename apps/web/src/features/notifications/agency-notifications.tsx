@@ -1,4 +1,4 @@
-import type { NotificationRecord } from "@brainiac/api/schemas/notifications";
+import type { NotificationRecord } from "@orch/api/schemas/notifications";
 import { Bell, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";

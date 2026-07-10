@@ -4,7 +4,7 @@ import type {
   WorkspaceNodeDashboardFeaturedBlock,
   WorkspaceNodeTint,
   WorkspaceNodeType,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 
 export type EditorMode = "create" | "edit";
 export type SaveState = "idle" | "saving" | "saved" | "error";

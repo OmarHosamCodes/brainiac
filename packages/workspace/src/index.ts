@@ -1,4 +1,4 @@
-import { assertNever } from "@brainiac/config/assert-never";
+import { assertNever } from "@orch/config/assert-never";
 import {
   DEFAULT_WORKSPACE_NODE_HEIGHT,
   DEFAULT_WORKSPACE_NODE_MIN_HEIGHT,

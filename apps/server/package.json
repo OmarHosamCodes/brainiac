@@ -8,7 +8,7 @@
     "check-types": "tsc -b",
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server",
     "dev": "bun run --hot src/index.ts",
-    "dev:portless": "portless server.brainiac bun run --hot src/index.ts",
+    "dev:portless": "portless server.orch bun run --hot src/index.ts",
     "grant:lifetime-pro": "bun run src/operations/maintenance/grant-lifetime-pro.ts",
     "db:seed:agency": "bun run src/operations/seeds/seed-agency.ts",
     "db:clear:team": "bun run src/operations/maintenance/clear-team-data.ts",
@@ -22,12 +22,12 @@
     "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"
   },
   "dependencies": {
-    "@brainiac/api": "workspace:*",
-    "@brainiac/auth": "workspace:*",
-    "@brainiac/db": "workspace:*",
-    "@brainiac/env": "workspace:*",
-    "@brainiac/workspace": "workspace:*",
     "@clack/prompts": "^1.6.0",
+    "@orch/api": "workspace:*",
+    "@orch/auth": "workspace:*",
+    "@orch/db": "workspace:*",
+    "@orch/env": "workspace:*",
+    "@orch/workspace": "workspace:*",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",
@@ -39,7 +39,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@brainiac/config": "workspace:*",
+    "@orch/config": "workspace:*",
     "@types/bun": "catalog:",
     "tsdown": "^0.22.3",
     "typescript": "catalog:"

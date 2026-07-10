@@ -2,7 +2,7 @@ import {
   buildMessageHouseStressTestPrompt,
   getMessageHouseSummary,
   type WorkspaceMessageHouseBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Loader2, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";

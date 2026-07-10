@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { formatTaskAssigneeLabel } from "@brainiac/api/schemas/agency-ops";
+import { formatTaskAssigneeLabel } from "@orch/api/schemas/agency-ops";
 import type { AgencyTaskThreadMember } from "@/features/task-management/agency-work";
 import { UNASSIGNED_ASSIGNEE_VALUE } from "@/features/task-management/stores/agency-task-list";
 

@@ -8,7 +8,7 @@ import {
   type WorkspaceDealScoringMatrixBlock,
   type WorkspaceSalesPipelineStage,
   type WorkspaceSalesTemperature,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { BadgeDollarSign, Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

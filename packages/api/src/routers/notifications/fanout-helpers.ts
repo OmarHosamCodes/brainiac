@@ -1,4 +1,4 @@
-import type { NotificationType } from "@brainiac/db/schema";
+import type { NotificationType } from "@orch/db/schema";
 
 export function excludeActor(recipientIds: string[], actorUserId: string | null | undefined) {
   if (!actorUserId) return [...new Set(recipientIds)];

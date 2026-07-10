@@ -7,7 +7,7 @@ import {
   workspaceCourseStatusLabels,
   type WorkspaceCourseRoadmapBlock,
   type WorkspaceCourseStatus,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Check, Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

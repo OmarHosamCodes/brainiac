@@ -1,5 +1,5 @@
-import { runTaskAgent } from "@brainiac/agent";
-import { db } from "@brainiac/db";
+import { runTaskAgent } from "@orch/agent";
+import { db } from "@orch/db";
 import {
   agencyOpsClient,
   agencyOpsProject,
@@ -9,10 +9,10 @@ import {
   agencyOpsTaskMessage,
   agencyOpsTaskThread,
   user,
-} from "@brainiac/db/schema";
+} from "@orch/db/schema";
 import { formatTaskAssigneeLabel } from "../../../schemas/agency-ops";
-import type { AttachmentMetadata } from "@brainiac/db/schema/agency-ops";
-import { createWorkspaceId } from "@brainiac/workspace";
+import type { AttachmentMetadata } from "@orch/db/schema/agency-ops";
+import { createWorkspaceId } from "@orch/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 

@@ -9,7 +9,7 @@ import type {
   AgencyProjectTaskStatus,
   AgencyTaskProject,
   AgencyTaskThreadMember,
-} from "@brainiac/api/schemas/agency-ops";
+} from "@orch/api/schemas/agency-ops";
 
 export type {
   AgencyProject,

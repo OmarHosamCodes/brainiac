@@ -1,5 +1,5 @@
 {
-  "name": "@brainiac/auth",
+  "name": "@orch/auth",
   "type": "module",
   "exports": {
     ".": {
@@ -14,14 +14,14 @@
     "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"
   },
   "dependencies": {
-    "@brainiac/db": "workspace:*",
-    "@brainiac/env": "workspace:*",
+    "@orch/db": "workspace:*",
+    "@orch/env": "workspace:*",
     "@polar-sh/better-auth": "^1.8.3",
     "@polar-sh/sdk": "^0.47.0",
     "better-auth": "catalog:"
   },
   "devDependencies": {
-    "@brainiac/config": "workspace:*",
+    "@orch/config": "workspace:*",
     "typescript": "catalog:"
   }
 }

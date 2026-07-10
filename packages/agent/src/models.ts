@@ -1,5 +1,5 @@
 import type { Model } from "@openrouter/sdk/models";
-import { env } from "@brainiac/env/server";
+import { env } from "@orch/env/server";
 import { z } from "zod";
 
 import { createOpenRouterClient } from "./client";

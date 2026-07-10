@@ -16,7 +16,7 @@ import {
   createWorkspaceTableBlock,
   createWorkspaceTableColumn,
   createWorkspaceTableRow,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 

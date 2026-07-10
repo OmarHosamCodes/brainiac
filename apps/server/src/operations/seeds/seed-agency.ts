@@ -1,6 +1,6 @@
 import { intro, isCancel, outro, select, spinner, text, confirm } from "@clack/prompts";
-import { uploadTaskAttachmentBuffer } from "@brainiac/api/storage";
-import { db } from "@brainiac/db";
+import { uploadTaskAttachmentBuffer } from "@orch/api/storage";
+import { db } from "@orch/db";
 import {
   agencyOpsClient,
   agencyOpsClientContact,
@@ -24,9 +24,9 @@ import {
   type AgencyOpsTaskMessageSenderType,
   type AgencyOpsTaskMessageType,
   type WorkspaceTeamRole,
-} from "@brainiac/db/schema";
-import { createWorkspaceId } from "@brainiac/workspace";
-import { env } from "@brainiac/env/server";
+} from "@orch/db/schema";
+import { createWorkspaceId } from "@orch/workspace";
+import { env } from "@orch/env/server";
 import { and, eq } from "drizzle-orm";
 import { ensureCredentialAccount } from "../../lib/ensure-credential-account";
 import {
@@ -49,14 +49,14 @@ type SeedUserDefinition = {
 };
 
 const SEED_USERS: SeedUserDefinition[] = [
-  { key: "founder", name: "Avery Founder", email: "founder@brainiac.test" },
-  { key: "ops", name: "Mina Operator", email: "ops@brainiac.test" },
-  { key: "analyst", name: "Noah Analyst", email: "analyst@brainiac.test" },
-  { key: "designer", name: "Luna Designer", email: "designer@brainiac.test" },
-  { key: "dev", name: "Felix Dev", email: "dev@brainiac.test" },
+  { key: "founder", name: "Avery Founder", email: "founder@orch.test" },
+  { key: "ops", name: "Mina Operator", email: "ops@orch.test" },
+  { key: "analyst", name: "Noah Analyst", email: "analyst@orch.test" },
+  { key: "designer", name: "Luna Designer", email: "designer@orch.test" },
+  { key: "dev", name: "Felix Dev", email: "dev@orch.test" },
 ];
 
-const DEFAULT_SEED_PASSWORD = "brainiac1234";
+const DEFAULT_SEED_PASSWORD = "orch1234";
 
 const SEED_ATTACHMENT_BYTES = {
   png: Buffer.from(
@@ -330,7 +330,7 @@ async function manageMembers(
         if (isCancel(name)) return;
         const email = await text({
           message: "New member email:",
-          defaultValue: "new@brainiac.test",
+          defaultValue: "new@orch.test",
           validate: (v) => (typeof v === "string" && v.includes("@") ? undefined : "Invalid email"),
         });
         if (isCancel(email)) return;
@@ -507,15 +507,15 @@ async function buildShowcaseThreadMessages(ctx: SeedContext): Promise<SeedMessag
 
   const [heroImage, moodImage, detailImage] = await Promise.all([
     fetchSeedBuffer(
-      "https://picsum.photos/seed/brainiac-thread-hero/960/640.jpg",
+      "https://picsum.photos/seed/orch-thread-hero/960/640.jpg",
       SEED_ATTACHMENT_BYTES.png,
     ),
     fetchSeedBuffer(
-      "https://picsum.photos/seed/brainiac-thread-mood/960/640.jpg",
+      "https://picsum.photos/seed/orch-thread-mood/960/640.jpg",
       SEED_ATTACHMENT_BYTES.png,
     ),
     fetchSeedBuffer(
-      "https://picsum.photos/seed/brainiac-thread-detail/640/640.jpg",
+      "https://picsum.photos/seed/orch-thread-detail/640/640.jpg",
       SEED_ATTACHMENT_BYTES.png,
     ),
   ]);
@@ -1401,7 +1401,7 @@ async function resolveSeedTeam(teamId: string | null): Promise<{
   const [founder] = await db
     .select({ id: user.id })
     .from(user)
-    .where(eq(user.email, "founder@brainiac.test"))
+    .where(eq(user.email, "founder@orch.test"))
     .limit(1);
 
   if (founder) {
@@ -1500,7 +1500,7 @@ async function main() {
     return;
   }
 
-  intro("Brainiac Agency Seed");
+  intro("Orch Agency Seed");
 
   const password = env.BRAINIAC_SEED_PASSWORD?.trim() || DEFAULT_SEED_PASSWORD;
 

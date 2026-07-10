@@ -10,9 +10,11 @@ type MarketingBrandLockupProps = {
 
 export function MarketingBrandLockup({ className, linkToHome = false }: MarketingBrandLockupProps) {
   const content = (
-    <div className={cn("flex items-center gap-2.5 text-sm font-bold tracking-tight", className)}>
+    <div
+      className={cn("flex items-center gap-2.5 text-sm font-semibold tracking-tight", className)}
+    >
       <BrandMark className="size-7" />
-      Brainiac
+      Orch
     </div>
   );
 

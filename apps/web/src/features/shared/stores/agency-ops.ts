@@ -19,7 +19,7 @@ import {
   refetchAgencyProjectTaskListQueries,
 } from "@/features/shared/agency-query-cache";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
-import type { AgencyProjectJourney } from "@brainiac/api/schemas/agency-ops";
+import type { AgencyProjectJourney } from "@orch/api/schemas/agency-ops";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 // Shared types (mirrored from API shapes — keep in sync with oRPC output)

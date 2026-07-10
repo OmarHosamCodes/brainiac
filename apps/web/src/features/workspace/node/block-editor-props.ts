@@ -1,4 +1,4 @@
-import type { WorkspaceBlock } from "@brainiac/workspace";
+import type { WorkspaceBlock } from "@orch/workspace";
 
 export type WorkspaceBlockEditorProps<TBlock extends WorkspaceBlock = WorkspaceBlock> = {
   block: TBlock;

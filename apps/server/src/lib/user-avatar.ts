@@ -1,8 +1,8 @@
-import { compressImage } from "@brainiac/api/image-compression";
-import { getUserAvatarStream, uploadUserAvatarBuffer } from "@brainiac/api/storage";
-import { createContext } from "@brainiac/api/context";
-import { db } from "@brainiac/db";
-import { user } from "@brainiac/db/schema";
+import { compressImage } from "@orch/api/image-compression";
+import { getUserAvatarStream, uploadUserAvatarBuffer } from "@orch/api/storage";
+import { createContext } from "@orch/api/context";
+import { db } from "@orch/db";
+import { user } from "@orch/db/schema";
 import { eq } from "drizzle-orm";
 import type { Hono } from "hono";
 

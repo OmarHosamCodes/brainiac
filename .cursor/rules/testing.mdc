@@ -35,7 +35,7 @@ bun run test:api:bruno        # local
 bun run test:api:bruno:ci     # CI
 ```
 
-Tests live in `tests/bruno/brainiac-api/`.
+Tests live in `tests/bruno/orch-api/`.
 
 ## What we don't test here
 

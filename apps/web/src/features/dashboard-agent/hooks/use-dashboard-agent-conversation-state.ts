@@ -1,4 +1,4 @@
-import type { DashboardAgentToolPreset, DashboardConversationMessage } from "@brainiac/agent";
+import type { DashboardAgentToolPreset, DashboardConversationMessage } from "@orch/agent";
 import { useCallback, useState } from "react";
 
 export function useDashboardAgentConversationState() {

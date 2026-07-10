@@ -101,7 +101,7 @@ Routes are defined in `apps/web/src/app.tsx` and `apps/web/src/authenticated-rou
 **Connection string format** (default Docker setup):
 
 ```
-postgresql://postgres:password@localhost:5440/brainiac
+postgresql://postgres:password@localhost:5440/orch
 ```
 
 ### Port Already in Use
@@ -140,7 +140,7 @@ export const env = createEnv({
 3. Use in server code:
 
 ```typescript
-import { env } from "@brainiac/env/server";
+import { env } from "@orch/env/server";
 
 const value = env.MY_NEW_VAR;
 ```
@@ -224,7 +224,7 @@ Agency task attachments need S3-compatible storage:
 ```env
 S3_ENDPOINT=https://s3.example.com
 S3_REGION=auto
-S3_BUCKET=brainiac-task-attachments
+S3_BUCKET=orch-task-attachments
 S3_ACCESS_KEY_ID=...
 S3_SECRET_ACCESS_KEY=...
 ```

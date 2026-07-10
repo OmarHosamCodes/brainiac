@@ -1,4 +1,4 @@
-import { getWorkspaceNodePreview, type WorkspaceNode } from "@brainiac/workspace";
+import { getWorkspaceNodePreview, type WorkspaceNode } from "@orch/workspace";
 
 import { getWorkspaceNodeTintStyle } from "@/features/workspace/utils/workspace-node-dashboard";
 import { cn } from "@/lib/utils";

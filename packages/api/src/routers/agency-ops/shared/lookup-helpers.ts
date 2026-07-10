@@ -1,5 +1,5 @@
-import { db } from "@brainiac/db";
-import { agencyOpsClient, agencyOpsProject, workspaceTeamMember } from "@brainiac/db/schema";
+import { db } from "@orch/db";
+import { agencyOpsClient, agencyOpsProject, workspaceTeamMember } from "@orch/db/schema";
 import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 

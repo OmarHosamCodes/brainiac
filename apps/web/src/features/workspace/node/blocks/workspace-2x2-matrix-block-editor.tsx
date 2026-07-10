@@ -2,7 +2,7 @@ import {
   createWorkspace2x2MatrixItem,
   get2x2MatrixSummary,
   type Workspace2x2MatrixBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Plus, SquareDashed, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

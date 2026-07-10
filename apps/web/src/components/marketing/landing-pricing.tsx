@@ -34,14 +34,14 @@ const features: PricingFeature[] = [
 function PlanCell({ included, value }: { included?: boolean; value?: string }) {
   if (value !== undefined) {
     return (
-      <span className="font-mono text-sm font-semibold tabular-nums text-highlighted">{value}</span>
+      <span className="font-mono text-sm font-semibold tabular-nums text-foreground">{value}</span>
     );
   }
 
   return included ? (
     <Check className="mx-auto size-4 text-primary" aria-hidden="true" />
   ) : (
-    <Minus className="mx-auto size-4 text-muted" aria-hidden="true" />
+    <Minus className="mx-auto size-4 text-muted-foreground" aria-hidden="true" />
   );
 }
 
@@ -69,7 +69,7 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
     <section id="pricing" className="w-full scroll-mt-8 border-t border-border bg-background">
       <div className="mx-auto max-w-4xl px-6 py-20 md:px-10 md:py-28 lg:px-16">
         <div className="max-w-2xl">
-          <h2 className="text-3xl leading-[1.1] font-bold tracking-tight md:text-5xl">
+          <h2 className="text-3xl leading-[1.1] font-semibold tracking-[-0.025em] md:text-5xl">
             Free to try. Pro when you need the room.
           </h2>
           <p className="mt-5 text-base leading-relaxed text-muted-foreground md:text-lg">
@@ -80,7 +80,7 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
 
         <div className="mt-12 overflow-hidden rounded-2xl border border-border">
           <table className="w-full border-collapse text-left">
-            <caption className="sr-only">Brainiac plan comparison</caption>
+            <caption className="sr-only">Orch plan comparison</caption>
             <thead>
               <tr className="border-b border-border bg-muted/60">
                 <th

@@ -4,7 +4,7 @@ if (!Bun.env.CORS_ORIGIN) {
 }
 
 if (!Bun.env.DATABASE_URL) {
-  Bun.env.DATABASE_URL = "postgresql://postgres:password@localhost:5440/brainiac";
+  Bun.env.DATABASE_URL = "postgresql://postgres:password@localhost:5440/orch";
 }
 
 if (!("__BRAINIAC_SERVER_URL__" in globalThis)) {

@@ -1,6 +1,6 @@
-import { db } from "@brainiac/db";
-import * as schema from "@brainiac/db/schema/auth";
-import { corsOrigins, env, primaryCorsOrigin } from "@brainiac/env/server";
+import { db } from "@orch/db";
+import * as schema from "@orch/db/schema/auth";
+import { corsOrigins, env, primaryCorsOrigin } from "@orch/env/server";
 import { checkout, polar, portal, webhooks } from "@polar-sh/better-auth";
 import { Polar } from "@polar-sh/sdk";
 import { betterAuth } from "better-auth";

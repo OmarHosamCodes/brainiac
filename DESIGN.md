@@ -1,6 +1,6 @@
 ---
-name: Brainiac
-description: A spatial knowledge workspace with an embedded agent. Two registers, one quiet visual voice.
+name: Orch
+description: A spatial knowledge workspace with an embedded agent. Quiet instrument, photographic depth. Dual register — dark cinematic marketing, light precise product.
 colors:
   operator-emerald: "#10b981"
   operator-emerald-deep: "#059669"
@@ -8,13 +8,16 @@ colors:
   ink: "#18181b"
   ink-muted: "#52525b"
   ink-dimmed: "#71717a"
-  paper: "#fafafa"
-  paper-pure: "#ffffff"
-  surface-elevated: "#f4f4f5"
-  hairline: "#e4e4e7"
-  hairline-strong: "#d4d4d8"
+  paper: "#f2f7f4"
+  paper-pure: "#f7fbf8"
+  surface-elevated: "#e8f0eb"
+  surface-sunken: "#e2ebe6"
+  hairline: "#d5e0d9"
+  hairline-strong: "#c5d4cb"
   ink-inverted: "#fafafa"
   paper-inverted: "#09090b"
+  surface-inverted: "#141416"
+  surface-inverted-elevated: "#1c1c1f"
   hairline-inverted: "#27272a"
   state-success: "#10b981"
   state-warning: "#f59e0b"
@@ -23,22 +26,22 @@ colors:
 typography:
   display:
     fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
-    fontSize: "clamp(2.5rem, 7vw, 5.5rem)"
-    fontWeight: 700
-    lineHeight: 1.02
-    letterSpacing: "-0.02em"
+    fontSize: "clamp(2.75rem, 7vw, 5.5rem)"
+    fontWeight: 600
+    lineHeight: 1.05
+    letterSpacing: "-0.03em"
   headline:
     fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
     fontSize: "clamp(1.875rem, 4vw, 3rem)"
-    fontWeight: 700
+    fontWeight: 600
     lineHeight: 1.1
-    letterSpacing: "-0.015em"
+    letterSpacing: "-0.025em"
   title:
     fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
     fontSize: "1.125rem"
     fontWeight: 600
     lineHeight: 1.3
-    letterSpacing: "normal"
+    letterSpacing: "-0.01em"
   body:
     fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
     fontSize: "1rem"
@@ -54,9 +57,9 @@ typography:
   label:
     fontFamily: "IBM Plex Sans, system-ui, -apple-system, sans-serif"
     fontSize: "0.6875rem"
-    fontWeight: 700
+    fontWeight: 600
     lineHeight: 1.2
-    letterSpacing: "0.18em"
+    letterSpacing: "0.14em"
   mono:
     fontFamily: "IBM Plex Mono, ui-monospace, monospace"
     fontSize: "0.8125rem"
@@ -67,9 +70,9 @@ rounded:
   none: "0"
   sm: "6px"
   md: "10px"
-  lg: "16px"
-  xl: "24px"
-  card: "32px"
+  lg: "12px"
+  xl: "16px"
+  card: "16px"
   full: "9999px"
 spacing:
   hairline: "1px"
@@ -78,8 +81,8 @@ spacing:
   md: "16px"
   lg: "24px"
   xl: "40px"
-  section: "80px"
-  section-lg: "128px"
+  section: "96px"
+  section-lg: "144px"
 components:
   button-primary:
     backgroundColor: "{colors.operator-emerald}"
@@ -129,186 +132,173 @@ components:
     typography: "{typography.label}"
 ---
 
-# Design System: Brainiac
+# Design System: Orch
 
 ## 1. Overview
 
-**Creative North Star: "Two Registers, One Voice"**
+**Creative North Star: "Quiet instrument, photographic depth"**
 
-Brainiac runs two surfaces inside one product. The Dashboard is spatial: an infinite canvas where users pan, zoom, place, and connect. The Agency is structured: rows, totals, time, execution. The visual system has to speak both dialects without ever sounding like two products bolted together. One typographic voice, one quiet color discipline, one component vocabulary; the layout grammar shifts between registers.
+Orch is a dual-register system. Marketing is dark and cinematic: large type, generous air, aurora atmosphere reserved for the hero. Product is light and precise: a surface ladder of cool zinc neutrals, hairlines, and one accent used sparingly. Same typographic voice, same component vocabulary, different rhythm and ambient light.
 
-The system rejects the dominant aesthetic of its category. No purple-blue gradient heroes, no animated orbs, no gradient text, no glassmorphism, no AI-tool neon. The agent is a tool, not a personality. The canvas is the product. UI chrome serves the work and gets out of the way the moment a user is thinking. Calm, focused, plain-spoken. Trust earned through restraint, not flash.
+Inspiration (synthesize, don't copy): Apple (whitespace, optical type, glass nav rare), Linear (near-black surface ladder, hairlines), Vercel (hero atmosphere only). Depth comes from tonal steps and light, not from shadow-on-every-card.
 
-The marketing register (landing, pricing, legal) is allowed editorial confidence: large display type, generous breathing room, hairline rules between sections. The product register (canvas, agency, blocks) is allowed density: tight rows, compact toolbars, dense tool traces. Same family. Same components. Different rhythm.
+The system rejects category defaults. No purple gradient heroes, no animated orbs as brand, no gradient text, no glassmorphism-as-default, no AI neon. The agent is a tool. The canvas is the product.
 
 **Key Characteristics:**
 
-- Restrained color: tinted neutrals, one accent (Operator Emerald) used on ≤10% of any product surface.
-- Typographic hierarchy carries the system. IBM Plex Sans across roles, IBM Plex Mono for tool traces and metric values.
-- Flat by default. Hairlines (1px) separate content; shadows appear only as a response to state (hover, focus, lift).
-- Generous radii on containers (32px cards, full pills on buttons and badges) keep the system feeling crafted, not clinical.
-- Two registers, one component vocabulary. A button looks the same on the landing page and inside the canvas toolbar.
+- Restrained color: cool zinc neutrals with a soft emerald-tinted paper (never true white), one accent (Operator Emerald) on ≤10% of any product surface.
+- Typographic hierarchy carries the system. IBM Plex Sans (600 display, not shouty 700), IBM Plex Mono for tool traces and metrics.
+- Surface ladder, not flat paper. Paper → elevated → sunken → hairline. Shadows only for true float (modals, popovers).
+- Radii: 12–16px on cards/inputs; full pills on buttons and badges. No 32px over-round.
+- Marketing may use aurora/mesh and blur-text reveals; product stays quiet. `prefers-reduced-motion` is mandatory.
 
 ## 2. Colors
 
-A small, restrained palette built on zinc-tinted neutrals plus a single saturated accent. The accent is rare on purpose; its rarity is what makes it readable as state.
-
 ### Primary
 
-- **Operator Emerald** (`#10b981`, `oklch(0.72 0.17 162)`): The single accent across the system. Used on primary CTAs, current selection, system-status indicators, the agent's success affordances, and active navigation. Never decorative.
-- **Operator Emerald Deep** (`#059669`, `oklch(0.65 0.16 162)`): Hover state for the accent. Slightly darker, same hue.
-- **Operator Emerald Soft** (`#d1fae5`, `oklch(0.94 0.06 162)`): Tinted background for badges and subtle highlights. Never as a hero surface.
+- **Operator Emerald** (`#10b981`, `oklch(0.72 0.17 162)`): The single brand accent. Primary CTAs, selection, active nav, focus rings. Never decorative wallpaper. Light UI uses a deeper step (`oklch(0.55 0.15 162)`) for contrast on soft paper.
+- **Operator Emerald Deep** (`#059669`, `oklch(0.65 0.16 162)`): Hover for the accent.
+- **Operator Emerald Soft** (`#d1fae5`, `oklch(0.94 0.06 162)`): Soft tint for badges and subtle highlights. Never a hero surface.
 
 ### Neutral
 
-- **Ink** (`#18181b`, `oklch(0.18 0.005 285)`): Body text, primary headings, dark surface in inverted contexts.
-- **Ink Muted** (`#52525b`, `oklch(0.40 0.005 285)`): Secondary text, supporting copy, dimmer labels.
-- **Ink Dimmed** (`#71717a`, `oklch(0.55 0.005 285)`): Tertiary text, eyebrows, timestamps, metadata.
-- **Paper** (`#fafafa`, `oklch(0.98 0.002 285)`): Default page background in light theme.
-- **Paper Pure** (`#ffffff` rendered, but treated as `oklch(0.99 0.002 285)`): Card and input surface in light theme.
-- **Surface Elevated** (`#f4f4f5`, `oklch(0.96 0.003 285)`): Sidebars, toolbars, hover backdrop on ghost buttons.
-- **Hairline** (`#e4e4e7`, `oklch(0.91 0.004 285)`): The default separator. Used everywhere borders are needed.
-- **Hairline Strong** (`#d4d4d8`, `oklch(0.85 0.005 285)`): Stronger separation when hairline gets lost on a tinted surface.
+- **Ink** (`#18181b`, `oklch(0.18 0.005 285)`): Body text, primary headings.
+- **Ink Muted** (`#52525b`, `oklch(0.40 0.005 285)`): Secondary text.
+- **Ink Dimmed** (`#71717a`, `oklch(0.55 0.005 285)`): Tertiary text, metadata.
+- **Paper** (`#f2f7f4`, `oklch(0.96 0.008 162)`): Default light page background. Soft emerald-tinted paper, never true white.
+- **Paper Pure** (`#f7fbf8`, `oklch(0.98 0.004 162)`): Cards and inputs in light. Still off-white.
+- **Surface Elevated** (`#e8f0eb`, `oklch(0.94 0.01 162)`): Sidebars, toolbars, ghost hover.
+- **Surface Sunken** (`#e2ebe6`, `oklch(0.92 0.012 162)`): Recessed wells, inset panels.
+- **Hairline** / **Hairline Strong**: Default and strong separators.
 
-### Inverted (Dark Theme)
+### Inverted (Dark theme + marketing)
 
-- **Paper Inverted** (`#09090b`, `oklch(0.13 0.005 285)`): Page background.
-- **Ink Inverted** (`#fafafa`): Primary text on dark.
-- **Hairline Inverted** (`#27272a`, `oklch(0.27 0.005 285)`): Separator in dark theme.
+- **Paper Inverted** (`#09090b`): Page / marketing hero ground.
+- **Surface Inverted** (`#141416`): Raised dark panels.
+- **Surface Inverted Elevated** (`#1c1c1f`): Higher dark surfaces.
+- **Ink Inverted** / **Hairline Inverted**: Text and borders on dark.
 
 ### State
 
-- **Success** (`#10b981`): Same hue as primary; semantic overlap is intentional. Confirmations, healthy states.
-- **Warning** (`#f59e0b`, `oklch(0.78 0.16 70)`): Caution, non-blocking issues.
-- **Error** (`#ef4444`, `oklch(0.65 0.22 25)`): Failures, destructive confirmations.
+- **Success** (`#10b981`, `oklch(0.72 0.17 162)`): Confirmations, healthy status. Not the brand accent.
+- **Warning** (`#f59e0b`): Caution.
+- **Error** (`#ef4444`): Failures, destructive.
 - **Info** (`#3b82f6`, `oklch(0.62 0.18 252)`): Neutral system messages.
 
 ### Named Rules
 
-**The One Voice Rule.** Operator Emerald is used on ≤10% of any given screen. Its rarity is the point. If a surface looks emerald-heavy, it is wrong. Demote to neutral, promote one element back.
+**The One Voice Rule.** Operator Emerald on ≤10% of any product screen. Rarity is the point.
 
-**The Tinted Neutral Rule.** No `#000` and no `#fff` raw. Every neutral is zinc-tinted (chroma ~0.005). The page is paper, not glare.
+**The Soft Paper Rule.** Light mode never uses true `#fff` as the page ground. Paper is emerald-tinted off-white.
 
-**The Semantic Reuse Rule.** Success and Operator Emerald share a hue family. This is a feature, not a bug. The product equates "primary action" and "successful state" by design.
+**The Tinted Neutral Rule.** No raw `#000` / `#fff`. Neutrals carry light chroma toward the brand hue.
+
+**The Marketing Atmosphere Exception.** Soft aurora/mesh glow on the dark hero is allowed once. It is not a product pattern.
 
 ## 3. Typography
 
-**Display Font:** IBM Plex Sans (with `system-ui, -apple-system, sans-serif` fallback)
-**Mono Font:** IBM Plex Mono (with `ui-monospace, monospace` fallback)
-
-**Character:** IBM Plex Sans is a quiet, modern sans with neutral letterforms. It carries display, headline, body, and label without needing a paired serif or display face. IBM Plex Mono shows up where structure matters: tool call traces in the agent rail, latency values in the system status, code blocks in notes, numeric data in agency tables.
+**Display / Body:** IBM Plex Sans  
+**Mono:** IBM Plex Mono
 
 ### Hierarchy
 
-- **Display** (`700`, `clamp(2.5rem, 7vw, 5.5rem)`, line-height `1.02`, letter-spacing `-0.02em`): Marketing hero headlines. Tight tracking, near-overlapping leading.
-- **Headline** (`700`, `clamp(1.875rem, 4vw, 3rem)`, line-height `1.1`, letter-spacing `-0.015em`): Section openings on marketing pages, page titles in product surfaces.
-- **Title** (`600`, `1.125rem`, line-height `1.3`): Card titles, panel headers, modal titles.
-- **Body** (`400`, `1rem`, line-height `1.6`): Default reading text. Capped at 65–75ch on prose surfaces; data tables and dense panels are exempt.
-- **Body Large** (`400`, `1.125rem`, line-height `1.6`): Hero supporting copy, marketing introductions.
-- **Label** (`700`, `0.6875rem`, letter-spacing `0.18em`, uppercase): Eyebrows, section markers, tool-trace badges, status indicators. The system's spoken-quiet voice.
-- **Mono** (`500`, `0.8125rem`, line-height `1.5`): Tool calls, latencies, metric values, code, kbd shortcuts.
+- **Display** (`600`, `clamp(2.75rem, 7vw, 5.5rem)`, LH `1.05`, tracking `-0.03em`): Marketing heroes. Floor tracking ≥ `-0.04em`.
+- **Headline** (`600`, `clamp(1.875rem, 4vw, 3rem)`, LH `1.1`, tracking `-0.025em`): Section openings, product page titles.
+- **Title** (`600`, `1.125rem`, LH `1.3`): Panel and card titles.
+- **Body** / **Body Large**: Reading text; cap prose at 65–75ch.
+- **Label** (`600`, `0.6875rem`, tracking `0.14em`, uppercase): Sparse use. One deliberate kicker per page max on marketing; never an eyebrow on every section.
+- **Mono** (`500`, `0.8125rem`): Tool calls, latencies, IDs, code.
 
 ### Named Rules
 
-**The Eyebrow Rule.** Section eyebrows (the small uppercase line above a heading) are rendered in Label scale at `text-neutral-400` / `dark:text-neutral-500`. Never colored, never emerald, never bolder. They are the system's whisper.
+**The Single Family Rule.** IBM Plex Sans across the scale. Hierarchy from weight and size.
 
-**The Single Family Rule.** No display/serif pairing. IBM Plex Sans across the entire scale. Hierarchy comes from weight (400/600/700) and size (1.25× minimum step ratio).
+**The Mono For Truth Rule.** Mono for what the system reports, never running prose or headings.
 
-**The Mono For Truth Rule.** IBM Plex Mono is reserved for things the system reports, not things the system says. Latencies, IDs, paths, code, tool calls. Never running prose, never headings.
+**The Eyebrow Restraint Rule.** Uppercase labels are rare. Identical section eyebrows across a page are banned.
 
 ## 4. Elevation
 
-The system is flat at rest. Surfaces lie on the page; depth is established through hairlines and tonal layering, not shadow. Shadows appear only as a response to state — hover lift on interactive elements, ambient glow on a focused input, container shadow on a floating modal or dropdown. No decorative depth. No "card with shadow" as the default container.
+Depth is a surface ladder first, hairlines second, shadow last.
 
-### Shadow Vocabulary
+### Surface ladder (light)
 
-- **state-lift** (`box-shadow: 0 1px 2px oklch(0.18 0.005 285 / 0.05), 0 4px 12px oklch(0.18 0.005 285 / 0.06)`): Hover state on primary CTAs and interactive cards.
-- **focus-ring** (`box-shadow: 0 0 0 3px oklch(0.72 0.17 162 / 0.20)`): Keyboard focus on inputs, buttons, links. The accent at low opacity, never a 1px outline.
-- **float-low** (`box-shadow: 0 4px 16px oklch(0.18 0.005 285 / 0.08)`): Toasts, popovers, dropdowns.
-- **float-high** (`box-shadow: 0 12px 48px oklch(0.18 0.005 285 / 0.18)`): Modals, command palette.
+1. Paper (page)
+2. Paper Pure (cards/inputs)
+3. Surface Elevated (chrome)
+4. Surface Sunken (wells)
 
-### Named Rules
+### Surface ladder (dark / marketing)
 
-**The Flat-By-Default Rule.** Surfaces are flat at rest. If you reach for `box-shadow` to make something "pop" without a state change, stop. Use a hairline border or a tonal step instead.
+1. Paper Inverted
+2. Surface Inverted
+3. Surface Inverted Elevated
 
-**The Hairline First Rule.** Separation is hairline (`1px solid var(--hairline)`) before it is tonal layering, and tonal layering before it is shadow. Walk the ladder; do not skip rungs.
+### Shadow vocabulary
+
+- **state-lift**: Hover on interactive CTAs only.
+- **focus-ring**: `0 0 0 3px oklch(0.55 0.15 162 / 0.25)` — emerald at low opacity.
+- **float-low**: Toasts, popovers, dropdowns.
+- **float-high**: Modals, command palette.
+
+**Hairline First.** Separation is hairline before tonal step before shadow.
+
+**No Ghost Cards.** Never pair `1px` border with a wide soft drop shadow as decoration. Pick one.
 
 ## 5. Components
 
 ### Buttons
 
-- **Shape:** Full-pill (radius `9999px`). Enforced via shared `Button` variants in `apps/web/src/components/ui/` and Tailwind utilities.
-- **Primary:** Operator Emerald background, white text, weight `700` (bold). Padding scales with size (`sm` 8×16px, `md` 10×20px, `lg` 12×24px, `xl` 14×28px).
-- **Hover / Focus:** Background shifts to Operator Emerald Deep. Focus shows the focus-ring at 20% opacity. No transform on hover; no scale-up.
-- **Ghost:** Transparent background, ink text, hover fills Surface Elevated. Used for tertiary actions.
-- **Outline:** 1px hairline border, transparent background, ink text. Used for secondary CTAs in marketing surfaces.
-- **Subtle:** Surface Elevated background, ink text. Used inside cards where outline would compete with the card border.
-
-### Badges
-
-- **Shape:** Full-pill (radius `9999px`). Bold weight.
-- **Default:** Surface Elevated background, ink-muted text. Tiny (≤12px) padding.
-- **Variant:** Tinted-soft variants per state (emerald-soft, warning-soft, error-soft) with the corresponding state-color text at high contrast.
+- Full-pill. Primary: Operator Emerald / white / weight 600. Hover: Emerald Deep. Ghost and outline as before with elevated hover fill.
 
 ### Cards / Containers
 
-- **Corner Style:** Generous (`32px` radius). Defined in `apps/web/src/index.css` and shared card primitives; overriding to a smaller radius is a deliberate choice, not a default.
-- **Background:** Paper Pure in light, surface-darkest in dark.
-- **Shadow Strategy:** None at rest. See Elevation: shadows on state only.
-- **Border:** 1px hairline at 20% opacity (`border-muted/20`). Visible enough to define, quiet enough to recede.
-- **Internal Padding:** `24px` default; dense variants drop to `16px`.
+- Radius `16px` (card token). Hairline border. Flat at rest. No nested cards.
 
-### Inputs / Fields
+### Inputs
 
-- **Shape:** `16px` radius (input scale, not card scale). Bold-weight text inside the field.
-- **Background:** Paper Pure in light, ink-9 (deepest neutral) in dark.
-- **Default Border:** 1px hairline.
-- **Focus:** Hairline shifts to Operator Emerald, focus-ring shadow at 20% opacity. No inset shadow. No border thickness change (that would shift layout).
-- **Error:** Border shifts to state-error, helper text in state-error, focus-ring in error-color at 20%.
-- **Disabled:** Opacity 50%, cursor not-allowed, no hover.
+- Radius `12px`. Focus border + focus-ring in emerald.
 
 ### Navigation
 
-- **Marketing register (landing/legal/pricing):** Navigation lives in the footer. No floating navbar, no sticky chrome.
-- **Product register (dashboard/agency/marketplace):** A standard top-bar or rail. Active state is text in Operator Emerald with a soft tinted backdrop (`bg-primary/10`). Hover is Surface Elevated. Never a side-stripe.
+- **Marketing:** Footer nav; optional frosted top strip only if it earns its place. No sticky chrome by default.
+- **Product:** Top-bar or rail. Active: emerald text + soft tint (`bg-primary/10`). Never a side-stripe.
 
-### System Status Indicator
+### Tool Trace (signature)
 
-- **Style:** Inline label (Label typography) with a 6px circular dot. Dot is Operator Emerald when healthy, Hairline Strong when unknown, state-error when failing.
-- **Placement:** Footer in marketing register. Status rail or app shell in product register.
-- **Animation:** No pulse by default. Add a 2.5s ease-in-out glow only when the user has explicitly opted into "live status" detail.
+Label-scale tool name in mono, emerald running indicator while live, hairline separator, mono body for args/results. Selectable. No badge soup.
 
-### Tool Trace (Signature Component)
+## 6. Marketing motion
 
-The agent rail's tool-call rendering. A multi-line block with: a small Label-scale tool name in mono, an Operator Emerald running indicator while live, a hairline separator, and a IBM Plex Mono body for arguments and results. Tool traces are plain prose-shaped; they are the agent's working notes, not a magic trick. Selectable text. No badge soup. No icon explosion.
+Allowed on marketing only, and sparingly (≤3 animated pieces per page):
 
-## 6. Do's and Don'ts
+- Aurora / soft mesh atmosphere behind the hero
+- BlurText or equivalent headline reveal
+- Magnet / soft CTA attraction
+- SpotlightCard for at most two feature moments
+- AnimatedContent scroll reveals
 
-### Do:
+All must degrade under `prefers-reduced-motion` to opacity or instant.
 
-- **Do** use Operator Emerald on primary actions, current selection, and system-status indicators only.
-- **Do** keep the accent on ≤10% of any given screen. The One Voice Rule.
-- **Do** use hairlines (`1px solid var(--hairline)`) as the default separator. Walk the elevation ladder before reaching for shadow.
-- **Do** render every interactive element with all seven states: default, hover, focus-visible, active, disabled, loading, error.
-- **Do** use full-pill radii for buttons and badges, generous (32px) radii for cards. Set them globally.
-- **Do** use IBM Plex Sans for everything that speaks; use IBM Plex Mono for everything the system reports.
-- **Do** put a quiet inline system-status indicator in the footer (marketing) or rail (product), never a floating chrome.
-- **Do** place navigation in the footer on marketing surfaces and in a standard top-bar or rail in product surfaces.
-- **Do** make tool traces selectable, plain-prose-shaped, and free of decorative badges.
-- **Do** respect `prefers-reduced-motion`: strip animation, keep opacity fades only.
+## 7. Do's and Don'ts
 
-### Don't:
+### Do
 
-- **Don't** use SaaS-cream clichés: purple/blue gradient heroes, hero-metric-with-sparkline cards, identical icon-and-heading card grids, or "Built for modern teams" template energy.
-- **Don't** ship AI-product slop: neon glows, gradient text, sparkle decoration, robot mascot avatars, animated orbs, breathless "AI-powered" copy. The agent is a tool, not a personality.
-- **Don't** apply enterprise heaviness: Salesforce/Jira density, nested tabs of nested tabs, dropdowns with 30 options, chrome-heavy navigation that competes with the canvas.
-- **Don't** use `#000` or `#fff` raw. Every neutral is zinc-tinted.
-- **Don't** use `border-left` or `border-right` greater than 1px as a colored stripe. The Side-Stripe Ban.
-- **Don't** use `background-clip: text` with a gradient. The Gradient Text Ban.
-- **Don't** use blur or glassmorphism as a default. Rare and purposeful, or nothing.
-- **Don't** wrap everything in a card. Most things don't need one. Nested cards are always wrong.
-- **Don't** orchestrate page-load entrance sequences in product surfaces. Speed is a feature; users load into a task, not a show.
-- **Don't** decorate empty space. The default surface is calm and uncrowded.
-- **Don't** use em dashes anywhere in copy or UI text. Use commas, colons, semicolons, periods, or parentheses.
-- **Don't** use loading spinners in the middle of content where a skeleton or optimistic update would do.
-- **Don't** build a modal as a first thought. Exhaust inline and progressive alternatives first.
+- Use Operator Emerald on primary actions, selection, and focus only.
+- Keep accent ≤10% of product screens.
+- Walk the surface ladder before reaching for shadow.
+- Use 12–16px radii on containers; pills on buttons/badges.
+- Put marketing navigation in the footer; product nav in rail/top-bar.
+- Make tool traces selectable and plain-prose-shaped.
+- Respect `prefers-reduced-motion`.
+
+### Don't
+
+- Don't use SaaS-cream or AI-slop patterns (orbs, gradient text, icon-card grids, hero metrics).
+- Don't use true white (`#fff`) as the light page ground.
+- Don't ship flat zinc-only UI with no tonal depth.
+- Don't use side-stripe borders, gradient text, or glass as default.
+- Don't wrap everything in a card; nested cards are always wrong.
+- Don't put an uppercase eyebrow on every section.
+- Don't orchestrate entrance sequences in product surfaces.
+- Don't use em dashes in copy or UI text.

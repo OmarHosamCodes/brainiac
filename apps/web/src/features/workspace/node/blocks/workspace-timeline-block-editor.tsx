@@ -2,7 +2,7 @@ import {
   WORKSPACE_TIMELINE_MILESTONE_STATUSES,
   type WorkspaceTimelineBlock,
   type WorkspaceTimelineMilestoneStatus,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import {
   AlertCircle,
   CheckCircle2,

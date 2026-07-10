@@ -6,9 +6,9 @@ import {
   normalizeWorkspaceNode,
   type WorkspaceNode,
   type WorkspaceTeamRole,
-} from "@brainiac/workspace";
-import { db } from "@brainiac/db";
-import { dashboardWorkspace, user, workspaceTeam, workspaceTeamMember } from "@brainiac/db/schema";
+} from "@orch/workspace";
+import { db } from "@orch/db";
+import { dashboardWorkspace, user, workspaceTeam, workspaceTeamMember } from "@orch/db/schema";
 
 import { requireTeamMembership } from "../../lib/team-membership";
 import { getBillingStateForUser } from "../../billing-guard";

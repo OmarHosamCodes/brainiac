@@ -7,10 +7,10 @@ const sections = [
     id: "acceptance",
     title: "Acceptance of These Terms",
     intro:
-      "These Terms of Service govern your access to Brainiac, including our website, workspace tools, marketplace surfaces, and related services.",
+      "These Terms of Service govern your access to Orch, including our website, workspace tools, marketplace surfaces, and related services.",
     paragraphs: [
-      "By creating an account, accessing the product, or using any Brainiac service, you agree to these terms and to any supplemental policies referenced here.",
-      "If you are using Brainiac on behalf of an organization, you represent that you have authority to bind that organization and that both you and the organization are responsible for compliance.",
+      "By creating an account, accessing the product, or using any Orch service, you agree to these terms and to any supplemental policies referenced here.",
+      "If you are using Orch on behalf of an organization, you represent that you have authority to bind that organization and that both you and the organization are responsible for compliance.",
     ],
   },
   {
@@ -30,7 +30,7 @@ const sections = [
     id: "acceptable-use",
     title: "Acceptable Use",
     intro:
-      "Brainiac is built for legitimate collaboration and creative work. You may not use the service in ways that interfere with others, violate law, or abuse our infrastructure.",
+      "Orch is built for legitimate collaboration and creative work. You may not use the service in ways that interfere with others, violate law, or abuse our infrastructure.",
     bullets: [
       "Do not upload or distribute content that is unlawful, defamatory, infringing, exploitative, or malicious.",
       "Do not attempt to reverse engineer, probe, scrape, disable, or circumvent security, rate limits, or technical restrictions.",
@@ -42,7 +42,7 @@ const sections = [
     id: "content",
     title: "Your Content and Licenses",
     paragraphs: [
-      "You retain ownership of the content, prompts, files, and materials you submit to Brainiac. You grant us a limited license to host, process, transmit, and display that content solely as needed to operate, secure, improve, and support the service.",
+      "You retain ownership of the content, prompts, files, and materials you submit to Orch. You grant us a limited license to host, process, transmit, and display that content solely as needed to operate, secure, improve, and support the service.",
       "You represent that you have the rights necessary to submit your content and that our use of it as permitted by these terms will not violate law or the rights of any third party.",
       "We may use aggregated and de-identified usage information to analyze performance, improve features, and maintain service quality.",
     ],
@@ -51,8 +51,8 @@ const sections = [
     id: "ai-services",
     title: "AI Features and Generated Output",
     paragraphs: [
-      "Brainiac may provide AI-assisted features, recommendations, summaries, and generated output. These features can be inaccurate, incomplete, or unsuitable for a specific purpose, so you remain responsible for reviewing output before relying on it.",
-      "You should not use AI-generated output from Brainiac as the sole basis for legal, medical, employment, financial, or other high-stakes decisions.",
+      "Orch may provide AI-assisted features, recommendations, summaries, and generated output. These features can be inaccurate, incomplete, or unsuitable for a specific purpose, so you remain responsible for reviewing output before relying on it.",
+      "You should not use AI-generated output from Orch as the sole basis for legal, medical, employment, financial, or other high-stakes decisions.",
     ],
   },
   {
@@ -67,7 +67,7 @@ const sections = [
     id: "termination",
     title: "Suspension and Termination",
     paragraphs: [
-      "You may stop using Brainiac at any time. We may suspend or terminate access if we reasonably believe you have violated these terms, created security risk, exposed us to legal liability, or used the service in a harmful way.",
+      "You may stop using Orch at any time. We may suspend or terminate access if we reasonably believe you have violated these terms, created security risk, exposed us to legal liability, or used the service in a harmful way.",
       "We may also discontinue features or the service itself with reasonable notice when practicable. Sections that by their nature should survive termination will remain in effect, including ownership, disclaimers, limitation of liability, and dispute provisions.",
     ],
   },
@@ -75,8 +75,8 @@ const sections = [
     id: "disclaimers",
     title: "Disclaimers and Limitation of Liability",
     paragraphs: [
-      "Brainiac is provided on an as-available and as-is basis. To the maximum extent permitted by law, we disclaim implied warranties including merchantability, fitness for a particular purpose, and non-infringement.",
-      "To the maximum extent permitted by law, Brainiac and its affiliates will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for loss of profits, revenues, goodwill, data, or business opportunities.",
+      "Orch is provided on an as-available and as-is basis. To the maximum extent permitted by law, we disclaim implied warranties including merchantability, fitness for a particular purpose, and non-infringement.",
+      "To the maximum extent permitted by law, Orch and its affiliates will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for loss of profits, revenues, goodwill, data, or business opportunities.",
       "Our aggregate liability for claims arising out of or related to the service will not exceed the greater of the amount you paid us for the service during the twelve months before the event giving rise to the claim or one hundred U.S. dollars.",
     ],
   },
@@ -85,7 +85,7 @@ const sections = [
     title: "Updates to These Terms",
     paragraphs: [
       "We may update these terms from time to time to reflect product changes, legal requirements, or operational needs. When we do, we will post the revised version here and update the effective date.",
-      "Your continued use of Brainiac after the revised terms take effect constitutes acceptance of the updated terms.",
+      "Your continued use of Orch after the revised terms take effect constitutes acceptance of the updated terms.",
     ],
   },
 ] as const;
@@ -94,7 +94,7 @@ export function TermsPage() {
   return (
     <MarketingLegalLayout
       title="Terms of Service"
-      description="Clear rules for using Brainiac, from account security and acceptable use to AI-assisted output, billing, and service limits."
+      description="Clear rules for using Orch, from account security and acceptable use to AI-assisted output, billing, and service limits."
       effectiveDate={effectiveDate}
       sections={sections}
       crossLink={{ label: "Privacy Policy", to: "/privacy" }}

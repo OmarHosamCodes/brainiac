@@ -4,7 +4,7 @@ import {
   getHookBankSummary,
   sortHookBankItems,
   type WorkspaceHookBankBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Link, Loader2, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";

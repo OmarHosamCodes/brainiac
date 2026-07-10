@@ -1,7 +1,7 @@
-import { auth } from "@brainiac/auth";
-import { db } from "@brainiac/db";
-import { dashboardWorkspace, user, workspaceMarketplaceItem } from "@brainiac/db/schema";
-import { env, primaryCorsOrigin } from "@brainiac/env/server";
+import { auth } from "@orch/auth";
+import { db } from "@orch/db";
+import { dashboardWorkspace, user, workspaceMarketplaceItem } from "@orch/db/schema";
+import { env, primaryCorsOrigin } from "@orch/env/server";
 import {
   cloneWorkspaceNodes,
   createWorkspace2x2MatrixBlock,
@@ -64,10 +64,10 @@ import {
   type WorkspaceNode,
   type WorkspaceNodeTab,
   type WorkspaceScorecardBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { eq, inArray } from "drizzle-orm";
 
-const DEFAULT_SEED_PASSWORD = "brainiac1234";
+const DEFAULT_SEED_PASSWORD = "orch1234";
 
 type SeedUserKey = "founder" | "ops" | "analyst";
 
@@ -120,17 +120,17 @@ const SEED_USERS: SeedUserDefinition[] = [
   {
     key: "founder",
     name: "Avery Founder",
-    email: "founder@brainiac.test",
+    email: "founder@orch.test",
   },
   {
     key: "ops",
     name: "Mina Operator",
-    email: "ops@brainiac.test",
+    email: "ops@orch.test",
   },
   {
     key: "analyst",
     name: "Noah Analyst",
-    email: "analyst@brainiac.test",
+    email: "analyst@orch.test",
   },
 ];
 
@@ -1361,7 +1361,7 @@ function buildSeedActorAliases(targetUser: SeedActor) {
 
 async function recreateSeedUsers(password: string) {
   const requestHeaders = new Headers({
-    "user-agent": "brainiac-seed-script",
+    "user-agent": "orch-seed-script",
   });
 
   requestHeaders.set("origin", primaryCorsOrigin);
@@ -1635,7 +1635,7 @@ async function seedExistingUser(email: string, content: SeedContent, now: Date) 
 async function seedDemoUsers(content: SeedContent, now: Date, scale: SeedCliOptions["scale"]) {
   const password = env.BRAINIAC_SEED_PASSWORD?.trim() || DEFAULT_SEED_PASSWORD;
 
-  console.log("Rebuilding reserved Brainiac demo accounts and seed data...");
+  console.log("Rebuilding reserved Orch demo accounts and seed data...");
 
   const users = await recreateSeedUsers(password);
 
@@ -1673,7 +1673,7 @@ async function seedDemoUsers(content: SeedContent, now: Date, scale: SeedCliOpti
   console.log(`Workspaces: ${SEED_USERS.length} nodes across ${SEED_USERS.length} demo users.`);
   console.log(`Marketplace: ${marketplaceItems.length} curated items.`);
   console.log(
-    "Rerunning this script resets only the reserved *.brainiac.test demo accounts and these seed marketplace records.",
+    "Rerunning this script resets only the reserved *.orch.test demo accounts and these seed marketplace records.",
   );
 }
 

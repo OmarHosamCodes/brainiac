@@ -1,7 +1,7 @@
 import { eq, isNotNull, isNull, and, asc, sql } from "drizzle-orm";
-import { agencyOpsClient, agencyOpsClientContact } from "@brainiac/db/schema";
-import { db } from "@brainiac/db";
-import { createWorkspaceId } from "@brainiac/workspace";
+import { agencyOpsClient, agencyOpsClientContact } from "@orch/db/schema";
+import { db } from "@orch/db";
+import { createWorkspaceId } from "@orch/workspace";
 import { ORPCError } from "@orpc/server";
 import { getClientByIdForTeam } from "../shared/lookup-helpers";
 import { type AgencyClientArchiveFilter } from "../shared/report-helpers";

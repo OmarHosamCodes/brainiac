@@ -1,4 +1,4 @@
-# Brainiac
+# Orch
 
 Spatial knowledge workspace with an embedded AI agent and agency operations surface. End-to-end type safety across a Turborepo monorepo built on React, Hono, and oRPC.
 
@@ -61,9 +61,9 @@ Visit [http://localhost:7001](http://localhost:7001) for the web app. The API ru
 
 **Demo accounts** (if seeded):
 
-- `founder@brainiac.test` / `brainiac1234`
-- `ops@brainiac.test` / `brainiac1234`
-- `analyst@brainiac.test` / `brainiac1234`
+- `founder@orch.test` / `orch1234`
+- `ops@orch.test` / `orch1234`
+- `analyst@orch.test` / `orch1234`
 
 ---
 
@@ -117,11 +117,11 @@ bun run db:seed     # Seed demo data (recommended)
 
 ### Demo Accounts
 
-| Email                   | Password       | Role       |
-| ----------------------- | -------------- | ---------- |
-| `founder@brainiac.test` | `brainiac1234` | Founder    |
-| `ops@brainiac.test`     | `brainiac1234` | Operations |
-| `analyst@brainiac.test` | `brainiac1234` | Analyst    |
+| Email               | Password   | Role       |
+| ------------------- | ---------- | ---------- |
+| `founder@orch.test` | `orch1234` | Founder    |
+| `ops@orch.test`     | `orch1234` | Operations |
+| `analyst@orch.test` | `orch1234` | Analyst    |
 
 **Change seed password**: Set `BRAINIAC_SEED_PASSWORD` before running `bun run db:seed`
 

@@ -6,7 +6,7 @@ import {
   getOkrTrackerSummary,
   type WorkspaceOkrHealth,
   type WorkspaceOkrTrackerBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Plus, Target, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

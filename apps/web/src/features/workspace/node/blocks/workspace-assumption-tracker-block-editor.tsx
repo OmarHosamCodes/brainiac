@@ -10,7 +10,7 @@ import {
   type WorkspaceStrategicAssumptionFilter,
   type WorkspaceStrategicAssumptionLinkType,
   type WorkspaceStrategicAssumptionStatus,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Activity, Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

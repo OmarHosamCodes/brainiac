@@ -1,4 +1,4 @@
-import { assertNever } from "@brainiac/config/assert-never";
+import { assertNever } from "@orch/config/assert-never";
 import { WORKSPACE_TASK_DOMAINS, WORKSPACE_TASK_QUADRANTS } from "./constants";
 import {
   workspaceLeadershipRhythmFilterSchema,

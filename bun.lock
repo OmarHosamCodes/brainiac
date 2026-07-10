@@ -5,7 +5,7 @@
     "": {
       "name": "brainiac",
       "devDependencies": {
-        "@brainiac/config": "workspace:*",
+        "@orch/config": "workspace:*",
         "@types/bun": "^1.3.14",
         "chrome-launcher": "^1.2.1",
         "knip": "6.23.0",
@@ -22,12 +22,12 @@
       "name": "server",
       "version": "0.0.2",
       "dependencies": {
-        "@brainiac/api": "workspace:*",
-        "@brainiac/auth": "workspace:*",
-        "@brainiac/db": "workspace:*",
-        "@brainiac/env": "workspace:*",
-        "@brainiac/workspace": "workspace:*",
         "@clack/prompts": "^1.6.0",
+        "@orch/api": "workspace:*",
+        "@orch/auth": "workspace:*",
+        "@orch/db": "workspace:*",
+        "@orch/env": "workspace:*",
+        "@orch/workspace": "workspace:*",
         "@orpc/openapi": "catalog:",
         "@orpc/server": "catalog:",
         "@orpc/zod": "catalog:",
@@ -39,7 +39,7 @@
         "zod": "catalog:",
       },
       "devDependencies": {
-        "@brainiac/config": "workspace:*",
+        "@orch/config": "workspace:*",
         "@types/bun": "catalog:",
         "tsdown": "^0.22.3",
         "typescript": "catalog:",
@@ -49,12 +49,12 @@
       "name": "web",
       "version": "0.0.2",
       "dependencies": {
-        "@brainiac/agent": "workspace:*",
-        "@brainiac/api": "workspace:*",
-        "@brainiac/config": "workspace:*",
-        "@brainiac/env": "workspace:*",
-        "@brainiac/workspace": "workspace:*",
         "@hookform/resolvers": "^5.4.0",
+        "@orch/agent": "workspace:*",
+        "@orch/api": "workspace:*",
+        "@orch/config": "workspace:*",
+        "@orch/env": "workspace:*",
+        "@orch/workspace": "workspace:*",
         "@orpc/client": "catalog:",
         "@orpc/tanstack-query": "^1.14.6",
         "@polar-sh/better-auth": "^1.8.4",
@@ -75,8 +75,10 @@
         "clsx": "^2.1.1",
         "cmdk": "^1.1.1",
         "exceljs": "^4.4.0",
+        "gsap": "^3.13.0",
         "lucide-react": "^1.22.0",
-        "motion": "^12.42.2",
+        "motion": "^12.23.12",
+        "ogl": "^1.0.11",
         "radix-ui": "^1.6.1",
         "react": "^19.2.7",
         "react-dom": "^19.2.7",
@@ -99,12 +101,12 @@
       },
     },
     "packages/agent": {
-      "name": "@brainiac/agent",
+      "name": "@orch/agent",
       "dependencies": {
-        "@brainiac/config": "workspace:*",
-        "@brainiac/env": "workspace:*",
-        "@brainiac/workspace": "workspace:*",
         "@openrouter/sdk": "latest",
+        "@orch/config": "workspace:*",
+        "@orch/env": "workspace:*",
+        "@orch/workspace": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -112,15 +114,15 @@
       },
     },
     "packages/api": {
-      "name": "@brainiac/api",
+      "name": "@orch/api",
       "dependencies": {
         "@aws-sdk/client-s3": "^3.1067.0",
         "@aws-sdk/s3-request-presigner": "^3.1067.0",
-        "@brainiac/agent": "workspace:*",
-        "@brainiac/auth": "workspace:*",
-        "@brainiac/db": "workspace:*",
-        "@brainiac/env": "workspace:*",
-        "@brainiac/workspace": "workspace:*",
+        "@orch/agent": "workspace:*",
+        "@orch/auth": "workspace:*",
+        "@orch/db": "workspace:*",
+        "@orch/env": "workspace:*",
+        "@orch/workspace": "workspace:*",
         "@orpc/server": "catalog:",
         "@polar-sh/sdk": "^0.47.0",
         "@types/pg": "catalog:",
@@ -130,47 +132,47 @@
         "zod": "catalog:",
       },
       "devDependencies": {
-        "@brainiac/config": "workspace:*",
+        "@orch/config": "workspace:*",
         "hono": "catalog:",
         "typescript": "catalog:",
       },
     },
     "packages/auth": {
-      "name": "@brainiac/auth",
+      "name": "@orch/auth",
       "dependencies": {
-        "@brainiac/db": "workspace:*",
-        "@brainiac/env": "workspace:*",
+        "@orch/db": "workspace:*",
+        "@orch/env": "workspace:*",
         "@polar-sh/better-auth": "^1.8.3",
         "@polar-sh/sdk": "^0.47.0",
         "better-auth": "catalog:",
       },
       "devDependencies": {
-        "@brainiac/config": "workspace:*",
+        "@orch/config": "workspace:*",
         "typescript": "catalog:",
       },
     },
     "packages/config": {
-      "name": "@brainiac/config",
+      "name": "@orch/config",
       "version": "0.0.0",
     },
     "packages/db": {
-      "name": "@brainiac/db",
+      "name": "@orch/db",
       "dependencies": {
-        "@brainiac/env": "workspace:*",
-        "@brainiac/workspace": "workspace:*",
+        "@orch/env": "workspace:*",
+        "@orch/workspace": "workspace:*",
         "dotenv": "catalog:",
         "drizzle-orm": "catalog:",
         "pg": "^8.17.1",
       },
       "devDependencies": {
-        "@brainiac/config": "workspace:*",
+        "@orch/config": "workspace:*",
         "@types/pg": "catalog:",
         "drizzle-kit": "^0.31.8",
         "typescript": "catalog:",
       },
     },
     "packages/env": {
-      "name": "@brainiac/env",
+      "name": "@orch/env",
       "version": "0.0.0",
       "dependencies": {
         "@t3-oss/env-core": "^0.13.1",
@@ -179,15 +181,15 @@
         "zod": "catalog:",
       },
       "devDependencies": {
-        "@brainiac/config": "workspace:*",
+        "@orch/config": "workspace:*",
         "@types/bun": "catalog:",
         "typescript": "catalog:",
       },
     },
     "packages/workspace": {
-      "name": "@brainiac/workspace",
+      "name": "@orch/workspace",
       "dependencies": {
-        "@brainiac/config": "workspace:*",
+        "@orch/config": "workspace:*",
         "zod": "catalog:",
       },
       "devDependencies": {
@@ -298,20 +300,6 @@
     "@better-auth/utils": ["@better-auth/utils@0.4.2", "", { "dependencies": { "@noble/hashes": "^2.0.1" } }, "sha512-AUxrvu+HaaODsUyzDxFgwd/8RZ1yZaYo42LXKSrU2oGgR38pS1ij8nqQKNgtTWoYGpNevNXtCfgTy6loHveW9A=="],
 
     "@better-fetch/fetch": ["@better-fetch/fetch@1.3.1", "", {}, "sha512-ABkD1WhyfPZprKRQI3bhATjeiFuNWC9PXhfGWqL+sg/gKrM977oFrYkdb4msM3hgUGonr7KlOsOFT5TU2rht9g=="],
-
-    "@brainiac/agent": ["@brainiac/agent@workspace:packages/agent"],
-
-    "@brainiac/api": ["@brainiac/api@workspace:packages/api"],
-
-    "@brainiac/auth": ["@brainiac/auth@workspace:packages/auth"],
-
-    "@brainiac/config": ["@brainiac/config@workspace:packages/config"],
-
-    "@brainiac/db": ["@brainiac/db@workspace:packages/db"],
-
-    "@brainiac/env": ["@brainiac/env@workspace:packages/env"],
-
-    "@brainiac/workspace": ["@brainiac/workspace@workspace:packages/workspace"],
 
     "@clack/core": ["@clack/core@1.4.2", "", { "dependencies": { "fast-wrap-ansi": "^0.2.0", "sisteransi": "^1.0.5" } }, "sha512-0Ty/1Gfm+Kb07sXcuESjyKfwEhSy4Ns1AgeEisHb/bDY5fWme0tTeTkU14T1Gmcs17YIjB/teiDe4uaCghbYqQ=="],
 
@@ -546,6 +534,20 @@
     "@opentelemetry/semantic-conventions": ["@opentelemetry/semantic-conventions@1.41.1", "", {}, "sha512-/UhIkaZgPutTFmQ7RnIJGgDXZmtEJ7Dvi86xNTFWcnRxVRNk/aotsqDJYeEvDP+FSMB2SdW+pQzNMcWP0rwuNA=="],
 
     "@opentelemetry/sql-common": ["@opentelemetry/sql-common@0.40.1", "", { "dependencies": { "@opentelemetry/core": "^1.1.0" }, "peerDependencies": { "@opentelemetry/api": "^1.1.0" } }, "sha512-nSDlnHSqzC3pXn/wZEZVLuAuJ1MYMXPBwtv2qAbCa3847SaHItdE7SzUq/Jtb0KZmh1zfAbNi3AAMjztTT4Ugg=="],
+
+    "@orch/agent": ["@orch/agent@workspace:packages/agent"],
+
+    "@orch/api": ["@orch/api@workspace:packages/api"],
+
+    "@orch/auth": ["@orch/auth@workspace:packages/auth"],
+
+    "@orch/config": ["@orch/config@workspace:packages/config"],
+
+    "@orch/db": ["@orch/db@workspace:packages/db"],
+
+    "@orch/env": ["@orch/env@workspace:packages/env"],
+
+    "@orch/workspace": ["@orch/workspace@workspace:packages/workspace"],
 
     "@orpc/client": ["@orpc/client@1.14.6", "", { "dependencies": { "@orpc/shared": "1.14.6", "@orpc/standard-server": "1.14.6", "@orpc/standard-server-fetch": "1.14.6", "@orpc/standard-server-peer": "1.14.6" } }, "sha512-Y03NcTtmEJdxcqkKBkdGxqe1IHVpD9IorshG4PaTnz9dQIW+RYI8anRo7o0IlbBlzBICN+Ubo1rnw6bpkhagCQ=="],
 
@@ -1327,6 +1329,8 @@
 
     "graceful-fs": ["graceful-fs@4.2.11", "", {}, "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ=="],
 
+    "gsap": ["gsap@3.15.0", "", {}, "sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A=="],
+
     "hasown": ["hasown@2.0.4", "", { "dependencies": { "function-bind": "^1.1.2" } }, "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A=="],
 
     "hono": ["hono@4.12.27", "", {}, "sha512-1yrb/+w6HWQJrUCLkJ2IF5jNIPvvFkblV5RNOYl6bV+OA6p9GLcMpHFFGTosSvHvcAUibuUukRqhlYI4z32C7Q=="],
@@ -1510,6 +1514,8 @@
     "obug": ["obug@2.1.3", "", {}, "sha512-9miFgM2OFba7hB+pRgvtV84pYTBaoTHohvmIgiRt6dRIzbwEOIaNaP+dIlGs2fNFoB0SeISs0Jz5WFVRid6Xyg=="],
 
     "ofetch": ["ofetch@1.5.1", "", { "dependencies": { "destr": "^2.0.5", "node-fetch-native": "^1.6.7", "ufo": "^1.6.1" } }, "sha512-2W4oUZlVaqAPAil6FUg/difl6YhqhUR7x2eZY4bQCko22UXg3hptq9KLQdqFClV+Wu85UX7hNtdGTngi/1BxcA=="],
+
+    "ogl": ["ogl@1.0.11", "", {}, "sha512-kUpC154AFfxi16pmZUK4jk3J+8zxwTWGPo03EoYA8QPbzikHoaC82n6pNTbd+oEaJonaE8aPWBlX7ad9zrqLsA=="],
 
     "once": ["once@1.4.0", "", { "dependencies": { "wrappy": "1" } }, "sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w=="],
 

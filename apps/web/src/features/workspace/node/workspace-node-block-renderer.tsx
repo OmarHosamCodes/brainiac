@@ -1,4 +1,4 @@
-import type { WorkspaceBlock } from "@brainiac/workspace";
+import type { WorkspaceBlock } from "@orch/workspace";
 import { Loader2, Plus, Search, Store, Trash2 } from "lucide-react";
 import { Suspense, useEffect, useRef } from "react";
 

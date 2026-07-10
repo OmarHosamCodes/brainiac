@@ -1,4 +1,4 @@
-import type { AgencyLiveEvent } from "@brainiac/api/routers/agency-ops/live/live";
+import type { AgencyLiveEvent } from "@orch/api/routers/agency-ops/live/live";
 import { useSyncExternalStore } from "react";
 
 import { handleAgencyLiveEvent } from "@/features/shared/live/agency-live-handlers";

@@ -30,10 +30,10 @@ Setup order matters — do not reorder without reason:
 ## Environment
 
 ```typescript
-import { corsOrigins, env, primaryCorsOrigin } from "@brainiac/env/server";
+import { corsOrigins, env, primaryCorsOrigin } from "@orch/env/server";
 ```
 
-Never import `@brainiac/env/server` from frontend code.
+Never import `@orch/env/server` from frontend code.
 
 ## Boot side effects
 

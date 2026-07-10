@@ -1,4 +1,4 @@
-import { workspaceBlockCategories, type WorkspaceBlock } from "@brainiac/workspace";
+import { workspaceBlockCategories, type WorkspaceBlock } from "@orch/workspace";
 import { cn } from "@/lib/utils";
 
 import {

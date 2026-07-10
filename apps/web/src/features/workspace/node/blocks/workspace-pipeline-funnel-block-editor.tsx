@@ -8,7 +8,7 @@ import {
   type WorkspacePipelineFunnelBlock,
   type WorkspaceSalesPipelineStage,
   type WorkspaceSalesTemperature,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Filter, Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

@@ -1,5 +1,5 @@
-import { assertNever } from "@brainiac/config/assert-never";
-import type { WorkspaceMarketplaceItem } from "@brainiac/workspace";
+import { assertNever } from "@orch/config/assert-never";
+import type { WorkspaceMarketplaceItem } from "@orch/workspace";
 import { Box, Component, Download, Layout, Plus } from "lucide-react";
 
 import { Badge } from "@/ui/badge";

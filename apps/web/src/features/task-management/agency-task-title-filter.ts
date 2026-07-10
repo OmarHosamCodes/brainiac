@@ -1,4 +1,4 @@
-import { normalizeTaskTitle } from "@brainiac/api/schemas/agency-ops";
+import { normalizeTaskTitle } from "@orch/api/schemas/agency-ops";
 
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
 

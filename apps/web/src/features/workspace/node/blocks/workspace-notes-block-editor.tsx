@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { WorkspaceNotesBlock } from "@brainiac/workspace";
+import type { WorkspaceNotesBlock } from "@orch/workspace";
 import { Eye, Pencil, StickyNote } from "lucide-react";
 import { useMemo } from "react";
 

@@ -76,7 +76,7 @@ export function useLoginPage() {
         setError(result.error.message ?? "Sign up failed.");
         return;
       }
-      toast.success("Welcome to Brainiac", { description: "Your workspace is ready." });
+      toast.success("Welcome to Orch", { description: "Your workspace is ready." });
     } catch (submitError) {
       setError(getErrorMessage(submitError, "Sign up failed."));
     } finally {

@@ -1,6 +1,6 @@
 import { orpcClient } from "@/lib/orpc";
 
-const PUSH_DISMISSED_KEY = "brainiac:push-prompt-dismissed";
+const PUSH_DISMISSED_KEY = "orch:push-prompt-dismissed";
 
 function getVapidPublicKey() {
   return import.meta.env.VITE_PUBLIC_VAPID_KEY as string | undefined;

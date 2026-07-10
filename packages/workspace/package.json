@@ -1,5 +1,5 @@
 {
-  "name": "@brainiac/workspace",
+  "name": "@orch/workspace",
   "type": "module",
   "exports": {
     ".": {
@@ -14,7 +14,7 @@
     "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"
   },
   "dependencies": {
-    "@brainiac/config": "workspace:*",
+    "@orch/config": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -14,7 +14,7 @@ Audited 2026-07-10 against the current worktree. This is a living Phase 8 checkl
 
 ## Contract Gates
 
-- [x] API routers under `packages/api/src/routers` have no direct `@brainiac/db` or `drizzle-orm` imports.
+- [x] API routers under `packages/api/src/routers` have no direct `@orch/db` or `drizzle-orm` imports.
 - [x] Dashboard-agent and Team routers parse their outputs through Zod schemas.
 - [x] Dashboard-agent and Team schemas have explicit router-local boundary modules.
 - [x] Every table has a supporting index review recorded. The reconstructed `0021` snapshot contains 36 tables; 34 have secondary indexes. The two intentional exceptions are `user` (primary key plus unique email) and `dashboard_workspace` (primary key plus user foreign key and one-row-per-user ownership).

@@ -1,4 +1,4 @@
-import type { AppRouterClient } from "@brainiac/api/routers/index";
+import type { AppRouterClient } from "@orch/api/routers/index";
 import { createORPCClient } from "@orpc/client";
 import { RPCLink } from "@orpc/client/fetch";
 import { createTanstackQueryUtils } from "@orpc/tanstack-query";

@@ -5,7 +5,7 @@ import {
   workspaceTalentGridBoxLabels,
   type WorkspaceTalentGridBlock,
   type WorkspaceTalentGridBoxKey,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Trash2, UserPlus, Users } from "lucide-react";
 import { Fragment, useMemo } from "react";
 

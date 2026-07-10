@@ -210,7 +210,7 @@ Tasks:
    - `containers/*` files only bind props to hooks and views.
    - `hooks/use-*` files may compose queries, stores, effects, handlers, and view models.
    - Feature stores may call `orpcClient`; views may not.
-   - Routers may not import `@brainiac/db`, Drizzle query helpers, or feature stores.
+   - Routers may not import `@orch/db`, Drizzle query helpers, or feature stores.
    - Feature-specific files may not live under `apps/web/src/lib` or `apps/web/src/stores`.
    - New generic `utils.ts` files inside feature folders are blocked unless allowlisted.
 3. Add allowlists only for permanent infrastructure, generated code, and server-operation
@@ -233,8 +233,8 @@ Tasks:
 
 1. Keep `packages/api/src/routers/agency-ops/index.ts` as a thin aggregator only.
 2. Move or deliberately preserve compatibility imports:
-   - `@brainiac/api/routers/agency-ops/live`
-   - `@brainiac/api/routers/agency-ops/tenure-engine`
+   - `@orch/api/routers/agency-ops/live`
+   - `@orch/api/routers/agency-ops/tenure-engine`
 3. Replace direct reports-router imports from `../time-tracking/service` with one deliberate boundary:
    - preferred: `reports/service.ts` owns report operations and calls a named time-entry admin service helper.
    - acceptable: `time-tracking/admin-service.ts` exports reporting-only functions with stricter permissions and tests.
@@ -253,7 +253,7 @@ Tasks:
 Exit gate:
 
 - `rg "from .*\\.\\./.*service" packages/api/src/routers/agency-ops -g 'router.ts'` returns only documented cross-feature exceptions or nothing.
-- `rg "from ['\\\"]@brainiac/db|from ['\\\"]drizzle-orm" packages/api/src/routers -g 'router.ts' -g 'index.ts'` returns no feature router violations.
+- `rg "from ['\\\"]@orch/db|from ['\\\"]drizzle-orm" packages/api/src/routers -g 'router.ts' -g 'index.ts'` returns no feature router violations.
 - `bun run check-types` passes.
 
 ### Phase 3 - Complete Agency Web Alignment

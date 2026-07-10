@@ -4,7 +4,7 @@ import {
   workspaceContentQualityDimensionLabels,
   type WorkspaceContentQualityDimension,
   type WorkspaceContentQualityRadarBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";

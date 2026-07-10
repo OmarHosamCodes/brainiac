@@ -1,4 +1,4 @@
-import type { workspaceTeamRoleSchema } from "@brainiac/workspace";
+import type { workspaceTeamRoleSchema } from "@orch/workspace";
 import type { z } from "zod";
 import { create } from "zustand";
 import { toast } from "sonner";

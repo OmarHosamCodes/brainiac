@@ -4,7 +4,7 @@ import {
   type WorkspaceCollectedTask,
   type WorkspaceNode,
   type WorkspaceTaskDomain,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import {
   ArrowDown,
   ArrowUp,

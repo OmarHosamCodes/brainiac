@@ -1,4 +1,4 @@
-import type { WorkspaceNode } from "@brainiac/workspace";
+import type { WorkspaceNode } from "@orch/workspace";
 
 export type WorkspaceCanonicalConnectionPair = {
   orchestratorNodeId: string;

@@ -1,4 +1,4 @@
-import type { TierLimits } from "@brainiac/workspace/tiers";
+import type { TierLimits } from "@orch/workspace/tiers";
 
 import { useShellBootGate } from "@/features/app-shell/shell/use-shell-boot-gate";
 import { useBilling } from "@/features/billing/billing-queries";

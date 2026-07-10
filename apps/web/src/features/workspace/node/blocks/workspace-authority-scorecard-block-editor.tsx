@@ -4,7 +4,7 @@ import {
   workspaceAuthorityScoreMetricLabels,
   type WorkspaceAuthorityScoreMetricKey,
   type WorkspaceAuthorityScorecardBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import {
   Headphones,
   Mic2,

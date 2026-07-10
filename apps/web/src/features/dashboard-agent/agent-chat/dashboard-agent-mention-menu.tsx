@@ -1,4 +1,4 @@
-import type { WorkspaceNode } from "@brainiac/workspace";
+import type { WorkspaceNode } from "@orch/workspace";
 import { useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";

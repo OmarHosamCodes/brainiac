@@ -143,7 +143,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <CommandDialog open={commandOpen} onOpenChange={setCommandOpen} title="Search navigation">
         <Command>
-          <CommandInput placeholder="Search Brainiac" />
+          <CommandInput placeholder="Search Orch" />
           <CommandList>
             <CommandEmpty>No matching destination.</CommandEmpty>
             <CommandGroup heading="App">

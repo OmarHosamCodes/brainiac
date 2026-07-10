@@ -1,6 +1,6 @@
-import { db } from "@brainiac/db";
-import { workspaceTeamMember } from "@brainiac/db/schema";
-import type { WorkspaceTeamRole } from "@brainiac/workspace";
+import { db } from "@orch/db";
+import { workspaceTeamMember } from "@orch/db/schema";
+import type { WorkspaceTeamRole } from "@orch/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, eq } from "drizzle-orm";
 

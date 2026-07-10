@@ -1,5 +1,5 @@
 import { pgTable, text, timestamp, jsonb, index } from "drizzle-orm/pg-core";
-import type { WorkspaceMarketplacePayload, WorkspaceNode } from "@brainiac/workspace";
+import type { WorkspaceMarketplacePayload, WorkspaceNode } from "@orch/workspace";
 
 import { user } from "./auth";
 

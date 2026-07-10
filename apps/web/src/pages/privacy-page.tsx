@@ -7,7 +7,7 @@ const sections = [
     id: "scope",
     title: "Scope of This Policy",
     intro:
-      "This Privacy Policy explains how Brainiac collects, uses, discloses, and safeguards personal information when you visit our website, create an account, or use our workspace and related services.",
+      "This Privacy Policy explains how Orch collects, uses, discloses, and safeguards personal information when you visit our website, create an account, or use our workspace and related services.",
     paragraphs: [
       "This policy applies to information we collect directly from you, automatically through your use of the service, and from third parties that help us operate authentication, analytics, support, and infrastructure.",
     ],
@@ -19,7 +19,7 @@ const sections = [
       "Account details such as name, email address, authentication identifiers, and profile information.",
       "Workspace data such as prompts, documents, board content, uploaded files, and messages exchanged through the product.",
       "Usage and device data such as IP address, browser type, pages viewed, timestamps, approximate location derived from IP, and interaction events.",
-      "Transaction and billing data when you purchase a paid plan, typically processed through third-party payment providers rather than stored directly by Brainiac.",
+      "Transaction and billing data when you purchase a paid plan, typically processed through third-party payment providers rather than stored directly by Orch.",
     ],
   },
   {
@@ -34,7 +34,7 @@ const sections = [
     id: "ai-processing",
     title: "AI Processing and Service Providers",
     paragraphs: [
-      "Some Brainiac features may send prompts, files, or other workspace inputs to AI or infrastructure providers acting on our behalf in order to generate responses or run product functionality.",
+      "Some Orch features may send prompts, files, or other workspace inputs to AI or infrastructure providers acting on our behalf in order to generate responses or run product functionality.",
       "We require providers to process data under contractual restrictions appropriate to the services they perform, but you should avoid submitting information that you are not authorized to share or that requires zero third-party exposure unless you have configured the service for that purpose.",
     ],
   },
@@ -76,7 +76,7 @@ const sections = [
     id: "international",
     title: "International Transfers",
     paragraphs: [
-      "Brainiac may process and store information in countries other than the country where you reside. Where required, we use appropriate transfer mechanisms and contractual protections for cross-border processing.",
+      "Orch may process and store information in countries other than the country where you reside. Where required, we use appropriate transfer mechanisms and contractual protections for cross-border processing.",
     ],
   },
   {
@@ -84,7 +84,7 @@ const sections = [
     title: "Changes to This Policy",
     paragraphs: [
       "We may update this Privacy Policy as our product, practices, or legal obligations evolve. When material changes are made, we will revise the date shown on this page and take additional steps where required by law.",
-      "Questions or privacy requests can be sent to legal@brainiac.studio.",
+      "Questions or privacy requests can be sent to legal@orch.studio.",
     ],
   },
 ] as const;
@@ -93,7 +93,7 @@ export function PrivacyPage() {
   return (
     <MarketingLegalLayout
       title="Privacy Policy"
-      description="A plain-language overview of what Brainiac collects, why it is processed, who may receive it, and what choices users have."
+      description="A plain-language overview of what Orch collects, why it is processed, who may receive it, and what choices users have."
       effectiveDate={effectiveDate}
       sections={sections}
       crossLink={{ label: "Terms of Service", to: "/terms" }}

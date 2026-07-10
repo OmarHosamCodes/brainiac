@@ -1,4 +1,4 @@
-import type { DashboardConversationMessage } from "@brainiac/agent";
+import type { DashboardConversationMessage } from "@orch/agent";
 
 import { DashboardAgentToolTraceList } from "@/features/dashboard-agent/agent-chat/dashboard-agent-tool-trace";
 import {

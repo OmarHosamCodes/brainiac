@@ -1,4 +1,4 @@
-import { createWorkspaceId } from "@brainiac/workspace";
+import { createWorkspaceId } from "@orch/workspace";
 
 import type { SeedContext } from "./seed-agency-types";
 

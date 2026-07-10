@@ -2,7 +2,7 @@ import type {
   WorkspaceNodeConnection,
   WorkspaceNodeTint,
   WorkspaceNodeType,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 
 export interface CanvasRect {
   x: number;

@@ -1,7 +1,4 @@
-import {
-  getPricingSimulatorSummary,
-  type WorkspacePricingSimulatorBlock,
-} from "@brainiac/workspace";
+import { getPricingSimulatorSummary, type WorkspacePricingSimulatorBlock } from "@orch/workspace";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";

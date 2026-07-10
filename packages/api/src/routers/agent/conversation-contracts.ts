@@ -1,4 +1,4 @@
-import { DASHBOARD_CONVERSATION_TITLE_LIMIT } from "@brainiac/agent";
+import { DASHBOARD_CONVERSATION_TITLE_LIMIT } from "@orch/agent";
 
 export function buildDashboardConversationTitle(content: string) {
   return content.trim().slice(0, DASHBOARD_CONVERSATION_TITLE_LIMIT) || "New conversation";

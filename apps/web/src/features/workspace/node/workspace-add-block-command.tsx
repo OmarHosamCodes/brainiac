@@ -1,4 +1,4 @@
-import type { WorkspaceBlock } from "@brainiac/workspace";
+import type { WorkspaceBlock } from "@orch/workspace";
 import { ArrowLeft, LayoutTemplate } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 

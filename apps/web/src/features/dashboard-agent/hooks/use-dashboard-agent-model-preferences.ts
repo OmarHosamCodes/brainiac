@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-const FAVORITE_MODELS_KEY = "brainiac:agent-favorite-models";
+const FAVORITE_MODELS_KEY = "orch:agent-favorite-models";
 
 type ModelOption = {
   id: string;

@@ -1,4 +1,4 @@
-import { db } from "@brainiac/db";
+import { db } from "@orch/db";
 import {
   agencyOpsTaskMessage,
   agencyOpsTaskThread,
@@ -9,14 +9,14 @@ import {
   type NotificationType,
   user,
   workspaceTeamMember,
-} from "@brainiac/db/schema";
-import { createWorkspaceId } from "@brainiac/workspace";
+} from "@orch/db/schema";
+import { createWorkspaceId } from "@orch/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, isNull, lt, sql } from "drizzle-orm";
 
 import type { NotificationRecord } from "../../schemas/notifications";
 import { getUserAvatarPublicUrl } from "../../storage";
-import { env } from "@brainiac/env/server";
+import { env } from "@orch/env/server";
 import { requireTeamMembership } from "../agency-ops/shared/membership";
 import { defaultNotificationChannels, excludeActor, messageCoalesceTaskId } from "./fanout-helpers";
 import { deliverNotificationPush } from "./delivery";

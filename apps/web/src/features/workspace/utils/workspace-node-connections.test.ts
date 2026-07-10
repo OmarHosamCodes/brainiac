@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkspaceNode, type WorkspaceNode } from "@brainiac/workspace";
+import { createWorkspaceNode, type WorkspaceNode } from "@orch/workspace";
 
 import {
   getCanonicalConnectionPair,

@@ -6,8 +6,8 @@
  *   railway run -- sh -c 'DATABASE_URL="$DATABASE_PUBLIC_URL" bun run --cwd apps/server src/operations/backfills/import-clockify-backfill.ts --before 2026-06-25'
  */
 import { resolve } from "node:path";
-import { db } from "@brainiac/db";
-import { user, workspaceTeamMember } from "@brainiac/db/schema";
+import { db } from "@orch/db";
+import { user, workspaceTeamMember } from "@orch/db/schema";
 import { eq, sql } from "drizzle-orm";
 import {
   buildCatalog,
@@ -144,9 +144,9 @@ async function main(): Promise<void> {
 
   const userIdByClockifyUserId = new Map<string, string>();
   for (const member of selectedMembers) {
-    const brainiacUserId = byEmail.get(member.email.toLowerCase());
-    if (brainiacUserId) {
-      userIdByClockifyUserId.set(member.userId, brainiacUserId);
+    const orchUserId = byEmail.get(member.email.toLowerCase());
+    if (orchUserId) {
+      userIdByClockifyUserId.set(member.userId, orchUserId);
     }
   }
 

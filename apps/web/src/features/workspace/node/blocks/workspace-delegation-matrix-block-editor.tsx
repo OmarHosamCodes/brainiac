@@ -4,7 +4,7 @@ import {
   workspaceDelegationStatusLabels,
   type WorkspaceDelegationMatrixBlock,
   type WorkspaceDelegationStatus,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { ArrowRight, BadgeDollarSign, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 

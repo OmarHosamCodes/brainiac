@@ -11,11 +11,11 @@
  * Start with: bun run dev (runs on port 7000 via BETTER_AUTH_URL)
  */
 
-import { createContext } from "@brainiac/api/context";
-import { bootstrapAgencyLiveRedisSubscriber } from "@brainiac/api/routers/agency-ops/live/live";
-import { registerNotificationPushHandler } from "@brainiac/api/routers/notifications/delivery";
-import { auth } from "@brainiac/auth";
-import { corsOrigins, env, primaryCorsOrigin } from "@brainiac/env/server";
+import { createContext } from "@orch/api/context";
+import { bootstrapAgencyLiveRedisSubscriber } from "@orch/api/routers/agency-ops/live/live";
+import { registerNotificationPushHandler } from "@orch/api/routers/notifications/delivery";
+import { auth } from "@orch/auth";
+import { corsOrigins, env, primaryCorsOrigin } from "@orch/env/server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";

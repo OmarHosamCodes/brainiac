@@ -4,7 +4,7 @@ import {
   createWorkspaceHabitGridHabit,
   getHabitGridSummary,
   type WorkspaceHabitGridBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Check, Minus, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

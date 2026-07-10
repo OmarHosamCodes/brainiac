@@ -59,7 +59,7 @@ export function MarketingPageShell({
             </div>
 
             <div className="md:col-span-3 md:col-start-7">
-              <div className="mb-4 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Product
               </div>
               <ul className="space-y-2.5">
@@ -77,7 +77,7 @@ export function MarketingPageShell({
             </div>
 
             <div className="md:col-span-2 md:col-start-11">
-              <div className="mb-4 text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              <div className="mb-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 Legal
               </div>
               <ul className="mb-6 space-y-2.5">
@@ -98,7 +98,7 @@ export function MarketingPageShell({
 
           <div className="mt-12 flex flex-col items-start justify-between gap-3 border-t border-border pt-6 md:mt-16 md:flex-row md:items-center">
             <p className="text-xs text-muted-foreground">
-              &copy; {year} Brainiac. All rights reserved.
+              &copy; {year} Orch. All rights reserved.
             </p>
             <p className="text-xs text-muted-foreground">Built for people who think on canvases.</p>
           </div>

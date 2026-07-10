@@ -1,4 +1,4 @@
-import { getTrackerTrend, type WorkspaceTrackerBlock } from "@brainiac/workspace";
+import { getTrackerTrend, type WorkspaceTrackerBlock } from "@orch/workspace";
 import { Minus, Plus, Trash2, TrendingDown, TrendingUp, X } from "lucide-react";
 import { useMemo } from "react";
 

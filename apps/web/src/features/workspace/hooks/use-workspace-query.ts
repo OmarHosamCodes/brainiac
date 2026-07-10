@@ -9,7 +9,7 @@ import {
   normalizeWorkspaceNode,
   type WorkspaceNode,
   type WorkspaceNodeDashboardSelectableBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 

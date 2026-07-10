@@ -11,7 +11,7 @@ import {
   workspaceContentRoiStatusLabels,
   type WorkspaceContentPlatform,
   type WorkspaceContentRoiTrackerBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

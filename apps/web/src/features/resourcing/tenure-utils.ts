@@ -3,7 +3,7 @@ import {
   getFiscalQuarterForDate,
   getFiscalQuarterRange,
   toFiscalCalendar,
-} from "@brainiac/api/routers/agency-ops/resourcing/tenure-engine";
+} from "@orch/api/routers/agency-ops/resourcing/tenure-engine";
 
 export type TenurePolicyCalendar = {
   fiscalYearStartMonth: number;

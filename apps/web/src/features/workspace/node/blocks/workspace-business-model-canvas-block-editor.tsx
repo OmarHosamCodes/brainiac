@@ -4,7 +4,7 @@ import {
   workspaceBusinessModelCanvasCellLabels,
   type WorkspaceBusinessModelCanvasBlock,
   type WorkspaceBusinessModelCanvasCellKey,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { AlertTriangle, Sparkles } from "lucide-react";
 import { useMemo } from "react";
 

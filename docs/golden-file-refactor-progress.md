@@ -42,7 +42,7 @@ Extended [`scripts/check-conventions.mjs`](../scripts/check-conventions.mjs) wit
 | Rule               | What it blocks                                                                                           |
 | ------------------ | -------------------------------------------------------------------------------------------------------- |
 | View imports       | `*-view.tsx` cannot import `@tanstack/react-query`, `@/lib/orpc`, `orpcClient`, or feature/global stores |
-| Router imports     | API routers cannot import `@brainiac/db` or `drizzle-orm` directly                                       |
+| Router imports     | API routers cannot import `@orch/db` or `drizzle-orm` directly                                           |
 | Feature lib/stores | Feature files must live in `features/`, not `lib/` or `stores/` (with allowlist for legacy files)        |
 | Generic utils      | New `utils.ts`, `helpers.ts`, or `data.ts` files inside feature folders are blocked                      |
 
