@@ -1,6 +1,12 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import type { AgencyProject } from "@/features/task-management/agency-work";
+import {
+  groupItemsByClient,
+  projectSearchableText,
+  sortProjectsByClientThenName,
+  useAgencyChooserOpenState,
+} from "@/features/shared/choosers/agency-chooser-shell";
 
 type Project = Pick<AgencyProject, "id" | "clientName" | "name">;
 
@@ -63,19 +69,10 @@ export function useAgencyProjectChooser({
   allowEmpty = false,
   emptyLabel = "All projects",
 }: UseAgencyProjectChooserOptions): AgencyProjectChooserViewModel {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const open = controlledOpen ?? uncontrolledOpen;
-
-  function setOpen(nextOpen: boolean) {
-    onOpenChange?.(nextOpen);
-    if (controlledOpen === undefined) {
-      setUncontrolledOpen(nextOpen);
-    }
-    if (!nextOpen) {
-      setSearchTerm("");
-    }
-  }
+  const { open, searchTerm, setSearchTerm, setOpen } = useAgencyChooserOpenState({
+    controlledOpen,
+    onOpenChange,
+  });
 
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === value) ?? null,
@@ -86,37 +83,13 @@ export function useAgencyProjectChooser({
     const query = searchTerm.trim().toLowerCase();
     if (!query) return projects;
 
-    return projects.filter((project) => {
-      const searchableText = [
-        project.name,
-        project.clientName,
-        `${project.clientName} · ${project.name}`,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return searchableText.includes(query);
-    });
+    return projects.filter((project) => projectSearchableText(project).includes(query));
   }, [projects, searchTerm]);
 
-  const groupedProjects = useMemo(() => {
-    const sortedProjects = [...filteredProjects].sort((left, right) => {
-      const clientSort = left.clientName.localeCompare(right.clientName);
-      return clientSort || left.name.localeCompare(right.name);
-    });
-
-    const clientGroups: AgencyProjectChooserClientGroup[] = [];
-    let currentGroup: AgencyProjectChooserClientGroup | null = null;
-
-    for (const project of sortedProjects) {
-      if (!currentGroup || currentGroup.clientName !== project.clientName) {
-        currentGroup = { clientName: project.clientName, projects: [] };
-        clientGroups.push(currentGroup);
-      }
-      currentGroup.projects.push(project);
-    }
-
-    return clientGroups;
-  }, [filteredProjects]);
+  const groupedProjects = useMemo(
+    () => groupItemsByClient(filteredProjects, sortProjectsByClientThenName),
+    [filteredProjects],
+  );
 
   function selectProject(projectId: string) {
     onValueChange(projectId);
