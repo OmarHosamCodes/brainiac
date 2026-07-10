@@ -1,7 +1,7 @@
 import { AlertTriangle, ListChecks, ListPlus, Plus } from "lucide-react";
 import { useState } from "react";
 
-import { AgencyTaskGroupRowView } from "@/features/task-management/task-list/agency-task-group-row-view";
+import { AgencyTaskGroupRow } from "@/features/task-management/task-list/agency-task-group-row";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
@@ -110,7 +110,7 @@ export function AgencyProjectTasks({ teamId, projectId, projectName }: AgencyPro
       ) : (
         <ul className="divide-y divide-default">
           {taskGroups.map((group) => (
-            <AgencyTaskGroupRowView
+            <AgencyTaskGroupRow
               key={group.groupKey}
               group={group}
               mode="project"

@@ -1,7 +1,5 @@
 import { Plus } from "lucide-react";
-import { AgencyDescriptionSuggestionMenu } from "@/features/time-tracking/agency-description-suggestion-menu";
-import { AgencyMemberChooser } from "@/features/shared/choosers/agency-member-chooser";
-import { AgencyProjectChooser } from "@/features/shared/choosers/agency-project-chooser";
+import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
@@ -15,11 +13,15 @@ import {
 import { cn } from "@/lib/utils";
 import type { AgencyWorkSurfaceCreateTaskPopoverViewModel } from "./hooks/use-agency-work-surface-create-task-popover";
 
-type Props = AgencyWorkSurfaceCreateTaskPopoverViewModel;
+type Props = AgencyWorkSurfaceCreateTaskPopoverViewModel & {
+  suggestionsOpen: boolean;
+  projectChooser: ReactNode;
+  suggestionMenu: ReactNode;
+  memberChooser: ReactNode;
+};
 
 export function AgencyWorkSurfaceCreateTaskPopoverView(props: Props) {
   const {
-    projects,
     open,
     setOpen,
     formTitleId,
@@ -27,27 +29,17 @@ export function AgencyWorkSurfaceCreateTaskPopoverView(props: Props) {
     suggestionListboxId,
     title,
     setTitle,
-    projectId,
-    setProjectId,
-    assignedToTeam,
-    setAssignedToTeam,
-    assigneeUserIds,
-    setAssigneeUserIds,
-    titleFocused,
     setTitleFocused,
-    suggestionsDismissed,
     setSuggestionsDismissed,
-    activeSuggestionIndex,
-    setActiveSuggestionIndex,
-    members,
-    suggestions,
     handleTitleKeyDown,
     handleSubmit,
-    applySuggestion,
     isCreatingTask,
     canSubmit,
+    suggestionsOpen,
+    projectChooser,
+    suggestionMenu,
+    memberChooser,
   } = props;
-  const suggestionsOpen = !suggestionsDismissed && suggestions.length > 0 && titleFocused;
   return (
     <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
@@ -68,21 +60,7 @@ export function AgencyWorkSurfaceCreateTaskPopoverView(props: Props) {
           </p>
           <div className={agencyFormFieldClass}>
             <Label className="text-xs font-semibold text-muted">Project</Label>
-            <AgencyProjectChooser
-              value={projectId}
-              onValueChange={setProjectId}
-              projects={projects}
-              placeholder="Select project"
-              searchPlaceholder="Search projects"
-              disabled={isCreatingTask}
-              className={cn(
-                "h-9 w-full max-w-none justify-between gap-1.5 rounded-xl border border-default bg-default px-3 text-sm font-medium shadow-none",
-                "transition-colors hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50",
-                agencyFocusRingClass,
-                "motion-reduce:transition-none",
-              )}
-              contentAlign="start"
-            />
+            {projectChooser}
           </div>
           <div className={agencyFormFieldClass} data-create-task-title>
             <Label htmlFor={titleFieldId} className="text-xs font-semibold text-muted">
@@ -110,31 +88,12 @@ export function AgencyWorkSurfaceCreateTaskPopoverView(props: Props) {
                   agencyFocusRingClass,
                 )}
               />
-              {suggestionsOpen ? (
-                <AgencyDescriptionSuggestionMenu
-                  listboxId={suggestionListboxId}
-                  suggestions={suggestions}
-                  activeIndex={activeSuggestionIndex}
-                  ariaLabel="Recent task names"
-                  onActiveIndexChange={setActiveSuggestionIndex}
-                  onSelect={applySuggestion}
-                />
-              ) : null}
+              {suggestionMenu}
             </div>
           </div>
           <div className={agencyFormFieldClass}>
             <Label className="text-xs font-semibold text-muted">Assign</Label>
-            <AgencyMemberChooser
-              mode="multiple"
-              assignedToTeam={assignedToTeam}
-              selectedUserIds={assigneeUserIds}
-              onAssignedToTeamChange={setAssignedToTeam}
-              onSelectedUserIdsChange={setAssigneeUserIds}
-              members={members}
-              loading={false}
-              disabled={isCreatingTask}
-              triggerVariant="stack"
-            />
+            {memberChooser}
           </div>
           <Button type="submit" disabled={!canSubmit}>
             Create task

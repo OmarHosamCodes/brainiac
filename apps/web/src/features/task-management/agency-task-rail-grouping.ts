@@ -5,10 +5,9 @@ import {
   expandTasksWithBlueprints,
   type ExpandTasksWithBlueprintsOptions,
 } from "@/features/task-management/agency-task-blueprints";
-import { type JourneyProgressSummary } from "@/features/projects/agency-task-journey";
 import { isTaskOverdue } from "@/features/task-management/agency-task-utils";
 
-export type AgencyTaskJourneyCluster = {
+type AgencyTaskJourneyCluster = {
   projectId: string;
   anchorRow: AgencyTaskDisplayRow;
   milestoneRows: AgencyTaskDisplayRow[];
@@ -39,12 +38,39 @@ export type AgencyTaskRailSummaryCounts = {
   taskCount: number;
 };
 
-import {
-  AGENCY_TASK_CLIENT_GROUP_HEADER_HEIGHT,
-  AGENCY_TASK_PROJECT_GROUP_HEADER_HEIGHT,
-} from "@/features/shared/agency-ui";
+export function flattenTasksFromClientGroups(
+  groups: AgencyTaskClientDisplayGroup[],
+): AgencyProjectTask[] {
+  const tasks: AgencyProjectTask[] = [];
+  const seen = new Set<string>();
 
-export const AGENCY_TASK_PROJECT_HEADER_HEIGHT = AGENCY_TASK_PROJECT_GROUP_HEADER_HEIGHT;
+  for (const group of groups) {
+    for (const projectGroup of group.projectGroups) {
+      for (const row of projectGroup.standaloneRows) {
+        if (seen.has(row.task.id)) continue;
+        seen.add(row.task.id);
+        tasks.push(row.task);
+      }
+
+      const journeyCluster = projectGroup.journeyCluster;
+      if (!journeyCluster) continue;
+
+      const anchor = journeyCluster.anchorRow.task;
+      if (!seen.has(anchor.id)) {
+        seen.add(anchor.id);
+        tasks.push(anchor);
+      }
+
+      for (const milestone of journeyCluster.milestoneRows) {
+        if (seen.has(milestone.task.id)) continue;
+        seen.add(milestone.task.id);
+        tasks.push(milestone.task);
+      }
+    }
+  }
+
+  return tasks;
+}
 
 function sortStandaloneRows(rows: AgencyTaskDisplayRow[]): AgencyTaskDisplayRow[] {
   return [...rows].sort((left, right) => {
@@ -125,7 +151,7 @@ export function countProjectDisplayRows(group: AgencyTaskProjectDisplayGroup): n
   return milestoneCount + group.standaloneRows.length;
 }
 
-export function countClientDisplayRows(group: AgencyTaskClientDisplayGroup): number {
+function countClientDisplayRows(group: AgencyTaskClientDisplayGroup): number {
   return countRailDisplayRows(group.projectGroups);
 }
 
@@ -195,58 +221,3 @@ export function buildAgencyTaskClientRailGroups(
 export function countClientRailDisplayRows(clientGroups: AgencyTaskClientDisplayGroup[]): number {
   return clientGroups.reduce((sum, group) => sum + countClientDisplayRows(group), 0);
 }
-
-export type EstimateProjectGroupHeightInput = {
-  group: AgencyTaskProjectDisplayGroup;
-  estimateRowHeight: (row: AgencyTaskDisplayRow) => number;
-};
-
-export function estimateProjectGroupHeight({
-  group,
-  estimateRowHeight,
-}: EstimateProjectGroupHeightInput): number {
-  let height = AGENCY_TASK_PROJECT_GROUP_HEADER_HEIGHT;
-
-  if (group.journeyCluster) {
-    for (const row of group.journeyCluster.milestoneRows) {
-      height += estimateRowHeight(row);
-    }
-  }
-
-  for (const row of group.standaloneRows) {
-    height += estimateRowHeight(row);
-  }
-
-  return height;
-}
-
-export type EstimateClientGroupHeightInput = {
-  group: AgencyTaskClientDisplayGroup;
-  expanded: boolean;
-  collapsedProjects: Set<string>;
-  estimateRowHeight: (row: AgencyTaskDisplayRow) => number;
-};
-
-export function estimateClientGroupHeight({
-  group,
-  expanded,
-  collapsedProjects,
-  estimateRowHeight,
-}: EstimateClientGroupHeightInput): number {
-  if (!expanded) return AGENCY_TASK_CLIENT_GROUP_HEADER_HEIGHT;
-
-  let height = AGENCY_TASK_CLIENT_GROUP_HEADER_HEIGHT;
-  for (const projectGroup of group.projectGroups) {
-    if (collapsedProjects.has(projectGroup.projectId)) {
-      height += AGENCY_TASK_PROJECT_GROUP_HEADER_HEIGHT;
-      continue;
-    }
-    height += estimateProjectGroupHeight({
-      group: projectGroup,
-      estimateRowHeight,
-    });
-  }
-  return height;
-}
-
-export type { JourneyProgressSummary };

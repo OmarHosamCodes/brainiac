@@ -1,33 +1,58 @@
 {
-  "ignoreIssues": {
-    "apps/web/app/components/workspace/node/context.ts": ["exports", "types"]
-  },
+  "$schema": "./node_modules/knip/schema.json",
   "workspaces": {
+    ".": {
+      "entry": [
+        "scripts/check-conventions.mjs",
+        "scripts/check-golden-file-inventory.mjs",
+        "scripts/check-realtime-registry.mjs",
+        "scripts/generate-golden-file-inventory.mjs",
+        "scripts/perf/run-benchmarks.mjs",
+        "scripts/railway-start.mjs",
+        "scripts/test-setup.ts"
+      ],
+      "project": ["scripts/**/*.{ts,mjs}"]
+    },
     "apps/web": {
       "entry": [
-        "nuxt.config.ts",
-        "app/app.vue",
-        "app/pages/**/*.vue",
-        "app/layouts/**/*.vue",
-        "app/plugins/**/*.ts",
-        "app/middleware/**/*.ts",
-        "app/components/**/*.vue",
-        "app/composables/**/*.ts",
-        "app/utils/**/*.ts"
+        "src/main.tsx",
+        "src/**/*.{test,spec}.{ts,tsx}",
+        "src/ui/**/*.{ts,tsx}",
+        "vite.config.ts",
+        "scripts/write-railway-server.mjs"
       ],
-      "project": ["app/**/*.{ts,vue}"],
-      "ignoreDependencies": ["@iconify-json/lucide", "@iconify-json/simple-icons"]
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "vite*.ts",
+        "scripts/**/*.mjs",
+        "perf/**/*.mjs"
+      ],
+      "ignoreDependencies": ["tailwindcss"]
     },
     "apps/server": {
-      "entry": ["src/index.ts", "src/seed.ts", "tsdown.config.ts"],
-      "project": ["src/**/*.ts"]
+      "entry": [
+        "src/index.ts",
+        "src/**/*.{test,spec}.ts",
+        "src/operations/seeds/seed.ts",
+        "src/operations/seeds/seed-agency.ts",
+        "src/operations/seeds/seed-massive.ts",
+        "src/operations/imports/import-clockify.ts",
+        "src/operations/backfills/import-clockify-backfill.ts",
+        "src/operations/backfills/verify-clockify-backfill.ts",
+        "src/operations/maintenance/clear-team-data.ts",
+        "src/operations/maintenance/cleanup-agency-operator-nodes.ts",
+        "src/operations/maintenance/grant-lifetime-pro.ts",
+        "tsdown.config.ts"
+      ],
+      "project": ["src/**/*.ts", "tsdown.config.ts"],
+      "ignoreDependencies": ["sharp"]
     },
     "packages/agent": {
-      "entry": ["src/index.ts", "src/tools.test.ts"],
+      "entry": ["src/index.ts", "src/**/*.{test,spec}.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/api": {
-      "entry": ["src/index.ts"],
+      "entry": ["src/index.ts", "src/**/*.{test,spec}.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/auth": {
@@ -39,11 +64,15 @@
       "project": ["src/**/*.ts", "drizzle.config.ts"]
     },
     "packages/env": {
-      "entry": ["src/server.ts", "src/web.ts"],
+      "entry": ["src/server.ts", "src/vite.ts", "src/web.ts"],
       "project": ["src/**/*.ts"]
     },
     "packages/workspace": {
-      "entry": ["src/index.ts"],
+      "entry": ["src/index.ts", "src/**/*.{test,spec}.ts"],
+      "project": ["src/**/*.ts"]
+    },
+    "packages/config": {
+      "entry": ["src/assert-never.ts"],
       "project": ["src/**/*.ts"]
     }
   }

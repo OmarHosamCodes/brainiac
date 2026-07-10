@@ -6,7 +6,7 @@ import { filterTasksByTitleSearch } from "./agency-task-title-filter";
 
 export const TASK_SUGGESTION_ACTIVE_STATUSES: TaskStatus[] = ["open", "in_progress"];
 
-export type TaskSuggestionQueryFilters = {
+type TaskSuggestionQueryFilters = {
   projectId?: string;
   statuses: AgencyProjectTaskStatus[];
   pageSize: number;

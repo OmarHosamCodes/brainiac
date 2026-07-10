@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
-import type { AgencyWorkSurfaceTaskTableVariant } from "@/features/task-management/work-surface/agency-work-surface-task-table-row-view";
+import type { AgencyWorkSurfaceTaskTableVariant } from "@/features/task-management/work-surface/agency-work-surface-task-table-row-model";
 import {
   agencyWorkTableGridClass,
   agencyWorkTableGridDelegatedClass,
@@ -10,7 +10,7 @@ import {
 } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
-export type AgencyWorkSurfaceTableHeaderItem = {
+type AgencyWorkSurfaceTableHeaderItem = {
   icon: LucideIcon;
   label: string;
   secondaryIcon?: LucideIcon;

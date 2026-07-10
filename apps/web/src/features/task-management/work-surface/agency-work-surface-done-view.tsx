@@ -1,39 +1,34 @@
 import { AlertTriangle, Calendar, CircleDot, MoreHorizontal, Timer } from "lucide-react";
-import { useMemo } from "react";
 
 import { AgencyWorkSurfacePaginationFooter } from "@/features/task-management/work-surface/agency-work-surface-pagination-footer";
 import { AgencyWorkSurfaceTableHeaderView } from "@/features/task-management/work-surface/agency-work-surface-table-header-view";
-import { AgencyWorkSurfaceTaskTableRowView } from "@/features/task-management/work-surface/agency-work-surface-task-table-row-view";
+import type { RenderAgencyWorkSurfaceTaskTableRow } from "@/features/task-management/work-surface/agency-work-surface-task-table-row-model";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
-import type { AgencyTaskListViewModel } from "@/features/task-management/hooks/use-agency-task-list";
+import type { AgencyWorkSurfaceDoneViewModel } from "@/features/task-management/work-surface/hooks/use-agency-work-surface-done";
 import {
   agencyMutedSectionHeaderClass,
   agencyWorkTableBodyScrollClass,
   agencyWorkTableListClass,
   agencyWorkTableStackClass,
 } from "@/features/shared/agency-ui";
-import { groupTasksByRecency } from "@/features/task-management/group-tasks-by-recency";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 type AgencyWorkSurfaceDoneViewProps = {
-  view: Extract<AgencyTaskListViewModel, { status: "ready" }>;
+  viewModel: AgencyWorkSurfaceDoneViewModel;
+  renderTaskTableRow: RenderAgencyWorkSurfaceTaskTableRow;
 };
 
-export function AgencyWorkSurfaceDoneView({ view }: AgencyWorkSurfaceDoneViewProps) {
-  const sections = useMemo(
-    () => groupTasksByRecency(view.doneTasks, (task) => task.updatedAt),
-    [view.doneTasks],
-  );
-  const visibleCount = sections.reduce((sum, section) => sum + section.tasks.length, 0);
+export function AgencyWorkSurfaceDoneView({
+  viewModel,
+  renderTaskTableRow,
+}: AgencyWorkSurfaceDoneViewProps) {
+  const { view, sections, visibleCount } = viewModel;
 
   if (view.doneTasksQueryError) {
     return (
       <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
         <AlertTriangle className="size-5 text-warning" aria-hidden />
-        <p className="text-sm text-muted">
-          {getErrorMessage(view.doneTasksErrorMessage, "Could not load done tasks.")}
-        </p>
+        <p className="text-sm text-muted">{view.doneTasksErrorMessage}</p>
         <Button size="sm" variant="secondary" onClick={view.onRetryDoneTasks}>
           Retry
         </Button>
@@ -73,20 +68,19 @@ export function AgencyWorkSurfaceDoneView({ view }: AgencyWorkSurfaceDoneViewPro
                     {section.tasks.length}
                   </span>
                 </div>
-                {section.tasks.map((task) => (
-                  <AgencyWorkSurfaceTaskTableRowView
-                    key={task.id}
-                    task={task}
-                    projects={view.projects}
-                    teamId={view.teamId}
-                    variant="done"
-                    highlight={task.id === view.recentlyCompletedTaskId}
-                    isRowPending={view.isRowPending(task.id)}
-                    onSelect={(taskId) => view.onSelect(taskId)}
-                    onDescriptionChange={view.onTaskDescriptionChange}
-                    onReopenToActive={view.onReopenDoneTask}
-                  />
-                ))}
+                {section.tasks.map((task) =>
+                  renderTaskTableRow({
+                    task,
+                    projects: view.projects,
+                    teamId: view.teamId,
+                    variant: "done",
+                    highlight: task.id === view.recentlyCompletedTaskId,
+                    isRowPending: view.isRowPending(task.id),
+                    onSelect: (taskId) => view.onSelect(taskId),
+                    onDescriptionChange: view.onTaskDescriptionChange,
+                    onReopenToActive: view.onReopenDoneTask,
+                  }),
+                )}
               </div>
             ))}
           </div>

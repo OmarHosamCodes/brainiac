@@ -4,6 +4,7 @@ import { AgencyTimeEntryRecencySectionView } from "@/features/time-tracking/entr
 import { AgencyWorkSurfacePaginationFooter } from "@/features/task-management/work-surface/agency-work-surface-pagination-footer";
 import { Button } from "@/ui/button";
 import type { AgencyTimeEntriesLogViewModel } from "@/features/time-tracking/hooks/use-agency-time-entries-log";
+import type { AgencyTimeEntryGroupRowRenderer } from "@/features/time-tracking/entries/agency-time-entry-row-renderer";
 import {
   agencyMetricClass,
   agencyTimeLogSkeletonClass,
@@ -14,9 +15,10 @@ import { cn } from "@/lib/utils";
 
 type AgencyTimeEntriesLogViewProps = {
   view: AgencyTimeEntriesLogViewModel;
+  renderGroupRow: AgencyTimeEntryGroupRowRenderer;
 };
 
-export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps) {
+export function AgencyTimeEntriesLogView({ view, renderGroupRow }: AgencyTimeEntriesLogViewProps) {
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col", view.className)}>
       {view.logQueryError ? (
@@ -79,23 +81,8 @@ export function AgencyTimeEntriesLogView({ view }: AgencyTimeEntriesLogViewProps
               <AgencyTimeEntryRecencySectionView
                 key={section.id}
                 section={section}
-                teamId={view.teamId}
-                projects={view.projects}
-                tasks={view.tasks}
-                expandedGroupKeys={view.expandedGroupKeys}
-                isTimerMutationPending={view.isTimerMutationPending}
-                deletingEntryIds={view.deletingEntryIds}
-                updatingEntryIds={view.updatingEntryIds}
-                duplicatingEntryIds={view.duplicatingEntryIds}
                 highlightedEntryId={view.highlightedEntryId}
-                onToggleGroupExpand={view.onToggleGroupExpand}
-                onRestart={view.onRestart}
-                onDeleteGroup={view.onDeleteGroup}
-                onDeleteEntry={view.onDeleteEntry}
-                onDuplicate={view.onDuplicate}
-                onSaveEdit={view.onSaveEdit}
-                onToggleWaste={view.onToggleWaste}
-                togglingWasteEntryIds={view.togglingWasteEntryIds}
+                renderGroupRow={renderGroupRow}
               />
             ))}
           </div>

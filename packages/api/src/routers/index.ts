@@ -1,12 +1,12 @@
 import type { RouterClient } from "@orpc/server";
 
 import { agencyOpsRouter } from "./agency-ops";
-import { agentRouter } from "./agent";
-import { billingRouter } from "./billing";
-import { notificationsRouter } from "./notifications";
+import { agentRouter } from "./agent/router";
+import { billingRouter } from "./billing/router";
+import { notificationsRouter } from "./notifications/router";
 import { systemRouter } from "./system";
-import { teamRouter } from "./team";
-import { workspaceRouter } from "./workspace";
+import { teamRouter } from "./team/router";
+import { workspaceRouter } from "./workspace/router";
 
 export const appRouter = {
   agent: agentRouter,

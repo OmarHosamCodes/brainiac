@@ -28,7 +28,7 @@ function ensureWebPushConfigured() {
 export async function sendWebPushForNotification(notification: NotificationRecord) {
   if (!ensureWebPushConfigured()) return;
 
-  const subscriptions = await listPushSubscriptionsForUser(notification.recipientUserId);
+  const subscriptions = await listPushSubscriptionsForUser(notification.recipientUserId, {});
   if (subscriptions.length === 0) return;
 
   const copy = notificationPushCopy(notification);

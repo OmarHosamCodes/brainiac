@@ -81,6 +81,23 @@ brainiac/
 
 Packages are shared between frontend and backend.
 
+## Golden Feature Workflow
+
+Product features follow the layer direction documented in [`docs/golden-file-pattern.md`](./docs/golden-file-pattern.md):
+
+```text
+schema/migration -> API schemas -> router -> service -> oRPC/TanStack hook
+-> feature state/mutations -> feature hook/view model -> container -> view
+```
+
+- Put product UI, hooks, stores, and feature helpers under `apps/web/src/features/<domain>`.
+- Keep views presentational; query, mutation, auth, and error normalization belong in hooks or stores.
+- Keep API routers thin and put authorization, business rules, mapping, and transactions in services.
+- Put reusable UI primitives in `apps/web/src/ui`; keep `apps/web/src/lib` for shared infrastructure only.
+- Put seeds, imports, backfills, and maintenance scripts under `apps/server/src/operations`.
+- Before opening a change, run `bun run check-types`, `bun run check`, and targeted `bun test` commands.
+- Update the golden source inventory when adding or relocating in-scope source files.
+
 ---
 
 ## Common Workflows
@@ -146,12 +163,12 @@ function MyFeatureList({ teamId }: { teamId: string }) {
 }
 ```
 
-### Adding a Frontend Component
+### Adding a Frontend Feature
 
-Components go in `apps/web/src/components/`:
+Feature components go in `apps/web/src/features/<domain>/` and should expose a public entry that renders a container:
 
 ```tsx
-// apps/web/src/components/my-component.tsx
+// apps/web/src/features/my-domain/my-component.tsx
 type MyComponentProps = {
   title: string;
   children?: React.ReactNode;
@@ -166,6 +183,8 @@ export function MyComponent({ title, children }: MyComponentProps) {
   );
 }
 ```
+
+Use `apps/web/src/components/` only for approved shared infrastructure or static presentation. Use `apps/web/src/ui/` for generic primitives.
 
 Use `@/` imports for app-local modules. Match existing Tailwind patterns and the design rules in [DESIGN.md](./DESIGN.md).
 

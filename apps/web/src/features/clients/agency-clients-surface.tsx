@@ -26,8 +26,8 @@ import {
   useAgencyTimeEntriesQuery,
 } from "@/features/shared/agency-queries";
 import { formatDuration } from "@/lib/utils/format-duration";
-import { formatRate, parseBillableRateCents } from "@/lib/utils/format-rate";
-import { projectHueStyle } from "@/lib/utils/project-palette";
+import { formatRate, parseBillableRateCents } from "@/features/shared/format-rate";
+import { projectHueStyle } from "@/features/shared/project-palette";
 import {
   selectIsClientMutationPending,
   selectIsContactMutationPending,

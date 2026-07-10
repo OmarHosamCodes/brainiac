@@ -18,7 +18,7 @@ const databaseUrl =
   process.env.DATABASE_URL || process.env.DATABASE_PRIVATE_URL || process.env.POSTGRES_URL || "";
 
 export default defineConfig({
-  schema: "./src/schema",
+  schema: "./src/schema/index.ts",
   out: "./src/migrations",
   dialect: "postgresql",
   dbCredentials: {

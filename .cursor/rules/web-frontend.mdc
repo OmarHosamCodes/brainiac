@@ -1,14 +1,32 @@
 ---
-description: React frontend patterns — data fetching, styling, forms, routing
+description: React frontend patterns — golden feature folders, data fetching, styling
 globs: apps/web/**
 alwaysApply: false
 ---
 
 # Web Frontend Conventions
 
+Follow the golden file pattern — see [`docs/golden-file-pattern.md`](../../docs/golden-file-pattern.md) and the `golden-file-pattern` rule.
+
+## Folder structure
+
+```
+src/
+  pages/              # route pages (compose features, no business rules)
+  features/<domain>/  # product features
+    feature-name.tsx           # public export → container
+    containers/                # one hook, one view, bind only
+    hooks/                     # queries, stores, view models, handlers
+    *-view.tsx                 # presentational only
+    stores/                    # mutations & optimistic orchestration
+  features/shared/    # agency queries, live sync, query cache, agency-ui
+  ui/                 # shadcn primitives
+  lib/                # shared infrastructure only (orpc, env, utils)
+```
+
 ## Data fetching
 
-**TanStack Query** for server state via `orpc` utils:
+**TanStack Query** via `orpc` utils — never hand-roll cache keys:
 
 ```tsx
 import { useQuery } from "@tanstack/react-query";
@@ -19,12 +37,16 @@ const { data } = useQuery(
 );
 ```
 
-**Zustand** only for UI state and optimistic orchestration — use `orpcClient` + cache helpers in `lib/utils/agency-query-cache.ts`.
+Shared agency queries live in `features/shared/agency-queries.ts`. Feature-specific fetching stays in feature hooks unless shared boot/live/optimistic behavior is needed.
+
+**Zustand** for mutations and optimistic orchestration — call `orpcClient` from feature stores, patch via `features/shared/agency-query-cache.ts`.
+
+Views and containers do **not** import oRPC, TanStack Query, or stores.
 
 ## Styling
 
 - `cn()` from `@/lib/utils` for all class merging
-- `cva()` only inside `components/ui/*` (shadcn primitives)
+- `cva()` only inside `ui/*` (shadcn primitives)
 - Semantic tokens: `text-muted`, `bg-background`, `text-primary` — never raw gray classes
 - Follow [DESIGN.md](../../DESIGN.md): flat UI, hairline borders, no gradients/glassmorphism
 
@@ -33,24 +55,13 @@ const { data } = useQuery(
 ```tsx
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginSchema } from "@/lib/schemas/auth";
+import { loginSchema } from "@/features/auth/auth-schemas";
 ```
 
-Schemas live in `apps/web/src/lib/schemas/`. Use shadcn `Form*` components.
+Feature schemas live in the feature folder or `lib/schemas/` for cross-cutting auth. Use shadcn `Form*` from `ui/`.
 
 ## Routing
 
 - Pages in `src/pages/`, lazy-loaded in `app.tsx`
 - Protected routes in `authenticated-routes.tsx` behind `ProtectedRoute`
 - App-local imports use `@/` alias
-
-## Folder structure
-
-```
-src/
-  pages/          # route pages
-  components/     # UI by domain (agency/, dashboard/, ui/)
-  lib/            # orpc client, hooks, utils, schemas/
-  stores/         # Zustand stores
-  providers/      # React context
-```

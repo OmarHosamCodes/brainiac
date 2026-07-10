@@ -69,7 +69,7 @@ async function runTeamDigest(teamId: string, day: string, range: { start: Date; 
   }
 
   for (const member of members) {
-    await emitTeamDigestNotification({
+    await emitTeamDigestNotification(null, {
       teamId,
       recipientUserId: member.userId,
       digestDate: day,

@@ -1,14 +1,8 @@
 import { Check, Clock, CornerDownLeft, Plus, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
-import { AgencyMiniTimerContainer } from "@/features/time-tracking/containers/agency-mini-timer-container";
-import type { TaskTrackingState } from "@/features/time-tracking/task-tracking-state";
-import type {
-  AgencyProjectTask,
-  AgencyTaskProject,
-  TaskStatus,
-} from "@/features/task-management/agency-work";
+import type { AgencyTaskRowViewModel } from "@/features/task-management/hooks/use-agency-task-row";
 import { Input } from "@/ui/input";
 import {
   agencyAvatarStackRingClass,
@@ -25,20 +19,7 @@ import {
   agencyTaskRowProjectPillClass,
   agencyTaskRowSelectedClass,
 } from "@/features/shared/agency-ui";
-import { isTaskOverdue } from "@/features/task-management/agency-task-utils";
-import { isJourneyMilestoneTask } from "@/features/projects/agency-task-journey";
 import { cn } from "@/lib/utils";
-
-const STACK_AVATAR_LIMIT = 4;
-
-export { statusLabel } from "@/features/task-management/agency-task-status";
-
-function formatDueDate(iso: string | null): string {
-  if (!iso) return "";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
 
 type AgencyTaskRowCheckboxProps = {
   title: string;
@@ -75,100 +56,54 @@ function AgencyTaskRowCheckbox({
   );
 }
 
-export type AgencyTaskRowViewProps = {
-  task: AgencyProjectTask;
-  projects: AgencyTaskProject[];
-  teamId: string;
-  selectedTaskId: string;
-  readOnly?: boolean;
-  highlight?: boolean;
-  isRowPending: boolean;
-  onSelect: (taskId: string) => void;
-  onSelectProject?: (projectId: string) => void;
-  onStatusChange?: (task: AgencyProjectTask, status: TaskStatus) => void;
-  /** Done section: reopen this task into Active. */
-  onReopenToActive?: (task: AgencyProjectTask) => void;
-  onDelete?: (task: AgencyProjectTask) => void;
-  blueprintId?: string | null;
-  blueprintDescription?: string;
-  showAllAssignees?: boolean;
-  nested?: boolean;
-  trackingState?: TaskTrackingState;
-  onBlueprintDescriptionChange?: (value: string) => void;
-  onTrackerDescriptionChange?: (value: string) => void;
-  onAssociateTrackerForDescription?: (task: AgencyProjectTask) => void;
+type AgencyTaskRowViewProps = {
+  viewModel: AgencyTaskRowViewModel;
+  miniTimer: ReactNode;
 };
 
-export function AgencyTaskRowView({
-  task,
-  projects,
-  teamId,
-  selectedTaskId,
-  readOnly = false,
-  highlight = false,
-  isRowPending,
-  onSelect,
-  onSelectProject,
-  onStatusChange,
-  onReopenToActive,
-  onDelete,
-  blueprintId = null,
-  blueprintDescription = "",
-  showAllAssignees = false,
-  nested = false,
-  trackingState,
-  onBlueprintDescriptionChange,
-  onTrackerDescriptionChange,
-  onAssociateTrackerForDescription,
-}: AgencyTaskRowViewProps) {
-  const project = projects.find((p) => p.id === task.projectId);
-  const projectName = project?.name ?? "Project";
-  const isSelected = task.id === selectedTaskId;
-  const memberStatus = task.viewerStatus;
-  const completionCount = task.viewerCompletionCount ?? 0;
-  const isDone = readOnly || memberStatus === "done";
-  const overdue = isTaskOverdue(task.dueDate);
-  const dueLabel = task.dueDate ? formatDueDate(task.dueDate) : "";
-  const showCompletionMultiplier = readOnly && completionCount >= 1;
-  const showAssigneeStack = showAllAssignees || isJourneyMilestoneTask(task);
-  const assigneeStack = task.assignees.slice(0, STACK_AVATAR_LIMIT);
-  const assigneeOverflow = task.assignees.length - assigneeStack.length;
-  const inlineAssigneeStack = nested && showAssigneeStack && task.assignees.length > 0;
-
-  const canDelete = !readOnly && Boolean(onDelete) && !isJourneyMilestoneTask(task);
-  const canEditBlueprint = Boolean(blueprintId && onBlueprintDescriptionChange && !readOnly);
-  const canEditTracker = Boolean(!readOnly && onTrackerDescriptionChange);
-  const [editingDescription, setEditingDescription] = useState(false);
-  const descriptionInputRef = useRef<HTMLInputElement>(null);
-  const descriptionInputValue = canEditBlueprint
-    ? blueprintDescription
-    : (trackingState?.trackerDescription ?? "");
-  const hasDescription = Boolean(descriptionInputValue.trim());
-  const showDescriptionInput = editingDescription && !readOnly;
-
-  useEffect(() => {
-    if (editingDescription) {
-      descriptionInputRef.current?.focus();
-    }
-  }, [editingDescription]);
-  const showDescriptionRow = readOnly
-    ? Boolean(blueprintDescription.trim())
-    : hasDescription || showDescriptionInput;
-  const showSecondaryMeta =
-    !readOnly &&
-    (Boolean(dueLabel) ||
-      (showAssigneeStack && task.assignees.length > 0 && !inlineAssigneeStack) ||
-      (!nested && Boolean(onSelectProject)));
-  const isSingleLineRow = !showDescriptionRow && !showSecondaryMeta;
+export function AgencyTaskRowView({ viewModel, miniTimer }: AgencyTaskRowViewProps) {
+  const {
+    task,
+    readOnly,
+    highlight,
+    isRowPending,
+    onSelectProject,
+    onReopenToActive,
+    nested,
+    trackingState,
+    projectName,
+    isSelected,
+    completionCount,
+    isDone,
+    overdue,
+    dueLabel,
+    showCompletionMultiplier,
+    showAssigneeStack,
+    assigneeStack,
+    assigneeOverflow,
+    inlineAssigneeStack,
+    canDelete,
+    canEditBlueprint,
+    canEditTracker,
+    descriptionInputRef,
+    descriptionInputValue,
+    showDescriptionInput,
+    showDescriptionRow,
+    showSecondaryMeta,
+    isSingleLineRow,
+    showDescriptionTrigger,
+    onBeginDescriptionEdit,
+    onDeleteTask,
+    onReopenTask,
+    onSelectTask,
+    onMarkDone,
+    onSelectTaskProject,
+    onDescriptionChange,
+    onDescriptionKeyDown,
+    onDescriptionBlur,
+    onDescriptionDisplayClick,
+  } = viewModel;
   const alignRowCenter = isSingleLineRow;
-  const showDescriptionTrigger = !readOnly && !hasDescription && !showDescriptionInput;
-
-  const beginDescriptionEdit = () => {
-    if (!canEditBlueprint) {
-      onAssociateTrackerForDescription?.(task);
-    }
-    setEditingDescription(true);
-  };
 
   const rowActions = (
     <div className="pointer-events-auto flex shrink-0 items-center gap-1">
@@ -186,10 +121,7 @@ export function AgencyTaskRowView({
             "motion-reduce:transition-none",
             isRowPending && "cursor-not-allowed opacity-50",
           )}
-          onClick={(event) => {
-            event.stopPropagation();
-            beginDescriptionEdit();
-          }}
+          onClick={onBeginDescriptionEdit}
         >
           <CornerDownLeft className="size-3.5" strokeWidth={2.25} aria-hidden />
         </button>
@@ -208,10 +140,7 @@ export function AgencyTaskRowView({
             "motion-reduce:transition-none",
             isRowPending && "cursor-not-allowed opacity-50",
           )}
-          onClick={(event) => {
-            event.stopPropagation();
-            onDelete?.(task);
-          }}
+          onClick={onDeleteTask}
         >
           <Trash2 className="size-3.5" strokeWidth={2} aria-hidden />
         </button>
@@ -236,24 +165,12 @@ export function AgencyTaskRowView({
             "motion-reduce:transition-none",
             isRowPending && "cursor-not-allowed opacity-50",
           )}
-          onClick={(event) => {
-            event.stopPropagation();
-            onReopenToActive(task);
-          }}
+          onClick={onReopenTask}
         >
           <Plus className="size-3.5" strokeWidth={2.5} aria-hidden />
         </button>
       ) : null}
-      {!readOnly ? (
-        <AgencyMiniTimerContainer
-          variant="compact"
-          teamId={teamId}
-          taskId={task.id}
-          projectId={task.projectId}
-          taskTitle={task.title}
-          projectName={projectName}
-        />
-      ) : null}
+      {!readOnly ? miniTimer : null}
     </div>
   );
 
@@ -274,7 +191,7 @@ export function AgencyTaskRowView({
         )}
         aria-current={isSelected ? "true" : undefined}
         aria-label={`Open thread for ${task.title}`}
-        onClick={() => onSelect(task.id)}
+        onClick={onSelectTask}
       />
 
       <div className="pointer-events-none relative z-10 flex w-full min-w-0 items-center gap-1.5">
@@ -283,7 +200,7 @@ export function AgencyTaskRowView({
             title={task.title}
             checked={isDone}
             disabled={isRowPending || readOnly}
-            onToggle={() => onStatusChange?.(task, "done")}
+            onToggle={onMarkDone}
           />
         </div>
 
@@ -345,7 +262,7 @@ export function AgencyTaskRowView({
                     agencyFocusRingClass,
                     "pointer-events-auto motion-reduce:transition-none",
                   )}
-                  onClick={() => onSelectProject(task.projectId)}
+                  onClick={onSelectTaskProject}
                 >
                   <span className="truncate">{projectName}</span>
                 </button>
@@ -404,25 +321,10 @@ export function AgencyTaskRowView({
                 <Input
                   ref={descriptionInputRef}
                   value={descriptionInputValue}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    if (canEditBlueprint) {
-                      onBlueprintDescriptionChange?.(value);
-                      return;
-                    }
-                    if (canEditTracker) {
-                      onTrackerDescriptionChange?.(value);
-                    }
-                  }}
+                  onChange={(event) => onDescriptionChange(event.target.value)}
                   onClick={(event) => event.stopPropagation()}
-                  onKeyDown={(event) => {
-                    event.stopPropagation();
-                    if (event.key === "Escape") {
-                      setEditingDescription(false);
-                      event.currentTarget.blur();
-                    }
-                  }}
-                  onBlur={() => setEditingDescription(false)}
+                  onKeyDown={onDescriptionKeyDown}
+                  onBlur={onDescriptionBlur}
                   placeholder="What are you working on?"
                   className={cn(
                     "h-6 min-w-0 border-0 bg-transparent px-0 text-[11px] leading-tight shadow-none focus-visible:ring-0",
@@ -444,11 +346,7 @@ export function AgencyTaskRowView({
                       (canEditBlueprint || canEditTracker) && "hover:text-highlighted",
                       agencyFocusRingClass,
                     )}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (!canEditBlueprint && !canEditTracker) return;
-                      beginDescriptionEdit();
-                    }}
+                    onClick={onDescriptionDisplayClick}
                   >
                     {descriptionInputValue}
                   </button>

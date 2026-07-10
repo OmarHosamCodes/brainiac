@@ -153,14 +153,15 @@ brainiac/
 ├── apps/
 │   ├── web/                    # Frontend (React + Vite + Tailwind)
 │   │   └── src/
-│   │       ├── pages/          # Route pages
-│   │       ├── components/     # UI components (dashboard, agency, canvas, …)
-│   │       ├── lib/            # oRPC client, hooks, utilities
-│   │       └── stores/         # Zustand stores
+│   │       ├── pages/          # Route composition and static pages
+│   │       ├── features/       # Product features: hooks, stores, containers, views
+│   │       ├── ui/             # Shared presentational primitives
+│   │       ├── components/     # Approved shared/static presentation only
+│   │       └── lib/            # Shared infrastructure (oRPC, env, utilities)
 │   └── server/                 # Backend (Hono + oRPC on Bun)
 │       └── src/
 │           ├── app.ts          # Hono app, auth, RPC, WebSocket
-│           └── seed.ts         # Database seeding
+│           └── operations/     # Seeds, imports, backfills, maintenance
 │
 ├── packages/
 │   ├── api/                    # oRPC routers, procedures, business logic

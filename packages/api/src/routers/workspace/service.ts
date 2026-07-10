@@ -20,6 +20,21 @@ import { ORPCError } from "@orpc/server";
 import { and, desc, eq, ilike, inArray, lt, or } from "drizzle-orm";
 
 import { requireTeamMembership } from "../../lib/team-membership";
+import { getBillingStateForUser } from "../../billing-guard";
+
+export async function assertCanSaveWorkspaceNodes(
+  actorUserId: string,
+  input: { nodeCount: number },
+) {
+  const billing = await getBillingStateForUser(actorUserId);
+  const { nodeCount } = input;
+  if (nodeCount > billing.limits.workspaceNodes) {
+    throw new ORPCError("FORBIDDEN", {
+      message: `Your ${billing.tier} plan allows up to ${billing.limits.workspaceNodes} workspace nodes`,
+      data: { limit: billing.limits.workspaceNodes, current: nodeCount },
+    });
+  }
+}
 
 const TEAM_ROLE_WEIGHT: Record<WorkspaceTeamRole, number> = {
   viewer: 1,
@@ -134,7 +149,8 @@ function getLatestUpdatedAtIso(rows: Array<{ updatedAt: Date }>) {
     .toISOString();
 }
 
-export async function getWorkspaceSnapshot(userId: string) {
+export async function getWorkspaceSnapshot(actorUserId: string, _input: Record<string, never>) {
+  const userId = actorUserId;
   const [workspace] = await db
     .select({
       nodes: dashboardWorkspace.nodes,
@@ -161,17 +177,23 @@ export async function getWorkspaceSnapshot(userId: string) {
   const ownNodes = (workspace?.nodes ?? []).map((node) =>
     withOwnerDefaults(node as WorkspaceNode, userId),
   );
-  const sharedNodes = relatedWorkspaces.flatMap((relatedWorkspace) => {
-    return (relatedWorkspace.nodes ?? [])
-      .map((node) => withOwnerDefaults(node as WorkspaceNode, relatedWorkspace.userId))
-      .filter((node) => {
-        if (node.visibility !== "team" || !node.teamId) {
-          return false;
-        }
+  const visibleRelatedWorkspaces = relatedWorkspaces
+    .map((relatedWorkspace) => ({
+      nodes: (relatedWorkspace.nodes ?? [])
+        .map((node) => withOwnerDefaults(node as WorkspaceNode, relatedWorkspace.userId))
+        .filter((node) => {
+          if (node.visibility !== "team" || !node.teamId) {
+            return false;
+          }
 
-        return membershipMap.has(node.teamId);
-      });
-  });
+          return membershipMap.has(node.teamId);
+        }),
+      updatedAt: relatedWorkspace.updatedAt,
+    }))
+    .filter((relatedWorkspace) => relatedWorkspace.nodes.length > 0);
+  const sharedNodes = visibleRelatedWorkspaces.flatMap(
+    (relatedWorkspace) => relatedWorkspace.nodes,
+  );
 
   const dedupedNodes = new Map<string, WorkspaceNode>();
 
@@ -182,7 +204,7 @@ export async function getWorkspaceSnapshot(userId: string) {
   const latestUpdatedAt = getLatestUpdatedAtIso(
     [
       ...(workspace?.updatedAt ? [{ updatedAt: workspace.updatedAt }] : []),
-      ...relatedWorkspaces.map((row) => ({ updatedAt: row.updatedAt })),
+      ...visibleRelatedWorkspaces.map((row) => ({ updatedAt: row.updatedAt })),
     ].filter((row): row is { updatedAt: Date } => Boolean(row.updatedAt)),
   );
 
@@ -192,26 +214,20 @@ export async function getWorkspaceSnapshot(userId: string) {
   };
 }
 
-export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[]) {
+export async function saveWorkspaceNodes(actorUserId: string, input: { nodes: WorkspaceNode[] }) {
+  const userId = actorUserId;
+  const { nodes } = input;
   const now = new Date();
   const membershipMap = await getMembershipMapByUser(userId);
   const verifiedEditorTeams = new Set<string>();
   const ownedNodes: WorkspaceNode[] = [];
   const sharedNodesByOwner = new Map<string, WorkspaceNode[]>();
+  const sharedWorkspaceNodesByOwner = new Map<string, Map<string, WorkspaceNode>>();
   const accessibleNodesById = new Map<string, WorkspaceNode>();
 
   for (const nodeInput of nodes) {
     const node = normalizeWorkspaceNode(nodeInput);
     const ownerUserId = node.ownerUserId ?? userId;
-    const normalizedNode = withOwnerDefaults(
-      {
-        ...node,
-        ownerUserId,
-      },
-      ownerUserId,
-    );
-
-    accessibleNodesById.set(normalizedNode.id, normalizedNode);
 
     if (ownerUserId === userId) {
       const teamId = node.teamId ?? null;
@@ -228,17 +244,17 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
         }
       }
 
-      ownedNodes.push(
-        withOwnerDefaults(
-          {
-            ...node,
-            ownerUserId,
-            visibility,
-            teamId: visibility === "team" ? teamId : null,
-          },
+      const ownedNode = withOwnerDefaults(
+        {
+          ...node,
           ownerUserId,
-        ),
+          visibility,
+          teamId: visibility === "team" ? teamId : null,
+        },
+        ownerUserId,
       );
+      ownedNodes.push(ownedNode);
+      accessibleNodesById.set(ownedNode.id, ownedNode);
 
       continue;
     }
@@ -252,27 +268,68 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
     const memberRole = membershipMap.get(teamId);
 
     if (!memberRole) {
-      continue;
+      throw new ORPCError("UNAUTHORIZED");
     }
 
     if (!hasRoleAtLeast(memberRole, "editor")) {
       continue;
     }
 
-    const ownerNodes = sharedNodesByOwner.get(ownerUserId) ?? [];
-    ownerNodes.push(
-      withOwnerDefaults(
-        {
-          ...node,
-          ownerUserId,
-          visibility: "team",
-          teamId,
-        },
+    const candidateSharedNode = withOwnerDefaults(
+      {
+        ...node,
         ownerUserId,
-      ),
+        visibility: "team",
+        teamId,
+      },
+      ownerUserId,
     );
+    let existingById = sharedWorkspaceNodesByOwner.get(ownerUserId);
+
+    if (!existingById) {
+      const [ownerWorkspace] = await db
+        .select({
+          nodes: dashboardWorkspace.nodes,
+        })
+        .from(dashboardWorkspace)
+        .where(eq(dashboardWorkspace.userId, ownerUserId))
+        .limit(1);
+      const existingNodes = (ownerWorkspace?.nodes ?? []).map((existingNode) =>
+        withOwnerDefaults(existingNode as WorkspaceNode, ownerUserId),
+      );
+      existingById = new Map(existingNodes.map((existingNode) => [existingNode.id, existingNode]));
+      sharedWorkspaceNodesByOwner.set(ownerUserId, existingById);
+    }
+
+    const existingNode = existingById.get(candidateSharedNode.id);
+
+    if (
+      !existingNode ||
+      existingNode.ownerUserId !== ownerUserId ||
+      existingNode.visibility !== "team" ||
+      !existingNode.teamId ||
+      candidateSharedNode.teamId !== existingNode.teamId
+    ) {
+      throw new ORPCError("NOT_FOUND");
+    }
+
+    await requireTeamMembership(userId, existingNode.teamId, "editor");
+
+    const sharedNode = withOwnerDefaults(
+      {
+        ...candidateSharedNode,
+        ownerUserId,
+        visibility: "team",
+        teamId: existingNode.teamId,
+      },
+      ownerUserId,
+    );
+    existingById.set(sharedNode.id, sharedNode);
+    const ownerNodes = sharedNodesByOwner.get(ownerUserId) ?? [];
+    ownerNodes.push(sharedNode);
 
     sharedNodesByOwner.set(ownerUserId, ownerNodes);
+    accessibleNodesById.set(sharedNode.id, sharedNode);
   }
 
   const persistedNodes = [
@@ -284,28 +341,7 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
 
   await upsertWorkspaceNodes(userId, ownedNodes, now);
 
-  for (const [ownerUserId, updates] of sharedNodesByOwner.entries()) {
-    const [ownerWorkspace] = await db
-      .select({
-        nodes: dashboardWorkspace.nodes,
-      })
-      .from(dashboardWorkspace)
-      .where(eq(dashboardWorkspace.userId, ownerUserId))
-      .limit(1);
-
-    const existingNodes = (ownerWorkspace?.nodes ?? []).map((node) =>
-      withOwnerDefaults(node as WorkspaceNode, ownerUserId),
-    );
-    const existingById = new Map(existingNodes.map((node) => [node.id, node]));
-
-    for (const update of updates) {
-      if (!existingById.has(update.id)) {
-        throw new ORPCError("NOT_FOUND");
-      }
-
-      existingById.set(update.id, update);
-    }
-
+  for (const [ownerUserId, existingById] of sharedWorkspaceNodesByOwner.entries()) {
     await upsertWorkspaceNodes(ownerUserId, [...existingById.values()], now);
   }
 
@@ -317,9 +353,10 @@ export async function saveWorkspaceNodes(userId: string, nodes: WorkspaceNode[])
 }
 
 export async function shareWorkspaceNode(
-  userId: string,
+  actorUserId: string,
   input: { nodeId: string; teamId: string },
 ) {
+  const userId = actorUserId;
   await requireTeamMembership(userId, input.teamId, "owner");
 
   const [workspace] = await db
@@ -364,7 +401,8 @@ export async function shareWorkspaceNode(
   };
 }
 
-export async function unshareWorkspaceNode(userId: string, input: { nodeId: string }) {
+export async function unshareWorkspaceNode(actorUserId: string, input: { nodeId: string }) {
+  const userId = actorUserId;
   const [workspace] = await db
     .select({ nodes: dashboardWorkspace.nodes })
     .from(dashboardWorkspace)
@@ -411,9 +449,10 @@ export async function unshareWorkspaceNode(userId: string, input: { nodeId: stri
 }
 
 export async function deleteWorkspaceNode(
-  userId: string,
+  actorUserId: string,
   input: { nodeId: string; ownerUserId?: string },
 ) {
+  const userId = actorUserId;
   const ownerUserId = input.ownerUserId ?? userId;
 
   if (ownerUserId !== userId) {
@@ -481,8 +520,10 @@ export async function deleteWorkspaceNode(
 }
 
 export async function getWorkspaceMarketplaceItems(
+  actorUserId: string,
   input: WorkspaceMarketplaceListInput,
 ): Promise<WorkspaceMarketplaceListOutput> {
+  void actorUserId;
   const limit = input.limit ?? 20;
   const kind = input.kind ?? "all";
   const search = input.search?.trim() ?? "";
@@ -565,19 +606,20 @@ export async function getWorkspaceMarketplaceItems(
 }
 
 export async function saveWorkspaceMarketplaceItem(
-  userId: string,
-  userName: string,
-  input: WorkspaceMarketplaceSaveInput,
+  actorUserId: string,
+  input: { actorUserName: string; item: WorkspaceMarketplaceSaveInput },
 ) {
+  const userId = actorUserId;
+  const { actorUserName: userName, item } = input;
   const now = new Date();
   const itemId = createWorkspaceId("market");
 
   await db.insert(workspaceMarketplaceItem).values({
     id: itemId,
-    title: input.title.trim(),
-    summary: input.summary?.trim() ?? "",
-    kind: input.payload.kind,
-    payload: input.payload,
+    title: item.title.trim(),
+    summary: item.summary?.trim() ?? "",
+    kind: item.payload.kind,
+    payload: item.payload,
     createdByUserId: userId,
     createdByName: userName.trim() || "Unknown",
     createdAt: now,
@@ -586,9 +628,9 @@ export async function saveWorkspaceMarketplaceItem(
 
   return workspaceMarketplaceItemSchema.parse({
     id: itemId,
-    title: input.title.trim(),
-    summary: input.summary?.trim() ?? "",
-    payload: input.payload,
+    title: item.title.trim(),
+    summary: item.summary?.trim() ?? "",
+    payload: item.payload,
     createdByUserId: userId,
     createdByName: userName.trim() || "Unknown",
     createdAt: now.toISOString(),

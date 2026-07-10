@@ -7,7 +7,7 @@ import {
   isShellAnimationReady,
   resetShellBoot,
   startShellBoot,
-} from "@/lib/shell/shell-boot";
+} from "@/features/app-shell/shell/shell-boot";
 import { ensureAgencySegmentBootQueries } from "@/features/shared/agency-segment-boot";
 import type { AgencySegmentId } from "@/features/shared/agency-segments";
 

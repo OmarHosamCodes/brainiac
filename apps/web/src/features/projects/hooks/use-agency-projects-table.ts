@@ -11,6 +11,7 @@ import {
 import { orpc } from "@/lib/orpc";
 import { getTaskGroupKey } from "@/features/task-management/agency-task-utils";
 import { agencyListSearchMatches } from "@/features/shared/agency-list-search";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 function getWeekStartUtc(): Date {
   const now = new Date();
@@ -30,7 +31,7 @@ export type AgencyProjectsTableViewModel = {
   budgetToneFor: (projectId: string) => string;
   isLoading: boolean;
   isError: boolean;
-  error: unknown;
+  errorMessage: string;
   clients: any[];
   projects: any[];
   refetchProjects: () => void;
@@ -130,7 +131,7 @@ export function useAgencyProjectsTable({
 
   const isLoading = projectsQuery.isPending || clientsQuery.isPending;
   const isError = projectsQuery.isError;
-  const error = projectsQuery.error;
+  const errorMessage = getErrorMessage(projectsQuery.error, "Try refreshing.");
 
   function refetchProjects() {
     void projectsQuery.refetch();
@@ -145,7 +146,7 @@ export function useAgencyProjectsTable({
     budgetToneFor,
     isLoading,
     isError,
-    error,
+    errorMessage,
     clients,
     projects,
     refetchProjects,

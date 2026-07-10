@@ -21,7 +21,6 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@brainiac/config": "workspace:*",
     "typescript": "catalog:"
   }
 }

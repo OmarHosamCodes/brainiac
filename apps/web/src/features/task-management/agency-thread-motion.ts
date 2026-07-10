@@ -1,8 +1,5 @@
 import type { AgencyListOverlay } from "@/features/shared/agency-optimistic-merge";
 
-export const AGENCY_THREAD_MESSAGE_EASE = [0.25, 1, 0.5, 1] as const;
-export const AGENCY_THREAD_MESSAGE_DURATION = 0.2;
-
 export function resolveMessageAnimationKey(
   messageId: string,
   idMap: Record<string, string>,

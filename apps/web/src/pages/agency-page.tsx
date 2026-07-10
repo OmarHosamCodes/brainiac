@@ -12,13 +12,13 @@ import { AgencySubtitleBreadcrumb } from "@/features/shared/agency-subtitle-brea
 import { AgencyPresenceAvatars } from "@/features/shared/live/agency-presence-avatars";
 import { AgencyTeamBreadcrumb } from "@/features/shared/agency-team-breadcrumb";
 import { AgencyWorkSurface } from "@/features/task-management/agency-work-surface";
-import { LogoLoader } from "@/components/shell/logo-loader";
+import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import {
   AppShellTopbarActions,
   AppShellTopbarSubtitle,
   AppShellTopbarTrailing,
-} from "@/components/app-shell-topbar";
-import { AppShellPage } from "@/components/app-shell-page";
+} from "@/features/app-shell/app-shell-topbar";
+import { AppShellPage } from "@/features/app-shell/app-shell-page";
 import { AgencySegmentFiltersRoot } from "@/features/shared/agency-segment-filters";
 import { useAgencySyncStatus } from "@/features/shared/agency-sync";
 import { useAgencyJourneyLiveSync } from "@/features/task-management/hooks/use-agency-journey-live-sync";
@@ -38,7 +38,11 @@ import {
 } from "@/features/shared/agency-segments";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
-import { shellContentInClass, shellPageBodyClass, shellPageClass } from "@/lib/utils/app-shell-ui";
+import {
+  shellContentInClass,
+  shellPageBodyClass,
+  shellPageClass,
+} from "@/features/app-shell/app-shell-ui";
 import { AGENCY_PAGE_SCROLL_ATTR, agencyWorkSurfaceShellClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 import { setAgencyTimeTrackingUserId } from "@/features/time-tracking/stores/agency-time-tracking";

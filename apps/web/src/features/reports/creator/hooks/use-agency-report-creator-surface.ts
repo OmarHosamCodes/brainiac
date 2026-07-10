@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
 import {
@@ -23,6 +23,7 @@ export type UseAgencyReportCreatorSurfaceProps = {
 
 export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreatorSurfaceProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const reportId = searchParams.get("report") ?? "";
 
@@ -289,19 +290,23 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
 
   const isPending = reportQuery.isPending;
   const isError = reportQuery.isError;
-  const error = reportQuery.error;
+  const errorMessage = getErrorMessage(reportQuery.error, "Try going back to Reports.");
+  const entriesQueryErrorMessage = getErrorMessage(entriesQuery.error, "Try refreshing.");
   const refetch = () => {
     void reportQuery.refetch();
   };
+  const onBackToReports = useCallback(() => {
+    navigate(`/agency?${backParams}`);
+  }, [backParams, navigate]);
 
   return {
     reportId,
     report,
     isPending,
     isError,
-    error,
+    errorMessage,
     refetch,
-    backParams,
+    onBackToReports,
     exporting,
     savingEntryId,
     wastePending,
@@ -312,7 +317,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     rangeReady,
     entriesQueryPending: entriesQuery.isPending,
     entriesQueryError: entriesQuery.isError,
-    entriesQueryErrorObj: entriesQuery.error,
+    entriesQueryErrorMessage,
     refetchEntries: () => {
       void entriesQuery.refetch();
     },

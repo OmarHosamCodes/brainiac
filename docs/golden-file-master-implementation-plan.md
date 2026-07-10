@@ -1,14 +1,73 @@
 # Master Implementation Plan: Golden File Pattern Refactor
 
-Generated against the current worktree on 2026-07-09.
+Original baseline generated against the 2026-07-09 worktree. Last validated against the live
+worktree on 2026-07-10.
 
 Source standard: `docs/golden-file-pattern.md`.
+
+## Validation Result — 2026-07-10
+
+**Status: not validated as complete.** The current implementation has substantial structural
+progress, but the evidence does not prove the objective or the phase exit gates. Any later
+completion claim must supersede this section with a fresh requirement-by-requirement audit.
+
+Live command results:
+
+| Command                  | Result                                                                 |
+| ------------------------ | ---------------------------------------------------------------------- |
+| `bun run check`          | Pass; 3 lint warnings                                                  |
+| `bun run check-types`    | Pass; 8 Turbo tasks                                                    |
+| `bun test`               | Pass; 192 tests across 47 discovered files, including generated `dist` |
+| `bun run check:golden`   | Pass; proves path coverage for 646 TS/TSX files, not classification    |
+| `bun run check:realtime` | Pass; proves 5 event names have nonempty registry metadata             |
+| `bun run db:generate`    | Pass; no schema changes                                                |
+| `bun run check:unused`   | **Fail**; Knip reports files, dependencies, exports, and config hints  |
+
+Completion blockers found by the validation:
+
+1. The source inventory is path-classified and its checker only compares path sets. It does not
+   prove that a classification is correct or that a `golden-feature` file obeys the pattern.
+2. Five view files remain exempt from golden checks and still import stores or store-owned
+   modules. Other views, including Billing and Team, call orchestration hooks indirectly and are
+   false negatives for the current checker.
+3. Phase 8 has no per-feature, per-layer completion matrix, and
+   `docs/golden-file-persistence-audit.md` explicitly says it is not a full-product completion
+   claim.
+4. `docs/golden-file-auth-membership-audit.md` leaves the generic-error, web-error, naming, and
+   high-risk authorization-test reviews unchecked.
+5. Workspace and subscription Billing routers still return some service results without Zod
+   output parsing, despite the universal API-contract requirement.
+6. Several router-facing Team, Workspace, Agent, and Notifications service functions do not use
+   the required `actorUserId` plus one input-object signature.
+7. `check:unused` has no owner/domain disposition, and `knip.json` still models the web workspace
+   as Nuxt/Vue although the application is Vite/React.
+8. The canonical exemplar still names paths and gaps changed by this refactor. The plan and
+   `docs/golden-file-pattern.md` must be reconciled before either can prove the other.
+
+Canonical coverage verdict:
+
+| Area                                  | Verdict | Required proof before completion                                      |
+| ------------------------------------- | ------- | --------------------------------------------------------------------- |
+| Scope and per-file classification     | Fail    | Expanded inventory plus semantic classification validation            |
+| Layer direction and boundary tooling  | Fail    | Zero view exceptions and indirect orchestration/container enforcement |
+| Agency backend                        | Partial | Per-feature actor/input/output/service checklist                      |
+| Agency web query, state, and UI       | Fail    | Props-only views and explicit query/store/cache evidence              |
+| Non-agency product domains            | Fail    | Full matrices for Workspace, Agent, Team, Auth, Billing, and Shell    |
+| Persistence and API contracts         | Fail    | Full-product matrix and Zod output proof for every router             |
+| Auth, membership, errors, and naming  | Fail    | Close every unchecked Phase 9 review and authorization test gap       |
+| Realtime and cross-feature ownership  | Partial | Validate referenced producers, consumers, paths, and tests            |
+| Testing                               | Partial | Source-only full suite, UI/hook coverage, and CI execution            |
+| Final cleanup and canonical alignment | Fail    | Green required gates, zero transitional allowlists, refreshed spec    |
+
+Validation evidence is also recorded in `docs/golden-file-final-verification.md` and the truthful
+resumption state in `docs/golden-file-refactor-progress.md`.
 
 ## Objective
 
 Refactor 100% of the source codebase so every product feature follows the golden file pattern, or is explicitly classified as shared infrastructure, server operations, or static presentation with equivalent layer boundaries.
 
-For this plan, "100%" covers source-controlled TypeScript and TSX under:
+For this plan, "100%" covers source-controlled product implementation, tests, persistence
+artifacts, runtime tooling, and build/runtime configuration. It includes, at minimum:
 
 - `apps/web/src`
 - `apps/server/src`
@@ -19,8 +78,13 @@ For this plan, "100%" covers source-controlled TypeScript and TSX under:
 - `packages/workspace/src`
 - `packages/env/src`
 - `packages/config/src`
+- `packages/db/src/migrations` SQL and metadata
+- source-controlled JavaScript/MJS/TypeScript under `scripts`
+- application/package build, test, database, and CI configuration
 
-Generated output and installed dependencies are out of scope: `node_modules`, `dist`, `.turbo`, `.nuxt`, `.output`.
+Generated output, installed dependencies, and vendored agent assets are out of scope:
+`node_modules`, `dist`, `.turbo`, `.nuxt`, `.output`, and `.agents/skills`. Every excluded
+source-controlled path must have an explicit rationale; the inventory may not silently omit it.
 
 ## Completion Standard
 
@@ -57,38 +121,35 @@ The repo already has meaningful progress toward the pattern:
 - Shared UI primitives are already under `apps/web/src/ui`.
 - Most pure helper tests use `bun:test`.
 
-Current known gaps to drive the plan:
-
-- `apps/web/src/lib/agency-management-sections.ts`, `apps/web/src/lib/agency-segments.ts`, and `apps/web/src/lib/agency-settings-sections.ts` still hold agency feature configuration outside `features/shared`.
-- `apps/web/src/lib/queries/agency-optimistic.ts` and `apps/web/src/lib/queries/agency-sync.ts` still hold agency query behavior outside `features/shared`.
-- Several feature components still mix query/mutation orchestration with rendering, including `agency-billing-surface.tsx`, `agency-settings-rates-pane.tsx`, `agency-dashboard-surface.tsx`, project surfaces, report creator surfaces, tenure settings, integrations settings, `agency-time-summary.tsx`, and `agency-work-surface-create-task-popover.tsx`.
-- `apps/web/src/features/task-management/work-surface/agency-work-surface-delegated-view.tsx` is explicitly a view file but imports `useQuery` and `orpc`.
-- Compatibility re-exports remain at `packages/api/src/routers/agency-ops/live.ts` and `packages/api/src/routers/agency-ops/tenure-engine.ts`.
-- `packages/api/src/routers/agency-ops/reports/router.ts` imports time tracking service functions directly; this needs a deliberate cross-feature integration boundary.
-- `packages/api/src/routers/agency-ops/shared/utils.ts` is a broad shared utility file with mixed responsibilities.
-- Non-agency product code still lives across `apps/web/src/components`, `apps/web/src/lib`, and `apps/web/src/stores` rather than feature folders.
-- `apps/web/src/features/reports/agency-report-fields.test.ts`, `apps/web/src/features/reports/agency-report-naming.test.ts`, and `apps/web/src/features/time-tracking/time-entry-draft.test.ts` still use direct `node:assert` style.
+Former known paths have largely moved, but the 2026-07-10 validation found that path movement is
+ahead of architectural proof. Mixed views, weak inventory classification, incomplete audit
+artifacts, and the red Knip gate remain open. The phase sections below describe the intended work;
+phase status and resumption state live in `docs/golden-file-refactor-progress.md`.
 
 ## Domain Ownership Map
 
 ### Agency Domains
 
-| Domain          | API home                                                    | Web home                                | Status                                                                                   |
-| --------------- | ----------------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Clients         | `packages/api/src/routers/agency-ops/clients`               | `apps/web/src/features/clients`         | Partially golden; split containers/hooks/views and move remaining shared config.         |
-| Projects        | `packages/api/src/routers/agency-ops/projects`              | `apps/web/src/features/projects`        | Partially golden; project surfaces still fetch directly.                                 |
-| Task management | `packages/api/src/routers/agency-ops/tasks`                 | `apps/web/src/features/task-management` | Strong progress; delegated view and popover still break view/query separation.           |
-| Time tracking   | `packages/api/src/routers/agency-ops/time-tracking`         | `apps/web/src/features/time-tracking`   | Golden exemplar; still has test style cleanup and `agency-time-summary.tsx` query split. |
-| Reports         | `packages/api/src/routers/agency-ops/reports`               | `apps/web/src/features/reports`         | Needs cross-feature integration boundary and container/hook/view split.                  |
-| Billing         | `packages/api/src/routers/agency-ops/billing`               | `apps/web/src/features/billing`         | Needs query/store split for billing surfaces.                                            |
-| Resourcing      | `packages/api/src/routers/agency-ops/resourcing`            | `apps/web/src/features/resourcing`      | Needs tenure settings split and legacy tenure re-export migration.                       |
-| Notifications   | `packages/api/src/routers/notifications` plus agency fanout | `apps/web/src/features/notifications`   | Needs feature query/state boundary review.                                               |
-| Settings        | Agency routers by domain                                    | `apps/web/src/features/settings`        | Needs integrations query split and config colocation.                                    |
-| Shared agency   | `packages/api/src/routers/agency-ops/shared`                | `apps/web/src/features/shared`          | Needs generic utility split and query/sync colocation.                                   |
+| Domain          | API home                                                    | Web home                                | Validation status                                                                  |
+| --------------- | ----------------------------------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------- |
+| Clients         | `packages/api/src/routers/agency-ops/clients`               | `apps/web/src/features/clients`         | Structure present; full canonical layer matrix missing.                            |
+| Projects        | `packages/api/src/routers/agency-ops/projects`              | `apps/web/src/features/projects`        | Structure present; view error normalization and full matrix remain unproved.       |
+| Task management | `packages/api/src/routers/agency-ops/tasks`                 | `apps/web/src/features/task-management` | **Not golden:** store-backed and stateful views remain.                            |
+| Time tracking   | `packages/api/src/routers/agency-ops/time-tracking`         | `apps/web/src/features/time-tracking`   | **Not golden:** state/theme-backed views remain.                                   |
+| Reports         | `packages/api/src/routers/agency-ops/reports`               | `apps/web/src/features/reports`         | Cross-feature boundary exists; raw-error and router-view evidence remains partial. |
+| Billing         | `packages/api/src/routers/agency-ops/billing`               | `apps/web/src/features/billing`         | **Not golden:** subscription Billing view calls orchestration hooks directly.      |
+| Resourcing      | `packages/api/src/routers/agency-ops/resourcing`            | `apps/web/src/features/resourcing`      | Structure present; full canonical layer matrix missing.                            |
+| Notifications   | `packages/api/src/routers/notifications` plus agency fanout | `apps/web/src/features/notifications`   | **Not golden:** monolithic query/store/router UI orchestration remains.            |
+| Settings        | Agency routers by domain                                    | `apps/web/src/features/settings`        | Structure present; full canonical layer matrix missing.                            |
+| Shared agency   | `packages/api/src/routers/agency-ops/shared`                | `apps/web/src/features/shared`          | **Not golden:** an allowlisted view and mixed segment orchestration remain.        |
 
-### Non-Agency Product Domains
+### Non-Agency Product Domains — 2026-07-09 Baseline
 
-| Domain                    | Current locations                                                                                                                                                                                  | Target home                                                                                                                                                              |
+The locations below are the dated migration baseline, not the validated current tree. The target
+folders now largely exist, but each domain still needs the canonical evidence matrix before it can
+be marked golden.
+
+| Domain                    | 2026-07-09 baseline locations                                                                                                                                                                      | Target home                                                                                                                                                              |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Workspace nodes and board | `apps/web/src/components/workspace`, `apps/web/src/lib/workspace`, `apps/web/src/stores/workspace`, `packages/api/src/routers/workspace`, `packages/workspace/src`                                 | `apps/web/src/features/workspace`, `packages/api/src/routers/workspace/{router,service,schemas}`, pure block logic in `packages/workspace/src` or feature-local helpers. |
 | Workspace canvas          | `apps/web/src/components/canvas`, `apps/web/src/components/infinite-canvas.tsx`, `apps/web/src/lib/canvas`                                                                                         | `apps/web/src/features/workspace-canvas` unless merged into `features/workspace/canvas`.                                                                                 |
@@ -102,14 +163,14 @@ Current known gaps to drive the plan:
 
 ### Infrastructure and Operations
 
-| Area                                                                 | Target classification                               |
-| -------------------------------------------------------------------- | --------------------------------------------------- |
-| `packages/db/src/schema/*` and migrations                            | Persistence layer source of truth.                  |
-| `packages/env/src/*`                                                 | Shared infrastructure.                              |
-| `packages/config/src/*`                                              | Shared infrastructure.                              |
-| `packages/auth/src/index.ts`                                         | Auth infrastructure; no feature business rules.     |
-| `apps/server/src/app.ts`, websocket handlers, startup                | Server app layer.                                   |
-| `apps/server/src/seed*.ts`, import, cleanup, backfill, grant scripts | Server operations with documented direct DB access. |
+| Area                                                  | Target classification                               |
+| ----------------------------------------------------- | --------------------------------------------------- |
+| `packages/db/src/schema/*` and migrations             | Persistence layer source of truth.                  |
+| `packages/env/src/*`                                  | Shared infrastructure.                              |
+| `packages/config/src/*`                               | Shared infrastructure.                              |
+| `packages/auth/src/index.ts`                          | Auth infrastructure; no feature business rules.     |
+| `apps/server/src/app.ts`, websocket handlers, startup | Server app layer.                                   |
+| `apps/server/src/operations/*`                        | Server operations with documented direct DB access. |
 
 ## Implementation Phases
 
@@ -119,8 +180,11 @@ Goal: create objective evidence before moving more code.
 
 Tasks:
 
-1. Add a source inventory artifact that classifies every source file as `golden-feature`, `shared-infrastructure`, `server-operation`, or `static-presentation`.
-2. Add a temporary migration checklist per domain in `docs/` or a tracked issue list.
+1. Add a source inventory artifact that records every in-scope source artifact with its domain,
+   canonical layer, classification, owner, rationale, and evidence. Path location alone must not
+   determine `golden-feature` status.
+2. Add a canonical requirement matrix per domain and feature. Every row is `pass`, `fail`, or a
+   justified `N/A`, with a current file, command, or test as evidence.
 3. Record baseline outputs for:
    - `bun run check-types`
    - `bun run check`
@@ -129,7 +193,9 @@ Tasks:
 
 Exit gate:
 
-- The inventory has no unknown directories.
+- The inventory has no unknown directories or silently omitted source-controlled extensions.
+- Classification validation rejects semantically invalid rows; it does more than compare paths.
+- Every feature has a complete canonical requirement matrix with no unsupported `pass` status.
 - Failing baseline commands, if any, are recorded with owner/domain and are not hidden by later refactors.
 
 ### Phase 1 - Enforce Golden Boundaries
@@ -147,17 +213,21 @@ Tasks:
    - Routers may not import `@brainiac/db`, Drizzle query helpers, or feature stores.
    - Feature-specific files may not live under `apps/web/src/lib` or `apps/web/src/stores`.
    - New generic `utils.ts` files inside feature folders are blocked unless allowlisted.
-3. Add allowlists for infrastructure, generated code, and server operations.
+3. Add allowlists only for permanent infrastructure, generated code, and server-operation
+   classifications. Transitional architectural violations must name an issue, owner, and removal
+   phase and cannot survive Phase 11.
 4. Add `bun run check:golden` or include the new script in `bun run check`.
 
 Exit gate:
 
-- The checker passes on the current allowlisted gaps.
-- Each allowlist entry names the target phase that removes it.
+- The checker passes on the current transitional gaps.
+- Each transitional entry names its issue, owner, and target phase.
+- The checker covers direct and indirect view orchestration, container shape, hook/view-model
+  boundaries, router output parsing, and feature-specific ownership outside `features/`.
 
 ### Phase 2 - Complete Agency Backend Alignment
 
-Goal: finish the backend split already started by `ExecPlan.md`.
+Goal: finish the backend split originally started by the archived [`legacy-exec-plan.md`](legacy-exec-plan.md).
 
 Tasks:
 
@@ -315,6 +385,8 @@ Tasks:
    - classify as `static-presentation`.
    - remove health-check query from `marketing-page-shell.tsx` or move it into a shell/status hook if it is product behavior.
 
+Marketplace implementation note: the page now uses `features/marketplace/hooks/use-marketplace-page.ts` for orchestration and a props-only `views/marketplace-page-surface.tsx`.
+
 Exit gate:
 
 - `apps/web/src/components` contains only approved shared primitives, app infrastructure, or is empty.
@@ -355,12 +427,18 @@ Tasks:
 4. Move reusable API schemas to feature `schemas.ts` files or `agency-ops/shared/schemas.ts` only when genuinely shared.
 5. Confirm dates cross API boundaries as ISO strings.
 6. Confirm nullable fields are represented as nullable, not optional.
-7. Confirm router outputs parse through Zod.
+7. Confirm every product router validates input at the boundary and parses every output through
+   Zod, including Workspace, Billing, Team, Agent, Notifications, and System routes.
+8. Complete the canonical requirement matrix with direct evidence for persistence ownership,
+   referential behavior, indexes, soft-delete filters, wire serialization, and route export
+   ownership.
 
 Exit gate:
 
-- Each feature checklist has persistence, API schema, router, service, web query/state, UI, live sync, and tests marked considered.
-- `bun run db:generate` produces no unintended schema drift after committed migrations.
+- Each feature checklist has persistence, API schema, router, service, web query/state, UI, live
+  sync, and tests marked `pass` or justified `N/A`, with direct evidence.
+- `bun run db:generate` produces no unintended schema drift after committed migrations, and a
+  subsequent worktree diff proves that the generator wrote nothing.
 
 ### Phase 9 - Error Handling, Auth, Membership, and Naming Audit
 
@@ -388,6 +466,8 @@ Tasks:
    - service functions are verb-first.
    - containers, hooks, view models, views, stores, and tests use the names from `docs/golden-file-pattern.md`.
 5. Add naming and error-handling checks to the golden checker where simple static checks are reliable.
+6. Add focused authorization tests for the highest-risk mutation paths in every product domain,
+   including Team and Workspace.
 
 Exit gate:
 
@@ -434,24 +514,35 @@ Tasks:
 3. Run:
    - `bun run check`
    - `bun run check-types`
+   - `bun run check:golden`
+   - `bun run check:realtime`
    - `bun run check:unused`
+   - `bun test` with generated output excluded from discovery
    - targeted `bun test` commands for moved domains
    - any required migration checks
 4. Inspect route and oRPC type compatibility for moved routers.
 5. Update `README.md`, `DEVELOPMENT.md`, or `CONTRIBUTING.md` with the golden feature workflow.
-6. Replace or archive `ExecPlan.md` once this master plan supersedes it.
+6. Archive the superseded plan as [`legacy-exec-plan.md`](legacy-exec-plan.md). ✅
+7. Reconcile every exemplar path and “Current Golden Exemplar Gap” in
+   `docs/golden-file-pattern.md` with the implemented architecture.
 
 Exit gate:
 
-- No unknown source files remain in the inventory.
-- No golden checker allowlist remains without an issue and owner.
-- All verification commands pass or have documented, unrelated pre-existing failures.
+- No unknown or silently out-of-scope source artifacts remain in the inventory.
+- No transitional architectural allowlist entry remains. Permanent classification exclusions are
+  documented separately and cannot suppress a golden-feature violation.
+- `bun run check` and `bun run check-types` pass unconditionally.
+- Every other required verification command passes. A command may be removed from the program
+  only through an explicit scope decision recorded in this plan, not a generic “pre-existing”
+  waiver.
 - The PR or final change summary lists affected layers and test coverage by domain.
 
 ## Per-Feature Definition of Done
 
 Each feature is done when:
 
+- Every applicable item in the canonical Layer Ownership Checklist is `pass`, and every `N/A`
+  has a feature-specific rationale and evidence.
 - Persistence is owned by the feature schema/migrations or explicitly has no persistence.
 - API contract schemas exist and parse router output.
 - Router is thin and imports no DB/query modules.
@@ -470,6 +561,8 @@ Each feature is done when:
 - Page only composes route context and feature surfaces.
 - Empty, loading, error, disabled, pending, optimistic, rollback, and success states are represented where applicable.
 - Tests cover pure rules, risky service behavior, and complex view state.
+- `bun run check` and `bun run check-types` pass, and the feature's unit, service/API, and UI/hook
+  test commands pass where the canonical testing minimum applies.
 
 ## Request Flow Audit
 

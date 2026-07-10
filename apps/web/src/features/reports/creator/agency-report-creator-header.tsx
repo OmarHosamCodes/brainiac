@@ -1,8 +1,6 @@
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
-import { AgencyReportActivityMenu } from "@/features/reports/creator/agency-report-activity-menu";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
@@ -157,8 +155,7 @@ type ReportHeaderActionsProps = {
   exporting: boolean;
   exportDisabled: boolean;
   onExport: () => void;
-  teamId: string;
-  reportId: string;
+  activityMenu: ReactNode;
 };
 
 function ReportHeaderActions({
@@ -167,8 +164,7 @@ function ReportHeaderActions({
   exporting,
   exportDisabled,
   onExport,
-  teamId,
-  reportId,
+  activityMenu,
 }: ReportHeaderActionsProps) {
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 pl-10 sm:pl-0">
@@ -177,7 +173,7 @@ function ReportHeaderActions({
           Undo
         </Button>
       ) : null}
-      <AgencyReportActivityMenu teamId={teamId} reportId={reportId} align="end" />
+      {activityMenu}
       <Button
         variant="secondary"
         size="sm"
@@ -200,7 +196,7 @@ function ReportHeaderActions({
 }
 
 export type AgencyReportCreatorHeaderProps = {
-  backHref: string;
+  onBack: () => void;
   reportName: string;
   fallbackName: string;
   onReportNameChange: (name: string) => void;
@@ -222,12 +218,11 @@ export type AgencyReportCreatorHeaderProps = {
   onRetrySave: () => void;
   exporting: boolean;
   onExport: () => void;
-  teamId: string;
-  reportId: string;
+  activityMenu: ReactNode;
 };
 
 export function AgencyReportCreatorHeader({
-  backHref,
+  onBack,
   reportName,
   fallbackName,
   onReportNameChange,
@@ -242,8 +237,7 @@ export function AgencyReportCreatorHeader({
   onRetrySave,
   exporting,
   onExport,
-  teamId,
-  reportId,
+  activityMenu,
 }: AgencyReportCreatorHeaderProps) {
   const meta = useMemo(
     () =>
@@ -266,10 +260,14 @@ export function AgencyReportCreatorHeader({
     <header className="rounded-2xl border border-default bg-elevated px-3 py-3 sm:px-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-start gap-2">
-          <Button variant="ghost" size="sm" className="h-9 shrink-0 px-2" asChild>
-            <Link to={backHref} aria-label="Back to reports">
-              <ArrowLeft className="size-4" />
-            </Link>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 shrink-0 px-2"
+            onClick={onBack}
+            aria-label="Back to reports"
+          >
+            <ArrowLeft className="size-4" />
           </Button>
           <div className="min-w-0 flex-1 space-y-1">
             <ReportTitleEditor
@@ -293,8 +291,7 @@ export function AgencyReportCreatorHeader({
           exporting={exporting}
           exportDisabled={visibleEntryCount === 0}
           onExport={onExport}
-          teamId={teamId}
-          reportId={reportId}
+          activityMenu={activityMenu}
         />
       </div>
     </header>

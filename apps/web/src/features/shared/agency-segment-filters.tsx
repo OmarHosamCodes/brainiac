@@ -19,7 +19,7 @@ import { useAgencyTimeRangeFilters } from "@/features/shared/use-agency-time-ran
 import type { AgencySegmentId } from "@/features/shared/agency-segments";
 import { orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { parseBillableRateCents } from "@/lib/utils/format-rate";
+import { parseBillableRateCents } from "@/features/shared/format-rate";
 import {
   selectIsClientMutationPending,
   useAgencyOpsStore,

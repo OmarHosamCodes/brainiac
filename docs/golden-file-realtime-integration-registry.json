@@ -1,0 +1,39 @@
+{
+  "events": [
+    {
+      "type": "journey.step.updated",
+      "producer": "agency journey service/live publisher",
+      "consumer": "task-management journey and project task query refetch",
+      "notification": "none",
+      "tests": ["agency-query-cache.test.ts"]
+    },
+    {
+      "type": "taskMessage.created",
+      "producer": "agency task-message service/live publisher",
+      "consumer": "task thread message store/cache",
+      "notification": "task-message notification fanout where applicable",
+      "tests": ["agency-task-messages-cache.test.ts", "stores/agency-task-messages.test.ts"]
+    },
+    {
+      "type": "timer.updated",
+      "producer": "time-tracking service/live publisher",
+      "consumer": "shared agency timer and presence cache",
+      "notification": "timer activity fanout",
+      "tests": ["agency-query-cache.test.ts"]
+    },
+    {
+      "type": "task.updated",
+      "producer": "task service/live publisher",
+      "consumer": "shared agency task cache",
+      "notification": "task assignment/message fanout where applicable",
+      "tests": ["agency-query-cache.test.ts"]
+    },
+    {
+      "type": "notification.created",
+      "producer": "notifications service/live bridge",
+      "consumer": "notifications query cache and unread count",
+      "notification": "push/in-app delivery owned by notifications service",
+      "tests": ["notifications-queries.test.ts", "fanout.test.ts"]
+    }
+  ]
+}

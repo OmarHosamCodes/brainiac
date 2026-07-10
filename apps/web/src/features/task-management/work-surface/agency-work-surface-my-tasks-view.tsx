@@ -7,11 +7,10 @@ import {
   MoreHorizontal,
   Play,
 } from "lucide-react";
-import { useMemo, useState } from "react";
 
 import { AgencyWorkSurfacePaginationFooter } from "@/features/task-management/work-surface/agency-work-surface-pagination-footer";
 import { AgencyWorkSurfaceTableHeaderView } from "@/features/task-management/work-surface/agency-work-surface-table-header-view";
-import { AgencyWorkSurfaceTaskTableRowView } from "@/features/task-management/work-surface/agency-work-surface-task-table-row-view";
+import type { RenderAgencyWorkSurfaceTaskTableRow } from "@/features/task-management/work-surface/agency-work-surface-task-table-row-model";
 import { Button } from "@/ui/button";
 import {
   Dialog,
@@ -24,18 +23,15 @@ import {
 import { Skeleton } from "@/ui/skeleton";
 import type { AgencyTaskListViewModel } from "@/features/task-management/hooks/use-agency-task-list";
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
-import type { AgencyTaskClientDisplayGroup } from "@/features/task-management/agency-task-rail-grouping";
-import { isTaskOverdue } from "@/features/task-management/agency-task-utils";
 import {
   agencyWorkTableBodyScrollClass,
   agencyWorkTableListClass,
   agencyWorkTableStackClass,
 } from "@/features/shared/agency-ui";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
 
 type AgencyWorkSurfaceMyTasksViewProps = {
   view: Extract<AgencyTaskListViewModel, { status: "ready" }>;
+  renderTaskTableRow: RenderAgencyWorkSurfaceTaskTableRow;
 };
 
 function AgencyWorkSurfaceTaskDeleteDialog({
@@ -75,58 +71,18 @@ function AgencyWorkSurfaceTaskDeleteDialog({
   );
 }
 
-function flattenTasksFromClientGroups(groups: AgencyTaskClientDisplayGroup[]): AgencyProjectTask[] {
-  const tasks: AgencyProjectTask[] = [];
-  const seen = new Set<string>();
-
-  for (const group of groups) {
-    for (const projectGroup of group.projectGroups) {
-      for (const row of projectGroup.standaloneRows) {
-        if (seen.has(row.task.id)) continue;
-        seen.add(row.task.id);
-        tasks.push(row.task);
-      }
-      if (projectGroup.journeyCluster) {
-        const anchor = projectGroup.journeyCluster.anchorRow.task;
-        if (!seen.has(anchor.id)) {
-          seen.add(anchor.id);
-          tasks.push(anchor);
-        }
-        for (const milestone of projectGroup.journeyCluster.milestoneRows) {
-          if (seen.has(milestone.task.id)) continue;
-          seen.add(milestone.task.id);
-          tasks.push(milestone.task);
-        }
-      }
-    }
-  }
-
-  return tasks;
-}
-
-export function AgencyWorkSurfaceMyTasksView({ view }: AgencyWorkSurfaceMyTasksViewProps) {
-  const agencyOps = useAgencyOpsStore();
-  const deletingTaskIds = useAgencyOpsStore((state) => state.deletingTaskIds);
-  const [deleteTarget, setDeleteTarget] = useState<AgencyProjectTask | null>(null);
-  const deleting = deleteTarget !== null && deletingTaskIds.includes(deleteTarget.id);
-
-  const tasks = useMemo(
-    () =>
-      flattenTasksFromClientGroups(view.clientGroups).sort((left, right) => {
-        const leftOverdue = isTaskOverdue(left.dueDate) ? 0 : 1;
-        const rightOverdue = isTaskOverdue(right.dueDate) ? 0 : 1;
-        if (leftOverdue !== rightOverdue) return leftOverdue - rightOverdue;
-        return left.title.localeCompare(right.title);
-      }),
-    [view.clientGroups],
-  );
+export function AgencyWorkSurfaceMyTasksView({
+  view,
+  renderTaskTableRow,
+}: AgencyWorkSurfaceMyTasksViewProps) {
+  const tasks = view.activeTableTasks;
 
   if (view.activeTasksQueryError) {
     return (
       <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
         <AlertTriangle className="size-5 text-warning" aria-hidden />
         <p className="text-sm text-muted">
-          {getErrorMessage(view.activeTasksErrorMessage, "Could not load tasks.")}
+          {view.activeTasksErrorMessage || "Could not load tasks."}
         </p>
         <Button size="sm" variant="secondary" onClick={view.onRetryActiveTasks}>
           Retry
@@ -158,24 +114,23 @@ export function AgencyWorkSurfaceMyTasksView({ view }: AgencyWorkSurfaceMyTasksV
                   { icon: Play, label: "Actions", secondaryIcon: MoreHorizontal },
                 ]}
               />
-              {tasks.map((task) => (
-                <AgencyWorkSurfaceTaskTableRowView
-                  key={task.id}
-                  task={task}
-                  projects={view.projects}
-                  teamId={view.teamId}
-                  variant="active"
-                  selected={task.id === view.selectedTaskId}
-                  highlight={task.id === view.recentlyCreatedTaskId}
-                  isRowPending={view.isRowPending(task.id)}
-                  onSelect={(taskId) => view.onSelect(taskId)}
-                  onSelectProject={view.onSelectProject}
-                  onStatusChange={view.onStatusChange}
-                  onDueDateChange={view.onDueDateChange}
-                  onDescriptionChange={view.onTaskDescriptionChange}
-                  onDelete={setDeleteTarget}
-                />
-              ))}
+              {tasks.map((task) =>
+                renderTaskTableRow({
+                  task,
+                  projects: view.projects,
+                  teamId: view.teamId,
+                  variant: "active",
+                  selected: task.id === view.selectedTaskId,
+                  highlight: task.id === view.recentlyCreatedTaskId,
+                  isRowPending: view.isRowPending(task.id),
+                  onSelect: (taskId) => view.onSelect(taskId),
+                  onSelectProject: view.onSelectProject,
+                  onStatusChange: view.onStatusChange,
+                  onDueDateChange: view.onDueDateChange,
+                  onDescriptionChange: view.onTaskDescriptionChange,
+                  onDelete: view.onRequestDelete,
+                }),
+              )}
             </div>
           </div>
         )}
@@ -191,22 +146,11 @@ export function AgencyWorkSurfaceMyTasksView({ view }: AgencyWorkSurfaceMyTasksV
       />
 
       <AgencyWorkSurfaceTaskDeleteDialog
-        task={deleteTarget}
+        task={view.deleteTarget}
         teamId={view.teamId}
-        deleting={deleting}
-        onDismiss={() => setDeleteTarget(null)}
-        onConfirm={() => {
-          if (!deleteTarget) return;
-          void agencyOps
-            .deleteProjectTask({
-              teamId: view.teamId,
-              taskId: deleteTarget.id,
-              taskTitle: deleteTarget.title,
-            })
-            .then(() => {
-              setDeleteTarget(null);
-            });
-        }}
+        deleting={view.deletePending}
+        onDismiss={view.onDismissDelete}
+        onConfirm={view.onConfirmDelete}
       />
     </div>
   );

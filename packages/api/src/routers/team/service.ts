@@ -11,6 +11,22 @@ import { db } from "@brainiac/db";
 import { dashboardWorkspace, user, workspaceTeam, workspaceTeamMember } from "@brainiac/db/schema";
 
 import { requireTeamMembership } from "../../lib/team-membership";
+import { getBillingStateForUser } from "../../billing-guard";
+
+export async function assertCanCreateTeam(
+  actorUserId: string,
+  _input: Record<string, never>,
+) {
+  const billing = await getBillingStateForUser(actorUserId);
+  const existing = await listUserTeams(actorUserId, {});
+
+  if (existing.length >= billing.limits.teams) {
+    throw new ORPCError("FORBIDDEN", {
+      message: `Your ${billing.tier} plan allows up to ${billing.limits.teams} team(s)`,
+      data: { limit: billing.limits.teams, current: existing.length },
+    });
+  }
+}
 
 async function touchTeam(teamId: string, now: Date) {
   await db
@@ -21,7 +37,7 @@ async function touchTeam(teamId: string, now: Date) {
     .where(eq(workspaceTeam.id, teamId));
 }
 
-export async function listUserTeams(userId: string) {
+export async function listUserTeams(actorUserId: string, _input: Record<string, never>) {
   const memberships = await db
     .select({
       teamId: workspaceTeamMember.teamId,
@@ -32,7 +48,7 @@ export async function listUserTeams(userId: string) {
     })
     .from(workspaceTeamMember)
     .innerJoin(workspaceTeam, eq(workspaceTeam.id, workspaceTeamMember.teamId))
-    .where(eq(workspaceTeamMember.userId, userId));
+    .where(eq(workspaceTeamMember.userId, actorUserId));
 
   return memberships.map((membership) => ({
     id: membership.teamId,
@@ -43,8 +59,8 @@ export async function listUserTeams(userId: string) {
   }));
 }
 
-export async function getTeam(userId: string, teamId: string) {
-  await requireTeamMembership(userId, teamId, "viewer");
+export async function getTeam(actorUserId: string, input: { teamId: string }) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
   const [membership] = await db
     .select({
@@ -55,17 +71,22 @@ export async function getTeam(userId: string, teamId: string) {
     })
     .from(workspaceTeamMember)
     .innerJoin(workspaceTeam, eq(workspaceTeam.id, workspaceTeamMember.teamId))
-    .where(and(eq(workspaceTeamMember.userId, userId), eq(workspaceTeamMember.teamId, teamId)))
+    .where(
+      and(
+        eq(workspaceTeamMember.userId, actorUserId),
+        eq(workspaceTeamMember.teamId, input.teamId),
+      ),
+    )
     .limit(1);
 
   if (!membership) {
     throw new ORPCError("NOT_FOUND");
   }
 
-  const members = await listTeamMembers(userId, teamId);
+  const members = await listTeamMembers(actorUserId, { teamId: input.teamId });
 
   return {
-    id: teamId,
+    id: input.teamId,
     name: membership.teamName,
     role: membership.role,
     createdByUserId: membership.createdByUserId,
@@ -74,15 +95,16 @@ export async function getTeam(userId: string, teamId: string) {
   };
 }
 
-export async function createTeam(userId: string, name: string) {
+export async function createTeam(actorUserId: string, input: { name: string }) {
   const now = new Date();
   const teamId = createWorkspaceId("team");
+  const name = input.name.trim();
 
   await db.transaction(async (tx) => {
     await tx.insert(workspaceTeam).values({
       id: teamId,
       name,
-      createdByUserId: userId,
+      createdByUserId: actorUserId,
       createdAt: now,
       updatedAt: now,
     });
@@ -90,7 +112,7 @@ export async function createTeam(userId: string, name: string) {
     await tx.insert(workspaceTeamMember).values({
       id: createWorkspaceId("team-member"),
       teamId,
-      userId,
+      userId: actorUserId,
       role: "owner",
       createdAt: now,
       updatedAt: now,
@@ -101,7 +123,7 @@ export async function createTeam(userId: string, name: string) {
     id: teamId,
     name,
     role: "owner" as const,
-    createdByUserId: userId,
+    createdByUserId: actorUserId,
     updatedAt: now.toISOString(),
   };
 }
@@ -213,8 +235,8 @@ export async function deleteTeam(actorUserId: string, input: { teamId: string })
   };
 }
 
-export async function listTeamMembers(actorUserId: string, teamId: string) {
-  await requireTeamMembership(actorUserId, teamId);
+export async function listTeamMembers(actorUserId: string, input: { teamId: string }) {
+  await requireTeamMembership(actorUserId, input.teamId);
 
   const members = await db
     .select({
@@ -227,10 +249,10 @@ export async function listTeamMembers(actorUserId: string, teamId: string) {
     })
     .from(workspaceTeamMember)
     .innerJoin(user, eq(user.id, workspaceTeamMember.userId))
-    .where(eq(workspaceTeamMember.teamId, teamId));
+    .where(eq(workspaceTeamMember.teamId, input.teamId));
 
   return members.map((member) => ({
-    teamId,
+    teamId: input.teamId,
     userId: member.userId,
     userName: member.userName,
     userEmail: member.userEmail,
@@ -282,13 +304,14 @@ export async function addTeamMember(
 
   await touchTeam(input.teamId, now);
 
-  return {
-    teamId: input.teamId,
-    userId: targetUser.id,
-    userName: targetUser.name,
-    userEmail: targetUser.email,
-    role: input.role,
-  };
+  const members = await listTeamMembers(actorUserId, { teamId: input.teamId });
+  const member = members.find((item) => item.userId === targetUser.id);
+  if (!member) {
+    throw new ORPCError("INTERNAL_SERVER_ERROR", {
+      message: "The team member was added but could not be loaded.",
+    });
+  }
+  return member;
 }
 
 export async function updateTeamMemberRole(

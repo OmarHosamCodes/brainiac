@@ -1,4 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+} from "react";
 
 import { setTrackingFavicon } from "@/lib/favicon";
 
@@ -75,9 +84,15 @@ export type AgencyTimeTrackerViewModel = {
   startTimeDayLabel: string;
   startTimeError: string | null;
   descriptionSuggestions: AgencyTimeTrackerSuggestion[];
+  suggestionListboxId: string;
+  suggestionsOpen: boolean;
+  activeSuggestionIndex: number;
   trackerStatusLine: string;
   onDescriptionChange: (value: string) => void;
-  onDescriptionKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  onDescriptionFocus: () => void;
+  onDescriptionBlur: (event: FocusEvent<HTMLInputElement>) => void;
+  onDescriptionKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
+  onSuggestionActiveIndexChange: (index: number) => void;
   onTaskChange: (taskId: string) => void;
   onTaskChooserOpenChange: (open: boolean) => void;
   onStartTimePopoverOpenChange: (open: boolean) => void;
@@ -112,6 +127,10 @@ export function useAgencyTimeTracker({
   const [taskChooserOpen, setTaskChooserOpen] = useState(false);
   const [startTimePopoverOpen, setStartTimePopoverOpen] = useState(false);
   const [startTimeDraft, setStartTimeDraft] = useState<AgencyTimerStartDraft>(emptyStartDraft);
+  const suggestionListboxId = useId();
+  const [descriptionFocused, setDescriptionFocused] = useState(false);
+  const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingDraftRef = useRef<AgencyTimerStartDraft | null>(null);
 
@@ -252,6 +271,14 @@ export function useAgencyTimeTracker({
     [recentEntriesQuery.data?.items, timerDescription],
   );
 
+  const suggestionsOpen =
+    !suggestionsDismissed && descriptionFocused && descriptionSuggestions.length > 0;
+
+  useEffect(() => {
+    setActiveSuggestionIndex(0);
+    setSuggestionsDismissed(false);
+  }, [descriptionSuggestions, timerDescription]);
+
   useEffect(() => {
     if (selectedTaskId || activeTimerHasTask) {
       setTaskChooserOpen(false);
@@ -271,6 +298,61 @@ export function useAgencyTimeTracker({
       task: selectedTask,
       description: timerDescription,
     });
+  }
+
+  function applyDescriptionSuggestion(suggestion: AgencyTimeTrackerSuggestion) {
+    setTrackerDescription(teamId, suggestion.description);
+    if (suggestion.taskId) {
+      setTrackerTaskId(teamId, suggestion.taskId);
+      const task = tasks.find((entry) => entry.id === suggestion.taskId);
+      if (task) {
+        setTrackerProjectId(teamId, task.projectId);
+      }
+    }
+    setSuggestionsDismissed(true);
+  }
+
+  function handleDescriptionKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (suggestionsOpen) {
+      switch (event.key) {
+        case "ArrowDown":
+          event.preventDefault();
+          setActiveSuggestionIndex((current) => (current + 1) % descriptionSuggestions.length);
+          return;
+        case "ArrowUp":
+          event.preventDefault();
+          setActiveSuggestionIndex(
+            (current) =>
+              (current - 1 + descriptionSuggestions.length) % descriptionSuggestions.length,
+          );
+          return;
+        case "Enter": {
+          const suggestion = descriptionSuggestions[activeSuggestionIndex];
+          if (suggestion) {
+            event.preventDefault();
+            applyDescriptionSuggestion(suggestion);
+          }
+          return;
+        }
+        case "Escape":
+          event.preventDefault();
+          setSuggestionsDismissed(true);
+          return;
+        default:
+          break;
+      }
+    }
+
+    if (event.key === "Enter" && canStartTimer) {
+      event.preventDefault();
+      void startTimer();
+    }
+  }
+
+  function handleDescriptionBlur(event: FocusEvent<HTMLInputElement>) {
+    if (!event.currentTarget.closest("[data-tracker-desc]")?.contains(event.relatedTarget)) {
+      setDescriptionFocused(false);
+    }
   }
 
   async function stopTimer(discard = false) {
@@ -355,14 +437,18 @@ export function useAgencyTimeTracker({
     startTimeDayLabel,
     startTimeError,
     descriptionSuggestions,
+    suggestionListboxId,
+    suggestionsOpen,
+    activeSuggestionIndex,
     trackerStatusLine,
     onDescriptionChange: (value) => setTrackerDescription(teamId, value),
-    onDescriptionKeyDown: (event) => {
-      if (event.key === "Enter" && canStartTimer) {
-        event.preventDefault();
-        void startTimer();
-      }
+    onDescriptionFocus: () => {
+      setDescriptionFocused(true);
+      setSuggestionsDismissed(false);
     },
+    onDescriptionBlur: handleDescriptionBlur,
+    onDescriptionKeyDown: handleDescriptionKeyDown,
+    onSuggestionActiveIndexChange: setActiveSuggestionIndex,
     onTaskChange: (value) => {
       setTrackerTaskId(teamId, value || "");
       const task = tasks.find((entry) => entry.id === value);
@@ -376,15 +462,6 @@ export function useAgencyTimeTracker({
     onStartTimer: () => void startTimer(),
     onStopTimer: () => void stopTimer(),
     onDiscardTimer: () => void stopTimer(true),
-    onApplySuggestion: (suggestion) => {
-      setTrackerDescription(teamId, suggestion.description);
-      if (suggestion.taskId) {
-        setTrackerTaskId(teamId, suggestion.taskId);
-        const task = tasks.find((entry) => entry.id === suggestion.taskId);
-        if (task) {
-          setTrackerProjectId(teamId, task.projectId);
-        }
-      }
-    },
+    onApplySuggestion: applyDescriptionSuggestion,
   };
 }

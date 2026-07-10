@@ -4,7 +4,6 @@ import { AgencyReportsTable } from "@/features/reports/agency-reports-table";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
 import { agencyEmptyPanelClass, agencyErrorPanelClass } from "@/features/shared/agency-ui";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
 import type { AgencyReportsSurfaceViewModel } from "./hooks/use-agency-reports-surface";
 
 export type AgencyReportsSurfaceViewProps = {
@@ -29,7 +28,7 @@ export function AgencyReportsSurfaceView({ vm }: AgencyReportsSurfaceViewProps) 
         <div className={agencyErrorPanelClass} role="alert">
           <AlertTriangle className="mx-auto size-5 text-error" />
           <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load reports.</p>
-          <p className="mt-1 text-xs text-muted">{getErrorMessage(vm.error, "Try refreshing.")}</p>
+          <p className="mt-1 text-xs text-muted">{vm.error}</p>
           <Button variant="secondary" size="sm" className="mt-3" onClick={vm.refetch}>
             Retry
           </Button>

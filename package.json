@@ -49,6 +49,8 @@
     "test:api:bruno:auto": "bash scripts/run-bruno-api-tests.sh",
     "test:api:bruno:ci": "bash scripts/run-bruno-api-tests.sh --ci",
     "check:conventions": "node scripts/check-conventions.mjs",
+    "check:golden": "node scripts/check-golden-file-inventory.mjs",
+    "check:realtime": "node scripts/check-realtime-registry.mjs",
     "check": "oxlint && node scripts/check-conventions.mjs && oxfmt --write",
     "perf": "node scripts/perf/run-benchmarks.mjs",
     "perf:ci": "node scripts/perf/run-benchmarks.mjs --ci",

@@ -1,17 +1,6 @@
-import { assertNever } from "@brainiac/config/assert-never";
-import type { LucideIcon } from "lucide-react";
-import { File, FileText, Globe, Image, Music, Video } from "lucide-react";
+type AttachmentMediaKind = "image" | "video" | "audio" | "document" | "archive" | "other" | "link";
 
-export type AttachmentMediaKind =
-  | "image"
-  | "video"
-  | "audio"
-  | "document"
-  | "archive"
-  | "other"
-  | "link";
-
-export type AttachmentMetadataLike =
+type AttachmentMetadataLike =
   | {
       imageWidth?: number;
       imageHeight?: number;
@@ -26,7 +15,7 @@ export type AttachmentMetadataLike =
   | null
   | undefined;
 
-export type AgencyAttachmentLike = {
+type AgencyAttachmentLike = {
   fileName: string;
   mimeType: string;
   sizeBytes: number;
@@ -36,9 +25,9 @@ export type AgencyAttachmentLike = {
   storageKey?: string;
 };
 
-export type AgencyAttachmentVariant = "grid" | "inline" | "list";
+type AgencyAttachmentVariant = "grid" | "inline" | "list";
 
-export type AgencyAttachmentContext = "composer" | "message";
+type AgencyAttachmentContext = "composer" | "message";
 
 const DOCUMENT_EXTENSIONS = new Set([
   "pdf",
@@ -56,12 +45,6 @@ const DOCUMENT_EXTENSIONS = new Set([
   "yml",
 ]);
 
-const DOCUMENT_ACCEPT =
-  ".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.md,.json,.yaml,.yml,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-
-export const AGENCY_ATTACHMENT_IMAGE_ACCEPT = "image/*";
-export const AGENCY_ATTACHMENT_DOCUMENT_ACCEPT = DOCUMENT_ACCEPT;
-
 /** Files from a paste or drop clipboard/dataTransfer (screenshots often only appear on items). */
 export function collectClipboardFiles(dataTransfer: DataTransfer | null | undefined): File[] {
   if (!dataTransfer) return [];
@@ -75,14 +58,12 @@ export function collectClipboardFiles(dataTransfer: DataTransfer | null | undefi
     .filter((file): file is File => file !== null && file.size > 0);
 }
 
-export function getMediaKindFromMetadata(
-  metadata: AttachmentMetadataLike,
-): AttachmentMediaKind | null {
+function getMediaKindFromMetadata(metadata: AttachmentMetadataLike): AttachmentMediaKind | null {
   if (!metadata?.mediaKind) return null;
   return metadata.mediaKind;
 }
 
-export function isLinkAttachment(attachment: AgencyAttachmentLike): boolean {
+function isLinkAttachment(attachment: AgencyAttachmentLike): boolean {
   return (
     getMediaKindFromMetadata(attachment.metadata) === "link" ||
     attachment.mimeType === "text/uri-list" ||
@@ -90,7 +71,7 @@ export function isLinkAttachment(attachment: AgencyAttachmentLike): boolean {
   );
 }
 
-export function isImageAttachment(attachment: AgencyAttachmentLike): boolean {
+function isImageAttachment(attachment: AgencyAttachmentLike): boolean {
   if (isLinkAttachment(attachment)) return false;
   return (
     attachment.mimeType.startsWith("image/") ||
@@ -98,7 +79,7 @@ export function isImageAttachment(attachment: AgencyAttachmentLike): boolean {
   );
 }
 
-export function isVideoAttachment(attachment: AgencyAttachmentLike): boolean {
+function isVideoAttachment(attachment: AgencyAttachmentLike): boolean {
   if (isLinkAttachment(attachment)) return false;
   return (
     attachment.mimeType.startsWith("video/") ||
@@ -106,7 +87,7 @@ export function isVideoAttachment(attachment: AgencyAttachmentLike): boolean {
   );
 }
 
-export function isAudioAttachment(attachment: AgencyAttachmentLike): boolean {
+function isAudioAttachment(attachment: AgencyAttachmentLike): boolean {
   if (isLinkAttachment(attachment)) return false;
   return (
     attachment.mimeType.startsWith("audio/") ||
@@ -115,59 +96,13 @@ export function isAudioAttachment(attachment: AgencyAttachmentLike): boolean {
   );
 }
 
-export function isDocumentAttachment(attachment: AgencyAttachmentLike): boolean {
+function isDocumentAttachment(attachment: AgencyAttachmentLike): boolean {
   if (isLinkAttachment(attachment)) return false;
   const kind = getMediaKindFromMetadata(attachment.metadata);
   if (kind === "document" || kind === "archive") return true;
   if (attachment.mimeType.includes("pdf")) return true;
   const ext = attachment.fileName.split(".").pop()?.toLowerCase() ?? "";
   return DOCUMENT_EXTENSIONS.has(ext);
-}
-
-export function getAttachmentMediaKind(attachment: AgencyAttachmentLike): AttachmentMediaKind {
-  if (isLinkAttachment(attachment)) return "link";
-  const fromMeta = getMediaKindFromMetadata(attachment.metadata);
-  if (fromMeta) return fromMeta;
-  if (isImageAttachment(attachment)) return "image";
-  if (isAudioAttachment(attachment)) return "audio";
-  if (isVideoAttachment(attachment)) return "video";
-  if (isDocumentAttachment(attachment)) return "document";
-  return "other";
-}
-
-export function getAttachmentIcon(attachment: AgencyAttachmentLike): LucideIcon {
-  const kind = getAttachmentMediaKind(attachment);
-  switch (kind) {
-    case "link":
-      return Globe;
-    case "image":
-      return Image;
-    case "audio":
-      return Music;
-    case "video":
-      return Video;
-    case "document":
-      return FileText;
-    case "archive":
-    case "other":
-      return File;
-    default:
-      return assertNever(kind);
-  }
-}
-
-export function formatAttachmentSize(bytes: number): string {
-  if (bytes <= 0) return "";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-export function getAttachmentUrl(attachment: AgencyAttachmentLike): string | null {
-  if (isLinkAttachment(attachment)) {
-    return attachment.metadata?.sourceUrl ?? attachment.url ?? null;
-  }
-  return attachment.url ?? null;
 }
 
 export function selectAttachmentVariant(

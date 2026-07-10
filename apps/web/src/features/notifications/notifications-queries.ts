@@ -35,6 +35,32 @@ function patchNotificationList(
   );
 }
 
+export function applyNotificationCreatedToCache(
+  queryClient: QueryClient,
+  teamId: string,
+  notification: NotificationRecord,
+) {
+  queryClient.setQueryData(
+    notificationListQueryKey(teamId),
+    (current: { items: NotificationRecord[]; nextCursor: string | null } | undefined) => {
+      if (!current?.items) return current;
+      const withoutDuplicate = current.items.filter((item) => item.id !== notification.id);
+      return {
+        ...current,
+        items: [notification, ...withoutDuplicate].slice(0, NOTIFICATION_LIST_LIMIT),
+      };
+    },
+  );
+
+  queryClient.setQueryData(
+    notificationUnreadCountQueryKey(teamId),
+    (current: { count: number } | undefined) => {
+      const base = current?.count ?? 0;
+      return notification.seenAt ? { count: base } : { count: base + 1 };
+    },
+  );
+}
+
 function markAllReadInCache(queryClient: QueryClient, teamId: string) {
   const now = new Date().toISOString();
   patchNotificationList(queryClient, teamId, (items) =>

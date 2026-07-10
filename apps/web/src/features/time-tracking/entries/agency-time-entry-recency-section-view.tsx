@@ -1,57 +1,22 @@
-import { AgencyTimeEntryRowContainer } from "@/features/time-tracking/containers/agency-time-entry-row-container";
 import {
   agencyMetricClass,
   agencyTimeEntrySectionHeaderClass,
   agencyWorkTableListClass,
 } from "@/features/shared/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
-import type {
-  CollapsedEntryGroup,
-  TimeEntryRecencySection,
-} from "@/features/time-tracking/group-time-entries";
-import type { TimeEntryDraft } from "@/features/time-tracking/agency-time-entry";
-import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
+import type { TimeEntryRecencySection } from "@/features/time-tracking/group-time-entries";
+import type { AgencyTimeEntryGroupRowRenderer } from "@/features/time-tracking/entries/agency-time-entry-row-renderer";
 import { cn } from "@/lib/utils";
 
 type AgencyTimeEntryRecencySectionViewProps = {
   section: TimeEntryRecencySection;
-  teamId: string;
-  projects: AgencyProject[];
-  tasks: AgencyProjectTask[];
-  expandedGroupKeys: Set<string>;
-  isTimerMutationPending: boolean;
-  deletingEntryIds: string[];
-  updatingEntryIds: string[];
-  duplicatingEntryIds: string[];
-  onToggleGroupExpand: (collapseKey: string) => void;
-  onRestart: (group: CollapsedEntryGroup) => void;
-  onDeleteGroup: (entryIds: string[]) => void;
-  onDeleteEntry: (entryId: string) => void;
-  onDuplicate: (entryId: string) => void;
-  onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
-  onToggleWaste: (entryId: string) => Promise<void>;
-  togglingWasteEntryIds: string[];
+  renderGroupRow: AgencyTimeEntryGroupRowRenderer;
   highlightedEntryId?: string | null;
 };
 
 export function AgencyTimeEntryRecencySectionView({
   section,
-  teamId,
-  projects,
-  tasks,
-  expandedGroupKeys,
-  isTimerMutationPending,
-  deletingEntryIds,
-  updatingEntryIds,
-  duplicatingEntryIds,
-  onToggleGroupExpand,
-  onRestart,
-  onDeleteGroup,
-  onDeleteEntry,
-  onDuplicate,
-  onSaveEdit,
-  onToggleWaste,
-  togglingWasteEntryIds,
+  renderGroupRow,
   highlightedEntryId = null,
 }: AgencyTimeEntryRecencySectionViewProps) {
   const lastGroupIndex = section.groups.length - 1;
@@ -82,27 +47,12 @@ export function AgencyTimeEntryRecencySectionView({
           const groupExpandKey = `${primaryEntry.startedAt.slice(0, 10)}||${group.collapseKey}`;
           return (
             <li key={groupExpandKey}>
-              <AgencyTimeEntryRowContainer
-                group={group}
-                teamId={teamId}
-                projects={projects}
-                tasks={tasks}
-                expanded={expandedGroupKeys.has(groupExpandKey)}
-                isTimerMutationPending={isTimerMutationPending}
-                deletingEntryIds={deletingEntryIds}
-                updatingEntryIds={updatingEntryIds}
-                duplicatingEntryIds={duplicatingEntryIds}
-                highlighted={highlightedEntryId === primaryEntry.id}
-                omitBottomBorder={index === lastGroupIndex}
-                onToggleExpand={() => onToggleGroupExpand(groupExpandKey)}
-                onRestart={onRestart}
-                onDeleteGroup={onDeleteGroup}
-                onDeleteEntry={onDeleteEntry}
-                onDuplicate={onDuplicate}
-                onSaveEdit={onSaveEdit}
-                onToggleWaste={onToggleWaste}
-                togglingWasteEntryIds={togglingWasteEntryIds}
-              />
+              {renderGroupRow({
+                group,
+                groupExpandKey,
+                highlighted: highlightedEntryId === primaryEntry.id,
+                omitBottomBorder: index === lastGroupIndex,
+              })}
             </li>
           );
         })}

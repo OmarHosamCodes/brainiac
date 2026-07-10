@@ -1,0 +1,61 @@
+---
+description: Golden feature layer direction — authoritative architecture for product features
+alwaysApply: true
+---
+
+# Golden File Pattern
+
+**Authoritative reference:** [`docs/golden-file-pattern.md`](../../docs/golden-file-pattern.md)
+
+Read it before adding, expanding, or refactoring any product feature. Exemplar: **Agency Time Tracking** (`apps/web/src/features/time-tracking/`, `packages/api/src/routers/agency-ops/time-tracking/`).
+
+## Layer direction (one way only)
+
+```text
+schema/migration -> API schemas -> router -> service -> oRPC/TanStack hook
+-> feature store/mutations -> feature hook/view model -> container -> view
+```
+
+No layer may skip the one below it. UI does not call Drizzle. Routers do not run business workflows. Views do not call oRPC, query hooks, stores, or auth.
+
+## Where code lives
+
+| Layer | Location |
+|-------|----------|
+| Product UI | `apps/web/src/features/<domain>/` |
+| Shared UI primitives | `apps/web/src/ui/` |
+| Shared agency query/live/cache | `apps/web/src/features/shared/` |
+| API routers & services | `packages/api/src/routers/<domain>/` |
+| Schema & migrations | `packages/db/src/schema/`, `packages/db/src/migrations/` |
+| Server ops (seeds, backfills) | `apps/server/src/operations/` |
+
+Do **not** put feature-specific code in `apps/web/src/lib/` or top-level `stores/`. Name helpers by domain (`timer-validation.ts`), never `utils.ts` / `helpers.ts` / `data.ts` inside features.
+
+## Web feature split (required)
+
+```text
+feature-name.tsx          -> re-exports container as public component
+containers/*-container.tsx -> exactly one hook call, one view import, bind only
+hooks/use-*.ts            -> queries, stores, handlers, ViewModel
+*-view.tsx                -> presentational; typed props only
+stores/*.ts               -> mutations, optimistic snapshots, pending flags
+```
+
+Views receive display-ready errors. Containers delegate orchestration to hooks.
+
+## API & service (required)
+
+- Routers: thin `protectedProProcedure` handlers → `service(actorUserId, input)` → `.parse()` output with Zod. No DB/Drizzle/store imports.
+- Services: exported functions take `(actorUserId: string, input: TypedInput)` only. `requireTeamMembership` before protected reads/writes. Transactions for multi-step writes. Map rows to API records; emit live events after durable writes.
+- Actor comes from `context.session.user.id` — never trust client-sent identity.
+
+## Before finishing
+
+```bash
+bun run check
+bun run check-types
+bun run check:conventions   # enforces golden-view, golden-container, golden-router, golden-service rules
+bun run check:golden        # when adding or relocating in-scope source files
+```
+
+Trace the 14-step request flow in the doc for each user action. PR description must list affected layers and test coverage.

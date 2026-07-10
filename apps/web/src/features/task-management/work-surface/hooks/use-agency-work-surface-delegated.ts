@@ -5,6 +5,7 @@ import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-optio
 import { groupDelegatedTasks } from "@/features/task-management/group-tasks-by-recency";
 import type { AgencyTaskListViewModel } from "@/features/task-management/hooks/use-agency-task-list";
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 export type AgencyWorkSurfaceDelegatedViewModel = {
   view: Extract<AgencyTaskListViewModel, { status: "ready" }>;
@@ -13,7 +14,7 @@ export type AgencyWorkSurfaceDelegatedViewModel = {
   totalLoaded: number;
   loading: boolean;
   queryError: boolean;
-  error: unknown;
+  errorMessage: string;
   retry: () => void;
 };
 
@@ -78,7 +79,9 @@ export function useAgencyWorkSurfaceDelegated({
   const loading =
     view.assignedTasksLoading || (doneDelegatedQuery.isPending && delegatedTasks.length === 0);
   const queryError = view.assignedTasksQueryError || doneDelegatedQuery.isError;
-  const error = view.assignedTasksErrorMessage || doneDelegatedQuery.error;
+  const errorMessage =
+    view.assignedTasksErrorMessage ||
+    getErrorMessage(doneDelegatedQuery.error, "Could not load delegated tasks.");
 
   function retry() {
     view.onRetryAssignedTasks();
@@ -92,7 +95,7 @@ export function useAgencyWorkSurfaceDelegated({
     totalLoaded,
     loading,
     queryError,
-    error,
+    errorMessage,
     retry,
   };
 }

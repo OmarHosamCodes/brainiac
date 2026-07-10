@@ -1,7 +1,6 @@
 import {
   DASHBOARD_CONVERSATION_HISTORY_LIMIT,
   DASHBOARD_CONVERSATION_MESSAGE_WINDOW,
-  DASHBOARD_CONVERSATION_TITLE_LIMIT,
   agentChatTurnResponseSchema,
   dashboardConversationDetailSchema,
   dashboardConversationListResponseSchema,
@@ -27,24 +26,37 @@ import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 
+import { getBillingStateForUser } from "../../billing-guard";
 import {
   getWorkspaceMarketplaceItems,
   getWorkspaceSnapshot,
   saveWorkspaceNodes,
 } from "../workspace/service";
+import {
+  buildDashboardConversationDeletionResult,
+  buildDashboardConversationTitle,
+  buildDashboardMessagePreview,
+  normalizeDashboardConversationTitle,
+} from "./conversation-contracts";
 
-function buildConversationTitle(content: string) {
-  return content.trim().slice(0, DASHBOARD_CONVERSATION_TITLE_LIMIT) || "New conversation";
-}
+export async function assertCanCreateDashboardConversation(
+  actorUserId: string,
+  _input: Record<string, never>,
+) {
+  const billing = await getBillingStateForUser(actorUserId);
 
-function buildMessagePreview(content: string) {
-  const normalized = content.replace(/\s+/g, " ").trim();
+  if (billing.limits.aiConversations === -1) return;
 
-  if (!normalized) {
-    return null;
+  const existing = await listDashboardConversations(actorUserId, {});
+  if (existing.conversations.length >= billing.limits.aiConversations) {
+    throw new ORPCError("FORBIDDEN", {
+      message: `Your ${billing.tier} plan allows up to ${billing.limits.aiConversations} AI conversations`,
+      data: {
+        limit: billing.limits.aiConversations,
+        current: existing.conversations.length,
+      },
+    });
   }
-
-  return normalized.slice(0, 280);
 }
 
 function normalizeConversationUsageSummary(
@@ -164,17 +176,22 @@ async function getConversationPreviewMap(conversationIds: string[]) {
       continue;
     }
 
-    previewMap.set(row.conversationId, buildMessagePreview(row.content));
+    previewMap.set(row.conversationId, buildDashboardMessagePreview(row.content));
   }
 
   return previewMap;
 }
 
-export async function listDashboardConversations(userId: string) {
+export async function listDashboardConversations(
+  actorUserId: string,
+  _input: Record<string, never>,
+) {
   const conversations = await db
     .select()
     .from(dashboardConversation)
-    .where(and(eq(dashboardConversation.userId, userId), isNull(dashboardConversation.archivedAt)))
+    .where(
+      and(eq(dashboardConversation.userId, actorUserId), isNull(dashboardConversation.archivedAt)),
+    )
     .orderBy(desc(dashboardConversation.updatedAt), desc(dashboardConversation.id))
     .limit(DASHBOARD_CONVERSATION_HISTORY_LIMIT);
 
@@ -190,15 +207,18 @@ export async function listDashboardConversations(userId: string) {
   });
 }
 
-export async function getDashboardConversation(userId: string, conversationId: string) {
-  const conversation = await getConversationRecord(userId, conversationId);
+export async function getDashboardConversation(
+  actorUserId: string,
+  input: { conversationId: string },
+) {
+  const conversation = await getConversationRecord(actorUserId, input.conversationId);
   const messages = await db
     .select()
     .from(dashboardConversationMessage)
     .where(
       and(
-        eq(dashboardConversationMessage.conversationId, conversationId),
-        eq(dashboardConversationMessage.userId, userId),
+        eq(dashboardConversationMessage.conversationId, input.conversationId),
+        eq(dashboardConversationMessage.userId, actorUserId),
       ),
     )
     .orderBy(asc(dashboardConversationMessage.createdAt), asc(dashboardConversationMessage.id));
@@ -206,7 +226,7 @@ export async function getDashboardConversation(userId: string, conversationId: s
   const detail = dashboardConversationDetailSchema.parse({
     ...mapConversationSummary({
       row: conversation,
-      lastMessagePreview: buildMessagePreview(messages.at(-1)?.content ?? ""),
+      lastMessagePreview: buildDashboardMessagePreview(messages.at(-1)?.content ?? ""),
     }),
     messages: messages.map(mapConversationMessage),
   });
@@ -215,18 +235,18 @@ export async function getDashboardConversation(userId: string, conversationId: s
 }
 
 export async function createDashboardConversation(
-  userId: string,
-  initialSettings: Pick<AgentChatTurnInput, "content" | "model" | "toolPreset">,
+  actorUserId: string,
+  input: Pick<AgentChatTurnInput, "content" | "model" | "toolPreset">,
 ) {
   const now = new Date();
   const conversationId = createWorkspaceId("conversation");
 
   await db.insert(dashboardConversation).values({
     id: conversationId,
-    userId,
-    title: buildConversationTitle(initialSettings.content),
-    model: initialSettings.model?.trim() || null,
-    toolPreset: initialSettings.toolPreset,
+    userId: actorUserId,
+    title: buildDashboardConversationTitle(input.content),
+    model: input.model?.trim() || null,
+    toolPreset: input.toolPreset,
     usageSummary: normalizeConversationUsageSummary(null),
     createdAt: now,
     updatedAt: now,
@@ -234,69 +254,75 @@ export async function createDashboardConversation(
     archivedAt: null,
   });
 
-  return getConversationRecord(userId, conversationId);
+  return getConversationRecord(actorUserId, conversationId);
 }
 
 export async function renameDashboardConversation(
-  userId: string,
-  conversationId: string,
-  title: string,
+  actorUserId: string,
+  input: { conversationId: string; title: string },
 ) {
-  await getConversationRecord(userId, conversationId);
+  await getConversationRecord(actorUserId, input.conversationId);
   const now = new Date();
 
   await db
     .update(dashboardConversation)
     .set({
-      title: title.trim().slice(0, DASHBOARD_CONVERSATION_TITLE_LIMIT),
+      title: normalizeDashboardConversationTitle(input.title),
       updatedAt: now,
     })
     .where(
-      and(eq(dashboardConversation.id, conversationId), eq(dashboardConversation.userId, userId)),
+      and(
+        eq(dashboardConversation.id, input.conversationId),
+        eq(dashboardConversation.userId, actorUserId),
+      ),
     );
 
-  return getDashboardConversation(userId, conversationId);
+  return getDashboardConversation(actorUserId, { conversationId: input.conversationId });
 }
 
-export async function deleteDashboardConversation(userId: string, conversationId: string) {
-  await getConversationRecord(userId, conversationId);
+export async function deleteDashboardConversation(
+  actorUserId: string,
+  input: { conversationId: string },
+) {
+  await getConversationRecord(actorUserId, input.conversationId);
 
   await db
     .delete(dashboardConversation)
     .where(
-      and(eq(dashboardConversation.id, conversationId), eq(dashboardConversation.userId, userId)),
+      and(
+        eq(dashboardConversation.id, input.conversationId),
+        eq(dashboardConversation.userId, actorUserId),
+      ),
     );
 
-  return {
-    deleted: true,
-    conversationId,
-  };
+  return buildDashboardConversationDeletionResult(input.conversationId);
 }
 
 export async function appendDashboardConversationTurn(
-  userId: string,
-  userName: string,
-  input: AgentChatTurnInput,
+  actorUserId: string,
+  input: { actorUserName: string; turn: AgentChatTurnInput },
 ) {
+  const userId = actorUserId;
+  const { actorUserName: userName, turn } = input;
   const now = new Date();
   const [fullWorkspaceSnapshot, marketplaceResult] = await Promise.all([
-    input.nodes
+    turn.nodes
       ? Promise.resolve({
-          nodes: input.nodes,
+          nodes: turn.nodes,
           updatedAt: null,
         })
-      : getWorkspaceSnapshot(userId),
-    getWorkspaceMarketplaceItems({ limit: 200, kind: "all" }),
+      : getWorkspaceSnapshot(userId, {}),
+    getWorkspaceMarketplaceItems(userId, { limit: 200, kind: "all" }),
   ]);
 
-  const conversation = input.conversationId
-    ? await getConversationRecord(userId, input.conversationId)
+  const conversation = turn.conversationId
+    ? await getConversationRecord(userId, turn.conversationId)
     : await createDashboardConversation(userId, {
-        content: input.content,
-        model: input.model,
-        toolPreset: input.toolPreset,
+        content: turn.content,
+        model: turn.model,
+        toolPreset: turn.toolPreset,
       });
-  const createdConversation = !input.conversationId;
+  const createdConversation = !turn.conversationId;
 
   const recentMessagesDesc = await db
     .select()
@@ -313,14 +339,14 @@ export async function appendDashboardConversationTurn(
     role: message.role as "user" | "assistant",
     content: message.content,
   }));
-  const scopeNodes = input.scopeNodes ?? input.nodes;
+  const scopeNodes = turn.scopeNodes ?? turn.nodes;
 
   const result = await runDashboardAgent(
     [
       ...recentMessages,
       {
         role: "user",
-        content: input.content,
+        content: turn.content,
       },
     ],
     {
@@ -329,11 +355,11 @@ export async function appendDashboardConversationTurn(
       marketplaceItems: marketplaceResult.items,
       updatedAt: fullWorkspaceSnapshot.updatedAt,
       userName,
-      activeTabId: input.activeTabId,
+      activeTabId: turn.activeTabId,
     },
     {
-      model: input.model,
-      toolPreset: input.toolPreset,
+      model: turn.model,
+      toolPreset: turn.toolPreset,
     },
   );
   const nextUsageSummary = buildNextConversationUsageSummary(
@@ -343,7 +369,8 @@ export async function appendDashboardConversationTurn(
   const workspaceSnapshot = result.workspaceSnapshot
     ? {
         nodes: result.workspaceSnapshot.nodes,
-        updatedAt: (await saveWorkspaceNodes(userId, result.workspaceSnapshot.nodes)).updatedAt,
+        updatedAt: (await saveWorkspaceNodes(userId, { nodes: result.workspaceSnapshot.nodes }))
+          .updatedAt,
       }
     : null;
 
@@ -352,9 +379,9 @@ export async function appendDashboardConversationTurn(
     conversationId: conversation.id,
     userId,
     role: "user" as const,
-    content: input.content,
-    contextNodeTitles: input.contextNodeTitles ?? [],
-    model: input.model?.trim() || null,
+    content: turn.content,
+    contextNodeTitles: turn.contextNodeTitles ?? [],
+    model: turn.model?.trim() || null,
     toolsCalled: [],
     createdAt: now,
   };
@@ -376,8 +403,8 @@ export async function appendDashboardConversationTurn(
   await db
     .update(dashboardConversation)
     .set({
-      model: input.model?.trim() || null,
-      toolPreset: input.toolPreset,
+      model: turn.model?.trim() || null,
+      toolPreset: turn.toolPreset,
       usageSummary: nextUsageSummary,
       updatedAt: assistantCreatedAt,
       lastMessageAt: assistantCreatedAt,
@@ -389,13 +416,13 @@ export async function appendDashboardConversationTurn(
   const conversationSummary = mapConversationSummary({
     row: {
       ...conversation,
-      model: input.model?.trim() || null,
-      toolPreset: input.toolPreset,
+      model: turn.model?.trim() || null,
+      toolPreset: turn.toolPreset,
       usageSummary: nextUsageSummary,
       updatedAt: assistantCreatedAt,
       lastMessageAt: assistantCreatedAt,
     },
-    lastMessagePreview: buildMessagePreview(result.response),
+    lastMessagePreview: buildDashboardMessagePreview(result.response),
   });
 
   return agentChatTurnResponseSchema.parse({

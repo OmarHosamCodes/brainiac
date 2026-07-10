@@ -5,7 +5,6 @@ import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Skeleton } from "@/ui/skeleton";
 import type { AgencyMemberChooserViewModel } from "@/features/shared/choosers/use-agency-member-chooser";
-import { UNASSIGNED_ASSIGNEE_VALUE } from "@/features/task-management/stores/agency-task-list";
 import {
   agencyAvatarStackRingClass,
   agencyFocusRingClass,
@@ -245,7 +244,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                     agencyFocusRingClass,
                     "motion-reduce:transition-none",
                   )}
-                  onClick={() => single?.onSelectMember(UNASSIGNED_ASSIGNEE_VALUE)}
+                  onClick={single?.onSelectUnassigned}
                 >
                   <span className="flex size-5 shrink-0 items-center justify-center rounded-md bg-muted">
                     <UserRound className="size-3 text-muted" aria-hidden />

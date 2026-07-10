@@ -6,6 +6,8 @@ alwaysApply: false
 
 # Database / Drizzle Conventions
 
+Persistence rules and index guidance: [`docs/golden-file-pattern.md`](../../docs/golden-file-pattern.md) (Persistence Layer).
+
 ## Schema patterns
 
 ```typescript

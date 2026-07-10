@@ -6,8 +6,7 @@ import {
   agencyTimeTrackerSuggestionPanelClass,
 } from "@/features/shared/agency-ui";
 import { liquidGlassMenuItemClass } from "@/lib/utils/liquid-glass-ui";
-import { projectHuePillStyle } from "@/lib/utils/project-palette";
-import { useTheme } from "@/stores/theme";
+import { projectHueStyle } from "@/features/shared/project-palette";
 import { cn } from "@/lib/utils";
 
 type AgencyDescriptionSuggestionMenuProps = {
@@ -27,8 +26,6 @@ export function AgencyDescriptionSuggestionMenu({
   onActiveIndexChange,
   onSelect,
 }: AgencyDescriptionSuggestionMenuProps) {
-  const { isDark } = useTheme();
-
   return (
     <div className={agencyTimeTrackerSuggestionAnchorClass}>
       <div className={agencyTimeTrackerSuggestionPanelClass}>
@@ -64,8 +61,11 @@ export function AgencyDescriptionSuggestionMenu({
                   <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                     {suggestion.projectName ? (
                       <span
-                        className={cn(agencyTaskRowProjectPillClass, "max-w-[9rem] truncate")}
-                        style={projectHuePillStyle(suggestion.projectId, isDark)}
+                        className={cn(
+                          agencyTaskRowProjectPillClass,
+                          "max-w-[9rem] truncate bg-[var(--project-hue-soft)] text-[var(--project-hue)] dark:bg-[var(--project-hue-soft-dark)] dark:text-[var(--project-hue-dark)]",
+                        )}
+                        style={projectHueStyle(suggestion.projectId)}
                       >
                         {suggestion.projectName}
                       </span>

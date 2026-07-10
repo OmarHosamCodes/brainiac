@@ -247,13 +247,12 @@ export const agencyLivePublisher = new AgencyLivePublisher();
 
 export async function* subscribeAgencyLive(
   actorUserId: string,
-  input: { teamId: string },
-  signal?: AbortSignal,
+  input: { teamId: string; signal?: AbortSignal },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
   registerAgencyLiveUserConnection(actorUserId, input.teamId);
   try {
-    for await (const event of agencyLivePublisher.subscribe(input.teamId, signal)) {
+    for await (const event of agencyLivePublisher.subscribe(input.teamId, input.signal)) {
       yield agencyLiveEventSchema.parse(event);
     }
   } finally {

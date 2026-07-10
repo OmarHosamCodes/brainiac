@@ -16,11 +16,8 @@ import { createWorkspaceId } from "@brainiac/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 
-import {
-  ensureTaskThreadByTaskId,
-  getTaskThreadMessageById,
-  validateTaskAttachmentUploadReferences,
-} from "./service";
+import { ensureTaskThreadByTaskId, getTaskThreadMessageById } from "./service";
+import { validateTaskAttachmentUploadReferences } from "./validate-task-attachment-upload-references";
 import { requireTeamMembership } from "../shared/membership";
 import { liveUpdatedAt, publishAgencyLiveEvent } from "../live/live";
 
@@ -121,7 +118,7 @@ export async function askTaskAgent(
     })),
   });
 
-  const thread = await ensureTaskThreadByTaskId(input.teamId, input.taskId);
+  const thread = await ensureTaskThreadByTaskId(actorUserId, input);
 
   // ------------------------------------------------------------------
   // Build recent messages with attachment summaries for the agent

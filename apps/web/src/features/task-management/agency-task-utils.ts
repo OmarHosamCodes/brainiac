@@ -65,12 +65,6 @@ export function groupTasksByProjectTitle<T extends TaskGroupItem>(
     .sort((left, right) => left.title.localeCompare(right.title));
 }
 
-export function groupTasksWithinClient<T extends TaskGroupItem>(
-  tasks: T[],
-): AgencyProjectTaskGroup<T>[] {
-  return groupTasksByProjectTitle(tasks);
-}
-
 export function isTaskOverdue(iso: string | null): boolean {
   if (!iso) return false;
   const date = new Date(iso);

@@ -8,7 +8,7 @@ import {
 import { Layers, Waypoints } from "lucide-react";
 import { useMemo } from "react";
 
-import type { CanvasNodeModel } from "@/lib/canvas/canvas-types";
+import type { CanvasNodeModel } from "@/features/workspace/canvas/canvas-types";
 import { getWorkspaceBlockRegistryEntry } from "@/features/workspace/utils/workspace-block-registry";
 import { getWorkspaceNodeTintStyle } from "@/features/workspace/utils/workspace-node-dashboard";
 import { cn } from "@/lib/utils";

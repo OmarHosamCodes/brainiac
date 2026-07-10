@@ -188,7 +188,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
   const entries = entriesQuery.data ?? [];
   const isPending = entriesQuery.isPending && !entriesQuery.isPlaceholderData;
   const isError = entriesQuery.isError;
-  const error = entriesQuery.error;
+  const error = getErrorMessage(entriesQuery.error, "Try refreshing.");
   const refetch = () => {
     void entriesQuery.refetch();
   };

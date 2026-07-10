@@ -59,6 +59,7 @@ export type AgencyMemberChooserViewModel = {
     allowEmpty: boolean;
     selectedMember: AgencyTaskThreadMember | null;
     isUnassigned: boolean;
+    onSelectUnassigned: () => void;
     onSelectMember: (userId: string) => void;
     onClearSelection: () => void;
   };
@@ -221,6 +222,7 @@ export function useAgencyMemberChooser(
       allowEmpty,
       selectedMember,
       isUnassigned,
+      onSelectUnassigned: () => selectMember(UNASSIGNED_ASSIGNEE_VALUE),
       onSelectMember: selectMember,
       onClearSelection: clearSelection,
     },

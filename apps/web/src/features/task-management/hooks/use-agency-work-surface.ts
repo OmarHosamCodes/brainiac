@@ -13,6 +13,7 @@ import {
   useAgencyTaskListStore,
   type AgencyTaskRailStatusFilter,
 } from "@/features/task-management/stores/agency-task-list";
+import { useAgencyJourneyLiveSync } from "@/features/task-management/hooks/use-agency-journey-live-sync";
 
 type UseAgencyWorkSurfaceOptions = {
   teamId: string;
@@ -42,6 +43,7 @@ export function useAgencyWorkSurface({
   onSegmentChange,
   onSelectProject,
 }: UseAgencyWorkSurfaceOptions): AgencyWorkSurfaceView {
+  useAgencyJourneyLiveSync({ teamId });
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = parseAgencyWorkSurfaceTab(searchParams.get("tab"));
   const selectedTaskId = searchParams.get("task") ?? "";

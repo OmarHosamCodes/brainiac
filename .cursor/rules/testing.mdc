@@ -5,6 +5,8 @@ alwaysApply: false
 
 # Testing Conventions
 
+Golden testing minimums: [`docs/golden-file-pattern.md`](../../docs/golden-file-pattern.md) (Testing Layer).
+
 ## Unit tests (Bun test)
 
 Co-located `*.test.ts` files next to the code they test. Focus on pure logic — no component render tests.
@@ -45,5 +47,6 @@ Tests live in `tests/bruno/brainiac-api/`.
 ```bash
 bun run check
 bun run check-types
+bun run check:conventions
 bun test <path-to-new-test>   # if you added logic
 ```

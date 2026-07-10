@@ -17,12 +17,11 @@ export async function notifyTaskAssigned(input: {
   assignedToTeam: boolean;
 }) {
   const recipients = input.assignedToTeam
-    ? await listTeamMemberUserIds(input.teamId)
+    ? await listTeamMemberUserIds(input.actorUserId, { teamId: input.teamId })
     : input.assigneeUserIds;
 
-  await fanOutNotification({
+  await fanOutNotification(input.actorUserId, {
     teamId: input.teamId,
-    actorUserId: input.actorUserId,
     recipientUserIds: recipients,
     type: "task.assigned",
     payload: {
@@ -45,12 +44,14 @@ export async function notifyTaskMessage(input: {
   messagePreview: string;
   assigneeUserIds: string[];
 }) {
-  const participants = await listTaskThreadParticipantUserIds(input.teamId, input.taskId);
+  const participants = await listTaskThreadParticipantUserIds(input.actorUserId, {
+    teamId: input.teamId,
+    taskId: input.taskId,
+  });
   const recipients = [...new Set([...input.assigneeUserIds, ...participants])];
 
-  await fanOutNotification({
+  await fanOutNotification(input.actorUserId, {
     teamId: input.teamId,
-    actorUserId: input.actorUserId,
     recipientUserIds: recipients,
     type: "task.message",
     payload: {
@@ -73,11 +74,10 @@ export async function notifyJourneyMilestone(input: {
   journeyStepId: string;
   journeyStepLabel: string;
 }) {
-  const recipients = await listTeamMemberUserIds(input.teamId);
+  const recipients = await listTeamMemberUserIds(input.actorUserId, { teamId: input.teamId });
 
-  await fanOutNotification({
+  await fanOutNotification(input.actorUserId, {
     teamId: input.teamId,
-    actorUserId: input.actorUserId,
     recipientUserIds: recipients,
     type: "journey.milestone",
     payload: {
@@ -98,7 +98,7 @@ export async function notifyTimerActivity(input: {
   taskTitle: string | null;
   timerAction: "started" | "stopped";
 }) {
-  const recipients = await listTeamMemberUserIds(input.teamId);
+  const recipients = await listTeamMemberUserIds(input.actorUserId, { teamId: input.teamId });
   const payload: NotificationPayload = {
     projectId: input.projectId,
     projectName: input.projectName,
@@ -110,9 +110,8 @@ export async function notifyTimerActivity(input: {
     payload.taskTitle = input.taskTitle ?? undefined;
   }
 
-  await fanOutNotification({
+  await fanOutNotification(input.actorUserId, {
     teamId: input.teamId,
-    actorUserId: input.actorUserId,
     recipientUserIds: recipients,
     type: "timer.activity",
     payload,

@@ -2,7 +2,7 @@ import { AlertTriangle, Calendar, CircleDot, MoreHorizontal, UserRound } from "l
 
 import { AgencyWorkSurfacePaginationFooter } from "@/features/task-management/work-surface/agency-work-surface-pagination-footer";
 import { AgencyWorkSurfaceTableHeaderView } from "@/features/task-management/work-surface/agency-work-surface-table-header-view";
-import { AgencyWorkSurfaceTaskTableRowView } from "@/features/task-management/work-surface/agency-work-surface-task-table-row-view";
+import type { RenderAgencyWorkSurfaceTaskTableRow } from "@/features/task-management/work-surface/agency-work-surface-task-table-row-model";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
 import {
@@ -11,22 +11,21 @@ import {
   agencyWorkTableListClass,
   agencyWorkTableStackClass,
 } from "@/features/shared/agency-ui";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
 import type { AgencyWorkSurfaceDelegatedViewModel } from "./hooks/use-agency-work-surface-delegated";
 
 export function AgencyWorkSurfaceDelegatedView({
   viewModel,
+  renderTaskTableRow,
 }: {
   viewModel: AgencyWorkSurfaceDelegatedViewModel;
+  renderTaskTableRow: RenderAgencyWorkSurfaceTaskTableRow;
 }) {
-  const { sections, totalLoaded, loading, queryError, error, retry } = viewModel;
+  const { sections, totalLoaded, loading, queryError, errorMessage, retry } = viewModel;
   if (queryError)
     return (
       <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
         <AlertTriangle className="size-5 text-warning" aria-hidden />
-        <p className="text-sm text-muted">
-          {getErrorMessage(error, "Could not load delegated tasks.")}
-        </p>
+        <p className="text-sm text-muted">{errorMessage}</p>
         <Button size="sm" variant="secondary" onClick={retry}>
           Retry
         </Button>
@@ -66,17 +65,16 @@ export function AgencyWorkSurfaceDelegatedView({
                     </span>
                   </div>
                 </div>
-                {section.tasks.map((task) => (
-                  <AgencyWorkSurfaceTaskTableRowView
-                    key={task.id}
-                    task={task}
-                    projects={viewModel.view.projects}
-                    teamId={viewModel.view.teamId}
-                    variant="delegated"
-                    isRowPending={viewModel.view.isRowPending(task.id)}
-                    onSelect={(taskId) => viewModel.view.onSelect(taskId)}
-                  />
-                ))}
+                {section.tasks.map((task) =>
+                  renderTaskTableRow({
+                    task,
+                    projects: viewModel.view.projects,
+                    teamId: viewModel.view.teamId,
+                    variant: "delegated",
+                    isRowPending: viewModel.view.isRowPending(task.id),
+                    onSelect: (taskId) => viewModel.view.onSelect(taskId),
+                  }),
+                )}
               </div>
             ))}
           </div>

@@ -8,7 +8,7 @@ import {
   shellInPageSubnavClass,
   shellSegmentTabActiveClass,
   shellSegmentTabClass,
-} from "@/lib/utils/app-shell-ui";
+} from "@/features/app-shell/app-shell-ui";
 import { cn } from "@/lib/utils";
 
 type AgencySegmentBarProps = {

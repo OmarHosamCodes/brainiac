@@ -1,12 +1,7 @@
-import { useMemo } from "react";
-
 import { useAgencyTimeEntryRow } from "@/features/time-tracking/hooks/use-agency-time-entry-row";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import type { TimeEntryDraft } from "@/features/time-tracking/agency-time-entry";
-import type {
-  CollapsedEntryGroup,
-  TimeEntryRecord,
-} from "@/features/time-tracking/group-time-entries";
+import type { CollapsedEntryGroup } from "@/features/time-tracking/group-time-entries";
 
 import { AgencyTimeEntryRowView } from "@/features/time-tracking/entries/agency-time-entry-row-view";
 import { agencyTimeEntryMultiChildClass } from "@/features/shared/agency-ui";
@@ -37,32 +32,12 @@ type AgencyTimeEntryRowContainerProps = {
   multiGroupChild?: boolean;
 };
 
-function singleEntryGroup(group: CollapsedEntryGroup, entry: TimeEntryRecord): CollapsedEntryGroup {
-  return {
-    collapseKey: group.collapseKey,
-    projectId: entry.projectId,
-    taskId: entry.taskId,
-    taskTitle: entry.taskTitle ?? group.taskTitle,
-    projectName: entry.projectName,
-    clientName: entry.clientName,
-    description: entry.description,
-    totalSeconds: entry.durationSeconds,
-    entries: [entry],
-  };
-}
-
 export function AgencyTimeEntryRowContainer({
   omitBottomBorder = false,
   multiGroupChild = false,
   ...props
 }: AgencyTimeEntryRowContainerProps) {
   const view = useAgencyTimeEntryRow(props);
-
-  const expandedChildGroups = useMemo(
-    () =>
-      view.expanded ? props.group.entries.map((entry) => singleEntryGroup(props.group, entry)) : [],
-    [props.group, view.expanded],
-  );
 
   if (!view.isMulti) {
     return (
@@ -79,7 +54,7 @@ export function AgencyTimeEntryRowContainer({
   return (
     <div className={cn("bg-elevated/20", omitBottomBorder ? undefined : "border-b border-default")}>
       <AgencyTimeEntryRowView view={view} className="border-b-0" />
-      {expandedChildGroups.map((childGroup, index) => (
+      {view.expandedChildGroups.map((childGroup, index) => (
         <AgencyTimeEntryRowContainer
           key={childGroup.entries[0]!.id}
           {...props}
@@ -89,7 +64,7 @@ export function AgencyTimeEntryRowContainer({
           highlighted={
             props.highlighted === true && childGroup.entries[0]?.id === props.group.entries[0]?.id
           }
-          omitBottomBorder={index === expandedChildGroups.length - 1}
+          omitBottomBorder={index === view.expandedChildGroups.length - 1}
         />
       ))}
     </div>

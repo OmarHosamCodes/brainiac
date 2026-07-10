@@ -148,7 +148,8 @@ export async function listNotifications(
   return { items, nextCursor };
 }
 
-export async function getUnreadNotificationCount(actorUserId: string, teamId: string) {
+export async function getUnreadNotificationCount(actorUserId: string, input: { teamId: string }) {
+  const { teamId } = input;
   await requireTeamMembership(actorUserId, teamId, "viewer");
 
   const [row] = await db
@@ -165,7 +166,8 @@ export async function getUnreadNotificationCount(actorUserId: string, teamId: st
   return { count: row?.count ?? 0 };
 }
 
-export async function markNotificationsSeen(actorUserId: string, teamId: string) {
+export async function markNotificationsSeen(actorUserId: string, input: { teamId: string }) {
+  const { teamId } = input;
   await requireTeamMembership(actorUserId, teamId, "viewer");
 
   const now = new Date();
@@ -209,7 +211,8 @@ export async function markNotificationRead(
   return { notificationId: updated.id, read: true };
 }
 
-export async function markAllNotificationsRead(actorUserId: string, teamId: string) {
+export async function markAllNotificationsRead(actorUserId: string, input: { teamId: string }) {
+  const { teamId } = input;
   await requireTeamMembership(actorUserId, teamId, "viewer");
 
   const now = new Date();
@@ -231,7 +234,8 @@ export async function markAllNotificationsRead(actorUserId: string, teamId: stri
   return { updated: true };
 }
 
-export async function getNotificationPreferences(actorUserId: string, teamId: string) {
+export async function getNotificationPreferences(actorUserId: string, input: { teamId: string }) {
+  const { teamId } = input;
   await requireTeamMembership(actorUserId, teamId, "viewer");
   const map = await getPreferenceMap(actorUserId, teamId);
 
@@ -281,7 +285,7 @@ export async function setNotificationPreferences(
       });
   }
 
-  return getNotificationPreferences(actorUserId, input.teamId);
+  return getNotificationPreferences(actorUserId, { teamId: input.teamId });
 }
 
 export async function subscribePush(
@@ -289,7 +293,7 @@ export async function subscribePush(
   input: { endpoint: string; p256dh: string; auth: string },
 ) {
   const now = new Date();
-  await db
+  const [subscription] = await db
     .insert(pushSubscription)
     .values({
       id: createWorkspaceId("push-sub"),
@@ -303,12 +307,17 @@ export async function subscribePush(
     .onConflictDoUpdate({
       target: pushSubscription.endpoint,
       set: {
-        userId: actorUserId,
         p256dh: input.p256dh,
         auth: input.auth,
         updatedAt: now,
       },
-    });
+      setWhere: eq(pushSubscription.userId, actorUserId),
+    })
+    .returning({ userId: pushSubscription.userId });
+
+  if (!subscription) {
+    throw new ORPCError("CONFLICT");
+  }
 
   return { subscribed: true };
 }
@@ -323,7 +332,10 @@ export async function unsubscribePush(actorUserId: string, input: { endpoint: st
   return { unsubscribed: true };
 }
 
-export async function listPushSubscriptionsForUser(userId: string) {
+export async function listPushSubscriptionsForUser(
+  actorUserId: string,
+  _input: Record<string, never>,
+) {
   return db
     .select({
       id: pushSubscription.id,
@@ -332,7 +344,7 @@ export async function listPushSubscriptionsForUser(userId: string) {
       auth: pushSubscription.auth,
     })
     .from(pushSubscription)
-    .where(eq(pushSubscription.userId, userId));
+    .where(eq(pushSubscription.userId, actorUserId));
 }
 
 async function shouldDeliver(
@@ -502,14 +514,16 @@ async function upsertNotificationForRecipient(input: {
   return record;
 }
 
-export async function fanOutNotification(input: {
-  teamId: string;
-  actorUserId: string | null;
-  recipientUserIds: string[];
-  type: NotificationType;
-  payload: NotificationPayload;
-}) {
-  const recipients = excludeActor(input.recipientUserIds, input.actorUserId);
+export async function fanOutNotification(
+  actorUserId: string | null,
+  input: {
+    teamId: string;
+    recipientUserIds: string[];
+    type: NotificationType;
+    payload: NotificationPayload;
+  },
+) {
+  const recipients = excludeActor(input.recipientUserIds, actorUserId);
   const created: NotificationRecord[] = [];
 
   for (const recipientUserId of recipients) {
@@ -519,7 +533,7 @@ export async function fanOutNotification(input: {
     const record = await upsertNotificationForRecipient({
       teamId: input.teamId,
       recipientUserId,
-      actorUserId: input.actorUserId,
+      actorUserId,
       type: input.type,
       payload: input.payload,
     });
@@ -529,35 +543,47 @@ export async function fanOutNotification(input: {
   return created;
 }
 
-export async function listTeamMemberUserIds(teamId: string) {
+export async function listTeamMemberUserIds(actorUserId: string | null, input: { teamId: string }) {
+  if (actorUserId) await requireTeamMembership(actorUserId, input.teamId, "viewer");
   const rows = await db
     .select({ userId: workspaceTeamMember.userId })
     .from(workspaceTeamMember)
-    .where(eq(workspaceTeamMember.teamId, teamId));
+    .where(eq(workspaceTeamMember.teamId, input.teamId));
 
   return rows.map((row) => row.userId);
 }
 
-export async function listTaskThreadParticipantUserIds(teamId: string, taskId: string) {
+export async function listTaskThreadParticipantUserIds(
+  actorUserId: string | null,
+  input: { teamId: string; taskId: string },
+) {
+  if (actorUserId) await requireTeamMembership(actorUserId, input.teamId, "viewer");
   const rows = await db
     .selectDistinct({ userId: agencyOpsTaskMessage.userId })
     .from(agencyOpsTaskMessage)
     .innerJoin(agencyOpsTaskThread, eq(agencyOpsTaskThread.id, agencyOpsTaskMessage.threadId))
-    .where(and(eq(agencyOpsTaskThread.teamId, teamId), eq(agencyOpsTaskThread.taskId, taskId)));
+    .where(
+      and(
+        eq(agencyOpsTaskThread.teamId, input.teamId),
+        eq(agencyOpsTaskThread.taskId, input.taskId),
+      ),
+    );
 
   return rows.map((row) => row.userId);
 }
 
-export async function emitTeamDigestNotification(input: {
-  teamId: string;
-  recipientUserId: string;
-  digestDate: string;
-  digestHoursSeconds: number;
-  digestTasksCompleted: number;
-}) {
-  return fanOutNotification({
+export async function emitTeamDigestNotification(
+  actorUserId: string | null,
+  input: {
+    teamId: string;
+    recipientUserId: string;
+    digestDate: string;
+    digestHoursSeconds: number;
+    digestTasksCompleted: number;
+  },
+) {
+  return fanOutNotification(actorUserId, {
     teamId: input.teamId,
-    actorUserId: null,
     recipientUserIds: [input.recipientUserId],
     type: "team.digest",
     payload: {

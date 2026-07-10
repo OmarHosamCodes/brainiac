@@ -1,6 +1,6 @@
-import { DashboardAgentToolTraceList } from "@/components/dashboard/agent-chat/dashboard-agent-tool-trace";
+import { DashboardAgentToolTraceList } from "@/features/dashboard-agent/agent-chat/dashboard-agent-tool-trace";
 import { marketingAgentToolTraces } from "@/components/marketing/marketing-demo-data";
-import { agentChatMessageAssistantClass } from "@/lib/utils/dashboard-agent-ui";
+import { agentChatMessageAssistantClass } from "@/features/dashboard-agent/dashboard-agent-ui";
 import { cn } from "@/lib/utils";
 
 export function LandingAgentTrace({ className }: { className?: string }) {

@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Outlet, Route, Routes, useLocation } from "react-router-dom";
 
-import { LogoLoader } from "@/components/shell/logo-loader";
+import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { AuthProvider } from "@/providers/auth-provider";
 import { AuthenticatedRoutes } from "@/authenticated-routes";
 
@@ -9,7 +9,7 @@ const LandingPage = lazy(() =>
   import("@/pages/landing-page").then((module) => ({ default: module.LandingPage })),
 );
 const LoginPage = lazy(() =>
-  import("@/pages/login-page").then((module) => ({ default: module.LoginPage })),
+  import("@/features/auth/login-page").then((module) => ({ default: module.LoginPage })),
 );
 const PrivacyPage = lazy(() =>
   import("@/pages/privacy-page").then((module) => ({ default: module.PrivacyPage })),

@@ -1,5 +1,4 @@
 import { ChevronDown, Search } from "lucide-react";
-import { useEffect, useRef } from "react";
 
 import { AgencyProjectHueDot } from "@/features/shared/agency-project-hue-dot";
 import { AgencyTimeEntryProjectLabel } from "@/features/time-tracking/entries/agency-time-entry-project-label";
@@ -31,6 +30,8 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     triggerProject,
     triggerTaskTitle,
     groupedProjects,
+    searchInputRef,
+    listRef,
     isProjectExpanded,
     isTaskGroupExpanded,
     onOpenChange,
@@ -38,26 +39,9 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     onSelectTask,
     onToggleProject,
     onToggleTaskGroup,
-    revealToken,
     statusDotClass,
     formatDueDate,
   } = view;
-
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const frame = requestAnimationFrame(() => {
-      searchInputRef.current?.focus({ preventScroll: true });
-      listRef.current
-        ?.querySelector<HTMLElement>('[data-selected-task="true"]')
-        ?.scrollIntoView({ block: "nearest" });
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, [open, revealToken]);
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>

@@ -1,4 +1,6 @@
 import { useAgencyTimeEntriesLog } from "@/features/time-tracking/hooks/use-agency-time-entries-log";
+import { AgencyTimeEntryRowContainer } from "@/features/time-tracking/containers/agency-time-entry-row-container";
+import type { AgencyTimeEntryGroupRowRenderer } from "@/features/time-tracking/entries/agency-time-entry-row-renderer";
 
 import { AgencyTimeEntriesLogView } from "@/features/time-tracking/entries/agency-time-entries-log-view";
 
@@ -12,5 +14,34 @@ export function AgencyTimeEntriesLogContainer({
   className,
 }: AgencyTimeEntriesLogContainerProps) {
   const view = useAgencyTimeEntriesLog({ teamId, className });
-  return <AgencyTimeEntriesLogView view={view} />;
+  const renderGroupRow: AgencyTimeEntryGroupRowRenderer = ({
+    group,
+    groupExpandKey,
+    highlighted,
+    omitBottomBorder,
+  }) => (
+    <AgencyTimeEntryRowContainer
+      group={group}
+      teamId={view.teamId}
+      projects={view.projects}
+      tasks={view.tasks}
+      expanded={view.expandedGroupKeys.has(groupExpandKey)}
+      isTimerMutationPending={view.isTimerMutationPending}
+      deletingEntryIds={view.deletingEntryIds}
+      updatingEntryIds={view.updatingEntryIds}
+      duplicatingEntryIds={view.duplicatingEntryIds}
+      highlighted={highlighted}
+      omitBottomBorder={omitBottomBorder}
+      onToggleExpand={() => view.onToggleGroupExpand(groupExpandKey)}
+      onRestart={view.onRestart}
+      onDeleteGroup={view.onDeleteGroup}
+      onDeleteEntry={view.onDeleteEntry}
+      onDuplicate={view.onDuplicate}
+      onSaveEdit={view.onSaveEdit}
+      onToggleWaste={view.onToggleWaste}
+      togglingWasteEntryIds={view.togglingWasteEntryIds}
+    />
+  );
+
+  return <AgencyTimeEntriesLogView view={view} renderGroupRow={renderGroupRow} />;
 }

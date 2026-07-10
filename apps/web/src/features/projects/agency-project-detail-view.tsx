@@ -1,7 +1,6 @@
 import { AlertTriangle, ArrowLeft, ChevronDown, Clock, FolderX } from "lucide-react";
+import type { ReactNode } from "react";
 
-import { AgencyProjectJourneyStepper } from "@/features/projects/journey/agency-project-journey-stepper";
-import { AgencyProjectTasks } from "@/features/task-management/task-list/agency-project-tasks";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
 import {
@@ -12,14 +11,15 @@ import {
   agencyPanelClass,
 } from "@/features/shared/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
-import { projectHueStyle } from "@/lib/utils/project-palette";
+import { projectHueStyle } from "@/features/shared/project-palette";
 import { cn } from "@/lib/utils";
 import { type AgencyProjectDetailViewModel } from "./hooks/use-agency-project-detail";
 
 type AgencyProjectDetailViewProps = {
   viewModel: AgencyProjectDetailViewModel;
   onBack: () => void;
+  journeyStepper: ReactNode;
+  projectTasks: ReactNode;
 };
 
 const ACTIVITY_SORTS = [
@@ -36,13 +36,16 @@ function formatEntryTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
 }
 
-export function AgencyProjectDetailView({ viewModel, onBack }: AgencyProjectDetailViewProps) {
+export function AgencyProjectDetailView({
+  viewModel,
+  onBack,
+  journeyStepper,
+  projectTasks,
+}: AgencyProjectDetailViewProps) {
   const {
-    teamId,
-    projectId,
     isLoading,
     isError,
-    error,
+    errorMessage,
     project,
     projectBudget,
     budgetPct,
@@ -83,7 +86,7 @@ export function AgencyProjectDetailView({ viewModel, onBack }: AgencyProjectDeta
           <p className="mt-3 text-sm font-bold text-highlighted">
             Couldn&apos;t load this project.
           </p>
-          <p className="mt-1 text-xs text-muted">{getErrorMessage(error, "Try refreshing.")}</p>
+          <p className="mt-1 text-xs text-muted">{errorMessage}</p>
           <Button variant="secondary" size="sm" className="mt-3" onClick={retryLoad}>
             Retry
           </Button>
@@ -193,7 +196,7 @@ export function AgencyProjectDetailView({ viewModel, onBack }: AgencyProjectDeta
                     </button>
                   </header>
                   <div className={cn("px-2 py-3", !journeyExpandedMobile && "hidden md:block")}>
-                    <AgencyProjectJourneyStepper teamId={teamId} projectId={projectId} />
+                    {journeyStepper}
                   </div>
                 </section>
               ) : null}
@@ -252,11 +255,7 @@ export function AgencyProjectDetailView({ viewModel, onBack }: AgencyProjectDeta
                 )}
               </section>
 
-              <AgencyProjectTasks
-                teamId={teamId}
-                projectId={projectId}
-                projectName={project.name}
-              />
+              {projectTasks}
             </div>
 
             <aside className="flex flex-col gap-4">

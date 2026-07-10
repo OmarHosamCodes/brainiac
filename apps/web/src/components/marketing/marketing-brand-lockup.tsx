@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-import { BrandMark } from "@/components/shell/brand-mark";
+import { BrandMark } from "@/features/app-shell/components/brand-mark";
 import { cn } from "@/lib/utils";
 
 type MarketingBrandLockupProps = {

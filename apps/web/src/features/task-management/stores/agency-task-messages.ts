@@ -11,7 +11,7 @@ import { createEmptyListOverlay } from "@/features/shared/agency-optimistic-merg
 import { insertLiveTaskMessageIntoInfiniteCache } from "@/features/task-management/agency-task-messages-cache";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
 
-export type AgencyTaskMessageAttachment = {
+type AgencyTaskMessageAttachment = {
   id: string;
   teamId: string;
   messageId: string;
@@ -40,7 +40,7 @@ export type AgencyTaskMessage = {
   attachments: AgencyTaskMessageAttachment[];
 };
 
-export type AgencyTaskMessagesListPage = {
+type AgencyTaskMessagesListPage = {
   items: AgencyTaskMessage[];
   page: number;
   pageSize: number;
@@ -66,7 +66,7 @@ export type SendTaskMessagePayload = {
   }>;
 };
 
-export type AskTaskAgentPayload = SendTaskMessagePayload & {
+type AskTaskAgentPayload = SendTaskMessagePayload & {
   model?: string;
 };
 
@@ -370,8 +370,6 @@ function buildOptimisticTaskMessage(
     attachments: buildOptimisticAttachments(payload, messageId),
   };
 }
-
-export { isAgentPendingMessageId } from "@/features/task-management/agency-thread-motion";
 
 export const useAgencyTaskMessagesStore = create<AgencyTaskMessagesState>((set) => ({
   isSending: false,

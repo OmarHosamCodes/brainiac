@@ -1,38 +1,29 @@
 import { z } from "zod";
 
 import type {
-  AgencyActiveTimer,
   AgencyProject,
   AgencyProjectJourney,
   AgencyProjectJourneyStep,
   AgencyProjectTask,
   AgencyProjectTaskKind,
   AgencyProjectTaskStatus,
-  AgencyTaskMessage,
-  AgencyTaskMessageAttachment,
   AgencyTaskProject,
   AgencyTaskThreadMember,
-  AgencyTimeEntry,
 } from "@brainiac/api/schemas/agency-ops";
 
 export type {
-  AgencyActiveTimer,
   AgencyProject,
   AgencyProjectJourney,
   AgencyProjectJourneyStep,
   AgencyProjectTask,
   AgencyProjectTaskKind,
-  AgencyProjectTaskStatus,
-  AgencyTaskMessage,
-  AgencyTaskMessageAttachment,
   AgencyTaskProject,
   AgencyTaskThreadMember,
-  AgencyTimeEntry,
 };
 
 export type TaskStatus = AgencyProjectTaskStatus;
 
-export const agencyWorkSurfaceTabSchema = z.enum(["sessions", "my-tasks", "done", "delegated"]);
+const agencyWorkSurfaceTabSchema = z.enum(["sessions", "my-tasks", "done", "delegated"]);
 
 export type AgencyWorkSurfaceTab = z.infer<typeof agencyWorkSurfaceTabSchema>;
 
@@ -41,7 +32,7 @@ export function parseAgencyWorkSurfaceTab(value: string | null): AgencyWorkSurfa
   return parsed.success ? parsed.data : "sessions";
 }
 
-export type AgencyWorkSurfaceReadyProps = {
+type AgencyWorkSurfaceReadyProps = {
   status: "ready";
   teamId: string;
   projects: AgencyProject[];
@@ -61,17 +52,3 @@ export type AgencyWorkSurfaceView =
       onGoToProjects: () => void;
     }
   | AgencyWorkSurfaceReadyProps;
-
-export function assertAgencyWorkSurfaceViewExhaustive(view: AgencyWorkSurfaceView): void {
-  switch (view.status) {
-    case "loading":
-    case "error":
-    case "empty":
-    case "ready":
-      return;
-    default: {
-      const _exhaustive: never = view;
-      return _exhaustive;
-    }
-  }
-}

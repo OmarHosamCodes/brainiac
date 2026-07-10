@@ -4,7 +4,7 @@ import {
   todayLocalDateKey,
 } from "@/features/time-tracking/format-agency-day-label";
 
-export type TaskRecencyGroupId = "today" | "yesterday" | "earlier";
+type TaskRecencyGroupId = "today" | "yesterday" | "earlier";
 
 export type TaskRecencyGroupSection = {
   id: TaskRecencyGroupId;
@@ -59,7 +59,7 @@ export function groupTasksByRecency(
   return sections;
 }
 
-export type DelegatedTaskGroupId = "due-today" | "due-this-week" | "completed";
+type DelegatedTaskGroupId = "due-today" | "due-this-week" | "completed";
 
 export type DelegatedTaskGroupSection = {
   id: DelegatedTaskGroupId;

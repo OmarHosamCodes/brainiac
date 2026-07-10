@@ -41,21 +41,25 @@ Quick reference for common development tasks, workflows, and troubleshooting.
 
 ## Where to Find Things
 
-| What            | Where                            |
-| --------------- | -------------------------------- |
-| Frontend pages  | `apps/web/src/pages/`            |
-| Components      | `apps/web/src/components/`       |
-| Frontend hooks  | `apps/web/src/lib/`              |
-| oRPC client     | `apps/web/src/lib/orpc.ts`       |
-| API routers     | `packages/api/src/routers/`      |
-| API procedures  | `packages/api/src/procedures.ts` |
-| Database schema | `packages/db/src/schema/`        |
-| Auth config     | `packages/auth/src/`             |
-| Server env      | `packages/env/src/server.ts`     |
-| Vite env        | `packages/env/src/vite.ts`       |
-| Server setup    | `apps/server/src/app.ts`         |
-| Workspace types | `packages/workspace/src/`        |
-| Agent tools     | `packages/agent/src/`            |
+| What                 | Where                              |
+| -------------------- | ---------------------------------- |
+| Frontend pages       | `apps/web/src/pages/`              |
+| Product features     | `apps/web/src/features/<domain>/`  |
+| Shared UI            | `apps/web/src/ui/`                 |
+| Shell infrastructure | `apps/web/src/features/app-shell/` |
+| Frontend hooks       | Feature-local `hooks/` directories |
+| oRPC client          | `apps/web/src/lib/orpc.ts`         |
+| API routers          | `packages/api/src/routers/`        |
+| API procedures       | `packages/api/src/procedures.ts`   |
+| Database schema      | `packages/db/src/schema/`          |
+| Auth config          | `packages/auth/src/`               |
+| Server env           | `packages/env/src/server.ts`       |
+| Vite env             | `packages/env/src/vite.ts`         |
+| Server setup         | `apps/server/src/app.ts`           |
+| Workspace types      | `packages/workspace/src/`          |
+| Agent tools          | `packages/agent/src/`              |
+
+The architecture and required layer direction are documented in [`docs/golden-file-pattern.md`](./docs/golden-file-pattern.md). See [`docs/golden-file-refactor-progress.md`](./docs/golden-file-refactor-progress.md) for the current audit state.
 
 ---
 

@@ -1,5 +1,5 @@
 import { useQuery, useQueries } from "@tanstack/react-query";
-import { useCallback, useEffect, useId, useMemo, useRef, type RefObject } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type RefObject } from "react";
 
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
@@ -29,9 +29,11 @@ import { isJourneyAnchorTask } from "@/features/projects/agency-task-journey";
 import {
   buildAgencyTaskClientRailGroups,
   countClientRailDisplayRows,
+  flattenTasksFromClientGroups,
   summarizeAgencyTaskRailGroups,
   type AgencyTaskClientDisplayGroup,
 } from "@/features/task-management/agency-task-rail-grouping";
+import { isTaskOverdue } from "@/features/task-management/agency-task-utils";
 import { selectIsCreatingTask, useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
 import {
   resolveDefaultCreateProjectId,
@@ -44,6 +46,9 @@ import {
   useAgencyTimeTrackingStore,
   useTrackerDraft,
 } from "@/features/time-tracking/stores/agency-time-tracking";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { useTheme } from "@/stores/theme";
+import { projectHueFor } from "@/features/shared/project-palette";
 
 const ACTIVE_TASK_STATUSES: TaskStatus[] = ["open", "in_progress"];
 const DONE_TASK_STATUSES: TaskStatus[] = ["done"];
@@ -58,9 +63,7 @@ type UseAgencyTaskListOptions = {
   onSelectProject: (projectId: string) => void;
 };
 
-export type { AgencyTaskClientDisplayGroup } from "@/features/task-management/agency-task-rail-grouping";
-
-export type AgencyTaskListCreateViewModel = {
+type AgencyTaskListCreateViewModel = {
   members: AgencyTaskThreadMember[];
   titleDraft: string;
   descriptionDraft: string;
@@ -91,6 +94,7 @@ export type AgencyTaskListCreateViewModel = {
   onAssigneeIdsChange: (value: string[]) => void;
   onPickSuggestion: (task: AgencyProjectTask) => void;
   onSubmit: () => void;
+  getProjectHueColor: (projectId: string) => string;
 };
 
 export type AgencyTaskListViewModel =
@@ -127,6 +131,7 @@ export type AgencyTaskListViewModel =
       assignedClientGroups: AgencyTaskClientDisplayGroup[];
       newClientGroups: AgencyTaskClientDisplayGroup[];
       allListedTasks: AgencyProjectTask[];
+      activeTableTasks: AgencyProjectTask[];
       collapsedProjects: Set<string>;
       collapsedClients: Set<string>;
       onProjectExpandedChange: (projectId: string, expanded: boolean) => void;
@@ -137,6 +142,12 @@ export type AgencyTaskListViewModel =
       onDueDateChange: (task: AgencyProjectTask, dueDate: string | null) => void;
       onTaskDescriptionChange: (task: AgencyProjectTask, description: string) => void;
       isRowPending: (taskId: string) => boolean;
+      isTaskDeleting: (taskId: string) => boolean;
+      deleteTarget: AgencyProjectTask | null;
+      deletePending: boolean;
+      onRequestDelete: (task: AgencyProjectTask) => void;
+      onDismissDelete: () => void;
+      onConfirmDelete: () => void;
       doneTasksLoading: boolean;
       doneTasksQueryError: boolean;
       doneTasksErrorMessage: string;
@@ -175,6 +186,7 @@ export type AgencyTaskListViewModel =
       onTrackerDescriptionChange: (value: string) => void;
       onAssociateTrackerForDescription: (task: AgencyProjectTask) => void;
       create: AgencyTaskListCreateViewModel;
+      getProjectHueColor: (projectId: string) => string;
     };
 
 export function useAgencyTaskList({
@@ -186,9 +198,19 @@ export function useAgencyTaskList({
   onCollapsedChange,
   onSelectProject,
 }: UseAgencyTaskListOptions): AgencyTaskListViewModel {
+  const { isDark } = useTheme();
+  const getProjectHueColor = useCallback(
+    (projectId: string) => {
+      const hue = projectHueFor(projectId);
+      return isDark ? hue.dark : hue.light;
+    },
+    [isDark],
+  );
   const agencyOps = useAgencyOpsStore();
   const isCreatingTask = useAgencyOpsStore(selectIsCreatingTask);
   const pendingTaskIds = useAgencyOpsStore((s) => s.pendingTaskIds);
+  const deletingTaskIds = useAgencyOpsStore((s) => s.deletingTaskIds);
+  const [deleteTarget, setDeleteTarget] = useState<AgencyProjectTask | null>(null);
   const isRowPending = useCallback(
     (taskId: string) => pendingTaskIds.includes(taskId),
     [pendingTaskIds],
@@ -480,6 +502,17 @@ export function useAgencyTaskList({
         },
       }),
     [activeTasks, allListedTasks, blueprints, currentUserId, journeyProgressByProjectId, projects],
+  );
+
+  const activeTableTasks = useMemo(
+    () =>
+      flattenTasksFromClientGroups(clientGroups).sort((left, right) => {
+        const leftOverdue = isTaskOverdue(left.dueDate) ? 0 : 1;
+        const rightOverdue = isTaskOverdue(right.dueDate) ? 0 : 1;
+        if (leftOverdue !== rightOverdue) return leftOverdue - rightOverdue;
+        return left.title.localeCompare(right.title);
+      }),
+    [clientGroups],
   );
 
   const doneClientGroups = useMemo(
@@ -780,6 +813,21 @@ export function useAgencyTaskList({
     [setTrackerProjectId, setTrackerTaskId, teamId],
   );
 
+  const isTaskDeleting = useCallback(
+    (taskId: string) => deletingTaskIds.includes(taskId),
+    [deletingTaskIds],
+  );
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    await agencyOps.deleteProjectTask({
+      teamId,
+      taskId: deleteTarget.id,
+      taskTitle: deleteTarget.title,
+    });
+    setDeleteTarget(null);
+  }, [agencyOps, deleteTarget, teamId]);
+
   const canSubmit = Boolean(
     titleDraft.trim() &&
     selectedProjectIdForCreate &&
@@ -836,13 +884,16 @@ export function useAgencyTaskList({
     isLoading: activeTasksQuery.isPending && activeTasks.length === 0,
     activeTasksEmpty: activeTasks.length === 0,
     activeTasksQueryError: activeTasksQuery.isError,
-    activeTasksErrorMessage: activeTasksQuery.isError ? String(activeTasksQuery.error) : "",
+    activeTasksErrorMessage: activeTasksQuery.isError
+      ? getErrorMessage(activeTasksQuery.error, "Could not load tasks.")
+      : "",
     onRetryActiveTasks: () => void activeTasksQuery.refetch(),
     clientGroups,
     doneClientGroups,
     assignedClientGroups,
     newClientGroups,
     allListedTasks,
+    activeTableTasks,
     collapsedProjects,
     collapsedClients,
     onProjectExpandedChange: setProjectExpanded,
@@ -853,20 +904,32 @@ export function useAgencyTaskList({
     onDueDateChange: (task, dueDate) => void updateTaskDueDate(task, dueDate),
     onTaskDescriptionChange: updateTaskDescription,
     isRowPending,
+    isTaskDeleting,
+    deleteTarget,
+    deletePending: deleteTarget !== null && isTaskDeleting(deleteTarget.id),
+    onRequestDelete: setDeleteTarget,
+    onDismissDelete: () => setDeleteTarget(null),
+    onConfirmDelete: () => void confirmDelete(),
     doneTasksLoading: doneTasksQuery.isPending && doneTasks.length === 0,
     doneTasksQueryError: doneTasksQuery.isError,
-    doneTasksErrorMessage: doneTasksQuery.isError ? String(doneTasksQuery.error) : "",
+    doneTasksErrorMessage: doneTasksQuery.isError
+      ? getErrorMessage(doneTasksQuery.error, "Could not load done tasks.")
+      : "",
     onRetryDoneTasks: () => void doneTasksQuery.refetch(),
     assignedTasksLoading: assignedTasksQuery.isPending && assignedTasks.length === 0,
     assignedTasksQueryError: assignedTasksQuery.isError,
-    assignedTasksErrorMessage: assignedTasksQuery.isError ? String(assignedTasksQuery.error) : "",
+    assignedTasksErrorMessage: assignedTasksQuery.isError
+      ? getErrorMessage(assignedTasksQuery.error, "Could not load delegated tasks.")
+      : "",
     onRetryAssignedTasks: () => void assignedTasksQuery.refetch(),
     hasMoreAssignedTasks: Boolean(assignedTasksQuery.hasNextPage),
     isFetchingMoreAssignedTasks: assignedTasksQuery.isFetchingNextPage,
     onFetchMoreAssignedTasks: () => void assignedTasksQuery.fetchNextPage(),
     newJourneysLoading: newJourneysQuery.isPending && newJourneyTasks.length === 0,
     newJourneysQueryError: newJourneysQuery.isError,
-    newJourneysErrorMessage: newJourneysQuery.isError ? String(newJourneysQuery.error) : "",
+    newJourneysErrorMessage: newJourneysQuery.isError
+      ? getErrorMessage(newJourneysQuery.error, "Could not load team journeys.")
+      : "",
     onRetryNewJourneys: () => void newJourneysQuery.refetch(),
     hasMoreNewJourneys: Boolean(newJourneysQuery.hasNextPage),
     isFetchingMoreNewJourneys: newJourneysQuery.isFetchingNextPage,
@@ -890,6 +953,7 @@ export function useAgencyTaskList({
     onBlueprintDescriptionChange,
     onTrackerDescriptionChange: (value) => setTrackerDescription(teamId, value),
     onAssociateTrackerForDescription: associateTrackerForDescription,
+    getProjectHueColor,
     create: {
       members,
       titleDraft,
@@ -920,6 +984,7 @@ export function useAgencyTaskList({
       onAssigneeIdsChange: setSelectedAssigneeIdsForCreate,
       onPickSuggestion: (task) => void handleSelectSuggestion(task),
       onSubmit: () => void createTask(),
+      getProjectHueColor,
     },
   };
 }

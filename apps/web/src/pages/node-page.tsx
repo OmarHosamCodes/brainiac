@@ -1,17 +1,17 @@
 import { Link } from "react-router-dom";
 
-import { DashboardAgentChatPanel } from "@/components/dashboard/dashboard-agent-chat-panel";
+import { DashboardAgentChatPanel } from "@/features/dashboard-agent/dashboard-agent-chat-panel";
 import { WorkspaceNodeEditorProvider } from "@/features/workspace/node/context";
 import { WorkspaceNodeShell } from "@/features/workspace/node/workspace-node-shell";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
-import { LogoLoader } from "@/components/shell/logo-loader";
-import { AppShellPage } from "@/components/app-shell-page";
-import { AppShellPortal } from "@/components/app-shell-portal";
+import { LogoLoader } from "@/features/app-shell/components/logo-loader";
+import { AppShellPage } from "@/features/app-shell/app-shell-page";
+import { AppShellPortal } from "@/features/app-shell/app-shell-portal";
 import { useWorkspaceNodePage } from "@/features/workspace/hooks/use-workspace-node-page";
-import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
-import { useAppShellStore } from "@/stores/app-shell";
-import { shellContentInClass } from "@/lib/utils/app-shell-ui";
+import { useShellBootGate } from "@/features/app-shell/shell/use-shell-boot-gate";
+import { useAppShellStore } from "@/features/app-shell/app-shell-store";
+import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 

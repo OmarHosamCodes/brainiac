@@ -22,6 +22,8 @@ bun install
 bun run dev              # web + server
 bun run check            # oxlint + oxfmt
 bun run check-types      # turbo typecheck
+bun run check:conventions # golden-file layer rules (views, containers, routers, services)
+bun run check:golden     # source inventory when adding/relocating files
 bun run db:push          # local schema sync
 ```
 
@@ -31,7 +33,10 @@ Before finishing any change:
 
 1. `bun run check` passes
 2. `bun run check-types` passes
-3. Conventional commit message (`feat:`, `fix:`, `refactor:`, `docs:`)
+3. `bun run check:conventions` passes for feature/API/web layer changes
+4. Conventional commit message (`feat:`, `fix:`, `refactor:`, `docs:`)
+
+Product features must follow the golden file pattern — see `golden-file-pattern` rule and [`docs/golden-file-pattern.md`](../../docs/golden-file-pattern.md).
 
 ## Environment access
 

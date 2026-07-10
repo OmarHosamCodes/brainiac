@@ -17,7 +17,6 @@ import {
 import { ORPCError } from "@orpc/server";
 import {
   getTaskAttachmentReadUrl,
-  verifyTaskAttachmentUploadToken,
   createTaskAttachmentPresignedUploadUrl,
   createTaskAttachmentUploadToken,
   deleteTaskAttachmentFromStorage,
@@ -45,6 +44,7 @@ import { parseIsoDateTime } from "../shared/date-helpers";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import { normalizeTaskTitle, planAssigneeMerge } from "./task-title";
+import { validateTaskAttachmentUploadReferences } from "./validate-task-attachment-upload-references";
 import { liveUpdatedAt, publishAgencyLiveEvent, publishAgencyTaskUpdated } from "../live/live";
 
 type AgencyTaskMessageRecord = {
@@ -973,7 +973,13 @@ export async function deleteAgencyProjectTask(
   };
 }
 
-export async function ensureTaskThreadByTaskId(teamId: string, taskId: string) {
+export async function ensureTaskThreadByTaskId(
+  actorUserId: string,
+  input: { teamId: string; taskId: string },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  await getTaskByIdForTeam(input.teamId, input.taskId);
+
   const [existingThread] = await db
     .select({
       id: agencyOpsTaskThread.id,
@@ -981,7 +987,12 @@ export async function ensureTaskThreadByTaskId(teamId: string, taskId: string) {
       taskId: agencyOpsTaskThread.taskId,
     })
     .from(agencyOpsTaskThread)
-    .where(and(eq(agencyOpsTaskThread.teamId, teamId), eq(agencyOpsTaskThread.taskId, taskId)))
+    .where(
+      and(
+        eq(agencyOpsTaskThread.teamId, input.teamId),
+        eq(agencyOpsTaskThread.taskId, input.taskId),
+      ),
+    )
     .limit(1);
 
   if (existingThread) {
@@ -993,8 +1004,8 @@ export async function ensureTaskThreadByTaskId(teamId: string, taskId: string) {
     .insert(agencyOpsTaskThread)
     .values({
       id: createWorkspaceId("agency-task-thread"),
-      teamId,
-      taskId,
+      teamId: input.teamId,
+      taskId: input.taskId,
       createdAt: now,
       updatedAt: now,
     })
@@ -1008,7 +1019,7 @@ export async function ensureTaskThreadByTaskId(teamId: string, taskId: string) {
       taskId: agencyOpsTaskThread.taskId,
     });
 
-  if (!thread || thread.teamId !== teamId) {
+  if (!thread || thread.teamId !== input.teamId) {
     throw new ORPCError("INTERNAL_SERVER_ERROR");
   }
 
@@ -1091,7 +1102,7 @@ export async function listTaskThreadMessages(
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
   await getTaskByIdForTeam(input.teamId, input.taskId);
-  const thread = await ensureTaskThreadByTaskId(input.teamId, input.taskId);
+  const thread = await ensureTaskThreadByTaskId(actorUserId, input);
 
   const page = Math.max(1, input.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 25));
@@ -1214,7 +1225,7 @@ export async function createTaskThreadMessage(
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
   await getTaskByIdForTeam(input.teamId, input.taskId);
-  const thread = await ensureTaskThreadByTaskId(input.teamId, input.taskId);
+  const thread = await ensureTaskThreadByTaskId(actorUserId, input);
 
   const type = input.type ?? "text";
   const content = input.content.trim();
@@ -1319,58 +1330,6 @@ export async function createTaskThreadMessage(
   });
 
   return message;
-}
-
-export function validateTaskAttachmentUploadReferences(input: {
-  teamId: string;
-  taskId: string;
-  attachments?: Array<{
-    fileName: string;
-    mimeType: string;
-    storageKey: string;
-    sizeBytes: number;
-    uploadToken: string;
-  }>;
-}) {
-  for (const attachment of input.attachments ?? []) {
-    const linkPrefix = `task-links/${input.teamId}/${input.taskId}/`;
-    if (attachment.storageKey.startsWith(linkPrefix)) {
-      if (
-        attachment.mimeType !== "text/uri-list" ||
-        attachment.sizeBytes !== 0 ||
-        !verifyTaskAttachmentUploadToken(attachment.uploadToken, {
-          teamId: input.teamId,
-          taskId: input.taskId,
-          fileName: attachment.fileName,
-          mimeType: attachment.mimeType,
-          storageKey: attachment.storageKey,
-          sizeBytes: attachment.sizeBytes,
-        })
-      ) {
-        throw new ORPCError("BAD_REQUEST", {
-          message: "Link attachment reference is invalid or expired.",
-        });
-      }
-      continue;
-    }
-
-    const expectedPrefix = `task-attachments/${input.teamId}/${input.taskId}/`;
-    if (
-      !attachment.storageKey.startsWith(expectedPrefix) ||
-      !verifyTaskAttachmentUploadToken(attachment.uploadToken, {
-        teamId: input.teamId,
-        taskId: input.taskId,
-        fileName: attachment.fileName,
-        mimeType: attachment.mimeType,
-        storageKey: attachment.storageKey,
-        sizeBytes: attachment.sizeBytes,
-      })
-    ) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Attachment upload reference is invalid or expired.",
-      });
-    }
-  }
 }
 
 export async function createTaskAttachmentPresignedUrl(
@@ -1594,7 +1553,7 @@ export async function listRecentTaskThreadMessages(
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
   await getTaskByIdForTeam(input.teamId, input.taskId);
-  const thread = await ensureTaskThreadByTaskId(input.teamId, input.taskId);
+  const thread = await ensureTaskThreadByTaskId(actorUserId, input);
 
   const limit = Math.min(50, Math.max(1, input.limit ?? 20));
 

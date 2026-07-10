@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { useMemo, useState } from "react";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
-import { shellFocusRingClass, shellSearchIconButtonClass } from "@/lib/utils/app-shell-ui";
+import { shellFocusRingClass, shellSearchIconButtonClass } from "@/features/app-shell/app-shell-ui";
 
 type AgencyTeamBreadcrumbProps = {
   teamId: string;

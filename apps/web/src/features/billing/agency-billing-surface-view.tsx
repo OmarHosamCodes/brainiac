@@ -9,7 +9,6 @@ import {
   agencyMetricClass,
   agencyErrorPanelClass,
 } from "@/features/shared/agency-ui";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
 import {
   type AgencyBillingSurfaceViewModel,
   type LaneId,
@@ -49,7 +48,7 @@ export function AgencyBillingSurfaceView({ viewModel }: AgencyBillingSurfaceView
   const {
     isLoading,
     isError,
-    error,
+    errorMessage,
     anyInvoices,
     summary,
     clients,
@@ -101,7 +100,7 @@ export function AgencyBillingSurfaceView({ viewModel }: AgencyBillingSurfaceView
         <div className={agencyErrorPanelClass} role="alert">
           <AlertTriangle className="mx-auto size-5 text-error" />
           <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load billing.</p>
-          <p className="mt-1 text-xs text-muted">{getErrorMessage(error, "Try refreshing.")}</p>
+          <p className="mt-1 text-xs text-muted">{errorMessage}</p>
           <Button
             variant="secondary"
             size="sm"

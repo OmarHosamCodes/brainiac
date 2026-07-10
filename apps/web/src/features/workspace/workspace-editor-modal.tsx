@@ -26,7 +26,7 @@ import {
   shellLabelClass,
   shellSegmentTabActiveClass,
   shellSegmentTabClass,
-} from "@/lib/utils/app-shell-ui";
+} from "@/features/app-shell/app-shell-ui";
 import { getWorkspaceBlockRegistryEntry } from "@/features/workspace/utils/workspace-block-registry";
 import {
   getWorkspaceNodeTintOption,

@@ -1,14 +1,7 @@
 import { Check, ChevronDown, Trash2 } from "lucide-react";
-import { useState } from "react";
 
-import { AgencyTaskRowView } from "@/features/task-management/task-list/agency-task-row-view";
-import type {
-  AgencyProjectTask,
-  AgencyTaskProject,
-  TaskStatus,
-} from "@/features/task-management/agency-work";
-import type { TaskTrackingState } from "@/features/time-tracking/task-tracking-state";
-import type { AgencyProjectTaskGroup } from "@/features/task-management/agency-task-utils";
+import type { AgencyTaskGroupRowViewModel } from "@/features/task-management/hooks/use-agency-task-group-row";
+import type { RenderAgencyTaskRow } from "@/features/task-management/hooks/use-agency-task-row";
 import {
   agencyFocusRingClass,
   agencyTaskRowCheckboxCheckedClass,
@@ -34,107 +27,50 @@ function memberStatusLabel(status: MemberStatus) {
   }
 }
 
-function resolveViewerStatus(task: AgencyProjectTask): MemberStatus {
-  return (
-    task.viewerStatus ??
-    (task.status === "done" || task.status === "archived" ? "done" : task.status)
-  );
-}
-
-function countDoneStatuses(
-  group: AgencyProjectTaskGroup,
-  currentUserId?: string,
-): { done: number; total: number } {
-  let done = 0;
-  let total = 0;
-
-  for (const instance of group.instances) {
-    if (currentUserId) {
-      if (instance.assignedToTeam) {
-        total += 1;
-        if (resolveViewerStatus(instance) === "done") done += 1;
-        continue;
-      }
-      const assignee = instance.assignees.find((entry) => entry.userId === currentUserId);
-      if (!assignee) continue;
-      total += 1;
-      if (assignee.status === "done") done += 1;
-      continue;
-    }
-
-    if (instance.assignees.length === 0) {
-      total += 1;
-      if (instance.status === "done" || instance.status === "archived") done += 1;
-      continue;
-    }
-
-    for (const assignee of instance.assignees) {
-      total += 1;
-      if (assignee.status === "done") done += 1;
-    }
-  }
-
-  return { done, total };
-}
-
-export type AgencyTaskGroupRowViewProps = {
-  group: AgencyProjectTaskGroup;
-  mode: "work" | "project";
-  projects?: AgencyTaskProject[];
-  teamId?: string;
-  currentUserId?: string;
-  selectedTaskId?: string;
-  isRowPending?: (taskId: string) => boolean;
-  deletingTaskIds?: string[];
-  onSelect?: (taskId: string) => void;
-  onSelectProject?: (projectId: string) => void;
-  onStatusChange?: (task: AgencyProjectTask, status: TaskStatus) => void;
-  onDeleteInstance?: (task: AgencyProjectTask) => void;
-  onDelete?: (task: AgencyProjectTask) => void;
-  readOnly?: boolean;
-  highlightTaskId?: string;
-  getTaskTrackingState?: (taskId: string) => TaskTrackingState;
+type AgencyTaskGroupRowViewProps = {
+  viewModel: AgencyTaskGroupRowViewModel;
+  renderTaskRow: RenderAgencyTaskRow;
 };
 
-export function AgencyTaskGroupRowView({
-  group,
-  mode,
-  projects = [],
-  teamId = "",
-  currentUserId,
-  selectedTaskId = "",
-  isRowPending = () => false,
-  deletingTaskIds = [],
-  onSelect,
-  onSelectProject,
-  onStatusChange,
-  onDeleteInstance,
-  onDelete,
-  readOnly = false,
-  highlightTaskId = "",
-  getTaskTrackingState,
-}: AgencyTaskGroupRowViewProps) {
-  const [expanded, setExpanded] = useState(group.instanceCount === 1);
-  const progress = countDoneStatuses(group, mode === "work" ? currentUserId : undefined);
-  const singleInstance = group.instanceCount === 1 ? group.instances[0] : null;
+export function AgencyTaskGroupRowView({ viewModel, renderTaskRow }: AgencyTaskGroupRowViewProps) {
+  const {
+    group,
+    mode,
+    projects,
+    teamId,
+    currentUserId,
+    selectedTaskId,
+    onSelect,
+    onSelectProject,
+    onStatusChange,
+    onDeleteInstance,
+    onDelete,
+    readOnly,
+    highlightTaskId,
+    expanded,
+    progress,
+    singleInstance,
+    singleInstancePending,
+    singleInstanceTrackingState,
+    instanceRows,
+    onToggleExpanded,
+  } = viewModel;
 
   if (singleInstance && mode === "work") {
-    return (
-      <AgencyTaskRowView
-        task={singleInstance}
-        projects={projects}
-        teamId={teamId}
-        selectedTaskId={selectedTaskId}
-        readOnly={readOnly}
-        highlight={singleInstance.id === highlightTaskId}
-        isRowPending={isRowPending(singleInstance.id)}
-        onSelect={onSelect ?? (() => undefined)}
-        onSelectProject={onSelectProject}
-        onStatusChange={onStatusChange}
-        onDelete={onDelete}
-        trackingState={getTaskTrackingState?.(singleInstance.id)}
-      />
-    );
+    return renderTaskRow({
+      task: singleInstance,
+      projects,
+      teamId,
+      selectedTaskId,
+      readOnly,
+      highlight: singleInstance.id === highlightTaskId,
+      isRowPending: singleInstancePending,
+      onSelect: onSelect ?? (() => undefined),
+      onSelectProject,
+      onStatusChange,
+      onDelete,
+      trackingState: singleInstanceTrackingState,
+    });
   }
 
   return (
@@ -147,7 +83,7 @@ export function AgencyTaskGroupRowView({
           "motion-reduce:transition-none",
         )}
         aria-expanded={expanded}
-        onClick={() => setExpanded((value) => !value)}
+        onClick={onToggleExpanded}
       >
         <ChevronDown
           className={cn(
@@ -171,14 +107,8 @@ export function AgencyTaskGroupRowView({
 
       {expanded ? (
         <ul className="border-t border-default bg-default/30">
-          {group.instances.map((instance) => {
-            const createdLabel = new Date(instance.createdAt).toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-            });
-
+          {instanceRows.map(({ instance, createdLabel, viewerDone, pending, deleting }) => {
             if (mode === "work" && currentUserId) {
-              const viewerDone = resolveViewerStatus(instance) === "done";
               return (
                 <li
                   key={instance.id}
@@ -189,11 +119,11 @@ export function AgencyTaskGroupRowView({
                     role="checkbox"
                     aria-checked={viewerDone}
                     aria-label={viewerDone ? `${group.title} is done` : `Mark ${group.title} done`}
-                    disabled={isRowPending(instance.id) || readOnly || viewerDone}
+                    disabled={pending || readOnly || viewerDone}
                     className={cn(
                       agencyTaskRowCheckboxClass,
                       viewerDone && agencyTaskRowCheckboxCheckedClass,
-                      (isRowPending(instance.id) || readOnly) && "cursor-not-allowed opacity-50",
+                      (pending || readOnly) && "cursor-not-allowed opacity-50",
                     )}
                     onClick={() => onStatusChange?.(instance, "done")}
                   >
@@ -254,7 +184,7 @@ export function AgencyTaskGroupRowView({
                       variant="ghost"
                       size="sm"
                       aria-label="Delete task"
-                      disabled={deletingTaskIds.includes(instance.id)}
+                      disabled={deleting}
                       onClick={() => onDeleteInstance(instance)}
                     >
                       <Trash2 />

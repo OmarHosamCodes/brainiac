@@ -1,12 +1,12 @@
 import { lazy, Suspense, useEffect } from "react";
 import { Navigate, Outlet, Route, Routes } from "react-router-dom";
 
-import { LogoLoader } from "@/components/shell/logo-loader";
-import { AppShell } from "@/components/app-shell";
-import { ShellPageTransition } from "@/components/shell/shell-page-transition";
-import { ProtectedRoute } from "@/components/auth/protected-route";
+import { LogoLoader } from "@/features/app-shell/components/logo-loader";
+import { AppShell } from "@/features/app-shell/app-shell";
+import { ShellPageTransition } from "@/features/app-shell/components/shell-page-transition";
+import { ProtectedRoute } from "@/features/auth/protected-route";
 import { AuthProvider } from "@/providers/auth-provider";
-import { startShellBoot } from "@/lib/shell/shell-boot";
+import { startShellBoot } from "@/features/app-shell/shell/shell-boot";
 
 const DashboardPage = lazy(() =>
   import("@/pages/dashboard-page").then((module) => ({ default: module.DashboardPage })),
@@ -15,10 +15,12 @@ const AgencyPage = lazy(() =>
   import("@/pages/agency-page").then((module) => ({ default: module.AgencyPage })),
 );
 const MarketplacePage = lazy(() =>
-  import("@/pages/marketplace-page").then((module) => ({ default: module.MarketplacePage })),
+  import("@/features/marketplace/marketplace-page").then((module) => ({
+    default: module.MarketplacePage,
+  })),
 );
 const BillingPage = lazy(() =>
-  import("@/pages/billing-page").then((module) => ({ default: module.BillingPage })),
+  import("@/features/billing/billing-page").then((module) => ({ default: module.BillingPage })),
 );
 const BillingSuccessPage = lazy(() =>
   import("@/pages/billing-success-page").then((module) => ({

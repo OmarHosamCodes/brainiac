@@ -8,7 +8,7 @@ import {
   shellErrorPanelClass,
   shellFocusRingClass,
   shellLabelClass,
-} from "@/lib/utils/app-shell-ui";
+} from "@/features/app-shell/app-shell-ui";
 
 export const AGENCY_PAGE_SCROLL_ATTR = "data-agency-page-scroll";
 

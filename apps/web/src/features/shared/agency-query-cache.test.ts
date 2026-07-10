@@ -9,6 +9,7 @@ mock.module("@/lib/env", () => ({
 const { bindQueryClient } = await import("@/lib/query-client");
 const {
   findProjectTaskInCache,
+  isAgencyProjectJourneyQueryKey,
   patchActiveTimerInCache,
   patchDeletedProjectTaskInCache,
   patchInsertedProjectTaskInCache,
@@ -155,5 +156,26 @@ describe("patchActiveTimerInCache", () => {
 
     const members = client.getQueryData<{ items: Array<{ userId: string }> }>(membersQueryKey);
     expect(members?.items.map((item) => item.userId)).toEqual(["user-1"]);
+  });
+});
+
+describe("isAgencyProjectJourneyQueryKey", () => {
+  test("matches the live journey project and excludes unrelated queries", () => {
+    const matchingKey = [
+      ["agencyOps", "projects", "journey", "get"],
+      { input: { teamId, projectId: "project-1" }, type: "query" },
+    ] as const;
+    const otherProjectKey = [
+      ["agencyOps", "projects", "journey", "get"],
+      { input: { teamId, projectId: "project-2" }, type: "query" },
+    ] as const;
+    const otherTeamKey = [
+      ["agencyOps", "projects", "journey", "get"],
+      { input: { teamId: "team-2", projectId: "project-1" }, type: "query" },
+    ] as const;
+
+    expect(isAgencyProjectJourneyQueryKey(matchingKey, teamId, "project-1")).toBe(true);
+    expect(isAgencyProjectJourneyQueryKey(otherProjectKey, teamId, "project-1")).toBe(false);
+    expect(isAgencyProjectJourneyQueryKey(otherTeamKey, teamId, "project-1")).toBe(false);
   });
 });

@@ -9,7 +9,7 @@ import {
   useAgencyPageScrollMargin,
 } from "@/features/shared/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
-import { projectHueStyle } from "@/lib/utils/project-palette";
+import { projectHueStyle } from "@/features/shared/project-palette";
 
 type ProjectRow = {
   id: string;

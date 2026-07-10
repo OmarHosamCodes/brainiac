@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { orpc } from "@/lib/orpc";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
 import {
   selectIsInvoiceMutationPending,
   useAgencyOpsStore,
@@ -12,7 +13,7 @@ export type AgencyBillingSurfaceViewModel = {
   teamId: string;
   isLoading: boolean;
   isError: boolean;
-  error: unknown;
+  errorMessage: string;
   anyInvoices: boolean;
   summary: {
     outstandingCents: number;
@@ -123,7 +124,10 @@ export function useAgencyBillingSurface(teamId: string): AgencyBillingSurfaceVie
 
   const isLoading = summaryQuery.isPending || invoicesQuery.isPending;
   const isError = summaryQuery.isError || invoicesQuery.isError;
-  const error = summaryQuery.error ?? invoicesQuery.error;
+  const errorMessage = getErrorMessage(
+    summaryQuery.error ?? invoicesQuery.error,
+    "Try refreshing.",
+  );
   const anyInvoices = invoices.length > 0;
 
   async function refetch() {
@@ -134,7 +138,7 @@ export function useAgencyBillingSurface(teamId: string): AgencyBillingSurfaceVie
     teamId,
     isLoading,
     isError,
-    error,
+    errorMessage,
     anyInvoices,
     summary,
     clients,

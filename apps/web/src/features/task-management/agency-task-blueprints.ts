@@ -13,10 +13,7 @@ export type AgencyTaskBlueprintEntry = {
   description: string;
 };
 
-/** Stable fallback for zustand selectors — never use inline `?? []`. */
-export const EMPTY_TASK_BLUEPRINTS: AgencyTaskBlueprintEntry[] = [];
-
-export type AgencyTaskDisplayRowKind = "standard" | "journey_anchor" | "journey_milestone";
+type AgencyTaskDisplayRowKind = "standard" | "journey_anchor" | "journey_milestone";
 
 export type AgencyTaskDisplayRow = {
   task: AgencyProjectTask;

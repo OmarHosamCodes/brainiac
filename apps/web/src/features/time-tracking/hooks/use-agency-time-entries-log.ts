@@ -15,7 +15,6 @@ import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import {
   groupEntriesByDay,
-  groupEntriesByWeek,
   groupTimeEntryDaysByRecency,
   type CollapsedEntryGroup,
   type TimeEntryRecencySection,
@@ -47,7 +46,6 @@ export type AgencyTimeEntriesLogViewModel = {
   isLoading: boolean;
   entriesEmpty: boolean;
   recencySections: TimeEntryRecencySection[];
-  weekGroups: ReturnType<typeof groupEntriesByWeek>;
   projects: AgencyProject[];
   tasks: AgencyProjectTask[];
   expandedGroupKeys: Set<string>;
@@ -111,26 +109,6 @@ export function useAgencyTimeEntriesLog({
   const projects = projectsQuery.data?.items ?? [];
   const tasks = tasksQuery.items ?? [];
   const weekSummary = entriesQuery.data?.weekSummary ?? null;
-
-  const weekGroups = useMemo(() => {
-    const groups = groupEntriesByWeek(entries);
-    const currentWeekStart = getLocalWeekStartKey(todayLocalDateKey());
-    const apiWeekTotal = weekSummary?.totalSeconds;
-
-    return groups.map((week) => {
-      if (week.weekStartKey !== currentWeekStart || apiWeekTotal === undefined || !weekSummary) {
-        return week;
-      }
-
-      const apiDaily = new Map(weekSummary.daily.map((daily) => [daily.date, daily.totalSeconds]));
-      const days = week.days.map((day) => ({
-        ...day,
-        totalSeconds: Math.max(day.totalSeconds, apiDaily.get(day.dateKey) ?? 0),
-      }));
-
-      return { ...week, days, totalSeconds: apiWeekTotal };
-    });
-  }, [entries, weekSummary]);
 
   const recencySections = useMemo(() => {
     const dayGroups = groupEntriesByDay(entries);
@@ -291,7 +269,6 @@ export function useAgencyTimeEntriesLog({
     isLoading: entriesQuery.isPending && entries.length === 0,
     entriesEmpty: entries.length === 0,
     recencySections,
-    weekGroups,
     projects,
     tasks,
     expandedGroupKeys,

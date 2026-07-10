@@ -16,8 +16,12 @@ import {
   entryToDraft,
 } from "@/features/time-tracking/time-entry-draft";
 import { formatDuration } from "@/lib/utils/format-duration";
-import type { CollapsedEntryGroup } from "@/features/time-tracking/group-time-entries";
+import type {
+  CollapsedEntryGroup,
+  TimeEntryRecord,
+} from "@/features/time-tracking/group-time-entries";
 import { useTrackerDraft } from "@/features/time-tracking/stores/agency-time-tracking";
+import { useTheme } from "@/stores/theme";
 
 function localDateKey(date: Date): string {
   const year = date.getFullYear();
@@ -64,6 +68,20 @@ function displayTitle(group: CollapsedEntryGroup) {
   return group.taskTitle;
 }
 
+function singleEntryGroup(group: CollapsedEntryGroup, entry: TimeEntryRecord): CollapsedEntryGroup {
+  return {
+    collapseKey: group.collapseKey,
+    projectId: entry.projectId,
+    taskId: entry.taskId,
+    taskTitle: entry.taskTitle ?? group.taskTitle,
+    projectName: entry.projectName,
+    clientName: entry.clientName,
+    description: entry.description,
+    totalSeconds: entry.durationSeconds,
+    entries: [entry],
+  };
+}
+
 type UseAgencyTimeEntryRowOptions = {
   group: CollapsedEntryGroup;
   teamId: string;
@@ -93,7 +111,9 @@ export type AgencyTimeEntryRowViewModel = {
   expanded: boolean;
   isTimerMutationPending: boolean;
   highlighted: boolean;
+  isDark: boolean;
   isMulti: boolean;
+  expandedChildGroups: CollapsedEntryGroup[];
   canRestart: boolean;
   primaryEntryId: string;
   descriptionDraft: string;
@@ -108,6 +128,9 @@ export type AgencyTimeEntryRowViewModel = {
   timeRange: string;
   durationLabel: string;
   displayTitle: string;
+  editingDescription: boolean;
+  timeEditorOpen: boolean;
+  editingDuration: boolean;
   onToggleExpand: () => void;
   onRestart: () => void;
   onDeleteGroup: () => void;
@@ -124,6 +147,9 @@ export type AgencyTimeEntryRowViewModel = {
   onDurationChange: (value: string) => void;
   onInlineBlur: () => void;
   onInlineKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
+  onEditingDescriptionChange: (editing: boolean) => void;
+  onTimeEditorOpenChange: (open: boolean) => void;
+  onEditingDurationChange: (editing: boolean) => void;
 };
 
 export function useAgencyTimeEntryRow({
@@ -146,15 +172,22 @@ export function useAgencyTimeEntryRow({
   togglingWasteEntryIds,
   highlighted = false,
 }: UseAgencyTimeEntryRowOptions): AgencyTimeEntryRowViewModel {
+  const { isDark } = useTheme();
   const activeTimer = useAgencyActiveTimerQuery(teamId).data?.timer ?? null;
   const activeTimerTeamId = activeTimer?.teamId ?? teamId;
   const trackerDraft = useTrackerDraft(activeTimerTeamId);
   const isMulti = group.entries.length > 1;
+  const expandedChildGroups = expanded
+    ? group.entries.map((entry) => singleEntryGroup(group, entry))
+    : [];
   const primaryEntry = group.entries[0]!;
 
   const [editDraft, setEditDraft] = useState<TimeEntryDraft>(() => entryToDraft(primaryEntry));
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [timeEditorOpen, setTimeEditorOpen] = useState(false);
+  const [editingDuration, setEditingDuration] = useState(false);
   const groupDescription = group.description;
   const groupTaskTitle = group.taskTitle;
   const resolvedTitle = groupDescription.trim().length > 0 ? groupDescription : groupTaskTitle;
@@ -276,7 +309,9 @@ export function useAgencyTimeEntryRow({
     expanded,
     isTimerMutationPending,
     highlighted,
+    isDark,
     isMulti,
+    expandedChildGroups,
     canRestart,
     primaryEntryId: primaryEntry.id,
     descriptionDraft,
@@ -291,6 +326,9 @@ export function useAgencyTimeEntryRow({
     timeRange,
     durationLabel,
     displayTitle: displayTitle(group),
+    editingDescription,
+    timeEditorOpen,
+    editingDuration,
     onToggleExpand,
     onRestart: () => onRestart(group),
     onDeleteGroup: () => onDeleteGroup(group.entries.map((entry) => entry.id)),
@@ -324,5 +362,8 @@ export function useAgencyTimeEntryRow({
     onDurationChange: (value) => updateInlineDraft(applyDurationToDraft(editDraft, value)),
     onInlineBlur: () => void saveInlineDraft(),
     onInlineKeyDown,
+    onEditingDescriptionChange: setEditingDescription,
+    onTimeEditorOpenChange: setTimeEditorOpen,
+    onEditingDurationChange: setEditingDuration,
   };
 }

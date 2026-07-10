@@ -3,15 +3,15 @@ import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Button } from "@/ui/button";
-import { LogoLoader } from "@/components/shell/logo-loader";
-import { AppShellPage } from "@/components/app-shell-page";
+import { LogoLoader } from "@/features/app-shell/components/logo-loader";
+import { AppShellPage } from "@/features/app-shell/app-shell-page";
 import { useBilling } from "@/features/billing/billing-queries";
-import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
+import { useShellBootGate } from "@/features/app-shell/shell/use-shell-boot-gate";
 import {
   shellConfirmInClass,
   shellContentInClass,
   shellStaggerItemClass,
-} from "@/lib/utils/app-shell-ui";
+} from "@/features/app-shell/app-shell-ui";
 import { cn } from "@/lib/utils";
 
 export function BillingSuccessPage() {

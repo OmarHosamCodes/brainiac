@@ -1,15 +1,11 @@
 import { MoreVertical, Trash2 } from "lucide-react";
-import { useEffect, useId, useState } from "react";
 
 import { AgencyDescriptionSuggestionMenu } from "@/features/time-tracking/agency-description-suggestion-menu";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
-import type {
-  AgencyTimeTrackerSuggestion,
-  AgencyTimeTrackerViewModel,
-} from "@/features/time-tracking/hooks/use-agency-time-tracker";
+import type { AgencyTimeTrackerViewModel } from "@/features/time-tracking/hooks/use-agency-time-tracker";
 import {
   agencyFocusRingClass,
   agencyInputPlaceholderClass,
@@ -32,11 +28,6 @@ type AgencyTimeTrackerViewProps = {
 };
 
 export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
-  const suggestionListboxId = useId();
-  const [descriptionFocused, setDescriptionFocused] = useState(false);
-  const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
-  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
-
   const elapsedLabel = view.elapsedLabel ?? "00:00:00";
   const statusSeparator = view.trackerStatusLine.indexOf(" · ");
   const statusPrefix =
@@ -45,55 +36,6 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
       : view.trackerStatusLine.slice(0, statusSeparator);
   const statusSuffix =
     statusSeparator === -1 ? null : view.trackerStatusLine.slice(statusSeparator + 3);
-
-  const suggestionsReady = !suggestionsDismissed && view.descriptionSuggestions.length > 0;
-
-  const suggestionsOpen = suggestionsReady && descriptionFocused;
-
-  useEffect(() => {
-    setActiveSuggestionIndex(0);
-    setSuggestionsDismissed(false);
-  }, [view.descriptionSuggestions, view.timerDescription]);
-
-  function applySuggestion(suggestion: AgencyTimeTrackerSuggestion) {
-    view.onApplySuggestion(suggestion);
-    setSuggestionsDismissed(true);
-  }
-
-  function handleDescriptionKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
-    if (suggestionsOpen) {
-      switch (event.key) {
-        case "ArrowDown":
-          event.preventDefault();
-          setActiveSuggestionIndex((current) => (current + 1) % view.descriptionSuggestions.length);
-          return;
-        case "ArrowUp":
-          event.preventDefault();
-          setActiveSuggestionIndex(
-            (current) =>
-              (current - 1 + view.descriptionSuggestions.length) %
-              view.descriptionSuggestions.length,
-          );
-          return;
-        case "Enter": {
-          const suggestion = view.descriptionSuggestions[activeSuggestionIndex];
-          if (suggestion) {
-            event.preventDefault();
-            applySuggestion(suggestion);
-          }
-          return;
-        }
-        case "Escape":
-          event.preventDefault();
-          setSuggestionsDismissed(true);
-          return;
-        default:
-          break;
-      }
-    }
-
-    view.onDescriptionKeyDown(event);
-  }
 
   return (
     <div className={agencyTimeTrackerSplitClass}>
@@ -107,22 +49,13 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
             type="text"
             value={view.timerDescription}
             onChange={(e) => view.onDescriptionChange(e.target.value)}
-            onKeyDown={handleDescriptionKeyDown}
-            onFocus={() => {
-              setDescriptionFocused(true);
-              setSuggestionsDismissed(false);
-            }}
-            onBlur={(event) => {
-              if (
-                !event.currentTarget.closest("[data-tracker-desc]")?.contains(event.relatedTarget)
-              ) {
-                setDescriptionFocused(false);
-              }
-            }}
+            onKeyDown={view.onDescriptionKeyDown}
+            onFocus={view.onDescriptionFocus}
+            onBlur={view.onDescriptionBlur}
             placeholder="Write task description, notes, links, or context..."
             aria-autocomplete="list"
-            aria-controls={suggestionsOpen ? suggestionListboxId : undefined}
-            aria-expanded={suggestionsOpen}
+            aria-controls={view.suggestionsOpen ? view.suggestionListboxId : undefined}
+            aria-expanded={view.suggestionsOpen}
             className={cn(
               agencyTimeTrackerDescriptionInputClass,
               agencyInputPlaceholderClass,
@@ -132,13 +65,13 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
           />
         </div>
 
-        {suggestionsOpen ? (
+        {view.suggestionsOpen ? (
           <AgencyDescriptionSuggestionMenu
-            listboxId={suggestionListboxId}
+            listboxId={view.suggestionListboxId}
             suggestions={view.descriptionSuggestions}
-            activeIndex={activeSuggestionIndex}
-            onActiveIndexChange={setActiveSuggestionIndex}
-            onSelect={applySuggestion}
+            activeIndex={view.activeSuggestionIndex}
+            onActiveIndexChange={view.onSuggestionActiveIndexChange}
+            onSelect={view.onApplySuggestion}
           />
         ) : null}
       </div>

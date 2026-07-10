@@ -3,26 +3,35 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { LogoLoader } from "@/components/shell/logo-loader";
-import { AppShellPage } from "@/components/app-shell-page";
-import { AppShellTopbarActions, AppShellTopbarContext } from "@/components/app-shell-topbar";
-import { AppShellPortal } from "@/components/app-shell-portal";
-import { DashboardAgentChatPanel } from "@/components/dashboard/dashboard-agent-chat-panel";
-import { DashboardWorkspaceSidebar } from "@/components/dashboard/dashboard-workspace-sidebar";
-import { LazyInfiniteCanvas, type InfiniteCanvasHandle } from "@/components/lazy-infinite-canvas";
-import { TeamSettingsModal } from "@/components/team/team-settings-modal";
+import { LogoLoader } from "@/features/app-shell/components/logo-loader";
+import { AppShellPage } from "@/features/app-shell/app-shell-page";
+import {
+  AppShellTopbarActions,
+  AppShellTopbarContext,
+} from "@/features/app-shell/app-shell-topbar";
+import { AppShellPortal } from "@/features/app-shell/app-shell-portal";
+import { DashboardAgentChatPanel } from "@/features/dashboard-agent/dashboard-agent-chat-panel";
+import { DashboardWorkspaceSidebar } from "@/features/workspace/dashboard/dashboard-workspace-sidebar";
+import {
+  LazyInfiniteCanvas,
+  type InfiniteCanvasHandle,
+} from "@/features/workspace/canvas/lazy-infinite-canvas";
+import { TeamSettingsModal } from "@/features/team/team-settings-modal";
 import { WorkspaceEditorModal } from "@/features/workspace/workspace-editor-modal";
 import { WorkspaceNodeCard } from "@/features/workspace/workspace-node-card";
 import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { authClient } from "@/lib/auth-client";
-import { teamDetailQueryOptions, teamListQueryOptions } from "@/lib/queries/team";
-import { useAppShellStore } from "@/stores/app-shell";
-import { deriveTeamPermissions, useTeamStore } from "@/stores/team";
+import { teamDetailQueryOptions, teamListQueryOptions } from "@/features/team/team-queries";
+import { useAppShellStore } from "@/features/app-shell/app-shell-store";
+import { deriveTeamPermissions, useTeamStore } from "@/features/team/team-store";
 import { useWorkspaceQuery } from "@/features/workspace/hooks/use-workspace-query";
-import { dashboardErrorAlertClass, dashboardStatusBadgeClass } from "@/lib/utils/dashboard-ui";
-import { useShellBootGate } from "@/lib/shell/use-shell-boot-gate";
-import { shellContentInClass } from "@/lib/utils/app-shell-ui";
+import {
+  dashboardErrorAlertClass,
+  dashboardStatusBadgeClass,
+} from "@/features/dashboard/dashboard-ui";
+import { useShellBootGate } from "@/features/app-shell/shell/use-shell-boot-gate";
+import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
 import { cn } from "@/lib/utils";
 
 export function DashboardPage() {

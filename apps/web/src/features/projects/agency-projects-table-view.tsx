@@ -4,7 +4,6 @@ import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
 import { AgencyProjectsVirtualTable } from "@/features/projects/agency-projects-virtual-table";
 import { agencyEmptyPanelClass, agencyErrorPanelClass } from "@/features/shared/agency-ui";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { type AgencyProjectsTableViewModel } from "./hooks/use-agency-projects-table";
 
 type AgencyProjectsTableViewProps = {
@@ -27,7 +26,7 @@ export function AgencyProjectsTableView({
     budgetToneFor,
     isLoading,
     isError,
-    error,
+    errorMessage,
     clients,
     projects,
     refetchProjects,
@@ -50,7 +49,7 @@ export function AgencyProjectsTableView({
       <div className={agencyErrorPanelClass} role="alert">
         <AlertTriangle className="mx-auto size-5 text-error" />
         <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load projects.</p>
-        <p className="mt-1 text-xs text-muted">{getErrorMessage(error, "Try refreshing.")}</p>
+        <p className="mt-1 text-xs text-muted">{errorMessage}</p>
         <Button variant="secondary" size="sm" className="mt-3" onClick={refetchProjects}>
           Retry
         </Button>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 
 import { formatTaskAssigneeLabel } from "@brainiac/api/schemas/agency-ops";
 import type {
@@ -71,9 +71,10 @@ export type AgencyTaskChooserViewModel = {
   selectedLabel: string;
   groupedProjects: AgencyTaskChooserClientGroup[];
   searchIsActive: boolean;
+  searchInputRef: RefObject<HTMLInputElement | null>;
+  listRef: RefObject<HTMLDivElement | null>;
   isProjectExpanded: (projectId: string) => boolean;
   isTaskGroupExpanded: (groupKey: string) => boolean;
-  revealToken: number;
   onOpenChange: (open: boolean) => void;
   onSearchChange: (value: string) => void;
   onSelectTask: (taskId: string) => void;
@@ -216,6 +217,8 @@ export function useAgencyTaskChooser({
   const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(() => new Set());
   const [expandedTaskGroupKeys, setExpandedTaskGroupKeys] = useState<Set<string>>(() => new Set());
   const [revealToken, setRevealToken] = useState(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const searchIsActive = searchTerm.trim().length > 0;
 
   useEffect(() => {
@@ -243,6 +246,19 @@ export function useAgencyTaskChooser({
     });
     setRevealToken((current) => current + 1);
   }, [open, selectedTask]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const frame = requestAnimationFrame(() => {
+      searchInputRef.current?.focus({ preventScroll: true });
+      listRef.current
+        ?.querySelector<HTMLElement>('[data-selected-task="true"]')
+        ?.scrollIntoView({ block: "nearest" });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [open, revealToken]);
 
   function selectTask(taskId: string) {
     onValueChange(taskId);
@@ -291,9 +307,10 @@ export function useAgencyTaskChooser({
     selectedLabel,
     groupedProjects,
     searchIsActive,
+    searchInputRef,
+    listRef,
     isProjectExpanded: (projectId) => searchIsActive || expandedProjectIds.has(projectId),
     isTaskGroupExpanded: (groupKey) => searchIsActive || expandedTaskGroupKeys.has(groupKey),
-    revealToken,
     onOpenChange: setOpen,
     onSearchChange: setSearchTerm,
     onSelectTask: selectTask,

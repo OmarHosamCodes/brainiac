@@ -1,7 +1,7 @@
 import { CheckCircle2, ClipboardList, Clock, Users } from "lucide-react";
+import type { ReactNode } from "react";
 
-import { AgencyWorkSurfaceCreateTaskPopover } from "@/features/task-management/work-surface/agency-work-surface-create-task-popover";
-import type { AgencyProject, AgencyWorkSurfaceTab } from "@/features/task-management/agency-work";
+import type { AgencyWorkSurfaceTab } from "@/features/task-management/agency-work";
 import {
   agencyWorkTabActiveClass,
   agencyWorkTabBarClass,
@@ -22,17 +22,15 @@ const TABS: Array<{
 ];
 
 type AgencyWorkSurfaceTabsViewProps = {
-  teamId: string;
-  projects: Array<Pick<AgencyProject, "id" | "clientName" | "name">>;
   activeTab: AgencyWorkSurfaceTab;
   onTabChange: (tab: AgencyWorkSurfaceTab) => void;
+  createTaskControl: ReactNode;
 };
 
 export function AgencyWorkSurfaceTabsView({
-  teamId,
-  projects,
   activeTab,
   onTabChange,
+  createTaskControl,
 }: AgencyWorkSurfaceTabsViewProps) {
   return (
     <div className={agencyWorkTabShellClass}>
@@ -63,7 +61,7 @@ export function AgencyWorkSurfaceTabsView({
           })}
         </div>
 
-        <AgencyWorkSurfaceCreateTaskPopover teamId={teamId} projects={projects} />
+        {createTaskControl}
       </div>
     </div>
   );

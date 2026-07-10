@@ -27,7 +27,7 @@ export type LiveCacheTaskMessage = {
   }>;
 };
 
-export type LiveCacheTaskMessagesListPage = {
+type LiveCacheTaskMessagesListPage = {
   items: LiveCacheTaskMessage[];
   page: number;
   pageSize: number;

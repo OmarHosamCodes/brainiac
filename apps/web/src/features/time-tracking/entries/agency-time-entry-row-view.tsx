@@ -1,5 +1,4 @@
 import { Calendar, MoreVertical, Play, Timer, Trash2 } from "lucide-react";
-import { useState } from "react";
 
 import { AgencyTimeEntryActions } from "@/features/time-tracking/entries/agency-time-entry-actions";
 import { Button } from "@/ui/button";
@@ -17,8 +16,7 @@ import {
   agencyWorkPlayButtonClass,
 } from "@/features/shared/agency-ui";
 import { reportEntryWasteRowClass } from "@/features/reports/agency-report-grouping";
-import { projectHuePillStyle } from "@/lib/utils/project-palette";
-import { useTheme } from "@/stores/theme";
+import { projectHuePillStyle } from "@/features/shared/project-palette";
 import { cn } from "@/lib/utils";
 
 const descriptionLeadingSlotClass = "flex w-8 shrink-0 items-center justify-start";
@@ -29,15 +27,11 @@ type AgencyTimeEntryRowViewProps = {
 };
 
 export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowViewProps) {
-  const { isDark } = useTheme();
-  const [editingDescription, setEditingDescription] = useState(false);
-  const [timeEditorOpen, setTimeEditorOpen] = useState(false);
-  const [editingDuration, setEditingDuration] = useState(false);
-
   const {
     group,
     expanded,
     highlighted,
+    isDark,
     isMulti,
     canRestart,
     primaryEntryId,
@@ -53,6 +47,9 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     timeRange,
     durationLabel,
     displayTitle,
+    editingDescription,
+    timeEditorOpen,
+    editingDuration,
     onToggleExpand,
     onRestart,
     onDeleteGroup,
@@ -66,6 +63,9 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onDurationChange,
     onInlineBlur,
     onInlineKeyDown,
+    onEditingDescriptionChange,
+    onTimeEditorOpenChange,
+    onEditingDurationChange,
   } = view;
 
   const categoryLabel = group.clientName || "General";
@@ -109,13 +109,13 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                   value={descriptionDraft}
                   onChange={(e) => onDescriptionChange(e.target.value)}
                   onBlur={() => {
-                    setEditingDescription(false);
+                    onEditingDescriptionChange(false);
                     onDescriptionBlur();
                   }}
                   onKeyDown={(event) => {
                     onDescriptionKeyDown(event);
                     if (event.key === "Enter" || event.key === "Escape") {
-                      setEditingDescription(false);
+                      onEditingDescriptionChange(false);
                     }
                   }}
                   disabled={editSaving || rowUpdating}
@@ -130,7 +130,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                     "block max-w-full truncate text-left text-sm font-semibold text-highlighted",
                     agencyFocusRingClass,
                   )}
-                  onClick={() => setEditingDescription(true)}
+                  onClick={() => onEditingDescriptionChange(true)}
                 >
                   {displayTitle}
                 </button>
@@ -161,7 +161,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
           <Popover
             open={timeEditorOpen}
             onOpenChange={(open) => {
-              setTimeEditorOpen(open);
+              onTimeEditorOpenChange(open);
               if (!open) onInlineBlur();
             }}
           >
@@ -243,13 +243,13 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 value={editDraft.durationInput}
                 onChange={(e) => onDurationChange(e.target.value)}
                 onBlur={() => {
-                  setEditingDuration(false);
+                  onEditingDurationChange(false);
                   onInlineBlur();
                 }}
                 onKeyDown={(event) => {
                   onInlineKeyDown(event);
                   if (event.key === "Enter" || event.key === "Escape") {
-                    setEditingDuration(false);
+                    onEditingDurationChange(false);
                   }
                 }}
                 disabled={editSaving || rowUpdating}
@@ -265,7 +265,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 "inline-flex items-center gap-2 font-mono text-sm font-medium tabular-nums text-muted hover:text-highlighted",
                 agencyFocusRingClass,
               )}
-              onClick={() => setEditingDuration(true)}
+              onClick={() => onEditingDurationChange(true)}
             >
               <Timer className="size-4 shrink-0 text-muted" aria-hidden />
               {editDraft.durationInput || durationLabel}

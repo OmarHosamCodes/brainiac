@@ -1,5 +1,5 @@
 import { AlertTriangle, BarChart2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import type { ReactNode } from "react";
 
 import {
   AgencyReportCreatorHeader,
@@ -9,17 +9,16 @@ import { AgencyReportCreatorTable } from "@/features/reports/creator/agency-repo
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
 import { agencyEmptyPanelClass, agencyErrorPanelClass } from "@/features/shared/agency-ui";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
 import type { AgencyReportCreatorSurfaceViewModel } from "./hooks/use-agency-report-creator-surface";
 
 export type AgencyReportCreatorSurfaceViewProps = {
-  teamId: string;
   vm: AgencyReportCreatorSurfaceViewModel;
+  activityMenu: ReactNode;
 };
 
 export function AgencyReportCreatorSurfaceView({
-  teamId,
   vm,
+  activityMenu,
 }: AgencyReportCreatorSurfaceViewProps) {
   if (!vm.reportId) {
     return (
@@ -45,11 +44,9 @@ export function AgencyReportCreatorSurfaceView({
       <div className={agencyErrorPanelClass} role="alert">
         <AlertTriangle className="mx-auto size-5 text-error" />
         <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load report.</p>
-        <p className="mt-1 text-xs text-muted">
-          {getErrorMessage(vm.error, "Try going back to Reports.")}
-        </p>
-        <Button variant="secondary" size="sm" className="mt-3" asChild>
-          <Link to={`/agency?${vm.backParams}`}>Back to Reports</Link>
+        <p className="mt-1 text-xs text-muted">{vm.errorMessage}</p>
+        <Button variant="secondary" size="sm" className="mt-3" onClick={vm.onBackToReports}>
+          Back to Reports
         </Button>
       </div>
     );
@@ -58,7 +55,7 @@ export function AgencyReportCreatorSurfaceView({
   return (
     <div className="agency-report-creator space-y-4">
       <AgencyReportCreatorHeader
-        backHref={`/agency?${vm.backParams}`}
+        onBack={vm.onBackToReports}
         reportName={vm.reportName}
         fallbackName={vm.report.name}
         onReportNameChange={vm.setReportName}
@@ -80,8 +77,7 @@ export function AgencyReportCreatorSurfaceView({
         onRetrySave={vm.autosave.retry}
         exporting={vm.exporting}
         onExport={() => void vm.handleExport()}
-        teamId={teamId}
-        reportId={vm.reportId}
+        activityMenu={activityMenu}
       />
 
       {!vm.rangeReady ? (
@@ -102,9 +98,7 @@ export function AgencyReportCreatorSurfaceView({
         <div className={agencyErrorPanelClass} role="alert">
           <AlertTriangle className="mx-auto size-5 text-error" />
           <p className="mt-3 text-sm font-bold text-highlighted">Couldn't load report entries.</p>
-          <p className="mt-1 text-xs text-muted">
-            {getErrorMessage(vm.entriesQueryErrorObj, "Try refreshing.")}
-          </p>
+          <p className="mt-1 text-xs text-muted">{vm.entriesQueryErrorMessage}</p>
           <Button variant="secondary" size="sm" className="mt-3" onClick={vm.refetchEntries}>
             Retry
           </Button>

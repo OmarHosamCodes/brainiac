@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { orpc } from "@/lib/orpc";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { useAgencyProjectJourney } from "@/features/projects/use-agency-project-journey";
 
 export type ActivitySort = "newest" | "oldest" | "longest";
@@ -19,7 +20,7 @@ export type AgencyProjectDetailViewModel = {
   projectId: string;
   isLoading: boolean;
   isError: boolean;
-  error: unknown;
+  errorMessage: string;
   project: any;
   projectBudget: any;
   budgetPct: number;
@@ -163,7 +164,10 @@ export function useAgencyProjectDetail({
 
   const isLoading = projectsQuery.isPending || entriesQuery.isPending;
   const isError = projectsQuery.isError || entriesQuery.isError;
-  const error = entriesQuery.error ?? projectsQuery.error;
+  const errorMessage = getErrorMessage(
+    entriesQuery.error ?? projectsQuery.error,
+    "Try refreshing.",
+  );
 
   function retryLoad() {
     void projectsQuery.refetch();
@@ -176,7 +180,7 @@ export function useAgencyProjectDetail({
     projectId,
     isLoading,
     isError,
-    error,
+    errorMessage,
     project,
     projectBudget,
     budgetPct,

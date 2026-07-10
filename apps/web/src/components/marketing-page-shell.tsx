@@ -1,13 +1,10 @@
 import { Moon, Sun } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 
 import { MarketingBrandLockup } from "@/components/marketing/marketing-brand-lockup";
 import { Button } from "@/ui/button";
 import { useTheme } from "@/stores/theme";
-import { orpc } from "@/lib/orpc";
-import { cn } from "@/lib/utils";
 
 const footerNav = [
   { label: "Dashboard", to: "/dashboard" },
@@ -38,40 +35,6 @@ function ThemeToggle() {
   );
 }
 
-function MarketingHealthStatus() {
-  const [enabled, setEnabled] = useState(false);
-
-  useEffect(() => {
-    if ("requestIdleCallback" in (window as any)) {
-      const idleId = (window as any).requestIdleCallback(() => setEnabled(true));
-      return () => (window as any).cancelIdleCallback(idleId);
-    }
-
-    const timeoutId = setTimeout(() => setEnabled(true), 1);
-    return () => clearTimeout(timeoutId);
-  }, []);
-
-  const healthCheck = useQuery({
-    ...orpc.healthCheck.queryOptions(),
-    enabled,
-  } as unknown as Parameters<typeof useQuery>[0]);
-
-  return (
-    <div className="mt-6 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-      <span
-        className={cn(
-          "size-1.5 rounded-full",
-          healthCheck.isSuccess ? "bg-primary" : "bg-muted-foreground/40",
-        )}
-      />
-      <span>{healthCheck.isSuccess ? "All systems operational" : "Status unavailable"}</span>
-      {healthCheck.isSuccess ? (
-        <span className="text-muted-foreground/50">· {String(healthCheck.data)}ms</span>
-      ) : null}
-    </div>
-  );
-}
-
 export function MarketingPageShell({
   children,
   heroIsDark: _heroIsDark = false,
@@ -93,8 +56,6 @@ export function MarketingPageShell({
               <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
                 A spatial knowledge workspace with an embedded agent.
               </p>
-
-              <MarketingHealthStatus />
             </div>
 
             <div className="md:col-span-3 md:col-start-7">
