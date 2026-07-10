@@ -435,7 +435,7 @@ For time tracking, the important behavior under test is:
 - Timer start/stop eligibility.
 - Task/project resolution for stopping timers.
 - Manual entry draft parsing, duration editing, and overnight entries.
-- Time entry grouping and recency buckets.
+- Time entry grouping by week and day.
 - Task tracking and state transitions.
 
 New feature minimum:

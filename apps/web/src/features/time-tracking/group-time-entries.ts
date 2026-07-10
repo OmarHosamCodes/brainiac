@@ -2,7 +2,6 @@ import {
   formatAgencyWeekLabel,
   getLocalWeekStartKey,
   localDateKeyFromIso,
-  todayLocalDateKey,
 } from "@/features/time-tracking/format-agency-day-label";
 
 export type TimeEntryRecord = {
@@ -112,90 +111,6 @@ export function groupEntriesByDay(entries: TimeEntryRecord[]): TimeEntryDayGroup
         groups,
       };
     });
-}
-
-export type TimeEntryRecencyGroupId = "today" | "yesterday" | "earlier";
-
-export type TimeEntryRecencySection = {
-  id: TimeEntryRecencyGroupId;
-  label: string;
-  totalSeconds: number;
-  groups: CollapsedEntryGroup[];
-};
-
-function yesterdayLocalDateKey(referenceDate = new Date()): string {
-  const yesterday = new Date(referenceDate);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const year = yesterday.getFullYear();
-  const month = String(yesterday.getMonth() + 1).padStart(2, "0");
-  const day = String(yesterday.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function resolveRecencyGroupId(
-  dateKey: string,
-  referenceDate = new Date(),
-): TimeEntryRecencyGroupId {
-  const todayKey = todayLocalDateKey(referenceDate);
-  if (dateKey === todayKey) return "today";
-  if (dateKey === yesterdayLocalDateKey(referenceDate)) return "yesterday";
-  return "earlier";
-}
-
-export function groupTimeEntryDaysByRecency(
-  dayGroups: TimeEntryDayGroup[],
-  referenceDate = new Date(),
-): TimeEntryRecencySection[] {
-  const buckets: Record<TimeEntryRecencyGroupId, CollapsedEntryGroup[]> = {
-    today: [],
-    yesterday: [],
-    earlier: [],
-  };
-  const totals: Record<TimeEntryRecencyGroupId, number> = {
-    today: 0,
-    yesterday: 0,
-    earlier: 0,
-  };
-
-  for (const day of dayGroups) {
-    const groupId = resolveRecencyGroupId(day.dateKey, referenceDate);
-    buckets[groupId].push(...day.groups);
-    totals[groupId] += day.totalSeconds;
-  }
-
-  const sections: TimeEntryRecencySection[] = [];
-  if (buckets.today.length > 0) {
-    sections.push({
-      id: "today",
-      label: "Today",
-      totalSeconds: totals.today,
-      groups: buckets.today,
-    });
-  }
-  if (buckets.yesterday.length > 0) {
-    sections.push({
-      id: "yesterday",
-      label: "Yesterday",
-      totalSeconds: totals.yesterday,
-      groups: buckets.yesterday,
-    });
-  }
-  if (buckets.earlier.length > 0) {
-    sections.push({
-      id: "earlier",
-      label: "Earlier",
-      totalSeconds: totals.earlier,
-      groups: buckets.earlier,
-    });
-  }
-  return sections;
-}
-
-export function groupEntriesByRecency(
-  entries: TimeEntryRecord[],
-  referenceDate = new Date(),
-): TimeEntryRecencySection[] {
-  return groupTimeEntryDaysByRecency(groupEntriesByDay(entries), referenceDate);
 }
 
 export function groupEntriesByWeek(

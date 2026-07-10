@@ -14,10 +14,9 @@ import {
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import {
-  groupEntriesByDay,
-  groupTimeEntryDaysByRecency,
+  groupEntriesByWeek,
   type CollapsedEntryGroup,
-  type TimeEntryRecencySection,
+  type TimeEntryWeekGroup,
 } from "@/features/time-tracking/group-time-entries";
 import {
   draftToIsoRange,
@@ -45,7 +44,7 @@ export type AgencyTimeEntriesLogViewModel = {
   onRetry: () => void;
   isLoading: boolean;
   entriesEmpty: boolean;
-  recencySections: TimeEntryRecencySection[];
+  weekGroups: TimeEntryWeekGroup[];
   projects: AgencyProject[];
   tasks: AgencyProjectTask[];
   expandedGroupKeys: Set<string>;
@@ -110,25 +109,24 @@ export function useAgencyTimeEntriesLog({
   const tasks = tasksQuery.items ?? [];
   const weekSummary = entriesQuery.data?.weekSummary ?? null;
 
-  const recencySections = useMemo(() => {
-    const dayGroups = groupEntriesByDay(entries);
+  const weekGroups = useMemo(() => {
+    const groups = groupEntriesByWeek(entries);
     const currentWeekStart = getLocalWeekStartKey(todayLocalDateKey());
-    const apiDaily = weekSummary
-      ? new Map(weekSummary.daily.map((daily) => [daily.date, daily.totalSeconds]))
-      : null;
+    const apiWeekTotal = weekSummary?.totalSeconds;
 
-    const adjustedDays = apiDaily
-      ? dayGroups.map((day) => {
-          const weekStart = getLocalWeekStartKey(day.dateKey);
-          if (weekStart !== currentWeekStart) return day;
-          return {
-            ...day,
-            totalSeconds: Math.max(day.totalSeconds, apiDaily.get(day.dateKey) ?? 0),
-          };
-        })
-      : dayGroups;
+    return groups.map((week) => {
+      if (week.weekStartKey !== currentWeekStart || apiWeekTotal === undefined || !weekSummary) {
+        return week;
+      }
 
-    return groupTimeEntryDaysByRecency(adjustedDays);
+      const apiDaily = new Map(weekSummary.daily.map((daily) => [daily.date, daily.totalSeconds]));
+      const days = week.days.map((day) => ({
+        ...day,
+        totalSeconds: Math.max(day.totalSeconds, apiDaily.get(day.dateKey) ?? 0),
+      }));
+
+      return { ...week, days, totalSeconds: apiWeekTotal };
+    });
   }, [entries, weekSummary]);
 
   const maxPage = useMemo(() => {
@@ -268,7 +266,7 @@ export function useAgencyTimeEntriesLog({
     onRetry: () => void entriesQuery.refetch(),
     isLoading: entriesQuery.isPending && entries.length === 0,
     entriesEmpty: entries.length === 0,
-    recencySections,
+    weekGroups,
     projects,
     tasks,
     expandedGroupKeys,

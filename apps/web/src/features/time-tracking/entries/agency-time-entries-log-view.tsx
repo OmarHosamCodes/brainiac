@@ -1,6 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 
-import { AgencyTimeEntryRecencySectionView } from "@/features/time-tracking/entries/agency-time-entry-recency-section-view";
+import { AgencyTimeEntryWeekGroupView } from "@/features/time-tracking/entries/agency-time-entry-week-group-view";
 import { AgencyWorkSurfacePaginationFooter } from "@/features/task-management/work-surface/agency-work-surface-pagination-footer";
 import { Button } from "@/ui/button";
 import type { AgencyTimeEntriesLogViewModel } from "@/features/time-tracking/hooks/use-agency-time-entries-log";
@@ -77,10 +77,10 @@ export function AgencyTimeEntriesLogView({ view, renderGroupRow }: AgencyTimeEnt
           </div>
         ) : (
           <div className={agencyWorkTableStackClass}>
-            {view.recencySections.map((section) => (
-              <AgencyTimeEntryRecencySectionView
-                key={section.id}
-                section={section}
+            {view.weekGroups.map((week) => (
+              <AgencyTimeEntryWeekGroupView
+                key={week.weekStartKey}
+                week={week}
                 highlightedEntryId={view.highlightedEntryId}
                 renderGroupRow={renderGroupRow}
               />
