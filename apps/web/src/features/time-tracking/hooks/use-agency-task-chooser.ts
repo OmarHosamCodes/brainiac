@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useMemo, useRef, type KeyboardEvent, type ReactNode, type RefObject } from "react";
 
 import { formatTaskAssigneeLabel } from "@brainiac/api/schemas/agency-ops";
 import type {
@@ -7,26 +7,39 @@ import type {
   TaskStatus,
 } from "@/features/task-management/agency-work";
 import {
-  getTaskGroupKey,
-  groupTasksByProjectTitle,
-  type AgencyProjectTaskGroup,
-} from "@/features/task-management/agency-task-utils";
+  groupItemsByClient,
+  projectSearchableText,
+  sortProjectsByClientThenName,
+  useAgencyChooserExpandedProjects,
+  useAgencyChooserOpenState,
+  useAgencyChooserScrollReveal,
+} from "@/features/shared/choosers/agency-chooser-shell";
 import { statusDotClass, statusLabel } from "@/features/task-management/agency-task-status";
 
 type Project = Pick<AgencyProject, "id" | "clientName" | "name">;
 type AgencyTask = Pick<
   AgencyProjectTask,
   "id" | "projectId" | "title" | "status" | "assignedToTeam" | "assignees"
-> & {
-  dueDate?: string | null;
-  createdAt?: string;
-};
+>;
 
-export type AgencyTaskChooserTriggerFormat = "task-project" | "project-client" | "task-only";
-
-type UseAgencyTaskChooserOptions = {
+type AgencyTaskChooserSelectOptions = {
+  mode?: "select";
   value: string;
   onValueChange: (value: string) => void;
+};
+
+type AgencyTaskChooserCreateOptions = {
+  mode: "create";
+  draftTitle: string;
+  onDraftTitleChange: (value: string) => void;
+  projectId: string;
+  onProjectIdChange: (value: string) => void;
+  onExistingTaskSelect?: (taskId: string) => void;
+};
+
+export type AgencyTaskChooserTriggerFormat = "task-only" | "project-client" | "task-client";
+
+type UseAgencyTaskChooserBaseOptions = {
   projects: Project[];
   tasks: AgencyTask[];
   disabled?: boolean;
@@ -37,15 +50,24 @@ type UseAgencyTaskChooserOptions = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   contentAlign?: "start" | "center" | "end";
+  /** Default task-only. Use task-client for session/tracker triggers. */
   triggerFormat?: AgencyTaskChooserTriggerFormat;
   fallbackTaskTitle?: string;
   fallbackProjectId?: string;
   fallbackProjectName?: string;
+  fallbackClientName?: string;
+  suggestionMenu?: ReactNode;
+  onSearchKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  /** When true, mark search matches in project/task labels like the clients surface. */
+  highlightSearch?: boolean;
 };
+
+export type UseAgencyTaskChooserOptions = UseAgencyTaskChooserBaseOptions &
+  (AgencyTaskChooserSelectOptions | AgencyTaskChooserCreateOptions);
 
 export type AgencyTaskChooserProjectGroup = {
   project: Project;
-  taskGroups: AgencyProjectTaskGroup<AgencyTask>[];
+  tasks: AgencyTask[];
 };
 
 export type AgencyTaskChooserClientGroup = {
@@ -54,6 +76,7 @@ export type AgencyTaskChooserClientGroup = {
 };
 
 export type AgencyTaskChooserViewModel = {
+  mode: "select" | "create";
   value: string;
   disabled: boolean;
   loading: boolean;
@@ -65,67 +88,76 @@ export type AgencyTaskChooserViewModel = {
   open: boolean;
   searchTerm: string;
   selectedProject: Project | null;
-  selectedTask: AgencyTask | null;
   triggerProject: Project | null;
+  selectedTask: AgencyTask | null;
   triggerTaskTitle: string | null;
-  selectedLabel: string;
+  projectId: string;
   groupedProjects: AgencyTaskChooserClientGroup[];
-  searchIsActive: boolean;
   searchInputRef: RefObject<HTMLInputElement | null>;
   listRef: RefObject<HTMLDivElement | null>;
   isProjectExpanded: (projectId: string) => boolean;
-  isTaskGroupExpanded: (groupKey: string) => boolean;
+  isProjectSelectedForCreate: (projectId: string) => boolean;
   onOpenChange: (open: boolean) => void;
   onSearchChange: (value: string) => void;
   onSelectTask: (taskId: string) => void;
+  onSelectProject: (projectId: string) => void;
   onToggleProject: (projectId: string) => void;
-  onToggleTaskGroup: (groupKey: string) => void;
+  suggestionMenu?: ReactNode;
+  onSearchKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  highlightSearch: boolean;
   statusLabel: (status: TaskStatus | undefined) => string;
   statusDotClass: (status: TaskStatus | undefined) => string;
-  formatDueDate: (iso: string | null | undefined) => string;
   formatAssigneeLabel: (task: AgencyTask) => string;
 };
 
-function formatDueDate(iso: string | null | undefined) {
-  if (!iso) return "";
-  const parsed = new Date(iso);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return parsed.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-}
+export function useAgencyTaskChooser(
+  options: UseAgencyTaskChooserOptions,
+): AgencyTaskChooserViewModel {
+  const {
+    projects,
+    tasks,
+    disabled = false,
+    loading = false,
+    placeholder = "Task",
+    searchPlaceholder = "Search tasks, projects, or clients",
+    className,
+    open: controlledOpen,
+    onOpenChange,
+    contentAlign = "start",
+    triggerFormat = "task-only",
+    fallbackTaskTitle,
+    fallbackProjectId,
+    fallbackProjectName,
+    fallbackClientName,
+    suggestionMenu,
+    onSearchKeyDown,
+    highlightSearch = false,
+  } = options;
 
-export function useAgencyTaskChooser({
-  value,
-  onValueChange,
-  projects,
-  tasks,
-  disabled = false,
-  loading = false,
-  placeholder = "Task",
-  searchPlaceholder = "Search tasks, projects, or clients",
-  className,
-  open: controlledOpen,
-  onOpenChange,
-  contentAlign = "start",
-  triggerFormat = "task-project",
-  fallbackTaskTitle,
-  fallbackProjectId,
-  fallbackProjectName,
-}: UseAgencyTaskChooserOptions): AgencyTaskChooserViewModel {
-  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const open = controlledOpen ?? uncontrolledOpen;
+  const isCreateMode = options.mode === "create";
 
-  function setOpen(nextOpen: boolean) {
-    onOpenChange?.(nextOpen);
-    if (controlledOpen === undefined) {
-      setUncontrolledOpen(nextOpen);
-    }
-    if (!nextOpen) {
-      setSearchTerm("");
-    }
-  }
+  const selectValue = options.mode === "create" ? "" : options.value;
+  const onValueChange = options.mode === "create" ? undefined : options.onValueChange;
+  const draftTitle = options.mode === "create" ? options.draftTitle : "";
+  const onDraftTitleChange = options.mode === "create" ? options.onDraftTitleChange : undefined;
+  const createProjectId = options.mode === "create" ? options.projectId : "";
+  const onProjectIdChange = options.mode === "create" ? options.onProjectIdChange : undefined;
+  const onExistingTaskSelect = options.mode === "create" ? options.onExistingTaskSelect : undefined;
 
-  const chooserTasks = useMemo(() => tasks.filter((task) => task.status !== "archived"), [tasks]);
+  const { open, searchTerm, setSearchTerm, setOpen } = useAgencyChooserOpenState({
+    controlledOpen,
+    onOpenChange,
+  });
+
+  const chooserTasks = useMemo(() => {
+    const seen = new Set<string>();
+    return tasks.filter((task) => {
+      if (task.status === "archived") return false;
+      if (seen.has(task.id)) return false;
+      seen.add(task.id);
+      return true;
+    });
+  }, [tasks]);
 
   const projectsById = useMemo(
     () => new Map(projects.map((project) => [project.id, project])),
@@ -133,14 +165,16 @@ export function useAgencyTaskChooser({
   );
 
   const selectedTask = useMemo(
-    () => tasks.find((task) => task.id === value) ?? null,
-    [tasks, value],
+    () => (isCreateMode ? null : (tasks.find((task) => task.id === selectValue) ?? null)),
+    [isCreateMode, tasks, selectValue],
   );
 
-  const selectedProject = useMemo(
-    () => (selectedTask ? (projectsById.get(selectedTask.projectId) ?? null) : null),
-    [projectsById, selectedTask],
-  );
+  const selectedProject = useMemo(() => {
+    if (isCreateMode) {
+      return createProjectId ? (projectsById.get(createProjectId) ?? null) : null;
+    }
+    return selectedTask ? (projectsById.get(selectedTask.projectId) ?? null) : null;
+  }, [createProjectId, isCreateMode, projectsById, selectedTask]);
 
   const triggerProject = useMemo((): Project | null => {
     if (selectedProject) return selectedProject;
@@ -148,21 +182,28 @@ export function useAgencyTaskChooser({
     return {
       id: fallbackProjectId,
       name: fallbackProjectName,
-      clientName: projectsById.get(fallbackProjectId)?.clientName ?? "",
+      clientName: fallbackClientName ?? projectsById.get(fallbackProjectId)?.clientName ?? "",
     };
-  }, [fallbackProjectId, fallbackProjectName, projectsById, selectedProject]);
+  }, [fallbackClientName, fallbackProjectId, fallbackProjectName, projectsById, selectedProject]);
 
-  const triggerTaskTitle = selectedTask?.title ?? fallbackTaskTitle ?? null;
+  const triggerTaskTitle = isCreateMode
+    ? draftTitle.trim() || null
+    : (selectedTask?.title ?? fallbackTaskTitle ?? null);
 
-  const selectedLabel = useMemo(() => {
-    if (!selectedTask) return "";
-    if (!selectedProject) return selectedTask.title;
-    return `${selectedTask.title} . ${selectedProject.name}`;
-  }, [selectedProject, selectedTask]);
+  const selectedProjectIdForExpand = isCreateMode
+    ? createProjectId
+    : (selectedTask?.projectId ?? null);
+
+  const { isProjectExpanded, toggleProject, expandProject } = useAgencyChooserExpandedProjects(
+    selectedProjectIdForExpand,
+    open,
+  );
+
+  // Create mode binds the search input to draftTitle; select mode uses local searchTerm.
+  const filterQuery = (isCreateMode ? draftTitle : searchTerm).trim().toLowerCase();
 
   const filteredTasks = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    if (!query) return chooserTasks;
+    if (!filterQuery) return chooserTasks;
 
     return chooserTasks.filter((task) => {
       const project = projectsById.get(task.projectId);
@@ -176,9 +217,9 @@ export function useAgencyTaskChooser({
         .join(" ")
         .toLowerCase();
 
-      return searchableText.includes(query);
+      return searchableText.includes(filterQuery);
     });
-  }, [chooserTasks, projectsById, searchTerm]);
+  }, [chooserTasks, filterQuery, projectsById]);
 
   const groupedProjects = useMemo(() => {
     const tasksByProject = new Map<string, AgencyTask[]>();
@@ -189,108 +230,85 @@ export function useAgencyTaskChooser({
       tasksByProject.set(task.projectId, existing);
     }
 
-    const sortedProjects = projects
-      .filter((project) => tasksByProject.has(project.id))
-      .sort((left, right) => {
-        const clientSort = left.clientName.localeCompare(right.clientName);
-        return clientSort || left.name.localeCompare(right.name);
-      });
+    const matchedProjects = isCreateMode
+      ? projects.filter((project) => {
+          if (!filterQuery) return true;
+          if (projectSearchableText(project).includes(filterQuery)) return true;
+          return (tasksByProject.get(project.id) ?? []).length > 0;
+        })
+      : projects.filter((project) => tasksByProject.has(project.id));
 
-    const clientGroups: AgencyTaskChooserClientGroup[] = [];
-    let currentGroup: AgencyTaskChooserClientGroup | null = null;
+    // Create mode: if the draft title matches nothing, still show projects so the user can place the new task.
+    const visibleProjects =
+      isCreateMode && filterQuery && matchedProjects.length === 0 ? projects : matchedProjects;
 
-    for (const project of sortedProjects) {
-      if (!currentGroup || currentGroup.clientName !== project.clientName) {
-        currentGroup = { clientName: project.clientName, projects: [] };
-        clientGroups.push(currentGroup);
-      }
+    const sortedProjects = [...visibleProjects].sort(sortProjectsByClientThenName);
 
-      currentGroup.projects.push({
+    const clientGroups = groupItemsByClient(sortedProjects);
+
+    return clientGroups.map((group) => ({
+      clientName: group.clientName,
+      projects: group.projects.map((project) => ({
         project,
-        taskGroups: groupTasksByProjectTitle(tasksByProject.get(project.id) ?? []),
-      });
-    }
+        tasks: (tasksByProject.get(project.id) ?? []).sort((left, right) =>
+          left.title.localeCompare(right.title),
+        ),
+      })),
+    }));
+  }, [filteredTasks, filterQuery, isCreateMode, projects]);
 
-    return clientGroups;
-  }, [filteredTasks, projects]);
-
-  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(() => new Set());
-  const [expandedTaskGroupKeys, setExpandedTaskGroupKeys] = useState<Set<string>>(() => new Set());
-  const [revealToken, setRevealToken] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const searchIsActive = searchTerm.trim().length > 0;
 
-  useEffect(() => {
-    if (!open) return;
+  useAgencyChooserScrollReveal({
+    open,
+    searchInputRef,
+    listRef,
+    selectedSelector: isCreateMode
+      ? '[data-selected-project="true"]'
+      : '[data-selected-task="true"]',
+    revealDeps: [selectedProjectIdForExpand, selectValue],
+  });
 
-    if (!selectedTask) {
-      setRevealToken((current) => current + 1);
+  function handleSearchChange(value: string) {
+    if (isCreateMode) {
+      onDraftTitleChange?.(value);
       return;
     }
-
-    const projectId = selectedTask.projectId;
-    const groupKey = getTaskGroupKey(selectedTask);
-
-    setExpandedProjectIds((current) => {
-      if (current.has(projectId)) return current;
-      const next = new Set(current);
-      next.add(projectId);
-      return next;
-    });
-    setExpandedTaskGroupKeys((current) => {
-      if (current.has(groupKey)) return current;
-      const next = new Set(current);
-      next.add(groupKey);
-      return next;
-    });
-    setRevealToken((current) => current + 1);
-  }, [open, selectedTask]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const frame = requestAnimationFrame(() => {
-      searchInputRef.current?.focus({ preventScroll: true });
-      listRef.current
-        ?.querySelector<HTMLElement>('[data-selected-task="true"]')
-        ?.scrollIntoView({ block: "nearest" });
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, [open, revealToken]);
+    setSearchTerm(value);
+  }
 
   function selectTask(taskId: string) {
-    onValueChange(taskId);
+    if (isCreateMode) {
+      onExistingTaskSelect?.(taskId);
+      setOpen(false);
+      return;
+    }
+    onValueChange?.(taskId);
     setOpen(false);
   }
 
-  function toggleProject(projectId: string) {
-    setExpandedProjectIds((current) => {
-      const next = new Set(current);
-      if (next.has(projectId)) {
-        next.delete(projectId);
-      } else {
-        next.add(projectId);
-      }
-      return next;
-    });
+  function selectProject(projectId: string) {
+    if (isCreateMode) {
+      onProjectIdChange?.(projectId);
+      expandProject(projectId);
+      return;
+    }
+    toggleProject(projectId);
   }
 
-  function toggleTaskGroup(groupKey: string) {
-    setExpandedTaskGroupKeys((current) => {
-      const next = new Set(current);
-      if (next.has(groupKey)) {
-        next.delete(groupKey);
-      } else {
-        next.add(groupKey);
-      }
-      return next;
-    });
+  function handleToggleProject(projectId: string) {
+    if (isCreateMode) {
+      onProjectIdChange?.(projectId);
+      expandProject(projectId);
+      return;
+    }
+    toggleProject(projectId);
   }
 
   return {
-    value,
+    mode: isCreateMode ? "create" : "select",
+    value: selectValue,
     disabled,
     loading,
     placeholder,
@@ -299,26 +317,27 @@ export function useAgencyTaskChooser({
     contentAlign,
     triggerFormat,
     open,
-    searchTerm,
+    searchTerm: isCreateMode ? draftTitle : searchTerm,
     selectedProject,
-    selectedTask,
     triggerProject,
+    selectedTask,
     triggerTaskTitle,
-    selectedLabel,
+    projectId: isCreateMode ? createProjectId : (selectedTask?.projectId ?? ""),
     groupedProjects,
-    searchIsActive,
     searchInputRef,
     listRef,
-    isProjectExpanded: (projectId) => searchIsActive || expandedProjectIds.has(projectId),
-    isTaskGroupExpanded: (groupKey) => searchIsActive || expandedTaskGroupKeys.has(groupKey),
+    isProjectExpanded,
+    isProjectSelectedForCreate: (projectId) => isCreateMode && createProjectId === projectId,
     onOpenChange: setOpen,
-    onSearchChange: setSearchTerm,
+    onSearchChange: handleSearchChange,
     onSelectTask: selectTask,
-    onToggleProject: toggleProject,
-    onToggleTaskGroup: toggleTaskGroup,
+    onSelectProject: selectProject,
+    onToggleProject: handleToggleProject,
+    suggestionMenu,
+    onSearchKeyDown,
+    highlightSearch,
     statusLabel,
     statusDotClass,
-    formatDueDate,
     formatAssigneeLabel: formatTaskAssigneeLabel,
   };
 }
