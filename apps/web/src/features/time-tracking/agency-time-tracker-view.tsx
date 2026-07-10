@@ -79,7 +79,8 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
           projects={view.projects}
           tasks={view.tasks}
           placeholder="Task"
-          triggerFormat="project-client"
+          triggerFormat="task-client"
+          highlightSearch
           fallbackTaskTitle={
             view.taskChooserLabel !== "Choose task" ? view.taskChooserLabel : undefined
           }
@@ -87,7 +88,9 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
           fallbackProjectName={view.activeTimer?.projectName}
           className={taskChooserTriggerClass}
           loading={view.projectsLoading || view.tasksLoading}
-          disabled={!view.teamId || view.isTimerMutationPending || view.projectsLoading || view.tasksLoading}
+          disabled={
+            !view.teamId || view.isTimerMutationPending || view.projectsLoading || view.tasksLoading
+          }
           open={view.taskChooserOpen}
           contentAlign="end"
           onOpenChange={view.onTaskChooserOpenChange}

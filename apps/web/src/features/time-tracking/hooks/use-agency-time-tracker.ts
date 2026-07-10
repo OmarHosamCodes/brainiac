@@ -363,9 +363,7 @@ export function useAgencyTimeTracker({
       activeTimer,
       description: timerDescription,
       discard,
-      task: resolvedTimerTask
-        ? { id: resolvedTimerTask.id, title: resolvedTimerTask.title }
-        : null,
+      task: resolvedTimerTask ? { id: resolvedTimerTask.id, title: resolvedTimerTask.title } : null,
     });
   }
 
