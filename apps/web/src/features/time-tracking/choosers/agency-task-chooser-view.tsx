@@ -1,6 +1,7 @@
 import { ChevronDown, Search } from "lucide-react";
 
 import { AgencyProjectHueDot } from "@/features/shared/agency-project-hue-dot";
+import { AgencySearchHighlight } from "@/features/shared/agency-search-highlight";
 import { AgencyTimeEntryProjectLabel } from "@/features/time-tracking/entries/agency-time-entry-project-label";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
@@ -16,6 +17,7 @@ type AgencyTaskChooserViewProps = {
 
 export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
   const {
+    mode,
     value,
     disabled,
     loading,
@@ -26,22 +28,67 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     triggerFormat,
     open,
     searchTerm,
-    selectedProject,
     triggerProject,
     triggerTaskTitle,
     groupedProjects,
     searchInputRef,
     listRef,
     isProjectExpanded,
-    isTaskGroupExpanded,
+    isProjectSelectedForCreate,
     onOpenChange,
     onSearchChange,
     onSelectTask,
     onToggleProject,
-    onToggleTaskGroup,
     statusDotClass,
-    formatDueDate,
+    suggestionMenu,
+    onSearchKeyDown,
+    highlightSearch,
   } = view;
+
+  const isCreateMode = mode === "create";
+
+  function renderHighlightedLabel(text: string) {
+    if (!highlightSearch) return text;
+    return <AgencySearchHighlight text={text} query={searchTerm} />;
+  }
+
+  function renderTriggerLabel() {
+    if (loading) {
+      return <span className="min-w-0 truncate text-muted">Loading…</span>;
+    }
+    if (triggerFormat === "task-client") {
+      if (triggerProject && triggerTaskTitle) {
+        return (
+          <AgencyTimeEntryProjectLabel
+            format="task-client"
+            projectId={triggerProject.id}
+            projectName={triggerProject.name}
+            clientName={triggerProject.clientName}
+            taskTitle={triggerTaskTitle}
+            className="min-w-0"
+          />
+        );
+      }
+      return <span className="min-w-0 truncate text-muted">{placeholder}</span>;
+    }
+    if (triggerFormat === "project-client") {
+      if (triggerProject) {
+        return (
+          <AgencyTimeEntryProjectLabel
+            projectId={triggerProject.id}
+            projectName={triggerProject.name}
+            clientName={triggerProject.clientName}
+            className="min-w-0"
+          />
+        );
+      }
+      return <span className="min-w-0 truncate text-muted">{placeholder}</span>;
+    }
+    if (triggerTaskTitle) {
+      return <span className="min-w-0 truncate">{triggerTaskTitle}</span>;
+    }
+    return <span className="min-w-0 truncate text-muted">{placeholder}</span>;
+  }
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -52,44 +99,11 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
           disabled={disabled || loading}
           className={cn(
             "w-64 max-w-full justify-start",
-            triggerFormat === "project-client" ? "gap-1" : "gap-2",
+            triggerFormat === "task-only" ? "gap-2" : "gap-1",
             className,
           )}
         >
-          {triggerFormat === "project-client" ? (
-            loading ? (
-              <span className="min-w-0 truncate text-muted">Loading…</span>
-            ) : selectedProject ? (
-              <AgencyTimeEntryProjectLabel
-                projectId={selectedProject.id}
-                projectName={selectedProject.name}
-                clientName={selectedProject.clientName}
-                className="min-w-0"
-              />
-            ) : (
-              <span className="min-w-0 truncate text-muted">{placeholder}</span>
-            )
-          ) : triggerFormat === "task-only" ? (
-            loading ? (
-              <span className="min-w-0 truncate text-muted">Loading…</span>
-            ) : triggerTaskTitle ? (
-              <span className="min-w-0 truncate">{triggerTaskTitle}</span>
-            ) : (
-              <span className="min-w-0 truncate text-muted">{placeholder}</span>
-            )
-          ) : loading ? (
-            <span className="min-w-0 truncate text-muted">Loading…</span>
-          ) : triggerProject && triggerTaskTitle ? (
-            <AgencyTimeEntryProjectLabel
-              format="task-project"
-              projectId={triggerProject.id}
-              projectName={triggerProject.name}
-              taskTitle={triggerTaskTitle}
-              className="min-w-0"
-            />
-          ) : (
-            <span className="min-w-0 truncate text-muted">{placeholder}</span>
-          )}
+          {renderTriggerLabel()}
         </Button>
       </PopoverTrigger>
       <PopoverContent align={contentAlign} className="w-[22rem] max-w-[calc(100vw-2rem)] p-0">
@@ -101,6 +115,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
               autoFocus
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={onSearchKeyDown}
               placeholder={searchPlaceholder}
               className={cn(
                 "h-9 rounded-lg border-default bg-default pl-8 text-sm",
@@ -108,6 +123,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
               )}
             />
           </div>
+          {suggestionMenu}
         </div>
         <div ref={listRef} className="max-h-[24rem] overflow-y-auto py-2">
           {loading ? (
@@ -118,7 +134,13 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
             </div>
           ) : groupedProjects.length === 0 ? (
             <p className="px-4 py-6 text-center text-xs text-muted">
-              {searchTerm.trim() ? "No matching active tasks." : "No open or in-progress tasks."}
+              {searchTerm.trim()
+                ? isCreateMode
+                  ? "No matching projects or tasks."
+                  : "No matching active tasks."
+                : isCreateMode
+                  ? "Choose a project for this task."
+                  : "No open or in-progress tasks."}
             </p>
           ) : (
             groupedProjects.map((group) => (
@@ -126,31 +148,21 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                 <div className="mb-1 flex items-center justify-between px-4 text-[11px] font-semibold text-muted">
                   <span className="uppercase tracking-[0.12em]">{group.clientName}</span>
                   <span className="font-mono tabular-nums">
-                    {group.projects.reduce(
-                      (total, entry) =>
-                        total +
-                        entry.taskGroups.reduce(
-                          (groupTotal, taskGroup) => groupTotal + taskGroup.instanceCount,
-                          0,
-                        ),
-                      0,
-                    )}{" "}
-                    Tasks
+                    {group.projects.reduce((total, entry) => total + entry.tasks.length, 0)} Tasks
                   </span>
                 </div>
 
-                {group.projects.map(({ project, taskGroups }) => {
+                {group.projects.map(({ project, tasks: projectTasks }) => {
                   const expanded = isProjectExpanded(project.id);
-                  const projectTaskCount = taskGroups.reduce(
-                    (total, taskGroup) => total + taskGroup.instanceCount,
-                    0,
-                  );
+                  const projectSelected = isProjectSelectedForCreate(project.id);
                   return (
                     <div key={project.id}>
                       <button
                         type="button"
+                        data-selected-project={projectSelected ? "true" : undefined}
                         className={cn(
                           "flex w-full items-center gap-2 px-4 py-1.5 text-left text-sm transition-colors hover:bg-default/70",
+                          projectSelected && "bg-primary/10 hover:bg-primary/10",
                           agencyFocusRingClass,
                           "motion-reduce:transition-none",
                         )}
@@ -159,10 +171,10 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
                       >
                         <AgencyProjectHueDot projectId={project.id} className="size-1.5" />
                         <span className="min-w-0 flex-1 truncate font-medium text-highlighted">
-                          {project.name}
+                          {renderHighlightedLabel(project.name)}
                         </span>
                         <span className="ml-1 shrink-0 font-mono text-xs tabular-nums text-muted">
-                          {projectTaskCount} {projectTaskCount === 1 ? "Task" : "Tasks"}
+                          {projectTasks.length} {projectTasks.length === 1 ? "Task" : "Tasks"}
                         </span>
                         <ChevronDown
                           className={cn(
@@ -175,92 +187,41 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
 
                       {expanded ? (
                         <div className="pb-1">
-                          {taskGroups.map((taskGroup) => {
-                            const groupExpanded =
-                              taskGroup.instanceCount === 1 ||
-                              isTaskGroupExpanded(taskGroup.groupKey);
+                          {projectTasks.length === 0 && isCreateMode ? (
+                            <p className="px-7 py-1.5 text-[11px] text-muted">
+                              New task will be created in this project.
+                            </p>
+                          ) : null}
+                          {projectTasks.map((task) => {
+                            const selected = !isCreateMode && task.id === value;
                             return (
-                              <div key={taskGroup.groupKey} className="mx-2">
-                                {taskGroup.instanceCount > 1 ? (
-                                  <button
-                                    type="button"
-                                    className={cn(
-                                      "flex w-full items-center gap-2 rounded-lg py-1.5 pr-2 pl-5 text-left transition-colors hover:bg-default/80",
-                                      agencyFocusRingClass,
-                                      "motion-reduce:transition-none",
-                                    )}
-                                    onClick={() => onToggleTaskGroup(taskGroup.groupKey)}
-                                    aria-expanded={groupExpanded}
-                                  >
-                                    <ChevronDown
-                                      className={cn(
-                                        "size-3 shrink-0 text-muted transition-transform duration-200 motion-reduce:transition-none",
-                                        groupExpanded && "rotate-180",
-                                      )}
-                                      aria-hidden
-                                    />
-                                    <span className="min-w-0 flex-1 truncate text-xs font-semibold text-highlighted">
-                                      {taskGroup.title}
-                                    </span>
-                                    <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-                                      ×{taskGroup.instanceCount}
-                                    </span>
-                                  </button>
-                                ) : null}
-
-                                {groupExpanded
-                                  ? taskGroup.instances.map((task) => {
-                                      const selected = task.id === value;
-                                      const instanceLabel =
-                                        taskGroup.instanceCount > 1
-                                          ? new Date(task.createdAt ?? "").toLocaleDateString(
-                                              undefined,
-                                              {
-                                                month: "short",
-                                                day: "numeric",
-                                              },
-                                            )
-                                          : task.title;
-                                      return (
-                                        <button
-                                          key={task.id}
-                                          type="button"
-                                          data-selected-task={selected ? "true" : undefined}
-                                          className={cn(
-                                            "group flex w-full items-center gap-2 rounded-lg py-1.5 pr-2 text-left transition-colors hover:bg-default/80",
-                                            taskGroup.instanceCount > 1 ? "pl-9" : "pl-7",
-                                            selected && "bg-primary/10 hover:bg-primary/10",
-                                            agencyFocusRingClass,
-                                            "motion-reduce:transition-none",
-                                          )}
-                                          onClick={() => onSelectTask(task.id)}
-                                        >
-                                          <span
-                                            className={cn(
-                                              "size-1.5 shrink-0 rounded-full",
-                                              statusDotClass(task.status),
-                                            )}
-                                          />
-                                          <span className="min-w-0 flex-1">
-                                            <span
-                                              className={cn(
-                                                "block truncate text-xs font-semibold",
-                                                selected ? "text-primary" : "text-highlighted",
-                                              )}
-                                            >
-                                              {instanceLabel}
-                                            </span>
-                                            {formatDueDate(task.dueDate) ? (
-                                              <span className="mt-0.5 block truncate text-[11px] text-muted">
-                                                Due {formatDueDate(task.dueDate)}
-                                              </span>
-                                            ) : null}
-                                          </span>
-                                        </button>
-                                      );
-                                    })
-                                  : null}
-                              </div>
+                              <button
+                                key={task.id}
+                                type="button"
+                                data-selected-task={selected ? "true" : undefined}
+                                className={cn(
+                                  "group flex w-full items-center gap-2 rounded-lg py-1.5 pr-2 pl-7 text-left transition-colors hover:bg-default/80",
+                                  selected && "bg-primary/10 hover:bg-primary/10",
+                                  agencyFocusRingClass,
+                                  "motion-reduce:transition-none",
+                                )}
+                                onClick={() => onSelectTask(task.id)}
+                              >
+                                <span
+                                  className={cn(
+                                    "size-1.5 shrink-0 rounded-full",
+                                    statusDotClass(task.status),
+                                  )}
+                                />
+                                <span
+                                  className={cn(
+                                    "min-w-0 flex-1 truncate text-xs font-semibold",
+                                    selected ? "text-primary" : "text-highlighted",
+                                  )}
+                                >
+                                  {renderHighlightedLabel(task.title)}
+                                </span>
+                              </button>
                             );
                           })}
                         </div>
