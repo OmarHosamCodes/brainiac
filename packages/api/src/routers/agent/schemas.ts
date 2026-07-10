@@ -13,4 +13,4 @@ export {
   getOpenRouterAccountStatus,
   listOpenRouterFreeModels,
   listOpenRouterModels,
-} from "@brainiac/agent";
+} from "@orch/agent";

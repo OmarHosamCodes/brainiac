@@ -1,5 +1,5 @@
 {
-  "name": "@brainiac/api",
+  "name": "@orch/api",
   "type": "module",
   "exports": {
     ".": {
@@ -16,11 +16,11 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1067.0",
     "@aws-sdk/s3-request-presigner": "^3.1067.0",
-    "@brainiac/agent": "workspace:*",
-    "@brainiac/auth": "workspace:*",
-    "@brainiac/db": "workspace:*",
-    "@brainiac/env": "workspace:*",
-    "@brainiac/workspace": "workspace:*",
+    "@orch/agent": "workspace:*",
+    "@orch/auth": "workspace:*",
+    "@orch/db": "workspace:*",
+    "@orch/env": "workspace:*",
+    "@orch/workspace": "workspace:*",
     "@orpc/server": "catalog:",
     "@polar-sh/sdk": "^0.47.0",
     "@types/pg": "catalog:",
@@ -30,7 +30,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@brainiac/config": "workspace:*",
+    "@orch/config": "workspace:*",
     "hono": "catalog:",
     "typescript": "catalog:"
   }

@@ -1,5 +1,5 @@
 {
-  "name": "@brainiac/db",
+  "name": "@orch/db",
   "type": "module",
   "exports": {
     ".": {
@@ -22,14 +22,14 @@
     "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"
   },
   "dependencies": {
-    "@brainiac/env": "workspace:*",
-    "@brainiac/workspace": "workspace:*",
+    "@orch/env": "workspace:*",
+    "@orch/workspace": "workspace:*",
     "dotenv": "catalog:",
     "drizzle-orm": "catalog:",
     "pg": "^8.17.1"
   },
   "devDependencies": {
-    "@brainiac/config": "workspace:*",
+    "@orch/config": "workspace:*",
     "@types/pg": "catalog:",
     "drizzle-kit": "^0.31.8",
     "typescript": "catalog:"

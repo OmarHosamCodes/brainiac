@@ -1,6 +1,6 @@
 # Golden File Pattern
 
-This document establishes the golden feature pattern for Brainiac. Use it when adding, expanding, or reviewing a feature that spans persistence, API contracts, business logic, live sync, client state, and UI.
+This document establishes the golden feature pattern for Orch. Use it when adding, expanding, or reviewing a feature that spans persistence, API contracts, business logic, live sync, client state, and UI.
 
 The exemplar feature is **Agency Time Tracking** because it is moderately complex and touches every important layer without being too broad:
 
@@ -124,7 +124,7 @@ packages/api/src/routers/agency-ops/shared/membership.ts
 packages/api/src/routers/agency-ops/shared/utils.ts
 ```
 
-Brainiac currently keeps feature-local data access inside the service file. That is the golden pattern unless a service grows enough that private repository helpers make it materially clearer.
+Orch currently keeps feature-local data access inside the service file. That is the golden pattern unless a service grows enough that private repository helpers make it materially clearer.
 
 The service owns:
 

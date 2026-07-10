@@ -1,5 +1,5 @@
-import { db } from "@brainiac/db";
-import { user } from "@brainiac/db/schema/auth";
+import { db } from "@orch/db";
+import { user } from "@orch/db/schema/auth";
 import { eq } from "drizzle-orm";
 
 type CliOptions = {

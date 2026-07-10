@@ -1,9 +1,9 @@
-import { db } from "@brainiac/db";
+import { db } from "@orch/db";
 import {
   dashboardWorkspace,
   workspaceMarketplaceItem,
   type WorkspaceNodeRecord,
-} from "@brainiac/db/schema/workspace";
+} from "@orch/db/schema/workspace";
 import { eq } from "drizzle-orm";
 
 const LEGACY_AGENCY_OPERATOR_NODE_TYPE = "agency-operator";

@@ -1,4 +1,4 @@
-import type { NotificationPayload } from "@brainiac/db/schema";
+import type { NotificationPayload } from "@orch/db/schema";
 
 import {
   fanOutNotification,

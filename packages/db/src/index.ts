@@ -1,4 +1,4 @@
-import { env } from "@brainiac/env/server";
+import { env } from "@orch/env/server";
 import { drizzle } from "drizzle-orm/node-postgres";
 
 import * as schema from "./schema";

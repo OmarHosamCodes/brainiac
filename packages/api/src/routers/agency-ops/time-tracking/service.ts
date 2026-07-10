@@ -1,5 +1,5 @@
 import { ORPCError } from "@orpc/server";
-import { db } from "@brainiac/db";
+import { db } from "@orch/db";
 import {
   agencyOpsActiveTimer,
   agencyOpsProjectTask,
@@ -10,9 +10,9 @@ import {
   agencyOpsClient,
   agencyOpsTimeEntry,
   workspaceTeamMember,
-} from "@brainiac/db/schema";
+} from "@orch/db/schema";
 import { eq, and, asc, isNull, desc, sql, gte, lte } from "drizzle-orm";
-import { createWorkspaceId } from "@brainiac/workspace";
+import { createWorkspaceId } from "@orch/workspace";
 import { notifyTimerActivity } from "../../notifications/fanout";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import { getProjectByIdForTeam } from "../shared/lookup-helpers";

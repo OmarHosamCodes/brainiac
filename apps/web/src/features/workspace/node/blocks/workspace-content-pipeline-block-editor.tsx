@@ -8,7 +8,7 @@ import {
   type WorkspaceContentPipelineBlock,
   type WorkspaceContentPipelineStatus,
   type WorkspaceContentPlatform,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import {
   ArrowLeft,
   ArrowRight,

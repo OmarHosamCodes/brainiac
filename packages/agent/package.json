@@ -1,5 +1,5 @@
 {
-  "name": "@brainiac/agent",
+  "name": "@orch/agent",
   "type": "module",
   "exports": {
     ".": {
@@ -14,10 +14,10 @@
     "clean": "git clean -xdf .turbo node_modules dist .nuxt .output"
   },
   "dependencies": {
-    "@brainiac/config": "workspace:*",
-    "@brainiac/env": "workspace:*",
-    "@brainiac/workspace": "workspace:*",
     "@openrouter/sdk": "latest",
+    "@orch/config": "workspace:*",
+    "@orch/env": "workspace:*",
+    "@orch/workspace": "workspace:*",
     "zod": "catalog:"
   },
   "devDependencies": {

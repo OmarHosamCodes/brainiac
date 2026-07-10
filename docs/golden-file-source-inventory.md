@@ -9,7 +9,7 @@ Included: all product JavaScript/TypeScript and CSS files in the declared app/pa
 Explicit exclusions:
 
 - `node_modules/**`, `**/dist/**`, `.turbo/**`, `.nuxt/**`, and `.output/**`: installed dependencies or generated build/cache output.
-- `.agents/**` and other editor/agent skill state: vendored agent assets, not Brainiac product source.
+- `.agents/**` and other editor/agent skill state: vendored agent assets, not Orch product source.
 - Documentation, design artifacts, screenshots, fonts, SVGs, and other static public media: governed as content/assets rather than executable architecture.
 - Git metadata and source-control ignore files, local logs, scratch output, and local-only tool caches: repository housekeeping or non-product machine state.
 

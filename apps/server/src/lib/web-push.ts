@@ -1,12 +1,12 @@
-import { db } from "@brainiac/db";
-import { pushSubscription } from "@brainiac/db/schema";
-import { env, primaryCorsOrigin } from "@brainiac/env/server";
+import { db } from "@orch/db";
+import { pushSubscription } from "@orch/db/schema";
+import { env, primaryCorsOrigin } from "@orch/env/server";
 import { eq } from "drizzle-orm";
 import webpush from "web-push";
 
-import type { NotificationRecord } from "@brainiac/api/schemas/notifications";
-import { notificationPushCopy } from "@brainiac/api/routers/notifications/copy";
-import { listPushSubscriptionsForUser } from "@brainiac/api/routers/notifications/service";
+import type { NotificationRecord } from "@orch/api/schemas/notifications";
+import { notificationPushCopy } from "@orch/api/routers/notifications/copy";
+import { listPushSubscriptionsForUser } from "@orch/api/routers/notifications/service";
 
 let configured = false;
 

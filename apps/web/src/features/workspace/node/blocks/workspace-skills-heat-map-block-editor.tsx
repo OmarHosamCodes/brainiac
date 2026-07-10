@@ -6,7 +6,7 @@ import {
   getSkillsHeatMapMemberAverage,
   getSkillsHeatMapSummary,
   type WorkspaceSkillsHeatMapBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Plus, Trash2, UserPlus, X } from "lucide-react";
 import { useMemo } from "react";
 

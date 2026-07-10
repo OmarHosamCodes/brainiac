@@ -1,4 +1,4 @@
-import type { WorkspaceMarketplaceItem } from "@brainiac/workspace";
+import type { WorkspaceMarketplaceItem } from "@orch/workspace";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 

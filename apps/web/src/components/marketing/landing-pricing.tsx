@@ -80,7 +80,7 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
 
         <div className="mt-12 overflow-hidden rounded-2xl border border-border">
           <table className="w-full border-collapse text-left">
-            <caption className="sr-only">Brainiac plan comparison</caption>
+            <caption className="sr-only">Orch plan comparison</caption>
             <thead>
               <tr className="border-b border-border bg-muted/60">
                 <th

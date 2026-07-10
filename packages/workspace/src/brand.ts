@@ -171,7 +171,7 @@ export function buildHookBankGenerationPrompt(block: WorkspaceHookBankBlock) {
     .join("\n");
 
   return [
-    "Act as Brainiac's Brand agent.",
+    "Act as Orch's Brand agent.",
     "Generate 5 sharp content hooks for Ahmed's personal brand.",
     "Keep them practical, specific, and suitable for a marketing operator/founder audience.",
     "Vary the angle across categories such as pattern-interrupt, investment, mistake, insider, contrarian, or proof.",
@@ -195,7 +195,7 @@ export function buildMessageHouseStressTestPrompt(block: WorkspaceMessageHouseBl
     .join("\n");
 
   return [
-    "Act as Brainiac's Brand agent.",
+    "Act as Orch's Brand agent.",
     "Stress-test this message house for gaps, contradictions, weak proof, and fuzzy positioning.",
     "Respond in concise markdown with these sections only:",
     "1. Gaps",

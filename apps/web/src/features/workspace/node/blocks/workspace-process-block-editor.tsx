@@ -2,7 +2,7 @@ import {
   createWorkspaceProcessStep,
   getProcessSummary,
   type WorkspaceProcessBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { ChevronDown, ChevronUp, ListChecks, Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 
-import { formatTaskAssigneeLabel } from "@brainiac/api/schemas/agency-ops";
+import { formatTaskAssigneeLabel } from "@orch/api/schemas/agency-ops";
 import type {
   AgencyProject,
   AgencyProjectTask,

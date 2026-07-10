@@ -5,8 +5,8 @@ import {
   createWorkspaceTask,
   createWorkspaceTaskListBlock,
   type WorkspaceNode,
-} from "@brainiac/workspace";
-import type { AgentToolCallEntry } from "@brainiac/agent";
+} from "@orch/workspace";
+import type { AgentToolCallEntry } from "@orch/agent";
 
 const NOW = "2026-06-15T14:30:00.000Z";
 
@@ -177,7 +177,7 @@ export const marketingAgencyRows = [
     description: "Roadmap review",
     projectId: "proj-internal",
     projectName: "Internal",
-    clientName: "Brainiac",
+    clientName: "Orch",
     startedAt: "2026-06-15T13:00:00.000Z",
     endedAt: "2026-06-15T14:05:00.000Z",
     durationSeconds: 3900,

@@ -3,7 +3,7 @@ import type {
   WorkspaceNode,
   WorkspaceNodeTab,
   WorkspaceTeamRole,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import {
   ArrowLeft,
   Blocks,

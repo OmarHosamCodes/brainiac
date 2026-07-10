@@ -1,5 +1,5 @@
 {
-  "name": "@brainiac/config",
+  "name": "@orch/config",
   "version": "0.0.0",
   "private": true,
   "exports": {

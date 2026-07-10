@@ -34,7 +34,7 @@ async function main() {
     "src/operations/maintenance/grant-lifetime-pro.ts",
     "--",
     "--email",
-    "founder@brainiac.test",
+    "founder@orch.test",
   ]);
 
   console.log("Massive seed complete.");

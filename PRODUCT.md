@@ -6,13 +6,13 @@ Spatial knowledge workspace with embedded AI and agency operations
 
 ## Users
 
-Knowledge workers — researchers, analysts, PMs, founders — managing complex, interconnected information across projects. They use Brainiac during focused work sessions on desktop, often for hours at a time. Their job to be done is to externalize thinking onto a spatial canvas, structure it into nodes and blocks, and collaborate with an AI agent that can read and mutate the workspace alongside them.
+Knowledge workers — researchers, analysts, PMs, founders — managing complex, interconnected information across projects. They use Orch during focused work sessions on desktop, often for hours at a time. Their job to be done is to externalize thinking onto a spatial canvas, structure it into nodes and blocks, and collaborate with an AI agent that can read and mutate the workspace alongside them.
 
 The canvas surface (Dashboard) is for spatial knowledge work — the user is exploring, organizing, and reshaping ideas. The Agency surface is for time and operations tracking — the user is structured and execution-focused there.
 
 ## Product Purpose
 
-Brainiac is a spatial knowledge workspace where every piece of work has a place on an infinite canvas. Nodes hold tabs, tabs hold blocks (task lists, notes, kanban boards, decision matrices, AI prompts, and more). An embedded AI agent can read and mutate the workspace through tools, turning conversation into structural changes the user can see appear on the canvas in real time.
+Orch is a spatial knowledge workspace where every piece of work has a place on an infinite canvas. Nodes hold tabs, tabs hold blocks (task lists, notes, kanban boards, decision matrices, AI prompts, and more). An embedded AI agent can read and mutate the workspace through tools, turning conversation into structural changes the user can see appear on the canvas in real time.
 
 Success looks like a user thinking out loud to the agent, watching their workspace reshape itself, and ending the session with a more structured, more useful map of what they're working on than they could have built by clicking alone.
 

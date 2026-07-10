@@ -1,5 +1,5 @@
 ---
-name: Brainiac
+name: Orch
 description: A spatial knowledge workspace with an embedded agent. Two registers, one quiet visual voice.
 colors:
   operator-emerald: "#10b981"
@@ -129,13 +129,13 @@ components:
     typography: "{typography.label}"
 ---
 
-# Design System: Brainiac
+# Design System: Orch
 
 ## 1. Overview
 
 **Creative North Star: "Two Registers, One Voice"**
 
-Brainiac runs two surfaces inside one product. The Dashboard is spatial: an infinite canvas where users pan, zoom, place, and connect. The Agency is structured: rows, totals, time, execution. The visual system has to speak both dialects without ever sounding like two products bolted together. One typographic voice, one quiet color discipline, one component vocabulary; the layout grammar shifts between registers.
+Orch runs two surfaces inside one product. The Dashboard is spatial: an infinite canvas where users pan, zoom, place, and connect. The Agency is structured: rows, totals, time, execution. The visual system has to speak both dialects without ever sounding like two products bolted together. One typographic voice, one quiet color discipline, one component vocabulary; the layout grammar shifts between registers.
 
 The system rejects the dominant aesthetic of its category. No purple-blue gradient heroes, no animated orbs, no gradient text, no glassmorphism, no AI-tool neon. The agent is a tool, not a personality. The canvas is the product. UI chrome serves the work and gets out of the way the moment a user is thinking. Calm, focused, plain-spoken. Trust earned through restraint, not flash.
 

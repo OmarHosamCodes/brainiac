@@ -6,7 +6,7 @@
  *   bun run src/operations/backfills/verify-clockify-backfill.ts --before 2026-06-25
  */
 import { sql } from "drizzle-orm";
-import { db } from "@brainiac/db";
+import { db } from "@orch/db";
 
 const DEFAULT_BEFORE = "2026-06-25";
 

@@ -8,8 +8,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const perfDir = resolve(__dirname);
 const storageStatePath = resolve(perfDir, ".auth", "storage-state.json");
 
-const DEFAULT_EMAIL = "founder@brainiac.test";
-const DEFAULT_PASSWORD = "brainiac1234";
+const DEFAULT_EMAIL = "founder@orch.test";
+const DEFAULT_PASSWORD = "orch1234";
 
 /**
  * @param {{ baseUrl: string; email?: string; password?: string }} options

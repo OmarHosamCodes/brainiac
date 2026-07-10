@@ -13,7 +13,7 @@ import {
   type WorkspaceLeadershipRhythm,
   type WorkspaceLeadershipRhythmFilter,
   type WorkspaceLeadershipRhythmPlannerBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Calendar, Plus, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

@@ -1,4 +1,4 @@
-import type { AgencyTimeEntry } from "@brainiac/api/schemas/agency-ops";
+import type { AgencyTimeEntry } from "@orch/api/schemas/agency-ops";
 
 import {
   AGENCY_REPORT_FIELD_LABELS,

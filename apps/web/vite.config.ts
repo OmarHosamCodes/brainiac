@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import path from "node:path";
 import { defineConfig, loadEnv } from "vite";
 
-import "@brainiac/env/vite";
+import "@orch/env/vite";
 
 import { marketingPrerenderShell } from "./vite-marketing-prerender";
 

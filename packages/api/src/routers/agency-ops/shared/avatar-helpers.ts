@@ -1,5 +1,5 @@
 import { getUserAvatarPublicUrl } from "../../../storage";
-import { env } from "@brainiac/env/server";
+import { env } from "@orch/env/server";
 
 export const AVATAR_KEY_PREFIX = "user-avatars/";
 

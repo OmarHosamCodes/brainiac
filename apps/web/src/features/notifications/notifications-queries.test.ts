@@ -1,7 +1,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, test } from "bun:test";
 
-import type { NotificationRecord } from "@brainiac/api/schemas/notifications";
+import type { NotificationRecord } from "@orch/api/schemas/notifications";
 import { orpc } from "@/lib/orpc";
 import {
   applyNotificationCreatedToCache,

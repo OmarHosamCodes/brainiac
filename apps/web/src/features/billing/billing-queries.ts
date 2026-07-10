@@ -1,4 +1,4 @@
-import type { TierLimits } from "@brainiac/workspace/tiers";
+import type { TierLimits } from "@orch/workspace/tiers";
 import type { QueryClient } from "@tanstack/react-query";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 

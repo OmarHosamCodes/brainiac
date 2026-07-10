@@ -1,4 +1,4 @@
-import type { AgencyLiveEvent } from "@brainiac/api/routers/agency-ops/live/live";
+import type { AgencyLiveEvent } from "@orch/api/routers/agency-ops/live/live";
 
 import { authClient } from "@/lib/auth-client";
 import { applyNotificationCreatedToCache } from "@/features/notifications/notifications-queries";

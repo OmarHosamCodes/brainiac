@@ -1,4 +1,4 @@
-import type { WorkspaceKanbanBlock } from "@brainiac/workspace";
+import type { WorkspaceKanbanBlock } from "@orch/workspace";
 import { Calendar, ChevronUp, Expand, Plus, Trash2, User } from "lucide-react";
 import { useMemo, useState, type DragEvent } from "react";
 

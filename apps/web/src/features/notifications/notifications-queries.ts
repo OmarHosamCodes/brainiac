@@ -1,4 +1,4 @@
-import type { NotificationRecord } from "@brainiac/api/schemas/notifications";
+import type { NotificationRecord } from "@orch/api/schemas/notifications";
 import type { QueryClient } from "@tanstack/react-query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 

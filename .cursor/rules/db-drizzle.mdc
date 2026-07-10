@@ -51,6 +51,6 @@ Export new tables from `packages/db/src/schema/index.ts`.
 No repository layer — query directly in `packages/api/src/routers/*/service.ts`:
 
 ```typescript
-import { db } from "@brainiac/db";
-import { agencyOpsClient } from "@brainiac/db/schema";
+import { db } from "@orch/db";
+import { agencyOpsClient } from "@orch/db/schema";
 ```

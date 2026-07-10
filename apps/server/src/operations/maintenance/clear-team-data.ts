@@ -7,7 +7,7 @@ import {
   outro,
   spinner,
 } from "@clack/prompts";
-import { db } from "@brainiac/db";
+import { db } from "@orch/db";
 import {
   agencyOpsActiveTimer,
   agencyOpsClient,
@@ -22,7 +22,7 @@ import {
   agencyOpsTenureQuarterExemption,
   agencyOpsTimeEntry,
   workspaceTeam,
-} from "@brainiac/db/schema";
+} from "@orch/db/schema";
 import { count, eq } from "drizzle-orm";
 
 type DataCategory =

@@ -1,4 +1,4 @@
-import type { WorkspaceAiPromptBlock } from "@brainiac/workspace";
+import type { WorkspaceAiPromptBlock } from "@orch/workspace";
 import { AlertCircle, History, Sparkles, Terminal, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 

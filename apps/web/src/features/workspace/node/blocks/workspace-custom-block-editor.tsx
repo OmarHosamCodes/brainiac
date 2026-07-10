@@ -1,4 +1,4 @@
-import type { WorkspaceCustomBlock, WorkspaceCustomBlockField } from "@brainiac/workspace";
+import type { WorkspaceCustomBlock, WorkspaceCustomBlockField } from "@orch/workspace";
 import { AlertCircle, AlertTriangle, Loader2, Play } from "lucide-react";
 import { useMemo, useState } from "react";
 

@@ -1,4 +1,4 @@
-import { getSwotSummary, type WorkspaceSwotBlock } from "@brainiac/workspace";
+import { getSwotSummary, type WorkspaceSwotBlock } from "@orch/workspace";
 import { useMemo } from "react";
 
 import type { WorkspaceBlockEditorProps } from "@/features/workspace/node/block-editor-props";

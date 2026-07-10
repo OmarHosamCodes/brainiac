@@ -1,4 +1,4 @@
-import type { WorkspaceNode } from "@brainiac/workspace";
+import type { WorkspaceNode } from "@orch/workspace";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";

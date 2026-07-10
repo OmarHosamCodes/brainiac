@@ -1,4 +1,4 @@
-import { workspaceTeamRoleSchema } from "@brainiac/workspace";
+import { workspaceTeamRoleSchema } from "@orch/workspace";
 import { z } from "zod";
 
 import { protectedProcedure } from "../../procedures";

@@ -1,4 +1,4 @@
-import type { WorkspaceMarketplaceItem } from "@brainiac/workspace";
+import type { WorkspaceMarketplaceItem } from "@orch/workspace";
 import { useEffect, useRef, useState } from "react";
 
 import { useShellBootGate } from "@/features/app-shell/shell/use-shell-boot-gate";

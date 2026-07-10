@@ -1,6 +1,6 @@
-import { auth } from "@brainiac/auth";
+import { auth } from "@orch/auth";
 
-import type { Context } from "@brainiac/api/context";
+import type { Context } from "@orch/api/context";
 
 export async function createWebSocketContext(request: Request): Promise<Context> {
   const session = await auth.api.getSession({

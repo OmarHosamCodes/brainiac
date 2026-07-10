@@ -13,7 +13,7 @@ import type {
   WorkspaceTimeOrchestratorBlock,
   WorkspaceTimeOrchestratorSummary,
   WorkspaceTimelineBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { createContext, useContext, type ReactNode } from "react";
 
 import type { WorkspaceBlockPresetId } from "@/features/workspace/utils/workspace-block-presets";

@@ -6,7 +6,7 @@ export default defineConfig({
   outDir: "./dist",
   clean: true,
   dts: false,
-  noExternal: [/@brainiac\/.*/],
+  noExternal: [/@orch\/.*/],
   deps: {
     neverBundle: ["sharp"],
   },

@@ -1,4 +1,4 @@
-import type { WorkspaceNode } from "@brainiac/workspace";
+import type { WorkspaceNode } from "@orch/workspace";
 import { useCallback, useEffect, useMemo } from "react";
 
 import { orpc } from "@/lib/orpc";

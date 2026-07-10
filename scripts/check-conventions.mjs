@@ -167,7 +167,7 @@ function forbiddenViewImport(source) {
     source.includes("/auth-client") ||
     source.includes("/auth/") ||
     source.startsWith("better-auth") ||
-    source.startsWith("@brainiac/auth")
+    source.startsWith("@orch/auth")
   ) {
     return "auth or router orchestration";
   }
@@ -399,7 +399,7 @@ function scanGoldenRouter(record) {
   const { normalized, sourceFile } = record;
 
   for (const imported of runtimeImports(sourceFile)) {
-    if (imported.source.includes("@brainiac/db") || imported.source.includes("drizzle-orm")) {
+    if (imported.source.includes("@orch/db") || imported.source.includes("drizzle-orm")) {
       violations.push({
         file: normalized,
         line: imported.line,
@@ -618,8 +618,7 @@ function scanFile(filePath, content) {
     if (isRouterFile) {
       const isImport = trimmed.startsWith("import ");
       if (isImport) {
-        const importsDbOrDrizzle =
-          trimmed.includes("@brainiac/db") || trimmed.includes("drizzle-orm");
+        const importsDbOrDrizzle = trimmed.includes("@orch/db") || trimmed.includes("drizzle-orm");
         const importsStore = trimmed.includes("/stores/") || trimmed.includes("@/stores/");
 
         if (importsDbOrDrizzle) {

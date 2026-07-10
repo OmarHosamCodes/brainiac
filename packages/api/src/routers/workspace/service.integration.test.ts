@@ -1,13 +1,13 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
 
-Bun.env.DATABASE_URL ??= "postgresql://postgres:password@localhost:5440/brainiac";
+Bun.env.DATABASE_URL ??= "postgresql://postgres:password@localhost:5440/orch";
 
 const [{ db }, { user }, { createWorkspaceNode }, teamService, workspaceService] =
   await Promise.all([
-    import("@brainiac/db"),
-    import("@brainiac/db/schema/auth"),
-    import("@brainiac/workspace"),
+    import("@orch/db"),
+    import("@orch/db/schema/auth"),
+    import("@orch/workspace"),
     import("../team/service"),
     import("./service"),
   ]);

@@ -6,7 +6,7 @@ import {
   workspaceCohortStatusLabels,
   type WorkspaceCohortHealthDashboardBlock,
   type WorkspaceCohortStatus,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Plus, Trash2, Users } from "lucide-react";
 import { useMemo } from "react";
 

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --port 7001",
-    "dev:portless": "portless web.brainiac vite --port 3001",
+    "dev:portless": "portless web.orch vite --port 3001",
     "build": "vite build && bun run scripts/write-railway-server.mjs",
     "start": "bun run .output/server/index.mjs",
     "preview": "vite preview --port 7001",
@@ -13,12 +13,12 @@
     "clean": "git clean -xdf .turbo node_modules dist .output"
   },
   "dependencies": {
-    "@brainiac/agent": "workspace:*",
-    "@brainiac/api": "workspace:*",
-    "@brainiac/config": "workspace:*",
-    "@brainiac/env": "workspace:*",
-    "@brainiac/workspace": "workspace:*",
     "@hookform/resolvers": "^5.4.0",
+    "@orch/agent": "workspace:*",
+    "@orch/api": "workspace:*",
+    "@orch/config": "workspace:*",
+    "@orch/env": "workspace:*",
+    "@orch/workspace": "workspace:*",
     "@orpc/client": "catalog:",
     "@orpc/tanstack-query": "^1.14.6",
     "@polar-sh/better-auth": "^1.8.4",

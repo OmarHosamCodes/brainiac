@@ -1,17 +1,17 @@
-name: brainiac
+name: orch
 
 services:
   postgres:
     image: postgres
-    container_name: brainiac-postgres
+    container_name: orch-postgres
     environment:
-      POSTGRES_DB: brainiac
+      POSTGRES_DB: orch
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     ports:
       - "5440:5432"
     volumes:
-      - brainiac_postgres_data:/var/lib/postgresql
+      - orch_postgres_data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -21,7 +21,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: brainiac-redis
+    container_name: orch-redis
     ports:
       - "6379:6379"
     healthcheck:
@@ -32,4 +32,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  brainiac_postgres_data:
+  orch_postgres_data:

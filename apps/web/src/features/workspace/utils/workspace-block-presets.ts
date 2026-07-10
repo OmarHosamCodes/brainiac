@@ -16,7 +16,7 @@ import {
   createWorkspaceTimeOrchestratorBlock,
   createWorkspaceTrackerBlock,
   type WorkspaceBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 
 export type WorkspaceBlockPresetId =
   | "plan-and-ship"

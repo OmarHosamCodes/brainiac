@@ -1,4 +1,4 @@
-import type { WorkspaceBlock } from "@brainiac/workspace";
+import type { WorkspaceBlock } from "@orch/workspace";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowRightLeft,

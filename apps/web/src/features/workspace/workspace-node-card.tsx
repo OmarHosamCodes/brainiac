@@ -4,7 +4,7 @@ import {
   getWorkspaceNodeStats,
   type WorkspaceBlock,
   type WorkspaceNode,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Layers, Waypoints } from "lucide-react";
 import { useMemo } from "react";
 

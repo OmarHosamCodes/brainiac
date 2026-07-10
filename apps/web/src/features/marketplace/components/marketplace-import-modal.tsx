@@ -1,4 +1,4 @@
-import { assertNever } from "@brainiac/config/assert-never";
+import { assertNever } from "@orch/config/assert-never";
 import {
   WORKSPACE_NODE_LIMIT,
   createDefaultWorkspaceTab,
@@ -6,7 +6,7 @@ import {
   normalizeWorkspaceNode,
   type WorkspaceMarketplaceItem,
   type WorkspaceNode,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Box, Check, Component, Download, HelpCircle, Info, Layout, Plus, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";

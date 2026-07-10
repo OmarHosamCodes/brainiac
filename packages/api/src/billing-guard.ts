@@ -1,7 +1,7 @@
 import { ORPCError, os } from "@orpc/server";
-import { db } from "@brainiac/db";
-import { user } from "@brainiac/db/schema/auth";
-import { env } from "@brainiac/env/server";
+import { db } from "@orch/db";
+import { user } from "@orch/db/schema/auth";
+import { env } from "@orch/env/server";
 import { Polar } from "@polar-sh/sdk";
 import { eq } from "drizzle-orm";
 

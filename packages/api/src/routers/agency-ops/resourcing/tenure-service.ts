@@ -1,4 +1,4 @@
-import { db } from "@brainiac/db";
+import { db } from "@orch/db";
 import {
   agencyOpsMemberTenureProfile,
   agencyOpsTenurePolicy,
@@ -7,8 +7,8 @@ import {
   user,
   workspaceTeamMember,
   type AgencyOpsTenureExemptionType,
-} from "@brainiac/db/schema";
-import { createWorkspaceId } from "@brainiac/workspace";
+} from "@orch/db/schema";
+import { createWorkspaceId } from "@orch/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, asc, eq, gte, inArray, isNull, lt, min, sql } from "drizzle-orm";
 

@@ -1,13 +1,13 @@
-import { db } from "@brainiac/db";
+import { db } from "@orch/db";
 import {
   agencyOpsProjectTask,
   agencyOpsTimeEntry,
   workspaceTeam,
   workspaceTeamMember,
-} from "@brainiac/db/schema";
+} from "@orch/db/schema";
 import { and, eq, gte, isNull, lt, sql } from "drizzle-orm";
 
-import { emitTeamDigestNotification } from "@brainiac/api/routers/notifications/service";
+import { emitTeamDigestNotification } from "@orch/api/routers/notifications/service";
 
 const DIGEST_HOUR_UTC = 8;
 const digestSentForTeamDay = new Set<string>();

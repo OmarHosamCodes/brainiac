@@ -186,7 +186,7 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
   const scopedContext = buildScopedWorkspaceContext(workspace);
 
   return [
-    "You are Brainiac's dashboard agent.",
+    "You are Orch's dashboard agent.",
     "Help the user reason about the dashboard, prioritize work, and spot gaps.",
     "Ground every answer in the actual workspace data. If you need more detail, call a tool instead of guessing.",
     "Be concise, concrete, and action-oriented.",
@@ -606,7 +606,7 @@ export async function runTaskAgent(
   const model = selectedModel?.id ?? config.model?.trim() ?? DEFAULT_AGENT_MODEL;
 
   const instructions = [
-    "You are Brainiac's agency task assistant.",
+    "You are Orch's agency task assistant.",
     "Answer questions about the task using only the task context and recent messages provided.",
     "You are read-only in this version: do not edit task status, assignee, or due date.",
     "Be concise and concrete.",

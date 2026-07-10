@@ -13,7 +13,7 @@ import {
   agencyOpsTaskMessage,
   workspaceTeamMember,
   agencyOpsClient,
-} from "@brainiac/db/schema";
+} from "@orch/db/schema";
 import { ORPCError } from "@orpc/server";
 import {
   getTaskAttachmentReadUrl,
@@ -21,8 +21,8 @@ import {
   createTaskAttachmentUploadToken,
   deleteTaskAttachmentFromStorage,
 } from "../../../storage";
-import { db } from "@brainiac/db";
-import { createWorkspaceId } from "@brainiac/workspace";
+import { db } from "@orch/db";
+import { createWorkspaceId } from "@orch/workspace";
 import { eq, sql, and, inArray, isNull, or, exists, desc, asc } from "drizzle-orm";
 import { notifyTaskAssigned, notifyTaskMessage } from "../../notifications/fanout";
 import { applyMemberTaskCompletion } from "../../../schemas/agency-ops";

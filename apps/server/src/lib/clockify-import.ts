@@ -1,13 +1,13 @@
 import { join } from "node:path";
-import { normalizeTaskTitle } from "@brainiac/api/schemas/agency-ops";
-import { db } from "@brainiac/db";
+import { normalizeTaskTitle } from "@orch/api/schemas/agency-ops";
+import { db } from "@orch/db";
 import {
   agencyOpsClient,
   agencyOpsProject,
   agencyOpsProjectTask,
   agencyOpsTaskThread,
   agencyOpsTimeEntry,
-} from "@brainiac/db/schema";
+} from "@orch/db/schema";
 import { eq, inArray } from "drizzle-orm";
 
 // ---------------------------------------------------------------------------
@@ -392,10 +392,10 @@ export async function buildCatalog(
   }
 
   for (const member of selectedMembers) {
-    const brainiacUserId = userIdByClockifyUserId.get(member.userId);
-    if (!brainiacUserId) {
+    const orchUserId = userIdByClockifyUserId.get(member.userId);
+    if (!orchUserId) {
       skipped.push({
-        reason: "Member not mapped to a Brainiac user",
+        reason: "Member not mapped to an Orch user",
         clockifyUserId: member.userId,
       });
       continue;

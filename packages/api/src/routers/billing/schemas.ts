@@ -1,4 +1,4 @@
-import { TIERS } from "@brainiac/workspace/tiers";
+import { TIERS } from "@orch/workspace/tiers";
 import { z } from "zod";
 
 export const billingStateSchema = z.object({

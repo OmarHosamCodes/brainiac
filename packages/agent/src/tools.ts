@@ -1,4 +1,4 @@
-import { assertNever } from "@brainiac/config/assert-never";
+import { assertNever } from "@orch/config/assert-never";
 import {
   cloneWorkspaceNodes,
   createDefaultWorkspaceTab,
@@ -56,7 +56,7 @@ import {
   type WorkspaceMarketplaceItem,
   type WorkspaceNode,
   type WorkspaceNodeTab,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { tool } from "@openrouter/sdk/lib/tool";
 import { z } from "zod";
 
@@ -3257,8 +3257,7 @@ export function buildDashboardAgentTools(
             redirect: "follow",
             signal: controller.signal,
             headers: {
-              "User-Agent":
-                "Mozilla/5.0 (compatible; BrainiacAgent/1.0; +https://brainiac.app/agent)",
+              "User-Agent": "Mozilla/5.0 (compatible; OrchAgent/1.0; +https://orch.app/agent)",
               Accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5",
               "Accept-Language": "en-US,en;q=0.8",
             },

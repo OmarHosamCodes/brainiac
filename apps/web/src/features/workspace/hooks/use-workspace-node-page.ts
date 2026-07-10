@@ -1,8 +1,4 @@
-import {
-  normalizeWorkspaceNode,
-  type WorkspaceBlock,
-  type WorkspaceNode,
-} from "@brainiac/workspace";
+import { normalizeWorkspaceNode, type WorkspaceBlock, type WorkspaceNode } from "@orch/workspace";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 

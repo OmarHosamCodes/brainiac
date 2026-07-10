@@ -10,14 +10,9 @@ import {
   spinner,
   text,
 } from "@clack/prompts";
-import { db } from "@brainiac/db";
-import {
-  user,
-  workspaceTeam,
-  workspaceTeamMember,
-  type WorkspaceTeamRole,
-} from "@brainiac/db/schema";
-import { createWorkspaceId } from "@brainiac/workspace";
+import { db } from "@orch/db";
+import { user, workspaceTeam, workspaceTeamMember, type WorkspaceTeamRole } from "@orch/db/schema";
+import { createWorkspaceId } from "@orch/workspace";
 import { eq } from "drizzle-orm";
 import {
   buildCatalog,
@@ -35,7 +30,7 @@ import {
   hasLegacyEmailAccount,
 } from "../../lib/ensure-credential-account";
 
-const DEFAULT_IMPORT_PASSWORD = "brainiac1234";
+const DEFAULT_IMPORT_PASSWORD = "orch1234";
 
 type CliOptions = {
   dryRun: boolean;
@@ -286,7 +281,7 @@ async function selectMembers(manifest: ScrapeManifest): Promise<ClockifyMember[]
   return manifest.members.filter((member) => selectedIds.has(member.userId));
 }
 
-async function createBrainiacUser(
+async function createOrchUser(
   name: string,
   email: string,
   password: string,
@@ -453,7 +448,7 @@ async function mapClockifyUsers(
     }
 
     const shouldCreate = await confirm({
-      message: `Create Brainiac user for ${clockifyMember.name} (${clockifyMember.email})?`,
+      message: `Create Orch user for ${clockifyMember.name} (${clockifyMember.email})?`,
       initialValue: true,
     });
 
@@ -497,7 +492,7 @@ async function mapClockifyUsers(
       password = customPassword as string;
     }
 
-    const created = await createBrainiacUser(clockifyMember.name, clockifyMember.email, password);
+    const created = await createOrchUser(clockifyMember.name, clockifyMember.email, password);
     await addTeamMember(teamId, created.id, "editor");
     s.stop(`Created ${created.email}`);
 
@@ -531,9 +526,9 @@ function printMappingSummary(
   console.log("");
   console.log("── User Mapping ──────────────────────────────");
   for (const member of members) {
-    const brainiacUserId = userIdByClockifyUserId.get(member.userId);
+    const orchUserId = userIdByClockifyUserId.get(member.userId);
     console.log(
-      brainiacUserId
+      orchUserId
         ? `  ✓ ${member.name} (${member.email})`
         : `  ✗ ${member.name} (${member.email}) — not mapped`,
     );

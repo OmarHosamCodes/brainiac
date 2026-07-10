@@ -6,7 +6,7 @@ import {
   workspaceNodeSchema,
   workspaceNodeVisibilitySchema,
   workspaceSaveInputSchema,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { z } from "zod";
 
 export const workspaceShareNodeInputSchema = z.object({

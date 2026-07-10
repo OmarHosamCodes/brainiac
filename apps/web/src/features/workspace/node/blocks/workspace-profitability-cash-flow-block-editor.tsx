@@ -7,7 +7,7 @@ import {
   workspaceFinancePaymentStatusLabels,
   type WorkspaceFinancePaymentStatus,
   type WorkspaceProfitabilityCashFlowBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import {
   Calculator,
   Percent,

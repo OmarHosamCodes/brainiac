@@ -24,8 +24,7 @@ const baselinePath = resolve(perfDir, "baseline.json");
 
 const PERF_ENV = {
   ...process.env,
-  DATABASE_URL:
-    process.env.DATABASE_URL ?? "postgresql://postgres:password@localhost:5440/brainiac",
+  DATABASE_URL: process.env.DATABASE_URL ?? "postgresql://postgres:password@localhost:5440/orch",
   BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET ?? "perf-benchmark-secret-key-32chars!",
   BETTER_AUTH_URL: process.env.BETTER_AUTH_URL ?? "http://localhost:7001",
   CORS_ORIGIN: process.env.CORS_ORIGIN ?? "http://localhost:7001",

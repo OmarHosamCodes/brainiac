@@ -1,4 +1,4 @@
-import type { AgentToolCallEntry } from "@brainiac/agent";
+import type { AgentToolCallEntry } from "@orch/agent";
 
 export type DashboardAgentToolTraceViewModel = {
   name: string;

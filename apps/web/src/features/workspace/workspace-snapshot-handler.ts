@@ -1,4 +1,4 @@
-import type { WorkspaceNode } from "@brainiac/workspace";
+import type { WorkspaceNode } from "@orch/workspace";
 
 let applyWorkspaceSnapshotHandler:
   | ((nodes: WorkspaceNode[], updatedAt: string | null) => void)

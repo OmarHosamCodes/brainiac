@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Brainiac Setup Script
+# Orch Setup Script
 # ====================
 # Automates the initial setup for new developers
 # Usage: bash scripts/setup.sh
@@ -150,9 +150,9 @@ offer_seed() {
     log_success "Demo data loaded"
     echo ""
     echo "Demo accounts:"
-    echo "  • founder@brainiac.test / brainiac1234"
-    echo "  • ops@brainiac.test / brainiac1234"
-    echo "  • analyst@brainiac.test / brainiac1234"
+    echo "  • founder@orch.test / orch1234"
+    echo "  • ops@orch.test / orch1234"
+    echo "  • analyst@orch.test / orch1234"
   else
     log_info "Skipped seeding. Run 'bun run db:seed' later if needed."
   fi
@@ -195,7 +195,7 @@ print_completion() {
 main() {
   echo ""
   echo -e "${BLUE}╔════════════════════════════════════════════════════════╗${NC}"
-  echo -e "${BLUE}║        Welcome to Brainiac Development Setup           ║${NC}"
+  echo -e "${BLUE}║        Welcome to Orch Development Setup           ║${NC}"
   echo -e "${BLUE}╚════════════════════════════════════════════════════════╝${NC}"
   
   check_bun

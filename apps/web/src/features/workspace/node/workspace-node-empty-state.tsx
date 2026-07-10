@@ -1,4 +1,4 @@
-import type { WorkspaceBlock } from "@brainiac/workspace";
+import type { WorkspaceBlock } from "@orch/workspace";
 import { Blocks } from "lucide-react";
 
 import { useWorkspaceNodeEditorContext } from "@/features/workspace/node/context";

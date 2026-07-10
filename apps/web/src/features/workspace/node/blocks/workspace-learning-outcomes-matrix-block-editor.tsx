@@ -2,7 +2,7 @@ import {
   buildLearningOutcomesMatrixPrompt,
   type WorkspaceCourseRoadmapBlock,
   type WorkspaceLearningOutcomesMatrixBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { BookOpen, Loader2, RefreshCcw, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";

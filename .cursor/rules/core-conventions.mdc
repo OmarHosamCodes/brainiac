@@ -3,7 +3,7 @@ description: Core monorepo conventions, commands, and definition of done
 alwaysApply: true
 ---
 
-# Brainiac Core Conventions
+# Orch Core Conventions
 
 ## Monorepo layout
 
@@ -40,7 +40,7 @@ Product features must follow the golden file pattern — see `golden-file-patter
 
 ## Environment access
 
-- **Server/API/DB:** `import { env } from "@brainiac/env/server"`
+- **Server/API/DB:** `import { env } from "@orch/env/server"`
 - **Web runtime:** `import { getRpcBaseUrl } from "@/lib/env"`
 - Never read raw `process.env` in app code — add vars to `packages/env` first
 

@@ -55,7 +55,7 @@ Unknown errors are handled by `devErrorMiddleware` in `procedures.ts`.
 ## Router structure
 
 - Thin handlers: Zod input → `service(context.session.user.id, input)` → `.parse()` output with Zod
-- No Drizzle, `@brainiac/db`, or store imports in router files
+- No Drizzle, `@orch/db`, or store imports in router files
 - Register in `routers/index.ts` with **camelCase** keys (`agencyOps`, `team`)
 - Team-scoped inputs always include `teamId: z.string().min(1)`
 

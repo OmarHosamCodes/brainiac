@@ -41,7 +41,7 @@ import {
   createWorkspaceTimeOrchestratorBlock,
   createWorkspaceTrackerBlock,
   type WorkspaceBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 
 import {
   getWorkspaceBlockPreset,

@@ -70,7 +70,7 @@ const firstCorsOrigin = corsOrigins[0];
 
 if (!firstCorsOrigin) {
   throw new Error(
-    "CORS_ORIGIN is required. Set it to the deployed web app origin, for example https://web-brainiac.up.railway.app",
+    "CORS_ORIGIN is required. Set it to the deployed web app origin, for example https://web-orch.up.railway.app",
   );
 }
 

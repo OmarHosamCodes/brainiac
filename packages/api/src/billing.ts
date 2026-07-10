@@ -1,5 +1,5 @@
-import { env } from "@brainiac/env/server";
-import { type Tier, TIER_LIMITS } from "@brainiac/workspace/tiers";
+import { env } from "@orch/env/server";
+import { type Tier, TIER_LIMITS } from "@orch/workspace/tiers";
 import type { CustomerState } from "@polar-sh/sdk/models/components/customerstate.js";
 
 export type BillingSubscription = {

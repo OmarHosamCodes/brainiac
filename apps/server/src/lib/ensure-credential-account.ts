@@ -1,7 +1,7 @@
 import { hashPassword } from "better-auth/crypto";
-import { db } from "@brainiac/db";
-import { account } from "@brainiac/db/schema";
-import { createWorkspaceId } from "@brainiac/workspace";
+import { db } from "@orch/db";
+import { account } from "@orch/db/schema";
+import { createWorkspaceId } from "@orch/workspace";
 import { eq } from "drizzle-orm";
 
 export type EnsureCredentialAccountResult = "exists" | "migrated" | "created" | "updated";

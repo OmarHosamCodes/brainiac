@@ -8,8 +8,8 @@ import {
   agencyOpsProjectTask,
   workspaceTeamMember,
   agencyOpsActiveTimer,
-} from "@brainiac/db/schema";
-import { db } from "@brainiac/db";
+} from "@orch/db/schema";
+import { db } from "@orch/db";
 import {
   type ReportEntityFilterInput,
   applyReportEntityFilters,

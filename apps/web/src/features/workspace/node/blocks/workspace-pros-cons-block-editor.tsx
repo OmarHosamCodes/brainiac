@@ -2,7 +2,7 @@ import {
   createWorkspaceProsConsItem,
   getProsConsSummary,
   type WorkspaceProsConsBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { MinusCircle, Plus, PlusCircle, Trash2 } from "lucide-react";
 import { useMemo } from "react";
 

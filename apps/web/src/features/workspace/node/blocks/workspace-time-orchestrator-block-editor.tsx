@@ -10,7 +10,7 @@ import {
   type WorkspaceTaskDomain,
   type WorkspaceTaskQuadrant,
   type WorkspaceTimeOrchestratorBlock,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { CalendarClock, Plug2, RotateCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 

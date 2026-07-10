@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { CustomerState } from "@polar-sh/sdk/models/components/customerstate.js";
-import { TIER_LIMITS } from "@brainiac/workspace/tiers";
+import { TIER_LIMITS } from "@orch/workspace/tiers";
 
 import { normalizeBillingState } from "./billing";
 

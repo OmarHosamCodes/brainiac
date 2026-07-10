@@ -56,7 +56,7 @@ export function LoginPage() {
         </div>
 
         <p className="relative z-10 text-xs text-[var(--marketing-ink-muted)]">
-          &copy; {new Date().getFullYear()} Brainiac
+          &copy; {new Date().getFullYear()} Orch
         </p>
       </aside>
 

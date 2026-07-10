@@ -4,7 +4,7 @@ import {
   type WorkspaceNodeDashboardSelectableBlock,
   type WorkspaceNodeTint,
   type WorkspaceNodeType,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { Check, Plus, Save } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 

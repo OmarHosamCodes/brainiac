@@ -1,6 +1,6 @@
 self.addEventListener("push", (event) => {
   const payload = event.data?.json() ?? {};
-  const title = typeof payload.title === "string" ? payload.title : "Brainiac";
+  const title = typeof payload.title === "string" ? payload.title : "Orch";
   const body = typeof payload.body === "string" ? payload.body : "";
   const url = typeof payload.url === "string" ? payload.url : "/agency";
   const notificationId = typeof payload.notificationId === "string" ? payload.notificationId : "";

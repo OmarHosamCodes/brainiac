@@ -1,4 +1,4 @@
-import { auth } from "@brainiac/auth";
+import { auth } from "@orch/auth";
 import type { Context as HonoContext } from "hono";
 
 export type CreateContextOptions = {

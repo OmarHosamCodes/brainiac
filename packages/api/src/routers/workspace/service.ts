@@ -1,9 +1,5 @@
-import { db } from "@brainiac/db";
-import {
-  dashboardWorkspace,
-  workspaceMarketplaceItem,
-  workspaceTeamMember,
-} from "@brainiac/db/schema";
+import { db } from "@orch/db";
+import { dashboardWorkspace, workspaceMarketplaceItem, workspaceTeamMember } from "@orch/db/schema";
 import {
   createWorkspaceId,
   normalizeWorkspaceNode,
@@ -15,7 +11,7 @@ import {
   type WorkspaceNode,
   type WorkspaceNodeVisibility,
   type WorkspaceTeamRole,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { ORPCError } from "@orpc/server";
 import { and, desc, eq, ilike, inArray, lt, or } from "drizzle-orm";
 

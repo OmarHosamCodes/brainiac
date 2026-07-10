@@ -3,7 +3,7 @@ import {
   workspaceNodeSchema,
   type WorkspaceMarketplaceItem,
   type WorkspaceNode,
-} from "@brainiac/workspace";
+} from "@orch/workspace";
 import { z } from "zod";
 
 export const DEFAULT_AGENT_MODEL = "openai/gpt-5-nano";

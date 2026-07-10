@@ -7,7 +7,7 @@
 export function logStartup(config: { port: number; baseUrl: string; corsOrigin: string }) {
   console.log("");
   console.log("═══════════════════════════════════════════════════════════");
-  console.log("🧠 Brainiac Backend Server");
+  console.log("🧠 Orch Backend Server");
   console.log("═══════════════════════════════════════════════════════════");
   console.log("");
   console.log(`✅ Server running on: ${config.baseUrl}`);
