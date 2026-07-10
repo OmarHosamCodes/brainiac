@@ -7,7 +7,10 @@ import {
   buildDescriptionSuggestions,
   type AgencyDescriptionSuggestion,
 } from "@/features/time-tracking/description-suggestions";
-import { useAgencyTimeEntriesQuery } from "@/features/shared/agency-queries";
+import {
+  useAgencyProjectTasksForChooserQuery,
+  useAgencyTimeEntriesQuery,
+} from "@/features/shared/agency-queries";
 import {
   resolveDefaultCreateProjectId,
   useAgencyTaskListStore,
@@ -20,7 +23,7 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
   projects: Array<Pick<AgencyProject, "id" | "clientName" | "name">>,
 ) {
   const formTitleId = useId();
-  const titleFieldId = useId();
+  const taskContextId = useId();
   const suggestionListboxId = useId();
   const session = authClient.useSession();
   const currentUserId = session.data?.user?.id ?? "";
@@ -35,9 +38,10 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
   const [projectId, setProjectId] = useState("");
   const [assignedToTeam, setAssignedToTeam] = useState(false);
   const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>([]);
-  const [titleFocused, setTitleFocused] = useState(false);
+  const [taskChooserOpen, setTaskChooserOpen] = useState(false);
   const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
+  const [existingTaskConflict, setExistingTaskConflict] = useState<string | null>(null);
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
       {
@@ -48,11 +52,20 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
       { liveGated: true, teamId },
     ),
   );
+  const tasksQuery = useAgencyProjectTasksForChooserQuery(open ? teamId : "");
   const recentEntriesQuery = useAgencyTimeEntriesQuery(open ? teamId : "", 1, 50);
   const titleSuggestions = useMemo(
     () => buildDescriptionSuggestions(recentEntriesQuery.data?.items ?? [], title, { projectId }),
     [projectId, recentEntriesQuery.data?.items, title],
   );
+  const selectedProject = useMemo(
+    () => projects.find((project) => project.id === projectId) ?? null,
+    [projectId, projects],
+  );
+  const projectContextLabel = selectedProject
+    ? `${selectedProject.clientName} · ${selectedProject.name}`
+    : null;
+
   useEffect(() => {
     if (!open) return;
     const defaultProjectId = resolveDefaultCreateProjectId({
@@ -65,24 +78,66 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
     setAssigneeUserIds(currentUserId ? [currentUserId] : []);
     setSuggestionsDismissed(false);
     setActiveSuggestionIndex(0);
+    setExistingTaskConflict(null);
+    setTaskChooserOpen(false);
   }, [currentUserId, lastUsedProjectIdForCreate, open, projects]);
+
   function applySuggestion(suggestion: AgencyDescriptionSuggestion) {
     setTitle(suggestion.description);
     if (suggestion.projectId) setProjectId(suggestion.projectId);
+    setExistingTaskConflict(null);
     setSuggestionsDismissed(true);
   }
-  function handleTitleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (!titleFocused || suggestionsDismissed || titleSuggestions.length === 0) return;
-    if (event.key === "Escape") setSuggestionsDismissed(true);
-    if (event.key === "Enter") {
-      const suggestion = titleSuggestions[activeSuggestionIndex];
-      if (suggestion) applySuggestion(suggestion);
+
+  function handleSearchKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    const suggestionsOpen =
+      taskChooserOpen && !suggestionsDismissed && titleSuggestions.length > 0;
+
+    if (!suggestionsOpen) return;
+
+    switch (event.key) {
+      case "ArrowDown":
+        event.preventDefault();
+        setActiveSuggestionIndex((current) => (current + 1) % titleSuggestions.length);
+        return;
+      case "ArrowUp":
+        event.preventDefault();
+        setActiveSuggestionIndex(
+          (current) => (current - 1 + titleSuggestions.length) % titleSuggestions.length,
+        );
+        return;
+      case "Escape":
+        setSuggestionsDismissed(true);
+        return;
+      case "Enter":
+        event.preventDefault();
+        applySuggestion(titleSuggestions[activeSuggestionIndex]!);
+        return;
+      default:
+        return;
     }
   }
+
+  function handleTitleChange(value: string) {
+    setTitle(value);
+    setExistingTaskConflict(null);
+    setSuggestionsDismissed(false);
+    setActiveSuggestionIndex(0);
+  }
+
+  function handleProjectChange(value: string) {
+    setProjectId(value);
+    setExistingTaskConflict(null);
+  }
+
+  function handleExistingTaskSelect(taskId: string) {
+    setExistingTaskConflict(taskId);
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const trimmedTitle = title.trim();
-    if (!trimmedTitle || !projectId || !teamId || isCreatingTask) return;
+    if (!trimmedTitle || !projectId || !teamId || isCreatingTask || existingTaskConflict) return;
     const createdId = await agencyOps.createProjectTask({
       teamId,
       projectId,
@@ -94,34 +149,44 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
     setLastUsedProjectIdForCreate(projectId);
     setOpen(false);
   }
+
+  const suggestionsOpen =
+    taskChooserOpen && !suggestionsDismissed && titleSuggestions.length > 0;
+
   return {
     projects,
+    tasks: tasksQuery.items ?? [],
+    tasksLoading: tasksQuery.isLoading,
     formTitleId,
-    titleFieldId,
+    taskContextId,
     suggestionListboxId,
     open,
     setOpen,
     title,
-    setTitle,
+    setTitle: handleTitleChange,
     projectId,
-    setProjectId,
+    setProjectId: handleProjectChange,
     assignedToTeam,
     setAssignedToTeam,
     assigneeUserIds,
     setAssigneeUserIds,
-    titleFocused,
-    setTitleFocused,
+    taskChooserOpen,
+    setTaskChooserOpen,
     suggestionsDismissed,
     setSuggestionsDismissed,
     activeSuggestionIndex,
     setActiveSuggestionIndex,
+    existingTaskConflict,
+    projectContextLabel,
     members: membersQuery.data?.items ?? [],
     suggestions: titleSuggestions,
-    handleTitleKeyDown,
+    suggestionsOpen,
+    handleSearchKeyDown,
     handleSubmit,
     applySuggestion,
+    handleExistingTaskSelect,
     isCreatingTask,
-    canSubmit: Boolean(title.trim() && projectId && !isCreatingTask),
+    canSubmit: Boolean(title.trim() && projectId && !isCreatingTask && !existingTaskConflict),
   };
 }
 

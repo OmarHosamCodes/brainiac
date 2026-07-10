@@ -1,22 +1,18 @@
 import { Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/ui/button";
-import { Input } from "@/ui/input";
 import { Label } from "@/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import {
   agencyFocusRingClass,
   agencyFormFieldClass,
-  agencyInputPlaceholderClass,
   agencyLabelClass,
 } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 import type { AgencyWorkSurfaceCreateTaskPopoverViewModel } from "./hooks/use-agency-work-surface-create-task-popover";
 
 type Props = AgencyWorkSurfaceCreateTaskPopoverViewModel & {
-  suggestionsOpen: boolean;
-  projectChooser: ReactNode;
-  suggestionMenu: ReactNode;
+  taskChooser: ReactNode;
   memberChooser: ReactNode;
 };
 
@@ -25,21 +21,15 @@ export function AgencyWorkSurfaceCreateTaskPopoverView(props: Props) {
     open,
     setOpen,
     formTitleId,
-    titleFieldId,
-    suggestionListboxId,
-    title,
-    setTitle,
-    setTitleFocused,
-    setSuggestionsDismissed,
-    handleTitleKeyDown,
+    taskContextId,
+    projectContextLabel,
+    existingTaskConflict,
     handleSubmit,
-    isCreatingTask,
     canSubmit,
-    suggestionsOpen,
-    projectChooser,
-    suggestionMenu,
+    taskChooser,
     memberChooser,
   } = props;
+
   return (
     <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
@@ -59,37 +49,18 @@ export function AgencyWorkSurfaceCreateTaskPopoverView(props: Props) {
             New task
           </p>
           <div className={agencyFormFieldClass}>
-            <Label className="text-xs font-semibold text-muted">Project</Label>
-            {projectChooser}
-          </div>
-          <div className={agencyFormFieldClass} data-create-task-title>
-            <Label htmlFor={titleFieldId} className="text-xs font-semibold text-muted">
-              Task name
-            </Label>
-            <div className="relative">
-              <Input
-                id={titleFieldId}
-                value={title}
-                onChange={(event) => setTitle(event.target.value)}
-                onKeyDown={handleTitleKeyDown}
-                onFocus={() => {
-                  setTitleFocused(true);
-                  setSuggestionsDismissed(false);
-                }}
-                placeholder="What needs doing?"
-                autoFocus
-                disabled={isCreatingTask}
-                aria-autocomplete="list"
-                aria-controls={suggestionsOpen ? suggestionListboxId : undefined}
-                aria-expanded={suggestionsOpen}
-                className={cn(
-                  "h-9 rounded-xl border-default bg-default text-sm font-medium",
-                  agencyInputPlaceholderClass,
-                  agencyFocusRingClass,
-                )}
-              />
-              {suggestionMenu}
-            </div>
+            <Label className="text-xs font-semibold text-muted">Task</Label>
+            {taskChooser}
+            {projectContextLabel ? (
+              <p id={taskContextId} className="mt-1.5 text-xs text-muted">
+                {projectContextLabel}
+              </p>
+            ) : null}
+            {existingTaskConflict ? (
+              <p className="mt-1.5 text-xs text-warning" role="alert">
+                Task already exists. Open it from My Tasks instead.
+              </p>
+            ) : null}
           </div>
           <div className={agencyFormFieldClass}>
             <Label className="text-xs font-semibold text-muted">Assign</Label>
