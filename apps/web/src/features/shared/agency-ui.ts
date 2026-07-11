@@ -348,9 +348,7 @@ export const agencyTimeEntryMainClass = "flex min-w-0 flex-1 items-center gap-3 
 
 /**
  * Right rail — time | duration | actions.
- * `box-content` so ch/rem widths are content-box (padding does not clip mono glyphs).
- * Vertical rules are inset (`inset-y-2`) so they read as soft ticks, not a timetable grid.
- * Day headers use the quiet rail (same widths, no hairlines).
+ * Inset vertical ticks (`inset-y-2`); day headers use the quiet rail (no hairlines).
  */
 export const agencyTimeEntryRailClass = cn(
   "relative flex shrink-0 items-stretch",
@@ -380,23 +378,27 @@ export const agencyTimeEntryRailActionsClass = cn(
   "box-content flex h-full w-16 shrink-0 items-center justify-center gap-0.5 px-1",
 );
 
+/** Day scan anchor — readable label, no fill band. */
+// export const agencyTimeEntrySectionHeaderClass = "flex min-h-8 items-stretch bg-transparent";
 /** Day band — same rail geometry as rows so totals lock to the duration column. */
 export const agencyTimeEntrySectionHeaderClass = cn(
   "flex min-h-9 items-stretch border-b border-default bg-elevated/40",
 );
 
+
 export const agencyTimeEntrySectionLabelClass =
   "flex min-w-0 flex-1 items-center px-4 text-sm font-semibold text-highlighted sm:px-5";
 
-export const agencyTimeWeekGroupClass = "flex flex-col gap-3";
+/** Week is secondary metadata; days own the scan rhythm. */
+export const agencyTimeWeekGroupClass = "flex flex-col gap-1";
 
 export const agencyTimeWeekGroupHeaderClass =
-  "flex h-9 shrink-0 items-center justify-between gap-3 bg-background px-4 sm:px-5";
+  "flex h-8 shrink-0 items-center justify-between gap-3 bg-transparent px-4 sm:px-5";
 
-export const agencyTimeWeekGroupBodyClass = "flex flex-col gap-4";
+export const agencyTimeWeekGroupBodyClass = "flex flex-col gap-3";
 
 /** Stack of week sections in the sessions log. */
-export const agencyTimeWeekStackClass = "flex flex-col gap-10";
+export const agencyTimeWeekStackClass = "flex flex-col gap-8";
 
 export const agencyTimeEntryRowHighlightClass =
   "bg-success/10 motion-reduce:transition-none transition-colors duration-500";

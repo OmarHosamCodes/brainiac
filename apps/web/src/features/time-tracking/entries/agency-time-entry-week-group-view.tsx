@@ -24,10 +24,10 @@ export function AgencyTimeEntryWeekGroupView({
   return (
     <section className={agencyTimeWeekGroupClass}>
       <header className={agencyTimeWeekGroupHeaderClass}>
-        <h2 className="text-sm font-semibold text-highlighted">{week.label}</h2>
+        <h2 className="text-xs font-medium text-muted">{week.label}</h2>
         <p className="inline-flex items-baseline gap-2 text-xs text-muted">
           <span>Week total</span>
-          <span className={cn(agencyMetricClass, "text-sm font-semibold text-highlighted")}>
+          <span className={cn(agencyMetricClass, "text-xs font-medium text-muted")}>
             {formatDuration(week.totalSeconds, "clock")}
           </span>
         </p>

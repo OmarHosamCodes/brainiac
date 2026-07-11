@@ -15,11 +15,10 @@ import {
   agencyTimeTrackerStatusDividerClass,
   agencyTimeTrackerStatusZoneClass,
   agencyTimeWeekFooterClass,
+  agencyTimeWeekGroupBodyClass,
   agencyWorkTabBarClass,
   agencyWorkTabShellClass,
   agencyWorkTableBodyScrollClass,
-  agencyWorkTableListClass,
-  agencyWorkTableStackClass,
 } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
@@ -60,15 +59,15 @@ function TabsSkeleton() {
 
 function SessionSectionSkeleton({ rows }: { rows: number }) {
   return (
-    <section className={agencyWorkTableListClass} aria-hidden>
+    <section aria-hidden>
       <header className={agencyTimeEntrySectionHeaderClass}>
         <div className={agencyTimeEntrySectionLabelClass}>
-          <Skeleton className="h-3.5 w-16" />
+          <Skeleton className="h-3 w-14" />
         </div>
         <div className={agencyTimeEntryRailQuietClass}>
           <div className={agencyTimeEntryRailTimeClass} aria-hidden />
           <div className={agencyTimeEntryRailDurationClass}>
-            <Skeleton className="h-3.5 w-14" />
+            <Skeleton className="h-3 w-14" />
           </div>
           <div className={agencyTimeEntryRailActionsClass} aria-hidden />
         </div>
@@ -77,7 +76,7 @@ function SessionSectionSkeleton({ rows }: { rows: number }) {
         {Array.from({ length: rows }, (_, index) => (
           <li
             key={index}
-            className="flex items-center gap-3 border-b border-default px-5 py-3.5 last:border-b-0"
+            className="flex items-center gap-3 border-b border-dotted border-border/40 px-5 py-3.5 last:border-b-0"
           >
             <Skeleton className="size-6 shrink-0 rounded-full" />
             <div className="min-w-0 flex-1 space-y-2">
@@ -101,7 +100,7 @@ function SessionsLogSkeleton() {
   return (
     <div className={cn(agencyTimeLogPanelClass, "min-h-0")} aria-hidden>
       <div className={agencyWorkTableBodyScrollClass}>
-        <div className={agencyWorkTableStackClass}>
+        <div className={agencyTimeWeekGroupBodyClass}>
           <SessionSectionSkeleton rows={2} />
           <SessionSectionSkeleton rows={2} />
           <SessionSectionSkeleton rows={1} />
