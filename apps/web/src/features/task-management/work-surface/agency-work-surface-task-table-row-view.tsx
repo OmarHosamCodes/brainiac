@@ -20,10 +20,12 @@ import {
   agencyTaskRowProjectPillClass,
   agencyTaskRowSelectedClass,
   agencyTimeEntryMultiChildClass,
+  agencyWorkCountBadgeClass,
   agencyWorkTableGridClass,
   agencyWorkTableGridDelegatedClass,
   agencyWorkTableGridDoneClass,
   agencyTimeEntryTimeInputClass,
+  agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
 import {
   resolveTaskDisplayStatus,
@@ -267,10 +269,7 @@ export function AgencyWorkSurfaceTaskTableRowView({
           {isMultiDescription ? (
             <button
               type="button"
-              className={cn(
-                "inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border border-default bg-elevated px-1.5 font-mono text-xs font-bold tabular-nums text-muted transition-colors hover:bg-default hover:text-highlighted",
-                agencyFocusRingClass,
-              )}
+              className={cn(agencyWorkCountBadgeClass, "shrink-0", agencyFocusRingClass)}
               aria-label={
                 descriptionsExpanded
                   ? `Collapse ${descriptionEntries.length} descriptions`
@@ -289,7 +288,8 @@ export function AgencyWorkSurfaceTaskTableRowView({
             <button
               type="button"
               className={cn(
-                "block max-w-full truncate text-left text-[0.9375rem] font-semibold leading-snug text-highlighted",
+                "block max-w-full truncate text-left",
+                agencyWorkTitleClass,
                 agencyFocusRingClass,
               )}
               onClick={() => onSelect?.(task.id)}

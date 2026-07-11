@@ -1,9 +1,9 @@
 import { AgencyTimeEntryDayGroupView } from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
 import {
-  agencyMetricClass,
   agencyTimeWeekGroupBodyClass,
   agencyTimeWeekGroupClass,
   agencyTimeWeekGroupHeaderClass,
+  agencyWorkWeekLabelClass,
 } from "@/features/shared/agency-ui";
 import { formatDuration } from "@/lib/utils/format-duration";
 import type { TimeEntryWeekGroup } from "@/features/time-tracking/group-time-entries";
@@ -24,10 +24,10 @@ export function AgencyTimeEntryWeekGroupView({
   return (
     <section className={agencyTimeWeekGroupClass}>
       <header className={agencyTimeWeekGroupHeaderClass}>
-        <h2 className="text-xs font-medium text-muted">{week.label}</h2>
-        <p className="inline-flex items-baseline gap-2 text-xs text-muted">
+        <h2 className={agencyWorkWeekLabelClass}>{week.label}</h2>
+        <p className={cn("inline-flex items-baseline gap-2", agencyWorkWeekLabelClass)}>
           <span>Week total</span>
-          <span className={cn(agencyMetricClass, "text-xs font-medium text-muted")}>
+          <span className={cn("font-mono tabular-nums", agencyWorkWeekLabelClass)}>
             {formatDuration(week.totalSeconds, "clock")}
           </span>
         </p>

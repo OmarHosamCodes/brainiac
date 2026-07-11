@@ -64,6 +64,21 @@ export const agencySectionTitleClass = "text-lg font-bold text-highlighted";
 
 export const agencyMetricClass = "font-mono tabular-nums text-highlighted";
 
+/**
+ * Work-surface type scale — one hierarchy across tracker, tabs, sessions, and tables.
+ * title → primary row name; metric → clock totals; meta → secondary; time → range ticks.
+ */
+export const agencyWorkTitleClass = "text-sm font-semibold leading-snug text-highlighted";
+export const agencyWorkMetricClass = cn(agencyMetricClass, "text-sm font-semibold");
+export const agencyWorkMetaClass = "text-xs font-normal text-muted";
+export const agencyWorkTimeRangeClass = "font-mono text-xs font-medium tabular-nums text-muted";
+export const agencyWorkWeekLabelClass = "text-xs font-medium text-muted";
+export const agencyWorkCountBadgeClass = cn(
+  "inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-default bg-elevated px-1.5",
+  "font-mono text-xs font-semibold tabular-nums text-muted",
+  "transition-colors hover:bg-default hover:text-highlighted",
+);
+
 export const agencyFocusRingClass = shellFocusRingClass;
 
 /** Hairline separator for overlapping member avatar stacks. */
@@ -191,7 +206,7 @@ export const agencyWorkTabClass = cn(
   "motion-reduce:transition-none",
 );
 
-export const agencyWorkTabActiveClass = "border-highlighted text-highlighted";
+export const agencyWorkTabActiveClass = "border-highlighted font-semibold text-highlighted";
 
 export const agencyWorkTabCreateClass = cn(
   "h-8 shrink-0 gap-1.5 rounded-full px-3 text-xs font-semibold",
@@ -268,7 +283,7 @@ export const agencyTimeTrackerDescriptionLabelClass =
   "text-xs font-semibold leading-none text-muted";
 
 export const agencyTimeTrackerDescriptionInputClass =
-  "block h-8 w-full min-w-0 truncate rounded-none border-0 bg-transparent px-0.5 py-0 text-sm leading-snug shadow-none";
+  "block h-8 w-full min-w-0 truncate rounded-none border-0 bg-transparent px-0.5 py-0 text-sm font-medium leading-snug shadow-none";
 
 export const agencyTimeTrackerActiveRowClass =
   "flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2";
@@ -282,8 +297,8 @@ export const agencyTimeTrackerStatusDividerClass =
   "mx-0.5 h-8 shrink-0 border-l border-dashed border-default";
 
 export const agencyTimeTrackerMetricClass = cn(
-  agencyMetricClass,
-  "w-[5rem] shrink-0 text-center text-sm font-semibold tabular-nums",
+  agencyWorkMetricClass,
+  "w-[5rem] shrink-0 text-center",
 );
 
 export const agencyTimeTrackerMetricButtonClass = cn(
@@ -301,7 +316,7 @@ export const agencyTimeTrackerTaskChooserTriggerClass = cn(
 );
 
 export const agencyTimeTrackerPrimaryActionClass =
-  "h-8 shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-semibold sm:text-sm";
+  "h-8 shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-semibold";
 
 export const agencyTimeTrackerIconActionClass = cn(
   "h-8 w-8 shrink-0 rounded-full p-0",
@@ -339,7 +354,7 @@ export const agencyTimeEntryGroupBorderClass = "border-b border-dotted border-bo
 
 /** Inline time inputs in entry rows. */
 export const agencyTimeEntryTimeInputClass = cn(
-  "h-7 w-full min-w-0 appearance-none border-0 bg-transparent px-0 font-mono text-sm font-medium tabular-nums text-muted shadow-none focus-visible:ring-0 focus-visible:text-highlighted",
+  "h-7 w-full min-w-0 appearance-none border-0 bg-transparent px-0 font-mono text-xs font-medium tabular-nums text-muted shadow-none focus-visible:ring-0 focus-visible:text-highlighted",
   "[&::-webkit-calendar-picker-indicator]:hidden",
 );
 
@@ -378,16 +393,15 @@ export const agencyTimeEntryRailActionsClass = cn(
   "box-content flex h-full w-16 shrink-0 items-center justify-center gap-0.5 px-1",
 );
 
-/** Day scan anchor — readable label, no fill band. */
-// export const agencyTimeEntrySectionHeaderClass = "flex min-h-8 items-stretch bg-transparent";
 /** Day band — same rail geometry as rows so totals lock to the duration column. */
 export const agencyTimeEntrySectionHeaderClass = cn(
   "flex min-h-9 items-stretch border-b border-default bg-elevated/40",
 );
 
-
-export const agencyTimeEntrySectionLabelClass =
-  "flex min-w-0 flex-1 items-center px-4 text-sm font-semibold text-highlighted sm:px-5";
+export const agencyTimeEntrySectionLabelClass = cn(
+  "flex min-w-0 flex-1 items-center px-4 sm:px-5",
+  agencyWorkTitleClass,
+);
 
 /** Week is secondary metadata; days own the scan rhythm. */
 export const agencyTimeWeekGroupClass = "flex flex-col gap-1";
@@ -415,7 +429,7 @@ export const agencyTimeWeekFooterClass = cn(
   "bg-elevated/40",
 );
 
-export const agencyTimeFooterMetricClass = cn("text-sm font-semibold", agencyMetricClass);
+export const agencyTimeFooterMetricClass = agencyWorkMetricClass;
 
 export const agencyTimeLogSkeletonClass =
   "h-[4.5rem] border-b border-default bg-elevated/35 motion-reduce:animate-none animate-pulse";

@@ -1,17 +1,16 @@
 import {
-  agencyMetricClass,
   agencyTimeEntryRailActionsClass,
   agencyTimeEntryRailDurationClass,
   agencyTimeEntryRailQuietClass,
   agencyTimeEntryRailTimeClass,
   agencyTimeEntrySectionHeaderClass,
   agencyTimeEntrySectionLabelClass,
+  agencyWorkMetricClass,
 } from "@/features/shared/agency-ui";
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { formatDuration } from "@/lib/utils/format-duration";
 import type { TimeEntryDayGroup } from "@/features/time-tracking/group-time-entries";
 import type { AgencyTimeEntryGroupRowRenderer } from "@/features/time-tracking/entries/agency-time-entry-row-renderer";
-import { cn } from "@/lib/utils";
 
 type AgencyTimeEntryDayGroupViewProps = {
   day: TimeEntryDayGroup;
@@ -34,7 +33,7 @@ export function AgencyTimeEntryDayGroupView({
           <div className={agencyTimeEntryRailTimeClass} aria-hidden />
           <div className={agencyTimeEntryRailDurationClass}>
             <span className="sr-only">Total</span>
-            <span className={cn("font-mono text-sm font-semibold tabular-nums", agencyMetricClass)}>
+            <span className={agencyWorkMetricClass}>
               {formatDuration(day.totalSeconds, "clock")}
             </span>
           </div>

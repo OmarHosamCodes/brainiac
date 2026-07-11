@@ -1,4 +1,5 @@
 import { AgencyProjectHueDot } from "@/features/shared/agency-project-hue-dot";
+import { agencyWorkMetaClass } from "@/features/shared/agency-ui";
 import { projectHueStyle } from "@/features/shared/project-palette";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +24,13 @@ export function AgencyTimeEntryProjectLabel({
 
   if (format === "task-client") {
     return (
-      <span className={cn("inline-flex min-w-0 items-center gap-1 truncate text-xs", className)}>
+      <span
+        className={cn(
+          "inline-flex min-w-0 items-center gap-1 truncate",
+          agencyWorkMetaClass,
+          className,
+        )}
+      >
         <AgencyProjectHueDot projectId={projectId} />
         <span
           className="truncate font-medium text-[var(--project-hue)] dark:text-[var(--project-hue-dark)]"
@@ -31,14 +38,20 @@ export function AgencyTimeEntryProjectLabel({
         >
           {taskTitle ?? projectName}
         </span>
-        <span className="truncate text-muted">. {clientName || "General"}</span>
+        <span className="truncate">. {clientName || "General"}</span>
       </span>
     );
   }
 
   if (format === "task-project") {
     return (
-      <span className={cn("inline-flex min-w-0 items-center gap-1 truncate text-xs", className)}>
+      <span
+        className={cn(
+          "inline-flex min-w-0 items-center gap-1 truncate",
+          agencyWorkMetaClass,
+          className,
+        )}
+      >
         <AgencyProjectHueDot projectId={projectId} />
         <span
           className="truncate font-medium text-[var(--project-hue)] dark:text-[var(--project-hue-dark)]"
@@ -46,13 +59,19 @@ export function AgencyTimeEntryProjectLabel({
         >
           {taskTitle ?? projectName}
         </span>
-        <span className="truncate text-muted">. {projectName}</span>
+        <span className="truncate">. {projectName}</span>
       </span>
     );
   }
 
   return (
-    <span className={cn("inline-flex min-w-0 items-center gap-1 truncate text-xs", className)}>
+    <span
+      className={cn(
+        "inline-flex min-w-0 items-center gap-1 truncate",
+        agencyWorkMetaClass,
+        className,
+      )}
+    >
       <AgencyProjectHueDot projectId={projectId} />
       <span
         className="truncate font-medium text-[var(--project-hue)] dark:text-[var(--project-hue-dark)]"
@@ -60,7 +79,7 @@ export function AgencyTimeEntryProjectLabel({
       >
         {projectName}
       </span>
-      <span className="truncate text-muted">· {clientName}</span>
+      <span className="truncate">· {clientName}</span>
     </span>
   );
 }

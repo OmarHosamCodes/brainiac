@@ -9,7 +9,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import type { AgencyTimeEntryRowViewModel } from "@/features/time-tracking/hooks/use-agency-time-entry-row";
 import {
   agencyFocusRingClass,
-  agencyMetricClass,
   agencyTimeEntryIconButtonClass,
   agencyTimeEntryMainClass,
   agencyTimeEntryRailActionsClass,
@@ -20,6 +19,10 @@ import {
   agencyTimeEntryRowEditingClass,
   agencyTimeEntryRowHighlightClass,
   agencyTimeEntryTimeInputClass,
+  agencyWorkCountBadgeClass,
+  agencyWorkMetricClass,
+  agencyWorkTimeRangeClass,
+  agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
 import { reportEntryWasteRowClass } from "@/features/reports/agency-report-grouping";
 import { cn } from "@/lib/utils";
@@ -97,10 +100,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
           <div className={descriptionLeadingSlotClass}>
             <button
               type="button"
-              className={cn(
-                "inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-default bg-elevated px-1.5 font-mono text-xs font-bold tabular-nums text-muted transition-colors hover:bg-default hover:text-highlighted",
-                agencyFocusRingClass,
-              )}
+              className={cn(agencyWorkCountBadgeClass, agencyFocusRingClass)}
               aria-label={expanded ? "Collapse entries" : "Expand entries"}
               aria-expanded={expanded}
               onClick={onToggleExpand}
@@ -128,14 +128,18 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 }}
                 disabled={editSaving || rowUpdating}
                 autoFocus
-                className="h-7 min-w-0 border-0 bg-transparent px-0 text-sm font-semibold text-highlighted shadow-none focus-visible:ring-0"
+                className={cn(
+                  "h-7 min-w-0 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0",
+                  agencyWorkTitleClass,
+                )}
                 aria-label="Edit description"
               />
             ) : (
               <button
                 type="button"
                 className={cn(
-                  "block min-w-0 max-w-full truncate text-left text-sm font-semibold text-highlighted sm:shrink-0",
+                  "block min-w-0 max-w-full truncate text-left sm:shrink-0",
+                  agencyWorkTitleClass,
                   agencyFocusRingClass,
                 )}
                 onClick={() => onEditingDescriptionChange(true)}
@@ -144,7 +148,12 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               </button>
             )
           ) : (
-            <span className="block min-w-0 max-w-full truncate text-left text-sm font-semibold text-highlighted sm:shrink-0">
+            <span
+              className={cn(
+                "block min-w-0 max-w-full truncate text-left sm:shrink-0",
+                agencyWorkTitleClass,
+              )}
+            >
               {displayTitle}
             </span>
           )}
@@ -195,7 +204,8 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 <button
                   type="button"
                   className={cn(
-                    "inline-flex h-8 w-full items-center text-left font-mono text-sm font-medium tabular-nums text-muted transition-colors hover:text-highlighted",
+                    "inline-flex h-8 w-full items-center text-left transition-colors hover:text-highlighted",
+                    agencyWorkTimeRangeClass,
                     agencyFocusRingClass,
                   )}
                   disabled={editSaving || rowUpdating}
@@ -250,11 +260,9 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               </PopoverContent>
             </Popover>
           ) : timeRange ? (
-            <span className="whitespace-nowrap font-mono text-sm font-medium tabular-nums text-muted">
-              {timeRange}
-            </span>
+            <span className={cn("whitespace-nowrap", agencyWorkTimeRangeClass)}>{timeRange}</span>
           ) : (
-            <span className="text-sm text-muted">—</span>
+            <span className={agencyWorkTimeRangeClass}>—</span>
           )}
         </div>
 
@@ -271,21 +279,13 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               onKeyDown={onInlineKeyDown}
               disabled={editSaving || rowUpdating}
               className={cn(
-                "h-8 w-full border-0 bg-transparent px-0 font-mono text-sm font-semibold tabular-nums shadow-none focus-visible:ring-0",
-                agencyMetricClass,
-                "text-highlighted",
+                "h-8 w-full border-0 bg-transparent px-0 shadow-none focus-visible:ring-0",
+                agencyWorkMetricClass,
               )}
               aria-label="Duration"
             />
           ) : (
-            <span
-              className={cn(
-                "block w-full font-mono text-sm font-semibold tabular-nums",
-                agencyMetricClass,
-              )}
-            >
-              {durationLabel}
-            </span>
+            <span className={cn("block w-full", agencyWorkMetricClass)}>{durationLabel}</span>
           )}
           {editError ? (
             <p className="absolute top-full left-2.5 z-10 text-xs text-error">{editError}</p>

@@ -62,12 +62,12 @@ function SessionSectionSkeleton({ rows }: { rows: number }) {
     <section aria-hidden>
       <header className={agencyTimeEntrySectionHeaderClass}>
         <div className={agencyTimeEntrySectionLabelClass}>
-          <Skeleton className="h-3 w-14" />
+          <Skeleton className="h-3.5 w-14" />
         </div>
         <div className={agencyTimeEntryRailQuietClass}>
           <div className={agencyTimeEntryRailTimeClass} aria-hidden />
           <div className={agencyTimeEntryRailDurationClass}>
-            <Skeleton className="h-3 w-14" />
+            <Skeleton className="h-3.5 w-14" />
           </div>
           <div className={agencyTimeEntryRailActionsClass} aria-hidden />
         </div>
