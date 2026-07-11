@@ -31,9 +31,13 @@ export function AgencyWorkSurfaceCreateTaskPopoverView(props: Props) {
   return (
     <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
-        <Button size="sm" variant="outline" className={agencyWorkTabCreateClass}>
+        <Button
+          size="sm"
+          variant="default"
+          className={agencyWorkTabCreateClass}
+          aria-label="New task"
+        >
           <Plus className="size-3.5" aria-hidden />
-          New task
         </Button>
       </PopoverTrigger>
       <PopoverContent

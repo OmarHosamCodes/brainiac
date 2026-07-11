@@ -197,7 +197,7 @@ export const agencyWorkTrackerCardClass =
   "shrink-0 overflow-hidden rounded-[var(--shell-inner-radius,1rem)] border border-default bg-default";
 
 export const agencyWorkTabBarClass =
-  "flex h-10 shrink-0 items-center justify-between gap-2 border-b border-default px-2 sm:px-3";
+  "flex min-h-12 shrink-0 items-center justify-between gap-2 border-b border-default px-2 sm:px-3";
 
 export const agencyWorkTabClass = cn(
   "inline-flex h-full shrink-0 items-center border-b-2 border-transparent px-2.5 text-sm font-medium text-muted transition-colors",
@@ -209,7 +209,7 @@ export const agencyWorkTabClass = cn(
 export const agencyWorkTabActiveClass = "border-highlighted font-semibold text-highlighted";
 
 export const agencyWorkTabCreateClass = cn(
-  "h-8 shrink-0 gap-1.5 rounded-full px-3 text-xs font-semibold",
+  "h-8 w-8 shrink-0 rounded-full p-0",
   agencyFocusRingClass,
 );
 
@@ -258,7 +258,7 @@ export const agencyTimeEntryIconButtonClass = cn(
 
 export const agencyTimeTrackerCardClass = cn(
   agencyWorkTrackerCardClass,
-  "flex min-h-14 min-w-0 flex-row items-center gap-2 overflow-visible px-4 py-2 sm:gap-3 sm:px-5",
+  "flex min-h-16 min-w-0 flex-row items-center gap-2 overflow-visible px-4 py-2 sm:gap-3 sm:px-5",
 );
 
 export const agencyTimeTrackerDescriptionZoneClass =
@@ -316,7 +316,7 @@ export const agencyTimeTrackerTaskChooserTriggerClass = cn(
 );
 
 export const agencyTimeTrackerPrimaryActionClass =
-  "h-8 shrink-0 whitespace-nowrap rounded-full px-3 text-xs font-semibold";
+  "h-8 shrink-0 whitespace-nowrap rounded-full px-6 text-xs font-semibold";
 
 export const agencyTimeTrackerIconActionClass = cn(
   "h-8 w-8 shrink-0 rounded-full p-0",
@@ -395,7 +395,7 @@ export const agencyTimeEntryRailActionsClass = cn(
 
 /** Day band — same rail geometry as rows so totals lock to the duration column. */
 export const agencyTimeEntrySectionHeaderClass = cn(
-  "flex min-h-9 items-stretch border-b border-default bg-elevated/40",
+  "flex min-h-12 items-stretch border-b border-default bg-elevated/40",
 );
 
 export const agencyTimeEntrySectionLabelClass = cn(
