@@ -7,6 +7,10 @@ import type {
   AgencyWorkSurfaceView,
 } from "@/features/task-management/agency-work";
 import { parseAgencyWorkSurfaceTab } from "@/features/task-management/agency-work";
+import {
+  normalizeAgencyWorkSurfaceTaskSelection,
+  selectAgencyWorkSurfaceTask,
+} from "@/features/task-management/agency-work-surface-navigation";
 import { useAgencyProjectsQuery } from "@/features/shared/agency-queries";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import {
@@ -60,11 +64,8 @@ export function useAgencyWorkSurface({
   }, [activeTab, setRailStatusFilter]);
 
   useEffect(() => {
-    const taskId = searchParams.get("task");
-    if (!taskId || searchParams.get("tab") === "my-tasks") return;
-    const next = new URLSearchParams(searchParams);
-    next.set("section", "work");
-    next.set("tab", "my-tasks");
+    const next = normalizeAgencyWorkSurfaceTaskSelection(searchParams);
+    if (!next) return;
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
@@ -87,14 +88,7 @@ export function useAgencyWorkSurface({
 
   const onSelectTask = useCallback(
     (taskId: string) => {
-      const next = new URLSearchParams(searchParams);
-      next.set("section", "work");
-      next.set("tab", "my-tasks");
-      if (taskId) {
-        next.set("task", taskId);
-      } else {
-        next.delete("task");
-      }
+      const next = selectAgencyWorkSurfaceTask(searchParams, taskId);
       setSearchParams(next, { replace: true });
       setRailStatusFilter("active");
     },

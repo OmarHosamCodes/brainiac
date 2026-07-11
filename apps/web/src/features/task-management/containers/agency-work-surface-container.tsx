@@ -1,4 +1,5 @@
 import type { AgencySegmentId } from "@/features/shared/agency-segments";
+import { AgencyTaskThreadContainer } from "@/features/task-management/containers/agency-task-thread-container";
 import { useAgencyWorkSurface } from "@/features/task-management/hooks/use-agency-work-surface";
 import { AgencyWorkSurfaceTaskPane } from "@/features/task-management/containers/agency-work-surface-task-pane-container";
 
@@ -20,6 +21,26 @@ function renderWorkSurfaceContent(
     case "sessions":
       return <AgencyTimeEntriesLog teamId={view.teamId} />;
     case "my-tasks":
+      if (view.selectedTaskId) {
+        return (
+          <AgencyTaskThreadContainer
+            teamId={view.teamId}
+            taskId={view.selectedTaskId}
+            projects={view.projects}
+            onBack={() => view.onSelectTask("")}
+          />
+        );
+      }
+      return (
+        <AgencyWorkSurfaceTaskPane
+          tab={view.activeTab}
+          teamId={view.teamId}
+          projects={view.projects}
+          selectedTaskId={view.selectedTaskId}
+          onSelectTask={view.onSelectTask}
+          onSelectProject={view.onSelectProject}
+        />
+      );
     case "done":
     case "delegated":
       return (

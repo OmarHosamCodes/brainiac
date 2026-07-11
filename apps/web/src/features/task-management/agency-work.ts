@@ -7,8 +7,11 @@ import type {
   AgencyProjectTask,
   AgencyProjectTaskKind,
   AgencyProjectTaskStatus,
+  AgencyTaskMessage,
+  AgencyTaskMessageAttachment,
   AgencyTaskProject,
   AgencyTaskThreadMember,
+  AgencyTimeEntry,
 } from "@orch/api/schemas/agency-ops";
 
 export type {
@@ -17,8 +20,12 @@ export type {
   AgencyProjectJourneyStep,
   AgencyProjectTask,
   AgencyProjectTaskKind,
+  AgencyProjectTaskStatus,
+  AgencyTaskMessage,
+  AgencyTaskMessageAttachment,
   AgencyTaskProject,
   AgencyTaskThreadMember,
+  AgencyTimeEntry,
 };
 
 export type TaskStatus = AgencyProjectTaskStatus;
