@@ -18,6 +18,7 @@ import {
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
 import { requireTeamMembership } from "../shared/membership";
+import { computeProjectShareMetrics } from "./project-share-metrics";
 
 type AgencyReportSummary = {
   totalHours: number;
@@ -44,6 +45,11 @@ type AgencyReportSummary = {
 
 type AgencyDashboardSummary = AgencyReportSummary & {
   totalSeconds: number;
+  projectShareMetrics: {
+    externalSeconds: number;
+    internalSeconds: number;
+    paidSeconds: number;
+  };
   activeTimerCount: number;
   topClient: { clientId: string; clientName: string; seconds: number } | null;
   topProject: {
@@ -144,8 +150,10 @@ async function getReportRows(
       memberEmail: user.email,
       clientId: agencyOpsClient.id,
       clientName: agencyOpsClient.name,
+      clientCategory: agencyOpsClient.category,
       projectId: agencyOpsProject.id,
       taskId: agencyOpsTimeEntry.taskId,
+      taskTitle: agencyOpsProjectTask.title,
       taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       source: agencyOpsTimeEntry.source,
@@ -447,6 +455,15 @@ export async function getAgencyDashboardSummary(
   const summary: AgencyDashboardSummary = {
     totalHours: Number((totalSeconds / 3_600).toFixed(2)),
     totalSeconds,
+    projectShareMetrics: computeProjectShareMetrics(
+      rows.map((row) => ({
+        durationSeconds: row.durationSeconds,
+        clientCategory: row.clientCategory,
+        taskIsWaste: row.taskIsWaste,
+        taskTitle: row.taskTitle,
+        projectName: row.projectName,
+      })),
+    ),
     totalEntries: rows.length,
     activeTimerCount: activeTimers.length,
     topClient,

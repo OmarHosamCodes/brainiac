@@ -262,7 +262,7 @@ export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
           type="button"
           variant="ghost"
           size="icon"
-          className="relative rounded-full"
+          className="relative rounded-full text-muted hover:text-highlighted"
           aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
         >
           <Bell className="size-4" aria-hidden />

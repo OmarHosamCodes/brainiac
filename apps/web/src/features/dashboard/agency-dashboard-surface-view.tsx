@@ -240,13 +240,58 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
       ) : (
         <div className="space-y-6">
           <section className="grid gap-4 [content-visibility:auto] lg:grid-cols-[22rem_minmax(0,1fr)]">
-            <div className={cn(agencyPanelClass, "p-4")}>
+            <div className={cn(agencyPanelClass, "group relative overflow-hidden p-4")}>
               <p className={agencyLabelClass}>Project share</p>
-              <ProjectShareDonut
-                projects={rankedProjects}
-                totalSeconds={summary.totalSeconds}
-                isDark={isDark}
-              />
+              <div className="transition-opacity duration-200 ease-out group-hover:opacity-0 group-focus-within:opacity-0">
+                <ProjectShareDonut
+                  projects={rankedProjects}
+                  totalSeconds={summary.totalSeconds}
+                  isDark={isDark}
+                />
+              </div>
+              <div
+                className={cn(
+                  "absolute inset-0 flex flex-col justify-center rounded-[2rem] bg-default p-6",
+                  "opacity-0 transition-opacity duration-200 ease-out",
+                  "pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100",
+                  "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+                )}
+                tabIndex={0}
+                aria-label="Project share hour breakdown"
+              >
+                <p className={agencyLabelClass}>Hour breakdown</p>
+                <dl className="mt-5 space-y-4">
+                  <div className="flex items-baseline justify-between gap-4 border-b border-default pb-3">
+                    <dt className="text-sm text-muted">Total</dt>
+                    <dd className={cn(agencyMetricClass, "text-xl tabular-nums")}>
+                      {formatDuration(summary.totalSeconds)}
+                    </dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-4 border-b border-default pb-3">
+                    <dt className="text-sm text-muted">External</dt>
+                    <dd className={cn(agencyMetricClass, "text-xl tabular-nums")}>
+                      {formatDuration(summary.projectShareMetrics.externalSeconds)}
+                    </dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-4 border-b border-default pb-3">
+                    <dt className="text-sm text-muted">Internal</dt>
+                    <dd className={cn(agencyMetricClass, "text-xl tabular-nums")}>
+                      {formatDuration(summary.projectShareMetrics.internalSeconds)}
+                    </dd>
+                  </div>
+                  <div className="flex items-baseline justify-between gap-4">
+                    <dt className="text-sm text-muted">
+                      Paid
+                      <span className="mt-0.5 block text-[0.65rem] font-normal normal-case tracking-normal text-muted/80">
+                        External − waste
+                      </span>
+                    </dt>
+                    <dd className={cn(agencyMetricClass, "text-xl tabular-nums text-primary")}>
+                      {formatDuration(summary.projectShareMetrics.paidSeconds)}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             </div>
             <div className={cn(agencyPanelClass, "p-4")}>
               <p className={agencyLabelClass}>Ranked projects</p>
@@ -263,11 +308,25 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
                         key={project.projectId}
                         className="grid gap-2 text-xs md:grid-cols-[minmax(12rem,1fr)_6rem_minmax(12rem,1.5fr)_3.5rem] md:items-center"
                       >
-                        <div className="flex min-w-0 items-center gap-2">
+                        <div className="group/project flex min-w-0 items-center gap-2">
                           <AgencyProjectHueDot projectId={project.projectId} className="size-2" />
-                          <span className="truncate font-semibold text-highlighted">
-                            {project.projectName}
-                          </span>
+                          <div className="min-w-0">
+                            <span className="block truncate font-semibold text-highlighted">
+                              {project.projectName}
+                            </span>
+                            {project.clientName ? (
+                              <span
+                                className={cn(
+                                  "block truncate text-[10px] font-medium text-muted",
+                                  "max-h-0 opacity-0 transition-[max-height,opacity] duration-200 ease-out",
+                                  "group-hover/project:max-h-4 group-hover/project:opacity-100",
+                                  "group-focus-within/project:max-h-4 group-focus-within/project:opacity-100",
+                                )}
+                              >
+                                {project.clientName}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                         <span className={cn(agencyMetricClass, "text-muted md:text-right")}>
                           {formatDuration(seconds)}
@@ -386,16 +445,15 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
                         </td>
                         <td className="px-4 py-3">
                           <span
-                            className="inline-flex items-center gap-1.5 rounded-full bg-elevated px-2 py-1 text-[11px] font-bold text-muted"
+                            className={cn(
+                              "inline-flex items-center rounded-full bg-elevated px-2 py-1 text-[11px] font-bold text-muted",
+                              isTracking && "gap-1.5",
+                            )}
                             aria-label={isTracking ? "Timer running" : "Idle"}
                           >
-                            <span
-                              className={cn(
-                                "size-1.5 rounded-full",
-                                isTracking ? "bg-primary" : "bg-muted",
-                              )}
-                              aria-hidden
-                            />
+                            {isTracking ? (
+                              <span className="size-1.5 rounded-full bg-primary" aria-hidden />
+                            ) : null}
                             {isTracking ? "In progress" : "Idle"}
                           </span>
                         </td>

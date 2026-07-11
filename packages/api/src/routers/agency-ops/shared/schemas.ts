@@ -221,6 +221,11 @@ export const reportsSummarySchema = z.object({
 
 export const reportsDashboardSummarySchema = reportsSummarySchema.extend({
   totalSeconds: z.number().int().nonnegative(),
+  projectShareMetrics: z.object({
+    externalSeconds: z.number().int().nonnegative(),
+    internalSeconds: z.number().int().nonnegative(),
+    paidSeconds: z.number().int().nonnegative(),
+  }),
   activeTimerCount: z.number().int().nonnegative(),
   topClient: z
     .object({
