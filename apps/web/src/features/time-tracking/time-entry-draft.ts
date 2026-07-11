@@ -85,6 +85,24 @@ export function startedAtToDateTimeDraft(startedAt: string): { date: string; sta
   };
 }
 
+/** Idle-tracker manual mode default: last hour → now on today's date. */
+export function createDefaultManualTimeWindow(now: Date = new Date()): {
+  date: string;
+  startTime: string;
+  endTime: string;
+  durationInput: string;
+} {
+  const end = now;
+  const start = new Date(now.getTime() - 60 * 60 * 1_000);
+  const durationSeconds = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1_000));
+  return {
+    date: toDateInputValue(end),
+    startTime: toTimeInputValue(start),
+    endTime: toTimeInputValue(end),
+    durationInput: formatDurationInput(durationSeconds),
+  };
+}
+
 export function activeTimerStartToIso(
   date: string,
   startTime: string,
@@ -203,4 +221,8 @@ if (import.meta.main) {
   console.assert(!("error" in ok));
   const future = activeTimerStartToIso(draft.date, "23:00", now);
   console.assert("error" in future);
+  const window = createDefaultManualTimeWindow(now);
+  console.assert(window.date === "2026-07-06");
+  console.assert(window.startTime === "11:00");
+  console.assert(window.endTime === "12:00");
 }

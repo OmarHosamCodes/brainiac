@@ -1,7 +1,8 @@
-import { MoreVertical, Trash2 } from "lucide-react";
+import { CalendarClock, MoreVertical, Timer, Trash2 } from "lucide-react";
 
 import { AgencyDescriptionSuggestionMenu } from "@/features/time-tracking/agency-description-suggestion-menu";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
+import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
@@ -9,6 +10,7 @@ import type { AgencyTimeTrackerViewModel } from "@/features/time-tracking/hooks/
 import {
   agencyInputPlaceholderClass,
   agencyLabelClass,
+  agencyTimeEntryTimeInputClass,
   agencyTimeTrackerActionsZoneClass,
   agencyTimeTrackerCardClass,
   agencyTimeTrackerDescriptionInputClass,
@@ -34,6 +36,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
     view.taskChooserWarning &&
       "text-warning hover:text-warning [&_svg]:text-warning [&_span]:text-warning",
   );
+  const idleManual = !view.activeTimer && view.mode === "manual";
 
   return (
     <div className={agencyTimeTrackerCardClass}>
@@ -56,7 +59,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
             agencyInputPlaceholderClass,
             "focus-visible:ring-0",
           )}
-          disabled={view.isTimerMutationPending || !view.teamId}
+          disabled={view.isTimerMutationPending || view.isManualCreatePending || !view.teamId}
         />
 
         {view.suggestionsOpen ? (
@@ -89,7 +92,11 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
           className={taskChooserTriggerClass}
           loading={view.projectsLoading || view.tasksLoading}
           disabled={
-            !view.teamId || view.isTimerMutationPending || view.projectsLoading || view.tasksLoading
+            !view.teamId ||
+            view.isTimerMutationPending ||
+            view.isManualCreatePending ||
+            view.projectsLoading ||
+            view.tasksLoading
           }
           open={view.taskChooserOpen}
           contentAlign="end"
@@ -151,6 +158,46 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
               </div>
             </PopoverContent>
           </Popover>
+        ) : idleManual ? (
+          <div className="relative flex min-w-0 shrink-0 items-center gap-1">
+            <Input
+              type="time"
+              value={view.manualDraft.startTime}
+              onChange={(e) => view.onManualStartTimeChange(e.target.value)}
+              className={cn(agencyTimeEntryTimeInputClass, "h-8 w-[5.5rem]")}
+              aria-label="Start time"
+              disabled={view.isManualCreatePending}
+            />
+            <span className="text-xs text-muted" aria-hidden>
+              –
+            </span>
+            <Input
+              type="time"
+              value={view.manualDraft.endTime}
+              onChange={(e) => view.onManualEndTimeChange(e.target.value)}
+              className={cn(agencyTimeEntryTimeInputClass, "h-8 w-[5.5rem]")}
+              aria-label="End time"
+              disabled={view.isManualCreatePending}
+            />
+            <label className="relative flex min-w-0 shrink-0 cursor-pointer items-center rounded-md px-1 py-0.5 hover:bg-elevated">
+              <Input
+                type="date"
+                value={view.manualDraft.date}
+                onChange={(e) => view.onManualDateChange(e.target.value)}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                aria-label="Entry date"
+                disabled={view.isManualCreatePending}
+              />
+              <span className="text-xs text-muted">
+                {view.manualDraft.date ? formatAgencyDayLabel(view.manualDraft.date) : "Date"}
+              </span>
+            </label>
+            {view.manualError ? (
+              <p className="absolute top-full left-0 z-10 whitespace-nowrap text-xs text-error">
+                {view.manualError}
+              </p>
+            ) : null}
+          </div>
         ) : (
           <span
             className={cn(agencyTimeTrackerMetricClass, "text-muted")}
@@ -208,6 +255,15 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
               </PopoverContent>
             </Popover>
           </>
+        ) : idleManual ? (
+          <Button
+            size="sm"
+            className={agencyTimeTrackerPrimaryActionClass}
+            disabled={!view.canAddManual}
+            onClick={view.onAddManual}
+          >
+            {view.isManualCreatePending ? "…" : "Add"}
+          </Button>
         ) : (
           <Button
             size="sm"
@@ -218,6 +274,19 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
             {view.isTimerMutationPending ? "…" : "Start"}
           </Button>
         )}
+
+        {view.showModeToggle ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className={agencyTimeTrackerIconActionClass}
+            aria-label={idleManual ? "Switch to timer" : "Switch to manual entry"}
+            aria-pressed={idleManual}
+            onClick={() => view.onModeChange(idleManual ? "timer" : "manual")}
+          >
+            {idleManual ? <Timer className="size-4" /> : <CalendarClock className="size-4" />}
+          </Button>
+        ) : null}
       </div>
     </div>
   );

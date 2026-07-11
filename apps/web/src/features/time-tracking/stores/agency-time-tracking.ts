@@ -175,6 +175,15 @@ type DuplicateEntryPayload = {
   entry: AgencyTimeEntry;
 };
 
+type CreateManualEntryPayload = {
+  teamId: string;
+  project: Pick<AgencyProjectSummary, "id" | "name" | "clientId" | "clientName">;
+  task: Pick<AgencyProjectTask, "id" | "title"> | null;
+  description: string;
+  startAt: string;
+  endAt: string;
+};
+
 const OPTIMISTIC_CLIENT_ID = "optimistic-client";
 const OPTIMISTIC_CLIENT_NAME = "Unknown client";
 const OPTIMISTIC_USER_NAME = "You";
@@ -202,6 +211,7 @@ type AgencyTimeTrackingState = {
   deletingEntryIds: string[];
   updatingEntryIds: string[];
   duplicatingEntryIds: string[];
+  manualCreateCount: number;
   trackerDraftsByTeam: Record<string, TrackerDraft>;
   lastHighlightedEntryId: string | null;
   taskChooserOpenRequest: number;
@@ -967,6 +977,31 @@ function createAgencyTimeTrackingActions(
     } satisfies AgencyTimeEntry;
   }
 
+  function createOptimisticManualEntry(payload: CreateManualEntryPayload) {
+    const now = new Date().toISOString();
+    const description = payload.description.trim();
+
+    return {
+      id: createOptimisticId("agency-time"),
+      teamId: payload.teamId,
+      userId: getCurrentUserId(),
+      userName: OPTIMISTIC_USER_NAME,
+      projectId: payload.project.id,
+      taskId: payload.task?.id ?? null,
+      taskTitle: payload.task?.title ?? null,
+      projectName: payload.project.name,
+      clientId: payload.project.clientId,
+      clientName: payload.project.clientName,
+      source: "manual",
+      description,
+      startedAt: payload.startAt,
+      endedAt: payload.endAt,
+      durationSeconds: getDurationSeconds(payload.startAt, payload.endAt),
+      createdAt: now,
+      updatedAt: now,
+    } satisfies AgencyTimeEntry;
+  }
+
   function getDurationSeconds(startedAt: string, endedAt: string) {
     const startedAtMs = new Date(startedAt).getTime();
     const endedAtMs = new Date(endedAt).getTime();
@@ -1301,6 +1336,43 @@ function createAgencyTimeTrackingActions(
     }
   }
 
+  async function createManualEntry(payload: CreateManualEntryPayload) {
+    const { teamId } = payload;
+    const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([teamId])));
+    const entryOverlaySnapshot = optimistic().snapshotTimeEntries(teamId);
+    const optimisticEntry = createOptimisticManualEntry(payload);
+
+    set((s) => ({ ...s, manualCreateCount: s.manualCreateCount + 1 }));
+
+    try {
+      patchInsertedEntry(teamId, optimisticEntry);
+
+      const created = (await orpcClient.agencyOps.timeEntries.createManual({
+        teamId,
+        projectId: payload.project.id,
+        taskId: payload.task?.id,
+        startAt: payload.startAt,
+        endAt: payload.endAt,
+        description: payload.description.trim() || undefined,
+      })) as AgencyTimeEntry;
+
+      reconcileCreatedEntry(teamId, optimisticEntry.id, created);
+      set((s) => ({ ...s, lastHighlightedEntryId: created.id }));
+      return created;
+    } catch (error) {
+      patchDeletedEntries(teamId, [optimisticEntry]);
+      restoreQuerySnapshots(logSnapshots);
+      optimistic().restoreTimeEntries(teamId, entryOverlaySnapshot);
+
+      toast.error("Unable to add entry", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+      return null;
+    } finally {
+      set((s) => ({ ...s, manualCreateCount: Math.max(0, s.manualCreateCount - 1) }));
+    }
+  }
+
   async function updateEntry(payload: UpdateEntryPayload) {
     const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([payload.teamId])));
     const entryOverlaySnapshot = optimistic().snapshotTimeEntries(payload.teamId);
@@ -1385,6 +1457,7 @@ function createAgencyTimeTrackingActions(
     updateActiveTimerStart,
     deleteEntries,
     duplicateEntry,
+    createManualEntry,
     updateEntry,
     clearHighlightedEntry,
     requestOpenTaskChooser,
@@ -1398,6 +1471,7 @@ export const useAgencyTimeTrackingStore = create<AgencyTimeTrackingState>((set, 
   deletingEntryIds: [],
   updatingEntryIds: [],
   duplicatingEntryIds: [],
+  manualCreateCount: 0,
   trackerDraftsByTeam: {},
   lastHighlightedEntryId: null,
   taskChooserOpenRequest: 0,

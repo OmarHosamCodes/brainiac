@@ -33,7 +33,13 @@ import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import {
   activeTimerStartToIso,
+  applyEndTimeToDraft,
+  applyStartTimeToDraft,
+  createDefaultManualTimeWindow,
+  draftToIsoRange,
   startedAtToDateTimeDraft,
+  validateTimeEntryDraft,
+  type TimeEntryDraft,
 } from "@/features/time-tracking/time-entry-draft";
 import {
   selectIsTimerMutationPending,
@@ -48,6 +54,14 @@ const emptyStartDraft = { date: "", startTime: "" };
 export type AgencyTimerStartDraft = {
   date: string;
   startTime: string;
+};
+
+export type AgencyTrackerMode = "timer" | "manual";
+
+export type AgencyManualTimeDraft = {
+  date: string;
+  startTime: string;
+  endTime: string;
 };
 
 type UseAgencyTimeTrackerOptions = {
@@ -82,6 +96,12 @@ export type AgencyTimeTrackerViewModel = {
   startTimeDraft: AgencyTimerStartDraft;
   startTimeDayLabel: string;
   startTimeError: string | null;
+  mode: AgencyTrackerMode;
+  showModeToggle: boolean;
+  manualDraft: AgencyManualTimeDraft;
+  canAddManual: boolean;
+  isManualCreatePending: boolean;
+  manualError: string | null;
   descriptionSuggestions: AgencyTimeTrackerSuggestion[];
   suggestionListboxId: string;
   suggestionsOpen: boolean;
@@ -96,9 +116,14 @@ export type AgencyTimeTrackerViewModel = {
   onTaskChooserOpenChange: (open: boolean) => void;
   onStartTimePopoverOpenChange: (open: boolean) => void;
   onStartTimeDraftChange: (patch: Partial<AgencyTimerStartDraft>) => void;
+  onModeChange: (mode: AgencyTrackerMode) => void;
+  onManualStartTimeChange: (startTime: string) => void;
+  onManualEndTimeChange: (endTime: string) => void;
+  onManualDateChange: (date: string) => void;
   onStartTimer: () => void;
   onStopTimer: () => void;
   onDiscardTimer: () => void;
+  onAddManual: () => void;
   onApplySuggestion: (suggestion: AgencyTimeTrackerSuggestion) => void;
 };
 
@@ -119,13 +144,20 @@ export function useAgencyTimeTracker({
   const startTimerAction = useAgencyTimeTrackingStore((s) => s.startTimer);
   const stopTimerAction = useAgencyTimeTrackingStore((s) => s.stopTimer);
   const updateActiveTimerStartAction = useAgencyTimeTrackingStore((s) => s.updateActiveTimerStart);
+  const createManualEntryAction = useAgencyTimeTrackingStore((s) => s.createManualEntry);
   const timerAdjustCount = useAgencyTimeTrackingStore((s) => s.timerAdjustCount);
   const isTimerMutationPending = useAgencyTimeTrackingStore(selectIsTimerMutationPending);
+  const isManualCreatePending = useAgencyTimeTrackingStore((s) => s.manualCreateCount > 0);
   const taskChooserOpenRequest = useAgencyTimeTrackingStore((s) => s.taskChooserOpenRequest);
 
   const [taskChooserOpen, setTaskChooserOpen] = useState(false);
   const [startTimePopoverOpen, setStartTimePopoverOpen] = useState(false);
   const [startTimeDraft, setStartTimeDraft] = useState<AgencyTimerStartDraft>(emptyStartDraft);
+  const [mode, setMode] = useState<AgencyTrackerMode>("timer");
+  const [manualDraft, setManualDraft] = useState<AgencyManualTimeDraft>(() => {
+    const window = createDefaultManualTimeWindow();
+    return { date: window.date, startTime: window.startTime, endTime: window.endTime };
+  });
   const suggestionListboxId = useId();
   const [descriptionFocused, setDescriptionFocused] = useState(false);
   const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
@@ -215,6 +247,37 @@ export function useAgencyTimeTracker({
     return "error" in result ? result.error : null;
   }, [startTimeDraft]);
 
+  const manualTimeEntryDraft = useMemo(
+    (): TimeEntryDraft => ({
+      taskId: selectedTaskId,
+      date: manualDraft.date,
+      startTime: manualDraft.startTime,
+      endTime: manualDraft.endTime,
+      durationInput: "",
+      description: timerDescription,
+    }),
+    [manualDraft, selectedTaskId, timerDescription],
+  );
+
+  const manualError = useMemo(
+    () => validateTimeEntryDraft(manualTimeEntryDraft, { requireTask: false }),
+    [manualTimeEntryDraft],
+  );
+
+  const manualProject =
+    (startProject ? projects.find((project) => project.id === startProject.id) : null) ?? null;
+
+  const canAddManual = Boolean(
+    teamId &&
+    !activeTimer &&
+    mode === "manual" &&
+    manualProject &&
+    !manualError &&
+    !isManualCreatePending,
+  );
+
+  const showModeToggle = Boolean(teamId && !activeTimer);
+
   const persistStartDraft = useCallback(
     (draft: AgencyTimerStartDraft) => {
       if (!teamId || !activeTimer) return;
@@ -263,7 +326,9 @@ export function useAgencyTimeTracker({
   useEffect(() => {
     if (!activeTimer) {
       setStartTimePopoverOpen(false);
+      return;
     }
+    setMode("timer");
   }, [activeTimer]);
 
   const descriptionSuggestions = useMemo(
@@ -293,6 +358,33 @@ export function useAgencyTimeTracker({
       description: timerDescription,
     });
     taskExplicitlyChosenRef.current = false;
+  }
+
+  async function addManual() {
+    if (!teamId || !manualProject || !canAddManual) return;
+
+    const range = draftToIsoRange(manualTimeEntryDraft);
+    if ("error" in range) return;
+
+    const created = await createManualEntryAction({
+      teamId,
+      project: {
+        id: manualProject.id,
+        name: manualProject.name,
+        clientId: manualProject.clientId,
+        clientName: manualProject.clientName,
+      },
+      task: selectedTask ? { id: selectedTask.id, title: selectedTask.title } : null,
+      description: timerDescription,
+      startAt: range.startAt,
+      endAt: range.endAt,
+    });
+
+    if (!created) return;
+
+    const window = createDefaultManualTimeWindow();
+    setManualDraft({ date: window.date, startTime: window.startTime, endTime: window.endTime });
+    setTrackerDescription(teamId, "");
   }
 
   function applyDescriptionSuggestion(suggestion: AgencyTimeTrackerSuggestion) {
@@ -339,9 +431,13 @@ export function useAgencyTimeTracker({
       }
     }
 
-    if (event.key === "Enter" && canStartTimer) {
+    if (event.key === "Enter" && mode === "timer" && canStartTimer) {
       event.preventDefault();
       void startTimer();
+    }
+    if (event.key === "Enter" && mode === "manual" && canAddManual) {
+      event.preventDefault();
+      void addManual();
     }
   }
 
@@ -409,6 +505,53 @@ export function useAgencyTimeTracker({
     });
   }
 
+  function onModeChange(nextMode: AgencyTrackerMode) {
+    if (activeTimer) return;
+    if (nextMode === "manual") {
+      const window = createDefaultManualTimeWindow();
+      setManualDraft({ date: window.date, startTime: window.startTime, endTime: window.endTime });
+    }
+    setMode(nextMode);
+  }
+
+  function onManualStartTimeChange(startTime: string) {
+    setManualDraft((current) => {
+      const next = applyStartTimeToDraft(
+        {
+          taskId: selectedTaskId,
+          date: current.date,
+          startTime: current.startTime,
+          endTime: current.endTime,
+          durationInput: "",
+          description: timerDescription,
+        },
+        startTime,
+      );
+      return { date: next.date, startTime: next.startTime, endTime: next.endTime };
+    });
+  }
+
+  function onManualEndTimeChange(endTime: string) {
+    setManualDraft((current) => {
+      const next = applyEndTimeToDraft(
+        {
+          taskId: selectedTaskId,
+          date: current.date,
+          startTime: current.startTime,
+          endTime: current.endTime,
+          durationInput: "",
+          description: timerDescription,
+        },
+        endTime,
+      );
+      return { date: next.date, startTime: next.startTime, endTime: next.endTime };
+    });
+  }
+
+  function onManualDateChange(date: string) {
+    setManualDraft((current) => ({ ...current, date }));
+  }
+
   return {
     teamId,
     timerDescription,
@@ -433,6 +576,12 @@ export function useAgencyTimeTracker({
     startTimeDraft,
     startTimeDayLabel,
     startTimeError,
+    mode,
+    showModeToggle,
+    manualDraft,
+    canAddManual,
+    isManualCreatePending,
+    manualError,
     descriptionSuggestions,
     suggestionListboxId,
     suggestionsOpen,
@@ -457,9 +606,14 @@ export function useAgencyTimeTracker({
     onTaskChooserOpenChange: setTaskChooserOpen,
     onStartTimePopoverOpenChange,
     onStartTimeDraftChange,
+    onModeChange,
+    onManualStartTimeChange,
+    onManualEndTimeChange,
+    onManualDateChange,
     onStartTimer: () => void startTimer(),
     onStopTimer: () => void stopTimer(),
     onDiscardTimer: () => void stopTimer(true),
+    onAddManual: () => void addManual(),
     onApplySuggestion: applyDescriptionSuggestion,
   };
 }
