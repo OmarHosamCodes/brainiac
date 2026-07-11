@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none"> 
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- dark theme: background oklch(0.15 0.02 269.18), primary oklch(0.922 0 0) -->
   <style>
     .line-1 {
       stroke-dasharray: 12;
@@ -36,22 +37,18 @@
       92%, 100% { stroke-dashoffset: 10; }
     }
     @keyframes pop-dot {
-      /* Keep hidden while lines 1, 2, and 3 are typing (0% - 55%) */
       0%, 55% {
         transform: scale(0);
         opacity: 0;
       }
-      /* Scale up past its normal size immediately after line 3 finishes */
       62% {
         transform: scale(1.4);
         opacity: 1;
       }
-      /* Settle down to normal scale and rest */
       68%, 85% {
         transform: scale(1);
         opacity: 1;
       }
-      /* Reset smoothly with the rest of the layout */
       92%, 100% {
         transform: scale(0);
         opacity: 0;
@@ -59,11 +56,11 @@
     }
   </style>
 
-  <rect width="32" height="32" rx="8" fill="#18181b"/> 
-  
-  <path class="line-1" d="M10 12h12" stroke="#10b981" stroke-width="2" stroke-linecap="round"/> 
-  <path class="line-2" d="M10 16h8" stroke="#10b981" stroke-width="2" stroke-linecap="round"/> 
-  <path class="line-3" d="M10 20h10" stroke="#10b981" stroke-width="2" stroke-linecap="round"/> 
-  
-  <circle class="dot" cx="22" cy="20" r="2" fill="#10b981"/> 
+  <rect width="32" height="32" rx="8" fill="#080b14"/>
+
+  <path class="line-1" d="M10 12h12" stroke="#e5e5e5" stroke-width="2" stroke-linecap="round"/>
+  <path class="line-2" d="M10 16h8" stroke="#e5e5e5" stroke-width="2" stroke-linecap="round"/>
+  <path class="line-3" d="M10 20h10" stroke="#e5e5e5" stroke-width="2" stroke-linecap="round"/>
+
+  <circle class="dot" cx="22" cy="20" r="2" fill="#e5e5e5"/>
 </svg>

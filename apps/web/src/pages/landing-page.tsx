@@ -49,7 +49,7 @@ export function LandingPage() {
             aria-hidden="true"
           >
             <Aurora
-              colorStops={["#059669", "#10b981", "#34d399"]}
+              colorStops={["#6b7280", "#e5e5e5", "#f5f5f5"]}
               amplitude={0.85}
               blend={0.55}
               speed={0.6}
