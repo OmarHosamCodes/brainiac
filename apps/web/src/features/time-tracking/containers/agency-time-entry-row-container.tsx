@@ -26,7 +26,7 @@ type AgencyTimeEntryRowContainerProps = {
   onToggleWaste: (entryId: string) => Promise<void>;
   togglingWasteEntryIds: string[];
   highlighted?: boolean;
-  /** Suppress the row bottom border (last row in a day card, or last child in a multi group). */
+  /** Suppress the row bottom border (last row in a day group, or last child in a multi group). */
   omitBottomBorder?: boolean;
   /** Child row inside an expanded multi-entry group. */
   multiGroupChild?: boolean;
@@ -52,7 +52,7 @@ export function AgencyTimeEntryRowContainer({
   }
 
   return (
-    <div className={cn("bg-elevated/20", omitBottomBorder ? undefined : "border-b border-default")}>
+    <div className={cn(omitBottomBorder ? undefined : "border-b border-dashed border-default")}>
       <AgencyTimeEntryRowView view={view} className="border-b-0" />
       {view.expandedChildGroups.map((childGroup, index) => (
         <AgencyTimeEntryRowContainer

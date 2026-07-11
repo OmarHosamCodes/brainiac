@@ -121,7 +121,7 @@ export const agencyTaskClientGroupHeaderClass = cn(
 
 /** Muted band headers — time log day groups, task rail project groups, etc. */
 export const agencyMutedSectionHeaderClass = cn(
-  "flex items-center justify-between gap-3 border-b border-default bg-muted/55 px-5 py-3 text-xs",
+  "flex min-h-10 items-center justify-between gap-3 border-y border-default bg-elevated/65 px-4 py-2 text-xs sm:px-5",
 );
 
 export const agencyTaskProjectGroupHeaderClass = cn(
@@ -163,56 +163,67 @@ export const agencySearchHighlightMarkClass = "agency-search-highlight-mark";
 export const agencyTaskRowNeedsDescriptionClass = "bg-warning/5";
 
 /** Work time surface — stacks tracker and log as separate panels. */
-export const agencyTimePaneStackClass = "flex min-h-0 min-w-0 flex-1 flex-col gap-4";
+export const agencyTimePaneStackClass = "flex min-h-0 min-w-0 flex-1 flex-col gap-4 font-sans";
 
-export const agencyTimePaneBodyClass = "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden";
+export const agencyTimePaneBodyClass = cn(
+  "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border border-default bg-default",
+  "rounded-[var(--shell-inner-radius,1rem)]",
+);
 
 export const agencyTimeTrackerPanelClass = "relative z-20 shrink-0 overflow-visible";
 
-export const agencyTimeLogPanelClass =
-  "flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-default bg-default";
+/** Log body inside the unified work pane — no second border/radius. */
+export const agencyTimeLogPanelClass = "flex min-h-0 flex-1 flex-col overflow-hidden";
 
-export const agencyWorkTabShellClass =
-  "shrink-0 overflow-hidden rounded-2xl rounded-b-none border border-default border-b-0 bg-default";
+/** Tab strip sits inside the pane; radius belongs on the pane, not here. */
+export const agencyWorkTabShellClass = "shrink-0";
 
 export const agencyWorkTrackerCardClass =
-  "shrink-0 overflow-hidden rounded-2xl border border-default bg-default";
+  "shrink-0 overflow-hidden rounded-[var(--shell-inner-radius,1rem)] border border-default bg-default";
 
 export const agencyWorkTabBarClass =
-  "flex shrink-0 items-center justify-between gap-4 border-b border-default px-4 py-2";
+  "flex h-10 shrink-0 items-center justify-between gap-2 border-b border-default px-2 sm:px-3";
 
 export const agencyWorkTabClass = cn(
-  "inline-flex shrink-0 items-center gap-2 border-b-2 border-transparent px-3 py-2.5 text-sm font-medium text-muted transition-colors",
+  "inline-flex h-full shrink-0 items-center border-b-2 border-transparent px-2.5 text-sm font-medium text-muted transition-colors",
   "hover:text-highlighted",
   agencyFocusRingClass,
   "motion-reduce:transition-none",
 );
 
-export const agencyWorkTabActiveClass = "border-primary text-highlighted [&_svg]:text-primary";
+export const agencyWorkTabActiveClass = "border-highlighted text-highlighted";
+
+export const agencyWorkTabCreateClass = cn(
+  "h-8 shrink-0 gap-1.5 rounded-full px-3 text-xs font-semibold",
+  agencyFocusRingClass,
+);
 
 export const agencyWorkTableGridClass =
-  "grid w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.75fr)_4.5rem] items-center gap-x-4 px-5 py-3.5";
+  "grid min-h-14 w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.9fr)_minmax(0,0.75fr)_4.5rem] items-center gap-x-0 px-4 py-2 sm:px-5 sm:[&>*+*]:border-l sm:[&>*+*]:border-dashed sm:[&>*+*]:border-default sm:[&>*+*]:pl-4";
 
 export const agencyWorkTableGridDoneClass =
-  "grid w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.6fr)_minmax(0,0.75fr)_4.5rem] items-center gap-x-4 px-5 py-3.5";
+  "grid min-h-14 w-full grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,0.6fr)_minmax(0,0.75fr)_4.5rem] items-center gap-x-0 px-4 py-2 sm:px-5 sm:[&>*+*]:border-l sm:[&>*+*]:border-dashed sm:[&>*+*]:border-default sm:[&>*+*]:pl-4";
 
 export const agencyWorkTableGridDelegatedClass =
-  "grid w-full grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.85fr)_4.5rem] items-center gap-x-4 px-5 py-3.5";
+  "grid min-h-14 w-full grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,0.85fr)_4.5rem] items-center gap-x-0 px-4 py-2 sm:px-5 sm:[&>*+*]:border-l sm:[&>*+*]:border-dashed sm:[&>*+*]:border-default sm:[&>*+*]:pl-4";
 
 /** Visual chrome only — pair with the matching row grid class so header cells align. */
 export const agencyWorkTableHeaderClass =
-  "border-b border-default bg-muted/45 text-xs font-semibold uppercase tracking-wide text-muted";
+  "min-h-10 border-b border-default bg-elevated/65 text-[11px] font-semibold text-muted";
 
-export const agencyWorkTableBodyScrollClass = "min-h-0 flex-1 overflow-y-auto p-3";
+export const agencyWorkTableBodyScrollClass = "min-h-0 flex-1 overflow-y-auto p-0";
 
-export const agencyWorkTableStackClass = "flex flex-col gap-4";
+export const agencyWorkTableStackClass = "flex flex-col gap-5";
 
-export const agencyWorkTableListClass =
-  "overflow-hidden rounded-xl border border-default bg-default";
+export const agencyWorkTableListClass = "overflow-hidden border-y border-default bg-default";
+
+/** Shared compact state treatment within the work-surface content pane. */
+export const agencyWorkSurfaceStateClass =
+  "mx-auto flex w-full max-w-md flex-col items-center rounded-none border border-default bg-elevated/35 px-5 py-8 text-center";
 
 export const agencyWorkTableRowClass = cn(
   agencyWorkTableGridClass,
-  "border-b border-default transition-colors hover:bg-elevated/45 motion-reduce:transition-none",
+  "border-b border-dashed border-default transition-colors hover:bg-elevated/60 motion-reduce:transition-none",
 );
 
 export const agencyWorkPlayButtonClass = cn(
@@ -224,7 +235,7 @@ export const agencyWorkPlayButtonClass = cn(
 
 export const agencyTimeTrackerCardClass = cn(
   agencyWorkTrackerCardClass,
-  "flex min-h-14 min-w-0 flex-row items-center gap-2 overflow-visible rounded-lg px-3 py-2 sm:gap-3",
+  "flex min-h-14 min-w-0 flex-row items-center gap-2 overflow-visible px-4 py-2 sm:gap-3 sm:px-5",
 );
 
 export const agencyTimeTrackerDescriptionZoneClass =
@@ -237,12 +248,12 @@ export const agencyTimeTrackerSplitClass = "flex min-w-0 flex-row items-center g
 
 export const agencyTimeTrackerDescriptionCardClass = cn(
   agencyWorkTrackerCardClass,
-  "group/desc relative flex min-h-14 min-w-0 flex-1 basis-0 flex-col justify-center gap-0 overflow-visible rounded-lg px-3 py-2",
+  "group/desc relative flex min-h-14 min-w-0 flex-1 basis-0 flex-col justify-center gap-0 overflow-visible px-3 py-2",
 );
 
 export const agencyTimeTrackerControlsCardClass = cn(
   agencyWorkTrackerCardClass,
-  "flex min-h-14 min-w-0 shrink-0 items-center rounded-lg px-3 py-2",
+  "flex min-h-14 min-w-0 shrink-0 items-center px-3 py-2",
 );
 
 export const agencyTimeTrackerDescriptionLabelClass =
@@ -259,7 +270,8 @@ export const agencyTimeTrackerStatusZoneClass =
 
 export const agencyTimeTrackerActionsZoneClass = "flex shrink-0 items-center gap-3 pl-0.5";
 
-export const agencyTimeTrackerStatusDividerClass = "mx-0.5 h-6 w-px shrink-0 bg-border";
+export const agencyTimeTrackerStatusDividerClass =
+  "mx-0.5 h-8 shrink-0 border-l border-dashed border-default";
 
 export const agencyTimeTrackerMetricClass = cn(
   agencyMetricClass,
@@ -308,11 +320,11 @@ export const agencyTimeDayHeaderClass = cn(
 export const agencyTimeWeekHeaderClass = "sr-only";
 
 export const agencyTimeEntryRowClass = cn(
-  "border-b border-default px-5 py-3.5 transition-colors hover:bg-elevated/45 motion-reduce:transition-none",
+  "min-h-12 border-b border-default px-4 py-2 transition-colors hover:bg-elevated/50 motion-reduce:transition-none sm:px-5",
 );
 
 /** Nested child row inside an expanded multi-entry group. */
-export const agencyTimeEntryMultiChildClass = "bg-elevated/25 pl-8";
+export const agencyTimeEntryMultiChildClass = "border-b border-default pl-8";
 
 /** Inline time inputs in entry rows. */
 export const agencyTimeEntryTimeInputClass = cn(
@@ -322,13 +334,23 @@ export const agencyTimeEntryTimeInputClass = cn(
 
 /** Shared column grid for time entry rows and day-section totals. */
 export const agencyTimeEntryGridClass =
-  "grid w-full grid-cols-[minmax(0,1fr)_4.25rem] items-center gap-x-4 gap-y-3 sm:grid-cols-[minmax(14rem,1.35fr)_minmax(12rem,0.7fr)_minmax(6rem,0.35fr)_4.5rem] sm:gap-y-0";
+  "grid w-full grid-cols-[minmax(0,1fr)_4.25rem] items-center gap-x-3 gap-y-2 sm:grid-cols-[minmax(14rem,1.35fr)_minmax(10rem,0.7fr)_minmax(5.5rem,0.35fr)_4.5rem] sm:gap-x-4 sm:gap-y-0";
 
-/** Day-section header: label/count left; total aligns to the duration column from sm up. */
+/** Day band — date left; total sits on the duration column from sm up. */
 export const agencyTimeEntrySectionHeaderClass = cn(
-  "flex items-center justify-between gap-3 border-b border-default bg-muted/55 px-5 py-3 text-xs",
-  "sm:grid sm:grid-cols-[minmax(14rem,1.35fr)_minmax(12rem,0.7fr)_minmax(6rem,0.35fr)_4.5rem] sm:gap-x-4 sm:items-center",
+  "flex min-h-9 items-center justify-between gap-3 border-b border-default bg-elevated/40 px-4 py-1.5 text-sm sm:px-5",
+  "sm:grid sm:grid-cols-[minmax(14rem,1.35fr)_minmax(10rem,0.7fr)_minmax(5.5rem,0.35fr)_4.5rem] sm:items-center sm:gap-x-4",
 );
+
+export const agencyTimeWeekGroupClass = "flex flex-col gap-3";
+
+export const agencyTimeWeekGroupHeaderClass =
+  "flex h-9 shrink-0 items-center justify-between gap-3 px-4 sm:px-5";
+
+export const agencyTimeWeekGroupBodyClass = "flex flex-col gap-4";
+
+/** Stack of week sections in the sessions log. */
+export const agencyTimeWeekStackClass = "flex flex-col gap-10";
 
 export const agencyTimeEntryRowHighlightClass =
   "bg-success/10 motion-reduce:transition-none transition-colors duration-500";
@@ -341,8 +363,8 @@ export const agencyTimeSuggestionChipClass = cn(
 );
 
 export const agencyTimeWeekFooterClass = cn(
-  "flex shrink-0 items-center justify-between border-t border-default px-5 py-3",
-  "bg-default/75",
+  "flex h-10 shrink-0 items-center justify-between border-t border-default px-4 sm:px-5",
+  "bg-elevated/40",
 );
 
 export const agencyTimeFooterMetricClass = cn("text-sm font-semibold", agencyMetricClass);

@@ -10,6 +10,7 @@ export function clampAgentDockWidth(width: number) {
   return Math.min(MAX_AGENT_DOCK_WIDTH, Math.max(MIN_AGENT_DOCK_WIDTH, Math.round(width)));
 }
 
+/** Collapsed rail width — keep in sync with `--app-shell-rail-width-collapsed` (topbar height uses the same token). */
 export const APP_SHELL_RAIL_WIDTH_COLLAPSED = "3rem";
 export const APP_SHELL_RAIL_WIDTH_EXPANDED = "14rem";
 

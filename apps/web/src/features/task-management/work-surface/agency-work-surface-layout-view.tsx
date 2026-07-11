@@ -13,7 +13,7 @@ export function AgencyWorkSurfaceLayoutView({
   contentPane,
 }: AgencyWorkSurfaceLayoutViewProps) {
   return (
-    <div className={agencyTimePaneStackClass}>
+    <div className={agencyTimePaneStackClass} data-agency-work-surface>
       {trackerPane}
       <div className={agencyTimePaneBodyClass}>
         {tabBar}

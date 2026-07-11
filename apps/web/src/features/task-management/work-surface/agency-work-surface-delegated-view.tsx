@@ -5,11 +5,13 @@ import { AgencyWorkSurfaceTableHeaderView } from "@/features/task-management/wor
 import type { RenderAgencyWorkSurfaceTaskTableRow } from "@/features/task-management/work-surface/agency-work-surface-task-table-row-model";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
   agencyMutedSectionHeaderClass,
   agencyWorkTableBodyScrollClass,
   agencyWorkTableListClass,
   agencyWorkTableStackClass,
+  agencyWorkSurfaceStateClass,
 } from "@/features/shared/agency-ui";
 import type { AgencyWorkSurfaceDelegatedViewModel } from "./hooks/use-agency-work-surface-delegated";
 
@@ -23,12 +25,14 @@ export function AgencyWorkSurfaceDelegatedView({
   const { sections, totalLoaded, loading, queryError, errorMessage, retry } = viewModel;
   if (queryError)
     return (
-      <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
-        <AlertTriangle className="size-5 text-warning" aria-hidden />
-        <p className="text-sm text-muted">{errorMessage}</p>
-        <Button size="sm" variant="secondary" onClick={retry}>
-          Retry
-        </Button>
+      <div className="p-3 sm:p-4">
+        <div className={cn(agencyWorkSurfaceStateClass, "gap-3")}>
+          <AlertTriangle className="size-5 text-warning" aria-hidden />
+          <p className="text-sm text-muted">{errorMessage}</p>
+          <Button size="sm" variant="secondary" onClick={retry}>
+            Retry
+          </Button>
+        </div>
       </div>
     );
   return (
@@ -37,11 +41,13 @@ export function AgencyWorkSurfaceDelegatedView({
         {loading ? (
           <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-[4.5rem] w-full rounded-lg" />
+              <Skeleton key={index} className="h-14 w-full rounded-none" />
             ))}
           </div>
         ) : sections.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted">No delegated tasks yet.</p>
+          <div className={agencyWorkSurfaceStateClass}>
+            <p className="text-sm text-muted">No delegated tasks yet.</p>
+          </div>
         ) : (
           <div className={agencyWorkTableStackClass}>
             {sections.map((section, sectionIndex) => (
@@ -58,11 +64,8 @@ export function AgencyWorkSurfaceDelegatedView({
                   />
                 ) : null}
                 <div className={agencyMutedSectionHeaderClass}>
-                  <div className="flex min-w-0 items-center gap-2">
+                  <div className="min-w-0">
                     <span className="font-semibold text-highlighted">{section.label}</span>
-                    <span className="rounded-full bg-elevated px-2 py-0.5 text-[11px] font-semibold text-muted">
-                      {section.tasks.length}
-                    </span>
                   </div>
                 </div>
                 {section.tasks.map((task) =>

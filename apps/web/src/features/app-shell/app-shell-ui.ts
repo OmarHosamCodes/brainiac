@@ -120,15 +120,27 @@ export const shellMobileNavLinkActiveClass = "bg-primary/10 text-primary";
 
 export const shellMobileNavLinkIdleClass = "text-muted hover:bg-elevated hover:text-highlighted";
 
+/** Page column — equal L/R pad, no max-width. Nest pad pairs with `--shell-inner-radius`. */
 export const shellPageClass =
-  "mx-auto flex h-full w-full max-w-[120rem] flex-col px-6 pb-16 lg:px-8";
+  "flex h-full w-full flex-col px-[var(--shell-nest-pad,1rem)] pb-16";
+
+/** Full equal nest padding (work surfaces that need concentric corners). */
+export const shellPageNestClass =
+  "flex h-full w-full min-h-0 flex-1 flex-col overflow-hidden p-[var(--shell-nest-pad,1rem)]";
 
 export const shellPageBodyClass = "flex min-h-0 flex-1 flex-col gap-4 pt-4";
 
 export const shellPageIntroClass = "text-sm text-muted";
 
 export const shellInPageSubnavClass =
-  "-mx-6 border-b border-default bg-default px-6 lg:-mx-8 lg:px-8";
+  "-mx-[var(--shell-nest-pad,1rem)] border-b border-default bg-default px-[var(--shell-nest-pad,1rem)]";
+
+/** Outer content frame radius — set on the shell page transition in execution mode. */
+export const shellContentFrameClass =
+  "rounded-[var(--shell-outer-radius,0px)] overflow-hidden";
+
+/** Inner panel radius — tracker, log, and other nest children. */
+export const shellInnerRadiusClass = "rounded-[var(--shell-inner-radius,1rem)]";
 
 /** Motion utilities (see index.css for keyframes and reduced-motion guards). */
 export const shellPageEnterClass = "shell-page-enter";

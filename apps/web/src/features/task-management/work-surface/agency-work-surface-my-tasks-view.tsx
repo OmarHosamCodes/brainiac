@@ -24,10 +24,12 @@ import {
 import { Skeleton } from "@/ui/skeleton";
 import type { AgencyTaskListViewModel } from "@/features/task-management/hooks/use-agency-task-list";
 import type { AgencyProjectTask } from "@/features/task-management/agency-work";
+import { cn } from "@/lib/utils";
 import {
   agencyWorkTableBodyScrollClass,
   agencyWorkTableListClass,
   agencyWorkTableStackClass,
+  agencyWorkSurfaceStateClass,
 } from "@/features/shared/agency-ui";
 
 type AgencyWorkSurfaceMyTasksViewProps = {
@@ -97,7 +99,7 @@ export function AgencyWorkSurfaceMyTasksView({
 
   if (view.activeTasksQueryError) {
     return (
-      <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+      <div className={cn(agencyWorkSurfaceStateClass, "gap-3")}>
         <AlertTriangle className="size-5 text-warning" aria-hidden />
         <p className="text-sm text-muted">
           {view.activeTasksErrorMessage || "Could not load tasks."}
@@ -115,11 +117,13 @@ export function AgencyWorkSurfaceMyTasksView({
         {view.isLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 5 }).map((_, index) => (
-              <Skeleton key={index} className="h-[4.5rem] w-full rounded-lg" />
+              <Skeleton key={index} className="h-14 w-full rounded-none" />
             ))}
           </div>
         ) : tasks.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted">No active tasks yet.</p>
+          <div className={agencyWorkSurfaceStateClass}>
+            <p className="text-sm text-muted">No active tasks yet.</p>
+          </div>
         ) : (
           <div className={agencyWorkTableStackClass}>
             <div className={agencyWorkTableListClass}>

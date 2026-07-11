@@ -2,7 +2,11 @@ import { useMemo, useRef, useEffect } from "react";
 import { Outlet, useLocation, useNavigationType } from "react-router-dom";
 
 import { resolveShellMode } from "@/features/app-shell/app-navigation";
-import { shellContentInClass, shellPageEnterClass } from "@/features/app-shell/app-shell-ui";
+import {
+  shellContentFrameClass,
+  shellContentInClass,
+  shellPageEnterClass,
+} from "@/features/app-shell/app-shell-ui";
 import { cn } from "@/lib/utils";
 
 function isSpatialFastPath(previousPath: string, nextPath: string) {
@@ -13,6 +17,7 @@ export function ShellPageTransition() {
   const location = useLocation();
   const navigationType = useNavigationType();
   const previousPathRef = useRef(location.pathname);
+  const isSpatial = resolveShellMode(location.pathname) === "spatial";
 
   const enterClass = useMemo(() => {
     if (navigationType === "POP") {
@@ -34,7 +39,7 @@ export function ShellPageTransition() {
   }, [location.pathname]);
 
   return (
-    <div className={cn(enterClass, "h-full min-h-0")}>
+    <div className={cn(enterClass, "h-full min-h-0", !isSpatial && shellContentFrameClass)}>
       <Outlet />
     </div>
   );

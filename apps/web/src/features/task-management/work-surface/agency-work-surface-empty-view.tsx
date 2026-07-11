@@ -1,7 +1,8 @@
 import { Briefcase, Building2, FolderKanban } from "lucide-react";
 
 import { Button } from "@/ui/button";
-import { agencyEmptyPanelClass } from "@/features/shared/agency-ui";
+import { agencyEmptyPanelClass, agencyWorkSurfaceStateClass } from "@/features/shared/agency-ui";
+import { cn } from "@/lib/utils";
 
 type AgencyWorkSurfaceEmptyViewProps = {
   onGoToClients: () => void;
@@ -13,7 +14,7 @@ export function AgencyWorkSurfaceEmptyView({
   onGoToProjects,
 }: AgencyWorkSurfaceEmptyViewProps) {
   return (
-    <div className={agencyEmptyPanelClass}>
+    <div className={cn(agencyEmptyPanelClass, agencyWorkSurfaceStateClass)}>
       <Briefcase className="mx-auto size-7 text-muted" />
       <p className="mt-4 text-sm font-bold text-highlighted">No projects yet.</p>
       <p className="mt-1 text-xs text-muted">

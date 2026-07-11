@@ -15,7 +15,9 @@
   "dependencies": {
     "@fontsource-variable/merriweather": "^5.2.6",
     "@fontsource-variable/roboto-mono": "^5.2.9",
+    "@fontsource/ibm-plex-sans-arabic": "^5.2.9",
     "@fontsource/lato": "^5.2.7",
+    "@fontsource/poppins": "^5.2.7",
     "@hookform/resolvers": "^5.4.0",
     "@orch/agent": "workspace:*",
     "@orch/api": "workspace:*",

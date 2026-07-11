@@ -6,11 +6,13 @@ import type { RenderAgencyWorkSurfaceTaskTableRow } from "@/features/task-manage
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
 import type { AgencyWorkSurfaceDoneViewModel } from "@/features/task-management/work-surface/hooks/use-agency-work-surface-done";
+import { cn } from "@/lib/utils";
 import {
   agencyMutedSectionHeaderClass,
   agencyWorkTableBodyScrollClass,
   agencyWorkTableListClass,
   agencyWorkTableStackClass,
+  agencyWorkSurfaceStateClass,
 } from "@/features/shared/agency-ui";
 
 type AgencyWorkSurfaceDoneViewProps = {
@@ -26,7 +28,7 @@ export function AgencyWorkSurfaceDoneView({
 
   if (view.doneTasksQueryError) {
     return (
-      <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+      <div className={cn(agencyWorkSurfaceStateClass, "gap-3")}>
         <AlertTriangle className="size-5 text-warning" aria-hidden />
         <p className="text-sm text-muted">{view.doneTasksErrorMessage}</p>
         <Button size="sm" variant="secondary" onClick={view.onRetryDoneTasks}>
@@ -42,11 +44,13 @@ export function AgencyWorkSurfaceDoneView({
         {view.doneTasksLoading ? (
           <div className="space-y-2">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-[4.5rem] w-full rounded-lg" />
+              <Skeleton key={index} className="h-14 w-full rounded-none" />
             ))}
           </div>
         ) : sections.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted">No completed tasks yet.</p>
+          <div className={agencyWorkSurfaceStateClass}>
+            <p className="text-sm text-muted">No completed tasks yet.</p>
+          </div>
         ) : (
           <div className={agencyWorkTableStackClass}>
             {sections.map((section, sectionIndex) => (
@@ -64,9 +68,6 @@ export function AgencyWorkSurfaceDoneView({
                 ) : null}
                 <div className={agencyMutedSectionHeaderClass}>
                   <span className="font-semibold text-highlighted">{section.label}</span>
-                  <span className="rounded-full bg-elevated px-2 py-0.5 text-[11px] font-semibold text-muted">
-                    {section.tasks.length}
-                  </span>
                 </div>
                 {section.tasks.map((task) =>
                   renderTaskTableRow({

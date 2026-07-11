@@ -1,7 +1,14 @@
 import { AgencyTimeEntryDayGroupView } from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
-import { agencyTimeWeekHeaderClass } from "@/features/shared/agency-ui";
+import {
+  agencyMetricClass,
+  agencyTimeWeekGroupBodyClass,
+  agencyTimeWeekGroupClass,
+  agencyTimeWeekGroupHeaderClass,
+} from "@/features/shared/agency-ui";
+import { formatDuration } from "@/lib/utils/format-duration";
 import type { TimeEntryWeekGroup } from "@/features/time-tracking/group-time-entries";
 import type { AgencyTimeEntryGroupRowRenderer } from "@/features/time-tracking/entries/agency-time-entry-row-renderer";
+import { cn } from "@/lib/utils";
 
 type AgencyTimeEntryWeekGroupViewProps = {
   week: TimeEntryWeekGroup;
@@ -15,10 +22,18 @@ export function AgencyTimeEntryWeekGroupView({
   highlightedEntryId = null,
 }: AgencyTimeEntryWeekGroupViewProps) {
   return (
-    <section>
-      <h2 className={agencyTimeWeekHeaderClass}>{week.label}</h2>
+    <section className={agencyTimeWeekGroupClass}>
+      <header className={agencyTimeWeekGroupHeaderClass}>
+        <h2 className="text-sm font-semibold text-highlighted">{week.label}</h2>
+        <p className="inline-flex items-baseline gap-2 text-xs text-muted">
+          <span>Week total</span>
+          <span className={cn(agencyMetricClass, "text-sm font-semibold text-highlighted")}>
+            {formatDuration(week.totalSeconds, "clock")}
+          </span>
+        </p>
+      </header>
 
-      <div className="flex flex-col gap-4">
+      <div className={agencyTimeWeekGroupBodyClass}>
         {week.days.map((day) => (
           <AgencyTimeEntryDayGroupView
             key={day.dateKey}

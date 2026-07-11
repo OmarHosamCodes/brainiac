@@ -55,7 +55,7 @@ export function AgencyWorkSurfaceRootView({
               role="tabpanel"
               id={`agency-work-panel-${view.activeTab}`}
               aria-labelledby={`agency-work-tab-${view.activeTab}`}
-              className={cn(agencyTimeLogPanelClass, "min-h-0 rounded-t-none border-t-0")}
+              className={cn(agencyTimeLogPanelClass, "min-h-0")}
             >
               {content}
             </div>
@@ -69,5 +69,5 @@ export function AgencyWorkSurfaceRootView({
     }
   }
 
-  return <div className="flex min-h-0 flex-1 flex-col pb-4">{surface}</div>;
+  return <div className="flex min-h-0 flex-1 flex-col">{surface}</div>;
 }

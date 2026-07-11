@@ -1,8 +1,4 @@
-import {
-  agencyMetricClass,
-  agencyTimeEntrySectionHeaderClass,
-  agencyWorkTableListClass,
-} from "@/features/shared/agency-ui";
+import { agencyMetricClass, agencyTimeEntrySectionHeaderClass } from "@/features/shared/agency-ui";
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { formatDuration } from "@/lib/utils/format-duration";
 import type { TimeEntryDayGroup } from "@/features/time-tracking/group-time-entries";
@@ -23,19 +19,16 @@ export function AgencyTimeEntryDayGroupView({
   const lastGroupIndex = day.groups.length - 1;
 
   return (
-    <section className={agencyWorkTableListClass}>
+    <section>
       <header className={agencyTimeEntrySectionHeaderClass}>
-        <div className="flex min-w-0 items-center gap-2.5">
+        <div className="min-w-0">
           <span className="font-semibold text-highlighted">
             {formatAgencyDayLabel(day.dateKey)}
           </span>
-          <span className="rounded-full bg-elevated px-2 py-0.5 text-[11px] font-semibold tabular-nums text-muted">
-            {day.groups.length}
-          </span>
         </div>
         <span className="hidden sm:block" aria-hidden />
-        <span className="inline-flex items-baseline gap-1.5 text-muted">
-          <span>Total</span>
+        <span className="inline-flex items-baseline justify-self-end gap-1.5 text-xs text-muted">
+          <span className="sr-only">Total</span>
           <span className={cn("text-sm font-semibold", agencyMetricClass)}>
             {formatDuration(day.totalSeconds, "clock")}
           </span>

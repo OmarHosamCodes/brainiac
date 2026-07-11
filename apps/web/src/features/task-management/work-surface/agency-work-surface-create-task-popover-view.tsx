@@ -4,11 +4,10 @@ import { Button } from "@/ui/button";
 import { Label } from "@/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import {
-  agencyFocusRingClass,
   agencyFormFieldClass,
   agencyLabelClass,
+  agencyWorkTabCreateClass,
 } from "@/features/shared/agency-ui";
-import { cn } from "@/lib/utils";
 import type { AgencyWorkSurfaceCreateTaskPopoverViewModel } from "./hooks/use-agency-work-surface-create-task-popover";
 
 type Props = AgencyWorkSurfaceCreateTaskPopoverViewModel & {
@@ -32,18 +31,18 @@ export function AgencyWorkSurfaceCreateTaskPopoverView(props: Props) {
   return (
     <Popover open={open} onOpenChange={setOpen} modal={false}>
       <PopoverTrigger asChild>
-        <Button size="sm" className={cn("h-9 shrink-0 rounded-xl px-3", agencyFocusRingClass)}>
-          <Plus className="size-4" aria-hidden />
-          Add New Task
+        <Button size="sm" variant="outline" className={agencyWorkTabCreateClass}>
+          <Plus className="size-3.5" aria-hidden />
+          New task
         </Button>
       </PopoverTrigger>
       <PopoverContent
         align="end"
         sideOffset={6}
-        className="w-80 !overflow-visible p-3"
+        className="w-[22rem] !overflow-visible p-4"
         aria-labelledby={formTitleId}
       >
-        <form className="flex flex-col gap-3" onSubmit={(event) => void handleSubmit(event)}>
+        <form className="flex flex-col gap-4" onSubmit={(event) => void handleSubmit(event)}>
           <p id={formTitleId} className={agencyLabelClass}>
             New task
           </p>
@@ -60,7 +59,7 @@ export function AgencyWorkSurfaceCreateTaskPopoverView(props: Props) {
             <Label className="text-xs font-semibold text-muted">Assign</Label>
             {memberChooser}
           </div>
-          <Button type="submit" disabled={!canSubmit}>
+          <Button type="submit" className="mt-1" disabled={!canSubmit}>
             Create task
           </Button>
         </form>

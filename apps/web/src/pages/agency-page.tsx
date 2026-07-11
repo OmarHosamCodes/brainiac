@@ -42,6 +42,7 @@ import {
   shellContentInClass,
   shellPageBodyClass,
   shellPageClass,
+  shellPageNestClass,
 } from "@/features/app-shell/app-shell-ui";
 import { AGENCY_PAGE_SCROLL_ATTR, agencyWorkSurfaceShellClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
@@ -235,9 +236,7 @@ export function AgencyPage() {
           </>
         ) : null}
 
-        <main
-          className={cn(shellPageClass, isWorkSegment && "min-h-0 flex-1 overflow-hidden pb-0")}
-        >
+        <main className={isWorkSegment ? shellPageNestClass : shellPageClass}>
           {isBooting ? (
             <LogoLoader label="Loading agency" />
           ) : showAgencyUpsell ? (
@@ -254,7 +253,7 @@ export function AgencyPage() {
               />
             </div>
           ) : (
-            <div className={cn(shellPageBodyClass, isWorkSegment && "min-h-0 flex-1")}>
+            <div className={cn(shellPageBodyClass, isWorkSegment && "min-h-0 flex-1 pt-0")}>
               <div
                 role="tabpanel"
                 id={panelIdFor(segment)}

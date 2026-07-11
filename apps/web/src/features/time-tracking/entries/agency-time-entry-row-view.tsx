@@ -1,4 +1,4 @@
-import { Calendar, MoreVertical, Play, Timer, Trash2 } from "lucide-react";
+import { MoreVertical, Play, Trash2 } from "lucide-react";
 
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { AgencyTimeEntryActions } from "@/features/time-tracking/entries/agency-time-entry-actions";
@@ -89,7 +89,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
       )}
     >
       <div className="col-start-1 row-start-1 flex min-w-0 items-center sm:col-auto sm:row-auto">
-        <div className="flex min-w-0 flex-1 items-center gap-3.5">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           {isMulti ? (
             <div className={descriptionLeadingSlotClass}>
               <button
@@ -107,7 +107,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             </div>
           ) : null}
 
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
             {!isMulti ? (
               editingDescription ? (
                 <Input
@@ -132,7 +132,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 <button
                   type="button"
                   className={cn(
-                    "block max-w-full truncate text-left text-sm font-semibold text-highlighted",
+                    "block max-w-full truncate text-left text-sm font-semibold text-highlighted sm:max-w-[15rem] sm:shrink-0",
                     agencyFocusRingClass,
                   )}
                   onClick={() => onEditingDescriptionChange(true)}
@@ -141,12 +141,12 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 </button>
               )
             ) : (
-              <span className="block min-w-0 truncate text-left text-sm font-semibold text-highlighted">
+              <span className="block min-w-0 truncate text-left text-sm font-semibold text-highlighted sm:max-w-[15rem] sm:shrink-0">
                 {displayTitle}
               </span>
             )}
 
-            <div className="mt-2 min-w-0">
+            <div className="mt-1.5 min-w-0 sm:mt-0 sm:flex-1">
               {isMulti ? (
                 <AgencyTimeEntryProjectLabel
                   format="task-client"
@@ -192,14 +192,13 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               <button
                 type="button"
                 className={cn(
-                  "inline-flex h-8 min-w-0 max-w-full items-center gap-2 rounded-lg px-2 text-left font-mono text-sm font-medium tabular-nums text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+                  "inline-flex h-8 min-w-0 max-w-full items-center rounded-md px-1.5 text-left font-mono text-sm font-medium tabular-nums text-muted transition-colors hover:bg-elevated hover:text-highlighted",
                   agencyFocusRingClass,
                 )}
                 disabled={editSaving || rowUpdating}
                 aria-label={`Edit time range, ${timeRange || "no time range"}`}
               >
-                <Calendar className="size-4 shrink-0 text-muted" aria-hidden />
-                <span className="min-w-0 truncate">{timeRange || "-"}</span>
+                <span className="min-w-0 truncate">{timeRange || "—"}</span>
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-auto min-w-[19rem] p-3">
@@ -248,19 +247,17 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             </PopoverContent>
           </Popover>
         ) : timeRange ? (
-          <span className="inline-flex min-w-0 items-center gap-2 truncate font-mono text-sm font-medium tabular-nums text-muted">
-            <Calendar className="size-4 shrink-0 text-muted" aria-hidden />
+          <span className="inline-flex min-w-0 items-center truncate font-mono text-sm font-medium tabular-nums text-muted">
             {timeRange}
           </span>
         ) : (
-          <span className="text-sm text-muted/70">-</span>
+          <span className="text-sm text-muted">—</span>
         )}
       </div>
 
       <div className="col-start-1 row-start-3 flex min-w-0 items-center sm:col-auto sm:row-auto">
         {!isMulti ? (
-          <div className="inline-flex h-8 min-w-0 max-w-full items-center gap-2 rounded-lg px-2 transition-colors hover:bg-elevated focus-within:bg-elevated">
-            <Timer className="size-4 shrink-0 text-muted" aria-hidden />
+          <div className="inline-flex h-8 min-w-0 max-w-full items-center rounded-md px-1.5 transition-colors hover:bg-elevated focus-within:bg-elevated">
             <Input
               value={editDraft.durationInput}
               onChange={(e) => onDurationChange(e.target.value)}
@@ -276,8 +273,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             />
           </div>
         ) : (
-          <span className="inline-flex items-center gap-2 font-mono text-sm font-medium tabular-nums text-muted">
-            <Timer className="size-4 shrink-0 text-muted" aria-hidden />
+          <span className="inline-flex items-center font-mono text-sm font-medium tabular-nums text-muted">
             {durationLabel}
           </span>
         )}

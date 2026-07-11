@@ -165,7 +165,7 @@ function resolveDelegatedStatusLabel(task: AgencyProjectTask): {
 function LabeledCell({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
-      <p className="text-xs text-muted">{label}</p>
+      <p className="text-[11px] font-medium text-muted">{label}</p>
       <div className="mt-1">{children}</div>
     </div>
   );
@@ -248,7 +248,7 @@ export function AgencyWorkSurfaceTaskTableRowView({
       data-project-id={task.projectId}
       className={cn(
         gridClass,
-        "border-b border-default transition-colors hover:bg-elevated/45 motion-reduce:transition-none",
+        "border-b border-dashed border-default transition-colors hover:bg-elevated/60 motion-reduce:transition-none",
         selected && agencyTaskRowSelectedClass,
         highlight && "bg-success/10",
         isRowPending && "opacity-60",
@@ -289,7 +289,7 @@ export function AgencyWorkSurfaceTaskTableRowView({
             <button
               type="button"
               className={cn(
-                "block max-w-full truncate text-left text-sm font-semibold text-highlighted",
+                "block max-w-full truncate text-left text-[0.9375rem] font-semibold leading-snug text-highlighted",
                 agencyFocusRingClass,
               )}
               onClick={() => onSelect?.(task.id)}

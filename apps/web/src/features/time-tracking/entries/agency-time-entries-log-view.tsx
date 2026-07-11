@@ -8,8 +8,8 @@ import type { AgencyTimeEntryGroupRowRenderer } from "@/features/time-tracking/e
 import {
   agencyMetricClass,
   agencyTimeLogSkeletonClass,
+  agencyTimeWeekStackClass,
   agencyWorkTableBodyScrollClass,
-  agencyWorkTableStackClass,
 } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
@@ -22,10 +22,7 @@ export function AgencyTimeEntriesLogView({ view, renderGroupRow }: AgencyTimeEnt
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col", view.className)}>
       {view.logQueryError ? (
-        <div
-          className="mx-4 mt-4 rounded-xl border border-error/30 bg-error/5 p-4 text-sm"
-          role="alert"
-        >
+        <div className="mx-4 mt-4 border border-error/30 bg-error/5 p-4 text-sm" role="alert">
           <div className="flex items-start gap-2">
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-error" />
             <div className="min-w-0 flex-1">
@@ -76,7 +73,7 @@ export function AgencyTimeEntriesLogView({ view, renderGroupRow }: AgencyTimeEnt
             </Button>
           </div>
         ) : (
-          <div className={agencyWorkTableStackClass}>
+          <div className={agencyTimeWeekStackClass}>
             {view.weekGroups.map((week) => (
               <AgencyTimeEntryWeekGroupView
                 key={week.weekStartKey}

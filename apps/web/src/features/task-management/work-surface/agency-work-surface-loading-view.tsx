@@ -42,12 +42,12 @@ function TabsSkeleton() {
     <div className={agencyWorkTabShellClass} aria-hidden>
       <div className={agencyWorkTabBarClass}>
         <div className="flex min-w-0 flex-1 items-center gap-1">
-          <Skeleton className="h-9 w-24 rounded-lg" />
-          <Skeleton className="h-9 w-24 rounded-lg" />
-          <Skeleton className="h-9 w-16 rounded-lg" />
-          <Skeleton className="h-9 w-24 rounded-lg" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-4 w-16" />
         </div>
-        <Skeleton className="h-9 w-32 shrink-0 rounded-full" />
+        <Skeleton className="h-8 w-24 shrink-0 rounded-full" />
       </div>
     </div>
   );
@@ -91,7 +91,7 @@ function SessionSectionSkeleton({ rows }: { rows: number }) {
 
 function SessionsLogSkeleton() {
   return (
-    <div className={cn(agencyTimeLogPanelClass, "min-h-0 rounded-t-none border-t-0")} aria-hidden>
+    <div className={cn(agencyTimeLogPanelClass, "min-h-0")} aria-hidden>
       <div className={agencyWorkTableBodyScrollClass}>
         <div className={agencyWorkTableStackClass}>
           <SessionSectionSkeleton rows={2} />
