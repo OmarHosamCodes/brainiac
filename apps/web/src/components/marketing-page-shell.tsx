@@ -35,13 +35,7 @@ function ThemeToggle() {
   );
 }
 
-export function MarketingPageShell({
-  children,
-  heroIsDark: _heroIsDark = false,
-}: {
-  children: ReactNode;
-  heroIsDark?: boolean;
-}) {
+export function MarketingPageShell({ children }: { children: ReactNode }) {
   const year = new Date().getFullYear();
 
   return (

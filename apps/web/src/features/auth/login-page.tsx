@@ -40,7 +40,10 @@ export function LoginPage() {
     <div className="flex min-h-screen bg-background text-foreground">
       <aside className="relative hidden flex-1 flex-col justify-between overflow-hidden bg-[var(--marketing-ink)] p-12 text-[var(--marketing-ink-foreground)] lg:flex xl:p-16">
         {!reducedMotion ? (
-          <div className="pointer-events-none absolute inset-0 opacity-50" aria-hidden="true">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-30 dark:opacity-50"
+            aria-hidden="true"
+          >
             <Aurora
               colorStops={["#059669", "#10b981", "#34d399"]}
               amplitude={0.7}

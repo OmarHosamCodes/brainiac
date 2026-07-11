@@ -62,7 +62,7 @@ export function MarketingLegalLayout({
   crossLink,
 }: MarketingLegalLayoutProps) {
   return (
-    <MarketingPageShell heroIsDark>
+    <MarketingPageShell>
       <section className="relative w-full overflow-hidden bg-[var(--marketing-ink)] text-[var(--marketing-ink-foreground)]">
         <div className="relative mx-auto max-w-6xl px-6 pt-20 pb-14 md:px-10 md:pt-28 md:pb-16 lg:px-16">
           <MarketingBrandLockup linkToHome className="mb-12 md:mb-16" />

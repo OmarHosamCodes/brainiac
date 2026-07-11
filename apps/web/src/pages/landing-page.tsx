@@ -41,10 +41,13 @@ export function LandingPage() {
   const ctaLabel = isAuthenticated ? "Open workspace" : "Get started";
 
   return (
-    <MarketingPageShell heroIsDark>
+    <MarketingPageShell>
       <section className="relative w-full overflow-hidden bg-[var(--marketing-ink)] text-[var(--marketing-ink-foreground)]">
         {!reducedMotion ? (
-          <div className="pointer-events-none absolute inset-0 opacity-70" aria-hidden="true">
+          <div
+            className="pointer-events-none absolute inset-0 opacity-40 dark:opacity-70"
+            aria-hidden="true"
+          >
             <Aurora
               colorStops={["#059669", "#10b981", "#34d399"]}
               amplitude={0.85}
@@ -54,7 +57,7 @@ export function LandingPage() {
           </div>
         ) : (
           <div
-            className="pointer-events-none absolute inset-0 opacity-40"
+            className="pointer-events-none absolute inset-0 opacity-30 dark:opacity-40"
             style={{ background: "var(--marketing-accent-glow)" }}
             aria-hidden="true"
           />
@@ -90,7 +93,7 @@ export function LandingPage() {
                 asChild
                 variant="ghost"
                 size="lg"
-                className="h-12 px-6 text-base text-[var(--marketing-ink-muted)] hover:bg-[var(--marketing-ink-border)] hover:text-[var(--marketing-ink-foreground)]"
+                className="h-12 px-6 text-base text-[var(--marketing-ink-muted)] hover:bg-[var(--marketing-surface-elevated)] hover:text-[var(--marketing-ink-foreground)]"
               >
                 <a href="#pricing">See pricing</a>
               </Button>
