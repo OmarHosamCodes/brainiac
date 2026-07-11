@@ -7,6 +7,7 @@ import {
   MoreHorizontal,
   Play,
 } from "lucide-react";
+import { useEffect } from "react";
 
 import { AgencyWorkSurfacePaginationFooter } from "@/features/task-management/work-surface/agency-work-surface-pagination-footer";
 import { AgencyWorkSurfaceTableHeaderView } from "@/features/task-management/work-surface/agency-work-surface-table-header-view";
@@ -77,6 +78,23 @@ export function AgencyWorkSurfaceMyTasksView({
 }: AgencyWorkSurfaceMyTasksViewProps) {
   const tasks = view.activeTableTasks;
 
+  useEffect(() => {
+    const taskId = view.recentlyCreatedTaskId;
+    const projectId = view.recentlyHighlightedProjectId;
+    if (!taskId && !projectId) return;
+    const frame = requestAnimationFrame(() => {
+      const target =
+        (taskId
+          ? document.querySelector<HTMLElement>(`[data-task-id="${CSS.escape(taskId)}"]`)
+          : null) ??
+        (projectId
+          ? document.querySelector<HTMLElement>(`[data-project-id="${CSS.escape(projectId)}"]`)
+          : null);
+      target?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [view.recentlyCreatedTaskId, view.recentlyHighlightedProjectId]);
+
   if (view.activeTasksQueryError) {
     return (
       <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
@@ -122,7 +140,10 @@ export function AgencyWorkSurfaceMyTasksView({
                   variant: "active",
                   selected: task.id === view.selectedTaskId,
                   highlight: task.id === view.recentlyCreatedTaskId,
+                  highlightProject: task.projectId === view.recentlyHighlightedProjectId,
                   isRowPending: view.isRowPending(task.id),
+                  currentUserId: view.currentUserId,
+                  teamMembers: view.create.members,
                   onSelect: (taskId) => view.onSelect(taskId),
                   onSelectProject: view.onSelectProject,
                   onStatusChange: view.onStatusChange,

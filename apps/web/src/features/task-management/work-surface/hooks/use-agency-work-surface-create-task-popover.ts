@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, useId, type FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-options";
 import { useAgencyProjectTasksForChooserQuery } from "@/features/shared/agency-queries";
+import { findOpenTaskByExactTitle } from "@/features/task-management/agency-task-title-filter";
+import { openAgencyWorkSurfaceMyTasks } from "@/features/task-management/agency-work-surface-navigation";
 import {
   resolveDefaultCreateProjectId,
   useAgencyTaskListStore,
@@ -21,17 +24,22 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
   const currentUserId = session.data?.user?.id ?? "";
   const agencyOps = useAgencyOpsStore();
   const isCreatingTask = useAgencyOpsStore(selectIsCreatingTask);
+  const [searchParams, setSearchParams] = useSearchParams();
   const lastUsedProjectIdForCreate = useAgencyTaskListStore((s) => s.lastUsedProjectIdForCreate);
   const setLastUsedProjectIdForCreate = useAgencyTaskListStore(
     (s) => s.setLastUsedProjectIdForCreate,
   );
+  const setRecentlyCreatedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCreatedTaskId);
+  const setRecentlyHighlightedProjectId = useAgencyTaskListStore(
+    (s) => s.setRecentlyHighlightedProjectId,
+  );
+  const setRailStatusFilter = useAgencyTaskListStore((s) => s.setRailStatusFilter);
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [projectId, setProjectId] = useState("");
   const [assignedToTeam, setAssignedToTeam] = useState(false);
   const [assigneeUserIds, setAssigneeUserIds] = useState<string[]>([]);
   const [taskChooserOpen, setTaskChooserOpen] = useState(false);
-  const [existingTaskConflict, setExistingTaskConflict] = useState<string | null>(null);
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
       {
@@ -43,6 +51,7 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
     ),
   );
   const tasksQuery = useAgencyProjectTasksForChooserQuery(open ? teamId : "");
+  const tasks = tasksQuery.items ?? [];
   const selectedProject = useMemo(
     () => projects.find((project) => project.id === projectId) ?? null,
     [projectId, projects],
@@ -65,28 +74,45 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
     setProjectId("");
     setAssignedToTeam(false);
     setAssigneeUserIds(currentUserId ? [currentUserId] : []);
-    setExistingTaskConflict(null);
     setTaskChooserOpen(false);
   }, [currentUserId, open, projects]);
 
+  function revealExistingTask(taskId: string, taskProjectId: string) {
+    setRecentlyCreatedTaskId(taskId);
+    setRecentlyHighlightedProjectId(taskProjectId);
+    setRailStatusFilter("active");
+    setSearchParams(openAgencyWorkSurfaceMyTasks(searchParams), { replace: true });
+    setOpen(false);
+  }
+
   function handleTitleChange(value: string) {
     setTitle(value);
-    setExistingTaskConflict(null);
   }
 
   function handleProjectChange(value: string) {
     setProjectId(value);
-    setExistingTaskConflict(null);
   }
 
   function handleExistingTaskSelect(taskId: string) {
-    setExistingTaskConflict(taskId);
+    const task = tasks.find((entry) => entry.id === taskId);
+    if (!task) return;
+    revealExistingTask(task.id, task.projectId);
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     const trimmedTitle = title.trim();
-    if (!trimmedTitle || !projectId || !teamId || isCreatingTask || existingTaskConflict) return;
+    if (!trimmedTitle || !projectId || !teamId || isCreatingTask) return;
+
+    const existing = findOpenTaskByExactTitle(
+      tasks.filter((task) => task.projectId === projectId),
+      trimmedTitle,
+    );
+    if (existing) {
+      revealExistingTask(existing.id, existing.projectId);
+      return;
+    }
+
     const createdId = await agencyOps.createProjectTask({
       teamId,
       projectId,
@@ -101,7 +127,7 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
 
   return {
     projects,
-    tasks: tasksQuery.items ?? [],
+    tasks,
     tasksLoading: tasksQuery.isLoading,
     formTitleId,
     taskContextId,
@@ -117,14 +143,13 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
     setAssigneeUserIds,
     taskChooserOpen,
     setTaskChooserOpen,
-    existingTaskConflict,
     projectContextLabel,
     members: membersQuery.data?.items ?? [],
     handleSubmit,
     handleExistingTaskSelect,
     isCreatingTask,
     preferredProjectId,
-    canSubmit: Boolean(title.trim() && projectId && !isCreatingTask && !existingTaskConflict),
+    canSubmit: Boolean(title.trim() && projectId && !isCreatingTask),
   };
 }
 

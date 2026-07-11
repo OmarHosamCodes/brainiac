@@ -140,7 +140,11 @@ export type AgencyTaskListViewModel =
       onSelectProject: (projectId: string) => void;
       onStatusChange: (task: AgencyProjectTask, status: TaskStatus) => void;
       onDueDateChange: (task: AgencyProjectTask, dueDate: string | null) => void;
-      onTaskDescriptionChange: (task: AgencyProjectTask, description: string) => void;
+      onTaskDescriptionChange: (
+        task: AgencyProjectTask,
+        description: string,
+        blueprintId?: string,
+      ) => void;
       isRowPending: (taskId: string) => boolean;
       isTaskDeleting: (taskId: string) => boolean;
       deleteTarget: AgencyProjectTask | null;
@@ -173,6 +177,7 @@ export type AgencyTaskListViewModel =
       recentlyCompletedTaskId: string;
       recentlyCreatedTaskId: string;
       recentlyCreatedBlueprintId: string;
+      recentlyHighlightedProjectId: string;
       onReopenDoneTask: (task: AgencyProjectTask) => void;
       hasMoreDoneTasks: boolean;
       isFetchingMoreDoneTasks: boolean;
@@ -227,6 +232,9 @@ export function useAgencyTaskList({
   const recentlyCompletedTaskId = useAgencyTaskListStore((s) => s.recentlyCompletedTaskId);
   const recentlyCreatedTaskId = useAgencyTaskListStore((s) => s.recentlyCreatedTaskId);
   const recentlyCreatedBlueprintId = useAgencyTaskListStore((s) => s.recentlyCreatedBlueprintId);
+  const recentlyHighlightedProjectId = useAgencyTaskListStore(
+    (s) => s.recentlyHighlightedProjectId,
+  );
   const titleDraft = useAgencyTaskListStore((s) => s.titleDraft);
   const descriptionDraft = useAgencyTaskListStore((s) => s.descriptionDraft);
   const selectedProjectIdForCreate = useAgencyTaskListStore((s) => s.selectedProjectIdForCreate);
@@ -241,6 +249,9 @@ export function useAgencyTaskList({
   const setRecentlyCreatedTaskId = useAgencyTaskListStore((s) => s.setRecentlyCreatedTaskId);
   const setRecentlyCreatedBlueprintId = useAgencyTaskListStore(
     (s) => s.setRecentlyCreatedBlueprintId,
+  );
+  const setRecentlyHighlightedProjectId = useAgencyTaskListStore(
+    (s) => s.setRecentlyHighlightedProjectId,
   );
   const setTitleDraft = useAgencyTaskListStore((s) => s.setTitleDraft);
   const setDescriptionDraft = useAgencyTaskListStore((s) => s.setDescriptionDraft);
@@ -625,6 +636,12 @@ export function useAgencyTaskList({
     return () => clearTimeout(clearHandle);
   }, [recentlyCreatedBlueprintId, setRecentlyCreatedBlueprintId]);
 
+  useEffect(() => {
+    if (!recentlyHighlightedProjectId) return;
+    const clearHandle = setTimeout(() => setRecentlyHighlightedProjectId(""), 1_600);
+    return () => clearTimeout(clearHandle);
+  }, [recentlyHighlightedProjectId, setRecentlyHighlightedProjectId]);
+
   const clearQuickAdd = useCallback(() => {
     clearQuickAddAction({
       currentUserId,
@@ -751,8 +768,10 @@ export function useAgencyTaskList({
   );
 
   const updateTaskDescription = useCallback(
-    (task: AgencyProjectTask, description: string) => {
-      const blueprint = task.viewerBlueprints?.[0];
+    (task: AgencyProjectTask, description: string, blueprintId?: string) => {
+      const blueprint = blueprintId
+        ? task.viewerBlueprints?.find((entry) => entry.id === blueprintId)
+        : task.viewerBlueprints?.[0];
       if (blueprint) {
         onBlueprintDescriptionChange(blueprint.id, description);
         return;
@@ -938,6 +957,7 @@ export function useAgencyTaskList({
     recentlyCompletedTaskId,
     recentlyCreatedTaskId: activeHighlightTaskId,
     recentlyCreatedBlueprintId,
+    recentlyHighlightedProjectId,
     onReopenDoneTask: (task) => void reopenDoneTask(task),
     hasMoreDoneTasks: Boolean(doneTasksQuery.hasNextPage),
     isFetchingMoreDoneTasks: doneTasksQuery.isFetchingNextPage,

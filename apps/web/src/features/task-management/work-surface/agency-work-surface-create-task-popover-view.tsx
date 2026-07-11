@@ -23,7 +23,6 @@ export function AgencyWorkSurfaceCreateTaskPopoverView(props: Props) {
     formTitleId,
     taskContextId,
     projectContextLabel,
-    existingTaskConflict,
     handleSubmit,
     canSubmit,
     taskChooser,
@@ -54,11 +53,6 @@ export function AgencyWorkSurfaceCreateTaskPopoverView(props: Props) {
             {projectContextLabel ? (
               <p id={taskContextId} className="mt-1.5 text-xs text-muted">
                 {projectContextLabel}
-              </p>
-            ) : null}
-            {existingTaskConflict ? (
-              <p className="mt-1.5 text-xs text-warning" role="alert">
-                Task already exists. Open it from My Tasks instead.
               </p>
             ) : null}
           </div>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 
 import {
   normalizeAgencyWorkSurfaceTaskSelection,
+  openAgencyWorkSurfaceMyTasks,
   selectAgencyWorkSurfaceTask,
 } from "./agency-work-surface-navigation";
 
@@ -32,6 +33,14 @@ describe("Agency work-surface task navigation", () => {
     const next = selectAgencyWorkSurfaceTask(
       new URLSearchParams("section=work&tab=my-tasks&filter=mine&task=task-1"),
       "",
+    );
+
+    expect(next.toString()).toBe("section=work&tab=my-tasks&filter=mine");
+  });
+
+  it("opens My Tasks without selecting a task thread", () => {
+    const next = openAgencyWorkSurfaceMyTasks(
+      new URLSearchParams("section=work&tab=sessions&task=task-1&filter=mine"),
     );
 
     expect(next.toString()).toBe("section=work&tab=my-tasks&filter=mine");

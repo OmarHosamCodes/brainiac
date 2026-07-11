@@ -6,13 +6,54 @@ import {
   type TaskDueDateDraft,
 } from "@/features/task-management/agency-task-utils";
 import type {
+  AgencyWorkSurfaceTaskDelegatedBy,
+  AgencyWorkSurfaceTaskDescriptionEntry,
   AgencyWorkSurfaceTaskTableRowProps,
   AgencyWorkSurfaceTaskTableRowViewModel,
 } from "@/features/task-management/work-surface/agency-work-surface-task-table-row-model";
 import { useTheme } from "@/stores/theme";
 
-function taskDescription(task: AgencyWorkSurfaceTaskTableRowProps["task"]): string {
-  return task.viewerBlueprints?.[0]?.description?.trim() ?? "";
+function taskDescriptionEntries(
+  task: AgencyWorkSurfaceTaskTableRowProps["task"],
+): AgencyWorkSurfaceTaskDescriptionEntry[] {
+  return (task.viewerBlueprints ?? []).map((blueprint) => ({
+    id: blueprint.id,
+    description: blueprint.description.trim(),
+  }));
+}
+
+function resolveDelegatedBy(
+  task: AgencyWorkSurfaceTaskTableRowProps["task"],
+  currentUserId: string | undefined,
+  teamMembers: AgencyWorkSurfaceTaskTableRowProps["teamMembers"],
+): AgencyWorkSurfaceTaskDelegatedBy | null {
+  if (!currentUserId || !task.createdByUserId || task.createdByUserId === currentUserId) {
+    return null;
+  }
+
+  const member = teamMembers?.find((entry) => entry.userId === task.createdByUserId);
+  if (member) {
+    return {
+      userId: member.userId,
+      userName: member.userName,
+      userAvatar: member.userAvatar,
+    };
+  }
+
+  const assignee = task.assignees.find((entry) => entry.userId === task.createdByUserId);
+  if (assignee) {
+    return {
+      userId: assignee.userId,
+      userName: assignee.userName,
+      userAvatar: assignee.userAvatar,
+    };
+  }
+
+  return {
+    userId: task.createdByUserId,
+    userName: "Teammate",
+    userAvatar: null,
+  };
 }
 
 export function useAgencyWorkSurfaceTaskTableRow(
@@ -22,6 +63,8 @@ export function useAgencyWorkSurfaceTaskTableRow(
     task,
     variant,
     isRowPending = false,
+    currentUserId,
+    teamMembers,
     onStatusChange,
     onDueDateChange,
     onDescriptionChange,
@@ -32,15 +75,20 @@ export function useAgencyWorkSurfaceTaskTableRow(
   const [menuOpen, setMenuOpen] = useState(false);
   const [dueEditorOpen, setDueEditorOpen] = useState(false);
   const [dueDraft, setDueDraft] = useState<TaskDueDateDraft>({ date: "", time: "" });
+  const [editingBlueprintId, setEditingBlueprintId] = useState<string | null>(null);
   const [editingDescription, setEditingDescription] = useState(false);
   const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [descriptionsExpanded, setDescriptionsExpanded] = useState(false);
   const descriptionInputRef = useRef<HTMLInputElement>(null);
   const skipDescriptionCommitRef = useRef(false);
-  const description = taskDescription(task);
+  const descriptionEntries = taskDescriptionEntries(task);
+  const isMultiDescription = descriptionEntries.length > 1;
+  const description = descriptionEntries[0]?.description ?? "";
+  const delegatedBy = resolveDelegatedBy(task, currentUserId, teamMembers);
   const canEditDescription =
     Boolean(onDescriptionChange) &&
     variant !== "delegated" &&
-    (variant !== "done" || Boolean(description));
+    (variant !== "done" || Boolean(description) || isMultiDescription);
 
   useEffect(() => {
     if (!dueEditorOpen) return;
@@ -52,16 +100,22 @@ export function useAgencyWorkSurfaceTaskTableRow(
     descriptionInputRef.current?.focus();
   }, [editingDescription]);
 
-  function beginDescriptionEdit() {
+  function beginDescriptionEdit(blueprintId?: string) {
     if (!canEditDescription || isRowPending) return;
+    const targetId = blueprintId ?? descriptionEntries[0]?.id ?? null;
+    const current =
+      descriptionEntries.find((entry) => entry.id === targetId)?.description ?? description;
     skipDescriptionCommitRef.current = false;
-    setDescriptionDraft(description);
+    setEditingBlueprintId(targetId);
+    setDescriptionDraft(current);
     setEditingDescription(true);
+    if (isMultiDescription) setDescriptionsExpanded(true);
   }
 
   function cancelDescriptionEdit() {
     skipDescriptionCommitRef.current = true;
     setDescriptionDraft(description);
+    setEditingBlueprintId(null);
     setEditingDescription(false);
   }
 
@@ -72,9 +126,14 @@ export function useAgencyWorkSurfaceTaskTableRow(
     }
     if (!onDescriptionChange) return;
     const next = descriptionDraft.trim();
+    const previous =
+      descriptionEntries.find((entry) => entry.id === editingBlueprintId)?.description ??
+      description;
     setEditingDescription(false);
-    if (next === description) return;
-    onDescriptionChange(task, next);
+    const blueprintId = editingBlueprintId;
+    setEditingBlueprintId(null);
+    if (next === previous) return;
+    onDescriptionChange(task, next, blueprintId ?? undefined);
   }
 
   function handleDescriptionKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -114,9 +173,14 @@ export function useAgencyWorkSurfaceTaskTableRow(
     dueEditorOpen,
     dueDraft,
     editingDescription,
+    editingBlueprintId,
     descriptionDraft,
     description,
+    descriptionEntries,
+    isMultiDescription,
+    descriptionsExpanded,
     canEditDescription,
+    delegatedBy,
     descriptionInputRef,
     onMenuOpenChange: setMenuOpen,
     onDueEditorOpenChange: (open) => {
@@ -129,6 +193,7 @@ export function useAgencyWorkSurfaceTaskTableRow(
       onDueDateChange?.(task, null);
       setDueEditorOpen(false);
     },
+    onToggleDescriptionsExpanded: () => setDescriptionsExpanded((value) => !value),
     onBeginDescriptionEdit: beginDescriptionEdit,
     onDescriptionDraftChange: setDescriptionDraft,
     onDescriptionDraftKeyDown: handleDescriptionKeyDown,

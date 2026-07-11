@@ -10,7 +10,9 @@ type AgencySegmentBodyProps = {
   segment: AgencySegmentId;
   teamId: string;
   selectedProjectId: string;
+  selectedClientId: string;
   onSelectProject: (projectId: string) => void;
+  onSelectClient: (clientId: string) => void;
   onCloseProject: () => void;
 };
 
@@ -18,13 +20,22 @@ export function AgencySegmentBody({
   segment,
   teamId,
   selectedProjectId,
+  selectedClientId,
   onSelectProject,
+  onSelectClient,
   onCloseProject,
 }: AgencySegmentBodyProps) {
   const surfaceFilters = useAgencySegmentSurfaceFilters();
 
   if (segment === "dashboard" && surfaceFilters.kind === "timeRange") {
-    return <AgencyDashboardSurface teamId={teamId} filters={surfaceFilters.applied} />;
+    return (
+      <AgencyDashboardSurface
+        teamId={teamId}
+        filters={surfaceFilters.applied}
+        onSelectProject={onSelectProject}
+        onSelectClient={onSelectClient}
+      />
+    );
   }
 
   if (segment === "reports" && surfaceFilters.kind === "timeRange") {
@@ -32,7 +43,13 @@ export function AgencySegmentBody({
   }
 
   if (segment === "clients" && surfaceFilters.kind === "list") {
-    return <AgencyClientsSurface teamId={teamId} filters={surfaceFilters.applied} />;
+    return (
+      <AgencyClientsSurface
+        teamId={teamId}
+        filters={surfaceFilters.applied}
+        selectedClientId={selectedClientId}
+      />
+    );
   }
 
   if (segment === "projects") {

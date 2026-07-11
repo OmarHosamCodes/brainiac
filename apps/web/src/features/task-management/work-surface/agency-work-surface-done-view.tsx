@@ -76,6 +76,8 @@ export function AgencyWorkSurfaceDoneView({
                     variant: "done",
                     highlight: task.id === view.recentlyCompletedTaskId,
                     isRowPending: view.isRowPending(task.id),
+                    currentUserId: view.currentUserId,
+                    teamMembers: view.create.members,
                     onSelect: (taskId) => view.onSelect(taskId),
                     onDescriptionChange: view.onTaskDescriptionChange,
                     onReopenToActive: view.onReopenDoneTask,

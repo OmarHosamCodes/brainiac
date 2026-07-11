@@ -10,11 +10,18 @@ import { useTheme } from "@/stores/theme";
 export type UseAgencyDashboardSurfaceProps = {
   teamId: string;
   filters: AgencyTimeRangeFilters;
+  onSelectProject?: (projectId: string) => void;
+  onSelectClient?: (clientId: string) => void;
 };
 
 export type AgencyDashboardSurfaceViewModel = ReturnType<typeof useAgencyDashboardSurface>;
 
-export function useAgencyDashboardSurface({ teamId, filters }: UseAgencyDashboardSurfaceProps) {
+export function useAgencyDashboardSurface({
+  teamId,
+  filters,
+  onSelectProject,
+  onSelectClient,
+}: UseAgencyDashboardSurfaceProps) {
   const { range, projectId, memberUserId, clientId, clientIds, projectIds, memberUserIds } =
     filters;
   const { members: presenceMembers } = useAgencyPresenceMembers(teamId);
@@ -71,6 +78,8 @@ export function useAgencyDashboardSurface({ teamId, filters }: UseAgencyDashboar
     sortedTeamMembers,
     sortedRankedProjects,
     isDark,
+    onSelectProject,
+    onSelectClient,
     refetch: () => {
       void dashboardQuery.refetch();
     },

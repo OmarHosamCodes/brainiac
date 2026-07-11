@@ -12,6 +12,7 @@ type AgencyTaskListState = {
   recentlyCompletedTaskId: string;
   recentlyCreatedTaskId: string;
   recentlyCreatedBlueprintId: string;
+  recentlyHighlightedProjectId: string;
   titleDraft: string;
   descriptionDraft: string;
   selectedProjectIdForCreate: string;
@@ -26,6 +27,7 @@ type AgencyTaskListState = {
   setRecentlyCompletedTaskId: (taskId: string) => void;
   setRecentlyCreatedTaskId: (taskId: string) => void;
   setRecentlyCreatedBlueprintId: (blueprintId: string) => void;
+  setRecentlyHighlightedProjectId: (projectId: string) => void;
   setTitleDraft: (value: string) => void;
   setDescriptionDraft: (value: string) => void;
   setSelectedProjectIdForCreate: (value: string) => void;
@@ -48,6 +50,7 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   recentlyCompletedTaskId: "",
   recentlyCreatedTaskId: "",
   recentlyCreatedBlueprintId: "",
+  recentlyHighlightedProjectId: "",
   titleDraft: "",
   descriptionDraft: "",
   selectedProjectIdForCreate: "",
@@ -62,6 +65,7 @@ export const useAgencyTaskListStore = create<AgencyTaskListState>((set) => ({
   setRecentlyCompletedTaskId: (taskId) => set({ recentlyCompletedTaskId: taskId }),
   setRecentlyCreatedTaskId: (taskId) => set({ recentlyCreatedTaskId: taskId }),
   setRecentlyCreatedBlueprintId: (blueprintId) => set({ recentlyCreatedBlueprintId: blueprintId }),
+  setRecentlyHighlightedProjectId: (projectId) => set({ recentlyHighlightedProjectId: projectId }),
   setTitleDraft: (value) => set({ titleDraft: value }),
   setDescriptionDraft: (value) => set({ descriptionDraft: value }),
   setSelectedProjectIdForCreate: (value) => set({ selectedProjectIdForCreate: value }),

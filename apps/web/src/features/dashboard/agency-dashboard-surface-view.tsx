@@ -5,6 +5,7 @@ import { AgencyProjectHueDot } from "@/features/shared/agency-project-hue-dot";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
+  agencyFocusRingClass,
   agencyLabelClass,
   agencyMetricClass,
   agencyPanelClass,
@@ -12,6 +13,7 @@ import {
 import { projectHueFor } from "@/features/shared/project-palette";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/ui/tooltip";
 import { formatDuration } from "@/lib/utils/format-duration";
 import { cn } from "@/lib/utils";
 import { type AgencyDashboardSurfaceViewModel } from "./hooks/use-agency-dashboard-surface";
@@ -48,6 +50,48 @@ function ProjectHueFill({
       className={className}
       style={{ ...style, backgroundColor: isDark ? hue.dark : hue.light }}
     />
+  );
+}
+
+function AllocationSegment({
+  project,
+  totalSeconds,
+  isDark,
+}: {
+  project: {
+    projectId: string;
+    projectName: string;
+    clientName: string;
+    seconds: number;
+  };
+  totalSeconds: number;
+  isDark: boolean;
+}) {
+  const share = totalSeconds > 0 ? (project.seconds / totalSeconds) * 100 : 0;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          className="block h-full min-w-1 p-0"
+          style={{ width: `${relShare(project.seconds, totalSeconds)}%` }}
+          aria-label={`${project.projectName}, ${formatDuration(project.seconds)}, ${share.toFixed(1)} percent`}
+        >
+          <ProjectHueFill
+            projectId={project.projectId}
+            className="block size-full"
+            isDark={isDark}
+          />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="space-y-1 px-3 py-2">
+        <p className="font-semibold text-highlighted">{project.projectName}</p>
+        <p className="text-muted">{project.clientName || "General"}</p>
+        <p className={cn(agencyMetricClass, "text-[11px] text-muted")}>
+          {formatDuration(project.seconds)} · {share.toFixed(1)}%
+        </p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -173,6 +217,8 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
     sortedTeamMembers,
     sortedRankedProjects,
     isDark,
+    onSelectProject,
+    onSelectClient,
     refetch,
   } = viewModel;
 
@@ -311,20 +357,31 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
                         <div className="group/project flex min-w-0 items-center gap-2">
                           <AgencyProjectHueDot projectId={project.projectId} className="size-2" />
                           <div className="min-w-0">
-                            <span className="block truncate font-semibold text-highlighted">
+                            <button
+                              type="button"
+                              className={cn(
+                                "block max-w-full truncate text-left font-semibold text-highlighted transition-colors hover:text-primary",
+                                agencyFocusRingClass,
+                              )}
+                              onClick={() => onSelectProject?.(project.projectId)}
+                            >
                               {project.projectName}
-                            </span>
+                            </button>
                             {project.clientName ? (
-                              <span
+                              <button
+                                type="button"
                                 className={cn(
-                                  "block truncate text-[10px] font-medium text-muted",
-                                  "max-h-0 opacity-0 transition-[max-height,opacity] duration-200 ease-out",
+                                  "block max-w-full truncate text-left text-[10px] font-medium text-muted",
+                                  "max-h-0 opacity-0 transition-[max-height,opacity,color] duration-200 ease-out",
                                   "group-hover/project:max-h-4 group-hover/project:opacity-100",
                                   "group-focus-within/project:max-h-4 group-focus-within/project:opacity-100",
+                                  "hover:text-highlighted",
+                                  agencyFocusRingClass,
                                 )}
+                                onClick={() => onSelectClient?.(project.clientId)}
                               >
                                 {project.clientName}
-                              </span>
+                              </button>
                             ) : null}
                           </div>
                         </div>
@@ -358,7 +415,8 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
               </p>
             </header>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[62rem] text-left text-xs">
+              <TooltipProvider delayDuration={120}>
+                <table className="w-full min-w-[62rem] text-left text-xs">
                 <thead className="border-b border-default bg-elevated text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
                   <tr>
                     <th scope="col" className="px-4 py-2.5">
@@ -466,21 +524,18 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
                             role="img"
                             aria-label={`Project allocation for ${member.userName}`}
                           >
-                            {member.projectBreakdown.length === 0 ? (
-                              <span className="h-full w-full bg-muted/30" />
-                            ) : (
-                              member.projectBreakdown.map((project) => (
-                                <ProjectHueFill
-                                  key={project.projectId}
-                                  projectId={project.projectId}
-                                  className="block h-full min-w-1"
-                                  style={{
-                                    width: `${relShare(project.seconds, member.totalSeconds)}%`,
-                                  }}
-                                  isDark={isDark}
-                                />
-                              ))
-                            )}
+                              {member.projectBreakdown.length === 0 ? (
+                                <span className="h-full w-full bg-muted/30" />
+                              ) : (
+                                member.projectBreakdown.map((project) => (
+                                  <AllocationSegment
+                                    key={project.projectId}
+                                    project={project}
+                                    totalSeconds={member.totalSeconds}
+                                    isDark={isDark}
+                                  />
+                                ))
+                              )}
                           </div>
                         </td>
                       </tr>
@@ -488,6 +543,7 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
                   })}
                 </tbody>
               </table>
+              </TooltipProvider>
             </div>
           </section>
         </div>

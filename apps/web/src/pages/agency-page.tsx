@@ -85,6 +85,8 @@ export function AgencyPage() {
 
   const selectedProjectId =
     typeof searchParams.get("project") === "string" ? searchParams.get("project")! : "";
+  const selectedClientId =
+    typeof searchParams.get("client") === "string" ? searchParams.get("client")! : "";
   useEffect(() => {
     if (sectionParam === "settings") {
       const next = new URLSearchParams(searchParams);
@@ -110,6 +112,9 @@ export function AgencyPage() {
     next.delete("pane");
     if (nextSegment !== "projects") {
       next.delete("project");
+    }
+    if (nextSegment !== "clients") {
+      next.delete("client");
     }
     if (nextSegment !== "management") {
       next.delete("manage");
@@ -171,6 +176,17 @@ export function AgencyPage() {
     const next = new URLSearchParams(searchParams);
     next.set("section", "projects");
     next.set("project", projectId);
+    next.delete("client");
+    next.delete("manage");
+    next.delete("pane");
+    setSearchParams(next);
+  }
+
+  function openClient(clientId: string) {
+    const next = new URLSearchParams(searchParams);
+    next.set("section", "clients");
+    next.set("client", clientId);
+    next.delete("project");
     next.delete("manage");
     next.delete("pane");
     setSearchParams(next);
@@ -275,7 +291,9 @@ export function AgencyPage() {
                       segment={segment}
                       teamId={selectedTeamId}
                       selectedProjectId={selectedProjectId}
+                      selectedClientId={selectedClientId}
                       onSelectProject={openProject}
+                      onSelectClient={openClient}
                       onCloseProject={closeProject}
                     />
                   ) : null}

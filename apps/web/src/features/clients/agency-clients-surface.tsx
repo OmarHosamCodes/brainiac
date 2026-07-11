@@ -37,6 +37,7 @@ import {
 type AgencyClientsSurfaceProps = {
   teamId: string;
   filters: AgencyListFiltersApplied;
+  selectedClientId?: string;
 };
 
 type AgencyClientCategory = "internal" | "external";
@@ -64,7 +65,11 @@ function getWeekStartUtc(): Date {
   return date;
 }
 
-export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfaceProps) {
+export function AgencyClientsSurface({
+  teamId,
+  filters,
+  selectedClientId = "",
+}: AgencyClientsSurfaceProps) {
   const { openNewClient } = useAgencyClientsActions();
   const agencyOps = useAgencyOpsStore();
   const isClientMutationPending = useAgencyOpsStore(selectIsClientMutationPending);
@@ -187,6 +192,16 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
       );
     }
   }, [clients, editClientId]);
+
+  useEffect(() => {
+    if (!selectedClientId) return;
+    const frame = requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(`[data-client-id="${CSS.escape(selectedClientId)}"]`)
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [selectedClientId, filteredClients.length]);
 
   async function saveClientEdits(clientId: string) {
     const client = clients.find((entry) => entry.id === clientId);
@@ -344,7 +359,11 @@ export function AgencyClientsSurface({ teamId, filters }: AgencyClientsSurfacePr
                 return (
                   <tr
                     key={client.id}
-                    className="border-b border-default transition-colors last:border-b-0 hover:bg-elevated/40"
+                    data-client-id={client.id}
+                    className={cn(
+                      "border-b border-default transition-colors last:border-b-0 hover:bg-elevated/40",
+                      selectedClientId === client.id && "bg-primary/10",
+                    )}
                   >
                     <td className="px-4 py-3">
                       <span className="truncate font-bold text-highlighted">

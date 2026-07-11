@@ -20,3 +20,12 @@ export function selectAgencyWorkSurfaceTask(searchParams: URLSearchParams, taskI
   }
   return next;
 }
+
+/** Switch to My Tasks without opening a task thread. */
+export function openAgencyWorkSurfaceMyTasks(searchParams: URLSearchParams) {
+  const next = new URLSearchParams(searchParams);
+  next.set("section", "work");
+  next.set("tab", "my-tasks");
+  next.delete("task");
+  return next;
+}

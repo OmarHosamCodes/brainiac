@@ -19,6 +19,7 @@ import {
   agencyInputPlaceholderClass,
   agencyTaskRowProjectPillClass,
   agencyTaskRowSelectedClass,
+  agencyTimeEntryMultiChildClass,
   agencyWorkTableGridClass,
   agencyWorkTableGridDelegatedClass,
   agencyWorkTableGridDoneClass,
@@ -183,6 +184,7 @@ export function AgencyWorkSurfaceTaskTableRowView({
     variant,
     selected = false,
     highlight = false,
+    highlightProject = false,
     isRowPending = false,
     onSelect,
     onSelectProject,
@@ -195,15 +197,21 @@ export function AgencyWorkSurfaceTaskTableRowView({
     dueEditorOpen,
     dueDraft,
     editingDescription,
+    editingBlueprintId,
     descriptionDraft,
     description,
+    descriptionEntries,
+    isMultiDescription,
+    descriptionsExpanded,
     canEditDescription,
+    delegatedBy,
     descriptionInputRef,
     onMenuOpenChange,
     onDueEditorOpenChange,
     onDueDraftDateChange,
     onDueDraftTimeChange,
     onClearDueDate,
+    onToggleDescriptionsExpanded,
     onBeginDescriptionEdit,
     onDescriptionDraftChange,
     onDescriptionDraftKeyDown,
@@ -236,6 +244,8 @@ export function AgencyWorkSurfaceTaskTableRowView({
 
   return (
     <div
+      data-task-id={task.id}
+      data-project-id={task.projectId}
       className={cn(
         gridClass,
         "border-b border-default transition-colors hover:bg-elevated/45 motion-reduce:transition-none",
@@ -254,7 +264,28 @@ export function AgencyWorkSurfaceTaskTableRowView({
               <CircleCheck className="size-4 stroke-3 stroke-primary" />
             </span>
           ) : null}
-          <div className="min-w-0">
+          {isMultiDescription ? (
+            <button
+              type="button"
+              className={cn(
+                "inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full border border-default bg-elevated px-1.5 font-mono text-xs font-bold tabular-nums text-muted transition-colors hover:bg-default hover:text-highlighted",
+                agencyFocusRingClass,
+              )}
+              aria-label={
+                descriptionsExpanded
+                  ? `Collapse ${descriptionEntries.length} descriptions`
+                  : `Expand ${descriptionEntries.length} descriptions`
+              }
+              aria-expanded={descriptionsExpanded}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleDescriptionsExpanded();
+              }}
+            >
+              {descriptionEntries.length}
+            </button>
+          ) : null}
+          <div className="min-w-0 flex-1">
             <button
               type="button"
               className={cn(
@@ -265,8 +296,87 @@ export function AgencyWorkSurfaceTaskTableRowView({
             >
               {task.title}
             </button>
+            {delegatedBy && variant !== "delegated" ? (
+              <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px] text-muted">
+                <AgencyMemberAvatar
+                  name={delegatedBy.userName}
+                  avatarUrl={delegatedBy.userAvatar}
+                  size="sm"
+                  className="size-4 rounded-full"
+                />
+                <span className="truncate">
+                  Delegated by{" "}
+                  <span className="font-semibold text-highlighted">{delegatedBy.userName}</span>
+                </span>
+              </div>
+            ) : null}
             {canEditDescription ? (
-              editingDescription ? (
+              isMultiDescription ? (
+                <div className="mt-0.5 space-y-1">
+                  {!descriptionsExpanded ? (
+                    <>
+                      {description ? (
+                        <p className="truncate text-xs leading-tight text-muted">{description}</p>
+                      ) : null}
+                      <button
+                        type="button"
+                        className={cn(
+                          "block text-left text-xs font-semibold text-muted hover:text-highlighted",
+                          agencyFocusRingClass,
+                        )}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onToggleDescriptionsExpanded();
+                        }}
+                      >
+                        Show {descriptionEntries.length} descriptions
+                      </button>
+                    </>
+                  ) : (
+                    descriptionEntries.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className={cn(agencyTimeEntryMultiChildClass, "rounded-md py-0.5")}
+                      >
+                        {editingDescription && editingBlueprintId === entry.id ? (
+                          <Input
+                            ref={descriptionInputRef}
+                            value={descriptionDraft}
+                            onChange={(event) => onDescriptionDraftChange(event.target.value)}
+                            onClick={(event) => event.stopPropagation()}
+                            onKeyDown={onDescriptionDraftKeyDown}
+                            onBlur={onDescriptionDraftBlur}
+                            disabled={isRowPending}
+                            placeholder="Add description"
+                            className={cn(
+                              "h-6 min-w-0 border-0 bg-transparent px-0 text-xs leading-tight shadow-none focus-visible:ring-0",
+                              agencyInputPlaceholderClass,
+                              "text-muted",
+                            )}
+                            aria-label={`Description for ${task.title}`}
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            className={cn(
+                              "block w-full truncate text-left text-xs leading-tight text-muted hover:text-highlighted",
+                              agencyFocusRingClass,
+                            )}
+                            disabled={isRowPending}
+                            aria-label={`Edit description for ${task.title}`}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              onBeginDescriptionEdit(entry.id);
+                            }}
+                          >
+                            {entry.description || "Add description"}
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : editingDescription ? (
                 <Input
                   ref={descriptionInputRef}
                   value={descriptionDraft}
@@ -316,13 +426,52 @@ export function AgencyWorkSurfaceTaskTableRowView({
                   Add description
                 </button>
               )
+            ) : isMultiDescription ? (
+              <div className="mt-0.5 space-y-1">
+                {!descriptionsExpanded ? (
+                  <>
+                    {description ? (
+                      <p className="truncate text-xs leading-tight text-muted">{description}</p>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={cn(
+                        "block text-left text-xs font-semibold text-muted hover:text-highlighted",
+                        agencyFocusRingClass,
+                      )}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onToggleDescriptionsExpanded();
+                      }}
+                    >
+                      Show {descriptionEntries.length} descriptions
+                    </button>
+                  </>
+                ) : (
+                  descriptionEntries.map((entry) => (
+                    <p
+                      key={entry.id}
+                      className={cn(
+                        agencyTimeEntryMultiChildClass,
+                        "rounded-md py-0.5 text-xs leading-tight text-muted",
+                      )}
+                    >
+                      {entry.description}
+                    </p>
+                  ))
+                )}
+              </div>
             ) : description && variant !== "delegated" ? (
               <p className="mt-0.5 line-clamp-1 text-xs text-muted">{description}</p>
             ) : null}
             {variant === "active" ? (
               <div className="mt-2 flex flex-wrap gap-1.5 lg:hidden">
                 <span
-                  className={cn(agencyTaskRowProjectPillClass, "max-w-[8rem] truncate")}
+                  className={cn(
+                    agencyTaskRowProjectPillClass,
+                    "max-w-[8rem] truncate",
+                    highlightProject && "ring-2 ring-primary/50 bg-primary/10",
+                  )}
                   style={projectHuePillStyle(task.projectId, isDark)}
                 >
                   {projectName}
@@ -354,6 +503,7 @@ export function AgencyWorkSurfaceTaskTableRowView({
                 agencyTaskRowProjectPillClass,
                 "max-w-[9rem] truncate",
                 agencyFocusRingClass,
+                highlightProject && "ring-2 ring-primary/50 bg-primary/10",
               )}
               style={projectHuePillStyle(task.projectId, isDark)}
               onClick={() => onSelectProject?.(task.projectId)}
@@ -531,7 +681,11 @@ export function AgencyWorkSurfaceTaskTableRowView({
                   onBeginDescriptionEdit();
                 }}
               >
-                {description ? "Edit description" : "Add description"}
+                {isMultiDescription
+                  ? "Edit descriptions"
+                  : description
+                    ? "Edit description"
+                    : "Add description"}
               </Button>
             ) : null}
             {variant === "done" && onReopenToActive ? (
