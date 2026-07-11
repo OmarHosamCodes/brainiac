@@ -233,6 +233,14 @@ export const agencyWorkPlayButtonClass = cn(
   "motion-reduce:transition-none",
 );
 
+/** Ghost icon control for entry rails — play and menu share this (no circle chrome). */
+export const agencyTimeEntryIconButtonClass = cn(
+  "inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted",
+  "transition-colors hover:bg-elevated hover:text-highlighted",
+  agencyFocusRingClass,
+  "motion-reduce:transition-none",
+);
+
 export const agencyTimeTrackerCardClass = cn(
   agencyWorkTrackerCardClass,
   "flex min-h-14 min-w-0 flex-row items-center gap-2 overflow-visible px-4 py-2 sm:gap-3 sm:px-5",
@@ -320,11 +328,14 @@ export const agencyTimeDayHeaderClass = cn(
 export const agencyTimeWeekHeaderClass = "sr-only";
 
 export const agencyTimeEntryRowClass = cn(
-  "min-h-12 border-b border-default px-4 py-2 transition-colors hover:bg-elevated/50 motion-reduce:transition-none sm:px-5",
+  "flex min-h-12 items-stretch border-b border-dotted border-border/40 bg-clip-padding transition-colors hover:bg-elevated/50 motion-reduce:transition-none",
 );
 
 /** Nested child row inside an expanded multi-entry group. */
-export const agencyTimeEntryMultiChildClass = "border-b border-default pl-8";
+export const agencyTimeEntryMultiChildClass = "border-b border-dotted border-border/40 pl-8";
+
+/** Bottom rule for expanded multi-entry wrappers (matches row separators). */
+export const agencyTimeEntryGroupBorderClass = "border-b border-dotted border-border/40";
 
 /** Inline time inputs in entry rows. */
 export const agencyTimeEntryTimeInputClass = cn(
@@ -332,20 +343,55 @@ export const agencyTimeEntryTimeInputClass = cn(
   "[&::-webkit-calendar-picker-indicator]:hidden",
 );
 
-/** Shared column grid for time entry rows and day-section totals. */
-export const agencyTimeEntryGridClass =
-  "grid w-full grid-cols-[minmax(0,1fr)_4.25rem] items-center gap-x-3 gap-y-2 sm:grid-cols-[minmax(14rem,1.35fr)_minmax(10rem,0.7fr)_minmax(5.5rem,0.35fr)_4.5rem] sm:gap-x-4 sm:gap-y-0";
+/** Left cluster — badge, description, task (free; not column-locked). */
+export const agencyTimeEntryMainClass = "flex min-w-0 flex-1 items-center gap-3 px-4 py-2 sm:px-5";
 
-/** Day band — date left; total sits on the duration column from sm up. */
-export const agencyTimeEntrySectionHeaderClass = cn(
-  "flex min-h-9 items-center justify-between gap-3 border-b border-default bg-elevated/40 px-4 py-1.5 text-sm sm:px-5",
-  "sm:grid sm:grid-cols-[minmax(14rem,1.35fr)_minmax(10rem,0.7fr)_minmax(5.5rem,0.35fr)_4.5rem] sm:items-center sm:gap-x-4",
+/**
+ * Right rail — time | duration | actions.
+ * `box-content` so ch/rem widths are content-box (padding does not clip mono glyphs).
+ * Vertical rules are inset (`inset-y-2`) so they read as soft ticks, not a timetable grid.
+ * Day headers use the quiet rail (same widths, no hairlines).
+ */
+export const agencyTimeEntryRailClass = cn(
+  "relative flex shrink-0 items-stretch",
+  "before:pointer-events-none before:absolute before:inset-y-2 before:left-0 before:w-px before:bg-border/40",
+  "[&>*+*]:relative [&>*+*]:before:pointer-events-none [&>*+*]:before:absolute [&>*+*]:before:inset-y-2 [&>*+*]:before:left-0 [&>*+*]:before:w-px [&>*+*]:before:bg-border/40",
 );
+
+/** Day-header rail — same cell widths, no vertical separators. */
+export const agencyTimeEntryRailQuietClass = "flex shrink-0 items-stretch";
+
+export const agencyTimeEntryRailCellClass = "box-content flex h-full shrink-0 items-center px-2.5";
+
+/** Content-box width for locale ranges like "12:29 - 14:54" / "9:29 pm - 9:40 pm". */
+export const agencyTimeEntryRailTimeClass = cn(
+  agencyTimeEntryRailCellClass,
+  "w-[15ch] whitespace-nowrap",
+);
+
+/** Content-box width for bold tabular "HH:MM:SS". */
+export const agencyTimeEntryRailDurationClass = cn(
+  agencyTimeEntryRailCellClass,
+  "relative w-[9ch] whitespace-nowrap",
+);
+
+/** Two 32px icon targets; content-box so px does not steal width. */
+export const agencyTimeEntryRailActionsClass = cn(
+  "box-content flex h-full w-16 shrink-0 items-center justify-center gap-0.5 px-1",
+);
+
+/** Day band — same rail geometry as rows so totals lock to the duration column. */
+export const agencyTimeEntrySectionHeaderClass = cn(
+  "flex min-h-9 items-stretch border-b border-default bg-elevated/40",
+);
+
+export const agencyTimeEntrySectionLabelClass =
+  "flex min-w-0 flex-1 items-center px-4 text-sm font-semibold text-highlighted sm:px-5";
 
 export const agencyTimeWeekGroupClass = "flex flex-col gap-3";
 
 export const agencyTimeWeekGroupHeaderClass =
-  "flex h-9 shrink-0 items-center justify-between gap-3 px-4 sm:px-5";
+  "flex h-9 shrink-0 items-center justify-between gap-3 bg-background px-4 sm:px-5";
 
 export const agencyTimeWeekGroupBodyClass = "flex flex-col gap-4";
 

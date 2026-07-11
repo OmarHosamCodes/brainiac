@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import { Button } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
-import { agencyFocusRingClass, agencyWorkPlayButtonClass } from "@/features/shared/agency-ui";
+import { agencyTimeEntryIconButtonClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
 type AgencyTimeEntryActionsProps = {
@@ -44,7 +44,10 @@ export function AgencyTimeEntryActions({
     <div className="flex shrink-0 items-center gap-0.5">
       <button
         type="button"
-        className={cn(agencyWorkPlayButtonClass, !canRestart && "cursor-not-allowed opacity-50")}
+        className={cn(
+          agencyTimeEntryIconButtonClass,
+          !canRestart && "cursor-not-allowed opacity-50",
+        )}
         disabled={!canRestart}
         aria-label={`Restart timer for ${entryLabel}`}
         onClick={onRestart}
@@ -54,10 +57,9 @@ export function AgencyTimeEntryActions({
 
       <Popover open={menuOpen} onOpenChange={setMenuOpen}>
         <PopoverTrigger asChild>
-          <Button
-            variant="ghost"
-            size="sm"
-            className={cn("h-8 w-8 p-0", agencyFocusRingClass)}
+          <button
+            type="button"
+            className={agencyTimeEntryIconButtonClass}
             disabled={deleting || wastePending || duplicating}
             aria-label={`Actions for ${entryLabel}`}
             onClick={() => setMenuOpen(true)}
@@ -67,7 +69,7 @@ export function AgencyTimeEntryActions({
             ) : (
               <MoreVertical className="size-3.5" />
             )}
-          </Button>
+          </button>
         </PopoverTrigger>
 
         <PopoverContent align="end" className="w-44 p-1">

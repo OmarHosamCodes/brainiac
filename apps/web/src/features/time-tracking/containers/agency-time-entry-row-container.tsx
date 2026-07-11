@@ -4,7 +4,10 @@ import type { TimeEntryDraft } from "@/features/time-tracking/agency-time-entry"
 import type { CollapsedEntryGroup } from "@/features/time-tracking/group-time-entries";
 
 import { AgencyTimeEntryRowView } from "@/features/time-tracking/entries/agency-time-entry-row-view";
-import { agencyTimeEntryMultiChildClass } from "@/features/shared/agency-ui";
+import {
+  agencyTimeEntryGroupBorderClass,
+  agencyTimeEntryMultiChildClass,
+} from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
 type AgencyTimeEntryRowContainerProps = {
@@ -52,7 +55,7 @@ export function AgencyTimeEntryRowContainer({
   }
 
   return (
-    <div className={cn(omitBottomBorder ? undefined : "border-b border-dashed border-default")}>
+    <div className={cn(omitBottomBorder ? undefined : agencyTimeEntryGroupBorderClass)}>
       <AgencyTimeEntryRowView view={view} className="border-b-0" />
       {view.expandedChildGroups.map((childGroup, index) => (
         <AgencyTimeEntryRowContainer

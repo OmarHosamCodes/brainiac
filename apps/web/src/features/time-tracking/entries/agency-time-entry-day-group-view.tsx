@@ -1,4 +1,12 @@
-import { agencyMetricClass, agencyTimeEntrySectionHeaderClass } from "@/features/shared/agency-ui";
+import {
+  agencyMetricClass,
+  agencyTimeEntryRailActionsClass,
+  agencyTimeEntryRailDurationClass,
+  agencyTimeEntryRailQuietClass,
+  agencyTimeEntryRailTimeClass,
+  agencyTimeEntrySectionHeaderClass,
+  agencyTimeEntrySectionLabelClass,
+} from "@/features/shared/agency-ui";
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { formatDuration } from "@/lib/utils/format-duration";
 import type { TimeEntryDayGroup } from "@/features/time-tracking/group-time-entries";
@@ -21,19 +29,17 @@ export function AgencyTimeEntryDayGroupView({
   return (
     <section>
       <header className={agencyTimeEntrySectionHeaderClass}>
-        <div className="min-w-0">
-          <span className="font-semibold text-highlighted">
-            {formatAgencyDayLabel(day.dateKey)}
-          </span>
+        <div className={agencyTimeEntrySectionLabelClass}>{formatAgencyDayLabel(day.dateKey)}</div>
+        <div className={agencyTimeEntryRailQuietClass}>
+          <div className={agencyTimeEntryRailTimeClass} aria-hidden />
+          <div className={agencyTimeEntryRailDurationClass}>
+            <span className="sr-only">Total</span>
+            <span className={cn("font-mono text-sm font-semibold tabular-nums", agencyMetricClass)}>
+              {formatDuration(day.totalSeconds, "clock")}
+            </span>
+          </div>
+          <div className={agencyTimeEntryRailActionsClass} aria-hidden />
         </div>
-        <span className="hidden sm:block" aria-hidden />
-        <span className="inline-flex items-baseline justify-self-end gap-1.5 text-xs text-muted">
-          <span className="sr-only">Total</span>
-          <span className={cn("text-sm font-semibold", agencyMetricClass)}>
-            {formatDuration(day.totalSeconds, "clock")}
-          </span>
-        </span>
-        <span className="hidden sm:block" aria-hidden />
       </header>
 
       <ul className="flex min-w-0 flex-col">

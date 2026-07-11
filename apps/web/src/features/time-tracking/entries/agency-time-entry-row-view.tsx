@@ -9,12 +9,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import type { AgencyTimeEntryRowViewModel } from "@/features/time-tracking/hooks/use-agency-time-entry-row";
 import {
   agencyFocusRingClass,
-  agencyTimeEntryGridClass,
+  agencyMetricClass,
+  agencyTimeEntryIconButtonClass,
+  agencyTimeEntryMainClass,
+  agencyTimeEntryRailActionsClass,
+  agencyTimeEntryRailClass,
+  agencyTimeEntryRailDurationClass,
+  agencyTimeEntryRailTimeClass,
   agencyTimeEntryRowClass,
   agencyTimeEntryRowEditingClass,
   agencyTimeEntryRowHighlightClass,
   agencyTimeEntryTimeInputClass,
-  agencyWorkPlayButtonClass,
 } from "@/features/shared/agency-ui";
 import { reportEntryWasteRowClass } from "@/features/reports/agency-report-grouping";
 import { cn } from "@/lib/utils";
@@ -81,183 +86,180 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
       data-entry-id={primaryEntryId}
       className={cn(
         agencyTimeEntryRowClass,
-        agencyTimeEntryGridClass,
         highlighted && agencyTimeEntryRowHighlightClass,
         (editingDescription || timeEditorOpen || editingDuration) && agencyTimeEntryRowEditingClass,
         isWaste && reportEntryWasteRowClass,
         className,
       )}
     >
-      <div className="col-start-1 row-start-1 flex min-w-0 items-center sm:col-auto sm:row-auto">
+      <div className={agencyTimeEntryMainClass}>
+        {isMulti ? (
+          <div className={descriptionLeadingSlotClass}>
+            <button
+              type="button"
+              className={cn(
+                "inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-default bg-elevated px-1.5 font-mono text-xs font-bold tabular-nums text-muted transition-colors hover:bg-default hover:text-highlighted",
+                agencyFocusRingClass,
+              )}
+              aria-label={expanded ? "Collapse entries" : "Expand entries"}
+              aria-expanded={expanded}
+              onClick={onToggleExpand}
+            >
+              {group.entries.length}
+            </button>
+          </div>
+        ) : null}
+
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          {isMulti ? (
-            <div className={descriptionLeadingSlotClass}>
+          {!isMulti ? (
+            editingDescription ? (
+              <Input
+                value={descriptionDraft}
+                onChange={(e) => onDescriptionChange(e.target.value)}
+                onBlur={() => {
+                  onEditingDescriptionChange(false);
+                  onDescriptionBlur();
+                }}
+                onKeyDown={(event) => {
+                  onDescriptionKeyDown(event);
+                  if (event.key === "Enter" || event.key === "Escape") {
+                    onEditingDescriptionChange(false);
+                  }
+                }}
+                disabled={editSaving || rowUpdating}
+                autoFocus
+                className="h-7 min-w-0 border-0 bg-transparent px-0 text-sm font-semibold text-highlighted shadow-none focus-visible:ring-0"
+                aria-label="Edit description"
+              />
+            ) : (
               <button
                 type="button"
                 className={cn(
-                  "inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-default bg-elevated px-1.5 font-mono text-xs font-bold tabular-nums text-muted transition-colors hover:bg-default hover:text-highlighted",
+                  "block min-w-0 max-w-full truncate text-left text-sm font-semibold text-highlighted sm:shrink-0",
                   agencyFocusRingClass,
                 )}
-                aria-label={expanded ? "Collapse entries" : "Expand entries"}
-                aria-expanded={expanded}
-                onClick={onToggleExpand}
+                onClick={() => onEditingDescriptionChange(true)}
               >
-                {group.entries.length}
-              </button>
-            </div>
-          ) : null}
-
-          <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
-            {!isMulti ? (
-              editingDescription ? (
-                <Input
-                  value={descriptionDraft}
-                  onChange={(e) => onDescriptionChange(e.target.value)}
-                  onBlur={() => {
-                    onEditingDescriptionChange(false);
-                    onDescriptionBlur();
-                  }}
-                  onKeyDown={(event) => {
-                    onDescriptionKeyDown(event);
-                    if (event.key === "Enter" || event.key === "Escape") {
-                      onEditingDescriptionChange(false);
-                    }
-                  }}
-                  disabled={editSaving || rowUpdating}
-                  autoFocus
-                  className="h-7 min-w-0 border-0 bg-transparent px-0 text-sm font-semibold text-highlighted shadow-none focus-visible:ring-0"
-                  aria-label="Edit description"
-                />
-              ) : (
-                <button
-                  type="button"
-                  className={cn(
-                    "block max-w-full truncate text-left text-sm font-semibold text-highlighted sm:max-w-[15rem] sm:shrink-0",
-                    agencyFocusRingClass,
-                  )}
-                  onClick={() => onEditingDescriptionChange(true)}
-                >
-                  {displayTitle}
-                </button>
-              )
-            ) : (
-              <span className="block min-w-0 truncate text-left text-sm font-semibold text-highlighted sm:max-w-[15rem] sm:shrink-0">
                 {displayTitle}
-              </span>
-            )}
+              </button>
+            )
+          ) : (
+            <span className="block min-w-0 max-w-full truncate text-left text-sm font-semibold text-highlighted sm:shrink-0">
+              {displayTitle}
+            </span>
+          )}
 
-            <div className="mt-1.5 min-w-0 sm:mt-0 sm:flex-1">
-              {isMulti ? (
-                <AgencyTimeEntryProjectLabel
-                  format="task-client"
-                  projectId={group.projectId}
-                  projectName={group.projectName}
-                  clientName={group.clientName || "General"}
-                  taskTitle={group.taskTitle}
-                  className="max-w-full"
-                />
-              ) : (
-                <AgencyTaskChooser
-                  value={editDraft.taskId}
-                  onValueChange={onTaskChange}
-                  projects={projects}
-                  tasks={tasks}
-                  fallbackTaskTitle={group.taskTitle}
-                  fallbackProjectId={group.projectId}
-                  fallbackProjectName={group.projectName}
-                  fallbackClientName={group.clientName || "General"}
-                  placeholder="Choose task"
-                  triggerFormat="task-client"
-                  highlightSearch
-                  contentAlign="start"
-                  disabled={editSaving || rowUpdating}
-                  className={cn(taskChooserTriggerClass, "max-w-full")}
-                />
-              )}
-            </div>
+          <div className="min-w-0 flex-1">
+            {isMulti ? (
+              <AgencyTimeEntryProjectLabel
+                format="task-client"
+                projectId={group.projectId}
+                projectName={group.projectName}
+                clientName={group.clientName || "General"}
+                taskTitle={group.taskTitle}
+                className="max-w-full"
+              />
+            ) : (
+              <AgencyTaskChooser
+                value={editDraft.taskId}
+                onValueChange={onTaskChange}
+                projects={projects}
+                tasks={tasks}
+                fallbackTaskTitle={group.taskTitle}
+                fallbackProjectId={group.projectId}
+                fallbackProjectName={group.projectName}
+                fallbackClientName={group.clientName || "General"}
+                placeholder="Choose task"
+                triggerFormat="task-client"
+                highlightSearch
+                contentAlign="start"
+                disabled={editSaving || rowUpdating}
+                className={cn(taskChooserTriggerClass, "max-w-full")}
+              />
+            )}
           </div>
         </div>
       </div>
 
-      <div className="col-start-1 row-start-2 flex min-w-0 items-center sm:col-auto sm:row-auto">
-        {!isMulti ? (
-          <Popover
-            open={timeEditorOpen}
-            onOpenChange={(open) => {
-              onTimeEditorOpenChange(open);
-              if (!open) onInlineBlur();
-            }}
-          >
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "inline-flex h-8 min-w-0 max-w-full items-center rounded-md px-1.5 text-left font-mono text-sm font-medium tabular-nums text-muted transition-colors hover:bg-elevated hover:text-highlighted",
-                  agencyFocusRingClass,
-                )}
-                disabled={editSaving || rowUpdating}
-                aria-label={`Edit time range, ${timeRange || "no time range"}`}
-              >
-                <span className="min-w-0 truncate">{timeRange || "—"}</span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-auto min-w-[19rem] p-3">
-              <div className="grid gap-3">
-                <label className="grid gap-1 text-xs font-semibold text-muted">
-                  <span>Date</span>
-                  <Input
-                    type="date"
-                    value={editDraft.date}
-                    onChange={(e) => onStartDateChange(e.target.value)}
-                    onKeyDown={onInlineKeyDown}
-                    disabled={editSaving || rowUpdating}
-                    className="h-8 font-mono text-sm tabular-nums"
-                    aria-label="Start date"
-                  />
-                </label>
-                <div className="grid grid-cols-2 gap-2">
+      <div className={agencyTimeEntryRailClass}>
+        <div className={agencyTimeEntryRailTimeClass}>
+          {!isMulti ? (
+            <Popover
+              open={timeEditorOpen}
+              onOpenChange={(open) => {
+                onTimeEditorOpenChange(open);
+                if (!open) onInlineBlur();
+              }}
+            >
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex h-8 w-full items-center text-left font-mono text-sm font-medium tabular-nums text-muted transition-colors hover:text-highlighted",
+                    agencyFocusRingClass,
+                  )}
+                  disabled={editSaving || rowUpdating}
+                  aria-label={`Edit time range, ${timeRange || "no time range"}`}
+                >
+                  <span className="whitespace-nowrap">{timeRange || "—"}</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-auto min-w-[19rem] p-3">
+                <div className="grid gap-3">
                   <label className="grid gap-1 text-xs font-semibold text-muted">
-                    <span>Start</span>
+                    <span>Date</span>
                     <Input
-                      type="time"
-                      value={editDraft.startTime}
-                      onChange={(e) => onStartTimeChange(e.target.value)}
-                      onBlur={onInlineBlur}
+                      type="date"
+                      value={editDraft.date}
+                      onChange={(e) => onStartDateChange(e.target.value)}
                       onKeyDown={onInlineKeyDown}
                       disabled={editSaving || rowUpdating}
-                      className={agencyTimeEntryTimeInputClass}
-                      aria-label="Start time"
+                      className="h-8 font-mono text-sm tabular-nums"
+                      aria-label="Start date"
                     />
                   </label>
-                  <label className="grid gap-1 text-xs font-semibold text-muted">
-                    <span>End</span>
-                    <Input
-                      type="time"
-                      value={editDraft.endTime}
-                      onChange={(e) => onEndTimeChange(e.target.value)}
-                      onBlur={onInlineBlur}
-                      onKeyDown={onInlineKeyDown}
-                      disabled={editSaving || rowUpdating}
-                      className={agencyTimeEntryTimeInputClass}
-                      aria-label="End time"
-                    />
-                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="grid gap-1 text-xs font-semibold text-muted">
+                      <span>Start</span>
+                      <Input
+                        type="time"
+                        value={editDraft.startTime}
+                        onChange={(e) => onStartTimeChange(e.target.value)}
+                        onBlur={onInlineBlur}
+                        onKeyDown={onInlineKeyDown}
+                        disabled={editSaving || rowUpdating}
+                        className={agencyTimeEntryTimeInputClass}
+                        aria-label="Start time"
+                      />
+                    </label>
+                    <label className="grid gap-1 text-xs font-semibold text-muted">
+                      <span>End</span>
+                      <Input
+                        type="time"
+                        value={editDraft.endTime}
+                        onChange={(e) => onEndTimeChange(e.target.value)}
+                        onBlur={onInlineBlur}
+                        onKeyDown={onInlineKeyDown}
+                        disabled={editSaving || rowUpdating}
+                        className={agencyTimeEntryTimeInputClass}
+                        aria-label="End time"
+                      />
+                    </label>
+                  </div>
                 </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-        ) : timeRange ? (
-          <span className="inline-flex min-w-0 items-center truncate font-mono text-sm font-medium tabular-nums text-muted">
-            {timeRange}
-          </span>
-        ) : (
-          <span className="text-sm text-muted">—</span>
-        )}
-      </div>
+              </PopoverContent>
+            </Popover>
+          ) : timeRange ? (
+            <span className="whitespace-nowrap font-mono text-sm font-medium tabular-nums text-muted">
+              {timeRange}
+            </span>
+          ) : (
+            <span className="text-sm text-muted">—</span>
+          )}
+        </div>
 
-      <div className="col-start-1 row-start-3 flex min-w-0 items-center sm:col-auto sm:row-auto">
-        {!isMulti ? (
-          <div className="inline-flex h-8 min-w-0 max-w-full items-center rounded-md px-1.5 transition-colors hover:bg-elevated focus-within:bg-elevated">
+        <div className={agencyTimeEntryRailDurationClass}>
+          {!isMulti ? (
             <Input
               value={editDraft.durationInput}
               onChange={(e) => onDurationChange(e.target.value)}
@@ -268,83 +270,92 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               }}
               onKeyDown={onInlineKeyDown}
               disabled={editSaving || rowUpdating}
-              className="h-7 min-w-[4.5rem] border-0 bg-transparent px-0 font-mono text-sm font-medium tabular-nums text-muted shadow-none focus-visible:text-highlighted focus-visible:ring-0"
+              className={cn(
+                "h-8 w-full border-0 bg-transparent px-0 font-mono text-sm font-semibold tabular-nums shadow-none focus-visible:ring-0",
+                agencyMetricClass,
+                "text-highlighted",
+              )}
               aria-label="Duration"
             />
-          </div>
-        ) : (
-          <span className="inline-flex items-center font-mono text-sm font-medium tabular-nums text-muted">
-            {durationLabel}
-          </span>
-        )}
-        {editError ? <p className="text-xs text-error">{editError}</p> : null}
-      </div>
-
-      <div className="col-start-2 row-span-3 row-start-1 flex min-w-0 shrink-0 items-center justify-end gap-1.5 self-center sm:col-auto sm:row-auto">
-        {isMulti && !expanded ? (
-          <div className="flex shrink-0 items-center gap-0.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(agencyWorkPlayButtonClass, "h-8 w-8 p-0", agencyFocusRingClass)}
-              disabled={!canRestart}
-              aria-label={`Restart timer for ${group.taskTitle}`}
-              onClick={onRestart}
+          ) : (
+            <span
+              className={cn(
+                "block w-full font-mono text-sm font-semibold tabular-nums",
+                agencyMetricClass,
+              )}
             >
-              <Play className="size-3.5" />
-            </Button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={cn("h-8 w-8 p-0", agencyFocusRingClass)}
-                  aria-label="Entry actions"
-                >
-                  <MoreVertical className="size-3.5" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-40 p-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={onToggleExpand}
-                >
-                  Show {group.entries.length} entries
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-error"
-                  disabled={rowDeleting}
-                  onClick={onDeleteGroup}
-                >
-                  <Trash2 className="size-3.5" />
-                  Delete all
-                </Button>
-              </PopoverContent>
-            </Popover>
-          </div>
-        ) : (
-          <AgencyTimeEntryActions
-            entry={{
-              id: primaryEntryId,
-              projectName: group.projectName,
-              taskTitle: group.taskTitle,
-              taskId: group.taskId,
-              taskIsWaste: isWaste,
-            }}
-            canRestart={canRestart}
-            deleting={rowDeleting || rowUpdating || editSaving}
-            duplicating={rowDuplicating}
-            wastePending={rowWastePending}
-            onRestart={onRestart}
-            onDelete={() => onDeleteGroup()}
-            onDuplicate={!isMulti ? onDuplicate : undefined}
-            onToggleWaste={group.taskId ? view.onToggleWaste : undefined}
-          />
-        )}
+              {durationLabel}
+            </span>
+          )}
+          {editError ? (
+            <p className="absolute top-full left-2.5 z-10 text-xs text-error">{editError}</p>
+          ) : null}
+        </div>
+
+        <div className={agencyTimeEntryRailActionsClass}>
+          {isMulti && !expanded ? (
+            <>
+              <button
+                type="button"
+                className={cn(agencyTimeEntryIconButtonClass, !canRestart && "opacity-50")}
+                disabled={!canRestart}
+                aria-label={`Restart timer for ${group.taskTitle}`}
+                onClick={onRestart}
+              >
+                <Play className="size-3.5" />
+              </button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className={agencyTimeEntryIconButtonClass}
+                    aria-label="Entry actions"
+                  >
+                    <MoreVertical className="size-3.5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-40 p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start"
+                    onClick={onToggleExpand}
+                  >
+                    Show {group.entries.length} entries
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-error"
+                    disabled={rowDeleting}
+                    onClick={onDeleteGroup}
+                  >
+                    <Trash2 className="size-3.5" />
+                    Delete all
+                  </Button>
+                </PopoverContent>
+              </Popover>
+            </>
+          ) : (
+            <AgencyTimeEntryActions
+              entry={{
+                id: primaryEntryId,
+                projectName: group.projectName,
+                taskTitle: group.taskTitle,
+                taskId: group.taskId,
+                taskIsWaste: isWaste,
+              }}
+              canRestart={canRestart}
+              deleting={rowDeleting || rowUpdating || editSaving}
+              duplicating={rowDuplicating}
+              wastePending={rowWastePending}
+              onRestart={onRestart}
+              onDelete={() => onDeleteGroup()}
+              onDuplicate={!isMulti ? onDuplicate : undefined}
+              onToggleWaste={group.taskId ? view.onToggleWaste : undefined}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

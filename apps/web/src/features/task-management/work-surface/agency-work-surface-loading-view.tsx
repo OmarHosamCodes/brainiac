@@ -1,6 +1,11 @@
 import { Skeleton } from "@/ui/skeleton";
 import {
+  agencyTimeEntryRailActionsClass,
+  agencyTimeEntryRailDurationClass,
+  agencyTimeEntryRailQuietClass,
+  agencyTimeEntryRailTimeClass,
   agencyTimeEntrySectionHeaderClass,
+  agencyTimeEntrySectionLabelClass,
   agencyTimeLogPanelClass,
   agencyTimePaneBodyClass,
   agencyTimePaneStackClass,
@@ -57,13 +62,16 @@ function SessionSectionSkeleton({ rows }: { rows: number }) {
   return (
     <section className={agencyWorkTableListClass} aria-hidden>
       <header className={agencyTimeEntrySectionHeaderClass}>
-        <div className="flex min-w-0 items-center gap-2">
+        <div className={agencyTimeEntrySectionLabelClass}>
           <Skeleton className="h-3.5 w-16" />
-          <Skeleton className="h-5 w-6 rounded-full" />
         </div>
-        <span className="hidden sm:block" aria-hidden />
-        <Skeleton className="h-3.5 w-24 justify-self-end" />
-        <span className="hidden sm:block" aria-hidden />
+        <div className={agencyTimeEntryRailQuietClass}>
+          <div className={agencyTimeEntryRailTimeClass} aria-hidden />
+          <div className={agencyTimeEntryRailDurationClass}>
+            <Skeleton className="h-3.5 w-14" />
+          </div>
+          <div className={agencyTimeEntryRailActionsClass} aria-hidden />
+        </div>
       </header>
       <ul className="flex min-w-0 flex-col">
         {Array.from({ length: rows }, (_, index) => (
