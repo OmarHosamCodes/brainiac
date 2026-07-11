@@ -1,4 +1,5 @@
 import {
+  agencyTimeEntryDayGroupClass,
   agencyTimeEntryRailActionsClass,
   agencyTimeEntryRailDurationClass,
   agencyTimeEntryRailQuietClass,
@@ -26,7 +27,7 @@ export function AgencyTimeEntryDayGroupView({
   const lastGroupIndex = day.groups.length - 1;
 
   return (
-    <section>
+    <section className={agencyTimeEntryDayGroupClass}>
       <header className={agencyTimeEntrySectionHeaderClass}>
         <div className={agencyTimeEntrySectionLabelClass}>{formatAgencyDayLabel(day.dateKey)}</div>
         <div className={agencyTimeEntryRailQuietClass}>

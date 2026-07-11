@@ -343,7 +343,7 @@ export const agencyTimeDayHeaderClass = cn(
 export const agencyTimeWeekHeaderClass = "sr-only";
 
 export const agencyTimeEntryRowClass = cn(
-  "flex min-h-12 items-stretch border-b border-dotted border-border/40 bg-clip-padding transition-colors hover:bg-elevated/50 motion-reduce:transition-none",
+  "flex min-h-16 items-stretch border-b border-dotted border-border/40 bg-clip-padding transition-colors hover:bg-elevated/50 motion-reduce:transition-none",
 );
 
 /** Nested child row inside an expanded multi-entry group. */
@@ -359,7 +359,7 @@ export const agencyTimeEntryTimeInputClass = cn(
 );
 
 /** Left cluster — badge, description, task (free; not column-locked). */
-export const agencyTimeEntryMainClass = "flex min-w-0 flex-1 items-center gap-3 px-4 py-2 sm:px-5";
+export const agencyTimeEntryMainClass = "flex min-w-0 flex-1 items-center gap-3 px-4 py-3 sm:px-5";
 
 /**
  * Right rail — time | duration | actions.
@@ -403,16 +403,19 @@ export const agencyTimeEntrySectionLabelClass = cn(
   agencyWorkTitleClass,
 );
 
-/** Week is secondary metadata; days own the scan rhythm. */
-export const agencyTimeWeekGroupClass = "flex flex-col gap-1";
+/** One day block — solid surface so background gutters read as hard separation. */
+export const agencyTimeEntryDayGroupClass = "border-b border-dotted border-border/40 bg-default";
+
+/** Days own the scan rhythm — no visible week chrome. */
+export const agencyTimeWeekGroupClass = "flex flex-col";
 
 export const agencyTimeWeekGroupHeaderClass =
   "flex h-8 shrink-0 items-center justify-between gap-3 bg-transparent px-4 sm:px-5";
 
-export const agencyTimeWeekGroupBodyClass = "flex flex-col gap-3";
+export const agencyTimeWeekGroupBodyClass = "flex flex-col gap-10 bg-background";
 
-/** Stack of week sections in the sessions log. */
-export const agencyTimeWeekStackClass = "flex flex-col gap-8";
+/** Stack of week sections — same gutter as days so week boundaries stay invisible. */
+export const agencyTimeWeekStackClass = "flex min-h-full flex-col gap-10 bg-background";
 
 export const agencyTimeEntryRowHighlightClass =
   "bg-success/10 motion-reduce:transition-none transition-colors duration-500";

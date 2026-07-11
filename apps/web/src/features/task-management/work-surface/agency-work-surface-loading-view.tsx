@@ -1,5 +1,6 @@
 import { Skeleton } from "@/ui/skeleton";
 import {
+  agencyTimeEntryDayGroupClass,
   agencyTimeEntryRailActionsClass,
   agencyTimeEntryRailDurationClass,
   agencyTimeEntryRailQuietClass,
@@ -59,7 +60,7 @@ function TabsSkeleton() {
 
 function SessionSectionSkeleton({ rows }: { rows: number }) {
   return (
-    <section aria-hidden>
+    <section className={agencyTimeEntryDayGroupClass} aria-hidden>
       <header className={agencyTimeEntrySectionHeaderClass}>
         <div className={agencyTimeEntrySectionLabelClass}>
           <Skeleton className="h-3.5 w-14" />
@@ -76,7 +77,7 @@ function SessionSectionSkeleton({ rows }: { rows: number }) {
         {Array.from({ length: rows }, (_, index) => (
           <li
             key={index}
-            className="flex items-center gap-3 border-b border-dotted border-border/40 px-5 py-3.5 last:border-b-0"
+            className="flex min-h-16 items-center gap-3 border-b border-dotted border-border/40 px-5 py-3.5 last:border-b-0"
           >
             <Skeleton className="size-6 shrink-0 rounded-full" />
             <div className="min-w-0 flex-1 space-y-2">
