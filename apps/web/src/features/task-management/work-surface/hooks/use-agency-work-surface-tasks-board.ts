@@ -40,6 +40,7 @@ import { getErrorMessage } from "@/lib/utils/get-error-message";
 const DONE_SETTLE_MS = 200;
 const ANNOUNCE_CLEAR_MS = 2500;
 const DESCRIPTION_SAVED_MS = 1200;
+const EMPTY_TODO_DESCRIPTION = "New todo";
 
 export type AgencyWorkBoardDelegatePrompt = {
   taskId: string;
@@ -48,7 +49,10 @@ export type AgencyWorkBoardDelegatePrompt = {
 };
 
 export type AgencyWorkSurfaceTasksBoardCardViewModel = {
+  cardKey: string;
   taskId: string;
+  blueprintId: string | null;
+  projectId: string;
   title: string;
   clientName: string;
   projectName: string;
@@ -67,6 +71,9 @@ export type AgencyWorkSurfaceTasksBoardCardViewModel = {
   canEditDescription: boolean;
   canDelegate: boolean;
   canClaim: boolean;
+  canDuplicate: boolean;
+  canDelete: boolean;
+  canTrack: boolean;
   readOnly: boolean;
   descriptionSaveState: "idle" | "saving" | "saved";
 };
@@ -81,6 +88,7 @@ export type AgencyWorkSurfaceTasksBoardViewModel =
     }
   | {
       status: "ready";
+      teamId: string;
       columns: Array<{
         id: AgencyWorkBoardColumnId;
         label: string;
@@ -99,11 +107,13 @@ export type AgencyWorkSurfaceTasksBoardViewModel =
       draggingTaskId: string | null;
       dragOverCellKey: string | null;
       statusAnnouncement: string;
-      editingDescriptionTaskId: string | null;
+      editingDescriptionCardKey: string | null;
       descriptionDraft: string;
       delegatePrompt: AgencyWorkBoardDelegatePrompt | null;
       delegateDraftAssignedToTeam: boolean;
       delegateDraftUserIds: string[];
+      deleteTarget: AgencyProjectTask | null;
+      deletePending: boolean;
       partialLoadWarning: string | null;
       onRetryPartialLoad: () => void;
       onSelectTask: (taskId: string) => void;
@@ -129,12 +139,16 @@ export type AgencyWorkSurfaceTasksBoardViewModel =
         event: DragEvent<HTMLElement>,
       ) => void;
       onMoveTaskStatus: (taskId: string, column: AgencyWorkBoardColumnId) => void;
-      onBeginDescriptionEdit: (taskId: string) => void;
+      onBeginDescriptionEdit: (cardKey: string) => void;
       onDescriptionDraftChange: (value: string) => void;
       onCommitDescription: () => void;
       onCancelDescriptionEdit: () => void;
       onRequestDelegate: (taskId: string) => void;
       onClaimTask: (taskId: string) => void;
+      onDuplicateTodo: (cardKey: string) => void;
+      onRequestDelete: (taskId: string) => void;
+      onDismissDelete: () => void;
+      onConfirmDelete: () => void;
       onDelegateDraftAssignedToTeamChange: (assignedToTeam: boolean) => void;
       onDelegateDraftUserIdsChange: (userIds: string[]) => void;
       onConfirmDelegatePrompt: () => void;
@@ -165,10 +179,6 @@ function assigneeLabelForCard(card: AgencyWorkBoardCard): string {
   return `${names[0]} +${names.length - 1}`;
 }
 
-function taskDescription(task: AgencyProjectTask): string {
-  return task.viewerBlueprints?.[0]?.description.trim() ?? "";
-}
-
 export function useAgencyWorkSurfaceTasksBoard({
   teamId,
   projects,
@@ -179,6 +189,7 @@ export function useAgencyWorkSurfaceTasksBoard({
   const { isDark } = useTheme();
   const updateProjectTask = useAgencyOpsStore((s) => s.updateProjectTask);
   const completeProjectTaskForMember = useAgencyOpsStore((s) => s.completeProjectTaskForMember);
+  const createProjectTask = useAgencyOpsStore((s) => s.createProjectTask);
   const listView = useAgencyTaskList({
     teamId,
     projects,
@@ -193,9 +204,9 @@ export function useAgencyWorkSurfaceTasksBoard({
   const [dragOverCellKey, setDragOverCellKey] = useState<string | null>(null);
   const [statusAnnouncement, setStatusAnnouncement] = useState("");
   const [settledTaskId, setSettledTaskId] = useState<string | null>(null);
-  const [editingDescriptionTaskId, setEditingDescriptionTaskId] = useState<string | null>(null);
+  const [editingDescriptionCardKey, setEditingDescriptionCardKey] = useState<string | null>(null);
   const [descriptionDraft, setDescriptionDraft] = useState("");
-  const [descriptionSaveTaskId, setDescriptionSaveTaskId] = useState<string | null>(null);
+  const [descriptionSaveCardKey, setDescriptionSaveCardKey] = useState<string | null>(null);
   const [descriptionSaveState, setDescriptionSaveState] = useState<"idle" | "saving" | "saved">(
     "idle",
   );
@@ -270,10 +281,20 @@ export function useAgencyWorkSurfaceTasksBoard({
 
   const cells = useMemo(() => groupAgencyWorkBoardCards(boardCards), [boardCards]);
 
+  const cardByKey = useMemo(() => {
+    const map = new Map<string, AgencyWorkBoardCard>();
+    for (const card of boardCards) {
+      map.set(card.cardKey, card);
+    }
+    return map;
+  }, [boardCards]);
+
   const taskById = useMemo(() => {
     const map = new Map<string, AgencyWorkBoardCard>();
     for (const card of boardCards) {
-      map.set(card.task.id, card);
+      if (!map.has(card.task.id)) {
+        map.set(card.task.id, card);
+      }
     }
     return map;
   }, [boardCards]);
@@ -502,37 +523,37 @@ export function useAgencyWorkSurfaceTasksBoard({
   );
 
   const onBeginDescriptionEdit = useCallback(
-    (taskId: string) => {
-      const card = taskById.get(taskId);
+    (cardKey: string) => {
+      const card = cardByKey.get(cardKey);
       if (!card) return;
-      setEditingDescriptionTaskId(taskId);
-      setDescriptionDraft(taskDescription(card.task));
+      setEditingDescriptionCardKey(cardKey);
+      setDescriptionDraft(card.description);
       setDescriptionSaveState("idle");
-      setDescriptionSaveTaskId(null);
+      setDescriptionSaveCardKey(null);
     },
-    [taskById],
+    [cardByKey],
   );
 
   const onCommitDescription = useCallback(() => {
-    if (listView.status !== "ready" || !editingDescriptionTaskId) return;
-    const card = taskById.get(editingDescriptionTaskId);
+    if (listView.status !== "ready" || !editingDescriptionCardKey) return;
+    const card = cardByKey.get(editingDescriptionCardKey);
     if (!card) {
-      setEditingDescriptionTaskId(null);
+      setEditingDescriptionCardKey(null);
       return;
     }
     const next = descriptionDraft.trim();
-    const previous = taskDescription(card.task);
+    const previous = card.description;
     if (next === previous) {
-      setEditingDescriptionTaskId(null);
+      setEditingDescriptionCardKey(null);
       setDescriptionDraft("");
       return;
     }
 
-    const taskId = editingDescriptionTaskId;
-    setDescriptionSaveTaskId(taskId);
+    const cardKey = editingDescriptionCardKey;
+    setDescriptionSaveCardKey(cardKey);
     setDescriptionSaveState("saving");
-    listView.onTaskDescriptionChange(card.task, descriptionDraft);
-    setEditingDescriptionTaskId(null);
+    listView.onTaskDescriptionChange(card.task, descriptionDraft, card.blueprintId ?? undefined);
+    setEditingDescriptionCardKey(null);
     setDescriptionDraft("");
 
     if (descriptionSavedTimerRef.current) clearTimeout(descriptionSavedTimerRef.current);
@@ -540,16 +561,63 @@ export function useAgencyWorkSurfaceTasksBoard({
       setDescriptionSaveState("saved");
       descriptionSavedTimerRef.current = setTimeout(() => {
         setDescriptionSaveState("idle");
-        setDescriptionSaveTaskId(null);
+        setDescriptionSaveCardKey(null);
         descriptionSavedTimerRef.current = null;
       }, DESCRIPTION_SAVED_MS);
     }, 450);
-  }, [descriptionDraft, editingDescriptionTaskId, listView, taskById]);
+  }, [cardByKey, descriptionDraft, editingDescriptionCardKey, listView]);
 
   const onCancelDescriptionEdit = useCallback(() => {
-    setEditingDescriptionTaskId(null);
+    setEditingDescriptionCardKey(null);
     setDescriptionDraft("");
   }, []);
+
+  const onDuplicateTodo = useCallback(
+    (cardKey: string) => {
+      const card = cardByKey.get(cardKey);
+      if (!card || isAgencyWorkBoardCardReadOnly(card.swimlane, card.column)) return;
+      if (card.swimlane !== "mine" || card.column === "done") return;
+
+      const description = card.description.trim() || EMPTY_TODO_DESCRIPTION;
+      const blueprints = card.task.viewerBlueprints ?? [];
+
+      void (async () => {
+        try {
+          // Materialize a virtual (no-blueprint) card first so Duplicate yields two todos.
+          if (blueprints.length === 0) {
+            const materialized = await createProjectTask({
+              teamId,
+              projectId: card.task.projectId,
+              title: card.task.title,
+              assignedToTeam: card.task.assignedToTeam,
+              assigneeUserIds: card.task.assignees.map((entry) => entry.userId),
+              description: card.description.trim() || EMPTY_TODO_DESCRIPTION,
+              reusesExistingTitle: true,
+              successToast: false,
+            });
+            if (!materialized) return;
+          }
+
+          const created = await createProjectTask({
+            teamId,
+            projectId: card.task.projectId,
+            title: card.task.title,
+            assignedToTeam: card.task.assignedToTeam,
+            assigneeUserIds: card.task.assignees.map((entry) => entry.userId),
+            description,
+            reusesExistingTitle: true,
+            successToast: false,
+          });
+          if (created) {
+            announceSuccess("Todo added");
+          }
+        } catch {
+          // Store already toasts the error.
+        }
+      })();
+    },
+    [announceSuccess, cardByKey, createProjectTask, teamId],
+  );
 
   const onConfirmDelegatePrompt = useCallback(() => {
     if (!delegatePrompt) return;
@@ -662,15 +730,20 @@ export function useAgencyWorkSurfaceTasksBoard({
         cards: cellCards.map((card) => {
           const project = listView.projects.find((entry) => entry.id === card.task.projectId);
           const hue = projectHueFor(card.task.projectId);
+          const readOnly = isAgencyWorkBoardCardReadOnly(card.swimlane, card.column);
+          const canMutate = !readOnly;
           return {
+            cardKey: card.cardKey,
             taskId: card.task.id,
+            blueprintId: card.blueprintId,
+            projectId: card.task.projectId,
             title: card.task.title,
             clientName: project?.clientName ?? "General",
             projectName: project?.name ?? "Project",
             projectHue: isDark ? hue.dark : hue.light,
             dueLabel: formatDueLabel(card.task.dueDate),
             overdue: isTaskOverdue(card.task.dueDate),
-            description: taskDescription(card.task),
+            description: card.description,
             assigneeLabel: assigneeLabelForCard(card),
             assigneeUserIds: card.task.assignees.map((entry) => entry.userId),
             assignedToTeam: card.task.assignedToTeam,
@@ -681,12 +754,18 @@ export function useAgencyWorkSurfaceTasksBoard({
             settled: settledTaskId === card.task.id,
             canEditDescription: card.swimlane === "mine" && card.column !== "done",
             canDelegate: card.swimlane === "mine" && card.column !== "done",
-            canClaim:
-              card.swimlane === "delegated" &&
-              !isAgencyWorkBoardCardReadOnly(card.swimlane, card.column),
-            readOnly: isAgencyWorkBoardCardReadOnly(card.swimlane, card.column),
+            canClaim: card.swimlane === "delegated" && canMutate,
+            canDuplicate: card.swimlane === "mine" && card.column !== "done",
+            canDelete: canMutate && card.swimlane === "mine",
+            canTrack:
+              card.swimlane === "mine" &&
+              card.column !== "done" &&
+              !card.task.isWaste &&
+              card.task.status !== "archived" &&
+              Boolean(project),
+            readOnly,
             descriptionSaveState:
-              descriptionSaveTaskId === card.task.id ? descriptionSaveState : "idle",
+              descriptionSaveCardKey === card.cardKey ? descriptionSaveState : "idle",
           };
         }),
       };
@@ -701,6 +780,7 @@ export function useAgencyWorkSurfaceTasksBoard({
 
   return {
     status: "ready",
+    teamId,
     columns,
     totalCards: boardCards.length,
     members,
@@ -709,11 +789,13 @@ export function useAgencyWorkSurfaceTasksBoard({
     draggingTaskId,
     dragOverCellKey,
     statusAnnouncement,
-    editingDescriptionTaskId,
+    editingDescriptionCardKey,
     descriptionDraft,
     delegatePrompt,
     delegateDraftAssignedToTeam,
     delegateDraftUserIds,
+    deleteTarget: listView.deleteTarget,
+    deletePending: listView.deletePending,
     partialLoadWarning,
     onRetryPartialLoad: retryBoardQueries,
     onSelectTask,
@@ -736,6 +818,14 @@ export function useAgencyWorkSurfaceTasksBoard({
       if (!card) return;
       claimTask(taskId, card.column);
     },
+    onDuplicateTodo,
+    onRequestDelete: (taskId: string) => {
+      const card = taskById.get(taskId);
+      if (!card) return;
+      listView.onRequestDelete(card.task);
+    },
+    onDismissDelete: listView.onDismissDelete,
+    onConfirmDelete: listView.onConfirmDelete,
     onDelegateDraftAssignedToTeamChange: setDelegateDraftAssignedToTeam,
     onDelegateDraftUserIdsChange: setDelegateDraftUserIds,
     onConfirmDelegatePrompt,

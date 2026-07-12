@@ -1,15 +1,10 @@
-import {
-  CheckCircle,
-  Circle,
-  CircleHalf,
-  DotsThree,
-  HandGrabbing,
-  Plus,
-  UserPlus,
-  Warning,
-} from "@phosphor-icons/react";
+import { Loader2 } from "lucide-react";
+import type { ReactNode } from "react";
 
-import type { AgencyWorkSurfaceTasksBoardViewModel } from "@/features/task-management/work-surface/hooks/use-agency-work-surface-tasks-board";
+import type {
+  AgencyWorkSurfaceTasksBoardCardViewModel,
+  AgencyWorkSurfaceTasksBoardViewModel,
+} from "@/features/task-management/work-surface/hooks/use-agency-work-surface-tasks-board";
 import {
   AGENCY_WORK_BOARD_COLUMNS,
   agencyWorkBoardCellKey,
@@ -17,6 +12,7 @@ import {
   type AgencyWorkBoardColumnId,
 } from "@/features/task-management/work-surface/agency-work-surface-tasks-board";
 import { statusDotClass } from "@/features/task-management/agency-task-status";
+import type { AgencyProjectTask } from "@/features/task-management/agency-work";
 import { AgencyMemberChooser } from "@/features/shared/choosers/agency-member-chooser";
 import {
   agencyFocusRingClass,
@@ -44,6 +40,18 @@ import {
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 import { cn } from "@/lib/utils";
+import {
+  CheckCircle,
+  Circle,
+  CircleHalf,
+  CopySimple,
+  DotsThree,
+  HandGrabbing,
+  Plus,
+  Trash,
+  UserPlus,
+  Warning,
+} from "@phosphor-icons/react";
 
 function boardColumnActionIcon(columnId: AgencyWorkBoardColumnId) {
   switch (columnId) {
@@ -60,8 +68,46 @@ function boardColumnActionIcon(columnId: AgencyWorkBoardColumnId) {
   }
 }
 
+function AgencyWorkSurfaceTaskDeleteDialog({
+  task,
+  teamId,
+  deleting,
+  onDismiss,
+  onConfirm,
+}: {
+  task: AgencyProjectTask | null;
+  teamId: string;
+  deleting: boolean;
+  onDismiss: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <Dialog open={task !== null} onOpenChange={(open) => !open && onDismiss()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Delete task</DialogTitle>
+          <DialogDescription>
+            {task
+              ? `This removes "${task.title}" and all its to-dos for everyone on the project. This cannot be undone.`
+              : "This removes the task for everyone on the project. This cannot be undone."}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onDismiss} disabled={deleting}>
+            Cancel
+          </Button>
+          <Button variant="destructive" disabled={deleting || !task || !teamId} onClick={onConfirm}>
+            {deleting ? <Loader2 className="size-4 motion-safe:animate-spin" /> : "Delete"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 type AgencyWorkSurfaceTasksBoardViewProps = {
   view: AgencyWorkSurfaceTasksBoardViewModel;
+  renderCardTimer: (card: AgencyWorkSurfaceTasksBoardCardViewModel) => ReactNode;
 };
 
 /** Restrained column washes — accent ≤10%; Open stays tonal, not emerald. */
@@ -80,7 +126,10 @@ function columnHeaderWashClass(columnId: AgencyWorkBoardColumnId): string {
   }
 }
 
-export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasksBoardViewProps) {
+export function AgencyWorkSurfaceTasksBoardView({
+  view,
+  renderCardTimer,
+}: AgencyWorkSurfaceTasksBoardViewProps) {
   if (view.status === "unsigned") {
     return (
       <div className={agencyWorkSurfaceStateClass}>
@@ -203,6 +252,14 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
         </DialogContent>
       </Dialog>
 
+      <AgencyWorkSurfaceTaskDeleteDialog
+        task={view.deleteTarget}
+        teamId={view.teamId}
+        deleting={view.deletePending}
+        onDismiss={view.onDismissDelete}
+        onConfirm={view.onConfirmDelete}
+      />
+
       <div className="-mx-1 flex min-h-0 flex-1 gap-3 overflow-x-auto px-1 pb-1 scrollbar-thin">
         {view.columns.map((column) => (
           <section
@@ -277,12 +334,13 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                     ) : (
                       swimlane.cards.map((card) => {
                         const isDragging = view.draggingTaskId === card.taskId;
-                        const isEditingDescription = view.editingDescriptionTaskId === card.taskId;
+                        const isEditingDescription =
+                          view.editingDescriptionCardKey === card.cardKey;
                         const canDrag = !card.readOnly && !card.pending && !isEditingDescription;
                         const showActionsMenu = !card.readOnly;
                         return (
                           <article
-                            key={card.taskId}
+                            key={card.cardKey}
                             draggable={canDrag}
                             onDragStart={(event) => {
                               if (!canDrag) {
@@ -304,6 +362,15 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                             )}
                           >
                             <div className="flex items-start gap-1.5">
+                              {card.canTrack ? (
+                                <div
+                                  className="pt-0.5"
+                                  onPointerDown={(event) => event.stopPropagation()}
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  {renderCardTimer(card)}
+                                </div>
+                              ) : null}
                               <div className="min-w-0 flex-1">
                                 <button
                                   type="button"
@@ -374,7 +441,7 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                                     disabled={!card.canEditDescription || card.pending}
                                     onClick={(event) => {
                                       event.stopPropagation();
-                                      view.onBeginDescriptionEdit(card.taskId);
+                                      view.onBeginDescriptionEdit(card.cardKey);
                                     }}
                                   >
                                     {card.description}
@@ -389,7 +456,7 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                                     disabled={card.pending}
                                     onClick={(event) => {
                                       event.stopPropagation();
-                                      view.onBeginDescriptionEdit(card.taskId);
+                                      view.onBeginDescriptionEdit(card.cardKey);
                                     }}
                                   >
                                     Add description
@@ -489,7 +556,10 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                                         </DropdownMenuItem>
                                       );
                                     })}
-                                    {card.canDelegate || card.canClaim ? (
+                                    {card.canDelegate ||
+                                    card.canClaim ||
+                                    card.canDuplicate ||
+                                    card.canDelete ? (
                                       <DropdownMenuSeparator />
                                     ) : null}
                                     {card.canDelegate ? (
@@ -509,6 +579,23 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                                           weight="duotone"
                                         />
                                         Claim…
+                                      </DropdownMenuItem>
+                                    ) : null}
+                                    {card.canDuplicate ? (
+                                      <DropdownMenuItem
+                                        onSelect={() => view.onDuplicateTodo(card.cardKey)}
+                                      >
+                                        <CopySimple className="size-4 text-toned" weight="duotone" />
+                                        Duplicate
+                                      </DropdownMenuItem>
+                                    ) : null}
+                                    {card.canDelete ? (
+                                      <DropdownMenuItem
+                                        variant="destructive"
+                                        onSelect={() => view.onRequestDelete(card.taskId)}
+                                      >
+                                        <Trash className="size-4" weight="duotone" />
+                                        Delete
                                       </DropdownMenuItem>
                                     ) : null}
                                   </DropdownMenuContent>

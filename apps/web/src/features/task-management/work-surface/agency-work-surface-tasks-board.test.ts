@@ -85,6 +85,38 @@ describe("agency work tasks board grouping", () => {
     });
     expect(cards).toHaveLength(1);
     expect(cards[0]?.swimlane).toBe("mine");
+    expect(cards[0]?.cardKey).toBe("shared");
+  });
+
+  it("expands viewer blueprints into separate cards in the same column", () => {
+    const cards = buildAgencyWorkBoardCards({
+      mineActiveTasks: [
+        task({
+          id: "m1",
+          title: "Ship site",
+          status: "open",
+          viewerStatus: "open",
+          viewerBlueprints: [
+            { id: "bp-1", description: "Write copy" },
+            { id: "bp-2", description: "Polish hero" },
+          ],
+        }),
+      ],
+      mineDoneTasks: [],
+      delegatedActiveTasks: [],
+      delegatedDoneTasks: [],
+    });
+
+    expect(cards).toHaveLength(2);
+    expect(cards.map((card) => card.cardKey)).toEqual(["bp-1", "bp-2"]);
+    expect(cards.map((card) => card.description)).toEqual(["Write copy", "Polish hero"]);
+    expect(cards.every((card) => card.task.id === "m1" && card.column === "open")).toBe(true);
+
+    const cells = groupAgencyWorkBoardCards(cards);
+    expect(cells[agencyWorkBoardCellKey("open", "mine")].map((c) => c.cardKey)).toEqual([
+      "bp-1",
+      "bp-2",
+    ]);
   });
 
   it("flattens assigned client groups without duplicate ids", () => {

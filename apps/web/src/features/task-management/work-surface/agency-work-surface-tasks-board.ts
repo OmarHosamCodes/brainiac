@@ -1,3 +1,7 @@
+import {
+  collectTaskBlueprintsFromTasks,
+  expandTasksWithBlueprints,
+} from "@/features/task-management/agency-task-blueprints";
 import { resolveTaskDisplayStatus } from "@/features/task-management/agency-task-status";
 import type { AgencyProjectTask, TaskStatus } from "@/features/task-management/agency-work";
 
@@ -11,6 +15,9 @@ export type AgencyWorkBoardCard = {
   task: AgencyProjectTask;
   swimlane: AgencyWorkBoardSwimlaneId;
   column: AgencyWorkBoardColumnId;
+  blueprintId: string | null;
+  description: string;
+  cardKey: string;
 };
 
 export type AgencyWorkBoardCellKey = `${AgencyWorkBoardColumnId}:${AgencyWorkBoardSwimlaneId}`;
@@ -77,20 +84,27 @@ export type BuildAgencyWorkBoardCardsInput = {
   delegatedDoneTasks: AgencyProjectTask[];
 };
 
-/** Compose Mine × Delegated swimlanes with Open / In Progress / Done columns. Mine wins on id overlap. */
+type LaneTask = {
+  task: AgencyProjectTask;
+  swimlane: AgencyWorkBoardSwimlaneId;
+  column: AgencyWorkBoardColumnId;
+};
+
+/** Compose Mine × Delegated swimlanes with Open / In Progress / Done columns.
+ * Mine wins on task-id overlap; viewer blueprints expand into separate todo cards. */
 export function buildAgencyWorkBoardCards({
   mineActiveTasks,
   mineDoneTasks,
   delegatedActiveTasks,
   delegatedDoneTasks,
 }: BuildAgencyWorkBoardCardsInput): AgencyWorkBoardCard[] {
-  const cards: AgencyWorkBoardCard[] = [];
-  const seen = new Set<string>();
+  const laneTasks: LaneTask[] = [];
+  const seenTaskIds = new Set<string>();
 
   function pushMine(task: AgencyProjectTask) {
-    if (seen.has(task.id)) return;
-    seen.add(task.id);
-    cards.push({
+    if (seenTaskIds.has(task.id)) return;
+    seenTaskIds.add(task.id);
+    laneTasks.push({
       task,
       swimlane: "mine",
       column: mineColumnForTask(task),
@@ -98,9 +112,9 @@ export function buildAgencyWorkBoardCards({
   }
 
   function pushDelegated(task: AgencyProjectTask) {
-    if (seen.has(task.id)) return;
-    seen.add(task.id);
-    cards.push({
+    if (seenTaskIds.has(task.id)) return;
+    seenTaskIds.add(task.id);
+    laneTasks.push({
       task,
       swimlane: "delegated",
       column: delegatedColumnForTask(task),
@@ -111,6 +125,26 @@ export function buildAgencyWorkBoardCards({
   for (const task of mineDoneTasks) pushMine(task);
   for (const task of delegatedActiveTasks) pushDelegated(task);
   for (const task of delegatedDoneTasks) pushDelegated(task);
+
+  const blueprints = collectTaskBlueprintsFromTasks(laneTasks.map((entry) => entry.task));
+  const cards: AgencyWorkBoardCard[] = [];
+  const seenCardKeys = new Set<string>();
+
+  for (const lane of laneTasks) {
+    const rows = expandTasksWithBlueprints([lane.task], blueprints);
+    for (const row of rows) {
+      if (seenCardKeys.has(row.rowKey)) continue;
+      seenCardKeys.add(row.rowKey);
+      cards.push({
+        task: row.task,
+        swimlane: lane.swimlane,
+        column: lane.column,
+        blueprintId: row.blueprintId,
+        description: row.blueprintDescription.trim(),
+        cardKey: row.rowKey,
+      });
+    }
+  }
 
   return cards;
 }
@@ -140,7 +174,9 @@ export function groupAgencyWorkBoardCards(
         ? new Date(right.task.dueDate).getTime()
         : Number.POSITIVE_INFINITY;
       if (leftDue !== rightDue) return leftDue - rightDue;
-      return left.task.title.localeCompare(right.task.title);
+      const titleCmp = left.task.title.localeCompare(right.task.title);
+      if (titleCmp !== 0) return titleCmp;
+      return left.cardKey.localeCompare(right.cardKey);
     });
   }
 

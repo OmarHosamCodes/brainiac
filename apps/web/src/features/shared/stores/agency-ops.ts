@@ -199,6 +199,8 @@ type CreateProjectTaskPayload = {
   description?: string;
   /** True when an open/in-progress task with this title already exists on the project. */
   reusesExistingTitle?: boolean;
+  /** Skip the default success toast (caller announces instead). */
+  successToast?: false;
   /** Fires with the row id as soon as the optimistic Active row is written. */
   onOptimisticId?: (taskId: string) => void;
   /** Fires with the persisted task after the API succeeds. */
@@ -1011,20 +1013,22 @@ function createAgencyOpsActions(
 
       payload.onCreated?.(created);
 
-      toast.success(
-        reopenedFromDone
-          ? "Added to open tasks"
-          : existingByTitle || payload.reusesExistingTitle
-            ? "Using existing task"
-            : "Task added",
-        {
-          description: reopenedFromDone
-            ? `"${title}" is open again.`
+      if (payload.successToast !== false) {
+        toast.success(
+          reopenedFromDone
+            ? "Added to open tasks"
             : existingByTitle || payload.reusesExistingTitle
-              ? `"${title}" is already open on this project. Assignees were merged.`
-              : title,
-        },
-      );
+              ? "Using existing task"
+              : "Task added",
+          {
+            description: reopenedFromDone
+              ? `"${title}" is open again.`
+              : existingByTitle || payload.reusesExistingTitle
+                ? `"${title}" is already open on this project. Assignees were merged.`
+                : title,
+          },
+        );
+      }
       syncProjectTaskQueriesAfterMutation(payload.teamId);
 
       return created.id;
