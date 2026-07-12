@@ -240,7 +240,9 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                   <div
                     key={swimlane.id}
                     className={cn(
-                      "flex min-h-30 flex-col gap-1.5 rounded-lg bg-muted/50 p-2 transition-[background-color,box-shadow] duration-150 ease-out motion-reduce:transition-none",
+                      // shrink-0: min-h-30 alone replaces flex min-height:auto and lets tall
+                      // lanes compress so cards paint over the next swimlane.
+                      "flex min-h-30 shrink-0 flex-col gap-1.5 rounded-lg bg-muted/50 p-2 transition-[background-color,box-shadow] duration-150 ease-out motion-reduce:transition-none",
                       isDropTarget && "bg-primary/10 ring-1 ring-primary/30",
                     )}
                     onDragOver={
