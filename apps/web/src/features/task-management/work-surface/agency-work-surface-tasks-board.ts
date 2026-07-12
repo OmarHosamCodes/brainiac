@@ -212,3 +212,15 @@ export function decodeAgencyWorkBoardDragPayload(raw: string): AgencyWorkBoardDr
     return null;
   }
 }
+
+/** Same lane = status move; Mine↔Delegated = handoff / claim. */
+export function canCrossAgencyWorkBoardSwimlane(
+  from: AgencyWorkBoardSwimlaneId,
+  to: AgencyWorkBoardSwimlaneId,
+): boolean {
+  return (
+    from === to ||
+    (from === "mine" && to === "delegated") ||
+    (from === "delegated" && to === "mine")
+  );
+}

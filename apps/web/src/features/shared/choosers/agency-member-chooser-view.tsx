@@ -69,14 +69,14 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
             {assignedToTeam ? (
               <span
                 className={cn(
-                  "relative z-0 flex size-6 shrink-0 items-center justify-center rounded-full bg-muted",
+                  "relative z-0 flex size-6 shrink-0 items-center justify-center rounded-md bg-muted",
                   agencyAvatarStackRingClass,
                 )}
                 aria-hidden
               >
                 <UsersRound className="size-3 text-highlighted" />
               </span>
-            ) : (
+            ) : stackVisible.length > 0 ? (
               stackVisible.map((member, index) => (
                 <span
                   key={member.userId}
@@ -87,15 +87,23 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                     name={member.userName}
                     avatarUrl={member.userAvatar}
                     size="sm"
-                    className={cn("size-6 rounded-full", agencyAvatarStackRingClass)}
+                    className={cn("size-6 rounded-md", agencyAvatarStackRingClass)}
                   />
                 </span>
               ))
+            ) : (
+              <span
+                className={cn(
+                  "relative z-0 size-6 shrink-0 rounded-md border border-default bg-elevated/40",
+                  agencyAvatarStackRingClass,
+                )}
+                aria-hidden
+              />
             )}
             {stackOverflow > 0 && !assignedToTeam ? (
               <span
                 className={cn(
-                  "relative z-10 -ml-2 flex size-6 shrink-0 items-center justify-center rounded-full",
+                  "relative z-10 -ml-2 flex size-6 shrink-0 items-center justify-center rounded-md",
                   "bg-muted text-[9px] font-bold text-foreground",
                   agencyAvatarStackRingClass,
                 )}
@@ -110,7 +118,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                 "border border-dashed border-default bg-elevated text-muted",
                 "transition-colors hover:border-accented hover:bg-default hover:text-highlighted",
                 "motion-reduce:transition-none",
-                (assignedToTeam || stackVisible.length > 0 || stackOverflow > 0) && "-ml-1",
+                "-ml-1",
               )}
               aria-hidden
             >

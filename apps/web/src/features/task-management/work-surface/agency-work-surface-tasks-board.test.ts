@@ -4,6 +4,7 @@ import type { AgencyProjectTask } from "@/features/task-management/agency-work";
 import {
   agencyWorkBoardCellKey,
   buildAgencyWorkBoardCards,
+  canCrossAgencyWorkBoardSwimlane,
   decodeAgencyWorkBoardDragPayload,
   encodeAgencyWorkBoardDragPayload,
   flattenAssignedClientGroupTasks,
@@ -111,5 +112,11 @@ describe("agency work tasks board grouping", () => {
       swimlane: "delegated",
     });
     expect(decodeAgencyWorkBoardDragPayload("not-json")).toBeNull();
+  });
+
+  it("allows Mine↔Delegated cross-lane drops", () => {
+    expect(canCrossAgencyWorkBoardSwimlane("mine", "mine")).toBe(true);
+    expect(canCrossAgencyWorkBoardSwimlane("mine", "delegated")).toBe(true);
+    expect(canCrossAgencyWorkBoardSwimlane("delegated", "mine")).toBe(true);
   });
 });
