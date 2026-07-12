@@ -1,11 +1,36 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { defineConfig, loadEnv } from "vite";
+import { defineConfig, loadEnv, type Plugin } from "vite";
 
 import "@orch/env/vite";
 
 import { marketingPrerenderShell } from "./vite-marketing-prerender";
+
+function resolveAppBuildId(): string {
+  return (
+    process.env.RAILWAY_GIT_COMMIT_SHA ||
+    process.env.SOURCE_COMMIT ||
+    process.env.VITE_APP_BUILD_ID ||
+    `build-${Date.now()}`
+  );
+}
+
+function appVersionPlugin(buildId: string): Plugin {
+  return {
+    name: "orch-app-version",
+    async writeBundle(outputOptions) {
+      const outDir = outputOptions.dir;
+      if (!outDir) return;
+      await mkdir(outDir, { recursive: true });
+      await writeFile(
+        path.join(outDir, "version.json"),
+        `${JSON.stringify({ buildId }, null, 2)}\n`,
+      );
+    },
+  };
+}
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -14,12 +39,14 @@ export default defineConfig(({ mode }) => {
     process.env.NUXT_PUBLIC_SERVER_URL ??
     env.VITE_PUBLIC_SERVER_URL ??
     env.NUXT_PUBLIC_SERVER_URL;
+  const appBuildId = resolveAppBuildId();
 
   return {
     define: {
       __BRAINIAC_SERVER_URL__: JSON.stringify(serverUrl ?? ""),
+      __APP_BUILD_ID__: JSON.stringify(appBuildId),
     },
-    plugins: [react(), tailwindcss(), marketingPrerenderShell()],
+    plugins: [react(), tailwindcss(), marketingPrerenderShell(), appVersionPlugin(appBuildId)],
     build: {
       rollupOptions: {
         output: {

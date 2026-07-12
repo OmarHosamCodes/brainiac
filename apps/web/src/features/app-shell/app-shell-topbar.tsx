@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 
 import { AppShellBreadcrumbs } from "@/features/app-shell/app-shell-breadcrumbs";
 import { AppShellPortal } from "@/features/app-shell/app-shell-portal";
+import { AppShellUpdateControl } from "@/features/app-shell/app-shell-update-control";
 import { Button } from "@/ui/button";
 import {
   useAppShellStore,
@@ -106,6 +107,7 @@ export function AppShellTopbar() {
         <div id={APP_SHELL_ACTIONS_SLOT_ID} className={shellHeaderActionsRegionClass} />
         {hasPageActions ? <span className={shellContextDividerClass} aria-hidden="true" /> : null}
         <div id={APP_SHELL_TRAILING_SLOT_ID} className={shellHeaderActionsRegionClass} />
+        <AppShellUpdateControl variant="mobile" />
         {agentButtonHidden ? null : (
           <Button
             type="button"

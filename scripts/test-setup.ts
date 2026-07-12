@@ -13,3 +13,10 @@ if (!("__BRAINIAC_SERVER_URL__" in globalThis)) {
     value: "http://localhost:7000",
   });
 }
+
+if (!("__APP_BUILD_ID__" in globalThis)) {
+  Object.defineProperty(globalThis, "__APP_BUILD_ID__", {
+    configurable: true,
+    value: "test-build",
+  });
+}

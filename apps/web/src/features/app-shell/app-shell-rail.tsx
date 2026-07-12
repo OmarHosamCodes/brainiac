@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 
 import { AppShellAccountMenu } from "@/features/app-shell/app-shell-account-menu";
 import { AppShellRailToggle } from "@/features/app-shell/app-shell-rail-toggle";
+import { AppShellUpdateControl } from "@/features/app-shell/app-shell-update-control";
 import { useAppShellStore } from "@/features/app-shell/app-shell-store";
 import { APP_NAV_ITEMS } from "@/features/app-shell/app-navigation";
 import {
@@ -120,6 +121,7 @@ export function AppShellRail({ onOpenSearch }: AppShellRailProps) {
         </nav>
 
         <div className={cn(shellRailFooterClass, railExpanded ? "px-0.5" : "items-center")}>
+          <AppShellUpdateControl variant="rail" expanded={railExpanded} />
           <AppShellAccountMenu variant="rail" expanded={railExpanded} />
         </div>
       </div>

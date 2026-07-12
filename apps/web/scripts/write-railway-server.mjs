@@ -235,6 +235,27 @@ async function resolveAsset(url) {
   return join(distDir, "index.html");
 }
 
+function cacheControlForAsset(assetPath, requestPathname) {
+  const relative = assetPath
+    .slice(distDir.length)
+    .replace(/^[/\\]+/, "")
+    .split(/[/\\]/)
+    .join("/");
+  if (
+    relative === "index.html" ||
+    relative === "version.json" ||
+    relative === "sw.js" ||
+    requestPathname === "/" ||
+    !requestPathname.includes(".")
+  ) {
+    return "no-cache";
+  }
+  if (relative.startsWith("assets/")) {
+    return "public, max-age=31536000, immutable";
+  }
+  return "no-cache";
+}
+
 const server = createServer(async (request, response) => {
   if (!request.url) {
     response.writeHead(400);
@@ -269,6 +290,7 @@ const server = createServer(async (request, response) => {
 
   const extension = extname(assetPath);
   response.setHeader("Content-Type", contentTypes.get(extension) || "application/octet-stream");
+  response.setHeader("Cache-Control", cacheControlForAsset(assetPath, pathname));
   createReadStream(assetPath)
     .on("error", () => {
       response.writeHead(404);

@@ -13,6 +13,9 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { AppShellRail } from "@/features/app-shell/app-shell-rail";
 import { AppShellTopbar } from "@/features/app-shell/app-shell-topbar";
+import { LogoLoader } from "@/features/app-shell/components/logo-loader";
+import { useAppUpdateStore } from "@/features/app-shell/app-update-store";
+import { useAppUpdateWatcher } from "@/features/app-shell/hooks/use-app-update-watcher";
 import {
   Command,
   CommandDialog,
@@ -85,6 +88,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const agencyTeamId = useCurrentAgencyTeamStore((s) => s.currentAgencyTeamId) ?? "";
   const activeTimer = useAgencyActiveTimerQuery(agencyTeamId).data?.timer ?? null;
   useAgencyTrackingFavicon(Boolean(activeTimer));
+  useAppUpdateWatcher();
+  const isRefreshing = useAppUpdateStore((s) => s.isRefreshing);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -231,6 +236,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       </nav>
 
       <main className="app-shell__main">{children}</main>
+      {isRefreshing ? <LogoLoader label="Updating" /> : null}
     </div>
   );
 }
