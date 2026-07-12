@@ -1,4 +1,4 @@
-import { DotsThree } from "@phosphor-icons/react";
+import { DotsThree, Plus, Warning } from "@phosphor-icons/react";
 
 import type { AgencyWorkSurfaceTasksBoardViewModel } from "@/features/task-management/work-surface/hooks/use-agency-work-surface-tasks-board";
 import {
@@ -29,6 +29,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/ui/dropdown-menu";
 import { Input } from "@/ui/input";
@@ -39,6 +40,7 @@ type AgencyWorkSurfaceTasksBoardViewProps = {
   view: AgencyWorkSurfaceTasksBoardViewModel;
 };
 
+/** Restrained column washes — accent ≤10%; Open stays tonal, not emerald. */
 function columnHeaderWashClass(columnId: AgencyWorkBoardColumnId): string {
   switch (columnId) {
     case "in_progress":
@@ -46,7 +48,7 @@ function columnHeaderWashClass(columnId: AgencyWorkBoardColumnId): string {
     case "done":
       return "bg-success/5";
     case "open":
-      return "bg-elevated/50";
+      return "bg-elevated/60";
     default: {
       const _exhaustive: never = columnId;
       return _exhaustive;
@@ -69,7 +71,7 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
         {AGENCY_WORK_BOARD_COLUMNS.map((column) => (
           <div
             key={column}
-            className="flex min-h-0 flex-col gap-2 rounded-[12px] border border-default bg-elevated/40 p-3"
+            className="flex min-h-0 flex-col gap-2 rounded-xl border border-default bg-elevated/40 p-3"
           >
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-20 w-full rounded-[10px]" />
@@ -102,6 +104,24 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
         {view.statusAnnouncement}
       </div>
 
+      {view.partialLoadWarning ? (
+        <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-warning/45 bg-warning/15 px-3 py-2">
+          <div className="flex min-w-0 items-start gap-2">
+            <Warning className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+            <p className="text-xs font-medium text-warning">{view.partialLoadWarning}</p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="shrink-0 text-warning hover:bg-warning/10 hover:text-warning"
+            onClick={view.onRetryPartialLoad}
+          >
+            Retry
+          </Button>
+        </div>
+      ) : null}
+
       <Dialog
         open={view.delegatePrompt !== null}
         onOpenChange={(open) => {
@@ -130,7 +150,9 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
               placeholder="Assign teammate"
             />
             {canConfirmDelegate ? (
-              <p className="min-w-0 truncate text-xs text-muted">
+              <p
+                className={cn(agencyWorkMetaClass, "min-w-0 truncate font-medium text-highlighted")}
+              >
                 {view.delegateDraftAssignedToTeam
                   ? "Entire team"
                   : view.members
@@ -139,7 +161,7 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                       .join(", ")}
               </p>
             ) : (
-              <p className="text-xs text-muted">Add a teammate</p>
+              <p className={agencyWorkMetaClass}>Add a teammate</p>
             )}
           </div>
           <DialogFooter>
@@ -161,7 +183,7 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
         {view.columns.map((column) => (
           <section
             key={column.id}
-            className="flex min-h-0 w-[min(100%,20rem)] shrink-0 flex-col rounded-[12px] border border-default bg-elevated/25 md:w-auto md:min-w-0 md:flex-1"
+            className="flex min-h-0 w-[min(100%,20rem)] shrink-0 flex-col rounded-xl border border-default bg-elevated/40 md:w-auto md:min-w-0 md:flex-1"
             aria-label={`${column.label}, ${column.count} tasks`}
           >
             <header
@@ -177,7 +199,7 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                 />
                 <h3 className={agencyWorkTitleClass}>{column.label}</h3>
               </div>
-              <span className="font-mono text-xs font-semibold tabular-nums text-muted">
+              <span className="font-mono text-xs font-semibold tabular-nums text-toned">
                 {column.count}
               </span>
             </header>
@@ -185,50 +207,74 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-2">
               {column.swimlanes.map((swimlane) => {
                 const cellKey = agencyWorkBoardCellKey(column.id, swimlane.id);
-                const isDropTarget = view.dragOverCellKey === cellKey;
+                const acceptsDrops = !(
+                  swimlane.id === "delegated" &&
+                  (column.id === "in_progress" || column.id === "done")
+                );
+                const isDropTarget = acceptsDrops && view.dragOverCellKey === cellKey;
                 return (
                   <div
                     key={swimlane.id}
                     className={cn(
-                      "flex min-h-30 flex-col gap-1.5 rounded-[10px] bg-muted/30 p-2 transition-[background-color,box-shadow] duration-150 ease-out motion-reduce:transition-none",
-                      isDropTarget && "bg-primary/5 ring-1 ring-primary/25",
+                      "flex min-h-30 flex-col gap-1.5 rounded-lg bg-muted/50 p-2 transition-[background-color,box-shadow] duration-150 ease-out motion-reduce:transition-none",
+                      isDropTarget && "bg-primary/10 ring-1 ring-primary/30",
                     )}
-                    onDragOver={(event) => view.onCellDragOver(column.id, swimlane.id, event)}
-                    onDragLeave={(event) => view.onCellDragLeave(column.id, swimlane.id, event)}
-                    onDrop={(event) => view.onCellDrop(column.id, swimlane.id, event)}
+                    onDragOver={
+                      acceptsDrops
+                        ? (event) => view.onCellDragOver(column.id, swimlane.id, event)
+                        : undefined
+                    }
+                    onDragLeave={
+                      acceptsDrops
+                        ? (event) => view.onCellDragLeave(column.id, swimlane.id, event)
+                        : undefined
+                    }
+                    onDrop={
+                      acceptsDrops
+                        ? (event) => view.onCellDrop(column.id, swimlane.id, event)
+                        : undefined
+                    }
                   >
                     <div className="flex items-center justify-between px-0.5">
-                      <span className={agencyWorkMetaClass}>{swimlane.label}</span>
-                      <span className="font-mono text-[10px] tabular-nums text-muted">
+                      <span className={cn(agencyWorkMetaClass, "font-medium")}>
+                        {swimlane.label}
+                      </span>
+                      <span className="font-mono text-xs tabular-nums text-toned">
                         {swimlane.cards.length}
                       </span>
                     </div>
 
                     {swimlane.cards.length === 0 ? (
-                      <p className="px-1 py-3 text-center text-xs text-muted">
+                      <p className={cn(agencyWorkMetaClass, "px-1 py-3 text-center")}>
                         {swimlane.emptyLabel}
                       </p>
                     ) : (
                       swimlane.cards.map((card) => {
                         const isDragging = view.draggingTaskId === card.taskId;
                         const isEditingDescription = view.editingDescriptionTaskId === card.taskId;
+                        const canDrag = !card.readOnly && !card.pending && !isEditingDescription;
+                        const showActionsMenu = !card.readOnly;
                         return (
                           <article
                             key={card.taskId}
-                            draggable={!card.pending && !isEditingDescription}
-                            onDragStart={(event) =>
-                              view.onCardDragStart(card.taskId, card.swimlane, event)
-                            }
+                            draggable={canDrag}
+                            onDragStart={(event) => {
+                              if (!canDrag) {
+                                event.preventDefault();
+                                return;
+                              }
+                              view.onCardDragStart(card.taskId, card.swimlane, event);
+                            }}
                             onDragEnd={view.onCardDragEnd}
                             className={cn(
-                              "group rounded-[10px] border border-default bg-background p-2.5",
-                              "cursor-grab active:cursor-grabbing",
+                              "group rounded-lg border border-default bg-default p-2.5",
+                              canDrag ? "cursor-grab active:cursor-grabbing" : "cursor-default",
                               "transition-[opacity,transform,border-color,background-color] duration-150 ease-out",
                               "motion-reduce:transition-none motion-reduce:transform-none",
                               card.selected && "border-primary/40 bg-primary/5",
                               card.pending && "opacity-60",
                               isDragging && "scale-[0.98] opacity-50 motion-reduce:scale-100",
-                              card.settled && "border-success/50",
+                              card.settled && "border-success/50 bg-success/5",
                             )}
                           >
                             <div className="flex items-start gap-1.5">
@@ -236,27 +282,28 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                                 <button
                                   type="button"
                                   className={cn(
-                                    "w-full rounded-[6px] text-left",
+                                    "w-full rounded-md text-left",
                                     agencyFocusRingClass,
                                   )}
-                                  onClick={() => view.onSelectTask(card.taskId)}
+                                  disabled={isEditingDescription}
+                                  onClick={() => {
+                                    if (isEditingDescription) return;
+                                    view.onSelectTask(card.taskId);
+                                  }}
                                 >
                                   <p className={cn(agencyWorkTitleClass, "text-balance")}>
                                     {card.title}
                                   </p>
-                                  <p className="mt-1 flex min-w-0 items-center gap-1.5 text-[11px] leading-tight">
+                                  <p className="mt-1 flex min-w-0 items-center gap-1.5 text-xs leading-tight">
                                     <span
                                       className="size-1.5 shrink-0 rounded-full"
                                       style={{ backgroundColor: card.projectHue }}
                                       aria-hidden
                                     />
-                                    <span
-                                      className="truncate font-medium"
-                                      style={{ color: card.projectHue }}
-                                    >
+                                    <span className="truncate font-medium text-highlighted">
                                       {card.clientName}
                                     </span>
-                                    <span className="shrink-0 text-muted" aria-hidden>
+                                    <span className="shrink-0 text-toned" aria-hidden>
                                       ·
                                     </span>
                                     <span className="truncate text-muted">{card.projectName}</span>
@@ -264,30 +311,32 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                                 </button>
 
                                 {isEditingDescription ? (
-                                  <Input
-                                    value={view.descriptionDraft}
-                                    onChange={(event) =>
-                                      view.onDescriptionDraftChange(event.target.value)
-                                    }
-                                    onKeyDown={(event) => {
-                                      if (event.key === "Enter") {
-                                        event.preventDefault();
-                                        view.onCommitDescription();
+                                  <div className="mt-1.5">
+                                    <Input
+                                      value={view.descriptionDraft}
+                                      onChange={(event) =>
+                                        view.onDescriptionDraftChange(event.target.value)
                                       }
-                                      if (event.key === "Escape") {
-                                        event.preventDefault();
-                                        view.onCancelDescriptionEdit();
-                                      }
-                                    }}
-                                    onBlur={() => view.onCommitDescription()}
-                                    placeholder="Add a description"
-                                    className={cn(
-                                      "mt-1.5 h-7 text-xs",
-                                      agencyInputPlaceholderClass,
-                                    )}
-                                    aria-label={`Description for ${card.title}`}
-                                    autoFocus
-                                  />
+                                      onKeyDown={(event) => {
+                                        if (event.key === "Enter") {
+                                          event.preventDefault();
+                                          view.onCommitDescription();
+                                        }
+                                        if (event.key === "Escape") {
+                                          event.preventDefault();
+                                          view.onCancelDescriptionEdit();
+                                        }
+                                      }}
+                                      onBlur={() => view.onCommitDescription()}
+                                      placeholder="Add a description"
+                                      className={cn("h-7 text-xs", agencyInputPlaceholderClass)}
+                                      aria-label={`Description for ${card.title}`}
+                                      autoFocus
+                                    />
+                                    <p className={cn(agencyWorkMetaClass, "mt-1")}>
+                                      Enter to save · Esc to cancel
+                                    </p>
+                                  </div>
                                 ) : card.description ? (
                                   <button
                                     type="button"
@@ -308,7 +357,7 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                                   <button
                                     type="button"
                                     className={cn(
-                                      "mt-1.5 text-left text-xs text-muted/80 hover:text-muted",
+                                      "mt-1.5 text-left text-xs text-muted hover:text-highlighted",
                                       agencyFocusRingClass,
                                     )}
                                     disabled={card.pending}
@@ -321,11 +370,17 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                                   </button>
                                 ) : null}
 
+                                {card.descriptionSaveState === "saving" ? (
+                                  <p className={cn(agencyWorkMetaClass, "mt-1")}>Saving…</p>
+                                ) : card.descriptionSaveState === "saved" ? (
+                                  <p className="mt-1 text-xs font-medium text-success">Saved</p>
+                                ) : null}
+
                                 <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
                                   {card.dueLabel ? (
                                     <span
                                       className={cn(
-                                        "font-mono text-[11px] tabular-nums",
+                                        "font-mono text-xs tabular-nums",
                                         card.overdue ? "font-medium text-error" : "text-muted",
                                       )}
                                     >
@@ -333,79 +388,94 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                                     </span>
                                   ) : null}
                                   {card.assigneeLabel ? (
-                                    <span className="inline-flex max-w-32 truncate rounded-full border border-default bg-elevated px-1.5 py-0.5 text-[10px] font-medium text-muted">
+                                    <span className="inline-flex max-w-32 truncate rounded-full border border-default bg-elevated px-1.5 py-0.5 text-xs font-medium text-toned">
                                       {card.assigneeLabel}
                                     </span>
                                   ) : null}
                                   {card.canDelegate ? (
-                                    <div
-                                      className="ms-auto"
-                                      onClick={(event) => event.stopPropagation()}
+                                    <button
+                                      type="button"
+                                      className={cn(
+                                        "ms-auto inline-flex items-center",
+                                        "transition-opacity disabled:cursor-not-allowed disabled:opacity-50",
+                                        agencyFocusRingClass,
+                                        "motion-reduce:transition-none",
+                                      )}
+                                      disabled={card.pending}
+                                      aria-label={`Delegate ${card.title}`}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        view.onRequestDelegate(card.taskId);
+                                      }}
                                       onPointerDown={(event) => event.stopPropagation()}
                                     >
-                                      <AgencyMemberChooser
-                                        mode="multiple"
-                                        triggerVariant="stack"
-                                        contentAlign="end"
-                                        className="scale-90"
-                                        assignedToTeam={card.assignedToTeam}
-                                        selectedUserIds={card.assigneeUserIds}
-                                        onAssignedToTeamChange={(assignedToTeam) =>
-                                          view.onAssigneesChange(
-                                            card.taskId,
-                                            assignedToTeam,
-                                            assignedToTeam ? [] : card.assigneeUserIds,
-                                          )
-                                        }
-                                        onSelectedUserIdsChange={(userIds) =>
-                                          view.onAssigneesChange(card.taskId, false, userIds)
-                                        }
-                                        members={view.members}
-                                        loading={view.membersLoading}
-                                        disabled={card.pending}
+                                      <span
+                                        className="relative z-0 size-6 shrink-0 rounded-md border border-default bg-elevated"
+                                        aria-hidden
                                       />
-                                    </div>
+                                      <span
+                                        className={cn(
+                                          "relative z-20 -ms-1 flex size-6 shrink-0 items-center justify-center rounded-full",
+                                          "border border-dashed border-default bg-elevated text-toned",
+                                          "transition-colors hover:border-accented hover:bg-default hover:text-highlighted",
+                                          "motion-reduce:transition-none",
+                                        )}
+                                        aria-hidden
+                                      >
+                                        <Plus className="size-3" />
+                                      </span>
+                                    </button>
                                   ) : null}
                                 </div>
                               </div>
 
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon-sm"
-                                    className={cn(
-                                      "size-7 shrink-0 text-muted opacity-70",
-                                      "group-focus-within:opacity-100",
-                                      "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100",
-                                      agencyFocusRingClass,
-                                    )}
-                                    aria-label={`Move ${card.title}`}
-                                    disabled={card.pending}
-                                  >
-                                    <DotsThree className="size-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="min-w-40">
-                                  {AGENCY_WORK_BOARD_COLUMNS.map((target) => (
-                                    <DropdownMenuItem
-                                      key={target}
-                                      disabled={target === card.column}
-                                      onSelect={() => view.onMoveTaskStatus(card.taskId, target)}
+                              {showActionsMenu ? (
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon-sm"
+                                      className={cn(
+                                        "size-7 shrink-0 text-toned hover:text-highlighted",
+                                        agencyFocusRingClass,
+                                      )}
+                                      aria-label={`Actions for ${card.title}`}
+                                      disabled={card.pending}
                                     >
-                                      {moveLabel(card.column, target)}
-                                    </DropdownMenuItem>
-                                  ))}
-                                  {card.canDelegate ? (
-                                    <DropdownMenuItem
-                                      onSelect={() => view.onRequestDelegate(card.taskId)}
-                                    >
-                                      Delegate…
-                                    </DropdownMenuItem>
-                                  ) : null}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                                      <DotsThree className="size-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end" className="min-w-40">
+                                    {AGENCY_WORK_BOARD_COLUMNS.map((target) => (
+                                      <DropdownMenuItem
+                                        key={target}
+                                        disabled={target === card.column}
+                                        onSelect={() => view.onMoveTaskStatus(card.taskId, target)}
+                                      >
+                                        {moveLabel(card.column, target)}
+                                      </DropdownMenuItem>
+                                    ))}
+                                    {card.canDelegate || card.canClaim ? (
+                                      <DropdownMenuSeparator />
+                                    ) : null}
+                                    {card.canDelegate ? (
+                                      <DropdownMenuItem
+                                        onSelect={() => view.onRequestDelegate(card.taskId)}
+                                      >
+                                        Delegate…
+                                      </DropdownMenuItem>
+                                    ) : null}
+                                    {card.canClaim ? (
+                                      <DropdownMenuItem
+                                        onSelect={() => view.onClaimTask(card.taskId)}
+                                      >
+                                        Claim…
+                                      </DropdownMenuItem>
+                                    ) : null}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              ) : null}
                             </div>
                           </article>
                         );

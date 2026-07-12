@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { toast } from "sonner";
 
 import type {
   AgencyProjectTask,
@@ -25,6 +26,8 @@ import {
   encodeAgencyWorkBoardDragPayload,
   flattenAssignedClientGroupTasks,
   groupAgencyWorkBoardCards,
+  isAgencyWorkBoardCardReadOnly,
+  canDropOnAgencyWorkBoardCell,
 } from "@/features/task-management/work-surface/agency-work-surface-tasks-board";
 import { useAgencyTaskList } from "@/features/task-management/hooks/use-agency-task-list";
 import { useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
@@ -35,6 +38,8 @@ import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 const DONE_SETTLE_MS = 200;
+const ANNOUNCE_CLEAR_MS = 2500;
+const DESCRIPTION_SAVED_MS = 1200;
 
 export type AgencyWorkBoardDelegatePrompt = {
   taskId: string;
@@ -61,6 +66,9 @@ export type AgencyWorkSurfaceTasksBoardCardViewModel = {
   settled: boolean;
   canEditDescription: boolean;
   canDelegate: boolean;
+  canClaim: boolean;
+  readOnly: boolean;
+  descriptionSaveState: "idle" | "saving" | "saved";
 };
 
 export type AgencyWorkSurfaceTasksBoardViewModel =
@@ -96,6 +104,8 @@ export type AgencyWorkSurfaceTasksBoardViewModel =
       delegatePrompt: AgencyWorkBoardDelegatePrompt | null;
       delegateDraftAssignedToTeam: boolean;
       delegateDraftUserIds: string[];
+      partialLoadWarning: string | null;
+      onRetryPartialLoad: () => void;
       onSelectTask: (taskId: string) => void;
       onCardDragStart: (
         taskId: string,
@@ -123,12 +133,8 @@ export type AgencyWorkSurfaceTasksBoardViewModel =
       onDescriptionDraftChange: (value: string) => void;
       onCommitDescription: () => void;
       onCancelDescriptionEdit: () => void;
-      onAssigneesChange: (
-        taskId: string,
-        assignedToTeam: boolean,
-        assigneeUserIds: string[],
-      ) => void;
       onRequestDelegate: (taskId: string) => void;
+      onClaimTask: (taskId: string) => void;
       onDelegateDraftAssignedToTeamChange: (assignedToTeam: boolean) => void;
       onDelegateDraftUserIdsChange: (userIds: string[]) => void;
       onConfirmDelegatePrompt: () => void;
@@ -172,6 +178,7 @@ export function useAgencyWorkSurfaceTasksBoard({
 }: UseAgencyWorkSurfaceTasksBoardOptions): AgencyWorkSurfaceTasksBoardViewModel {
   const { isDark } = useTheme();
   const updateProjectTask = useAgencyOpsStore((s) => s.updateProjectTask);
+  const completeProjectTaskForMember = useAgencyOpsStore((s) => s.completeProjectTaskForMember);
   const listView = useAgencyTaskList({
     teamId,
     projects,
@@ -188,14 +195,22 @@ export function useAgencyWorkSurfaceTasksBoard({
   const [settledTaskId, setSettledTaskId] = useState<string | null>(null);
   const [editingDescriptionTaskId, setEditingDescriptionTaskId] = useState<string | null>(null);
   const [descriptionDraft, setDescriptionDraft] = useState("");
+  const [descriptionSaveTaskId, setDescriptionSaveTaskId] = useState<string | null>(null);
+  const [descriptionSaveState, setDescriptionSaveState] = useState<"idle" | "saving" | "saved">(
+    "idle",
+  );
   const [delegatePrompt, setDelegatePrompt] = useState<AgencyWorkBoardDelegatePrompt | null>(null);
   const [delegateDraftAssignedToTeam, setDelegateDraftAssignedToTeam] = useState(false);
   const [delegateDraftUserIds, setDelegateDraftUserIds] = useState<string[]>([]);
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const announceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const descriptionSavedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
+      if (announceTimerRef.current) clearTimeout(announceTimerRef.current);
+      if (descriptionSavedTimerRef.current) clearTimeout(descriptionSavedTimerRef.current);
     };
   }, []);
 
@@ -206,6 +221,16 @@ export function useAgencyWorkSurfaceTasksBoard({
       setSettledTaskId(null);
       settleTimerRef.current = null;
     }, DONE_SETTLE_MS);
+  }, []);
+
+  const announceSuccess = useCallback((message: string) => {
+    setStatusAnnouncement(message);
+    toast.success(message);
+    if (announceTimerRef.current) clearTimeout(announceTimerRef.current);
+    announceTimerRef.current = setTimeout(() => {
+      setStatusAnnouncement("");
+      announceTimerRef.current = null;
+    }, ANNOUNCE_CLEAR_MS);
   }, []);
 
   const currentUserId = listView.status === "ready" ? listView.currentUserId : "";
@@ -258,37 +283,64 @@ export function useAgencyWorkSurfaceTasksBoard({
       if (listView.status !== "ready") return;
       const card = taskById.get(taskId);
       if (!card || card.column === column) return;
+      if (isAgencyWorkBoardCardReadOnly(card.swimlane, card.column)) return;
       const nextStatus: TaskStatus = columnIdToTaskStatus(column);
-      setStatusAnnouncement(`Moved to ${boardColumnLabel(column)}`);
+      const message = `Moved to ${boardColumnLabel(column)}`;
 
-      if (column === "done") {
-        flashDoneSettle(taskId);
-        listView.onStatusChange(card.task, "done");
-        return;
-      }
+      void (async () => {
+        try {
+          if (column === "done") {
+            await completeProjectTaskForMember({ teamId, taskId: card.task.id });
+            flashDoneSettle(taskId);
+            announceSuccess(message);
+            return;
+          }
 
-      if (card.column === "done") {
-        if (card.swimlane === "mine") {
-          listView.onReopenDoneTask(card.task);
-          return;
+          if (card.column === "done") {
+            if (card.swimlane === "mine") {
+              listView.onReopenDoneTask(card.task);
+              announceSuccess(message);
+              return;
+            }
+            await updateProjectTask({
+              teamId,
+              taskId: card.task.id,
+              status: nextStatus,
+            });
+            announceSuccess(message);
+            return;
+          }
+
+          await updateProjectTask({
+            teamId,
+            taskId: card.task.id,
+            status: nextStatus,
+          });
+          announceSuccess(message);
+        } catch {
+          // Store already toasts the error.
         }
-        listView.onStatusChange(card.task, nextStatus);
-        return;
-      }
-
-      listView.onStatusChange(card.task, nextStatus);
+      })();
     },
-    [flashDoneSettle, listView, taskById],
+    [
+      announceSuccess,
+      completeProjectTaskForMember,
+      flashDoneSettle,
+      listView,
+      taskById,
+      teamId,
+      updateProjectTask,
+    ],
   );
 
   const applyAssignees = useCallback(
-    (
+    async (
       task: AgencyProjectTask,
       assignedToTeam: boolean,
       assigneeUserIds: string[],
       status?: TaskStatus,
     ) => {
-      void updateProjectTask({
+      await updateProjectTask({
         teamId,
         taskId: task.id,
         assignedToTeam,
@@ -322,23 +374,35 @@ export function useAgencyWorkSurfaceTasksBoard({
     (taskId: string, targetColumn: AgencyWorkBoardColumnId) => {
       const card = taskById.get(taskId);
       if (!card || !currentUserId) return;
+      if (isAgencyWorkBoardCardReadOnly(card.swimlane, card.column)) return;
       const nextStatus = columnIdToTaskStatus(targetColumn);
-      setStatusAnnouncement("Moved to Mine");
-      applyAssignees(
-        card.task,
-        false,
-        [currentUserId],
-        card.column === targetColumn ? undefined : nextStatus,
-      );
-      if (targetColumn === "done" && card.column !== "done") {
-        flashDoneSettle(taskId);
-      }
+      void (async () => {
+        try {
+          await applyAssignees(
+            card.task,
+            false,
+            [currentUserId],
+            card.column === targetColumn ? undefined : nextStatus,
+          );
+          if (targetColumn === "done" && card.column !== "done") {
+            flashDoneSettle(taskId);
+          }
+          announceSuccess("Moved to Mine");
+        } catch {
+          // Store already toasts the error.
+        }
+      })();
     },
-    [applyAssignees, currentUserId, flashDoneSettle, taskById],
+    [announceSuccess, applyAssignees, currentUserId, flashDoneSettle, taskById],
   );
 
   const onCardDragStart = useCallback(
     (taskId: string, swimlane: AgencyWorkBoardSwimlaneId, event: DragEvent<HTMLElement>) => {
+      const card = taskById.get(taskId);
+      if (!card || isAgencyWorkBoardCardReadOnly(card.swimlane, card.column)) {
+        event.preventDefault();
+        return;
+      }
       setDraggingTaskId(taskId);
       if (!event.dataTransfer) return;
       event.dataTransfer.effectAllowed = "move";
@@ -348,7 +412,7 @@ export function useAgencyWorkSurfaceTasksBoard({
       );
       event.dataTransfer.setData("text/plain", taskId);
     },
-    [],
+    [taskById],
   );
 
   const clearDragState = useCallback(() => {
@@ -363,6 +427,7 @@ export function useAgencyWorkSurfaceTasksBoard({
       event: DragEvent<HTMLElement>,
     ) => {
       if (!draggingTaskId) return;
+      if (!canDropOnAgencyWorkBoardCell(swimlane, column)) return;
       const card = taskById.get(draggingTaskId);
       if (!card || !canCrossAgencyWorkBoardSwimlane(card.swimlane, swimlane)) return;
       event.preventDefault();
@@ -415,6 +480,9 @@ export function useAgencyWorkSurfaceTasksBoard({
           : null);
       clearDragState();
       if (!payload?.taskId) return;
+      if (!canDropOnAgencyWorkBoardCell(swimlane, column)) return;
+      const source = taskById.get(payload.taskId);
+      if (source && isAgencyWorkBoardCardReadOnly(source.swimlane, source.column)) return;
 
       if (payload.swimlane === swimlane) {
         moveTaskToColumn(payload.taskId, column);
@@ -433,26 +501,14 @@ export function useAgencyWorkSurfaceTasksBoard({
     [claimTask, clearDragState, draggingTaskId, moveTaskToColumn, openDelegatePrompt, taskById],
   );
 
-  const onAssigneesChange = useCallback(
-    (taskId: string, assignedToTeam: boolean, assigneeUserIds: string[]) => {
-      const card = taskById.get(taskId);
-      if (!card) return;
-      applyAssignees(card.task, assignedToTeam, assigneeUserIds);
-      const isDelegated =
-        assignedToTeam ||
-        assigneeUserIds.some((userId) => userId !== currentUserId) ||
-        (assigneeUserIds.length === 1 && assigneeUserIds[0] !== currentUserId);
-      setStatusAnnouncement(isDelegated ? "Delegated" : "Assigned to you");
-    },
-    [applyAssignees, currentUserId, taskById],
-  );
-
   const onBeginDescriptionEdit = useCallback(
     (taskId: string) => {
       const card = taskById.get(taskId);
       if (!card) return;
       setEditingDescriptionTaskId(taskId);
       setDescriptionDraft(taskDescription(card.task));
+      setDescriptionSaveState("idle");
+      setDescriptionSaveTaskId(null);
     },
     [taskById],
   );
@@ -464,9 +520,30 @@ export function useAgencyWorkSurfaceTasksBoard({
       setEditingDescriptionTaskId(null);
       return;
     }
+    const next = descriptionDraft.trim();
+    const previous = taskDescription(card.task);
+    if (next === previous) {
+      setEditingDescriptionTaskId(null);
+      setDescriptionDraft("");
+      return;
+    }
+
+    const taskId = editingDescriptionTaskId;
+    setDescriptionSaveTaskId(taskId);
+    setDescriptionSaveState("saving");
     listView.onTaskDescriptionChange(card.task, descriptionDraft);
     setEditingDescriptionTaskId(null);
     setDescriptionDraft("");
+
+    if (descriptionSavedTimerRef.current) clearTimeout(descriptionSavedTimerRef.current);
+    descriptionSavedTimerRef.current = setTimeout(() => {
+      setDescriptionSaveState("saved");
+      descriptionSavedTimerRef.current = setTimeout(() => {
+        setDescriptionSaveState("idle");
+        setDescriptionSaveTaskId(null);
+        descriptionSavedTimerRef.current = null;
+      }, DESCRIPTION_SAVED_MS);
+    }, 450);
   }, [descriptionDraft, editingDescriptionTaskId, listView, taskById]);
 
   const onCancelDescriptionEdit = useCallback(() => {
@@ -487,18 +564,27 @@ export function useAgencyWorkSurfaceTasksBoard({
     if (!hasDelegateTarget) return;
 
     const nextStatus = columnIdToTaskStatus(delegatePrompt.targetColumn);
-    applyAssignees(
-      card.task,
-      delegateDraftAssignedToTeam,
-      delegateDraftUserIds,
-      card.column === delegatePrompt.targetColumn ? undefined : nextStatus,
-    );
-    if (delegatePrompt.targetColumn === "done" && card.column !== "done") {
-      flashDoneSettle(delegatePrompt.taskId);
-    }
-    setStatusAnnouncement("Delegated");
+    const prompt = delegatePrompt;
     setDelegatePrompt(null);
+
+    void (async () => {
+      try {
+        await applyAssignees(
+          card.task,
+          delegateDraftAssignedToTeam,
+          delegateDraftUserIds,
+          card.column === prompt.targetColumn ? undefined : nextStatus,
+        );
+        if (prompt.targetColumn === "done" && card.column !== "done") {
+          flashDoneSettle(prompt.taskId);
+        }
+        announceSuccess("Delegated");
+      } catch {
+        // Store already toasts the error.
+      }
+    })();
   }, [
+    announceSuccess,
     applyAssignees,
     currentUserId,
     delegateDraftAssignedToTeam,
@@ -520,6 +606,13 @@ export function useAgencyWorkSurfaceTasksBoard({
     return { status: "loading" };
   }
 
+  const retryBoardQueries = () => {
+    listView.onRetryActiveTasks();
+    listView.onRetryDoneTasks();
+    listView.onRetryAssignedTasks();
+    void doneDelegatedQuery.refetch();
+  };
+
   const loading =
     listView.isLoading ||
     listView.doneTasksLoading ||
@@ -540,12 +633,7 @@ export function useAgencyWorkSurfaceTasksBoard({
         listView.doneTasksErrorMessage ||
         listView.assignedTasksErrorMessage ||
         getErrorMessage(doneDelegatedQuery.error, "Could not load tasks."),
-      onRetry: () => {
-        listView.onRetryActiveTasks();
-        listView.onRetryDoneTasks();
-        listView.onRetryAssignedTasks();
-        void doneDelegatedQuery.refetch();
-      },
+      onRetry: retryBoardQueries,
     };
   }
 
@@ -555,6 +643,9 @@ export function useAgencyWorkSurfaceTasksBoard({
 
   const members = listView.create.members;
   const membersLoading = listView.create.membersLoading;
+  const partialLoadWarning = queryError
+    ? "Some tasks may be missing. Retry to refresh the board."
+    : null;
 
   const columns = AGENCY_WORK_BOARD_COLUMNS.map((columnId) => {
     const swimlanes = AGENCY_WORK_BOARD_SWIMLANES.map((swimlaneId) => {
@@ -565,8 +656,8 @@ export function useAgencyWorkSurfaceTasksBoard({
         emptyLabel:
           boardCards.length === 0 && columnId === "open" && swimlaneId === "mine"
             ? "Create a task to start the board."
-            : swimlaneId === "delegated"
-              ? "Drop a task here to delegate."
+            : swimlaneId === "delegated" && columnId === "open"
+              ? "Drop a task here to delegate, or use Delegate… on a card."
               : "No tasks in this lane.",
         cards: cellCards.map((card) => {
           const project = listView.projects.find((entry) => entry.id === card.task.projectId);
@@ -590,6 +681,12 @@ export function useAgencyWorkSurfaceTasksBoard({
             settled: settledTaskId === card.task.id,
             canEditDescription: card.swimlane === "mine" && card.column !== "done",
             canDelegate: card.swimlane === "mine" && card.column !== "done",
+            canClaim:
+              card.swimlane === "delegated" &&
+              !isAgencyWorkBoardCardReadOnly(card.swimlane, card.column),
+            readOnly: isAgencyWorkBoardCardReadOnly(card.swimlane, card.column),
+            descriptionSaveState:
+              descriptionSaveTaskId === card.task.id ? descriptionSaveState : "idle",
           };
         }),
       };
@@ -617,6 +714,8 @@ export function useAgencyWorkSurfaceTasksBoard({
     delegatePrompt,
     delegateDraftAssignedToTeam,
     delegateDraftUserIds,
+    partialLoadWarning,
+    onRetryPartialLoad: retryBoardQueries,
     onSelectTask,
     onCardDragStart,
     onCardDragEnd: clearDragState,
@@ -628,10 +727,14 @@ export function useAgencyWorkSurfaceTasksBoard({
     onDescriptionDraftChange: setDescriptionDraft,
     onCommitDescription,
     onCancelDescriptionEdit,
-    onAssigneesChange,
     onRequestDelegate: (taskId: string) => {
       const card = taskById.get(taskId);
       openDelegatePrompt(taskId, card?.column ?? "open");
+    },
+    onClaimTask: (taskId: string) => {
+      const card = taskById.get(taskId);
+      if (!card) return;
+      claimTask(taskId, card.column);
     },
     onDelegateDraftAssignedToTeamChange: setDelegateDraftAssignedToTeam,
     onDelegateDraftUserIdsChange: setDelegateDraftUserIds,

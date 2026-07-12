@@ -5,10 +5,12 @@ import {
   agencyWorkBoardCellKey,
   buildAgencyWorkBoardCards,
   canCrossAgencyWorkBoardSwimlane,
+  canDropOnAgencyWorkBoardCell,
   decodeAgencyWorkBoardDragPayload,
   encodeAgencyWorkBoardDragPayload,
   flattenAssignedClientGroupTasks,
   groupAgencyWorkBoardCards,
+  isAgencyWorkBoardCardReadOnly,
 } from "./agency-work-surface-tasks-board";
 
 function task(
@@ -118,5 +120,21 @@ describe("agency work tasks board grouping", () => {
     expect(canCrossAgencyWorkBoardSwimlane("mine", "mine")).toBe(true);
     expect(canCrossAgencyWorkBoardSwimlane("mine", "delegated")).toBe(true);
     expect(canCrossAgencyWorkBoardSwimlane("delegated", "mine")).toBe(true);
+  });
+
+  it("marks delegated in-progress and done cards as read-only", () => {
+    expect(isAgencyWorkBoardCardReadOnly("delegated", "open")).toBe(false);
+    expect(isAgencyWorkBoardCardReadOnly("delegated", "in_progress")).toBe(true);
+    expect(isAgencyWorkBoardCardReadOnly("delegated", "done")).toBe(true);
+    expect(isAgencyWorkBoardCardReadOnly("mine", "in_progress")).toBe(false);
+    expect(isAgencyWorkBoardCardReadOnly("mine", "done")).toBe(false);
+  });
+
+  it("rejects drops onto delegated in-progress and done cells", () => {
+    expect(canDropOnAgencyWorkBoardCell("delegated", "open")).toBe(true);
+    expect(canDropOnAgencyWorkBoardCell("delegated", "in_progress")).toBe(false);
+    expect(canDropOnAgencyWorkBoardCell("delegated", "done")).toBe(false);
+    expect(canDropOnAgencyWorkBoardCell("mine", "in_progress")).toBe(true);
+    expect(canDropOnAgencyWorkBoardCell("mine", "done")).toBe(true);
   });
 });

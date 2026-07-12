@@ -224,3 +224,19 @@ export function canCrossAgencyWorkBoardSwimlane(
     (from === "delegated" && to === "mine")
   );
 }
+
+/** Delegated In Progress / Done cards are view-only (no drag, claim, or status moves). */
+export function isAgencyWorkBoardCardReadOnly(
+  swimlane: AgencyWorkBoardSwimlaneId,
+  column: AgencyWorkBoardColumnId,
+): boolean {
+  return swimlane === "delegated" && (column === "in_progress" || column === "done");
+}
+
+/** Same cells reject drops — handoff only into Delegated Open. */
+export function canDropOnAgencyWorkBoardCell(
+  swimlane: AgencyWorkBoardSwimlaneId,
+  column: AgencyWorkBoardColumnId,
+): boolean {
+  return !isAgencyWorkBoardCardReadOnly(swimlane, column);
+}
