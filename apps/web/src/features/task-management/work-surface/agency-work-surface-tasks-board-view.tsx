@@ -1,4 +1,13 @@
-import { DotsThree, Plus, Warning } from "@phosphor-icons/react";
+import {
+  CheckCircle,
+  Circle,
+  CircleHalf,
+  DotsThree,
+  HandGrabbing,
+  Plus,
+  UserPlus,
+  Warning,
+} from "@phosphor-icons/react";
 
 import type { AgencyWorkSurfaceTasksBoardViewModel } from "@/features/task-management/work-surface/hooks/use-agency-work-surface-tasks-board";
 import {
@@ -35,6 +44,21 @@ import {
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 import { cn } from "@/lib/utils";
+
+function boardColumnActionIcon(columnId: AgencyWorkBoardColumnId) {
+  switch (columnId) {
+    case "open":
+      return { Icon: Circle, className: "text-toned" };
+    case "in_progress":
+      return { Icon: CircleHalf, className: "text-primary" };
+    case "done":
+      return { Icon: CheckCircle, className: "text-success" };
+    default: {
+      const _exhaustive: never = columnId;
+      return _exhaustive;
+    }
+  }
+}
 
 type AgencyWorkSurfaceTasksBoardViewProps = {
   view: AgencyWorkSurfaceTasksBoardViewModel;
@@ -183,7 +207,7 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
         {view.columns.map((column) => (
           <section
             key={column.id}
-            className="flex min-h-0 w-[min(100%,20rem)] shrink-0 flex-col rounded-xl border border-default bg-elevated/40 md:w-auto md:min-w-0 md:flex-1"
+            className="flex min-h-0 w-[min(100%,20rem)] shrink-0 flex-col overflow-hidden rounded-xl border border-default bg-elevated/40 md:w-auto md:min-w-0 md:flex-1"
             aria-label={`${column.label}, ${column.count} tasks`}
           >
             <header
@@ -446,16 +470,23 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                                       <DotsThree className="size-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end" className="min-w-40">
-                                    {AGENCY_WORK_BOARD_COLUMNS.map((target) => (
-                                      <DropdownMenuItem
-                                        key={target}
-                                        disabled={target === card.column}
-                                        onSelect={() => view.onMoveTaskStatus(card.taskId, target)}
-                                      >
-                                        {moveLabel(card.column, target)}
-                                      </DropdownMenuItem>
-                                    ))}
+                                  <DropdownMenuContent align="end" className="min-w-44">
+                                    {AGENCY_WORK_BOARD_COLUMNS.map((target) => {
+                                      const { Icon, className: iconClass } =
+                                        boardColumnActionIcon(target);
+                                      return (
+                                        <DropdownMenuItem
+                                          key={target}
+                                          disabled={target === card.column}
+                                          onSelect={() =>
+                                            view.onMoveTaskStatus(card.taskId, target)
+                                          }
+                                        >
+                                          <Icon className={cn("size-4", iconClass)} weight="fill" />
+                                          {moveLabel(card.column, target)}
+                                        </DropdownMenuItem>
+                                      );
+                                    })}
                                     {card.canDelegate || card.canClaim ? (
                                       <DropdownMenuSeparator />
                                     ) : null}
@@ -463,6 +494,7 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                                       <DropdownMenuItem
                                         onSelect={() => view.onRequestDelegate(card.taskId)}
                                       >
+                                        <UserPlus className="size-4 text-info" weight="duotone" />
                                         Delegate…
                                       </DropdownMenuItem>
                                     ) : null}
@@ -470,6 +502,10 @@ export function AgencyWorkSurfaceTasksBoardView({ view }: AgencyWorkSurfaceTasks
                                       <DropdownMenuItem
                                         onSelect={() => view.onClaimTask(card.taskId)}
                                       >
+                                        <HandGrabbing
+                                          className="size-4 text-warning"
+                                          weight="duotone"
+                                        />
                                         Claim…
                                       </DropdownMenuItem>
                                     ) : null}

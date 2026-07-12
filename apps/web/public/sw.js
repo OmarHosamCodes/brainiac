@@ -11,7 +11,7 @@ self.addEventListener("push", (event) => {
       body,
       tag: notificationId || undefined,
       data: { url, notificationId, teamId },
-      icon: "/favicon.ico",
+      icon: "/favicon.svg",
     }),
   );
 });

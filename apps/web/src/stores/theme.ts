@@ -1,5 +1,6 @@
 import { create } from "zustand";
 
+import { setFaviconTheme } from "@/lib/favicon";
 import { applyTheme, resolveInitialTheme, setTheme, type ThemePreference } from "@/lib/theme";
 
 type ThemeState = {
@@ -7,6 +8,11 @@ type ThemeState = {
   setTheme: (theme: ThemePreference) => void;
   toggle: () => void;
 };
+
+function applyThemeDom(theme: ThemePreference): void {
+  applyTheme(theme);
+  setFaviconTheme(theme);
+}
 
 export const useThemeStore = create<ThemeState>((set, get) => ({
   theme: resolveInitialTheme(),
@@ -22,9 +28,9 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
 
 /** Apply theme to document when store changes. Call once from app root. */
 export function subscribeThemeDomSync() {
-  applyTheme(useThemeStore.getState().theme);
+  applyThemeDom(useThemeStore.getState().theme);
   return useThemeStore.subscribe((state) => {
-    applyTheme(state.theme);
+    applyThemeDom(state.theme);
   });
 }
 

@@ -115,6 +115,9 @@
   --accent: oklch(0.94 0.015 270);
   --accent-foreground: oklch(0.22 0.02 269);
   --destructive: oklch(0.61 0.24 20.96);
+  --success: oklch(0.72 0.17 145);
+  --warning: oklch(0.77 0.16 70);
+  --info: oklch(0.62 0.18 252);
   --border: oklch(0.88 0.012 269);
   --input: oklch(0.88 0.012 269);
   --ring: oklch(0.556 0 0);
@@ -185,6 +188,9 @@
   --accent: oklch(0.30 0.03 271.05);
   --accent-foreground: oklch(0.95 0.01 238.46);
   --destructive: oklch(0.64 0.25 19.69);
+  --success: oklch(0.72 0.17 145);
+  --warning: oklch(0.79 0.15 70);
+  --info: oklch(0.68 0.16 252);
   --border: oklch(0.95 0.01 238.46 / 15%);
   --input: oklch(0.95 0.01 238.46 / 20%);
   --ring: oklch(0.556 0 0);
@@ -251,6 +257,9 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -838,6 +847,42 @@ body {
 
 .agency-task-row-complete {
   animation: agency-task-row-complete 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes project-share-panel-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes project-share-legend-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.project-share-panel-in {
+  animation: project-share-panel-in 200ms var(--motion-ease-out) both;
+}
+
+.project-share-legend-in {
+  animation: project-share-legend-in 200ms var(--motion-ease-out) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .project-share-panel-in,
+  .project-share-legend-in {
+    animation: none;
+  }
 }
 
 @keyframes agency-search-highlight-sweep {

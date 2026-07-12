@@ -1,5 +1,5 @@
-import { AlertTriangle, BarChart3 } from "lucide-react";
-import { type CSSProperties } from "react";
+import { AlertTriangle, BarChart3, X } from "lucide-react";
+import { useId, useState, type CSSProperties } from "react";
 
 import { AgencyProjectHueDot } from "@/features/shared/agency-project-hue-dot";
 import {
@@ -122,10 +122,16 @@ function ProjectShareDonut({
   projects,
   totalSeconds,
   isDark,
+  totalButtonId,
+  breakdownPanelId,
+  onTotalClick,
 }: {
   projects: Array<{ projectId: string; hours: number }>;
   totalSeconds: number;
   isDark: boolean;
+  totalButtonId: string;
+  breakdownPanelId: string;
+  onTotalClick: () => void;
 }) {
   const size = 100;
   const cx = 50;
@@ -192,11 +198,149 @@ function ProjectShareDonut({
         ))}
       </svg>
       <div className="absolute flex size-32 items-center justify-center rounded-full border border-default bg-default text-center">
-        <div>
+        <button
+          id={totalButtonId}
+          type="button"
+          className={cn(
+            "rounded-full px-3 py-2 transition-colors hover:bg-elevated",
+            agencyFocusRingClass,
+          )}
+          aria-expanded={false}
+          aria-controls={breakdownPanelId}
+          onClick={onTotalClick}
+        >
           <p className={cn(agencyMetricClass, "text-lg")}>{formatDuration(totalSeconds)}</p>
-          <p className="mt-1 text-xs text-muted">logged</p>
-        </div>
+          <p className="mt-1 text-xs text-muted">Total</p>
+        </button>
       </div>
+    </div>
+  );
+}
+
+type HourBreakdownSegment = {
+  id: string;
+  label: string;
+  purpose: string;
+  seconds: number;
+  barClass: string;
+  dotClass: string;
+};
+
+function HourBreakdownChart({
+  panelId,
+  totalSeconds,
+  externalSeconds,
+  internalSeconds,
+  paidSeconds,
+  onClose,
+}: {
+  panelId: string;
+  totalSeconds: number;
+  externalSeconds: number;
+  internalSeconds: number;
+  paidSeconds: number;
+  onClose: () => void;
+}) {
+  const wasteSeconds = Math.max(0, externalSeconds - paidSeconds);
+  const segments: HourBreakdownSegment[] = [
+    {
+      id: "paid",
+      label: "Paid",
+      purpose: "External hours minus waste — the billable client share.",
+      seconds: paidSeconds,
+      barClass: "bg-primary",
+      dotClass: "bg-primary",
+    },
+    {
+      id: "waste",
+      label: "Waste",
+      purpose: "External time marked as non-billable or waste.",
+      seconds: wasteSeconds,
+      barClass: "bg-warning",
+      dotClass: "bg-warning",
+    },
+    {
+      id: "internal",
+      label: "Internal",
+      purpose: "Agency and internal-client work, not client-billable.",
+      seconds: internalSeconds,
+      barClass: "bg-info",
+      dotClass: "bg-info",
+    },
+  ];
+  const chartTotal = Math.max(
+    1,
+    segments.reduce((sum, segment) => sum + segment.seconds, 0),
+  );
+
+  return (
+    <div id={panelId} className="mt-4" role="region" aria-label="Hour breakdown chart">
+      <div className="flex items-center justify-between gap-2">
+        <p className={agencyLabelClass}>Hour breakdown</p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="size-7 text-toned hover:text-highlighted"
+          aria-label="Close hour breakdown"
+          onClick={onClose}
+        >
+          <X className="size-4" />
+        </Button>
+      </div>
+
+      <div className="mt-4 flex items-baseline justify-between gap-3">
+        <p className="text-xs text-muted">Total time in range</p>
+        <p className={cn(agencyMetricClass, "text-base tabular-nums")}>
+          {formatDuration(totalSeconds)}
+        </p>
+      </div>
+
+      <div
+        className="mt-3 flex h-3 overflow-hidden rounded-full bg-elevated"
+        role="img"
+        aria-label="Paid, waste, and internal time share"
+      >
+        {segments.map((segment) => {
+          if (segment.seconds <= 0) return null;
+          const width = Math.max(2, (segment.seconds / chartTotal) * 100);
+          return (
+            <span
+              key={segment.id}
+              className={cn("h-full", segment.barClass)}
+              style={{ width: `${width}%` }}
+              title={`${segment.label}: ${formatDuration(segment.seconds)}`}
+            />
+          );
+        })}
+      </div>
+
+      <ul className="mt-5 space-y-4">
+        {segments.map((segment) => {
+          const share = totalSeconds > 0 ? (segment.seconds / totalSeconds) * 100 : 0;
+          return (
+            <li key={segment.id} className="min-w-0">
+              <div className="flex items-baseline justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className={cn("size-2.5 shrink-0 rounded-full", segment.dotClass)} />
+                  <span className="text-sm font-semibold text-highlighted">{segment.label}</span>
+                </div>
+                <span className={cn(agencyMetricClass, "shrink-0 tabular-nums text-muted")}>
+                  {formatDuration(segment.seconds)}
+                  <span className="ml-1.5 text-[10px] font-medium">{share.toFixed(0)}%</span>
+                </span>
+              </div>
+              <p className="mt-1 pl-4.5 text-xs leading-snug text-muted">{segment.purpose}</p>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-elevated">
+                <span
+                  className={cn("block h-full rounded-full", segment.barClass)}
+                  style={{ width: `${Math.max(segment.seconds > 0 ? 2 : 0, share)}%` }}
+                />
+              </div>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
@@ -221,6 +365,9 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
     onSelectClient,
     refetch,
   } = viewModel;
+  const [hourBreakdownOpen, setHourBreakdownOpen] = useState(false);
+  const totalButtonId = useId();
+  const breakdownPanelId = useId();
 
   if (isLoading) {
     return (
@@ -286,58 +433,27 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
       ) : (
         <div className="space-y-6">
           <section className="grid gap-4 [content-visibility:auto] lg:grid-cols-[22rem_minmax(0,1fr)]">
-            <div className={cn(agencyPanelClass, "group relative overflow-hidden p-4")}>
+            <div className={cn(agencyPanelClass, "relative overflow-hidden p-4")}>
               <p className={agencyLabelClass}>Project share</p>
-              <div className="transition-opacity duration-200 ease-out group-hover:opacity-0 group-focus-within:opacity-0">
+              {hourBreakdownOpen ? (
+                <HourBreakdownChart
+                  panelId={breakdownPanelId}
+                  totalSeconds={summary.totalSeconds}
+                  externalSeconds={summary.projectShareMetrics.externalSeconds}
+                  internalSeconds={summary.projectShareMetrics.internalSeconds}
+                  paidSeconds={summary.projectShareMetrics.paidSeconds}
+                  onClose={() => setHourBreakdownOpen(false)}
+                />
+              ) : (
                 <ProjectShareDonut
                   projects={rankedProjects}
                   totalSeconds={summary.totalSeconds}
                   isDark={isDark}
+                  totalButtonId={totalButtonId}
+                  breakdownPanelId={breakdownPanelId}
+                  onTotalClick={() => setHourBreakdownOpen(true)}
                 />
-              </div>
-              <div
-                className={cn(
-                  "absolute inset-0 flex flex-col justify-center rounded-[2rem] bg-default p-6",
-                  "opacity-0 transition-opacity duration-200 ease-out",
-                  "pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100",
-                  "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
-                )}
-                tabIndex={0}
-                aria-label="Project share hour breakdown"
-              >
-                <p className={agencyLabelClass}>Hour breakdown</p>
-                <dl className="mt-5 space-y-4">
-                  <div className="flex items-baseline justify-between gap-4 border-b border-default pb-3">
-                    <dt className="text-sm text-muted">Total</dt>
-                    <dd className={cn(agencyMetricClass, "text-xl tabular-nums")}>
-                      {formatDuration(summary.totalSeconds)}
-                    </dd>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-4 border-b border-default pb-3">
-                    <dt className="text-sm text-muted">External</dt>
-                    <dd className={cn(agencyMetricClass, "text-xl tabular-nums")}>
-                      {formatDuration(summary.projectShareMetrics.externalSeconds)}
-                    </dd>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-4 border-b border-default pb-3">
-                    <dt className="text-sm text-muted">Internal</dt>
-                    <dd className={cn(agencyMetricClass, "text-xl tabular-nums")}>
-                      {formatDuration(summary.projectShareMetrics.internalSeconds)}
-                    </dd>
-                  </div>
-                  <div className="flex items-baseline justify-between gap-4">
-                    <dt className="text-sm text-muted">
-                      Paid
-                      <span className="mt-0.5 block text-[0.65rem] font-normal normal-case tracking-normal text-muted/80">
-                        External − waste
-                      </span>
-                    </dt>
-                    <dd className={cn(agencyMetricClass, "text-xl tabular-nums text-primary")}>
-                      {formatDuration(summary.projectShareMetrics.paidSeconds)}
-                    </dd>
-                  </div>
-                </dl>
-              </div>
+              )}
             </div>
             <div className={cn(agencyPanelClass, "p-4")}>
               <p className={agencyLabelClass}>Ranked projects</p>
@@ -417,113 +533,115 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
             <div className="overflow-x-auto">
               <TooltipProvider delayDuration={120}>
                 <table className="w-full min-w-[62rem] text-left text-xs">
-                <thead className="border-b border-default bg-elevated text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
-                  <tr>
-                    <th scope="col" className="px-4 py-2.5">
-                      Team member
-                    </th>
-                    <th scope="col" className="px-4 py-2.5">
-                      Latest activity
-                    </th>
-                    <th scope="col" className="px-4 py-2.5">
-                      Current
-                    </th>
-                    <th scope="col" className="px-4 py-2.5 text-right">
-                      Total tracked
-                    </th>
-                    <th scope="col" className="px-4 py-2.5">
-                      Allocation
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-default">
-                  {sortedTeamMembers.map((member) => {
-                    const liveTimer = activeTimerByUserId.get(member.userId);
-                    const isTracking = Boolean(liveTimer) || member.isActive;
-                    const activity = liveTimer
-                      ? {
-                          description: liveTimer.description,
-                          projectName: liveTimer.projectName,
-                          clientName: liveTimer.clientName ?? null,
-                        }
-                      : member.latestEntry;
+                  <thead className="border-b border-default bg-elevated text-[11px] font-bold uppercase tracking-[0.14em] text-muted">
+                    <tr>
+                      <th scope="col" className="px-4 py-2.5">
+                        Team member
+                      </th>
+                      <th scope="col" className="px-4 py-2.5">
+                        Latest activity
+                      </th>
+                      <th scope="col" className="px-4 py-2.5">
+                        Current
+                      </th>
+                      <th scope="col" className="px-4 py-2.5 text-right">
+                        Total tracked
+                      </th>
+                      <th scope="col" className="px-4 py-2.5">
+                        Allocation
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-default">
+                    {sortedTeamMembers.map((member) => {
+                      const liveTimer = activeTimerByUserId.get(member.userId);
+                      const isTracking = Boolean(liveTimer) || member.isActive;
+                      const activity = liveTimer
+                        ? {
+                            description: liveTimer.description,
+                            projectName: liveTimer.projectName,
+                            clientName: liveTimer.clientName ?? null,
+                          }
+                        : member.latestEntry;
 
-                    return (
-                      <tr
-                        key={member.userId}
-                        className="transition-colors hover:bg-elevated/55 motion-reduce:transition-none"
-                      >
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2.5">
-                            {member.avatar ? (
-                              <img
-                                src={member.avatar}
-                                alt={member.userName}
-                                className="size-8 rounded-xl object-cover"
-                              />
-                            ) : (
-                              <span
-                                className="flex size-8 items-center justify-center rounded-xl bg-muted text-[11px] font-bold text-highlighted"
-                                aria-hidden
-                              >
-                                {initials(member.userName)}
-                              </span>
-                            )}
-                            <div className="min-w-0">
-                              <p className="truncate font-bold text-highlighted">
-                                {member.userName}
-                              </p>
-                              <p className="truncate text-[11px] text-muted">{member.userEmail}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="max-w-sm px-4 py-3">
-                          {activity ? (
-                            <div className="min-w-0">
-                              <div className="flex min-w-0 items-center gap-1.5">
-                                {isTracking ? (
-                                  <span
-                                    className="size-1.5 shrink-0 rounded-full bg-primary"
-                                    aria-hidden
-                                  />
-                                ) : null}
-                                <p className="truncate font-semibold text-highlighted">
-                                  {activity.description || "(no description)"}
+                      return (
+                        <tr
+                          key={member.userId}
+                          className="transition-colors hover:bg-elevated/55 motion-reduce:transition-none"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2.5">
+                              {member.avatar ? (
+                                <img
+                                  src={member.avatar}
+                                  alt={member.userName}
+                                  className="size-8 rounded-xl object-cover"
+                                />
+                              ) : (
+                                <span
+                                  className="flex size-8 items-center justify-center rounded-xl bg-muted text-[11px] font-bold text-highlighted"
+                                  aria-hidden
+                                >
+                                  {initials(member.userName)}
+                                </span>
+                              )}
+                              <div className="min-w-0">
+                                <p className="truncate font-bold text-highlighted">
+                                  {member.userName}
+                                </p>
+                                <p className="truncate text-[11px] text-muted">
+                                  {member.userEmail}
                                 </p>
                               </div>
-                              <p className="truncate text-[11px] text-muted">
-                                {activity.clientName
-                                  ? `${activity.projectName} · ${activity.clientName}`
-                                  : activity.projectName}
-                              </p>
                             </div>
-                          ) : (
-                            <span className="text-muted">No activity</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              "inline-flex items-center rounded-full bg-elevated px-2 py-1 text-[11px] font-bold text-muted",
-                              isTracking && "gap-1.5",
+                          </td>
+                          <td className="max-w-sm px-4 py-3">
+                            {activity ? (
+                              <div className="min-w-0">
+                                <div className="flex min-w-0 items-center gap-1.5">
+                                  {isTracking ? (
+                                    <span
+                                      className="size-1.5 shrink-0 rounded-full bg-primary"
+                                      aria-hidden
+                                    />
+                                  ) : null}
+                                  <p className="truncate font-semibold text-highlighted">
+                                    {activity.description || "(no description)"}
+                                  </p>
+                                </div>
+                                <p className="truncate text-[11px] text-muted">
+                                  {activity.clientName
+                                    ? `${activity.projectName} · ${activity.clientName}`
+                                    : activity.projectName}
+                                </p>
+                              </div>
+                            ) : (
+                              <span className="text-muted">No activity</span>
                             )}
-                            aria-label={isTracking ? "Timer running" : "Idle"}
-                          >
-                            {isTracking ? (
-                              <span className="size-1.5 rounded-full bg-primary" aria-hidden />
-                            ) : null}
-                            {isTracking ? "In progress" : "Idle"}
-                          </span>
-                        </td>
-                        <td className={cn("px-4 py-3 text-right", agencyMetricClass)}>
-                          {formatDuration(member.totalSeconds)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div
-                            className="flex h-4 overflow-hidden rounded-sm bg-elevated"
-                            role="img"
-                            aria-label={`Project allocation for ${member.userName}`}
-                          >
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={cn(
+                                "inline-flex items-center rounded-full bg-elevated px-2 py-1 text-[11px] font-bold text-muted",
+                                isTracking && "gap-1.5",
+                              )}
+                              aria-label={isTracking ? "Timer running" : "Idle"}
+                            >
+                              {isTracking ? (
+                                <span className="size-1.5 rounded-full bg-primary" aria-hidden />
+                              ) : null}
+                              {isTracking ? "In progress" : "Idle"}
+                            </span>
+                          </td>
+                          <td className={cn("px-4 py-3 text-right", agencyMetricClass)}>
+                            {formatDuration(member.totalSeconds)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <div
+                              className="flex h-4 overflow-hidden rounded-sm bg-elevated"
+                              role="img"
+                              aria-label={`Project allocation for ${member.userName}`}
+                            >
                               {member.projectBreakdown.length === 0 ? (
                                 <span className="h-full w-full bg-muted/30" />
                               ) : (
@@ -536,13 +654,13 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
                                   />
                                 ))
                               )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </TooltipProvider>
             </div>
           </section>
