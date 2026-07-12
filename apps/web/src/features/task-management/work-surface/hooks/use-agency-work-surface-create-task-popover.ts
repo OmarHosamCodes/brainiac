@@ -6,7 +6,7 @@ import { orpc } from "@/lib/orpc";
 import { withAgencySyncQueryOptions } from "@/features/shared/agency-query-options";
 import { useAgencyProjectTasksForChooserQuery } from "@/features/shared/agency-queries";
 import { findOpenTaskByExactTitle } from "@/features/task-management/agency-task-title-filter";
-import { openAgencyWorkSurfaceMyTasks } from "@/features/task-management/agency-work-surface-navigation";
+import { openAgencyWorkSurfaceTasks } from "@/features/task-management/agency-work-surface-navigation";
 import {
   resolveDefaultCreateProjectId,
   useAgencyTaskListStore,
@@ -81,7 +81,7 @@ export function useAgencyWorkSurfaceCreateTaskPopover(
     setRecentlyCreatedTaskId(taskId);
     setRecentlyHighlightedProjectId(taskProjectId);
     setRailStatusFilter("active");
-    setSearchParams(openAgencyWorkSurfaceMyTasks(searchParams), { replace: true });
+    setSearchParams(openAgencyWorkSurfaceTasks(searchParams), { replace: true });
     setOpen(false);
   }
 

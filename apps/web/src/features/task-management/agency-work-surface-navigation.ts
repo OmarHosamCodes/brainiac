@@ -1,18 +1,18 @@
 export function normalizeAgencyWorkSurfaceTaskSelection(searchParams: URLSearchParams) {
-  if (!searchParams.get("task") || searchParams.get("tab") === "my-tasks") {
+  if (!searchParams.get("task") || searchParams.get("tab") === "tasks") {
     return null;
   }
 
   const next = new URLSearchParams(searchParams);
   next.set("section", "work");
-  next.set("tab", "my-tasks");
+  next.set("tab", "tasks");
   return next;
 }
 
 export function selectAgencyWorkSurfaceTask(searchParams: URLSearchParams, taskId: string) {
   const next = new URLSearchParams(searchParams);
   next.set("section", "work");
-  next.set("tab", "my-tasks");
+  next.set("tab", "tasks");
   if (taskId) {
     next.set("task", taskId);
   } else {
@@ -21,11 +21,11 @@ export function selectAgencyWorkSurfaceTask(searchParams: URLSearchParams, taskI
   return next;
 }
 
-/** Switch to My Tasks without opening a task thread. */
-export function openAgencyWorkSurfaceMyTasks(searchParams: URLSearchParams) {
+/** Switch to Tasks without opening a task thread. */
+export function openAgencyWorkSurfaceTasks(searchParams: URLSearchParams) {
   const next = new URLSearchParams(searchParams);
   next.set("section", "work");
-  next.set("tab", "my-tasks");
+  next.set("tab", "tasks");
   next.delete("task");
   return next;
 }

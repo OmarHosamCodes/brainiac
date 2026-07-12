@@ -11,9 +11,7 @@ import { cn } from "@/lib/utils";
 
 const TABS: Array<{ id: AgencyWorkSurfaceTab; label: string }> = [
   { id: "sessions", label: "Sessions" },
-  { id: "my-tasks", label: "My Tasks" },
-  { id: "done", label: "Done" },
-  { id: "delegated", label: "Delegated" },
+  { id: "tasks", label: "Tasks" },
 ];
 
 type AgencyWorkSurfaceTabsViewProps = {
