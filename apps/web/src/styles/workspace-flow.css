@@ -5,9 +5,9 @@
   --xy-edge-stroke: var(--canvas-edge-stroke);
   --xy-edge-stroke-selected: var(--canvas-edge-stroke-selected);
   --xy-minimap-background-color: var(--color-elevated);
-  --xy-minimap-mask-background-color: oklch(0.72 0.17 162 / 0.12);
-  --xy-minimap-node-background-color: oklch(0.72 0.17 162 / 0.45);
-  --xy-minimap-node-stroke-color: oklch(0.72 0.17 162 / 0.65);
+  --xy-minimap-mask-background-color: oklch(0.488 0.243 264.376 / 0.12);
+  --xy-minimap-node-background-color: oklch(0.488 0.243 264.376 / 0.45);
+  --xy-minimap-node-stroke-color: oklch(0.488 0.243 264.376 / 0.65);
   height: 100%;
   width: 100%;
 }

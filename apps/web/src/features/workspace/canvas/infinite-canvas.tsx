@@ -400,9 +400,9 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
               <MiniMap
                 aria-label="Board overview"
                 className="!rounded-2xl !border !border-default !bg-elevated/95 !shadow-sm"
-                maskColor="oklch(0.72 0.17 162 / 0.12)"
-                nodeColor={() => "oklch(0.72 0.17 162 / 0.45)"}
-                nodeStrokeColor="oklch(0.72 0.17 162 / 0.65)"
+                maskColor="oklch(0.488 0.243 264.376 / 0.12)"
+                nodeColor={() => "oklch(0.488 0.243 264.376 / 0.45)"}
+                nodeStrokeColor="oklch(0.488 0.243 264.376 / 0.65)"
                 pannable
                 zoomable
               />

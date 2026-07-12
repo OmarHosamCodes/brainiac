@@ -32,7 +32,7 @@ Emotionally: confidence without strain. Users should feel in control of a powerf
 - **AI-product slop.** No neon glows, gradient text, sparkle-everywhere decoration, robot mascot avatars, animated orbs, or breathless "AI-powered" copy. The agent is a tool, not a personality.
 - **Enterprise heaviness.** No Salesforce/Jira density, no nested tabs of nested tabs, no dropdowns with 30 options, no chrome-heavy navigation that competes with the canvas.
 - **Flat zinc-only UI.** No paper-thin hairline-only surfaces with zero tonal depth. Premium depth comes from a surface ladder (Linear) and photographic light (Apple), not from decorative drop shadows on every card.
-- **Emerald-as-wallpaper.** Operator Emerald is the brand accent, used sparingly (≤10%). Do not flood surfaces with green.
+- **Violet-as-wallpaper.** Operator Violet is the brand accent for selection and chrome, used sparingly (≤10%). Primary CTAs stay monochrome. Do not flood surfaces with violet.
 
 ## Design Principles
 

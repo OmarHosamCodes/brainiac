@@ -85,7 +85,7 @@ export function LandingWorkspaceVignette({ className }: { className?: string }) 
                     y1={from.y}
                     x2={to.x}
                     y2={to.y}
-                    stroke="oklch(0.72 0.17 162 / 0.5)"
+                    stroke="oklch(0.488 0.243 264.376 / 0.5)"
                     strokeWidth="2"
                     strokeDasharray="6 6"
                     strokeLinecap="round"
