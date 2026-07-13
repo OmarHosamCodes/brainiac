@@ -5,6 +5,7 @@ import { AgencyBillingSurface } from "@/features/billing/agency-billing-surface"
 import { AgencyResourcingSurface } from "@/features/resourcing/agency-resourcing-surface";
 import { AgencySettingsRatesPane } from "@/features/billing/agency-settings-rates-pane";
 import { AgencySettingsTenurePane } from "@/features/resourcing/tenure/agency-settings-tenure-pane";
+import { AgencySettingsTagsPane } from "@/features/time-tracking/agency-settings-tags-pane";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import {
   AGENCY_MANAGEMENT_PANES,
@@ -76,6 +77,9 @@ export function AgencyManagementSurface({ teamId }: AgencyManagementSurfaceProps
           </TabsContent>
           <TabsContent value="rates">
             <AgencySettingsRatesPane teamId={teamId} active={activePane === "rates"} />
+          </TabsContent>
+          <TabsContent value="tags">
+            <AgencySettingsTagsPane teamId={teamId} active={activePane === "tags"} />
           </TabsContent>
           <TabsContent value="tenure">
             <AgencySettingsTenurePane teamId={teamId} active={activePane === "tenure"} />

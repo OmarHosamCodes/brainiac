@@ -114,6 +114,13 @@ async function ensureManagementBootQueries(
         "cold",
       );
       break;
+    case "tags":
+      await ensureSyncedQuery(
+        queryClient,
+        orpc.agencyOps.tags.list.queryOptions({ input: { teamId } }),
+        "cold",
+      );
+      break;
     case "tenure":
       await Promise.all([
         ensureSyncedQuery(
