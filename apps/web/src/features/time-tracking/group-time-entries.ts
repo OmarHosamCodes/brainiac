@@ -72,7 +72,7 @@ export function collapseDuplicatesWithinDay(entries: TimeEntryRecord[]): Collaps
         collapseKey: key,
         projectId: entry.projectId,
         taskId: entry.taskId,
-        taskTitle: (entry.taskTitle ?? entry.description) || "Project-only entry",
+        taskTitle: entry.taskTitle ?? "",
         projectName: entry.projectName,
         clientName: entry.clientName,
         description: entry.description,

@@ -72,7 +72,7 @@ export function useAgencyMiniTimer({
     activeTimer,
     project,
     description: activeDescription,
-    selectedTask: activeDraftTask,
+    selectedTask: activeTimer ? activeDraftTask : task,
   });
   const canStop = canStopAgencyTimer({
     activeTimer,

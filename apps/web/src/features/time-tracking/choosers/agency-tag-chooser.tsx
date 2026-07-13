@@ -86,7 +86,9 @@ export function AgencyTagChooser({
           disabled={disabled}
           className={cn(
             agencyTimeTrackerIconActionClass,
-            compact ? "min-w-8 px-0" : "h-auto min-w-0 max-w-[9rem] gap-1 rounded-none px-1",
+            compact
+              ? "inline-flex size-8 items-center justify-center px-0"
+              : "h-auto min-w-0 max-w-[9rem] gap-1 rounded-none px-1",
             selected.length > 0 ? "text-highlighted" : "text-muted",
             className,
           )}

@@ -1,12 +1,11 @@
 import type { AgencyDescriptionSuggestion } from "@/features/time-tracking/description-suggestions";
+import { AgencyTimeEntryProjectLabel } from "@/features/time-tracking/entries/agency-time-entry-project-label";
 import {
-  agencyTaskRowProjectPillClass,
   agencyTimeTrackerSuggestionAnchorClass,
   agencyTimeTrackerSuggestionOptionClass,
   agencyTimeTrackerSuggestionPanelClass,
 } from "@/features/shared/agency-ui";
 import { liquidGlassMenuItemClass } from "@/lib/utils/liquid-glass-ui";
-import { projectHueStyle } from "@/features/shared/project-palette";
 import { cn } from "@/lib/utils";
 
 type AgencyDescriptionSuggestionMenuProps = {
@@ -52,30 +51,20 @@ export function AgencyDescriptionSuggestionMenu({
                 >
                   <span
                     className={cn(
-                      "block max-w-full truncate text-sm font-semibold",
-                      active ? "text-primary" : "text-highlighted",
+                      "min-w-0 flex-1 truncate text-sm font-normal",
+                      active ? "text-highlighted" : "text-foreground",
                     )}
                   >
                     {suggestion.description}
                   </span>
-                  <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                    {suggestion.projectName ? (
-                      <span
-                        className={cn(
-                          agencyTaskRowProjectPillClass,
-                          "max-w-[9rem] truncate bg-[var(--project-hue-soft)] text-[var(--project-hue)] dark:bg-[var(--project-hue-soft-dark)] dark:text-[var(--project-hue-dark)]",
-                        )}
-                        style={projectHueStyle(suggestion.projectId)}
-                      >
-                        {suggestion.projectName}
-                      </span>
-                    ) : null}
-                    {suggestion.clientName ? (
-                      <span className="inline-flex max-w-[9rem] truncate rounded-full border border-default bg-default px-1.5 py-0.5 text-[10px] font-semibold text-muted">
-                        {suggestion.clientName}
-                      </span>
-                    ) : null}
-                  </div>
+                  {suggestion.projectName ? (
+                    <AgencyTimeEntryProjectLabel
+                      projectId={suggestion.projectId}
+                      projectName={suggestion.projectName}
+                      clientName={suggestion.clientName || undefined}
+                      className="max-w-[55%] shrink-0"
+                    />
+                  ) : null}
                 </button>
               </li>
             );
