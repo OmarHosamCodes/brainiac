@@ -1,4 +1,4 @@
-import { Copy, Loader2, MoreVertical, Play, Trash2, TrashIcon } from "lucide-react";
+import { Copy, Loader2, MoreVertical, Play, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/ui/button";
@@ -11,17 +11,13 @@ type AgencyTimeEntryActionsProps = {
     id: string;
     projectName: string;
     taskTitle?: string | null;
-    taskId?: string | null;
-    taskIsWaste?: boolean | null;
   };
   canRestart?: boolean;
   deleting?: boolean;
   duplicating?: boolean;
-  wastePending?: boolean;
   onRestart: () => void;
   onDelete: () => void;
   onDuplicate?: () => void;
-  onToggleWaste?: () => void;
 };
 
 export function AgencyTimeEntryActions({
@@ -29,16 +25,12 @@ export function AgencyTimeEntryActions({
   canRestart = true,
   deleting = false,
   duplicating = false,
-  wastePending = false,
   onRestart,
   onDelete,
   onDuplicate,
-  onToggleWaste,
 }: AgencyTimeEntryActionsProps) {
   const entryLabel = entry.taskTitle || entry.projectName;
   const [menuOpen, setMenuOpen] = useState(false);
-  const canToggleWaste = Boolean(entry.taskId && onToggleWaste);
-  const isWaste = entry.taskIsWaste === true;
 
   return (
     <div className="flex shrink-0 items-center gap-0.5">
@@ -60,11 +52,11 @@ export function AgencyTimeEntryActions({
           <button
             type="button"
             className={agencyTimeEntryIconButtonClass}
-            disabled={deleting || wastePending || duplicating}
+            disabled={deleting || duplicating}
             aria-label={`Actions for ${entryLabel}`}
             onClick={() => setMenuOpen(true)}
           >
-            {deleting || wastePending || duplicating ? (
+            {deleting || duplicating ? (
               <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
             ) : (
               <MoreVertical className="size-3.5" />
@@ -73,21 +65,6 @@ export function AgencyTimeEntryActions({
         </PopoverTrigger>
 
         <PopoverContent align="end" className="w-44 p-1">
-          {canToggleWaste ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn("w-full justify-start", isWaste && "text-warning")}
-              disabled={wastePending}
-              onClick={() => {
-                setMenuOpen(false);
-                onToggleWaste?.();
-              }}
-            >
-              <TrashIcon className="size-3.5" />
-              {isWaste ? "Unmark as waste" : "Mark as waste"}
-            </Button>
-          ) : null}
           {onDuplicate ? (
             <Button
               variant="ghost"

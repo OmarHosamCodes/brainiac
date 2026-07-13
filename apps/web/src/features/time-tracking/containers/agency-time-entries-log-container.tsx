@@ -25,6 +25,9 @@ export function AgencyTimeEntriesLogContainer({
       teamId={view.teamId}
       projects={view.projects}
       tasks={view.tasks}
+      tags={view.tags}
+      tagCreatePending={view.tagCreatePending}
+      onCreateTag={view.onCreateTag}
       expanded={view.expandedGroupKeys.has(groupExpandKey)}
       isTimerMutationPending={view.isTimerMutationPending}
       deletingEntryIds={view.deletingEntryIds}
@@ -38,8 +41,6 @@ export function AgencyTimeEntriesLogContainer({
       onDeleteEntry={view.onDeleteEntry}
       onDuplicate={view.onDuplicate}
       onSaveEdit={view.onSaveEdit}
-      onToggleWaste={view.onToggleWaste}
-      togglingWasteEntryIds={view.togglingWasteEntryIds}
     />
   );
 

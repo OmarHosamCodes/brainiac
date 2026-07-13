@@ -1,5 +1,6 @@
 import { useAgencyTimeEntryRow } from "@/features/time-tracking/hooks/use-agency-time-entry-row";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
+import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import type { TimeEntryDraft } from "@/features/time-tracking/agency-time-entry";
 import type { CollapsedEntryGroup } from "@/features/time-tracking/group-time-entries";
 
@@ -15,6 +16,9 @@ type AgencyTimeEntryRowContainerProps = {
   teamId: string;
   projects: AgencyProject[];
   tasks: AgencyProjectTask[];
+  tags: AgencyTagOption[];
+  tagCreatePending: boolean;
+  onCreateTag: (name: string) => void;
   expanded: boolean;
   isTimerMutationPending: boolean;
   deletingEntryIds: string[];
@@ -26,8 +30,6 @@ type AgencyTimeEntryRowContainerProps = {
   onDeleteEntry: (entryId: string) => void;
   onDuplicate: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
-  onToggleWaste: (entryId: string) => Promise<void>;
-  togglingWasteEntryIds: string[];
   highlighted?: boolean;
   /** Suppress the row bottom border (last row in a day group, or last child in a multi group). */
   omitBottomBorder?: boolean;

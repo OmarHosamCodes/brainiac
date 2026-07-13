@@ -2,6 +2,7 @@ import type { KeyboardEvent } from "react";
 import { useCallback, useEffect, useState } from "react";
 
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
+import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import { canStartAgencyTimer } from "@/features/time-tracking/timer-validation";
 import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
 import {
@@ -32,9 +33,8 @@ function localDateKey(date: Date): string {
 
 function formatTimeLabel(date: Date): string {
   return date
-    .toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
-    .replace(/\sAM/g, " am")
-    .replace(/\sPM/g, " pm");
+    .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+    .replace(" ", "");
 }
 
 function formatTimeRange(startedAt: string, endedAt: string) {
@@ -87,6 +87,9 @@ type UseAgencyTimeEntryRowOptions = {
   teamId: string;
   projects: AgencyProject[];
   tasks: AgencyProjectTask[];
+  tags: AgencyTagOption[];
+  tagCreatePending: boolean;
+  onCreateTag: (name: string) => void;
   expanded: boolean;
   isTimerMutationPending: boolean;
   deletingEntryIds: string[];
@@ -98,8 +101,6 @@ type UseAgencyTimeEntryRowOptions = {
   onDeleteEntry: (entryId: string) => void;
   onDuplicate: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
-  onToggleWaste: (entryId: string) => Promise<void>;
-  togglingWasteEntryIds: string[];
   highlighted?: boolean;
 };
 
@@ -108,6 +109,9 @@ export type AgencyTimeEntryRowViewModel = {
   teamId: string;
   projects: AgencyProject[];
   tasks: AgencyProjectTask[];
+  tags: AgencyTagOption[];
+  tagCreatePending: boolean;
+  onCreateTag: (name: string) => void;
   expanded: boolean;
   isTimerMutationPending: boolean;
   highlighted: boolean;
@@ -123,8 +127,6 @@ export type AgencyTimeEntryRowViewModel = {
   rowDeleting: boolean;
   rowUpdating: boolean;
   rowDuplicating: boolean;
-  rowWastePending: boolean;
-  isWaste: boolean;
   timeRange: string;
   durationLabel: string;
   displayTitle: string;
@@ -136,11 +138,13 @@ export type AgencyTimeEntryRowViewModel = {
   onDeleteGroup: () => void;
   onDeleteEntry: (entryId: string) => void;
   onDuplicate: () => void;
-  onToggleWaste: () => void;
   onDescriptionChange: (value: string) => void;
   onDescriptionBlur: () => void;
   onDescriptionKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onTaskChange: (taskId: string) => void;
+  onProjectChange: (projectId: string) => void;
+  onTagIdsChange: (tagIds: string[]) => void;
+  onIsBillableChange: (isBillable: boolean) => void;
   onStartTimeChange: (value: string) => void;
   onEndTimeChange: (value: string) => void;
   onStartDateChange: (value: string) => void;
@@ -157,6 +161,9 @@ export function useAgencyTimeEntryRow({
   teamId,
   projects,
   tasks,
+  tags,
+  tagCreatePending,
+  onCreateTag,
   expanded,
   isTimerMutationPending,
   deletingEntryIds,
@@ -168,8 +175,6 @@ export function useAgencyTimeEntryRow({
   onDeleteEntry,
   onDuplicate,
   onSaveEdit,
-  onToggleWaste,
-  togglingWasteEntryIds,
   highlighted = false,
 }: UseAgencyTimeEntryRowOptions): AgencyTimeEntryRowViewModel {
   const { isDark } = useTheme();
@@ -280,8 +285,6 @@ export function useAgencyTimeEntryRow({
   const rowDeleting = group.entries.some((entry) => deletingEntryIds.includes(entry.id));
   const rowUpdating = group.entries.some((entry) => updatingEntryIds.includes(entry.id));
   const rowDuplicating = group.entries.some((entry) => duplicatingEntryIds.includes(entry.id));
-  const rowWastePending = group.entries.some((entry) => togglingWasteEntryIds.includes(entry.id));
-  const isWaste = primaryEntry.taskIsWaste === true;
   const timeRange = isMulti
     ? formatGroupTimeRange(group)
     : formatTimeRange(primaryEntry.startedAt, primaryEntry.endedAt);
@@ -308,6 +311,9 @@ export function useAgencyTimeEntryRow({
     teamId,
     projects,
     tasks,
+    tags,
+    tagCreatePending,
+    onCreateTag,
     expanded,
     isTimerMutationPending,
     highlighted,
@@ -323,8 +329,6 @@ export function useAgencyTimeEntryRow({
     rowDeleting,
     rowUpdating,
     rowDuplicating,
-    rowWastePending,
-    isWaste,
     timeRange,
     durationLabel,
     displayTitle: displayTitle(group),
@@ -336,7 +340,6 @@ export function useAgencyTimeEntryRow({
     onDeleteGroup: () => onDeleteGroup(group.entries.map((entry) => entry.id)),
     onDeleteEntry,
     onDuplicate: () => onDuplicate(primaryEntry.id),
-    onToggleWaste: () => void onToggleWaste(primaryEntry.id),
     onDescriptionChange: setDescriptionDraft,
     onDescriptionBlur: () => void saveDescriptionEdit(),
     onDescriptionKeyDown: (event) => {
@@ -350,7 +353,31 @@ export function useAgencyTimeEntryRow({
       }
     },
     onTaskChange: (taskId) => {
-      const nextDraft = { ...editDraft, taskId };
+      const task = tasks.find((entry) => entry.id === taskId);
+      const nextDraft = {
+        ...editDraft,
+        taskId,
+        projectId: task?.projectId ?? editDraft.projectId,
+      };
+      updateInlineDraft(nextDraft);
+      void saveInlineDraft(nextDraft);
+    },
+    onProjectChange: (projectId) => {
+      const nextDraft = {
+        ...editDraft,
+        projectId,
+        taskId: editDraft.projectId === projectId ? editDraft.taskId : "",
+      };
+      updateInlineDraft(nextDraft);
+      void saveInlineDraft(nextDraft);
+    },
+    onTagIdsChange: (tagIds) => {
+      const nextDraft = { ...editDraft, tagIds };
+      updateInlineDraft(nextDraft);
+      void saveInlineDraft(nextDraft);
+    },
+    onIsBillableChange: (nextBillable) => {
+      const nextDraft = { ...editDraft, isBillable: nextBillable };
       updateInlineDraft(nextDraft);
       void saveInlineDraft(nextDraft);
     },

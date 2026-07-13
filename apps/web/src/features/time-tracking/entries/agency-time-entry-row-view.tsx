@@ -1,5 +1,6 @@
-import { MoreVertical, Play, Trash2 } from "lucide-react";
+import { CalendarDays, MoreVertical, Play, Tag, Trash2 } from "lucide-react";
 
+import { AgencyTagChooser } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { AgencyTimeEntryActions } from "@/features/time-tracking/entries/agency-time-entry-actions";
 import { AgencyTimeEntryProjectLabel } from "@/features/time-tracking/entries/agency-time-entry-project-label";
@@ -12,19 +13,22 @@ import {
   agencyTimeEntryIconButtonClass,
   agencyTimeEntryMainClass,
   agencyTimeEntryRailActionsClass,
+  agencyTimeEntryRailBillableClass,
+  agencyTimeEntryRailCalendarClass,
   agencyTimeEntryRailClass,
   agencyTimeEntryRailDurationClass,
+  agencyTimeEntryRailTagClass,
   agencyTimeEntryRailTimeClass,
   agencyTimeEntryRowClass,
   agencyTimeEntryRowEditingClass,
   agencyTimeEntryRowHighlightClass,
   agencyTimeEntryTimeInputClass,
+  agencyTimeTrackerIconActionClass,
   agencyWorkCountBadgeClass,
   agencyWorkMetricClass,
   agencyWorkTimeRangeClass,
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
-import { reportEntryWasteRowClass } from "@/features/reports/agency-report-grouping";
 import { cn } from "@/lib/utils";
 
 const descriptionLeadingSlotClass = "flex w-8 shrink-0 items-center justify-start";
@@ -39,6 +43,9 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     group,
     projects,
     tasks,
+    tags,
+    tagCreatePending,
+    onCreateTag,
     expanded,
     highlighted,
     isMulti,
@@ -51,13 +58,10 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     rowDeleting,
     rowUpdating,
     rowDuplicating,
-    rowWastePending,
-    isWaste,
     timeRange,
     durationLabel,
     displayTitle,
     editingDescription,
-    timeEditorOpen,
     editingDuration,
     onToggleExpand,
     onRestart,
@@ -67,6 +71,9 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onDescriptionBlur,
     onDescriptionKeyDown,
     onTaskChange,
+    onProjectChange: _onProjectChange,
+    onTagIdsChange,
+    onIsBillableChange,
     onStartTimeChange,
     onEndTimeChange,
     onStartDateChange,
@@ -74,7 +81,6 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onInlineBlur,
     onInlineKeyDown,
     onEditingDescriptionChange,
-    onTimeEditorOpenChange,
     onEditingDurationChange,
   } = view;
 
@@ -90,179 +96,210 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
       className={cn(
         agencyTimeEntryRowClass,
         highlighted && agencyTimeEntryRowHighlightClass,
-        (editingDescription || timeEditorOpen || editingDuration) && agencyTimeEntryRowEditingClass,
-        isWaste && reportEntryWasteRowClass,
+        (editingDescription || editingDuration) && agencyTimeEntryRowEditingClass,
         className,
       )}
     >
       <div className={agencyTimeEntryMainClass}>
-        {isMulti ? (
+        <div className="flex w-[200px] min-w-0 shrink-0 items-center">
           <div className={descriptionLeadingSlotClass}>
-            <button
-              type="button"
-              className={cn(agencyWorkCountBadgeClass, agencyFocusRingClass)}
-              aria-label={expanded ? "Collapse entries" : "Expand entries"}
-              aria-expanded={expanded}
-              onClick={onToggleExpand}
-            >
-              {group.entries.length}
-            </button>
-          </div>
-        ) : null}
-
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          {!isMulti ? (
-            editingDescription ? (
-              <Input
-                value={descriptionDraft}
-                onChange={(e) => onDescriptionChange(e.target.value)}
-                onBlur={() => {
-                  onEditingDescriptionChange(false);
-                  onDescriptionBlur();
-                }}
-                onKeyDown={(event) => {
-                  onDescriptionKeyDown(event);
-                  if (event.key === "Enter" || event.key === "Escape") {
-                    onEditingDescriptionChange(false);
-                  }
-                }}
-                disabled={editSaving || rowUpdating}
-                autoFocus
-                className={cn(
-                  "h-7 min-w-0 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0",
-                  agencyWorkTitleClass,
-                )}
-                aria-label="Edit description"
-              />
-            ) : (
+            {isMulti ? (
               <button
                 type="button"
-                className={cn(
-                  "block min-w-0 max-w-full truncate text-left sm:shrink-0",
-                  agencyWorkTitleClass,
-                  agencyFocusRingClass,
-                )}
-                onClick={() => onEditingDescriptionChange(true)}
+                className={cn(agencyWorkCountBadgeClass, agencyFocusRingClass)}
+                aria-label={expanded ? "Collapse entries" : "Expand entries"}
+                aria-expanded={expanded}
+                onClick={onToggleExpand}
               >
-                {displayTitle}
+                {group.entries.length}
               </button>
-            )
-          ) : (
+            ) : null}
+          </div>
+          {isMulti ? (
             <span
               className={cn(
-                "block min-w-0 max-w-full truncate text-left sm:shrink-0",
                 agencyWorkTitleClass,
+                "block min-w-0 flex-1 truncate text-left font-normal",
               )}
             >
               {displayTitle}
             </span>
+          ) : (
+            <Input
+              value={descriptionDraft}
+              onChange={(e) => onDescriptionChange(e.target.value)}
+              onFocus={() => onEditingDescriptionChange(true)}
+              onBlur={() => {
+                onEditingDescriptionChange(false);
+                onDescriptionBlur();
+              }}
+              onKeyDown={(event) => {
+                onDescriptionKeyDown(event);
+                if (event.key === "Enter" || event.key === "Escape") {
+                  onEditingDescriptionChange(false);
+                }
+              }}
+              disabled={editSaving || rowUpdating}
+              placeholder="Add description"
+              className={cn(
+                agencyWorkTitleClass,
+                "h-[40px] min-w-0 flex-1 border-0 bg-transparent px-0 font-normal shadow-none focus-visible:ring-0",
+              )}
+              aria-label="Add description"
+            />
           )}
+        </div>
 
-          <div className="min-w-0 flex-1">
-            {isMulti ? (
-              <AgencyTimeEntryProjectLabel
-                format="task-client"
-                projectId={group.projectId}
-                projectName={group.projectName}
-                clientName={group.clientName || "General"}
-                taskTitle={group.taskTitle}
-                className="max-w-full"
-              />
-            ) : (
-              <AgencyTaskChooser
-                value={editDraft.taskId}
-                onValueChange={onTaskChange}
-                projects={projects}
-                tasks={tasks}
-                fallbackTaskTitle={group.taskTitle}
-                fallbackProjectId={group.projectId}
-                fallbackProjectName={group.projectName}
-                fallbackClientName={group.clientName || "General"}
-                placeholder="Choose task"
-                triggerFormat="task-client"
-                highlightSearch
-                contentAlign="start"
-                disabled={editSaving || rowUpdating}
-                className={cn(taskChooserTriggerClass, "max-w-full")}
-              />
-            )}
-          </div>
+        <div className="flex min-w-0 flex-1 items-center gap-[10px] px-[10px]">
+          {isMulti ? (
+            <AgencyTimeEntryProjectLabel
+              format="project-client"
+              projectId={group.projectId}
+              projectName={group.projectName}
+              clientName={group.clientName || "General"}
+              taskTitle={group.taskTitle}
+              className="max-w-full"
+            />
+          ) : (
+            <AgencyTaskChooser
+              value={editDraft.taskId}
+              onValueChange={onTaskChange}
+              projects={projects}
+              tasks={tasks}
+              filterProjectId={editDraft.projectId || group.projectId || undefined}
+              fallbackTaskTitle={group.taskTitle}
+              fallbackProjectId={group.projectId}
+              fallbackProjectName={group.projectName}
+              fallbackClientName={group.clientName || "General"}
+              placeholder="+ Project"
+              triggerFormat="project-client"
+              highlightSearch
+              contentAlign="start"
+              disabled={editSaving || rowUpdating}
+              className={cn(taskChooserTriggerClass, "max-w-full")}
+            />
+          )}
         </div>
       </div>
 
       <div className={agencyTimeEntryRailClass}>
+        <div className={agencyTimeEntryRailTagClass}>
+          {isMulti ? (
+            <span
+              className={cn(
+                "inline-flex size-8 items-center justify-center",
+                group.entries[0]?.tags?.length ? "text-highlighted" : "text-muted",
+              )}
+              aria-label={
+                group.entries[0]?.tags?.length ? `${group.entries[0].tags.length} tags` : "No tags"
+              }
+            >
+              <Tag className="size-3.5" />
+            </span>
+          ) : (
+            <AgencyTagChooser
+              value={editDraft.tagIds}
+              tags={tags}
+              onValueChange={onTagIdsChange}
+              onCreateTag={onCreateTag}
+              creating={tagCreatePending}
+              disabled={editSaving || rowUpdating}
+              compact
+            />
+          )}
+        </div>
+
+        <div className={agencyTimeEntryRailBillableClass}>
+          {isMulti ? (
+            <span
+              className={cn(
+                "inline-flex size-8 items-center justify-center",
+                group.entries[0]?.isBillable ? "text-info" : "text-muted",
+              )}
+              aria-label={group.entries[0]?.isBillable ? "Billable" : "Non-billable"}
+            >
+              $
+            </span>
+          ) : (
+            <button
+              type="button"
+              className={cn(
+                agencyTimeTrackerIconActionClass,
+                "inline-flex size-8 items-center justify-center",
+                editDraft.isBillable ? "text-info" : "text-muted",
+              )}
+              aria-pressed={editDraft.isBillable}
+              aria-label={editDraft.isBillable ? "Billable" : "Non-billable"}
+              disabled={editSaving || rowUpdating}
+              onClick={() => onIsBillableChange(!editDraft.isBillable)}
+            >
+              $
+            </button>
+          )}
+        </div>
+
         <div className={agencyTimeEntryRailTimeClass}>
           {!isMulti ? (
-            <Popover
-              open={timeEditorOpen}
-              onOpenChange={(open) => {
-                onTimeEditorOpenChange(open);
-                if (!open) onInlineBlur();
-              }}
-            >
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className={cn(
-                    "inline-flex h-8 w-full items-center text-left transition-colors hover:text-highlighted",
-                    agencyWorkTimeRangeClass,
-                    agencyFocusRingClass,
-                  )}
-                  disabled={editSaving || rowUpdating}
-                  aria-label={`Edit time range, ${timeRange || "no time range"}`}
-                >
-                  <span className="whitespace-nowrap">{timeRange || "—"}</span>
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-auto min-w-[19rem] p-3">
-                <div className="grid gap-3">
-                  <label className="grid gap-1 text-xs font-semibold text-muted">
-                    <span>Date</span>
-                    <Input
-                      type="date"
-                      value={editDraft.date}
-                      onChange={(e) => onStartDateChange(e.target.value)}
-                      onKeyDown={onInlineKeyDown}
-                      disabled={editSaving || rowUpdating}
-                      className="h-8 font-mono text-sm tabular-nums"
-                      aria-label="Start date"
-                    />
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <label className="grid gap-1 text-xs font-semibold text-muted">
-                      <span>Start</span>
-                      <Input
-                        type="time"
-                        value={editDraft.startTime}
-                        onChange={(e) => onStartTimeChange(e.target.value)}
-                        onBlur={onInlineBlur}
-                        onKeyDown={onInlineKeyDown}
-                        disabled={editSaving || rowUpdating}
-                        className={agencyTimeEntryTimeInputClass}
-                        aria-label="Start time"
-                      />
-                    </label>
-                    <label className="grid gap-1 text-xs font-semibold text-muted">
-                      <span>End</span>
-                      <Input
-                        type="time"
-                        value={editDraft.endTime}
-                        onChange={(e) => onEndTimeChange(e.target.value)}
-                        onBlur={onInlineBlur}
-                        onKeyDown={onInlineKeyDown}
-                        disabled={editSaving || rowUpdating}
-                        className={agencyTimeEntryTimeInputClass}
-                        aria-label="End time"
-                      />
-                    </label>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
+            <div className="flex w-full items-center justify-center gap-1 overflow-hidden">
+              <Input
+                type="time"
+                value={editDraft.startTime}
+                onChange={(e) => onStartTimeChange(e.target.value)}
+                onBlur={onInlineBlur}
+                onKeyDown={onInlineKeyDown}
+                disabled={editSaving || rowUpdating}
+                className={cn(
+                  agencyTimeEntryTimeInputClass,
+                  agencyWorkTimeRangeClass,
+                  "h-8 w-[4.75rem] text-right",
+                )}
+                aria-label="Start time"
+              />
+              <span className={cn("shrink-0", agencyWorkTimeRangeClass)} aria-hidden>
+                -
+              </span>
+              <Input
+                type="time"
+                value={editDraft.endTime}
+                onChange={(e) => onEndTimeChange(e.target.value)}
+                onBlur={onInlineBlur}
+                onKeyDown={onInlineKeyDown}
+                disabled={editSaving || rowUpdating}
+                className={cn(
+                  agencyTimeEntryTimeInputClass,
+                  agencyWorkTimeRangeClass,
+                  "h-8 w-[4.75rem] text-left",
+                )}
+                aria-label="End time"
+              />
+            </div>
           ) : timeRange ? (
-            <span className={cn("whitespace-nowrap", agencyWorkTimeRangeClass)}>{timeRange}</span>
+            <span className={cn("w-full text-center whitespace-nowrap", agencyWorkTimeRangeClass)}>
+              {timeRange}
+            </span>
           ) : (
-            <span className={agencyWorkTimeRangeClass}>—</span>
+            <span className={cn("w-full text-center", agencyWorkTimeRangeClass)}>—</span>
+          )}
+        </div>
+
+        <div className={agencyTimeEntryRailCalendarClass}>
+          {!isMulti ? (
+            <label className="relative inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-highlighted">
+              <Input
+                type="date"
+                value={editDraft.date}
+                onChange={(e) => onStartDateChange(e.target.value)}
+                onKeyDown={onInlineKeyDown}
+                disabled={editSaving || rowUpdating}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                aria-label="Entry date"
+              />
+              <CalendarDays className="size-4" aria-hidden />
+            </label>
+          ) : (
+            <span className="inline-flex size-8 items-center justify-center text-muted" aria-hidden>
+              <CalendarDays className="size-4" />
+            </span>
           )}
         </div>
 
@@ -279,13 +316,15 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               onKeyDown={onInlineKeyDown}
               disabled={editSaving || rowUpdating}
               className={cn(
-                "h-8 w-full border-0 bg-transparent px-0 shadow-none focus-visible:ring-0",
+                "h-8 w-full border-0 bg-transparent px-0 text-center shadow-none focus-visible:ring-0",
                 agencyWorkMetricClass,
               )}
               aria-label="Duration"
             />
           ) : (
-            <span className={cn("block w-full", agencyWorkMetricClass)}>{durationLabel}</span>
+            <span className={cn("block w-full text-center", agencyWorkMetricClass)}>
+              {durationLabel}
+            </span>
           )}
           {editError ? (
             <p className="absolute top-full left-2.5 z-10 text-xs text-error">{editError}</p>
@@ -342,17 +381,13 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 id: primaryEntryId,
                 projectName: group.projectName,
                 taskTitle: group.taskTitle,
-                taskId: group.taskId,
-                taskIsWaste: isWaste,
               }}
               canRestart={canRestart}
               deleting={rowDeleting || rowUpdating || editSaving}
               duplicating={rowDuplicating}
-              wastePending={rowWastePending}
               onRestart={onRestart}
               onDelete={() => onDeleteGroup()}
               onDuplicate={!isMulti ? onDuplicate : undefined}
-              onToggleWaste={group.taskId ? view.onToggleWaste : undefined}
             />
           )}
         </div>
