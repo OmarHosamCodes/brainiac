@@ -2,6 +2,7 @@ import { clientsRouter } from "./clients/router";
 import { projectsRouter } from "./projects/router";
 import { tasksRouter } from "./tasks/router";
 import { timeTrackingRouter } from "./time-tracking/router";
+import { tagsRouter } from "./tags/router";
 import { reportsRouter } from "./reports/router";
 import { billingRouter } from "./billing/router";
 import { resourcingRouter } from "./resourcing/router";
@@ -16,6 +17,7 @@ export const agencyOpsRouter = {
   projectTasks: tasksRouter.projectTasks,
   taskThreads: tasksRouter.taskThreads,
   taskAgent: tasksRouter.taskAgent,
+  tags: tagsRouter.tags,
   timer: timeTrackingRouter.timer,
   timeEntries: timeTrackingRouter.timeEntries,
   summary: timeTrackingRouter.summary,
