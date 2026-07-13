@@ -58,6 +58,8 @@ type UseAgencyTaskChooserBaseOptions = {
   fallbackProjectId?: string;
   fallbackProjectName?: string;
   fallbackClientName?: string;
+  /** When set, only show this project's tasks (Clockify-style project-then-task). */
+  filterProjectId?: string;
   /** When true, mark search matches in project/task labels like the clients surface. */
   highlightSearch?: boolean;
 };
@@ -139,6 +141,7 @@ export function useAgencyTaskChooser(
     fallbackProjectName,
     fallbackClientName,
     highlightSearch = false,
+    filterProjectId,
   } = options;
 
   const isCreateMode = options.mode === "create";
@@ -164,11 +167,17 @@ export function useAgencyTaskChooser(
     const seen = new Set<string>();
     return tasks.filter((task) => {
       if (task.status === "archived") return false;
+      if (filterProjectId && task.projectId !== filterProjectId) return false;
       if (seen.has(task.id)) return false;
       seen.add(task.id);
       return true;
     });
-  }, [tasks]);
+  }, [tasks, filterProjectId]);
+
+  const chooserProjects = useMemo(() => {
+    if (!filterProjectId) return projects;
+    return projects.filter((project) => project.id === filterProjectId);
+  }, [projects, filterProjectId]);
 
   const projectsById = useMemo(
     () => new Map(projects.map((project) => [project.id, project])),
@@ -254,7 +263,9 @@ export function useAgencyTaskChooser(
     }
 
     if (!isCreateMode) {
-      const matchedProjects = projects.filter((project) => filteredTasksByProject.has(project.id));
+      const matchedProjects = chooserProjects.filter((project) =>
+        filteredTasksByProject.has(project.id),
+      );
       const sortedProjects = [...matchedProjects].sort(sortProjectsByClientThenName);
       return groupItemsByClient(sortedProjects).map((group) => ({
         clientName: group.clientName,
@@ -266,14 +277,14 @@ export function useAgencyTaskChooser(
     }
 
     // Create mode: project/client match → all tasks; task-only match → filtered tasks.
-    const matchedProjects = projects.filter((project) => {
+    const matchedProjects = chooserProjects.filter((project) => {
       if (!filterQuery) return true;
       if (projectSearchableText(project).includes(filterQuery)) return true;
       return (filteredTasksByProject.get(project.id) ?? []).length > 0;
     });
 
     const visibleProjects =
-      filterQuery && matchedProjects.length === 0 ? projects : matchedProjects;
+      filterQuery && matchedProjects.length === 0 ? chooserProjects : matchedProjects;
 
     const sortedProjects = [...visibleProjects].sort(sortProjectsByClientThenName);
 
@@ -287,7 +298,7 @@ export function useAgencyTaskChooser(
         return { project, tasks: tasksForProject };
       }),
     }));
-  }, [filteredTasks, filterQuery, isCreateMode, projects, tasksByProjectId]);
+  }, [chooserProjects, filteredTasks, filterQuery, isCreateMode, tasksByProjectId]);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const createInputRef = useRef<HTMLInputElement>(null);
