@@ -1,5 +1,3 @@
-import { z } from "zod";
-
 import type {
   AgencyProject,
   AgencyProjectJourney,
@@ -30,31 +28,21 @@ export type {
 
 export type TaskStatus = AgencyProjectTaskStatus;
 
-const agencyWorkSurfaceTabSchema = z.enum(["sessions", "tasks"]);
+/** Kept for unwired board/tabs modules still on disk. */
+export type AgencyWorkSurfaceTab = "sessions" | "tasks";
 
-const legacyAgencyWorkSurfaceTabSchema = z.enum(["my-tasks", "done", "delegated"]);
-
-export type AgencyWorkSurfaceTab = z.infer<typeof agencyWorkSurfaceTabSchema>;
-
-export function parseAgencyWorkSurfaceTab(value: string | null): AgencyWorkSurfaceTab {
-  if (legacyAgencyWorkSurfaceTabSchema.safeParse(value).success) {
-    return "tasks";
-  }
-  const parsed = agencyWorkSurfaceTabSchema.safeParse(value);
-  return parsed.success ? parsed.data : "sessions";
-}
-
-/** Rewrite legacy My Tasks / Done / Delegated tab query values to `tasks`. */
-export function normalizeAgencyWorkSurfaceTabParam(
+/** Strip obsolete Work tab/task query params so legacy URLs land on the tracker. */
+export function normalizeAgencyWorkSurfaceQueryParams(
   searchParams: URLSearchParams,
 ): URLSearchParams | null {
-  const tab = searchParams.get("tab");
-  if (!legacyAgencyWorkSurfaceTabSchema.safeParse(tab).success) {
+  if (!searchParams.has("tab") && !searchParams.has("task") && !searchParams.has("filter")) {
     return null;
   }
   const next = new URLSearchParams(searchParams);
   next.set("section", "work");
-  next.set("tab", "tasks");
+  next.delete("tab");
+  next.delete("task");
+  next.delete("filter");
   return next;
 }
 
@@ -62,11 +50,6 @@ type AgencyWorkSurfaceReadyProps = {
   status: "ready";
   teamId: string;
   projects: AgencyProject[];
-  activeTab: AgencyWorkSurfaceTab;
-  selectedTaskId: string;
-  onTabChange: (tab: AgencyWorkSurfaceTab) => void;
-  onSelectTask: (taskId: string) => void;
-  onSelectProject: (projectId: string) => void;
 };
 
 export type AgencyWorkSurfaceView =

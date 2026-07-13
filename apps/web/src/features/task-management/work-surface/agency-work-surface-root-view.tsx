@@ -6,21 +6,18 @@ import { AgencyWorkSurfaceEmptyView } from "@/features/task-management/work-surf
 import { AgencyWorkSurfaceErrorView } from "@/features/task-management/work-surface/agency-work-surface-error-view";
 import { AgencyWorkSurfaceLayoutView } from "@/features/task-management/work-surface/agency-work-surface-layout-view";
 import { AgencyWorkSurfaceLoadingView } from "@/features/task-management/work-surface/agency-work-surface-loading-view";
-import { AgencyWorkSurfaceTabsView } from "@/features/task-management/work-surface/agency-work-surface-tabs-view";
 import { cn } from "@/lib/utils";
 
 type AgencyWorkSurfaceRootViewProps = {
   view: AgencyWorkSurfaceView;
   trackerControl: ReactNode;
   content: ReactNode;
-  createTaskControl: ReactNode;
 };
 
 export function AgencyWorkSurfaceRootView({
   view,
   trackerControl,
   content,
-  createTaskControl,
 }: AgencyWorkSurfaceRootViewProps) {
   let surface: ReactNode;
 
@@ -43,20 +40,8 @@ export function AgencyWorkSurfaceRootView({
       surface = (
         <AgencyWorkSurfaceLayoutView
           trackerPane={<div className={agencyTimeTrackerPanelClass}>{trackerControl}</div>}
-          tabBar={
-            <AgencyWorkSurfaceTabsView
-              activeTab={view.activeTab}
-              onTabChange={view.onTabChange}
-              createTaskControl={createTaskControl}
-            />
-          }
           contentPane={
-            <div
-              role="tabpanel"
-              id={`agency-work-panel-${view.activeTab}`}
-              aria-labelledby={`agency-work-tab-${view.activeTab}`}
-              className={cn(agencyTimeLogPanelClass, "min-h-0")}
-            >
+            <div className={cn(agencyTimeLogPanelClass, "min-h-0")} aria-label="Time entries">
               {content}
             </div>
           }

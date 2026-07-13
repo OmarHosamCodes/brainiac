@@ -5,27 +5,31 @@ import {
   openAgencyWorkSurfaceTasks,
   selectAgencyWorkSurfaceTask,
 } from "./agency-work-surface-navigation";
-import { normalizeAgencyWorkSurfaceTabParam, parseAgencyWorkSurfaceTab } from "./agency-work";
+import { normalizeAgencyWorkSurfaceQueryParams } from "./agency-work";
 
-describe("Agency work-surface tab parse", () => {
-  it("maps legacy tabs to tasks", () => {
-    expect(parseAgencyWorkSurfaceTab("my-tasks")).toBe("tasks");
-    expect(parseAgencyWorkSurfaceTab("done")).toBe("tasks");
-    expect(parseAgencyWorkSurfaceTab("delegated")).toBe("tasks");
-    expect(parseAgencyWorkSurfaceTab("tasks")).toBe("tasks");
-    expect(parseAgencyWorkSurfaceTab("sessions")).toBe("sessions");
-    expect(parseAgencyWorkSurfaceTab(null)).toBe("sessions");
+describe("Agency work-surface query normalize", () => {
+  it("strips obsolete tab, task, and filter params", () => {
+    const next = normalizeAgencyWorkSurfaceQueryParams(
+      new URLSearchParams("section=work&tab=tasks&task=task-1&filter=mine"),
+    );
+    expect(next?.toString()).toBe("section=work");
   });
 
-  it("rewrites legacy tab query params", () => {
-    const next = normalizeAgencyWorkSurfaceTabParam(
+  it("strips legacy my-tasks style tabs", () => {
+    const next = normalizeAgencyWorkSurfaceQueryParams(
       new URLSearchParams("section=work&tab=done&task=task-1"),
     );
-    expect(next?.toString()).toBe("section=work&tab=tasks&task=task-1");
+    expect(next?.toString()).toBe("section=work");
+  });
+
+  it("returns null when already clean", () => {
+    expect(
+      normalizeAgencyWorkSurfaceQueryParams(new URLSearchParams("section=work")),
+    ).toBeNull();
   });
 });
 
-describe("Agency work-surface task navigation", () => {
+describe("Agency work-surface task navigation helpers (kept for unwired board)", () => {
   it("keeps the Tasks board selected when no task is present", () => {
     const current = new URLSearchParams("section=work&tab=tasks");
     expect(normalizeAgencyWorkSurfaceTaskSelection(current)).toBeNull();

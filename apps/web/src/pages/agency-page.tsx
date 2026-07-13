@@ -271,7 +271,6 @@ export function AgencyPage() {
                     <div className={agencyWorkSurfaceShellClass}>
                       <AgencyWorkSurface
                         teamId={selectedTeamId}
-                        onSelectProject={openProject}
                         onSegmentChange={handleSegmentChange}
                       />
                     </div>

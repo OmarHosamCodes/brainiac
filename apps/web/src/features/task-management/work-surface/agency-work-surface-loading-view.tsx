@@ -17,8 +17,6 @@ import {
   agencyTimeTrackerStatusZoneClass,
   agencyTimeWeekFooterClass,
   agencyTimeWeekGroupBodyClass,
-  agencyWorkTabBarClass,
-  agencyWorkTabShellClass,
   agencyWorkTableBodyScrollClass,
 } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
@@ -29,30 +27,17 @@ function TrackerSkeleton() {
       <div className={agencyTimeTrackerDescriptionZoneClass}>
         <Skeleton className="h-5 w-3/4 max-w-xs" />
       </div>
-      <div className={agencyTimeTrackerStatusDividerClass} />
+      <div className={agencyTimeTrackerStatusDividerClass} aria-hidden />
       <div className={agencyTimeTrackerStatusZoneClass}>
-        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-4 w-16" />
       </div>
-      <div className={agencyTimeTrackerStatusDividerClass} />
+      <div className={agencyTimeTrackerStatusDividerClass} aria-hidden />
       <div className={agencyTimeTrackerActionsZoneClass}>
+        <Skeleton className="size-8 rounded-full" />
+        <Skeleton className="size-8 rounded-full" />
         <Skeleton className="h-6 w-[5rem]" />
-        <Skeleton className="h-8 w-16 rounded-full" />
-      </div>
-    </div>
-  );
-}
-
-function TabsSkeleton() {
-  return (
-    <div className={agencyWorkTabShellClass} aria-hidden>
-      <div className={agencyWorkTabBarClass}>
-        <div className="flex min-w-0 flex-1 items-center gap-1">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-4 w-12" />
-          <Skeleton className="h-4 w-16" />
-        </div>
-        <Skeleton className="h-8 w-24 shrink-0 rounded-full" />
+        <Skeleton className="h-8 w-[5.5rem] rounded-[2px]" />
       </div>
     </div>
   );
@@ -124,7 +109,6 @@ export function AgencyWorkSurfaceLoadingView() {
     <div className={agencyTimePaneStackClass} aria-busy="true" aria-label="Loading work data">
       <TrackerSkeleton />
       <div className={agencyTimePaneBodyClass}>
-        <TabsSkeleton />
         <SessionsLogSkeleton />
       </div>
     </div>

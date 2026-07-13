@@ -3,22 +3,17 @@ import { agencyTimePaneBodyClass, agencyTimePaneStackClass } from "@/features/sh
 
 type AgencyWorkSurfaceLayoutViewProps = {
   trackerPane: ReactNode;
-  tabBar: ReactNode;
   contentPane: ReactNode;
 };
 
 export function AgencyWorkSurfaceLayoutView({
   trackerPane,
-  tabBar,
   contentPane,
 }: AgencyWorkSurfaceLayoutViewProps) {
   return (
     <div className={agencyTimePaneStackClass} data-agency-work-surface>
       {trackerPane}
-      <div className={agencyTimePaneBodyClass}>
-        {tabBar}
-        {contentPane}
-      </div>
+      <div className={agencyTimePaneBodyClass}>{contentPane}</div>
     </div>
   );
 }

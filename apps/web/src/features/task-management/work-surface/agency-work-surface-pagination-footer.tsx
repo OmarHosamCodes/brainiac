@@ -60,7 +60,6 @@ export function AgencyWorkSurfacePaginationFooter({
 
       {pageSize !== undefined && pageSizeOptions && onPageSizeChange ? (
         <label className="flex items-center gap-2 text-xs text-muted">
-          <span>Show</span>
           <span className="relative inline-flex items-center">
             <select
               value={pageSize}
@@ -79,6 +78,7 @@ export function AgencyWorkSurfacePaginationFooter({
               aria-hidden
             />
           </span>
+          <span>Items per page</span>
         </label>
       ) : null}
     </div>
