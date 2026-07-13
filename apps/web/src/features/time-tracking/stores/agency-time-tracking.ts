@@ -40,6 +40,14 @@ type AgencyProjectSummary = {
   updatedAt: string;
 };
 
+type AgencyTag = {
+  id: string;
+  teamId: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 type AgencyActiveTimer = {
   id: string;
   teamId: string;
@@ -49,6 +57,8 @@ type AgencyActiveTimer = {
   taskTitle: string | null;
   projectName: string;
   description: string;
+  tags: AgencyTag[];
+  isBillable: boolean;
   startedAt: string;
   createdAt: string;
   updatedAt: string;
@@ -67,6 +77,8 @@ type AgencyTimeEntry = {
   clientName: string;
   source: "timer" | "manual";
   description: string;
+  tags: AgencyTag[];
+  isBillable: boolean;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
@@ -75,6 +87,7 @@ type AgencyTimeEntry = {
 };
 
 type AgencyWeekSummary = {
+  weekStartKey?: string;
   startDate: string;
   endDate: string;
   totalSeconds: number;
@@ -96,12 +109,15 @@ type AgencyTimeEntriesListQueryData = {
   pageSize: number;
   total: number;
   weekSummary: AgencyWeekSummary;
+  weekSummaries?: Array<AgencyWeekSummary & { weekStartKey: string }>;
 };
 
 type TrackerDraft = {
   description: string;
   projectId: string;
   taskId: string;
+  tagIds: string[];
+  isBillable: boolean;
   syncedTimerId: string | null;
 };
 
@@ -126,6 +142,8 @@ type StartTimerPayload = {
   project: Pick<AgencyProjectSummary, "id" | "name">;
   task: Pick<AgencyProjectTask, "id" | "title"> | null;
   description: string;
+  tagIds?: string[];
+  isBillable?: boolean;
   successDescription?: string;
 };
 
@@ -135,6 +153,8 @@ type StopTimerPayload = {
   discard?: boolean;
   activeTimer?: AgencyActiveTimer | null;
   task?: Pick<AgencyProjectTask, "id" | "title"> | null;
+  tagIds?: string[];
+  isBillable?: boolean;
 };
 
 type UpdateActiveTimerStartPayload = {
@@ -148,6 +168,8 @@ type RestartEntryPayload = {
   project: Pick<AgencyProjectSummary, "id" | "name">;
   task: Pick<AgencyProjectTask, "id" | "title">;
   description: string;
+  tagIds?: string[];
+  isBillable?: boolean;
 };
 
 type DeleteEntriesPayload = {
@@ -168,6 +190,20 @@ type UpdateEntryPayload = {
   startAt: string;
   endAt: string;
   durationSeconds: number;
+  tagIds?: string[];
+  isBillable?: boolean;
+};
+
+type UpdateEntriesBulkPayload = {
+  teamId: string;
+  entryIds: string[];
+  patch: {
+    projectId?: string;
+    taskId?: string | null;
+    description?: string;
+    tagIds?: string[];
+    isBillable?: boolean;
+  };
 };
 
 type DuplicateEntryPayload = {
@@ -182,6 +218,8 @@ type CreateManualEntryPayload = {
   description: string;
   startAt: string;
   endAt: string;
+  tagIds?: string[];
+  isBillable?: boolean;
 };
 
 const OPTIMISTIC_CLIENT_ID = "optimistic-client";
@@ -257,6 +295,8 @@ function createAgencyTimeTrackingActions(
       description: "",
       projectId: "",
       taskId: "",
+      tagIds: [],
+      isBillable: true,
       syncedTimerId: null,
     };
   }
@@ -314,7 +354,11 @@ function createAgencyTimeTrackingActions(
         ...s,
         trackerDraftsByTeam: {
           ...s.trackerDraftsByTeam,
-          [teamId]: { ...existing, projectId },
+          [teamId]: {
+            ...existing,
+            projectId,
+            taskId: projectId === existing.projectId ? existing.taskId : "",
+          },
         },
       };
     });
@@ -336,6 +380,16 @@ function createAgencyTimeTrackingActions(
         },
       };
     });
+    mirrorTrackerDraftToActiveTimer(teamId);
+  }
+
+  function setTrackerTagIds(teamId: string, tagIds: string[]) {
+    patchTrackerDraft(teamId, { tagIds: [...new Set(tagIds)] });
+    mirrorTrackerDraftToActiveTimer(teamId);
+  }
+
+  function setTrackerIsBillable(teamId: string, isBillable: boolean) {
+    patchTrackerDraft(teamId, { isBillable });
     mirrorTrackerDraftToActiveTimer(teamId);
   }
 
@@ -393,6 +447,10 @@ function createAgencyTimeTrackingActions(
       taskTitle: cachedTask?.title ?? (taskId ? activeTimer.taskTitle : null),
       projectId,
       projectName: activeTimer.projectName,
+      tags: draft.tagIds
+        .map((id) => activeTimer.tags.find((tag) => tag.id === id))
+        .filter(Boolean) as AgencyTag[],
+      isBillable: draft.isBillable,
       updatedAt: new Date().toISOString(),
     });
   }
@@ -431,6 +489,8 @@ function createAgencyTimeTrackingActions(
             description: timer.description,
             projectId: timer.projectId,
             taskId: timer.taskId ?? draft.taskId ?? "",
+            tagIds: timer.tags.map((tag) => tag.id),
+            isBillable: timer.isBillable,
             syncedTimerId: timer.id,
           },
         },
@@ -575,6 +635,8 @@ function createAgencyTimeTrackingActions(
       project: payload.project,
       task: payload.task,
       description: payload.description,
+      tagIds: payload.tagIds ?? previousDraft?.tagIds ?? [],
+      isBillable: payload.isBillable ?? previousDraft?.isBillable ?? true,
       startedAt: nowIso,
     });
     const draft = ensureTrackerDraft(payload.teamId);
@@ -595,6 +657,8 @@ function createAgencyTimeTrackingActions(
         description: optimisticTimer.description,
         projectId: optimisticTimer.projectId,
         taskId: optimisticTimer.taskId ?? "",
+        tagIds: (payload.tagIds ?? previousDraft?.tagIds ?? []).slice(),
+        isBillable: payload.isBillable ?? previousDraft?.isBillable ?? true,
         syncedTimerId: optimisticTimer.id,
       });
 
@@ -621,6 +685,8 @@ function createAgencyTimeTrackingActions(
         projectId: payload.project.id,
         ...(payload.task ? { taskId: payload.task.id } : {}),
         description: payload.description.trim(),
+        tagIds: payload.tagIds ?? previousDraft?.tagIds,
+        isBillable: payload.isBillable ?? previousDraft?.isBillable,
       })) as {
         timer: AgencyActiveTimer | null;
         createdEntry: AgencyTimeEntry | null;
@@ -657,6 +723,8 @@ function createAgencyTimeTrackingActions(
       project: payload.project,
       task: payload.task,
       description: payload.description,
+      tagIds: payload.tagIds,
+      isBillable: payload.isBillable,
       successDescription: `Tracking ${payload.description || "time"}.`,
     });
   }
@@ -728,6 +796,8 @@ function createAgencyTimeTrackingActions(
         teamId: payload.teamId,
         taskId: selectedTask?.id,
         description,
+        tagIds: payload.tagIds ?? previousDraft?.tagIds,
+        isBillable: payload.isBillable ?? previousDraft?.isBillable,
         discard: payload.discard,
       })) as {
         timer: AgencyActiveTimer | null;
@@ -916,6 +986,8 @@ function createAgencyTimeTrackingActions(
     project: Pick<AgencyProjectSummary, "id" | "name">;
     task: Pick<AgencyProjectTask, "id" | "title"> | null;
     description: string;
+    tagIds?: string[];
+    isBillable?: boolean;
     startedAt: string;
   }) {
     return {
@@ -927,6 +999,8 @@ function createAgencyTimeTrackingActions(
       taskTitle: payload.task?.title ?? null,
       projectName: payload.project.name,
       description: payload.description.trim(),
+      tags: [],
+      isBillable: payload.isBillable ?? true,
       startedAt: payload.startedAt,
       createdAt: payload.startedAt,
       updatedAt: payload.startedAt,
@@ -957,6 +1031,8 @@ function createAgencyTimeTrackingActions(
       clientName: overrides.clientName ?? OPTIMISTIC_CLIENT_NAME,
       source: "timer",
       description: overrides.description ?? timer.description,
+      tags: timer.tags,
+      isBillable: timer.isBillable,
       startedAt: timer.startedAt,
       endedAt: overrides.endedAt,
       durationSeconds: getDurationSeconds(timer.startedAt, overrides.endedAt),
@@ -994,6 +1070,8 @@ function createAgencyTimeTrackingActions(
       clientName: payload.project.clientName,
       source: "manual",
       description,
+      tags: [],
+      isBillable: payload.isBillable ?? true,
       startedAt: payload.startAt,
       endedAt: payload.endAt,
       durationSeconds: getDurationSeconds(payload.startAt, payload.endAt),
@@ -1261,6 +1339,8 @@ function createAgencyTimeTrackingActions(
       taskId: payload.taskId,
       taskTitle: payload.task?.title ?? null,
       description: payload.description.trim(),
+      ...(payload.tagIds !== undefined ? { tags: previous.tags } : {}),
+      ...(payload.isBillable !== undefined ? { isBillable: payload.isBillable } : {}),
       startedAt: payload.startAt,
       endedAt: payload.endAt,
       durationSeconds: payload.durationSeconds,
@@ -1319,6 +1399,8 @@ function createAgencyTimeTrackingActions(
         startAt: entry.startedAt,
         endAt: entry.endedAt,
         description: entry.description,
+        tagIds: entry.tags.map((tag) => tag.id),
+        isBillable: entry.isBillable,
       })) as AgencyTimeEntry;
 
       reconcileCreatedEntry(teamId, optimisticEntry.id, created);
@@ -1354,6 +1436,8 @@ function createAgencyTimeTrackingActions(
         startAt: payload.startAt,
         endAt: payload.endAt,
         description: payload.description.trim() || undefined,
+        tagIds: payload.tagIds,
+        isBillable: payload.isBillable,
       })) as AgencyTimeEntry;
 
       reconcileCreatedEntry(teamId, optimisticEntry.id, created);
@@ -1403,6 +1487,8 @@ function createAgencyTimeTrackingActions(
         description: payload.description.trim(),
         startAt: payload.startAt,
         endAt: payload.endAt,
+        tagIds: payload.tagIds,
+        isBillable: payload.isBillable,
       })) as AgencyTimeEntry;
 
       patchUpdatedEntry(payload.teamId, optimisticEntry, updated);
@@ -1417,6 +1503,71 @@ function createAgencyTimeTrackingActions(
         ...s,
         updatingEntryIds: previousUpdatingIds,
       }));
+    }
+  }
+
+  async function updateEntriesBulk(payload: UpdateEntriesBulkPayload) {
+    const entryIds = [...new Set(payload.entryIds)];
+    if (entryIds.length === 0) return;
+
+    const previousEntries = entryIds
+      .map((entryId) => findTimeEntry(payload.teamId, entryId))
+      .filter((entry): entry is AgencyTimeEntry => entry !== null);
+    if (previousEntries.length !== entryIds.length) {
+      toast.error("Unable to update entries", {
+        description: "One or more entries were not found.",
+      });
+      return;
+    }
+
+    const logSnapshots = snapshotQueries(getRegisteredLogQueries(new Set([payload.teamId])));
+    const entryOverlaySnapshot = optimistic().snapshotTimeEntries(payload.teamId);
+    const previousUpdatingIds = [...get().updatingEntryIds];
+    const optimisticEntries = previousEntries.map((entry) => ({
+      ...entry,
+      ...(payload.patch.projectId
+        ? {
+            projectId: payload.patch.projectId,
+            taskId: payload.patch.taskId ?? null,
+            taskTitle: null,
+          }
+        : {}),
+      ...(payload.patch.taskId ? { taskId: payload.patch.taskId } : {}),
+      ...(payload.patch.description !== undefined
+        ? { description: payload.patch.description.trim() }
+        : {}),
+      ...(payload.patch.isBillable !== undefined ? { isBillable: payload.patch.isBillable } : {}),
+      updatedAt: new Date().toISOString(),
+    }));
+
+    set((s) => ({
+      ...s,
+      updatingEntryIds: [...new Set([...s.updatingEntryIds, ...entryIds])],
+    }));
+
+    try {
+      optimisticEntries.forEach((entry, index) => {
+        patchUpdatedEntry(payload.teamId, previousEntries[index]!, entry);
+      });
+
+      const result = (await orpcClient.agencyOps.timeEntries.updateMineBulk({
+        teamId: payload.teamId,
+        entryIds,
+        patch: payload.patch,
+      })) as { items: AgencyTimeEntry[] };
+
+      result.items.forEach((entry) => {
+        const optimisticEntry = optimisticEntries.find((item) => item.id === entry.id);
+        if (optimisticEntry) patchUpdatedEntry(payload.teamId, optimisticEntry, entry);
+      });
+    } catch (error) {
+      restoreQuerySnapshots(logSnapshots);
+      optimistic().restoreTimeEntries(payload.teamId, entryOverlaySnapshot);
+      toast.error("Unable to update entries", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+    } finally {
+      set((s) => ({ ...s, updatingEntryIds: previousUpdatingIds }));
     }
   }
 
@@ -1446,6 +1597,8 @@ function createAgencyTimeTrackingActions(
     setTrackerDescription,
     setTrackerProjectId,
     setTrackerTaskId,
+    setTrackerTagIds,
+    setTrackerIsBillable,
     syncDraftFromActiveTimer,
     registerActiveTimerQuery,
     unregisterActiveTimerQuery,
@@ -1459,6 +1612,7 @@ function createAgencyTimeTrackingActions(
     duplicateEntry,
     createManualEntry,
     updateEntry,
+    updateEntriesBulk,
     clearHighlightedEntry,
     requestOpenTaskChooser,
   };
@@ -1480,6 +1634,14 @@ export const useAgencyTimeTrackingStore = create<AgencyTimeTrackingState>((set, 
     () => get() as AgencyTimeTrackingState,
   ),
 }));
+
+export function setTrackerTagIds(teamId: string, tagIds: string[]) {
+  useAgencyTimeTrackingStore.getState().setTrackerTagIds(teamId, tagIds);
+}
+
+export function setTrackerIsBillable(teamId: string, isBillable: boolean) {
+  useAgencyTimeTrackingStore.getState().setTrackerIsBillable(teamId, isBillable);
+}
 
 export function useTrackerDraft(teamId: string) {
   return useAgencyTimeTrackingStore((s) =>
