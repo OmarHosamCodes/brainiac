@@ -3,7 +3,6 @@ import {
   useEffect,
   useId,
   useMemo,
-  useRef,
   useState,
   type FocusEvent,
   type KeyboardEvent,
@@ -29,15 +28,14 @@ import {
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
 } from "@/features/shared/agency-queries";
-import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import {
-  activeTimerStartToIso,
   applyEndTimeToDraft,
   applyStartTimeToDraft,
   createDefaultManualTimeWindow,
   draftToIsoRange,
-  startedAtToDateTimeDraft,
+  elapsedDurationToStartedAt,
+  parseDurationInput,
   validateTimeEntryDraft,
   type TimeEntryDraft,
 } from "@/features/time-tracking/time-entry-draft";
@@ -52,14 +50,7 @@ import {
 } from "@/features/time-tracking/hooks/use-agency-tags";
 import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-tag-chooser";
 
-const START_TIME_DEBOUNCE_MS = 300;
-
-const emptyStartDraft = { date: "", startTime: "" };
-
-export type AgencyTimerStartDraft = {
-  date: string;
-  startTime: string;
-};
+const emptyElapsedDraft = "";
 
 export type AgencyTrackerMode = "timer" | "manual";
 
@@ -102,10 +93,9 @@ export type AgencyTimeTrackerViewModel = {
   stopButtonWarningRing: boolean;
   isTimerMutationPending: boolean;
   isStartTimeSaving: boolean;
-  startTimePopoverOpen: boolean;
-  startTimeDraft: AgencyTimerStartDraft;
-  startTimeDayLabel: string;
-  startTimeError: string | null;
+  elapsedEditing: boolean;
+  elapsedDraft: string;
+  elapsedError: string | null;
   mode: AgencyTrackerMode;
   showModeToggle: boolean;
   manualDraft: AgencyManualTimeDraft;
@@ -128,8 +118,10 @@ export type AgencyTimeTrackerViewModel = {
   onCreateTag: (name: string) => void;
   onIsBillableChange: (isBillable: boolean) => void;
   onTaskChooserOpenChange: (open: boolean) => void;
-  onStartTimePopoverOpenChange: (open: boolean) => void;
-  onStartTimeDraftChange: (patch: Partial<AgencyTimerStartDraft>) => void;
+  onElapsedFocus: () => void;
+  onElapsedChange: (value: string) => void;
+  onElapsedBlur: () => void;
+  onElapsedKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onModeChange: (mode: AgencyTrackerMode) => void;
   onManualStartTimeChange: (startTime: string) => void;
   onManualEndTimeChange: (endTime: string) => void;
@@ -167,8 +159,9 @@ export function useAgencyTimeTracker({
   const taskChooserOpenRequest = useAgencyTimeTrackingStore((s) => s.taskChooserOpenRequest);
 
   const [taskChooserOpen, setTaskChooserOpen] = useState(false);
-  const [startTimePopoverOpen, setStartTimePopoverOpen] = useState(false);
-  const [startTimeDraft, setStartTimeDraft] = useState<AgencyTimerStartDraft>(emptyStartDraft);
+  const [elapsedEditing, setElapsedEditing] = useState(false);
+  const [elapsedDraft, setElapsedDraft] = useState(emptyElapsedDraft);
+  const [elapsedError, setElapsedError] = useState<string | null>(null);
   const [mode, setMode] = useState<AgencyTrackerMode>("timer");
   const [manualDraft, setManualDraft] = useState<AgencyManualTimeDraft>(() => {
     const window = createDefaultManualTimeWindow();
@@ -178,9 +171,6 @@ export function useAgencyTimeTracker({
   const [descriptionFocused, setDescriptionFocused] = useState(false);
   const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingDraftRef = useRef<AgencyTimerStartDraft | null>(null);
-  const taskExplicitlyChosenRef = useRef(false);
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId);
@@ -249,6 +239,12 @@ export function useAgencyTimeTracker({
     canStartAgencyTimer({
       activeTimer: null,
       project: startProject,
+      selectedTask: cachedTask
+        ? { id: cachedTask.id, title: cachedTask.title }
+        : null,
+      selectedTaskId,
+      selectedTaskTitle,
+      catalogTasks: tasks,
     }),
   );
   const canStopTimer = canStopAgencyTimer({
@@ -262,17 +258,6 @@ export function useAgencyTimeTracker({
     enabled: Boolean(activeTimer),
     format: "clock",
   });
-
-  const startTimeDayLabel = useMemo(
-    () => (startTimeDraft.date ? formatAgencyDayLabel(startTimeDraft.date) : ""),
-    [startTimeDraft.date],
-  );
-
-  const startTimeError = useMemo(() => {
-    if (!startTimeDraft.date || !startTimeDraft.startTime) return null;
-    const result = activeTimerStartToIso(startTimeDraft.date, startTimeDraft.startTime);
-    return "error" in result ? result.error : null;
-  }, [startTimeDraft]);
 
   const manualTimeEntryDraft = useMemo(
     (): TimeEntryDraft => ({
@@ -297,7 +282,7 @@ export function useAgencyTimeTracker({
   );
 
   const manualError = useMemo(
-    () => validateTimeEntryDraft(manualTimeEntryDraft, { requireTask: false }),
+    () => validateTimeEntryDraft(manualTimeEntryDraft, { requireTask: true }),
     [manualTimeEntryDraft],
   );
 
@@ -309,60 +294,45 @@ export function useAgencyTimeTracker({
     !activeTimer &&
     mode === "manual" &&
     manualProject &&
+    cachedTask &&
     !manualError &&
     !isManualCreatePending,
   );
 
   const showModeToggle = Boolean(teamId && !activeTimer);
 
-  const persistStartDraft = useCallback(
-    (draft: AgencyTimerStartDraft) => {
-      if (!teamId || !activeTimer) return;
-      const result = activeTimerStartToIso(draft.date, draft.startTime);
-      if ("error" in result) return;
+  const persistElapsedDraft = useCallback(
+    (draft: string) => {
+      if (!teamId || !activeTimer) return false;
+      const seconds = parseDurationInput(draft);
+      if (seconds === null) {
+        setElapsedError("Use hh:mm:ss or hh:mm.");
+        return false;
+      }
+      const result = elapsedDurationToStartedAt(seconds);
+      if ("error" in result) {
+        setElapsedError(result.error);
+        return false;
+      }
       const nextMs = new Date(result.startAt).getTime();
       const currentMs = new Date(activeTimer.startedAt).getTime();
-      if (nextMs === currentMs) return;
+      setElapsedError(null);
+      if (nextMs === currentMs) return true;
       void updateActiveTimerStartAction({
         teamId,
         activeTimer,
         startedAt: result.startAt,
       });
+      return true;
     },
     [teamId, activeTimer, updateActiveTimerStartAction],
   );
 
-  const flushStartDraftPersist = useCallback(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = null;
-    }
-    const draft = pendingDraftRef.current ?? startTimeDraft;
-    pendingDraftRef.current = null;
-    persistStartDraft(draft);
-  }, [persistStartDraft, startTimeDraft]);
-
-  const scheduleStartDraftPersist = useCallback(
-    (draft: AgencyTimerStartDraft) => {
-      pendingDraftRef.current = draft;
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      debounceRef.current = setTimeout(() => {
-        pendingDraftRef.current = null;
-        persistStartDraft(draft);
-      }, START_TIME_DEBOUNCE_MS);
-    },
-    [persistStartDraft],
-  );
-
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
-
   useEffect(() => {
     if (!activeTimer) {
-      setStartTimePopoverOpen(false);
+      setElapsedEditing(false);
+      setElapsedDraft(emptyElapsedDraft);
+      setElapsedError(null);
       return;
     }
     setMode("timer");
@@ -386,21 +356,20 @@ export function useAgencyTimeTracker({
   }
 
   async function startTimer() {
-    if (!teamId || !startProject || !canStartTimer) return;
+    if (!teamId || !startProject || !cachedTask || !canStartTimer) return;
 
     await startTimerAction({
       teamId,
       project: startProject,
-      task: taskExplicitlyChosenRef.current && selectedTask ? selectedTask : null,
+      task: { id: cachedTask.id, title: cachedTask.title },
       description: timerDescription,
       tagIds: trackerDraft?.tagIds,
       isBillable: trackerDraft?.isBillable,
     });
-    taskExplicitlyChosenRef.current = false;
   }
 
   async function addManual() {
-    if (!teamId || !manualProject || !canAddManual) return;
+    if (!teamId || !manualProject || !cachedTask || !canAddManual) return;
 
     const range = draftToIsoRange(manualTimeEntryDraft);
     if ("error" in range) return;
@@ -413,7 +382,7 @@ export function useAgencyTimeTracker({
         clientId: manualProject.clientId,
         clientName: manualProject.clientName,
       },
-      task: selectedTask ? { id: selectedTask.id, title: selectedTask.title } : null,
+      task: { id: cachedTask.id, title: cachedTask.title },
       description: timerDescription,
       startAt: range.startAt,
       endAt: range.endAt,
@@ -431,7 +400,6 @@ export function useAgencyTimeTracker({
   function applyDescriptionSuggestion(suggestion: AgencyTimeTrackerSuggestion) {
     setTrackerDescription(teamId, suggestion.description);
     if (suggestion.taskId) {
-      taskExplicitlyChosenRef.current = true;
       setTrackerTaskId(teamId, suggestion.taskId);
       const task = tasks.find((entry) => entry.id === suggestion.taskId);
       if (task) {
@@ -528,24 +496,44 @@ export function useAgencyTimeTracker({
       : "Enter what you're working on.";
   }
 
-  function onStartTimePopoverOpenChange(open: boolean) {
-    if (open && activeTimer?.startedAt) {
-      setStartTimeDraft(startedAtToDateTimeDraft(activeTimer.startedAt));
-    } else if (!open) {
-      flushStartDraftPersist();
-    }
-    setStartTimePopoverOpen(open);
+  function onElapsedFocus() {
+    setElapsedDraft(elapsedLabel ?? "00:00:00");
+    setElapsedError(null);
+    setElapsedEditing(true);
   }
 
-  function onStartTimeDraftChange(patch: Partial<AgencyTimerStartDraft>) {
-    setStartTimeDraft((current) => {
-      const next = { ...current, ...patch };
-      const result = activeTimerStartToIso(next.date, next.startTime);
-      if (!("error" in result)) {
-        scheduleStartDraftPersist(next);
+  function onElapsedChange(value: string) {
+    setElapsedDraft(value);
+    if (elapsedError) setElapsedError(null);
+  }
+
+  function onElapsedBlur() {
+    if (!elapsedEditing) return;
+    const ok = persistElapsedDraft(elapsedDraft);
+    if (ok) {
+      setElapsedEditing(false);
+      setElapsedDraft(emptyElapsedDraft);
+    }
+  }
+
+  function onElapsedKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const ok = persistElapsedDraft(elapsedDraft);
+      if (ok) {
+        setElapsedEditing(false);
+        setElapsedDraft(emptyElapsedDraft);
+        event.currentTarget.blur();
       }
-      return next;
-    });
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setElapsedEditing(false);
+      setElapsedDraft(emptyElapsedDraft);
+      setElapsedError(null);
+      event.currentTarget.blur();
+    }
   }
 
   function onModeChange(nextMode: AgencyTrackerMode) {
@@ -626,10 +614,9 @@ export function useAgencyTimeTracker({
     stopButtonWarningRing: Boolean(activeTimer && !canStopTimer),
     isTimerMutationPending,
     isStartTimeSaving: timerAdjustCount > 0,
-    startTimePopoverOpen,
-    startTimeDraft,
-    startTimeDayLabel,
-    startTimeError,
+    elapsedEditing,
+    elapsedDraft,
+    elapsedError,
     mode,
     showModeToggle,
     manualDraft,
@@ -652,17 +639,14 @@ export function useAgencyTimeTracker({
     onProjectChange: (projectId) => {
       setTrackerProjectId(teamId, projectId);
       if (!projectId) {
-        taskExplicitlyChosenRef.current = false;
         setTrackerTaskId(teamId, "");
         return;
       }
       if (selectedTask && selectedTask.projectId !== projectId) {
-        taskExplicitlyChosenRef.current = false;
         setTrackerTaskId(teamId, "");
       }
     },
     onTaskChange: (value) => {
-      taskExplicitlyChosenRef.current = Boolean(value);
       setTrackerTaskId(teamId, value || "");
       const task = tasks.find((entry) => entry.id === value);
       if (task) {
@@ -681,8 +665,10 @@ export function useAgencyTimeTracker({
     },
     onIsBillableChange: (next) => setTrackerIsBillable(teamId, next),
     onTaskChooserOpenChange: setTaskChooserOpen,
-    onStartTimePopoverOpenChange,
-    onStartTimeDraftChange,
+    onElapsedFocus,
+    onElapsedChange,
+    onElapsedBlur,
+    onElapsedKeyDown,
     onModeChange,
     onManualStartTimeChange,
     onManualEndTimeChange,
