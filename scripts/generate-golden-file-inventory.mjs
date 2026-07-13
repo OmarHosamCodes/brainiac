@@ -142,6 +142,7 @@ const featureDomainAliases = new Map([
   ["shared", "agency-shared"],
   ["task-management", "task-management"],
   ["tasks", "task-management"],
+  ["tags", "time-tracking"],
   ["team", "team"],
   ["time-tracking", "time-tracking"],
   ["workspace", "workspace"],
