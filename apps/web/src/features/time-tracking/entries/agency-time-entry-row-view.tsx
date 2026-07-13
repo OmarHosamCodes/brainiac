@@ -1,9 +1,11 @@
-import { CalendarDays, MoreVertical, Play, Tag, Trash2 } from "lucide-react";
+import { CalendarDays, MoreVertical, Play, Trash2 } from "lucide-react";
 
 import { AgencyTagChooser } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
-import { AgencyTimeEntryActions } from "@/features/time-tracking/entries/agency-time-entry-actions";
-import { AgencyTimeEntryProjectLabel } from "@/features/time-tracking/entries/agency-time-entry-project-label";
+import {
+  AgencyTimeEntryMoreAction,
+  AgencyTimeEntryPlayAction,
+} from "@/features/time-tracking/entries/agency-time-entry-actions";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
@@ -12,7 +14,8 @@ import {
   agencyFocusRingClass,
   agencyTimeEntryIconButtonClass,
   agencyTimeEntryMainClass,
-  agencyTimeEntryRailActionsClass,
+  agencyTimeEntryRailMoreClass,
+  agencyTimeEntryRailPlayClass,
   agencyTimeEntryRailBillableClass,
   agencyTimeEntryRailCalendarClass,
   agencyTimeEntryRailClass,
@@ -22,7 +25,7 @@ import {
   agencyTimeEntryRowClass,
   agencyTimeEntryRowEditingClass,
   agencyTimeEntryRowHighlightClass,
-  agencyTimeEntryTimeInputClass,
+  agencyTimeEntryClockTimeInputClass,
   agencyTimeTrackerIconActionClass,
   agencyWorkCountBadgeClass,
   agencyWorkMetricClass,
@@ -53,6 +56,8 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     primaryEntryId,
     descriptionDraft,
     editDraft,
+    startTimeInput,
+    endTimeInput,
     editError,
     editSaving,
     rowDeleting,
@@ -76,6 +81,8 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onIsBillableChange,
     onStartTimeChange,
     onEndTimeChange,
+    onStartTimeBlur,
+    onEndTimeBlur,
     onStartDateChange,
     onDurationChange,
     onInlineBlur,
@@ -100,176 +107,133 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         className,
       )}
     >
-      <div className={agencyTimeEntryMainClass}>
-        <div className="flex w-[200px] min-w-0 shrink-0 items-center">
+      <div className={cn(agencyTimeEntryMainClass, "gap-2")}>
+        {isMulti ? (
           <div className={descriptionLeadingSlotClass}>
-            {isMulti ? (
-              <button
-                type="button"
-                className={cn(agencyWorkCountBadgeClass, agencyFocusRingClass)}
-                aria-label={expanded ? "Collapse entries" : "Expand entries"}
-                aria-expanded={expanded}
-                onClick={onToggleExpand}
-              >
-                {group.entries.length}
-              </button>
-            ) : null}
-          </div>
-          {isMulti ? (
-            <span
-              className={cn(
-                agencyWorkTitleClass,
-                "block min-w-0 flex-1 truncate text-left font-normal",
-              )}
+            <button
+              type="button"
+              className={cn(agencyWorkCountBadgeClass, agencyFocusRingClass)}
+              aria-label={expanded ? "Collapse entries" : "Expand entries"}
+              aria-expanded={expanded}
+              onClick={onToggleExpand}
             >
-              {displayTitle}
-            </span>
-          ) : (
-            <Input
-              value={descriptionDraft}
-              onChange={(e) => onDescriptionChange(e.target.value)}
-              onFocus={() => onEditingDescriptionChange(true)}
-              onBlur={() => {
+              {group.entries.length}
+            </button>
+          </div>
+        ) : null}
+        {isMulti ? (
+          <span
+            className={cn(
+              agencyWorkTitleClass,
+              "min-w-0 shrink truncate text-left font-normal",
+            )}
+          >
+            {displayTitle}
+          </span>
+        ) : (
+          <Input
+            value={descriptionDraft}
+            onChange={(e) => onDescriptionChange(e.target.value)}
+            onFocus={() => onEditingDescriptionChange(true)}
+            onBlur={() => {
+              onEditingDescriptionChange(false);
+              onDescriptionBlur();
+            }}
+            onKeyDown={(event) => {
+              onDescriptionKeyDown(event);
+              if (event.key === "Enter" || event.key === "Escape") {
                 onEditingDescriptionChange(false);
-                onDescriptionBlur();
-              }}
-              onKeyDown={(event) => {
-                onDescriptionKeyDown(event);
-                if (event.key === "Enter" || event.key === "Escape") {
-                  onEditingDescriptionChange(false);
-                }
-              }}
-              disabled={editSaving || rowUpdating}
-              placeholder="Add description"
-              className={cn(
-                agencyWorkTitleClass,
-                "h-[40px] min-w-0 flex-1 border-0 bg-transparent px-0 font-normal shadow-none focus-visible:ring-0",
-              )}
-              aria-label="Add description"
-            />
-          )}
+              }
+            }}
+            disabled={editSaving || rowUpdating}
+            placeholder="Add description"
+            className={cn(
+              agencyWorkTitleClass,
+              "field-sizing-content h-[40px] w-auto min-w-0 max-w-[14rem] shrink border-0 bg-transparent px-0 font-normal shadow-none focus-visible:ring-0",
+            )}
+            aria-label="Add description"
+          />
+        )}
+        <div className="min-w-0 shrink truncate">
+          <AgencyTaskChooser
+            value={editDraft.taskId}
+            onValueChange={onTaskChange}
+            projects={projects}
+            tasks={tasks}
+            fallbackTaskTitle={group.taskId ? group.taskTitle : undefined}
+            fallbackProjectId={group.projectId}
+            fallbackProjectName={group.projectName}
+            fallbackClientName={group.clientName || "General"}
+            placeholder="Task"
+            triggerFormat="task-client"
+            highlightSearch
+            contentAlign="start"
+            disabled={editSaving || rowUpdating}
+            className={cn(taskChooserTriggerClass, "max-w-full")}
+          />
         </div>
-
-        <div className="flex min-w-0 flex-1 items-center gap-[10px] px-[10px]">
-          {isMulti ? (
-            <AgencyTimeEntryProjectLabel
-              format="project-client"
-              projectId={group.projectId}
-              projectName={group.projectName}
-              clientName={group.clientName || "General"}
-              taskTitle={group.taskTitle}
-              className="max-w-full"
-            />
-          ) : (
-            <AgencyTaskChooser
-              value={editDraft.taskId}
-              onValueChange={onTaskChange}
-              projects={projects}
-              tasks={tasks}
-              filterProjectId={editDraft.projectId || group.projectId || undefined}
-              fallbackTaskTitle={group.taskTitle}
-              fallbackProjectId={group.projectId}
-              fallbackProjectName={group.projectName}
-              fallbackClientName={group.clientName || "General"}
-              placeholder="+ Project"
-              triggerFormat="project-client"
-              highlightSearch
-              contentAlign="start"
-              disabled={editSaving || rowUpdating}
-              className={cn(taskChooserTriggerClass, "max-w-full")}
-            />
-          )}
-        </div>
+        {/* Absorbs leftover width so the right action rail stays fixed. */}
+        <div className="min-w-0 flex-1" aria-hidden />
       </div>
 
       <div className={agencyTimeEntryRailClass}>
         <div className={agencyTimeEntryRailTagClass}>
-          {isMulti ? (
-            <span
-              className={cn(
-                "inline-flex size-8 items-center justify-center",
-                group.entries[0]?.tags?.length ? "text-highlighted" : "text-muted",
-              )}
-              aria-label={
-                group.entries[0]?.tags?.length ? `${group.entries[0].tags.length} tags` : "No tags"
-              }
-            >
-              <Tag className="size-3.5" />
-            </span>
-          ) : (
-            <AgencyTagChooser
-              value={editDraft.tagIds}
-              tags={tags}
-              onValueChange={onTagIdsChange}
-              onCreateTag={onCreateTag}
-              creating={tagCreatePending}
-              disabled={editSaving || rowUpdating}
-              compact
-            />
-          )}
+          <AgencyTagChooser
+            value={editDraft.tagIds}
+            tags={tags}
+            onValueChange={onTagIdsChange}
+            onCreateTag={onCreateTag}
+            creating={tagCreatePending}
+            disabled={editSaving || rowUpdating}
+            compact
+          />
         </div>
 
         <div className={agencyTimeEntryRailBillableClass}>
-          {isMulti ? (
-            <span
-              className={cn(
-                "inline-flex size-8 items-center justify-center",
-                group.entries[0]?.isBillable ? "text-info" : "text-muted",
-              )}
-              aria-label={group.entries[0]?.isBillable ? "Billable" : "Non-billable"}
-            >
-              $
-            </span>
-          ) : (
-            <button
-              type="button"
-              className={cn(
-                agencyTimeTrackerIconActionClass,
-                "inline-flex size-8 items-center justify-center",
-                editDraft.isBillable ? "text-info" : "text-muted",
-              )}
-              aria-pressed={editDraft.isBillable}
-              aria-label={editDraft.isBillable ? "Billable" : "Non-billable"}
-              disabled={editSaving || rowUpdating}
-              onClick={() => onIsBillableChange(!editDraft.isBillable)}
-            >
-              $
-            </button>
-          )}
+          <button
+            type="button"
+            className={cn(
+              agencyTimeTrackerIconActionClass,
+              "inline-flex size-8 items-center justify-center",
+              editDraft.isBillable ? "text-info" : "text-muted",
+            )}
+            aria-pressed={editDraft.isBillable}
+            aria-label={editDraft.isBillable ? "Billable" : "Non-billable"}
+            disabled={editSaving || rowUpdating}
+            onClick={() => onIsBillableChange(!editDraft.isBillable)}
+          >
+            $
+          </button>
         </div>
 
         <div className={agencyTimeEntryRailTimeClass}>
           {!isMulti ? (
-            <div className="flex w-full items-center justify-center gap-1 overflow-hidden">
+            <div className="flex w-full min-w-0 items-center justify-center gap-0.5 overflow-hidden">
               <Input
-                type="time"
-                value={editDraft.startTime}
+                type="text"
+                inputMode="text"
+                data-time-field="start"
+                value={startTimeInput}
                 onChange={(e) => onStartTimeChange(e.target.value)}
-                onBlur={onInlineBlur}
+                onBlur={onStartTimeBlur}
                 onKeyDown={onInlineKeyDown}
                 disabled={editSaving || rowUpdating}
-                className={cn(
-                  agencyTimeEntryTimeInputClass,
-                  agencyWorkTimeRangeClass,
-                  "h-8 w-[4.75rem] text-right",
-                )}
+                className={agencyTimeEntryClockTimeInputClass}
                 aria-label="Start time"
               />
               <span className={cn("shrink-0", agencyWorkTimeRangeClass)} aria-hidden>
                 -
               </span>
               <Input
-                type="time"
-                value={editDraft.endTime}
+                type="text"
+                inputMode="text"
+                data-time-field="end"
+                value={endTimeInput}
                 onChange={(e) => onEndTimeChange(e.target.value)}
-                onBlur={onInlineBlur}
+                onBlur={onEndTimeBlur}
                 onKeyDown={onInlineKeyDown}
                 disabled={editSaving || rowUpdating}
-                className={cn(
-                  agencyTimeEntryTimeInputClass,
-                  agencyWorkTimeRangeClass,
-                  "h-8 w-[4.75rem] text-left",
-                )}
+                className={agencyTimeEntryClockTimeInputClass}
                 aria-label="End time"
               />
             </div>
@@ -283,24 +247,18 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         </div>
 
         <div className={agencyTimeEntryRailCalendarClass}>
-          {!isMulti ? (
-            <label className="relative inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-highlighted">
-              <Input
-                type="date"
-                value={editDraft.date}
-                onChange={(e) => onStartDateChange(e.target.value)}
-                onKeyDown={onInlineKeyDown}
-                disabled={editSaving || rowUpdating}
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                aria-label="Entry date"
-              />
-              <CalendarDays className="size-4" aria-hidden />
-            </label>
-          ) : (
-            <span className="inline-flex size-8 items-center justify-center text-muted" aria-hidden>
-              <CalendarDays className="size-4" />
-            </span>
-          )}
+          <label className="relative inline-flex size-8 cursor-pointer items-center justify-center rounded-md text-muted transition-colors hover:bg-elevated hover:text-highlighted">
+            <Input
+              type="date"
+              value={editDraft.date}
+              onChange={(e) => onStartDateChange(e.target.value)}
+              onKeyDown={onInlineKeyDown}
+              disabled={editSaving || rowUpdating}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              aria-label="Entry date"
+            />
+            <CalendarDays className="size-4" aria-hidden />
+          </label>
         </div>
 
         <div className={agencyTimeEntryRailDurationClass}>
@@ -331,61 +289,72 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
           ) : null}
         </div>
 
-        <div className={agencyTimeEntryRailActionsClass}>
+        <div className={agencyTimeEntryRailPlayClass}>
           {isMulti && !expanded ? (
-            <>
-              <button
-                type="button"
-                className={cn(agencyTimeEntryIconButtonClass, !canRestart && "opacity-50")}
-                disabled={!canRestart}
-                aria-label={`Restart timer for ${group.taskTitle}`}
-                onClick={onRestart}
-              >
-                <Play className="size-3.5" />
-              </button>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className={agencyTimeEntryIconButtonClass}
-                    aria-label="Entry actions"
-                  >
-                    <MoreVertical className="size-3.5" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-40 p-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start"
-                    onClick={onToggleExpand}
-                  >
-                    Show {group.entries.length} entries
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full justify-start text-error"
-                    disabled={rowDeleting}
-                    onClick={onDeleteGroup}
-                  >
-                    <Trash2 className="size-3.5" />
-                    Delete all
-                  </Button>
-                </PopoverContent>
-              </Popover>
-            </>
+            <button
+              type="button"
+              className={cn(agencyTimeEntryIconButtonClass, !canRestart && "opacity-50")}
+              disabled={!canRestart}
+              aria-label={`Restart timer for ${group.taskTitle}`}
+              onClick={onRestart}
+            >
+              <Play className="size-3.5" />
+            </button>
           ) : (
-            <AgencyTimeEntryActions
+            <AgencyTimeEntryPlayAction
               entry={{
                 id: primaryEntryId,
                 projectName: group.projectName,
                 taskTitle: group.taskTitle,
               }}
               canRestart={canRestart}
+              onRestart={onRestart}
+            />
+          )}
+        </div>
+
+        <div className={agencyTimeEntryRailMoreClass}>
+          {isMulti && !expanded ? (
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={agencyTimeEntryIconButtonClass}
+                  aria-label="Entry actions"
+                >
+                  <MoreVertical className="size-3.5" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-40 p-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={onToggleExpand}
+                >
+                  Show {group.entries.length} entries
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-error"
+                  disabled={rowDeleting}
+                  onClick={onDeleteGroup}
+                >
+                  <Trash2 className="size-3.5" />
+                  Delete all
+                </Button>
+              </PopoverContent>
+            </Popover>
+          ) : (
+            <AgencyTimeEntryMoreAction
+              entry={{
+                id: primaryEntryId,
+                projectName: group.projectName,
+                taskTitle: group.taskTitle,
+              }}
               deleting={rowDeleting || rowUpdating || editSaving}
               duplicating={rowDuplicating}
-              onRestart={onRestart}
               onDelete={() => onDeleteGroup()}
               onDuplicate={!isMulti ? onDuplicate : undefined}
             />

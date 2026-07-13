@@ -30,6 +30,16 @@ type AgencyTimeEntryRowContainerProps = {
   onDeleteEntry: (entryId: string) => void;
   onDuplicate: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  onBulkPatch: (
+    entryIds: string[],
+    patch: {
+      projectId?: string;
+      taskId?: string | null;
+      description?: string;
+      tagIds?: string[];
+      isBillable?: boolean;
+    },
+  ) => Promise<void>;
   highlighted?: boolean;
   /** Suppress the row bottom border (last row in a day group, or last child in a multi group). */
   omitBottomBorder?: boolean;
