@@ -62,6 +62,16 @@ export type AgencyTimeEntriesLogViewModel = {
   onDeleteEntry: (entryId: string) => void;
   onDuplicate: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  onBulkPatch: (
+    entryIds: string[],
+    patch: {
+      projectId?: string;
+      taskId?: string | null;
+      description?: string;
+      tagIds?: string[];
+      isBillable?: boolean;
+    },
+  ) => Promise<void>;
   selectedEntryIds: Set<string>;
   bulkEditDayKey: string | null;
   bulkDraft: AgencyDayBulkDraft;
@@ -304,8 +314,26 @@ export function useAgencyTimeEntriesLog({
     });
   }
 
+  async function saveBulkPatch(
+    entryIds: string[],
+    patch: {
+      projectId?: string;
+      taskId?: string | null;
+      description?: string;
+      tagIds?: string[];
+      isBillable?: boolean;
+    },
+  ) {
+    if (!teamId || entryIds.length === 0 || Object.keys(patch).length === 0) return;
+    await agencyTimeTrackingStore.updateEntriesBulk({
+      teamId,
+      entryIds,
+      patch,
+    });
+  }
+
   async function applyBulkPatch() {
-    if (!teamId || selectedEntryIds.size === 0) return;
+    if (selectedEntryIds.size === 0) return;
     const patch: {
       projectId?: string;
       taskId?: string | null;
@@ -319,11 +347,7 @@ export function useAgencyTimeEntriesLog({
     if (bulkDraft.tagIds.length > 0) patch.tagIds = bulkDraft.tagIds;
     if (bulkDraft.isBillable !== null) patch.isBillable = bulkDraft.isBillable;
     if (Object.keys(patch).length === 0) return;
-    await agencyTimeTrackingStore.updateEntriesBulk({
-      teamId,
-      entryIds: [...selectedEntryIds],
-      patch,
-    });
+    await saveBulkPatch([...selectedEntryIds], patch);
     setSelectedEntryIds(new Set());
     setBulkEditDayKey(null);
   }
@@ -365,6 +389,7 @@ export function useAgencyTimeEntriesLog({
     onDeleteEntry: (entryId) => void deleteEntry(entryId),
     onDuplicate: (entryId) => void duplicateEntry(entryId),
     onSaveEdit: saveEdit,
+    onBulkPatch: saveBulkPatch,
     selectedEntryIds,
     bulkEditDayKey,
     bulkDraft,

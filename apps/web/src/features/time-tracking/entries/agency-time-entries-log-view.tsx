@@ -82,16 +82,8 @@ export function AgencyTimeEntriesLogView({ view, renderGroupRow }: AgencyTimeEnt
                 renderGroupRow={renderGroupRow}
                 selectedEntryIds={view.selectedEntryIds}
                 bulkEditDayKey={view.bulkEditDayKey}
-                bulkDraft={view.bulkDraft}
-                onBulkDraftChange={view.onBulkDraftChange}
                 onToggleEntrySelected={view.onToggleEntrySelected}
                 onToggleDayBulkEdit={view.onToggleDayBulkEdit}
-                onApplyBulk={view.onApplyBulk}
-                onCreateTag={view.onCreateTag}
-                tagCreatePending={view.tagCreatePending}
-                tags={view.tags}
-                projects={view.projects}
-                tasks={view.tasks}
               />
             ))}
           </div>
