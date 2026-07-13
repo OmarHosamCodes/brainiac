@@ -15,6 +15,8 @@ import {
   applyEndTimeToDraft,
   applyStartTimeToDraft,
   entryToDraft,
+  formatClockTimeLabel,
+  parseClockTimeLabel,
 } from "@/features/time-tracking/time-entry-draft";
 import { formatDuration } from "@/lib/utils/format-duration";
 import type {
@@ -32,9 +34,9 @@ function localDateKey(date: Date): string {
 }
 
 function formatTimeLabel(date: Date): string {
-  return date
-    .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
-    .replace(" ", "");
+  return formatClockTimeLabel(
+    `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`,
+  );
 }
 
 function formatTimeRange(startedAt: string, endedAt: string) {
@@ -73,7 +75,7 @@ function singleEntryGroup(group: CollapsedEntryGroup, entry: TimeEntryRecord): C
     collapseKey: group.collapseKey,
     projectId: entry.projectId,
     taskId: entry.taskId,
-    taskTitle: entry.taskTitle ?? group.taskTitle,
+    taskTitle: entry.taskTitle ?? "",
     projectName: entry.projectName,
     clientName: entry.clientName,
     description: entry.description,
@@ -101,6 +103,16 @@ type UseAgencyTimeEntryRowOptions = {
   onDeleteEntry: (entryId: string) => void;
   onDuplicate: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
+  onBulkPatch: (
+    entryIds: string[],
+    patch: {
+      projectId?: string;
+      taskId?: string | null;
+      description?: string;
+      tagIds?: string[];
+      isBillable?: boolean;
+    },
+  ) => Promise<void>;
   highlighted?: boolean;
 };
 
@@ -122,6 +134,8 @@ export type AgencyTimeEntryRowViewModel = {
   primaryEntryId: string;
   descriptionDraft: string;
   editDraft: TimeEntryDraft;
+  startTimeInput: string;
+  endTimeInput: string;
   editError: string | null;
   editSaving: boolean;
   rowDeleting: boolean;
@@ -147,6 +161,8 @@ export type AgencyTimeEntryRowViewModel = {
   onIsBillableChange: (isBillable: boolean) => void;
   onStartTimeChange: (value: string) => void;
   onEndTimeChange: (value: string) => void;
+  onStartTimeBlur: () => void;
+  onEndTimeBlur: () => void;
   onStartDateChange: (value: string) => void;
   onDurationChange: (value: string) => void;
   onInlineBlur: () => void;
@@ -175,6 +191,7 @@ export function useAgencyTimeEntryRow({
   onDeleteEntry,
   onDuplicate,
   onSaveEdit,
+  onBulkPatch,
   highlighted = false,
 }: UseAgencyTimeEntryRowOptions): AgencyTimeEntryRowViewModel {
   const { isDark } = useTheme();
@@ -188,6 +205,12 @@ export function useAgencyTimeEntryRow({
   const primaryEntry = group.entries[0]!;
 
   const [editDraft, setEditDraft] = useState<TimeEntryDraft>(() => entryToDraft(primaryEntry));
+  const [startTimeInput, setStartTimeInput] = useState(() =>
+    formatClockTimeLabel(entryToDraft(primaryEntry).startTime),
+  );
+  const [endTimeInput, setEndTimeInput] = useState(() =>
+    formatClockTimeLabel(entryToDraft(primaryEntry).endTime),
+  );
   const [editError, setEditError] = useState<string | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
@@ -204,12 +227,18 @@ export function useAgencyTimeEntryRow({
   }, [groupDescription, groupTaskTitle]);
 
   useEffect(() => {
-    setEditDraft(entryToDraft(primaryEntry));
+    const nextDraft = entryToDraft(primaryEntry);
+    setEditDraft(nextDraft);
+    setStartTimeInput(formatClockTimeLabel(nextDraft.startTime));
+    setEndTimeInput(formatClockTimeLabel(nextDraft.endTime));
     setEditError(null);
   }, [primaryEntry]);
 
   const resetEditDraft = useCallback(() => {
-    setEditDraft(entryToDraft(primaryEntry));
+    const nextDraft = entryToDraft(primaryEntry);
+    setEditDraft(nextDraft);
+    setStartTimeInput(formatClockTimeLabel(nextDraft.startTime));
+    setEndTimeInput(formatClockTimeLabel(nextDraft.endTime));
     setEditError(null);
   }, [primaryEntry]);
 
@@ -239,6 +268,45 @@ export function useAgencyTimeEntryRow({
     [onSaveEdit, primaryEntry.id],
   );
 
+  const saveBulkFieldPatch = useCallback(
+    async (patch: {
+      projectId?: string;
+      taskId?: string | null;
+      tagIds?: string[];
+      isBillable?: boolean;
+    }) => {
+      if (!isMulti) return;
+      setEditSaving(true);
+      setEditError(null);
+      try {
+        await onBulkPatch(
+          group.entries.map((entry) => entry.id),
+          patch,
+        );
+      } finally {
+        setEditSaving(false);
+      }
+    },
+    [group.entries, isMulti, onBulkPatch],
+  );
+
+  const saveMultiDateChange = useCallback(
+    async (date: string) => {
+      if (!isMulti) return;
+      setEditSaving(true);
+      setEditError(null);
+      try {
+        // Sequential: updateEntry restores updatingEntryIds from a snapshot and races if parallel.
+        for (const entry of group.entries) {
+          await onSaveEdit(entry.id, { ...entryToDraft(entry), date });
+        }
+      } finally {
+        setEditSaving(false);
+      }
+    },
+    [group.entries, isMulti, onSaveEdit],
+  );
+
   const saveDescriptionEdit = useCallback(async () => {
     const trimmed = descriptionDraft.trim();
     if (trimmed === resolvedTitle) return;
@@ -265,11 +333,50 @@ export function useAgencyTimeEntryRow({
     [editDraft, isMulti, saveDraft],
   );
 
+  const commitStartTimeInput = useCallback(async () => {
+    if (isMulti) return;
+    const parsed = parseClockTimeLabel(startTimeInput);
+    if (!parsed) {
+      setStartTimeInput(formatClockTimeLabel(editDraft.startTime));
+      setEditError("Invalid start time.");
+      return;
+    }
+    const nextDraft = applyStartTimeToDraft(editDraft, parsed);
+    setStartTimeInput(formatClockTimeLabel(nextDraft.startTime));
+    setEndTimeInput(formatClockTimeLabel(nextDraft.endTime));
+    updateInlineDraft(nextDraft);
+    await saveInlineDraft(nextDraft);
+  }, [editDraft, isMulti, saveInlineDraft, startTimeInput, updateInlineDraft]);
+
+  const commitEndTimeInput = useCallback(async () => {
+    if (isMulti) return;
+    const parsed = parseClockTimeLabel(endTimeInput);
+    if (!parsed) {
+      setEndTimeInput(formatClockTimeLabel(editDraft.endTime));
+      setEditError("Invalid end time.");
+      return;
+    }
+    const nextDraft = applyEndTimeToDraft(editDraft, parsed);
+    setStartTimeInput(formatClockTimeLabel(nextDraft.startTime));
+    setEndTimeInput(formatClockTimeLabel(nextDraft.endTime));
+    updateInlineDraft(nextDraft);
+    await saveInlineDraft(nextDraft);
+  }, [editDraft, endTimeInput, isMulti, saveInlineDraft, updateInlineDraft]);
+
   const onInlineKeyDown = useCallback(
     (event: KeyboardEvent<HTMLInputElement>) => {
       if (event.key === "Enter") {
         event.preventDefault();
         setEditingDuration(false);
+        const field = event.currentTarget.dataset.timeField;
+        if (field === "start") {
+          void commitStartTimeInput();
+          return;
+        }
+        if (field === "end") {
+          void commitEndTimeInput();
+          return;
+        }
         void saveInlineDraft();
       }
       if (event.key === "Escape") {
@@ -279,7 +386,13 @@ export function useAgencyTimeEntryRow({
         setEditingDuration(false);
       }
     },
-    [cancelDescriptionEdit, resetEditDraft, saveInlineDraft],
+    [
+      cancelDescriptionEdit,
+      commitEndTimeInput,
+      commitStartTimeInput,
+      resetEditDraft,
+      saveInlineDraft,
+    ],
   );
 
   const rowDeleting = group.entries.some((entry) => deletingEntryIds.includes(entry.id));
@@ -299,10 +412,11 @@ export function useAgencyTimeEntryRow({
       activeTimer,
       project,
       description: trackerDraft?.description ?? activeTimer?.description,
-      selectedTask:
-        !activeTimer?.taskId && trackerDraft?.taskId?.trim()
+      selectedTask: activeTimer
+        ? !activeTimer.taskId && trackerDraft?.taskId?.trim()
           ? { id: trackerDraft.taskId.trim(), title: "" }
-          : null,
+          : null
+        : { id: group.taskId, title: group.taskTitle ?? "" },
     }),
   );
 
@@ -324,6 +438,8 @@ export function useAgencyTimeEntryRow({
     primaryEntryId: primaryEntry.id,
     descriptionDraft,
     editDraft,
+    startTimeInput,
+    endTimeInput,
     editError,
     editSaving,
     rowDeleting,
@@ -360,6 +476,13 @@ export function useAgencyTimeEntryRow({
         projectId: task?.projectId ?? editDraft.projectId,
       };
       updateInlineDraft(nextDraft);
+      if (isMulti) {
+        void saveBulkFieldPatch({
+          projectId: nextDraft.projectId,
+          taskId: nextDraft.taskId,
+        });
+        return;
+      }
       void saveInlineDraft(nextDraft);
     },
     onProjectChange: (projectId) => {
@@ -369,23 +492,44 @@ export function useAgencyTimeEntryRow({
         taskId: editDraft.projectId === projectId ? editDraft.taskId : "",
       };
       updateInlineDraft(nextDraft);
+      if (isMulti) {
+        void saveBulkFieldPatch({
+          projectId: nextDraft.projectId,
+          taskId: nextDraft.taskId || null,
+        });
+        return;
+      }
       void saveInlineDraft(nextDraft);
     },
     onTagIdsChange: (tagIds) => {
       const nextDraft = { ...editDraft, tagIds };
       updateInlineDraft(nextDraft);
+      if (isMulti) {
+        void saveBulkFieldPatch({ tagIds });
+        return;
+      }
       void saveInlineDraft(nextDraft);
     },
     onIsBillableChange: (nextBillable) => {
       const nextDraft = { ...editDraft, isBillable: nextBillable };
       updateInlineDraft(nextDraft);
+      if (isMulti) {
+        void saveBulkFieldPatch({ isBillable: nextBillable });
+        return;
+      }
       void saveInlineDraft(nextDraft);
     },
-    onStartTimeChange: (value) => updateInlineDraft(applyStartTimeToDraft(editDraft, value)),
-    onEndTimeChange: (value) => updateInlineDraft(applyEndTimeToDraft(editDraft, value)),
+    onStartTimeChange: setStartTimeInput,
+    onEndTimeChange: setEndTimeInput,
+    onStartTimeBlur: () => void commitStartTimeInput(),
+    onEndTimeBlur: () => void commitEndTimeInput(),
     onStartDateChange: (value) => {
       const nextDraft = { ...editDraft, date: value };
       updateInlineDraft(nextDraft);
+      if (isMulti) {
+        void saveMultiDateChange(value);
+        return;
+      }
       void saveInlineDraft(nextDraft);
     },
     onDurationChange: (value) => updateInlineDraft(applyDurationToDraft(editDraft, value)),
