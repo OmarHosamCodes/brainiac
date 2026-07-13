@@ -6,7 +6,10 @@ import {
 } from "@/features/time-tracking/time-entry-draft";
 
 export const timeEntryDraftSchema = z.object({
+  projectId: z.string(),
   taskId: z.string(),
+  tagIds: z.array(z.string()),
+  isBillable: z.boolean(),
   date: z.string(),
   startTime: z.string(),
   endTime: z.string(),
