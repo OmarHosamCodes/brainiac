@@ -31,7 +31,15 @@ export function canStartAgencyTimer(input: {
   // Allow start while another timer runs only when that timer is stoppable;
   // API startAgencyTimer then rolls it into an entry and starts the new one.
   if (!input.activeTimer) {
-    return true;
+    const selectedTask =
+      input.selectedTask ??
+      resolveAgencyTimerTaskRef({
+        activeTimer: null,
+        selectedTaskId: input.selectedTaskId,
+        selectedTaskTitle: input.selectedTaskTitle,
+        catalogTasks: input.catalogTasks,
+      });
+    return Boolean(selectedTask);
   }
 
   return canStopAgencyTimer({
@@ -142,6 +150,17 @@ export function getAgencyTimerStartBlockedMessage(input: {
   }
 
   if (!input.activeTimer) {
+    const selectedTask =
+      input.selectedTask ??
+      resolveAgencyTimerTaskRef({
+        activeTimer: null,
+        selectedTaskId: input.selectedTaskId,
+        selectedTaskTitle: input.selectedTaskTitle,
+        catalogTasks: input.catalogTasks,
+      });
+    if (!selectedTask) {
+      return "Choose a task to start the timer.";
+    }
     return null;
   }
 

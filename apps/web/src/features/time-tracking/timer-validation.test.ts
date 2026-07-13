@@ -13,8 +13,14 @@ const projectB = { id: "proj-b", name: "Project B" };
 const task = { id: "task-1", title: "Task 1" };
 
 describe("canStartAgencyTimer", () => {
-  it("allows start with project only", () => {
-    expect(canStartAgencyTimer({ activeTimer: null, project: projectA })).toBe(true);
+  it("allows start with project and task", () => {
+    expect(
+      canStartAgencyTimer({ activeTimer: null, project: projectA, selectedTask: task }),
+    ).toBe(true);
+  });
+
+  it("blocks start without a selected task", () => {
+    expect(canStartAgencyTimer({ activeTimer: null, project: projectA })).toBe(false);
   });
 
   it("blocks start when active timer is not stoppable", () => {
@@ -61,7 +67,9 @@ describe("canStartAgencyTimer", () => {
   });
 
   it("blocks start when no project is available", () => {
-    expect(canStartAgencyTimer({ activeTimer: null, project: null })).toBe(false);
+    expect(
+      canStartAgencyTimer({ activeTimer: null, project: null, selectedTask: task }),
+    ).toBe(false);
   });
 });
 
