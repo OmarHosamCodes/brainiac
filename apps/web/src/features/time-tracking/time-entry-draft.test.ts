@@ -5,7 +5,9 @@ import {
   applyStartTimeToDraft,
   draftSpansNextDay,
   draftToIsoRange,
+  formatClockTimeLabel,
   formatDurationInput,
+  parseClockTimeLabel,
   type TimeEntryDraft,
 } from "./time-entry-draft";
 
@@ -119,5 +121,15 @@ describe("time-entry-draft", () => {
     );
     expect(startDraft.endTime).toBe("13:32");
     expect(startDraft.durationInput).toBe("02:32:00");
+  });
+
+  test("formatClockTimeLabel and parseClockTimeLabel", () => {
+    expect(formatClockTimeLabel("05:17")).toBe("5:17AM");
+    expect(formatClockTimeLabel("22:38")).toBe("10:38PM");
+    expect(parseClockTimeLabel("5:17AM")).toBe("05:17");
+    expect(parseClockTimeLabel("10:38 pm")).toBe("22:38");
+    expect(parseClockTimeLabel("17:17")).toBe("17:17");
+    expect(parseClockTimeLabel("517am")).toBe("05:17");
+    expect(parseClockTimeLabel("bogus")).toBeNull();
   });
 });

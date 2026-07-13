@@ -35,6 +35,76 @@ function toTimeInputValue(date: Date) {
   return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
 }
 
+/** Display label for draft `HH:MM` — e.g. `5:17AM` (Clockify-style, no space). */
+export function formatClockTimeLabel(timeHhMm: string): string {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(timeHhMm.trim());
+  if (!match) return timeHhMm;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return timeHhMm;
+  const date = new Date(2000, 0, 1, hours, minutes);
+  return date
+    .toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+    .replace(/\s/g, "");
+}
+
+/**
+ * Parse free-text clock times into draft `HH:MM`.
+ * Accepts `5:17AM`, `5:17 pm`, `17:17`, `5:17`, `517am`.
+ */
+export function parseClockTimeLabel(value: string): string | null {
+  const trimmed = value.trim().toUpperCase().replace(/\s+/g, "");
+  if (!trimmed) return null;
+
+  const match = /^(\d{1,4})(?::(\d{2}))?(AM|PM|A|P)?$/.exec(trimmed);
+  if (!match) return null;
+
+  const meridiemRaw = match[3];
+  const meridiem =
+    meridiemRaw === "A" || meridiemRaw === "AM"
+      ? "AM"
+      : meridiemRaw === "P" || meridiemRaw === "PM"
+        ? "PM"
+        : null;
+
+  let hours: number;
+  let minutes: number;
+
+  if (match[2] !== undefined) {
+    hours = Number(match[1]);
+    minutes = Number(match[2]);
+  } else {
+    const digits = match[1]!;
+    if (digits.length <= 2) {
+      hours = Number(digits);
+      minutes = 0;
+    } else if (digits.length === 3) {
+      hours = Number(digits.slice(0, 1));
+      minutes = Number(digits.slice(1));
+    } else if (digits.length === 4) {
+      hours = Number(digits.slice(0, 2));
+      minutes = Number(digits.slice(2));
+    } else {
+      return null;
+    }
+  }
+
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes) || minutes > 59) return null;
+
+  if (meridiem) {
+    if (hours < 1 || hours > 12) return null;
+    if (meridiem === "AM") {
+      hours = hours === 12 ? 0 : hours;
+    } else {
+      hours = hours === 12 ? 12 : hours + 12;
+    }
+  } else if (hours > 23) {
+    return null;
+  }
+
+  return `${pad2(hours)}:${pad2(minutes)}`;
+}
+
 export function formatDurationInput(seconds: number): string {
   return formatDuration(seconds, "clock");
 }
@@ -123,6 +193,17 @@ export function activeTimerStartToIso(
     return { error: "Start time can't be in the future." };
   }
   return { startAt: start.toISOString() };
+}
+
+/** Running timer: set startedAt so elapsed ≈ durationSeconds (Clockify-style inline edit). */
+export function elapsedDurationToStartedAt(
+  durationSeconds: number,
+  now: Date = new Date(),
+): { startAt: string } | { error: string } {
+  if (!Number.isFinite(durationSeconds) || durationSeconds < 0) {
+    return { error: "Invalid duration." };
+  }
+  return { startAt: new Date(now.getTime() - durationSeconds * 1_000).toISOString() };
 }
 
 export function applyStartTimeToDraft(draft: TimeEntryDraft, startTime: string): TimeEntryDraft {
@@ -230,8 +311,19 @@ if (import.meta.main) {
   console.assert(!("error" in ok));
   const future = activeTimerStartToIso(draft.date, "23:00", now);
   console.assert("error" in future);
+  const fromElapsed = elapsedDurationToStartedAt(3_600, now);
+  console.assert(!("error" in fromElapsed));
+  if (!("error" in fromElapsed)) {
+    console.assert(new Date(fromElapsed.startAt).getTime() === now.getTime() - 3_600_000);
+  }
   const window = createDefaultManualTimeWindow(now);
   console.assert(window.date === "2026-07-06");
   console.assert(window.startTime === "11:00");
   console.assert(window.endTime === "12:00");
+  console.assert(formatClockTimeLabel("05:17") === "5:17AM");
+  console.assert(formatClockTimeLabel("22:38") === "10:38PM");
+  console.assert(parseClockTimeLabel("5:17AM") === "05:17");
+  console.assert(parseClockTimeLabel("10:38 pm") === "22:38");
+  console.assert(parseClockTimeLabel("17:17") === "17:17");
+  console.assert(parseClockTimeLabel("bogus") === null);
 }
