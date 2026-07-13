@@ -6,6 +6,14 @@ export const teamScopedInputSchema = z.object({
   teamId: z.string().min(1),
 });
 
+export const agencyTagSchema = z.object({
+  id: z.string().min(1),
+  teamId: z.string().min(1),
+  name: z.string().min(1),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
 export const agencyClientCategorySchema = z.enum(["internal", "external"]);
 
 export const agencyClientSchema = z.object({
@@ -167,8 +175,10 @@ export const agencyTimeEntrySchema = z.object({
   projectName: z.string().min(1),
   clientId: z.string().min(1),
   clientName: z.string().min(1),
+  tags: z.array(agencyTagSchema),
   source: agencyTimeEntrySourceSchema,
   description: z.string(),
+  isBillable: z.boolean(),
   startedAt: z.string().datetime(),
   endedAt: z.string().datetime(),
   durationSeconds: z.number().int().nonnegative(),
@@ -184,7 +194,9 @@ export const agencyActiveTimerSchema = z.object({
   taskId: z.string().nullable(),
   taskTitle: z.string().nullable(),
   projectName: z.string().min(1),
+  tags: z.array(agencyTagSchema),
   description: z.string(),
+  isBillable: z.boolean(),
   startedAt: z.string().datetime(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
