@@ -135,9 +135,8 @@ export const shellPageIntroClass = "text-sm text-muted";
 export const shellInPageSubnavClass =
   "-mx-[var(--shell-nest-pad,1rem)] border-b border-default bg-default px-[var(--shell-nest-pad,1rem)]";
 
-/** Outer content frame radius — set on the shell page transition in execution mode. */
-export const shellContentFrameClass =
-  "rounded-[var(--shell-outer-radius,0px)] overflow-hidden";
+/** Outer content frame — set on the shell page transition in execution mode. */
+export const shellContentFrameClass = "overflow-hidden";
 
 /** Inner panel radius — tracker, log, and other nest children. */
 export const shellInnerRadiusClass = "rounded-[var(--shell-inner-radius,1rem)]";

@@ -668,8 +668,9 @@ body {
 }
 
 .app-shell--execution .app-shell__main {
-  padding: var(--shell-chrome-inset);
-  padding-bottom: calc(var(--shell-chrome-inset) + var(--app-shell-mobile-nav-height));
+  /* Open right/bottom chrome; keep top/left inset (and mobile nav clearance). */
+  padding: var(--shell-chrome-inset) 0 var(--app-shell-mobile-nav-height)
+    var(--shell-chrome-inset);
 }
 
 @media (min-width: 768px) {
@@ -679,7 +680,7 @@ body {
   }
 
   .app-shell--execution .app-shell__main {
-    padding-bottom: var(--shell-chrome-inset);
+    padding-bottom: 0;
   }
 }
 

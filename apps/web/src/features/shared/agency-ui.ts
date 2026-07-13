@@ -286,23 +286,36 @@ export const agencyTimeTrackerActiveRowClass =
   "flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2";
 
 export const agencyTimeTrackerStatusZoneClass =
-  "flex min-w-0 max-w-[14rem] shrink items-center gap-1.5 sm:max-w-[18rem]";
+  "flex min-w-0 max-w-[14rem] items-center gap-1.5 sm:max-w-[18rem]";
 
-export const agencyTimeTrackerActionsZoneClass = "flex shrink-0 items-center gap-2 pl-0.5 sm:gap-3";
+/** Tracker right cluster — inset ticks between description and each control group. */
+export const agencyTimeTrackerRailClass = cn(
+  "relative flex min-w-0 shrink-0 items-stretch self-stretch",
+  "before:pointer-events-none before:absolute before:inset-y-2 before:left-0 before:w-px before:bg-border/40",
+  "[&>*+*]:relative [&>*+*]:before:pointer-events-none [&>*+*]:before:absolute [&>*+*]:before:inset-y-2 [&>*+*]:before:left-0 [&>*+*]:before:w-px [&>*+*]:before:bg-border/40",
+);
 
+export const agencyTimeTrackerRailCellClass =
+  "box-border flex shrink-0 items-center px-2 py-2 sm:px-2.5";
+
+/** @deprecated Use agencyTimeTrackerRailClass — kept for gradual migration. */
+export const agencyTimeTrackerActionsZoneClass = agencyTimeTrackerRailClass;
+
+/** @deprecated Use agencyTimeTrackerRailClass inset ticks. */
 export const agencyTimeTrackerStatusDividerClass =
-  "mx-0.5 h-8 shrink-0 border-l border-dashed border-default";
+  "mx-0.5 h-8 shrink-0 self-center w-px bg-border/40";
+
+export const agencyTimeTrackerInnerDividerClass = "h-6 w-px shrink-0 self-center bg-border/40";
 
 export const agencyTimeTrackerMetricClass = cn(
   agencyWorkMetricClass,
   "w-[5rem] shrink-0 text-center",
 );
 
-export const agencyTimeTrackerMetricButtonClass = cn(
+export const agencyTimeTrackerElapsedInputClass = cn(
   agencyTimeTrackerMetricClass,
-  "inline-flex h-8 items-center justify-center rounded-md px-1 transition-colors hover:bg-elevated",
-  agencyFocusRingClass,
-  "motion-reduce:transition-none",
+  "h-8 rounded-[2px] border border-transparent bg-transparent px-1 shadow-none",
+  "focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30",
 );
 
 export const agencyTimeTrackerTaskChooserTriggerClass = cn(
@@ -334,7 +347,7 @@ export const agencyTimeTrackerSuggestionPanelClass = cn(
 );
 
 export const agencyTimeTrackerSuggestionOptionClass = cn(
-  "flex w-full min-w-0 flex-col items-start gap-1.5 rounded-lg px-2.5 py-2.5 text-left",
+  "flex w-full min-w-0 flex-row items-center gap-2 rounded-[2px] px-2.5 py-2 text-left",
   agencyFocusRingClass,
 );
 
@@ -349,7 +362,7 @@ export const agencyTimeEntryRowClass = cn(
 );
 
 /** Nested child row inside an expanded multi-entry group. */
-export const agencyTimeEntryMultiChildClass = "border-b border-dotted border-border/40 pl-8";
+export const agencyTimeEntryMultiChildClass = "border-b border-dotted border-border/40";
 
 /** Bottom rule for expanded multi-entry wrappers (matches row separators). */
 export const agencyTimeEntryGroupBorderClass = "border-b border-dotted border-border/40";
@@ -358,6 +371,16 @@ export const agencyTimeEntryGroupBorderClass = "border-b border-dotted border-bo
 export const agencyTimeEntryTimeInputClass = cn(
   "h-7 w-full min-w-0 appearance-none border-0 bg-transparent px-0 font-mono text-xs font-medium tabular-nums text-muted shadow-none focus-visible:ring-0 focus-visible:text-highlighted",
   "[&::-webkit-calendar-picker-indicator]:hidden",
+);
+
+/** Clockify-style free-text start/end — plain like multi range; border only on hover/focus. */
+export const agencyTimeEntryClockTimeInputClass = cn(
+  // Override shared Input defaults (rounded-4xl, bg-input/30, focus ring).
+  "h-7 w-[4.25rem] min-w-0 shrink appearance-none rounded-none border border-transparent bg-transparent px-0.5 py-0",
+  "text-center font-mono text-xs font-medium tabular-nums text-muted shadow-none outline-none",
+  "transition-colors hover:border-border",
+  "focus-visible:border-primary focus-visible:bg-transparent focus-visible:text-highlighted focus-visible:ring-0",
+  "disabled:cursor-not-allowed disabled:opacity-60",
 );
 
 /** Left cluster — badge, description, task (free; not column-locked). */
@@ -407,10 +430,19 @@ export const agencyTimeEntryRailDurationClass = cn(
   "relative w-[133px] whitespace-nowrap",
 );
 
-/** Two 32px icon targets; content-box so px does not steal width. */
-export const agencyTimeEntryRailActionsClass = cn(
-  "box-border flex h-full w-[112px] shrink-0 items-center justify-end gap-0 px-0",
+/** Play / more — 56+56; rail `[&>*+*]:before` draws the divider between them. */
+export const agencyTimeEntryRailPlayClass = cn(
+  agencyTimeEntryRailCellClass,
+  "w-[56px] justify-center",
 );
+
+export const agencyTimeEntryRailMoreClass = cn(
+  agencyTimeEntryRailCellClass,
+  "w-[56px] justify-center",
+);
+
+/** Combined 112px actions zone for day headers / skeletons. */
+export const agencyTimeEntryRailActionsClass = "flex h-full w-[112px] shrink-0 items-stretch";
 
 /** Day band — same rail geometry as rows so totals lock to the duration column. */
 export const agencyTimeEntrySectionHeaderClass = cn("flex h-[40px] items-stretch bg-background");
