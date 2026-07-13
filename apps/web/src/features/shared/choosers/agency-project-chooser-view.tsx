@@ -41,6 +41,7 @@ export function AgencyProjectChooserView({ view }: AgencyProjectChooserViewProps
       : allowEmpty
         ? emptyLabel
         : placeholder;
+  const linkStyle = !selectedProject && !loading && placeholder.trim().startsWith("+");
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -57,7 +58,7 @@ export function AgencyProjectChooserView({ view }: AgencyProjectChooserViewProps
             "motion-reduce:transition-none",
             className,
           )}
-          aria-label="Choose project"
+          aria-label={selectedProject ? `Project: ${selectedProject.name}` : placeholder}
         >
           {loading ? (
             <span className="truncate">Loading…</span>
@@ -67,7 +68,7 @@ export function AgencyProjectChooserView({ view }: AgencyProjectChooserViewProps
               <span className="min-w-0 flex-1 truncate">{triggerLabel}</span>
             </>
           )}
-          <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden />
+          {linkStyle ? null : <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden />}
         </button>
       </PopoverTrigger>
       <PopoverContent

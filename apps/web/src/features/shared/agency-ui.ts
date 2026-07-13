@@ -178,12 +178,9 @@ export const agencySearchHighlightMarkClass = "agency-search-highlight-mark";
 export const agencyTaskRowNeedsDescriptionClass = "bg-warning/5";
 
 /** Work time surface — stacks tracker and log as separate panels. */
-export const agencyTimePaneStackClass = "flex min-h-0 min-w-0 flex-1 flex-col gap-4 font-sans";
+export const agencyTimePaneStackClass = "flex min-h-0 min-w-0 flex-1 flex-col gap-[20px] font-sans";
 
-export const agencyTimePaneBodyClass = cn(
-  "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden border border-default bg-default",
-  "rounded-[var(--shell-inner-radius,1rem)]",
-);
+export const agencyTimePaneBodyClass = "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden";
 
 export const agencyTimeTrackerPanelClass = "relative z-20 shrink-0 overflow-visible";
 
@@ -194,7 +191,7 @@ export const agencyTimeLogPanelClass = "flex min-h-0 flex-1 flex-col overflow-hi
 export const agencyWorkTabShellClass = "shrink-0";
 
 export const agencyWorkTrackerCardClass =
-  "shrink-0 overflow-hidden rounded-[var(--shell-inner-radius,1rem)] border border-default bg-default";
+  "shrink-0 overflow-hidden rounded-[2px] border border-default bg-default";
 
 export const agencyWorkTabBarClass =
   "flex min-h-12 shrink-0 items-center justify-between gap-2 border-b border-default px-2 sm:px-3";
@@ -283,15 +280,15 @@ export const agencyTimeTrackerDescriptionLabelClass =
   "text-xs font-semibold leading-none text-muted";
 
 export const agencyTimeTrackerDescriptionInputClass =
-  "block h-8 w-full min-w-0 truncate rounded-none border-0 bg-transparent px-0.5 py-0 text-sm font-medium leading-snug shadow-none";
+  "block h-8 w-full min-w-0 truncate rounded-none border-0 bg-transparent px-0.5 py-0 text-sm font-normal leading-snug shadow-none";
 
 export const agencyTimeTrackerActiveRowClass =
   "flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2";
 
 export const agencyTimeTrackerStatusZoneClass =
-  "flex min-w-0 max-w-[10rem] shrink items-center gap-1.5 sm:max-w-[13rem]";
+  "flex min-w-0 max-w-[14rem] shrink items-center gap-1.5 sm:max-w-[18rem]";
 
-export const agencyTimeTrackerActionsZoneClass = "flex shrink-0 items-center gap-3 pl-0.5";
+export const agencyTimeTrackerActionsZoneClass = "flex shrink-0 items-center gap-2 pl-0.5 sm:gap-3";
 
 export const agencyTimeTrackerStatusDividerClass =
   "mx-0.5 h-8 shrink-0 border-l border-dashed border-default";
@@ -309,14 +306,19 @@ export const agencyTimeTrackerMetricButtonClass = cn(
 );
 
 export const agencyTimeTrackerTaskChooserTriggerClass = cn(
-  "h-8 min-h-0 w-full min-w-0 max-w-full justify-start gap-1 overflow-hidden border-0 bg-transparent px-0 py-0 text-xs font-normal text-highlighted shadow-none",
-  "transition-colors hover:bg-elevated/80",
+  "h-8 min-h-0 w-auto min-w-0 max-w-full justify-start gap-1 overflow-hidden rounded-none border-0 bg-transparent px-0 py-0 text-xs font-normal text-highlighted shadow-none",
+  "transition-colors hover:bg-transparent hover:opacity-90",
   agencyFocusRingClass,
   "motion-reduce:transition-none",
 );
 
+export const agencyTimeTrackerProjectEmptyTriggerClass = cn(
+  agencyTimeTrackerTaskChooserTriggerClass,
+  "text-info hover:text-info",
+);
+
 export const agencyTimeTrackerPrimaryActionClass =
-  "h-8 shrink-0 whitespace-nowrap rounded-full px-6 text-xs font-semibold";
+  "h-8 min-w-[5.5rem] shrink-0 whitespace-nowrap rounded-[2px] bg-info px-4 text-xs font-normal uppercase text-white hover:bg-info/90 hover:text-white";
 
 export const agencyTimeTrackerIconActionClass = cn(
   "h-8 w-8 shrink-0 rounded-full p-0",
@@ -343,7 +345,7 @@ export const agencyTimeDayHeaderClass = cn(
 export const agencyTimeWeekHeaderClass = "sr-only";
 
 export const agencyTimeEntryRowClass = cn(
-  "flex min-h-16 items-stretch border-b border-dotted border-border/40 bg-clip-padding transition-colors hover:bg-elevated/50 motion-reduce:transition-none",
+  "flex min-h-[60px] items-stretch border-b border-dotted border-border/40 bg-clip-padding transition-colors hover:bg-elevated/50 motion-reduce:transition-none",
 );
 
 /** Nested child row inside an expanded multi-entry group. */
@@ -359,7 +361,8 @@ export const agencyTimeEntryTimeInputClass = cn(
 );
 
 /** Left cluster — badge, description, task (free; not column-locked). */
-export const agencyTimeEntryMainClass = "flex min-w-0 flex-1 items-center gap-3 px-4 py-3 sm:px-5";
+export const agencyTimeEntryMainClass =
+  "flex min-w-0 flex-1 items-center gap-0 py-[10px] pl-[10px]";
 
 /**
  * Right rail — time | duration | actions.
@@ -374,48 +377,63 @@ export const agencyTimeEntryRailClass = cn(
 /** Day-header rail — same cell widths, no vertical separators. */
 export const agencyTimeEntryRailQuietClass = "flex shrink-0 items-stretch";
 
-export const agencyTimeEntryRailCellClass = "box-content flex h-full shrink-0 items-center px-2.5";
+export const agencyTimeEntryRailCellClass =
+  "box-border flex h-full shrink-0 items-center px-[10px]";
+
+export const agencyTimeEntryRailTagClass = cn(
+  agencyTimeEntryRailCellClass,
+  "w-[71px] justify-center overflow-hidden",
+);
+
+export const agencyTimeEntryRailBillableClass = cn(
+  agencyTimeEntryRailCellClass,
+  "w-[56px] justify-center",
+);
 
 /** Content-box width for locale ranges like "12:29 - 14:54" / "9:29 pm - 9:40 pm". */
 export const agencyTimeEntryRailTimeClass = cn(
   agencyTimeEntryRailCellClass,
-  "w-[15ch] whitespace-nowrap",
+  "w-[168px] whitespace-nowrap",
+);
+
+export const agencyTimeEntryRailCalendarClass = cn(
+  agencyTimeEntryRailCellClass,
+  "w-[63px] justify-center",
 );
 
 /** Content-box width for bold tabular "HH:MM:SS". */
 export const agencyTimeEntryRailDurationClass = cn(
   agencyTimeEntryRailCellClass,
-  "relative w-[9ch] whitespace-nowrap",
+  "relative w-[133px] whitespace-nowrap",
 );
 
 /** Two 32px icon targets; content-box so px does not steal width. */
 export const agencyTimeEntryRailActionsClass = cn(
-  "box-content flex h-full w-16 shrink-0 items-center justify-center gap-0.5 px-1",
+  "box-border flex h-full w-[112px] shrink-0 items-center justify-end gap-0 px-0",
 );
 
 /** Day band — same rail geometry as rows so totals lock to the duration column. */
-export const agencyTimeEntrySectionHeaderClass = cn(
-  "flex min-h-12 items-stretch border-b border-default bg-elevated/40",
-);
+export const agencyTimeEntrySectionHeaderClass = cn("flex h-[40px] items-stretch bg-background");
 
 export const agencyTimeEntrySectionLabelClass = cn(
-  "flex min-w-0 flex-1 items-center px-4 sm:px-5",
+  "flex min-w-0 flex-1 items-center px-[20px]",
   agencyWorkTitleClass,
 );
 
 /** One day block — solid surface so background gutters read as hard separation. */
-export const agencyTimeEntryDayGroupClass = "border-b border-dotted border-border/40 bg-default";
+export const agencyTimeEntryDayGroupClass =
+  "overflow-hidden rounded-[2px] border border-default bg-default";
 
-/** Days own the scan rhythm — no visible week chrome. */
+/** Week band with visible week total chrome (Clockify-style). */
 export const agencyTimeWeekGroupClass = "flex flex-col";
 
 export const agencyTimeWeekGroupHeaderClass =
-  "flex h-8 shrink-0 items-center justify-between gap-3 bg-transparent px-4 sm:px-5";
+  "flex h-[40px] shrink-0 items-center justify-between gap-3 bg-transparent";
 
-export const agencyTimeWeekGroupBodyClass = "flex flex-col gap-10 bg-background";
+export const agencyTimeWeekGroupBodyClass = "flex flex-col gap-[20px] bg-background";
 
 /** Stack of week sections — same gutter as days so week boundaries stay invisible. */
-export const agencyTimeWeekStackClass = "flex min-h-full flex-col gap-10 bg-background";
+export const agencyTimeWeekStackClass = "flex min-h-full flex-col gap-[20px] bg-background";
 
 export const agencyTimeEntryRowHighlightClass =
   "bg-success/10 motion-reduce:transition-none transition-colors duration-500";
@@ -428,7 +446,7 @@ export const agencyTimeSuggestionChipClass = cn(
 );
 
 export const agencyTimeWeekFooterClass = cn(
-  "flex h-10 shrink-0 items-center justify-between border-t border-default px-4 sm:px-5",
+  "flex h-[40px] shrink-0 items-center justify-between border-t border-default px-[20px]",
   "bg-elevated/40",
 );
 
