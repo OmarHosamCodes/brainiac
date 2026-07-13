@@ -46,6 +46,11 @@ import {
   useAgencyTimeTrackingStore,
   useTrackerDraft,
 } from "@/features/time-tracking/stores/agency-time-tracking";
+import {
+  createAgencyTag,
+  useAgencyTagsQuery,
+} from "@/features/time-tracking/hooks/use-agency-tags";
+import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-tag-chooser";
 
 const START_TIME_DEBOUNCE_MS = 300;
 
@@ -73,7 +78,12 @@ export type AgencyTimeTrackerSuggestion = AgencyDescriptionSuggestion;
 export type AgencyTimeTrackerViewModel = {
   teamId: string;
   timerDescription: string;
+  selectedProjectId: string;
   selectedTaskId: string;
+  selectedTagIds: string[];
+  tags: AgencyTagOption[];
+  tagCreatePending: boolean;
+  isBillable: boolean;
   taskChooserOpen: boolean;
   taskChooserLabel: string;
   taskChooserWarning: boolean;
@@ -112,7 +122,11 @@ export type AgencyTimeTrackerViewModel = {
   onDescriptionBlur: (event: FocusEvent<HTMLInputElement>) => void;
   onDescriptionKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onSuggestionActiveIndexChange: (index: number) => void;
+  onProjectChange: (projectId: string) => void;
   onTaskChange: (taskId: string) => void;
+  onTagIdsChange: (tagIds: string[]) => void;
+  onCreateTag: (name: string) => void;
+  onIsBillableChange: (isBillable: boolean) => void;
   onTaskChooserOpenChange: (open: boolean) => void;
   onStartTimePopoverOpenChange: (open: boolean) => void;
   onStartTimeDraftChange: (patch: Partial<AgencyTimerStartDraft>) => void;
@@ -139,6 +153,8 @@ export function useAgencyTimeTracker({
   const setTrackerDescription = useAgencyTimeTrackingStore((s) => s.setTrackerDescription);
   const setTrackerProjectId = useAgencyTimeTrackingStore((s) => s.setTrackerProjectId);
   const setTrackerTaskId = useAgencyTimeTrackingStore((s) => s.setTrackerTaskId);
+  const setTrackerTagIds = useAgencyTimeTrackingStore((s) => s.setTrackerTagIds);
+  const setTrackerIsBillable = useAgencyTimeTrackingStore((s) => s.setTrackerIsBillable);
   const ensureTrackerDraft = useAgencyTimeTrackingStore((s) => s.ensureTrackerDraft);
   const syncDraftFromActiveTimer = useAgencyTimeTrackingStore((s) => s.syncDraftFromActiveTimer);
   const startTimerAction = useAgencyTimeTrackingStore((s) => s.startTimer);
@@ -168,22 +184,33 @@ export function useAgencyTimeTracker({
 
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId);
+  const tagsQuery = useAgencyTagsQuery(teamId);
   const recentEntriesQuery = useAgencyTimeEntriesQuery(teamId, 1, 50);
   const activeTimerQuery = useAgencyActiveTimerQuery(teamId);
+  const [tagCreatePending, setTagCreatePending] = useState(false);
 
   const projects = projectsQuery.data?.items ?? [];
   const tasks = tasksQuery.items ?? [];
+  const tags = (tagsQuery.data?.items ?? []) as AgencyTagOption[];
   const activeTimer = activeTimerQuery.data?.timer ?? null;
   useAgencyTrackingFavicon(Boolean(activeTimer));
   const trackerDraft = useTrackerDraft(teamId);
 
   const selectedTaskId = trackerDraft?.taskId ?? "";
+  const selectedTagIds = trackerDraft?.tagIds ?? [];
+  const isBillable = trackerDraft?.isBillable ?? true;
   const timerDescription = trackerDraft?.description ?? "";
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
   const cachedTask =
     selectedTask ??
     (selectedTaskId && teamId ? findProjectTaskInCache(teamId, selectedTaskId) : null);
+  const selectedProjectId =
+    trackerDraft?.projectId ||
+    activeTimer?.projectId ||
+    cachedTask?.projectId ||
+    selectedTask?.projectId ||
+    "";
   const selectedTaskTitle = activeTimer?.taskTitle ?? cachedTask?.title ?? null;
   const resolvedTimerTask = resolveAgencyTimerTaskRef({
     activeTimer,
@@ -249,14 +276,24 @@ export function useAgencyTimeTracker({
 
   const manualTimeEntryDraft = useMemo(
     (): TimeEntryDraft => ({
+      projectId: selectedProjectId,
       taskId: selectedTaskId,
+      tagIds: selectedTagIds,
+      isBillable,
       date: manualDraft.date,
       startTime: manualDraft.startTime,
       endTime: manualDraft.endTime,
       durationInput: "",
       description: timerDescription,
     }),
-    [manualDraft, selectedTaskId, timerDescription],
+    [
+      isBillable,
+      manualDraft,
+      selectedProjectId,
+      selectedTagIds,
+      selectedTaskId,
+      timerDescription,
+    ],
   );
 
   const manualError = useMemo(
@@ -356,6 +393,8 @@ export function useAgencyTimeTracker({
       project: startProject,
       task: taskExplicitlyChosenRef.current && selectedTask ? selectedTask : null,
       description: timerDescription,
+      tagIds: trackerDraft?.tagIds,
+      isBillable: trackerDraft?.isBillable,
     });
     taskExplicitlyChosenRef.current = false;
   }
@@ -378,6 +417,8 @@ export function useAgencyTimeTracker({
       description: timerDescription,
       startAt: range.startAt,
       endAt: range.endAt,
+      tagIds: trackerDraft?.tagIds,
+      isBillable: trackerDraft?.isBillable,
     });
 
     if (!created) return;
@@ -460,6 +501,8 @@ export function useAgencyTimeTracker({
       description: timerDescription,
       discard,
       task: resolvedTimerTask ? { id: resolvedTimerTask.id, title: resolvedTimerTask.title } : null,
+      tagIds: trackerDraft?.tagIds,
+      isBillable: trackerDraft?.isBillable,
     });
   }
 
@@ -518,7 +561,10 @@ export function useAgencyTimeTracker({
     setManualDraft((current) => {
       const next = applyStartTimeToDraft(
         {
+          projectId: selectedProjectId,
           taskId: selectedTaskId,
+          tagIds: selectedTagIds,
+          isBillable,
           date: current.date,
           startTime: current.startTime,
           endTime: current.endTime,
@@ -535,7 +581,10 @@ export function useAgencyTimeTracker({
     setManualDraft((current) => {
       const next = applyEndTimeToDraft(
         {
+          projectId: selectedProjectId,
           taskId: selectedTaskId,
+          tagIds: selectedTagIds,
+          isBillable,
           date: current.date,
           startTime: current.startTime,
           endTime: current.endTime,
@@ -555,7 +604,12 @@ export function useAgencyTimeTracker({
   return {
     teamId,
     timerDescription,
+    selectedProjectId,
     selectedTaskId,
+    selectedTagIds,
+    tags,
+    tagCreatePending,
+    isBillable,
     taskChooserOpen,
     taskChooserLabel,
     taskChooserWarning: !activeTimerHasTask && !resolvedTimerTask && taskChooserOpen,
@@ -595,6 +649,18 @@ export function useAgencyTimeTracker({
     onDescriptionBlur: handleDescriptionBlur,
     onDescriptionKeyDown: handleDescriptionKeyDown,
     onSuggestionActiveIndexChange: setActiveSuggestionIndex,
+    onProjectChange: (projectId) => {
+      setTrackerProjectId(teamId, projectId);
+      if (!projectId) {
+        taskExplicitlyChosenRef.current = false;
+        setTrackerTaskId(teamId, "");
+        return;
+      }
+      if (selectedTask && selectedTask.projectId !== projectId) {
+        taskExplicitlyChosenRef.current = false;
+        setTrackerTaskId(teamId, "");
+      }
+    },
     onTaskChange: (value) => {
       taskExplicitlyChosenRef.current = Boolean(value);
       setTrackerTaskId(teamId, value || "");
@@ -603,6 +669,17 @@ export function useAgencyTimeTracker({
         setTrackerProjectId(teamId, task.projectId);
       }
     },
+    onTagIdsChange: (tagIds) => setTrackerTagIds(teamId, tagIds),
+    onCreateTag: (name) => {
+      if (!teamId || tagCreatePending) return;
+      setTagCreatePending(true);
+      void createAgencyTag(teamId, name)
+        .then((created) => {
+          setTrackerTagIds(teamId, [...new Set([...selectedTagIds, created.id])]);
+        })
+        .finally(() => setTagCreatePending(false));
+    },
+    onIsBillableChange: (next) => setTrackerIsBillable(teamId, next),
     onTaskChooserOpenChange: setTaskChooserOpen,
     onStartTimePopoverOpenChange,
     onStartTimeDraftChange,

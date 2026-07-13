@@ -1,6 +1,8 @@
 import { CalendarClock, MoreVertical, Timer, Trash2 } from "lucide-react";
 
 import { AgencyDescriptionSuggestionMenu } from "@/features/time-tracking/agency-description-suggestion-menu";
+import { AgencyProjectChooser } from "@/features/shared/choosers/agency-project-chooser";
+import { AgencyTagChooser } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { Button } from "@/ui/button";
@@ -19,6 +21,7 @@ import {
   agencyTimeTrackerMetricButtonClass,
   agencyTimeTrackerMetricClass,
   agencyTimeTrackerPrimaryActionClass,
+  agencyTimeTrackerProjectEmptyTriggerClass,
   agencyTimeTrackerStatusDividerClass,
   agencyTimeTrackerStatusZoneClass,
   agencyTimeTrackerTaskChooserTriggerClass,
@@ -33,10 +36,20 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
   const elapsedLabel = view.elapsedLabel ?? "00:00:00";
   const taskChooserTriggerClass = cn(
     agencyTimeTrackerTaskChooserTriggerClass,
+    "max-w-[9rem]",
     view.taskChooserWarning &&
       "text-warning hover:text-warning [&_svg]:text-warning [&_span]:text-warning",
   );
   const idleManual = !view.activeTimer && view.mode === "manual";
+  const controlsDisabled =
+    !view.teamId ||
+    view.isTimerMutationPending ||
+    view.isManualCreatePending ||
+    view.projectsLoading ||
+    view.tasksLoading;
+  const projectTriggerClass = view.selectedProjectId
+    ? cn(agencyTimeTrackerTaskChooserTriggerClass, "max-w-[9rem]")
+    : cn(agencyTimeTrackerProjectEmptyTriggerClass, "max-w-[9rem]");
 
   return (
     <div className={agencyTimeTrackerCardClass}>
@@ -76,13 +89,24 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
       <div className={agencyTimeTrackerStatusDividerClass} aria-hidden />
 
       <div className={agencyTimeTrackerStatusZoneClass}>
+        <AgencyProjectChooser
+          value={view.selectedProjectId}
+          onValueChange={view.onProjectChange}
+          projects={view.projects}
+          placeholder="+ Project"
+          className={projectTriggerClass}
+          loading={view.projectsLoading}
+          disabled={controlsDisabled}
+          contentAlign="end"
+        />
         <AgencyTaskChooser
           value={view.selectedTaskId}
           onValueChange={view.onTaskChange}
           projects={view.projects}
           tasks={view.tasks}
+          filterProjectId={view.selectedProjectId || undefined}
           placeholder="Task"
-          triggerFormat="task-client"
+          triggerFormat="task-only"
           highlightSearch
           fallbackTaskTitle={
             view.taskChooserLabel !== "Choose task" ? view.taskChooserLabel : undefined
@@ -91,13 +115,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
           fallbackProjectName={view.activeTimer?.projectName}
           className={taskChooserTriggerClass}
           loading={view.projectsLoading || view.tasksLoading}
-          disabled={
-            !view.teamId ||
-            view.isTimerMutationPending ||
-            view.isManualCreatePending ||
-            view.projectsLoading ||
-            view.tasksLoading
-          }
+          disabled={controlsDisabled || !view.selectedProjectId}
           open={view.taskChooserOpen}
           contentAlign="end"
           onOpenChange={view.onTaskChooserOpenChange}
@@ -107,6 +125,29 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
       <div className={agencyTimeTrackerStatusDividerClass} aria-hidden />
 
       <div className={agencyTimeTrackerActionsZoneClass}>
+        <AgencyTagChooser
+          value={view.selectedTagIds}
+          tags={view.tags}
+          onValueChange={view.onTagIdsChange}
+          onCreateTag={view.onCreateTag}
+          creating={view.tagCreatePending}
+          disabled={controlsDisabled}
+          compact
+        />
+        <button
+          type="button"
+          className={cn(
+            agencyTimeTrackerIconActionClass,
+            view.isBillable ? "text-info" : "text-muted",
+          )}
+          aria-pressed={view.isBillable}
+          aria-label={view.isBillable ? "Billable" : "Non-billable"}
+          disabled={controlsDisabled}
+          onClick={() => view.onIsBillableChange(!view.isBillable)}
+        >
+          $
+        </button>
+
         {view.activeTimer ? (
           <Popover
             open={view.startTimePopoverOpen}
@@ -215,7 +256,9 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
               size="sm"
               className={cn(
                 agencyTimeTrackerPrimaryActionClass,
-                !view.canStopTimer && "text-muted",
+                view.canStopTimer
+                  ? "bg-destructive text-white hover:bg-destructive/90"
+                  : "bg-transparent text-muted",
                 view.stopButtonWarningRing &&
                   "ring-2 ring-warning/30 ring-offset-1 ring-offset-background",
               )}
