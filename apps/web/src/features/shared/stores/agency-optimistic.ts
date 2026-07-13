@@ -78,6 +78,14 @@ export type AgencyOptimisticTaskMessage = {
   }>;
 };
 
+export type AgencyOptimisticTag = {
+  id: string;
+  teamId: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AgencyOptimisticTimeEntry = {
   id: string;
   teamId: string;
@@ -91,6 +99,8 @@ export type AgencyOptimisticTimeEntry = {
   clientName: string;
   source: "timer" | "manual";
   description: string;
+  tags: AgencyOptimisticTag[];
+  isBillable: boolean;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
@@ -107,6 +117,8 @@ export type AgencyOptimisticActiveTimer = {
   taskTitle: string | null;
   projectName: string;
   description: string;
+  tags: AgencyOptimisticTag[];
+  isBillable: boolean;
   startedAt: string;
   createdAt: string;
   updatedAt: string;

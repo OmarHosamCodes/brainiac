@@ -1,7 +1,10 @@
 import { formatDuration } from "@/lib/utils/format-duration";
 
 export type TimeEntryDraft = {
+  projectId: string;
   taskId: string;
+  tagIds: string[];
+  isBillable: boolean;
   date: string;
   startTime: string;
   endTime: string;
@@ -10,7 +13,10 @@ export type TimeEntryDraft = {
 };
 
 type DraftEntrySource = {
+  projectId?: string;
   taskId: string | null;
+  tags?: Array<{ id: string }>;
+  isBillable?: boolean;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
@@ -68,7 +74,10 @@ export function entryToDraft(entry: DraftEntrySource): TimeEntryDraft {
   const end = new Date(entry.endedAt);
 
   return {
+    projectId: entry.projectId ?? "",
     taskId: entry.taskId ?? "",
+    tagIds: entry.tags?.map((tag) => tag.id) ?? [],
+    isBillable: entry.isBillable ?? true,
     date: toDateInputValue(start),
     startTime: toTimeInputValue(start),
     endTime: toTimeInputValue(end),

@@ -10,7 +10,10 @@ import {
 } from "./time-entry-draft";
 
 const baseDraft: TimeEntryDraft = {
+  projectId: "project-1",
   taskId: "task-1",
+  tagIds: [],
+  isBillable: true,
   date: "2026-07-04",
   startTime: "23:00",
   endTime: "22:00",
