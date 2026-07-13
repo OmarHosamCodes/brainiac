@@ -1,7 +1,6 @@
 import { CalendarClock, MoreVertical, Timer, Trash2 } from "lucide-react";
 
 import { AgencyDescriptionSuggestionMenu } from "@/features/time-tracking/agency-description-suggestion-menu";
-import { AgencyProjectChooser } from "@/features/shared/choosers/agency-project-chooser";
 import { AgencyTagChooser } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
@@ -11,19 +10,17 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import type { AgencyTimeTrackerViewModel } from "@/features/time-tracking/hooks/use-agency-time-tracker";
 import {
   agencyInputPlaceholderClass,
-  agencyLabelClass,
   agencyTimeEntryTimeInputClass,
-  agencyTimeTrackerActionsZoneClass,
   agencyTimeTrackerCardClass,
   agencyTimeTrackerDescriptionInputClass,
   agencyTimeTrackerDescriptionZoneClass,
+  agencyTimeTrackerElapsedInputClass,
   agencyTimeTrackerIconActionClass,
-  agencyTimeTrackerMetricButtonClass,
+  agencyTimeTrackerInnerDividerClass,
   agencyTimeTrackerMetricClass,
   agencyTimeTrackerPrimaryActionClass,
-  agencyTimeTrackerProjectEmptyTriggerClass,
-  agencyTimeTrackerStatusDividerClass,
-  agencyTimeTrackerStatusZoneClass,
+  agencyTimeTrackerRailCellClass,
+  agencyTimeTrackerRailClass,
   agencyTimeTrackerTaskChooserTriggerClass,
 } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
@@ -47,9 +44,6 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
     view.isManualCreatePending ||
     view.projectsLoading ||
     view.tasksLoading;
-  const projectTriggerClass = view.selectedProjectId
-    ? cn(agencyTimeTrackerTaskChooserTriggerClass, "max-w-[9rem]")
-    : cn(agencyTimeTrackerProjectEmptyTriggerClass, "max-w-[9rem]");
 
   return (
     <div className={agencyTimeTrackerCardClass}>
@@ -71,6 +65,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
             agencyTimeTrackerDescriptionInputClass,
             agencyInputPlaceholderClass,
             "focus-visible:ring-0",
+            view.suggestionsOpen && "rounded-[2px] ring-1 ring-primary",
           )}
           disabled={view.isTimerMutationPending || view.isManualCreatePending || !view.teamId}
         />
@@ -86,249 +81,211 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
         ) : null}
       </div>
 
-      <div className={agencyTimeTrackerStatusDividerClass} aria-hidden />
+      <div className={agencyTimeTrackerRailClass}>
+        <div className={agencyTimeTrackerRailCellClass}>
+          <AgencyTaskChooser
+            value={view.selectedTaskId}
+            onValueChange={view.onTaskChange}
+            projects={view.projects}
+            tasks={view.tasks}
+            placeholder="Task"
+            triggerFormat="task-client"
+            highlightSearch
+            fallbackTaskTitle={
+              view.taskChooserLabel !== "Choose task" ? view.taskChooserLabel : undefined
+            }
+            fallbackProjectId={view.activeTimer?.projectId}
+            fallbackProjectName={view.activeTimer?.projectName}
+            className={taskChooserTriggerClass}
+            loading={view.projectsLoading || view.tasksLoading}
+            disabled={controlsDisabled}
+            open={view.taskChooserOpen}
+            contentAlign="end"
+            onOpenChange={view.onTaskChooserOpenChange}
+          />
+        </div>
 
-      <div className={agencyTimeTrackerStatusZoneClass}>
-        <AgencyProjectChooser
-          value={view.selectedProjectId}
-          onValueChange={view.onProjectChange}
-          projects={view.projects}
-          placeholder="+ Project"
-          className={projectTriggerClass}
-          loading={view.projectsLoading}
-          disabled={controlsDisabled}
-          contentAlign="end"
-        />
-        <AgencyTaskChooser
-          value={view.selectedTaskId}
-          onValueChange={view.onTaskChange}
-          projects={view.projects}
-          tasks={view.tasks}
-          filterProjectId={view.selectedProjectId || undefined}
-          placeholder="Task"
-          triggerFormat="task-only"
-          highlightSearch
-          fallbackTaskTitle={
-            view.taskChooserLabel !== "Choose task" ? view.taskChooserLabel : undefined
-          }
-          fallbackProjectId={view.activeTimer?.projectId}
-          fallbackProjectName={view.activeTimer?.projectName}
-          className={taskChooserTriggerClass}
-          loading={view.projectsLoading || view.tasksLoading}
-          disabled={controlsDisabled || !view.selectedProjectId}
-          open={view.taskChooserOpen}
-          contentAlign="end"
-          onOpenChange={view.onTaskChooserOpenChange}
-        />
-      </div>
-
-      <div className={agencyTimeTrackerStatusDividerClass} aria-hidden />
-
-      <div className={agencyTimeTrackerActionsZoneClass}>
-        <AgencyTagChooser
-          value={view.selectedTagIds}
-          tags={view.tags}
-          onValueChange={view.onTagIdsChange}
-          onCreateTag={view.onCreateTag}
-          creating={view.tagCreatePending}
-          disabled={controlsDisabled}
-          compact
-        />
-        <button
-          type="button"
-          className={cn(
-            agencyTimeTrackerIconActionClass,
-            view.isBillable ? "text-info" : "text-muted",
-          )}
-          aria-pressed={view.isBillable}
-          aria-label={view.isBillable ? "Billable" : "Non-billable"}
-          disabled={controlsDisabled}
-          onClick={() => view.onIsBillableChange(!view.isBillable)}
-        >
-          $
-        </button>
-
-        {view.activeTimer ? (
-          <Popover
-            open={view.startTimePopoverOpen}
-            onOpenChange={view.onStartTimePopoverOpenChange}
+        <div className={cn(agencyTimeTrackerRailCellClass, "gap-1.5")}>
+          <AgencyTagChooser
+            value={view.selectedTagIds}
+            tags={view.tags}
+            onValueChange={view.onTagIdsChange}
+            onCreateTag={view.onCreateTag}
+            creating={view.tagCreatePending}
+            disabled={controlsDisabled}
+            compact
+          />
+          <span className={agencyTimeTrackerInnerDividerClass} aria-hidden />
+          <button
+            type="button"
+            className={cn(
+              agencyTimeTrackerIconActionClass,
+              view.isBillable ? "text-info" : "text-muted",
+            )}
+            aria-pressed={view.isBillable}
+            aria-label={view.isBillable ? "Billable" : "Non-billable"}
+            disabled={controlsDisabled}
+            onClick={() => view.onIsBillableChange(!view.isBillable)}
           >
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className={agencyTimeTrackerMetricButtonClass}
-                aria-live="polite"
-                aria-atomic="true"
-                aria-haspopup="dialog"
-                aria-expanded={view.startTimePopoverOpen}
-                aria-label={`Adjust timer start time, ${elapsedLabel} elapsed`}
-                disabled={view.isStartTimeSaving}
-              >
-                {elapsedLabel}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="end" side="bottom" className="w-auto min-w-[16rem] p-2">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-2">
-                  <span className={cn(agencyLabelClass, "shrink-0 text-muted")}>Start time</span>
-                  <Input
-                    type="time"
-                    value={view.startTimeDraft.startTime}
-                    onChange={(e) => view.onStartTimeDraftChange({ startTime: e.target.value })}
-                    className="h-8 w-[5.5rem] font-mono text-sm tabular-nums"
-                    aria-label="Start time"
-                    disabled={view.isStartTimeSaving}
-                  />
-                  <label className="relative flex min-w-0 shrink-0 cursor-pointer items-center rounded-md px-1 py-0.5 hover:bg-elevated">
-                    <Input
-                      type="date"
-                      value={view.startTimeDraft.date}
-                      onChange={(e) => view.onStartTimeDraftChange({ date: e.target.value })}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                      aria-label="Start date"
-                      disabled={view.isStartTimeSaving}
-                    />
-                    <span className="text-sm text-muted">{view.startTimeDayLabel}</span>
-                  </label>
-                </div>
-                {view.startTimeError ? (
-                  <p className="text-xs text-error" role="alert">
-                    {view.startTimeError}
-                  </p>
-                ) : null}
-              </div>
-            </PopoverContent>
-          </Popover>
-        ) : idleManual ? (
-          <div className="relative flex min-w-0 shrink-0 items-center gap-1">
-            <Input
-              type="time"
-              value={view.manualDraft.startTime}
-              onChange={(e) => view.onManualStartTimeChange(e.target.value)}
-              className={cn(agencyTimeEntryTimeInputClass, "h-8 w-[5.5rem]")}
-              aria-label="Start time"
-              disabled={view.isManualCreatePending}
-            />
-            <span className="text-xs text-muted" aria-hidden>
-              –
-            </span>
-            <Input
-              type="time"
-              value={view.manualDraft.endTime}
-              onChange={(e) => view.onManualEndTimeChange(e.target.value)}
-              className={cn(agencyTimeEntryTimeInputClass, "h-8 w-[5.5rem]")}
-              aria-label="End time"
-              disabled={view.isManualCreatePending}
-            />
-            <label className="relative flex min-w-0 shrink-0 cursor-pointer items-center rounded-md px-1 py-0.5 hover:bg-elevated">
+            $
+          </button>
+        </div>
+
+        <div className={agencyTimeTrackerRailCellClass}>
+          {view.activeTimer ? (
+            <div className="relative">
               <Input
-                type="date"
-                value={view.manualDraft.date}
-                onChange={(e) => view.onManualDateChange(e.target.value)}
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                aria-label="Entry date"
+                value={view.elapsedEditing ? view.elapsedDraft : elapsedLabel}
+                onFocus={view.onElapsedFocus}
+                onChange={(e) => view.onElapsedChange(e.target.value)}
+                onBlur={view.onElapsedBlur}
+                onKeyDown={view.onElapsedKeyDown}
+                className={agencyTimeTrackerElapsedInputClass}
+                aria-label="Elapsed time"
+                aria-invalid={Boolean(view.elapsedError)}
+                disabled={view.isStartTimeSaving}
+              />
+              {view.elapsedError ? (
+                <p className="absolute top-full left-0 z-10 whitespace-nowrap text-xs text-error" role="alert">
+                  {view.elapsedError}
+                </p>
+              ) : null}
+            </div>
+          ) : idleManual ? (
+            <div className="relative flex min-w-0 shrink-0 items-center gap-1">
+              <Input
+                type="time"
+                value={view.manualDraft.startTime}
+                onChange={(e) => view.onManualStartTimeChange(e.target.value)}
+                className={cn(agencyTimeEntryTimeInputClass, "h-8 w-[5.5rem]")}
+                aria-label="Start time"
                 disabled={view.isManualCreatePending}
               />
-              <span className="text-xs text-muted">
-                {view.manualDraft.date ? formatAgencyDayLabel(view.manualDraft.date) : "Date"}
+              <span className="text-xs text-muted" aria-hidden>
+                –
               </span>
-            </label>
-            {view.manualError ? (
-              <p className="absolute top-full left-0 z-10 whitespace-nowrap text-xs text-error">
-                {view.manualError}
-              </p>
-            ) : null}
-          </div>
-        ) : (
-          <span
-            className={cn(agencyTimeTrackerMetricClass, "text-muted")}
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            {elapsedLabel}
-          </span>
-        )}
-
-        {view.activeTimer ? (
-          <>
-            <Button
-              variant={view.canStopTimer ? "destructive" : "outline"}
-              size="sm"
-              className={cn(
-                agencyTimeTrackerPrimaryActionClass,
-                view.canStopTimer
-                  ? "bg-destructive text-white hover:bg-destructive/90"
-                  : "bg-transparent text-muted",
-                view.stopButtonWarningRing &&
-                  "ring-2 ring-warning/30 ring-offset-1 ring-offset-background",
-              )}
-              disabled={view.isTimerMutationPending || !view.teamId || !view.canStopTimer}
-              title={view.stopButtonHint ?? undefined}
-              aria-label={
-                view.stopButtonHint
-                  ? `${view.stopButtonLabel}. ${view.stopButtonHint}`
-                  : view.stopButtonLabel
-              }
-              onClick={view.onStopTimer}
+              <Input
+                type="time"
+                value={view.manualDraft.endTime}
+                onChange={(e) => view.onManualEndTimeChange(e.target.value)}
+                className={cn(agencyTimeEntryTimeInputClass, "h-8 w-[5.5rem]")}
+                aria-label="End time"
+                disabled={view.isManualCreatePending}
+              />
+              <label className="relative flex min-w-0 shrink-0 cursor-pointer items-center rounded-md px-1 py-0.5 hover:bg-elevated">
+                <Input
+                  type="date"
+                  value={view.manualDraft.date}
+                  onChange={(e) => view.onManualDateChange(e.target.value)}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  aria-label="Entry date"
+                  disabled={view.isManualCreatePending}
+                />
+                <span className="text-xs text-muted">
+                  {view.manualDraft.date ? formatAgencyDayLabel(view.manualDraft.date) : "Date"}
+                </span>
+              </label>
+              {view.manualError ? (
+                <p className="absolute top-full left-0 z-10 whitespace-nowrap text-xs text-error">
+                  {view.manualError}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <span
+              className={cn(agencyTimeTrackerMetricClass, "text-muted")}
+              aria-live="polite"
+              aria-atomic="true"
             >
-              {view.stopButtonLabel}
-            </Button>
+              {elapsedLabel}
+            </span>
+          )}
+        </div>
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className={agencyTimeTrackerIconActionClass}
-                  aria-label="Timer options"
-                >
-                  <MoreVertical className="size-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-40 p-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-error"
-                  onClick={view.onDiscardTimer}
-                >
-                  <Trash2 />
-                  Discard timer
-                </Button>
-              </PopoverContent>
-            </Popover>
-          </>
-        ) : idleManual ? (
-          <Button
-            size="sm"
-            className={agencyTimeTrackerPrimaryActionClass}
-            disabled={!view.canAddManual}
-            onClick={view.onAddManual}
-          >
-            {view.isManualCreatePending ? "…" : "Add"}
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            className={agencyTimeTrackerPrimaryActionClass}
-            disabled={!view.canStartTimer || view.isTimerMutationPending}
-            onClick={view.onStartTimer}
-          >
-            {view.isTimerMutationPending ? "…" : "Start"}
-          </Button>
-        )}
+        <div className={cn(agencyTimeTrackerRailCellClass, "gap-1")}>
+          {view.activeTimer ? (
+            <>
+              <Button
+                variant={view.canStopTimer ? "destructive" : "outline"}
+                size="sm"
+                className={cn(
+                  agencyTimeTrackerPrimaryActionClass,
+                  view.canStopTimer
+                    ? "bg-destructive text-white hover:bg-destructive/90"
+                    : "bg-transparent text-muted",
+                  view.stopButtonWarningRing &&
+                    "ring-2 ring-warning/30 ring-offset-1 ring-offset-background",
+                )}
+                disabled={view.isTimerMutationPending || !view.teamId || !view.canStopTimer}
+                title={view.stopButtonHint ?? undefined}
+                aria-label={
+                  view.stopButtonHint
+                    ? `${view.stopButtonLabel}. ${view.stopButtonHint}`
+                    : view.stopButtonLabel
+                }
+                onClick={view.onStopTimer}
+              >
+                {view.stopButtonLabel}
+              </Button>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={agencyTimeTrackerIconActionClass}
+                    aria-label="Timer options"
+                  >
+                    <MoreVertical className="size-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-40 p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full justify-start text-error"
+                    onClick={view.onDiscardTimer}
+                  >
+                    <Trash2 />
+                    Discard timer
+                  </Button>
+                </PopoverContent>
+              </Popover>
+            </>
+          ) : idleManual ? (
+            <Button
+              size="sm"
+              className={agencyTimeTrackerPrimaryActionClass}
+              disabled={!view.canAddManual}
+              onClick={view.onAddManual}
+            >
+              {view.isManualCreatePending ? "…" : "Add"}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              className={agencyTimeTrackerPrimaryActionClass}
+              disabled={!view.canStartTimer || view.isTimerMutationPending}
+              onClick={view.onStartTimer}
+            >
+              {view.isTimerMutationPending ? "…" : "Start"}
+            </Button>
+          )}
+        </div>
 
         {view.showModeToggle ? (
-          <Button
-            variant="ghost"
-            size="sm"
-            className={agencyTimeTrackerIconActionClass}
-            aria-label={idleManual ? "Switch to timer" : "Switch to manual entry"}
-            aria-pressed={idleManual}
-            onClick={() => view.onModeChange(idleManual ? "timer" : "manual")}
-          >
-            {idleManual ? <Timer className="size-4" /> : <CalendarClock className="size-4" />}
-          </Button>
+          <div className={agencyTimeTrackerRailCellClass}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className={agencyTimeTrackerIconActionClass}
+              aria-label={idleManual ? "Switch to timer" : "Switch to manual entry"}
+              aria-pressed={idleManual}
+              onClick={() => view.onModeChange(idleManual ? "timer" : "manual")}
+            >
+              {idleManual ? <Timer className="size-4" /> : <CalendarClock className="size-4" />}
+            </Button>
+          </div>
         ) : null}
       </div>
     </div>

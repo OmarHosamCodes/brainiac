@@ -10,11 +10,10 @@ import {
   agencyTimeLogPanelClass,
   agencyTimePaneBodyClass,
   agencyTimePaneStackClass,
-  agencyTimeTrackerActionsZoneClass,
   agencyTimeTrackerCardClass,
   agencyTimeTrackerDescriptionZoneClass,
-  agencyTimeTrackerStatusDividerClass,
-  agencyTimeTrackerStatusZoneClass,
+  agencyTimeTrackerRailCellClass,
+  agencyTimeTrackerRailClass,
   agencyTimeWeekFooterClass,
   agencyTimeWeekGroupBodyClass,
   agencyWorkTableBodyScrollClass,
@@ -27,17 +26,26 @@ function TrackerSkeleton() {
       <div className={agencyTimeTrackerDescriptionZoneClass}>
         <Skeleton className="h-5 w-3/4 max-w-xs" />
       </div>
-      <div className={agencyTimeTrackerStatusDividerClass} aria-hidden />
-      <div className={agencyTimeTrackerStatusZoneClass}>
-        <Skeleton className="h-4 w-20" />
-        <Skeleton className="h-4 w-16" />
-      </div>
-      <div className={agencyTimeTrackerStatusDividerClass} aria-hidden />
-      <div className={agencyTimeTrackerActionsZoneClass}>
-        <Skeleton className="size-8 rounded-full" />
-        <Skeleton className="size-8 rounded-full" />
-        <Skeleton className="h-6 w-[5rem]" />
-        <Skeleton className="h-8 w-[5.5rem] rounded-[2px]" />
+      <div className={agencyTimeTrackerRailClass}>
+        <div className={agencyTimeTrackerRailCellClass}>
+          <Skeleton className="h-4 w-20" />
+        </div>
+        <div className={agencyTimeTrackerRailCellClass}>
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <div className={cn(agencyTimeTrackerRailCellClass, "gap-1.5")}>
+          <Skeleton className="size-8 rounded-full" />
+          <Skeleton className="size-8 rounded-full" />
+        </div>
+        <div className={agencyTimeTrackerRailCellClass}>
+          <Skeleton className="h-6 w-[5rem]" />
+        </div>
+        <div className={agencyTimeTrackerRailCellClass}>
+          <Skeleton className="h-8 w-[5.5rem] rounded-[2px]" />
+        </div>
+        <div className={agencyTimeTrackerRailCellClass}>
+          <Skeleton className="size-8 rounded-full" />
+        </div>
       </div>
     </div>
   );
