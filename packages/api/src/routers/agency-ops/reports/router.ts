@@ -84,6 +84,8 @@ export const reportsRouter = {
           description: z.string().max(2_000).optional(),
           projectId: z.string().min(1).optional(),
           taskId: z.string().min(1).nullable().optional(),
+          tagIds: z.array(z.string().min(1)).optional(),
+          isBillable: z.boolean().optional(),
         }),
       )
       .handler(async ({ context, input }) => {

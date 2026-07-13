@@ -16,9 +16,23 @@ import {
   listMyAgencyTimeEntries,
   createManualAgencyTimeEntry,
   updateMyAgencyTimeEntry,
+  updateMyAgencyTimeEntriesBulk,
   deleteMyAgencyTimeEntry,
   getAgencyTimeSummary,
 } from "./service";
+
+const agencyWeekSummarySchema = z.object({
+  weekStartKey: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  startDate: z.string().datetime(),
+  endDate: z.string().datetime(),
+  totalSeconds: z.number().int().nonnegative(),
+  daily: z.array(
+    z.object({
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      totalSeconds: z.number().int().nonnegative(),
+    }),
+  ),
+});
 
 export const timeTrackingRouter = {
   timer: {
@@ -54,6 +68,8 @@ export const timeTrackingRouter = {
           projectId: z.string().min(1).optional(),
           taskId: z.string().min(1).optional(),
           description: z.string().max(2_000).optional(),
+          tagIds: z.array(z.string().min(1)).optional(),
+          isBillable: z.boolean().optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -71,6 +87,8 @@ export const timeTrackingRouter = {
           teamId: z.string().min(1).optional(),
           taskId: z.string().min(1).optional(),
           description: z.string().max(2_000).optional(),
+          tagIds: z.array(z.string().min(1)).optional(),
+          isBillable: z.boolean().optional(),
           discard: z.boolean().optional(),
         }),
       )
@@ -118,17 +136,8 @@ export const timeTrackingRouter = {
             page: z.number().int().min(1),
             pageSize: z.number().int().min(1),
             total: z.number().int().nonnegative(),
-            weekSummary: z.object({
-              startDate: z.string().datetime(),
-              endDate: z.string().datetime(),
-              totalSeconds: z.number().int().nonnegative(),
-              daily: z.array(
-                z.object({
-                  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-                  totalSeconds: z.number().int().nonnegative(),
-                }),
-              ),
-            }),
+            weekSummary: agencyWeekSummarySchema,
+            weekSummaries: z.array(agencyWeekSummarySchema),
           })
           .parse(await listMyAgencyTimeEntries(context.session.user.id, input));
       }),
@@ -140,6 +149,8 @@ export const timeTrackingRouter = {
           startAt: z.string().datetime(),
           endAt: z.string().datetime(),
           description: z.string().max(2_000).optional(),
+          tagIds: z.array(z.string().min(1)).optional(),
+          isBillable: z.boolean().optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -157,6 +168,8 @@ export const timeTrackingRouter = {
           startAt: z.string().datetime().optional(),
           endAt: z.string().datetime().optional(),
           description: z.string().max(2_000).optional(),
+          tagIds: z.array(z.string().min(1)).optional(),
+          isBillable: z.boolean().optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -164,6 +177,24 @@ export const timeTrackingRouter = {
           await updateMyAgencyTimeEntry(context.session.user.id, input),
         );
         return entry;
+      }),
+    updateMineBulk: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          entryIds: z.array(z.string().min(1)).min(1),
+          patch: z.object({
+            projectId: z.string().min(1).optional(),
+            taskId: z.string().min(1).nullable().optional(),
+            description: z.string().max(2_000).optional(),
+            tagIds: z.array(z.string().min(1)).optional(),
+            isBillable: z.boolean().optional(),
+          }),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ items: z.array(agencyTimeEntrySchema) })
+          .parse(await updateMyAgencyTimeEntriesBulk(context.session.user.id, input));
       }),
     deleteMine: protectedProProcedure
       .input(teamScopedInputSchema.extend({ entryId: z.string().min(1) }))

@@ -2,6 +2,7 @@ import { ORPCError } from "@orpc/server";
 import { db } from "@orch/db";
 import {
   agencyOpsActiveTimer,
+  agencyOpsActiveTimerTag,
   agencyOpsProjectTask,
   agencyOpsProject,
   agencyOpsProjectJourneyStep,
@@ -9,9 +10,11 @@ import {
   user,
   agencyOpsClient,
   agencyOpsTimeEntry,
+  agencyOpsTimeEntryTag,
+  agencyOpsTag,
   workspaceTeamMember,
 } from "@orch/db/schema";
-import { eq, and, asc, isNull, desc, sql, gte, lte } from "drizzle-orm";
+import { eq, and, or, asc, isNull, desc, sql, gte, lte, inArray } from "drizzle-orm";
 import { createWorkspaceId } from "@orch/workspace";
 import { notifyTimerActivity } from "../../notifications/fanout";
 import { formatAvatarUrl } from "../shared/avatar-helpers";
@@ -23,6 +26,14 @@ import { resolveAgencyTimerStopBinding } from "./resolve-agency-timer-stop-bindi
 import { publishAgencyTimerUpdated } from "../live/live";
 
 type AgencyTimeEntrySource = "timer" | "manual";
+
+type AgencyTagRecord = {
+  id: string;
+  teamId: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 type AgencyTimeEntryRecord = {
   id: string;
@@ -38,6 +49,8 @@ type AgencyTimeEntryRecord = {
   clientName: string;
   source: AgencyTimeEntrySource;
   description: string;
+  isBillable: boolean;
+  tags: AgencyTagRecord[];
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
@@ -45,26 +58,30 @@ type AgencyTimeEntryRecord = {
   updatedAt: string;
 };
 
-function mapAgencyTimeEntryRow(row: {
-  id: string;
-  teamId: string;
-  userId: string;
-  userName: string | null;
-  projectId: string;
-  taskId: string | null;
-  taskTitle: string | null;
-  taskIsWaste: boolean | null;
-  projectName: string;
-  clientId: string;
-  clientName: string;
-  source: AgencyTimeEntrySource;
-  description: string;
-  startedAt: Date;
-  endedAt: Date;
-  durationSeconds: number;
-  createdAt: Date;
-  updatedAt: Date;
-}): AgencyTimeEntryRecord {
+function mapAgencyTimeEntryRow(
+  row: {
+    id: string;
+    teamId: string;
+    userId: string;
+    userName: string | null;
+    projectId: string;
+    taskId: string | null;
+    taskTitle: string | null;
+    taskIsWaste: boolean | null;
+    projectName: string;
+    clientId: string;
+    clientName: string;
+    source: AgencyTimeEntrySource;
+    description: string;
+    isBillable: boolean;
+    startedAt: Date;
+    endedAt: Date;
+    durationSeconds: number;
+    createdAt: Date;
+    updatedAt: Date;
+  },
+  tags: AgencyTagRecord[],
+): AgencyTimeEntryRecord {
   return {
     id: row.id,
     teamId: row.teamId,
@@ -79,6 +96,8 @@ function mapAgencyTimeEntryRow(row: {
     clientName: row.clientName,
     source: row.source,
     description: row.description,
+    isBillable: row.isBillable,
+    tags,
     startedAt: row.startedAt.toISOString(),
     endedAt: row.endedAt.toISOString(),
     durationSeconds: row.durationSeconds,
@@ -96,6 +115,8 @@ type AgencyActiveTimerRecord = {
   taskTitle: string | null;
   projectName: string;
   description: string;
+  isBillable: boolean;
+  tags: AgencyTagRecord[];
   startedAt: string;
   createdAt: string;
   updatedAt: string;
@@ -111,6 +132,74 @@ function validateDateRange(startedAt: Date, endedAt: Date) {
 
 function getDurationSeconds(startedAt: Date, endedAt: Date) {
   return Math.max(1, Math.floor((endedAt.getTime() - startedAt.getTime()) / 1_000));
+}
+
+function mapAgencyTagRow(row: {
+  id: string;
+  teamId: string;
+  name: string;
+  createdAt: Date;
+  updatedAt: Date;
+}): AgencyTagRecord {
+  return {
+    id: row.id,
+    teamId: row.teamId,
+    name: row.name,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+async function listTagsForTimeEntry(timeEntryId: string) {
+  const rows = await db
+    .select({
+      id: agencyOpsTag.id,
+      teamId: agencyOpsTag.teamId,
+      name: agencyOpsTag.name,
+      createdAt: agencyOpsTag.createdAt,
+      updatedAt: agencyOpsTag.updatedAt,
+    })
+    .from(agencyOpsTimeEntryTag)
+    .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
+    .where(eq(agencyOpsTimeEntryTag.timeEntryId, timeEntryId))
+    .orderBy(asc(agencyOpsTag.name));
+
+  return rows.map(mapAgencyTagRow);
+}
+
+async function listTagsForActiveTimer(activeTimerId: string) {
+  const rows = await db
+    .select({
+      id: agencyOpsTag.id,
+      teamId: agencyOpsTag.teamId,
+      name: agencyOpsTag.name,
+      createdAt: agencyOpsTag.createdAt,
+      updatedAt: agencyOpsTag.updatedAt,
+    })
+    .from(agencyOpsActiveTimerTag)
+    .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsActiveTimerTag.tagId))
+    .where(eq(agencyOpsActiveTimerTag.activeTimerId, activeTimerId))
+    .orderBy(asc(agencyOpsTag.name));
+
+  return rows.map(mapAgencyTagRow);
+}
+
+async function validateAgencyTagIds(teamId: string, tagIds: string[] | undefined) {
+  if (tagIds === undefined) return [];
+
+  const uniqueTagIds = [...new Set(tagIds)];
+  if (uniqueTagIds.length === 0) return uniqueTagIds;
+
+  const rows = await db
+    .select({ id: agencyOpsTag.id })
+    .from(agencyOpsTag)
+    .where(and(eq(agencyOpsTag.teamId, teamId), inArray(agencyOpsTag.id, uniqueTagIds)));
+
+  if (rows.length !== uniqueTagIds.length) {
+    throw new ORPCError("BAD_REQUEST", { message: "One or more tags do not belong to this team." });
+  }
+
+  return uniqueTagIds;
 }
 
 /** Local calendar date (YYYY-MM-DD) for an instant using JS getTimezoneOffset() semantics. */
@@ -187,6 +276,7 @@ async function getActiveTimerByUser(userId: string) {
       taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       description: agencyOpsActiveTimer.description,
+      isBillable: agencyOpsActiveTimer.isBillable,
       startedAt: agencyOpsActiveTimer.startedAt,
       createdAt: agencyOpsActiveTimer.createdAt,
       updatedAt: agencyOpsActiveTimer.updatedAt,
@@ -201,6 +291,8 @@ async function getActiveTimerByUser(userId: string) {
     return null;
   }
 
+  const tags = await listTagsForActiveTimer(timer.id);
+
   return {
     id: timer.id,
     teamId: timer.teamId,
@@ -210,6 +302,8 @@ async function getActiveTimerByUser(userId: string) {
     taskTitle: timer.taskTitle ?? null,
     projectName: timer.projectName,
     description: timer.description,
+    isBillable: timer.isBillable,
+    tags,
     startedAt: timer.startedAt.toISOString(),
     createdAt: timer.createdAt.toISOString(),
     updatedAt: timer.updatedAt.toISOString(),
@@ -312,9 +406,12 @@ export async function startAgencyTimer(
     projectId?: string;
     taskId?: string;
     description?: string;
+    tagIds?: string[];
+    isBillable?: boolean;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  const tagIds = await validateAgencyTagIds(input.teamId, input.tagIds);
 
   let projectId = input.projectId;
   if (input.taskId) {
@@ -342,6 +439,7 @@ export async function startAgencyTimer(
       projectId: agencyOpsActiveTimer.projectId,
       taskId: agencyOpsActiveTimer.taskId,
       description: agencyOpsActiveTimer.description,
+      isBillable: agencyOpsActiveTimer.isBillable,
       startedAt: agencyOpsActiveTimer.startedAt,
     })
     .from(agencyOpsActiveTimer)
@@ -366,28 +464,51 @@ export async function startAgencyTimer(
           userId: actorUserId,
           source: "timer",
           description: existing.description,
+          isBillable: existing.isBillable,
           startedAt: existing.startedAt,
           endedAt: now,
           durationSeconds,
           createdAt: now,
           updatedAt: now,
         });
+
+        const previousTagIds = await tx
+          .select({ tagId: agencyOpsActiveTimerTag.tagId })
+          .from(agencyOpsActiveTimerTag)
+          .where(eq(agencyOpsActiveTimerTag.activeTimerId, existing.id));
+        if (previousTagIds.length > 0) {
+          await tx
+            .insert(agencyOpsTimeEntryTag)
+            .values(
+              previousTagIds.map(({ tagId }) => ({ timeEntryId: rolledOverEntryId!, tagId })),
+            );
+        }
       }
 
       await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, existing.id));
     }
 
-    await tx.insert(agencyOpsActiveTimer).values({
-      id: createWorkspaceId("agency-active-timer"),
-      teamId: input.teamId,
-      projectId,
-      taskId: input.taskId ?? null,
-      userId: actorUserId,
-      description: input.description?.trim() ?? "",
-      startedAt: now,
-      createdAt: now,
-      updatedAt: now,
-    });
+    const [createdTimer] = await tx
+      .insert(agencyOpsActiveTimer)
+      .values({
+        id: createWorkspaceId("agency-active-timer"),
+        teamId: input.teamId,
+        projectId,
+        taskId: input.taskId ?? null,
+        userId: actorUserId,
+        description: input.description?.trim() ?? "",
+        isBillable: input.isBillable ?? true,
+        startedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: agencyOpsActiveTimer.id });
+
+    if (createdTimer && tagIds.length > 0) {
+      await tx
+        .insert(agencyOpsActiveTimerTag)
+        .values(tagIds.map((tagId) => ({ activeTimerId: createdTimer.id, tagId })));
+    }
 
     if (input.taskId) {
       await tx
@@ -470,6 +591,7 @@ async function fetchAgencyTimeEntryRecord(entryId: string) {
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
+      isBillable: agencyOpsTimeEntry.isBillable,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -488,7 +610,7 @@ async function fetchAgencyTimeEntryRecord(entryId: string) {
     return null;
   }
 
-  return mapAgencyTimeEntryRow(row);
+  return mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id));
 }
 
 export async function stopAgencyTimer(
@@ -497,6 +619,8 @@ export async function stopAgencyTimer(
     teamId?: string;
     taskId?: string;
     description?: string;
+    tagIds?: string[];
+    isBillable?: boolean;
     discard?: boolean;
   },
 ) {
@@ -507,6 +631,7 @@ export async function stopAgencyTimer(
       projectId: agencyOpsActiveTimer.projectId,
       taskId: agencyOpsActiveTimer.taskId,
       description: agencyOpsActiveTimer.description,
+      isBillable: agencyOpsActiveTimer.isBillable,
       startedAt: agencyOpsActiveTimer.startedAt,
     })
     .from(agencyOpsActiveTimer)
@@ -527,6 +652,8 @@ export async function stopAgencyTimer(
       message: "Active timer belongs to a different team.",
     });
   }
+
+  const tagIds = await validateAgencyTagIds(active.teamId, input.tagIds);
 
   let taskId = active.taskId ?? null;
   let entryProjectId = active.projectId;
@@ -590,6 +717,7 @@ export async function stopAgencyTimer(
         userId: actorUserId,
         source: "timer",
         description,
+        isBillable: input.isBillable ?? active.isBillable,
         startedAt: active.startedAt,
         endedAt: now,
         durationSeconds,
@@ -597,6 +725,19 @@ export async function stopAgencyTimer(
         updatedAt: now,
       })
       .returning({ id: agencyOpsTimeEntry.id });
+
+    const tagsToInsert =
+      input.tagIds === undefined
+        ? await tx
+            .select({ tagId: agencyOpsActiveTimerTag.tagId })
+            .from(agencyOpsActiveTimerTag)
+            .where(eq(agencyOpsActiveTimerTag.activeTimerId, active.id))
+        : tagIds.map((tagId) => ({ tagId }));
+    if (tagsToInsert.length > 0 && created) {
+      await tx
+        .insert(agencyOpsTimeEntryTag)
+        .values(tagsToInsert.map(({ tagId }) => ({ timeEntryId: created.id, tagId })));
+    }
 
     await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, active.id));
 
@@ -717,6 +858,7 @@ export async function listMyAgencyTimeEntries(
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
+      isBillable: agencyOpsTimeEntry.isBillable,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -739,7 +881,9 @@ export async function listMyAgencyTimeEntries(
     .limit(pageSize)
     .offset(offset);
 
-  const items = rows.map((row) => mapAgencyTimeEntryRow(row));
+  const items = await Promise.all(
+    rows.map(async (row) => mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id))),
+  );
 
   // Count total for pagination
   const [countRow] = await db
@@ -758,10 +902,38 @@ export async function listMyAgencyTimeEntries(
   const parsedTotal = Number(countRow?.count ?? 0);
   const total = Number.isFinite(parsedTotal) && parsedTotal >= 0 ? parsedTotal : 0;
 
-  // Compute week summary for the anchor date (or current week) in the viewer's local timezone.
+  // Compute complete totals for the anchor week and every week represented on this page.
   const anchor = input.anchorDate ? parseIsoDateTime(input.anchorDate, "anchorDate") : new Date();
   const utcOffsetMinutes = input.utcOffsetMinutes ?? 0;
-  const { weekStartKey, weekStart, weekEnd } = getLocalWeekBounds(anchor, utcOffsetMinutes);
+  const anchorWeek = getLocalWeekBounds(anchor, utcOffsetMinutes);
+  const summaryWeekStartKeys = [
+    ...new Set([
+      anchorWeek.weekStartKey,
+      ...rows.map((row) =>
+        getLocalWeekStartKeyFromDateKey(localDateKeyFromInstant(row.startedAt, utcOffsetMinutes)),
+      ),
+    ]),
+  ];
+  const summaryWeeks = new Map<
+    string,
+    { start: Date; end: Date; daily: Map<string, number>; totalSeconds: number }
+  >();
+  for (const weekStartKey of summaryWeekStartKeys) {
+    const weekEndKey = addDaysToDateKey(weekStartKey, 6);
+    const daily = new Map<string, number>();
+    for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+      daily.set(addDaysToDateKey(weekStartKey, dayIndex), 0);
+    }
+    summaryWeeks.set(weekStartKey, {
+      start: localInstantFromDateKey(weekStartKey, utcOffsetMinutes),
+      end: localInstantFromDateKey(weekEndKey, utcOffsetMinutes, true),
+      daily,
+      totalSeconds: 0,
+    });
+  }
+  const summaryRangeFilters = [...summaryWeeks.values()].map((week) =>
+    and(gte(agencyOpsTimeEntry.startedAt, week.start), lte(agencyOpsTimeEntry.startedAt, week.end)),
+  );
 
   const weekRows = await db
     .select({
@@ -774,28 +946,28 @@ export async function listMyAgencyTimeEntries(
         eq(agencyOpsTimeEntry.teamId, input.teamId),
         eq(agencyOpsTimeEntry.userId, actorUserId),
         isNull(agencyOpsTimeEntry.deletedAt),
-        gte(agencyOpsTimeEntry.startedAt, weekStart),
-        lte(agencyOpsTimeEntry.startedAt, weekEnd),
+        or(...summaryRangeFilters),
       ),
     );
 
-  const dailyMap = new Map<string, number>();
-  for (let i = 0; i < 7; i++) {
-    dailyMap.set(addDaysToDateKey(weekStartKey, i), 0);
-  }
-  let weekTotalSeconds = 0;
-  for (const wr of weekRows) {
-    const dateKey = localDateKeyFromInstant(wr.startedAt, utcOffsetMinutes);
-    dailyMap.set(dateKey, (dailyMap.get(dateKey) ?? 0) + wr.durationSeconds);
-    weekTotalSeconds += wr.durationSeconds;
+  for (const weekRow of weekRows) {
+    const dateKey = localDateKeyFromInstant(weekRow.startedAt, utcOffsetMinutes);
+    const summary = summaryWeeks.get(getLocalWeekStartKeyFromDateKey(dateKey));
+    if (!summary) continue;
+    summary.daily.set(dateKey, (summary.daily.get(dateKey) ?? 0) + weekRow.durationSeconds);
+    summary.totalSeconds += weekRow.durationSeconds;
   }
 
-  const weekSummary = {
-    startDate: weekStart.toISOString(),
-    endDate: weekEnd.toISOString(),
-    totalSeconds: weekTotalSeconds,
-    daily: [...dailyMap.entries()].map(([date, totalSeconds]) => ({ date, totalSeconds })),
-  };
+  const weekSummaries = [...summaryWeeks.entries()].map(([weekStartKey, summary]) => ({
+    weekStartKey,
+    startDate: summary.start.toISOString(),
+    endDate: summary.end.toISOString(),
+    totalSeconds: summary.totalSeconds,
+    daily: [...summary.daily.entries()].map(([date, totalSeconds]) => ({ date, totalSeconds })),
+  }));
+  const weekSummary = weekSummaries.find(
+    (summary) => summary.weekStartKey === anchorWeek.weekStartKey,
+  )!;
 
   return {
     items,
@@ -803,6 +975,7 @@ export async function listMyAgencyTimeEntries(
     pageSize,
     total,
     weekSummary,
+    weekSummaries,
   };
 }
 
@@ -815,9 +988,12 @@ export async function createManualAgencyTimeEntry(
     startAt: string;
     endAt: string;
     description?: string;
+    tagIds?: string[];
+    isBillable?: boolean;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  const tagIds = await validateAgencyTagIds(input.teamId, input.tagIds);
 
   let projectId = input.projectId;
   if (input.taskId) {
@@ -844,24 +1020,33 @@ export async function createManualAgencyTimeEntry(
   const durationSeconds = getDurationSeconds(startAt, endAt);
   const journeyStepId = await resolveJourneyStepIdForTask(input.teamId, input.taskId ?? null);
 
-  const [created] = await db
-    .insert(agencyOpsTimeEntry)
-    .values({
-      id: createWorkspaceId("agency-time"),
-      teamId: input.teamId,
-      projectId,
-      taskId: input.taskId ?? null,
-      journeyStepId,
-      userId: actorUserId,
-      source: "manual",
-      description: input.description?.trim() ?? "",
-      startedAt: startAt,
-      endedAt: endAt,
-      durationSeconds,
-      createdAt: now,
-      updatedAt: now,
-    })
-    .returning({ id: agencyOpsTimeEntry.id });
+  const [created] = await db.transaction(async (tx) => {
+    const [entry] = await tx
+      .insert(agencyOpsTimeEntry)
+      .values({
+        id: createWorkspaceId("agency-time"),
+        teamId: input.teamId,
+        projectId,
+        taskId: input.taskId ?? null,
+        journeyStepId,
+        userId: actorUserId,
+        source: "manual",
+        description: input.description?.trim() ?? "",
+        isBillable: input.isBillable ?? true,
+        startedAt: startAt,
+        endedAt: endAt,
+        durationSeconds,
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning({ id: agencyOpsTimeEntry.id });
+    if (entry && tagIds.length > 0) {
+      await tx
+        .insert(agencyOpsTimeEntryTag)
+        .values(tagIds.map((tagId) => ({ timeEntryId: entry.id, tagId })));
+    }
+    return [entry];
+  });
 
   if (!created) {
     throw new ORPCError("INTERNAL_SERVER_ERROR");
@@ -882,6 +1067,7 @@ export async function createManualAgencyTimeEntry(
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
+      isBillable: agencyOpsTimeEntry.isBillable,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -900,7 +1086,7 @@ export async function createManualAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  return mapAgencyTimeEntryRow(row);
+  return mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id));
 }
 
 export async function updateMyAgencyTimeEntry(
@@ -913,9 +1099,12 @@ export async function updateMyAgencyTimeEntry(
     startAt?: string;
     endAt?: string;
     description?: string;
+    tagIds?: string[];
+    isBillable?: boolean;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
+  const tagIds = await validateAgencyTagIds(input.teamId, input.tagIds);
 
   const [current] = await db
     .select({
@@ -971,26 +1160,38 @@ export async function updateMyAgencyTimeEntry(
   const now = new Date();
   const durationSeconds = getDurationSeconds(nextStartedAt, nextEndedAt);
 
-  const [updated] = await db
-    .update(agencyOpsTimeEntry)
-    .set({
-      ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
-      ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
-      startedAt: nextStartedAt,
-      endedAt: nextEndedAt,
-      durationSeconds,
-      description: input.description?.trim(),
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(agencyOpsTimeEntry.id, input.entryId),
-        eq(agencyOpsTimeEntry.teamId, input.teamId),
-        eq(agencyOpsTimeEntry.userId, actorUserId),
-        isNull(agencyOpsTimeEntry.deletedAt),
-      ),
-    )
-    .returning({ id: agencyOpsTimeEntry.id });
+  const [updated] = await db.transaction(async (tx) => {
+    const [entry] = await tx
+      .update(agencyOpsTimeEntry)
+      .set({
+        ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
+        ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
+        startedAt: nextStartedAt,
+        endedAt: nextEndedAt,
+        durationSeconds,
+        description: input.description?.trim(),
+        ...(input.isBillable !== undefined ? { isBillable: input.isBillable } : {}),
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(agencyOpsTimeEntry.id, input.entryId),
+          eq(agencyOpsTimeEntry.teamId, input.teamId),
+          eq(agencyOpsTimeEntry.userId, actorUserId),
+          isNull(agencyOpsTimeEntry.deletedAt),
+        ),
+      )
+      .returning({ id: agencyOpsTimeEntry.id });
+    if (entry && input.tagIds !== undefined) {
+      await tx.delete(agencyOpsTimeEntryTag).where(eq(agencyOpsTimeEntryTag.timeEntryId, entry.id));
+      if (tagIds.length > 0) {
+        await tx
+          .insert(agencyOpsTimeEntryTag)
+          .values(tagIds.map((tagId) => ({ timeEntryId: entry.id, tagId })));
+      }
+    }
+    return [entry];
+  });
 
   if (!updated) {
     throw new ORPCError("NOT_FOUND");
@@ -1011,6 +1212,7 @@ export async function updateMyAgencyTimeEntry(
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
+      isBillable: agencyOpsTimeEntry.isBillable,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1029,7 +1231,114 @@ export async function updateMyAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  return mapAgencyTimeEntryRow(row);
+  return mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id));
+}
+
+export async function updateMyAgencyTimeEntriesBulk(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    entryIds: string[];
+    patch: {
+      projectId?: string;
+      taskId?: string | null;
+      description?: string;
+      tagIds?: string[];
+      isBillable?: boolean;
+    };
+  },
+) {
+  await requireTeamMembership(actorUserId, input.teamId, "viewer");
+
+  const entryIds = [...new Set(input.entryIds)];
+  if (entryIds.length === 0) {
+    throw new ORPCError("BAD_REQUEST", { message: "Choose at least one time entry." });
+  }
+
+  const tagIds = await validateAgencyTagIds(input.teamId, input.patch.tagIds);
+
+  if (input.patch.projectId) {
+    await getProjectByIdForTeam(input.teamId, input.patch.projectId);
+  }
+
+  let projectId = input.patch.projectId;
+  let taskId: string | null | undefined;
+  if (input.patch.taskId) {
+    const taskProjectId = await resolveTaskProjectId(input.teamId, input.patch.taskId);
+    if (projectId && projectId !== taskProjectId) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "taskId does not belong to the provided projectId.",
+      });
+    }
+    projectId = taskProjectId;
+    taskId = input.patch.taskId;
+  } else if (input.patch.projectId) {
+    taskId = null;
+  }
+
+  const entries = await db
+    .select({
+      id: agencyOpsTimeEntry.id,
+      taskId: agencyOpsTimeEntry.taskId,
+    })
+    .from(agencyOpsTimeEntry)
+    .where(
+      and(
+        inArray(agencyOpsTimeEntry.id, entryIds),
+        eq(agencyOpsTimeEntry.teamId, input.teamId),
+        eq(agencyOpsTimeEntry.userId, actorUserId),
+        isNull(agencyOpsTimeEntry.deletedAt),
+      ),
+    );
+
+  if (entries.length !== entryIds.length) {
+    throw new ORPCError("NOT_FOUND", {
+      message: "One or more time entries were not found.",
+    });
+  }
+
+  const now = new Date();
+  await db.transaction(async (tx) => {
+    for (const entry of entries) {
+      const nextTaskId = taskId === undefined ? entry.taskId : taskId;
+      const journeyStepId =
+        taskId === undefined
+          ? undefined
+          : await resolveJourneyStepIdForTask(input.teamId, nextTaskId);
+
+      await tx
+        .update(agencyOpsTimeEntry)
+        .set({
+          ...(projectId ? { projectId } : {}),
+          ...(taskId !== undefined ? { taskId } : {}),
+          ...(journeyStepId !== undefined ? { journeyStepId } : {}),
+          ...(input.patch.description !== undefined
+            ? { description: input.patch.description.trim() }
+            : {}),
+          ...(input.patch.isBillable !== undefined ? { isBillable: input.patch.isBillable } : {}),
+          updatedAt: now,
+        })
+        .where(eq(agencyOpsTimeEntry.id, entry.id));
+
+      if (input.patch.tagIds !== undefined) {
+        await tx
+          .delete(agencyOpsTimeEntryTag)
+          .where(eq(agencyOpsTimeEntryTag.timeEntryId, entry.id));
+        if (tagIds.length > 0) {
+          await tx
+            .insert(agencyOpsTimeEntryTag)
+            .values(tagIds.map((tagId) => ({ timeEntryId: entry.id, tagId })));
+        }
+      }
+    }
+  });
+
+  const items = await Promise.all(entryIds.map((entryId) => fetchAgencyTimeEntryRecord(entryId)));
+  if (items.some((entry) => entry === null)) {
+    throw new ORPCError("NOT_FOUND");
+  }
+
+  return { items: items as AgencyTimeEntryRecord[] };
 }
 
 export async function deleteMyAgencyTimeEntry(
@@ -1226,6 +1535,7 @@ export async function listAllAgencyTimeEntries(
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
+      isBillable: agencyOpsTimeEntry.isBillable,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1242,7 +1552,9 @@ export async function listAllAgencyTimeEntries(
     .limit(pageSize)
     .offset(offset);
 
-  const items = rows.map((row) => mapAgencyTimeEntryRow(row));
+  const items = await Promise.all(
+    rows.map(async (row) => mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id))),
+  );
 
   const [countRow] = await db
     .select({ count: sql<number>`count(*)` })
@@ -1272,9 +1584,12 @@ export async function updateAnyAgencyTimeEntry(
     description?: string;
     projectId?: string;
     taskId?: string | null;
+    tagIds?: string[];
+    isBillable?: boolean;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
+  const tagIds = await validateAgencyTagIds(input.teamId, input.tagIds);
 
   const [current] = await db
     .select({
@@ -1329,25 +1644,37 @@ export async function updateAnyAgencyTimeEntry(
   const now = new Date();
   const durationSeconds = getDurationSeconds(nextStartedAt, nextEndedAt);
 
-  const [updated] = await db
-    .update(agencyOpsTimeEntry)
-    .set({
-      ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
-      ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
-      startedAt: nextStartedAt,
-      endedAt: nextEndedAt,
-      durationSeconds,
-      description: input.description?.trim(),
-      updatedAt: now,
-    })
-    .where(
-      and(
-        eq(agencyOpsTimeEntry.id, input.entryId),
-        eq(agencyOpsTimeEntry.teamId, input.teamId),
-        isNull(agencyOpsTimeEntry.deletedAt),
-      ),
-    )
-    .returning({ id: agencyOpsTimeEntry.id });
+  const [updated] = await db.transaction(async (tx) => {
+    const [entry] = await tx
+      .update(agencyOpsTimeEntry)
+      .set({
+        ...(resolvedProjectId ? { projectId: resolvedProjectId } : {}),
+        ...(taskIdUpdate ? { taskId: taskIdUpdate.taskId } : {}),
+        startedAt: nextStartedAt,
+        endedAt: nextEndedAt,
+        durationSeconds,
+        description: input.description?.trim(),
+        ...(input.isBillable !== undefined ? { isBillable: input.isBillable } : {}),
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(agencyOpsTimeEntry.id, input.entryId),
+          eq(agencyOpsTimeEntry.teamId, input.teamId),
+          isNull(agencyOpsTimeEntry.deletedAt),
+        ),
+      )
+      .returning({ id: agencyOpsTimeEntry.id });
+    if (entry && input.tagIds !== undefined) {
+      await tx.delete(agencyOpsTimeEntryTag).where(eq(agencyOpsTimeEntryTag.timeEntryId, entry.id));
+      if (tagIds.length > 0) {
+        await tx
+          .insert(agencyOpsTimeEntryTag)
+          .values(tagIds.map((tagId) => ({ timeEntryId: entry.id, tagId })));
+      }
+    }
+    return [entry];
+  });
 
   if (!updated) {
     throw new ORPCError("NOT_FOUND");
@@ -1368,6 +1695,7 @@ export async function updateAnyAgencyTimeEntry(
       clientName: agencyOpsClient.name,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
+      isBillable: agencyOpsTimeEntry.isBillable,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1386,5 +1714,5 @@ export async function updateAnyAgencyTimeEntry(
     throw new ORPCError("NOT_FOUND");
   }
 
-  return mapAgencyTimeEntryRow(row);
+  return mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id));
 }
