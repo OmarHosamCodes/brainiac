@@ -38,7 +38,7 @@ export function AgencyTimeEntryProjectLabel({
         >
           {taskTitle ?? projectName}
         </span>
-        <span className="truncate">. {clientName || "General"}</span>
+        <span className="truncate">- {clientName || "General"}</span>
       </span>
     );
   }
@@ -59,7 +59,7 @@ export function AgencyTimeEntryProjectLabel({
         >
           {taskTitle ?? projectName}
         </span>
-        <span className="truncate">. {projectName}</span>
+        <span className="truncate">- {projectName}</span>
       </span>
     );
   }
@@ -79,7 +79,7 @@ export function AgencyTimeEntryProjectLabel({
       >
         {projectName}
       </span>
-      <span className="truncate">· {clientName}</span>
+      <span className="truncate">- {clientName}</span>
     </span>
   );
 }
