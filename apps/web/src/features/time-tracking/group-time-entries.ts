@@ -16,8 +16,10 @@ export type TimeEntryRecord = {
   projectName: string;
   clientId: string;
   clientName: string;
+  tags?: Array<{ id: string; name: string }>;
   source: "timer" | "manual";
   description: string;
+  isBillable?: boolean;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;

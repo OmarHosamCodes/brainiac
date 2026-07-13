@@ -7,10 +7,6 @@ import {
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
 } from "@/features/shared/agency-queries";
-import {
-  getLocalWeekStartKey,
-  todayLocalDateKey,
-} from "@/features/time-tracking/format-agency-day-label";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import {
@@ -23,11 +19,16 @@ import {
   validateTimeEntryDraft,
   type TimeEntryDraft,
 } from "@/features/time-tracking/agency-time-entry";
-import { orpcClient } from "@/lib/orpc";
 import {
   selectIsTimerMutationPending,
   useAgencyTimeTrackingStore,
 } from "@/features/time-tracking/stores/agency-time-tracking";
+import {
+  createAgencyTag,
+  useAgencyTagsQuery,
+} from "@/features/time-tracking/hooks/use-agency-tags";
+import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-tag-chooser";
+import type { AgencyDayBulkDraft } from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
 const HIGHLIGHT_CLEAR_MS = 2_500;
@@ -47,6 +48,8 @@ export type AgencyTimeEntriesLogViewModel = {
   weekGroups: TimeEntryWeekGroup[];
   projects: AgencyProject[];
   tasks: AgencyProjectTask[];
+  tags: AgencyTagOption[];
+  tagCreatePending: boolean;
   expandedGroupKeys: Set<string>;
   isTimerMutationPending: boolean;
   deletingEntryIds: string[];
@@ -59,8 +62,14 @@ export type AgencyTimeEntriesLogViewModel = {
   onDeleteEntry: (entryId: string) => void;
   onDuplicate: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
-  onToggleWaste: (entryId: string) => Promise<void>;
-  togglingWasteEntryIds: string[];
+  selectedEntryIds: Set<string>;
+  bulkEditDayKey: string | null;
+  bulkDraft: AgencyDayBulkDraft;
+  onBulkDraftChange: (patch: Partial<AgencyDayBulkDraft>) => void;
+  onToggleEntrySelected: (entryIds: string[]) => void;
+  onToggleDayBulkEdit: (dateKey: string) => void;
+  onApplyBulk: () => void;
+  onCreateTag: (name: string) => void;
   onRequestOpenTaskChooser: () => void;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   showPagination: boolean;
@@ -98,36 +107,51 @@ export function useAgencyTimeEntriesLog({
   const resetForTeam = useAgencyTimeEntriesLogStore((s) => s.resetForTeam);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [togglingWasteEntryIds, setTogglingWasteEntryIds] = useState<string[]>([]);
+  const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(() => new Set());
+  const [bulkEditDayKey, setBulkEditDayKey] = useState<string | null>(null);
+  const [bulkDraft, setBulkDraft] = useState<AgencyDayBulkDraft>({
+    projectId: "",
+    taskId: "",
+    description: "",
+    tagIds: [],
+    isBillable: null,
+  });
+  const [tagCreatePending, setTagCreatePending] = useState(false);
 
   const entriesQuery = useAgencyTimeEntriesQuery(teamId, page, pageSize);
   const projectsQuery = useAgencyProjectsQuery(teamId);
   const tasksQuery = useAgencyProjectTasksForChooserQuery(teamId);
+  const tagsQuery = useAgencyTagsQuery(teamId);
   const entries = entriesQuery.data?.items ?? [];
   const totalEntries = entriesQuery.data?.total ?? 0;
   const projects = projectsQuery.data?.items ?? [];
   const tasks = tasksQuery.items ?? [];
+  const tags = (tagsQuery.data?.items ?? []) as AgencyTagOption[];
   const weekSummary = entriesQuery.data?.weekSummary ?? null;
+  const weekSummaries = entriesQuery.data?.weekSummaries ?? [];
 
   const weekGroups = useMemo(() => {
     const groups = groupEntriesByWeek(entries);
-    const currentWeekStart = getLocalWeekStartKey(todayLocalDateKey());
-    const apiWeekTotal = weekSummary?.totalSeconds;
+    const summariesByWeek = new Map(
+      weekSummaries.map((summary) => [summary.weekStartKey, summary]),
+    );
+    if (weekSummary?.weekStartKey) {
+      summariesByWeek.set(weekSummary.weekStartKey, weekSummary);
+    }
 
     return groups.map((week) => {
-      if (week.weekStartKey !== currentWeekStart || apiWeekTotal === undefined || !weekSummary) {
-        return week;
-      }
+      const summary = summariesByWeek.get(week.weekStartKey);
+      if (!summary) return week;
 
-      const apiDaily = new Map(weekSummary.daily.map((daily) => [daily.date, daily.totalSeconds]));
+      const apiDaily = new Map(summary.daily.map((daily) => [daily.date, daily.totalSeconds]));
       const days = week.days.map((day) => ({
         ...day,
-        totalSeconds: Math.max(day.totalSeconds, apiDaily.get(day.dateKey) ?? 0),
+        totalSeconds: apiDaily.get(day.dateKey) ?? day.totalSeconds,
       }));
 
-      return { ...week, days, totalSeconds: apiWeekTotal };
+      return { ...week, days, totalSeconds: summary.totalSeconds };
     });
-  }, [entries, weekSummary]);
+  }, [entries, weekSummaries, weekSummary]);
 
   const maxPage = useMemo(() => {
     if (pageSize <= 0) return 1;
@@ -178,6 +202,7 @@ export function useAgencyTimeEntriesLog({
 
   async function restartEntry(group: CollapsedEntryGroup) {
     const project = projects.find((projectEntry) => projectEntry.id === group.projectId);
+    const sourceEntry = group.entries[0];
     if (!teamId || !project || !group.taskId) return;
 
     await agencyTimeTrackingStore.restartEntry({
@@ -185,6 +210,8 @@ export function useAgencyTimeEntriesLog({
       project,
       task: { id: group.taskId, title: group.taskTitle },
       description: group.description,
+      tagIds: sourceEntry?.tags?.map((tag) => tag.id) ?? [],
+      isBillable: sourceEntry?.isBillable ?? true,
     });
   }
 
@@ -217,7 +244,10 @@ export function useAgencyTimeEntriesLog({
             updatedAt: entry.updatedAt,
           }
         : null);
-    const project = task ? projects.find((item) => item.id === task.projectId) : null;
+    const project =
+      projects.find((item) => item.id === draft.projectId) ??
+      (task ? projects.find((item) => item.id === task.projectId) : null) ??
+      null;
 
     if (!teamId || !entry || !task || !project) return;
 
@@ -233,6 +263,8 @@ export function useAgencyTimeEntriesLog({
       startAt: range.startAt,
       endAt: range.endAt,
       durationSeconds: range.durationSeconds,
+      tagIds: draft.tagIds,
+      isBillable: draft.isBillable,
     });
   }
 
@@ -242,21 +274,71 @@ export function useAgencyTimeEntriesLog({
     await agencyTimeTrackingStore.duplicateEntry({ teamId, entry });
   }
 
-  async function toggleWaste(entryId: string) {
-    const entry = entries.find((item) => item.id === entryId);
-    if (!teamId || !entry?.taskId) return;
+  function toggleEntrySelected(entryIds: string[]) {
+    setSelectedEntryIds((current) => {
+      const next = new Set(current);
+      const allSelected = entryIds.every((entryId) => current.has(entryId));
+      for (const entryId of entryIds) {
+        if (allSelected) next.delete(entryId);
+        else next.add(entryId);
+      }
+      return next;
+    });
+  }
 
-    setTogglingWasteEntryIds((current) => [...current, entryId]);
-    try {
-      await orpcClient.agencyOps.projectTasks.update({
-        teamId,
-        taskId: entry.taskId,
-        isWaste: !(entry.taskIsWaste === true),
+  function toggleDayBulkEdit(dateKey: string) {
+    setBulkEditDayKey((current) => {
+      if (current === dateKey) {
+        setSelectedEntryIds(new Set());
+        return null;
+      }
+      setSelectedEntryIds(new Set());
+      setBulkDraft({
+        projectId: "",
+        taskId: "",
+        description: "",
+        tagIds: [],
+        isBillable: null,
       });
-      await entriesQuery.refetch();
-    } finally {
-      setTogglingWasteEntryIds((current) => current.filter((id) => id !== entryId));
-    }
+      return dateKey;
+    });
+  }
+
+  async function applyBulkPatch() {
+    if (!teamId || selectedEntryIds.size === 0) return;
+    const patch: {
+      projectId?: string;
+      taskId?: string | null;
+      description?: string;
+      tagIds?: string[];
+      isBillable?: boolean;
+    } = {};
+    if (bulkDraft.projectId) patch.projectId = bulkDraft.projectId;
+    if (bulkDraft.taskId) patch.taskId = bulkDraft.taskId;
+    if (bulkDraft.description.trim()) patch.description = bulkDraft.description.trim();
+    if (bulkDraft.tagIds.length > 0) patch.tagIds = bulkDraft.tagIds;
+    if (bulkDraft.isBillable !== null) patch.isBillable = bulkDraft.isBillable;
+    if (Object.keys(patch).length === 0) return;
+    await agencyTimeTrackingStore.updateEntriesBulk({
+      teamId,
+      entryIds: [...selectedEntryIds],
+      patch,
+    });
+    setSelectedEntryIds(new Set());
+    setBulkEditDayKey(null);
+  }
+
+  function createTag(name: string) {
+    if (!teamId || tagCreatePending) return;
+    setTagCreatePending(true);
+    void createAgencyTag(teamId, name)
+      .then((created) => {
+        setBulkDraft((current) => ({
+          ...current,
+          tagIds: [...new Set([...current.tagIds, created.id])],
+        }));
+      })
+      .finally(() => setTagCreatePending(false));
   }
 
   return {
@@ -269,6 +351,8 @@ export function useAgencyTimeEntriesLog({
     weekGroups,
     projects,
     tasks,
+    tags,
+    tagCreatePending,
     expandedGroupKeys,
     isTimerMutationPending,
     deletingEntryIds,
@@ -281,8 +365,14 @@ export function useAgencyTimeEntriesLog({
     onDeleteEntry: (entryId) => void deleteEntry(entryId),
     onDuplicate: (entryId) => void duplicateEntry(entryId),
     onSaveEdit: saveEdit,
-    onToggleWaste: toggleWaste,
-    togglingWasteEntryIds,
+    selectedEntryIds,
+    bulkEditDayKey,
+    bulkDraft,
+    onBulkDraftChange: (patch) => setBulkDraft((current) => ({ ...current, ...patch })),
+    onToggleEntrySelected: toggleEntrySelected,
+    onToggleDayBulkEdit: toggleDayBulkEdit,
+    onApplyBulk: () => void applyBulkPatch(),
+    onCreateTag: createTag,
     onRequestOpenTaskChooser: requestOpenTaskChooser,
     scrollContainerRef,
     showPagination: totalEntries > pageSize,

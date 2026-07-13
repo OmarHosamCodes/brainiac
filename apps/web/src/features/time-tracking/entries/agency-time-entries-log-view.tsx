@@ -80,26 +80,37 @@ export function AgencyTimeEntriesLogView({ view, renderGroupRow }: AgencyTimeEnt
                 week={week}
                 highlightedEntryId={view.highlightedEntryId}
                 renderGroupRow={renderGroupRow}
+                selectedEntryIds={view.selectedEntryIds}
+                bulkEditDayKey={view.bulkEditDayKey}
+                bulkDraft={view.bulkDraft}
+                onBulkDraftChange={view.onBulkDraftChange}
+                onToggleEntrySelected={view.onToggleEntrySelected}
+                onToggleDayBulkEdit={view.onToggleDayBulkEdit}
+                onApplyBulk={view.onApplyBulk}
+                onCreateTag={view.onCreateTag}
+                tagCreatePending={view.tagCreatePending}
+                tags={view.tags}
+                projects={view.projects}
+                tasks={view.tasks}
               />
             ))}
           </div>
         )}
+        {view.showPagination ? (
+          <AgencyWorkSurfacePaginationFooter
+            rangeStart={view.rangeStart}
+            rangeEnd={view.rangeEnd}
+            total={view.totalEntries}
+            previousDisabled={view.page <= 1}
+            nextDisabled={view.page >= view.maxPage}
+            onPrevious={view.onPreviousPage}
+            onNext={view.onNextPage}
+            pageSize={view.pageSize}
+            pageSizeOptions={view.pageSizeOptions}
+            onPageSizeChange={view.onPageSizeChange}
+          />
+        ) : null}
       </div>
-
-      {view.showPagination ? (
-        <AgencyWorkSurfacePaginationFooter
-          rangeStart={view.rangeStart}
-          rangeEnd={view.rangeEnd}
-          total={view.totalEntries}
-          previousDisabled={view.page <= 1}
-          nextDisabled={view.page >= view.maxPage}
-          onPrevious={view.onPreviousPage}
-          onNext={view.onNextPage}
-          pageSize={view.pageSize}
-          pageSizeOptions={view.pageSizeOptions}
-          onPageSizeChange={view.onPageSizeChange}
-        />
-      ) : null}
     </div>
   );
 }

@@ -54,7 +54,7 @@ export function getLocalWeekStartKey(dateKey: string): string {
   return toLocalDateKey(weekStart);
 }
 
-/** Smart week label: This week, Last week, or "Jun 16 – Jun 22". */
+/** Smart week label: This week, Last week, or "Jun 16 - Jun 22". */
 export function formatAgencyWeekLabel(weekStartKey: string, referenceDate = new Date()): string {
   const thisWeekStart = getLocalWeekStartKey(toLocalDateKey(referenceDate));
   if (weekStartKey === thisWeekStart) return "This week";
@@ -67,5 +67,5 @@ export function formatAgencyWeekLabel(weekStartKey: string, referenceDate = new 
   const weekStart = parseDateKey(weekStartKey);
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekEnd.getDate() + 6);
-  return `${weekRangeFormatter.format(weekStart)} – ${weekRangeFormatter.format(weekEnd)}`;
+  return `${weekRangeFormatter.format(weekStart)} - ${weekRangeFormatter.format(weekEnd)}`;
 }
