@@ -574,11 +574,12 @@ function createAgencyTimeTrackingActions(
       !previousActiveTimer?.taskId && previousDraftTaskId
         ? { id: previousDraftTaskId, title: "" }
         : null;
+    // Idle start: require the payload task. Switch: require the running timer to be stoppable.
     const startBlockedMessage = getAgencyTimerStartBlockedMessage({
       activeTimer: previousActiveTimer,
       project: payload.project,
       description: previousTimerDraft?.description ?? previousActiveTimer?.description,
-      selectedTask: previousDraftTask,
+      selectedTask: previousActiveTimer ? previousDraftTask : payload.task,
     });
 
     if (startBlockedMessage) {
