@@ -15,7 +15,8 @@ import { createContext } from "@orch/api/context";
 import { bootstrapAgencyLiveRedisSubscriber } from "@orch/api/routers/agency-ops/live/live";
 import { registerNotificationPushHandler } from "@orch/api/routers/notifications/delivery";
 import { auth } from "@orch/auth";
-import { corsOrigins, env, primaryCorsOrigin } from "@orch/env/server";
+import { corsOrigins, env, primaryCorsOrigin, resolveSentryRelease } from "@orch/env/server";
+import { sentry } from "@sentry/hono/bun";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
@@ -76,15 +77,29 @@ function createApp() {
    * Initialize the Hono application
    *
    * Setup order:
-   * 1. Error handler - catches all errors and logs them
-   * 2. Logging - logs incoming requests
-   * 3. CORS - enables cross-origin requests from frontend
-   * 4. Auth routes - /api/auth/* endpoints from Better Auth
-   * 5. Billing redirect - /billing/success for payment webhooks
-   * 6. RPC handler - all /api/app/* requests go to oRPC router
-   * 7. Health check - GET / returns "OK" for monitoring
+   * 1. Sentry middleware - request isolation + unexpected error capture
+   * 2. Error handler - catches all errors and logs them
+   * 3. Logging - logs incoming requests
+   * 4. CORS - enables cross-origin requests from frontend
+   * 5. Auth routes - /api/auth/* endpoints from Better Auth
+   * 6. Billing redirect - /billing/success for payment webhooks
+   * 7. RPC handler - all /api/app/* requests go to oRPC router
+   * 8. Health check - GET / returns "OK" for monitoring
    */
   const app = new Hono();
+
+  if (env.SENTRY_DSN) {
+    app.use(
+      "*",
+      sentry(app, {
+        dsn: env.SENTRY_DSN,
+        environment: env.SENTRY_ENVIRONMENT ?? env.NODE_ENV,
+        release: resolveSentryRelease(),
+        sendDefaultPii: false,
+        tracesSampleRate: env.NODE_ENV === "production" ? 0.1 : 1.0,
+      }),
+    );
+  }
 
   app.onError((error, context) => {
     console.error(error);

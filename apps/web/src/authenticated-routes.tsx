@@ -7,6 +7,7 @@ import { ShellPageTransition } from "@/features/app-shell/components/shell-page-
 import { ProtectedRoute } from "@/features/auth/protected-route";
 import { AuthProvider } from "@/providers/auth-provider";
 import { startShellBoot } from "@/features/app-shell/shell/shell-boot";
+import { Sentry } from "@/lib/sentry";
 
 const DashboardPage = lazy(() =>
   import("@/pages/dashboard-page").then((module) => ({ default: module.DashboardPage })),
@@ -30,6 +31,8 @@ const BillingSuccessPage = lazy(() =>
 const NodePage = lazy(() =>
   import("@/pages/node-page").then((module) => ({ default: module.NodePage })),
 );
+
+const SentryRoutes = Sentry.withSentryReactRouterV7Routing(Routes);
 
 function AuthBoundary() {
   return (
@@ -59,7 +62,7 @@ function ShellLayout() {
 
 export function AuthenticatedRoutes() {
   return (
-    <Routes>
+    <SentryRoutes>
       <Route element={<AuthBoundary />}>
         <Route element={<ProtectedRoute />}>
           <Route element={<ShellLayout />}>
@@ -73,6 +76,6 @@ export function AuthenticatedRoutes() {
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    </SentryRoutes>
   );
 }

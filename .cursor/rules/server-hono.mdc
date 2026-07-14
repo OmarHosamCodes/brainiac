@@ -10,14 +10,15 @@ alwaysApply: false
 
 Setup order matters — do not reorder without reason:
 
-1. `onError` — catches and logs all errors
-2. `logger()` — request logging
-3. `cors()` — cross-origin from frontend
-4. Better Auth — `GET|POST /api/auth/*`
-5. Billing/error redirects — `/billing/success`, `/error`
-6. Attachment/avatar routes
-7. oRPC middleware — `createContext` + `handleAppRouterRequest`
-8. Health check — `GET /` returns `"OK"`
+1. Sentry middleware — request isolation + unexpected error capture (when `SENTRY_DSN` is set)
+2. `onError` — catches and logs all errors
+3. `logger()` — request logging
+4. `cors()` — cross-origin from frontend
+5. Better Auth — `GET|POST /api/auth/*`
+6. Billing/error redirects — `/billing/success`, `/error`
+7. Attachment/avatar routes
+8. oRPC middleware — `createContext` + `handleAppRouterRequest`
+9. Health check — `GET /` returns `"OK"`
 
 ## Mount points
 

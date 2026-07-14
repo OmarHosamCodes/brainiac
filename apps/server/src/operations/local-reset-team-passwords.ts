@@ -8,13 +8,10 @@ import { user, workspaceTeam, workspaceTeamMember } from "@orch/db/schema";
 import { eq, ilike } from "drizzle-orm";
 import { ensureCredentialAccount } from "../lib/ensure-credential-account";
 
-const TEAM_NAME = process.env.TEAM_NAME ?? "School Of Marketing";
-const PASSWORD = process.env.LOCAL_PASSWORD ?? "orch1234";
+const TEAM_NAME = Bun.env.TEAM_NAME ?? "School Of Marketing";
+const PASSWORD = Bun.env.LOCAL_PASSWORD ?? "orch1234";
 
-const teams = await db
-  .select()
-  .from(workspaceTeam)
-  .where(ilike(workspaceTeam.name, TEAM_NAME));
+const teams = await db.select().from(workspaceTeam).where(ilike(workspaceTeam.name, TEAM_NAME));
 
 if (teams.length === 0) {
   console.error(`No team matching "${TEAM_NAME}"`);

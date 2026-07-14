@@ -226,6 +226,15 @@ const items = await db.select().from(myTable);
 2. Document in `.env.example`
 3. Use via `@orch/env/server` or `@/lib/env`
 
+### Sentry Observability
+
+Error monitoring covers both the Vite frontend and Hono/Bun server through one shared Sentry project.
+
+- Setup guide: [`docs/sentry-setup.md`](docs/sentry-setup.md)
+- Fix-and-PR Cursor Automation draft: [`docs/sentry-fix-automation.md`](docs/sentry-fix-automation.md)
+
+Leave DSNs empty locally. Production needs Railway `VITE_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, and (for source maps) `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN`.
+
 ---
 
 ## Code Standards
