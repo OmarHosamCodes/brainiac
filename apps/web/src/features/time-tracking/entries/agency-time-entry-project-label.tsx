@@ -25,15 +25,23 @@ export function AgencyTimeEntryProjectLabel({
   if (format === "task-client") {
     const resolvedTaskTitle = taskTitle?.trim();
     if (!resolvedTaskTitle) {
+      // Project-only entry: show project · client instead of a misleading "Task" placeholder.
       return (
         <span
           className={cn(
-            "inline-flex min-w-0 items-center gap-1 truncate text-muted",
+            "inline-flex min-w-0 items-center gap-1 truncate",
             agencyWorkMetaClass,
             className,
           )}
         >
-          Task
+          <AgencyProjectHueDot projectId={projectId} />
+          <span
+            className="truncate font-medium text-[var(--project-hue)] dark:text-[var(--project-hue-dark)]"
+            style={projectStyle}
+          >
+            {projectName}
+          </span>
+          <span className="truncate">- {clientName || "General"}</span>
         </span>
       );
     }

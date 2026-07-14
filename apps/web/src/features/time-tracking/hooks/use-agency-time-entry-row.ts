@@ -66,8 +66,8 @@ function formatGroupTimeRange(group: CollapsedEntryGroup) {
 }
 
 function displayTitle(group: CollapsedEntryGroup) {
-  if (group.description.trim()) return group.description;
-  return group.taskTitle;
+  // Keep description empty when none was typed; project/task live in the chooser label.
+  return group.description.trim();
 }
 
 function singleEntryGroup(group: CollapsedEntryGroup, entry: TimeEntryRecord): CollapsedEntryGroup {
@@ -405,7 +405,6 @@ export function useAgencyTimeEntryRow({
   const project = projects.find((projectEntry) => projectEntry.id === group.projectId) ?? null;
   const canRestart = Boolean(
     teamId &&
-    group.taskId &&
     project &&
     !isTimerMutationPending &&
     canStartAgencyTimer({
@@ -416,7 +415,9 @@ export function useAgencyTimeEntryRow({
         ? !activeTimer.taskId && trackerDraft?.taskId?.trim()
           ? { id: trackerDraft.taskId.trim(), title: "" }
           : null
-        : { id: group.taskId, title: group.taskTitle ?? "" },
+        : group.taskId
+          ? { id: group.taskId, title: group.taskTitle ?? "" }
+          : null,
     }),
   );
 

@@ -25,20 +25,13 @@ describe("canStartAgencyTimer", () => {
     );
   });
 
-  it("blocks start when active timer is not stoppable", () => {
+  it("allows switch even when active timer has no task yet", () => {
     expect(
       canStartAgencyTimer({
         activeTimer: { taskId: null, taskTitle: null, description: "" },
         project: projectA,
       }),
-    ).toBe(false);
-
-    expect(
-      canStartAgencyTimer({
-        activeTimer: { taskId: null, taskTitle: null, description: "Work" },
-        project: projectA,
-      }),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("allows switch when active timer has task even with empty description", () => {
@@ -55,17 +48,6 @@ describe("canStartAgencyTimer", () => {
       canStartAgencyTimer({
         activeTimer: { taskId: "task-1", taskTitle: "Task 1", description: "Work" },
         project: projectA,
-      }),
-    ).toBe(true);
-  });
-
-  it("allows start when draft description and task make active timer stoppable", () => {
-    expect(
-      canStartAgencyTimer({
-        activeTimer: { taskId: null, taskTitle: null, description: "" },
-        project: projectA,
-        description: "Work",
-        selectedTask: task,
       }),
     ).toBe(true);
   });
@@ -90,53 +72,18 @@ describe("getAgencyTimerStartBlockedMessage", () => {
 });
 
 describe("canStopAgencyTimer", () => {
-  it("requires description and task", () => {
+  it("allows stop for any running timer (task optional)", () => {
     const activeTimer = { taskId: null, taskTitle: null, description: "" };
 
-    expect(canStopAgencyTimer({ activeTimer, description: "", selectedTask: null })).toBe(false);
-    expect(canStopAgencyTimer({ activeTimer, description: "Work", selectedTask: null })).toBe(
-      false,
-    );
+    expect(canStopAgencyTimer({ activeTimer, description: "", selectedTask: null })).toBe(true);
+    expect(canStopAgencyTimer({ activeTimer, description: "Work", selectedTask: null })).toBe(true);
     expect(canStopAgencyTimer({ activeTimer, description: "Work", selectedTask: task })).toBe(true);
   });
 
-  it("allows stop when active timer already has a task", () => {
-    expect(
-      canStopAgencyTimer({
-        activeTimer: { taskId: "task-1", taskTitle: "Task 1", description: "" },
-        description: "Work",
-        selectedTask: null,
-      }),
-    ).toBe(true);
-  });
-
-  it("allows stop with empty description by falling back to task title", () => {
-    expect(
-      canStopAgencyTimer({
-        activeTimer: { taskId: "task-1", taskTitle: "Task 1", description: "" },
-        description: "",
-        selectedTask: null,
-      }),
-    ).toBe(true);
-
-    expect(
-      canStopAgencyTimer({
-        activeTimer: { taskId: null, taskTitle: null, description: "" },
-        description: "",
-        selectedTask: task,
-      }),
-    ).toBe(true);
-  });
-
-  it("allows stop for draft task not in assignee-filtered catalog", () => {
-    expect(
-      canStopAgencyTimer({
-        activeTimer: { taskId: null, taskTitle: null, description: "" },
-        description: "Delegated work",
-        selectedTaskId: "task-delegated",
-        selectedTaskTitle: "Planning & Analysis",
-      }),
-    ).toBe(true);
+  it("blocks stop when no timer is running", () => {
+    expect(canStopAgencyTimer({ activeTimer: null, description: "Work", selectedTask: task })).toBe(
+      false,
+    );
   });
 });
 
@@ -145,20 +92,21 @@ describe("resolveAgencyTimerStopDescription", () => {
     expect(resolveAgencyTimerStopDescription("  Note  ", "Task 1")).toBe("Note");
   });
 
-  it("falls back to task title when description is blank", () => {
+  it("falls back to task title then project name", () => {
     expect(resolveAgencyTimerStopDescription("   ", "Task 1")).toBe("Task 1");
-    expect(resolveAgencyTimerStopDescription("", null)).toBe("");
+    expect(resolveAgencyTimerStopDescription("", null, "Project A")).toBe("Project A");
+    expect(resolveAgencyTimerStopDescription("", null, null)).toBe("");
   });
 });
 
 describe("getAgencyTimerStopButtonPresentation", () => {
-  it("keeps Choose task clickable so the tracker can open the chooser", () => {
+  it("disables Stop when the timer cannot be saved", () => {
     expect(
       getAgencyTimerStopButtonPresentation({
         isPending: false,
         canStop: false,
       }),
-    ).toEqual({ label: "Choose task", disabled: false });
+    ).toEqual({ label: "Stop", disabled: true });
   });
 
   it("shows Stop when the timer can be saved", () => {

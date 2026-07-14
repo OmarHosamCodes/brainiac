@@ -167,7 +167,7 @@ type UpdateActiveTimerStartPayload = {
 type RestartEntryPayload = {
   teamId: string;
   project: Pick<AgencyProjectSummary, "id" | "name">;
-  task: Pick<AgencyProjectTask, "id" | "title">;
+  task: Pick<AgencyProjectTask, "id" | "title"> | null;
   description: string;
   tagIds?: string[];
   isBillable?: boolean;
@@ -632,6 +632,7 @@ function createAgencyTimeTrackingActions(
       const stopDescription = resolveAgencyTimerStopDescription(
         previousTimerDraft?.description ?? previousActiveTimer.description ?? "",
         stopTask?.title ?? previousActiveTimer.taskTitle,
+        previousActiveTimer.projectName,
       );
 
       await runStopTimer({
@@ -767,6 +768,7 @@ function createAgencyTimeTrackingActions(
     const description = resolveAgencyTimerStopDescription(
       payload.description,
       selectedTask?.title ?? activeTimer.taskTitle,
+      activeTimer.projectName,
     );
 
     if (!payload.discard) {

@@ -90,6 +90,17 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
           />
         );
       }
+      if (triggerProject) {
+        return (
+          <AgencyTimeEntryProjectLabel
+            format="project-client"
+            projectId={triggerProject.id}
+            projectName={triggerProject.name}
+            clientName={triggerProject.clientName}
+            className="min-w-0"
+          />
+        );
+      }
       return <span className="min-w-0 truncate text-muted">{placeholder}</span>;
     }
     if (triggerFormat === "project-client") {

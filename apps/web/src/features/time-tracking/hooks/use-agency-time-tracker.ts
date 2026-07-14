@@ -79,6 +79,8 @@ export type AgencyTimeTrackerViewModel = {
   taskChooserOpen: boolean;
   taskChooserLabel: string;
   taskChooserWarning: boolean;
+  /** Resolved project Start will use (and idle chooser should show). */
+  startProject: Pick<AgencyProject, "id" | "name" | "clientName"> | null;
   projects: AgencyProject[];
   tasks: AgencyProjectTask[];
   projectsLoading: boolean;
@@ -485,7 +487,7 @@ export function useAgencyTimeTracker({
   });
   const stopButtonLabel = stopPresentation.label;
   const stopButtonDisabled = !teamId || stopPresentation.disabled;
-  const stopButtonHint = !canStopTimer ? "Choose a task to save this entry." : null;
+  const stopButtonHint = null;
 
   // Start stays clickable when a project exists but no task — click opens the chooser.
   const startButtonDisabled =
@@ -596,6 +598,7 @@ export function useAgencyTimeTracker({
     taskChooserOpen,
     taskChooserLabel,
     taskChooserWarning: !activeTimerHasTask && !resolvedTimerTask && taskChooserOpen,
+    startProject: manualProject,
     projects,
     tasks,
     projectsLoading: projectsQuery.isPending,

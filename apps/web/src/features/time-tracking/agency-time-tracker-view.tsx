@@ -33,7 +33,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
   const elapsedLabel = view.elapsedLabel ?? "00:00:00";
   const taskChooserTriggerClass = cn(
     agencyTimeTrackerTaskChooserTriggerClass,
-    "max-w-[9rem]",
+    "max-w-[14rem]",
     view.taskChooserWarning &&
       "text-warning hover:text-warning [&_svg]:text-warning [&_span]:text-warning",
   );
@@ -94,8 +94,13 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
             fallbackTaskTitle={
               view.taskChooserLabel !== "Choose task" ? view.taskChooserLabel : undefined
             }
-            fallbackProjectId={view.activeTimer?.projectId}
-            fallbackProjectName={view.activeTimer?.projectName}
+            fallbackProjectId={view.activeTimer?.projectId ?? view.startProject?.id}
+            fallbackProjectName={view.activeTimer?.projectName ?? view.startProject?.name}
+            fallbackClientName={
+              view.projects.find(
+                (project) => project.id === (view.activeTimer?.projectId ?? view.startProject?.id),
+              )?.clientName ?? view.startProject?.clientName
+            }
             className={taskChooserTriggerClass}
             loading={view.projectsLoading || view.tasksLoading}
             disabled={controlsDisabled}
@@ -146,7 +151,10 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                 disabled={view.isStartTimeSaving}
               />
               {view.elapsedError ? (
-                <p className="absolute top-full left-0 z-10 whitespace-nowrap text-xs text-error" role="alert">
+                <p
+                  className="absolute top-full left-0 z-10 whitespace-nowrap text-xs text-error"
+                  role="alert"
+                >
                   {view.elapsedError}
                 </p>
               ) : null}
@@ -206,23 +214,14 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
           {view.activeTimer ? (
             <>
               <Button
-                variant={view.canStopTimer ? "destructive" : "outline"}
+                variant="destructive"
                 size="sm"
                 className={cn(
                   agencyTimeTrackerPrimaryActionClass,
-                  view.canStopTimer
-                    ? "bg-destructive text-white hover:bg-destructive/90"
-                    : "bg-transparent text-muted",
-                  view.stopButtonWarningRing &&
-                    "ring-2 ring-warning/30 ring-offset-1 ring-offset-background",
+                  "bg-destructive text-white hover:bg-destructive/90",
                 )}
                 disabled={view.stopButtonDisabled}
-                title={view.stopButtonHint ?? undefined}
-                aria-label={
-                  view.stopButtonHint
-                    ? `${view.stopButtonLabel}. ${view.stopButtonHint}`
-                    : view.stopButtonLabel
-                }
+                aria-label={view.stopButtonLabel}
                 onClick={view.onStopTimer}
               >
                 {view.stopButtonLabel}

@@ -450,39 +450,37 @@ export async function startAgencyTimer(
 
   await db.transaction(async (tx) => {
     if (existing) {
-      if (existing.taskId) {
-        const durationSeconds = getDurationSeconds(existing.startedAt, now);
-        rolledOverEntryId = createWorkspaceId("agency-time");
-        const journeyStepId = await resolveJourneyStepIdForTask(existing.teamId, existing.taskId);
+      // Always save the previous timer — including project-only (no task) — so start
+      // never silently discards time when replacing an active run.
+      const durationSeconds = getDurationSeconds(existing.startedAt, now);
+      rolledOverEntryId = createWorkspaceId("agency-time");
+      const journeyStepId = await resolveJourneyStepIdForTask(existing.teamId, existing.taskId);
 
-        await tx.insert(agencyOpsTimeEntry).values({
-          id: rolledOverEntryId,
-          teamId: existing.teamId,
-          projectId: existing.projectId,
-          taskId: existing.taskId,
-          journeyStepId,
-          userId: actorUserId,
-          source: "timer",
-          description: existing.description,
-          isBillable: existing.isBillable,
-          startedAt: existing.startedAt,
-          endedAt: now,
-          durationSeconds,
-          createdAt: now,
-          updatedAt: now,
-        });
+      await tx.insert(agencyOpsTimeEntry).values({
+        id: rolledOverEntryId,
+        teamId: existing.teamId,
+        projectId: existing.projectId,
+        taskId: existing.taskId,
+        journeyStepId,
+        userId: actorUserId,
+        source: "timer",
+        description: existing.description,
+        isBillable: existing.isBillable,
+        startedAt: existing.startedAt,
+        endedAt: now,
+        durationSeconds,
+        createdAt: now,
+        updatedAt: now,
+      });
 
-        const previousTagIds = await tx
-          .select({ tagId: agencyOpsActiveTimerTag.tagId })
-          .from(agencyOpsActiveTimerTag)
-          .where(eq(agencyOpsActiveTimerTag.activeTimerId, existing.id));
-        if (previousTagIds.length > 0) {
-          await tx
-            .insert(agencyOpsTimeEntryTag)
-            .values(
-              previousTagIds.map(({ tagId }) => ({ timeEntryId: rolledOverEntryId!, tagId })),
-            );
-        }
+      const previousTagIds = await tx
+        .select({ tagId: agencyOpsActiveTimerTag.tagId })
+        .from(agencyOpsActiveTimerTag)
+        .where(eq(agencyOpsActiveTimerTag.activeTimerId, existing.id));
+      if (previousTagIds.length > 0) {
+        await tx
+          .insert(agencyOpsTimeEntryTag)
+          .values(previousTagIds.map(({ tagId }) => ({ timeEntryId: rolledOverEntryId!, tagId })));
       }
 
       await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, existing.id));
@@ -670,19 +668,17 @@ export async function stopAgencyTimer(
     entryProjectId = binding.projectId;
   }
 
-  if (!input.discard && !taskId) {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Choose a task before stopping this timer.",
-    });
-  }
-
   const now = new Date();
-  const description = input.description?.trim() ?? active.description;
+  let description = (input.description?.trim() || active.description || "").trim();
 
+  // Project-only timers are allowed; fall back to the project name so stop/save never dead-ends.
   if (!input.discard && !description) {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "Add a description before stopping this timer.",
-    });
+    const [project] = await db
+      .select({ name: agencyOpsProject.name })
+      .from(agencyOpsProject)
+      .where(eq(agencyOpsProject.id, entryProjectId))
+      .limit(1);
+    description = project?.name?.trim() || "Time entry";
   }
 
   const durationSeconds = getDurationSeconds(active.startedAt, now);

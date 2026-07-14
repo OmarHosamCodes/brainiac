@@ -213,12 +213,12 @@ export function useAgencyTimeEntriesLog({
   async function restartEntry(group: CollapsedEntryGroup) {
     const project = projects.find((projectEntry) => projectEntry.id === group.projectId);
     const sourceEntry = group.entries[0];
-    if (!teamId || !project || !group.taskId) return;
+    if (!teamId || !project) return;
 
     await agencyTimeTrackingStore.restartEntry({
       teamId,
       project,
-      task: { id: group.taskId, title: group.taskTitle },
+      task: group.taskId ? { id: group.taskId, title: group.taskTitle } : null,
       description: group.description,
       tagIds: sourceEntry?.tags?.map((tag) => tag.id) ?? [],
       isBillable: sourceEntry?.isBillable ?? true,

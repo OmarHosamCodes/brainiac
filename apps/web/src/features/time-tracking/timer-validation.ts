@@ -82,12 +82,13 @@ export function resolveAgencyTimerTaskRef(input: {
   return null;
 }
 
-/** Prefer typed description; fall back to task title so stop/save works without typing. */
+/** Prefer typed description; fall back to task title / project name so stop/save works without typing. */
 export function resolveAgencyTimerStopDescription(
   description: string,
   taskTitle?: string | null,
+  projectName?: string | null,
 ): string {
-  return description.trim() || (taskTitle?.trim() ?? "");
+  return description.trim() || taskTitle?.trim() || projectName?.trim() || "";
 }
 
 export function canStopAgencyTimer(input: {
@@ -97,26 +98,10 @@ export function canStopAgencyTimer(input: {
   selectedTaskId?: string;
   selectedTaskTitle?: string | null;
   catalogTasks?: AgencyTimerTaskRef[];
+  projectName?: string | null;
 }): boolean {
-  if (!input.activeTimer) {
-    return false;
-  }
-
-  const task =
-    input.selectedTask ??
-    resolveAgencyTimerTaskRef({
-      activeTimer: input.activeTimer,
-      selectedTaskId: input.selectedTaskId,
-      selectedTaskTitle: input.selectedTaskTitle,
-      catalogTasks: input.catalogTasks,
-    });
-
-  const descriptionTrimmed = resolveAgencyTimerStopDescription(
-    input.description,
-    task?.title ?? input.activeTimer.taskTitle,
-  );
-
-  return Boolean(descriptionTrimmed && task);
+  // Running timer always has a project; task/description are optional (fallback on stop).
+  return Boolean(input.activeTimer);
 }
 
 // ponytail: naive fallback chain (draft → recent entry → first project); upgrade path is explicit project picker
@@ -191,37 +176,16 @@ export function getAgencyTimerStopBlockedMessage(input: {
   selectedTaskId?: string;
   selectedTaskTitle?: string | null;
   catalogTasks?: AgencyTimerTaskRef[];
+  projectName?: string | null;
 }): string | null {
   if (!input.activeTimer) {
     return null;
   }
 
-  const task =
-    input.selectedTask ??
-    resolveAgencyTimerTaskRef({
-      activeTimer: input.activeTimer,
-      selectedTaskId: input.selectedTaskId,
-      selectedTaskTitle: input.selectedTaskTitle,
-      catalogTasks: input.catalogTasks,
-    });
-
-  if (!task) {
-    return "Choose a task in the time tracker before stopping the timer.";
-  }
-
-  const descriptionTrimmed = resolveAgencyTimerStopDescription(
-    input.description,
-    task.title || input.activeTimer.taskTitle,
-  );
-
-  if (!descriptionTrimmed) {
-    return "Add a description in the time tracker before stopping the timer.";
-  }
-
   return null;
 }
 
-/** Stop CTA while a timer is running: Stop, or a guided next step that stays clickable when it opens the chooser. */
+/** Stop CTA while a timer is running. */
 export function getAgencyTimerStopButtonPresentation(input: {
   isPending: boolean;
   canStop: boolean;
@@ -229,9 +193,5 @@ export function getAgencyTimerStopButtonPresentation(input: {
   if (input.isPending) {
     return { label: "…", disabled: true };
   }
-  if (input.canStop) {
-    return { label: "Stop", disabled: false };
-  }
-  // Always keep the CTA clickable so users can open the task chooser after a task-less start.
-  return { label: "Choose task", disabled: false };
+  return { label: "Stop", disabled: !input.canStop };
 }

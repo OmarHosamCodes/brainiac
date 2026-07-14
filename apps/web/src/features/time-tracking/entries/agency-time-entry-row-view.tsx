@@ -123,10 +123,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         ) : null}
         {isMulti ? (
           <span
-            className={cn(
-              agencyWorkTitleClass,
-              "min-w-0 shrink truncate text-left font-normal",
-            )}
+            className={cn(agencyWorkTitleClass, "min-w-0 shrink truncate text-left font-normal")}
           >
             {displayTitle}
           </span>
@@ -295,7 +292,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               type="button"
               className={cn(agencyTimeEntryIconButtonClass, !canRestart && "opacity-50")}
               disabled={!canRestart}
-              aria-label={`Restart timer for ${group.taskTitle}`}
+              aria-label={`Restart timer for ${group.taskTitle || group.projectName}`}
               onClick={onRestart}
             >
               <Play className="size-3.5" />
