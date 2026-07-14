@@ -28,18 +28,9 @@ export function canStartAgencyTimer(input: {
     return false;
   }
 
-  // Allow start while another timer runs only when that timer is stoppable;
-  // API startAgencyTimer then rolls it into an entry and starts the new one.
+  // Idle: project is enough (task optional). Switch: previous timer must be stoppable.
   if (!input.activeTimer) {
-    const selectedTask =
-      input.selectedTask ??
-      resolveAgencyTimerTaskRef({
-        activeTimer: null,
-        selectedTaskId: input.selectedTaskId,
-        selectedTaskTitle: input.selectedTaskTitle,
-        catalogTasks: input.catalogTasks,
-      });
-    return Boolean(selectedTask);
+    return true;
   }
 
   return canStopAgencyTimer({
@@ -58,26 +49,34 @@ export function resolveAgencyTimerTaskRef(input: {
   selectedTaskTitle?: string | null;
   catalogTasks?: AgencyTimerTaskRef[];
 }): AgencyTimerTaskRef | null {
+  // Prefer tracker draft so mid-run task changes stick through stop/save.
+  const draftTaskId = input.selectedTaskId?.trim() ?? "";
+  if (draftTaskId) {
+    const fromCatalog = input.catalogTasks?.find((task) => task.id === draftTaskId);
+    if (fromCatalog) {
+      return fromCatalog;
+    }
+
+    const draftTitle = input.selectedTaskTitle?.trim() ?? "";
+    if (input.activeTimer?.taskId === draftTaskId) {
+      return {
+        id: draftTaskId,
+        title: input.activeTimer.taskTitle ?? draftTitle,
+      };
+    }
+
+    if (draftTitle) {
+      return { id: draftTaskId, title: draftTitle };
+    }
+
+    return { id: draftTaskId, title: "" };
+  }
+
   if (input.activeTimer?.taskId) {
     return {
       id: input.activeTimer.taskId,
       title: input.activeTimer.taskTitle ?? input.selectedTaskTitle?.trim() ?? "",
     };
-  }
-
-  const draftTaskId = input.selectedTaskId?.trim() ?? "";
-  if (!draftTaskId) {
-    return null;
-  }
-
-  const fromCatalog = input.catalogTasks?.find((task) => task.id === draftTaskId);
-  if (fromCatalog) {
-    return fromCatalog;
-  }
-
-  const draftTitle = input.selectedTaskTitle?.trim() ?? "";
-  if (draftTitle) {
-    return { id: draftTaskId, title: draftTitle };
   }
 
   return null;
@@ -162,17 +161,6 @@ export function getAgencyTimerStartBlockedMessage(input: {
   }
 
   if (!input.activeTimer) {
-    const selectedTask =
-      input.selectedTask ??
-      resolveAgencyTimerTaskRef({
-        activeTimer: null,
-        selectedTaskId: input.selectedTaskId,
-        selectedTaskTitle: input.selectedTaskTitle,
-        catalogTasks: input.catalogTasks,
-      });
-    if (!selectedTask) {
-      return "Choose a task to start the timer.";
-    }
     return null;
   }
 
@@ -237,7 +225,6 @@ export function getAgencyTimerStopBlockedMessage(input: {
 export function getAgencyTimerStopButtonPresentation(input: {
   isPending: boolean;
   canStop: boolean;
-  descriptionTrimmed: boolean;
 }): { label: string; disabled: boolean } {
   if (input.isPending) {
     return { label: "…", disabled: true };
@@ -245,9 +232,6 @@ export function getAgencyTimerStopButtonPresentation(input: {
   if (input.canStop) {
     return { label: "Stop", disabled: false };
   }
-  // Keep "Choose task" enabled so the click opens the chooser (stop is still blocked until a task is set).
-  if (input.descriptionTrimmed) {
-    return { label: "Choose task", disabled: false };
-  }
-  return { label: "Add details", disabled: true };
+  // Always keep the CTA clickable so users can open the task chooser after a task-less start.
+  return { label: "Choose task", disabled: false };
 }

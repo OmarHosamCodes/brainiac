@@ -666,12 +666,6 @@ export async function stopAgencyTimer(
       inputTaskProjectId: taskProjectId,
     });
 
-    if ("error" in binding) {
-      throw new ORPCError("BAD_REQUEST", {
-        message: "Task must belong to the active timer project.",
-      });
-    }
-
     taskId = binding.taskId;
     entryProjectId = binding.projectId;
   }

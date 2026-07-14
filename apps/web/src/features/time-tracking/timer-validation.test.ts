@@ -3,6 +3,7 @@ import { describe, expect, it } from "bun:test";
 import {
   canStartAgencyTimer,
   canStopAgencyTimer,
+  getAgencyTimerStartBlockedMessage,
   getAgencyTimerStopButtonPresentation,
   resolveAgencyTimerStartProject,
   resolveAgencyTimerStopDescription,
@@ -14,14 +15,14 @@ const projectB = { id: "proj-b", name: "Project B" };
 const task = { id: "task-1", title: "Task 1" };
 
 describe("canStartAgencyTimer", () => {
-  it("allows start with project and task", () => {
-    expect(
-      canStartAgencyTimer({ activeTimer: null, project: projectA, selectedTask: task }),
-    ).toBe(true);
+  it("allows start with project only", () => {
+    expect(canStartAgencyTimer({ activeTimer: null, project: projectA })).toBe(true);
   });
 
-  it("blocks start without a selected task", () => {
-    expect(canStartAgencyTimer({ activeTimer: null, project: projectA })).toBe(false);
+  it("allows start with project and task", () => {
+    expect(canStartAgencyTimer({ activeTimer: null, project: projectA, selectedTask: task })).toBe(
+      true,
+    );
   });
 
   it("blocks start when active timer is not stoppable", () => {
@@ -70,9 +71,21 @@ describe("canStartAgencyTimer", () => {
   });
 
   it("blocks start when no project is available", () => {
-    expect(
-      canStartAgencyTimer({ activeTimer: null, project: null, selectedTask: task }),
-    ).toBe(false);
+    expect(canStartAgencyTimer({ activeTimer: null, project: null, selectedTask: task })).toBe(
+      false,
+    );
+  });
+});
+
+describe("getAgencyTimerStartBlockedMessage", () => {
+  it("allows idle start without a task", () => {
+    expect(getAgencyTimerStartBlockedMessage({ activeTimer: null, project: projectA })).toBeNull();
+  });
+
+  it("requires a project for idle start", () => {
+    expect(getAgencyTimerStartBlockedMessage({ activeTimer: null, project: null })).toBe(
+      "No project available to start the timer.",
+    );
   });
 });
 
@@ -144,19 +157,8 @@ describe("getAgencyTimerStopButtonPresentation", () => {
       getAgencyTimerStopButtonPresentation({
         isPending: false,
         canStop: false,
-        descriptionTrimmed: true,
       }),
     ).toEqual({ label: "Choose task", disabled: false });
-  });
-
-  it("disables Add details until a description exists", () => {
-    expect(
-      getAgencyTimerStopButtonPresentation({
-        isPending: false,
-        canStop: false,
-        descriptionTrimmed: false,
-      }),
-    ).toEqual({ label: "Add details", disabled: true });
   });
 
   it("shows Stop when the timer can be saved", () => {
@@ -164,21 +166,20 @@ describe("getAgencyTimerStopButtonPresentation", () => {
       getAgencyTimerStopButtonPresentation({
         isPending: false,
         canStop: true,
-        descriptionTrimmed: true,
       }),
     ).toEqual({ label: "Stop", disabled: false });
   });
 });
 
 describe("resolveAgencyTimerTaskRef", () => {
-  it("prefers active timer task over draft selection", () => {
+  it("prefers draft selection over active timer task so mid-run changes stick", () => {
     expect(
       resolveAgencyTimerTaskRef({
         activeTimer: { taskId: "task-1", taskTitle: "Running task", description: "" },
         selectedTaskId: "task-2",
         selectedTaskTitle: "Draft task",
       }),
-    ).toEqual({ id: "task-1", title: "Running task" });
+    ).toEqual({ id: "task-2", title: "Draft task" });
   });
 
   it("falls back to draft id and title when task is absent from catalog", () => {
@@ -190,6 +191,15 @@ describe("resolveAgencyTimerTaskRef", () => {
         catalogTasks: [task],
       }),
     ).toEqual({ id: "task-delegated", title: "Planning & Analysis" });
+  });
+
+  it("uses active timer task when draft has no selection", () => {
+    expect(
+      resolveAgencyTimerTaskRef({
+        activeTimer: { taskId: "task-1", taskTitle: "Running task", description: "" },
+        selectedTaskId: "",
+      }),
+    ).toEqual({ id: "task-1", title: "Running task" });
   });
 });
 

@@ -204,7 +204,8 @@ export function useAgencyTimeTracker({
     cachedTask?.projectId ||
     selectedTask?.projectId ||
     "";
-  const selectedTaskTitle = activeTimer?.taskTitle ?? cachedTask?.title ?? null;
+  const selectedTaskTitle =
+    cachedTask?.title ?? selectedTask?.title ?? activeTimer?.taskTitle ?? null;
   const resolvedTimerTask = resolveAgencyTimerTaskRef({
     activeTimer,
     selectedTaskId,
@@ -219,7 +220,6 @@ export function useAgencyTimeTracker({
     recentEntryProjectId,
   });
   const activeTimerHasTask = Boolean(activeTimer?.taskId);
-  const descriptionTrimmed = timerDescription.trim();
   useEffect(() => {
     if (!teamId) return;
     ensureTrackerDraft(teamId);
@@ -242,9 +242,7 @@ export function useAgencyTimeTracker({
     canStartAgencyTimer({
       activeTimer: null,
       project: startProject,
-      selectedTask: cachedTask
-        ? { id: cachedTask.id, title: cachedTask.title }
-        : null,
+      selectedTask: cachedTask ? { id: cachedTask.id, title: cachedTask.title } : null,
       selectedTaskId,
       selectedTaskTitle,
       catalogTasks: tasks,
@@ -274,14 +272,7 @@ export function useAgencyTimeTracker({
       durationInput: "",
       description: timerDescription,
     }),
-    [
-      isBillable,
-      manualDraft,
-      selectedProjectId,
-      selectedTagIds,
-      selectedTaskId,
-      timerDescription,
-    ],
+    [isBillable, manualDraft, selectedProjectId, selectedTagIds, selectedTaskId, timerDescription],
   );
 
   const manualError = useMemo(
@@ -359,16 +350,12 @@ export function useAgencyTimeTracker({
   }
 
   async function startTimer() {
-    if (!teamId || !startProject) return;
-    if (!cachedTask || !canStartTimer) {
-      revealTaskChooser();
-      return;
-    }
+    if (!teamId || !startProject || !canStartTimer) return;
 
     await startTimerAction({
       teamId,
       project: startProject,
-      task: { id: cachedTask.id, title: cachedTask.title },
+      task: cachedTask ? { id: cachedTask.id, title: cachedTask.title } : null,
       description: timerDescription,
       tagIds: trackerDraft?.tagIds,
       isBillable: trackerDraft?.isBillable,
@@ -466,7 +453,7 @@ export function useAgencyTimeTracker({
   async function stopTimer(discard = false) {
     if (!teamId || !activeTimer) return;
     if (!discard && !canStopTimer) {
-      if (descriptionTrimmed && !activeTimerHasTask && !resolvedTimerTask) revealTaskChooser();
+      revealTaskChooser();
       return;
     }
 
@@ -495,18 +482,14 @@ export function useAgencyTimeTracker({
   const stopPresentation = getAgencyTimerStopButtonPresentation({
     isPending: isTimerMutationPending,
     canStop: canStopTimer,
-    descriptionTrimmed: Boolean(descriptionTrimmed),
   });
   const stopButtonLabel = stopPresentation.label;
   const stopButtonDisabled = !teamId || stopPresentation.disabled;
-  const stopButtonHint = !canStopTimer
-    ? descriptionTrimmed
-      ? "Choose a task to save this entry."
-      : "Enter what you're working on."
-    : null;
+  const stopButtonHint = !canStopTimer ? "Choose a task to save this entry." : null;
 
   // Start stays clickable when a project exists but no task — click opens the chooser.
-  const startButtonDisabled = !teamId || !startProject || Boolean(activeTimer) || isTimerMutationPending;
+  const startButtonDisabled =
+    !teamId || !startProject || Boolean(activeTimer) || isTimerMutationPending;
 
   function onElapsedFocus() {
     setElapsedDraft(elapsedLabel ?? "00:00:00");

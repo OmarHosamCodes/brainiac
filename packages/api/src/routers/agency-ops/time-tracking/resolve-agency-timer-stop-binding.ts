@@ -4,18 +4,9 @@ export function resolveAgencyTimerStopBinding(input: {
   activeTaskId: string | null;
   inputTaskId?: string;
   inputTaskProjectId?: string;
-}):
-  | { projectId: string; taskId: string }
-  | { projectId: string; taskId: null }
-  | { error: "task_project_mismatch" } {
+}): { projectId: string; taskId: string } | { projectId: string; taskId: null } {
+  // Honor the task chosen in the tracker (including mid-run changes and cross-project moves).
   if (input.inputTaskId && input.inputTaskProjectId) {
-    if (input.activeTaskId) {
-      if (input.inputTaskProjectId !== input.activeProjectId) {
-        return { error: "task_project_mismatch" };
-      }
-      return { projectId: input.activeProjectId, taskId: input.activeTaskId };
-    }
-
     return {
       projectId: input.inputTaskProjectId,
       taskId: input.inputTaskId,

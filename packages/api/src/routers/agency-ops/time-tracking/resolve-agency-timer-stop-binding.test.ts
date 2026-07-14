@@ -14,7 +14,7 @@ describe("resolveAgencyTimerStopBinding", () => {
     ).toEqual({ projectId: "project-b", taskId: "task-b" });
   });
 
-  test("keeps active task when timer already has one", () => {
+  test("honors mid-run task change on the same project", () => {
     expect(
       resolveAgencyTimerStopBinding({
         activeProjectId: "project-a",
@@ -22,10 +22,10 @@ describe("resolveAgencyTimerStopBinding", () => {
         inputTaskId: "task-b",
         inputTaskProjectId: "project-a",
       }),
-    ).toEqual({ projectId: "project-a", taskId: "task-a" });
+    ).toEqual({ projectId: "project-a", taskId: "task-b" });
   });
 
-  test("rejects cross-project task when timer already has one", () => {
+  test("honors mid-run cross-project task change", () => {
     expect(
       resolveAgencyTimerStopBinding({
         activeProjectId: "project-a",
@@ -33,6 +33,24 @@ describe("resolveAgencyTimerStopBinding", () => {
         inputTaskId: "task-b",
         inputTaskProjectId: "project-b",
       }),
-    ).toEqual({ error: "task_project_mismatch" });
+    ).toEqual({ projectId: "project-b", taskId: "task-b" });
+  });
+
+  test("falls back to active task when no input task is provided", () => {
+    expect(
+      resolveAgencyTimerStopBinding({
+        activeProjectId: "project-a",
+        activeTaskId: "task-a",
+      }),
+    ).toEqual({ projectId: "project-a", taskId: "task-a" });
+  });
+
+  test("returns null task when neither input nor active has a task", () => {
+    expect(
+      resolveAgencyTimerStopBinding({
+        activeProjectId: "project-a",
+        activeTaskId: null,
+      }),
+    ).toEqual({ projectId: "project-a", taskId: null });
   });
 });
