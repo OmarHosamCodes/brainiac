@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import { sentryVitePlugin } from "@sentry/vite-plugin";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { defineConfig, loadEnv, type Plugin } from "vite";
@@ -32,6 +33,14 @@ function appVersionPlugin(buildId: string): Plugin {
   };
 }
 
+function hasSentryUploadCredentials(env: Record<string, string>): boolean {
+  return Boolean(
+    (process.env.SENTRY_AUTH_TOKEN || env.SENTRY_AUTH_TOKEN) &&
+    (process.env.SENTRY_ORG || env.SENTRY_ORG) &&
+    (process.env.SENTRY_PROJECT || env.SENTRY_PROJECT),
+  );
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const serverUrl =
@@ -39,15 +48,39 @@ export default defineConfig(({ mode }) => {
     process.env.NUXT_PUBLIC_SERVER_URL ??
     env.VITE_PUBLIC_SERVER_URL ??
     env.NUXT_PUBLIC_SERVER_URL;
+  const sentryDsn = process.env.VITE_PUBLIC_SENTRY_DSN ?? env.VITE_PUBLIC_SENTRY_DSN ?? "";
   const appBuildId = resolveAppBuildId();
+  const shouldUploadSourceMaps = hasSentryUploadCredentials(env);
 
   return {
     define: {
       __BRAINIAC_SERVER_URL__: JSON.stringify(serverUrl ?? ""),
       __APP_BUILD_ID__: JSON.stringify(appBuildId),
+      __SENTRY_DSN__: JSON.stringify(sentryDsn),
     },
-    plugins: [react(), tailwindcss(), marketingPrerenderShell(), appVersionPlugin(appBuildId)],
+    plugins: [
+      react(),
+      tailwindcss(),
+      marketingPrerenderShell(),
+      appVersionPlugin(appBuildId),
+      ...(shouldUploadSourceMaps
+        ? [
+            sentryVitePlugin({
+              org: process.env.SENTRY_ORG || env.SENTRY_ORG,
+              project: process.env.SENTRY_PROJECT || env.SENTRY_PROJECT,
+              authToken: process.env.SENTRY_AUTH_TOKEN || env.SENTRY_AUTH_TOKEN,
+              release: {
+                name: appBuildId,
+              },
+              sourcemaps: {
+                filesToDeleteAfterUpload: ["./dist/**/*.map"],
+              },
+            }),
+          ]
+        : []),
+    ],
     build: {
+      sourcemap: shouldUploadSourceMaps ? "hidden" : false,
       rollupOptions: {
         output: {
           manualChunks(id) {

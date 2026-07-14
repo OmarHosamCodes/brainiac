@@ -1,6 +1,6 @@
 # Golden File Source Inventory
 
-Generated on 2026-07-13 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
+Generated on 2026-07-14 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
 
 ## Scope policy
 
@@ -19,9 +19,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 483 |
-| server-operation | 10 |
-| shared-infrastructure | 226 |
+| golden-feature | 487 |
+| server-operation | 12 |
+| shared-infrastructure | 228 |
 | static-presentation | 15 |
 
 ## Counts by domain
@@ -48,14 +48,14 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | performance | 8 |
 | projects | 20 |
 | reports | 41 |
-| repository | 12 |
+| repository | 13 |
 | resourcing | 16 |
-| server-platform | 18 |
+| server-platform | 20 |
 | settings | 1 |
 | task-management | 109 |
 | team | 18 |
-| time-tracking | 62 |
-| web-platform | 72 |
+| time-tracking | 66 |
+| web-platform | 73 |
 | workspace | 106 |
 
 ## Artifacts
@@ -89,6 +89,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/server/src/operations/backfills/import-clockify-backfill.ts` | time-tracking | server-operation | server-operation | time-tracking-domain | Deliberate time-tracking operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
 | `apps/server/src/operations/backfills/verify-clockify-backfill.ts` | time-tracking | server-operation | server-operation | time-tracking-domain | Deliberate time-tracking operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
 | `apps/server/src/operations/imports/import-clockify.ts` | time-tracking | server-operation | server-operation | time-tracking-domain | Deliberate time-tracking operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
+| `apps/server/src/operations/local-reset-team-passwords.ts` | server-platform | server-operation | server-operation | server-platform | Deliberate server-platform operation with isolated runtime side effects. | content: database access, process or filesystem tooling, environment contract; structure: source role and exported behavior |
+| `apps/server/src/operations/local-timer-smoke.ts` | server-platform | server-operation | server-operation | server-platform | Deliberate server-platform operation with isolated runtime side effects. | content: database access, process or filesystem tooling, environment contract; structure: source role and exported behavior |
 | `apps/server/src/operations/maintenance/cleanup-agency-operator-nodes.ts` | agency-shared | server-operation | server-operation | agency-platform | Deliberate agency-shared operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
 | `apps/server/src/operations/maintenance/clear-team-data.ts` | team | server-operation | server-operation | team-domain | Deliberate team operation with isolated runtime side effects. | content: database access, process or filesystem tooling, package or task configuration; structure: source role and exported behavior |
 | `apps/server/src/operations/maintenance/grant-lifetime-pro.ts` | billing | server-operation | server-operation | billing-domain | Deliberate billing operation with isolated runtime side effects. | content: database access, process or filesystem tooling; structure: source role and exported behavior |
@@ -434,9 +436,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/time-tracking/agency-time-summary.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/agency-time-tracker-view.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/agency-time-tracker.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/time-tracking/choosers/agency-tag-chooser.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/choosers/agency-task-chooser-view.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/choosers/agency-task-chooser.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
-| `apps/web/src/features/time-tracking/choosers/agency-tag-chooser.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/containers/agency-mini-timer-container.tsx` | time-tracking | container | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/time-tracking/containers/agency-task-chooser-container.tsx` | time-tracking | container | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/time-tracking/containers/agency-time-entries-log-container.tsx` | time-tracking | container | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
@@ -451,6 +453,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/time-tracking/entries/agency-time-entry-day-group-view.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/entries/agency-time-entry-day-group.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/entries/agency-time-entry-inline-edit.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/time-tracking/entries/agency-time-entry-project-label.test.tsx` | time-tracking | test | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical test layer. | content: Bun test declarations, React component or hook code; structure: test filename |
 | `apps/web/src/features/time-tracking/entries/agency-time-entry-project-label.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/entries/agency-time-entry-row-renderer.ts` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/time-tracking/entries/agency-time-entry-row-view.tsx` | time-tracking | presentational-view | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -565,6 +568,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/lib/push.ts` | notifications | web-query | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical web-query layer. | content: oRPC procedures or clients, exported declarations, environment contract; structure: source role and exported behavior |
 | `apps/web/src/lib/query-client.ts` | web-platform | web-query | shared-infrastructure | web-platform | Cross-cutting web-platform web-query support rather than a feature-owned business workflow. | content: TanStack Query orchestration, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/lib/schemas/index.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/lib/sentry.ts` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations, environment contract; structure: view or component role |
 | `apps/web/src/lib/theme.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/lib/user-avatar-url.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/lib/utils.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
@@ -797,6 +801,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `scripts/railway-start.mjs` | deployment | build-tooling | shared-infrastructure | platform-operations | Cross-cutting deployment build-tooling support rather than a feature-owned business workflow. | content: server runtime wiring, process or filesystem tooling, environment contract; structure: source-controlled script path |
 | `scripts/setup.sh` | repository | build-tooling | shared-infrastructure | developer-experience | Cross-cutting repository build-tooling support rather than a feature-owned business workflow. | content: shell operation commands, environment contract; structure: source-controlled script path |
 | `scripts/test-setup.ts` | repository | test-tooling | shared-infrastructure | developer-experience | Cross-cutting repository test-tooling support rather than a feature-owned business workflow. | content: environment contract; structure: source-controlled script path |
+| `scripts/upload-server-sentry-sourcemaps.ts` | repository | build-tooling | shared-infrastructure | developer-experience | Cross-cutting repository build-tooling support rather than a feature-owned business workflow. | content: process or filesystem tooling, environment contract; structure: source-controlled script path |
 | `tsconfig.json` | repository | build-config | shared-infrastructure | developer-experience | Cross-cutting repository build-config support rather than a feature-owned business workflow. | content: JSON configuration or metadata; structure: recognized build, test, database, runtime, or package config |
 | `turbo.json` | repository | build-config | shared-infrastructure | developer-experience | Cross-cutting repository build-config support rather than a feature-owned business workflow. | content: JSON configuration or metadata, package or task configuration, environment contract; structure: recognized build, test, database, runtime, or package config |
 

@@ -48,6 +48,11 @@ export const env = createEnv({
     PORT: z.coerce.number().optional(),
     BRAINIAC_SEED_SCALE: z.enum(["default", "massive"]).optional(),
     BRAINIAC_SEED_PASSWORD: z.string().optional(),
+    SENTRY_DSN: z.string().optional(),
+    SENTRY_ENVIRONMENT: z.string().optional(),
+    SENTRY_RELEASE: z.string().optional(),
+    RAILWAY_GIT_COMMIT_SHA: z.string().optional(),
+    SOURCE_COMMIT: z.string().optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
@@ -75,3 +80,8 @@ if (!firstCorsOrigin) {
 }
 
 export const primaryCorsOrigin = firstCorsOrigin;
+
+/** Prefer an explicit release, then Railway/source commit SHAs. */
+export function resolveSentryRelease(): string | undefined {
+  return env.SENTRY_RELEASE || env.RAILWAY_GIT_COMMIT_SHA || env.SOURCE_COMMIT || undefined;
+}

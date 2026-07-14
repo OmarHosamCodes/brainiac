@@ -16,8 +16,8 @@ import { eq } from "drizzle-orm";
 import { hashPassword } from "better-auth/crypto";
 
 const email = process.argv[2] ?? "omarhosamcodes@gmail.com";
-const password = process.env.LOCAL_PASSWORD ?? "orch1234";
-const base = process.env.BETTER_AUTH_URL ?? "http://localhost:7001";
+const password = Bun.env.LOCAL_PASSWORD ?? "orch1234";
+const base = Bun.env.BETTER_AUTH_URL ?? "http://localhost:7001";
 
 function cookieHeader(setCookie: string[] | null): string {
   if (!setCookie?.length) return "";
@@ -116,9 +116,13 @@ if (!signIn.ok || !cookies) {
 console.log("Signed in OK");
 
 // Clear any active timer first
-const activeBefore = await rpc<{ json?: { id?: string } } | unknown>(cookies, "agencyOps/timer/getActive", {
-  teamId: team.id,
-});
+const activeBefore = await rpc<{ json?: { id?: string } } | unknown>(
+  cookies,
+  "agencyOps/timer/getActive",
+  {
+    teamId: team.id,
+  },
+);
 console.log("getActive", activeBefore.status, JSON.stringify(activeBefore.json)?.slice(0, 200));
 
 const stopIfNeeded = await rpc(cookies, "agencyOps/timer/stop", {

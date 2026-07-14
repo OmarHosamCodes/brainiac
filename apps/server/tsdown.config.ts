@@ -6,6 +6,7 @@ export default defineConfig({
   outDir: "./dist",
   clean: true,
   dts: false,
+  sourcemap: true,
   noExternal: [/@orch\/.*/],
   deps: {
     neverBundle: ["sharp"],

@@ -4,6 +4,7 @@ import { Outlet, Route, Routes, useLocation } from "react-router-dom";
 import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { AuthProvider } from "@/providers/auth-provider";
 import { AuthenticatedRoutes } from "@/authenticated-routes";
+import { Sentry } from "@/lib/sentry";
 
 const LandingPage = lazy(() =>
   import("@/pages/landing-page").then((module) => ({ default: module.LandingPage })),
@@ -17,6 +18,8 @@ const PrivacyPage = lazy(() =>
 const TermsPage = lazy(() =>
   import("@/pages/terms-page").then((module) => ({ default: module.TermsPage })),
 );
+
+const SentryRoutes = Sentry.withSentryReactRouterV7Routing(Routes);
 
 function PublicPageFallback() {
   return (
@@ -49,7 +52,7 @@ export function App() {
     <>
       <ScrollToTopOnNavigate />
       <Suspense fallback={<PublicPageFallback />}>
-        <Routes>
+        <SentryRoutes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
@@ -57,7 +60,7 @@ export function App() {
             <Route index element={<LoginPage />} />
           </Route>
           <Route path="/*" element={<AuthenticatedRoutes />} />
-        </Routes>
+        </SentryRoutes>
       </Suspense>
     </>
   );

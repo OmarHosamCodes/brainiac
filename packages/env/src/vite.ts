@@ -13,11 +13,13 @@ export const env = createEnv({
       .url("VITE_PUBLIC_SERVER_URL must be a valid URL pointing to the backend")
       .optional(),
     VITE_PUBLIC_VAPID_KEY: z.string().optional(),
+    VITE_PUBLIC_SENTRY_DSN: z.string().optional(),
   },
   runtimeEnv: {
     VITE_PUBLIC_SERVER_URL:
       process.env.VITE_PUBLIC_SERVER_URL ?? process.env.NUXT_PUBLIC_SERVER_URL,
     VITE_PUBLIC_VAPID_KEY: process.env.VITE_PUBLIC_VAPID_KEY,
+    VITE_PUBLIC_SENTRY_DSN: process.env.VITE_PUBLIC_SENTRY_DSN,
   },
   emptyStringAsUndefined: true,
   skipValidation: true,
