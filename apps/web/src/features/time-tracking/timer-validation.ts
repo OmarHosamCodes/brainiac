@@ -83,6 +83,14 @@ export function resolveAgencyTimerTaskRef(input: {
   return null;
 }
 
+/** Prefer typed description; fall back to task title so stop/save works without typing. */
+export function resolveAgencyTimerStopDescription(
+  description: string,
+  taskTitle?: string | null,
+): string {
+  return description.trim() || (taskTitle?.trim() ?? "");
+}
+
 export function canStopAgencyTimer(input: {
   activeTimer: AgencyActiveTimerRef | null;
   description: string;
@@ -95,7 +103,6 @@ export function canStopAgencyTimer(input: {
     return false;
   }
 
-  const descriptionTrimmed = input.description.trim();
   const task =
     input.selectedTask ??
     resolveAgencyTimerTaskRef({
@@ -104,6 +111,11 @@ export function canStopAgencyTimer(input: {
       selectedTaskTitle: input.selectedTaskTitle,
       catalogTasks: input.catalogTasks,
     });
+
+  const descriptionTrimmed = resolveAgencyTimerStopDescription(
+    input.description,
+    task?.title ?? input.activeTimer.taskTitle,
+  );
 
   return Boolean(descriptionTrimmed && task);
 }
@@ -196,7 +208,6 @@ export function getAgencyTimerStopBlockedMessage(input: {
     return null;
   }
 
-  const descriptionTrimmed = input.description.trim();
   const task =
     input.selectedTask ??
     resolveAgencyTimerTaskRef({
@@ -206,12 +217,17 @@ export function getAgencyTimerStopBlockedMessage(input: {
       catalogTasks: input.catalogTasks,
     });
 
-  if (!descriptionTrimmed) {
-    return "Add a description in the time tracker before stopping the timer.";
-  }
-
   if (!task) {
     return "Choose a task in the time tracker before stopping the timer.";
+  }
+
+  const descriptionTrimmed = resolveAgencyTimerStopDescription(
+    input.description,
+    task.title || input.activeTimer.taskTitle,
+  );
+
+  if (!descriptionTrimmed) {
+    return "Add a description in the time tracker before stopping the timer.";
   }
 
   return null;

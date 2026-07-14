@@ -5,6 +5,7 @@ import {
   canStopAgencyTimer,
   getAgencyTimerStopButtonPresentation,
   resolveAgencyTimerStartProject,
+  resolveAgencyTimerStopDescription,
   resolveAgencyTimerTaskRef,
 } from "@/features/time-tracking/timer-validation";
 
@@ -33,17 +34,19 @@ describe("canStartAgencyTimer", () => {
 
     expect(
       canStartAgencyTimer({
-        activeTimer: { taskId: "task-1", taskTitle: "Task 1", description: "" },
-        project: projectA,
-      }),
-    ).toBe(false);
-
-    expect(
-      canStartAgencyTimer({
         activeTimer: { taskId: null, taskTitle: null, description: "Work" },
         project: projectA,
       }),
     ).toBe(false);
+  });
+
+  it("allows switch when active timer has task even with empty description", () => {
+    expect(
+      canStartAgencyTimer({
+        activeTimer: { taskId: "task-1", taskTitle: "Task 1", description: "" },
+        project: projectA,
+      }),
+    ).toBe(true);
   });
 
   it("allows start when active timer can be stopped (switch)", () => {
@@ -94,6 +97,24 @@ describe("canStopAgencyTimer", () => {
     ).toBe(true);
   });
 
+  it("allows stop with empty description by falling back to task title", () => {
+    expect(
+      canStopAgencyTimer({
+        activeTimer: { taskId: "task-1", taskTitle: "Task 1", description: "" },
+        description: "",
+        selectedTask: null,
+      }),
+    ).toBe(true);
+
+    expect(
+      canStopAgencyTimer({
+        activeTimer: { taskId: null, taskTitle: null, description: "" },
+        description: "",
+        selectedTask: task,
+      }),
+    ).toBe(true);
+  });
+
   it("allows stop for draft task not in assignee-filtered catalog", () => {
     expect(
       canStopAgencyTimer({
@@ -103,6 +124,17 @@ describe("canStopAgencyTimer", () => {
         selectedTaskTitle: "Planning & Analysis",
       }),
     ).toBe(true);
+  });
+});
+
+describe("resolveAgencyTimerStopDescription", () => {
+  it("prefers typed description over task title", () => {
+    expect(resolveAgencyTimerStopDescription("  Note  ", "Task 1")).toBe("Note");
+  });
+
+  it("falls back to task title when description is blank", () => {
+    expect(resolveAgencyTimerStopDescription("   ", "Task 1")).toBe("Task 1");
+    expect(resolveAgencyTimerStopDescription("", null)).toBe("");
   });
 });
 

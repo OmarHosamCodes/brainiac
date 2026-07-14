@@ -16,6 +16,7 @@ import { getErrorMessage } from "@/lib/utils/get-error-message";
 import {
   getAgencyTimerStartBlockedMessage,
   getAgencyTimerStopBlockedMessage,
+  resolveAgencyTimerStopDescription,
 } from "@/features/time-tracking/timer-validation";
 import { type AgencyListOverlay } from "@/features/shared/agency-optimistic-merge";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
@@ -264,6 +265,28 @@ function createAgencyTimeTrackingActions(
     { payload: RegisteredActiveTimerQuery; count: number }
   >();
   const logQueryRegistry = new Map<string, { payload: RegisteredLogQuery; count: number }>();
+  // ponytail: single-flight gate; upgrade to a queue if overlapping starts must not drop
+  let timerMutationInFlight = false;
+
+  async function startTimer(payload: StartTimerPayload) {
+    if (timerMutationInFlight) return;
+    timerMutationInFlight = true;
+    try {
+      await runStartTimer(payload);
+    } finally {
+      timerMutationInFlight = false;
+    }
+  }
+
+  async function stopTimer(payload: StopTimerPayload) {
+    if (timerMutationInFlight) return;
+    timerMutationInFlight = true;
+    try {
+      await runStopTimer(payload);
+    } finally {
+      timerMutationInFlight = false;
+    }
+  }
 
   function optimistic() {
     return useAgencyOptimisticStore.getState();
@@ -563,7 +586,7 @@ function createAgencyTimeTrackingActions(
     }
   }
 
-  async function startTimer(payload: StartTimerPayload) {
+  async function runStartTimer(payload: StartTimerPayload) {
     const previousActiveTimer = getCachedActiveTimer();
     // Prefer tracker draft for the running timer's team so typed desc/task unlock switch.
     const previousTimerDraft = previousActiveTimer
@@ -589,8 +612,6 @@ function createAgencyTimeTrackingActions(
 
     // Stop-then-start so draft description/task are saved; API start rollover only uses DB fields.
     if (previousActiveTimer) {
-      const stopDescription =
-        previousTimerDraft?.description ?? previousActiveTimer.description ?? "";
       let stopTask: { id: string; title: string } | null = null;
 
       if (previousActiveTimer.taskId) {
@@ -608,7 +629,12 @@ function createAgencyTimeTrackingActions(
         };
       }
 
-      await stopTimer({
+      const stopDescription = resolveAgencyTimerStopDescription(
+        previousTimerDraft?.description ?? previousActiveTimer.description ?? "",
+        stopTask?.title ?? previousActiveTimer.taskTitle,
+      );
+
+      await runStopTimer({
         teamId: previousActiveTimer.teamId,
         activeTimer: previousActiveTimer,
         description: stopDescription,
@@ -730,18 +756,24 @@ function createAgencyTimeTrackingActions(
     });
   }
 
-  async function stopTimer(payload: StopTimerPayload) {
+  async function runStopTimer(payload: StopTimerPayload) {
     const activeTimer = payload.activeTimer ?? getCachedActiveTimer();
 
     if (!activeTimer) {
       return;
     }
 
+    const selectedTask = payload.task ?? null;
+    const description = resolveAgencyTimerStopDescription(
+      payload.description,
+      selectedTask?.title ?? activeTimer.taskTitle,
+    );
+
     if (!payload.discard) {
       const stopBlockedMessage = getAgencyTimerStopBlockedMessage({
         activeTimer,
-        description: payload.description,
-        selectedTask: payload.task ?? null,
+        description,
+        selectedTask,
       });
 
       if (stopBlockedMessage) {
@@ -758,8 +790,6 @@ function createAgencyTimeTrackingActions(
     const logSnapshots = snapshotQueries(getRegisteredLogQueries(affectedLogTeams));
     const timerOverlaySnapshots = captureTimerOverlaySnapshots([activeTimer.teamId]);
     const entryOverlaySnapshots = captureEntryOverlaySnapshots(affectedLogTeams);
-    const description = payload.description.trim();
-    const selectedTask = payload.task ?? null;
     const optimisticEntry = payload.discard
       ? null
       : createOptimisticEntryFromTimer(activeTimer, {

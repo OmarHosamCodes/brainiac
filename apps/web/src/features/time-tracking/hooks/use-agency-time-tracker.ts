@@ -18,6 +18,7 @@ import { useAgencyElapsedTimer } from "@/features/time-tracking/hooks/use-agency
 import {
   canStartAgencyTimer,
   canStopAgencyTimer,
+  getAgencyTimerStopButtonPresentation,
   resolveAgencyTimerStartProject,
   resolveAgencyTimerTaskRef,
 } from "@/features/time-tracking/timer-validation";
@@ -90,6 +91,8 @@ export type AgencyTimeTrackerViewModel = {
   canStopTimer: boolean;
   stopButtonLabel: string;
   stopButtonHint: string | null;
+  stopButtonDisabled: boolean;
+  startButtonDisabled: boolean;
   stopButtonWarningRing: boolean;
   isTimerMutationPending: boolean;
   isStartTimeSaving: boolean;
@@ -356,7 +359,11 @@ export function useAgencyTimeTracker({
   }
 
   async function startTimer() {
-    if (!teamId || !startProject || !cachedTask || !canStartTimer) return;
+    if (!teamId || !startProject) return;
+    if (!cachedTask || !canStartTimer) {
+      revealTaskChooser();
+      return;
+    }
 
     await startTimerAction({
       teamId,
@@ -485,16 +492,21 @@ export function useAgencyTimeTracker({
       ? `${trackerProject?.clientName ?? "Project"} · ${trackerProject?.name ?? taskChooserLabel}`
       : "Choose task";
 
-  let stopButtonLabel = "Stop";
-  let stopButtonHint: string | null = null;
-  if (isTimerMutationPending) {
-    stopButtonLabel = "…";
-  } else if (!canStopTimer) {
-    stopButtonLabel = descriptionTrimmed ? "Task" : "Details";
-    stopButtonHint = descriptionTrimmed
+  const stopPresentation = getAgencyTimerStopButtonPresentation({
+    isPending: isTimerMutationPending,
+    canStop: canStopTimer,
+    descriptionTrimmed: Boolean(descriptionTrimmed),
+  });
+  const stopButtonLabel = stopPresentation.label;
+  const stopButtonDisabled = !teamId || stopPresentation.disabled;
+  const stopButtonHint = !canStopTimer
+    ? descriptionTrimmed
       ? "Choose a task to save this entry."
-      : "Enter what you're working on.";
-  }
+      : "Enter what you're working on."
+    : null;
+
+  // Start stays clickable when a project exists but no task — click opens the chooser.
+  const startButtonDisabled = !teamId || !startProject || Boolean(activeTimer) || isTimerMutationPending;
 
   function onElapsedFocus() {
     setElapsedDraft(elapsedLabel ?? "00:00:00");
@@ -611,6 +623,8 @@ export function useAgencyTimeTracker({
     canStopTimer,
     stopButtonLabel,
     stopButtonHint,
+    stopButtonDisabled,
+    startButtonDisabled,
     stopButtonWarningRing: Boolean(activeTimer && !canStopTimer),
     isTimerMutationPending,
     isStartTimeSaving: timerAdjustCount > 0,

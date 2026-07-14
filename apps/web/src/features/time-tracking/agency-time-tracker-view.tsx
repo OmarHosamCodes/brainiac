@@ -216,7 +216,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                   view.stopButtonWarningRing &&
                     "ring-2 ring-warning/30 ring-offset-1 ring-offset-background",
                 )}
-                disabled={view.isTimerMutationPending || !view.teamId || !view.canStopTimer}
+                disabled={view.stopButtonDisabled}
                 title={view.stopButtonHint ?? undefined}
                 aria-label={
                   view.stopButtonHint
@@ -265,7 +265,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
             <Button
               size="sm"
               className={agencyTimeTrackerPrimaryActionClass}
-              disabled={!view.canStartTimer || view.isTimerMutationPending}
+              disabled={view.startButtonDisabled}
               onClick={view.onStartTimer}
             >
               {view.isTimerMutationPending ? "…" : "Start"}
