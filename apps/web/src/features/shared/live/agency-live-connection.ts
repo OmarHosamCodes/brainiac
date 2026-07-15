@@ -57,10 +57,7 @@ function isBenignSubscriptionError(error: unknown) {
  * "Cannot send message, WebSocket is not open." Closing the socket is enough:
  * the peer shuts down and in-flight iterators end.
  */
-function stopSubscriptionTransport(
-  connection: TeamLiveConnection,
-  reason = "subscription ended",
-) {
+function stopSubscriptionTransport(connection: TeamLiveConnection, reason = "subscription ended") {
   connection.abortController = null;
   closeConnectionWebSocket(connection, reason);
 }
