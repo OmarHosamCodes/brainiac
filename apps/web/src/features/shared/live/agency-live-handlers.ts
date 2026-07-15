@@ -12,8 +12,14 @@ import {
 } from "@/features/shared/agency-query-cache";
 
 async function getViewerUserId(): Promise<string | null> {
-  const session = await authClient.getSession();
-  return session.data?.user?.id ?? null;
+  try {
+    const session = await authClient.getSession();
+    return session.data?.user?.id ?? null;
+  } catch {
+    // Session fetch can fail transiently (offline / network). Live handlers must
+    // degrade without becoming an unhandledrejection.
+    return null;
+  }
 }
 
 async function handleTimerUpdated(event: Extract<AgencyLiveEvent, { type: "timer.updated" }>) {
