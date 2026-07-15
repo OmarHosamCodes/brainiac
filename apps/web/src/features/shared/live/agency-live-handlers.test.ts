@@ -6,6 +6,9 @@ const patchActiveMembersFromLiveTimer = mock(() => {});
 const applyNotificationCreatedToCache = mock(() => {});
 const getQueryClient = mock(() => ({}));
 
+// Other live tests may mock this module; restore so we exercise the real handlers.
+mock.restore();
+
 mock.module("@/lib/auth-client", () => ({
   authClient: {
     getSession,
@@ -28,7 +31,9 @@ mock.module("@/lib/query-client", () => ({
   getQueryClient,
 }));
 
-const { handleAgencyLiveEvent } = await import("./agency-live-handlers");
+const { handleAgencyLiveEvent } = await import(
+  /* @vite-ignore */ `./agency-live-handlers.ts?handlers-test=${Date.now()}`
+);
 
 afterEach(() => {
   getSession.mockReset();
@@ -50,7 +55,7 @@ describe("handleAgencyLiveEvent", () => {
       teamId: "team-1",
       userId: "viewer-1",
       timer,
-    });
+    } as never);
 
     await Promise.resolve();
     await Promise.resolve();
@@ -66,7 +71,7 @@ describe("handleAgencyLiveEvent", () => {
       teamId: "team-1",
       userId: "viewer-1",
       timer,
-    });
+    } as never);
 
     await Promise.resolve();
     await Promise.resolve();
@@ -87,7 +92,7 @@ describe("handleAgencyLiveEvent", () => {
         id: "n-1",
         recipientUserId: "viewer-1",
       },
-    });
+    } as never);
 
     await Promise.resolve();
     await Promise.resolve();
