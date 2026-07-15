@@ -42,8 +42,27 @@ function isBenignSubscriptionError(error: unknown) {
   return (
     message.includes("closed or aborted while waiting for pulling") ||
     message.includes("The operation was aborted") ||
-    message.includes("WebSocket connection timed out")
+    message.includes("WebSocket connection timed out") ||
+    // oRPC abort listeners send ABORT_SIGNAL over the socket; if the socket
+    // already closed, that send rejects — expected during teardown/reconnect.
+    message.includes("Cannot send message, WebSocket is not open")
   );
+}
+
+/**
+ * Stop the live transport without aborting the oRPC request signal.
+ *
+ * Aborting while the WebSocket is closing races oRPC's async abort listener,
+ * which tries to send ABORT_SIGNAL and rejects with an unhandled
+ * "Cannot send message, WebSocket is not open." Closing the socket is enough:
+ * the peer shuts down and in-flight iterators end.
+ */
+function stopSubscriptionTransport(
+  connection: TeamLiveConnection,
+  reason = "subscription ended",
+) {
+  connection.abortController = null;
+  closeConnectionWebSocket(connection, reason);
 }
 
 function createEmptyConnection(): TeamLiveConnection {
@@ -130,25 +149,18 @@ async function startTeamSubscription(teamId: string, generation: number) {
     return;
   }
 
-  connection.abortController?.abort();
-  closeConnectionWebSocket(connection, "subscription replaced");
+  stopSubscriptionTransport(connection, "subscription replaced");
   connection.abortController = new AbortController();
   const subscriptionSignal = connection.abortController.signal;
 
   updateConnectionState(teamId, connection.reconnectAttempt > 0 ? "reconnecting" : "connecting");
 
   let websocket: WebSocket | null = null;
-  let onWebSocketClose: (() => void) | null = null;
 
   try {
     const rpcConnection = createAgencyLiveRpcClient(getServerUrl());
     websocket = rpcConnection.websocket;
     connection.websocket = websocket;
-
-    onWebSocketClose = () => {
-      connection.abortController?.abort();
-    };
-    websocket.addEventListener("close", onWebSocketClose);
 
     await waitForWebSocketOpen(websocket);
 
@@ -212,9 +224,6 @@ async function startTeamSubscription(teamId: string, generation: number) {
     updateConnectionState(teamId, "error");
     scheduleReconnect(teamId, generation);
   } finally {
-    if (websocket && onWebSocketClose) {
-      websocket.removeEventListener("close", onWebSocketClose);
-    }
     if (
       websocket &&
       connection.websocket === websocket &&
@@ -222,7 +231,8 @@ async function startTeamSubscription(teamId: string, generation: number) {
         generation !== connection.subscriptionGeneration ||
         subscriptionSignal.aborted)
     ) {
-      closeConnectionWebSocket(connection, "subscription ended");
+      // Close without aborting — see stopSubscriptionTransport.
+      stopSubscriptionTransport(connection, "subscription ended");
     }
   }
 }
@@ -243,8 +253,7 @@ function teardownTeamConnection(teamId: string) {
   }
 
   clearReconnectTimer(connection);
-  connection.abortController?.abort();
-  closeConnectionWebSocket(connection, "subscription disposed");
+  stopSubscriptionTransport(connection, "subscription disposed");
   connection.subscriptionGeneration += 1;
   setAgencyTeamLiveConnected(teamId, false);
   teamConnections.delete(teamId);

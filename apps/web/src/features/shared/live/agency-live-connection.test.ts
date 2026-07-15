@@ -3,12 +3,15 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 const createdWebSockets: MockWebSocket[] = [];
 const closeCalls: MockWebSocket[] = [];
 let subscribeCallCount = 0;
+let abortSendAttempts = 0;
+const unhandledRejections: unknown[] = [];
 
 class MockWebSocket {
   readyState = WebSocket.CONNECTING;
   addEventListener = mock(() => {});
   removeEventListener = mock(() => {});
   close = mock(() => {
+    this.readyState = WebSocket.CLOSED;
     closeCalls.push(this);
   });
 }
@@ -45,8 +48,19 @@ mock.module("@/features/shared/agency-live-rpc", () => ({
       client: {
         agencyOps: {
           live: {
-            subscribe: mock(async () => {
+            subscribe: mock(async (_input: unknown, options?: { signal?: AbortSignal }) => {
               subscribeCallCount += 1;
+              // Mirror @orpc/standard-server-peer: abort tries to send on the socket.
+              options?.signal?.addEventListener("abort", () => {
+                abortSendAttempts += 1;
+                const socket = websocket as unknown as MockWebSocket;
+                if (socket.readyState !== WebSocket.OPEN) {
+                  queueMicrotask(() => {
+                    const error = new Error("Cannot send message, WebSocket is not open.");
+                    unhandledRejections.push(error);
+                  });
+                }
+              });
               return makeAsyncIterator();
             }),
           },
@@ -58,7 +72,9 @@ mock.module("@/features/shared/agency-live-rpc", () => ({
     (websocket as unknown as MockWebSocket).readyState = WebSocket.OPEN;
   }),
   closeAgencyLiveWebSocket: mock((websocket: WebSocket) => {
-    closeCalls.push(websocket as unknown as MockWebSocket);
+    const socket = websocket as unknown as MockWebSocket;
+    socket.readyState = WebSocket.CLOSED;
+    closeCalls.push(socket);
   }),
 }));
 
@@ -70,6 +86,8 @@ afterEach(() => {
   createdWebSockets.length = 0;
   closeCalls.length = 0;
   subscribeCallCount = 0;
+  abortSendAttempts = 0;
+  unhandledRejections.length = 0;
 });
 
 describe("subscribeAgencyLive", () => {
@@ -109,5 +127,22 @@ describe("subscribeAgencyLive", () => {
     await Promise.resolve();
 
     expect(closeCalls).toHaveLength(1);
+  });
+
+  test("teardown does not abort oRPC over a closed socket", async () => {
+    const unsubscribe = subscribeAgencyLive("team-1", () => {});
+
+    // Allow subscribe() to register its abort listener.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(subscribeCallCount).toBe(1);
+
+    unsubscribe();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(closeCalls.length).toBeGreaterThanOrEqual(1);
+    expect(abortSendAttempts).toBe(0);
+    expect(unhandledRejections).toHaveLength(0);
   });
 });
