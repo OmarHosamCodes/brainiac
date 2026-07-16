@@ -51,7 +51,7 @@ type LandingPricingProps = {
 
 export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
   const navigate = useNavigate();
-  const { checkout, isPro } = useBilling(isAuthenticated);
+  const { checkout, isPro, openPortal } = useBilling(isAuthenticated);
 
   async function handleCheckout() {
     if (!isAuthenticated) {
@@ -59,7 +59,7 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
       return;
     }
     if (isPro) {
-      await navigate("/billing");
+      await openPortal();
       return;
     }
     await checkout("pro");

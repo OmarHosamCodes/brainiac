@@ -61,7 +61,7 @@ export function AppShellAccountMenu({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const session = authClient.useSession();
-  const { tier, isPro } = useBilling();
+  const { tier, isPro, checkout, openPortal } = useBilling();
   const { isDark, toggle: toggleTheme } = useTheme();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -273,11 +273,13 @@ export function AppShellAccountMenu({
             {isDark ? "Light mode" : "Dark mode"}
           </DropdownMenuItem>
 
-          <DropdownMenuItem asChild>
-            <Link to="/billing">
-              <CreditCard />
-              Billing
-            </Link>
+          <DropdownMenuItem
+            onSelect={() => {
+              void (isPro ? openPortal() : checkout());
+            }}
+          >
+            <CreditCard />
+            {isPro ? "Manage subscription" : "Upgrade to Pro"}
           </DropdownMenuItem>
 
           <DropdownMenuItem asChild>

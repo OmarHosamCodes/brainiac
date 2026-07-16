@@ -1,30 +1,12 @@
-import {
-  BarChart3,
-  Briefcase,
-  Building2,
-  CreditCard,
-  FolderKanban,
-  LayoutDashboard,
-  ShoppingBag,
-  SlidersHorizontal,
-} from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Briefcase, LayoutDashboard } from "lucide-react";
+import { useEffect, type ReactNode } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 import { AppShellRail } from "@/features/app-shell/app-shell-rail";
 import { AppShellTopbar } from "@/features/app-shell/app-shell-topbar";
 import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { useAppUpdateStore } from "@/features/app-shell/app-update-store";
 import { useAppUpdateWatcher } from "@/features/app-shell/hooks/use-app-update-watcher";
-import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/ui/command";
 import {
   APP_SHELL_RAIL_WIDTH_COLLAPSED,
   APP_SHELL_RAIL_WIDTH_EXPANDED,
@@ -47,42 +29,7 @@ import { useCurrentAgencyTeamStore } from "@/features/time-tracking/stores/agenc
 const NAV_ICONS = {
   "/dashboard": LayoutDashboard,
   "/agency": Briefcase,
-  "/marketplace": ShoppingBag,
-  "/billing": CreditCard,
 } as const;
-
-const AGENCY_COMMAND_ITEMS = [
-  {
-    label: "Work",
-    description: "Tasks, projects, and time",
-    to: "/agency?section=work",
-    icon: Briefcase,
-  },
-  {
-    label: "Projects",
-    description: "Project list and delivery health",
-    to: "/agency?section=projects",
-    icon: FolderKanban,
-  },
-  {
-    label: "Clients",
-    description: "Clients and contacts",
-    to: "/agency?section=clients",
-    icon: Building2,
-  },
-  {
-    label: "Reports",
-    description: "Hours and breakdowns",
-    to: "/agency?section=reports",
-    icon: BarChart3,
-  },
-  {
-    label: "Management",
-    description: "Resourcing, invoices, rates, tenure",
-    to: "/agency?section=management",
-    icon: SlidersHorizontal,
-  },
-] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
   const agencyTeamId = useCurrentAgencyTeamStore((s) => s.currentAgencyTeamId) ?? "";
@@ -92,10 +39,8 @@ export function AppShell({ children }: { children: ReactNode }) {
   const isRefreshing = useAppUpdateStore((s) => s.isRefreshing);
 
   const location = useLocation();
-  const navigate = useNavigate();
   const setCurrentPath = useAppShellStore((s) => s.setCurrentPath);
   const shellMode = useShellMode();
-  const [commandOpen, setCommandOpen] = useState(false);
 
   const agentDockOpen = useAppShellStore((s) => s.agentDockOpen);
   const agentDockWidth = useAppShellStore((s) => s.agentDockWidth);
@@ -104,11 +49,6 @@ export function AppShell({ children }: { children: ReactNode }) {
   const toggleAgentDock = useAppShellStore((s) => s.toggleAgentDock);
 
   const isSpatialMode = shellMode === "spatial";
-
-  function runCommand(to: string) {
-    setCommandOpen(false);
-    navigate(to);
-  }
 
   useEffect(() => {
     setCurrentPath(location.pathname);
@@ -144,49 +84,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         } as React.CSSProperties
       }
     >
-      <AppShellRail onOpenSearch={() => setCommandOpen(true)} />
-
-      <CommandDialog open={commandOpen} onOpenChange={setCommandOpen} title="Search navigation">
-        <Command>
-          <CommandInput placeholder="Search Orch" />
-          <CommandList>
-            <CommandEmpty>No matching destination.</CommandEmpty>
-            <CommandGroup heading="App">
-              {APP_NAV_ITEMS.map((item) => {
-                const Icon = NAV_ICONS[item.to as keyof typeof NAV_ICONS] ?? LayoutDashboard;
-                return (
-                  <CommandItem
-                    key={item.to}
-                    value={`app ${item.label}`}
-                    onSelect={() => runCommand(item.to)}
-                  >
-                    <Icon />
-                    <span>{item.label}</span>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-            <CommandGroup heading="Agency">
-              {AGENCY_COMMAND_ITEMS.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <CommandItem
-                    key={item.to}
-                    value={`agency ${item.label} ${item.description}`}
-                    onSelect={() => runCommand(item.to)}
-                  >
-                    <Icon />
-                    <div className="min-w-0">
-                      <p className="truncate">{item.label}</p>
-                      <p className="truncate text-xs text-muted">{item.description}</p>
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </CommandDialog>
+      <AppShellRail />
 
       <AppShellTopbar />
 

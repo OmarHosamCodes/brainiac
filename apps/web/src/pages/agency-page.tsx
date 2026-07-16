@@ -20,7 +20,6 @@ import {
 } from "@/features/app-shell/app-shell-topbar";
 import { AppShellPage } from "@/features/app-shell/app-shell-page";
 import { AgencySegmentFiltersRoot } from "@/features/shared/agency-segment-filters";
-import { useAgencySyncStatus } from "@/features/shared/agency-sync";
 import { useAgencyJourneyLiveSync } from "@/features/task-management/hooks/use-agency-journey-live-sync";
 import { useAgencyBootGate } from "@/features/shared/use-agency-boot-gate";
 import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
@@ -159,7 +158,6 @@ export function AgencyPage() {
   const agencySyncTeamId = agencyEnabled && selectedTeamId ? selectedTeamId : "";
   useAgencyActiveTimerQuery(agencySyncTeamId);
   useAgencyJourneyLiveSync({ teamId: agencySyncTeamId });
-  const syncState = useAgencySyncStatus(agencySyncTeamId);
 
   const { isBooting } = useAgencyBootGate({
     segment,
@@ -216,7 +214,7 @@ export function AgencyPage() {
             <AppShellTopbarSubtitle>
               <AgencySubtitleBreadcrumb
                 segment={segment}
-                syncState={syncState}
+                teamId={agencySyncTeamId}
                 onSegmentChange={handleSegmentChange}
               />
             </AppShellTopbarSubtitle>

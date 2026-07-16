@@ -1,7 +1,6 @@
 import { CalendarClock, MoreVertical, Timer, Trash2 } from "lucide-react";
 
-import { AgencyDescriptionSuggestionMenu } from "@/features/time-tracking/agency-description-suggestion-menu";
-import { AgencyTagChooser } from "@/features/time-tracking/choosers/agency-tag-chooser";
+import { AgencyDescriptionDatalistField } from "@/features/time-tracking/agency-description-datalist-field";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { Button } from "@/ui/button";
@@ -12,15 +11,15 @@ import {
   agencyInputPlaceholderClass,
   agencyTimeEntryTimeInputClass,
   agencyTimeTrackerCardClass,
-  agencyTimeTrackerDescriptionInputClass,
-  agencyTimeTrackerDescriptionZoneClass,
+  agencyTimeTrackerCardRunningClass,
   agencyTimeTrackerElapsedInputClass,
   agencyTimeTrackerIconActionClass,
-  agencyTimeTrackerInnerDividerClass,
   agencyTimeTrackerMetricClass,
   agencyTimeTrackerPrimaryActionClass,
   agencyTimeTrackerRailCellClass,
   agencyTimeTrackerRailClass,
+  agencyTimeTrackerRailDividerClass,
+  agencyTimeTrackerStopActionClass,
   agencyTimeTrackerTaskChooserTriggerClass,
 } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
@@ -33,7 +32,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
   const elapsedLabel = view.elapsedLabel ?? "00:00:00";
   const taskChooserTriggerClass = cn(
     agencyTimeTrackerTaskChooserTriggerClass,
-    "max-w-[14rem]",
+    "max-w-[12rem]",
     view.taskChooserWarning &&
       "text-warning hover:text-warning [&_svg]:text-warning [&_span]:text-warning",
   );
@@ -46,60 +45,41 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
     view.tasksLoading;
 
   return (
-    <div className={agencyTimeTrackerCardClass}>
-      <div className={agencyTimeTrackerDescriptionZoneClass} data-tracker-desc>
-        <Input
-          id="agency-timer-note"
-          type="text"
-          value={view.timerDescription}
-          onChange={(e) => view.onDescriptionChange(e.target.value)}
-          onKeyDown={view.onDescriptionKeyDown}
-          onFocus={view.onDescriptionFocus}
-          onBlur={view.onDescriptionBlur}
-          placeholder="What are you working on?"
-          aria-label="Description"
-          aria-autocomplete="list"
-          aria-controls={view.suggestionsOpen ? view.suggestionListboxId : undefined}
-          aria-expanded={view.suggestionsOpen}
-          className={cn(
-            agencyTimeTrackerDescriptionInputClass,
-            agencyInputPlaceholderClass,
-            "focus-visible:ring-0",
-            view.suggestionsOpen && "rounded-[2px] ring-1 ring-primary",
-          )}
-          disabled={view.isTimerMutationPending || view.isManualCreatePending || !view.teamId}
-        />
-
-        {view.suggestionsOpen ? (
-          <AgencyDescriptionSuggestionMenu
-            listboxId={view.suggestionListboxId}
-            suggestions={view.descriptionSuggestions}
-            activeIndex={view.activeSuggestionIndex}
-            onActiveIndexChange={view.onSuggestionActiveIndexChange}
-            onSelect={view.onApplySuggestion}
-          />
-        ) : null}
-      </div>
+    <div
+      className={cn(agencyTimeTrackerCardClass, view.activeTimer && agencyTimeTrackerCardRunningClass)}
+      data-timer-state={view.activeTimer ? "running" : idleManual ? "manual" : "idle"}
+    >
+      <AgencyDescriptionDatalistField
+        value={view.timerDescription}
+        options={view.descriptionDatalistOptions}
+        onValueChange={view.onDescriptionChange}
+        onFocus={view.onDescriptionFocus}
+        onBlur={view.onDescriptionBlur}
+        onKeyDown={view.onDescriptionKeyDown}
+        disabled={view.isTimerMutationPending || view.isManualCreatePending || !view.teamId}
+      />
 
       <div className={agencyTimeTrackerRailClass}>
+        <span className={agencyTimeTrackerRailDividerClass} aria-hidden />
+
         <div className={agencyTimeTrackerRailCellClass}>
           <AgencyTaskChooser
             value={view.selectedTaskId}
             onValueChange={view.onTaskChange}
             projects={view.projects}
             tasks={view.tasks}
-            placeholder="Task"
+            placeholder="Choose task"
+            required={!view.activeTimer}
             triggerFormat="task-client"
             highlightSearch
-            fallbackTaskTitle={
-              view.taskChooserLabel !== "Choose task" ? view.taskChooserLabel : undefined
-            }
-            fallbackProjectId={view.activeTimer?.projectId ?? view.startProject?.id}
-            fallbackProjectName={view.activeTimer?.projectName ?? view.startProject?.name}
+            fallbackTaskTitle={view.activeTimer?.taskTitle}
+            fallbackProjectId={view.activeTimer?.projectId}
+            fallbackProjectName={view.activeTimer?.projectName}
             fallbackClientName={
-              view.projects.find(
-                (project) => project.id === (view.activeTimer?.projectId ?? view.startProject?.id),
-              )?.clientName ?? view.startProject?.clientName
+              view.activeTimer
+                ? view.projects.find((project) => project.id === view.activeTimer?.projectId)
+                    ?.clientName
+                : undefined
             }
             className={taskChooserTriggerClass}
             loading={view.projectsLoading || view.tasksLoading}
@@ -110,22 +90,14 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
           />
         </div>
 
-        <div className={cn(agencyTimeTrackerRailCellClass, "gap-1.5")}>
-          <AgencyTagChooser
-            value={view.selectedTagIds}
-            tags={view.tags}
-            onValueChange={view.onTagIdsChange}
-            onCreateTag={view.onCreateTag}
-            creating={view.tagCreatePending}
-            disabled={controlsDisabled}
-            compact
-          />
-          <span className={agencyTimeTrackerInnerDividerClass} aria-hidden />
+        <span className={agencyTimeTrackerRailDividerClass} aria-hidden />
+
+        <div className={agencyTimeTrackerRailCellClass}>
           <button
             type="button"
             className={cn(
               agencyTimeTrackerIconActionClass,
-              view.isBillable ? "text-info" : "text-muted",
+              view.isBillable ? "text-info hover:text-info" : undefined,
             )}
             aria-pressed={view.isBillable}
             aria-label={view.isBillable ? "Billable" : "Non-billable"}
@@ -136,6 +108,8 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
           </button>
         </div>
 
+        <span className={agencyTimeTrackerRailDividerClass} aria-hidden />
+
         <div className={agencyTimeTrackerRailCellClass}>
           {view.activeTimer ? (
             <div className="relative">
@@ -145,7 +119,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                 onChange={(e) => view.onElapsedChange(e.target.value)}
                 onBlur={view.onElapsedBlur}
                 onKeyDown={view.onElapsedKeyDown}
-                className={agencyTimeTrackerElapsedInputClass}
+                className={cn(agencyTimeTrackerElapsedInputClass, "font-semibold")}
                 aria-label="Elapsed time"
                 aria-invalid={Boolean(view.elapsedError)}
                 disabled={view.isStartTimeSaving}
@@ -180,7 +154,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                 aria-label="End time"
                 disabled={view.isManualCreatePending}
               />
-              <label className="relative flex min-w-0 shrink-0 cursor-pointer items-center rounded-md px-1 py-0.5 hover:bg-elevated">
+              <label className="relative flex min-w-0 shrink-0 cursor-pointer items-center rounded-md px-1 py-0.5 hover:bg-muted">
                 <Input
                   type="date"
                   value={view.manualDraft.date}
@@ -189,7 +163,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                   aria-label="Entry date"
                   disabled={view.isManualCreatePending}
                 />
-                <span className="text-xs text-muted">
+                <span className="text-xs text-muted-foreground">
                   {view.manualDraft.date ? formatAgencyDayLabel(view.manualDraft.date) : "Date"}
                 </span>
               </label>
@@ -210,16 +184,13 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
           )}
         </div>
 
-        <div className={cn(agencyTimeTrackerRailCellClass, "gap-1")}>
+        <span className={agencyTimeTrackerRailDividerClass} aria-hidden />
+
+        <div className={cn(agencyTimeTrackerRailCellClass, "gap-0.5")}>
           {view.activeTimer ? (
             <>
               <Button
-                variant="destructive"
-                size="sm"
-                className={cn(
-                  agencyTimeTrackerPrimaryActionClass,
-                  "bg-destructive text-white hover:bg-destructive/90",
-                )}
+                className={cn(agencyTimeTrackerStopActionClass, "rounded-md")}
                 disabled={view.stopButtonDisabled}
                 aria-label={view.stopButtonLabel}
                 onClick={view.onStopTimer}
@@ -231,7 +202,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                 <PopoverTrigger asChild>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon-sm"
                     className={agencyTimeTrackerIconActionClass}
                     aria-label="Timer options"
                   >
@@ -253,8 +224,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
             </>
           ) : idleManual ? (
             <Button
-              size="sm"
-              className={agencyTimeTrackerPrimaryActionClass}
+              className={cn(agencyTimeTrackerPrimaryActionClass, "rounded-md")}
               disabled={!view.canAddManual}
               onClick={view.onAddManual}
             >
@@ -262,8 +232,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
             </Button>
           ) : (
             <Button
-              size="sm"
-              className={agencyTimeTrackerPrimaryActionClass}
+              className={cn(agencyTimeTrackerPrimaryActionClass, "rounded-md")}
               disabled={view.startButtonDisabled}
               onClick={view.onStartTimer}
             >
@@ -273,18 +242,21 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
         </div>
 
         {view.showModeToggle ? (
-          <div className={agencyTimeTrackerRailCellClass}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={agencyTimeTrackerIconActionClass}
+          <>
+            <span className={agencyTimeTrackerRailDividerClass} aria-hidden />
+            <div className={agencyTimeTrackerRailCellClass}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className={agencyTimeTrackerIconActionClass}
               aria-label={idleManual ? "Switch to timer" : "Switch to manual entry"}
               aria-pressed={idleManual}
               onClick={() => view.onModeChange(idleManual ? "timer" : "manual")}
             >
               {idleManual ? <Timer className="size-4" /> : <CalendarClock className="size-4" />}
             </Button>
-          </div>
+            </div>
+          </>
         ) : null}
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 
-import { buildDescriptionSuggestions, normalizeSuggestionText } from "./description-suggestions";
+import { buildDescriptionDatalistOptions, normalizeSuggestionText } from "./description-suggestions";
+import { filterDescriptionDatalistOptions } from "./description-datalist";
 
 function entry(
   partial: Partial<{
@@ -28,57 +29,61 @@ describe("normalizeSuggestionText", () => {
   });
 });
 
-describe("buildDescriptionSuggestions", () => {
-  test("shows recent suggestions when query is empty", () => {
-    const suggestions = buildDescriptionSuggestions(
-      [
-        entry({ description: "Ship landing", projectId: "p1" }),
-        entry({ description: "Fix billing", projectId: "p2" }),
-      ],
-      "",
-    );
-    expect(suggestions.map((s) => s.description)).toEqual(["Ship landing", "Fix billing"]);
+describe("buildDescriptionDatalistOptions", () => {
+  test("returns recent unique descriptions with project metadata", () => {
+    const options = buildDescriptionDatalistOptions([
+      entry({ description: "Ship landing", projectName: "Alpha", clientName: "Acme" }),
+      entry({ description: "Fix billing", projectName: "Beta", clientName: "Globex" }),
+    ]);
+
+    expect(options).toEqual([
+      {
+        description: "Ship landing",
+        taskId: null,
+        taskTitle: null,
+        projectId: "p1",
+        projectName: "Alpha",
+        clientName: "Acme",
+      },
+      {
+        description: "Fix billing",
+        taskId: null,
+        taskTitle: null,
+        projectId: "p1",
+        projectName: "Beta",
+        clientName: "Globex",
+      },
+    ]);
   });
 
-  test("filters by project when projectId is set", () => {
-    const suggestions = buildDescriptionSuggestions(
-      [
-        entry({ description: "Ship landing", projectId: "p1" }),
-        entry({ description: "Fix billing", projectId: "p2" }),
-      ],
-      "",
-      { projectId: "p2" },
-    );
-    expect(suggestions.map((s) => s.description)).toEqual(["Fix billing"]);
+  test("dedupes by normalized description", () => {
+    const options = buildDescriptionDatalistOptions([
+      entry({ description: "Ship landing" }),
+      entry({ description: "  ship   landing " }),
+    ]);
+
+    expect(options).toHaveLength(1);
+  });
+});
+
+describe("filterDescriptionDatalistOptions", () => {
+  const options = buildDescriptionDatalistOptions([
+    entry({
+      description: "Design review",
+      taskTitle: "Mesh Madrasa",
+      projectName: "Coaching",
+      clientName: "Consultation",
+    }),
+    entry({ description: "Deploy", projectName: "Growth", clientName: "Design" }),
+  ]);
+
+  test("returns all options when query is empty", () => {
+    expect(filterDescriptionDatalistOptions(options, "")).toHaveLength(2);
   });
 
-  test("ranks startsWith above includes when typed", () => {
-    const suggestions = buildDescriptionSuggestions(
-      [entry({ description: "later ship notes" }), entry({ description: "Ship landing" })],
-      "ship",
-    );
-    expect(suggestions.map((s) => s.description)).toEqual(["Ship landing", "later ship notes"]);
-  });
-
-  test("dedupes by normalized description + projectId", () => {
-    const suggestions = buildDescriptionSuggestions(
-      [
-        entry({ description: "Ship landing", projectId: "p1" }),
-        entry({ description: "  ship   landing ", projectId: "p1" }),
-        entry({ description: "Ship landing", projectId: "p2" }),
-      ],
-      "",
-    );
-    expect(suggestions).toHaveLength(2);
-    expect(suggestions[0]?.projectId).toBe("p1");
-    expect(suggestions[1]?.projectId).toBe("p2");
-  });
-
-  test("falls back to taskTitle when description is empty", () => {
-    const suggestions = buildDescriptionSuggestions(
-      [entry({ description: "  ", taskTitle: "Write brief" })],
-      "",
-    );
-    expect(suggestions[0]?.description).toBe("Write brief");
+  test("filters by description, task, project, or client", () => {
+    expect(filterDescriptionDatalistOptions(options, "mesh")).toHaveLength(1);
+    expect(filterDescriptionDatalistOptions(options, "consultation")).toHaveLength(1);
+    expect(filterDescriptionDatalistOptions(options, "growth")).toHaveLength(1);
   });
 });

@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 export function BillingSuccessPage() {
   const [searchParams] = useSearchParams();
-  const { refreshBillingState, billingQuery } = useBilling();
+  const { refreshBillingState, billingQuery, openPortal } = useBilling();
   const { isBooting } = useShellBootGate(!billingQuery.isPending);
 
   const checkoutId = searchParams.get("checkout_id") ?? undefined;
@@ -57,13 +57,13 @@ export function BillingSuccessPage() {
                 <Link to="/dashboard">Go to Dashboard</Link>
               </Button>
               <Button
-                asChild
                 size="lg"
                 variant="outline"
                 className={shellStaggerItemClass}
                 style={{ "--stagger-i": 1 } as React.CSSProperties}
+                onClick={() => void openPortal()}
               >
-                <Link to="/billing">View Billing Details</Link>
+                Manage subscription
               </Button>
             </div>
           </div>

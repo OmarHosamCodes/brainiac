@@ -191,7 +191,7 @@ export const agencyTimeLogPanelClass = "flex min-h-0 flex-1 flex-col overflow-hi
 export const agencyWorkTabShellClass = "shrink-0";
 
 export const agencyWorkTrackerCardClass =
-  "shrink-0 overflow-hidden rounded-[2px] border border-default bg-default";
+  "shrink-0 overflow-hidden rounded-lg border border-border bg-card";
 
 export const agencyWorkTabBarClass =
   "flex min-h-12 shrink-0 items-center justify-between gap-2 border-b border-default px-2 sm:px-3";
@@ -255,11 +255,14 @@ export const agencyTimeEntryIconButtonClass = cn(
 
 export const agencyTimeTrackerCardClass = cn(
   agencyWorkTrackerCardClass,
-  "flex min-h-16 min-w-0 flex-row items-center gap-2 overflow-visible px-4 py-2 sm:gap-3 sm:px-5",
+  "flex h-12 min-w-0 flex-row items-center overflow-visible px-3 sm:px-4",
 );
 
+export const agencyTimeTrackerCardRunningClass =
+  "border-success/35 motion-reduce:transition-none transition-[border-color] duration-200";
+
 export const agencyTimeTrackerDescriptionZoneClass =
-  "group/desc relative min-w-0 flex-1 basis-0 overflow-visible";
+  "group/desc relative flex min-h-0 min-w-0 flex-1 items-center overflow-visible pr-2";
 
 export const agencyTimeTrackerControlsZoneClass =
   "flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2";
@@ -280,7 +283,7 @@ export const agencyTimeTrackerDescriptionLabelClass =
   "text-xs font-semibold leading-none text-muted";
 
 export const agencyTimeTrackerDescriptionInputClass =
-  "block h-8 w-full min-w-0 truncate rounded-none border-0 bg-transparent px-0.5 py-0 text-sm font-normal leading-snug shadow-none";
+  "block h-8 w-full min-w-0 truncate rounded-md border-0 bg-transparent px-0 py-0 text-sm font-normal leading-8 text-foreground shadow-none";
 
 export const agencyTimeTrackerActiveRowClass =
   "flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2";
@@ -288,32 +291,29 @@ export const agencyTimeTrackerActiveRowClass =
 export const agencyTimeTrackerStatusZoneClass =
   "flex min-w-0 max-w-[14rem] items-center gap-1.5 sm:max-w-[18rem]";
 
-/** Tracker right cluster — inset ticks between description and each control group. */
-export const agencyTimeTrackerRailClass = cn(
-  "relative flex min-w-0 shrink-0 items-stretch self-stretch",
-  "before:pointer-events-none before:absolute before:inset-y-2 before:left-0 before:w-px before:bg-border/40",
-  "[&>*+*]:relative [&>*+*]:before:pointer-events-none [&>*+*]:before:absolute [&>*+*]:before:inset-y-2 [&>*+*]:before:left-0 [&>*+*]:before:w-px [&>*+*]:before:bg-border/40",
-);
+/** Tracker right cluster — single-height rail with hairline separators. */
+export const agencyTimeTrackerRailClass = "flex h-full shrink-0 items-center";
 
-export const agencyTimeTrackerRailCellClass =
-  "box-border flex shrink-0 items-center px-2 py-2 sm:px-2.5";
+export const agencyTimeTrackerRailCellClass = "flex shrink-0 items-center gap-1 px-2";
 
-export const agencyTimeTrackerInnerDividerClass = "h-6 w-px shrink-0 self-center bg-border/40";
+export const agencyTimeTrackerRailDividerClass = "h-5 w-px shrink-0 bg-border";
+
+export const agencyTimeTrackerInnerDividerClass = agencyTimeTrackerRailDividerClass;
 
 export const agencyTimeTrackerMetricClass = cn(
   agencyWorkMetricClass,
-  "w-[5rem] shrink-0 text-center",
+  "inline-flex h-8 w-[4.75rem] shrink-0 items-center justify-center",
 );
 
 export const agencyTimeTrackerElapsedInputClass = cn(
   agencyTimeTrackerMetricClass,
-  "h-8 rounded-[2px] border border-transparent bg-transparent px-1 shadow-none",
-  "focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30",
+  "rounded-md border border-transparent bg-transparent px-0 shadow-none",
+  "text-highlighted focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
 );
 
 export const agencyTimeTrackerTaskChooserTriggerClass = cn(
-  "h-8 min-h-0 w-auto min-w-0 max-w-full justify-start gap-1 overflow-hidden rounded-none border-0 bg-transparent px-0 py-0 text-xs font-normal text-highlighted shadow-none",
-  "transition-colors hover:bg-transparent hover:opacity-90",
+  "inline-flex h-8 max-h-8 min-h-8 w-auto min-w-0 max-w-full items-center justify-start gap-1 overflow-hidden rounded-md border-0 bg-transparent px-0 py-0 text-xs font-normal leading-none text-foreground shadow-none",
+  "transition-colors hover:bg-muted/50 hover:text-foreground",
   agencyFocusRingClass,
   "motion-reduce:transition-none",
 );
@@ -324,24 +324,25 @@ export const agencyTimeTrackerProjectEmptyTriggerClass = cn(
 );
 
 export const agencyTimeTrackerPrimaryActionClass =
-  "h-8 min-w-[5.5rem] shrink-0 whitespace-nowrap rounded-[2px] bg-info px-4 text-xs font-normal uppercase text-white hover:bg-info/90 hover:text-white";
+  "inline-flex h-8 max-h-8 min-h-8 min-w-[4.25rem] shrink-0 items-center justify-center rounded-md bg-primary px-3 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground hover:bg-primary/90";
+
+export const agencyTimeTrackerStopActionClass =
+  "inline-flex h-8 max-h-8 min-h-8 min-w-[4.25rem] shrink-0 items-center justify-center rounded-md bg-destructive px-3 text-[11px] font-semibold uppercase tracking-wide text-primary-foreground hover:bg-destructive/90";
 
 export const agencyTimeTrackerIconActionClass = cn(
-  "h-8 w-8 shrink-0 rounded-full p-0",
+  "inline-flex size-8 shrink-0 items-center justify-center rounded-md p-0 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
   agencyFocusRingClass,
+  "motion-reduce:transition-none",
 );
 
-export const agencyTimeTrackerSuggestionAnchorClass =
-  "absolute top-full right-0 left-0 z-50 mt-1 max-h-48";
-
-/** Opaque popover surface — liquid-glass / missing elevated tokens ghost Assign/Create through. */
 export const agencyTimeTrackerSuggestionPanelClass = cn(
-  "relative z-50 max-h-48 overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-popover text-popover-foreground shadow-lg outline-none",
+  "relative z-50 max-h-48 overflow-y-auto overflow-x-hidden rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-lg outline-none",
 );
 
 export const agencyTimeTrackerSuggestionOptionClass = cn(
-  "flex w-full min-w-0 flex-row items-center gap-2 rounded-[2px] px-2.5 py-2 text-left",
+  "flex w-full min-w-0 flex-row items-center gap-2 rounded-md px-2.5 py-2 text-left transition-colors hover:bg-accent/35",
   agencyFocusRingClass,
+  "motion-reduce:transition-none",
 );
 
 export const agencyTimeDayHeaderClass = cn(

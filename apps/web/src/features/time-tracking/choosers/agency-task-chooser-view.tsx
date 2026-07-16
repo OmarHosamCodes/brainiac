@@ -23,6 +23,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     disabled,
     loading,
     placeholder,
+    required,
     searchPlaceholder,
     className,
     contentAlign,
@@ -73,6 +74,20 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
     }
   }
 
+  function renderEmptyPlaceholder() {
+    return (
+      <span className="min-w-0 truncate text-muted">
+        {placeholder}
+        {required ? (
+          <span className="text-error" aria-hidden>
+            {" "}
+            *
+          </span>
+        ) : null}
+      </span>
+    );
+  }
+
   function renderTriggerLabel() {
     if (loading) {
       return <span className="min-w-0 truncate text-muted">Loading…</span>;
@@ -101,7 +116,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
           />
         );
       }
-      return <span className="min-w-0 truncate text-muted">{placeholder}</span>;
+      return renderEmptyPlaceholder();
     }
     if (triggerFormat === "project-client") {
       if (triggerProject) {
@@ -114,12 +129,12 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
           />
         );
       }
-      return <span className="min-w-0 truncate text-muted">{placeholder}</span>;
+      return renderEmptyPlaceholder();
     }
     if (triggerTaskTitle) {
       return <span className="min-w-0 truncate">{triggerTaskTitle}</span>;
     }
-    return <span className="min-w-0 truncate text-muted">{placeholder}</span>;
+    return renderEmptyPlaceholder();
   }
 
   return (
@@ -129,6 +144,7 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
           variant="outline"
           size="sm"
           disabled={disabled || loading}
+          aria-required={required && !value ? true : undefined}
           className={cn(
             "w-64 max-w-full justify-start",
             triggerFormat === "task-only" ? "gap-2" : "gap-1",

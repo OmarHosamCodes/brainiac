@@ -13,6 +13,7 @@ import {
   startAgencyTimer,
   stopAgencyTimer,
   updateAgencyActiveTimerStart,
+  updateAgencyActiveTimerDescription,
   listMyAgencyTimeEntries,
   createManualAgencyTimeEntry,
   updateMyAgencyTimeEntry,
@@ -116,6 +117,17 @@ export const timeTrackingRouter = {
         return z
           .object({ timer: agencyActiveTimerSchema })
           .parse(await updateAgencyActiveTimerStart(context.session.user.id, input));
+      }),
+    updateDescription: protectedProProcedure
+      .input(
+        teamScopedInputSchema.extend({
+          description: z.string().max(2_000),
+        }),
+      )
+      .handler(async ({ context, input }) => {
+        return z
+          .object({ timer: agencyActiveTimerSchema })
+          .parse(await updateAgencyActiveTimerDescription(context.session.user.id, input));
       }),
   },
 

@@ -12,7 +12,14 @@ export type AgencyActiveTimerRef = {
   taskId: string | null;
   taskTitle: string | null;
   description: string;
+  projectId?: string;
 };
+
+export const AGENCY_LOCAL_DRAFT_TIMER_ID_PREFIX = "agency-active-timer-local-";
+
+export function isAgencyLocalDraftTimer(timer: { id: string } | null | undefined): boolean {
+  return Boolean(timer?.id.startsWith(AGENCY_LOCAL_DRAFT_TIMER_ID_PREFIX));
+}
 
 export function canStartAgencyTimer(input: {
   activeTimer: AgencyActiveTimerRef | null;
@@ -24,11 +31,6 @@ export function canStartAgencyTimer(input: {
   selectedTaskTitle?: string | null;
   catalogTasks?: AgencyTimerTaskRef[];
 }): boolean {
-  if (!input.project) {
-    return false;
-  }
-
-  // Idle: project is enough (task optional). Switch: previous timer must be stoppable.
   if (!input.activeTimer) {
     return true;
   }
@@ -104,32 +106,15 @@ export function canStopAgencyTimer(input: {
   return Boolean(input.activeTimer);
 }
 
-// ponytail: naive fallback chain (draft → recent entry → first project); upgrade path is explicit project picker
 export function resolveAgencyTimerStartProject(input: {
   projects: AgencyTimerProjectRef[];
   selectedTaskProjectId: string | null;
-  draftProjectId: string;
-  recentEntryProjectId: string | null;
 }): AgencyTimerProjectRef | null {
-  const findProject = (projectId: string) =>
-    input.projects.find((project) => project.id === projectId) ?? null;
-
-  if (input.selectedTaskProjectId) {
-    const project = findProject(input.selectedTaskProjectId);
-    if (project) return project;
+  if (!input.selectedTaskProjectId) {
+    return null;
   }
 
-  if (input.draftProjectId) {
-    const project = findProject(input.draftProjectId);
-    if (project) return project;
-  }
-
-  if (input.recentEntryProjectId) {
-    const project = findProject(input.recentEntryProjectId);
-    if (project) return project;
-  }
-
-  return input.projects[0] ?? null;
+  return input.projects.find((project) => project.id === input.selectedTaskProjectId) ?? null;
 }
 
 export function getAgencyTimerStartBlockedMessage(input: {
@@ -141,12 +126,12 @@ export function getAgencyTimerStartBlockedMessage(input: {
   selectedTaskTitle?: string | null;
   catalogTasks?: AgencyTimerTaskRef[];
 }): string | null {
-  if (!input.project) {
-    return "No project available to start the timer.";
-  }
-
   if (!input.activeTimer) {
     return null;
+  }
+
+  if (!input.project) {
+    return "No project available to start the timer.";
   }
 
   const stopInput = {
@@ -182,16 +167,28 @@ export function getAgencyTimerStopBlockedMessage(input: {
     return null;
   }
 
+  const hasProject = Boolean(input.activeTimer.projectId?.trim());
+  const task = resolveAgencyTimerTaskRef({
+    activeTimer: input.activeTimer,
+    selectedTaskId: input.selectedTaskId,
+    selectedTaskTitle: input.selectedTaskTitle,
+    catalogTasks: input.catalogTasks,
+  });
+
+  if (!hasProject && !task?.id) {
+    return "Choose a task before stopping the timer.";
+  }
+
   return null;
 }
 
 /** Stop CTA while a timer is running. */
 export function getAgencyTimerStopButtonPresentation(input: {
   isPending: boolean;
-  canStop: boolean;
+  hasActiveTimer: boolean;
 }): { label: string; disabled: boolean } {
   if (input.isPending) {
     return { label: "…", disabled: true };
   }
-  return { label: "Stop", disabled: !input.canStop };
+  return { label: "Stop", disabled: !input.hasActiveTimer };
 }

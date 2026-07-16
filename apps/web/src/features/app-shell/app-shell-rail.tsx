@@ -1,4 +1,4 @@
-import { Briefcase, CreditCard, LayoutDashboard, Search, ShoppingBag } from "lucide-react";
+import { Briefcase, LayoutDashboard } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 import { AppShellAccountMenu } from "@/features/app-shell/app-shell-account-menu";
@@ -20,15 +20,9 @@ import { cn } from "@/lib/utils";
 const NAV_ICONS = {
   "/dashboard": LayoutDashboard,
   "/agency": Briefcase,
-  "/marketplace": ShoppingBag,
-  "/billing": CreditCard,
 } as const;
 
-type AppShellRailProps = {
-  onOpenSearch: () => void;
-};
-
-export function AppShellRail({ onOpenSearch }: AppShellRailProps) {
+export function AppShellRail() {
   const location = useLocation();
   const railExpanded = useAppShellStore((s) => s.railExpanded);
   const toggleRail = useAppShellStore((s) => s.toggleRail);
@@ -64,24 +58,6 @@ export function AppShellRail({ onOpenSearch }: AppShellRailProps) {
             Orch
           </span>
         </div>
-
-        <button
-          type="button"
-          className={cn(
-            railExpanded ? shellRailExpandedLinkClass : shellRailLinkBaseClass,
-            shellFocusRingClass,
-            "border border-transparent",
-            railExpanded ? "text-left" : "",
-          )}
-          aria-label="Search navigation"
-          title={railExpanded ? undefined : "Search"}
-          onClick={onOpenSearch}
-        >
-          <Search className={shellRailIconClass} />
-          <span className={cn("app-shell__rail-label truncate", !railExpanded && "sr-only")}>
-            Search
-          </span>
-        </button>
 
         <nav
           className={cn(

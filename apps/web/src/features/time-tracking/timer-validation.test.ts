@@ -4,7 +4,9 @@ import {
   canStartAgencyTimer,
   canStopAgencyTimer,
   getAgencyTimerStartBlockedMessage,
+  getAgencyTimerStopBlockedMessage,
   getAgencyTimerStopButtonPresentation,
+  isAgencyLocalDraftTimer,
   resolveAgencyTimerStartProject,
   resolveAgencyTimerStopDescription,
   resolveAgencyTimerTaskRef,
@@ -15,8 +17,8 @@ const projectB = { id: "proj-b", name: "Project B" };
 const task = { id: "task-1", title: "Task 1" };
 
 describe("canStartAgencyTimer", () => {
-  it("allows start with project only", () => {
-    expect(canStartAgencyTimer({ activeTimer: null, project: projectA })).toBe(true);
+  it("allows idle start without a selected task", () => {
+    expect(canStartAgencyTimer({ activeTimer: null, project: null })).toBe(true);
   });
 
   it("allows start with project and task", () => {
@@ -51,23 +53,43 @@ describe("canStartAgencyTimer", () => {
       }),
     ).toBe(true);
   });
-
-  it("blocks start when no project is available", () => {
-    expect(canStartAgencyTimer({ activeTimer: null, project: null, selectedTask: task })).toBe(
-      false,
-    );
-  });
 });
 
 describe("getAgencyTimerStartBlockedMessage", () => {
-  it("allows idle start without a task", () => {
-    expect(getAgencyTimerStartBlockedMessage({ activeTimer: null, project: projectA })).toBeNull();
+  it("allows idle start without a project", () => {
+    expect(getAgencyTimerStartBlockedMessage({ activeTimer: null, project: null })).toBeNull();
+  });
+});
+
+describe("getAgencyTimerStopBlockedMessage", () => {
+  it("requires a task when the timer has no project binding", () => {
+    expect(
+      getAgencyTimerStopBlockedMessage({
+        activeTimer: { taskId: null, taskTitle: null, description: "", projectId: "" },
+        description: "",
+      }),
+    ).toBe("Choose a task before stopping the timer.");
   });
 
-  it("requires a project for idle start", () => {
-    expect(getAgencyTimerStartBlockedMessage({ activeTimer: null, project: null })).toBe(
-      "No project available to start the timer.",
-    );
+  it("allows stop for a project-only server timer", () => {
+    expect(
+      getAgencyTimerStopBlockedMessage({
+        activeTimer: {
+          taskId: null,
+          taskTitle: null,
+          description: "",
+          projectId: "proj-a",
+        },
+        description: "Work",
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("isAgencyLocalDraftTimer", () => {
+  it("detects local draft timers by id prefix", () => {
+    expect(isAgencyLocalDraftTimer({ id: "agency-active-timer-local-123" })).toBe(true);
+    expect(isAgencyLocalDraftTimer({ id: "agency-active-timer-123" })).toBe(false);
   });
 });
 
@@ -100,20 +122,20 @@ describe("resolveAgencyTimerStopDescription", () => {
 });
 
 describe("getAgencyTimerStopButtonPresentation", () => {
-  it("disables Stop when the timer cannot be saved", () => {
+  it("disables Stop when no timer is running", () => {
     expect(
       getAgencyTimerStopButtonPresentation({
         isPending: false,
-        canStop: false,
+        hasActiveTimer: false,
       }),
     ).toEqual({ label: "Stop", disabled: true });
   });
 
-  it("shows Stop when the timer can be saved", () => {
+  it("shows Stop when a timer is running", () => {
     expect(
       getAgencyTimerStopButtonPresentation({
         isPending: false,
-        canStop: true,
+        hasActiveTimer: true,
       }),
     ).toEqual({ label: "Stop", disabled: false });
   });
@@ -154,43 +176,21 @@ describe("resolveAgencyTimerTaskRef", () => {
 describe("resolveAgencyTimerStartProject", () => {
   const projects = [projectA, projectB];
 
-  it("prefers selected task project over draft and recent entry", () => {
+  it("returns the selected task project when one is chosen", () => {
     expect(
       resolveAgencyTimerStartProject({
         projects,
         selectedTaskProjectId: "proj-b",
-        draftProjectId: "proj-a",
-        recentEntryProjectId: "proj-a",
       }),
     ).toEqual(projectB);
   });
 
-  it("falls back to draft then recent entry then first project", () => {
+  it("returns null when no task is selected", () => {
     expect(
       resolveAgencyTimerStartProject({
         projects,
         selectedTaskProjectId: null,
-        draftProjectId: "proj-b",
-        recentEntryProjectId: "proj-a",
       }),
-    ).toEqual(projectB);
-
-    expect(
-      resolveAgencyTimerStartProject({
-        projects,
-        selectedTaskProjectId: null,
-        draftProjectId: "",
-        recentEntryProjectId: "proj-b",
-      }),
-    ).toEqual(projectB);
-
-    expect(
-      resolveAgencyTimerStartProject({
-        projects,
-        selectedTaskProjectId: null,
-        draftProjectId: "",
-        recentEntryProjectId: null,
-      }),
-    ).toEqual(projectA);
+    ).toBeNull();
   });
 });

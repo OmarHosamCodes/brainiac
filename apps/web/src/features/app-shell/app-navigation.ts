@@ -25,20 +25,6 @@ export const APP_NAV_ITEMS = [
     mode: "execution",
     matches: (path: string) => path.startsWith("/agency"),
   },
-  {
-    label: "Marketplace",
-    to: "/marketplace",
-    icon: "i-lucide-shopping-bag",
-    mode: "execution",
-    matches: (path: string) => path.startsWith("/marketplace"),
-  },
-  {
-    label: "Billing",
-    to: "/billing",
-    icon: "i-lucide-credit-card",
-    mode: "execution",
-    matches: (path: string) => path.startsWith("/billing"),
-  },
 ] as const satisfies readonly AppNavItem[];
 
 const SPATIAL_PREFIXES = ["/dashboard", "/node/"] as const;

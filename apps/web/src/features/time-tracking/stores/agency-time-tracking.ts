@@ -16,6 +16,7 @@ import { getErrorMessage } from "@/lib/utils/get-error-message";
 import {
   getAgencyTimerStartBlockedMessage,
   getAgencyTimerStopBlockedMessage,
+  isAgencyLocalDraftTimer,
   resolveAgencyTimerStopDescription,
 } from "@/features/time-tracking/timer-validation";
 import { type AgencyListOverlay } from "@/features/shared/agency-optimistic-merge";
@@ -140,7 +141,7 @@ type QuerySnapshot = {
 
 type StartTimerPayload = {
   teamId: string;
-  project: Pick<AgencyProjectSummary, "id" | "name">;
+  project: Pick<AgencyProjectSummary, "id" | "name"> | null;
   task: Pick<AgencyProjectTask, "id" | "title"> | null;
   description: string;
   tagIds?: string[];
@@ -163,6 +164,9 @@ type UpdateActiveTimerStartPayload = {
   activeTimer: AgencyActiveTimer;
   startedAt: string;
 };
+
+const ACTIVE_TIMER_DESCRIPTION_DEBOUNCE_MS = 400;
+const activeTimerDescriptionPersistTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 type RestartEntryPayload = {
   teamId: string;
@@ -364,6 +368,77 @@ function createAgencyTimeTrackingActions(
       };
     });
     mirrorTrackerDraftToActiveTimer(teamId);
+    scheduleActiveTimerDescriptionPersist(teamId);
+  }
+
+  function scheduleActiveTimerDescriptionPersist(teamId: string) {
+    const existingTimer = activeTimerDescriptionPersistTimers.get(teamId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+    }
+
+    activeTimerDescriptionPersistTimers.set(
+      teamId,
+      setTimeout(() => {
+        activeTimerDescriptionPersistTimers.delete(teamId);
+        void persistActiveTimerDescription(teamId);
+      }, ACTIVE_TIMER_DESCRIPTION_DEBOUNCE_MS),
+    );
+  }
+
+  function cancelActiveTimerDescriptionPersist(teamId: string) {
+    const existingTimer = activeTimerDescriptionPersistTimers.get(teamId);
+    if (!existingTimer) {
+      return;
+    }
+
+    clearTimeout(existingTimer);
+    activeTimerDescriptionPersistTimers.delete(teamId);
+  }
+
+  async function persistActiveTimerDescription(teamId: string) {
+    if (!teamId) {
+      return;
+    }
+
+    const draft = get().trackerDraftsByTeam[teamId];
+    const activeTimer = getActiveTimerForTeam(teamId);
+    if (!draft || !activeTimer || draft.syncedTimerId !== activeTimer.id) {
+      return;
+    }
+
+    if (isAgencyLocalDraftTimer(activeTimer)) {
+      return;
+    }
+
+    const description = draft.description;
+    const timerSnapshots = snapshotQueries(
+      [...activeTimerQueryRegistry.values()].map((entry) => entry.payload),
+    );
+
+    try {
+      const result = (await orpcClient.agencyOps.timer.updateDescription({
+        teamId,
+        description,
+      })) as { timer: AgencyActiveTimer };
+
+      patchActiveTimerCaches(result.timer);
+    } catch (error) {
+      restoreQuerySnapshots(timerSnapshots);
+
+      toast.error("Unable to sync description", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+    }
+  }
+
+  function flushActiveTimerDescription(teamId: string) {
+    if (!teamId) {
+      return Promise.resolve();
+    }
+
+    cancelActiveTimerDescriptionPersist(teamId);
+    return persistActiveTimerDescription(teamId);
   }
 
   function setTrackerProjectId(teamId: string, projectId: string) {
@@ -444,6 +519,38 @@ function createAgencyTimeTrackingActions(
     return null;
   }
 
+  function findProjectNameInCache(teamId: string, projectId: string) {
+    if (!projectId) {
+      return "";
+    }
+
+    const queryClient = getQueryClient();
+
+    for (const query of queryClient.getQueryCache().findAll()) {
+      const path = query.queryKey[0];
+      if (
+        !Array.isArray(path) ||
+        path[0] !== "agencyOps" ||
+        path[1] !== "projects" ||
+        path[2] !== "list"
+      ) {
+        continue;
+      }
+
+      const cached = queryClient.getQueryData<{
+        items: Array<{ id: string; name: string; teamId: string }>;
+      }>(query.queryKey);
+      const project = cached?.items.find(
+        (entry) => entry.id === projectId && entry.teamId === teamId,
+      );
+      if (project) {
+        return project.name;
+      }
+    }
+
+    return "";
+  }
+
   function mirrorTrackerDraftToActiveTimer(teamId: string) {
     if (!teamId) {
       return;
@@ -462,6 +569,8 @@ function createAgencyTimeTrackingActions(
     const taskId = draft.taskId.trim() || null;
     const cachedTask = taskId ? findProjectTaskInCache(teamId, taskId) : null;
     const projectId = cachedTask?.projectId ?? (draft.projectId || activeTimer.projectId);
+    const projectName =
+      findProjectNameInCache(teamId, projectId) || activeTimer.projectName || "";
 
     patchActiveTimerCaches({
       ...activeTimer,
@@ -469,7 +578,7 @@ function createAgencyTimeTrackingActions(
       taskId,
       taskTitle: cachedTask?.title ?? (taskId ? activeTimer.taskTitle : null),
       projectId,
-      projectName: activeTimer.projectName,
+      projectName,
       tags: draft.tagIds
         .map((id) => activeTimer.tags.find((tag) => tag.id === id))
         .filter(Boolean) as AgencyTag[],
@@ -478,7 +587,11 @@ function createAgencyTimeTrackingActions(
     });
   }
 
-  function syncDraftFromActiveTimer(teamId: string, timer: AgencyActiveTimer | null) {
+  function syncDraftFromActiveTimer(
+    teamId: string,
+    timer: AgencyActiveTimer | null,
+    options?: { skipDescription?: boolean },
+  ) {
     if (!teamId) {
       return;
     }
@@ -500,8 +613,23 @@ function createAgencyTimeTrackingActions(
         };
       }
 
+      const nextDescription = options?.skipDescription ? draft.description : timer.description;
+
       if (draft.syncedTimerId === timer.id) {
-        return s;
+        if (nextDescription === draft.description) {
+          return s;
+        }
+
+        return {
+          ...s,
+          trackerDraftsByTeam: {
+            ...s.trackerDraftsByTeam,
+            [teamId]: {
+              ...draft,
+              description: nextDescription,
+            },
+          },
+        };
       }
 
       return {
@@ -509,7 +637,7 @@ function createAgencyTimeTrackingActions(
         trackerDraftsByTeam: {
           ...s.trackerDraftsByTeam,
           [teamId]: {
-            description: timer.description,
+            description: nextDescription,
             projectId: timer.projectId,
             taskId: timer.taskId ?? draft.taskId ?? "",
             tagIds: timer.tags.map((tag) => tag.id),
@@ -612,6 +740,9 @@ function createAgencyTimeTrackingActions(
 
     // Stop-then-start so draft description/task are saved; API start rollover only uses DB fields.
     if (previousActiveTimer) {
+      if (isAgencyLocalDraftTimer(previousActiveTimer)) {
+        patchActiveTimerCaches(null);
+      } else {
       let stopTask: { id: string; title: string } | null = null;
 
       if (previousActiveTimer.taskId) {
@@ -645,6 +776,38 @@ function createAgencyTimeTrackingActions(
       if (getCachedActiveTimer()) {
         return;
       }
+      }
+    }
+
+    if (!payload.project) {
+      const previousDraft = getTrackerDraftSnapshot(payload.teamId);
+      const nowIso = new Date().toISOString();
+      const optimisticTimer = createLocalDraftTimer({
+        teamId: payload.teamId,
+        description: payload.description,
+        tagIds: payload.tagIds ?? previousDraft?.tagIds,
+        isBillable: payload.isBillable ?? previousDraft?.isBillable,
+        startedAt: nowIso,
+        task: payload.task,
+      });
+      const draft = ensureTrackerDraft(payload.teamId);
+
+      if (!draft) {
+        return;
+      }
+
+      patchActiveTimerCaches(optimisticTimer);
+      patchTrackerDraft(payload.teamId, {
+        description: optimisticTimer.description,
+        projectId: payload.task ? (previousDraft?.projectId ?? "") : "",
+        taskId: payload.task?.id ?? "",
+        tagIds: (payload.tagIds ?? previousDraft?.tagIds ?? []).slice(),
+        isBillable: payload.isBillable ?? previousDraft?.isBillable ?? true,
+        syncedTimerId: optimisticTimer.id,
+      });
+
+      toast.success("Timer started");
+      return;
     }
 
     const previousDraft = getTrackerDraftSnapshot(payload.teamId);
@@ -773,9 +936,16 @@ function createAgencyTimeTrackingActions(
 
     if (!payload.discard) {
       const stopBlockedMessage = getAgencyTimerStopBlockedMessage({
-        activeTimer,
+        activeTimer: {
+          taskId: activeTimer.taskId,
+          taskTitle: activeTimer.taskTitle,
+          description: activeTimer.description,
+          projectId: activeTimer.projectId,
+        },
         description,
         selectedTask,
+        selectedTaskId: selectedTask?.id,
+        selectedTaskTitle: selectedTask?.title,
       });
 
       if (stopBlockedMessage) {
@@ -785,6 +955,64 @@ function createAgencyTimeTrackingActions(
     }
 
     const previousDraft = getTrackerDraftSnapshot(payload.teamId);
+
+    if (isAgencyLocalDraftTimer(activeTimer)) {
+      set((s) => ({ ...s, timerStopCount: s.timerStopCount + 1 }));
+
+      try {
+        if (payload.discard) {
+          patchActiveTimerCaches(null);
+          patchTrackerDraft(payload.teamId, emptyTrackerDraft());
+          toast.success("Timer discarded");
+          return;
+        }
+
+        const projectId = activeTimer.projectId.trim();
+        const taskId = selectedTask?.id ?? activeTimer.taskId ?? undefined;
+
+        await orpcClient.agencyOps.timer.start({
+          teamId: payload.teamId,
+          projectId,
+          ...(taskId ? { taskId } : {}),
+          description: description.trim(),
+          tagIds: payload.tagIds ?? previousDraft?.tagIds,
+          isBillable: payload.isBillable ?? previousDraft?.isBillable,
+        });
+
+        await orpcClient.agencyOps.timer.updateStart({
+          teamId: payload.teamId,
+          startedAt: activeTimer.startedAt,
+        });
+
+        const result = (await orpcClient.agencyOps.timer.stop({
+          teamId: payload.teamId,
+          ...(taskId ? { taskId } : {}),
+          description,
+          tagIds: payload.tagIds ?? previousDraft?.tagIds,
+          isBillable: payload.isBillable ?? previousDraft?.isBillable,
+        })) as {
+          timer: AgencyActiveTimer | null;
+          createdEntry: AgencyTimeEntry | null;
+        };
+
+        patchActiveTimerCaches(result.timer);
+        if (result.createdEntry) {
+          patchInsertedEntry(activeTimer.teamId, result.createdEntry);
+        }
+        patchTrackerDraft(payload.teamId, emptyTrackerDraft());
+        void refetchAgencyTimeEntriesListQueries(payload.teamId);
+        toast.success("Timer stopped");
+      } catch (error) {
+        toast.error("Unable to stop timer", {
+          description: getErrorMessage(error, "Please try again."),
+        });
+      } finally {
+        set((s) => ({ ...s, timerStopCount: Math.max(0, s.timerStopCount - 1) }));
+      }
+
+      return;
+    }
+
     const timerSnapshots = snapshotQueries(
       [...activeTimerQueryRegistry.values()].map((entry) => entry.payload),
     );
@@ -1012,6 +1240,35 @@ function createAgencyTimeTrackingActions(
     }
 
     return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  function createLocalDraftTimer(payload: {
+    teamId: string;
+    description: string;
+    tagIds?: string[];
+    isBillable?: boolean;
+    startedAt: string;
+    task: Pick<AgencyProjectTask, "id" | "title"> | null;
+  }) {
+    const projectId = payload.task
+      ? (findProjectTaskInCache(payload.teamId, payload.task.id)?.projectId ?? "")
+      : "";
+
+    return {
+      id: createOptimisticId("agency-active-timer-local"),
+      teamId: payload.teamId,
+      userId: getCurrentUserId(),
+      projectId,
+      taskId: payload.task?.id ?? null,
+      taskTitle: payload.task?.title ?? null,
+      projectName: projectId ? findProjectNameInCache(payload.teamId, projectId) : "",
+      description: payload.description.trim(),
+      tags: [],
+      isBillable: payload.isBillable ?? true,
+      startedAt: payload.startedAt,
+      createdAt: payload.startedAt,
+      updatedAt: payload.startedAt,
+    } satisfies AgencyActiveTimer;
   }
 
   function createOptimisticTimer(payload: {
@@ -1633,6 +1890,7 @@ function createAgencyTimeTrackingActions(
     setTrackerTagIds,
     setTrackerIsBillable,
     syncDraftFromActiveTimer,
+    flushActiveTimerDescription,
     registerActiveTimerQuery,
     unregisterActiveTimerQuery,
     registerLogQuery,

@@ -62,6 +62,8 @@ type UseAgencyTaskChooserBaseOptions = {
   filterProjectId?: string;
   /** When true, mark search matches in project/task labels like the clients surface. */
   highlightSearch?: boolean;
+  /** When true, empty trigger shows a required-field asterisk beside the placeholder. */
+  required?: boolean;
 };
 
 export type UseAgencyTaskChooserOptions = UseAgencyTaskChooserBaseOptions &
@@ -83,6 +85,7 @@ export type AgencyTaskChooserViewModel = {
   disabled: boolean;
   loading: boolean;
   placeholder: string;
+  required: boolean;
   searchPlaceholder: string;
   className?: string;
   contentAlign: "start" | "center" | "end";
@@ -141,6 +144,7 @@ export function useAgencyTaskChooser(
     fallbackProjectName,
     fallbackClientName,
     highlightSearch = false,
+    required = false,
     filterProjectId,
   } = options;
 
@@ -400,6 +404,7 @@ export function useAgencyTaskChooser(
     disabled,
     loading,
     placeholder,
+    required,
     searchPlaceholder,
     className,
     contentAlign,
