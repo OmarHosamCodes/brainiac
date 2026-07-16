@@ -33,6 +33,7 @@ import {
   applyJourneySyncNotifications,
 } from "../shared/journey-helpers";
 import { requireTeamMembership } from "../shared/membership";
+import { getAgencyProjectTemplateForTeam } from "../project-templates/service";
 
 type AgencyProjectRecord = {
   id: string;
@@ -40,6 +41,7 @@ type AgencyProjectRecord = {
   clientId: string;
   clientName: string;
   name: string;
+  colorHueId: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -74,6 +76,7 @@ function mapProjectRow(row: {
   clientId: string;
   clientName: string;
   name: string;
+  colorHueId: number | null;
   createdAt: Date;
   updatedAt: Date;
 }): AgencyProjectRecord {
@@ -83,9 +86,18 @@ function mapProjectRow(row: {
     clientId: row.clientId,
     clientName: row.clientName,
     name: row.name,
+    colorHueId: row.colorHueId,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
+}
+
+function normalizeColorHueId(colorHueId: number | null | undefined): number | null {
+  if (colorHueId == null) return null;
+  if (!Number.isInteger(colorHueId) || colorHueId < 1 || colorHueId > 12) {
+    throw new ORPCError("BAD_REQUEST", { message: "colorHueId must be between 1 and 12." });
+  }
+  return colorHueId;
 }
 
 export async function listAgencyProjects(
@@ -113,6 +125,7 @@ export async function listAgencyProjects(
       clientId: agencyOpsProject.clientId,
       clientName: agencyOpsClient.name,
       name: agencyOpsProject.name,
+      colorHueId: agencyOpsProject.colorHueId,
       createdAt: agencyOpsProject.createdAt,
       updatedAt: agencyOpsProject.updatedAt,
     })
@@ -138,8 +151,36 @@ export async function createAgencyProject(
     teamId: string;
     clientId: string;
     name: string;
+    colorHueId?: number | null;
+    templateId?: string;
   },
 ) {
+  const colorHueId = normalizeColorHueId(input.colorHueId);
+
+  if (input.templateId) {
+    const template = await getAgencyProjectTemplateForTeam(actorUserId, {
+      teamId: input.teamId,
+      templateId: input.templateId,
+    });
+    const milestones = template.milestones.map((milestone) => ({
+      title: milestone.title,
+      assigneeUserIds: milestone.assigneeUserIds ?? [],
+    }));
+    if (milestones.length === 0) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "Selected template has no milestones.",
+      });
+    }
+    const created = await createAgencyProjectWithJourney(actorUserId, {
+      teamId: input.teamId,
+      clientId: input.clientId,
+      name: input.name,
+      colorHueId,
+      milestones,
+    });
+    return created.project;
+  }
+
   await requireTeamMembership(actorUserId, input.teamId, "owner");
   await getClientByIdForTeam(input.teamId, input.clientId);
 
@@ -151,6 +192,7 @@ export async function createAgencyProject(
       teamId: input.teamId,
       clientId: input.clientId,
       name: input.name.trim(),
+      colorHueId,
       createdByUserId: actorUserId,
       createdAt: now,
       updatedAt: now,
@@ -160,6 +202,7 @@ export async function createAgencyProject(
       teamId: agencyOpsProject.teamId,
       clientId: agencyOpsProject.clientId,
       name: agencyOpsProject.name,
+      colorHueId: agencyOpsProject.colorHueId,
       createdAt: agencyOpsProject.createdAt,
       updatedAt: agencyOpsProject.updatedAt,
     });
@@ -340,6 +383,7 @@ export async function createAgencyProjectWithJourney(
     teamId: string;
     clientId: string;
     name: string;
+    colorHueId?: number | null;
     milestones: Array<{
       title: string;
       assigneeUserIds: string[];
@@ -355,6 +399,7 @@ export async function createAgencyProjectWithJourney(
     });
   }
 
+  const colorHueId = normalizeColorHueId(input.colorHueId);
   const projectName = input.name.trim();
   const now = new Date();
   const projectId = createWorkspaceId("agency-project");
@@ -380,6 +425,7 @@ export async function createAgencyProjectWithJourney(
       teamId: input.teamId,
       clientId: input.clientId,
       name: projectName,
+      colorHueId,
       createdByUserId: actorUserId,
       createdAt: now,
       updatedAt: now,
@@ -466,6 +512,7 @@ export async function createAgencyProjectWithJourney(
       teamId: agencyOpsProject.teamId,
       clientId: agencyOpsProject.clientId,
       name: agencyOpsProject.name,
+      colorHueId: agencyOpsProject.colorHueId,
       createdAt: agencyOpsProject.createdAt,
       updatedAt: agencyOpsProject.updatedAt,
     })
@@ -792,6 +839,7 @@ export async function updateAgencyProject(
     projectId: string;
     clientId?: string;
     name?: string;
+    colorHueId?: number | null;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -801,19 +849,26 @@ export async function updateAgencyProject(
   }
 
   const now = new Date();
+  const patch: {
+    clientId?: string;
+    name?: string;
+    colorHueId?: number | null;
+    updatedAt: Date;
+  } = { updatedAt: now };
+  if (input.clientId !== undefined) patch.clientId = input.clientId;
+  if (input.name !== undefined) patch.name = input.name.trim();
+  if (input.colorHueId !== undefined) patch.colorHueId = normalizeColorHueId(input.colorHueId);
+
   const [updated] = await db
     .update(agencyOpsProject)
-    .set({
-      clientId: input.clientId,
-      name: input.name?.trim(),
-      updatedAt: now,
-    })
+    .set(patch)
     .where(and(eq(agencyOpsProject.teamId, input.teamId), eq(agencyOpsProject.id, input.projectId)))
     .returning({
       id: agencyOpsProject.id,
       teamId: agencyOpsProject.teamId,
       clientId: agencyOpsProject.clientId,
       name: agencyOpsProject.name,
+      colorHueId: agencyOpsProject.colorHueId,
       createdAt: agencyOpsProject.createdAt,
       updatedAt: agencyOpsProject.updatedAt,
     });

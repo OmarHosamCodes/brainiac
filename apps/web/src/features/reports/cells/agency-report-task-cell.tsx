@@ -5,8 +5,9 @@ import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
 type AgencyReportTaskCellProps = {
+  teamId: string;
   row: AggregatedReportRow;
-  projects: Array<Pick<AgencyProject, "id" | "clientName" | "name">>;
+  projects: Array<Pick<AgencyProject, "id" | "clientId" | "clientName" | "name" | "colorHueId">>;
   tasks: Array<
     Pick<
       AgencyProjectTask,
@@ -21,6 +22,7 @@ type AgencyReportTaskCellProps = {
 };
 
 export function AgencyReportTaskCell({
+  teamId,
   row,
   projects,
   tasks,
@@ -30,6 +32,7 @@ export function AgencyReportTaskCell({
 }: AgencyReportTaskCellProps) {
   return (
     <AgencyTaskChooser
+      teamId={teamId}
       value={row.taskId ?? ""}
       onValueChange={onTaskChange}
       projects={projects}

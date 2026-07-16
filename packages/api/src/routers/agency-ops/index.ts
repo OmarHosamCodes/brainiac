@@ -1,5 +1,7 @@
 import { clientsRouter } from "./clients/router";
 import { projectsRouter } from "./projects/router";
+import { projectTemplatesRouter } from "./project-templates/router";
+import { favoritesRouter } from "./favorites/router";
 import { tasksRouter } from "./tasks/router";
 import { timeTrackingRouter } from "./time-tracking/router";
 import { tagsRouter } from "./tags/router";
@@ -14,6 +16,8 @@ export const agencyOpsRouter = {
   clients: clientsRouter.clients,
   contacts: clientsRouter.contacts,
   projects: projectsRouter.projects,
+  projectTemplates: projectTemplatesRouter.projectTemplates,
+  favorites: favoritesRouter.favorites,
   projectTasks: tasksRouter.projectTasks,
   tags: tagsRouter.tags,
   timer: timeTrackingRouter.timer,

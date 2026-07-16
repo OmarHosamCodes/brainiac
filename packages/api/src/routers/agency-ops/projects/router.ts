@@ -4,6 +4,7 @@ import {
   teamScopedInputSchema,
   agencyProjectSchema,
   agencyProjectJourneySchema,
+  agencyProjectColorHueIdSchema,
 } from "../shared/schemas";
 import {
   listAgencyProjects,
@@ -36,6 +37,8 @@ export const projectsRouter = {
         teamScopedInputSchema.extend({
           clientId: z.string().min(1),
           name: z.string().trim().min(1).max(160),
+          colorHueId: agencyProjectColorHueIdSchema.nullable().optional(),
+          templateId: z.string().min(1).optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -49,6 +52,7 @@ export const projectsRouter = {
         teamScopedInputSchema.extend({
           clientId: z.string().min(1),
           name: z.string().trim().min(1).max(160),
+          colorHueId: agencyProjectColorHueIdSchema.nullable().optional(),
           milestones: z
             .array(
               z.object({
@@ -147,6 +151,7 @@ export const projectsRouter = {
           projectId: z.string().min(1),
           clientId: z.string().min(1).optional(),
           name: z.string().trim().min(1).max(160).optional(),
+          colorHueId: agencyProjectColorHueIdSchema.nullable().optional(),
         }),
       )
       .handler(async ({ context, input }) => {

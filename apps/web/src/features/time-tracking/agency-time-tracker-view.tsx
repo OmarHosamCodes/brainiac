@@ -8,7 +8,6 @@ import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import type { AgencyTimeTrackerViewModel } from "@/features/time-tracking/hooks/use-agency-time-tracker";
 import {
-  agencyInputPlaceholderClass,
   agencyTimeEntryTimeInputClass,
   agencyTimeTrackerCardClass,
   agencyTimeTrackerCardRunningClass,
@@ -64,6 +63,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
 
         <div className={agencyTimeTrackerRailCellClass}>
           <AgencyTaskChooser
+            teamId={view.teamId}
             value={view.selectedTaskId}
             onValueChange={view.onTaskChange}
             projects={view.projects}
@@ -72,9 +72,9 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
             required={!view.activeTimer}
             triggerFormat="task-client"
             highlightSearch
-            fallbackTaskTitle={view.activeTimer?.taskTitle}
-            fallbackProjectId={view.activeTimer?.projectId}
-            fallbackProjectName={view.activeTimer?.projectName}
+            fallbackTaskTitle={view.activeTimer?.taskTitle ?? undefined}
+            fallbackProjectId={view.activeTimer?.projectId ?? undefined}
+            fallbackProjectName={view.activeTimer?.projectName ?? undefined}
             fallbackClientName={
               view.activeTimer
                 ? view.projects.find((project) => project.id === view.activeTimer?.projectId)

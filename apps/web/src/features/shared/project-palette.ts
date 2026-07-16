@@ -141,7 +141,14 @@ function hashString(input: string): number {
   return hash >>> 0;
 }
 
-export function projectHueFor(projectId: string | null | undefined): ProjectHue {
+export function projectHueFor(
+  projectId: string | null | undefined,
+  colorHueId?: number | null,
+): ProjectHue {
+  if (colorHueId != null && colorHueId >= 1 && colorHueId <= PROJECT_PALETTE.length) {
+    return PROJECT_PALETTE[colorHueId - 1]!;
+  }
+
   if (!projectId) {
     return PROJECT_PALETTE[11]!; // Slate fallback for unknown project.
   }
@@ -151,8 +158,11 @@ export function projectHueFor(projectId: string | null | undefined): ProjectHue 
 }
 
 /** Returns CSS custom properties for inline style binding on a hue dot. */
-export function projectHueStyle(projectId: string | null | undefined) {
-  const hue = projectHueFor(projectId);
+export function projectHueStyle(
+  projectId: string | null | undefined,
+  colorHueId?: number | null,
+) {
+  const hue = projectHueFor(projectId, colorHueId);
   return {
     "--project-hue": hue.light,
     "--project-hue-dark": hue.dark,
@@ -162,8 +172,12 @@ export function projectHueStyle(projectId: string | null | undefined) {
 }
 
 /** Soft pill background + hue text for project badges. */
-export function projectHuePillStyle(projectId: string | null | undefined, isDark: boolean) {
-  const hue = projectHueFor(projectId);
+export function projectHuePillStyle(
+  projectId: string | null | undefined,
+  isDark: boolean,
+  colorHueId?: number | null,
+) {
+  const hue = projectHueFor(projectId, colorHueId);
   return {
     backgroundColor: isDark ? hue.darkSoft : hue.lightSoft,
     color: isDark ? hue.dark : hue.light,

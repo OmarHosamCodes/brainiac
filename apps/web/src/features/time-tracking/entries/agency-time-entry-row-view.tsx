@@ -153,6 +153,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         )}
         <div className="min-w-0 shrink truncate">
           <AgencyTaskChooser
+            teamId={view.teamId}
             value={editDraft.taskId}
             onValueChange={onTaskChange}
             projects={projects}

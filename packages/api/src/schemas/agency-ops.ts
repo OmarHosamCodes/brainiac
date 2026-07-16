@@ -41,12 +41,15 @@ export const agencyClientSchema = z.object({
   updatedAt: z.string().datetime(),
 });
 
+export const agencyProjectColorHueIdSchema = z.number().int().min(1).max(12);
+
 export const agencyProjectSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
   clientId: z.string().min(1),
   clientName: z.string().min(1),
   name: z.string().min(1),
+  colorHueId: agencyProjectColorHueIdSchema.nullable(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
@@ -220,6 +223,7 @@ export const agencyTaskProjectSchema = agencyProjectSchema.pick({
   clientId: true,
   clientName: true,
   name: true,
+  colorHueId: true,
 });
 
 export type AgencyProjectTaskStatus = z.infer<typeof agencyProjectTaskStatusSchema>;

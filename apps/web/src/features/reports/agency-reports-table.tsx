@@ -24,11 +24,12 @@ import { formatDuration } from "@/lib/utils/format-duration";
 import { cn } from "@/lib/utils";
 
 type AgencyReportsTableProps = {
+  teamId: string;
   entries: AgencyReportEntry[];
   clientGroups?: DisplayClientGroup[];
   visibleFields?: AgencyReportFieldId[];
   footer?: ReactNode;
-  projects?: Array<Pick<AgencyProject, "id" | "clientName" | "name">>;
+  projects?: Array<Pick<AgencyProject, "id" | "clientId" | "clientName" | "name" | "colorHueId">>;
   tasks?: Array<
     Pick<
       AgencyProjectTask,
@@ -48,6 +49,7 @@ type AgencyReportsTableProps = {
 };
 
 export function AgencyReportsTable({
+  teamId,
   entries,
   clientGroups: clientGroupsProp,
   visibleFields = allAgencyReportFieldIds(),
@@ -156,6 +158,7 @@ export function AgencyReportsTable({
                         <td className="max-w-48 px-4 py-3 text-highlighted" dir="auto">
                           {onTaskChange ? (
                             <AgencyReportTaskCell
+                              teamId={teamId}
                               row={row}
                               projects={projects}
                               tasks={tasks}

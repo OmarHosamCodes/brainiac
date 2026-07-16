@@ -194,6 +194,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
   };
 
   return {
+    teamId,
     entries,
     isPending,
     isError,

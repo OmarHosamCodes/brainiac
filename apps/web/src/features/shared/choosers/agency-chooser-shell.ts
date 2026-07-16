@@ -147,3 +147,31 @@ export function useAgencyChooserExpandedProjects(selectedProjectId: string | nul
     },
   };
 }
+
+export function useAgencyChooserExpandedClients(open: boolean) {
+  const [collapsedClientNames, setCollapsedClientNames] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    if (!open) {
+      setCollapsedClientNames(new Set());
+    }
+  }, [open]);
+
+  function isClientExpanded(clientName: string) {
+    return !collapsedClientNames.has(clientName);
+  }
+
+  function toggleClient(clientName: string) {
+    setCollapsedClientNames((current) => {
+      const next = new Set(current);
+      if (next.has(clientName)) {
+        next.delete(clientName);
+      } else {
+        next.add(clientName);
+      }
+      return next;
+    });
+  }
+
+  return { isClientExpanded, toggleClient };
+}

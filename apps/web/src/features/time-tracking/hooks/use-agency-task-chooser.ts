@@ -1,49 +1,50 @@
-import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useMemo, useRef, useState, type RefObject } from "react";
 
-import { formatTaskAssigneeLabel } from "@orch/api/schemas/agency-ops";
 import type {
   AgencyProject,
   AgencyProjectTask,
   TaskStatus,
 } from "@/features/task-management/agency-work";
 import {
-  groupItemsByClient,
-  projectSearchableText,
-  sortProjectsByClientThenName,
+  useAgencyChooserExpandedClients,
   useAgencyChooserExpandedProjects,
   useAgencyChooserOpenState,
   useAgencyChooserScrollReveal,
 } from "@/features/shared/choosers/agency-chooser-shell";
-import { statusDotClass, statusLabel } from "@/features/task-management/agency-task-status";
+import {
+  useAgencyFavoritesQuery,
+  useAgencyProjectTemplatesQuery,
+} from "@/features/shared/agency-queries";
+import { useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
+import { statusLabel } from "@/features/task-management/agency-task-status";
+import {
+  buildAgencyTaskChooserSections,
+  type ChooserClientGroup,
+  type ChooserProjectGroup,
+} from "@/features/time-tracking/agency-task-chooser-groups";
 
-type Project = Pick<AgencyProject, "id" | "clientName" | "name">;
+type Project = Pick<AgencyProject, "id" | "clientId" | "clientName" | "name"> & {
+  colorHueId?: number | null;
+};
 type AgencyTask = Pick<
   AgencyProjectTask,
   "id" | "projectId" | "title" | "status" | "assignedToTeam" | "assignees"
 >;
 
-type AgencyTaskChooserSelectOptions = {
-  mode?: "select";
-  value: string;
-  onValueChange: (value: string) => void;
-};
-
-type AgencyTaskChooserCreateOptions = {
-  mode: "create";
-  draftTitle: string;
-  onDraftTitleChange: (value: string) => void;
-  projectId: string;
-  onProjectIdChange: (value: string) => void;
-  onExistingTaskSelect?: (taskId: string) => void;
-  /** Expand this project when the chooser opens (does not select it for create). */
-  preferredProjectId?: string;
+export type AgencyTaskChooserClientOption = {
+  id: string;
+  name: string;
 };
 
 export type AgencyTaskChooserTriggerFormat = "task-only" | "project-client" | "task-client";
 
-type UseAgencyTaskChooserBaseOptions = {
+export type UseAgencyTaskChooserOptions = {
+  teamId: string;
+  value: string;
+  onValueChange: (value: string) => void;
   projects: Project[];
   tasks: AgencyTask[];
+  clients?: AgencyTaskChooserClientOption[];
   disabled?: boolean;
   loading?: boolean;
   placeholder?: string;
@@ -52,36 +53,19 @@ type UseAgencyTaskChooserBaseOptions = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   contentAlign?: "start" | "center" | "end";
-  /** Default task-only. Use task-client for session/tracker triggers. */
   triggerFormat?: AgencyTaskChooserTriggerFormat;
   fallbackTaskTitle?: string;
   fallbackProjectId?: string;
   fallbackProjectName?: string;
   fallbackClientName?: string;
-  /** When set, only show this project's tasks (Clockify-style project-then-task). */
   filterProjectId?: string;
-  /** When true, mark search matches in project/task labels like the clients surface. */
   highlightSearch?: boolean;
-  /** When true, empty trigger shows a required-field asterisk beside the placeholder. */
   required?: boolean;
 };
 
-export type UseAgencyTaskChooserOptions = UseAgencyTaskChooserBaseOptions &
-  (AgencyTaskChooserSelectOptions | AgencyTaskChooserCreateOptions);
-
-export type AgencyTaskChooserProjectGroup = {
-  project: Project;
-  tasks: AgencyTask[];
-};
-
-export type AgencyTaskChooserClientGroup = {
-  clientName: string;
-  projects: AgencyTaskChooserProjectGroup[];
-};
-
 export type AgencyTaskChooserViewModel = {
-  mode: "select" | "create";
   value: string;
+  teamId: string;
   disabled: boolean;
   loading: boolean;
   placeholder: string;
@@ -96,44 +80,50 @@ export type AgencyTaskChooserViewModel = {
   triggerProject: Project | null;
   selectedTask: AgencyTask | null;
   triggerTaskTitle: string | null;
-  projectId: string;
-  groupedProjects: AgencyTaskChooserClientGroup[];
+  favorites: ChooserProjectGroup[];
+  clientGroups: ChooserClientGroup[];
+  favoriteProjectIds: Set<string>;
+  favoriteTaskIds: Set<string>;
   searchInputRef: RefObject<HTMLInputElement | null>;
-  createInputRef: RefObject<HTMLInputElement | null>;
   listRef: RefObject<HTMLDivElement | null>;
   isProjectExpanded: (projectId: string) => boolean;
-  isProjectSelectedForCreate: (projectId: string) => boolean;
-  creatingInProjectId: string | null;
-  createInputValue: string;
+  isClientExpanded: (clientName: string) => boolean;
   onOpenChange: (open: boolean) => void;
   onSearchChange: (value: string) => void;
   onSelectTask: (taskId: string) => void;
-  onSelectProject: (projectId: string) => void;
   onToggleProject: (projectId: string) => void;
-  onStartCreateInProject: (projectId: string) => void;
-  onCancelCreateInProject: () => void;
-  onCreateInputChange: (value: string) => void;
-  onConfirmCreateInProject: () => void;
+  onToggleClient: (clientName: string) => void;
+  onToggleProjectFavorite: (projectId: string) => void;
+  onToggleTaskFavorite: (taskId: string) => void;
   highlightSearch: boolean;
   statusLabel: (status: TaskStatus | undefined) => string;
-  statusDotClass: (status: TaskStatus | undefined) => string;
-  formatAssigneeLabel: (task: AgencyTask) => string;
+  createTaskOpen: boolean;
+  createTaskProjectId: string;
+  createProjectOpen: boolean;
+  clients: AgencyTaskChooserClientOption[];
+  templates: Array<{ id: string; name: string; milestoneCount: number }>;
+  onOpenCreateTask: (projectId: string) => void;
+  onCreateTaskOpenChange: (open: boolean) => void;
+  onOpenCreateProject: () => void;
+  onCreateProjectOpenChange: (open: boolean) => void;
+  onTaskCreated: (taskId: string) => void;
+  onProjectCreated: (projectId: string) => void;
 };
-
-function sortTasksByTitle(left: AgencyTask, right: AgencyTask) {
-  return left.title.localeCompare(right.title);
-}
 
 export function useAgencyTaskChooser(
   options: UseAgencyTaskChooserOptions,
 ): AgencyTaskChooserViewModel {
   const {
+    teamId,
+    value,
+    onValueChange,
     projects,
     tasks,
+    clients: clientsProp = [],
     disabled = false,
     loading = false,
     placeholder = "Task",
-    searchPlaceholder = "Search tasks, projects, or clients",
+    searchPlaceholder = "Search projects or clients",
     className,
     open: controlledOpen,
     onOpenChange,
@@ -148,24 +138,27 @@ export function useAgencyTaskChooser(
     filterProjectId,
   } = options;
 
-  const isCreateMode = options.mode === "create";
-
-  const selectValue = options.mode === "create" ? "" : options.value;
-  const onValueChange = options.mode === "create" ? undefined : options.onValueChange;
-  const draftTitle = options.mode === "create" ? options.draftTitle : "";
-  const onDraftTitleChange = options.mode === "create" ? options.onDraftTitleChange : undefined;
-  const createProjectId = options.mode === "create" ? options.projectId : "";
-  const onProjectIdChange = options.mode === "create" ? options.onProjectIdChange : undefined;
-  const onExistingTaskSelect = options.mode === "create" ? options.onExistingTaskSelect : undefined;
-  const preferredProjectId = options.mode === "create" ? (options.preferredProjectId ?? "") : "";
-
   const { open, searchTerm, setSearchTerm, setOpen } = useAgencyChooserOpenState({
     controlledOpen,
     onOpenChange,
   });
 
-  const [creatingInProjectId, setCreatingInProjectId] = useState<string | null>(null);
-  const [createInputValue, setCreateInputValue] = useState("");
+  const [createTaskOpen, setCreateTaskOpen] = useState(false);
+  const [createTaskProjectId, setCreateTaskProjectId] = useState("");
+  const [createProjectOpen, setCreateProjectOpen] = useState(false);
+
+  const favoritesQuery = useAgencyFavoritesQuery(teamId);
+  const templatesQuery = useAgencyProjectTemplatesQuery(teamId);
+  const toggleFavorite = useAgencyOpsStore((state) => state.toggleFavorite);
+
+  const favoriteProjectIds = useMemo(
+    () => new Set(favoritesQuery.data?.projectIds ?? []),
+    [favoritesQuery.data?.projectIds],
+  );
+  const favoriteTaskIds = useMemo(
+    () => new Set(favoritesQuery.data?.taskIds ?? []),
+    [favoritesQuery.data?.taskIds],
+  );
 
   const chooserTasks = useMemo(() => {
     const seen = new Set<string>();
@@ -188,219 +181,114 @@ export function useAgencyTaskChooser(
     [projects],
   );
 
-  const tasksByProjectId = useMemo(() => {
-    const map = new Map<string, AgencyTask[]>();
-    for (const task of chooserTasks) {
-      const existing = map.get(task.projectId) ?? [];
-      existing.push(task);
-      map.set(task.projectId, existing);
-    }
-    for (const [projectId, projectTasks] of map) {
-      map.set(projectId, [...projectTasks].sort(sortTasksByTitle));
-    }
-    return map;
-  }, [chooserTasks]);
-
   const selectedTask = useMemo(
-    () => (isCreateMode ? null : (tasks.find((task) => task.id === selectValue) ?? null)),
-    [isCreateMode, tasks, selectValue],
+    () => tasks.find((task) => task.id === value) ?? null,
+    [tasks, value],
   );
 
-  const selectedProject = useMemo(() => {
-    if (isCreateMode) {
-      return createProjectId ? (projectsById.get(createProjectId) ?? null) : null;
-    }
-    return selectedTask ? (projectsById.get(selectedTask.projectId) ?? null) : null;
-  }, [createProjectId, isCreateMode, projectsById, selectedTask]);
+  const selectedProject = useMemo(
+    () => (selectedTask ? (projectsById.get(selectedTask.projectId) ?? null) : null),
+    [projectsById, selectedTask],
+  );
 
   const triggerProject = useMemo((): Project | null => {
     if (selectedProject) return selectedProject;
     if (!fallbackProjectId || !fallbackProjectName) return null;
+    const cached = projectsById.get(fallbackProjectId);
     return {
       id: fallbackProjectId,
       name: fallbackProjectName,
-      clientName: fallbackClientName ?? projectsById.get(fallbackProjectId)?.clientName ?? "",
+      clientId: cached?.clientId ?? "",
+      clientName: fallbackClientName ?? cached?.clientName ?? "",
+      colorHueId: cached?.colorHueId ?? null,
     };
   }, [fallbackClientName, fallbackProjectId, fallbackProjectName, projectsById, selectedProject]);
 
-  const triggerTaskTitle = isCreateMode
-    ? draftTitle.trim() || null
-    : (selectedTask?.title ?? fallbackTaskTitle ?? null);
-
-  const selectedProjectIdForExpand = isCreateMode
-    ? (creatingInProjectId ?? (createProjectId || preferredProjectId || null))
-    : (selectedTask?.projectId ?? null);
+  const triggerTaskTitle = selectedTask?.title ?? fallbackTaskTitle ?? null;
 
   const { isProjectExpanded, toggleProject, expandProject } = useAgencyChooserExpandedProjects(
-    selectedProjectIdForExpand,
+    selectedTask?.projectId ?? null,
     open,
   );
+  const { isClientExpanded, toggleClient } = useAgencyChooserExpandedClients(open);
 
-  const filterQuery = searchTerm.trim().toLowerCase();
-
-  const filteredTasks = useMemo(() => {
-    if (!filterQuery) return chooserTasks;
-
-    return chooserTasks.filter((task) => {
-      const project = projectsById.get(task.projectId);
-      const searchableText = [
-        task.title,
-        task.status,
-        formatTaskAssigneeLabel(task),
-        project?.name ?? "",
-        project?.clientName ?? "",
-      ]
-        .join(" ")
-        .toLowerCase();
-
-      return searchableText.includes(filterQuery);
-    });
-  }, [chooserTasks, filterQuery, projectsById]);
-
-  const groupedProjects = useMemo(() => {
-    const filteredTasksByProject = new Map<string, AgencyTask[]>();
-
-    for (const task of filteredTasks) {
-      const existing = filteredTasksByProject.get(task.projectId) ?? [];
-      existing.push(task);
-      filteredTasksByProject.set(task.projectId, existing);
-    }
-
-    if (!isCreateMode) {
-      const matchedProjects = chooserProjects.filter((project) =>
-        filteredTasksByProject.has(project.id),
-      );
-      const sortedProjects = [...matchedProjects].sort(sortProjectsByClientThenName);
-      return groupItemsByClient(sortedProjects).map((group) => ({
-        clientName: group.clientName,
-        projects: group.projects.map((project) => ({
-          project,
-          tasks: (filteredTasksByProject.get(project.id) ?? []).sort(sortTasksByTitle),
-        })),
-      }));
-    }
-
-    // Create mode: project/client match → all tasks; task-only match → filtered tasks.
-    const matchedProjects = chooserProjects.filter((project) => {
-      if (!filterQuery) return true;
-      if (projectSearchableText(project).includes(filterQuery)) return true;
-      return (filteredTasksByProject.get(project.id) ?? []).length > 0;
-    });
-
-    const visibleProjects =
-      filterQuery && matchedProjects.length === 0 ? chooserProjects : matchedProjects;
-
-    const sortedProjects = [...visibleProjects].sort(sortProjectsByClientThenName);
-
-    return groupItemsByClient(sortedProjects).map((group) => ({
-      clientName: group.clientName,
-      projects: group.projects.map((project) => {
-        const projectMatched = !filterQuery || projectSearchableText(project).includes(filterQuery);
-        const tasksForProject = projectMatched
-          ? (tasksByProjectId.get(project.id) ?? [])
-          : (filteredTasksByProject.get(project.id) ?? []).sort(sortTasksByTitle);
-        return { project, tasks: tasksForProject };
+  const sections = useMemo(
+    () =>
+      buildAgencyTaskChooserSections({
+        projects: chooserProjects,
+        tasks: chooserTasks,
+        favoriteProjectIds: [...favoriteProjectIds],
+        favoriteTaskIds: [...favoriteTaskIds],
+        searchTerm,
       }),
-    }));
-  }, [chooserProjects, filteredTasks, filterQuery, isCreateMode, tasksByProjectId]);
+    [chooserProjects, chooserTasks, favoriteProjectIds, favoriteTaskIds, searchTerm],
+  );
 
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const createInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
   useAgencyChooserScrollReveal({
     open,
     searchInputRef,
     listRef,
-    selectedSelector: isCreateMode
-      ? '[data-selected-project="true"]'
-      : '[data-selected-task="true"]',
-    revealDeps: [selectedProjectIdForExpand, selectValue],
+    selectedSelector: '[data-selected-task="true"]',
+    revealDeps: [selectedTask?.projectId, value],
   });
 
-  useEffect(() => {
-    if (!open) {
-      setCreatingInProjectId(null);
-      setCreateInputValue("");
+  const clients = useMemo(() => {
+    if (clientsProp.length > 0) return clientsProp;
+    const byId = new Map<string, AgencyTaskChooserClientOption>();
+    for (const project of projects) {
+      if (!project.clientId || byId.has(project.clientId)) continue;
+      byId.set(project.clientId, { id: project.clientId, name: project.clientName || "Client" });
     }
-  }, [open]);
+    return [...byId.values()].sort((left, right) => left.name.localeCompare(right.name));
+  }, [clientsProp, projects]);
 
-  useEffect(() => {
-    if (!creatingInProjectId) return;
-    const frame = requestAnimationFrame(() => {
-      createInputRef.current?.focus({ preventScroll: true });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [creatingInProjectId]);
-
-  function handleSearchChange(value: string) {
-    setSearchTerm(value);
-  }
+  const templates = useMemo(
+    () =>
+      (templatesQuery.data?.items ?? []).map((template) => ({
+        id: template.id,
+        name: template.name,
+        milestoneCount: template.milestoneCount,
+      })),
+    [templatesQuery.data?.items],
+  );
 
   function selectTask(taskId: string) {
-    if (isCreateMode) {
-      onExistingTaskSelect?.(taskId);
-      setCreatingInProjectId(null);
-      setOpen(false);
-      return;
-    }
-    onValueChange?.(taskId);
+    onValueChange(taskId);
     setOpen(false);
   }
 
-  function selectProject(projectId: string) {
-    if (isCreateMode) {
-      expandProject(projectId);
-      return;
-    }
-    toggleProject(projectId);
+  function handleToggleProjectFavorite(projectId: string) {
+    void toggleFavorite({ teamId, kind: "project", projectId });
   }
 
-  function handleToggleProject(projectId: string) {
-    if (isCreateMode) {
-      if (creatingInProjectId && creatingInProjectId !== projectId) {
-        setCreatingInProjectId(null);
-        setCreateInputValue("");
-      }
-      toggleProject(projectId);
-      return;
-    }
-    toggleProject(projectId);
+  function handleToggleTaskFavorite(taskId: string) {
+    void toggleFavorite({ teamId, kind: "task", taskId });
   }
 
-  function onStartCreateInProject(projectId: string) {
-    if (!isCreateMode) return;
+  function onOpenCreateTask(projectId: string) {
+    setCreateTaskProjectId(projectId);
+    setCreateTaskOpen(true);
+  }
+
+  function onTaskCreated(taskId: string) {
+    setCreateTaskOpen(false);
+    setCreateTaskProjectId("");
+    onValueChange(taskId);
+    setOpen(false);
+  }
+
+  function onProjectCreated(projectId: string) {
+    setCreateProjectOpen(false);
     expandProject(projectId);
-    setCreatingInProjectId(projectId);
-    setCreateInputValue(draftTitle);
-    onDraftTitleChange?.(draftTitle);
-  }
-
-  function onCancelCreateInProject() {
-    setCreatingInProjectId(null);
-    setCreateInputValue("");
-    onDraftTitleChange?.("");
-  }
-
-  function onCreateInputChange(value: string) {
-    setCreateInputValue(value);
-    onDraftTitleChange?.(value);
-  }
-
-  function onConfirmCreateInProject() {
-    if (!isCreateMode || !creatingInProjectId) return;
-    const trimmed = createInputValue.trim();
-    if (!trimmed) return;
-    onProjectIdChange?.(creatingInProjectId);
-    onDraftTitleChange?.(trimmed);
-    setCreatingInProjectId(null);
-    setCreateInputValue("");
-    setOpen(false);
+    onOpenCreateTask(projectId);
   }
 
   return {
-    mode: isCreateMode ? "create" : "select",
-    value: selectValue,
+    value,
+    teamId,
     disabled,
     loading,
     placeholder,
@@ -415,27 +303,33 @@ export function useAgencyTaskChooser(
     triggerProject,
     selectedTask,
     triggerTaskTitle,
-    projectId: isCreateMode ? createProjectId : (selectedTask?.projectId ?? ""),
-    groupedProjects,
+    favorites: sections.favorites,
+    clientGroups: sections.clientGroups,
+    favoriteProjectIds,
+    favoriteTaskIds,
     searchInputRef,
-    createInputRef,
     listRef,
     isProjectExpanded,
-    isProjectSelectedForCreate: (projectId) => isCreateMode && createProjectId === projectId,
-    creatingInProjectId,
-    createInputValue,
+    isClientExpanded,
     onOpenChange: setOpen,
-    onSearchChange: handleSearchChange,
+    onSearchChange: setSearchTerm,
     onSelectTask: selectTask,
-    onSelectProject: selectProject,
-    onToggleProject: handleToggleProject,
-    onStartCreateInProject,
-    onCancelCreateInProject,
-    onCreateInputChange,
-    onConfirmCreateInProject,
+    onToggleProject: toggleProject,
+    onToggleClient: toggleClient,
+    onToggleProjectFavorite: handleToggleProjectFavorite,
+    onToggleTaskFavorite: handleToggleTaskFavorite,
     highlightSearch,
     statusLabel,
-    statusDotClass,
-    formatAssigneeLabel: formatTaskAssigneeLabel,
+    createTaskOpen,
+    createTaskProjectId,
+    createProjectOpen,
+    clients,
+    templates,
+    onOpenCreateTask,
+    onCreateTaskOpenChange: setCreateTaskOpen,
+    onOpenCreateProject: () => setCreateProjectOpen(true),
+    onCreateProjectOpenChange: setCreateProjectOpen,
+    onTaskCreated,
+    onProjectCreated,
   };
 }

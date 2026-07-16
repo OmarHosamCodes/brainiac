@@ -42,6 +42,7 @@ type AgencyProject = {
   clientId: string;
   clientName: string;
   name: string;
+  colorHueId: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -173,6 +174,15 @@ type CreateProjectPayload = {
   /** Used to fill the optimistic row's clientName field. */
   clientName: string;
   name: string;
+  colorHueId?: number | null;
+  templateId?: string;
+};
+
+type ToggleFavoritePayload = {
+  teamId: string;
+  kind: "project" | "task";
+  projectId?: string;
+  taskId?: string;
 };
 
 type CreateProjectWithJourneyMilestonePayload = {
@@ -720,6 +730,7 @@ function createAgencyOpsActions(
       clientId: payload.clientId,
       clientName: payload.clientName,
       name: payload.name.trim(),
+      colorHueId: payload.colorHueId ?? null,
       createdAt: nowIso,
       updatedAt: nowIso,
     };
@@ -733,6 +744,8 @@ function createAgencyOpsActions(
         teamId: payload.teamId,
         clientId: payload.clientId,
         name: payload.name.trim(),
+        colorHueId: payload.colorHueId,
+        templateId: payload.templateId,
       })) as AgencyProject;
 
       reconcileCreatedProject(payload.teamId, optimisticProject.id, created);
@@ -749,6 +762,66 @@ function createAgencyOpsActions(
         ...state,
         projectMutationCount: Math.max(0, state.projectMutationCount - 1),
       }));
+    }
+  }
+
+  async function toggleFavorite(payload: ToggleFavoritePayload): Promise<boolean> {
+    if (!payload.teamId) return false;
+    if (payload.kind === "project" && !payload.projectId) return false;
+    if (payload.kind === "task" && !payload.taskId) return false;
+
+    const queryClient = getQueryClient();
+    const queryKey = orpc.agencyOps.favorites.list.queryOptions({
+      input: { teamId: payload.teamId },
+    }).queryKey;
+    const previous = queryClient.getQueryData<{ projectIds: string[]; taskIds: string[] }>(queryKey);
+
+    const nextProjectIds = new Set(previous?.projectIds ?? []);
+    const nextTaskIds = new Set(previous?.taskIds ?? []);
+    let favorited = false;
+
+    if (payload.kind === "project" && payload.projectId) {
+      if (nextProjectIds.has(payload.projectId)) {
+        nextProjectIds.delete(payload.projectId);
+      } else {
+        nextProjectIds.add(payload.projectId);
+        favorited = true;
+      }
+    }
+    if (payload.kind === "task" && payload.taskId) {
+      if (nextTaskIds.has(payload.taskId)) {
+        nextTaskIds.delete(payload.taskId);
+      } else {
+        nextTaskIds.add(payload.taskId);
+        favorited = true;
+      }
+    }
+
+    queryClient.setQueryData(queryKey, {
+      projectIds: [...nextProjectIds],
+      taskIds: [...nextTaskIds],
+    });
+
+    try {
+      const result = await orpcClient.agencyOps.favorites.toggle({
+        teamId: payload.teamId,
+        kind: payload.kind,
+        projectId: payload.projectId,
+        taskId: payload.taskId,
+      });
+      queryClient.setQueryData(queryKey, {
+        projectIds: result.projectIds,
+        taskIds: result.taskIds,
+      });
+      return result.favorited;
+    } catch (error) {
+      if (previous) {
+        queryClient.setQueryData(queryKey, previous);
+      } else {
+        queryClient.removeQueries({ queryKey });
+      }
+      toast.error("Couldn't update favorite", { description: getErrorMessage(error, "Try again.") });
+      return favorited;
     }
   }
 
@@ -821,6 +894,7 @@ function createAgencyOpsActions(
       clientId: payload.clientId,
       clientName: payload.clientName,
       name,
+      colorHueId: null,
       createdAt: nowIso,
       updatedAt: nowIso,
     };
@@ -1507,6 +1581,7 @@ function createAgencyOpsActions(
     archiveClient,
     createProject,
     createProjectWithJourney,
+    toggleFavorite,
     createProjectTask,
     patchProjectTaskBlueprintDescription,
     updateProjectTaskBlueprint,

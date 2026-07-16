@@ -43,6 +43,7 @@ export function AgencyReportsSurfaceView({ vm }: AgencyReportsSurfaceViewProps) 
         </div>
       ) : (
         <AgencyReportsTable
+          teamId={vm.teamId}
           entries={vm.entries}
           visibleFields={vm.visibleFields}
           projects={vm.projects}

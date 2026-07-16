@@ -660,6 +660,34 @@ export function useAgencyActiveTimerQuery(teamId: string) {
   return useMergedAgencyActiveTimerQuery(query, teamId);
 }
 
+export function useAgencyFavoritesQuery(teamId: string) {
+  return useQuery(
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.favorites.list.queryOptions({ input: { teamId } }),
+        enabled: Boolean(teamId),
+        placeholderData: keepPreviousData,
+      },
+      "cold",
+      { liveGated: true, teamId },
+    ),
+  );
+}
+
+export function useAgencyProjectTemplatesQuery(teamId: string) {
+  return useQuery(
+    withAgencySyncQueryOptions(
+      {
+        ...orpc.agencyOps.projectTemplates.list.queryOptions({ input: { teamId } }),
+        enabled: Boolean(teamId),
+        placeholderData: keepPreviousData,
+      },
+      "cold",
+      { liveGated: true, teamId },
+    ),
+  );
+}
+
 export function useAgencyTimeEntriesQuery(teamId: string, page: number, pageSize: number) {
   const registerLogQuery = useAgencyTimeTrackingStore((s) => s.registerLogQuery);
   const unregisterLogQuery = useAgencyTimeTrackingStore((s) => s.unregisterLogQuery);
