@@ -15,8 +15,6 @@ export const agencyOpsRouter = {
   contacts: clientsRouter.contacts,
   projects: projectsRouter.projects,
   projectTasks: tasksRouter.projectTasks,
-  taskThreads: tasksRouter.taskThreads,
-  taskAgent: tasksRouter.taskAgent,
   tags: tagsRouter.tags,
   timer: timeTrackingRouter.timer,
   timeEntries: timeTrackingRouter.timeEntries,

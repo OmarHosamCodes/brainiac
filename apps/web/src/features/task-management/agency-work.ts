@@ -5,12 +5,11 @@ import type {
   AgencyProjectTask,
   AgencyProjectTaskKind,
   AgencyProjectTaskStatus,
-  AgencyTaskMessage,
-  AgencyTaskMessageAttachment,
   AgencyTaskProject,
-  AgencyTaskThreadMember,
   AgencyTimeEntry,
 } from "@orch/api/schemas/agency-ops";
+
+import type { AgencyMemberOption } from "@/features/shared/agency-member-option";
 
 export type {
   AgencyProject,
@@ -19,17 +18,13 @@ export type {
   AgencyProjectTask,
   AgencyProjectTaskKind,
   AgencyProjectTaskStatus,
-  AgencyTaskMessage,
-  AgencyTaskMessageAttachment,
   AgencyTaskProject,
-  AgencyTaskThreadMember,
   AgencyTimeEntry,
 };
 
-export type TaskStatus = AgencyProjectTaskStatus;
+export type { AgencyMemberOption };
 
-/** Kept for unwired board/tabs modules still on disk. */
-export type AgencyWorkSurfaceTab = "sessions" | "tasks";
+export type TaskStatus = AgencyProjectTaskStatus;
 
 /** Strip obsolete Work tab/task query params so legacy URLs land on the tracker. */
 export function normalizeAgencyWorkSurfaceQueryParams(

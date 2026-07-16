@@ -578,7 +578,6 @@ function printImportSummary(
   console.log(`  Projects exist:    ${stats.projectsAlreadyExist}`);
   console.log(`  Tasks inserted:    ${stats.tasksInserted}`);
   console.log(`  Tasks exist:       ${stats.tasksAlreadyExist}`);
-  console.log(`  Threads inserted:  ${stats.threadsInserted}`);
   console.log(`  Entries inserted:  ${stats.timeEntriesInserted}`);
   console.log(`  Entries exist:     ${stats.timeEntriesAlreadyExist}`);
   console.log(`  Skipped records:   ${stats.skipped}`);

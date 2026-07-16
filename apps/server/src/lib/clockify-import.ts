@@ -5,7 +5,6 @@ import {
   agencyOpsClient,
   agencyOpsProject,
   agencyOpsProjectTask,
-  agencyOpsTaskThread,
   agencyOpsTimeEntry,
 } from "@orch/db/schema";
 import { eq, inArray } from "drizzle-orm";
@@ -78,7 +77,6 @@ export type ImportStats = {
   clientsInserted: number;
   projectsInserted: number;
   tasksInserted: number;
-  threadsInserted: number;
   timeEntriesInserted: number;
   skipped: number;
   skippedByBefore: number;
@@ -615,7 +613,6 @@ export async function runImport(ctx: ImportContext, catalog: ImportCatalog): Pro
     clientsInserted: 0,
     projectsInserted: 0,
     tasksInserted: 0,
-    threadsInserted: 0,
     timeEntriesInserted: 0,
     skipped: catalog.skipped.length,
     skippedByBefore: catalog.skippedByBefore,
@@ -651,7 +648,6 @@ export async function runImport(ctx: ImportContext, catalog: ImportCatalog): Pro
     stats.clientsInserted = clientIds.length - existingClientIds.size;
     stats.projectsInserted = projectIds.length - existingProjectIds.size;
     stats.tasksInserted = tasksToInsert.filter((task) => !existingTaskIds.has(task.id)).length;
-    stats.threadsInserted = stats.tasksInserted;
     stats.timeEntriesInserted = entryIds.length - existingEntryIds.size;
     return stats;
   }
@@ -740,20 +736,6 @@ export async function runImport(ctx: ImportContext, catalog: ImportCatalog): Pro
         .onConflictDoNothing()
         .returning({ id: agencyOpsProjectTask.id });
       stats.tasksInserted += insertedTasks.length;
-
-      const threadId = `${task.id}-thread`;
-      const insertedThreads = await db
-        .insert(agencyOpsTaskThread)
-        .values({
-          id: threadId,
-          teamId: ctx.teamId,
-          taskId: task.id,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .onConflictDoNothing()
-        .returning({ id: agencyOpsTaskThread.id });
-      stats.threadsInserted += insertedThreads.length;
     }
   }
 

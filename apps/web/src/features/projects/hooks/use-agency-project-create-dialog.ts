@@ -6,7 +6,10 @@ import {
   selectIsProjectMutationPending,
   useAgencyOpsStore,
 } from "@/features/shared/stores/agency-ops";
-import type { AgencyTaskThreadMember } from "@/features/task-management/agency-work";
+import {
+  toAgencyMemberOption,
+  type AgencyMemberOption,
+} from "@/features/shared/agency-member-option";
 
 export type ProjectCreateMode = "normal" | "journey";
 
@@ -35,7 +38,7 @@ export type AgencyProjectCreateDialogViewModel = {
   formError: string | null;
   setFormError: (err: string | null) => void;
   isJourneyMode: boolean;
-  members: AgencyTaskThreadMember[];
+  members: AgencyMemberOption[];
   isMembersLoading: boolean;
   resolvedClientId: string;
   selectedClient: AgencyClientOption | null;
@@ -91,7 +94,7 @@ export function useAgencyProjectCreateDialog({
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
       {
-        ...orpc.agencyOps.taskThreads.members.list.queryOptions({ input: { teamId } }),
+        ...orpc.team.members.list.queryOptions({ input: { teamId } }),
         enabled: Boolean(teamId) && open && isJourneyMode,
       },
       "cold",
@@ -99,7 +102,7 @@ export function useAgencyProjectCreateDialog({
     ),
   );
 
-  const members: AgencyTaskThreadMember[] = membersQuery.data?.items ?? [];
+  const members: AgencyMemberOption[] = (membersQuery.data?.items ?? []).map(toAgencyMemberOption);
 
   const resolvedClientId = lockClientId ?? clientId;
   const selectedClient = clients.find((client) => client.id === resolvedClientId) ?? null;

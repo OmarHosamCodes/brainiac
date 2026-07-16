@@ -227,7 +227,7 @@ Exit gate:
 
 ### Phase 2 - Complete Agency Backend Alignment
 
-Goal: finish the backend split originally started by the archived [`legacy-exec-plan.md`](legacy-exec-plan.md).
+Goal: finish the backend split originally started by the superseded root `ExecPlan.md` (since removed).
 
 Tasks:
 
@@ -522,7 +522,7 @@ Tasks:
    - any required migration checks
 4. Inspect route and oRPC type compatibility for moved routers.
 5. Update `README.md`, `DEVELOPMENT.md`, or `CONTRIBUTING.md` with the golden feature workflow.
-6. Archive the superseded plan as [`legacy-exec-plan.md`](legacy-exec-plan.md). ✅
+6. Remove the superseded root `ExecPlan.md` (previously archived, now deleted). ✅
 7. Reconcile every exemplar path and “Current Golden Exemplar Gap” in
    `docs/golden-file-pattern.md` with the implemented architecture.
 

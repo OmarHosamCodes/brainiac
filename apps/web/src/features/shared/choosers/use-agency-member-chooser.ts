@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 
 import { formatTaskAssigneeLabel } from "@orch/api/schemas/agency-ops";
-import type { AgencyTaskThreadMember } from "@/features/task-management/agency-work";
-import { UNASSIGNED_ASSIGNEE_VALUE } from "@/features/task-management/stores/agency-task-list";
+import { UNASSIGNED_ASSIGNEE_VALUE } from "@/features/shared/agency-member-constants";
+import type { AgencyMemberOption } from "@/features/shared/agency-member-option";
 
 type AgencyMemberChooserBaseOptions = {
-  members: AgencyTaskThreadMember[];
+  members: AgencyMemberOption[];
   disabled?: boolean;
   loading?: boolean;
   placeholder?: string;
@@ -49,7 +49,7 @@ export type AgencyMemberChooserViewModel = {
   contentAlign: "start" | "center" | "end";
   open: boolean;
   searchTerm: string;
-  filteredMembers: AgencyTaskThreadMember[];
+  filteredMembers: AgencyMemberOption[];
   onOpenChange: (open: boolean) => void;
   onSearchChange: (value: string) => void;
   triggerLabel: string;
@@ -57,7 +57,7 @@ export type AgencyMemberChooserViewModel = {
     value: string;
     allowUnassigned: boolean;
     allowEmpty: boolean;
-    selectedMember: AgencyTaskThreadMember | null;
+    selectedMember: AgencyMemberOption | null;
     isUnassigned: boolean;
     onSelectUnassigned: () => void;
     onSelectMember: (userId: string) => void;
@@ -66,7 +66,7 @@ export type AgencyMemberChooserViewModel = {
   multiple?: {
     assignedToTeam: boolean;
     selectedUserIds: string[];
-    selectedMembers: AgencyTaskThreadMember[];
+    selectedMembers: AgencyMemberOption[];
     onToggleEntireTeam: () => void;
     onToggleMember: (userId: string) => void;
     isMemberSelected: (userId: string) => boolean;
@@ -74,7 +74,7 @@ export type AgencyMemberChooserViewModel = {
 };
 
 function buildMultipleTriggerLabel(
-  members: AgencyTaskThreadMember[],
+  members: AgencyMemberOption[],
   assignedToTeam: boolean,
   selectedUserIds: string[],
 ): string {
@@ -82,7 +82,7 @@ function buildMultipleTriggerLabel(
 
   const selectedMembers = selectedUserIds
     .map((userId) => members.find((member) => member.userId === userId))
-    .filter((member): member is AgencyTaskThreadMember => Boolean(member));
+    .filter((member): member is AgencyMemberOption => Boolean(member));
 
   return formatTaskAssigneeLabel({
     assignedToTeam: false,
@@ -147,7 +147,7 @@ export function useAgencyMemberChooser(
 
     const selectedMembers = selectedUserIds
       .map((userId) => members.find((member) => member.userId === userId))
-      .filter((member): member is AgencyTaskThreadMember => Boolean(member));
+      .filter((member): member is AgencyMemberOption => Boolean(member));
 
     return {
       mode: "multiple" as const,

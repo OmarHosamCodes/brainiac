@@ -11,7 +11,6 @@ import {
   useMergedAgencyContactQuery,
   useMergedAgencyProjectTasksQuery,
   useMergedAgencyProjectsQuery,
-  useMergedAgencyTaskMessagesInfiniteQuery,
   useMergedAgencyTimeEntriesQuery,
 } from "@/features/shared/agency-optimistic";
 import { getQueryClient } from "@/lib/query-client";
@@ -22,18 +21,14 @@ import {
   EMPTY_LIST_OVERLAY,
   mergeListWithOverlay,
 } from "@/features/shared/agency-optimistic-merge";
-import { isAgencyLiveConnected } from "@/features/shared/live/agency-live-connected";
 import {
   withAgencySyncQueryOptions,
   prefetchAgencySyncQueryOptions,
-  AGENCY_POLL,
-  AGENCY_STALE_TIME,
 } from "@/features/shared/agency-query-options";
 import {
   taskMatchesAgencyFilters,
   useAgencyOptimisticStore,
 } from "@/features/shared/stores/agency-optimistic";
-import { useAgencyTaskMessagesStore } from "@/features/task-management/stores/agency-task-messages";
 import { useAgencyOpsStore } from "@/features/shared/stores/agency-ops";
 import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
 
@@ -281,22 +276,6 @@ export function useAgencyCapacityQuery(teamId: string, weekStart: string, weeks:
   return useMergedAgencyCapacityQuery(query, teamId);
 }
 
-export function useAgencyTaskThreadContextQuery(teamId: string, taskId: string) {
-  return useQuery(
-    withAgencySyncQueryOptions(
-      {
-        ...orpc.agencyOps.taskThreads.context.get.queryOptions({
-          input: { teamId, taskId },
-        }),
-        enabled: Boolean(teamId) && Boolean(taskId),
-        placeholderData: keepPreviousData,
-      },
-      "hot",
-      { liveGated: true, teamId },
-    ),
-  );
-}
-
 export function useAgencyProjectJourneyQuery(teamId: string, projectId: string) {
   return useQuery(
     withAgencySyncQueryOptions(
@@ -311,66 +290,6 @@ export function useAgencyProjectJourneyQuery(teamId: string, projectId: string) 
       { liveGated: true, teamId, noPoll: true },
     ),
   );
-}
-
-export function useAgencyTaskMessagesInfiniteQuery(teamId: string, taskId: string, pageSize = 50) {
-  const registerTaskMessagesQuery = useAgencyTaskMessagesStore((s) => s.registerTaskMessagesQuery);
-  const unregisterTaskMessagesQuery = useAgencyTaskMessagesStore(
-    (s) => s.unregisterTaskMessagesQuery,
-  );
-
-  const baseInput = useMemo(() => ({ teamId, taskId, pageSize }), [teamId, taskId, pageSize]);
-
-  const queryKey = useMemo(
-    () =>
-      [
-        ...orpc.agencyOps.taskThreads.messages.list.queryOptions({ input: baseInput }).queryKey,
-        "infinite",
-      ] as const,
-    [baseInput],
-  );
-
-  const query = useInfiniteQuery({
-    queryKey,
-    queryFn: async ({ pageParam }) =>
-      orpcClient.agencyOps.taskThreads.messages.list({
-        ...baseInput,
-        page: pageParam,
-      }),
-    initialPageParam: 1,
-    getNextPageParam: (lastPage) => {
-      if (lastPage.page * lastPage.pageSize < lastPage.total) {
-        return lastPage.page + 1;
-      }
-      return undefined;
-    },
-    enabled: Boolean(teamId) && Boolean(taskId),
-    staleTime: AGENCY_STALE_TIME.hot,
-    refetchInterval: teamId && isAgencyLiveConnected(teamId) ? false : AGENCY_POLL.hot,
-    refetchIntervalInBackground: false,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    placeholderData: keepPreviousData,
-    meta: teamId
-      ? {
-          agencyLiveGatedTeamId: teamId,
-          agencySyncTier: "hot" as const,
-        }
-      : undefined,
-  });
-
-  useEffect(() => {
-    if (!teamId || !taskId) return;
-    registerTaskMessagesQuery({ queryKey: [...queryKey], teamId, taskId });
-    return () => unregisterTaskMessagesQuery([...queryKey]);
-  }, [teamId, taskId, queryKey, registerTaskMessagesQuery, unregisterTaskMessagesQuery]);
-
-  return useMergedAgencyTaskMessagesInfiniteQuery(query, teamId, taskId);
-}
-
-/** @deprecated Use useAgencyTaskMessagesInfiniteQuery */
-export function useAgencyTaskMessagesQuery(teamId: string, taskId: string, pageSize = 50) {
-  return useAgencyTaskMessagesInfiniteQuery(teamId, taskId, pageSize);
 }
 
 export function useAgencyProjectTasksQuery(

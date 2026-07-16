@@ -5,7 +5,6 @@ import {
   agencyOpsTimeEntry,
   agencyOpsProjectJourneyStep,
   agencyOpsProjectTask,
-  agencyOpsTaskThread,
   agencyOpsProjectJourney,
 } from "@orch/db/schema";
 import { db } from "@orch/db";
@@ -331,14 +330,6 @@ async function insertJourneyLinkedTask(
   if (args.assigneeUserIds.length > 0) {
     await setTaskAssignees(tx, task.id, args.assigneeUserIds);
   }
-
-  await tx.insert(agencyOpsTaskThread).values({
-    id: createWorkspaceId("agency-task-thread"),
-    teamId: args.teamId,
-    taskId: task.id,
-    createdAt: args.now,
-    updatedAt: args.now,
-  });
 
   return task;
 }

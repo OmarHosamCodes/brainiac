@@ -1,7 +1,5 @@
 import { db } from "@orch/db";
 import {
-  agencyOpsTaskMessage,
-  agencyOpsTaskThread,
   notification,
   notificationPreference,
   pushSubscription,
@@ -553,24 +551,6 @@ export async function listTeamMemberUserIds(actorUserId: string | null, input: {
   return rows.map((row) => row.userId);
 }
 
-export async function listTaskThreadParticipantUserIds(
-  actorUserId: string | null,
-  input: { teamId: string; taskId: string },
-) {
-  if (actorUserId) await requireTeamMembership(actorUserId, input.teamId, "viewer");
-  const rows = await db
-    .selectDistinct({ userId: agencyOpsTaskMessage.userId })
-    .from(agencyOpsTaskMessage)
-    .innerJoin(agencyOpsTaskThread, eq(agencyOpsTaskThread.id, agencyOpsTaskMessage.threadId))
-    .where(
-      and(
-        eq(agencyOpsTaskThread.teamId, input.teamId),
-        eq(agencyOpsTaskThread.taskId, input.taskId),
-      ),
-    );
-
-  return rows.map((row) => row.userId);
-}
 
 export async function emitTeamDigestNotification(
   actorUserId: string | null,

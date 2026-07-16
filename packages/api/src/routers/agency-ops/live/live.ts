@@ -8,35 +8,6 @@ import {
 } from "../../notifications/live-bridge";
 import { notificationRecordSchema } from "../../../schemas/notifications";
 
-const agencyTaskMessageAttachmentLiveSchema = z.object({
-  id: z.string().min(1),
-  teamId: z.string().min(1),
-  messageId: z.string().min(1),
-  fileName: z.string().min(1),
-  mimeType: z.string().min(1),
-  storageKey: z.string().min(1),
-  sizeBytes: z.number().int().nonnegative(),
-  durationSeconds: z.number().int().nonnegative().nullable(),
-  metadata: z.unknown().nullable().optional(),
-  createdAt: z.string().datetime(),
-  url: z.string().nullable(),
-});
-
-const agencyTaskMessageLiveSchema = z.object({
-  id: z.string().min(1),
-  teamId: z.string().min(1),
-  threadId: z.string().min(1),
-  userId: z.string().min(1),
-  userName: z.string().min(1),
-  userAvatar: z.string().nullable(),
-  content: z.string(),
-  type: z.enum(["text", "voice", "attachment"]),
-  senderType: z.enum(["user", "agent"]),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-  attachments: z.array(agencyTaskMessageAttachmentLiveSchema),
-});
-
 const agencyActiveTimerLiveSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
@@ -78,13 +49,6 @@ const agencyProjectTaskLiveSchema = z.object({
 
 export const agencyLiveEventSchema = z.discriminatedUnion("type", [
   z.object({
-    type: z.literal("taskMessage.created"),
-    teamId: z.string().min(1),
-    taskId: z.string().min(1),
-    updatedAt: z.string().datetime(),
-    message: agencyTaskMessageLiveSchema,
-  }),
-  z.object({
     type: z.literal("journey.step.updated"),
     teamId: z.string().min(1),
     projectId: z.string().min(1),
@@ -120,8 +84,6 @@ function liveEventCoalesceKey(event: AgencyLiveEvent): string | null {
   switch (event.type) {
     case "journey.step.updated":
       return `journey.step.updated:${event.projectId}`;
-    case "taskMessage.created":
-      return `taskMessage.created:${event.taskId}`;
     case "timer.updated":
       return `timer.updated:${event.userId}`;
     case "task.updated":

@@ -245,7 +245,7 @@ Follow-up convention cleanup: obsolete dashboard-agent, Team, billing, Marketpla
 - Moved Workspace node-limit billing enforcement into `assertCanSaveWorkspaceNodes` in the service and added a Notifications-local `schemas.ts` boundary.
 - Promoted Notifications procedure wiring from `notifications/index.ts` to `notifications/router.ts`; the root API aggregator now uses explicit router modules consistently.
 - Promoted subscription Billing procedure wiring from `billing/index.ts` to `billing/router.ts`; all product API router namespaces now use explicit router modules.
-- Archived the superseded root `ExecPlan.md` as `docs/legacy-exec-plan.md` and updated the master plan reference.
+- Removed the superseded root `ExecPlan.md` (previously archived as `docs/legacy-exec-plan.md`).
 
 ## ◐ Phase 10 — Realtime and Cross-Feature Integration Audit (Validator Hardening Pending)
 

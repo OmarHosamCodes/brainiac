@@ -298,13 +298,6 @@ export const agencyTimeTrackerRailClass = cn(
 export const agencyTimeTrackerRailCellClass =
   "box-border flex shrink-0 items-center px-2 py-2 sm:px-2.5";
 
-/** @deprecated Use agencyTimeTrackerRailClass — kept for gradual migration. */
-export const agencyTimeTrackerActionsZoneClass = agencyTimeTrackerRailClass;
-
-/** @deprecated Use agencyTimeTrackerRailClass inset ticks. */
-export const agencyTimeTrackerStatusDividerClass =
-  "mx-0.5 h-8 shrink-0 self-center w-px bg-border/40";
-
 export const agencyTimeTrackerInnerDividerClass = "h-6 w-px shrink-0 self-center bg-border/40";
 
 export const agencyTimeTrackerMetricClass = cn(

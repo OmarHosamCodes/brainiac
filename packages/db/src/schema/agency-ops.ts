@@ -20,21 +20,8 @@ export type AgencyOpsProjectTaskKind = "standard" | "journey_anchor" | "journey_
 export type AgencyOpsJourneyStepKind = "start" | "milestone" | "checkpoint" | "destination";
 export type AgencyOpsJourneyStepStatus = "planned" | "active" | "done" | "blocked";
 export type AgencyOpsProjectTaskMemberStatus = "open" | "in_progress" | "done";
-export type AgencyOpsTaskMessageType = "text" | "voice" | "attachment";
-export type AgencyOpsTaskMessageSenderType = "user" | "agent";
 export type AgencyOpsClientCategory = "internal" | "external";
 
-export type AttachmentMetadata = {
-  imageWidth?: number;
-  imageHeight?: number;
-  videoWidth?: number;
-  videoHeight?: number;
-  durationSeconds?: number;
-  fileExtension?: string;
-  lastModified?: string;
-  mediaKind?: "image" | "video" | "audio" | "document" | "archive" | "other" | "link";
-  sourceUrl?: string;
-};
 
 export const agencyOpsClient = pgTable(
   "agency_ops_client",
@@ -245,85 +232,6 @@ export const agencyOpsProjectTaskBlueprint = pgTable(
   ],
 );
 
-export const agencyOpsTaskThread = pgTable(
-  "agency_ops_task_thread",
-  {
-    id: text("id").primaryKey(),
-    teamId: text("team_id")
-      .notNull()
-      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
-    taskId: text("task_id")
-      .notNull()
-      .references(() => agencyOpsProjectTask.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-  },
-  (table) => [
-    index("agency_ops_task_thread_team_idx").on(table.teamId),
-    uniqueIndex("agency_ops_task_thread_task_unique").on(table.taskId),
-  ],
-);
-
-export const agencyOpsTaskMessage = pgTable(
-  "agency_ops_task_message",
-  {
-    id: text("id").primaryKey(),
-    teamId: text("team_id")
-      .notNull()
-      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
-    threadId: text("thread_id")
-      .notNull()
-      .references(() => agencyOpsTaskThread.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    content: text("content").notNull().default(""),
-    type: text("type").$type<AgencyOpsTaskMessageType>().notNull().default("text"),
-    senderType: text("sender_type")
-      .$type<AgencyOpsTaskMessageSenderType>()
-      .notNull()
-      .default("user"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => /* @__PURE__ */ new Date())
-      .notNull(),
-    deletedAt: timestamp("deleted_at"),
-  },
-  (table) => [
-    index("agency_ops_task_message_team_idx").on(table.teamId),
-    index("agency_ops_task_message_thread_created_idx").on(table.threadId, table.createdAt),
-    index("agency_ops_task_message_user_idx").on(table.userId),
-  ],
-);
-
-export const agencyOpsTaskAttachment = pgTable(
-  "agency_ops_task_attachment",
-  {
-    id: text("id").primaryKey(),
-    teamId: text("team_id")
-      .notNull()
-      .references(() => workspaceTeam.id, { onDelete: "cascade" }),
-    messageId: text("message_id")
-      .notNull()
-      .references(() => agencyOpsTaskMessage.id, { onDelete: "cascade" }),
-    fileName: text("file_name").notNull(),
-    mimeType: text("mime_type").notNull(),
-    storageKey: text("storage_key").notNull(),
-    sizeBytes: integer("size_bytes").notNull().default(0),
-    durationSeconds: integer("duration_seconds"),
-    metadata: jsonb("metadata").$type<AttachmentMetadata | null>().default(null),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    deletedAt: timestamp("deleted_at"),
-  },
-  (table) => [
-    index("agency_ops_task_attachment_team_idx").on(table.teamId),
-    index("agency_ops_task_attachment_message_idx").on(table.messageId),
-  ],
-);
 
 export const agencyOpsTag = pgTable(
   "agency_ops_tag",

@@ -1,5 +1,4 @@
 import { intro, isCancel, outro, select, spinner, text, confirm } from "@clack/prompts";
-import { uploadTaskAttachmentBuffer } from "@orch/api/storage";
 import { db } from "@orch/db";
 import {
   agencyOpsClient,
@@ -12,17 +11,11 @@ import {
   agencyOpsProject,
   agencyOpsProjectTask,
   agencyOpsProjectTaskAssignee,
-  agencyOpsTaskAttachment,
-  agencyOpsTaskMessage,
-  agencyOpsTaskThread,
   agencyOpsTenurePolicy,
   agencyOpsTimeEntry,
   user,
   workspaceTeam,
   workspaceTeamMember,
-  type AttachmentMetadata,
-  type AgencyOpsTaskMessageSenderType,
-  type AgencyOpsTaskMessageType,
   type WorkspaceTeamRole,
 } from "@orch/db/schema";
 import { createWorkspaceId } from "@orch/workspace";
@@ -58,42 +51,6 @@ const SEED_USERS: SeedUserDefinition[] = [
 
 const DEFAULT_SEED_PASSWORD = "orch1234";
 
-const SEED_ATTACHMENT_BYTES = {
-  png: Buffer.from(
-    "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mNk+M9Qz0AEYBxVSF+FABJADbad3QAAAABJRU5ErkJggg==",
-    "base64",
-  ),
-  wav: Buffer.from("UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=", "base64"),
-  pdf: Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF"),
-  zip: Buffer.from([0x50, 0x4b, 0x05, 0x06, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-} as const;
-
-async function fetchSeedBuffer(url: string, fallback: Buffer): Promise<Buffer> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return fallback;
-    return Buffer.from(await response.arrayBuffer());
-  } catch {
-    return fallback;
-  }
-}
-
-async function uploadSeedAttachmentIfPossible(args: {
-  storageKey: string;
-  buffer: Buffer;
-  mimeType: string;
-  fileName: string;
-}) {
-  try {
-    await uploadTaskAttachmentBuffer({
-      storageKey: args.storageKey,
-      buffer: args.buffer,
-      mimeType: args.mimeType,
-    });
-  } catch (error) {
-    console.warn(`Seed attachment upload skipped for ${args.fileName}:`, error);
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -443,301 +400,20 @@ type ProjectDef = {
   name: string;
 };
 
-type SeedAttachmentDef = {
-  id: string;
-  fileName: string;
-  mimeType: string;
-  sizeBytes: number;
-  durationSeconds?: number | null;
-  metadata: AttachmentMetadata;
-  buffer?: Buffer;
-  linkUrl?: string;
-};
-
-type SeedMessageDef = {
-  id: string;
-  userId: string;
-  content: string;
-  type: AgencyOpsTaskMessageType;
-  senderType: AgencyOpsTaskMessageSenderType;
-  createdAt: Date;
-  attachments?: SeedAttachmentDef[];
-};
-
 type TaskDef = {
   id: string;
-  threadId: string;
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
   assignedToTeam?: boolean;
   assigneeUserIds: string[];
   dueDate: Date | null;
-  messages: SeedMessageDef[];
-  showcaseThread?: boolean;
 };
 
-function seedTextMessage(args: {
-  userId: string;
-  content: string;
-  createdAt: Date;
-  senderType?: AgencyOpsTaskMessageSenderType;
-  type?: AgencyOpsTaskMessageType;
-  attachments?: SeedAttachmentDef[];
-}): SeedMessageDef {
-  return {
-    id: createWorkspaceId("agency-message"),
-    userId: args.userId,
-    content: args.content,
-    type: args.type ?? "text",
-    senderType: args.senderType ?? "user",
-    createdAt: args.createdAt,
-    attachments: args.attachments,
-  };
-}
-
-async function buildShowcaseThreadMessages(ctx: SeedContext): Promise<SeedMessageDef[]> {
-  const ownerId =
-    ctx.members.find((member) => member.role === "owner")?.userId ?? ctx.members[0]?.userId ?? "";
-  const designerId = ctx.actors.get("designer")?.id ?? ownerId;
-  const devId = ctx.actors.get("dev")?.id ?? ownerId;
-  const now = ctx.now;
-  const daysAgo = (n: number) => shiftDate(now, { days: -n });
-  const hoursAgo = (n: number) => shiftDate(now, { hours: -n });
-
-  const [heroImage, moodImage, detailImage] = await Promise.all([
-    fetchSeedBuffer(
-      "https://picsum.photos/seed/orch-thread-hero/960/640.jpg",
-      SEED_ATTACHMENT_BYTES.png,
-    ),
-    fetchSeedBuffer(
-      "https://picsum.photos/seed/orch-thread-mood/960/640.jpg",
-      SEED_ATTACHMENT_BYTES.png,
-    ),
-    fetchSeedBuffer(
-      "https://picsum.photos/seed/orch-thread-detail/640/640.jpg",
-      SEED_ATTACHMENT_BYTES.png,
-    ),
-  ]);
-  const walkthroughVideo = await fetchSeedBuffer(
-    "https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4",
-    SEED_ATTACHMENT_BYTES.png,
-  );
-
-  const imageAttachment = (
-    id: string,
-    fileName: string,
-    buffer: Buffer,
-    width: number,
-    height: number,
-  ): SeedAttachmentDef => ({
-    id,
-    fileName,
-    mimeType: "image/jpeg",
-    sizeBytes: buffer.byteLength,
-    metadata: {
-      mediaKind: "image",
-      imageWidth: width,
-      imageHeight: height,
-      fileExtension: "jpg",
-    },
-    buffer,
-  });
-
-  return [
-    seedTextMessage({
-      userId: ownerId,
-      content: "Thread showcase — this task includes every message and attachment format.",
-      createdAt: daysAgo(6),
-    }),
-    seedTextMessage({
-      userId: designerId,
-      content: "Hero and moodboard references for the homepage refresh.",
-      createdAt: daysAgo(5),
-      type: "attachment",
-      attachments: [
-        imageAttachment(
-          createWorkspaceId("agency-attachment"),
-          "homepage-hero.jpg",
-          heroImage,
-          960,
-          640,
-        ),
-        imageAttachment(
-          createWorkspaceId("agency-attachment"),
-          "moodboard.jpg",
-          moodImage,
-          960,
-          640,
-        ),
-      ],
-    }),
-    seedTextMessage({
-      userId: devId,
-      content: "Spec PDF, spreadsheet export, and the Figma source file.",
-      createdAt: daysAgo(4),
-      type: "attachment",
-      attachments: [
-        {
-          id: createWorkspaceId("agency-attachment"),
-          fileName: "creative-brief.pdf",
-          mimeType: "application/pdf",
-          sizeBytes: SEED_ATTACHMENT_BYTES.pdf.byteLength,
-          metadata: { mediaKind: "document", fileExtension: "pdf" },
-          buffer: SEED_ATTACHMENT_BYTES.pdf,
-        },
-        {
-          id: createWorkspaceId("agency-attachment"),
-          fileName: "asset-tracker.xlsx",
-          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          sizeBytes: SEED_ATTACHMENT_BYTES.zip.byteLength,
-          metadata: { mediaKind: "document", fileExtension: "xlsx" },
-          buffer: SEED_ATTACHMENT_BYTES.zip,
-        },
-        {
-          id: createWorkspaceId("agency-attachment"),
-          fileName: "figma.com/file/homepage",
-          mimeType: "text/uri-list",
-          sizeBytes: 0,
-          linkUrl: "https://www.figma.com/file/example/homepage-refresh",
-          metadata: {
-            mediaKind: "link",
-            sourceUrl: "https://www.figma.com/file/example/homepage-refresh",
-          },
-        },
-      ],
-    }),
-    seedTextMessage({
-      userId: designerId,
-      content: "",
-      createdAt: daysAgo(3),
-      type: "voice",
-      attachments: [
-        {
-          id: createWorkspaceId("agency-attachment"),
-          fileName: "voice-note.wav",
-          mimeType: "audio/wav",
-          sizeBytes: SEED_ATTACHMENT_BYTES.wav.byteLength,
-          durationSeconds: 3,
-          metadata: { mediaKind: "audio", durationSeconds: 3, fileExtension: "wav" },
-          buffer: SEED_ATTACHMENT_BYTES.wav,
-        },
-      ],
-    }),
-    seedTextMessage({
-      userId: devId,
-      content: "Quick walkthrough of the responsive prototype.",
-      createdAt: daysAgo(2),
-      type: "attachment",
-      attachments: [
-        {
-          id: createWorkspaceId("agency-attachment"),
-          fileName: "prototype-walkthrough.mp4",
-          mimeType: "video/mp4",
-          sizeBytes: walkthroughVideo.byteLength,
-          metadata: {
-            mediaKind: "video",
-            videoWidth: 960,
-            videoHeight: 540,
-            durationSeconds: 12,
-            fileExtension: "mp4",
-          },
-          buffer: walkthroughVideo,
-        },
-      ],
-    }),
-    seedTextMessage({
-      userId: ownerId,
-      content: "Bundled exports for handoff.",
-      createdAt: daysAgo(2),
-      type: "attachment",
-      attachments: [
-        {
-          id: createWorkspaceId("agency-attachment"),
-          fileName: "handoff-assets.zip",
-          mimeType: "application/zip",
-          sizeBytes: SEED_ATTACHMENT_BYTES.zip.byteLength,
-          metadata: { mediaKind: "archive", fileExtension: "zip" },
-          buffer: SEED_ATTACHMENT_BYTES.zip,
-        },
-        {
-          id: createWorkspaceId("agency-attachment"),
-          fileName: "readme.txt",
-          mimeType: "text/plain",
-          sizeBytes: Buffer.byteLength("Export notes for the homepage refresh."),
-          metadata: { mediaKind: "document", fileExtension: "txt" },
-          buffer: Buffer.from("Export notes for the homepage refresh."),
-        },
-        {
-          id: createWorkspaceId("agency-attachment"),
-          fileName: "component-inventory.json",
-          mimeType: "application/json",
-          sizeBytes: Buffer.byteLength('{"components":["hero","nav","footer"]}'),
-          metadata: { mediaKind: "document", fileExtension: "json" },
-          buffer: Buffer.from('{"components":["hero","nav","footer"]}'),
-        },
-        {
-          id: createWorkspaceId("agency-attachment"),
-          fileName: "analytics-dashboard",
-          mimeType: "text/uri-list",
-          sizeBytes: 0,
-          linkUrl: "https://example.com/analytics/homepage-refresh",
-          metadata: {
-            mediaKind: "link",
-            sourceUrl: "https://example.com/analytics/homepage-refresh",
-          },
-        },
-      ],
-    }),
-    seedTextMessage({
-      userId: ownerId,
-      content: "",
-      createdAt: daysAgo(1),
-      type: "attachment",
-      attachments: [
-        imageAttachment(
-          createWorkspaceId("agency-attachment"),
-          "detail-crop.jpg",
-          detailImage,
-          640,
-          640,
-        ),
-      ],
-    }),
-    seedTextMessage({
-      userId: ownerId,
-      content:
-        "Can you summarize the attachment mix and call out which layout each group should use?",
-      createdAt: hoursAgo(6),
-    }),
-    seedTextMessage({
-      userId: ownerId,
-      content: [
-        "Here's how the thread attachments map to layouts:",
-        "",
-        "```typescript",
-        'const variant = selectAttachmentVariant(attachments, "message");',
-        "// image-only -> grid",
-        "// links / 4+ files -> list",
-        "// small mixed sets -> inline",
-        "```",
-        "",
-        "**Takeaways**",
-        "- Image pairs render in the grid.",
-        "- Document-heavy drops use the list layout.",
-        "- Voice notes stay inline above the transcript player.",
-      ].join("\n"),
-      createdAt: hoursAgo(5),
-      senderType: "agent",
-    }),
-  ];
-}
 
 function buildSeedData(ctx: SeedContext, scale: AgencySeedScale = "default") {
   const { now, members } = ctx;
 
-  const getOwnerId = () =>
-    members.find((m) => m.role === "owner")?.userId ?? members[0]?.userId ?? "";
   const getMemberIds = () => members.map((m) => m.userId);
   const pickMember = (exclude?: string): string => {
     const ids = getMemberIds().filter((id) => id !== exclude);
@@ -745,7 +421,6 @@ function buildSeedData(ctx: SeedContext, scale: AgencySeedScale = "default") {
   };
   const daysAgo = (n: number) => shiftDate(now, { days: -n });
   const daysFromNow = (n: number) => shiftDate(now, { days: n });
-  const hoursAgo = (n: number) => shiftDate(now, { hours: -n });
 
   // Clients
   const clients: ClientDef[] = [
@@ -788,209 +463,111 @@ function buildSeedData(ctx: SeedContext, scale: AgencySeedScale = "default") {
     },
   ];
 
-  // Tasks with threads and messages
-  const ownerId = getOwnerId();
-  const showcaseTaskId = createWorkspaceId("agency-task");
-  const showcaseThreadId = createWorkspaceId("agency-thread");
+  // Tasks
   const tasks: TaskDef[] = [
     {
-      id: showcaseTaskId,
-      threadId: showcaseThreadId,
+      id: createWorkspaceId("agency-task"),
       projectId: projects[1]!.id,
-      title: "Thread showcase — all message formats",
+      title: "Campaign kickoff checklist",
       status: "in_progress",
       assigneeUserIds: [pickMember()],
       dueDate: daysFromNow(2),
-      messages: [],
-      showcaseThread: true,
     },
     {
       id: createWorkspaceId("agency-task"),
-      threadId: createWorkspaceId("agency-thread"),
       projectId: projects[0]!.id,
       title: "Finalize creative brief",
       status: "done",
       assigneeUserIds: [pickMember()],
       dueDate: daysAgo(5),
-      messages: [
-        seedTextMessage({
-          userId: ownerId,
-          content: "Brief draft is ready for review.",
-          createdAt: daysAgo(10),
-        }),
-        seedTextMessage({
-          userId: pickMember(ownerId),
-          content: "Looks good, just a few tweaks on the targeting section.",
-          createdAt: daysAgo(9),
-        }),
-        seedTextMessage({
-          userId: ownerId,
-          content: "Updated per feedback. Ready to ship.",
-          createdAt: daysAgo(6),
-        }),
-      ],
     },
     {
       id: createWorkspaceId("agency-task"),
-      threadId: createWorkspaceId("agency-thread"),
       projectId: projects[0]!.id,
       title: "Produce social media assets",
       status: "in_progress",
       assigneeUserIds: [pickMember()],
       dueDate: daysFromNow(3),
-      messages: [
-        seedTextMessage({
-          userId: pickMember(),
-          content: "Pulling reference images from the brand guide.",
-          createdAt: daysAgo(2),
-        }),
-      ],
     },
     {
       id: createWorkspaceId("agency-task"),
-      threadId: createWorkspaceId("agency-thread"),
       projectId: projects[0]!.id,
       title: "Set up campaign tracking",
       status: "open",
       assigneeUserIds: [],
       dueDate: daysFromNow(7),
-      messages: [],
     },
     {
       id: createWorkspaceId("agency-task"),
-      threadId: createWorkspaceId("agency-thread"),
       projectId: projects[1]!.id,
       title: "Design new homepage mockups",
       status: "done",
       assigneeUserIds: [pickMember()],
       dueDate: daysAgo(3),
-      messages: [
-        seedTextMessage({
-          userId: pickMember(),
-          content: "Three concepts ready for client review.",
-          createdAt: daysAgo(7),
-        }),
-        seedTextMessage({
-          userId: ownerId,
-          content: "Client chose option B. Let's refine.",
-          createdAt: daysAgo(5),
-        }),
-      ],
     },
     {
       id: createWorkspaceId("agency-task"),
-      threadId: createWorkspaceId("agency-thread"),
       projectId: projects[1]!.id,
       title: "Implement responsive breakpoints",
       status: "in_progress",
       assigneeUserIds: [pickMember()],
       dueDate: daysFromNow(5),
-      messages: [
-        seedTextMessage({
-          userId: pickMember(),
-          content: "Mobile layouts are done. Tablet is WIP.",
-          createdAt: hoursAgo(12),
-        }),
-      ],
     },
     {
       id: createWorkspaceId("agency-task"),
-      threadId: createWorkspaceId("agency-thread"),
       projectId: projects[1]!.id,
       title: "Accessibility audit",
       status: "open",
       assigneeUserIds: [],
       dueDate: daysFromNow(10),
-      messages: [],
     },
     {
       id: createWorkspaceId("agency-task"),
-      threadId: createWorkspaceId("agency-thread"),
       projectId: projects[2]!.id,
       title: "Implement user onboarding flow",
       status: "in_progress",
       assigneeUserIds: [pickMember()],
       dueDate: daysFromNow(4),
-      messages: [
-        seedTextMessage({
-          userId: pickMember(),
-          content: "Onboarding screens are coded. Need backend integration.",
-          createdAt: daysAgo(1),
-        }),
-      ],
     },
     {
       id: createWorkspaceId("agency-task"),
-      threadId: createWorkspaceId("agency-thread"),
       projectId: projects[2]!.id,
       title: "Push notification setup",
       status: "open",
       assigneeUserIds: [pickMember()],
       dueDate: daysFromNow(8),
-      messages: [],
     },
     {
       id: createWorkspaceId("agency-task"),
-      threadId: createWorkspaceId("agency-thread"),
       projectId: projects[2]!.id,
       title: "Beta testing coordination",
       status: "open",
       assigneeUserIds: [],
       dueDate: daysFromNow(14),
-      messages: [],
     },
     {
       id: createWorkspaceId("agency-task"),
-      threadId: createWorkspaceId("agency-thread"),
       projectId: projects[3]!.id,
       title: "Security compliance review",
       status: "done",
       assigneeUserIds: [pickMember()],
       dueDate: daysAgo(2),
-      messages: [
-        seedTextMessage({
-          userId: pickMember(),
-          content: "All critical findings have been addressed.",
-          createdAt: daysAgo(4),
-        }),
-        seedTextMessage({
-          userId: ownerId,
-          content: "Great work. Closing this out.",
-          createdAt: daysAgo(2),
-        }),
-      ],
     },
     {
       id: createWorkspaceId("agency-task"),
-      threadId: createWorkspaceId("agency-thread"),
       projectId: projects[3]!.id,
       title: "Cost optimization report",
       status: "in_progress",
       assigneeUserIds: [pickMember()],
       dueDate: daysFromNow(6),
-      messages: [
-        seedTextMessage({
-          userId: pickMember(),
-          content: "Preliminary savings estimate: ~30% on compute.",
-          createdAt: hoursAgo(48),
-        }),
-      ],
     },
     {
       id: createWorkspaceId("agency-task"),
-      threadId: createWorkspaceId("agency-thread"),
       projectId: projects[4]!.id,
       title: "Data migration ETL pipeline",
       status: "archived",
       assigneeUserIds: [],
       dueDate: null,
-      messages: [
-        seedTextMessage({
-          userId: ownerId,
-          content: "Client paused this indefinitely.",
-          createdAt: daysAgo(20),
-        }),
-      ],
     },
   ];
 
@@ -1045,42 +622,6 @@ function buildSeedData(ctx: SeedContext, scale: AgencySeedScale = "default") {
   return scale === "massive" ? appendMassiveAgencyData(ctx, base) : base;
 }
 
-async function seedTaskMessageAttachments(args: {
-  teamId: string;
-  taskId: string;
-  messageId: string;
-  createdAt: Date;
-  attachments: SeedAttachmentDef[];
-}) {
-  for (const attachment of args.attachments) {
-    const extension = attachment.fileName.split(".").pop() ?? "bin";
-    const storageKey = attachment.linkUrl
-      ? `task-links/${args.teamId}/${args.taskId}/${attachment.id}`
-      : `task-attachments/${args.teamId}/${args.taskId}/${attachment.id}${extension ? `.${extension}` : ""}`;
-
-    if (attachment.buffer) {
-      await uploadSeedAttachmentIfPossible({
-        storageKey,
-        buffer: attachment.buffer,
-        mimeType: attachment.mimeType,
-        fileName: attachment.fileName,
-      });
-    }
-
-    await db.insert(agencyOpsTaskAttachment).values({
-      id: attachment.id,
-      teamId: args.teamId,
-      messageId: args.messageId,
-      fileName: attachment.fileName,
-      mimeType: attachment.mimeType,
-      storageKey,
-      sizeBytes: attachment.sizeBytes,
-      durationSeconds: attachment.durationSeconds ?? null,
-      metadata: attachment.metadata,
-      createdAt: args.createdAt,
-    });
-  }
-}
 
 async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "default") {
   const s = spinner();
@@ -1131,12 +672,8 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
     });
   }
 
-  s.message("Seeding tasks, threads, and messages...");
+  s.message("Seeding tasks...");
   for (const t of data.tasks) {
-    const taskMessages = t.showcaseThread ? await buildShowcaseThreadMessages(ctx) : t.messages;
-    const firstMessageAt = taskMessages[0]?.createdAt ?? now;
-    const lastMessageAt = taskMessages[taskMessages.length - 1]?.createdAt ?? now;
-
     await db.insert(agencyOpsProjectTask).values({
       id: t.id,
       teamId,
@@ -1146,8 +683,8 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
       assignedToTeam: t.assignedToTeam ?? false,
       dueDate: t.dueDate,
       createdByUserId: ownerId,
-      createdAt: firstMessageAt,
-      updatedAt: lastMessageAt,
+      createdAt: now,
+      updatedAt: now,
     });
 
     if (!t.assignedToTeam && t.assigneeUserIds.length > 0) {
@@ -1157,39 +694,6 @@ async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "defaul
           userId,
         })),
       );
-    }
-
-    await db.insert(agencyOpsTaskThread).values({
-      id: t.threadId,
-      teamId,
-      taskId: t.id,
-      createdAt: firstMessageAt,
-      updatedAt: lastMessageAt,
-    });
-
-    for (const msg of taskMessages) {
-      await db.insert(agencyOpsTaskMessage).values({
-        id: msg.id,
-        teamId,
-        threadId: t.threadId,
-        userId: msg.userId,
-        content: msg.content,
-        type: msg.type,
-        senderType: msg.senderType,
-        createdAt: msg.createdAt,
-        updatedAt: msg.createdAt,
-      });
-
-      const attachments = (msg as SeedMessageDef).attachments;
-      if (attachments && attachments.length > 0) {
-        await seedTaskMessageAttachments({
-          teamId,
-          taskId: t.id,
-          messageId: msg.id,
-          createdAt: msg.createdAt,
-          attachments,
-        });
-      }
     }
   }
 

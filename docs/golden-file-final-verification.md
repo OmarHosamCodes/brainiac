@@ -9,7 +9,7 @@ checked items prove only the statement they contain, not overall completion.
 - [x] `bun run check:golden` verifies that this inventory has no missing or stale TS/TSX rows.
 - [ ] Inventory scope includes persistence artifacts, source-controlled tooling, and runtime/build configuration required by the master plan.
 - [ ] Inventory classifications record domain/layer/rationale/owner/evidence and are semantically validated.
-- [x] Superseded root `ExecPlan.md` archived at `docs/legacy-exec-plan.md`.
+- [x] Superseded root `ExecPlan.md` removed (was temporarily archived as `docs/legacy-exec-plan.md`).
 - [x] Legacy feature paths audited with repository-wide searches.
 - [ ] Golden convention checker passes with zero transitional architectural allowlist entries.
 - [ ] Checker covers indirect orchestration, props-only views, container/hook/view-model shape, router output parsing, and repo-wide feature ownership.

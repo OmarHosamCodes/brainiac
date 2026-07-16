@@ -64,8 +64,6 @@ export function handleAgencyLiveEvent(_teamId: string, event: AgencyLiveEvent) {
     case "journey.step.updated":
       void handleJourneyStepUpdated(event);
       break;
-    case "taskMessage.created":
-      break;
     case "notification.created":
       handleNotificationCreated(event);
       break;

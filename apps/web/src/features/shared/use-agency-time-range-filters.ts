@@ -241,7 +241,7 @@ export function useAgencyTimeRangeFilters({
   });
   const clientsQuery = useAgencyClientsQuery(includeClientFilter ? teamId : "");
   const membersQuery = useQuery({
-    ...orpc.agencyOps.taskThreads.members.list.queryOptions({ input: { teamId } }),
+    ...orpc.team.members.list.queryOptions({ input: { teamId } }),
     enabled: Boolean(teamId),
   });
 
@@ -283,7 +283,7 @@ export function useAgencyTimeRangeFilters({
   const members = (membersQuery.data?.items ?? []).map((member) => ({
     userId: member.userId,
     userName: member.userName,
-    avatar: member.userAvatar,
+    avatar: null,
   }));
 
   function handleClientIdsChange(clientIds: string[]) {

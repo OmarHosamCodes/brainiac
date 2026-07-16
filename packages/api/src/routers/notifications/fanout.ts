@@ -2,7 +2,6 @@ import type { NotificationPayload } from "@orch/db/schema";
 
 import {
   fanOutNotification,
-  listTaskThreadParticipantUserIds,
   listTeamMemberUserIds,
 } from "./service";
 
@@ -33,38 +32,6 @@ export async function notifyTaskAssigned(input: {
   });
 }
 
-export async function notifyTaskMessage(input: {
-  teamId: string;
-  actorUserId: string;
-  taskId: string;
-  taskTitle: string;
-  projectId: string;
-  projectName: string;
-  messageId: string;
-  messagePreview: string;
-  assigneeUserIds: string[];
-}) {
-  const participants = await listTaskThreadParticipantUserIds(input.actorUserId, {
-    teamId: input.teamId,
-    taskId: input.taskId,
-  });
-  const recipients = [...new Set([...input.assigneeUserIds, ...participants])];
-
-  await fanOutNotification(input.actorUserId, {
-    teamId: input.teamId,
-    recipientUserIds: recipients,
-    type: "task.message",
-    payload: {
-      taskId: input.taskId,
-      taskTitle: input.taskTitle,
-      projectId: input.projectId,
-      projectName: input.projectName,
-      messageId: input.messageId,
-      messagePreview: input.messagePreview,
-      messageCount: 1,
-    },
-  });
-}
 
 export async function notifyJourneyMilestone(input: {
   teamId: string;

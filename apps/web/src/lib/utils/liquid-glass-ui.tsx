@@ -70,9 +70,6 @@ export function LiquidGlassBody({
 export const liquidGlassFrameClass =
   "ui-liquid-glass-frame relative z-50 overflow-hidden rounded-xl border border-white/10 dark:border-white/[0.08] text-popover-foreground outline-none";
 
-/** @deprecated use liquidGlassFrameClass */
-export const liquidGlassPanelClass = liquidGlassFrameClass;
-
 export const liquidGlassMenuContentClass = `${liquidGlassFrameClass} min-w-[8rem]`;
 
 export const liquidGlassMenuItemClass =

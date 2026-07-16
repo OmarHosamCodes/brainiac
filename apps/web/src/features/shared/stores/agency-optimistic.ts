@@ -51,32 +51,6 @@ export type AgencyOptimisticTask = {
   updatedAt: string;
 };
 
-export type AgencyOptimisticTaskMessage = {
-  id: string;
-  teamId: string;
-  threadId: string;
-  userId: string;
-  userName: string;
-  userAvatar: string | null;
-  content: string;
-  type: "text" | "voice" | "attachment";
-  senderType: "user" | "agent";
-  createdAt: string;
-  updatedAt: string;
-  attachments: Array<{
-    id: string;
-    teamId: string;
-    messageId: string;
-    fileName: string;
-    mimeType: string;
-    storageKey: string;
-    sizeBytes: number;
-    durationSeconds: number | null;
-    metadata?: unknown;
-    createdAt: string;
-    url: string | null;
-  }>;
-};
 
 export type AgencyOptimisticTag = {
   id: string;
@@ -142,7 +116,6 @@ type AgencyOptimisticState = {
   projects: Record<string, AgencyListOverlay<AgencyOptimisticProject>>;
   tasks: Record<string, AgencyListOverlay<AgencyOptimisticTask>>;
   timeEntries: Record<string, AgencyListOverlay<AgencyOptimisticTimeEntry>>;
-  taskMessages: Record<string, AgencyListOverlay<AgencyOptimisticTaskMessage>>;
   activeTimers: Record<string, AgencyOptimisticActiveTimer | null | undefined>;
   contacts: Record<string, AgencyOptimisticContact>;
   capacityCells: Record<CapacityCellKey, number>;
@@ -188,34 +161,6 @@ type AgencyOptimisticState = {
     snapshot: AgencyListOverlay<AgencyOptimisticTimeEntry>,
   ) => void;
 
-  upsertTaskMessage: (teamId: string, taskId: string, message: AgencyOptimisticTaskMessage) => void;
-  deleteTaskMessage: (teamId: string, taskId: string, messageId: string) => void;
-  reconcileTaskMessage: (
-    teamId: string,
-    taskId: string,
-    optimisticId: string,
-    created: AgencyOptimisticTaskMessage,
-  ) => void;
-  mapTaskMessageIdentity: (
-    teamId: string,
-    taskId: string,
-    optimisticId: string,
-    realId: string,
-  ) => void;
-  pruneTaskMessages: (
-    teamId: string,
-    taskId: string,
-    serverItems: AgencyOptimisticTaskMessage[],
-  ) => void;
-  snapshotTaskMessages: (
-    teamId: string,
-    taskId: string,
-  ) => AgencyListOverlay<AgencyOptimisticTaskMessage>;
-  restoreTaskMessages: (
-    teamId: string,
-    taskId: string,
-    snapshot: AgencyListOverlay<AgencyOptimisticTaskMessage>,
-  ) => void;
 
   setActiveTimer: (teamId: string, timer: AgencyOptimisticActiveTimer | null) => void;
   clearActiveTimer: (teamId: string) => void;
@@ -243,9 +188,6 @@ function contactKey(teamId: string, clientId: string) {
   return `${teamId}:${clientId}`;
 }
 
-function taskMessagesKey(teamId: string, taskId: string) {
-  return `${teamId}:${taskId}`;
-}
 
 function capacityKey(teamId: string, weekStart: string, userId: string) {
   return `${teamId}:${weekStart}:${userId}`;
@@ -354,7 +296,6 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
   projects: {},
   tasks: {},
   timeEntries: {},
-  taskMessages: {},
   activeTimers: {},
   contacts: {},
   capacityCells: {},
@@ -577,99 +518,6 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
   restoreTimeEntries: (teamId, snapshot) =>
     set((state) => ({ timeEntries: setListOverlay(state.timeEntries, teamId, snapshot) })),
 
-  upsertTaskMessage: (teamId, taskId, message) =>
-    set((state) => {
-      const key = taskMessagesKey(teamId, taskId);
-      const overlay =
-        state.taskMessages[key] ?? createEmptyListOverlay<AgencyOptimisticTaskMessage>();
-      return {
-        taskMessages: {
-          ...state.taskMessages,
-          [key]: upsertListItem(overlay, message),
-        },
-      };
-    }),
-
-  deleteTaskMessage: (teamId, taskId, messageId) =>
-    set((state) => {
-      const key = taskMessagesKey(teamId, taskId);
-      const overlay = state.taskMessages[key];
-      if (!overlay) return state;
-      const nextOverlay = deleteListItem(overlay, messageId);
-      const next = { ...state.taskMessages };
-      if (
-        Object.keys(nextOverlay.upserts).length === 0 &&
-        Object.keys(nextOverlay.deletedIds).length === 0 &&
-        Object.keys(nextOverlay.idMap).length === 0
-      ) {
-        delete next[key];
-        return { taskMessages: next };
-      }
-      return { taskMessages: { ...next, [key]: nextOverlay } };
-    }),
-
-  reconcileTaskMessage: (teamId, taskId, optimisticId, created) =>
-    set((state) => {
-      const key = taskMessagesKey(teamId, taskId);
-      const overlay =
-        state.taskMessages[key] ?? createEmptyListOverlay<AgencyOptimisticTaskMessage>();
-      return {
-        taskMessages: {
-          ...state.taskMessages,
-          [key]: reconcileListItem(overlay, optimisticId, created),
-        },
-      };
-    }),
-
-  mapTaskMessageIdentity: (teamId, taskId, optimisticId, realId) =>
-    set((state) => {
-      const key = taskMessagesKey(teamId, taskId);
-      const overlay =
-        state.taskMessages[key] ?? createEmptyListOverlay<AgencyOptimisticTaskMessage>();
-      const nextUpserts = { ...overlay.upserts };
-      delete nextUpserts[optimisticId];
-      return {
-        taskMessages: {
-          ...state.taskMessages,
-          [key]: {
-            upserts: nextUpserts,
-            deletedIds: overlay.deletedIds,
-            idMap: { ...overlay.idMap, [optimisticId]: realId },
-          },
-        },
-      };
-    }),
-
-  pruneTaskMessages: (teamId, taskId, serverItems) =>
-    set((state) => {
-      const key = taskMessagesKey(teamId, taskId);
-      const overlay = state.taskMessages[key];
-      if (!overlay) return state;
-      const pruned = pruneListOverlay(overlay, serverItems);
-      const next = { ...state.taskMessages };
-      if (
-        Object.keys(pruned.upserts).length === 0 &&
-        Object.keys(pruned.deletedIds).length === 0 &&
-        Object.keys(pruned.idMap).length === 0
-      ) {
-        delete next[key];
-        return { taskMessages: next };
-      }
-      return { taskMessages: { ...next, [key]: pruned } };
-    }),
-
-  snapshotTaskMessages: (teamId, taskId) =>
-    structuredClone(
-      get().taskMessages[taskMessagesKey(teamId, taskId)] ?? createEmptyListOverlay(),
-    ),
-
-  restoreTaskMessages: (teamId, taskId, snapshot) =>
-    set((state) => ({
-      taskMessages: {
-        ...state.taskMessages,
-        [taskMessagesKey(teamId, taskId)]: snapshot,
-      },
-    })),
 
   setActiveTimer: (teamId, timer) =>
     set((state) => ({
@@ -739,13 +587,6 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
       delete nextEntries[teamId];
       delete nextTimers[teamId];
 
-      const nextMessages = { ...state.taskMessages };
-      for (const key of Object.keys(nextMessages)) {
-        if (key.startsWith(`${teamId}:`)) {
-          delete nextMessages[key];
-        }
-      }
-
       const nextContacts = { ...state.contacts };
       for (const key of Object.keys(nextContacts)) {
         if (key.startsWith(`${teamId}:`)) {
@@ -765,7 +606,6 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
         projects: nextProjects,
         tasks: nextTasks,
         timeEntries: nextEntries,
-        taskMessages: nextMessages,
         activeTimers: nextTimers,
         contacts: nextContacts,
         capacityCells: nextCapacity,

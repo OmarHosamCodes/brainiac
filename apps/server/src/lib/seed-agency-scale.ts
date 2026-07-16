@@ -8,7 +8,6 @@ export const MASSIVE_SCALE_TARGETS = {
   clients: 80,
   projects: 400,
   tasks: 3_000,
-  messages: 15_000,
   timeEntries: 25_000,
   invoices: 80,
 } as const;
@@ -43,26 +42,14 @@ type ProjectDef = {
   name: string;
 };
 
-type SeedMessageDef = {
-  id: string;
-  userId: string;
-  content: string;
-  type: "text" | "voice" | "attachment";
-  senderType: "user" | "agent";
-  createdAt: Date;
-};
-
 type TaskDef = {
   id: string;
-  threadId: string;
   projectId: string;
   title: string;
   status: "open" | "in_progress" | "done" | "archived";
   assignedToTeam?: boolean;
   assigneeUserIds: string[];
   dueDate: Date | null;
-  messages: SeedMessageDef[];
-  showcaseThread?: boolean;
 };
 
 type TimeEntryDef = {
@@ -135,8 +122,6 @@ export function appendMassiveAgencyData(ctx: SeedContext, data: SeedDataBundle):
     });
   }
 
-  let messageBudget = data.tasks.reduce((sum, task) => sum + task.messages.length, 0);
-
   while (data.tasks.length < MASSIVE_SCALE_TARGETS.tasks) {
     const index = data.tasks.length + 1;
     const project = data.projects[index % data.projects.length];
@@ -144,33 +129,15 @@ export function appendMassiveAgencyData(ctx: SeedContext, data: SeedDataBundle):
 
     const assigneeId = pickMember();
     const status = TASK_STATUSES[index % TASK_STATUSES.length] ?? "open";
-    const threadId = createWorkspaceId("agency-thread");
     const taskId = createWorkspaceId("agency-task");
-    const messages: SeedMessageDef[] = [];
-    const messageCount = Math.min(5, MASSIVE_SCALE_TARGETS.messages - messageBudget);
-
-    for (let messageIndex = 0; messageIndex < messageCount; messageIndex += 1) {
-      messages.push({
-        id: createWorkspaceId("agency-message"),
-        userId: pickMember(),
-        content: `Scale message ${index}-${messageIndex + 1}`,
-        type: "text",
-        senderType: "user",
-        createdAt: daysAgo((index % 28) + messageIndex),
-      });
-      messageBudget += 1;
-      if (messageBudget >= MASSIVE_SCALE_TARGETS.messages) break;
-    }
 
     data.tasks.push({
       id: taskId,
-      threadId,
       projectId: project.id,
       title: `${TASK_TITLES[index % TASK_TITLES.length]} #${index}`,
       status,
       assigneeUserIds: assigneeId ? [assigneeId] : [],
       dueDate: shiftDate(now, { days: (index % 14) - 7 }),
-      messages,
     });
   }
 

@@ -1,4 +1,4 @@
-import type { InfiniteData, UseInfiniteQueryResult, UseQueryResult } from "@tanstack/react-query";
+import type { UseQueryResult } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 
 import {
@@ -16,7 +16,6 @@ import {
   type AgencyOptimisticContact,
   type AgencyOptimisticProject,
   type AgencyOptimisticTask,
-  type AgencyOptimisticTaskMessage,
   type AgencyOptimisticTimeEntry,
 } from "@/features/shared/stores/agency-optimistic";
 
@@ -130,60 +129,6 @@ export function useMergedAgencyTimeEntriesQuery<
     teamId,
     prune: pruneTimeEntries,
   });
-}
-
-export function useMergedAgencyTaskMessagesQuery<
-  TData extends ListQueryData<AgencyOptimisticTaskMessage>,
->(query: UseQueryResult<TData, Error>, teamId: string, taskId: string) {
-  const overlayKey = `${teamId}:${taskId}`;
-  const overlay = useAgencyOptimisticStore(
-    (state) => state.taskMessages[overlayKey] ?? EMPTY_LIST_OVERLAY,
-  );
-  const pruneTaskMessages = useAgencyOptimisticStore((state) => state.pruneTaskMessages);
-
-  return useMergedAgencyListQuery(query, overlay, {
-    teamId,
-    prune: (currentTeamId, items) => pruneTaskMessages(currentTeamId, taskId, items),
-  });
-}
-
-type TaskMessagesPage = ListQueryData<AgencyOptimisticTaskMessage>;
-
-export function useMergedAgencyTaskMessagesInfiniteQuery(
-  query: UseInfiniteQueryResult<InfiniteData<TaskMessagesPage>, Error>,
-  teamId: string,
-  taskId: string,
-) {
-  const overlayKey = `${teamId}:${taskId}`;
-  const overlay = useAgencyOptimisticStore(
-    (state) => state.taskMessages[overlayKey] ?? EMPTY_LIST_OVERLAY,
-  );
-  const pruneTaskMessages = useAgencyOptimisticStore((state) => state.pruneTaskMessages);
-
-  useEffect(() => {
-    if (!teamId || !query.isSuccess || !query.data?.pages[0]?.items) return;
-    const serverItems = query.data.pages.flatMap((page) => page.items);
-    pruneTaskMessages(teamId, taskId, serverItems);
-  }, [teamId, taskId, query.isSuccess, query.data?.pages, pruneTaskMessages]);
-
-  const mergedData = useMemo(() => {
-    if (!query.data) return query.data;
-    const pages = query.data.pages.map((page, index) => {
-      if (index !== 0) return page;
-      const items = mergeListWithOverlay(page.items, overlay);
-      const total =
-        typeof page.total === "number"
-          ? adjustPaginatedTotal(page.total, overlay, page.items)
-          : page.total;
-      return { ...page, items, total };
-    });
-    return { ...query.data, pages };
-  }, [query.data, overlay]);
-
-  return { ...query, data: mergedData } as UseInfiniteQueryResult<
-    InfiniteData<TaskMessagesPage>,
-    Error
-  >;
 }
 
 export function useMergedAgencyActiveTimerQuery(

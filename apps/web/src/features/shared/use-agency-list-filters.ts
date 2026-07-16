@@ -49,7 +49,7 @@ export function useAgencyListFilters({ teamId }: UseAgencyListFiltersOptions) {
   const membersQuery = useQuery(
     withAgencySyncQueryOptions(
       {
-        ...orpc.agencyOps.taskThreads.members.list.queryOptions({ input: { teamId } }),
+        ...orpc.team.members.list.queryOptions({ input: { teamId } }),
         enabled: Boolean(teamId),
       },
       "cold",

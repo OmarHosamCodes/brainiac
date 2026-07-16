@@ -12,7 +12,7 @@ export function useAgencyReportLabelContext(teamId: string): AgencyReportHeaderL
     enabled: Boolean(teamId),
   });
   const membersQuery = useQuery({
-    ...orpc.agencyOps.taskThreads.members.list.queryOptions({ input: { teamId } }),
+    ...orpc.team.members.list.queryOptions({ input: { teamId } }),
     enabled: Boolean(teamId),
   });
 
