@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  type KeyboardEvent,
-} from "react";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 
 import { setTrackingFavicon } from "@/lib/favicon";
 
@@ -147,7 +141,9 @@ export function useAgencyTimeTracker({
   const setTrackerIsBillable = useAgencyTimeTrackingStore((s) => s.setTrackerIsBillable);
   const ensureTrackerDraft = useAgencyTimeTrackingStore((s) => s.ensureTrackerDraft);
   const syncDraftFromActiveTimer = useAgencyTimeTrackingStore((s) => s.syncDraftFromActiveTimer);
-  const flushActiveTimerDescription = useAgencyTimeTrackingStore((s) => s.flushActiveTimerDescription);
+  const flushActiveTimerDescription = useAgencyTimeTrackingStore(
+    (s) => s.flushActiveTimerDescription,
+  );
   const startTimerAction = useAgencyTimeTrackingStore((s) => s.startTimer);
   const stopTimerAction = useAgencyTimeTrackingStore((s) => s.stopTimer);
   const updateActiveTimerStartAction = useAgencyTimeTrackingStore((s) => s.updateActiveTimerStart);
@@ -460,8 +456,9 @@ export function useAgencyTimeTracker({
     hasActiveTimer: Boolean(activeTimer),
   });
   const stopButtonLabel = stopPresentation.label;
-  const stopButtonDisabled = !teamId || stopPresentation.disabled;
-  const stopButtonHint = null;
+  const stopButtonDisabled =
+    !teamId || stopPresentation.disabled || !canStopTimer || Boolean(stopBlockedMessage);
+  const stopButtonHint = stopBlockedMessage;
 
   const startButtonDisabled = !teamId || Boolean(activeTimer) || isTimerMutationPending;
 
@@ -612,11 +609,11 @@ export function useAgencyTimeTracker({
       }
     },
     onTaskChange: (value) => {
-      setTrackerTaskId(teamId, value || "");
       const task = tasks.find((entry) => entry.id === value);
       if (task) {
         setTrackerProjectId(teamId, task.projectId);
       }
+      setTrackerTaskId(teamId, value || "");
     },
     onTagIdsChange: (tagIds) => setTrackerTagIds(teamId, tagIds),
     onCreateTag: (name) => {

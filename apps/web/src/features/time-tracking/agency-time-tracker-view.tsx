@@ -45,7 +45,10 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
 
   return (
     <div
-      className={cn(agencyTimeTrackerCardClass, view.activeTimer && agencyTimeTrackerCardRunningClass)}
+      className={cn(
+        agencyTimeTrackerCardClass,
+        view.activeTimer && agencyTimeTrackerCardRunningClass,
+      )}
       data-timer-state={view.activeTimer ? "running" : idleManual ? "manual" : "idle"}
     >
       <AgencyDescriptionDatalistField
@@ -134,27 +137,32 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
               ) : null}
             </div>
           ) : idleManual ? (
-            <div className="relative flex min-w-0 shrink-0 items-center gap-1">
-              <Input
-                type="time"
-                value={view.manualDraft.startTime}
-                onChange={(e) => view.onManualStartTimeChange(e.target.value)}
-                className={cn(agencyTimeEntryTimeInputClass, "h-8 w-[5.5rem]")}
-                aria-label="Start time"
-                disabled={view.isManualCreatePending}
-              />
-              <span className="text-xs text-muted" aria-hidden>
-                –
-              </span>
-              <Input
-                type="time"
-                value={view.manualDraft.endTime}
-                onChange={(e) => view.onManualEndTimeChange(e.target.value)}
-                className={cn(agencyTimeEntryTimeInputClass, "h-8 w-[5.5rem]")}
-                aria-label="End time"
-                disabled={view.isManualCreatePending}
-              />
-              <label className="relative flex min-w-0 shrink-0 cursor-pointer items-center rounded-md px-1 py-0.5 hover:bg-muted">
+            <div className="relative flex min-w-0 shrink-0 items-center gap-2">
+              <div className="flex min-w-0 shrink-0 items-center gap-0.5">
+                <Input
+                  type="time"
+                  value={view.manualDraft.startTime}
+                  onChange={(e) => view.onManualStartTimeChange(e.target.value)}
+                  className={cn(agencyTimeEntryTimeInputClass, "h-8 w-[5.5rem]")}
+                  aria-label="Start time"
+                  disabled={view.isManualCreatePending}
+                />
+                <span
+                  className="inline-flex w-3 shrink-0 justify-center text-xs text-muted"
+                  aria-hidden
+                >
+                  –
+                </span>
+                <Input
+                  type="time"
+                  value={view.manualDraft.endTime}
+                  onChange={(e) => view.onManualEndTimeChange(e.target.value)}
+                  className={cn(agencyTimeEntryTimeInputClass, "h-8 w-[5.5rem]")}
+                  aria-label="End time"
+                  disabled={view.isManualCreatePending}
+                />
+              </div>
+              <label className="relative flex min-w-0 shrink-0 cursor-pointer items-center border-l border-border/60 py-0.5 pr-1 pl-2 hover:text-foreground">
                 <Input
                   type="date"
                   value={view.manualDraft.date}
@@ -193,6 +201,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                 className={cn(agencyTimeTrackerStopActionClass, "rounded-md")}
                 disabled={view.stopButtonDisabled}
                 aria-label={view.stopButtonLabel}
+                title={view.stopButtonHint ?? undefined}
                 onClick={view.onStopTimer}
               >
                 {view.stopButtonLabel}
@@ -249,12 +258,12 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
                 variant="ghost"
                 size="icon-sm"
                 className={agencyTimeTrackerIconActionClass}
-              aria-label={idleManual ? "Switch to timer" : "Switch to manual entry"}
-              aria-pressed={idleManual}
-              onClick={() => view.onModeChange(idleManual ? "timer" : "manual")}
-            >
-              {idleManual ? <Timer className="size-4" /> : <CalendarClock className="size-4" />}
-            </Button>
+                aria-label={idleManual ? "Switch to timer" : "Switch to manual entry"}
+                aria-pressed={idleManual}
+                onClick={() => view.onModeChange(idleManual ? "timer" : "manual")}
+              >
+                {idleManual ? <Timer className="size-4" /> : <CalendarClock className="size-4" />}
+              </Button>
             </div>
           </>
         ) : null}
