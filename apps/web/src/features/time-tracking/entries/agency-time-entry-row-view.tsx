@@ -191,10 +191,11 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             <div className="flex w-full min-w-0 items-center justify-center gap-0.5 overflow-hidden">
               <Input
                 type="text"
-                inputMode="text"
+                inputMode="decimal"
                 data-time-field="start"
                 value={startTimeInput}
                 onChange={(e) => onStartTimeChange(e.target.value)}
+                onFocus={(e) => e.currentTarget.select()}
                 onBlur={onStartTimeBlur}
                 onKeyDown={onInlineKeyDown}
                 disabled={editSaving || rowUpdating}
@@ -206,10 +207,11 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
               </span>
               <Input
                 type="text"
-                inputMode="text"
+                inputMode="decimal"
                 data-time-field="end"
                 value={endTimeInput}
                 onChange={(e) => onEndTimeChange(e.target.value)}
+                onFocus={(e) => e.currentTarget.select()}
                 onBlur={onEndTimeBlur}
                 onKeyDown={onInlineKeyDown}
                 disabled={editSaving || rowUpdating}

@@ -16,6 +16,7 @@ import {
   applyStartTimeToDraft,
   entryToDraft,
   formatClockTimeLabel,
+  meridiemFromDraftTime,
   parseClockTimeLabel,
 } from "@/features/time-tracking/time-entry-draft";
 import { formatDuration } from "@/lib/utils/format-duration";
@@ -335,7 +336,9 @@ export function useAgencyTimeEntryRow({
 
   const commitStartTimeInput = useCallback(async () => {
     if (isMulti) return;
-    const parsed = parseClockTimeLabel(startTimeInput);
+    const parsed = parseClockTimeLabel(startTimeInput, {
+      preferMeridiem: meridiemFromDraftTime(editDraft.startTime),
+    });
     if (!parsed) {
       setStartTimeInput(formatClockTimeLabel(editDraft.startTime));
       setEditError("Invalid start time.");
@@ -350,7 +353,9 @@ export function useAgencyTimeEntryRow({
 
   const commitEndTimeInput = useCallback(async () => {
     if (isMulti) return;
-    const parsed = parseClockTimeLabel(endTimeInput);
+    const parsed = parseClockTimeLabel(endTimeInput, {
+      preferMeridiem: meridiemFromDraftTime(editDraft.endTime),
+    });
     if (!parsed) {
       setEndTimeInput(formatClockTimeLabel(editDraft.endTime));
       setEditError("Invalid end time.");

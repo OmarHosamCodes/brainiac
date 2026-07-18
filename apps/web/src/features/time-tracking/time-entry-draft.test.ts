@@ -132,4 +132,12 @@ describe("time-entry-draft", () => {
     expect(parseClockTimeLabel("517am")).toBe("05:17");
     expect(parseClockTimeLabel("bogus")).toBeNull();
   });
+
+  test("parseClockTimeLabel accepts numpad decimal separators", () => {
+    expect(parseClockTimeLabel("12.48")).toBe("12:48");
+    expect(parseClockTimeLabel("12,48PM")).toBe("12:48");
+    expect(parseClockTimeLabel("1.30", { preferMeridiem: "PM" })).toBe("13:30");
+    expect(parseClockTimeLabel("130", { preferMeridiem: "PM" })).toBe("13:30");
+    expect(parseClockTimeLabel("130", { preferMeridiem: "AM" })).toBe("01:30");
+  });
 });

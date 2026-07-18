@@ -5,9 +5,10 @@ import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { Button } from "@/ui/button";
 import { Input } from "@/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
+import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import type { AgencyTimeTrackerViewModel } from "@/features/time-tracking/hooks/use-agency-time-tracker";
 import {
+  agencyTimeEntryClockTimeInputClass,
   agencyTimeEntryTimeInputClass,
   agencyTimeTrackerCardClass,
   agencyTimeTrackerCardRunningClass,
@@ -26,6 +27,10 @@ import { cn } from "@/lib/utils";
 type AgencyTimeTrackerViewProps = {
   view: AgencyTimeTrackerViewModel;
 };
+
+function isElapsedStartEditorTarget(target: EventTarget | null) {
+  return target instanceof Element && target.closest("[data-elapsed-start-editor]") != null;
+}
 
 export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
   const elapsedLabel = view.elapsedLabel ?? "00:00:00";
@@ -115,27 +120,87 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
 
         <div className={agencyTimeTrackerRailCellClass}>
           {view.activeTimer ? (
-            <div className="relative">
-              <Input
-                value={view.elapsedEditing ? view.elapsedDraft : elapsedLabel}
-                onFocus={view.onElapsedFocus}
-                onChange={(e) => view.onElapsedChange(e.target.value)}
-                onBlur={view.onElapsedBlur}
-                onKeyDown={view.onElapsedKeyDown}
-                className={cn(agencyTimeTrackerElapsedInputClass, "font-semibold")}
-                aria-label="Elapsed time"
-                aria-invalid={Boolean(view.elapsedError)}
-                disabled={view.isStartTimeSaving}
-              />
-              {view.elapsedError ? (
-                <p
-                  className="absolute top-full left-0 z-10 whitespace-nowrap text-xs text-error"
-                  role="alert"
-                >
-                  {view.elapsedError}
-                </p>
-              ) : null}
-            </div>
+            <Popover open={view.startTimeEditorOpen} onOpenChange={view.onStartTimeEditorOpenChange}>
+              <PopoverAnchor asChild>
+                <div className="relative" data-elapsed-start-editor="">
+                  <Input
+                    value={view.elapsedEditing ? view.elapsedDraft : elapsedLabel}
+                    onFocus={(event) => {
+                      view.onElapsedFocus();
+                      const input = event.currentTarget;
+                      requestAnimationFrame(() => input.select());
+                    }}
+                    onChange={(e) => view.onElapsedChange(e.target.value)}
+                    onBlur={view.onElapsedBlur}
+                    onKeyDown={view.onElapsedKeyDown}
+                    className={cn(agencyTimeTrackerElapsedInputClass, "font-semibold")}
+                    aria-label="Elapsed time"
+                    aria-invalid={Boolean(view.elapsedError)}
+                    aria-expanded={view.startTimeEditorOpen}
+                    aria-haspopup="dialog"
+                    disabled={view.isStartTimeSaving}
+                  />
+                  {view.elapsedError ? (
+                    <p
+                      className="absolute top-full left-0 z-10 whitespace-nowrap text-xs text-error"
+                      role="alert"
+                    >
+                      {view.elapsedError}
+                    </p>
+                  ) : null}
+                </div>
+              </PopoverAnchor>
+              <PopoverContent
+                align="center"
+                side="bottom"
+                sideOffset={8}
+                collisionPadding={12}
+                onOpenAutoFocus={(event) => event.preventDefault()}
+                onCloseAutoFocus={(event) => event.preventDefault()}
+                onPointerDownOutside={(event) => {
+                  if (isElapsedStartEditorTarget(event.target)) event.preventDefault();
+                }}
+                onFocusOutside={(event) => {
+                  if (isElapsedStartEditorTarget(event.target)) event.preventDefault();
+                }}
+                onInteractOutside={(event) => {
+                  if (isElapsedStartEditorTarget(event.target)) event.preventDefault();
+                }}
+                className={cn(
+                  "w-auto min-w-0 gap-1.5 rounded-xl border border-default p-2.5 shadow-lg ring-0",
+                  "data-[state=closed]:animate-none",
+                )}
+                data-elapsed-start-editor=""
+              >
+                <div className="flex items-center gap-3">
+                  <span className="shrink-0 text-[10px] font-semibold tracking-[0.12em] text-muted uppercase">
+                    Start time
+                  </span>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={view.startTimeDraft}
+                    onChange={(e) => view.onStartTimeDraftChange(e.target.value)}
+                    onFocus={(e) => e.currentTarget.select()}
+                    onBlur={view.onStartTimeBlur}
+                    onKeyDown={view.onStartTimeKeyDown}
+                    disabled={view.isStartTimeSaving}
+                    className={cn(
+                      agencyTimeEntryClockTimeInputClass,
+                      "h-8 w-[4.5rem] text-sm font-semibold text-highlighted",
+                    )}
+                    aria-label="Timer start time"
+                    aria-invalid={Boolean(view.startTimeError)}
+                  />
+                  <span className="shrink-0 text-xs text-muted">{view.startTimeDayLabel}</span>
+                </div>
+                {view.startTimeError ? (
+                  <p className="text-xs text-error" role="alert">
+                    {view.startTimeError}
+                  </p>
+                ) : null}
+              </PopoverContent>
+            </Popover>
           ) : idleManual ? (
             <div className="relative flex min-w-0 shrink-0 items-center gap-2">
               <div className="flex min-w-0 shrink-0 items-center gap-0.5">

@@ -48,19 +48,37 @@ export function formatClockTimeLabel(timeHhMm: string): string {
     .replace(/\s/g, "");
 }
 
+/** AM/PM from draft `HH:MM` — used so numpad digit edits keep the field's meridiem. */
+export function meridiemFromDraftTime(timeHhMm: string): "AM" | "PM" | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(timeHhMm.trim());
+  if (!match) return null;
+  const hours = Number(match[1]);
+  if (!Number.isFinite(hours) || hours < 0 || hours > 23) return null;
+  return hours < 12 ? "AM" : "PM";
+}
+
 /**
  * Parse free-text clock times into draft `HH:MM`.
- * Accepts `5:17AM`, `5:17 pm`, `17:17`, `5:17`, `517am`.
+ * Accepts `5:17AM`, `5:17 pm`, `17:17`, `5:17`, `517am`, and numpad forms like `12.48` / `1248`.
+ * When digits have no meridiem and hours are 1–12, `preferMeridiem` keeps AM/PM from the prior value.
  */
-export function parseClockTimeLabel(value: string): string | null {
-  const trimmed = value.trim().toUpperCase().replace(/\s+/g, "");
+export function parseClockTimeLabel(
+  value: string,
+  options?: { preferMeridiem?: "AM" | "PM" | null },
+): string | null {
+  // Numpad decimal / locale comma often stands in for `:`.
+  const trimmed = value
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "")
+    .replace(/[.,]/g, ":");
   if (!trimmed) return null;
 
   const match = /^(\d{1,4})(?::(\d{2}))?(AM|PM|A|P)?$/.exec(trimmed);
   if (!match) return null;
 
   const meridiemRaw = match[3];
-  const meridiem =
+  let meridiem: "AM" | "PM" | null =
     meridiemRaw === "A" || meridiemRaw === "AM"
       ? "AM"
       : meridiemRaw === "P" || meridiemRaw === "PM"
@@ -90,6 +108,10 @@ export function parseClockTimeLabel(value: string): string | null {
   }
 
   if (!Number.isFinite(hours) || !Number.isFinite(minutes) || minutes > 59) return null;
+
+  if (!meridiem && options?.preferMeridiem && hours >= 1 && hours <= 12) {
+    meridiem = options.preferMeridiem;
+  }
 
   if (meridiem) {
     if (hours < 1 || hours > 12) return null;
@@ -325,5 +347,7 @@ if (import.meta.main) {
   console.assert(parseClockTimeLabel("5:17AM") === "05:17");
   console.assert(parseClockTimeLabel("10:38 pm") === "22:38");
   console.assert(parseClockTimeLabel("17:17") === "17:17");
+  console.assert(parseClockTimeLabel("12.48") === "12:48");
+  console.assert(parseClockTimeLabel("130", { preferMeridiem: "PM" }) === "13:30");
   console.assert(parseClockTimeLabel("bogus") === null);
 }

@@ -48,19 +48,17 @@ export function AgencyTimeEntryDayGroupView({
   return (
     <section className={agencyTimeEntryDayGroupClass}>
       <header className={cn(agencyTimeEntrySectionHeaderClass, "justify-between gap-3 px-5")}>
-        <div className="flex min-w-0 items-center gap-4">
-          <span className="text-sm font-semibold text-highlighted">
-            {formatAgencyDayLabel(day.dateKey)}
-          </span>
+        <span className="min-w-0 truncate text-sm font-semibold text-highlighted">
+          {formatAgencyDayLabel(day.dateKey)}
+        </span>
+
+        <div className="flex shrink-0 items-center gap-3">
           <div className="flex items-center gap-2 whitespace-nowrap">
             <span className="text-xs text-muted">Total</span>
             <span className={agencyWorkMetricClass}>
               {formatDuration(day.totalSeconds, "clock")}
             </span>
           </div>
-        </div>
-
-        <div className="flex shrink-0 items-center gap-1">
           {onToggleDayBulkEdit ? (
             <button
               type="button"

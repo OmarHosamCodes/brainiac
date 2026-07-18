@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+} from "react";
 
 import { setTrackingFavicon } from "@/lib/favicon";
 
@@ -7,6 +14,7 @@ import {
   normalizeSuggestionText,
   type DescriptionDatalistOption,
 } from "@/features/time-tracking/description-suggestions";
+import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { useAgencyElapsedTimer } from "@/features/time-tracking/hooks/use-agency-elapsed-timer";
 import {
   canStartAgencyTimer,
@@ -25,12 +33,17 @@ import {
 } from "@/features/shared/agency-queries";
 import { findProjectTaskInCache } from "@/features/shared/agency-query-cache";
 import {
+  activeTimerStartToIso,
   applyEndTimeToDraft,
   applyStartTimeToDraft,
   createDefaultManualTimeWindow,
   draftToIsoRange,
   elapsedDurationToStartedAt,
+  formatClockTimeLabel,
+  meridiemFromDraftTime,
+  parseClockTimeLabel,
   parseDurationInput,
+  startedAtToDateTimeDraft,
   validateTimeEntryDraft,
   type TimeEntryDraft,
 } from "@/features/time-tracking/time-entry-draft";
@@ -93,6 +106,10 @@ export type AgencyTimeTrackerViewModel = {
   elapsedEditing: boolean;
   elapsedDraft: string;
   elapsedError: string | null;
+  startTimeEditorOpen: boolean;
+  startTimeDraft: string;
+  startTimeDayLabel: string;
+  startTimeError: string | null;
   mode: AgencyTrackerMode;
   showModeToggle: boolean;
   manualDraft: AgencyManualTimeDraft;
@@ -113,8 +130,12 @@ export type AgencyTimeTrackerViewModel = {
   onTaskChooserOpenChange: (open: boolean) => void;
   onElapsedFocus: () => void;
   onElapsedChange: (value: string) => void;
-  onElapsedBlur: () => void;
+  onElapsedBlur: (event: FocusEvent<HTMLInputElement>) => void;
   onElapsedKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
+  onStartTimeEditorOpenChange: (open: boolean) => void;
+  onStartTimeDraftChange: (value: string) => void;
+  onStartTimeBlur: () => void;
+  onStartTimeKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
   onModeChange: (mode: AgencyTrackerMode) => void;
   onManualStartTimeChange: (startTime: string) => void;
   onManualEndTimeChange: (endTime: string) => void;
@@ -157,6 +178,10 @@ export function useAgencyTimeTracker({
   const [elapsedEditing, setElapsedEditing] = useState(false);
   const [elapsedDraft, setElapsedDraft] = useState(emptyElapsedDraft);
   const [elapsedError, setElapsedError] = useState<string | null>(null);
+  const [startTimeEditorOpen, setStartTimeEditorOpen] = useState(false);
+  const [startTimeDraft, setStartTimeDraft] = useState("");
+  const [startDateDraft, setStartDateDraft] = useState("");
+  const [startTimeError, setStartTimeError] = useState<string | null>(null);
   const [mode, setMode] = useState<AgencyTrackerMode>("timer");
   const [manualDraft, setManualDraft] = useState<AgencyManualTimeDraft>(() => {
     const window = createDefaultManualTimeWindow();
@@ -328,10 +353,56 @@ export function useAgencyTimeTracker({
       setElapsedEditing(false);
       setElapsedDraft(emptyElapsedDraft);
       setElapsedError(null);
+      setStartTimeEditorOpen(false);
+      setStartTimeDraft("");
+      setStartDateDraft("");
+      setStartTimeError(null);
       return;
     }
     setMode("timer");
   }, [activeTimer]);
+
+  const syncStartDraftFromTimer = useCallback(() => {
+    if (!activeTimer) return;
+    const draft = startedAtToDateTimeDraft(activeTimer.startedAt);
+    setStartDateDraft(draft.date);
+    setStartTimeDraft(formatClockTimeLabel(draft.startTime));
+    setStartTimeError(null);
+  }, [activeTimer]);
+
+  const persistStartTimeDraft = useCallback(
+    (draftLabel: string) => {
+      if (!teamId || !activeTimer) return false;
+      const current = startedAtToDateTimeDraft(activeTimer.startedAt);
+      const parsed = parseClockTimeLabel(draftLabel, {
+        preferMeridiem: meridiemFromDraftTime(current.startTime),
+      });
+      if (!parsed) {
+        setStartTimeError("Invalid start time.");
+        setStartTimeDraft(formatClockTimeLabel(current.startTime));
+        return false;
+      }
+      const date = startDateDraft || current.date;
+      const result = activeTimerStartToIso(date, parsed);
+      if ("error" in result) {
+        setStartTimeError(result.error);
+        setStartTimeDraft(formatClockTimeLabel(current.startTime));
+        return false;
+      }
+      const nextMs = new Date(result.startAt).getTime();
+      const currentMs = new Date(activeTimer.startedAt).getTime();
+      setStartTimeError(null);
+      setStartTimeDraft(formatClockTimeLabel(parsed));
+      if (nextMs === currentMs) return true;
+      void updateActiveTimerStartAction({
+        teamId,
+        activeTimer,
+        startedAt: result.startAt,
+      });
+      return true;
+    },
+    [teamId, activeTimer, startDateDraft, updateActiveTimerStartAction],
+  );
 
   const descriptionDatalistOptions = useMemo(
     () => buildDescriptionDatalistOptions(recentEntriesQuery.data?.items ?? []),
@@ -466,6 +537,8 @@ export function useAgencyTimeTracker({
     setElapsedDraft(elapsedLabel ?? "00:00:00");
     setElapsedError(null);
     setElapsedEditing(true);
+    syncStartDraftFromTimer();
+    setStartTimeEditorOpen(true);
   }
 
   function onElapsedChange(value: string) {
@@ -473,7 +546,7 @@ export function useAgencyTimeTracker({
     if (elapsedError) setElapsedError(null);
   }
 
-  function onElapsedBlur() {
+  function onElapsedBlur(_event: FocusEvent<HTMLInputElement>) {
     if (!elapsedEditing) return;
     const ok = persistElapsedDraft(elapsedDraft);
     if (ok) {
@@ -498,9 +571,46 @@ export function useAgencyTimeTracker({
       setElapsedEditing(false);
       setElapsedDraft(emptyElapsedDraft);
       setElapsedError(null);
+      setStartTimeEditorOpen(false);
       event.currentTarget.blur();
     }
   }
+
+  function onStartTimeEditorOpenChange(open: boolean) {
+    if (!open) {
+      setStartTimeEditorOpen(false);
+      setStartTimeError(null);
+      return;
+    }
+    if (!activeTimer) return;
+    syncStartDraftFromTimer();
+    setStartTimeEditorOpen(true);
+  }
+
+  function onStartTimeDraftChange(value: string) {
+    setStartTimeDraft(value);
+    if (startTimeError) setStartTimeError(null);
+  }
+
+  function onStartTimeBlur() {
+    void persistStartTimeDraft(startTimeDraft);
+  }
+
+  function onStartTimeKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      const ok = persistStartTimeDraft(startTimeDraft);
+      if (ok) event.currentTarget.blur();
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      syncStartDraftFromTimer();
+      setStartTimeEditorOpen(false);
+    }
+  }
+
+  const startTimeDayLabel = startDateDraft ? formatAgencyDayLabel(startDateDraft) : "";
 
   function onModeChange(nextMode: AgencyTrackerMode) {
     if (activeTimer) return;
@@ -586,6 +696,10 @@ export function useAgencyTimeTracker({
     elapsedEditing,
     elapsedDraft,
     elapsedError,
+    startTimeEditorOpen,
+    startTimeDraft,
+    startTimeDayLabel,
+    startTimeError,
     mode,
     showModeToggle,
     manualDraft,
@@ -631,6 +745,10 @@ export function useAgencyTimeTracker({
     onElapsedChange,
     onElapsedBlur,
     onElapsedKeyDown,
+    onStartTimeEditorOpenChange,
+    onStartTimeDraftChange,
+    onStartTimeBlur,
+    onStartTimeKeyDown,
     onModeChange,
     onManualStartTimeChange,
     onManualEndTimeChange,
