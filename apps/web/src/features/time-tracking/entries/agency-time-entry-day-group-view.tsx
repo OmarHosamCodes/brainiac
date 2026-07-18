@@ -3,9 +3,6 @@ import { Copy } from "lucide-react";
 import {
   agencyTimeEntryDayGroupClass,
   agencyTimeEntryIconButtonClass,
-  agencyTimeEntryRailActionsClass,
-  agencyTimeEntryRailDurationClass,
-  agencyTimeEntryRailQuietClass,
   agencyTimeEntrySectionHeaderClass,
   agencyWorkMetricClass,
 } from "@/features/shared/agency-ui";
@@ -13,6 +10,7 @@ import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day
 import { formatDuration } from "@/lib/utils/format-duration";
 import type { TimeEntryDayGroup } from "@/features/time-tracking/group-time-entries";
 import type { AgencyTimeEntryGroupRowRenderer } from "@/features/time-tracking/entries/agency-time-entry-row-renderer";
+import { cn } from "@/lib/utils";
 
 /** Kept for the entries-log hook bulk patch draft (UI toolbar removed). */
 export type AgencyDayBulkDraft = {
@@ -49,10 +47,33 @@ export function AgencyTimeEntryDayGroupView({
 
   return (
     <section className={agencyTimeEntryDayGroupClass}>
-      <header className={agencyTimeEntrySectionHeaderClass}>
-        <div className="flex min-w-0 flex-1 items-center px-5">
+      <header className={cn(agencyTimeEntrySectionHeaderClass, "justify-between gap-3 px-5")}>
+        <div className="flex min-w-0 items-center gap-4">
+          <span className="text-sm font-semibold text-highlighted">
+            {formatAgencyDayLabel(day.dateKey)}
+          </span>
+          <div className="flex items-center gap-2 whitespace-nowrap">
+            <span className="text-xs text-muted">Total</span>
+            <span className={agencyWorkMetricClass}>
+              {formatDuration(day.totalSeconds, "clock")}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1">
+          {onToggleDayBulkEdit ? (
+            <button
+              type="button"
+              className={agencyTimeEntryIconButtonClass}
+              aria-label={bulkEditActive ? "Exit bulk edit" : "Bulk edit day"}
+              aria-pressed={bulkEditActive}
+              onClick={() => onToggleDayBulkEdit(day.dateKey)}
+            >
+              <Copy className="size-4" />
+            </button>
+          ) : null}
           {bulkEditActive && onToggleEntrySelected ? (
-            <label className="mr-3 inline-flex shrink-0 items-center">
+            <label className="inline-flex size-8 shrink-0 items-center justify-center">
               <input
                 type="checkbox"
                 checked={allSelected}
@@ -62,31 +83,6 @@ export function AgencyTimeEntryDayGroupView({
               />
             </label>
           ) : null}
-          <span className="text-sm font-semibold text-highlighted">
-            {formatAgencyDayLabel(day.dateKey)}
-          </span>
-        </div>
-
-        <div className={agencyTimeEntryRailQuietClass}>
-          <div className={agencyTimeEntryRailDurationClass}>
-            <span className="mr-2 text-xs text-muted">Total</span>
-            <span className={agencyWorkMetricClass}>
-              {formatDuration(day.totalSeconds, "clock")}
-            </span>
-          </div>
-          <div className={agencyTimeEntryRailActionsClass}>
-            {onToggleDayBulkEdit ? (
-              <button
-                type="button"
-                className={agencyTimeEntryIconButtonClass}
-                aria-label={bulkEditActive ? "Exit bulk edit" : "Bulk edit day"}
-                aria-pressed={bulkEditActive}
-                onClick={() => onToggleDayBulkEdit(day.dateKey)}
-              >
-                <Copy className="size-4" />
-              </button>
-            ) : null}
-          </div>
         </div>
       </header>
 

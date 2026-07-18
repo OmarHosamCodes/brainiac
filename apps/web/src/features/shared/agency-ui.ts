@@ -391,7 +391,7 @@ export const agencyTimeEntryRailClass = cn(
 );
 
 /** Day-header rail — same cell widths, no vertical separators. */
-export const agencyTimeEntryRailQuietClass = "flex shrink-0 items-stretch";
+export const agencyTimeEntryRailQuietClass = "flex shrink-0 items-center";
 
 export const agencyTimeEntryRailCellClass =
   "box-border flex h-full shrink-0 items-center px-[10px]";
@@ -430,11 +430,12 @@ export const agencyTimeEntryRailMoreClass = cn(
 );
 
 /** Combined 112px actions zone for day headers / skeletons. */
-export const agencyTimeEntryRailActionsClass = "flex h-full w-[112px] shrink-0 items-stretch";
+export const agencyTimeEntryRailActionsClass =
+  "flex h-full w-[112px] shrink-0 items-center justify-end gap-1 pr-2";
 
 /** Day band — same rail geometry as rows so totals lock to the duration column. */
 export const agencyTimeEntrySectionHeaderClass = cn(
-  "flex h-10 items-stretch border-b border-border/30 bg-muted/20 font-sans",
+  "flex h-10 items-center border-b border-border/30 bg-muted/20 font-sans",
 );
 
 export const agencyTimeEntrySectionLabelClass = cn(
