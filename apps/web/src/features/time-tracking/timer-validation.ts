@@ -102,8 +102,7 @@ export function canStopAgencyTimer(input: {
   catalogTasks?: AgencyTimerTaskRef[];
   projectName?: string | null;
 }): boolean {
-  // Running timer always has a project; task/description are optional (fallback on stop).
-  return Boolean(input.activeTimer);
+  return getAgencyTimerStopBlockedMessage(input) === null && Boolean(input.activeTimer);
 }
 
 export function resolveAgencyTimerStartProject(input: {
@@ -165,6 +164,10 @@ export function getAgencyTimerStopBlockedMessage(input: {
 }): string | null {
   if (!input.activeTimer) {
     return null;
+  }
+
+  if (!input.description.trim()) {
+    return "Add a description before stopping the timer.";
   }
 
   const hasProject = Boolean(input.activeTimer.projectId?.trim());

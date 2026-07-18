@@ -27,22 +27,24 @@ describe("canStartAgencyTimer", () => {
     );
   });
 
-  it("allows switch even when active timer has no task yet", () => {
+  it("blocks switch when active timer has no description", () => {
     expect(
       canStartAgencyTimer({
         activeTimer: { taskId: null, taskTitle: null, description: "" },
         project: projectA,
+        description: "",
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
-  it("allows switch when active timer has task even with empty description", () => {
+  it("blocks switch when active timer has task but empty description", () => {
     expect(
       canStartAgencyTimer({
         activeTimer: { taskId: "task-1", taskTitle: "Task 1", description: "" },
         project: projectA,
+        description: "",
       }),
-    ).toBe(true);
+    ).toBe(false);
   });
 
   it("allows start when active timer can be stopped (switch)", () => {
@@ -50,6 +52,7 @@ describe("canStartAgencyTimer", () => {
       canStartAgencyTimer({
         activeTimer: { taskId: "task-1", taskTitle: "Task 1", description: "Work" },
         project: projectA,
+        description: "Work",
       }),
     ).toBe(true);
   });
@@ -62,16 +65,30 @@ describe("getAgencyTimerStartBlockedMessage", () => {
 });
 
 describe("getAgencyTimerStopBlockedMessage", () => {
+  it("requires a description before stopping", () => {
+    expect(
+      getAgencyTimerStopBlockedMessage({
+        activeTimer: {
+          taskId: null,
+          taskTitle: null,
+          description: "",
+          projectId: "proj-a",
+        },
+        description: "   ",
+      }),
+    ).toBe("Add a description before stopping the timer.");
+  });
+
   it("requires a task when the timer has no project binding", () => {
     expect(
       getAgencyTimerStopBlockedMessage({
         activeTimer: { taskId: null, taskTitle: null, description: "", projectId: "" },
-        description: "",
+        description: "Work",
       }),
     ).toBe("Choose a task before stopping the timer.");
   });
 
-  it("allows stop for a project-only server timer", () => {
+  it("allows stop for a project-only server timer with a description", () => {
     expect(
       getAgencyTimerStopBlockedMessage({
         activeTimer: {
@@ -94,10 +111,15 @@ describe("isAgencyLocalDraftTimer", () => {
 });
 
 describe("canStopAgencyTimer", () => {
-  it("allows stop for any running timer (task optional)", () => {
-    const activeTimer = { taskId: null, taskTitle: null, description: "" };
+  it("requires a non-empty description to stop", () => {
+    const activeTimer = {
+      taskId: null,
+      taskTitle: null,
+      description: "",
+      projectId: "proj-a",
+    };
 
-    expect(canStopAgencyTimer({ activeTimer, description: "", selectedTask: null })).toBe(true);
+    expect(canStopAgencyTimer({ activeTimer, description: "", selectedTask: null })).toBe(false);
     expect(canStopAgencyTimer({ activeTimer, description: "Work", selectedTask: null })).toBe(true);
     expect(canStopAgencyTimer({ activeTimer, description: "Work", selectedTask: task })).toBe(true);
   });
