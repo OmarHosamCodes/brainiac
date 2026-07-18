@@ -5,11 +5,19 @@ import { applyNotificationCreatedToCache } from "@/features/notifications/notifi
 import { getQueryClient } from "@/lib/query-client";
 import {
   patchActiveMembersFromLiveTimer,
-  patchActiveTimerInCache,
   patchUpdatedProjectTaskInCache,
   refetchAgencyProjectJourneyQueries,
   refetchAgencyProjectScopedTaskListQueries,
 } from "@/features/shared/agency-query-cache";
+import { useAgencyTimeTrackingStore } from "@/features/time-tracking/stores/agency-time-tracking";
+
+export function applyViewerTimerUpdated(
+  event: Extract<AgencyLiveEvent, { type: "timer.updated" }>,
+) {
+  useAgencyTimeTrackingStore
+    .getState()
+    .reconcileActiveTimerFromLive(event.teamId, event.timer, event.updatedAt);
+}
 
 async function getViewerUserId(): Promise<string | null> {
   const session = await authClient.getSession();
@@ -20,7 +28,7 @@ async function handleTimerUpdated(event: Extract<AgencyLiveEvent, { type: "timer
   const viewerUserId = await getViewerUserId();
 
   if (viewerUserId && event.userId === viewerUserId) {
-    patchActiveTimerInCache(event.teamId, event.timer);
+    applyViewerTimerUpdated(event);
     return;
   }
 
