@@ -54,7 +54,7 @@ export function AgencyTaskChooserProjectRow({
         aria-expanded={expanded}
       >
         <AgencyProjectHueDot projectId={projectId} colorHueId={colorHueId} className="size-2" />
-        <span className="min-w-0 flex-1 truncate text-sm">
+        <span className="min-w-0 flex-1 truncate text-sm leading-snug">
           <span
             className="font-semibold text-[var(--project-hue)] dark:text-[var(--project-hue-dark)]"
             style={projectStyle}
@@ -66,7 +66,7 @@ export function AgencyTaskChooserProjectRow({
             )}
           </span>
           {showClientName && clientName ? (
-            <span className="font-normal text-muted">
+            <span className="font-normal text-dimmed">
               {" · "}
               {highlightSearch ? (
                 <AgencySearchHighlight text={clientName} query={searchTerm} />
@@ -76,7 +76,7 @@ export function AgencyTaskChooserProjectRow({
             </span>
           ) : null}
         </span>
-        <span className="shrink-0 text-[11px] font-normal text-muted tabular-nums">
+        <span className="shrink-0 text-[11px] font-normal text-dimmed tabular-nums">
           {taskCount} {taskCount === 1 ? "task" : "tasks"}
         </span>
         <ChevronDown

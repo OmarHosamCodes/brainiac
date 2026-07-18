@@ -31,14 +31,14 @@ export function AgencyTaskChooserClientSection({
         onClick={onToggle}
         aria-expanded={expanded}
       >
-        <span className="min-w-0 truncate text-xs font-semibold tracking-wide text-muted">
+        <span className="min-w-0 truncate text-xs font-medium text-muted">
           {clientName}
         </span>
-        <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-normal text-muted tabular-nums">
+        <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-normal text-dimmed tabular-nums">
           {projectCount} {projectCount === 1 ? "project" : "projects"}
           <ChevronDown
             className={cn(
-              "size-3.5 transition-transform duration-200 motion-reduce:transition-none",
+              "size-3.5 text-muted transition-transform duration-200 motion-reduce:transition-none",
               expanded && "rotate-180",
             )}
             aria-hidden

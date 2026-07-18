@@ -109,23 +109,31 @@ export function isChooserNodeExpanded(collapsedIds: Set<string>, id: string): bo
   return !collapsedIds.has(id);
 }
 
-/** Opt-out collapse: projects/clients stay open unless the user collapses them. */
+/** Opt-in expand: closed unless the id is in the expanded set. */
+export function isChooserNodeExpandedOptIn(expandedIds: Set<string>, id: string): boolean {
+  return expandedIds.has(id);
+}
+
+/**
+ * Projects start collapsed so task lists stay hidden until the user opens one.
+ * The selected project auto-expands when the chooser opens.
+ */
 export function useAgencyChooserExpandedProjects(selectedProjectId: string | null, open: boolean) {
-  const [collapsedProjectIds, setCollapsedProjectIds] = useState<Set<string>>(() => new Set());
+  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     if (!open || !selectedProjectId) return;
 
-    setCollapsedProjectIds((current) => {
-      if (!current.has(selectedProjectId)) return current;
+    setExpandedProjectIds((current) => {
+      if (current.has(selectedProjectId)) return current;
       const next = new Set(current);
-      next.delete(selectedProjectId);
+      next.add(selectedProjectId);
       return next;
     });
   }, [open, selectedProjectId]);
 
   function toggleProject(projectId: string) {
-    setCollapsedProjectIds((current) => {
+    setExpandedProjectIds((current) => {
       const next = new Set(current);
       if (next.has(projectId)) {
         next.delete(projectId);
@@ -137,23 +145,24 @@ export function useAgencyChooserExpandedProjects(selectedProjectId: string | nul
   }
 
   function isProjectExpanded(projectId: string) {
-    return isChooserNodeExpanded(collapsedProjectIds, projectId);
+    return isChooserNodeExpandedOptIn(expandedProjectIds, projectId);
   }
 
   return {
     isProjectExpanded,
     toggleProject,
     expandProject: (projectId: string) => {
-      setCollapsedProjectIds((current) => {
-        if (!current.has(projectId)) return current;
+      setExpandedProjectIds((current) => {
+        if (current.has(projectId)) return current;
         const next = new Set(current);
-        next.delete(projectId);
+        next.add(projectId);
         return next;
       });
     },
   };
 }
 
+/** Clients start open so project rows are visible without an extra click. */
 export function useAgencyChooserExpandedClients(selectedClientName: string | null, open: boolean) {
   const [collapsedClientNames, setCollapsedClientNames] = useState<Set<string>>(() => new Set());
 

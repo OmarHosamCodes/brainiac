@@ -56,8 +56,8 @@ export function AgencyTaskChooserTaskRow({
       >
         <span
           className={cn(
-            "min-w-0 flex-1 truncate text-sm",
-            selected ? "font-medium text-primary" : "font-normal text-highlighted",
+            "min-w-0 flex-1 truncate text-sm font-normal leading-snug",
+            selected ? "font-medium text-primary" : "text-muted",
           )}
         >
           {highlightSearch ? <AgencySearchHighlight text={title} query={searchTerm} /> : title}
