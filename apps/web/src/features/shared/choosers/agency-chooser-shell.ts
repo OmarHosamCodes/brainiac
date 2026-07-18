@@ -104,22 +104,28 @@ export function useAgencyChooserScrollReveal({
   return { bumpReveal: () => setRevealToken((current) => current + 1) };
 }
 
+/** Opt-out collapse: open unless the id is in the collapsed set. */
+export function isChooserNodeExpanded(collapsedIds: Set<string>, id: string): boolean {
+  return !collapsedIds.has(id);
+}
+
+/** Opt-out collapse: projects/clients stay open unless the user collapses them. */
 export function useAgencyChooserExpandedProjects(selectedProjectId: string | null, open: boolean) {
-  const [expandedProjectIds, setExpandedProjectIds] = useState<Set<string>>(() => new Set());
+  const [collapsedProjectIds, setCollapsedProjectIds] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     if (!open || !selectedProjectId) return;
 
-    setExpandedProjectIds((current) => {
-      if (current.has(selectedProjectId)) return current;
+    setCollapsedProjectIds((current) => {
+      if (!current.has(selectedProjectId)) return current;
       const next = new Set(current);
-      next.add(selectedProjectId);
+      next.delete(selectedProjectId);
       return next;
     });
   }, [open, selectedProjectId]);
 
   function toggleProject(projectId: string) {
-    setExpandedProjectIds((current) => {
+    setCollapsedProjectIds((current) => {
       const next = new Set(current);
       if (next.has(projectId)) {
         next.delete(projectId);
@@ -131,17 +137,17 @@ export function useAgencyChooserExpandedProjects(selectedProjectId: string | nul
   }
 
   function isProjectExpanded(projectId: string) {
-    return expandedProjectIds.has(projectId);
+    return isChooserNodeExpanded(collapsedProjectIds, projectId);
   }
 
   return {
     isProjectExpanded,
     toggleProject,
     expandProject: (projectId: string) => {
-      setExpandedProjectIds((current) => {
-        if (current.has(projectId)) return current;
+      setCollapsedProjectIds((current) => {
+        if (!current.has(projectId)) return current;
         const next = new Set(current);
-        next.add(projectId);
+        next.delete(projectId);
         return next;
       });
     },
@@ -149,20 +155,25 @@ export function useAgencyChooserExpandedProjects(selectedProjectId: string | nul
 }
 
 export function useAgencyChooserExpandedClients(selectedClientName: string | null, open: boolean) {
-  const [expandedClientNames, setExpandedClientNames] = useState<Set<string>>(() => new Set());
+  const [collapsedClientNames, setCollapsedClientNames] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !selectedClientName) return;
 
-    setExpandedClientNames(selectedClientName ? new Set([selectedClientName]) : new Set());
+    setCollapsedClientNames((current) => {
+      if (!current.has(selectedClientName)) return current;
+      const next = new Set(current);
+      next.delete(selectedClientName);
+      return next;
+    });
   }, [open, selectedClientName]);
 
   function isClientExpanded(clientName: string) {
-    return expandedClientNames.has(clientName);
+    return isChooserNodeExpanded(collapsedClientNames, clientName);
   }
 
   function toggleClient(clientName: string) {
-    setExpandedClientNames((current) => {
+    setCollapsedClientNames((current) => {
       const next = new Set(current);
       if (next.has(clientName)) {
         next.delete(clientName);

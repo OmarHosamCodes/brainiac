@@ -318,7 +318,7 @@ export function useAgencyTaskChooser(
     favoriteTaskIds,
     searchInputRef,
     listRef,
-    isProjectExpanded,
+    isProjectExpanded: (projectId) => Boolean(searchTerm.trim()) || isProjectExpanded(projectId),
     isClientExpanded: (clientName) => Boolean(searchTerm.trim()) || isClientExpanded(clientName),
     onOpenChange: setOpen,
     onSearchChange: setSearchTerm,
