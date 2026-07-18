@@ -277,7 +277,7 @@ export function useAgencyTimeTracker({
   );
 
   const manualError = useMemo(
-    () => validateTimeEntryDraft(manualTimeEntryDraft, { requireTask: true }),
+    () => validateTimeEntryDraft(manualTimeEntryDraft, { requireTask: false }),
     [manualTimeEntryDraft],
   );
 
