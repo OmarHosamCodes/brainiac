@@ -3,8 +3,10 @@ import { Copy } from "lucide-react";
 import {
   agencyTimeEntryDayGroupClass,
   agencyTimeEntryIconButtonClass,
+  agencyTimeEntryRailActionsClass,
+  agencyTimeEntryRailDurationClass,
+  agencyTimeEntryRailQuietClass,
   agencyTimeEntrySectionHeaderClass,
-  agencyTimeEntrySectionLabelClass,
   agencyWorkMetricClass,
 } from "@/features/shared/agency-ui";
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
@@ -48,9 +50,9 @@ export function AgencyTimeEntryDayGroupView({
   return (
     <section className={agencyTimeEntryDayGroupClass}>
       <header className={agencyTimeEntrySectionHeaderClass}>
-        <div className={agencyTimeEntrySectionLabelClass}>
+        <div className="flex min-w-0 flex-1 items-center px-5">
           {bulkEditActive && onToggleEntrySelected ? (
-            <label className="mr-2 inline-flex shrink-0 items-center">
+            <label className="mr-3 inline-flex shrink-0 items-center">
               <input
                 type="checkbox"
                 checked={allSelected}
@@ -60,16 +62,19 @@ export function AgencyTimeEntryDayGroupView({
               />
             </label>
           ) : null}
-          <span>{formatAgencyDayLabel(day.dateKey)}</span>
+          <span className="text-sm font-semibold text-highlighted">
+            {formatAgencyDayLabel(day.dateKey)}
+          </span>
         </div>
-        <div className="flex h-full shrink-0 items-center">
-          <span className="mr-2 text-xs text-muted">Total:</span>
-          <div className="flex h-full w-[133px] items-center px-[10px]">
+
+        <div className={agencyTimeEntryRailQuietClass}>
+          <div className={agencyTimeEntryRailDurationClass}>
+            <span className="mr-2 text-xs text-muted">Total</span>
             <span className={agencyWorkMetricClass}>
               {formatDuration(day.totalSeconds, "clock")}
             </span>
           </div>
-          <div className="flex h-full w-[112px] items-center justify-end">
+          <div className={agencyTimeEntryRailActionsClass}>
             {onToggleDayBulkEdit ? (
               <button
                 type="button"
@@ -95,7 +100,7 @@ export function AgencyTimeEntryDayGroupView({
           return (
             <li key={groupExpandKey} className={bulkEditActive ? "flex items-stretch" : undefined}>
               {bulkEditActive && onToggleEntrySelected ? (
-                <label className="flex w-[34px] shrink-0 items-center pl-[20px]">
+                <label className="flex w-[34px] shrink-0 items-center pl-5">
                   <input
                     type="checkbox"
                     checked={selected}

@@ -1,6 +1,5 @@
 import { CalendarDays, MoreVertical, Play, Trash2 } from "lucide-react";
 
-import { AgencyTagChooser } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import { AgencyTaskChooser } from "@/features/time-tracking/choosers/agency-task-chooser";
 import {
   AgencyTimeEntryMoreAction,
@@ -20,7 +19,6 @@ import {
   agencyTimeEntryRailCalendarClass,
   agencyTimeEntryRailClass,
   agencyTimeEntryRailDurationClass,
-  agencyTimeEntryRailTagClass,
   agencyTimeEntryRailTimeClass,
   agencyTimeEntryRowClass,
   agencyTimeEntryRowEditingClass,
@@ -46,9 +44,6 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     group,
     projects,
     tasks,
-    tags,
-    tagCreatePending,
-    onCreateTag,
     expanded,
     highlighted,
     isMulti,
@@ -77,7 +72,6 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onDescriptionKeyDown,
     onTaskChange,
     onProjectChange: _onProjectChange,
-    onTagIdsChange,
     onIsBillableChange,
     onStartTimeChange,
     onEndTimeChange,
@@ -107,7 +101,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         className,
       )}
     >
-      <div className={cn(agencyTimeEntryMainClass, "gap-2")}>
+      <div className={cn(agencyTimeEntryMainClass, "gap-3 pr-2")}>
         {isMulti ? (
           <div className={descriptionLeadingSlotClass}>
             <button
@@ -151,7 +145,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             aria-label="Add description"
           />
         )}
-        <div className="min-w-0 shrink truncate">
+        <div className="min-w-0 max-w-[min(100%,18rem)] shrink truncate">
           <AgencyTaskChooser
             teamId={view.teamId}
             value={editDraft.taskId}
@@ -175,18 +169,6 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
       </div>
 
       <div className={agencyTimeEntryRailClass}>
-        <div className={agencyTimeEntryRailTagClass}>
-          <AgencyTagChooser
-            value={editDraft.tagIds}
-            tags={tags}
-            onValueChange={onTagIdsChange}
-            onCreateTag={onCreateTag}
-            creating={tagCreatePending}
-            disabled={editSaving || rowUpdating}
-            compact
-          />
-        </div>
-
         <div className={agencyTimeEntryRailBillableClass}>
           <button
             type="button"

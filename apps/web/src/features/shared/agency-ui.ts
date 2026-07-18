@@ -352,7 +352,7 @@ export const agencyTimeDayHeaderClass = cn(
 export const agencyTimeWeekHeaderClass = "sr-only";
 
 export const agencyTimeEntryRowClass = cn(
-  "flex min-h-[60px] items-stretch border-b border-dotted border-border/40 bg-clip-padding transition-colors hover:bg-elevated/50 motion-reduce:transition-none",
+  "flex min-h-[52px] items-stretch border-b border-border/30 bg-clip-padding font-sans transition-colors hover:bg-elevated/50 motion-reduce:transition-none",
 );
 
 /** Nested child row inside an expanded multi-entry group. */
@@ -378,15 +378,14 @@ export const agencyTimeEntryClockTimeInputClass = cn(
 );
 
 /** Left cluster — badge, description, task (free; not column-locked). */
-export const agencyTimeEntryMainClass =
-  "flex min-w-0 flex-1 items-center gap-0 py-[10px] pl-[10px]";
+export const agencyTimeEntryMainClass = "flex min-w-0 flex-1 self-stretch items-center gap-0 pl-3";
 
 /**
  * Right rail — time | duration | actions.
  * Inset vertical ticks (`inset-y-2`); day headers use the quiet rail (no hairlines).
  */
 export const agencyTimeEntryRailClass = cn(
-  "relative flex shrink-0 items-stretch",
+  "relative flex shrink-0 self-stretch items-stretch",
   "before:pointer-events-none before:absolute before:inset-y-2 before:left-0 before:w-px before:bg-border/40",
   "[&>*+*]:relative [&>*+*]:before:pointer-events-none [&>*+*]:before:absolute [&>*+*]:before:inset-y-2 [&>*+*]:before:left-0 [&>*+*]:before:w-px [&>*+*]:before:bg-border/40",
 );
@@ -396,11 +395,6 @@ export const agencyTimeEntryRailQuietClass = "flex shrink-0 items-stretch";
 
 export const agencyTimeEntryRailCellClass =
   "box-border flex h-full shrink-0 items-center px-[10px]";
-
-export const agencyTimeEntryRailTagClass = cn(
-  agencyTimeEntryRailCellClass,
-  "w-[71px] justify-center overflow-hidden",
-);
 
 export const agencyTimeEntryRailBillableClass = cn(
   agencyTimeEntryRailCellClass,
@@ -439,16 +433,17 @@ export const agencyTimeEntryRailMoreClass = cn(
 export const agencyTimeEntryRailActionsClass = "flex h-full w-[112px] shrink-0 items-stretch";
 
 /** Day band — same rail geometry as rows so totals lock to the duration column. */
-export const agencyTimeEntrySectionHeaderClass = cn("flex h-[40px] items-stretch bg-background");
+export const agencyTimeEntrySectionHeaderClass = cn(
+  "flex h-10 items-stretch border-b border-border/30 bg-muted/20 font-sans",
+);
 
 export const agencyTimeEntrySectionLabelClass = cn(
-  "flex min-w-0 flex-1 items-center px-[20px]",
-  agencyWorkTitleClass,
+  "flex min-w-0 flex-1 items-center px-5 text-sm font-semibold text-highlighted",
 );
 
 /** One day block — solid surface so background gutters read as hard separation. */
 export const agencyTimeEntryDayGroupClass =
-  "overflow-hidden rounded-[2px] border border-default bg-default";
+  "overflow-hidden rounded-lg border border-default bg-default";
 
 /** Week band with visible week total chrome (Clockify-style). */
 export const agencyTimeWeekGroupClass = "flex flex-col";
