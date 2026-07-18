@@ -17,6 +17,16 @@ const agencyActiveTimerLiveSchema = z.object({
   taskTitle: z.string().nullable(),
   projectName: z.string(),
   description: z.string(),
+  isBillable: z.boolean(),
+  tags: z.array(
+    z.object({
+      id: z.string().min(1),
+      teamId: z.string().min(1),
+      name: z.string().min(1),
+      createdAt: z.string().datetime(),
+      updatedAt: z.string().datetime(),
+    }),
+  ),
   startedAt: z.string().datetime(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -252,6 +262,14 @@ export async function publishAgencyTimerUpdated(
     taskTitle: string | null;
     projectName: string;
     description: string;
+    isBillable: boolean;
+    tags: Array<{
+      id: string;
+      teamId: string;
+      name: string;
+      createdAt: string;
+      updatedAt: string;
+    }>;
     startedAt: string;
     createdAt: string;
     updatedAt: string;
