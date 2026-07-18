@@ -206,7 +206,16 @@ export function AgencyTaskChooserView({ view }: AgencyTaskChooserViewProps) {
         </PopoverTrigger>
         <PopoverContent
           align={contentAlign}
-          className="flex w-[26rem] max-w-[calc(100vw-2rem)] flex-col rounded-xl border border-default p-0 font-sans shadow-lg ring-0"
+          collisionPadding={12}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            searchInputRef.current?.focus();
+          }}
+          className={cn(
+            "flex w-[26rem] max-w-[calc(100vw-2rem)] flex-col gap-0 rounded-xl border border-default p-0 font-sans shadow-lg ring-0",
+            // Exit animation can stall Presence unmount and leave a click-eating layer.
+            "data-[state=closed]:animate-none",
+          )}
         >
           <div className="border-b border-default p-3">
             <div className="relative">

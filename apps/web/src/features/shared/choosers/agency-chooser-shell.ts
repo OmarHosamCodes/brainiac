@@ -148,21 +148,21 @@ export function useAgencyChooserExpandedProjects(selectedProjectId: string | nul
   };
 }
 
-export function useAgencyChooserExpandedClients(open: boolean) {
-  const [collapsedClientNames, setCollapsedClientNames] = useState<Set<string>>(() => new Set());
+export function useAgencyChooserExpandedClients(selectedClientName: string | null, open: boolean) {
+  const [expandedClientNames, setExpandedClientNames] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
-    if (!open) {
-      setCollapsedClientNames(new Set());
-    }
-  }, [open]);
+    if (!open) return;
+
+    setExpandedClientNames(selectedClientName ? new Set([selectedClientName]) : new Set());
+  }, [open, selectedClientName]);
 
   function isClientExpanded(clientName: string) {
-    return !collapsedClientNames.has(clientName);
+    return expandedClientNames.has(clientName);
   }
 
   function toggleClient(clientName: string) {
-    setCollapsedClientNames((current) => {
+    setExpandedClientNames((current) => {
       const next = new Set(current);
       if (next.has(clientName)) {
         next.delete(clientName);

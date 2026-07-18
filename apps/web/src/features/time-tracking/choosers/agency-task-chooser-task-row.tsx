@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import type { PointerEvent } from "react";
 
 import { AgencySearchHighlight } from "@/features/shared/agency-search-highlight";
 import { agencyFocusRingClass } from "@/features/shared/agency-ui";
@@ -25,6 +26,12 @@ export function AgencyTaskChooserTaskRow({
   onSelect,
   onToggleFavorite,
 }: AgencyTaskChooserTaskRowProps) {
+  function keepPointerInsideChooser(event: PointerEvent<HTMLButtonElement>) {
+    // Keep the search input's blur and Radix's dismiss layer from racing the click.
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   return (
     <div
       className={cn(
@@ -41,7 +48,11 @@ export function AgencyTaskChooserTaskRow({
           agencyFocusRingClass,
           "motion-reduce:transition-none",
         )}
-        onClick={onSelect}
+        onPointerDown={keepPointerInsideChooser}
+        onClick={(event) => {
+          event.stopPropagation();
+          onSelect();
+        }}
       >
         <span
           className={cn(
@@ -56,10 +67,17 @@ export function AgencyTaskChooserTaskRow({
         type="button"
         aria-label={favorited ? "Remove task from favorites" : "Add task to favorites"}
         className={cn(
-          "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
-          favorited && "text-warning opacity-100",
+          "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted",
+          "pointer-events-none opacity-0 transition-opacity",
+          "group-hover:pointer-events-auto group-hover:opacity-100",
+          "focus-visible:pointer-events-auto focus-visible:opacity-100",
+          favorited && "pointer-events-auto text-warning opacity-100",
           agencyFocusRingClass,
         )}
+        onPointerDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
         onClick={(event) => {
           event.stopPropagation();
           onToggleFavorite();

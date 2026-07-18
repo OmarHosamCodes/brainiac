@@ -91,10 +91,17 @@ export function AgencyTaskChooserProjectRow({
         type="button"
         aria-label={favorited ? "Remove project from favorites" : "Add project to favorites"}
         className={cn(
-          "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
-          favorited && "text-warning opacity-100",
+          "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted",
+          "pointer-events-none opacity-0 transition-opacity",
+          "group-hover:pointer-events-auto group-hover:opacity-100",
+          "focus-visible:pointer-events-auto focus-visible:opacity-100",
+          favorited && "pointer-events-auto text-warning opacity-100",
           agencyFocusRingClass,
         )}
+        onPointerDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
         onClick={(event) => {
           event.stopPropagation();
           onToggleFavorite();
@@ -107,9 +114,16 @@ export function AgencyTaskChooserProjectRow({
           type="button"
           aria-label="Create task"
           className={cn(
-            "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-info opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100",
+            "inline-flex size-7 shrink-0 items-center justify-center rounded-md text-info",
+            "pointer-events-none opacity-0 transition-opacity",
+            "group-hover:pointer-events-auto group-hover:opacity-100",
+            "focus-visible:pointer-events-auto focus-visible:opacity-100",
             agencyFocusRingClass,
           )}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
           onClick={(event) => {
             event.stopPropagation();
             onCreateTask();

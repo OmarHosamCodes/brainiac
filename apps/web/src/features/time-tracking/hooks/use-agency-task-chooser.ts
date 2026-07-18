@@ -210,7 +210,10 @@ export function useAgencyTaskChooser(
     selectedTask?.projectId ?? null,
     open,
   );
-  const { isClientExpanded, toggleClient } = useAgencyChooserExpandedClients(open);
+  const { isClientExpanded, toggleClient } = useAgencyChooserExpandedClients(
+    triggerProject?.clientName || null,
+    open,
+  );
 
   const sections = useMemo(
     () =>
@@ -269,8 +272,14 @@ export function useAgencyTaskChooser(
   }
 
   function onOpenCreateTask(projectId: string) {
+    setOpen(false);
     setCreateTaskProjectId(projectId);
     setCreateTaskOpen(true);
+  }
+
+  function onOpenCreateProject() {
+    setOpen(false);
+    setCreateProjectOpen(true);
   }
 
   function onTaskCreated(taskId: string) {
@@ -310,7 +319,7 @@ export function useAgencyTaskChooser(
     searchInputRef,
     listRef,
     isProjectExpanded,
-    isClientExpanded,
+    isClientExpanded: (clientName) => Boolean(searchTerm.trim()) || isClientExpanded(clientName),
     onOpenChange: setOpen,
     onSearchChange: setSearchTerm,
     onSelectTask: selectTask,
@@ -327,7 +336,7 @@ export function useAgencyTaskChooser(
     templates,
     onOpenCreateTask,
     onCreateTaskOpenChange: setCreateTaskOpen,
-    onOpenCreateProject: () => setCreateProjectOpen(true),
+    onOpenCreateProject,
     onCreateProjectOpenChange: setCreateProjectOpen,
     onTaskCreated,
     onProjectCreated,
