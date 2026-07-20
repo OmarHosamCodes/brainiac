@@ -27,7 +27,6 @@ export type AgencyOpsProjectTemplateMilestone = {
   assigneeUserIds?: string[];
 };
 
-
 export const agencyOpsClient = pgTable(
   "agency_ops_client",
   {
@@ -288,7 +287,6 @@ export const agencyOpsProjectTaskBlueprint = pgTable(
   ],
 );
 
-
 export const agencyOpsTag = pgTable(
   "agency_ops_tag",
   {
@@ -378,9 +376,8 @@ export const agencyOpsActiveTimer = pgTable(
     teamId: text("team_id")
       .notNull()
       .references(() => workspaceTeam.id, { onDelete: "cascade" }),
-    projectId: text("project_id")
-      .notNull()
-      .references(() => agencyOpsProject.id, { onDelete: "cascade" }),
+    // Nullable so a timer can start before a project/task is chosen; entries still require a project.
+    projectId: text("project_id").references(() => agencyOpsProject.id, { onDelete: "cascade" }),
     taskId: text("task_id").references(() => agencyOpsProjectTask.id, { onDelete: "set null" }),
     userId: text("user_id")
       .notNull()

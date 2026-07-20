@@ -282,7 +282,7 @@ async function getActiveTimerByUser(userId: string) {
       updatedAt: agencyOpsActiveTimer.updatedAt,
     })
     .from(agencyOpsActiveTimer)
-    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+    .leftJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
     .leftJoin(agencyOpsProjectTask, eq(agencyOpsProjectTask.id, agencyOpsActiveTimer.taskId))
     .where(eq(agencyOpsActiveTimer.userId, userId))
     .limit(1);
@@ -297,10 +297,10 @@ async function getActiveTimerByUser(userId: string) {
     id: timer.id,
     teamId: timer.teamId,
     userId: timer.userId,
-    projectId: timer.projectId,
+    projectId: timer.projectId ?? "",
     taskId: timer.taskId,
     taskTitle: timer.taskTitle ?? null,
-    projectName: timer.projectName,
+    projectName: timer.projectName ?? "",
     description: timer.description,
     isBillable: timer.isBillable,
     tags,
@@ -381,8 +381,8 @@ export async function listAgencyActiveMembers(
     })
     .from(agencyOpsActiveTimer)
     .innerJoin(user, eq(user.id, agencyOpsActiveTimer.userId))
-    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
-    .innerJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
+    .leftJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+    .leftJoin(agencyOpsClient, eq(agencyOpsClient.id, agencyOpsProject.clientId))
     .where(eq(agencyOpsActiveTimer.teamId, input.teamId))
     .orderBy(asc(user.name));
 
@@ -391,8 +391,8 @@ export async function listAgencyActiveMembers(
       userId: row.userId,
       userName: row.userName ?? "Unknown",
       userAvatar: formatAvatarUrl(row.userAvatar),
-      projectName: row.projectName,
-      clientName: row.clientName,
+      projectName: row.projectName ?? "No project",
+      clientName: row.clientName ?? "No client",
       description: row.description,
       startedAt: row.startedAt.toISOString(),
     })),
@@ -413,7 +413,7 @@ export async function startAgencyTimer(
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
   const tagIds = await validateAgencyTagIds(input.teamId, input.tagIds);
 
-  let projectId = input.projectId;
+  let projectId: string | null = input.projectId ?? null;
   if (input.taskId) {
     const taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
     if (projectId && projectId !== taskProjectId) {
@@ -422,13 +422,11 @@ export async function startAgencyTimer(
       });
     }
     projectId = taskProjectId;
-  } else if (!projectId) {
-    throw new ORPCError("BAD_REQUEST", {
-      message: "projectId or taskId is required.",
-    });
   }
 
-  await getProjectByIdForTeam(input.teamId, projectId);
+  if (projectId) {
+    await getProjectByIdForTeam(input.teamId, projectId);
+  }
 
   const now = new Date();
 
@@ -450,38 +448,43 @@ export async function startAgencyTimer(
 
   await db.transaction(async (tx) => {
     if (existing) {
-      // Always save the previous timer — including project-only (no task) — so start
-      // never silently discards time when replacing an active run.
-      const durationSeconds = getDurationSeconds(existing.startedAt, now);
-      rolledOverEntryId = createWorkspaceId("agency-time");
-      const journeyStepId = await resolveJourneyStepIdForTask(existing.teamId, existing.taskId);
+      if (existing.projectId) {
+        // Save the previous timer — including project-only (no task) — so start
+        // never silently discards bound time when replacing an active run.
+        const durationSeconds = getDurationSeconds(existing.startedAt, now);
+        rolledOverEntryId = createWorkspaceId("agency-time");
+        const journeyStepId = await resolveJourneyStepIdForTask(existing.teamId, existing.taskId);
 
-      await tx.insert(agencyOpsTimeEntry).values({
-        id: rolledOverEntryId,
-        teamId: existing.teamId,
-        projectId: existing.projectId,
-        taskId: existing.taskId,
-        journeyStepId,
-        userId: actorUserId,
-        source: "timer",
-        description: existing.description,
-        isBillable: existing.isBillable,
-        startedAt: existing.startedAt,
-        endedAt: now,
-        durationSeconds,
-        createdAt: now,
-        updatedAt: now,
-      });
+        await tx.insert(agencyOpsTimeEntry).values({
+          id: rolledOverEntryId,
+          teamId: existing.teamId,
+          projectId: existing.projectId,
+          taskId: existing.taskId,
+          journeyStepId,
+          userId: actorUserId,
+          source: "timer",
+          description: existing.description,
+          isBillable: existing.isBillable,
+          startedAt: existing.startedAt,
+          endedAt: now,
+          durationSeconds,
+          createdAt: now,
+          updatedAt: now,
+        });
 
-      const previousTagIds = await tx
-        .select({ tagId: agencyOpsActiveTimerTag.tagId })
-        .from(agencyOpsActiveTimerTag)
-        .where(eq(agencyOpsActiveTimerTag.activeTimerId, existing.id));
-      if (previousTagIds.length > 0) {
-        await tx
-          .insert(agencyOpsTimeEntryTag)
-          .values(previousTagIds.map(({ tagId }) => ({ timeEntryId: rolledOverEntryId!, tagId })));
+        const previousTagIds = await tx
+          .select({ tagId: agencyOpsActiveTimerTag.tagId })
+          .from(agencyOpsActiveTimerTag)
+          .where(eq(agencyOpsActiveTimerTag.activeTimerId, existing.id));
+        if (previousTagIds.length > 0) {
+          await tx
+            .insert(agencyOpsTimeEntryTag)
+            .values(
+              previousTagIds.map(({ tagId }) => ({ timeEntryId: rolledOverEntryId!, tagId })),
+            );
+        }
       }
+      // Unbound previous timer can't become an entry (entries require a project).
 
       await tx.delete(agencyOpsActiveTimer).where(eq(agencyOpsActiveTimer.id, existing.id));
     }
@@ -529,7 +532,7 @@ export async function startAgencyTimer(
 
   await publishAgencyTimerUpdated(input.teamId, actorUserId, timer);
 
-  if (timer) {
+  if (timer?.projectId) {
     await notifyTimerActivity({
       teamId: input.teamId,
       actorUserId,
@@ -655,24 +658,24 @@ export async function stopAgencyTimer(
 
   let taskId = active.taskId ?? null;
   let entryProjectId = active.projectId;
-  if (input.taskId) {
-    const taskProjectId = await resolveTaskProjectId(active.teamId, input.taskId);
-    const binding = resolveAgencyTimerStopBinding({
-      activeProjectId: active.projectId,
-      activeTaskId: active.taskId,
-      inputTaskId: input.taskId,
-      inputTaskProjectId: taskProjectId,
-    });
-
-    taskId = binding.taskId;
-    entryProjectId = binding.projectId;
-  }
+  const binding = resolveAgencyTimerStopBinding({
+    activeProjectId: active.projectId,
+    activeTaskId: active.taskId,
+    ...(input.taskId
+      ? {
+          inputTaskId: input.taskId,
+          inputTaskProjectId: await resolveTaskProjectId(active.teamId, input.taskId),
+        }
+      : {}),
+  });
+  taskId = binding.taskId;
+  entryProjectId = binding.projectId;
 
   const now = new Date();
   let description = (input.description?.trim() || active.description || "").trim();
 
   // Project-only timers are allowed; fall back to the project name so stop/save never dead-ends.
-  if (!input.discard && !description) {
+  if (!input.discard && !description && entryProjectId) {
     const [project] = await db
       .select({ name: agencyOpsProject.name })
       .from(agencyOpsProject)
@@ -692,6 +695,18 @@ export async function stopAgencyTimer(
       timer: null,
       createdEntry: null,
     };
+  }
+
+  if (!entryProjectId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Choose a task before stopping the timer.",
+    });
+  }
+
+  if (!description) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Add a description before stopping the timer.",
+    });
   }
 
   const [entry] = await db.transaction(async (tx) => {
@@ -1443,7 +1458,7 @@ export async function getAgencyTimeSummary(
       description: agencyOpsActiveTimer.description,
     })
     .from(agencyOpsActiveTimer)
-    .innerJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
+    .leftJoin(agencyOpsProject, eq(agencyOpsProject.id, agencyOpsActiveTimer.projectId))
     .where(eq(agencyOpsActiveTimer.teamId, input.teamId));
 
   const activeTimerByUser = new Map(activeTimers.map((t) => [t.userId, t]));
@@ -1511,7 +1526,10 @@ export async function getAgencyTimeSummary(
           totalSeconds: totalSecondsPerMember.get(member.id) ?? 0,
           // Prefer the live timer over the last completed entry in-range.
           latestEntry: activeTimer
-            ? { projectName: activeTimer.projectName, description: activeTimer.description }
+            ? {
+                projectName: activeTimer.projectName ?? "No project",
+                description: activeTimer.description,
+              }
             : (latestEntryPerMember.get(member.id) ?? null),
         };
       }),

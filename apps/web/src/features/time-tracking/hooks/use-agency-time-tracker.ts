@@ -226,10 +226,14 @@ export function useAgencyTimeTracker({
     selectedTaskTitle,
     catalogTasks: tasks,
   });
-  const startProject = resolveAgencyTimerStartProject({
-    projects,
-    selectedTaskProjectId: cachedTask?.projectId ?? selectedTask?.projectId ?? null,
-  });
+  const startProject =
+    resolveAgencyTimerStartProject({
+      projects,
+      selectedTaskProjectId: cachedTask?.projectId ?? selectedTask?.projectId ?? null,
+    }) ??
+    (selectedProjectId
+      ? (projects.find((project) => project.id === selectedProjectId) ?? null)
+      : null);
   const activeTimerHasTask = Boolean(activeTimer?.taskId);
   useEffect(() => {
     if (!teamId) return;

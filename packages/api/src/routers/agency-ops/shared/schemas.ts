@@ -124,10 +124,11 @@ export const agencyActiveTimerSchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),
   userId: z.string().min(1),
-  projectId: z.string().min(1),
+  /** Empty when the timer was started before a project/task was chosen. */
+  projectId: z.string(),
   taskId: z.string().nullable(),
   taskTitle: z.string().nullable(),
-  projectName: z.string().min(1),
+  projectName: z.string(),
   tags: z.array(agencyTagSchema),
   description: z.string(),
   isBillable: z.boolean(),

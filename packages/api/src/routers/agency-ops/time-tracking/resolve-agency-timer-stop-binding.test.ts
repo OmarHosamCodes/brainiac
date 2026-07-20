@@ -53,4 +53,13 @@ describe("resolveAgencyTimerStopBinding", () => {
       }),
     ).toEqual({ projectId: "project-a", taskId: null });
   });
+
+  test("returns null binding when the timer is still unbound", () => {
+    expect(
+      resolveAgencyTimerStopBinding({
+        activeProjectId: null,
+        activeTaskId: null,
+      }),
+    ).toEqual({ projectId: null, taskId: null });
+  });
 });

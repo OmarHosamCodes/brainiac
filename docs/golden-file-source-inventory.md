@@ -1,6 +1,6 @@
 # Golden File Source Inventory
 
-Generated on 2026-07-16 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
+Generated on 2026-07-20 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
 
 ## Scope policy
 
@@ -19,16 +19,16 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 435 |
+| golden-feature | 439 |
 | server-operation | 12 |
-| shared-infrastructure | 231 |
+| shared-infrastructure | 233 |
 | static-presentation | 15 |
 
 ## Counts by domain
 
 | Domain | Artifacts |
 | --- | ---: |
-| agency-shared | 73 |
+| agency-shared | 76 |
 | agent | 34 |
 | api-platform | 13 |
 | architecture | 4 |
@@ -54,7 +54,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | settings | 1 |
 | task-management | 41 |
 | team | 18 |
-| time-tracking | 79 |
+| time-tracking | 82 |
 | web-platform | 73 |
 | workspace | 106 |
 
@@ -302,6 +302,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/shared/agency-sync.ts` | agency-shared | web-query | shared-infrastructure | agency-platform | Cross-cutting agency-shared web-query support rather than a feature-owned business workflow. | content: TanStack Query orchestration, React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/shared/agency-team-breadcrumb.tsx` | agency-shared | presentational-view | shared-infrastructure | agency-platform | Cross-cutting agency-shared presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/shared/agency-ui.ts` | agency-shared | presentational-view | shared-infrastructure | agency-platform | Cross-cutting agency-shared presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/shared/choosers/agency-chooser-expanded.test.ts` | agency-shared | test | shared-infrastructure | agency-platform | Cross-cutting agency-shared test support rather than a feature-owned business workflow. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/shared/choosers/agency-chooser-shell.ts` | agency-shared | presentational-view | shared-infrastructure | agency-platform | Cross-cutting agency-shared presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/shared/choosers/agency-member-chooser-container.tsx` | agency-shared | container | shared-infrastructure | agency-platform | Cross-cutting agency-shared container support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/shared/choosers/agency-member-chooser-view.tsx` | agency-shared | presentational-view | shared-infrastructure | agency-platform | Cross-cutting agency-shared presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -314,6 +315,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/shared/live/agency-live-connected.ts` | agency-shared | domain-logic | shared-infrastructure | agency-platform | Cross-cutting agency-shared domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/shared/live/agency-live-connection.test.ts` | agency-shared | test | shared-infrastructure | agency-platform | Cross-cutting agency-shared test support rather than a feature-owned business workflow. | content: Bun test declarations, server runtime wiring; structure: test filename |
 | `apps/web/src/features/shared/live/agency-live-connection.ts` | agency-shared | web-query | shared-infrastructure | agency-platform | Cross-cutting agency-shared web-query support rather than a feature-owned business workflow. | content: feature query orchestration, React component or hook code, server runtime wiring; structure: source role and exported behavior |
+| `apps/web/src/features/shared/live/agency-live-handlers.test.ts` | agency-shared | test | shared-infrastructure | agency-platform | Cross-cutting agency-shared test support rather than a feature-owned business workflow. | content: Bun test declarations, TanStack Query orchestration; structure: test filename |
 | `apps/web/src/features/shared/live/agency-live-handlers.ts` | agency-shared | web-query | shared-infrastructure | agency-platform | Cross-cutting agency-shared web-query support rather than a feature-owned business workflow. | content: feature query orchestration, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/shared/live/agency-presence-avatars.tsx` | agency-shared | web-query | shared-infrastructure | agency-platform | Cross-cutting agency-shared web-query support rather than a feature-owned business workflow. | content: feature query orchestration, React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/shared/project-palette.test.ts` | agency-shared | test | shared-infrastructure | agency-platform | Cross-cutting agency-shared test support rather than a feature-owned business workflow. | content: Bun test declarations; structure: test filename |
@@ -423,6 +425,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/time-tracking/time-entry-draft.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/time-tracking/timer-validation.test.ts` | time-tracking | test | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/time-tracking/timer-validation.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/time-tracking/tracker-draft.test.ts` | time-tracking | test | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/time-tracking/tracker-draft.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace/canvas/canvas-flow-context.tsx` | workspace | presentational-view | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace/canvas/canvas-types.ts` | workspace | domain-logic | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace/canvas/infinite-canvas.tsx` | workspace | presentational-view | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -591,6 +595,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/agency-ops/index.ts` | agency-shared | domain-logic | golden-feature | agency-platform | Feature-owned agency-shared artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/integrations/router.ts` | integrations | api-router | golden-feature | integrations-domain | Feature-owned integrations artifact in the canonical api-router layer. | content: Zod contracts, oRPC procedures or clients, exported declarations; structure: router role and procedure declarations |
 | `packages/api/src/routers/agency-ops/integrations/stubs-service.ts` | integrations | domain-logic | golden-feature | integrations-domain | Feature-owned integrations artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `packages/api/src/routers/agency-ops/live/live.test.ts` | agency-shared | test | golden-feature | agency-platform | Feature-owned agency-shared artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/api/src/routers/agency-ops/live/live.ts` | agency-shared | domain-logic | golden-feature | agency-platform | Feature-owned agency-shared artifact in the canonical domain-logic layer. | content: Zod contracts, exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agency-ops/live/router.ts` | agency-shared | api-router | golden-feature | agency-platform | Feature-owned agency-shared artifact in the canonical api-router layer. | content: oRPC procedures or clients, exported declarations; structure: router role and procedure declarations |
 | `packages/api/src/routers/agency-ops/project-templates/router.ts` | projects | api-router | golden-feature | projects-domain | Feature-owned projects artifact in the canonical api-router layer. | content: Zod contracts, oRPC procedures or clients, exported declarations; structure: router role and procedure declarations |
@@ -700,6 +705,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/db/src/migrations/0023_drop_agency_sprints.sql` | time-tracking | persistence-migration | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical persistence-migration layer. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0024_drop_agency_task_threads.sql` | task-management | persistence-migration | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical persistence-migration layer. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/0025_agency_chooser_foundation.sql` | projects | persistence-migration | golden-feature | projects-domain | Feature-owned projects artifact in the canonical persistence-migration layer. | content: SQL schema mutation statements; structure: ordered migration path |
+| `packages/db/src/migrations/0026_active_timer_nullable_project.sql` | time-tracking | persistence-migration | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical persistence-migration layer. | content: SQL schema mutation statements; structure: ordered migration path |
 | `packages/db/src/migrations/meta/0000_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0001_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |
 | `packages/db/src/migrations/meta/0002_snapshot.json` | database-platform | persistence-metadata | shared-infrastructure | data-platform | Cross-cutting database-platform persistence-metadata support rather than a feature-owned business workflow. | content: Drizzle migration metadata, JSON configuration or metadata; structure: migration metadata path |

@@ -15,12 +15,6 @@ export type AgencyActiveTimerRef = {
   projectId?: string;
 };
 
-export const AGENCY_LOCAL_DRAFT_TIMER_ID_PREFIX = "agency-active-timer-local-";
-
-export function isAgencyLocalDraftTimer(timer: { id: string } | null | undefined): boolean {
-  return Boolean(timer?.id.startsWith(AGENCY_LOCAL_DRAFT_TIMER_ID_PREFIX));
-}
-
 export function canStartAgencyTimer(input: {
   activeTimer: AgencyActiveTimerRef | null;
   project: AgencyTimerProjectRef | null;

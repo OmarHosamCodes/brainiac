@@ -131,7 +131,28 @@ const stopIfNeeded = await rpc(cookies, "agencyOps/timer/stop", {
 });
 console.log("stop-existing", stopIfNeeded.status, stopIfNeeded.text.slice(0, 200));
 
-// 1) Start without task, stop without task (project-only save)
+// 1) Start unbound (no project/task), then stop after binding a project via stop task
+const startUnbound = await rpc(cookies, "agencyOps/timer/start", {
+  teamId: team.id,
+  description: "",
+});
+console.log("start-unbound", startUnbound.status, startUnbound.text.slice(0, 200));
+
+const getUnbound = await rpc<{ json?: { timer?: { projectId?: string } } }>(
+  cookies,
+  "agencyOps/timer/getActive",
+  { teamId: team.id },
+);
+console.log("getActive-unbound", getUnbound.status, JSON.stringify(getUnbound.json)?.slice(0, 250));
+
+const stopUnbound = await rpc(cookies, "agencyOps/timer/stop", {
+  teamId: team.id,
+  description: "smoke-unbound",
+  discard: true,
+});
+console.log("discard-unbound", stopUnbound.status, stopUnbound.text.slice(0, 200));
+
+// 2) Start without task, stop without task (project-only save)
 const startNoTask = await rpc(cookies, "agencyOps/timer/start", {
   teamId: team.id,
   projectId: project.id,
@@ -171,6 +192,9 @@ const stopFinal = await rpc(cookies, "agencyOps/timer/stop", {
 console.log("stop-final", stopFinal.status, stopFinal.text.slice(0, 300));
 
 const ok =
+  startUnbound.status === 200 &&
+  Boolean((getUnbound.json as { json?: { timer?: { id?: string } } } | null)?.json?.timer) &&
+  stopUnbound.status === 200 &&
   stopNoTask.status === 200 &&
   startB.status === 200 &&
   Boolean((startB.json as { json?: { createdEntry?: unknown } } | null)?.json?.createdEntry) &&

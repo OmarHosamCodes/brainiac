@@ -6,7 +6,6 @@ import {
   getAgencyTimerStartBlockedMessage,
   getAgencyTimerStopBlockedMessage,
   getAgencyTimerStopButtonPresentation,
-  isAgencyLocalDraftTimer,
   resolveAgencyTimerStartProject,
   resolveAgencyTimerStopDescription,
   resolveAgencyTimerTaskRef,
@@ -100,13 +99,6 @@ describe("getAgencyTimerStopBlockedMessage", () => {
         description: "Work",
       }),
     ).toBeNull();
-  });
-});
-
-describe("isAgencyLocalDraftTimer", () => {
-  it("detects local draft timers by id prefix", () => {
-    expect(isAgencyLocalDraftTimer({ id: "agency-active-timer-local-123" })).toBe(true);
-    expect(isAgencyLocalDraftTimer({ id: "agency-active-timer-123" })).toBe(false);
   });
 });
 
