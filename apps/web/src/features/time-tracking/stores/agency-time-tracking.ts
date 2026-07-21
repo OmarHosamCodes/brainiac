@@ -439,8 +439,14 @@ function createAgencyTimeTrackingActions(
       return;
     }
 
+    let shouldPersist = false;
+
     set((s) => {
       const existing = s.trackerDraftsByTeam[teamId] ?? emptyTrackerDraft();
+      const nextTaskId = projectId === existing.projectId ? existing.taskId : "";
+      // Persist here only for project-only edits while already unbound.
+      // Task clears defer to setTrackerTaskId("") so we don't double-write.
+      shouldPersist = nextTaskId === "" && existing.taskId === "";
       return {
         ...s,
         trackerDraftsByTeam: {
@@ -448,12 +454,15 @@ function createAgencyTimeTrackingActions(
           [teamId]: {
             ...existing,
             projectId,
-            taskId: projectId === existing.projectId ? existing.taskId : "",
+            taskId: nextTaskId,
           },
         },
       };
     });
     mirrorTrackerDraftToActiveTimer(teamId);
+    if (shouldPersist) {
+      void persistActiveTimerTask(teamId);
+    }
   }
 
   function setTrackerTaskId(teamId: string, taskId: string) {
@@ -472,6 +481,41 @@ function createAgencyTimeTrackingActions(
       };
     });
     mirrorTrackerDraftToActiveTimer(teamId);
+    void persistActiveTimerTask(teamId);
+  }
+
+  async function persistActiveTimerTask(teamId: string) {
+    if (!teamId) {
+      return;
+    }
+
+    const draft = get().trackerDraftsByTeam[teamId];
+    const activeTimer = getActiveTimerForTeam(teamId);
+    if (!draft || !activeTimer || draft.syncedTimerId !== activeTimer.id) {
+      return;
+    }
+
+    const taskId = draft.taskId.trim() || null;
+    const projectId = draft.projectId.trim() || undefined;
+    const timerSnapshots = snapshotQueries(
+      [...activeTimerQueryRegistry.values()].map((entry) => entry.payload),
+    );
+
+    try {
+      const result = (await orpcClient.agencyOps.timer.updateTask({
+        teamId,
+        taskId,
+        ...(projectId ? { projectId } : {}),
+      })) as { timer: AgencyActiveTimer };
+
+      patchActiveTimerCaches(result.timer);
+    } catch (error) {
+      restoreQuerySnapshots(timerSnapshots);
+
+      toast.error("Unable to sync task", {
+        description: getErrorMessage(error, "Please try again."),
+      });
+    }
   }
 
   function setTrackerTagIds(teamId: string, tagIds: string[]) {

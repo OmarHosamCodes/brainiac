@@ -23,6 +23,7 @@ import { parseIsoDateTime } from "../shared/date-helpers";
 import { type ReportEntityFilterInput, applyReportEntityFilters } from "../shared/report-helpers";
 import { requireTeamMembership } from "../shared/membership";
 import { resolveAgencyTimerStopBinding } from "./resolve-agency-timer-stop-binding";
+import { resolveAgencyActiveTimerTaskBinding } from "./resolve-agency-active-timer-task-binding";
 import { publishAgencyTimerUpdated } from "../live/live";
 
 type AgencyTimeEntrySource = "timer" | "manual";
@@ -812,6 +813,80 @@ export async function updateAgencyActiveTimerDescription(
   await db
     .update(agencyOpsActiveTimer)
     .set({ description: input.description.trim(), updatedAt: now })
+    .where(eq(agencyOpsActiveTimer.id, active.id));
+
+  const timer = await getActiveTimerByUser(actorUserId);
+
+  if (!timer) {
+    throw new ORPCError("NOT_FOUND", { message: "No active timer." });
+  }
+
+  await publishAgencyTimerUpdated(input.teamId, actorUserId, timer);
+
+  return { timer };
+}
+
+export async function updateAgencyActiveTimerTask(
+  actorUserId: string,
+  input: {
+    teamId: string;
+    taskId: string | null;
+    projectId?: string;
+  },
+) {
+  const [active] = await db
+    .select({ id: agencyOpsActiveTimer.id, teamId: agencyOpsActiveTimer.teamId })
+    .from(agencyOpsActiveTimer)
+    .where(eq(agencyOpsActiveTimer.userId, actorUserId))
+    .limit(1);
+
+  if (!active) {
+    throw new ORPCError("NOT_FOUND", { message: "No active timer." });
+  }
+
+  await requireTeamMembership(actorUserId, active.teamId, "viewer");
+
+  if (active.teamId !== input.teamId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Active timer belongs to a different team.",
+    });
+  }
+
+  let taskProjectId: string | null | undefined;
+  if (input.taskId) {
+    taskProjectId = await resolveTaskProjectId(input.teamId, input.taskId);
+    if (input.projectId && input.projectId !== taskProjectId) {
+      throw new ORPCError("BAD_REQUEST", {
+        message: "taskId does not belong to the provided projectId.",
+      });
+    }
+  }
+
+  const binding = resolveAgencyActiveTimerTaskBinding({
+    taskId: input.taskId,
+    taskProjectId,
+    projectId: input.projectId,
+  });
+
+  if (binding.taskId && !binding.projectId) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "taskId requires a resolvable projectId.",
+    });
+  }
+
+  if (binding.projectId) {
+    await getProjectByIdForTeam(input.teamId, binding.projectId);
+  }
+
+  const now = new Date();
+
+  await db
+    .update(agencyOpsActiveTimer)
+    .set({
+      taskId: binding.taskId,
+      projectId: binding.projectId,
+      updatedAt: now,
+    })
     .where(eq(agencyOpsActiveTimer.id, active.id));
 
   const timer = await getActiveTimerByUser(actorUserId);
