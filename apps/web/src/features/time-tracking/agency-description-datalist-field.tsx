@@ -19,6 +19,8 @@ type AgencyDescriptionDatalistFieldProps = {
   placeholder?: string;
   disabled?: boolean;
   onValueChange: (value: string) => void;
+  /** Explicit suggestion pick — applies description + task/project. Typing never calls this. */
+  onSelectOption?: (option: DescriptionDatalistOption) => void;
   onFocus?: () => void;
   onBlur?: () => void;
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
@@ -30,6 +32,7 @@ export function AgencyDescriptionDatalistField({
   placeholder = "What are you working on?",
   disabled = false,
   onValueChange,
+  onSelectOption,
   onFocus,
   onBlur,
   onKeyDown,
@@ -55,7 +58,11 @@ export function AgencyDescriptionDatalistField({
   }
 
   function selectOption(option: DescriptionDatalistOption) {
-    onValueChange(option.description);
+    if (onSelectOption) {
+      onSelectOption(option);
+    } else {
+      onValueChange(option.description);
+    }
     setFocused(false);
   }
 

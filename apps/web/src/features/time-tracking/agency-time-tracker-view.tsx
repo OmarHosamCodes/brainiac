@@ -60,6 +60,7 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
         value={view.timerDescription}
         options={view.descriptionDatalistOptions}
         onValueChange={view.onDescriptionChange}
+        onSelectOption={view.onDescriptionSuggestionSelect}
         onFocus={view.onDescriptionFocus}
         onBlur={view.onDescriptionBlur}
         onKeyDown={view.onDescriptionKeyDown}
@@ -120,7 +121,10 @@ export function AgencyTimeTrackerView({ view }: AgencyTimeTrackerViewProps) {
 
         <div className={agencyTimeTrackerRailCellClass}>
           {view.activeTimer ? (
-            <Popover open={view.startTimeEditorOpen} onOpenChange={view.onStartTimeEditorOpenChange}>
+            <Popover
+              open={view.startTimeEditorOpen}
+              onOpenChange={view.onStartTimeEditorOpenChange}
+            >
               <PopoverAnchor asChild>
                 <div className="relative" data-elapsed-start-editor="">
                   <Input

@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
-import { buildDescriptionDatalistOptions, normalizeSuggestionText } from "./description-suggestions";
+import {
+  buildDescriptionDatalistOptions,
+  draftFromDescriptionSuggestion,
+  normalizeSuggestionText,
+} from "./description-suggestions";
 import { filterDescriptionDatalistOptions } from "./description-datalist";
 
 function entry(
@@ -63,6 +67,42 @@ describe("buildDescriptionDatalistOptions", () => {
     ]);
 
     expect(options).toHaveLength(1);
+  });
+});
+
+describe("draftFromDescriptionSuggestion", () => {
+  test("carries description, task, and project from an explicit pick", () => {
+    expect(
+      draftFromDescriptionSuggestion({
+        description: "Ship landing",
+        taskId: "task-1",
+        taskTitle: "Landing",
+        projectId: "proj-1",
+        projectName: "Alpha",
+        clientName: "Acme",
+      }),
+    ).toEqual({
+      description: "Ship landing",
+      taskId: "task-1",
+      projectId: "proj-1",
+    });
+  });
+
+  test("uses empty taskId when the suggestion has no task", () => {
+    expect(
+      draftFromDescriptionSuggestion({
+        description: "Ad hoc",
+        taskId: null,
+        taskTitle: null,
+        projectId: "proj-2",
+        projectName: "Beta",
+        clientName: "Globex",
+      }),
+    ).toEqual({
+      description: "Ad hoc",
+      taskId: "",
+      projectId: "proj-2",
+    });
   });
 });
 

@@ -22,6 +22,19 @@ export function normalizeSuggestionText(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+/** Draft fields to apply when the user explicitly picks a suggestion (not on typing). */
+export function draftFromDescriptionSuggestion(option: DescriptionDatalistOption): {
+  description: string;
+  taskId: string;
+  projectId: string;
+} {
+  return {
+    description: option.description,
+    taskId: option.taskId ?? "",
+    projectId: option.projectId,
+  };
+}
+
 /** Recent unique descriptions for datalist + styled suggestion panel. */
 export function buildDescriptionDatalistOptions(
   entries: DescriptionSuggestionEntry[],

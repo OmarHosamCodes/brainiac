@@ -11,7 +11,7 @@ import { setTrackingFavicon } from "@/lib/favicon";
 
 import {
   buildDescriptionDatalistOptions,
-  normalizeSuggestionText,
+  draftFromDescriptionSuggestion,
   type DescriptionDatalistOption,
 } from "@/features/time-tracking/description-suggestions";
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
@@ -119,6 +119,7 @@ export type AgencyTimeTrackerViewModel = {
   descriptionDatalistOptions: DescriptionDatalistOption[];
   trackerStatusLine: string;
   onDescriptionChange: (value: string) => void;
+  onDescriptionSuggestionSelect: (option: DescriptionDatalistOption) => void;
   onDescriptionFocus: () => void;
   onDescriptionBlur: () => void;
   onDescriptionKeyDown: (event: KeyboardEvent<HTMLInputElement>) => void;
@@ -413,22 +414,6 @@ export function useAgencyTimeTracker({
     [recentEntriesQuery.data?.items],
   );
 
-  const descriptionEntryByText = useMemo(() => {
-    const lookup = new Map<string, { taskId: string; projectId: string }>();
-
-    for (const entry of recentEntriesQuery.data?.items ?? []) {
-      const description = entry.description.trim() || entry.taskTitle?.trim() || "";
-      if (!description || !entry.taskId) continue;
-
-      const key = normalizeSuggestionText(description);
-      if (lookup.has(key)) continue;
-
-      lookup.set(key, { taskId: entry.taskId, projectId: entry.projectId });
-    }
-
-    return lookup;
-  }, [recentEntriesQuery.data?.items]);
-
   async function startTimer() {
     if (!teamId || !canStartTimer || activeTimer) return;
 
@@ -473,12 +458,13 @@ export function useAgencyTimeTracker({
 
   function handleDescriptionChange(value: string) {
     setTrackerDescription(teamId, value);
+  }
 
-    const match = descriptionEntryByText.get(normalizeSuggestionText(value));
-    if (!match) return;
-
-    setTrackerTaskId(teamId, match.taskId);
-    setTrackerProjectId(teamId, match.projectId);
+  function handleDescriptionSuggestionSelect(option: DescriptionDatalistOption) {
+    const draft = draftFromDescriptionSuggestion(option);
+    setTrackerDescription(teamId, draft.description);
+    setTrackerTaskId(teamId, draft.taskId);
+    setTrackerProjectId(teamId, draft.projectId);
   }
 
   function handleDescriptionKeyDown(event: KeyboardEvent<HTMLInputElement>) {
@@ -713,6 +699,7 @@ export function useAgencyTimeTracker({
     descriptionDatalistOptions,
     trackerStatusLine,
     onDescriptionChange: handleDescriptionChange,
+    onDescriptionSuggestionSelect: handleDescriptionSuggestionSelect,
     onDescriptionFocus: () => setDescriptionFocused(true),
     onDescriptionBlur: handleDescriptionBlur,
     onDescriptionKeyDown: handleDescriptionKeyDown,
