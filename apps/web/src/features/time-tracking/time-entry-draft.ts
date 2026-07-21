@@ -67,11 +67,7 @@ export function parseClockTimeLabel(
   options?: { preferMeridiem?: "AM" | "PM" | null },
 ): string | null {
   // Numpad decimal / locale comma often stands in for `:`.
-  const trimmed = value
-    .trim()
-    .toUpperCase()
-    .replace(/\s+/g, "")
-    .replace(/[.,]/g, ":");
+  const trimmed = value.trim().toUpperCase().replace(/\s+/g, "").replace(/[.,]/g, ":");
   if (!trimmed) return null;
 
   const match = /^(\d{1,4})(?::(\d{2}))?(AM|PM|A|P)?$/.exec(trimmed);

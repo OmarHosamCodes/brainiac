@@ -31,9 +31,7 @@ export function AgencyTaskChooserClientSection({
         onClick={onToggle}
         aria-expanded={expanded}
       >
-        <span className="min-w-0 truncate text-xs font-medium text-muted">
-          {clientName}
-        </span>
+        <span className="min-w-0 truncate text-xs font-medium text-muted">{clientName}</span>
         <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-normal text-dimmed tabular-nums">
           {projectCount} {projectCount === 1 ? "project" : "projects"}
           <ChevronDown

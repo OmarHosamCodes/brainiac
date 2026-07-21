@@ -39,10 +39,7 @@ function sortTasksByTitle(left: ChooserTask, right: ChooserTask) {
   return left.title.localeCompare(right.title);
 }
 
-function taskSearchableText(
-  task: ChooserTask,
-  project: ChooserProject | undefined,
-): string {
+function taskSearchableText(task: ChooserTask, project: ChooserProject | undefined): string {
   return [task.title, task.status, project?.name ?? "", project?.clientName ?? ""]
     .join(" ")
     .toLowerCase();
@@ -73,9 +70,7 @@ export function buildAgencyTaskChooserSections(input: {
     if (!filterQuery) return projectTasks;
     const projectMatched = projectSearchableText(project).includes(filterQuery);
     if (projectMatched) return projectTasks;
-    return projectTasks.filter((task) =>
-      taskSearchableText(task, project).includes(filterQuery),
-    );
+    return projectTasks.filter((task) => taskSearchableText(task, project).includes(filterQuery));
   }
 
   function projectMatchesSearch(project: ChooserProject, projectTasks: ChooserTask[]) {

@@ -30,10 +30,7 @@ export function AgencyTimeEntryPlayAction({
   return (
     <button
       type="button"
-      className={cn(
-        agencyTimeEntryIconButtonClass,
-        !canRestart && "cursor-not-allowed opacity-50",
-      )}
+      className={cn(agencyTimeEntryIconButtonClass, !canRestart && "cursor-not-allowed opacity-50")}
       disabled={!canRestart}
       aria-label={`Restart timer for ${entryLabel}`}
       onClick={onRestart}

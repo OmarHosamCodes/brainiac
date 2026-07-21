@@ -463,8 +463,9 @@ export function useAgencyTimeTracker({
   function handleDescriptionSuggestionSelect(option: DescriptionDatalistOption) {
     const draft = draftFromDescriptionSuggestion(option);
     setTrackerDescription(teamId, draft.description);
-    setTrackerTaskId(teamId, draft.taskId);
+    // Project before task: setTrackerProjectId clears taskId when project changes.
     setTrackerProjectId(teamId, draft.projectId);
+    setTrackerTaskId(teamId, draft.taskId);
   }
 
   function handleDescriptionKeyDown(event: KeyboardEvent<HTMLInputElement>) {

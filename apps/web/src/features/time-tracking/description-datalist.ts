@@ -5,12 +5,7 @@ import {
 
 function optionSearchText(option: DescriptionDatalistOption) {
   return normalizeSuggestionText(
-    [
-      option.description,
-      option.taskTitle ?? "",
-      option.projectName,
-      option.clientName,
-    ].join(" "),
+    [option.description, option.taskTitle ?? "", option.projectName, option.clientName].join(" "),
   );
 }
 
