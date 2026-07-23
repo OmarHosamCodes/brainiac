@@ -1,4 +1,7 @@
-import { AgencyTimeEntryDayGroupView } from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
+import {
+  AgencyTimeEntryDayGroupView,
+  type AgencyDayBulkDraft,
+} from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
 import {
   agencyTimeWeekGroupBodyClass,
   agencyTimeWeekGroupClass,
@@ -8,26 +11,56 @@ import {
 import { formatDuration } from "@/lib/utils/format-duration";
 import type { TimeEntryWeekGroup } from "@/features/time-tracking/group-time-entries";
 import type { AgencyTimeEntryGroupRowRenderer } from "@/features/time-tracking/entries/agency-time-entry-row-renderer";
+import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
+import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import { cn } from "@/lib/utils";
 
 type AgencyTimeEntryWeekGroupViewProps = {
+  teamId: string;
   week: TimeEntryWeekGroup;
   renderGroupRow: AgencyTimeEntryGroupRowRenderer;
   highlightedEntryId?: string | null;
   selectedEntryIds?: Set<string>;
   bulkEditDayKey?: string | null;
+  bulkFieldEditOpen?: boolean;
+  bulkDraft?: AgencyDayBulkDraft;
+  onBulkDraftChange?: (patch: Partial<AgencyDayBulkDraft>) => void;
   onToggleEntrySelected?: (entryIds: string[]) => void;
   onToggleDayBulkEdit?: (dateKey: string) => void;
+  onToggleBulkFieldEdit?: () => void;
+  onDeleteSelected?: (entryIds: string[]) => void;
+  onMarkSelectedAsWaste?: (entryIds: string[]) => void;
+  onApplyBulk?: () => void;
+  onCreateTag?: (name: string) => void;
+  tagCreatePending?: boolean;
+  tags?: AgencyTagOption[];
+  projects?: AgencyProject[];
+  tasks?: AgencyProjectTask[];
+  wastePending?: boolean;
 };
 
 export function AgencyTimeEntryWeekGroupView({
+  teamId,
   week,
   renderGroupRow,
   highlightedEntryId = null,
   selectedEntryIds,
   bulkEditDayKey = null,
+  bulkFieldEditOpen = false,
+  bulkDraft,
+  onBulkDraftChange,
   onToggleEntrySelected,
   onToggleDayBulkEdit,
+  onToggleBulkFieldEdit,
+  onDeleteSelected,
+  onMarkSelectedAsWaste,
+  onApplyBulk,
+  onCreateTag,
+  tagCreatePending,
+  tags,
+  projects,
+  tasks,
+  wastePending,
 }: AgencyTimeEntryWeekGroupViewProps) {
   return (
     <section className={agencyTimeWeekGroupClass}>
@@ -45,13 +78,27 @@ export function AgencyTimeEntryWeekGroupView({
         {week.days.map((day) => (
           <AgencyTimeEntryDayGroupView
             key={day.dateKey}
+            teamId={teamId}
             day={day}
             highlightedEntryId={highlightedEntryId}
             renderGroupRow={renderGroupRow}
             selectedEntryIds={selectedEntryIds}
             bulkEditActive={bulkEditDayKey === day.dateKey}
+            bulkFieldEditOpen={bulkFieldEditOpen && bulkEditDayKey === day.dateKey}
+            bulkDraft={bulkDraft}
+            onBulkDraftChange={onBulkDraftChange}
             onToggleEntrySelected={onToggleEntrySelected}
             onToggleDayBulkEdit={onToggleDayBulkEdit}
+            onToggleBulkFieldEdit={onToggleBulkFieldEdit}
+            onDeleteSelected={onDeleteSelected}
+            onMarkSelectedAsWaste={onMarkSelectedAsWaste}
+            onApplyBulk={onApplyBulk}
+            onCreateTag={onCreateTag}
+            tagCreatePending={tagCreatePending}
+            tags={tags}
+            projects={projects}
+            tasks={tasks}
+            wastePending={wastePending}
           />
         ))}
       </div>

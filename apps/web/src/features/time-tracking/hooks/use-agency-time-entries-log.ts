@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 
 import { useAgencyTimeEntriesLogStore } from "@/features/time-tracking/stores/agency-time-entries-log";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import {
+  invalidateAgencyTeamQueries,
   useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
@@ -29,8 +31,9 @@ import {
 } from "@/features/time-tracking/hooks/use-agency-tags";
 import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import type { AgencyDayBulkDraft } from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
+import { orpcClient } from "@/lib/orpc";
 
-const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
+const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 500] as const;
 const HIGHLIGHT_CLEAR_MS = 2_500;
 
 type UseAgencyTimeEntriesLogOptions = {
@@ -74,10 +77,15 @@ export type AgencyTimeEntriesLogViewModel = {
   ) => Promise<void>;
   selectedEntryIds: Set<string>;
   bulkEditDayKey: string | null;
+  bulkFieldEditOpen: boolean;
   bulkDraft: AgencyDayBulkDraft;
+  wastePending: boolean;
   onBulkDraftChange: (patch: Partial<AgencyDayBulkDraft>) => void;
   onToggleEntrySelected: (entryIds: string[]) => void;
   onToggleDayBulkEdit: (dateKey: string) => void;
+  onToggleBulkFieldEdit: () => void;
+  onDeleteSelected: (entryIds: string[]) => void;
+  onMarkSelectedAsWaste: (entryIds: string[]) => void;
   onApplyBulk: () => void;
   onCreateTag: (name: string) => void;
   onRequestOpenTaskChooser: () => void;
@@ -119,6 +127,8 @@ export function useAgencyTimeEntriesLog({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(() => new Set());
   const [bulkEditDayKey, setBulkEditDayKey] = useState<string | null>(null);
+  const [bulkFieldEditOpen, setBulkFieldEditOpen] = useState(false);
+  const [wastePending, setWastePending] = useState(false);
   const [bulkDraft, setBulkDraft] = useState<AgencyDayBulkDraft>({
     projectId: "",
     taskId: "",
@@ -300,9 +310,11 @@ export function useAgencyTimeEntriesLog({
     setBulkEditDayKey((current) => {
       if (current === dateKey) {
         setSelectedEntryIds(new Set());
+        setBulkFieldEditOpen(false);
         return null;
       }
       setSelectedEntryIds(new Set());
+      setBulkFieldEditOpen(false);
       setBulkDraft({
         projectId: "",
         taskId: "",
@@ -312,6 +324,61 @@ export function useAgencyTimeEntriesLog({
       });
       return dateKey;
     });
+  }
+
+  function toggleBulkFieldEdit() {
+    setBulkFieldEditOpen((current) => !current);
+  }
+
+  async function deleteSelected(entryIds: string[]) {
+    if (entryIds.length === 0) return;
+    await deleteGroupEntries(entryIds);
+    setSelectedEntryIds((current) => {
+      const next = new Set(current);
+      for (const entryId of entryIds) next.delete(entryId);
+      return next;
+    });
+    setBulkFieldEditOpen(false);
+  }
+
+  async function markSelectedAsWaste(entryIds: string[]) {
+    if (!teamId || entryIds.length === 0 || wastePending) return;
+
+    const taskIds = [
+      ...new Set(
+        entries
+          .filter((entry) => entryIds.includes(entry.id) && entry.taskId)
+          .map((entry) => entry.taskId as string),
+      ),
+    ];
+    if (taskIds.length === 0) {
+      toast.error("Couldn't mark as waste", {
+        description: "Selected entries need a task.",
+      });
+      return;
+    }
+
+    setWastePending(true);
+    try {
+      await Promise.all(
+        taskIds.map((taskId) =>
+          orpcClient.agencyOps.projectTasks.update({
+            teamId,
+            taskId,
+            isWaste: true,
+          }),
+        ),
+      );
+      void invalidateAgencyTeamQueries(teamId);
+      void entriesQuery.refetch();
+      toast.success(taskIds.length === 1 ? "Marked as waste" : `Marked ${taskIds.length} tasks as waste`);
+    } catch (error) {
+      toast.error("Couldn't mark as waste", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      setWastePending(false);
+    }
   }
 
   async function saveBulkPatch(
@@ -349,6 +416,7 @@ export function useAgencyTimeEntriesLog({
     if (Object.keys(patch).length === 0) return;
     await saveBulkPatch([...selectedEntryIds], patch);
     setSelectedEntryIds(new Set());
+    setBulkFieldEditOpen(false);
     setBulkEditDayKey(null);
   }
 
@@ -392,10 +460,15 @@ export function useAgencyTimeEntriesLog({
     onBulkPatch: saveBulkPatch,
     selectedEntryIds,
     bulkEditDayKey,
+    bulkFieldEditOpen,
     bulkDraft,
+    wastePending,
     onBulkDraftChange: (patch) => setBulkDraft((current) => ({ ...current, ...patch })),
     onToggleEntrySelected: toggleEntrySelected,
     onToggleDayBulkEdit: toggleDayBulkEdit,
+    onToggleBulkFieldEdit: toggleBulkFieldEdit,
+    onDeleteSelected: (entryIds) => void deleteSelected(entryIds),
+    onMarkSelectedAsWaste: (entryIds) => void markSelectedAsWaste(entryIds),
     onApplyBulk: () => void applyBulkPatch(),
     onCreateTag: createTag,
     onRequestOpenTaskChooser: requestOpenTaskChooser,

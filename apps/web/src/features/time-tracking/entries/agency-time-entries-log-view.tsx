@@ -77,13 +77,27 @@ export function AgencyTimeEntriesLogView({ view, renderGroupRow }: AgencyTimeEnt
             {view.weekGroups.map((week) => (
               <AgencyTimeEntryWeekGroupView
                 key={week.weekStartKey}
+                teamId={view.teamId}
                 week={week}
                 highlightedEntryId={view.highlightedEntryId}
                 renderGroupRow={renderGroupRow}
                 selectedEntryIds={view.selectedEntryIds}
                 bulkEditDayKey={view.bulkEditDayKey}
+                bulkFieldEditOpen={view.bulkFieldEditOpen}
+                bulkDraft={view.bulkDraft}
+                onBulkDraftChange={view.onBulkDraftChange}
                 onToggleEntrySelected={view.onToggleEntrySelected}
                 onToggleDayBulkEdit={view.onToggleDayBulkEdit}
+                onToggleBulkFieldEdit={view.onToggleBulkFieldEdit}
+                onDeleteSelected={view.onDeleteSelected}
+                onMarkSelectedAsWaste={view.onMarkSelectedAsWaste}
+                onApplyBulk={view.onApplyBulk}
+                onCreateTag={view.onCreateTag}
+                tagCreatePending={view.tagCreatePending}
+                tags={view.tags}
+                projects={view.projects}
+                tasks={view.tasks}
+                wastePending={view.wastePending}
               />
             ))}
           </div>

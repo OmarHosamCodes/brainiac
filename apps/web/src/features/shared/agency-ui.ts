@@ -436,10 +436,35 @@ export const agencyTimeEntryRailActionsClass =
 /** Day band — same rail geometry as rows so totals lock to the duration column. */
 export const agencyTimeEntrySectionHeaderClass = cn(
   "flex h-10 items-center border-b border-border/30 bg-muted/20 font-sans",
+  "motion-reduce:transition-none transition-colors duration-150",
 );
+
+/** Bulk mode with a selection — soft Operator Violet surface, still quiet. */
+export const agencyTimeEntrySectionHeaderBulkActiveClass = "border-b-primary/25 bg-primary/5";
 
 export const agencyTimeEntrySectionLabelClass = cn(
   "flex min-w-0 flex-1 items-center px-5 text-sm font-semibold text-highlighted",
+);
+
+/**
+ * Shared select column for day header + entry rows.
+ * pl-5 (20px) + 14px checkbox fits in w-[34px] under border-box.
+ */
+export const agencyTimeEntryBulkSelectColumnClass =
+  "flex w-[34px] shrink-0 items-center justify-start self-stretch pl-5";
+
+export const agencyTimeEntryBulkRowSelectedClass = "bg-primary/5";
+
+export const agencyTimeEntryBulkToolbarClass = cn(
+  "flex flex-wrap items-center gap-2 border-b border-primary/20 bg-primary/[0.04] px-4 py-2 sm:px-5",
+  "motion-reduce:transition-none transition-colors duration-150",
+);
+
+export const agencyTimeEntryBulkActionClass = cn(
+  "h-7 gap-1 rounded-md px-2 text-xs font-medium text-muted",
+  "hover:bg-elevated hover:text-highlighted",
+  agencyFocusRingClass,
+  "motion-reduce:transition-none",
 );
 
 /** One day block — solid surface so background gutters read as hard separation. */
