@@ -1,9 +1,6 @@
 import type { NotificationPayload } from "@orch/db/schema";
 
-import {
-  fanOutNotification,
-  listTeamMemberUserIds,
-} from "./service";
+import { fanOutNotification, listTeamMemberUserIds } from "./service";
 
 export async function notifyTaskAssigned(input: {
   teamId: string;
@@ -31,7 +28,6 @@ export async function notifyTaskAssigned(input: {
     },
   });
 }
-
 
 export async function notifyJourneyMilestone(input: {
   teamId: string;

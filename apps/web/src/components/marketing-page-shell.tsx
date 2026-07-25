@@ -9,7 +9,6 @@ import { useTheme } from "@/stores/theme";
 const footerNav = [
   { label: "Dashboard", to: "/dashboard" },
   { label: "Agency", to: "/agency" },
-  { label: "Marketplace", to: "/marketplace" },
   { label: "Pricing", to: "/#pricing" },
 ];
 

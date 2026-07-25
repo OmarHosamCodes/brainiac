@@ -255,7 +255,7 @@ export function formatRelativeReportTime(iso: string): string {
 export function sanitizeReportFileName(name: string): string {
   const trimmed = name.trim().slice(0, 120);
   const sanitized = trimmed
-    .replace(/[^\w\s·\-]/g, "")
+    .replace(/[^\w\s·-]/g, "")
     .replace(/\s+/g, " ")
     .trim();
   return sanitized.length > 0 ? sanitized : "report";

@@ -190,7 +190,7 @@ async function fetchOpenRouterModelCatalog() {
     })
     .catch(() => client.models.list());
   const models = sortCatalogModels(
-    response.data
+    response.result.data
       .map(toCatalogModel)
       .filter((model): model is OpenRouterCatalogModel => model !== null),
   );

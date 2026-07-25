@@ -1,10 +1,6 @@
 import { ORPCError } from "@orpc/server";
 import { db } from "@orch/db";
-import {
-  agencyOpsProject,
-  agencyOpsProjectTask,
-  agencyOpsUserFavorite,
-} from "@orch/db/schema";
+import { agencyOpsProject, agencyOpsProjectTask, agencyOpsUserFavorite } from "@orch/db/schema";
 import { and, asc, eq } from "drizzle-orm";
 import { createWorkspaceId } from "@orch/workspace";
 import { requireTeamMembership } from "../shared/membership";
@@ -77,7 +73,9 @@ export async function toggleAgencyFavorite(
     const [project] = await db
       .select({ id: agencyOpsProject.id })
       .from(agencyOpsProject)
-      .where(and(eq(agencyOpsProject.id, input.projectId), eq(agencyOpsProject.teamId, input.teamId)))
+      .where(
+        and(eq(agencyOpsProject.id, input.projectId), eq(agencyOpsProject.teamId, input.teamId)),
+      )
       .limit(1);
     if (!project) {
       throw new ORPCError("NOT_FOUND", { message: "Project was not found." });

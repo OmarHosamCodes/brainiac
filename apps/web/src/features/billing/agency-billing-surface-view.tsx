@@ -338,9 +338,7 @@ export function AgencyBillingSurfaceView({ viewModel }: AgencyBillingSurfaceView
                     </li>
                     <li className="flex items-start gap-2">
                       <CornerDownRight className="mt-0.5 size-3.5 shrink-0 text-dimmed" />
-                      <span>
-                        Send as PDF or push to QuickBooks · Xero from Settings · Integrations.
-                      </span>
+                      <span>Export invoices as PDF when you need to send them externally.</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CornerDownRight className="mt-0.5 size-3.5 shrink-0 text-dimmed" />

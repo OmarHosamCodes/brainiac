@@ -8,13 +8,6 @@
       "tests": ["agency-query-cache.test.ts"]
     },
     {
-      "type": "taskMessage.created",
-      "producer": "agency task-message service/live publisher",
-      "consumer": "task thread message store/cache",
-      "notification": "task-message notification fanout where applicable",
-      "tests": ["agency-task-messages-cache.test.ts", "stores/agency-task-messages.test.ts"]
-    },
-    {
       "type": "timer.updated",
       "producer": "time-tracking service/live publisher",
       "consumer": "shared agency timer and presence cache",

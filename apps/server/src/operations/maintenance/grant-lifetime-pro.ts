@@ -81,7 +81,7 @@ async function grantLifetimePro(email: string) {
     .limit(1);
 
   if (!existingUser) {
-    throw new Error(`No existing user found for \"${normalizedEmail}\".`);
+    throw new Error(`No existing user found for "${normalizedEmail}".`);
   }
 
   if (existingUser.lifetimePro) {

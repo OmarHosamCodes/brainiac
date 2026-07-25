@@ -551,7 +551,6 @@ export async function listTeamMemberUserIds(actorUserId: string | null, input: {
   return rows.map((row) => row.userId);
 }
 
-
 export async function emitTeamDigestNotification(
   actorUserId: string | null,
   input: {

@@ -51,7 +51,6 @@ export type AgencyOptimisticTask = {
   updatedAt: string;
 };
 
-
 export type AgencyOptimisticTag = {
   id: string;
   teamId: string;
@@ -161,7 +160,6 @@ type AgencyOptimisticState = {
     snapshot: AgencyListOverlay<AgencyOptimisticTimeEntry>,
   ) => void;
 
-
   setActiveTimer: (teamId: string, timer: AgencyOptimisticActiveTimer | null) => void;
   clearActiveTimer: (teamId: string) => void;
   snapshotActiveTimer: (teamId: string) => AgencyOptimisticActiveTimer | null | undefined;
@@ -187,7 +185,6 @@ type AgencyOptimisticState = {
 function contactKey(teamId: string, clientId: string) {
   return `${teamId}:${clientId}`;
 }
-
 
 function capacityKey(teamId: string, weekStart: string, userId: string) {
   return `${teamId}:${weekStart}:${userId}`;
@@ -517,7 +514,6 @@ export const useAgencyOptimisticStore = create<AgencyOptimisticState>((set, get)
   snapshotTimeEntries: (teamId) => structuredClone(getListOverlay(get().timeEntries, teamId)),
   restoreTimeEntries: (teamId, snapshot) =>
     set((state) => ({ timeEntries: setListOverlay(state.timeEntries, teamId, snapshot) })),
-
 
   setActiveTimer: (teamId, timer) =>
     set((state) => ({

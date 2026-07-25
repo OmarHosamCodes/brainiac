@@ -45,10 +45,7 @@ function normalizeMilestones(
   }));
 }
 
-export async function listAgencyProjectTemplates(
-  actorUserId: string,
-  input: { teamId: string },
-) {
+export async function listAgencyProjectTemplates(actorUserId: string, input: { teamId: string }) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
   const rows = await db

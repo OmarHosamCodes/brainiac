@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+import { QueryClient } from "@tanstack/react-query";
+
+import { bindQueryClient } from "@/lib/query-client";
 
 const createdWebSockets: MockWebSocket[] = [];
 const closeCalls: MockWebSocket[] = [];
@@ -24,16 +27,10 @@ function makeAsyncIterator(events: unknown[] = []) {
   };
 }
 
-mock.module("@/features/shared/agency-query-options", () => ({
-  refreshAgencyLiveGatedPolling: mock(() => {}),
-}));
-
 mock.module("@/lib/env", () => ({
   getServerUrl: () => "http://localhost:7000",
-}));
-
-mock.module("@/features/shared/live/agency-live-handlers", () => ({
-  handleAgencyLiveEvent: mock(() => {}),
+  getRpcBaseUrl: () => "http://localhost:7000",
+  getAuthBaseUrl: () => "http://localhost:7000",
 }));
 
 mock.module("@/features/shared/agency-live-rpc", () => ({
@@ -61,6 +58,8 @@ mock.module("@/features/shared/agency-live-rpc", () => ({
     closeCalls.push(websocket as unknown as MockWebSocket);
   }),
 }));
+
+bindQueryClient(new QueryClient());
 
 const { resetAgencyLiveConnectionsForTest, subscribeAgencyLive } =
   await import("./agency-live-connection");

@@ -1,7 +1,6 @@
 import type { AgencyLiveEvent } from "@orch/api/routers/agency-ops/live/live";
 import { useSyncExternalStore } from "react";
 
-import { handleAgencyLiveEvent } from "@/features/shared/live/agency-live-handlers";
 import {
   resetAgencyLiveConnectedForTest,
   setAgencyTeamLiveConnected,
@@ -17,6 +16,16 @@ import {
 
 const RECONNECT_BASE_MS = 1_000;
 const RECONNECT_MAX_MS = 15_000;
+
+// Lazy: avoid static connection → handlers → store/orpc → env cycle (Bun test load-order).
+let agencyLiveHandlersPromise: Promise<
+  typeof import("@/features/shared/live/agency-live-handlers")
+> | null = null;
+
+function loadAgencyLiveHandlers() {
+  agencyLiveHandlersPromise ??= import("@/features/shared/live/agency-live-handlers");
+  return agencyLiveHandlersPromise;
+}
 
 export type AgencyLiveListener = (event: AgencyLiveEvent) => void;
 
@@ -97,11 +106,12 @@ function closeConnectionWebSocket(connection: TeamLiveConnection, reason = "subs
   connection.websocket = null;
 }
 
-function fanOutEvent(teamId: string, event: AgencyLiveEvent) {
+async function fanOutEvent(teamId: string, event: AgencyLiveEvent) {
   const connection = teamConnections.get(teamId);
   if (!connection) {
     return;
   }
+  const { handleAgencyLiveEvent } = await loadAgencyLiveHandlers();
   handleAgencyLiveEvent(teamId, event);
   for (const listener of connection.listeners) {
     listener(event);
@@ -184,7 +194,7 @@ async function startTeamSubscription(teamId: string, generation: number) {
       ) {
         break;
       }
-      fanOutEvent(teamId, event as AgencyLiveEvent);
+      await fanOutEvent(teamId, event as AgencyLiveEvent);
     }
 
     if (

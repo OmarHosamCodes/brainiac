@@ -51,7 +51,6 @@ const SEED_USERS: SeedUserDefinition[] = [
 
 const DEFAULT_SEED_PASSWORD = "orch1234";
 
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -410,7 +409,6 @@ type TaskDef = {
   dueDate: Date | null;
 };
 
-
 function buildSeedData(ctx: SeedContext, scale: AgencySeedScale = "default") {
   const { now, members } = ctx;
 
@@ -621,7 +619,6 @@ function buildSeedData(ctx: SeedContext, scale: AgencySeedScale = "default") {
   const base = { clients, projects, tasks, timeEntries };
   return scale === "massive" ? appendMassiveAgencyData(ctx, base) : base;
 }
-
 
 async function seedAgencyData(ctx: SeedContext, scale: AgencySeedScale = "default") {
   const s = spinner();

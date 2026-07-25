@@ -1,5 +1,5 @@
 import { AlertTriangle, BarChart3, X } from "lucide-react";
-import { useId, useState, type CSSProperties } from "react";
+import { type CSSProperties } from "react";
 
 import { AgencyProjectHueDot } from "@/features/shared/agency-project-hue-dot";
 import {
@@ -361,13 +361,14 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
     sortedTeamMembers,
     sortedRankedProjects,
     isDark,
+    hourBreakdownOpen,
+    setHourBreakdownOpen,
+    totalButtonId,
+    breakdownPanelId,
     onSelectProject,
     onSelectClient,
     refetch,
   } = viewModel;
-  const [hourBreakdownOpen, setHourBreakdownOpen] = useState(false);
-  const totalButtonId = useId();
-  const breakdownPanelId = useId();
 
   if (isLoading) {
     return (

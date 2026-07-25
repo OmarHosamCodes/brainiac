@@ -14,6 +14,7 @@ import { AppShellNotifications } from "@/features/app-shell/app-shell-notificati
 import { AppShellPortal } from "@/features/app-shell/app-shell-portal";
 import { BrandMark } from "@/features/app-shell/components/brand-mark";
 import { AppShellTeamControl } from "@/features/app-shell/app-shell-team-control";
+import { AppShellUpdateControl } from "@/features/app-shell/app-shell-update-control";
 import { Button } from "@/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/ui/sheet";
 import {
@@ -186,6 +187,7 @@ export function AppShellTopbar() {
         </div>
 
         <div className={shellUtilityClusterClass}>
+          <AppShellUpdateControl />
           <AppShellNotifications />
           <AppShellAccountMenu />
         </div>

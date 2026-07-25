@@ -4,13 +4,12 @@ Audited 2026-07-10 against `packages/api/src/routers/agency-ops/live/live.ts` an
 
 The machine-readable source of this table is [`golden-file-realtime-integration-registry.json`](golden-file-realtime-integration-registry.json), verified by `bun run check:realtime`.
 
-| Event                  | Producer                                   | Consumer/cache owner                                     | Notification path                                   | Tests                                                                       |
-| ---------------------- | ------------------------------------------ | -------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------- |
-| `journey.step.updated` | Agency journey service/live publisher      | Task-management live sync; journey/project query refetch | None                                                | Live connection tests; journey query-key predicate contract test            |
-| `taskMessage.created`  | Agency task-message service/live publisher | Task thread message cache                                | Task-message notification fanout where applicable   | `agency-task-messages-cache.test.ts`, `stores/agency-task-messages.test.ts` |
-| `timer.updated`        | Time-tracking service/live publisher       | Shared agency query cache and presence members           | Timer activity fanout                               | `agency-query-cache.test.ts`, live connection tests                         |
-| `task.updated`         | Task service/live publisher                | Shared agency task cache                                 | Task assignment/message fanout where applicable     | `agency-query-cache.test.ts`, live connection tests                         |
-| `notification.created` | Notifications service/live bridge          | Notifications query cache and unread count               | Push/in-app delivery owned by notifications service | Fanout tests, live connection tests, `notifications-queries.test.ts`        |
+| Event                  | Producer                              | Consumer/cache owner                                     | Notification path                                   | Tests                                                                |
+| ---------------------- | ------------------------------------- | -------------------------------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------- |
+| `journey.step.updated` | Agency journey service/live publisher | Task-management live sync; journey/project query refetch | None                                                | Live connection tests; journey query-key predicate contract test     |
+| `timer.updated`        | Time-tracking service/live publisher  | Shared agency query cache and presence members           | Timer activity fanout                               | `agency-query-cache.test.ts`, live connection tests                  |
+| `task.updated`         | Task service/live publisher           | Shared agency task cache                                 | Task assignment/message fanout where applicable     | `agency-query-cache.test.ts`, live connection tests                  |
+| `notification.created` | Notifications service/live bridge     | Notifications query cache and unread count               | Push/in-app delivery owned by notifications service | Fanout tests, live connection tests, `notifications-queries.test.ts` |
 
 ## Rules
 

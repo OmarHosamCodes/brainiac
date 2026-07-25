@@ -177,7 +177,6 @@ export function taskVisibleToAssignee(
   return task.assignees.some((assignee) => assignee.userId === assigneeUserId);
 }
 
-
 export const agencyTimeEntrySchema = z.object({
   id: z.string().min(1),
   teamId: z.string().min(1),

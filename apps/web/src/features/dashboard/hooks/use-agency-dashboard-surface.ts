@@ -1,5 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useMemo } from "react";
+import { useId, useMemo, useState } from "react";
 
 import type { AgencyTimeRangeFilters } from "@/features/shared/use-agency-time-range-filters";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
@@ -26,6 +26,9 @@ export function useAgencyDashboardSurface({
     filters;
   const { members: presenceMembers } = useAgencyPresenceMembers(teamId);
   const { isDark } = useTheme();
+  const [hourBreakdownOpen, setHourBreakdownOpen] = useState(false);
+  const totalButtonId = useId();
+  const breakdownPanelId = useId();
 
   const dashboardQuery = useQuery({
     ...orpc.agencyOps.reports.dashboard.queryOptions({
@@ -78,6 +81,10 @@ export function useAgencyDashboardSurface({
     sortedTeamMembers,
     sortedRankedProjects,
     isDark,
+    hourBreakdownOpen,
+    setHourBreakdownOpen,
+    totalButtonId,
+    breakdownPanelId,
     onSelectProject,
     onSelectClient,
     refetch: () => {

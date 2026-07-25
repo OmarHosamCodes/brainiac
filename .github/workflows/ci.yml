@@ -33,3 +33,6 @@ jobs:
 
       - name: Typecheck
         run: bun run check-types
+
+      - name: Unit tests
+        run: bun test --path-ignore-patterns '**/*.integration.test.ts'

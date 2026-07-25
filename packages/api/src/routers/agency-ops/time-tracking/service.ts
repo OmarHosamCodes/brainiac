@@ -22,6 +22,14 @@ import { getProjectByIdForTeam } from "../shared/lookup-helpers";
 import { parseIsoDateTime } from "../shared/date-helpers";
 import { type ReportEntityFilterInput, applyReportEntityFilters } from "../shared/report-helpers";
 import { requireTeamMembership } from "../shared/membership";
+import { groupTimeEntryTagRows } from "./group-time-entry-tag-rows";
+import {
+  addDaysToDateKey,
+  getLocalWeekBounds,
+  getLocalWeekStartKeyFromDateKey,
+  localDateKeyFromInstant,
+  localInstantFromDateKey,
+} from "./local-week-bounds";
 import { resolveAgencyTimerStopBinding } from "./resolve-agency-timer-stop-binding";
 import { resolveAgencyActiveTimerTaskBinding } from "./resolve-agency-active-timer-task-binding";
 import { publishAgencyTimerUpdated } from "../live/live";
@@ -151,9 +159,14 @@ function mapAgencyTagRow(row: {
   };
 }
 
-async function listTagsForTimeEntry(timeEntryId: string) {
+async function listTagsByTimeEntryIds(timeEntryIds: string[]) {
+  if (timeEntryIds.length === 0) {
+    return new Map<string, AgencyTagRecord[]>();
+  }
+
   const rows = await db
     .select({
+      timeEntryId: agencyOpsTimeEntryTag.timeEntryId,
       id: agencyOpsTag.id,
       teamId: agencyOpsTag.teamId,
       name: agencyOpsTag.name,
@@ -162,10 +175,17 @@ async function listTagsForTimeEntry(timeEntryId: string) {
     })
     .from(agencyOpsTimeEntryTag)
     .innerJoin(agencyOpsTag, eq(agencyOpsTag.id, agencyOpsTimeEntryTag.tagId))
-    .where(eq(agencyOpsTimeEntryTag.timeEntryId, timeEntryId))
+    .where(inArray(agencyOpsTimeEntryTag.timeEntryId, timeEntryIds))
     .orderBy(asc(agencyOpsTag.name));
 
-  return rows.map(mapAgencyTagRow);
+  return groupTimeEntryTagRows(
+    rows.map(({ timeEntryId, ...tag }) => ({ timeEntryId, tag: mapAgencyTagRow(tag) })),
+  );
+}
+
+async function listTagsForTimeEntry(timeEntryId: string) {
+  const grouped = await listTagsByTimeEntryIds([timeEntryId]);
+  return grouped.get(timeEntryId) ?? [];
 }
 
 async function listTagsForActiveTimer(activeTimerId: string) {
@@ -201,68 +221,6 @@ async function validateAgencyTagIds(teamId: string, tagIds: string[] | undefined
   }
 
   return uniqueTagIds;
-}
-
-/** Local calendar date (YYYY-MM-DD) for an instant using JS getTimezoneOffset() semantics. */
-function localDateKeyFromInstant(instant: Date, utcOffsetMinutes: number): string {
-  const localMs = instant.getTime() - utcOffsetMinutes * 60_000;
-  const local = new Date(localMs);
-  const year = local.getUTCFullYear();
-  const month = String(local.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(local.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function addDaysToDateKey(dateKey: string, days: number): string {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const next = new Date(Date.UTC(year!, month! - 1, day! + days));
-  const nextYear = next.getUTCFullYear();
-  const nextMonth = String(next.getUTCMonth() + 1).padStart(2, "0");
-  const nextDay = String(next.getUTCDate()).padStart(2, "0");
-  return `${nextYear}-${nextMonth}-${nextDay}`;
-}
-
-function getLocalWeekStartKeyFromDateKey(dateKey: string): string {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const date = new Date(Date.UTC(year!, month! - 1, day!));
-  const dayOfWeek = date.getUTCDay();
-  const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  date.setUTCDate(date.getUTCDate() + diff);
-  const weekYear = date.getUTCFullYear();
-  const weekMonth = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const weekDay = String(date.getUTCDate()).padStart(2, "0");
-  return `${weekYear}-${weekMonth}-${weekDay}`;
-}
-
-function localInstantFromDateKey(
-  dateKey: string,
-  utcOffsetMinutes: number,
-  endOfDay = false,
-): Date {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  const ms =
-    Date.UTC(
-      year!,
-      month! - 1,
-      day!,
-      endOfDay ? 23 : 0,
-      endOfDay ? 59 : 0,
-      endOfDay ? 59 : 0,
-      endOfDay ? 999 : 0,
-    ) +
-    utcOffsetMinutes * 60_000;
-  return new Date(ms);
-}
-
-function getLocalWeekBounds(anchor: Date, utcOffsetMinutes: number) {
-  const anchorDateKey = localDateKeyFromInstant(anchor, utcOffsetMinutes);
-  const weekStartKey = getLocalWeekStartKeyFromDateKey(anchorDateKey);
-  const weekEndKey = addDaysToDateKey(weekStartKey, 6);
-  return {
-    weekStartKey,
-    weekStart: localInstantFromDateKey(weekStartKey, utcOffsetMinutes),
-    weekEnd: localInstantFromDateKey(weekEndKey, utcOffsetMinutes, true),
-  };
 }
 
 async function getActiveTimerByUser(userId: string) {
@@ -1004,9 +962,8 @@ export async function listMyAgencyTimeEntries(
     .limit(pageSize)
     .offset(offset);
 
-  const items = await Promise.all(
-    rows.map(async (row) => mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id))),
-  );
+  const tagsByEntryId = await listTagsByTimeEntryIds(rows.map((row) => row.id));
+  const items = rows.map((row) => mapAgencyTimeEntryRow(row, tagsByEntryId.get(row.id) ?? []));
 
   // Count total for pagination
   const [countRow] = await db
@@ -1678,9 +1635,8 @@ export async function listAllAgencyTimeEntries(
     .limit(pageSize)
     .offset(offset);
 
-  const items = await Promise.all(
-    rows.map(async (row) => mapAgencyTimeEntryRow(row, await listTagsForTimeEntry(row.id))),
-  );
+  const tagsByEntryId = await listTagsByTimeEntryIds(rows.map((row) => row.id));
+  const items = rows.map((row) => mapAgencyTimeEntryRow(row, tagsByEntryId.get(row.id) ?? []));
 
   const [countRow] = await db
     .select({ count: sql<number>`count(*)` })

@@ -371,7 +371,9 @@ export function useAgencyTimeEntriesLog({
       );
       void invalidateAgencyTeamQueries(teamId);
       void entriesQuery.refetch();
-      toast.success(taskIds.length === 1 ? "Marked as waste" : `Marked ${taskIds.length} tasks as waste`);
+      toast.success(
+        taskIds.length === 1 ? "Marked as waste" : `Marked ${taskIds.length} tasks as waste`,
+      );
     } catch (error) {
       toast.error("Couldn't mark as waste", {
         description: getErrorMessage(error, "Try again."),

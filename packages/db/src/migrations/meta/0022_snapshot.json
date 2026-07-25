@@ -146,12 +146,8 @@
           "name": "agency_ops_active_timer_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_active_timer",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -159,12 +155,8 @@
           "name": "agency_ops_active_timer_project_id_agency_ops_project_id_fk",
           "tableFrom": "agency_ops_active_timer",
           "tableTo": "agency_ops_project",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -172,12 +164,8 @@
           "name": "agency_ops_active_timer_task_id_agency_ops_project_task_id_fk",
           "tableFrom": "agency_ops_active_timer",
           "tableTo": "agency_ops_project_task",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -185,12 +173,8 @@
           "name": "agency_ops_active_timer_user_id_user_id_fk",
           "tableFrom": "agency_ops_active_timer",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -255,12 +239,8 @@
           "name": "agency_ops_active_timer_tag_active_timer_id_agency_ops_active_timer_id_fk",
           "tableFrom": "agency_ops_active_timer_tag",
           "tableTo": "agency_ops_active_timer",
-          "columnsFrom": [
-            "active_timer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["active_timer_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -268,12 +248,8 @@
           "name": "agency_ops_active_timer_tag_tag_id_agency_ops_tag_id_fk",
           "tableFrom": "agency_ops_active_timer_tag",
           "tableTo": "agency_ops_tag",
-          "columnsFrom": [
-            "tag_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tag_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -281,10 +257,7 @@
       "compositePrimaryKeys": {
         "agency_ops_active_timer_tag_active_timer_id_tag_id_pk": {
           "name": "agency_ops_active_timer_tag_active_timer_id_tag_id_pk",
-          "columns": [
-            "active_timer_id",
-            "tag_id"
-          ]
+          "columns": ["active_timer_id", "tag_id"]
         }
       },
       "uniqueConstraints": {},
@@ -425,12 +398,8 @@
           "name": "agency_ops_client_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_client",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -438,12 +407,8 @@
           "name": "agency_ops_client_created_by_user_id_user_id_fk",
           "tableFrom": "agency_ops_client",
           "tableTo": "user",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -549,12 +514,8 @@
           "name": "agency_ops_client_contact_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_client_contact",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -562,12 +523,8 @@
           "name": "agency_ops_client_contact_client_id_agency_ops_client_id_fk",
           "tableFrom": "agency_ops_client_contact",
           "tableTo": "agency_ops_client",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["client_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -757,12 +714,8 @@
           "name": "agency_ops_invoice_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_invoice",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -770,12 +723,8 @@
           "name": "agency_ops_invoice_client_id_agency_ops_client_id_fk",
           "tableFrom": "agency_ops_invoice",
           "tableTo": "agency_ops_client",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["client_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -783,12 +732,8 @@
           "name": "agency_ops_invoice_created_by_user_id_user_id_fk",
           "tableFrom": "agency_ops_invoice",
           "tableTo": "user",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -886,12 +831,8 @@
           "name": "agency_ops_invoice_line_item_invoice_id_agency_ops_invoice_id_fk",
           "tableFrom": "agency_ops_invoice_line_item",
           "tableTo": "agency_ops_invoice",
-          "columnsFrom": [
-            "invoice_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invoice_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -899,12 +840,8 @@
           "name": "agency_ops_invoice_line_item_project_id_agency_ops_project_id_fk",
           "tableFrom": "agency_ops_invoice_line_item",
           "tableTo": "agency_ops_project",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1035,12 +972,8 @@
           "name": "agency_ops_member_capacity_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_member_capacity",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1048,12 +981,8 @@
           "name": "agency_ops_member_capacity_user_id_user_id_fk",
           "tableFrom": "agency_ops_member_capacity",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1170,12 +1099,8 @@
           "name": "agency_ops_member_rate_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_member_rate",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1183,12 +1108,8 @@
           "name": "agency_ops_member_rate_user_id_user_id_fk",
           "tableFrom": "agency_ops_member_rate",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1311,12 +1232,8 @@
           "name": "agency_ops_member_tenure_profile_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_member_tenure_profile",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1324,12 +1241,8 @@
           "name": "agency_ops_member_tenure_profile_user_id_user_id_fk",
           "tableFrom": "agency_ops_member_tenure_profile",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1432,12 +1345,8 @@
           "name": "agency_ops_project_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_project",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1445,12 +1354,8 @@
           "name": "agency_ops_project_client_id_agency_ops_client_id_fk",
           "tableFrom": "agency_ops_project",
           "tableTo": "agency_ops_client",
-          "columnsFrom": [
-            "client_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["client_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         },
@@ -1458,12 +1363,8 @@
           "name": "agency_ops_project_created_by_user_id_user_id_fk",
           "tableFrom": "agency_ops_project",
           "tableTo": "user",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1527,12 +1428,8 @@
           "name": "agency_ops_project_journey_project_id_agency_ops_project_id_fk",
           "tableFrom": "agency_ops_project_journey",
           "tableTo": "agency_ops_project",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1663,12 +1560,8 @@
           "name": "agency_ops_project_journey_step_journey_id_agency_ops_project_journey_id_fk",
           "tableFrom": "agency_ops_project_journey_step",
           "tableTo": "agency_ops_project_journey",
-          "columnsFrom": [
-            "journey_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["journey_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1676,12 +1569,8 @@
           "name": "agency_ops_project_journey_step_task_id_agency_ops_project_task_id_fk",
           "tableFrom": "agency_ops_project_journey_step",
           "tableTo": "agency_ops_project_task",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1938,12 +1827,8 @@
           "name": "agency_ops_project_task_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_project_task",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1951,12 +1836,8 @@
           "name": "agency_ops_project_task_project_id_agency_ops_project_id_fk",
           "tableFrom": "agency_ops_project_task",
           "tableTo": "agency_ops_project",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1964,12 +1845,8 @@
           "name": "agency_ops_project_task_created_by_user_id_user_id_fk",
           "tableFrom": "agency_ops_project_task",
           "tableTo": "user",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2062,12 +1939,8 @@
           "name": "agency_ops_project_task_assignee_task_id_agency_ops_project_task_id_fk",
           "tableFrom": "agency_ops_project_task_assignee",
           "tableTo": "agency_ops_project_task",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2075,12 +1948,8 @@
           "name": "agency_ops_project_task_assignee_user_id_user_id_fk",
           "tableFrom": "agency_ops_project_task_assignee",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2199,12 +2068,8 @@
           "name": "agency_ops_project_task_blueprint_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_project_task_blueprint",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2212,12 +2077,8 @@
           "name": "agency_ops_project_task_blueprint_task_id_agency_ops_project_task_id_fk",
           "tableFrom": "agency_ops_project_task_blueprint",
           "tableTo": "agency_ops_project_task",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2225,12 +2086,8 @@
           "name": "agency_ops_project_task_blueprint_user_id_user_id_fk",
           "tableFrom": "agency_ops_project_task_blueprint",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2356,12 +2213,8 @@
           "name": "agency_ops_project_task_member_status_task_id_agency_ops_project_task_id_fk",
           "tableFrom": "agency_ops_project_task_member_status",
           "tableTo": "agency_ops_project_task",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2369,12 +2222,8 @@
           "name": "agency_ops_project_task_member_status_user_id_user_id_fk",
           "tableFrom": "agency_ops_project_task_member_status",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2565,12 +2414,8 @@
           "name": "agency_ops_report_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_report",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2578,12 +2423,8 @@
           "name": "agency_ops_report_created_by_user_id_user_id_fk",
           "tableFrom": "agency_ops_report",
           "tableTo": "user",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2591,12 +2432,8 @@
           "name": "agency_ops_report_updated_by_user_id_user_id_fk",
           "tableFrom": "agency_ops_report",
           "tableTo": "user",
-          "columnsFrom": [
-            "updated_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["updated_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2693,12 +2530,8 @@
           "name": "agency_ops_report_activity_report_id_agency_ops_report_id_fk",
           "tableFrom": "agency_ops_report_activity",
           "tableTo": "agency_ops_report",
-          "columnsFrom": [
-            "report_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["report_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2706,12 +2539,8 @@
           "name": "agency_ops_report_activity_actor_user_id_user_id_fk",
           "tableFrom": "agency_ops_report_activity",
           "tableTo": "user",
-          "columnsFrom": [
-            "actor_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["actor_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2808,12 +2637,8 @@
           "name": "agency_ops_tag_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_tag",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2821,12 +2646,8 @@
           "name": "agency_ops_tag_created_by_user_id_user_id_fk",
           "tableFrom": "agency_ops_tag",
           "tableTo": "user",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2948,12 +2769,8 @@
           "name": "agency_ops_task_attachment_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_task_attachment",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2961,12 +2778,8 @@
           "name": "agency_ops_task_attachment_message_id_agency_ops_task_message_id_fk",
           "tableFrom": "agency_ops_task_attachment",
           "tableTo": "agency_ops_task_message",
-          "columnsFrom": [
-            "message_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["message_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3105,12 +2918,8 @@
           "name": "agency_ops_task_message_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_task_message",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3118,12 +2927,8 @@
           "name": "agency_ops_task_message_thread_id_agency_ops_task_thread_id_fk",
           "tableFrom": "agency_ops_task_message",
           "tableTo": "agency_ops_task_thread",
-          "columnsFrom": [
-            "thread_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["thread_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3131,12 +2936,8 @@
           "name": "agency_ops_task_message_user_id_user_id_fk",
           "tableFrom": "agency_ops_task_message",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3221,12 +3022,8 @@
           "name": "agency_ops_task_thread_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_task_thread",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3234,12 +3031,8 @@
           "name": "agency_ops_task_thread_task_id_agency_ops_project_task_id_fk",
           "tableFrom": "agency_ops_task_thread",
           "tableTo": "agency_ops_project_task",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3358,12 +3151,8 @@
           "name": "agency_ops_tenure_policy_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_tenure_policy",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3535,12 +3324,8 @@
           "name": "agency_ops_tenure_quarter_exemption_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_tenure_quarter_exemption",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3548,12 +3333,8 @@
           "name": "agency_ops_tenure_quarter_exemption_user_id_user_id_fk",
           "tableFrom": "agency_ops_tenure_quarter_exemption",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3561,12 +3342,8 @@
           "name": "agency_ops_tenure_quarter_exemption_created_by_user_id_user_id_fk",
           "tableFrom": "agency_ops_tenure_quarter_exemption",
           "tableTo": "user",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3840,12 +3617,8 @@
           "name": "agency_ops_time_entry_team_id_workspace_team_id_fk",
           "tableFrom": "agency_ops_time_entry",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3853,12 +3626,8 @@
           "name": "agency_ops_time_entry_project_id_agency_ops_project_id_fk",
           "tableFrom": "agency_ops_time_entry",
           "tableTo": "agency_ops_project",
-          "columnsFrom": [
-            "project_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["project_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3866,12 +3635,8 @@
           "name": "agency_ops_time_entry_task_id_agency_ops_project_task_id_fk",
           "tableFrom": "agency_ops_time_entry",
           "tableTo": "agency_ops_project_task",
-          "columnsFrom": [
-            "task_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["task_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3879,12 +3644,8 @@
           "name": "agency_ops_time_entry_journey_step_id_agency_ops_project_journey_step_id_fk",
           "tableFrom": "agency_ops_time_entry",
           "tableTo": "agency_ops_project_journey_step",
-          "columnsFrom": [
-            "journey_step_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["journey_step_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3892,12 +3653,8 @@
           "name": "agency_ops_time_entry_user_id_user_id_fk",
           "tableFrom": "agency_ops_time_entry",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3962,12 +3719,8 @@
           "name": "agency_ops_time_entry_tag_time_entry_id_agency_ops_time_entry_id_fk",
           "tableFrom": "agency_ops_time_entry_tag",
           "tableTo": "agency_ops_time_entry",
-          "columnsFrom": [
-            "time_entry_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["time_entry_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -3975,12 +3728,8 @@
           "name": "agency_ops_time_entry_tag_tag_id_agency_ops_tag_id_fk",
           "tableFrom": "agency_ops_time_entry_tag",
           "tableTo": "agency_ops_tag",
-          "columnsFrom": [
-            "tag_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["tag_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -3988,10 +3737,7 @@
       "compositePrimaryKeys": {
         "agency_ops_time_entry_tag_time_entry_id_tag_id_pk": {
           "name": "agency_ops_time_entry_tag_time_entry_id_tag_id_pk",
-          "columns": [
-            "time_entry_id",
-            "tag_id"
-          ]
+          "columns": ["time_entry_id", "tag_id"]
         }
       },
       "uniqueConstraints": {},
@@ -4105,12 +3851,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4197,12 +3939,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4212,9 +3950,7 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -4285,9 +4021,7 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -4498,12 +4232,8 @@
           "name": "notification_team_id_workspace_team_id_fk",
           "tableFrom": "notification",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4511,12 +4241,8 @@
           "name": "notification_recipient_user_id_user_id_fk",
           "tableFrom": "notification",
           "tableTo": "user",
-          "columnsFrom": [
-            "recipient_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["recipient_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4524,12 +4250,8 @@
           "name": "notification_actor_user_id_user_id_fk",
           "tableFrom": "notification",
           "tableTo": "user",
-          "columnsFrom": [
-            "actor_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["actor_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -4631,12 +4353,8 @@
           "name": "notification_preference_user_id_user_id_fk",
           "tableFrom": "notification_preference",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4644,12 +4362,8 @@
           "name": "notification_preference_team_id_workspace_team_id_fk",
           "tableFrom": "notification_preference",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4746,12 +4460,8 @@
           "name": "push_subscription_user_id_user_id_fk",
           "tableFrom": "push_subscription",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4821,12 +4531,8 @@
           "name": "workspace_team_created_by_user_id_user_id_fk",
           "tableFrom": "workspace_team",
           "tableTo": "user",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -4939,12 +4645,8 @@
           "name": "workspace_team_member_team_id_workspace_team_id_fk",
           "tableFrom": "workspace_team_member",
           "tableTo": "workspace_team",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -4952,12 +4654,8 @@
           "name": "workspace_team_member_user_id_user_id_fk",
           "tableFrom": "workspace_team_member",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5086,12 +4784,8 @@
           "name": "dashboard_conversation_user_id_user_id_fk",
           "tableFrom": "dashboard_conversation",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5213,12 +4907,8 @@
           "name": "dashboard_conversation_message_conversation_id_dashboard_conversation_id_fk",
           "tableFrom": "dashboard_conversation_message",
           "tableTo": "dashboard_conversation",
-          "columnsFrom": [
-            "conversation_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["conversation_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -5226,12 +4916,8 @@
           "name": "dashboard_conversation_message_user_id_user_id_fk",
           "tableFrom": "dashboard_conversation_message",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5279,12 +4965,8 @@
           "name": "dashboard_workspace_user_id_user_id_fk",
           "tableFrom": "dashboard_workspace",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -5394,12 +5076,8 @@
           "name": "workspace_marketplace_item_created_by_user_id_user_id_fk",
           "tableFrom": "workspace_marketplace_item",
           "tableTo": "user",
-          "columnsFrom": [
-            "created_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }

@@ -774,7 +774,9 @@ function createAgencyOpsActions(
     const queryKey = orpc.agencyOps.favorites.list.queryOptions({
       input: { teamId: payload.teamId },
     }).queryKey;
-    const previous = queryClient.getQueryData<{ projectIds: string[]; taskIds: string[] }>(queryKey);
+    const previous = queryClient.getQueryData<{ projectIds: string[]; taskIds: string[] }>(
+      queryKey,
+    );
 
     const nextProjectIds = new Set(previous?.projectIds ?? []);
     const nextTaskIds = new Set(previous?.taskIds ?? []);
@@ -820,7 +822,9 @@ function createAgencyOpsActions(
       } else {
         queryClient.removeQueries({ queryKey });
       }
-      toast.error("Couldn't update favorite", { description: getErrorMessage(error, "Try again.") });
+      toast.error("Couldn't update favorite", {
+        description: getErrorMessage(error, "Try again."),
+      });
       return favorited;
     }
   }

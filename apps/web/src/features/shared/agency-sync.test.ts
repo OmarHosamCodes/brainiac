@@ -24,9 +24,7 @@ describe("resolveAgencySyncDetails", () => {
     ]);
 
     expect(details.state).toBe("error");
-    expect(details.errors).toEqual([
-      { label: "Projects", message: "Network error" },
-    ]);
+    expect(details.errors).toEqual([{ label: "Projects", message: "Network error" }]);
   });
 
   test("reports background sync while data already exists", () => {

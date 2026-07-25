@@ -22,7 +22,14 @@
         "scripts/write-railway-server.mjs"
       ],
       "project": ["src/**/*.{ts,tsx}", "vite*.ts", "scripts/**/*.mjs", "perf/**/*.mjs"],
-      "ignoreDependencies": ["tailwindcss"]
+      "ignoreDependencies": [
+        "tailwindcss",
+        "@fontsource-variable/merriweather",
+        "@fontsource-variable/roboto-mono",
+        "@fontsource/lato",
+        "tw-animate-css",
+        "shadcn"
+      ]
     },
     "apps/server": {
       "entry": [
@@ -37,10 +44,12 @@
         "src/operations/maintenance/clear-team-data.ts",
         "src/operations/maintenance/cleanup-agency-operator-nodes.ts",
         "src/operations/maintenance/grant-lifetime-pro.ts",
+        "src/operations/local-reset-team-passwords.ts",
+        "src/operations/local-timer-smoke.ts",
         "tsdown.config.ts"
       ],
       "project": ["src/**/*.ts", "tsdown.config.ts"],
-      "ignoreDependencies": ["sharp"]
+      "ignoreDependencies": ["sharp", "@sentry/cli"]
     },
     "packages/agent": {
       "entry": ["src/index.ts", "src/**/*.{test,spec}.ts"],

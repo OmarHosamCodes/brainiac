@@ -5,10 +5,7 @@ import { agencyListSearchMatches } from "@/features/shared/agency-list-search";
 import { AgencySearchHighlight } from "@/features/shared/agency-search-highlight";
 import { Input } from "@/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
-import {
-  agencyFocusRingClass,
-  agencyInputPlaceholderClass,
-} from "@/features/shared/agency-ui";
+import { agencyFocusRingClass, agencyInputPlaceholderClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
 export type AgencySearchSelectOption = {
@@ -140,7 +137,9 @@ export function AgencySearchSelect({
                   {option.description ? (
                     <span className="shrink-0 text-[11px] text-muted">{option.description}</span>
                   ) : null}
-                  {selected ? <Check className="size-3.5 shrink-0 text-primary" aria-hidden /> : null}
+                  {selected ? (
+                    <Check className="size-3.5 shrink-0 text-primary" aria-hidden />
+                  ) : null}
                 </button>
               );
             })

@@ -17,12 +17,41 @@ export function closeAgencyLiveWebSocket(websocket: WebSocket, reason = "subscri
   }
 }
 
+/** Quiet closed-socket sends so oRPC abort cleanup does not throw (ORCH-5 / ORCH-1). */
+export function withQuietClosedSend(websocket: WebSocket): WebSocket {
+  return new Proxy(websocket, {
+    get(target, prop, receiver) {
+      if (prop === "readyState") {
+        const state = target.readyState;
+        // Lie OPEN so the link's pre-send check proceeds; send itself no-ops below.
+        if (state === WebSocket.CLOSING || state === WebSocket.CLOSED) {
+          return WebSocket.OPEN;
+        }
+        return state;
+      }
+      if (prop === "send") {
+        return (data: Parameters<WebSocket["send"]>[0]) => {
+          if (target.readyState !== WebSocket.OPEN) {
+            return;
+          }
+          return target.send(data);
+        };
+      }
+      const value = Reflect.get(target, prop, receiver);
+      if (typeof value === "function") {
+        return (value as (...args: unknown[]) => unknown).bind(target);
+      }
+      return value;
+    },
+  });
+}
+
 export function createAgencyLiveRpcClient(serverUrl: string): {
   client: AppRouterClient;
   websocket: WebSocket;
 } {
   const websocket = new WebSocket(toWebSocketRpcUrl(serverUrl));
-  const link = new WebSocketRPCLink({ websocket });
+  const link = new WebSocketRPCLink({ websocket: withQuietClosedSend(websocket) });
   const client = createORPCClient<AppRouterClient>(link);
   return { client, websocket };
 }

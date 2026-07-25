@@ -158,10 +158,7 @@ export function projectHueFor(
 }
 
 /** Returns CSS custom properties for inline style binding on a hue dot. */
-export function projectHueStyle(
-  projectId: string | null | undefined,
-  colorHueId?: number | null,
-) {
+export function projectHueStyle(projectId: string | null | undefined, colorHueId?: number | null) {
   const hue = projectHueFor(projectId, colorHueId);
   return {
     "--project-hue": hue.light,
