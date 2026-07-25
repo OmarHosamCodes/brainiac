@@ -8,6 +8,7 @@ import {
   LogIn,
   LogOut,
   Moon,
+  RefreshCw,
   Settings,
   Sun,
 } from "lucide-react";
@@ -25,6 +26,7 @@ import {
   DropdownMenuTrigger,
 } from "@/ui/dropdown-menu";
 import { Skeleton } from "@/ui/skeleton";
+import { useAppUpdateStore } from "@/features/app-shell/app-update-store";
 import { useBilling } from "@/features/billing/billing-queries";
 import { authClient } from "@/lib/auth-client";
 import { getServerUrl } from "@/lib/env";
@@ -50,6 +52,9 @@ export function AppShellAccountMenu() {
   const session = authClient.useSession();
   const { tier, isPro, checkout, openPortal } = useBilling();
   const { isDark, toggle: toggleTheme } = useTheme();
+  const updateAvailable = useAppUpdateStore((s) => s.updateAvailable);
+  const isRefreshing = useAppUpdateStore((s) => s.isRefreshing);
+  const beginRefresh = useAppUpdateStore((s) => s.beginRefresh);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -160,7 +165,7 @@ export function AppShellAccountMenu() {
             ) : (
               <span>{initials}</span>
             )}
-            {isPro ? (
+            {updateAvailable || isPro ? (
               <span
                 className="absolute right-[0.35rem] top-[0.35rem] size-[0.3rem] rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
                 aria-hidden="true"
@@ -178,6 +183,18 @@ export function AppShellAccountMenu() {
           </DropdownMenuLabel>
 
           <DropdownMenuSeparator />
+
+          {updateAvailable && !isRefreshing ? (
+            <DropdownMenuItem
+              onSelect={(event) => {
+                event.preventDefault();
+                void beginRefresh();
+              }}
+            >
+              <RefreshCw className="text-primary" />
+              Update available
+            </DropdownMenuItem>
+          ) : null}
 
           <DropdownMenuItem disabled>
             {isPro ? <BadgeCheck className="text-primary" /> : <Circle />}

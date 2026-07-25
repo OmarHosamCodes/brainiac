@@ -475,12 +475,31 @@ body {
 
 .app-shell {
   --app-shell-topbar-height: 3rem;
+  --app-shell-topbar-inset: 0.5rem;
+  --app-shell-topbar-slot: calc(var(--app-shell-topbar-height) + var(--app-shell-topbar-inset) * 2);
+  position: relative;
   display: grid;
   height: 100vh;
   overflow: hidden;
   grid-template-columns: minmax(0, 1fr) var(--app-shell-dock-width, 0px);
-  grid-template-rows: var(--app-shell-topbar-height) minmax(0, 1fr);
+  grid-template-rows: var(--app-shell-topbar-slot) minmax(0, 1fr);
   transition: grid-template-columns var(--motion-duration-rail) var(--motion-ease-rail);
+}
+
+/* Spatial: canvas fills the viewport; glass top bar overlays so the board shows through. */
+.app-shell--spatial {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.app-shell--spatial .app-shell__topbar {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  grid-row: auto;
+}
+
+.app-shell--spatial .app-shell__main {
+  grid-row: 1;
 }
 
 .app-shell--execution {
@@ -497,6 +516,32 @@ body {
   }
 }
 
+/* Restrained chrome glass — shared by floating top bar and canvas tool strips. */
+.ui-chrome-glass {
+  isolation: isolate;
+  background: color-mix(in oklab, var(--color-default) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(1.6);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-border) 70%, transparent),
+    0 6px 22px color-mix(in oklab, black 12%, transparent),
+    inset 0 1px 0 color-mix(in oklab, white 26%, transparent);
+}
+
+.dark .ui-chrome-glass {
+  background: color-mix(in oklab, var(--color-default) 62%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--color-border) 80%, transparent),
+    0 8px 26px color-mix(in oklab, black 34%, transparent),
+    inset 0 1px 0 color-mix(in oklab, white 8%, transparent);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .ui-chrome-glass {
+    background: var(--color-default);
+  }
+}
+
+/* Floating liquid-glass header: inset surface over the workspace. */
 .app-shell__topbar {
   grid-column: 1 / -1;
   grid-row: 1;
@@ -505,15 +550,17 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  margin: var(--app-shell-topbar-inset);
   min-height: var(--app-shell-topbar-height);
-  padding: 0 0.75rem;
+  padding: 0 0.625rem;
+  border-radius: 14px;
   transition: min-height var(--motion-duration-panel) var(--motion-ease-out);
 }
 
 @media (min-width: 768px) {
   .app-shell__topbar {
     gap: 0.75rem;
-    padding: 0 1rem;
+    padding: 0 0.875rem;
   }
 }
 
@@ -587,14 +634,14 @@ body {
 
 .app-shell__mobile-backdrop {
   position: fixed;
-  inset: var(--app-shell-topbar-height) 0 0 0;
+  inset: var(--app-shell-topbar-slot) 0 0 0;
   z-index: 45;
 }
 
 .app-shell__dock {
   position: fixed;
   right: 0;
-  top: var(--app-shell-topbar-height);
+  top: var(--app-shell-topbar-slot);
   bottom: 0;
   z-index: 50;
   width: min(100vw, 28rem);
@@ -618,6 +665,10 @@ body {
     width: var(--app-shell-dock-width, 0px);
     transform: none;
     opacity: 1;
+  }
+
+  .app-shell--spatial .app-shell__dock {
+    grid-row: 1;
   }
 }
 

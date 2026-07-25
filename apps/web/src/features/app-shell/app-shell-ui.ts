@@ -43,8 +43,11 @@ export const shellRailExpandedLinkActiveClass =
 export const shellRailFooterClass =
   "mt-auto flex w-full flex-col gap-1.5 border-t border-default pt-2.5";
 
-/** Topbar shell frame (paired with `.app-shell__topbar` in index.css). */
-export const shellTopbarBaseClass = "app-shell__topbar border-b border-default bg-default";
+/** Topbar shell frame (floating glass surface; visuals live in `.ui-chrome-glass`). */
+export const shellTopbarBaseClass = "app-shell__topbar ui-chrome-glass";
+
+/** Shared restrained chrome glass for floating product controls (top bar, canvas tools). */
+export const shellChromeGlassClass = "ui-chrome-glass";
 
 export const shellTopbarSpatialClass = "app-shell__topbar--spatial";
 
@@ -72,9 +75,6 @@ export const shellTopbarIconButtonClass = shellTopbarControlClass;
 
 export const shellTopbarActionButtonClass = shellTopbarControlClass;
 
-export const shellTopbarChipClass =
-  "inline-flex h-8 min-w-0 items-center gap-1.5 rounded-full border border-default bg-muted px-2.5 text-xs font-semibold text-highlighted transition-colors hover:bg-elevated";
-
 export const shellTopbarFieldClass = "h-8 min-w-0";
 
 export const shellSearchPillClass = cn(
@@ -88,11 +88,12 @@ export const shellSearchIconButtonClass = cn(
 );
 
 export const shellNavLinkClass = cn(
-  "inline-flex h-8 items-center rounded-full px-2.5 text-sm font-medium text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+  "relative inline-flex h-8 items-center rounded-md px-1.5 text-sm font-medium text-muted transition-colors hover:text-highlighted",
   shellFocusRingClass,
 );
 
-export const shellNavLinkActiveClass = "bg-primary/10 text-primary";
+export const shellNavLinkActiveClass =
+  "font-semibold text-highlighted after:absolute after:inset-x-1.5 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-primary";
 
 export const shellContextSlotClass = "app-shell__context min-w-0";
 

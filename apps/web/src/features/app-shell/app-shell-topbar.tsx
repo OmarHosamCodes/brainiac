@@ -14,7 +14,6 @@ import { AppShellNotifications } from "@/features/app-shell/app-shell-notificati
 import { AppShellPortal } from "@/features/app-shell/app-shell-portal";
 import { BrandMark } from "@/features/app-shell/components/brand-mark";
 import { AppShellTeamControl } from "@/features/app-shell/app-shell-team-control";
-import { AppShellUpdateControl } from "@/features/app-shell/app-shell-update-control";
 import { Button } from "@/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/ui/sheet";
 import {
@@ -154,10 +153,6 @@ export function AppShellTopbar() {
             })}
           </nav>
 
-          <div className="hidden md:block">
-            <AppShellTeamControl />
-          </div>
-
           {hasContextContent ? (
             <div id={APP_SHELL_CONTEXT_SLOT_ID} className={shellContextSlotClass} />
           ) : null}
@@ -187,7 +182,7 @@ export function AppShellTopbar() {
         </div>
 
         <div className={shellUtilityClusterClass}>
-          <AppShellUpdateControl />
+          <AppShellTeamControl />
           <AppShellNotifications />
           <AppShellAccountMenu />
         </div>
@@ -220,7 +215,6 @@ export function AppShellTopbar() {
               );
             })}
           </nav>
-          <AppShellTeamControl className="w-full max-w-none" />
           {showUpgrade ? (
             <Button
               type="button"

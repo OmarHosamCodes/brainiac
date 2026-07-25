@@ -1,17 +1,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, Loader2, Plus, Settings2, Users } from "lucide-react";
+import { Check, Loader2, Plus, Settings2, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { shellFocusRingClass, shellTopbarChipClass } from "@/features/app-shell/app-shell-ui";
+import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
 import { teamDetailQueryOptions, teamListQueryOptions } from "@/features/team/team-queries";
 import { TeamSettingsModal } from "@/features/team/team-settings-modal";
 import { useTeamStore } from "@/features/team/team-store";
 import { authClient } from "@/lib/auth-client";
 import { teamCreateFormSchema } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -26,21 +25,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/ui/input";
 import { Skeleton } from "@/ui/skeleton";
 
-type TeamRole = "owner" | "editor" | "viewer";
-
-function roleLabel(role: TeamRole | null | undefined) {
-  if (role === "owner") return "Owner";
-  if (role === "editor") return "Editor";
-  if (role === "viewer") return "Viewer";
-  return null;
-}
-
 type AppShellTeamControlProps = {
   className?: string;
-  compact?: boolean;
 };
 
-export function AppShellTeamControl({ className, compact = false }: AppShellTeamControlProps) {
+export function AppShellTeamControl({ className }: AppShellTeamControlProps) {
   const session = authClient.useSession();
   const authEnabled = Boolean(session.data?.user);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -67,7 +56,6 @@ export function AppShellTeamControl({ className, compact = false }: AppShellTeam
   const selectedTeam = teamDetailQuery.data ?? null;
   const selectedSummary = teams.find((team) => team.id === selectedTeamId) ?? teams[0] ?? null;
   const displayName = selectedTeam?.name ?? selectedSummary?.name ?? "";
-  const displayRole = (selectedTeam?.role ?? selectedSummary?.role ?? null) as TeamRole | null;
 
   useEffect(() => {
     syncSelectedTeam(teams);
@@ -83,7 +71,7 @@ export function AppShellTeamControl({ className, compact = false }: AppShellTeam
   }
 
   if (teamListQuery.isPending) {
-    return <Skeleton className={cn("h-8 w-28 rounded-full", className)} />;
+    return <Skeleton className={cn("size-8 rounded-full", className)} />;
   }
 
   return (
@@ -101,18 +89,16 @@ export function AppShellTeamControl({ className, compact = false }: AppShellTeam
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            className={cn(shellTopbarChipClass, shellFocusRingClass, "max-w-[12rem]", className)}
+            className={cn(
+              "flex size-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+              shellFocusRingClass,
+              className,
+            )}
             aria-label={displayName ? `Team: ${displayName}` : "Select team"}
             aria-expanded={menuOpen}
+            title={displayName || "Select team"}
           >
-            <Users className="size-3.5 shrink-0" aria-hidden="true" />
-            <span className="min-w-0 truncate">{displayName || "Create team"}</span>
-            {displayRole && !compact ? (
-              <Badge variant="secondary" className="hidden shrink-0 lg:inline-flex">
-                {roleLabel(displayRole)}
-              </Badge>
-            ) : null}
-            <ChevronsUpDown className="size-3.5 shrink-0 text-dimmed" aria-hidden="true" />
+            <Users className="size-4 shrink-0" aria-hidden="true" />
           </button>
         </DropdownMenuTrigger>
 

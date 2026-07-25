@@ -4,12 +4,17 @@
   --xy-background-pattern-dots-color: var(--canvas-dot-pattern);
   --xy-edge-stroke: var(--canvas-edge-stroke);
   --xy-edge-stroke-selected: var(--canvas-edge-stroke-selected);
-  --xy-minimap-background-color: var(--color-elevated);
+  --xy-minimap-background-color: transparent;
   --xy-minimap-mask-background-color: oklch(0.488 0.243 264.376 / 0.12);
   --xy-minimap-node-background-color: oklch(0.488 0.243 264.376 / 0.45);
   --xy-minimap-node-stroke-color: oklch(0.488 0.243 264.376 / 0.65);
   height: 100%;
   width: 100%;
+}
+
+/* MiniMap SVG should not leave a square gap under the glass radius. */
+.workspace-flow .react-flow__minimap.ui-chrome-glass svg {
+  display: block;
 }
 
 .workspace-flow .react-flow__pane {

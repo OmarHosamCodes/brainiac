@@ -19,10 +19,7 @@ import { teamListQueryOptions } from "@/features/team/team-queries";
 import { useAppShellStore } from "@/features/app-shell/app-shell-store";
 import { useTeamStore } from "@/features/team/team-store";
 import { useWorkspaceQuery } from "@/features/workspace/hooks/use-workspace-query";
-import {
-  dashboardErrorAlertClass,
-  dashboardStatusBadgeClass,
-} from "@/features/dashboard/dashboard-ui";
+import { dashboardErrorAlertClass } from "@/features/dashboard/dashboard-ui";
 import { useShellBootGate } from "@/features/app-shell/shell/use-shell-boot-gate";
 import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
 import { cn } from "@/lib/utils";
@@ -112,12 +109,9 @@ export function DashboardPage() {
               />
             </main>
 
-            <div className="pointer-events-none absolute bottom-4 left-4 z-30 flex max-w-xs flex-col gap-3 md:bottom-6 md:left-6">
-              <div className="pointer-events-auto flex flex-wrap items-center gap-2">
-                <span className={cn(dashboardStatusBadgeClass, board.saveBadge.className)}>
-                  {board.saveBadge.label}
-                </span>
-                {board.isWorkspaceRefreshing && board.saveBadge.label !== "Syncing" ? (
+            <div className="pointer-events-none absolute bottom-[11.5rem] left-4 z-30 flex max-w-xs flex-col gap-3 md:bottom-[12rem] md:left-6">
+              {board.isWorkspaceRefreshing ? (
+                <div className="pointer-events-auto flex flex-wrap items-center gap-2">
                   <Badge
                     key="refreshing"
                     variant="secondary"
@@ -126,8 +120,8 @@ export function DashboardPage() {
                     <Loader2 className="size-3 animate-spin" />
                     Refreshing
                   </Badge>
-                ) : null}
-              </div>
+                </div>
+              ) : null}
 
               {board.saveError ? (
                 <div

@@ -44,6 +44,7 @@ import {
   dashboardEmptyPanelClass,
   dashboardFocusRingClass,
 } from "@/features/dashboard/dashboard-ui";
+import { shellChromeGlassClass } from "@/features/app-shell/app-shell-ui";
 import {
   getCanonicalConnectionPair,
   getEligibleConnectionTargetIds,
@@ -286,7 +287,7 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
     );
 
     const controlButtonClass = cn(
-      "inline-flex size-10 items-center justify-center rounded-2xl border border-default bg-elevated text-highlighted transition hover:border-primary/60 hover:bg-default disabled:opacity-50",
+      "inline-flex size-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-elevated/70 hover:text-highlighted disabled:opacity-50",
       dashboardFocusRingClass,
     );
 
@@ -353,24 +354,15 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
               color={isDark ? "oklch(0.55 0.01 285 / 0.35)" : "oklch(0.55 0.01 285 / 0.2)"}
             />
 
-            <Panel position="bottom-center" className="!mb-8 flex items-center gap-3">
-              <div className="flex items-center gap-1.5 rounded-full border border-default bg-elevated p-1.5 shadow-sm">
-                <button
-                  type="button"
-                  className={controlButtonClass}
-                  aria-label="Zoom out"
-                  onClick={() => {
-                    const reducedMotion = window.matchMedia(
-                      "(prefers-reduced-motion: reduce)",
-                    ).matches;
-                    void zoomOut({ duration: reducedMotion ? 0 : 150 });
-                  }}
-                >
-                  <Minus className="size-4" />
-                </button>
-                <div className="w-12 px-3 text-center text-xs font-bold tabular-nums text-muted">
-                  {zoomPercent}%
-                </div>
+            <Panel position="bottom-left" className="!mb-8 !ml-4">
+              <div
+                className={cn(
+                  shellChromeGlassClass,
+                  "flex flex-col items-center gap-1 rounded-[14px] p-1.5",
+                )}
+                role="toolbar"
+                aria-label="Canvas zoom"
+              >
                 <button
                   type="button"
                   className={controlButtonClass}
@@ -384,7 +376,26 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
                 >
                   <Plus className="size-4" />
                 </button>
-                <div className="mx-1 h-4 w-px bg-default" />
+                <div
+                  className="flex h-7 w-10 items-center justify-center text-[11px] font-semibold tabular-nums text-highlighted"
+                  aria-live="polite"
+                >
+                  {zoomPercent}%
+                </div>
+                <button
+                  type="button"
+                  className={controlButtonClass}
+                  aria-label="Zoom out"
+                  onClick={() => {
+                    const reducedMotion = window.matchMedia(
+                      "(prefers-reduced-motion: reduce)",
+                    ).matches;
+                    void zoomOut({ duration: reducedMotion ? 0 : 150 });
+                  }}
+                >
+                  <Minus className="size-4" />
+                </button>
+                <div className="my-0.5 h-px w-6 bg-border" aria-hidden="true" />
                 <button
                   type="button"
                   className={controlButtonClass}
@@ -399,7 +410,10 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
             <Panel position="bottom-right" className="!mb-8 !mr-4">
               <MiniMap
                 aria-label="Board overview"
-                className="!rounded-2xl !border !border-default !bg-elevated/95 !shadow-sm"
+                className={cn(
+                  shellChromeGlassClass,
+                  "!m-0 overflow-hidden !rounded-[14px] !border-0 !shadow-none",
+                )}
                 maskColor="oklch(0.488 0.243 264.376 / 0.12)"
                 nodeColor={() => "oklch(0.488 0.243 264.376 / 0.45)"}
                 nodeStrokeColor="oklch(0.488 0.243 264.376 / 0.65)"
