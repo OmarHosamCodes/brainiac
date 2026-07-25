@@ -85,6 +85,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                 >
                   <AgencyMemberAvatar
                     name={member.userName}
+                    userId={member.userId}
                     avatarUrl={member.userAvatar}
                     size="sm"
                     className={cn("size-6 rounded-md", agencyAvatarStackRingClass)}
@@ -149,6 +150,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
             ) : selectedMember ? (
               <AgencyMemberAvatar
                 name={selectedMember.userName}
+                userId={selectedMember.userId}
                 avatarUrl={selectedMember.userAvatar}
                 size="sm"
               />
@@ -297,6 +299,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
                     >
                       <AgencyMemberAvatar
                         name={member.userName}
+                        userId={member.userId}
                         avatarUrl={member.userAvatar}
                         size="sm"
                       />

@@ -1,6 +1,7 @@
 import { AlertTriangle, BarChart3, X } from "lucide-react";
 import { type CSSProperties } from "react";
 
+import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import { AgencyProjectHueDot } from "@/features/shared/agency-project-hue-dot";
 import {
   agencyEmptyPanelClass,
@@ -21,16 +22,6 @@ import { type AgencyDashboardSurfaceViewModel } from "./hooks/use-agency-dashboa
 function relShare(seconds: number, totalSeconds: number): number {
   if (totalSeconds <= 0) return 0;
   return Math.max(2, Math.min(100, (seconds / totalSeconds) * 100));
-}
-
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase();
 }
 
 function ProjectHueFill({
@@ -572,20 +563,13 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2.5">
-                              {member.avatar ? (
-                                <img
-                                  src={member.avatar}
-                                  alt={member.userName}
-                                  className="size-8 rounded-xl object-cover"
-                                />
-                              ) : (
-                                <span
-                                  className="flex size-8 items-center justify-center rounded-xl bg-muted text-[11px] font-bold text-highlighted"
-                                  aria-hidden
-                                >
-                                  {initials(member.userName)}
-                                </span>
-                              )}
+                              <AgencyMemberAvatar
+                                name={member.userName}
+                                userId={member.userId}
+                                avatarUrl={member.avatar}
+                                size="md"
+                                alt={member.userName}
+                              />
                               <div className="min-w-0">
                                 <p className="truncate font-bold text-highlighted">
                                   {member.userName}

@@ -230,6 +230,7 @@ export function AgencyTaskRowView({ viewModel, miniTimer }: AgencyTaskRowViewPro
                   >
                     <AgencyMemberAvatar
                       name={member.userName}
+                      userId={member.userId}
                       avatarUrl={member.userAvatar}
                       size="sm"
                       className={cn("size-5 rounded-full", agencyAvatarStackRingClass)}
@@ -292,6 +293,7 @@ export function AgencyTaskRowView({ viewModel, miniTimer }: AgencyTaskRowViewPro
                     >
                       <AgencyMemberAvatar
                         name={member.userName}
+                        userId={member.userId}
                         avatarUrl={member.userAvatar}
                         size="sm"
                         className={cn("rounded-full", agencyAvatarStackRingClass)}

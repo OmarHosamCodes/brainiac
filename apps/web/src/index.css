@@ -503,8 +503,8 @@ body {
 }
 
 .app-shell--execution {
-  /* Nested corners: outer = inner + nest pad (equal inset on the content frame). */
-  --shell-chrome-inset: 1rem;
+  /* Content frame is full-bleed; page classes opt into nest pad where needed. */
+  --shell-chrome-inset: 0;
   --shell-nest-pad: 1rem;
   --shell-inner-radius: 1rem;
   --shell-outer-radius: calc(var(--shell-inner-radius) + var(--shell-nest-pad));

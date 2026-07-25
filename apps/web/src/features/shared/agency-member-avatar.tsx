@@ -1,43 +1,52 @@
-import { initials } from "@/lib/utils/initials";
+import { useEffect, useState } from "react";
+
+import { getDicebearGlyphAvatarUrl } from "@/lib/dicebear-avatar-url";
 import { cn } from "@/lib/utils";
 
 type AgencyMemberAvatarSize = "sm" | "md";
 
-const sizeClasses: Record<AgencyMemberAvatarSize, { box: string; text: string }> = {
-  sm: { box: "size-5 rounded-md", text: "text-[9px]" },
-  md: { box: "size-8 rounded-xl", text: "text-[11px]" },
+const sizeClasses: Record<AgencyMemberAvatarSize, string> = {
+  sm: "size-5 rounded-md",
+  md: "size-8 rounded-xl",
 };
 
 type AgencyMemberAvatarProps = {
   name: string;
+  userId?: string | null;
   avatarUrl?: string | null;
   size?: AgencyMemberAvatarSize;
   className?: string;
+  /** Empty string (default) marks the image decorative. */
+  alt?: string;
 };
 
 export function AgencyMemberAvatar({
   name,
+  userId,
   avatarUrl,
   size = "sm",
   className,
+  alt = "",
 }: AgencyMemberAvatarProps) {
-  const { box, text } = sizeClasses[size];
+  const seed = userId?.trim() || name.trim() || "orch";
+  const fallbackUrl = getDicebearGlyphAvatarUrl(seed);
+  const preferredUrl = avatarUrl?.trim() || fallbackUrl;
+  const [src, setSrc] = useState(preferredUrl);
 
-  if (avatarUrl) {
-    return <img src={avatarUrl} alt="" className={cn(box, "shrink-0 object-cover", className)} />;
-  }
+  useEffect(() => {
+    setSrc(preferredUrl);
+  }, [preferredUrl]);
 
   return (
-    <span
-      className={cn(
-        box,
-        "flex shrink-0 items-center justify-center bg-muted font-bold text-foreground",
-        text,
-        className,
-      )}
-      aria-hidden
-    >
-      {initials(name)}
-    </span>
+    <img
+      src={src}
+      alt={alt}
+      className={cn(sizeClasses[size], "shrink-0 object-cover bg-muted", className)}
+      onError={() => {
+        if (src !== fallbackUrl) {
+          setSrc(fallbackUrl);
+        }
+      }}
+    />
   );
 }

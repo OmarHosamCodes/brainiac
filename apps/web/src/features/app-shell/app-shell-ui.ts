@@ -123,7 +123,7 @@ export const shellSegmentTabActiveClass = "bg-primary/10 text-primary";
 /** Page column — equal L/R pad, no max-width. Nest pad pairs with `--shell-inner-radius`. */
 export const shellPageClass = "flex h-full w-full flex-col px-[var(--shell-nest-pad,1rem)] pb-4";
 
-/** Full equal nest padding (work surfaces that need concentric corners). */
+/** Full-bleed work surface under the floating top bar. */
 export const shellPageNestClass =
   "flex h-full w-full min-h-0 flex-1 flex-col overflow-hidden p-[var(--shell-nest-pad,1rem)]";
 

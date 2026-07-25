@@ -27,24 +27,15 @@ import {
 } from "@/ui/dropdown-menu";
 import { Skeleton } from "@/ui/skeleton";
 import { useAppUpdateStore } from "@/features/app-shell/app-update-store";
+import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
 import { useBilling } from "@/features/billing/billing-queries";
+import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import { authClient } from "@/lib/auth-client";
 import { getServerUrl } from "@/lib/env";
-import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { getUserAvatarPublicUrl } from "@/lib/user-avatar-url";
-import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
-import { useTheme } from "@/stores/theme";
 import { cn } from "@/lib/utils";
-
-function getInitials(name: string | undefined | null): string {
-  const fullName = name?.trim();
-  if (!fullName) {
-    return "B";
-  }
-
-  const parts = fullName.split(/\s+/).filter(Boolean).slice(0, 2);
-  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "B";
-}
+import { getErrorMessage } from "@/lib/utils/get-error-message";
+import { useTheme } from "@/stores/theme";
 
 export function AppShellAccountMenu() {
   const navigate = useNavigate();
@@ -66,7 +57,6 @@ export function AppShellAccountMenu() {
     user?.image && user.id && serverUrl
       ? getUserAvatarPublicUrl({ baseUrl: serverUrl, userId: user.id, storageKey: user.image })
       : null;
-  const initials = getInitials(user?.name);
 
   async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
@@ -160,11 +150,14 @@ export function AppShellAccountMenu() {
             aria-label={`Account menu for ${userName}`}
             title={userName}
           >
-            {avatarUrl ? (
-              <img src={avatarUrl} alt={userName} className="size-full object-cover" />
-            ) : (
-              <span>{initials}</span>
-            )}
+            <AgencyMemberAvatar
+              name={userName}
+              userId={user.id}
+              avatarUrl={avatarUrl}
+              size="md"
+              alt={userName}
+              className="size-full rounded-full"
+            />
             {updateAvailable || isPro ? (
               <span
                 className="absolute right-[0.35rem] top-[0.35rem] size-[0.3rem] rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
