@@ -3,6 +3,7 @@ import { type ReactNode, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { AppShellAccountMenu } from "@/features/app-shell/app-shell-account-menu";
+import { AppShellAgencyNav } from "@/features/app-shell/app-shell-agency-nav";
 import {
   APP_SHELL_SUBTITLE_SLOT_ID,
   AppShellTopbarPageCrumb,
@@ -14,14 +15,15 @@ import { AppShellNotifications } from "@/features/app-shell/app-shell-notificati
 import { AppShellPortal } from "@/features/app-shell/app-shell-portal";
 import { BrandMark } from "@/features/app-shell/components/brand-mark";
 import { AppShellTeamControl } from "@/features/app-shell/app-shell-team-control";
-import { Button } from "@/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/ui/sheet";
 import {
   useAppShellStore,
   useHasContextContent,
   useHasSubtitleContent,
   useShellMode,
 } from "@/features/app-shell/app-shell-store";
+import { useAgencySegmentShortcuts } from "@/features/shared/use-agency-segment-shortcuts";
+import { Button } from "@/ui/button";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/ui/sheet";
 import {
   shellActionsSlotClass,
   shellContextSlotClass,
@@ -103,6 +105,7 @@ export function AppShellTopbar() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const showUpgrade = !isPro && !billingQuery.isPending;
   const modKey = isMacPlatform() ? "⌘" : "Ctrl";
+  useAgencySegmentShortcuts();
 
   return (
     <>
@@ -139,6 +142,9 @@ export function AppShellTopbar() {
 
           <nav className="hidden items-center gap-0.5 md:flex" aria-label="Sections">
             {APP_NAV_ITEMS.map((item) => {
+              if (item.to === "/agency") {
+                return <AppShellAgencyNav key={item.to} />;
+              }
               const active = item.matches(location.pathname);
               return (
                 <Link
@@ -197,6 +203,15 @@ export function AppShellTopbar() {
           </SheetHeader>
           <nav className="flex flex-col gap-1" aria-label="Sections">
             {APP_NAV_ITEMS.map((item) => {
+              if (item.to === "/agency") {
+                return (
+                  <AppShellAgencyNav
+                    key={item.to}
+                    variant="mobile"
+                    onNavigate={() => setMobileNavOpen(false)}
+                  />
+                );
+              }
               const active = item.matches(location.pathname);
               return (
                 <Link

@@ -78,3 +78,28 @@ export const LEGACY_AGENCY_SEGMENT_MAP = {
 export function isLegacyAgencySegmentId(value: string | null): value is LegacyAgencySegmentId {
   return value === "projects" || value === "resourcing" || value === "billing";
 }
+
+export function isAgencySegmentId(value: string | null): value is AgencySegmentId {
+  return AGENCY_SEGMENTS.some((entry) => entry.id === value);
+}
+
+/** Resolve the active Agency segment from `?section=`. */
+export function agencySegmentFromSearch(search: string): AgencySegmentId {
+  const section = new URLSearchParams(search).get("section");
+  if (isAgencySegmentId(section)) return section;
+  if (isLegacyAgencySegmentId(section)) return LEGACY_AGENCY_SEGMENT_MAP[section];
+  return "work";
+}
+
+/** Canonical href for an Agency segment (Work omits the query). */
+export function agencySegmentHref(segment: AgencySegmentId): string {
+  return segment === "work" ? "/agency" : `/agency?section=${segment}`;
+}
+
+export function agencySegmentLabel(segment: AgencySegmentId): string {
+  return AGENCY_SEGMENTS.find((entry) => entry.id === segment)?.label ?? "Agency";
+}
+
+export function agencySegmentTabId(segment: AgencySegmentId): string {
+  return `agency-tab-${segment}`;
+}

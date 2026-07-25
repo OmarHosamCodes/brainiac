@@ -23,8 +23,9 @@ import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
 import { AgencyPlaceholderSurface } from "@/features/shared/agency-placeholder-surface";
 import { AgencySegmentFiltersRoot } from "@/features/shared/agency-segment-filters";
 import {
-  AGENCY_SEGMENTS,
   LEGACY_AGENCY_SEGMENT_MAP,
+  agencySegmentFromSearch,
+  agencySegmentLabel,
   isLegacyAgencySegmentId,
   type AgencySegmentId,
 } from "@/features/shared/agency-segments";
@@ -41,10 +42,6 @@ import { setAgencyTimeTrackingUserId } from "@/features/time-tracking/stores/age
 import { useCurrentAgencyTeam } from "@/features/time-tracking/stores/agency-timer";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-
-function isAgencySegmentId(value: string | null): value is AgencySegmentId {
-  return AGENCY_SEGMENTS.some((entry) => entry.id === value);
-}
 
 function panelIdFor(segmentId: AgencySegmentId) {
   return `agency-panel-${segmentId}`;
@@ -71,11 +68,7 @@ export function AgencyPage() {
   const selectedTeamId = useTeamStore((s) => s.selectedTeamId);
   const syncSelectedTeam = useTeamStore((s) => s.syncSelectedTeam);
   const sectionParam = searchParams.get("section");
-  const segment: AgencySegmentId = isAgencySegmentId(sectionParam)
-    ? sectionParam
-    : isLegacyAgencySegmentId(sectionParam)
-      ? LEGACY_AGENCY_SEGMENT_MAP[sectionParam]
-      : "work";
+  const segment: AgencySegmentId = agencySegmentFromSearch(searchParams.toString());
 
   const selectedProjectId =
     typeof searchParams.get("project") === "string" ? searchParams.get("project")! : "";
@@ -198,11 +191,7 @@ export function AgencyPage() {
       >
         {!isBooting ? (
           <AppShellTopbarSubtitle>
-            <AgencySubtitleBreadcrumb
-              segment={segment}
-              teamId={agencySyncTeamId}
-              onSegmentChange={handleSegmentChange}
-            />
+            <AgencySubtitleBreadcrumb teamId={agencySyncTeamId} />
           </AppShellTopbarSubtitle>
         ) : null}
 
@@ -227,7 +216,7 @@ export function AgencyPage() {
               <div
                 role="tabpanel"
                 id={panelIdFor(segment)}
-                aria-labelledby={`agency-tab-${segment}`}
+                aria-label={agencySegmentLabel(segment)}
                 className={cn(isWorkSegment && "flex min-h-0 flex-1 flex-col")}
               >
                 <AgencySegmentFiltersRoot
