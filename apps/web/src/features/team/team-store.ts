@@ -107,8 +107,11 @@ export const useTeamStore = create<TeamStoreState>((set, get) => ({
 
     set({ createTeamPending: true });
     try {
-      await orpcClient.team.create({ name: teamName });
-      await refreshTeamData(get().selectedTeamId);
+      const created = await orpcClient.team.create({ name: teamName });
+      if (created?.id) {
+        set({ selectedTeamId: created.id });
+      }
+      await refreshTeamData(created?.id ?? get().selectedTeamId);
       toast.success("Team created", { description: `Created ${teamName}.` });
     } catch (error) {
       toast.error("Failed to create team", {

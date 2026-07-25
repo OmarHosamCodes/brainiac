@@ -1,30 +1,23 @@
-import { AlertCircle, Loader2, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { AppShellPage } from "@/features/app-shell/app-shell-page";
-import {
-  AppShellTopbarActions,
-  AppShellTopbarContext,
-} from "@/features/app-shell/app-shell-topbar";
 import { AppShellPortal } from "@/features/app-shell/app-shell-portal";
 import { DashboardAgentChatPanel } from "@/features/dashboard-agent/dashboard-agent-chat-panel";
-import { DashboardWorkspaceSidebar } from "@/features/workspace/dashboard/dashboard-workspace-sidebar";
 import {
   LazyInfiniteCanvas,
   type InfiniteCanvasHandle,
 } from "@/features/workspace/canvas/lazy-infinite-canvas";
-import { TeamSettingsModal } from "@/features/team/team-settings-modal";
 import { WorkspaceEditorModal } from "@/features/workspace/workspace-editor-modal";
 import { WorkspaceNodeCard } from "@/features/workspace/workspace-node-card";
 import { Badge } from "@/ui/badge";
-import { Button } from "@/ui/button";
 import { authClient } from "@/lib/auth-client";
-import { teamDetailQueryOptions, teamListQueryOptions } from "@/features/team/team-queries";
+import { teamListQueryOptions } from "@/features/team/team-queries";
 import { useAppShellStore } from "@/features/app-shell/app-shell-store";
-import { deriveTeamPermissions, useTeamStore } from "@/features/team/team-store";
+import { useTeamStore } from "@/features/team/team-store";
 import { useWorkspaceQuery } from "@/features/workspace/hooks/use-workspace-query";
 import {
   dashboardErrorAlertClass,
@@ -39,15 +32,9 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const session = authClient.useSession();
   const authEnabled = Boolean(session.data?.user);
-  const [teamSettingsOpen, setTeamSettingsOpen] = useState(false);
 
   const setAgentDockOpen = useAppShellStore((s) => s.setAgentDockOpen);
-  const isTeamAsideCompact = useTeamStore((s) => s.isTeamAsideCompact);
-  const setIsTeamAsideCompact = useTeamStore((s) => s.setIsTeamAsideCompact);
-  const selectedTeamId = useTeamStore((s) => s.selectedTeamId);
   const syncSelectedTeam = useTeamStore((s) => s.syncSelectedTeam);
-  const createTeamPending = useTeamStore((s) => s.createTeamPending);
-  const createTeam = useTeamStore((s) => s.createTeam);
 
   const board = useWorkspaceQuery();
 
@@ -56,30 +43,11 @@ export function DashboardPage() {
     enabled: authEnabled,
   });
 
-  const teamDetailQuery = useQuery({
-    ...teamDetailQueryOptions(selectedTeamId),
-    enabled: Boolean(authEnabled && selectedTeamId),
-  });
-
-  const teams = useMemo(() => teamListQuery.data?.items ?? [], [teamListQuery.data?.items]);
-  const selectedTeam = teamDetailQuery.data ?? null;
+  const teams = teamListQuery.data?.items ?? [];
 
   useEffect(() => {
     syncSelectedTeam(teams);
   }, [teams, syncSelectedTeam]);
-
-  const selectedNode = useMemo(() => {
-    const nodeId = board.selectedNodeIds[0];
-    if (!nodeId) return null;
-    return board.nodes.find((node) => node.id === nodeId) ?? null;
-  }, [board.nodes, board.selectedNodeIds]);
-
-  const selectedTeamRole = selectedTeam?.role ?? null;
-  const selectedTeamName = selectedTeam?.name ?? "";
-  const selectedTeamMemberCount = selectedTeam?.members?.length ?? 0;
-  const { canInvite } = deriveTeamPermissions(selectedTeamRole);
-  const isSelectedNodeShared = selectedNode?.visibility === "team";
-  const isNodeShareActionPending = false;
 
   useEffect(() => {
     void board.preloadWorkspace();
@@ -96,38 +64,10 @@ export function DashboardPage() {
   }, [board.isWorkspaceInitialLoading, board.nodes.length]);
 
   return (
-    <AppShellPage subtitle={selectedTeamName || null} slots={["context", "actions", "dock"]}>
+    <AppShellPage slots={["dock"]}>
       <div className="relative h-full w-full overflow-hidden bg-default selection:bg-primary/30">
         {!isBooting ? (
           <>
-            <AppShellTopbarContext>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="shrink-0"
-                aria-expanded={!isTeamAsideCompact}
-                onClick={() => setIsTeamAsideCompact(!isTeamAsideCompact)}
-              >
-                {isTeamAsideCompact ? (
-                  <PanelLeftOpen className="size-4" />
-                ) : (
-                  <PanelLeftClose className="size-4" />
-                )}
-                <span className="hidden lg:inline">Workspace</span>
-              </Button>
-            </AppShellTopbarContext>
-
-            <AppShellTopbarActions>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => canvasRef.current?.createNodeAtViewportCenter()}
-              >
-                <Plus className="size-4" />
-                Add
-              </Button>
-            </AppShellTopbarActions>
-
             <AppShellPortal targetId="app-shell-dock-content">
               <div className="flex h-full min-h-0 flex-col">
                 <DashboardAgentChatPanel
@@ -138,62 +78,38 @@ export function DashboardPage() {
             </AppShellPortal>
 
             <main className="h-full w-full">
-              <div className="flex h-full w-full overflow-hidden">
-                <DashboardWorkspaceSidebar
-                  compact={isTeamAsideCompact}
-                  teamsCount={teams.length}
-                  createTeamPending={createTeamPending}
-                  selectedTeamName={selectedTeamName}
-                  selectedTeamRole={selectedTeamRole}
-                  memberCount={selectedTeamMemberCount}
-                  selectedNode={selectedNode}
-                  canInvite={canInvite}
-                  canManageSelectedNodeSharing={selectedTeamRole === "owner"}
-                  isSelectedNodeShared={Boolean(isSelectedNodeShared)}
-                  isNodeShareActionPending={Boolean(isNodeShareActionPending)}
-                  nodeShareActionLabel={isSelectedNodeShared ? "Unshare node" : "Share node"}
-                  nodeShareActionDisabled={!selectedNode || selectedTeamRole !== "owner"}
-                  onCompactChange={setIsTeamAsideCompact}
-                  onCreateTeam={createTeam}
-                  onOpenTeamSettings={() => setTeamSettingsOpen(true)}
-                  onToggleSelectedNodeSharing={() => {}}
-                />
-
-                <div className="min-h-0 min-w-0 flex-1 h-full">
-                  <LazyInfiniteCanvas
-                    ref={canvasRef}
-                    nodes={board.nodes}
-                    selectedNodeIds={board.selectedNodeIds}
-                    loading={board.isWorkspaceInitialLoading}
-                    onNodesChange={(nextNodes: any[]) =>
-                      board.updateNodes((draft) => {
-                        const positionById = new Map(nextNodes.map((node: any) => [node.id, node]));
-                        draft.forEach((node, index) => {
-                          const updated = positionById.get(node.id) as any;
-                          if (!updated) return;
-                          draft[index] = {
-                            ...node,
-                            x: updated.x,
-                            y: updated.y,
-                            width: updated.width,
-                            height: updated.height,
-                          };
-                        });
-                      })
-                    }
-                    onSelectedNodeIdsChange={board.setSelectedNodeIds}
-                    onCreateNode={board.openCreateNode}
-                    onEditNode={board.openEditNode}
-                    onConnectNodePair={board.connectNodePair}
-                    onDisconnectNodePair={board.disconnectNodePair}
-                    onRemoveNode={board.removeNode}
-                    onOpenNode={(payload: any) => navigate(`/node/${payload.nodeId}`)}
-                    renderNode={(node: any, selected: any, allNodes: any) => (
-                      <WorkspaceNodeCard node={node} selected={selected} allNodes={allNodes} />
-                    )}
-                  />
-                </div>
-              </div>
+              <LazyInfiniteCanvas
+                ref={canvasRef}
+                nodes={board.nodes}
+                selectedNodeIds={board.selectedNodeIds}
+                loading={board.isWorkspaceInitialLoading}
+                onNodesChange={(nextNodes: any[]) =>
+                  board.updateNodes((draft) => {
+                    const positionById = new Map(nextNodes.map((node: any) => [node.id, node]));
+                    draft.forEach((node, index) => {
+                      const updated = positionById.get(node.id) as any;
+                      if (!updated) return;
+                      draft[index] = {
+                        ...node,
+                        x: updated.x,
+                        y: updated.y,
+                        width: updated.width,
+                        height: updated.height,
+                      };
+                    });
+                  })
+                }
+                onSelectedNodeIdsChange={board.setSelectedNodeIds}
+                onCreateNode={board.openCreateNode}
+                onEditNode={board.openEditNode}
+                onConnectNodePair={board.connectNodePair}
+                onDisconnectNodePair={board.disconnectNodePair}
+                onRemoveNode={board.removeNode}
+                onOpenNode={(payload: any) => navigate(`/node/${payload.nodeId}`)}
+                renderNode={(node: any, selected: any, allNodes: any) => (
+                  <WorkspaceNodeCard node={node} selected={selected} allNodes={allNodes} />
+                )}
+              />
             </main>
 
             <div className="pointer-events-none absolute bottom-4 left-4 z-30 flex max-w-xs flex-col gap-3 md:bottom-6 md:left-6">
@@ -261,13 +177,6 @@ export function DashboardPage() {
               onNodeTypeChange={(nodeType) => board.patchNodeDraft({ nodeType })}
               onTintChange={(tint) => board.patchNodeDraft({ tint })}
               onTitleChange={(title) => board.patchNodeDraft({ title })}
-            />
-
-            <TeamSettingsModal
-              open={teamSettingsOpen}
-              onOpenChange={setTeamSettingsOpen}
-              team={selectedTeam}
-              onRefetchWorkspace={() => board.workspaceQuery.refetch()}
             />
           </>
         ) : (

@@ -30,12 +30,7 @@ import { authClient } from "@/lib/auth-client";
 import { getServerUrl } from "@/lib/env";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { getUserAvatarPublicUrl } from "@/lib/user-avatar-url";
-import {
-  shellFocusRingClass,
-  shellRailAvatarClass,
-  shellRailAvatarCollapsedClass,
-  shellRailExpandedLinkClass,
-} from "@/features/app-shell/app-shell-ui";
+import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
 import { useTheme } from "@/stores/theme";
 import { cn } from "@/lib/utils";
 
@@ -49,15 +44,7 @@ function getInitials(name: string | undefined | null): string {
   return parts.map((part) => part[0]?.toUpperCase() ?? "").join("") || "B";
 }
 
-type AppShellAccountMenuProps = {
-  variant?: "topbar" | "rail";
-  expanded?: boolean;
-};
-
-export function AppShellAccountMenu({
-  variant = "topbar",
-  expanded = false,
-}: AppShellAccountMenuProps) {
+export function AppShellAccountMenu() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const session = authClient.useSession();
@@ -136,32 +123,10 @@ export function AppShellAccountMenu({
   }
 
   if (session.isPending) {
-    return (
-      <Skeleton
-        className={cn("rounded-full", variant === "rail" && expanded ? "h-8 w-full" : "size-8")}
-      />
-    );
+    return <Skeleton className="size-8 rounded-full" />;
   }
 
   if (!user) {
-    if (variant === "rail" && expanded) {
-      return (
-        <Button
-          asChild
-          variant="secondary"
-          className={cn(
-            "h-8 w-full justify-start rounded-full px-2.5 text-[13px]",
-            shellFocusRingClass,
-          )}
-        >
-          <Link to="/login">
-            <LogIn className="size-3.5" />
-            Sign in
-          </Link>
-        </Button>
-      );
-    }
-
     return (
       <Button
         asChild
@@ -177,83 +142,34 @@ export function AppShellAccountMenu({
     );
   }
 
-  const isRail = variant === "rail";
-  const dropdownSide = isRail ? "right" : "bottom";
-  const dropdownAlign = isRail ? "end" : "end";
-
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          {isRail && expanded ? (
-            <button
-              type="button"
-              className={cn(
-                shellRailExpandedLinkClass,
-                "border border-transparent text-left text-highlighted",
-              )}
-              aria-label={`Account menu for ${userName}`}
-            >
-              <span className={shellRailAvatarClass}>
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt={userName} className="size-full object-cover" />
-                ) : (
-                  <span>{initials}</span>
-                )}
-                {isPro ? (
-                  <span
-                    className="absolute right-[0.2rem] top-[0.2rem] size-[0.28rem] rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
-                    aria-hidden="true"
-                  />
-                ) : null}
-              </span>
-              <span className="app-shell__rail-label truncate">{userName}</span>
-            </button>
-          ) : isRail ? (
-            <button
-              type="button"
-              className={cn(shellRailAvatarCollapsedClass, shellFocusRingClass)}
-              aria-label={`Account menu for ${userName}`}
-              title={userName}
-            >
-              {avatarUrl ? (
-                <img src={avatarUrl} alt={userName} className="size-full object-cover" />
-              ) : (
-                <span>{initials}</span>
-              )}
-              {isPro ? (
-                <span
-                  className="absolute right-[0.35rem] top-[0.35rem] size-[0.3rem] rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
-                  aria-hidden="true"
-                />
-              ) : null}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={cn(
-                "group relative flex size-8 items-center justify-center overflow-hidden rounded-full border border-default bg-default text-[11px] font-semibold text-highlighted transition-colors hover:border-accented hover:bg-elevated focus-visible:border-accented focus-visible:bg-elevated active:scale-95",
-                shellFocusRingClass,
-              )}
-              aria-label={`Account menu for ${userName}`}
-              title={userName}
-            >
-              {avatarUrl ? (
-                <img src={avatarUrl} alt={userName} className="size-full object-cover" />
-              ) : (
-                <span>{initials}</span>
-              )}
-              {isPro ? (
-                <span
-                  className="absolute right-[0.35rem] top-[0.35rem] size-[0.3rem] rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
-                  aria-hidden="true"
-                />
-              ) : null}
-            </button>
-          )}
+          <button
+            type="button"
+            className={cn(
+              "group relative flex size-8 items-center justify-center overflow-hidden rounded-full border border-default bg-default text-[11px] font-semibold text-highlighted transition-colors hover:border-accented hover:bg-elevated focus-visible:border-accented focus-visible:bg-elevated active:scale-95",
+              shellFocusRingClass,
+            )}
+            aria-label={`Account menu for ${userName}`}
+            title={userName}
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={userName} className="size-full object-cover" />
+            ) : (
+              <span>{initials}</span>
+            )}
+            {isPro ? (
+              <span
+                className="absolute right-[0.35rem] top-[0.35rem] size-[0.3rem] rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
+                aria-hidden="true"
+              />
+            ) : null}
+          </button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align={dropdownAlign} side={dropdownSide} className="w-56">
+        <DropdownMenuContent align="end" side="bottom" className="w-56">
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col gap-0.5">
               <span className="truncate font-semibold text-highlighted">{userName}</span>

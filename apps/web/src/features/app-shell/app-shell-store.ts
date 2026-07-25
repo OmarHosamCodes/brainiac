@@ -10,14 +10,10 @@ export function clampAgentDockWidth(width: number) {
   return Math.min(MAX_AGENT_DOCK_WIDTH, Math.max(MIN_AGENT_DOCK_WIDTH, Math.round(width)));
 }
 
-/** Collapsed rail width — keep in sync with `--app-shell-rail-width-collapsed` (topbar height uses the same token). */
-export const APP_SHELL_RAIL_WIDTH_COLLAPSED = "3rem";
-export const APP_SHELL_RAIL_WIDTH_EXPANDED = "14rem";
-
 type AppShellState = {
   agentDockOpen: boolean;
   agentDockWidth: number;
-  railExpanded: boolean;
+  commandPaletteOpen: boolean;
   pageSubtitle: string | null;
   customDockOwnerCount: number;
   contextOwnerCount: number;
@@ -29,8 +25,8 @@ type AppShellState = {
   setAgentDockOpen: (open: boolean) => void;
   toggleAgentDock: () => void;
   setAgentDockWidth: (width: number) => void;
-  setRailExpanded: (expanded: boolean) => void;
-  toggleRail: () => void;
+  setCommandPaletteOpen: (open: boolean) => void;
+  toggleCommandPalette: () => void;
   setPageSubtitle: (subtitle: string | null) => void;
   acquireCustomDock: () => void;
   releaseCustomDock: () => void;
@@ -50,7 +46,7 @@ type AppShellState = {
 export const useAppShellStore = create<AppShellState>((set, get) => ({
   agentDockOpen: false,
   agentDockWidth: DEFAULT_AGENT_DOCK_WIDTH,
-  railExpanded: false,
+  commandPaletteOpen: false,
   pageSubtitle: null,
   customDockOwnerCount: 0,
   contextOwnerCount: 0,
@@ -62,8 +58,8 @@ export const useAppShellStore = create<AppShellState>((set, get) => ({
   setAgentDockOpen: (open) => set({ agentDockOpen: open }),
   toggleAgentDock: () => set({ agentDockOpen: !get().agentDockOpen }),
   setAgentDockWidth: (width) => set({ agentDockWidth: clampAgentDockWidth(width) }),
-  setRailExpanded: (expanded) => set({ railExpanded: expanded }),
-  toggleRail: () => set({ railExpanded: !get().railExpanded }),
+  setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
+  toggleCommandPalette: () => set({ commandPaletteOpen: !get().commandPaletteOpen }),
   setPageSubtitle: (subtitle) => set({ pageSubtitle: subtitle }),
   acquireCustomDock: () => set({ customDockOwnerCount: get().customDockOwnerCount + 1 }),
   releaseCustomDock: () =>
