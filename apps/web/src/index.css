@@ -475,7 +475,8 @@ body {
 
 .app-shell {
   --app-shell-topbar-height: 3rem;
-  --app-shell-topbar-inset: 0.5rem;
+  /* Shared Dashboard + Agency chrome inset (tracker / nest pad align to this). */
+  --app-shell-topbar-inset: 1rem;
   --app-shell-topbar-slot: calc(var(--app-shell-topbar-height) + var(--app-shell-topbar-inset) * 2);
   position: relative;
   display: grid;
@@ -503,9 +504,8 @@ body {
 }
 
 .app-shell--execution {
-  /* Content frame is full-bleed; page classes opt into nest pad where needed. */
   --shell-chrome-inset: 0;
-  --shell-nest-pad: 1rem;
+  --shell-nest-pad: var(--app-shell-topbar-inset);
   --shell-inner-radius: 1rem;
   --shell-outer-radius: calc(var(--shell-inner-radius) + var(--shell-nest-pad));
 }

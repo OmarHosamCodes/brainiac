@@ -59,7 +59,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <div
       className={cn(
-        "app-shell bg-default text-default",
+        "app-shell bg-background text-default",
         isSpatialMode ? "app-shell--spatial" : "app-shell--execution",
       )}
       style={
