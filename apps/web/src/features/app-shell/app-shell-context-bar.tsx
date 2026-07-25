@@ -1,0 +1,95 @@
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Link, useLocation } from "react-router-dom";
+
+import { findActiveNavItem } from "@/features/app-shell/app-navigation";
+import { AppShellNotifications } from "@/features/app-shell/app-shell-notifications";
+import { useAppShellStore } from "@/features/app-shell/app-shell-store";
+import {
+  shellContextBarClass,
+  shellFocusRingClass,
+  shellHeaderContextInnerClass,
+  shellHeaderContextRegionClass,
+  shellUtilityClusterClass,
+} from "@/features/app-shell/app-shell-ui";
+import { agencySegmentFromSearch, agencySegmentLabel } from "@/features/shared/agency-segments";
+import { AgencySubtitleBreadcrumb } from "@/features/shared/agency-subtitle-breadcrumb";
+import { useTeamStore } from "@/features/team/team-store";
+import { cn } from "@/lib/utils";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/ui/breadcrumb";
+import { Separator } from "@/ui/separator";
+
+export function AppShellContextBar() {
+  const location = useLocation();
+  const railPinned = useAppShellStore((s) => s.railPinned);
+  const toggleRailPinned = useAppShellStore((s) => s.toggleRailPinned);
+  const activeNav = findActiveNavItem(location.pathname);
+  const onAgency = location.pathname.startsWith("/agency");
+  const segment = onAgency ? agencySegmentFromSearch(location.search) : null;
+  const sectionLabel = activeNav?.label ?? "Orch";
+  const sectionHref = activeNav?.to ?? "/dashboard";
+  const agencyTeamId = useTeamStore((s) => s.selectedTeamId);
+
+  return (
+    <header className={shellContextBarClass}>
+      <div className={cn(shellHeaderContextRegionClass, shellHeaderContextInnerClass)}>
+        <button
+          type="button"
+          className={cn(
+            "flex size-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+            shellFocusRingClass,
+          )}
+          onClick={toggleRailPinned}
+          aria-pressed={railPinned}
+          aria-label={railPinned ? "Collapse sidebar" : "Expand sidebar"}
+          title={railPinned ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          {railPinned ? (
+            <PanelLeftClose className="size-4" aria-hidden="true" />
+          ) : (
+            <PanelLeftOpen className="size-4" aria-hidden="true" />
+          )}
+        </button>
+        <Separator orientation="vertical" className="h-4 self-center" />
+        <Breadcrumb>
+          <BreadcrumbList className="min-w-0 flex-nowrap">
+            {onAgency && segment ? (
+              <>
+                <BreadcrumbItem>
+                  <BreadcrumbLink asChild>
+                    <Link to={sectionHref} className="truncate text-muted">
+                      {sectionLabel}
+                    </Link>
+                  </BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem className="min-w-0">
+                  <BreadcrumbPage className="truncate font-semibold text-highlighted">
+                    {agencySegmentLabel(segment)}
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </>
+            ) : (
+              <BreadcrumbItem className="min-w-0">
+                <BreadcrumbPage className="truncate font-semibold text-highlighted">
+                  {sectionLabel}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            )}
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+
+      <div className={shellUtilityClusterClass}>
+        {onAgency && agencyTeamId ? <AgencySubtitleBreadcrumb teamId={agencyTeamId} /> : null}
+        <AppShellNotifications />
+      </div>
+    </header>
+  );
+}

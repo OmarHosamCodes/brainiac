@@ -474,33 +474,25 @@ body {
 }
 
 .app-shell {
-  --app-shell-topbar-height: 3rem;
-  /* Shared Dashboard + Agency chrome inset (tracker / nest pad align to this). */
   --app-shell-topbar-inset: 1rem;
-  --app-shell-topbar-slot: calc(var(--app-shell-topbar-height) + var(--app-shell-topbar-inset) * 2);
+  --app-shell-rail-inset: 0.75rem;
+  --app-shell-rail-collapsed: 3.25rem;
+  --app-shell-rail-expanded: 15.5rem;
+  --app-shell-rail-width: var(--app-shell-rail-collapsed);
+  --app-shell-context-bar-height: 2.75rem;
+  --app-shell-chrome-rail: var(--app-shell-rail-collapsed);
   position: relative;
   display: grid;
   height: 100vh;
   overflow: hidden;
   grid-template-columns: minmax(0, 1fr) var(--app-shell-dock-width, 0px);
-  grid-template-rows: var(--app-shell-topbar-slot) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   transition: grid-template-columns var(--motion-duration-rail) var(--motion-ease-rail);
 }
 
-/* Spatial: canvas fills the viewport; glass top bar overlays so the board shows through. */
-.app-shell--spatial {
-  grid-template-rows: minmax(0, 1fr);
-}
-
-.app-shell--spatial .app-shell__topbar {
-  position: absolute;
-  inset-inline: 0;
-  top: 0;
-  grid-row: auto;
-}
-
-.app-shell--spatial .app-shell__main {
-  grid-row: 1;
+.app-shell--rail-pinned {
+  --app-shell-rail-width: var(--app-shell-rail-expanded);
+  --app-shell-chrome-rail: var(--app-shell-rail-expanded);
 }
 
 .app-shell--execution {
@@ -516,7 +508,6 @@ body {
   }
 }
 
-/* Restrained chrome glass — shared by floating top bar and canvas tool strips. */
 .ui-chrome-glass {
   isolation: isolate;
   background: color-mix(in oklab, var(--color-default) 72%, transparent);
@@ -541,91 +532,251 @@ body {
   }
 }
 
-/* Floating liquid-glass header: inset surface over the workspace. */
-.app-shell__topbar {
-  grid-column: 1 / -1;
-  grid-row: 1;
-  position: relative;
+/* Quiet opaque chrome panel; hairline ring instead of glass. */
+.app-shell__chrome-surface {
+  background: var(--color-default);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-border) 80%, transparent);
+}
+
+/* One L-shaped nest: rail column + context row share border/shadow/radius. */
+.app-shell__chrome {
+  position: fixed;
+  top: var(--app-shell-rail-inset);
+  left: var(--app-shell-rail-inset);
+  right: calc(var(--app-shell-rail-inset) + var(--app-shell-dock-width, 0px));
+  bottom: var(--app-shell-rail-inset);
   z-index: 40;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: var(--app-shell-topbar-inset);
-  min-height: var(--app-shell-topbar-height);
-  padding: 0 0.625rem;
-  border-radius: 14px;
-  transition: min-height var(--motion-duration-panel) var(--motion-ease-out);
+  display: none;
+  grid-template-columns: var(--app-shell-chrome-rail) minmax(0, 1fr);
+  grid-template-rows: var(--app-shell-context-bar-height) minmax(0, 1fr);
+  border-radius: 16px;
+  pointer-events: none;
+  transition:
+    grid-template-columns var(--motion-duration-rail) var(--motion-ease-rail),
+    box-shadow var(--motion-duration-rail) var(--motion-ease-rail),
+    clip-path var(--motion-duration-rail) var(--motion-ease-rail);
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% var(--app-shell-context-bar-height),
+    var(--app-shell-chrome-rail) var(--app-shell-context-bar-height),
+    var(--app-shell-chrome-rail) 100%,
+    0 100%
+  );
+  /* drop-shadow survives clip-path; the surface box-shadow ring is clipped to the L. */
+  filter: drop-shadow(0 2px 8px color-mix(in oklab, black 8%, transparent));
 }
 
 @media (min-width: 768px) {
-  .app-shell__topbar {
-    gap: 0.75rem;
-    padding: 0 0.875rem;
+  .app-shell__chrome {
+    display: grid;
   }
 }
 
+.app-shell:not(.app-shell--rail-pinned) .app-shell__chrome:has(.app-shell__rail:hover),
+.app-shell:not(.app-shell--rail-pinned) .app-shell__chrome:has(.app-shell__rail:focus-within) {
+  --app-shell-chrome-rail: var(--app-shell-rail-expanded);
+  filter: drop-shadow(0 8px 20px color-mix(in oklab, black 14%, transparent));
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .app-shell__topbar {
+  .app-shell__chrome {
     transition: none;
   }
 }
 
-.app-shell__topbar-left {
+.app-shell__rail {
+  grid-column: 1;
+  grid-row: 1 / -1;
   display: flex;
-  min-width: 0;
-  flex: 1 1 0%;
-  align-items: center;
-  gap: 0.375rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  min-height: 0;
+  padding: 0.5rem;
   overflow: hidden;
-}
-
-@media (min-width: 768px) {
-  .app-shell__topbar-left {
-    gap: 0.5rem;
-  }
-}
-
-.app-shell__topbar-center {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  z-index: 1;
-  display: block;
-  width: min(20rem, calc(100vw - 14rem));
-  max-width: 20rem;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-}
-
-@media (min-width: 768px) {
-  .app-shell__topbar-center {
-    width: min(22rem, calc(100vw - 28rem));
-    max-width: 22rem;
-  }
-}
-
-.app-shell__topbar-center > * {
   pointer-events: auto;
 }
 
-.app-shell__utilities {
-  display: flex;
-  flex: 1 1 0%;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.375rem;
+/* Taller two-line rows: team header at the top, profile row in the footer. */
+.app-shell__rail-header {
+  flex: none;
+  height: 2.75rem;
 }
 
-.app-shell__context:empty {
-  display: none;
+.app-shell__rail-nav {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.app-shell__rail-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.app-shell__rail-link {
+  display: flex;
+  width: 100%;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 0;
+  border-radius: 0.625rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rail-label {
+  min-width: 0;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition:
+    max-width var(--motion-duration-rail) var(--motion-ease-rail),
+    opacity var(--motion-duration-rail) var(--motion-ease-rail);
+}
+
+.app-shell__rail-subnav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding-left: 0.5rem;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-height var(--motion-duration-rail) var(--motion-ease-rail),
+    opacity var(--motion-duration-rail) var(--motion-ease-rail);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rail-label,
+  .app-shell__rail-subnav {
+    transition: none;
+  }
+}
+
+.app-shell__rail-sublink {
+  display: flex;
+  height: 2rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: 0.5rem;
+  border-radius: 0.625rem;
+  white-space: nowrap;
+}
+
+.app-shell__rail-footer {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid color-mix(in oklab, var(--color-border) 80%, transparent);
+}
+
+.app-shell--rail-pinned .app-shell__rail-link,
+.app-shell__chrome:has(.app-shell__rail:hover) .app-shell__rail-link,
+.app-shell__chrome:has(.app-shell__rail:focus-within) .app-shell__rail-link {
+  justify-content: flex-start;
+  gap: 0.625rem;
+  padding-inline: 0.625rem;
+}
+
+.app-shell--rail-pinned .rail-label,
+.app-shell__chrome:has(.app-shell__rail:hover) .rail-label,
+.app-shell__chrome:has(.app-shell__rail:focus-within) .rail-label {
+  max-width: 11.5rem;
+  opacity: 1;
+}
+
+.app-shell--rail-pinned .app-shell__rail-subnav,
+.app-shell__chrome:has(.app-shell__rail:hover) .app-shell__rail-subnav,
+.app-shell__chrome:has(.app-shell__rail:focus-within) .app-shell__rail-subnav {
+  max-height: 18rem;
+  margin-top: 0.125rem;
+  opacity: 1;
+}
+
+/* Static drawer (mobile sheet): rail rows render expanded, no width animation. */
+.app-shell__drawer-static .app-shell__rail-link {
+  justify-content: flex-start;
+  gap: 0.625rem;
+  padding-inline: 0.625rem;
+}
+
+.app-shell__drawer-static .rail-label {
+  max-width: none;
+  opacity: 1;
+}
+
+.app-shell__drawer-static .app-shell__rail-subnav {
+  max-height: none;
+  margin-top: 0.125rem;
+  opacity: 1;
+}
+
+.app-shell__mobile-nav-trigger {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 44;
+  border-radius: 9999px;
+}
+
+.app-shell__context-bar {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-inline: 0.75rem;
+  pointer-events: auto;
+  box-shadow: inset 1px 0 0 color-mix(in oklab, var(--color-border) 70%, transparent);
+}
+
+.app-shell__context-bar-left {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
 }
 
 .app-shell__main {
   grid-column: 1;
-  grid-row: 2;
+  grid-row: 1;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .app-shell {
+    grid-template-columns:
+      calc(var(--app-shell-rail-width) + var(--app-shell-rail-inset) * 2)
+      minmax(0, 1fr)
+      var(--app-shell-dock-width, 0px);
+    grid-template-rows:
+      calc(var(--app-shell-context-bar-height) + var(--app-shell-rail-inset))
+      minmax(0, 1fr);
+  }
+
+  .app-shell__main {
+    grid-column: 2;
+    grid-row: 2;
+  }
 }
 
 .app-shell--execution .app-shell__main {
@@ -634,14 +785,14 @@ body {
 
 .app-shell__mobile-backdrop {
   position: fixed;
-  inset: var(--app-shell-topbar-slot) 0 0 0;
+  inset: 0;
   z-index: 45;
 }
 
 .app-shell__dock {
   position: fixed;
   right: 0;
-  top: var(--app-shell-topbar-slot);
+  top: 0;
   bottom: 0;
   z-index: 50;
   width: min(100vw, 28rem);
@@ -660,15 +811,11 @@ body {
     position: relative;
     top: auto;
     bottom: auto;
-    grid-column: 2;
-    grid-row: 2;
+    grid-column: 3;
+    grid-row: 1 / -1;
     width: var(--app-shell-dock-width, 0px);
     transform: none;
     opacity: 1;
-  }
-
-  .app-shell--spatial .app-shell__dock {
-    grid-row: 1;
   }
 }
 

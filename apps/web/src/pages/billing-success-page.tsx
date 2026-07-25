@@ -26,7 +26,7 @@ export function BillingSuccessPage() {
   }, [refreshBillingState]);
 
   return (
-    <AppShellPage subtitle="Success">
+    <AppShellPage>
       {isBooting ? (
         <LogoLoader label="Loading billing" />
       ) : (

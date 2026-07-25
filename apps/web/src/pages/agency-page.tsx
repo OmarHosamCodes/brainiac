@@ -4,7 +4,6 @@ import { useSearchParams } from "react-router-dom";
 
 import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { AppShellPage } from "@/features/app-shell/app-shell-page";
-import { AppShellTopbarSubtitle } from "@/features/app-shell/app-shell-topbar";
 import {
   shellContentInClass,
   shellPageBodyClass,
@@ -29,7 +28,6 @@ import {
   isLegacyAgencySegmentId,
   type AgencySegmentId,
 } from "@/features/shared/agency-segments";
-import { AgencySubtitleBreadcrumb } from "@/features/shared/agency-subtitle-breadcrumb";
 import { AgencySegmentBody } from "@/features/shared/segment/agency-segment-body";
 import { AGENCY_PAGE_SCROLL_ATTR, agencyWorkSurfaceShellClass } from "@/features/shared/agency-ui";
 import { useAgencyOptimisticStore } from "@/features/shared/stores/agency-optimistic";
@@ -181,7 +179,7 @@ export function AgencyPage() {
   const isWorkSegment = segment === "work";
 
   return (
-    <AppShellPage slots={["subtitle"]}>
+    <AppShellPage>
       <div
         className={cn(
           "flex h-full min-h-0 flex-col bg-background text-foreground",
@@ -189,12 +187,6 @@ export function AgencyPage() {
         )}
         {...{ [AGENCY_PAGE_SCROLL_ATTR]: "" }}
       >
-        {!isBooting ? (
-          <AppShellTopbarSubtitle>
-            <AgencySubtitleBreadcrumb teamId={agencySyncTeamId} />
-          </AppShellTopbarSubtitle>
-        ) : null}
-
         <main className={isWorkSegment ? shellPageNestClass : shellPageClass}>
           {isBooting ? (
             <LogoLoader label="Loading agency" />

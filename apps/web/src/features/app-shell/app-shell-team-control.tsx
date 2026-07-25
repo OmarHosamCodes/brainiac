@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Loader2, Plus, Settings2, Users } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Plus, Settings2, Users } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -27,9 +27,11 @@ import { Skeleton } from "@/ui/skeleton";
 
 type AppShellTeamControlProps = {
   className?: string;
+  /** `compact` round toolbar trigger, or a full-width `sidebar` header row. */
+  variant?: "compact" | "sidebar";
 };
 
-export function AppShellTeamControl({ className }: AppShellTeamControlProps) {
+export function AppShellTeamControl({ className, variant = "compact" }: AppShellTeamControlProps) {
   const session = authClient.useSession();
   const authEnabled = Boolean(session.data?.user);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -56,6 +58,10 @@ export function AppShellTeamControl({ className }: AppShellTeamControlProps) {
   const selectedTeam = teamDetailQuery.data ?? null;
   const selectedSummary = teams.find((team) => team.id === selectedTeamId) ?? teams[0] ?? null;
   const displayName = selectedTeam?.name ?? selectedSummary?.name ?? "";
+  const memberCount = selectedTeam?.members.length ?? 0;
+  const secondaryLabel = selectedTeam
+    ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
+    : "Workspace";
 
   useEffect(() => {
     syncSelectedTeam(teams);
@@ -71,7 +77,11 @@ export function AppShellTeamControl({ className }: AppShellTeamControlProps) {
   }
 
   if (teamListQuery.isPending) {
-    return <Skeleton className={cn("size-8 rounded-full", className)} />;
+    return variant === "sidebar" ? (
+      <Skeleton className={cn("h-11 w-full rounded-[10px]", className)} />
+    ) : (
+      <Skeleton className={cn("size-8 rounded-full", className)} />
+    );
   }
 
   return (
@@ -87,19 +97,51 @@ export function AppShellTeamControl({ className }: AppShellTeamControlProps) {
         }}
       >
         <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-elevated hover:text-highlighted",
-              shellFocusRingClass,
-              className,
-            )}
-            aria-label={displayName ? `Team: ${displayName}` : "Select team"}
-            aria-expanded={menuOpen}
-            title={displayName || "Select team"}
-          >
-            <Users className="size-4 shrink-0" aria-hidden="true" />
-          </button>
+          {variant === "sidebar" ? (
+            <button
+              type="button"
+              className={cn(
+                "app-shell__rail-link app-shell__rail-header text-muted transition-colors hover:bg-elevated",
+                shellFocusRingClass,
+                className,
+              )}
+              aria-label={displayName ? `Team: ${displayName}` : "Select team"}
+              aria-expanded={menuOpen}
+              title={displayName || "Select team"}
+            >
+              <span
+                className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary"
+                aria-hidden="true"
+              >
+                {displayName ? displayName.charAt(0).toUpperCase() : <Users className="size-3.5" />}
+              </span>
+              <span className="rail-label flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="flex min-w-0 flex-1 flex-col text-left leading-tight">
+                  <span className="truncate text-[13px] font-semibold text-highlighted">
+                    {displayName || "Select team"}
+                  </span>
+                  <span className="truncate text-[11px] font-medium text-muted">
+                    {secondaryLabel}
+                  </span>
+                </span>
+                <ChevronsUpDown className="size-3.5 shrink-0 text-muted" aria-hidden="true" />
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={cn(
+                "flex size-8 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+                shellFocusRingClass,
+                className,
+              )}
+              aria-label={displayName ? `Team: ${displayName}` : "Select team"}
+              aria-expanded={menuOpen}
+              title={displayName || "Select team"}
+            >
+              <Users className="size-4 shrink-0" aria-hidden="true" />
+            </button>
+          )}
         </DropdownMenuTrigger>
 
         <DropdownMenuContent align="start" className="w-64">

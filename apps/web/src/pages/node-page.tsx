@@ -22,7 +22,7 @@ export function NodePage() {
   const { isBooting } = useShellBootGate(dataReady);
 
   return (
-    <AppShellPage subtitle={page.node?.title ?? "Node"} slots={["dock"]}>
+    <AppShellPage slots={["dock"]}>
       <div className="relative h-full w-full overflow-hidden">
         {!isBooting ? (
           <AppShellPortal targetId="app-shell-dock-content">

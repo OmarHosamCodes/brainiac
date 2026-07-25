@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   BadgeCheck,
   Camera,
+  ChevronsUpDown,
   Circle,
   CreditCard,
   Loader2,
@@ -37,7 +38,12 @@ import { cn } from "@/lib/utils";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { useTheme } from "@/stores/theme";
 
-export function AppShellAccountMenu() {
+type AppShellAccountMenuProps = {
+  /** `icon` round avatar trigger, or a full-width `sidebar` profile row. */
+  variant?: "icon" | "sidebar";
+};
+
+export function AppShellAccountMenu({ variant = "icon" }: AppShellAccountMenuProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const session = authClient.useSession();
@@ -118,10 +124,30 @@ export function AppShellAccountMenu() {
   }
 
   if (session.isPending) {
-    return <Skeleton className="size-8 rounded-full" />;
+    return variant === "sidebar" ? (
+      <Skeleton className="h-11 w-full rounded-[10px]" />
+    ) : (
+      <Skeleton className="size-8 rounded-full" />
+    );
   }
 
   if (!user) {
+    if (variant === "sidebar") {
+      return (
+        <Link
+          to="/login"
+          className={cn(
+            "app-shell__rail-link text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+            shellFocusRingClass,
+          )}
+          aria-label="Sign in"
+          title="Sign in"
+        >
+          <LogIn className="size-4 shrink-0" aria-hidden="true" />
+          <span className="rail-label min-w-0 flex-1 truncate text-left">Sign in</span>
+        </Link>
+      );
+    }
     return (
       <Button
         asChild
@@ -141,33 +167,77 @@ export function AppShellAccountMenu() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            className={cn(
-              "group relative flex size-8 items-center justify-center overflow-hidden rounded-full border border-default bg-default text-[11px] font-semibold text-highlighted transition-colors hover:border-accented hover:bg-elevated focus-visible:border-accented focus-visible:bg-elevated active:scale-95",
-              shellFocusRingClass,
-            )}
-            aria-label={`Account menu for ${userName}`}
-            title={userName}
-          >
-            <AgencyMemberAvatar
-              name={userName}
-              userId={user.id}
-              avatarUrl={avatarUrl}
-              size="md"
-              alt={userName}
-              className="size-full rounded-full"
-            />
-            {updateAvailable || isPro ? (
-              <span
-                className="absolute right-[0.35rem] top-[0.35rem] size-[0.3rem] rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
-                aria-hidden="true"
+          {variant === "sidebar" ? (
+            <button
+              type="button"
+              className={cn(
+                "app-shell__rail-link app-shell__rail-header text-muted transition-colors hover:bg-elevated",
+                shellFocusRingClass,
+              )}
+              aria-label={`Account menu for ${userName}`}
+              title={userName}
+            >
+              <span className="relative shrink-0">
+                <AgencyMemberAvatar
+                  name={userName}
+                  userId={user.id}
+                  avatarUrl={avatarUrl}
+                  size="md"
+                  alt={userName}
+                  className="size-7 rounded-lg"
+                />
+                {updateAvailable ? (
+                  <span
+                    className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
+                    aria-hidden="true"
+                  />
+                ) : null}
+              </span>
+              <span className="rail-label flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="flex min-w-0 flex-1 flex-col text-left leading-tight">
+                  <span className="truncate text-[13px] font-semibold text-highlighted">
+                    {userName}
+                  </span>
+                  <span className="truncate text-[11px] font-medium text-muted">
+                    {isPro ? "Pro plan" : "Free plan"}
+                  </span>
+                </span>
+                <ChevronsUpDown className="size-3.5 shrink-0 text-muted" aria-hidden="true" />
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={cn(
+                "group relative flex size-8 items-center justify-center overflow-hidden rounded-full border border-default bg-default text-[11px] font-semibold text-highlighted transition-colors hover:border-accented hover:bg-elevated focus-visible:border-accented focus-visible:bg-elevated active:scale-95",
+                shellFocusRingClass,
+              )}
+              aria-label={`Account menu for ${userName}`}
+              title={userName}
+            >
+              <AgencyMemberAvatar
+                name={userName}
+                userId={user.id}
+                avatarUrl={avatarUrl}
+                size="md"
+                alt={userName}
+                className="size-full rounded-full"
               />
-            ) : null}
-          </button>
+              {updateAvailable || isPro ? (
+                <span
+                  className="absolute right-[0.35rem] top-[0.35rem] size-[0.3rem] rounded-full bg-primary shadow-[0_0_0_2px_var(--background)]"
+                  aria-hidden="true"
+                />
+              ) : null}
+            </button>
+          )}
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end" side="bottom" className="w-56">
+        <DropdownMenuContent
+          align="end"
+          side={variant === "sidebar" ? "right" : "bottom"}
+          className="w-56"
+        >
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col gap-0.5">
               <span className="truncate font-semibold text-highlighted">{userName}</span>

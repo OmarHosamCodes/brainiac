@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 
-import { AppShellTopbar } from "@/features/app-shell/app-shell-topbar";
+import { AppShellChrome } from "@/features/app-shell/app-shell-chrome";
 import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { useAppUpdateStore } from "@/features/app-shell/app-update-store";
 import { useAppUpdateWatcher } from "@/features/app-shell/hooks/use-app-update-watcher";
@@ -24,6 +24,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const agentDockOpen = useAppShellStore((s) => s.agentDockOpen);
   const agentDockWidth = useAppShellStore((s) => s.agentDockWidth);
+  const railPinned = useAppShellStore((s) => s.railPinned);
   const setAgentDockOpen = useAppShellStore((s) => s.setAgentDockOpen);
   const toggleAgentDock = useAppShellStore((s) => s.toggleAgentDock);
   const toggleCommandPalette = useAppShellStore((s) => s.toggleCommandPalette);
@@ -61,6 +62,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       className={cn(
         "app-shell bg-background text-default",
         isSpatialMode ? "app-shell--spatial" : "app-shell--execution",
+        railPinned && "app-shell--rail-pinned",
       )}
       style={
         {
@@ -68,7 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         } as React.CSSProperties
       }
     >
-      <AppShellTopbar />
+      <AppShellChrome />
 
       {agentDockOpen ? (
         <div

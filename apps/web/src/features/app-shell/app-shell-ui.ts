@@ -1,7 +1,7 @@
 /** Shared Tailwind class strings for the authenticated app shell. */
 import { cn } from "@/lib/utils";
 
-/** z-index scale: dock 50, backdrop 45, topbar 40 */
+/** z-index scale: dock 50, backdrop 45, chrome 40 */
 export const SHELL_Z_DOCK = 50;
 export const SHELL_Z_BACKDROP = 45;
 
@@ -19,43 +19,24 @@ export const shellLoadingPanelClass = "rounded-2xl border border-default bg-mute
 
 export const shellRailIconClass = "size-4 shrink-0";
 
-export const shellRailLinkBaseClass =
-  "flex size-8 shrink-0 items-center justify-center rounded-full text-muted transition-[background-color,border-color,color,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-elevated hover:text-highlighted active:scale-95";
-
-export const shellRailLinkActiveClass = "bg-primary/10 text-primary border border-primary/30";
-
-export const shellRailToggleClass = cn(shellRailLinkBaseClass, "border border-transparent");
-
-export const shellRailExpandedLinkClass = cn(
-  "flex h-8 w-full min-w-0 items-center gap-2.5 rounded-full px-2.5 text-[13px] font-medium text-muted transition-[background-color,border-color,color,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-elevated hover:text-highlighted active:scale-[0.98]",
+export const shellRailLinkClass = cn(
+  "app-shell__rail-link text-muted transition-colors hover:bg-elevated hover:text-highlighted active:scale-[0.98]",
   shellFocusRingClass,
 );
 
-export const shellRailAvatarClass =
-  "relative flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-default bg-default text-[10px] font-semibold";
+export const shellRailLinkActiveClass = "bg-primary/10 text-primary";
 
-export const shellRailAvatarCollapsedClass =
-  "group relative flex size-8 items-center justify-center overflow-hidden rounded-full border border-default bg-default text-[11px] font-semibold text-highlighted transition-[background-color,border-color,transform] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:border-accented hover:bg-elevated focus-visible:border-accented focus-visible:bg-elevated active:scale-95";
+export const shellRailFooterClass = "app-shell__rail-footer";
 
-export const shellRailExpandedLinkActiveClass =
-  "bg-primary/10 text-primary border border-primary/30";
+export const shellChromeFrameClass = "app-shell__chrome app-shell__chrome-surface";
 
-export const shellRailFooterClass =
-  "mt-auto flex w-full flex-col gap-1.5 border-t border-default pt-2.5";
+export const shellContextBarClass = "app-shell__context-bar";
 
-/** Topbar shell frame (floating glass surface; visuals live in `.ui-chrome-glass`). */
-export const shellTopbarBaseClass = "app-shell__topbar ui-chrome-glass";
-
-/** Shared restrained chrome glass for floating product controls (top bar, canvas tools). */
 export const shellChromeGlassClass = "ui-chrome-glass";
 
-export const shellTopbarSpatialClass = "app-shell__topbar--spatial";
+export const shellHeaderContextRegionClass = "app-shell__context-bar-left min-w-0";
 
-export const shellTopbarExecutionClass = "app-shell__topbar--execution";
-
-export const shellHeaderContextRegionClass = "app-shell__topbar-left min-w-0";
-
-export const shellHeaderCenterRegionClass = "app-shell__topbar-center";
+export const shellHeaderCenterRegionClass = "app-shell__context-bar-center";
 
 export const shellHeaderContextInnerClass = "flex min-w-0 items-center gap-2";
 
@@ -68,7 +49,6 @@ export const shellHeaderUtilityButtonClass = cn(
 
 export const shellHeaderUtilityActionClass = cn("shrink-0 rounded-full", shellFocusRingClass);
 
-/** Shared geometry for all topbar controls: pill buttons, 32px icon targets. */
 export const shellTopbarControlClass = "shrink-0 rounded-full";
 
 export const shellTopbarIconButtonClass = shellTopbarControlClass;

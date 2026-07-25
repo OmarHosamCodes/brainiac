@@ -5,41 +5,33 @@ import { type AppShellMode, resolveShellMode } from "@/features/app-shell/app-na
 const DEFAULT_AGENT_DOCK_WIDTH = 384;
 const MIN_AGENT_DOCK_WIDTH = 320;
 const MAX_AGENT_DOCK_WIDTH = 640;
+const RAIL_PINNED_STORAGE_KEY = "orch.appShell.railPinned";
 
 export function clampAgentDockWidth(width: number) {
   return Math.min(MAX_AGENT_DOCK_WIDTH, Math.max(MIN_AGENT_DOCK_WIDTH, Math.round(width)));
+}
+
+function readRailPinned(): boolean {
+  if (typeof localStorage === "undefined") return false;
+  return localStorage.getItem(RAIL_PINNED_STORAGE_KEY) === "1";
 }
 
 type AppShellState = {
   agentDockOpen: boolean;
   agentDockWidth: number;
   commandPaletteOpen: boolean;
-  pageSubtitle: string | null;
+  railPinned: boolean;
   customDockOwnerCount: number;
-  contextOwnerCount: number;
-  pageCrumbOwnerCount: number;
-  subtitleOwnerCount: number;
-  actionsOwnerCount: number;
-  agentButtonHiddenOwnerCount: number;
   currentPath: string;
   setAgentDockOpen: (open: boolean) => void;
   toggleAgentDock: () => void;
   setAgentDockWidth: (width: number) => void;
   setCommandPaletteOpen: (open: boolean) => void;
   toggleCommandPalette: () => void;
-  setPageSubtitle: (subtitle: string | null) => void;
+  setRailPinned: (pinned: boolean) => void;
+  toggleRailPinned: () => void;
   acquireCustomDock: () => void;
   releaseCustomDock: () => void;
-  acquireContextSlot: () => void;
-  releaseContextSlot: () => void;
-  acquirePageCrumbSlot: () => void;
-  releasePageCrumbSlot: () => void;
-  acquireSubtitleSlot: () => void;
-  releaseSubtitleSlot: () => void;
-  acquireActionsSlot: () => void;
-  releaseActionsSlot: () => void;
-  acquireAgentButtonHidden: () => void;
-  releaseAgentButtonHidden: () => void;
   setCurrentPath: (path: string) => void;
 };
 
@@ -47,38 +39,24 @@ export const useAppShellStore = create<AppShellState>((set, get) => ({
   agentDockOpen: false,
   agentDockWidth: DEFAULT_AGENT_DOCK_WIDTH,
   commandPaletteOpen: false,
-  pageSubtitle: null,
+  railPinned: readRailPinned(),
   customDockOwnerCount: 0,
-  contextOwnerCount: 0,
-  pageCrumbOwnerCount: 0,
-  subtitleOwnerCount: 0,
-  actionsOwnerCount: 0,
-  agentButtonHiddenOwnerCount: 0,
   currentPath: "/",
   setAgentDockOpen: (open) => set({ agentDockOpen: open }),
   toggleAgentDock: () => set({ agentDockOpen: !get().agentDockOpen }),
   setAgentDockWidth: (width) => set({ agentDockWidth: clampAgentDockWidth(width) }),
   setCommandPaletteOpen: (open) => set({ commandPaletteOpen: open }),
   toggleCommandPalette: () => set({ commandPaletteOpen: !get().commandPaletteOpen }),
-  setPageSubtitle: (subtitle) => set({ pageSubtitle: subtitle }),
+  setRailPinned: (pinned) => {
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(RAIL_PINNED_STORAGE_KEY, pinned ? "1" : "0");
+    }
+    set({ railPinned: pinned });
+  },
+  toggleRailPinned: () => get().setRailPinned(!get().railPinned),
   acquireCustomDock: () => set({ customDockOwnerCount: get().customDockOwnerCount + 1 }),
   releaseCustomDock: () =>
     set({ customDockOwnerCount: Math.max(0, get().customDockOwnerCount - 1) }),
-  acquireContextSlot: () => set({ contextOwnerCount: get().contextOwnerCount + 1 }),
-  releaseContextSlot: () => set({ contextOwnerCount: Math.max(0, get().contextOwnerCount - 1) }),
-  acquirePageCrumbSlot: () => set({ pageCrumbOwnerCount: get().pageCrumbOwnerCount + 1 }),
-  releasePageCrumbSlot: () =>
-    set({ pageCrumbOwnerCount: Math.max(0, get().pageCrumbOwnerCount - 1) }),
-  acquireSubtitleSlot: () => set({ subtitleOwnerCount: get().subtitleOwnerCount + 1 }),
-  releaseSubtitleSlot: () => set({ subtitleOwnerCount: Math.max(0, get().subtitleOwnerCount - 1) }),
-  acquireActionsSlot: () => set({ actionsOwnerCount: get().actionsOwnerCount + 1 }),
-  releaseActionsSlot: () => set({ actionsOwnerCount: Math.max(0, get().actionsOwnerCount - 1) }),
-  acquireAgentButtonHidden: () =>
-    set({ agentButtonHiddenOwnerCount: get().agentButtonHiddenOwnerCount + 1 }),
-  releaseAgentButtonHidden: () =>
-    set({
-      agentButtonHiddenOwnerCount: Math.max(0, get().agentButtonHiddenOwnerCount - 1),
-    }),
   setCurrentPath: (path) => set({ currentPath: path }),
 }));
 
@@ -88,20 +66,4 @@ export function useShellMode(): AppShellMode {
 
 export function useHasCustomDockContent(): boolean {
   return useAppShellStore((s) => s.customDockOwnerCount > 0);
-}
-
-export function useHasContextContent(): boolean {
-  return useAppShellStore((s) => s.contextOwnerCount > 0);
-}
-
-export function useHasPageCrumbContent(): boolean {
-  return useAppShellStore((s) => s.pageCrumbOwnerCount > 0);
-}
-
-export function useHasSubtitleContent(): boolean {
-  return useAppShellStore((s) => s.subtitleOwnerCount > 0);
-}
-
-export function useAgentButtonHidden(): boolean {
-  return useAppShellStore((s) => s.agentButtonHiddenOwnerCount > 0);
 }

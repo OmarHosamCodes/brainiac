@@ -3,6 +3,7 @@ import { Bell, Settings2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import { shellFocusRingClass } from "@/features/app-shell/app-shell-ui";
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import { Button } from "@/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
@@ -28,6 +29,8 @@ import { cn } from "@/lib/utils";
 
 type AgencyNotificationsProps = {
   teamId: string;
+  /** `icon` toolbar bell, or a full-width `sidebar` row shown only while unread. */
+  variant?: "icon" | "sidebar";
 };
 
 type NotificationGroup = {
@@ -179,7 +182,7 @@ function buildNotificationSearchParams(notification: NotificationRecord) {
   return params;
 }
 
-export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
+export function AgencyNotifications({ teamId, variant = "icon" }: AgencyNotificationsProps) {
   const [, setSearchParams] = useSearchParams();
   const [open, setOpen] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -197,6 +200,11 @@ export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
 
   const unreadCount = unreadQuery.data?.count ?? 0;
   const badgeLabel = unreadCount > 9 ? "9+" : String(unreadCount);
+  // Opening marks items seen (count -> 0); keep the sidebar row stable while open.
+  const [sidebarUnread, setSidebarUnread] = useState(unreadCount);
+  useEffect(() => {
+    if (unreadCount > 0) setSidebarUnread(unreadCount);
+  }, [unreadCount]);
   const items = notificationsQuery.data?.items ?? [];
   const hasUnread = items.some((item) => !item.readAt);
   const groups = useMemo(() => groupNotifications(items), [items]);
@@ -207,6 +215,7 @@ export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
   }, [open, teamId, markSeen]);
 
   if (!teamId) return null;
+  if (variant === "sidebar" && unreadCount === 0 && !open) return null;
 
   const showPushPrompt =
     canUsePushNotifications() &&
@@ -258,23 +267,49 @@ export function AgencyNotifications({ teamId }: AgencyNotificationsProps) {
       }}
     >
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="relative size-8 rounded-full text-muted hover:text-highlighted"
-          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
-        >
-          <Bell className="size-4" aria-hidden />
-          {unreadCount > 0 ? (
-            <span className="absolute -right-0.5 -top-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground">
-              {badgeLabel}
+        {variant === "sidebar" ? (
+          <button
+            type="button"
+            className={cn(
+              "app-shell__rail-link text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+              shellFocusRingClass,
+            )}
+            aria-label={`${sidebarUnread} unread notification${sidebarUnread === 1 ? "" : "s"}`}
+            title={`${sidebarUnread} unread notification${sidebarUnread === 1 ? "" : "s"}`}
+          >
+            <span className="relative shrink-0" aria-hidden>
+              <Bell className="size-4" />
+              <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-3.5 items-center justify-center rounded-full bg-primary px-0.5 text-[9px] font-bold leading-3.5 text-primary-foreground">
+                {sidebarUnread > 9 ? "9+" : sidebarUnread}
+              </span>
             </span>
-          ) : null}
-        </Button>
+            <span className="rail-label min-w-0 flex-1 truncate text-left">
+              {sidebarUnread} unread notification{sidebarUnread === 1 ? "" : "s"}
+            </span>
+          </button>
+        ) : (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="relative size-8 rounded-full text-muted hover:text-highlighted"
+            aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+          >
+            <Bell className="size-4" aria-hidden />
+            {unreadCount > 0 ? (
+              <span className="absolute -right-0.5 -top-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground">
+                {badgeLabel}
+              </span>
+            ) : null}
+          </Button>
+        )}
       </PopoverTrigger>
 
-      <PopoverContent align="end" className="w-[380px] p-0">
+      <PopoverContent
+        align="end"
+        side={variant === "sidebar" ? "right" : "bottom"}
+        className="w-[380px] p-0"
+      >
         <div className="flex items-center justify-between border-b border-border/60 px-3 py-2.5">
           <div className="flex items-center gap-2">
             <p className="text-sm font-semibold text-foreground">Notifications</p>

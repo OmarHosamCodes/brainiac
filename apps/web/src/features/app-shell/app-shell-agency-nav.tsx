@@ -5,6 +5,9 @@ import {
   shellFocusRingClass,
   shellNavLinkActiveClass,
   shellNavLinkClass,
+  shellRailIconClass,
+  shellRailLinkActiveClass,
+  shellRailLinkClass,
 } from "@/features/app-shell/app-shell-ui";
 import {
   AGENCY_SEGMENTS,
@@ -20,8 +23,8 @@ const OPEN_DELAY_MS = 80;
 const CLOSE_DELAY_MS = 140;
 
 type AppShellAgencyNavProps = {
-  /** Compact stacked links for the mobile sheet. */
-  variant?: "desktop" | "mobile";
+  /** Hover-popover topbar link, or stacked rows for the rail and mobile drawer. */
+  variant?: "desktop" | "rail";
   onNavigate?: () => void;
 };
 
@@ -63,26 +66,20 @@ export function AppShellAgencyNav({ variant = "desktop", onNavigate }: AppShellA
 
   useEffect(() => () => clearTimers(), []);
 
-  if (variant === "mobile") {
+  if (variant === "rail") {
     return (
-      <div className="flex flex-col gap-1">
+      <div className="app-shell__rail-group">
         <Link
           to="/agency"
-          className={cn(
-            shellNavLinkClass,
-            "w-full justify-start",
-            active && shellNavLinkActiveClass,
-          )}
+          className={cn(shellRailLinkClass, active && shellRailLinkActiveClass)}
+          title="Agency"
           aria-current={active ? "page" : undefined}
           onClick={onNavigate}
         >
-          Agency
+          <LucideIcon name="i-lucide-briefcase" className={cn(shellRailIconClass, "rail-icon")} />
+          <span className="rail-label">Agency</span>
         </Link>
-        <div
-          className="ml-2 flex flex-col gap-0.5 border-l border-default pl-2"
-          role="group"
-          aria-label="Agency sections"
-        >
+        <div className="app-shell__rail-subnav" role="group" aria-label="Agency sections">
           {AGENCY_SEGMENTS.map((entry) => {
             const href = agencySegmentHref(entry.id);
             const selected = currentSegment === entry.id;
@@ -91,16 +88,17 @@ export function AppShellAgencyNav({ variant = "desktop", onNavigate }: AppShellA
                 key={entry.id}
                 id={agencySegmentTabId(entry.id)}
                 to={href}
+                title={`${entry.label} (g ${entry.shortcutKey})`}
                 className={cn(
-                  "inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+                  "app-shell__rail-sublink text-muted transition-colors hover:bg-elevated hover:text-highlighted",
                   shellFocusRingClass,
                   selected && "bg-primary/10 text-primary",
                 )}
                 aria-current={selected ? "page" : undefined}
                 onClick={onNavigate}
               >
-                <LucideIcon name={entry.icon} className="size-3.5" />
-                <span>{entry.label}</span>
+                <LucideIcon name={entry.icon} className="size-3.5 shrink-0" />
+                <span className="rail-label">{entry.label}</span>
               </Link>
             );
           })}
