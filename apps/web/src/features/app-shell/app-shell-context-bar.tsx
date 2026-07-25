@@ -23,7 +23,6 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/ui/breadcrumb";
-import { Separator } from "@/ui/separator";
 
 export function AppShellContextBar() {
   const location = useLocation();
@@ -56,7 +55,6 @@ export function AppShellContextBar() {
             <PanelLeftOpen className="size-4" aria-hidden="true" />
           )}
         </button>
-        <Separator orientation="vertical" className="h-4 self-center" />
         <Breadcrumb>
           <BreadcrumbList className="min-w-0 flex-nowrap">
             {onAgency && segment ? (

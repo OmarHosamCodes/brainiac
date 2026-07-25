@@ -475,7 +475,6 @@ body {
 
 .app-shell {
   --app-shell-topbar-inset: 1rem;
-  --app-shell-rail-inset: 0.75rem;
   --app-shell-rail-collapsed: 3.25rem;
   --app-shell-rail-expanded: 15.5rem;
   --app-shell-rail-width: var(--app-shell-rail-collapsed);
@@ -538,22 +537,20 @@ body {
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--color-border) 80%, transparent);
 }
 
-/* One L-shaped nest: rail column + context row share border/shadow/radius. */
+/* One L-shaped nest: rail column + context row share border/shadow. Flush to viewport. */
 .app-shell__chrome {
   position: fixed;
-  top: var(--app-shell-rail-inset);
-  left: var(--app-shell-rail-inset);
-  right: calc(var(--app-shell-rail-inset) + var(--app-shell-dock-width, 0px));
-  bottom: var(--app-shell-rail-inset);
+  top: 0;
+  left: 0;
+  right: var(--app-shell-dock-width, 0px);
+  bottom: 0;
   z-index: 40;
   display: none;
   grid-template-columns: var(--app-shell-chrome-rail) minmax(0, 1fr);
   grid-template-rows: var(--app-shell-context-bar-height) minmax(0, 1fr);
-  border-radius: 16px;
   pointer-events: none;
   transition:
     grid-template-columns var(--motion-duration-rail) var(--motion-ease-rail),
-    box-shadow var(--motion-duration-rail) var(--motion-ease-rail),
     clip-path var(--motion-duration-rail) var(--motion-ease-rail);
   clip-path: polygon(
     0 0,
@@ -563,20 +560,12 @@ body {
     var(--app-shell-chrome-rail) 100%,
     0 100%
   );
-  /* drop-shadow survives clip-path; the surface box-shadow ring is clipped to the L. */
-  filter: drop-shadow(0 2px 8px color-mix(in oklab, black 8%, transparent));
 }
 
 @media (min-width: 768px) {
   .app-shell__chrome {
     display: grid;
   }
-}
-
-.app-shell:not(.app-shell--rail-pinned) .app-shell__chrome:has(.app-shell__rail:hover),
-.app-shell:not(.app-shell--rail-pinned) .app-shell__chrome:has(.app-shell__rail:focus-within) {
-  --app-shell-chrome-rail: var(--app-shell-rail-expanded);
-  filter: drop-shadow(0 8px 20px color-mix(in oklab, black 14%, transparent));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -685,24 +674,18 @@ body {
   border-top: 1px solid color-mix(in oklab, var(--color-border) 80%, transparent);
 }
 
-.app-shell--rail-pinned .app-shell__rail-link,
-.app-shell__chrome:has(.app-shell__rail:hover) .app-shell__rail-link,
-.app-shell__chrome:has(.app-shell__rail:focus-within) .app-shell__rail-link {
+.app-shell--rail-pinned .app-shell__rail-link {
   justify-content: flex-start;
   gap: 0.625rem;
   padding-inline: 0.625rem;
 }
 
-.app-shell--rail-pinned .rail-label,
-.app-shell__chrome:has(.app-shell__rail:hover) .rail-label,
-.app-shell__chrome:has(.app-shell__rail:focus-within) .rail-label {
+.app-shell--rail-pinned .rail-label {
   max-width: 11.5rem;
   opacity: 1;
 }
 
-.app-shell--rail-pinned .app-shell__rail-subnav,
-.app-shell__chrome:has(.app-shell__rail:hover) .app-shell__rail-subnav,
-.app-shell__chrome:has(.app-shell__rail:focus-within) .app-shell__rail-subnav {
+.app-shell--rail-pinned .app-shell__rail-subnav {
   max-height: 18rem;
   margin-top: 0.125rem;
   opacity: 1;
@@ -765,11 +748,11 @@ body {
 @media (min-width: 768px) {
   .app-shell {
     grid-template-columns:
-      calc(var(--app-shell-rail-width) + var(--app-shell-rail-inset) * 2)
+      var(--app-shell-rail-width)
       minmax(0, 1fr)
       var(--app-shell-dock-width, 0px);
     grid-template-rows:
-      calc(var(--app-shell-context-bar-height) + var(--app-shell-rail-inset))
+      var(--app-shell-context-bar-height)
       minmax(0, 1fr);
   }
 
