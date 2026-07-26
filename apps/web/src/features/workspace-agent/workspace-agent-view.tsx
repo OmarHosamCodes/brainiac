@@ -130,6 +130,14 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                         onConfirmDelete={() => void view.confirmDeleteConversation()}
                         isRenaming={view.isRenamingConversation}
                         isDeleting={view.isDeletingConversation}
+                        isStreaming={view.isStreaming}
+                        streamingMessageId={view.streamingMessageId}
+                        streamStopped={view.streamStopped}
+                        followOutput={view.followOutput}
+                        onFollowOutputChange={view.setFollowOutput}
+                        scrollRef={view.chatScrollRef}
+                        endRef={view.chatEndRef}
+                        onScroll={view.onChatScroll}
                       />
                     </motion.div>
                   ) : null}
@@ -195,6 +203,7 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                     canSend={view.canSend}
                     isPending={view.isPending}
                     onSend={() => void view.sendMessage()}
+                    onStop={view.stopGeneration}
                     dimmed={view.scopeModeActive}
                     shellLayoutId={showChat ? undefined : SHELL_LAYOUT_ID}
                     nestedInShell={showChat}

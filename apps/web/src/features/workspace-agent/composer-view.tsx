@@ -1,14 +1,18 @@
-import type { AgentModelTier, AgentToolCatalogEntry, DashboardAgentToolPreset } from "@orch/agent";
+import type {
+  AgentModelTier,
+  AgentToolCatalogEntry,
+  DashboardAgentToolPreset,
+} from "@orch/agent/types";
 import type { WorkspaceNode } from "@orch/workspace";
 import {
   Box,
   Check,
   Crosshair,
-  Loader2,
   MessageCircleQuestion,
   Plus,
   Send,
   Sparkles,
+  Square,
   Wrench,
   X,
 } from "lucide-react";
@@ -57,6 +61,7 @@ type WorkspaceAgentComposerViewProps = {
   canSend: boolean;
   isPending: boolean;
   onSend: () => void;
+  onStop: () => void;
   dimmed: boolean;
   /** Shared-element morph target when composer is the floating shell (no chat card). */
   shellLayoutId?: string;
@@ -106,6 +111,7 @@ export function WorkspaceAgentComposerView({
   canSend,
   isPending,
   onSend,
+  onStop,
   dimmed,
   shellLayoutId,
   nestedInShell = false,
@@ -392,21 +398,22 @@ export function WorkspaceAgentComposerView({
               <Button
                 type="button"
                 size="icon-sm"
+                variant={isPending ? "secondary" : "default"}
                 className="rounded-full"
-                disabled={!canSend}
-                aria-label={isPending ? "Stop or wait for reply" : "Send message"}
-                onClick={onSend}
+                disabled={isPending ? false : !canSend}
+                aria-label={isPending ? "Stop" : "Send message"}
+                onClick={isPending ? onStop : onSend}
               >
                 <AnimatePresence mode="wait" initial={false}>
                   <motion.span
-                    key={isPending ? "pending" : "send"}
+                    key={isPending ? "stop" : "send"}
                     initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.1 } }}
                     transition={{ duration: 0.14, ease: [0.25, 1, 0.5, 1] }}
                     className="inline-flex"
                   >
-                    {isPending ? <Loader2 className="animate-spin" /> : <Send />}
+                    {isPending ? <Square className="fill-current" /> : <Send />}
                   </motion.span>
                 </AnimatePresence>
               </Button>
