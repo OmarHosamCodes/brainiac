@@ -35,7 +35,7 @@ export function WorkspaceAgentScopeChipView({ chips, onRemove }: WorkspaceAgentS
   if (chips.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap gap-1.5 px-3 pt-2 pb-0.5">
+    <div className="flex flex-wrap gap-1.5">
       <AnimatePresence initial={false}>
         {chips.map((chip, index) => (
           <motion.div
