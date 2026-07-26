@@ -1,3 +1,5 @@
+import { AnimatePresence, LayoutGroup, MotionConfig, motion } from "motion/react";
+
 import { WorkspaceAgentChatPanelView } from "@/features/workspace-agent/chat-panel-view";
 import { WorkspaceAgentComposerView } from "@/features/workspace-agent/composer-view";
 import type { WorkspaceAgentViewModel } from "@/features/workspace-agent/hooks/use-workspace-agent";
@@ -8,123 +10,207 @@ type WorkspaceAgentViewProps = {
   view: WorkspaceAgentViewModel;
 };
 
+const EASE_OUT_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
+const EASE_OUT_QUART: [number, number, number, number] = [0.25, 1, 0.5, 1];
+
+const SHELL_LAYOUT_ID = "workspace-agent-shell";
+
+const layoutTransition = { duration: 0.38, ease: EASE_OUT_EXPO };
+const contentEnter = { duration: 0.2, ease: EASE_OUT_QUART, delay: 0.06 };
+const contentExit = { duration: 0.12, ease: EASE_OUT_QUART };
+
 export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
   const selectedModelLabel =
     view.modelOptions.find((model) => model.id === view.selectedModelId)?.label ?? "Model";
-
-  if (!view.expanded) {
-    return (
-      <div
-        data-workspace-agent-root
-        className={cn(
-          "pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4",
-          view.bottomOffsetClass,
-        )}
-      >
-        <div className="group/pill pointer-events-auto flex w-full max-w-[360px] items-center justify-center py-3">
-          <button
-            type="button"
-            aria-label="Message Orch"
-            title="Message Orch (Ctrl+J)"
-            className={cn(
-              "group relative flex items-center justify-center overflow-hidden",
-              "h-1.5 w-12 rounded-full border-0 bg-muted-foreground/40",
-              "motion-safe:transition-[width,height,padding,background-color,border-color,box-shadow] motion-safe:duration-200 motion-safe:ease-out",
-              "group-hover/pill:h-11 group-hover/pill:w-full group-hover/pill:justify-between group-hover/pill:border group-hover/pill:border-primary/30 group-hover/pill:bg-default group-hover/pill:px-4 group-hover/pill:shadow-[0_4px_16px_oklch(0.18_0.005_285_/_0.08)]",
-              "focus-visible:h-11 focus-visible:w-full focus-visible:justify-between focus-visible:border focus-visible:border-primary/40 focus-visible:bg-default focus-visible:px-4 focus-visible:outline-none focus-visible:shadow-[0_4px_16px_oklch(0.18_0.005_285_/_0.08)]",
-            )}
-            onClick={() => view.setExpanded(true)}
-          >
-            <span className="hidden w-full items-center justify-between whitespace-nowrap text-sm text-muted group-hover/pill:flex group-focus-visible:flex">
-              <span>Message Orch</span>
-              <kbd className="text-xs text-muted">Ctrl+J</kbd>
-            </span>
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const showChat = view.messages.length > 0 || Boolean(view.activeConversationId);
+  const isWorking = view.isPending;
+  const collapsedLabel = isWorking ? "Working..." : "Message Orch";
 
   return (
-    <div
-      data-workspace-agent-root
-      className={cn(
-        "pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4",
-        view.bottomOffsetClass,
-      )}
-    >
-      <div className="pointer-events-auto flex w-full max-w-[720px] flex-col overflow-hidden rounded-2xl border border-default bg-default shadow-[0_8px_28px_oklch(0.18_0.005_285_/_0.12)] motion-safe:transition-[opacity,transform] motion-safe:duration-200 motion-safe:ease-out">
-        {(view.messages.length > 0 || view.activeConversationId) && (
-          <WorkspaceAgentChatPanelView
-            title={view.activeConversationTitle}
-            messages={view.messages}
-            conversationOptions={view.conversationOptions}
-            threadMenuOpen={view.threadMenuOpen}
-            onThreadMenuOpenChange={view.setThreadMenuOpen}
-            onSelectConversation={view.switchConversation}
-            onStartNewConversation={view.startNewConversation}
-            canManageConversation={view.canManageConversation}
-            isRenameDialogOpen={view.isRenameDialogOpen}
-            isDeleteDialogOpen={view.isDeleteDialogOpen}
-            renameDraft={view.renameDraft}
-            onRenameDraftChange={view.setRenameDraft}
-            onOpenRename={view.openRenameDialog}
-            onCloseRename={view.closeRenameDialog}
-            onSubmitRename={() => void view.submitRenameConversation()}
-            onOpenDelete={view.openDeleteDialog}
-            onCloseDelete={view.closeDeleteDialog}
-            onConfirmDelete={() => void view.confirmDeleteConversation()}
-            isRenaming={view.isRenamingConversation}
-            isDeleting={view.isDeletingConversation}
-          />
-        )}
+    <MotionConfig reducedMotion="user" transition={{ layout: layoutTransition }}>
+      <LayoutGroup id="workspace-agent">
+        <div
+          data-workspace-agent-root
+          className={cn(
+            "pointer-events-none fixed inset-x-0 z-40 flex justify-center px-4",
+            view.bottomOffsetClass,
+          )}
+        >
+        <AnimatePresence initial={false} mode="popLayout">
+          {!view.expanded ? (
+            <motion.div
+              key="workspace-agent-collapsed"
+              className="pointer-events-auto flex w-full max-w-[360px] items-center justify-center py-3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.1 } }}
+            >
+              <div className="group/pill flex w-full items-center justify-center">
+                <motion.button
+                  type="button"
+                  layoutId={SHELL_LAYOUT_ID}
+                  transition={{ layout: layoutTransition }}
+                  aria-label={collapsedLabel}
+                  title={isWorking ? "Working..." : "Message Orch (Ctrl+J)"}
+                  aria-busy={isWorking || undefined}
+                  style={{ borderRadius: 9999 }}
+                  className={cn(
+                    "group relative flex items-center justify-center overflow-hidden",
+                    "border border-transparent",
+                    isWorking
+                      ? "workspace-agent-pill-shimmer h-1.5 w-16 bg-foreground/40"
+                      : "h-1.5 w-12 bg-foreground/35",
+                    "motion-safe:transition-[width,height,padding,background-color,border-color] motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.25,1,0.5,1)]",
+                    "group-hover/pill:h-11 group-hover/pill:w-full group-hover/pill:justify-between group-hover/pill:border-border group-hover/pill:bg-card group-hover/pill:px-4",
+                    "focus-visible:h-11 focus-visible:w-full focus-visible:justify-between focus-visible:border-border focus-visible:bg-card focus-visible:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                  )}
+                  onClick={() => view.setExpanded(true)}
+                >
+                  <span className="hidden w-full items-center justify-between whitespace-nowrap text-sm group-hover/pill:flex group-focus-visible:flex">
+                    {isWorking ? (
+                      <span className="workspace-agent-pill-shimmer-text text-foreground">
+                        {collapsedLabel}
+                      </span>
+                    ) : (
+                      <>
+                        <span className="text-foreground">{collapsedLabel}</span>
+                        <kbd className="text-xs text-muted-foreground">Ctrl+J</kbd>
+                      </>
+                    )}
+                  </span>
+                </motion.button>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="workspace-agent-expanded"
+              {...(showChat
+                ? {
+                    layoutId: SHELL_LAYOUT_ID,
+                    transition: { layout: layoutTransition },
+                    style: { borderRadius: 16 },
+                  }
+                : {})}
+              className={cn(
+                "pointer-events-auto flex w-full max-w-[720px] flex-col",
+                showChat && "overflow-hidden border border-border bg-card text-card-foreground",
+              )}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, transition: { duration: 0.12 } }}
+            >
+              <AnimatePresence initial={false}>
+                {showChat ? (
+                  <motion.div
+                    key="workspace-agent-chat"
+                    layout
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0, transition: contentExit }}
+                    transition={{ layout: layoutTransition, opacity: contentEnter }}
+                    className="overflow-hidden"
+                  >
+                    <WorkspaceAgentChatPanelView
+                      title={view.activeConversationTitle}
+                      messages={view.messages}
+                      conversationOptions={view.conversationOptions}
+                      threadMenuOpen={view.threadMenuOpen}
+                      onThreadMenuOpenChange={view.setThreadMenuOpen}
+                      onSelectConversation={view.switchConversation}
+                      onStartNewConversation={view.startNewConversation}
+                      canManageConversation={view.canManageConversation}
+                      isRenameDialogOpen={view.isRenameDialogOpen}
+                      isDeleteDialogOpen={view.isDeleteDialogOpen}
+                      renameDraft={view.renameDraft}
+                      onRenameDraftChange={view.setRenameDraft}
+                      onOpenRename={view.openRenameDialog}
+                      onCloseRename={view.closeRenameDialog}
+                      onSubmitRename={() => void view.submitRenameConversation()}
+                      onOpenDelete={view.openDeleteDialog}
+                      onCloseDelete={view.closeDeleteDialog}
+                      onConfirmDelete={() => void view.confirmDeleteConversation()}
+                      isRenaming={view.isRenamingConversation}
+                      isDeleting={view.isDeletingConversation}
+                    />
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
 
-        {view.error ? (
-          <div className="border-b border-default px-3 py-2 text-sm text-destructive">
-            {view.error}
-          </div>
-        ) : null}
+              <AnimatePresence initial={false}>
+                {view.error ? (
+                  <motion.div
+                    key="workspace-agent-error"
+                    layout
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0, transition: contentExit }}
+                    transition={contentEnter}
+                    className={cn(
+                      "overflow-hidden bg-destructive/10 text-sm text-destructive",
+                      showChat
+                        ? "border-b border-border px-3 py-2"
+                        : "mb-2 rounded-xl border border-destructive/40 bg-card px-3 py-2",
+                    )}
+                  >
+                    {view.error}
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
 
-        <WorkspaceAgentComposerView
-          draft={view.draft}
-          onDraftChange={view.setDraft}
-          placeholder={view.placeholder}
-          scopeChips={view.scopeChips}
-          onRemoveChip={view.removeScopeChip}
-          mentionSuggestions={view.mentionSuggestions}
-          onSelectMention={view.addMentionedNode}
-          selectedToolPreset={view.selectedToolPreset}
-          onSelectToolPreset={view.setSelectedToolPreset}
-          agentModeDisabled={view.agentModeDisabled}
-          selectedModelLabel={selectedModelLabel}
-          onOpenModelLibrary={() => view.setModelLibraryOpen(true)}
-          scopeModeActive={view.scopeModeActive}
-          onToggleScopeMode={view.toggleScopeMode}
-          scopeHintSeen={view.scopeHintSeen}
-          toolsMenuOpen={view.toolsMenuOpen}
-          onToolsMenuOpenChange={view.setToolsMenuOpen}
-          tools={view.tools}
-          toolsLoading={view.toolsLoading}
-          canSend={view.canSend}
-          isPending={view.isPending}
-          onSend={() => void view.sendMessage()}
-          dimmed={view.scopeModeActive}
+              <motion.div
+                layout
+                className={cn(showChat && "border-t border-border bg-card p-2")}
+                transition={{ layout: layoutTransition }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1, transition: contentEnter }}
+              >
+                <WorkspaceAgentComposerView
+                  draft={view.draft}
+                  onDraftChange={view.setDraft}
+                  placeholder={view.placeholder}
+                  scopeChips={view.scopeChips}
+                  onRemoveChip={view.removeScopeChip}
+                  mentionSuggestions={view.mentionSuggestions}
+                  onSelectMention={view.addMentionedNode}
+                  selectedToolPreset={view.selectedToolPreset}
+                  onSelectToolPreset={view.setSelectedToolPreset}
+                  agentModeDisabled={view.agentModeDisabled}
+                  selectedModelLabel={selectedModelLabel}
+                  onOpenModelLibrary={() => view.setModelLibraryOpen(true)}
+                  scopeModeActive={view.scopeModeActive}
+                  onToggleScopeMode={view.toggleScopeMode}
+                  scopeHintSeen={view.scopeHintSeen}
+                  toolsMenuOpen={view.toolsMenuOpen}
+                  onToolsMenuOpenChange={view.setToolsMenuOpen}
+                  tools={view.tools}
+                  toolsLoading={view.toolsLoading}
+                  canSend={view.canSend}
+                  isPending={view.isPending}
+                  onSend={() => void view.sendMessage()}
+                  dimmed={view.scopeModeActive}
+                  shellLayoutId={showChat ? undefined : SHELL_LAYOUT_ID}
+                  nestedInShell={showChat}
+                />
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <WorkspaceAgentModelLibraryView
+          open={view.modelLibraryOpen}
+          onOpenChange={view.setModelLibraryOpen}
+          modelSearch={view.modelSearch}
+          onModelSearchChange={view.setModelSearch}
+          filteredModelOptions={view.filteredModelOptions}
+          selectedModelId={view.selectedModelId}
+          onSelectModel={view.setConversationDraftModelId}
+          onToggleFavorite={view.toggleFavoriteModel}
+          isFavoriteModel={view.isFavoriteModel}
+          favoritesOnly={view.favoritesOnly}
+          onFavoritesOnlyChange={view.setFavoritesOnly}
         />
-      </div>
-
-      <WorkspaceAgentModelLibraryView
-        open={view.modelLibraryOpen}
-        onOpenChange={view.setModelLibraryOpen}
-        modelSearch={view.modelSearch}
-        onModelSearchChange={view.setModelSearch}
-        filteredModelOptions={view.filteredModelOptions}
-        selectedModelId={view.selectedModelId}
-        onSelectModel={view.setConversationDraftModelId}
-        onToggleFavorite={view.toggleFavoriteModel}
-        isFavoriteModel={view.isFavoriteModel}
-        favoritesOnly={view.favoritesOnly}
-        onFavoritesOnlyChange={view.setFavoritesOnly}
-      />
-    </div>
+        </div>
+      </LayoutGroup>
+    </MotionConfig>
   );
 }
