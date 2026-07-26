@@ -1,9 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { AgentSurface, DashboardAgentToolPreset } from "@orch/agent";
 
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
 
-export function useDashboardAgentData(activeConversationId: string | null) {
+export function useWorkspaceAgentData(args: {
+  activeConversationId: string | null;
+  surface: AgentSurface;
+  toolPreset: DashboardAgentToolPreset;
+  toolsMenuOpen: boolean;
+}) {
   const session = authClient.useSession();
   const queryClient = useQueryClient();
   const authEnabled = Boolean(session.data?.user);
@@ -21,9 +27,19 @@ export function useDashboardAgentData(activeConversationId: string | null) {
   });
   const activeConversationQuery = useQuery({
     ...orpc.agent.conversations.get.queryOptions({
-      input: { conversationId: activeConversationId ?? "" },
+      input: { conversationId: args.activeConversationId ?? "" },
     }),
-    enabled: Boolean(authEnabled && activeConversationId),
+    enabled: Boolean(authEnabled && args.activeConversationId),
+  });
+  const toolsCatalogQuery = useQuery({
+    ...orpc.agent.tools.catalog.queryOptions({
+      input: {
+        surface: args.surface,
+        mode: args.surface === "agency" ? "ask" : args.toolPreset,
+      },
+    }),
+    enabled: Boolean(authEnabled && args.toolsMenuOpen),
+    staleTime: 5 * 60 * 1000,
   });
 
   return {
@@ -33,6 +49,7 @@ export function useDashboardAgentData(activeConversationId: string | null) {
     modelCatalogQuery,
     accountStatusQuery,
     activeConversationQuery,
+    toolsCatalogQuery,
     chatTurnMutation: useMutation(orpc.agent.chat.turn.mutationOptions()),
     renameConversationMutation: useMutation(orpc.agent.conversations.rename.mutationOptions()),
     deleteConversationMutation: useMutation(orpc.agent.conversations.delete.mutationOptions()),

@@ -30,6 +30,7 @@ import {
   agencyWorkTimeRangeClass,
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
+import { agentScopeableProps } from "@/features/shared/agent-scopeable";
 import { cn } from "@/lib/utils";
 
 const descriptionLeadingSlotClass = "flex w-8 shrink-0 items-center justify-start";
@@ -93,12 +94,18 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
   return (
     <div
       data-entry-id={primaryEntryId}
+      tabIndex={0}
       className={cn(
         agencyTimeEntryRowClass,
         highlighted && agencyTimeEntryRowHighlightClass,
         (editingDescription || editingDuration) && agencyTimeEntryRowEditingClass,
         className,
       )}
+      {...agentScopeableProps({
+        kind: "timeEntry",
+        id: primaryEntryId,
+        label: descriptionDraft.trim() || durationLabel || "Time entry",
+      })}
     >
       <div className={cn(agencyTimeEntryMainClass, "gap-3 pr-2")}>
         {isMulti ? (

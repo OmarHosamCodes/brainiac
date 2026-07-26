@@ -1,55 +1,24 @@
 import { Link } from "react-router-dom";
 
-import { DashboardAgentChatPanel } from "@/features/dashboard-agent/dashboard-agent-chat-panel";
 import { WorkspaceNodeEditorProvider } from "@/features/workspace/node/context";
 import { WorkspaceNodeShell } from "@/features/workspace/node/workspace-node-shell";
-import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { AppShellPage } from "@/features/app-shell/app-shell-page";
-import { AppShellPortal } from "@/features/app-shell/app-shell-portal";
 import { useWorkspaceNodePage } from "@/features/workspace/hooks/use-workspace-node-page";
 import { useShellBootGate } from "@/features/app-shell/shell/use-shell-boot-gate";
-import { useAppShellStore } from "@/features/app-shell/app-shell-store";
 import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 
 export function NodePage() {
-  const setAgentDockOpen = useAppShellStore((s) => s.setAgentDockOpen);
   const page = useWorkspaceNodePage();
   const dataReady = !page.isWorkspaceInitialLoading && page.hasWorkspaceLoaded;
   const { isBooting } = useShellBootGate(dataReady);
 
   return (
-    <AppShellPage slots={["dock"]}>
+    <AppShellPage>
       <div className="relative h-full w-full overflow-hidden">
-        {!isBooting ? (
-          <AppShellPortal targetId="app-shell-dock-content">
-            {page.node ? (
-              <div className="flex h-full min-h-0 flex-col">
-                <DashboardAgentChatPanel
-                  nodes={page.agentChatNodes}
-                  activeTabId={page.activeTabId}
-                  scopeKind="blocks"
-                  onClose={() => setAgentDockOpen(false)}
-                  scopeBadges={
-                    page.agentContextBadgeItems.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5">
-                        {page.agentContextBadgeItems.map((item) => (
-                          <Badge key={item.id} variant="secondary" className="rounded-full">
-                            {item.label}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : null
-                  }
-                />
-              </div>
-            ) : null}
-          </AppShellPortal>
-        ) : null}
-
         {page.workspaceQuery.status === "error" ? (
           <div className="p-6 text-sm text-destructive">
             {page.workspaceQuery.error?.message || "The workspace could not be loaded."}

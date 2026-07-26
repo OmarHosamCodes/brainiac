@@ -2,14 +2,19 @@ import {
   DASHBOARD_CONVERSATION_HISTORY_LIMIT,
   DASHBOARD_CONVERSATION_MESSAGE_WINDOW,
   agentChatTurnResponseSchema,
+  agentToolCatalogResponseSchema,
   dashboardConversationDetailSchema,
   dashboardConversationListResponseSchema,
   dashboardConversationMessageSchema,
   dashboardConversationSummarySchema,
   dashboardConversationUsageSummarySchema,
+  listAgentToolCatalog,
   normalizeDashboardAgentToolPreset,
   runDashboardAgent,
+  type AgencyAgentRuntime,
   type AgentChatTurnInput,
+  type AgentSurface,
+  type AgentToolCatalogInput,
   type DashboardConversationSummary,
   type DashboardConversationUsageLatest,
   type DashboardConversationUsageSummary,
@@ -27,6 +32,10 @@ import { ORPCError } from "@orpc/server";
 import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 
 import { getBillingStateForUser } from "../../billing-guard";
+import { listAgencyProjects } from "../agency-ops/projects/service";
+import { getAgencyReportsSummary } from "../agency-ops/reports/service";
+import { getAgencyTimeSummary, listMyAgencyTimeEntries } from "../agency-ops/time-tracking/service";
+import { listTeamMembers } from "../team/service";
 import {
   getWorkspaceMarketplaceItems,
   getWorkspaceSnapshot,
@@ -39,6 +48,111 @@ import {
   normalizeDashboardConversationTitle,
 } from "./conversation-contracts";
 
+function createAgencyAgentRuntime(actorUserId: string, teamId: string): AgencyAgentRuntime {
+  return {
+    teamId,
+    listMyTimeEntries: async ({ page, pageSize }) => {
+      const result = await listMyAgencyTimeEntries(actorUserId, {
+        teamId,
+        page,
+        pageSize,
+      });
+      return {
+        entries: result.items.map((entry) => ({
+          id: entry.id,
+          description: entry.description,
+          projectName: entry.projectName,
+          clientName: entry.clientName,
+          durationSeconds: entry.durationSeconds,
+          startedAt: entry.startedAt,
+          endedAt: entry.endedAt,
+          isBillable: entry.isBillable,
+        })),
+      };
+    },
+    listProjects: async ({ clientId } = {}) => {
+      const result = await listAgencyProjects(actorUserId, {
+        teamId,
+        ...(clientId ? { clientId } : {}),
+      });
+      return {
+        projects: result.items.map((project) => ({
+          id: project.id,
+          name: project.name,
+          clientId: project.clientId,
+          clientName: project.clientName,
+        })),
+      };
+    },
+    listMembers: async () => {
+      const members = await listTeamMembers(actorUserId, { teamId });
+      return {
+        members: members.map((member) => ({
+          userId: member.userId,
+          name: member.userName,
+          email: member.userEmail,
+          role: member.role,
+        })),
+      };
+    },
+    getTimeSummary: async (input) => {
+      const result = await getAgencyTimeSummary(actorUserId, {
+        teamId,
+        from: input.from,
+        to: input.to,
+        memberUserId: input.memberUserId,
+        projectId: input.projectId,
+        clientId: input.clientId,
+      });
+      return {
+        totalSeconds: result.summary.totalSeconds,
+        members: result.summary.teamMembers.map((member) => ({
+          userId: member.id,
+          name: member.name,
+          seconds: member.totalSeconds,
+          isTiming: member.isActive,
+        })),
+      };
+    },
+    getReportsSummary: async (input) => {
+      const result = await getAgencyReportsSummary(actorUserId, {
+        teamId,
+        from: input.from,
+        to: input.to,
+        memberUserId: input.memberUserId,
+        projectId: input.projectId,
+        clientId: input.clientId,
+      });
+      return {
+        totalSeconds: Math.round(result.summary.totalHours * 3_600),
+        byClient: result.summary.timeDistributionByClient.map((entry) => ({
+          clientId: entry.clientId,
+          clientName: entry.clientName,
+          seconds: Math.round(entry.hours * 3_600),
+        })),
+        byProject: result.summary.timeDistributionByProject.map((entry) => ({
+          projectId: entry.projectId,
+          projectName: entry.projectName,
+          clientName: entry.clientName,
+          seconds: Math.round(entry.hours * 3_600),
+        })),
+        byMember: result.summary.teamActivity.map((entry) => ({
+          userId: entry.userId,
+          userName: entry.userName,
+          seconds: Math.round(entry.hours * 3_600),
+        })),
+      };
+    },
+  };
+}
+
+export function getAgentToolsCatalog(actorUserId: string, input: AgentToolCatalogInput) {
+  void actorUserId;
+  const mode = input.surface === "agency" ? "ask" : input.mode;
+  return agentToolCatalogResponseSchema.parse({
+    tools: listAgentToolCatalog({ surface: input.surface, mode }),
+  });
+}
 export async function assertCanCreateDashboardConversation(
   actorUserId: string,
   _input: Record<string, never>,
@@ -304,15 +418,34 @@ export async function appendDashboardConversationTurn(
 ) {
   const userId = actorUserId;
   const { actorUserName: userName, turn } = input;
+  const surface: AgentSurface = turn.surface ?? "canvas";
+  const toolPreset = surface === "agency" ? "ask" : turn.toolPreset;
+
+  if (surface === "agency" && !turn.teamId?.trim()) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Agency agent turns require a teamId.",
+    });
+  }
+
+  if (surface === "agency" && turn.toolPreset === "agent") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Agent edits are canvas-only for now.",
+    });
+  }
+
   const now = new Date();
   const [fullWorkspaceSnapshot, marketplaceResult] = await Promise.all([
-    turn.nodes
-      ? Promise.resolve({
-          nodes: turn.nodes,
-          updatedAt: null,
-        })
-      : getWorkspaceSnapshot(userId, {}),
-    getWorkspaceMarketplaceItems(userId, { limit: 200, kind: "all" }),
+    surface === "agency"
+      ? Promise.resolve({ nodes: [], updatedAt: null as string | null })
+      : turn.nodes
+        ? Promise.resolve({
+            nodes: turn.nodes,
+            updatedAt: null as string | null,
+          })
+        : getWorkspaceSnapshot(userId, {}),
+    surface === "agency"
+      ? Promise.resolve({ items: [] })
+      : getWorkspaceMarketplaceItems(userId, { limit: 200, kind: "all" }),
   ]);
 
   const conversation = turn.conversationId
@@ -320,7 +453,7 @@ export async function appendDashboardConversationTurn(
     : await createDashboardConversation(userId, {
         content: turn.content,
         model: turn.model,
-        toolPreset: turn.toolPreset,
+        toolPreset,
       });
   const createdConversation = !turn.conversationId;
 
@@ -340,6 +473,8 @@ export async function appendDashboardConversationTurn(
     content: message.content,
   }));
   const scopeNodes = turn.scopeNodes ?? turn.nodes;
+  const agencyRuntime =
+    surface === "agency" && turn.teamId ? createAgencyAgentRuntime(userId, turn.teamId) : null;
 
   const result = await runDashboardAgent(
     [
@@ -356,23 +491,32 @@ export async function appendDashboardConversationTurn(
       updatedAt: fullWorkspaceSnapshot.updatedAt,
       userName,
       activeTabId: turn.activeTabId,
+      surface,
+      scopeRefs: turn.scopeRefs,
+      teamId: turn.teamId ?? null,
     },
     {
       model: turn.model,
-      toolPreset: turn.toolPreset,
+      toolPreset,
+      agencyRuntime,
     },
   );
   const nextUsageSummary = buildNextConversationUsageSummary(
     conversation.usageSummary,
     result.usage,
   );
-  const workspaceSnapshot = result.workspaceSnapshot
-    ? {
-        nodes: result.workspaceSnapshot.nodes,
-        updatedAt: (await saveWorkspaceNodes(userId, { nodes: result.workspaceSnapshot.nodes }))
-          .updatedAt,
-      }
-    : null;
+  const workspaceSnapshot =
+    surface === "agency"
+      ? null
+      : result.workspaceSnapshot
+        ? {
+            nodes: result.workspaceSnapshot.nodes,
+            updatedAt: (await saveWorkspaceNodes(userId, { nodes: result.workspaceSnapshot.nodes }))
+              .updatedAt,
+          }
+        : null;
+
+  const contextTitles = turn.contextNodeTitles ?? turn.scopeRefs?.map((ref) => ref.label) ?? [];
 
   const userMessageRow = {
     id: createWorkspaceId("message"),
@@ -380,7 +524,7 @@ export async function appendDashboardConversationTurn(
     userId,
     role: "user" as const,
     content: turn.content,
-    contextNodeTitles: turn.contextNodeTitles ?? [],
+    contextNodeTitles: contextTitles,
     model: turn.model?.trim() || null,
     toolsCalled: [],
     createdAt: now,
@@ -404,7 +548,7 @@ export async function appendDashboardConversationTurn(
     .update(dashboardConversation)
     .set({
       model: turn.model?.trim() || null,
-      toolPreset: turn.toolPreset,
+      toolPreset,
       usageSummary: nextUsageSummary,
       updatedAt: assistantCreatedAt,
       lastMessageAt: assistantCreatedAt,
@@ -417,7 +561,7 @@ export async function appendDashboardConversationTurn(
     row: {
       ...conversation,
       model: turn.model?.trim() || null,
-      toolPreset: turn.toolPreset,
+      toolPreset,
       usageSummary: nextUsageSummary,
       updatedAt: assistantCreatedAt,
       lastMessageAt: assistantCreatedAt,

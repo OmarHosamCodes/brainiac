@@ -166,11 +166,47 @@ export const dashboardConversationDeleteInputSchema = z.object({
   conversationId: z.string().trim().min(1),
 });
 
+export const agentSurfaceSchema = z.enum(["canvas", "agency"]);
+export const agentScopeRefKindSchema = z.enum([
+  "node",
+  "tab",
+  "block",
+  "timeEntry",
+  "project",
+  "member",
+]);
+
+export const agentScopeRefSchema = z.object({
+  kind: agentScopeRefKindSchema,
+  id: z.string().trim().min(1).max(160),
+  label: z.string().trim().min(1).max(160),
+});
+
+export const agentToolCatalogEntrySchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  usage: z.string().trim().min(1).max(280),
+  surface: z.array(agentSurfaceSchema).min(1),
+  modes: z.array(dashboardAgentCanonicalToolPresetSchema).min(1),
+  available: z.boolean(),
+});
+
+export const agentToolCatalogInputSchema = z.object({
+  surface: agentSurfaceSchema,
+  mode: dashboardAgentToolPresetInputSchema,
+});
+
+export const agentToolCatalogResponseSchema = z.object({
+  tools: z.array(agentToolCatalogEntrySchema).max(64),
+});
+
 export const agentChatTurnInputSchema = z.object({
   conversationId: z.string().trim().min(1).optional(),
   content: z.string().trim().min(1).max(20_000),
+  surface: agentSurfaceSchema.optional().default("canvas"),
+  teamId: z.string().trim().min(1).optional(),
   nodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
   scopeNodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
+  scopeRefs: z.array(agentScopeRefSchema).max(24).optional(),
   contextNodeTitles: z.array(z.string().trim().min(1).max(120)).max(24).optional(),
   activeTabId: z.string().trim().min(1).optional(),
   model: z.string().trim().min(1).optional(),
@@ -204,6 +240,11 @@ export type DashboardConversationMessage = z.infer<typeof dashboardConversationM
 export type DashboardConversationDetail = z.infer<typeof dashboardConversationDetailSchema>;
 export type AgentChatTurnInput = z.infer<typeof agentChatTurnInputSchema>;
 export type AgentChatTurnResponse = z.infer<typeof agentChatTurnResponseSchema>;
+export type AgentSurface = z.infer<typeof agentSurfaceSchema>;
+export type AgentScopeRef = z.infer<typeof agentScopeRefSchema>;
+export type AgentToolCatalogEntry = z.infer<typeof agentToolCatalogEntrySchema>;
+export type AgentToolCatalogInput = z.infer<typeof agentToolCatalogInputSchema>;
+export type AgentToolCatalogResponse = z.infer<typeof agentToolCatalogResponseSchema>;
 
 export type DashboardAgentWorkspaceContext = {
   nodes: WorkspaceNode[];
@@ -212,6 +253,9 @@ export type DashboardAgentWorkspaceContext = {
   updatedAt?: string | null;
   userName?: string | null;
   activeTabId?: string | null;
+  surface?: AgentSurface;
+  scopeRefs?: AgentScopeRef[];
+  teamId?: string | null;
 };
 
 export type DashboardAgentConfig = {
@@ -219,4 +263,69 @@ export type DashboardAgentConfig = {
   temperature?: number;
   maxOutputTokens?: number;
   toolPreset?: DashboardAgentToolPreset;
+  agencyRuntime?: AgencyAgentRuntime | null;
+};
+
+export type AgencyAgentRuntime = {
+  teamId: string;
+  listMyTimeEntries: (input: { page?: number; pageSize?: number }) => Promise<{
+    entries: Array<{
+      id: string;
+      description: string;
+      projectName: string;
+      clientName: string;
+      durationSeconds: number;
+      startedAt: string;
+      endedAt: string;
+      isBillable: boolean;
+    }>;
+  }>;
+  listProjects: (input?: { clientId?: string }) => Promise<{
+    projects: Array<{
+      id: string;
+      name: string;
+      clientId: string;
+      clientName: string;
+    }>;
+  }>;
+  listMembers: () => Promise<{
+    members: Array<{
+      userId: string;
+      name: string;
+      email: string;
+      role: string;
+    }>;
+  }>;
+  getTimeSummary: (input: {
+    from: string;
+    to: string;
+    memberUserId?: string;
+    projectId?: string;
+    clientId?: string;
+  }) => Promise<{
+    totalSeconds: number;
+    members: Array<{
+      userId: string;
+      name: string;
+      seconds: number;
+      isTiming: boolean;
+    }>;
+  }>;
+  getReportsSummary: (input: {
+    from: string;
+    to: string;
+    memberUserId?: string;
+    projectId?: string;
+    clientId?: string;
+  }) => Promise<{
+    totalSeconds: number;
+    byClient: Array<{ clientId: string; clientName: string; seconds: number }>;
+    byProject: Array<{
+      projectId: string;
+      projectName: string;
+      clientName: string;
+      seconds: number;
+    }>;
+    byMember: Array<{ userId: string; userName: string; seconds: number }>;
+  }>;
 };

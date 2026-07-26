@@ -11,6 +11,7 @@ import { useMemo } from "react";
 import type { CanvasNodeModel } from "@/features/workspace/canvas/canvas-types";
 import { getWorkspaceBlockRegistryEntry } from "@/features/workspace/utils/workspace-block-registry";
 import { getWorkspaceNodeTintStyle } from "@/features/workspace/utils/workspace-node-dashboard";
+import { agentScopeableProps } from "@/features/shared/agent-scopeable";
 import { cn } from "@/lib/utils";
 
 type WorkspaceNodeCardProps = {
@@ -87,6 +88,12 @@ export function WorkspaceNodeCard({
     <div
       className="node-card group relative flex h-full min-h-0 flex-col overflow-hidden rounded-[1.5rem] p-4 transition-colors duration-200"
       style={tintStyle}
+      tabIndex={0}
+      {...agentScopeableProps({
+        kind: "node",
+        id: workspaceNode.id,
+        label: workspaceNode.title,
+      })}
     >
       <div className="absolute inset-0 -z-20 rounded-[1.5rem] bg-background/50" />
       {workspaceNode.nodeType === "orchestrator" ? (

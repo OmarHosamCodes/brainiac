@@ -1,5 +1,6 @@
 import { stepCountIs } from "@openrouter/sdk/lib/stop-conditions";
 
+import { buildAgencyAgentTools } from "./agency-tools";
 import { createOpenRouterClient } from "./client";
 import { resolveOpenRouterModel } from "./models";
 import {
@@ -172,7 +173,35 @@ function buildScopedWorkspaceContext(workspace: DashboardAgentWorkspaceContext) 
   ].join("\n");
 }
 
+function buildAgencyInstructions(workspace: DashboardAgentWorkspaceContext) {
+  const userLabel = workspace.userName?.trim()
+    ? `The current user is ${workspace.userName.trim()}.`
+    : "The current user name is unavailable.";
+  const scopeLines =
+    workspace.scopeRefs && workspace.scopeRefs.length > 0
+      ? [
+          "Pinned scope chips for this turn:",
+          ...workspace.scopeRefs.map((ref) => `- ${ref.kind}: ${ref.label} (${ref.id})`),
+        ]
+      : ["No Agency scope chips are pinned for this turn."];
+
+  return [
+    "You are Orch's Agency assistant.",
+    "Help the user understand tracked time, projects, members, and report totals.",
+    "Agency mode is ask-only. Do not create, edit, or delete time entries, projects, tasks, or members.",
+    "Ground every answer in tool results. If you need data, call a tool instead of guessing.",
+    "Be concise, concrete, and factual.",
+    userLabel,
+    workspace.teamId ? `Active team id: ${workspace.teamId}.` : "Active team id is unavailable.",
+    ...scopeLines,
+  ].join("\n");
+}
+
 function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
+  if (workspace.surface === "agency") {
+    return buildAgencyInstructions(workspace);
+  }
+
   const scopedNodes = getScopedWorkspaceNodes(workspace);
   const scopedWorkspace = hasScopedWorkspace(workspace);
   const updatedLabel = workspace.updatedAt
@@ -184,6 +213,13 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
   const marketplaceCount = workspace.marketplaceItems?.length ?? 0;
   const focusedWorkspaceDetails = buildFocusedWorkspaceDetails(scopedNodes);
   const scopedContext = buildScopedWorkspaceContext(workspace);
+  const scopeRefLines =
+    workspace.scopeRefs && workspace.scopeRefs.length > 0
+      ? [
+          "Pinned scope chips for this turn:",
+          ...workspace.scopeRefs.map((ref) => `- ${ref.kind}: ${ref.label} (${ref.id})`),
+        ]
+      : [];
 
   return [
     "You are Orch's dashboard agent.",
@@ -199,6 +235,7 @@ function buildAgentInstructions(workspace: DashboardAgentWorkspaceContext) {
         ]
       : []),
     `The marketplace currently has ${marketplaceCount} items.`,
+    ...scopeRefLines,
     scopedWorkspace ? "Scoped dashboard overview:" : "Dashboard overview:",
     buildWorkspaceOverview(scopedNodes),
     ...(scopedContext ? [scopedContext] : []),
@@ -332,6 +369,7 @@ async function runToolEnabledPass(args: {
   workspace: DashboardAgentWorkspaceContext;
   workspaceRuntime: DashboardAgentWorkspaceRuntime;
   toolPreset: DashboardAgentToolPreset;
+  agencyRuntime?: DashboardAgentConfig["agencyRuntime"];
   normalizedMessages: ReturnType<typeof normalizeMessages>;
   instructions: string;
   maxSteps: number;
@@ -339,11 +377,14 @@ async function runToolEnabledPass(args: {
   maxOutputTokens?: number;
   contextLength: number | null;
 }) {
-  const tools = buildDashboardAgentTools(
-    args.workspaceRuntime,
-    args.workspace.marketplaceItems ?? [],
-    args.toolPreset,
-  );
+  const tools =
+    args.workspace.surface === "agency" && args.agencyRuntime
+      ? buildAgencyAgentTools(args.agencyRuntime)
+      : buildDashboardAgentTools(
+          args.workspaceRuntime,
+          args.workspace.marketplaceItems ?? [],
+          args.toolPreset,
+        );
   const calls = new Map<string, AgentToolCall>();
   const callOrder: string[] = [];
   const result = createOpenRouterClient().callModel({
@@ -481,9 +522,14 @@ export async function runDashboardAgent(
   });
   const selectedModel = await resolveOpenRouterModel(config.model);
   const model = selectedModel?.id ?? config.model?.trim() ?? DEFAULT_AGENT_MODEL;
-  const toolPreset = config.toolPreset ?? "ask";
+  const surface = workspace.surface ?? "canvas";
+  const toolPreset = surface === "agency" ? "ask" : (config.toolPreset ?? "ask");
   const supportsTools = selectedModel?.supportsTools ?? true;
-  const executionConfig = resolveAgentExecutionConfig(workspace, toolPreset, supportsTools);
+  const executionConfig = resolveAgentExecutionConfig(
+    { ...workspace, surface },
+    toolPreset,
+    supportsTools,
+  );
   let usage: DashboardConversationUsageLatest | null = null;
 
   let responseText = "";
@@ -492,9 +538,10 @@ export async function runDashboardAgent(
     try {
       const initialPass = await runToolEnabledPass({
         model,
-        workspace,
+        workspace: { ...workspace, surface },
         workspaceRuntime,
         toolPreset,
+        agencyRuntime: config.agencyRuntime,
         normalizedMessages,
         instructions: executionConfig.instructions,
         maxSteps: executionConfig.maxSteps,
@@ -510,13 +557,15 @@ export async function runDashboardAgent(
       if (
         executionConfig.shouldRetryForInspection &&
         toolCalls.length === 0 &&
-        workspace.nodes.length > 0
+        workspace.nodes.length > 0 &&
+        surface !== "agency"
       ) {
         const retryPass = await runToolEnabledPass({
           model,
-          workspace,
+          workspace: { ...workspace, surface },
           workspaceRuntime,
           toolPreset,
+          agencyRuntime: config.agencyRuntime,
           normalizedMessages,
           instructions: `${executionConfig.instructions}\nYou have not inspected the workspace yet. Call a relevant tool before answering.`,
           maxSteps: executionConfig.maxSteps,
@@ -645,3 +694,4 @@ export async function runTaskAgent(
 
 export * from "./models";
 export * from "./types";
+export { listAgentToolCatalog } from "./tool-catalog";

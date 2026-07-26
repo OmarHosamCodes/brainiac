@@ -3,8 +3,8 @@
 - Agency work surface / time tracking should match Clockify UI and UX closely (including action parity); avoid inventing custom flows that diverge from Clockify unless explicitly requested.
 - Prefer choosing an existing task over creating a new one in task selectors and suggestions.
 - Timer and time-entry state must persist on the server (DB or Redis), not browser or device storage, must survive refresh, and must stay editable mid-tracking with changes durably saved.
-- Keep tracker start / stop / save simple; do not overcomplicate that path.
 - Optimistic UI must not flicker or diverge from server/cache truth; for critical task/timer CRUD, prefer DB/cache-confirmed updates over local-only optimistic state.
+- Workspace agent (Orch) should be available above all pages; Agency is Ask-only (agent mode disabled); scope/design selection uses app-suitable terminology and is not click-only; collapsed composer expands on hover.
 - When verifying agency UX, use the browser; for Clockify-parity work, compare against Clockify in-browser until the goal is met.
 - Default git branch for rebase, merge, deploy, and fix PRs is `dev`; when explicitly asked for commits on multi-step work, prefer small micro-commits per logical update.
 - Primary app navigation is a left sidebar rail shared by Canvas and Agency: team controls at the top (not a logo), distinct sidebar background from the main content, notification card at the bottom, reference-style profile card, and the sidebar collapse button in the top bar; no outer padding around sidebar/top bar, no expand-on-hover, and Agency section tabs should remain reachable via hover menu when the rail is collapsed; sidebar and top bar must read as one connected shell surface; the Agency top-bar segment crumb opens a segment switcher menu (not a static label only).
@@ -20,7 +20,7 @@
 - Clockify data can be imported with `bun run db:import:clockify`.
 - Sentry issue fix automation is set up to open fix PRs against `dev`.
 - Product features follow the golden-file layer pattern; Agency Time Tracking is the exemplar.
-- Authenticated chrome is a left sidebar rail plus a thin connected top bar (breadcrumb, team switcher, notifications, collapse control) in `apps/web/src/features/app-shell/`; spatial dashboard uses `app-shell--spatial` and Agency uses `app-shell--execution` on the same topology.
+- Authenticated chrome is a left sidebar rail plus a thin connected top bar (breadcrumb, team switcher, notifications, collapse control) in `apps/web/src/features/app-shell/`; spatial dashboard uses `app-shell--spatial` and Agency uses `app-shell--execution` on the same topology; global workspace agent composer lives under `apps/web/src/features/workspace-agent/`.
 - The spatial home route is `/canvas` (formerly `/dashboard`); it is a MagicBento-style bento grid (React Bits + gsap) with adaptive glass cards; auth pages keep their original UI (a bento restyle was reverted).
 - Agency’s primary time-tracking nav segment is labeled Tracker (not Work).
 - Dashboard and Reports hour breakdown uses a shared Paid / Waste / Internal composition; on Dashboard, Project share morphs into a Sankey-style flow that splits Internal into billable vs non-billable.

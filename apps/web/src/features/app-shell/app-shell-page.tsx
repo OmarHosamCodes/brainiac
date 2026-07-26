@@ -1,25 +1,11 @@
-import { useLayoutEffect, type ReactNode } from "react";
-
-import { useAppShellStore } from "@/features/app-shell/app-shell-store";
-
-export type AppShellPageSlot = "dock";
+import type { ReactNode } from "react";
 
 type AppShellPageProps = {
-  slots?: AppShellPageSlot[];
   children: ReactNode;
+  /** @deprecated Dock portal slots were removed with the global floating agent. */
+  slots?: Array<"dock">;
 };
 
-export function AppShellPage({ slots = [], children }: AppShellPageProps) {
-  const acquireCustomDock = useAppShellStore((s) => s.acquireCustomDock);
-  const releaseCustomDock = useAppShellStore((s) => s.releaseCustomDock);
-
-  const wantsDock = slots.includes("dock");
-
-  useLayoutEffect(() => {
-    if (!wantsDock) return;
-    acquireCustomDock();
-    return () => releaseCustomDock();
-  }, [wantsDock, acquireCustomDock, releaseCustomDock]);
-
+export function AppShellPage({ children }: AppShellPageProps) {
   return children;
 }

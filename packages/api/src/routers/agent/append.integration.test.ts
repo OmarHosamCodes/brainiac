@@ -63,6 +63,7 @@ describe("dashboard agent append persistence", () => {
         content: "Plan the next sprint",
         model: "test-model",
         toolPreset: "ask",
+        surface: "canvas",
         nodes: [],
       },
     });
@@ -96,6 +97,7 @@ describe("dashboard agent append persistence", () => {
           content: "Append to the owner's conversation",
           model: "test-model",
           toolPreset: "ask",
+          surface: "canvas",
           nodes: [],
         },
       }),

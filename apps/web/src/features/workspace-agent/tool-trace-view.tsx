@@ -1,20 +1,18 @@
 import type { AgentToolCallEntry } from "@orch/agent";
 
-import { agentChatToolTraceClass } from "@/features/dashboard-agent/dashboard-agent-ui";
-import { getDashboardAgentToolTraceViewModel } from "@/features/dashboard-agent/dashboard-agent-view-models";
+import { getWorkspaceAgentToolTraceViewModel } from "@/features/workspace-agent/workspace-agent-view-models";
 import { cn } from "@/lib/utils";
 
-type DashboardAgentToolTraceProps = {
+type WorkspaceAgentToolTraceProps = {
   entry: AgentToolCallEntry;
-  className?: string;
 };
 
-export function DashboardAgentToolTrace({ entry, className }: DashboardAgentToolTraceProps) {
-  const viewModel = getDashboardAgentToolTraceViewModel(entry);
+export function WorkspaceAgentToolTraceView({ entry }: WorkspaceAgentToolTraceProps) {
+  const viewModel = getWorkspaceAgentToolTraceViewModel(entry);
 
   if (!viewModel.isStructured) {
     return (
-      <div className={cn(agentChatToolTraceClass, className)}>
+      <div className="rounded-lg border border-default bg-default px-2.5 py-2 font-mono text-xs">
         <span className="font-semibold text-muted">{viewModel.name}</span>
       </div>
     );
@@ -23,7 +21,10 @@ export function DashboardAgentToolTrace({ entry, className }: DashboardAgentTool
   const isRunning = viewModel.status === "in_progress";
 
   return (
-    <details className={cn(agentChatToolTraceClass, className)} open={isRunning}>
+    <details
+      className="rounded-lg border border-default bg-default px-2.5 py-2 font-mono text-xs"
+      open={isRunning}
+    >
       <summary className="flex cursor-pointer list-none items-center gap-2 text-muted [&::-webkit-details-marker]:hidden">
         <span
           className={cn(
@@ -38,7 +39,6 @@ export function DashboardAgentToolTrace({ entry, className }: DashboardAgentTool
         ) : null}
         {isRunning ? <span className="text-primary">running</span> : null}
       </summary>
-
       {viewModel.inputText ? (
         <div className="mt-2 border-t border-default pt-2">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted">Input</p>
@@ -47,7 +47,6 @@ export function DashboardAgentToolTrace({ entry, className }: DashboardAgentTool
           </pre>
         </div>
       ) : null}
-
       {viewModel.outputText ? (
         <div className="mt-2 border-t border-default pt-2">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted">Output</p>
@@ -56,7 +55,6 @@ export function DashboardAgentToolTrace({ entry, className }: DashboardAgentTool
           </pre>
         </div>
       ) : null}
-
       {viewModel.error ? (
         <div className="mt-2 border-t border-default pt-2 text-destructive">{viewModel.error}</div>
       ) : null}
@@ -64,23 +62,17 @@ export function DashboardAgentToolTrace({ entry, className }: DashboardAgentTool
   );
 }
 
-type DashboardAgentToolTraceListProps = {
-  toolsCalled: AgentToolCallEntry[];
-  className?: string;
-};
-
-export function DashboardAgentToolTraceList({
+export function WorkspaceAgentToolTraceListView({
   toolsCalled,
-  className,
-}: DashboardAgentToolTraceListProps) {
-  if (toolsCalled.length === 0) {
-    return null;
-  }
+}: {
+  toolsCalled: AgentToolCallEntry[];
+}) {
+  if (toolsCalled.length === 0) return null;
 
   return (
-    <div className={cn("space-y-1.5", className)}>
+    <div className="mt-2 flex flex-col gap-1.5">
       {toolsCalled.map((entry, index) => (
-        <DashboardAgentToolTrace
+        <WorkspaceAgentToolTraceView
           key={
             typeof entry === "string" ? `${entry}-${index}` : (entry.id ?? `${entry.name}-${index}`)
           }

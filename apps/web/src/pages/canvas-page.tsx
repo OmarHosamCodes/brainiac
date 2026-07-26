@@ -5,8 +5,6 @@ import { useNavigate } from "react-router-dom";
 
 import { LogoLoader } from "@/features/app-shell/components/logo-loader";
 import { AppShellPage } from "@/features/app-shell/app-shell-page";
-import { AppShellPortal } from "@/features/app-shell/app-shell-portal";
-import { DashboardAgentChatPanel } from "@/features/dashboard-agent/dashboard-agent-chat-panel";
 import {
   LazyInfiniteCanvas,
   type InfiniteCanvasHandle,
@@ -16,7 +14,6 @@ import { WorkspaceNodeCard } from "@/features/workspace/workspace-node-card";
 import { Badge } from "@/ui/badge";
 import { authClient } from "@/lib/auth-client";
 import { teamListQueryOptions } from "@/features/team/team-queries";
-import { useAppShellStore } from "@/features/app-shell/app-shell-store";
 import { useTeamStore } from "@/features/team/team-store";
 import { useWorkspaceQuery } from "@/features/workspace/hooks/use-workspace-query";
 import { dashboardErrorAlertClass } from "@/features/dashboard/dashboard-ui";
@@ -30,7 +27,6 @@ export function CanvasPage() {
   const session = authClient.useSession();
   const authEnabled = Boolean(session.data?.user);
 
-  const setAgentDockOpen = useAppShellStore((s) => s.setAgentDockOpen);
   const syncSelectedTeam = useTeamStore((s) => s.syncSelectedTeam);
 
   const board = useWorkspaceQuery();
@@ -61,19 +57,10 @@ export function CanvasPage() {
   }, [board.isWorkspaceInitialLoading, board.nodes.length]);
 
   return (
-    <AppShellPage slots={["dock"]}>
+    <AppShellPage>
       <div className="relative h-full w-full overflow-hidden bg-default selection:bg-primary/30">
         {!isBooting ? (
           <>
-            <AppShellPortal targetId="app-shell-dock-content">
-              <div className="flex h-full min-h-0 flex-col">
-                <DashboardAgentChatPanel
-                  nodes={board.nodes}
-                  onClose={() => setAgentDockOpen(false)}
-                />
-              </div>
-            </AppShellPortal>
-
             <main className="h-full w-full">
               <LazyInfiniteCanvas
                 ref={canvasRef}

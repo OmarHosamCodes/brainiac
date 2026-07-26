@@ -2,6 +2,8 @@
 export {
   agentChatTurnInputSchema,
   agentChatTurnResponseSchema,
+  agentToolCatalogInputSchema,
+  agentToolCatalogResponseSchema,
   dashboardConversationDeleteInputSchema,
   dashboardConversationDetailSchema,
   dashboardConversationGetInputSchema,
@@ -13,4 +15,5 @@ export {
   getOpenRouterAccountStatus,
   listOpenRouterFreeModels,
   listOpenRouterModels,
+  listAgentToolCatalog,
 } from "@orch/agent";

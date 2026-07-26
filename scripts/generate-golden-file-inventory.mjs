@@ -132,6 +132,7 @@ const featureDomainAliases = new Map([
   ["clients", "clients"],
   ["dashboard", "dashboard"],
   ["dashboard-agent", "agent"],
+  ["workspace-agent", "agent"],
   ["favorites", "time-tracking"],
   ["integrations", "integrations"],
   ["marketplace", "marketplace"],

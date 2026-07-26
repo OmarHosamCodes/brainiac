@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { cn } from "@/lib/utils";
-
 const FAVORITE_MODELS_KEY = "orch:agent-favorite-models";
 
 type ModelOption = {
@@ -21,7 +19,7 @@ function loadFavoriteModelIds(): string[] {
   }
 }
 
-export function useDashboardAgentModelPreferences<T extends ModelOption>(modelOptions: T[]) {
+export function useWorkspaceAgentModelPreferences<T extends ModelOption>(modelOptions: T[]) {
   const [modelSearch, setModelSearch] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favoriteModelIds, setFavoriteModelIds] = useState<string[]>(() => loadFavoriteModelIds());
@@ -37,7 +35,8 @@ export function useDashboardAgentModelPreferences<T extends ModelOption>(modelOp
     return modelOptions.filter((model) => {
       if (favoritesOnly && !favoriteModelIdSet.has(model.id)) return false;
       if (!normalizedSearch) return true;
-      return cn(model.name, model.id, model.creatorLabel ?? "")
+      return [model.name, model.id, model.creatorLabel ?? ""]
+        .join(" ")
         .toLowerCase()
         .includes(normalizedSearch);
     });
@@ -57,18 +56,6 @@ export function useDashboardAgentModelPreferences<T extends ModelOption>(modelOp
       current.includes(modelId) ? current.filter((id) => id !== modelId) : [...current, modelId],
     );
   }, []);
-  const moveFavoriteModel = useCallback((modelId: string, direction: "up" | "down") => {
-    setFavoriteModelIds((current) => {
-      const index = current.indexOf(modelId);
-      const targetIndex = direction === "up" ? index - 1 : index + 1;
-      if (index < 0 || targetIndex < 0 || targetIndex >= current.length) return current;
-      const next = [...current];
-      const [item] = next.splice(index, 1);
-      if (!item) return current;
-      next.splice(targetIndex, 0, item);
-      return next;
-    });
-  }, []);
 
   return {
     modelSearch,
@@ -79,6 +66,5 @@ export function useDashboardAgentModelPreferences<T extends ModelOption>(modelOp
     favoriteModelOptions,
     isFavoriteModel,
     toggleFavoriteModel,
-    moveFavoriteModel,
   };
 }

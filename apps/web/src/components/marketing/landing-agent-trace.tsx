@@ -1,6 +1,5 @@
-import { DashboardAgentToolTraceList } from "@/features/dashboard-agent/agent-chat/dashboard-agent-tool-trace";
 import { marketingAgentToolTraces } from "@/components/marketing/marketing-demo-data";
-import { agentChatMessageAssistantClass } from "@/features/dashboard-agent/dashboard-agent-ui";
+import { WorkspaceAgentToolTraceListView } from "@/features/workspace-agent/tool-trace-view";
 import { cn } from "@/lib/utils";
 
 export function LandingAgentTrace({ className }: { className?: string }) {
@@ -15,12 +14,12 @@ export function LandingAgentTrace({ className }: { className?: string }) {
         </time>
       </div>
 
-      <div className={cn(agentChatMessageAssistantClass, "min-w-0 overflow-x-auto")}>
+      <div className="mr-4 min-w-0 overflow-x-auto rounded-xl border border-default bg-muted/20 px-3 py-2 text-sm text-highlighted">
         <p className="text-sm text-foreground">
           I read the launch node, added a checklist block, and I am searching the workspace for
           agency time sync references.
         </p>
-        <DashboardAgentToolTraceList toolsCalled={marketingAgentToolTraces} />
+        <WorkspaceAgentToolTraceListView toolsCalled={marketingAgentToolTraces} />
       </div>
     </div>
   );

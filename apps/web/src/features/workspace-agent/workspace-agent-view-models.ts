@@ -1,6 +1,6 @@
 import type { AgentToolCallEntry } from "@orch/agent";
 
-export type DashboardAgentToolTraceViewModel = {
+export type WorkspaceAgentToolTraceViewModel = {
   name: string;
   inputText: string;
   outputText: string;
@@ -10,7 +10,7 @@ export type DashboardAgentToolTraceViewModel = {
   isStructured: boolean;
 };
 
-export function formatDashboardAgentTracePayload(value: unknown): string {
+export function formatWorkspaceAgentTracePayload(value: unknown): string {
   if (value === undefined || value === null) return "";
   if (typeof value === "string") return value;
 
@@ -21,9 +21,9 @@ export function formatDashboardAgentTracePayload(value: unknown): string {
   }
 }
 
-export function getDashboardAgentToolTraceViewModel(
+export function getWorkspaceAgentToolTraceViewModel(
   entry: AgentToolCallEntry,
-): DashboardAgentToolTraceViewModel {
+): WorkspaceAgentToolTraceViewModel {
   if (typeof entry === "string") {
     return {
       name: entry,
@@ -37,8 +37,8 @@ export function getDashboardAgentToolTraceViewModel(
 
   return {
     name: entry.name,
-    inputText: formatDashboardAgentTracePayload(entry.input),
-    outputText: formatDashboardAgentTracePayload(entry.output),
+    inputText: formatWorkspaceAgentTracePayload(entry.input),
+    outputText: formatWorkspaceAgentTracePayload(entry.output),
     status: entry.status,
     error: entry.error,
     durationMs: entry.durationMs,

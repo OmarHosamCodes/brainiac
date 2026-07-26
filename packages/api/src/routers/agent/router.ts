@@ -1,6 +1,8 @@
 import {
   agentChatTurnInputSchema,
   agentChatTurnResponseSchema,
+  agentToolCatalogInputSchema,
+  agentToolCatalogResponseSchema,
   dashboardConversationDeleteInputSchema,
   dashboardConversationDetailSchema,
   dashboardConversationGetInputSchema,
@@ -23,6 +25,7 @@ import {
   appendDashboardConversationTurn,
   assertCanCreateDashboardConversation,
   deleteDashboardConversation,
+  getAgentToolsCatalog,
   getDashboardConversation,
   listDashboardConversations,
   renameDashboardConversation,
@@ -50,6 +53,22 @@ export const agentRouter = {
       throw toInternalServerError("agent.accountStatus", error);
     }
   }),
+  tools: {
+    catalog: protectedProcedure
+      .input(agentToolCatalogInputSchema)
+      .handler(async ({ input, context }) => {
+        try {
+          return agentToolCatalogResponseSchema.parse(
+            getAgentToolsCatalog(context.session.user.id, input),
+          );
+        } catch (error) {
+          throw toInternalServerError("agent.tools.catalog", error, {
+            surface: input.surface,
+            mode: input.mode,
+          });
+        }
+      }),
+  },
   chat: {
     turn: protectedProcedure.input(agentChatTurnInputSchema).handler(async ({ input, context }) => {
       try {
@@ -70,6 +89,7 @@ export const agentRouter = {
           workspaceSource: input.nodes ? "request" : "database",
           requestedModel: input.model ?? null,
           toolPreset: input.toolPreset,
+          surface: input.surface,
         });
       }
     }),

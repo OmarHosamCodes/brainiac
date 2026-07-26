@@ -1,6 +1,6 @@
 import type { WorkspaceNode } from "@orch/workspace";
 
-export type DashboardAgentActiveMention = {
+export type WorkspaceAgentActiveMention = {
   query: string;
   start: number;
   end: number;
@@ -13,72 +13,36 @@ function normalizeMentionQuery(value: string) {
 }
 
 function scoreMentionSuggestion(node: WorkspaceNode, normalizedQuery: string) {
-  if (!normalizedQuery) {
-    return 1;
-  }
+  if (!normalizedQuery) return 1;
 
   const title = node.title.toLowerCase();
   const label = node.label?.toLowerCase() ?? "";
   const id = node.id.toLowerCase();
 
-  if (title === normalizedQuery) {
-    return 100;
-  }
-
-  if (id === normalizedQuery) {
-    return 95;
-  }
-
-  if (label === normalizedQuery) {
-    return 90;
-  }
-
-  if (title.startsWith(normalizedQuery)) {
-    return 80;
-  }
-
-  if (label.startsWith(normalizedQuery)) {
-    return 70;
-  }
-
-  if (id.startsWith(normalizedQuery)) {
-    return 60;
-  }
-
-  if (title.includes(normalizedQuery)) {
-    return 50;
-  }
-
-  if (label.includes(normalizedQuery)) {
-    return 40;
-  }
-
-  if (id.includes(normalizedQuery)) {
-    return 30;
-  }
-
+  if (title === normalizedQuery) return 100;
+  if (id === normalizedQuery) return 95;
+  if (label === normalizedQuery) return 90;
+  if (title.startsWith(normalizedQuery)) return 80;
+  if (label.startsWith(normalizedQuery)) return 70;
+  if (id.startsWith(normalizedQuery)) return 60;
+  if (title.includes(normalizedQuery)) return 50;
+  if (label.includes(normalizedQuery)) return 40;
+  if (id.includes(normalizedQuery)) return 30;
   return 0;
 }
 
-export function getActiveDashboardNodeMention(draft: string): DashboardAgentActiveMention | null {
+export function getActiveWorkspaceAgentMention(draft: string): WorkspaceAgentActiveMention | null {
   const match = ACTIVE_NODE_MENTION_PATTERN.exec(draft);
-
-  if (!match) {
-    return null;
-  }
+  if (!match) return null;
 
   const prefix = match[1] ?? "";
   const query = match[2] ?? "";
   const start = match.index + prefix.length;
 
-  return {
-    query,
-    start,
-    end: draft.length,
-  };
+  return { query, start, end: draft.length };
 }
 
-export function getDashboardNodeMentionSuggestions(
+export function getWorkspaceAgentMentionSuggestions(
   nodes: WorkspaceNode[],
   query: string,
   selectedNodeIds: Set<string>,
@@ -100,12 +64,8 @@ export function getDashboardNodeMentionSuggestions(
     .map(({ node }) => node);
 }
 
-export function stripActiveDashboardNodeMention(draft: string) {
-  const activeMention = getActiveDashboardNodeMention(draft);
-
-  if (!activeMention) {
-    return draft;
-  }
-
+export function stripActiveWorkspaceAgentMention(draft: string) {
+  const activeMention = getActiveWorkspaceAgentMention(draft);
+  if (!activeMention) return draft;
   return `${draft.slice(0, activeMention.start)}${draft.slice(activeMention.end)}`;
 }

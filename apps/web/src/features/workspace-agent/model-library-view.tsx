@@ -5,10 +5,9 @@ import { Badge } from "@/ui/badge";
 import { Button } from "@/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/ui/dialog";
 import { Input } from "@/ui/input";
-import { agentChatLabelClass } from "@/features/dashboard-agent/dashboard-agent-ui";
 import { cn } from "@/lib/utils";
 
-type DashboardAgentModelLibraryProps = {
+type WorkspaceAgentModelLibraryViewProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   modelSearch: string;
@@ -28,7 +27,7 @@ type DashboardAgentModelLibraryProps = {
   onFavoritesOnlyChange: (value: boolean) => void;
 };
 
-export function DashboardAgentModelLibrary({
+export function WorkspaceAgentModelLibraryView({
   open,
   onOpenChange,
   modelSearch,
@@ -40,12 +39,11 @@ export function DashboardAgentModelLibrary({
   isFavoriteModel,
   favoritesOnly,
   onFavoritesOnlyChange,
-}: DashboardAgentModelLibraryProps) {
+}: WorkspaceAgentModelLibraryViewProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[min(80vh,640px)] max-w-lg flex-col gap-0 overflow-hidden p-0">
         <DialogHeader className="border-b border-default px-4 py-4 text-left">
-          <p className={agentChatLabelClass}>Model library</p>
           <DialogTitle className="text-base">Choose a model</DialogTitle>
           <DialogDescription>Browse OpenRouter models for this conversation.</DialogDescription>
         </DialogHeader>
@@ -70,63 +68,58 @@ export function DashboardAgentModelLibrary({
               aria-pressed={favoritesOnly}
               onClick={() => onFavoritesOnlyChange(!favoritesOnly)}
             >
-              <Star className="size-4" />
+              <Star data-icon="inline-start" />
               Favorites
             </Button>
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {filteredModelOptions.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted">No models match your filters.</p>
           ) : (
-            filteredModelOptions.map((model) => (
-              <button
-                key={model.id}
-                type="button"
-                className={cn(
-                  "flex w-full items-start gap-3 rounded-xl border px-3 py-2 text-left transition-colors",
-                  selectedModelId === model.id
-                    ? "border-primary/40 bg-primary/10"
-                    : "border-default hover:border-primary/30 hover:bg-muted/20",
-                )}
-                onClick={() => {
-                  onSelectModel(model.id);
-                  onOpenChange(false);
-                }}
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-semibold text-highlighted">
-                      {model.name}
-                    </span>
-                    {model.isFree ? <Badge variant="secondary">Free</Badge> : null}
-                  </div>
-                  <p className="mt-1 text-xs text-muted">{model.creatorLabel}</p>
-                  <p className="mt-1 text-xs text-muted">{model.pricingLabel}</p>
-                </div>
-                <Button
+            <div className="flex flex-col gap-2">
+              {filteredModelOptions.map((model) => (
+                <button
+                  key={model.id}
                   type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0"
-                  aria-label={
-                    isFavoriteModel(model.id) ? "Remove from favorites" : "Add to favorites"
-                  }
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onToggleFavorite(model.id);
+                  className={cn(
+                    "flex w-full items-start gap-3 rounded-xl border px-3 py-2 text-left transition-colors",
+                    selectedModelId === model.id
+                      ? "border-primary/40 bg-primary/10"
+                      : "border-default hover:border-primary/30 hover:bg-muted/20",
+                  )}
+                  onClick={() => {
+                    onSelectModel(model.id);
+                    onOpenChange(false);
                   }}
                 >
-                  <Star
-                    className={cn(
-                      "size-4",
-                      isFavoriteModel(model.id) && "fill-current text-warning",
-                    )}
-                  />
-                </Button>
-              </button>
-            ))
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-semibold text-highlighted">
+                        {model.label}
+                      </span>
+                      {model.isFree ? <Badge variant="secondary">Free</Badge> : null}
+                    </div>
+                    <p className="mt-0.5 text-xs text-muted">{model.pricingLabel}</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={
+                      isFavoriteModel(model.id) ? "Remove from favorites" : "Add to favorites"
+                    }
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onToggleFavorite(model.id);
+                    }}
+                  >
+                    <Star className={isFavoriteModel(model.id) ? "fill-current" : undefined} />
+                  </Button>
+                </button>
+              ))}
+            </div>
           )}
         </div>
       </DialogContent>

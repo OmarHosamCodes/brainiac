@@ -8,6 +8,7 @@ import { useAppUpdateWatcher } from "@/features/app-shell/hooks/use-app-update-w
 import { useAppShellStore, useShellMode } from "@/features/app-shell/app-shell-store";
 import { useAgencyTrackingFavicon } from "@/features/time-tracking/hooks/use-agency-time-tracker";
 import { useAgencyActiveTimerQuery } from "@/features/shared/agency-queries";
+import { WorkspaceAgent } from "@/features/workspace-agent/workspace-agent";
 import { cn } from "@/lib/utils";
 import { useCurrentAgencyTeamStore } from "@/features/time-tracking/stores/agency-timer";
 
@@ -22,11 +23,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const setCurrentPath = useAppShellStore((s) => s.setCurrentPath);
   const shellMode = useShellMode();
 
-  const agentDockOpen = useAppShellStore((s) => s.agentDockOpen);
-  const agentDockWidth = useAppShellStore((s) => s.agentDockWidth);
   const railPinned = useAppShellStore((s) => s.railPinned);
-  const setAgentDockOpen = useAppShellStore((s) => s.setAgentDockOpen);
-  const toggleAgentDock = useAppShellStore((s) => s.toggleAgentDock);
   const toggleCommandPalette = useAppShellStore((s) => s.toggleCommandPalette);
 
   const isSpatialMode = shellMode === "spatial";
@@ -42,11 +39,6 @@ export function AppShell({ children }: { children: ReactNode }) {
       if (!modifier || event.shiftKey || event.altKey) return;
 
       const key = event.key.toLowerCase();
-      if (key === "j") {
-        event.preventDefault();
-        toggleAgentDock();
-        return;
-      }
       if (key === "k") {
         event.preventDefault();
         toggleCommandPalette();
@@ -55,7 +47,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     window.addEventListener("keydown", handleShellShortcuts);
     return () => window.removeEventListener("keydown", handleShellShortcuts);
-  }, [toggleAgentDock, toggleCommandPalette]);
+  }, [toggleCommandPalette]);
 
   return (
     <div
@@ -64,37 +56,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         isSpatialMode ? "app-shell--spatial" : "app-shell--execution",
         railPinned && "app-shell--rail-pinned",
       )}
-      style={
-        {
-          "--app-shell-dock-width": agentDockOpen ? `${agentDockWidth}px` : "0px",
-        } as React.CSSProperties
-      }
     >
       <AppShellChrome />
-
-      {agentDockOpen ? (
-        <div
-          className="app-shell__mobile-backdrop bg-inverted/30 md:hidden"
-          aria-hidden="true"
-          onClick={() => setAgentDockOpen(false)}
-        />
-      ) : null}
-
-      <aside
-        className={cn(
-          "app-shell__dock border-l border-default bg-default",
-          agentDockOpen ? "app-shell__dock--open" : "app-shell__dock--closed",
-        )}
-        aria-hidden={!agentDockOpen}
-        role="complementary"
-        aria-label="Agent panel"
-      >
-        <div className="app-shell__dock-inner">
-          <div id="app-shell-dock-content" className="min-h-0 flex-1" />
-        </div>
-      </aside>
-
       <main className="app-shell__main">{children}</main>
+      <WorkspaceAgent />
       {isRefreshing ? <LogoLoader label="Updating" /> : null}
     </div>
   );
