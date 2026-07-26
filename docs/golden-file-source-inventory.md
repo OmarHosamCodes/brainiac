@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 435 |
+| golden-feature | 439 |
 | server-operation | 12 |
 | shared-infrastructure | 240 |
 | static-presentation | 15 |
@@ -29,7 +29,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | Domain | Artifacts |
 | --- | ---: |
 | agency-shared | 78 |
-| agent | 35 |
+| agent | 39 |
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 11 |
@@ -409,8 +409,10 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/workspace-agent/hooks/use-agent-scope-mode-listener.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-data.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-model-preferences.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
+| `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-model-preset.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/model-library-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/workspace-agent/model-preset-menu-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/scope-chip-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/stores/workspace-agent-store.ts` | agent | client-state | golden-feature | agent-domain | Feature-owned agent artifact in the canonical client-state layer. | content: Zustand client state, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/tool-menu-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -563,6 +565,8 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/agent/src/agency-tools.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: Zod contracts, exported declarations; structure: source role and exported behavior |
 | `packages/agent/src/client.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/agent/src/index.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: exported declarations; structure: source role and exported behavior |
+| `packages/agent/src/model-routing.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/agent/src/model-routing.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/agent/src/models.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: Zod contracts, exported declarations; structure: source role and exported behavior |
 | `packages/agent/src/tool-catalog.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/agent/src/tool-catalog.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: exported declarations; structure: source role and exported behavior |

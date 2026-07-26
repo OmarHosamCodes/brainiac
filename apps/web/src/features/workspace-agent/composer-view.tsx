@@ -1,4 +1,4 @@
-import type { AgentToolCatalogEntry, DashboardAgentToolPreset } from "@orch/agent";
+import type { AgentModelTier, AgentToolCatalogEntry, DashboardAgentToolPreset } from "@orch/agent";
 import type { WorkspaceNode } from "@orch/workspace";
 import {
   Box,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
+import { WorkspaceAgentModelPresetMenuView } from "@/features/workspace-agent/model-preset-menu-view";
 import { WorkspaceAgentScopeChipView } from "@/features/workspace-agent/scope-chip-view";
 import { WorkspaceAgentToolMenuView } from "@/features/workspace-agent/tool-menu-view";
 import type { WorkspaceAgentScopeChip } from "@/features/workspace-agent/hooks/use-workspace-agent";
@@ -36,6 +37,15 @@ type WorkspaceAgentComposerViewProps = {
   onSelectToolPreset: (preset: DashboardAgentToolPreset) => void;
   agentModeDisabled: boolean;
   selectedModelLabel: string;
+  resolvedModelLabel: string | null;
+  modelTier: AgentModelTier;
+  modelAuto: boolean;
+  modelFree: boolean;
+  onModelTierChange: (tier: AgentModelTier) => void;
+  onModelAutoChange: (auto: boolean) => void;
+  onModelFreeChange: (free: boolean) => void;
+  modelMenuOpen: boolean;
+  onModelMenuOpenChange: (open: boolean) => void;
   onOpenModelLibrary: () => void;
   scopeModeActive: boolean;
   onToggleScopeMode: () => void;
@@ -76,6 +86,15 @@ export function WorkspaceAgentComposerView({
   onSelectToolPreset,
   agentModeDisabled,
   selectedModelLabel,
+  resolvedModelLabel,
+  modelTier,
+  modelAuto,
+  modelFree,
+  onModelTierChange,
+  onModelAutoChange,
+  onModelFreeChange,
+  modelMenuOpen,
+  onModelMenuOpenChange,
   onOpenModelLibrary,
   scopeModeActive,
   onToggleScopeMode,
@@ -97,6 +116,9 @@ export function WorkspaceAgentComposerView({
   const selectedModeLabel = selectedToolPreset === "ask" ? "Ask" : "Agent";
   const pillSurface = !(hasChips || multiline);
   const borderRadius = pillSurface ? 9999 : 16;
+  const modelTooltip = resolvedModelLabel
+    ? `${selectedModelLabel} · ${resolvedModelLabel}`
+    : "Quality band — Auto picks the model";
 
   return (
     <TooltipProvider>
@@ -217,7 +239,7 @@ export function WorkspaceAgentComposerView({
                       className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-foreground hover:bg-accent hover:text-accent-foreground motion-safe:transition-colors motion-safe:duration-150"
                       onClick={() => {
                         onToolsMenuOpenChange(false);
-                        onOpenModelLibrary();
+                        onModelMenuOpenChange(true);
                       }}
                     >
                       <Box className="size-4 text-muted-foreground" aria-hidden />
@@ -311,16 +333,46 @@ export function WorkspaceAgentComposerView({
             </div>
 
             <div className="flex shrink-0 items-center gap-0.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="max-w-[7.5rem] truncate rounded-full px-2 text-muted-foreground hover:text-foreground"
-                onClick={onOpenModelLibrary}
-              >
-                <Sparkles data-icon="inline-start" />
-                <span className="truncate">{selectedModelLabel}</span>
-              </Button>
+              <Popover open={modelMenuOpen} onOpenChange={onModelMenuOpenChange}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="max-w-[8.5rem] truncate rounded-full px-2 text-muted-foreground hover:text-foreground"
+                        aria-label={`Model: ${selectedModelLabel}`}
+                      >
+                        <Sparkles data-icon="inline-start" />
+                        <span className="truncate">{selectedModelLabel}</span>
+                      </Button>
+                    </PopoverTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">{modelTooltip}</TooltipContent>
+                </Tooltip>
+                <PopoverContent
+                  align="end"
+                  side="top"
+                  sideOffset={8}
+                  className="w-72 rounded-2xl p-3"
+                  data-workspace-agent-overlay
+                >
+                  <WorkspaceAgentModelPresetMenuView
+                    tier={modelTier}
+                    auto={modelAuto}
+                    free={modelFree}
+                    resolvedModelLabel={resolvedModelLabel}
+                    onTierChange={onModelTierChange}
+                    onAutoChange={onModelAutoChange}
+                    onFreeChange={onModelFreeChange}
+                    onBrowseAll={() => {
+                      onModelMenuOpenChange(false);
+                      onOpenModelLibrary();
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
 
               <Button
                 type="button"

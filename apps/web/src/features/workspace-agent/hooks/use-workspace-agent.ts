@@ -18,6 +18,7 @@ import {
 } from "@/features/workspace-agent/workspace-agent-mentions";
 import { useWorkspaceAgentData } from "@/features/workspace-agent/hooks/use-workspace-agent-data";
 import { useWorkspaceAgentModelPreferences } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preferences";
+import { useWorkspaceAgentModelPreset } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preset";
 import { useWorkspaceAgentStore } from "@/features/workspace-agent/stores/workspace-agent-store";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
@@ -53,8 +54,8 @@ export function useWorkspaceAgent() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [pendingMessages, setPendingMessages] = useState<DashboardConversationMessage[]>([]);
   const [selectedToolPreset, setSelectedToolPreset] = useState<DashboardAgentToolPreset>("agent");
-  const [conversationDraftModelId, setConversationDraftModelId] = useState<string | undefined>();
   const [modelLibraryOpen, setModelLibraryOpen] = useState(false);
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [threadMenuOpen, setThreadMenuOpen] = useState(false);
   const [isRenameDialogOpen, setIsRenameDialogOpen] = useState(false);
@@ -76,6 +77,7 @@ export function useWorkspaceAgent() {
     conversationsListQueryOptions,
     conversationsQuery,
     modelCatalogQuery,
+    accountStatusQuery,
     activeConversationQuery,
     toolsCatalogQuery,
     chatTurnMutation,
@@ -110,9 +112,18 @@ export function useWorkspaceAgent() {
     });
   }, [modelCatalogQuery.data?.models]);
 
-  const modelPreferences = useWorkspaceAgentModelPreferences(modelOptions);
+  const modelPresetState = useWorkspaceAgentModelPreset({
+    isFreeTier: accountStatusQuery.data?.isFreeTier,
+    modelOptions,
+  });
+  const modelPreferences = useWorkspaceAgentModelPreferences(modelOptions, {
+    freeOnly: modelPresetState.free,
+  });
   const selectedModelId =
-    conversationDraftModelId ?? modelCatalogQuery.data?.defaultModel ?? modelOptions[0]?.id;
+    modelPresetState.outboundModelId ??
+    modelPresetState.lastResolvedModelId ??
+    modelCatalogQuery.data?.defaultModel ??
+    modelOptions[0]?.id;
   const canSend = draft.trim().length > 0 && !chatTurnMutation.isPending;
   const activeMention = getActiveWorkspaceAgentMention(draft);
   const mentionSuggestions = useMemo(
@@ -133,14 +144,22 @@ export function useWorkspaceAgent() {
     }
   }, [selectedToolPreset, surface]);
 
+  const rememberResolvedModel = modelPresetState.rememberResolvedModel;
+
   useEffect(() => {
     if (activeConversation?.toolPreset && surface !== "agency") {
       setSelectedToolPreset(activeConversation.toolPreset);
     }
     if (activeConversation?.model) {
-      setConversationDraftModelId(activeConversation.model);
+      rememberResolvedModel(activeConversation.model);
     }
-  }, [activeConversation?.id, activeConversation?.model, activeConversation?.toolPreset, surface]);
+  }, [
+    activeConversation?.id,
+    activeConversation?.model,
+    activeConversation?.toolPreset,
+    rememberResolvedModel,
+    surface,
+  ]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -206,7 +225,9 @@ export function useWorkspaceAgent() {
 
   const sendMessage = useCallback(async () => {
     const content = draft.trim();
-    const model = selectedModelId?.trim();
+    const model = modelPresetState.outboundModelId?.trim();
+    const modelPreset = modelPresetState.modelPreset;
+    const lastResolvedModelId = modelPresetState.lastResolvedModelId;
     if (!content || chatTurnMutation.isPending) return;
     if (surface === "agency" && !teamId) {
       setError("Select an Agency team before asking about time.");
@@ -221,7 +242,7 @@ export function useWorkspaceAgent() {
         role: "user",
         content,
         contextNodeTitles: scopeChips.map((chip) => chip.label),
-        model: model ?? null,
+        model: model ?? lastResolvedModelId ?? null,
         toolsCalled: [],
         createdAt: new Date().toISOString(),
       },
@@ -240,6 +261,7 @@ export function useWorkspaceAgent() {
         content,
         surface,
         toolPreset: effectiveToolPreset,
+        modelPreset,
         scopeRefs: scopeChips,
         contextNodeTitles: scopeChips.map((chip) => chip.label),
         ...(surface === "agency" && teamId ? { teamId } : {}),
@@ -253,6 +275,7 @@ export function useWorkspaceAgent() {
       });
       setPendingMessages([]);
       setActiveConversationId(result.conversation.id);
+      rememberResolvedModel(result.assistantMessage.model ?? result.conversation.model);
       if (result.workspaceSnapshot) {
         useWorkspaceStore
           .getState()
@@ -277,10 +300,13 @@ export function useWorkspaceAgent() {
     chatTurnMutation,
     draft,
     effectiveToolPreset,
+    modelPresetState.lastResolvedModelId,
+    modelPresetState.modelPreset,
+    modelPresetState.outboundModelId,
     queryClient,
     conversationsListQueryOptions.queryKey,
+    rememberResolvedModel,
     scopeChips,
-    selectedModelId,
     setDraft,
     surface,
     teamId,
@@ -362,9 +388,19 @@ export function useWorkspaceAgent() {
     setSelectedToolPreset,
     agentModeDisabled: surface === "agency",
     selectedModelId,
-    setConversationDraftModelId,
+    selectedModelLabel: modelPresetState.selectedModelLabel,
+    resolvedModelLabel: modelPresetState.resolvedModelLabel,
+    modelTier: modelPresetState.tier,
+    modelAuto: modelPresetState.auto,
+    modelFree: modelPresetState.free,
+    setModelTier: modelPresetState.setTier,
+    setModelAuto: modelPresetState.setAuto,
+    setModelFree: modelPresetState.setFree,
+    pinModel: modelPresetState.pinModel,
     modelLibraryOpen,
     setModelLibraryOpen,
+    modelMenuOpen,
+    setModelMenuOpen,
     toolsMenuOpen,
     setToolsMenuOpen,
     threadMenuOpen,

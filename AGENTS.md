@@ -4,7 +4,7 @@
 - Prefer choosing an existing task over creating a new one in task selectors and suggestions.
 - Timer and time-entry state must persist on the server (DB or Redis), not browser or device storage, must survive refresh, and must stay editable mid-tracking with changes durably saved.
 - Optimistic UI must not flicker or diverge from server/cache truth; for critical task/timer CRUD, prefer DB/cache-confirmed updates over local-only optimistic state.
-- Workspace agent (Orch) should be available above all pages; Agency is Ask-only (agent mode disabled); scope/design selection uses app-suitable terminology and is not click-only; collapsed composer expands on hover.
+- Workspace agent (Orch) should be available above all pages; Agency is Ask-only (agent mode disabled); scope/design selection uses app-suitable terminology and is not click-only; collapsed composer expands on hover; non-Agent modes appear as dismissible tags that clear back to Agent; model picking uses Fast/Balanced/Pro tiers with Auto and Free toggles (not a flat model list alone).
 - When verifying agency UX, use the browser; for Clockify-parity work, compare against Clockify in-browser until the goal is met.
 - Default git branch for rebase, merge, deploy, and fix PRs is `dev`; when explicitly asked for commits on multi-step work, prefer small micro-commits per logical update.
 - Primary app navigation is a left sidebar rail shared by Canvas and Agency: team controls at the top (not a logo), distinct sidebar background from the main content, notification card at the bottom, reference-style profile card, and the sidebar collapse button in the top bar; no outer padding around sidebar/top bar, no expand-on-hover, and Agency section tabs should remain reachable via hover menu when the rail is collapsed; sidebar and top bar must read as one connected shell surface; the Agency top-bar segment crumb opens a segment switcher menu (not a static label only).
@@ -24,6 +24,6 @@
 - The spatial home route is `/canvas` (formerly `/dashboard`); it is a MagicBento-style bento grid (React Bits + gsap) with adaptive glass cards; auth pages keep their original UI (a bento restyle was reverted).
 - Agency’s primary time-tracking nav segment is labeled Tracker (not Work).
 - Dashboard and Reports hour breakdown uses a shared Paid / Waste / Internal composition; on Dashboard, Project share morphs into a Sankey-style flow that splits Internal into billable vs non-billable.
-- Tenure range chooser labels use simple calendar-style `Qn YYYY` (e.g. `Q3 2026`), not “Tenure period” or fiscal codes like `FY25 Q3`.
 - Reports aggregated-row entry details reuse the Tracker grouped time-entry log UI, including bulk actions when multiple entries are present.
 - A weekly Cursor automation produces a canvas report of Cursor-chat vs tracked-time gaps and the proposed additions/new totals before entries are inserted.
+- Browser/Vite code must not import the `@orch/agent` barrel (it pulls dotenv/`process` and crashes the client); use `@orch/agent/types` or `@orch/agent/model-routing` for client-safe values.

@@ -69,6 +69,18 @@ export const dashboardAgentLegacyToolPresetSchema = z.enum([
 ]);
 export const dashboardAgentToolPresetSchema = dashboardAgentCanonicalToolPresetSchema;
 
+export const agentModelTierSchema = z.enum(["fast", "balanced", "pro"]);
+export const agentModelPresetSchema = z.object({
+  tier: agentModelTierSchema.default("balanced"),
+  auto: z.boolean().default(true),
+  free: z.boolean().default(false),
+});
+export const DEFAULT_AGENT_MODEL_PRESET = {
+  tier: "balanced" as const,
+  auto: true,
+  free: false,
+};
+
 export function normalizeDashboardAgentToolPreset(
   preset?: string | null,
 ): z.infer<typeof dashboardAgentCanonicalToolPresetSchema> {
@@ -210,6 +222,7 @@ export const agentChatTurnInputSchema = z.object({
   contextNodeTitles: z.array(z.string().trim().min(1).max(120)).max(24).optional(),
   activeTabId: z.string().trim().min(1).optional(),
   model: z.string().trim().min(1).optional(),
+  modelPreset: agentModelPresetSchema.optional(),
   toolPreset: dashboardAgentToolPresetInputSchema,
 });
 
@@ -245,6 +258,8 @@ export type AgentScopeRef = z.infer<typeof agentScopeRefSchema>;
 export type AgentToolCatalogEntry = z.infer<typeof agentToolCatalogEntrySchema>;
 export type AgentToolCatalogInput = z.infer<typeof agentToolCatalogInputSchema>;
 export type AgentToolCatalogResponse = z.infer<typeof agentToolCatalogResponseSchema>;
+export type AgentModelTier = z.infer<typeof agentModelTierSchema>;
+export type AgentModelPreset = z.infer<typeof agentModelPresetSchema>;
 
 export type DashboardAgentWorkspaceContext = {
   nodes: WorkspaceNode[];
@@ -260,6 +275,7 @@ export type DashboardAgentWorkspaceContext = {
 
 export type DashboardAgentConfig = {
   model?: string;
+  modelPreset?: AgentModelPreset;
   temperature?: number;
   maxOutputTokens?: number;
   toolPreset?: DashboardAgentToolPreset;

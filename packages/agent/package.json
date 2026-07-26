@@ -5,6 +5,12 @@
     ".": {
       "default": "./src/index.ts"
     },
+    "./types": {
+      "default": "./src/types.ts"
+    },
+    "./model-routing": {
+      "default": "./src/model-routing.ts"
+    },
     "./*": {
       "default": "./src/*.ts"
     }

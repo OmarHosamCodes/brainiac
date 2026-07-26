@@ -693,5 +693,6 @@ export async function runTaskAgent(
 }
 
 export * from "./models";
+export * from "./model-routing";
 export * from "./types";
 export { listAgentToolCatalog } from "./tool-catalog";

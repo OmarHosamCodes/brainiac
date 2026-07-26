@@ -3,7 +3,12 @@ import { env } from "@orch/env/server";
 import { z } from "zod";
 
 import { createOpenRouterClient } from "./client";
-import { DEFAULT_AGENT_MODEL } from "./types";
+import {
+  resolveModelForTurn as resolveModelForTurnSync,
+  type ModelPromptSignals,
+  type ResolveModelForTurnResult,
+} from "./model-routing";
+import { DEFAULT_AGENT_MODEL, DEFAULT_AGENT_MODEL_PRESET, type AgentModelPreset } from "./types";
 
 const MODEL_CACHE_TTL_MS = 10 * 60 * 1000;
 const ACCOUNT_STATUS_CACHE_TTL_MS = 60 * 1000;
@@ -392,4 +397,23 @@ export async function resolveOpenRouterFreeModel(modelId?: string | null) {
   } catch {
     return null;
   }
+}
+
+export async function resolveOpenRouterModelForTurn(args: {
+  preset?: AgentModelPreset | null;
+  pinnedModelId?: string | null;
+  signals: ModelPromptSignals;
+  content?: string;
+}): Promise<ResolveModelForTurnResult> {
+  const catalog = await listOpenRouterModels();
+  const preset = args.preset ?? DEFAULT_AGENT_MODEL_PRESET;
+
+  return resolveModelForTurnSync({
+    models: catalog.models,
+    defaultModel: catalog.defaultModel,
+    preset,
+    pinnedModelId: args.pinnedModelId,
+    signals: args.signals,
+    content: args.content,
+  });
 }

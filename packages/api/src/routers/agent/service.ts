@@ -1,6 +1,7 @@
 import {
   DASHBOARD_CONVERSATION_HISTORY_LIMIT,
   DASHBOARD_CONVERSATION_MESSAGE_WINDOW,
+  DEFAULT_AGENT_MODEL_PRESET,
   agentChatTurnResponseSchema,
   agentToolCatalogResponseSchema,
   dashboardConversationDetailSchema,
@@ -10,6 +11,7 @@ import {
   dashboardConversationUsageSummarySchema,
   listAgentToolCatalog,
   normalizeDashboardAgentToolPreset,
+  resolveOpenRouterModelForTurn,
   runDashboardAgent,
   type AgencyAgentRuntime,
   type AgentChatTurnInput,
@@ -448,11 +450,25 @@ export async function appendDashboardConversationTurn(
       : getWorkspaceMarketplaceItems(userId, { limit: 200, kind: "all" }),
   ]);
 
+  const modelPreset = turn.modelPreset ?? DEFAULT_AGENT_MODEL_PRESET;
+  const resolvedModel = await resolveOpenRouterModelForTurn({
+    preset: modelPreset,
+    pinnedModelId: turn.model,
+    content: turn.content,
+    signals: {
+      contentLength: turn.content.trim().length,
+      scopeCount: turn.scopeRefs?.length ?? turn.scopeNodes?.length ?? 0,
+      mentionCount: turn.contextNodeTitles?.length ?? 0,
+      toolPreset,
+    },
+  });
+  const resolvedModelId = resolvedModel.modelId;
+
   const conversation = turn.conversationId
     ? await getConversationRecord(userId, turn.conversationId)
     : await createDashboardConversation(userId, {
         content: turn.content,
-        model: turn.model,
+        model: resolvedModelId,
         toolPreset,
       });
   const createdConversation = !turn.conversationId;
@@ -496,7 +512,8 @@ export async function appendDashboardConversationTurn(
       teamId: turn.teamId ?? null,
     },
     {
-      model: turn.model,
+      model: resolvedModelId,
+      modelPreset,
       toolPreset,
       agencyRuntime,
     },
@@ -525,7 +542,7 @@ export async function appendDashboardConversationTurn(
     role: "user" as const,
     content: turn.content,
     contextNodeTitles: contextTitles,
-    model: turn.model?.trim() || null,
+    model: resolvedModelId,
     toolsCalled: [],
     createdAt: now,
   };
@@ -547,7 +564,7 @@ export async function appendDashboardConversationTurn(
   await db
     .update(dashboardConversation)
     .set({
-      model: turn.model?.trim() || null,
+      model: result.model || resolvedModelId,
       toolPreset,
       usageSummary: nextUsageSummary,
       updatedAt: assistantCreatedAt,
@@ -560,7 +577,7 @@ export async function appendDashboardConversationTurn(
   const conversationSummary = mapConversationSummary({
     row: {
       ...conversation,
-      model: turn.model?.trim() || null,
+      model: result.model || resolvedModelId,
       toolPreset,
       usageSummary: nextUsageSummary,
       updatedAt: assistantCreatedAt,

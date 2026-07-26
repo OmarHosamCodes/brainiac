@@ -6,6 +6,7 @@ type ModelOption = {
   id: string;
   name: string;
   creatorLabel?: string | null;
+  isFree?: boolean;
 };
 
 function loadFavoriteModelIds(): string[] {
@@ -19,10 +20,14 @@ function loadFavoriteModelIds(): string[] {
   }
 }
 
-export function useWorkspaceAgentModelPreferences<T extends ModelOption>(modelOptions: T[]) {
+export function useWorkspaceAgentModelPreferences<T extends ModelOption>(
+  modelOptions: T[],
+  options?: { freeOnly?: boolean },
+) {
   const [modelSearch, setModelSearch] = useState("");
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favoriteModelIds, setFavoriteModelIds] = useState<string[]>(() => loadFavoriteModelIds());
+  const freeOnly = options?.freeOnly ?? false;
 
   useEffect(() => {
     localStorage.setItem(FAVORITE_MODELS_KEY, JSON.stringify(favoriteModelIds));
@@ -33,6 +38,7 @@ export function useWorkspaceAgentModelPreferences<T extends ModelOption>(modelOp
     const normalizedSearch = modelSearch.trim().toLowerCase();
 
     return modelOptions.filter((model) => {
+      if (freeOnly && !model.isFree) return false;
       if (favoritesOnly && !favoriteModelIdSet.has(model.id)) return false;
       if (!normalizedSearch) return true;
       return [model.name, model.id, model.creatorLabel ?? ""]
@@ -40,7 +46,7 @@ export function useWorkspaceAgentModelPreferences<T extends ModelOption>(modelOp
         .toLowerCase()
         .includes(normalizedSearch);
     });
-  }, [favoriteModelIdSet, favoritesOnly, modelOptions, modelSearch]);
+  }, [favoriteModelIdSet, favoritesOnly, freeOnly, modelOptions, modelSearch]);
 
   const favoriteModelOptions = useMemo(
     () => modelOptions.filter((model) => favoriteModelIdSet.has(model.id)),
