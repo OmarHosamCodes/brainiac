@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 
-import { getCurrentTenurePeriodRange, resolveDefaultDashboardRangePreset } from "./tenure-utils";
+import {
+  getCurrentTenurePeriodRange,
+  resolveDefaultDashboardRangePreset,
+  simpleTenurePeriodLabel,
+} from "./tenure-utils";
 
 describe("resolveDefaultDashboardRangePreset", () => {
   test("uses tenure when policy is enabled", () => {
@@ -25,6 +29,12 @@ describe("resolveDefaultDashboardRangePreset", () => {
   });
 });
 
+describe("simpleTenurePeriodLabel", () => {
+  test("formats quarter and year", () => {
+    expect(simpleTenurePeriodLabel(2026, 1)).toBe("Q1 2026");
+  });
+});
+
 describe("getCurrentTenurePeriodRange", () => {
   test("returns current fiscal quarter bounds through today", () => {
     const range = getCurrentTenurePeriodRange(
@@ -36,6 +46,7 @@ describe("getCurrentTenurePeriodRange", () => {
     expect(range?.from).toBe("2026-01-01T00:00:00.000Z");
     expect(range?.to).toBe("2026-02-15T23:59:59.999Z");
     expect(range?.label).toBe("FY26 Q1");
+    expect(range?.simpleLabel).toBe("Q1 2026");
   });
 
   test("returns null when tenure tracking is unavailable", () => {

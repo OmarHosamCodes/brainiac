@@ -17,10 +17,15 @@ export function resolveDefaultDashboardRangePreset(
   return policy?.enabled ? "tenure" : "last30";
 }
 
+/** Short range-chooser label, e.g. "Q1 2026". */
+export function simpleTenurePeriodLabel(fiscalYear: number, fiscalQuarter: number): string {
+  return `Q${fiscalQuarter} ${fiscalYear}`;
+}
+
 export function getCurrentTenurePeriodRange(
   policy: TenurePolicyCalendar | null | undefined,
   now = new Date(),
-): { from: string; to: string; label: string } | null {
+): { from: string; to: string; label: string; simpleLabel: string } | null {
   if (!policy?.enabled) return null;
 
   const calendar = toFiscalCalendar(policy);
@@ -34,6 +39,7 @@ export function getCurrentTenurePeriodRange(
     from: range.start.toISOString(),
     to: to.toISOString(),
     label: fiscalQuarterLabel(ref.fiscalYear, ref.fiscalQuarter),
+    simpleLabel: simpleTenurePeriodLabel(ref.fiscalYear, ref.fiscalQuarter),
   };
 }
 

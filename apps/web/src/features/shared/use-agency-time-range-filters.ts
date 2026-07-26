@@ -173,6 +173,10 @@ export function useAgencyTimeRangeFilters({
     () => resolveDefaultDashboardRangePreset(tenurePolicy),
     [tenurePolicy],
   );
+  const tenurePeriodLabel = useMemo(
+    () => getCurrentTenurePeriodRange(tenurePolicy, now)?.simpleLabel ?? null,
+    [now, tenurePolicy],
+  );
 
   const [appliedRangePreset, setAppliedRangePreset] = useState<RangePreset | null>(null);
   const effectiveAppliedRangePreset = appliedRangePreset ?? defaultRangePreset;
@@ -430,6 +434,7 @@ export function useAgencyTimeRangeFilters({
     onReset: handleReset,
     defaultRangePreset,
     tenureAvailable: Boolean(tenurePolicy?.enabled),
+    tenurePeriodLabel,
     members,
     projectsLoading: projectsQuery.isPending,
     clientIds: draftClientIds,

@@ -27,13 +27,20 @@ import { cn } from "@/lib/utils";
 export type RangePreset = "tenure" | "today" | "week" | "month" | "last30" | "custom";
 
 export const RANGE_LABEL: Record<RangePreset, string> = {
-  tenure: "Tenure period",
+  tenure: "Tenure",
   today: "Today",
   week: "This week",
   month: "This month",
   last30: "Last 30 days",
   custom: "Custom",
 };
+
+export function rangePresetLabel(preset: RangePreset, tenurePeriodLabel?: string | null): string {
+  if (preset === "tenure") {
+    return tenurePeriodLabel?.trim() || RANGE_LABEL.tenure;
+  }
+  return RANGE_LABEL[preset];
+}
 
 export function rangePresets(tenureAvailable: boolean): RangePreset[] {
   // Tenure supersedes "This month" — never offer both.
@@ -71,6 +78,7 @@ type AgencyDashboardCommandBarProps = {
   onReset: () => void;
   defaultRangePreset: RangePreset;
   tenureAvailable: boolean;
+  tenurePeriodLabel?: string | null;
   members: Array<{ userId: string; userName: string; avatar?: string | null }>;
   projectsLoading?: boolean;
   fieldIds?: AgencyReportFieldId[];
@@ -84,10 +92,12 @@ function RangePresetChooser({
   value,
   onChange,
   tenureAvailable,
+  tenurePeriodLabel,
 }: {
   value: RangePreset;
   onChange: (preset: RangePreset) => void;
   tenureAvailable: boolean;
+  tenurePeriodLabel?: string | null;
 }) {
   const [open, setOpen] = useState(false);
   const presets = rangePresets(tenureAvailable);
@@ -100,7 +110,9 @@ function RangePresetChooser({
           className={cn(filterTriggerClass, "text-highlighted")}
           aria-label="Time range"
         >
-          <span className="min-w-0 flex-1 truncate">{RANGE_LABEL[value]}</span>
+          <span className="min-w-0 flex-1 truncate">
+            {rangePresetLabel(value, tenurePeriodLabel)}
+          </span>
           <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden />
         </button>
       </PopoverTrigger>
@@ -117,7 +129,7 @@ function RangePresetChooser({
                 setOpen(false);
               }}
             >
-              <span className="truncate">{RANGE_LABEL[preset]}</span>
+              <span className="truncate">{rangePresetLabel(preset, tenurePeriodLabel)}</span>
               {selected ? (
                 <Check className="size-3.5 shrink-0" aria-hidden />
               ) : (
@@ -152,6 +164,7 @@ export function AgencyDashboardCommandBar({
   onReset,
   defaultRangePreset,
   tenureAvailable,
+  tenurePeriodLabel = null,
   members,
   projectsLoading,
   fieldIds,
@@ -223,6 +236,7 @@ export function AgencyDashboardCommandBar({
         value={rangePreset}
         onChange={onRangePresetChange}
         tenureAvailable={tenureAvailable}
+        tenurePeriodLabel={tenurePeriodLabel}
       />
 
       {rangePreset === "custom" ? (
