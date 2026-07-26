@@ -12,8 +12,8 @@ export function WorkspaceAgentToolTraceView({ entry }: WorkspaceAgentToolTracePr
 
   if (!viewModel.isStructured) {
     return (
-      <div className="rounded-lg border border-default bg-default px-2.5 py-2 font-mono text-xs">
-        <span className="font-semibold text-muted">{viewModel.name}</span>
+      <div className="rounded-lg border border-border bg-background px-2.5 py-2 font-mono text-xs">
+        <span className="font-semibold text-muted-foreground">{viewModel.name}</span>
       </div>
     );
   }
@@ -22,41 +22,49 @@ export function WorkspaceAgentToolTraceView({ entry }: WorkspaceAgentToolTracePr
 
   return (
     <details
-      className="rounded-lg border border-default bg-default px-2.5 py-2 font-mono text-xs"
+      className="rounded-lg border border-border bg-background px-2.5 py-2 font-mono text-xs"
       open={isRunning}
     >
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-muted [&::-webkit-details-marker]:hidden">
+      <summary className="flex cursor-pointer list-none items-center gap-2 text-muted-foreground [&::-webkit-details-marker]:hidden">
         <span
           className={cn(
             "size-1.5 shrink-0 rounded-full",
-            isRunning ? "bg-primary" : viewModel.status === "error" ? "bg-destructive" : "bg-muted",
+            isRunning
+              ? "bg-foreground"
+              : viewModel.status === "error"
+                ? "bg-destructive"
+                : "bg-muted-foreground",
           )}
           aria-hidden="true"
         />
-        <span className="font-semibold text-highlighted">{viewModel.name}</span>
+        <span className="font-semibold text-foreground">{viewModel.name}</span>
         {viewModel.durationMs !== undefined ? (
-          <span className="text-muted">{viewModel.durationMs}ms</span>
+          <span className="text-muted-foreground">{viewModel.durationMs}ms</span>
         ) : null}
-        {isRunning ? <span className="text-primary">running</span> : null}
+        {isRunning ? <span className="text-foreground">running</span> : null}
       </summary>
       {viewModel.inputText ? (
-        <div className="mt-2 border-t border-default pt-2">
-          <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted">Input</p>
-          <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-muted">
+        <div className="mt-2 border-t border-border pt-2">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Input
+          </p>
+          <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-muted-foreground">
             {viewModel.inputText}
           </pre>
         </div>
       ) : null}
       {viewModel.outputText ? (
-        <div className="mt-2 border-t border-default pt-2">
-          <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted">Output</p>
-          <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-highlighted">
+        <div className="mt-2 border-t border-border pt-2">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+            Output
+          </p>
+          <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-foreground">
             {viewModel.outputText}
           </pre>
         </div>
       ) : null}
       {viewModel.error ? (
-        <div className="mt-2 border-t border-default pt-2 text-destructive">{viewModel.error}</div>
+        <div className="mt-2 border-t border-border pt-2 text-destructive">{viewModel.error}</div>
       ) : null}
     </details>
   );

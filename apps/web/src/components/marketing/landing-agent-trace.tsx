@@ -14,7 +14,7 @@ export function LandingAgentTrace({ className }: { className?: string }) {
         </time>
       </div>
 
-      <div className="mr-4 min-w-0 overflow-x-auto rounded-xl border border-default bg-muted/20 px-3 py-2 text-sm text-highlighted">
+      <div className="mr-4 min-w-0 overflow-x-auto rounded-xl border border-border bg-muted px-3 py-2 text-sm text-foreground">
         <p className="text-sm text-foreground">
           I read the launch node, added a checklist block, and I am searching the workspace for
           agency time sync references.

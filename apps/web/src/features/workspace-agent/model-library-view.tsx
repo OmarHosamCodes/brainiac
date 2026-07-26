@@ -42,17 +42,20 @@ export function WorkspaceAgentModelLibraryView({
 }: WorkspaceAgentModelLibraryViewProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[min(80vh,640px)] max-w-lg flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="border-b border-default px-4 py-4 text-left">
+      <DialogContent
+        data-workspace-agent-overlay
+        className="flex max-h-[min(80vh,640px)] max-w-lg flex-col gap-0 overflow-hidden p-0"
+      >
+        <DialogHeader className="border-b border-border px-4 py-4 text-left">
           <DialogTitle className="text-base">Choose a model</DialogTitle>
           <DialogDescription>Browse OpenRouter models for this conversation.</DialogDescription>
         </DialogHeader>
 
-        <div className="border-b border-default px-4 py-3">
+        <div className="border-b border-border px-4 py-3">
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative min-w-[12rem] flex-1">
               <Search
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted"
+                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
                 aria-hidden="true"
               />
               <Input
@@ -76,7 +79,9 @@ export function WorkspaceAgentModelLibraryView({
 
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {filteredModelOptions.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted">No models match your filters.</p>
+            <p className="py-6 text-center text-sm text-muted-foreground">
+              No models match your filters.
+            </p>
           ) : (
             <div className="flex flex-col gap-2">
               {filteredModelOptions.map((model) => (
@@ -86,8 +91,8 @@ export function WorkspaceAgentModelLibraryView({
                   className={cn(
                     "flex w-full items-start gap-3 rounded-xl border px-3 py-2 text-left transition-colors",
                     selectedModelId === model.id
-                      ? "border-primary/40 bg-primary/10"
-                      : "border-default hover:border-primary/30 hover:bg-muted/20",
+                      ? "border-border bg-accent text-accent-foreground"
+                      : "border-border bg-card text-card-foreground hover:bg-muted",
                   )}
                   onClick={() => {
                     onSelectModel(model.id);
@@ -96,12 +101,12 @@ export function WorkspaceAgentModelLibraryView({
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-semibold text-highlighted">
+                      <span className="truncate text-sm font-semibold text-foreground">
                         {model.label}
                       </span>
                       {model.isFree ? <Badge variant="secondary">Free</Badge> : null}
                     </div>
-                    <p className="mt-0.5 text-xs text-muted">{model.pricingLabel}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{model.pricingLabel}</p>
                   </div>
                   <Button
                     type="button"
