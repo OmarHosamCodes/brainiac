@@ -414,9 +414,9 @@ const InfiniteCanvasInner = forwardRef<InfiniteCanvasHandle, InfiniteCanvasInner
                   shellChromeGlassClass,
                   "!m-0 overflow-hidden !rounded-[14px] !border-0 !shadow-none",
                 )}
-                maskColor="oklch(0.488 0.243 264.376 / 0.12)"
-                nodeColor={() => "oklch(0.488 0.243 264.376 / 0.45)"}
-                nodeStrokeColor="oklch(0.488 0.243 264.376 / 0.65)"
+                maskColor="color-mix(in oklab, var(--chart-2) 12%, transparent)"
+                nodeColor={() => "color-mix(in oklab, var(--chart-2) 45%, transparent)"}
+                nodeStrokeColor="color-mix(in oklab, var(--chart-2) 65%, transparent)"
                 pannable
                 zoomable
               />
