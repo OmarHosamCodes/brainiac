@@ -404,7 +404,7 @@ export function useWorkspaceAgent() {
   ]);
 
   const placeholder = surface === "agency" ? "Ask about your time" : "Ask about this canvas";
-  const bottomOffsetClass = surface === "agency" ? "bottom-20" : "bottom-6";
+  const bottomOffsetClass = surface === "agency" ? "bottom-8" : "bottom-4";
   const streamingMessageId =
     isStreaming && messages[messages.length - 1]?.role === "assistant"
       ? (messages[messages.length - 1]?.id ?? null)
@@ -442,6 +442,7 @@ export function useWorkspaceAgent() {
     agentModeDisabled: surface === "agency",
     selectedModelId,
     selectedModelLabel: modelPresetState.selectedModelLabel,
+    selectedModelButtonLabel: modelPresetState.selectedModelButtonLabel,
     resolvedModelLabel: modelPresetState.resolvedModelLabel,
     modelTier: modelPresetState.tier,
     modelAuto: modelPresetState.auto,

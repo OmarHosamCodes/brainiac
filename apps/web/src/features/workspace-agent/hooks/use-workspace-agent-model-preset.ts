@@ -1,4 +1,4 @@
-import { formatModelPresetLabel } from "@orch/agent/model-routing";
+import { formatModelPresetButtonLabel, formatModelPresetLabel } from "@orch/agent/model-routing";
 import {
   DEFAULT_AGENT_MODEL_PRESET,
   type AgentModelPreset,
@@ -153,6 +153,12 @@ export function useWorkspaceAgentModelPreset(args: {
     free,
     pinnedLabel: auto ? null : pinnedLabel,
   });
+  const selectedModelButtonLabel = formatModelPresetButtonLabel({
+    tier,
+    auto,
+    free,
+    pinnedLabel: auto ? null : pinnedLabel,
+  });
 
   const resolvedModelLabel =
     lastResolvedModelId != null
@@ -167,6 +173,7 @@ export function useWorkspaceAgentModelPreset(args: {
     pinnedModelId,
     outboundModelId,
     selectedModelLabel,
+    selectedModelButtonLabel,
     resolvedModelLabel,
     lastResolvedModelId,
     setTier,

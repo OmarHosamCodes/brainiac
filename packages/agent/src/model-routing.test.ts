@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import {
   classifyModelTier,
+  formatModelPresetButtonLabel,
   formatModelPresetLabel,
   resolveModelForTurn,
   scorePromptComplexity,
@@ -165,5 +166,21 @@ describe("model routing", () => {
       }),
     ).toBe("Claude Opus 4");
     expect(formatModelPresetLabel({ tier: "fast", auto: true, free: false })).toBe("Fast · Auto");
+  });
+
+  test("formatModelPresetButtonLabel is always one word", () => {
+    expect(
+      formatModelPresetButtonLabel({
+        tier: "fast",
+        auto: true,
+        free: true,
+        pinnedLabel: "Claude Opus 4",
+      }),
+    ).toBe("Claude");
+    expect(formatModelPresetButtonLabel({ tier: "fast", auto: true, free: true })).toBe("Auto");
+    expect(formatModelPresetButtonLabel({ tier: "pro", auto: false, free: true })).toBe("Free");
+    expect(formatModelPresetButtonLabel({ tier: "balanced", auto: false, free: false })).toBe(
+      "Balanced",
+    );
   });
 });

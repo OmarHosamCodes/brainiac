@@ -21,6 +21,7 @@ const contentExit = { duration: 0.12, ease: EASE_OUT_QUART };
 
 export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
   const selectedModelLabel = view.selectedModelLabel;
+  const selectedModelButtonLabel = view.selectedModelButtonLabel;
   const showChat = view.messages.length > 0 || Boolean(view.activeConversationId);
   const isWorking = view.isPending;
   const collapsedLabel = isWorking ? "Working..." : "Message Orch";
@@ -57,8 +58,8 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                       "group relative flex items-center justify-center overflow-hidden",
                       "border border-transparent",
                       isWorking
-                        ? "workspace-agent-pill-shimmer h-1.5 w-16 bg-foreground/40"
-                        : "h-1.5 w-12 bg-foreground/35",
+                        ? "workspace-agent-pill-shimmer h-1.5 w-28 bg-foreground/40"
+                        : "h-1.5 w-24 bg-foreground/35",
                       "motion-safe:transition-[width,height,padding,background-color,border-color] motion-safe:duration-200 motion-safe:ease-[cubic-bezier(0.25,1,0.5,1)]",
                       "group-hover/pill:h-11 group-hover/pill:w-full group-hover/pill:justify-between group-hover/pill:border-border group-hover/pill:bg-card group-hover/pill:px-4",
                       "focus-visible:h-11 focus-visible:w-full focus-visible:justify-between focus-visible:border-border focus-visible:bg-card focus-visible:px-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
@@ -178,6 +179,7 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                     onSelectToolPreset={view.setSelectedToolPreset}
                     agentModeDisabled={view.agentModeDisabled}
                     selectedModelLabel={selectedModelLabel}
+                    selectedModelButtonLabel={selectedModelButtonLabel}
                     resolvedModelLabel={view.resolvedModelLabel}
                     modelTier={view.modelTier}
                     modelAuto={view.modelAuto}

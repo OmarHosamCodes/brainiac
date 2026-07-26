@@ -327,3 +327,23 @@ export function formatModelPresetLabel(args: {
   }
   return parts.join(" · ");
 }
+
+/** Single-word trigger label; full preset stays in the tooltip. */
+export function formatModelPresetButtonLabel(args: {
+  tier: AgentModelTier;
+  auto: boolean;
+  free: boolean;
+  pinnedLabel?: string | null;
+}) {
+  if (args.pinnedLabel) {
+    const firstWord = args.pinnedLabel.trim().split(/\s+/)[0];
+    return firstWord || "Model";
+  }
+  if (args.auto) {
+    return "Auto";
+  }
+  if (args.free) {
+    return "Free";
+  }
+  return args.tier === "fast" ? "Fast" : args.tier === "pro" ? "Pro" : "Balanced";
+}

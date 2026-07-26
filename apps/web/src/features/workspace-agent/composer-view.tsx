@@ -36,8 +36,9 @@ import {
   filePartsToAgentAttachments,
 } from "@/features/workspace-agent/agent-attachments";
 import {
-  WorkspaceAgentAttachButton,
+  WorkspaceAgentAttachMenuItem,
   WorkspaceAgentComposerSubmitGate,
+  workspaceAgentPlusMenuItemClass,
 } from "@/features/workspace-agent/composer-attachment-controls";
 import { WorkspaceAgentModelPresetMenuView } from "@/features/workspace-agent/model-preset-menu-view";
 import { WorkspaceAgentScopeChipView } from "@/features/workspace-agent/scope-chip-view";
@@ -60,6 +61,7 @@ type WorkspaceAgentComposerViewProps = {
   onSelectToolPreset: (preset: DashboardAgentToolPreset) => void;
   agentModeDisabled: boolean;
   selectedModelLabel: string;
+  selectedModelButtonLabel: string;
   resolvedModelLabel: string | null;
   modelTier: AgentModelTier;
   modelAuto: boolean;
@@ -109,6 +111,7 @@ export function WorkspaceAgentComposerView({
   onSelectToolPreset,
   agentModeDisabled,
   selectedModelLabel,
+  selectedModelButtonLabel,
   resolvedModelLabel,
   modelTier,
   modelAuto,
@@ -144,7 +147,7 @@ export function WorkspaceAgentComposerView({
   const borderRadius = nestedInShell ? 0 : 16;
   const modelTooltip = resolvedModelLabel
     ? `${selectedModelLabel} · ${resolvedModelLabel}`
-    : "Quality band · Auto picks the model";
+    : selectedModelLabel;
 
   return (
     <TooltipProvider>
@@ -272,18 +275,50 @@ export function WorkspaceAgentComposerView({
 
             <PromptInputFooter className="px-1.5 pb-1.5">
               <PromptInputTools>
-                <WorkspaceAgentAttachButton />
                 <Popover open={toolsMenuOpen} onOpenChange={onToolsMenuOpenChange}>
-                  <PopoverTrigger asChild>
-                    <PromptInputButton aria-label="Modes, context, and tools">
-                      <Plus />
-                    </PromptInputButton>
-                  </PopoverTrigger>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <PopoverTrigger asChild>
+                        <PromptInputButton aria-label="Modes, context, and tools">
+                          <Plus />
+                        </PromptInputButton>
+                      </PopoverTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Modes, context, and tools</TooltipContent>
+                  </Tooltip>
                   <PopoverContent
                     align="start"
                     data-workspace-agent-overlay
                     className="w-72 gap-0 p-0"
                   >
+                    <div className="flex flex-col gap-0.5 p-1">
+                      <WorkspaceAgentAttachMenuItem
+                        onSelect={() => onToolsMenuOpenChange(false)}
+                      />
+                      <button
+                        type="button"
+                        className={cn(
+                          workspaceAgentPlusMenuItemClass,
+                          scopeModeActive && "bg-accent text-accent-foreground",
+                        )}
+                        aria-pressed={scopeModeActive}
+                        onClick={() => {
+                          onToggleScopeMode();
+                          onToolsMenuOpenChange(false);
+                        }}
+                      >
+                        <Crosshair className="size-4 text-muted-foreground" aria-hidden />
+                        <span className="flex-1">
+                          {scopeModeActive ? "Exit scope mode" : "Scope mode"}
+                        </span>
+                        {scopeModeActive ? (
+                          <Check className="size-4 text-foreground" aria-hidden />
+                        ) : null}
+                      </button>
+                    </div>
+
+                    <Separator />
+
                     <div className="flex flex-col gap-0.5 p-1">
                       {MODE_OPTIONS.map((mode) => {
                         const disabled = mode.preset === "agent" && agentModeDisabled;
@@ -296,11 +331,8 @@ export function WorkspaceAgentComposerView({
                             type="button"
                             disabled={disabled}
                             className={cn(
-                              "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm",
-                              "motion-safe:transition-colors motion-safe:duration-150",
-                              selected
-                                ? "bg-accent text-accent-foreground"
-                                : "text-foreground hover:bg-accent hover:text-accent-foreground",
+                              workspaceAgentPlusMenuItemClass,
+                              selected && "bg-accent text-accent-foreground",
                               disabled &&
                                 "cursor-not-allowed text-muted-foreground opacity-50 hover:bg-transparent hover:text-muted-foreground",
                             )}
@@ -348,28 +380,85 @@ export function WorkspaceAgentComposerView({
                       transition={{ duration: 0.16, ease: [0.25, 1, 0.5, 1] }}
                       className={cn(
                         "inline-flex h-6 items-center gap-0.5 rounded-full border border-border bg-secondary",
-                        "pl-2 text-xs font-medium text-secondary-foreground",
+                        "pl-1.5 text-xs font-medium text-secondary-foreground",
                         agentModeDisabled ? "pr-2" : "pr-1",
                       )}
                     >
-                      <button
-                        type="button"
-                        className="motion-safe:transition-colors motion-safe:duration-150 hover:text-foreground"
-                        aria-label={`Mode: ${selectedModeLabel}. Change mode`}
-                        onClick={() => onToolsMenuOpenChange(true)}
-                      >
-                        {selectedModeLabel}
-                      </button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 motion-safe:transition-colors motion-safe:duration-150 hover:text-foreground"
+                            aria-label={`Mode: ${selectedModeLabel}. Change mode`}
+                            onClick={() => onToolsMenuOpenChange(true)}
+                          >
+                            <MessageCircleQuestion
+                              className="size-3.5 text-muted-foreground"
+                              aria-hidden
+                            />
+                            {selectedModeLabel}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {selectedModeLabel} mode — click to change
+                        </TooltipContent>
+                      </Tooltip>
                       {!agentModeDisabled ? (
-                        <button
-                          type="button"
-                          className="rounded-full p-0.5 text-muted-foreground motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent hover:text-accent-foreground"
-                          aria-label={`Remove ${selectedModeLabel} mode and return to Agent`}
-                          onClick={() => onSelectToolPreset("agent")}
-                        >
-                          <X className="size-3" aria-hidden />
-                        </button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              className="rounded-full p-0.5 text-muted-foreground motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent hover:text-accent-foreground"
+                              aria-label={`Remove ${selectedModeLabel} mode and return to Agent`}
+                              onClick={() => onSelectToolPreset("agent")}
+                            >
+                              <X className="size-3" aria-hidden />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Return to Agent</TooltipContent>
+                        </Tooltip>
                       ) : null}
+                    </motion.div>
+                  ) : null}
+                  {scopeModeActive ? (
+                    <motion.div
+                      key="scope-tag"
+                      layout
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.1 } }}
+                      transition={{ duration: 0.16, ease: [0.25, 1, 0.5, 1] }}
+                      className="inline-flex h-6 items-center gap-0.5 rounded-full border border-border bg-secondary pr-1 pl-1.5 text-xs font-medium text-secondary-foreground"
+                    >
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1 motion-safe:transition-colors motion-safe:duration-150 hover:text-foreground"
+                            aria-label="Scope mode active. Open tools menu"
+                            onClick={() => onToolsMenuOpenChange(true)}
+                          >
+                            <Crosshair className="size-3.5 text-muted-foreground" aria-hidden />
+                            Scope
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          Click page items to add them to scope
+                        </TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="rounded-full p-0.5 text-muted-foreground motion-safe:transition-colors motion-safe:duration-150 hover:bg-accent hover:text-accent-foreground"
+                            aria-label="Exit scope mode"
+                            onClick={onToggleScopeMode}
+                          >
+                            <X className="size-3" aria-hidden />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Exit scope mode</TooltipContent>
+                      </Tooltip>
                     </motion.div>
                   ) : null}
                 </AnimatePresence>
@@ -381,10 +470,10 @@ export function WorkspaceAgentComposerView({
                     <TooltipTrigger asChild>
                       <PopoverTrigger asChild>
                         <PromptInputButton
-                          className="max-w-[8.5rem] truncate px-2 text-muted-foreground hover:text-foreground"
+                          className="px-2 text-muted-foreground hover:text-foreground"
                           aria-label={`Model: ${selectedModelLabel}`}
                         >
-                          <span className="truncate">{selectedModelLabel}</span>
+                          <span>{selectedModelButtonLabel}</span>
                           <ChevronDown className="size-3.5 shrink-0 opacity-70" />
                         </PromptInputButton>
                       </PopoverTrigger>
@@ -413,15 +502,6 @@ export function WorkspaceAgentComposerView({
                     />
                   </PopoverContent>
                 </Popover>
-
-                <PromptInputButton
-                  variant={scopeModeActive ? "secondary" : "ghost"}
-                  aria-pressed={scopeModeActive}
-                  aria-label="Toggle Scope Mode"
-                  onClick={onToggleScopeMode}
-                >
-                  <Crosshair />
-                </PromptInputButton>
 
                 <WorkspaceAgentComposerSubmitGate
                   canSend={canSend}
