@@ -133,11 +133,6 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                         isStreaming={view.isStreaming}
                         streamingMessageId={view.streamingMessageId}
                         streamStopped={view.streamStopped}
-                        followOutput={view.followOutput}
-                        onFollowOutputChange={view.setFollowOutput}
-                        scrollRef={view.chatScrollRef}
-                        endRef={view.chatEndRef}
-                        onScroll={view.onChatScroll}
                       />
                     </motion.div>
                   ) : null}
@@ -166,7 +161,7 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
 
                 <motion.div
                   layout
-                  className={cn(showChat && "border-t border-border bg-card p-2")}
+                  className={cn(showChat && "border-t border-border")}
                   transition={{ layout: layoutTransition }}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1, transition: contentEnter }}
@@ -202,6 +197,7 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                     toolsLoading={view.toolsLoading}
                     canSend={view.canSend}
                     isPending={view.isPending}
+                    chatStatus={view.chatStatus}
                     onSend={() => void view.sendMessage()}
                     onStop={view.stopGeneration}
                     dimmed={view.scopeModeActive}
