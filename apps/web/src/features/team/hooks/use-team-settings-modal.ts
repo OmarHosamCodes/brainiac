@@ -7,6 +7,7 @@ export function useTeamSettingsModal(teamRole: "owner" | "editor" | "viewer" | n
   return {
     currentUserId: session.data?.user?.id ?? "",
     saveTeamName: useTeamStore((state) => state.saveTeamName),
+    saveTeamImage: useTeamStore((state) => state.saveTeamImage),
     deleteSelectedTeam: useTeamStore((state) => state.deleteSelectedTeam),
     addTeamMember: useTeamStore((state) => state.addTeamMember),
     updateMemberRole: useTeamStore((state) => state.updateMemberRole),

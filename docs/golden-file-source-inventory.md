@@ -19,9 +19,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 453 |
+| golden-feature | 455 |
 | server-operation | 12 |
-| shared-infrastructure | 250 |
+| shared-infrastructure | 257 |
 | static-presentation | 15 |
 
 ## Counts by domain
@@ -49,12 +49,12 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | reports | 48 |
 | repository | 13 |
 | resourcing | 16 |
-| server-platform | 20 |
+| server-platform | 21 |
 | settings | 1 |
 | task-management | 41 |
-| team | 18 |
-| time-tracking | 85 |
-| web-platform | 88 |
+| team | 19 |
+| time-tracking | 86 |
+| web-platform | 94 |
 | workspace | 104 |
 
 ## Artifacts
@@ -81,6 +81,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/server/src/lib/seed-agency-types.ts` | server-platform | server-runtime | shared-infrastructure | server-platform | Cross-cutting server-platform server-runtime support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/server/src/lib/startup.ts` | server-platform | server-runtime | shared-infrastructure | server-platform | Cross-cutting server-platform server-runtime support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
 | `apps/server/src/lib/task-attachments.ts` | task-management | domain-service | golden-feature | task-management-domain | Feature-owned task-management artifact in the canonical domain-service layer. | content: database access, exported declarations; structure: source role and exported behavior |
+| `apps/server/src/lib/team-avatar.ts` | server-platform | server-runtime | shared-infrastructure | server-platform | Cross-cutting server-platform server-runtime support rather than a feature-owned business workflow. | content: database access, exported declarations; structure: source role and exported behavior |
 | `apps/server/src/lib/user-avatar.ts` | server-platform | server-runtime | shared-infrastructure | server-platform | Cross-cutting server-platform server-runtime support rather than a feature-owned business workflow. | content: database access, exported declarations; structure: source role and exported behavior |
 | `apps/server/src/lib/web-push.ts` | notifications | domain-service | golden-feature | notifications-domain | Feature-owned notifications artifact in the canonical domain-service layer. | content: database access, exported declarations; structure: source role and exported behavior |
 | `apps/server/src/lib/ws-context.ts` | server-platform | server-runtime | shared-infrastructure | server-platform | Cross-cutting server-platform server-runtime support rather than a feature-owned business workflow. | content: server runtime wiring, exported declarations; structure: source role and exported behavior |
@@ -132,7 +133,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/components/marketing/marketing-legal-layout.tsx` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/components/marketing/marketing-node-card.tsx` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/app-shell/app-navigation.ts` | web-platform | domain-logic | shared-infrastructure | web-platform | Cross-cutting web-platform domain-logic support rather than a feature-owned business workflow. | content: exported declarations; structure: source role and exported behavior |
-| `apps/web/src/features/app-shell/app-shell-account-menu.tsx` | web-platform | web-query | shared-infrastructure | web-platform | Cross-cutting web-platform web-query support rather than a feature-owned business workflow. | content: TanStack Query orchestration, feature query orchestration, React component or hook code; structure: source role and exported behavior |
+| `apps/web/src/features/app-shell/app-shell-account-menu.tsx` | web-platform | web-query | shared-infrastructure | web-platform | Cross-cutting web-platform web-query support rather than a feature-owned business workflow. | content: feature query orchestration, React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/app-shell/app-shell-agency-nav.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/app-shell/app-shell-agency-segment-menu.test.ts` | web-platform | test | shared-infrastructure | web-platform | Cross-cutting web-platform test support rather than a feature-owned business workflow. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/app-shell/app-shell-agency-segment-menu.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -339,6 +340,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/team/hooks/use-team-settings-modal-actions.ts` | team | feature-hook | golden-feature | team-domain | Feature-owned team artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/team/hooks/use-team-settings-modal-state.ts` | team | feature-hook | golden-feature | team-domain | Feature-owned team artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/team/hooks/use-team-settings-modal.ts` | team | feature-hook | golden-feature | team-domain | Feature-owned team artifact in the canonical feature-hook layer. | content: exported declarations; structure: hook naming |
+| `apps/web/src/features/team/team-avatar-url.ts` | team | domain-logic | golden-feature | team-domain | Feature-owned team artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/team/team-permissions.test.ts` | team | test | golden-feature | team-domain | Feature-owned team artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/team/team-permissions.ts` | team | domain-logic | golden-feature | team-domain | Feature-owned team artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/team/team-queries.ts` | team | domain-logic | golden-feature | team-domain | Feature-owned team artifact in the canonical domain-logic layer. | content: oRPC procedures or clients, exported declarations; structure: source role and exported behavior |
@@ -406,6 +408,11 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/time-tracking/timer-validation.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/time-tracking/tracker-draft.test.ts` | time-tracking | test | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/time-tracking/tracker-draft.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/user-settings/containers/user-settings-modal-container.tsx` | web-platform | container | shared-infrastructure | web-platform | Cross-cutting web-platform container support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: container naming |
+| `apps/web/src/features/user-settings/hooks/use-user-settings-modal-actions.ts` | web-platform | feature-hook | shared-infrastructure | web-platform | Cross-cutting web-platform feature-hook support rather than a feature-owned business workflow. | content: TanStack Query orchestration, feature query orchestration, React component or hook code; structure: hook naming |
+| `apps/web/src/features/user-settings/hooks/use-user-settings-modal-state.ts` | web-platform | feature-hook | shared-infrastructure | web-platform | Cross-cutting web-platform feature-hook support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: hook naming |
+| `apps/web/src/features/user-settings/user-settings-modal.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/user-settings/views/user-settings-modal-view.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/agent-attachments.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/workspace-agent/agent-attachments.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/agent-turn-stream.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations, server runtime wiring; structure: test filename |
@@ -543,6 +550,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/providers/query-provider.tsx` | web-platform | web-query | shared-infrastructure | web-platform | Cross-cutting web-platform web-query support rather than a feature-owned business workflow. | content: TanStack Query orchestration, React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/stores/theme.ts` | web-platform | client-state | shared-infrastructure | web-platform | Cross-cutting web-platform client-state support rather than a feature-owned business workflow. | content: Zustand client state, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/styles/workspace-flow.css` | workspace | presentational-view | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical presentational-view layer. | content: CSS selectors and declarations; structure: view or component role |
+| `apps/web/src/ui/avatar.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/badge.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/breadcrumb.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/bubble.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |

@@ -9,8 +9,11 @@ import { teamDetailQueryOptions, teamListQueryOptions } from "@/features/team/te
 import { TeamSettingsModal } from "@/features/team/team-settings-modal";
 import { useTeamStore } from "@/features/team/team-store";
 import { authClient } from "@/lib/auth-client";
+import { getServerUrl } from "@/lib/env";
 import { teamCreateFormSchema } from "@/lib/schemas";
+import { getTeamAvatarPublicUrl } from "@/features/team/team-avatar-url";
 import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "@/ui/avatar";
 import { Button } from "@/ui/button";
 import {
   DropdownMenu,
@@ -30,6 +33,36 @@ type AppShellTeamControlProps = {
   /** `compact` round toolbar trigger, or a full-width `sidebar` header row. */
   variant?: "compact" | "sidebar";
 };
+
+function TeamMark({
+  name,
+  image,
+  teamId,
+  className,
+}: {
+  name: string;
+  image: string | null | undefined;
+  teamId: string | null | undefined;
+  className?: string;
+}) {
+  const serverUrl = getServerUrl();
+  const avatarUrl =
+    image && teamId && serverUrl
+      ? getTeamAvatarPublicUrl({ baseUrl: serverUrl, teamId, storageKey: image })
+      : null;
+  const initial = name ? name.charAt(0).toUpperCase() : null;
+
+  return (
+    <Avatar className={cn("size-7 rounded-lg after:rounded-lg", className)} aria-hidden="true">
+      {avatarUrl ? (
+        <AvatarImage src={avatarUrl} alt="" className="rounded-lg object-cover" />
+      ) : null}
+      <AvatarFallback className="rounded-lg bg-primary/10 text-sm font-semibold text-primary">
+        {initial ?? <Users className="size-3.5" />}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
 
 export function AppShellTeamControl({ className, variant = "compact" }: AppShellTeamControlProps) {
   const session = authClient.useSession();
@@ -58,6 +91,8 @@ export function AppShellTeamControl({ className, variant = "compact" }: AppShell
   const selectedTeam = teamDetailQuery.data ?? null;
   const selectedSummary = teams.find((team) => team.id === selectedTeamId) ?? teams[0] ?? null;
   const displayName = selectedTeam?.name ?? selectedSummary?.name ?? "";
+  const displayImage = selectedTeam?.image ?? selectedSummary?.image ?? null;
+  const displayTeamId = selectedTeam?.id ?? selectedSummary?.id ?? selectedTeamId;
   const memberCount = selectedTeam?.members.length ?? 0;
   const secondaryLabel = selectedTeam
     ? `${memberCount} member${memberCount === 1 ? "" : "s"}`
@@ -109,12 +144,7 @@ export function AppShellTeamControl({ className, variant = "compact" }: AppShell
               aria-expanded={menuOpen}
               title={displayName || "Select team"}
             >
-              <span
-                className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-semibold text-primary"
-                aria-hidden="true"
-              >
-                {displayName ? displayName.charAt(0).toUpperCase() : <Users className="size-3.5" />}
-              </span>
+              <TeamMark name={displayName} image={displayImage} teamId={displayTeamId} />
               <span className="rail-label flex min-w-0 flex-1 items-center gap-1.5">
                 <span className="flex min-w-0 flex-1 flex-col text-left leading-tight">
                   <span className="truncate text-[13px] font-semibold text-highlighted">
@@ -139,7 +169,12 @@ export function AppShellTeamControl({ className, variant = "compact" }: AppShell
               aria-expanded={menuOpen}
               title={displayName || "Select team"}
             >
-              <Users className="size-4 shrink-0" aria-hidden="true" />
+              <TeamMark
+                name={displayName}
+                image={displayImage}
+                teamId={displayTeamId}
+                className="size-8 rounded-full after:rounded-full"
+              />
             </button>
           )}
         </DropdownMenuTrigger>
@@ -204,6 +239,12 @@ export function AppShellTeamControl({ className, variant = "compact" }: AppShell
                         setSelectedTeamId(team.id);
                       }}
                     >
+                      <TeamMark
+                        name={team.name}
+                        image={team.image}
+                        teamId={team.id}
+                        className="size-6"
+                      />
                       <span className="min-w-0 flex-1 truncate">{team.name}</span>
                       {team.id === selectedTeamId ? (
                         <Check className="size-3.5 shrink-0 text-primary" />

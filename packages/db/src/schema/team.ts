@@ -9,6 +9,8 @@ export const workspaceTeam = pgTable(
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
+    /** Storage key for the team/agency profile image (mirrors user.image). */
+    image: text("image"),
     createdByUserId: text("created_by_user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),

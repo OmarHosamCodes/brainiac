@@ -2,10 +2,14 @@ import { useState } from "react";
 
 type TeamRole = "owner" | "editor" | "viewer";
 
+export type TeamSettingsPane = "general" | "members" | "invite" | "danger";
+
 export function useTeamSettingsModalState() {
+  const [pane, setPane] = useState<TeamSettingsPane>("general");
   const [nameDraft, setNameDraft] = useState("");
   const [nameDirty, setNameDirty] = useState(false);
   const [savingName, setSavingName] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<TeamRole>("viewer");
   const [addingMember, setAddingMember] = useState(false);
@@ -14,12 +18,16 @@ export function useTeamSettingsModalState() {
   const [deletingTeam, setDeletingTeam] = useState(false);
 
   return {
+    pane,
+    setPane,
     nameDraft,
     setNameDraft,
     nameDirty,
     setNameDirty,
     savingName,
     setSavingName,
+    uploadingImage,
+    setUploadingImage,
     inviteEmail,
     setInviteEmail,
     inviteRole,

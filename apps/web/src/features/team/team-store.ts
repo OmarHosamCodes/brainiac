@@ -16,6 +16,7 @@ type TeamMember = {
   userId: string;
   userName: string;
   userEmail: string;
+  userAvatar: string | null;
   role: TeamRole;
   joinedAt: string;
   updatedAt: string;
@@ -24,6 +25,7 @@ type TeamMember = {
 type TeamSummary = {
   id: string;
   name: string;
+  image: string | null;
   role: TeamRole;
   createdByUserId: string;
   updatedAt: string;
@@ -49,6 +51,7 @@ type TeamStoreState = {
   syncTeamNameDraft: (name: string | undefined) => void;
   createTeam: (name: string) => Promise<void>;
   saveTeamName: (teamId: string, name: string) => Promise<void>;
+  saveTeamImage: (teamId: string, image: string) => Promise<void>;
   deleteSelectedTeam: (teamId: string, workspaceRefetch: () => Promise<unknown>) => Promise<void>;
   addTeamMember: (teamId: string) => Promise<void>;
   updateMemberRole: (teamId: string, userId: string, role: TeamRole) => Promise<void>;
@@ -154,6 +157,7 @@ export const useTeamStore = create<TeamStoreState>((set, get) => ({
           ? {
               ...current,
               name: updatedTeam.name,
+              image: updatedTeam.image,
               role: updatedTeam.role,
               updatedAt: updatedTeam.updatedAt,
             }
@@ -180,6 +184,68 @@ export const useTeamStore = create<TeamStoreState>((set, get) => ({
       }
       toast.error("Failed to update team", {
         description: getErrorMessage(error, "Please try again."),
+      });
+    } finally {
+      await refreshTeamData(teamId);
+    }
+  },
+
+  saveTeamImage: async (teamId, image) => {
+    if (!teamId || !image) return;
+
+    const queryClient = getQueryClient();
+    const detailKey = teamDetailQueryKey(teamId);
+    const listKey = teamListQueryKey();
+    const previousTeamDetail = queryClient.getQueryData<TeamDetail>(detailKey);
+    const previousTeamList = queryClient.getQueryData<{ items: TeamSummary[] }>(listKey);
+
+    queryClient.setQueryData<TeamDetail | undefined>(detailKey, (current) =>
+      current ? { ...current, image } : current,
+    );
+    queryClient.setQueryData<{ items: TeamSummary[] } | undefined>(listKey, (current) =>
+      current
+        ? {
+            ...current,
+            items: current.items.map((team) => (team.id === teamId ? { ...team, image } : team)),
+          }
+        : current,
+    );
+
+    try {
+      const updatedTeam = await orpcClient.team.update({ teamId, image });
+
+      queryClient.setQueryData<TeamDetail | undefined>(detailKey, (current) =>
+        current
+          ? {
+              ...current,
+              name: updatedTeam.name,
+              image: updatedTeam.image,
+              role: updatedTeam.role,
+              updatedAt: updatedTeam.updatedAt,
+            }
+          : current,
+      );
+      queryClient.setQueryData<{ items: TeamSummary[] } | undefined>(listKey, (current) =>
+        current
+          ? {
+              ...current,
+              items: current.items.map((team) =>
+                team.id === updatedTeam.id ? { ...team, ...updatedTeam } : team,
+              ),
+            }
+          : current,
+      );
+
+      toast.success("Profile updated", { description: "Agency profile image saved." });
+    } catch (error) {
+      if (previousTeamDetail) {
+        queryClient.setQueryData(detailKey, previousTeamDetail);
+      }
+      if (previousTeamList) {
+        queryClient.setQueryData(listKey, previousTeamList);
+      }
+      toast.error("Couldn't update profile image", {
+        description: getErrorMessage(error, "Try again."),
       });
     } finally {
       await refreshTeamData(teamId);
@@ -217,6 +283,7 @@ export const useTeamStore = create<TeamStoreState>((set, get) => ({
       userId: pendingMemberId,
       userName: userEmail.split("@")[0] || userEmail,
       userEmail,
+      userAvatar: null,
       role: memberRole,
       joinedAt: timestamp,
       updatedAt: timestamp,

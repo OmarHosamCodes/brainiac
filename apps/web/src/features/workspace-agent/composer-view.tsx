@@ -292,9 +292,7 @@ export function WorkspaceAgentComposerView({
                     className="w-72 gap-0 p-0"
                   >
                     <div className="flex flex-col gap-0.5 p-1">
-                      <WorkspaceAgentAttachMenuItem
-                        onSelect={() => onToolsMenuOpenChange(false)}
-                      />
+                      <WorkspaceAgentAttachMenuItem onSelect={() => onToolsMenuOpenChange(false)} />
                       <button
                         type="button"
                         className={cn(

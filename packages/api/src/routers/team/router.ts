@@ -44,7 +44,8 @@ export const teamRouter = {
   update: protectedProcedure.input(teamUpdateInputSchema).handler(async ({ context, input }) => {
     const team = await updateTeam(context.session.user.id, {
       teamId: input.teamId,
-      name: input.name.trim(),
+      ...(input.name !== undefined ? { name: input.name.trim() } : {}),
+      ...(input.image !== undefined ? { image: input.image } : {}),
     });
     const actorMembership = await listUserTeams(context.session.user.id, {});
     const actorTeam = actorMembership.find((item) => item.id === team.id);
@@ -52,6 +53,7 @@ export const teamRouter = {
     return teamSummarySchema.parse({
       id: team.id,
       name: team.name,
+      image: team.image,
       role: actorTeam?.role ?? "owner",
       createdByUserId: team.createdByUserId,
       updatedAt: team.updatedAt,

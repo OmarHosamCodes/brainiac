@@ -6,6 +6,7 @@ export const teamMemberSchema = z.object({
   userId: z.string().min(1),
   userName: z.string().min(1),
   userEmail: z.email(),
+  userAvatar: z.string().nullable(),
   role: workspaceTeamRoleSchema,
   joinedAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -14,6 +15,7 @@ export const teamMemberSchema = z.object({
 export const teamSummarySchema = z.object({
   id: z.string().min(1),
   name: z.string().trim().min(1).max(120),
+  image: z.string().nullable(),
   role: workspaceTeamRoleSchema,
   createdByUserId: z.string().min(1),
   updatedAt: z.string().datetime(),
@@ -31,10 +33,15 @@ export const teamGetInputSchema = z.object({
   teamId: z.string().min(1),
 });
 
-export const teamUpdateInputSchema = z.object({
-  teamId: z.string().min(1),
-  name: z.string().trim().min(1, "Team name is required").max(120),
-});
+export const teamUpdateInputSchema = z
+  .object({
+    teamId: z.string().min(1),
+    name: z.string().trim().min(1, "Team name is required").max(120).optional(),
+    image: z.string().nullable().optional(),
+  })
+  .refine((value) => value.name !== undefined || value.image !== undefined, {
+    message: "Provide a name and/or image to update",
+  });
 
 export const teamDeleteInputSchema = z.object({
   teamId: z.string().min(1),

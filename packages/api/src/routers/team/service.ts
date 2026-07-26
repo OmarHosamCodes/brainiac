@@ -12,6 +12,7 @@ import { dashboardWorkspace, user, workspaceTeam, workspaceTeamMember } from "@o
 
 import { requireTeamMembership } from "../../lib/team-membership";
 import { getBillingStateForUser } from "../../billing-guard";
+import { formatAvatarUrl } from "../agency-ops/shared/avatar-helpers";
 
 export async function assertCanCreateTeam(actorUserId: string, _input: Record<string, never>) {
   const billing = await getBillingStateForUser(actorUserId);
@@ -40,6 +41,7 @@ export async function listUserTeams(actorUserId: string, _input: Record<string, 
       teamId: workspaceTeamMember.teamId,
       role: workspaceTeamMember.role,
       teamName: workspaceTeam.name,
+      teamImage: workspaceTeam.image,
       createdByUserId: workspaceTeam.createdByUserId,
       updatedAt: workspaceTeam.updatedAt,
     })
@@ -50,6 +52,7 @@ export async function listUserTeams(actorUserId: string, _input: Record<string, 
   return memberships.map((membership) => ({
     id: membership.teamId,
     name: membership.teamName,
+    image: membership.teamImage ?? null,
     role: membership.role,
     createdByUserId: membership.createdByUserId,
     updatedAt: membership.updatedAt.toISOString(),
@@ -63,6 +66,7 @@ export async function getTeam(actorUserId: string, input: { teamId: string }) {
     .select({
       role: workspaceTeamMember.role,
       teamName: workspaceTeam.name,
+      teamImage: workspaceTeam.image,
       createdByUserId: workspaceTeam.createdByUserId,
       updatedAt: workspaceTeam.updatedAt,
     })
@@ -85,6 +89,7 @@ export async function getTeam(actorUserId: string, input: { teamId: string }) {
   return {
     id: input.teamId,
     name: membership.teamName,
+    image: membership.teamImage ?? null,
     role: membership.role,
     createdByUserId: membership.createdByUserId,
     updatedAt: membership.updatedAt.toISOString(),
@@ -119,6 +124,7 @@ export async function createTeam(actorUserId: string, input: { name: string }) {
   return {
     id: teamId,
     name,
+    image: null,
     role: "owner" as const,
     createdByUserId: actorUserId,
     updatedAt: now.toISOString(),
@@ -129,22 +135,29 @@ export async function updateTeam(
   actorUserId: string,
   input: {
     teamId: string;
-    name: string;
+    name?: string;
+    image?: string | null;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
+
+  if (input.name === undefined && input.image === undefined) {
+    throw new ORPCError("BAD_REQUEST", { message: "Provide a name and/or image to update" });
+  }
 
   const now = new Date();
   const [updated] = await db
     .update(workspaceTeam)
     .set({
-      name: input.name,
+      ...(input.name !== undefined ? { name: input.name } : {}),
+      ...(input.image !== undefined ? { image: input.image } : {}),
       updatedAt: now,
     })
     .where(eq(workspaceTeam.id, input.teamId))
     .returning({
       id: workspaceTeam.id,
       name: workspaceTeam.name,
+      image: workspaceTeam.image,
       createdByUserId: workspaceTeam.createdByUserId,
       updatedAt: workspaceTeam.updatedAt,
     });
@@ -156,6 +169,7 @@ export async function updateTeam(
   return {
     id: updated.id,
     name: updated.name,
+    image: updated.image ?? null,
     createdByUserId: updated.createdByUserId,
     updatedAt: updated.updatedAt.toISOString(),
   };
@@ -241,6 +255,7 @@ export async function listTeamMembers(actorUserId: string, input: { teamId: stri
       role: workspaceTeamMember.role,
       userName: user.name,
       userEmail: user.email,
+      userAvatar: user.image,
       joinedAt: workspaceTeamMember.createdAt,
       updatedAt: workspaceTeamMember.updatedAt,
     })
@@ -253,6 +268,7 @@ export async function listTeamMembers(actorUserId: string, input: { teamId: stri
     userId: member.userId,
     userName: member.userName,
     userEmail: member.userEmail,
+    userAvatar: formatAvatarUrl(member.userAvatar),
     role: member.role,
     joinedAt: member.joinedAt.toISOString(),
     updatedAt: member.updatedAt.toISOString(),

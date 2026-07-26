@@ -24,6 +24,7 @@ import { logger } from "hono/logger";
 import { handleAppRouterRequest } from "./lib/handlers";
 import { logStartup } from "./lib/startup";
 import { registerTaskAttachmentUploadRoute } from "./lib/task-attachments";
+import { registerTeamAvatarRoutes } from "./lib/team-avatar";
 import { registerUserAvatarRoutes } from "./lib/user-avatar";
 import {
   authenticateWebSocket,
@@ -138,6 +139,7 @@ function createApp() {
 
   registerTaskAttachmentUploadRoute(app);
   registerUserAvatarRoutes(app);
+  registerTeamAvatarRoutes(app);
 
   app.use("/*", async (context, next) => {
     const requestContext = await createContext({ context });

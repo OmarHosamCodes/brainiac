@@ -1,7 +1,11 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
+import { toast } from "sonner";
+
+import { getServerUrl } from "@/lib/env";
+import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 import { useTeamSettingsModal } from "./use-team-settings-modal";
-import { useTeamSettingsModalState } from "./use-team-settings-modal-state";
+import { useTeamSettingsModalState, type TeamSettingsPane } from "./use-team-settings-modal-state";
 
 export type TeamSettingsRole = "owner" | "editor" | "viewer";
 
@@ -10,6 +14,7 @@ export type TeamSettingsMember = {
   userId: string;
   userName: string;
   userEmail: string;
+  userAvatar: string | null;
   role: TeamSettingsRole;
   joinedAt: string;
   updatedAt: string;
@@ -18,6 +23,7 @@ export type TeamSettingsMember = {
 export type TeamSettingsTeam = {
   id: string;
   name: string;
+  image: string | null;
   role: TeamSettingsRole;
   createdByUserId: string;
   updatedAt: string;
@@ -52,6 +58,15 @@ export function useTeamSettingsModalActions(input: TeamSettingsModalInput) {
     [input.team],
   );
 
+  useEffect(() => {
+    if (input.open && input.team) {
+      state.setNameDraft(input.team.name);
+      state.setNameDirty(false);
+    }
+    // Sync draft when the modal opens for a team; ignore setter identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional open/team sync
+  }, [input.open, input.team?.id, input.team?.name]);
+
   async function saveName() {
     if (!input.team || !state.nameDraft.trim() || !state.nameDirty) return;
     state.setSavingName(true);
@@ -61,6 +76,54 @@ export function useTeamSettingsModalActions(input: TeamSettingsModalInput) {
     } finally {
       state.setSavingName(false);
     }
+  }
+
+  async function uploadImage(file: File) {
+    if (!input.team || !actions.permissions.canManageSelectedTeam) return;
+
+    const serverUrl = getServerUrl();
+    state.setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("teamId", input.team.id);
+      formData.append("file", file);
+      const response = await fetch(`${serverUrl}/uploads/team-avatar`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const err = (await response.json().catch(() => ({ error: "Upload failed" }))) as {
+          error?: string;
+        };
+        toast.error("Couldn't update profile image", {
+          description: err.error ?? "Try again.",
+        });
+        return;
+      }
+
+      const { storageKey } = (await response.json()) as { storageKey: string };
+      await actions.saveTeamImage(input.team.id, storageKey);
+    } catch (error) {
+      toast.error("Couldn't update profile image", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      state.setUploadingImage(false);
+    }
+  }
+
+  function pickImage() {
+    if (!input.team || !actions.permissions.canManageSelectedTeam) return;
+    const inputEl = document.createElement("input");
+    inputEl.type = "file";
+    inputEl.accept = "image/*";
+    inputEl.addEventListener("change", () => {
+      const file = inputEl.files?.[0];
+      if (file) void uploadImage(file);
+    });
+    inputEl.click();
   }
 
   async function addMember() {
@@ -100,6 +163,7 @@ export function useTeamSettingsModalActions(input: TeamSettingsModalInput) {
 
   function handleOpenChange(nextOpen: boolean) {
     if (!nextOpen) {
+      state.setPane("general");
       state.setNameDraft("");
       state.setNameDirty(false);
       state.setInviteEmail("");
@@ -115,6 +179,12 @@ export function useTeamSettingsModalActions(input: TeamSettingsModalInput) {
     state.setNameDirty(value !== input.team?.name);
   }
 
+  function handlePaneChange(pane: TeamSettingsPane) {
+    state.setConfirmDelete(false);
+    state.setConfirmRemoveUserId(null);
+    state.setPane(pane);
+  }
+
   return {
     open: input.open,
     team: input.team,
@@ -123,9 +193,11 @@ export function useTeamSettingsModalActions(input: TeamSettingsModalInput) {
     sortedMembers,
     currentUserId: actions.currentUserId,
     permissions: actions.permissions,
+    pane: state.pane,
     nameDraft: state.nameDraft,
     nameDirty: state.nameDirty,
     savingName: state.savingName,
+    uploadingImage: state.uploadingImage,
     inviteEmail: state.inviteEmail,
     inviteRole: state.inviteRole,
     addingMember: state.addingMember,
@@ -137,8 +209,10 @@ export function useTeamSettingsModalActions(input: TeamSettingsModalInput) {
       sortedMembers.find((member) => member.userId === state.confirmRemoveUserId)?.userName ||
       "member",
     onOpenChange: handleOpenChange,
+    onPaneChange: handlePaneChange,
     onNameDraftChange: handleNameDraftChange,
     onSaveName: () => void saveName(),
+    onPickImage: pickImage,
     onInviteEmailChange: state.setInviteEmail,
     onInviteRoleChange: state.setInviteRole,
     onAddMember: () => void addMember(),

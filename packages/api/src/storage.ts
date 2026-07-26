@@ -205,3 +205,62 @@ export function getUserAvatarPublicUrl(args: {
   const version = args.storageKey.split("/").pop()?.split(".")[0];
   return version ? `${base}?v=${version}` : base;
 }
+
+// ---------------------------------------------------------------------------
+// Team avatar helpers
+// ---------------------------------------------------------------------------
+
+export async function uploadTeamAvatarBuffer(args: {
+  teamId: string;
+  buffer: Buffer;
+  mimeType: string;
+}) {
+  const extension = args.mimeType.split("/").pop() ?? "jpg";
+  const timestamp = Date.now();
+  const storageKey = `team-avatars/${args.teamId}/${timestamp}.${extension}`;
+  await s3Client.send(
+    new PutObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: storageKey,
+      Body: args.buffer,
+      ContentType: args.mimeType,
+      ContentLength: args.buffer.byteLength,
+    }),
+  );
+  return { storageKey };
+}
+
+export async function getTeamAvatarStream(storageKey: string) {
+  const response = await s3Client.send(
+    new GetObjectCommand({
+      Bucket: env.S3_BUCKET,
+      Key: storageKey,
+    }),
+  );
+
+  if (!response.Body) {
+    throw new Error("Missing avatar object body");
+  }
+
+  const body = await response.Body.transformToByteArray();
+
+  return {
+    body,
+    contentType: response.ContentType ?? "application/octet-stream",
+    contentLength: body.byteLength,
+  };
+}
+
+export function getTeamAvatarPublicUrl(args: {
+  baseUrl: string;
+  teamId: string;
+  storageKey?: string | null;
+}) {
+  const base = `${args.baseUrl.replace(/\/$/, "")}/api/team-avatars/${args.teamId}`;
+  if (!args.storageKey?.startsWith("team-avatars/")) {
+    return base;
+  }
+
+  const version = args.storageKey.split("/").pop()?.split(".")[0];
+  return version ? `${base}?v=${version}` : base;
+}
