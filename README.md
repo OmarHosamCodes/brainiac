@@ -80,7 +80,7 @@ Visit [http://localhost:7001](http://localhost:7001) for the web app. The API ru
 
 | Surface         | Route          | Purpose                                                                   |
 | --------------- | -------------- | ------------------------------------------------------------------------- |
-| **Dashboard**   | `/dashboard`   | Infinite canvas for spatial knowledge work: nodes, blocks, and agent chat |
+| **Canvas**      | `/canvas`      | Infinite canvas for spatial knowledge work: nodes, blocks, and agent chat |
 | **Agency**      | `/agency`      | Time tracking, projects, clients, reports, and team operations            |
 | **Marketplace** | `/marketplace` | Shared workspace node templates                                           |
 | **Billing**     | `/billing`     | Subscription and plan management                                          |

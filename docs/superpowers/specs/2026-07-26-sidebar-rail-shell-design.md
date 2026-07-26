@@ -38,10 +38,10 @@ work canvas.
 
 ## Rail contents (top to bottom)
 
-1. Brand mark -> `/dashboard`.
-2. Primary nav from `APP_NAV_ITEMS`: Dashboard (`layout-dashboard`), Agency
+1. Brand mark -> `/canvas`.
+2. Primary nav from `APP_NAV_ITEMS`: Canvas (`layout-dashboard`), Agency
    (`briefcase`). Agency segments: collapsed -> flyout `Popover` to the right;
-   expanded/pinned -> nested list under Agency. `g w/d/c/p/r/m` shortcuts preserved.
+   expanded/pinned -> nested list under Agency. `g t/d/c/p/r/m` shortcuts preserved.
 3. Search -> opens the command palette.
 4. Footer (`mt-auto`): team control, notifications, account avatar, pin toggle.
 

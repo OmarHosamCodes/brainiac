@@ -20,7 +20,7 @@ import {
 } from "@/ui/command";
 
 const NAV_ICONS = {
-  "/dashboard": LayoutDashboard,
+  "/canvas": LayoutDashboard,
   "/agency": Briefcase,
 } as const;
 

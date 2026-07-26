@@ -30,7 +30,7 @@ createRoot(document.getElementById("root")!, {
   </StrictMode>,
 );
 
-// ponytail: one global dismiss — per-page hooks miss /dashboard and other app routes
+// ponytail: one global dismiss — per-page hooks miss /canvas and other app routes
 requestAnimationFrame(() => {
   requestAnimationFrame(() => {
     dismissMarketingPrerenderShell();

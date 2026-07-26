@@ -17,6 +17,7 @@ import {
   ShoppingBag,
   SlidersHorizontal,
   Target,
+  Timer,
   Users,
   type LucideIcon as LucideIconComponent,
 } from "lucide-react";
@@ -40,6 +41,7 @@ const ICON_BY_SLUG: Record<string, LucideIconComponent> = {
   "shopping-bag": ShoppingBag,
   "sliders-horizontal": SlidersHorizontal,
   target: Target,
+  timer: Timer,
   users: Users,
 };
 

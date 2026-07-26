@@ -36,7 +36,7 @@ export function useLoginPage() {
   });
   const [pending, setPending] = useState(false);
   const [emailAuthOpen, setEmailAuthOpen] = useState(false);
-  const redirectTo = (location.state as { from?: string } | null)?.from ?? "/dashboard";
+  const redirectTo = (location.state as { from?: string } | null)?.from ?? "/canvas";
   const signInForm = useForm<SignInFormValues>({
     resolver: zodResolver(signInFormSchema),
     defaultValues: { email: "", password: "" },

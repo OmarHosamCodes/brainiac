@@ -114,7 +114,7 @@ export const auth = betterAuth({
           returnUrl: new URL("/pricing", primaryCorsOrigin).toString(),
         }),
         portal({
-          returnUrl: new URL("/dashboard", primaryCorsOrigin).toString(),
+          returnUrl: new URL("/canvas", primaryCorsOrigin).toString(),
         }),
         webhooks({
           secret: env.POLAR_WEBHOOK_SECRET,

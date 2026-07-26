@@ -139,9 +139,9 @@ export function WorkspaceNodeShell({
       >
         <div className="flex flex-1 flex-col overflow-y-auto p-6">
           <Button variant="ghost" className="justify-start px-0" asChild>
-            <Link to="/dashboard">
+            <Link to="/canvas">
               <ArrowLeft className="size-4" />
-              Dashboard
+              Canvas
             </Link>
           </Button>
           <div className="mb-8 mt-4 space-y-4">

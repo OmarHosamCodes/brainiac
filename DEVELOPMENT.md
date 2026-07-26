@@ -69,7 +69,7 @@ The architecture and required layer direction are documented in [`docs/golden-fi
 | -------------- | ------------------ |
 | `/`            | Landing            |
 | `/login`       | Login              |
-| `/dashboard`   | Canvas workspace   |
+| `/canvas`      | Canvas workspace   |
 | `/agency`      | Agency operations  |
 | `/marketplace` | Node marketplace   |
 | `/billing`     | Billing            |

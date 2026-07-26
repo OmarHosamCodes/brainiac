@@ -32,7 +32,7 @@ export function AppShellContextBar() {
   const onAgency = location.pathname.startsWith("/agency");
   const segment = onAgency ? agencySegmentFromSearch(location.search) : null;
   const sectionLabel = activeNav?.label ?? "Orch";
-  const sectionHref = activeNav?.to ?? "/dashboard";
+  const sectionHref = activeNav?.to ?? "/canvas";
   const agencyTeamId = useTeamStore((s) => s.selectedTeamId);
 
   return (

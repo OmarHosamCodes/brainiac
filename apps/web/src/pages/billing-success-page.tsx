@@ -54,7 +54,7 @@ export function BillingSuccessPage() {
 
             <div className={cn("flex flex-col gap-3", shellContentInClass)}>
               <Button asChild size="lg">
-                <Link to="/dashboard">Go to Dashboard</Link>
+                <Link to="/canvas">Go to Canvas</Link>
               </Button>
               <Button
                 size="lg"

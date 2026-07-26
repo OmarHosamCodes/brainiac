@@ -12,11 +12,11 @@ export type AppNavItem = {
 
 export const APP_NAV_ITEMS = [
   {
-    label: "Dashboard",
-    to: "/dashboard",
+    label: "Canvas",
+    to: "/canvas",
     icon: "i-lucide-layout-dashboard",
     mode: "spatial",
-    matches: (path: string) => path.startsWith("/dashboard") || path.startsWith("/node/"),
+    matches: (path: string) => path.startsWith("/canvas") || path.startsWith("/node/"),
   },
   {
     label: "Agency",
@@ -27,7 +27,7 @@ export const APP_NAV_ITEMS = [
   },
 ] as const satisfies readonly AppNavItem[];
 
-const SPATIAL_PREFIXES = ["/dashboard", "/node/"] as const;
+const SPATIAL_PREFIXES = ["/canvas", "/node/"] as const;
 
 export function resolveShellMode(path: string): AppShellMode {
   if (SPATIAL_PREFIXES.some((prefix) => path.startsWith(prefix))) {

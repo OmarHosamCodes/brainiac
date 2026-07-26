@@ -1,9 +1,9 @@
 /**
  * Agency segments — single source of truth for the IA.
  *
- * Order is execution-first: Work leads because it is the default surface.
+ * Order is execution-first: Tracker leads because it is the default surface.
  * The shortcut key is the second letter of the `g X` chord
- * (Work = `g w`, Dashboard = `g d`, Clients = `g c`, …).
+ * (Tracker = `g t`, Dashboard = `g d`, Clients = `g c`, …).
  */
 export type AgencySegmentId =
   | "work"
@@ -27,9 +27,9 @@ export type AgencySegment = {
 export const AGENCY_SEGMENTS: readonly AgencySegment[] = [
   {
     id: "work",
-    label: "Work",
-    icon: "i-lucide-briefcase",
-    shortcutKey: "w",
+    label: "Tracker",
+    icon: "i-lucide-timer",
+    shortcutKey: "t",
     subtitle: "Tasks, threads, and time in one place.",
   },
   {
@@ -91,7 +91,7 @@ export function agencySegmentFromSearch(search: string): AgencySegmentId {
   return "work";
 }
 
-/** Canonical href for an Agency segment (Work omits the query). */
+/** Canonical href for an Agency segment (Tracker omits the query). */
 export function agencySegmentHref(segment: AgencySegmentId): string {
   return segment === "work" ? "/agency" : `/agency?section=${segment}`;
 }

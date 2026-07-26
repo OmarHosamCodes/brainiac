@@ -7,7 +7,7 @@ import { Button } from "@/ui/button";
 import { useTheme } from "@/stores/theme";
 
 const footerNav = [
-  { label: "Dashboard", to: "/dashboard" },
+  { label: "Canvas", to: "/canvas" },
   { label: "Agency", to: "/agency" },
   { label: "Pricing", to: "/#pricing" },
 ];

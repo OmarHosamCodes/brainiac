@@ -37,7 +37,7 @@ export function LandingPage() {
     return () => clearTimeout(timeoutId);
   }, []);
 
-  const ctaHref = isAuthenticated ? "/dashboard" : "/login";
+  const ctaHref = isAuthenticated ? "/canvas" : "/login";
   const ctaLabel = isAuthenticated ? "Open workspace" : "Get started";
 
   return (

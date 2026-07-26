@@ -9,8 +9,8 @@ import { AuthProvider } from "@/providers/auth-provider";
 import { startShellBoot } from "@/features/app-shell/shell/shell-boot";
 import { Sentry } from "@/lib/sentry";
 
-const DashboardPage = lazy(() =>
-  import("@/pages/dashboard-page").then((module) => ({ default: module.DashboardPage })),
+const CanvasPage = lazy(() =>
+  import("@/pages/canvas-page").then((module) => ({ default: module.CanvasPage })),
 );
 const AgencyPage = lazy(() =>
   import("@/pages/agency-page").then((module) => ({ default: module.AgencyPage })),
@@ -58,7 +58,8 @@ export function AuthenticatedRoutes() {
       <Route element={<AuthBoundary />}>
         <Route element={<ProtectedRoute />}>
           <Route element={<ShellLayout />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/canvas" element={<CanvasPage />} />
+            <Route path="/dashboard" element={<Navigate to="/canvas" replace />} />
             <Route path="/agency" element={<AgencyPage />} />
             <Route path="/billing/success" element={<BillingSuccessPage />} />
             <Route path="/node/:id" element={<NodePage />} />

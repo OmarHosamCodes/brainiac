@@ -24,7 +24,7 @@ import { useShellBootGate } from "@/features/app-shell/shell/use-shell-boot-gate
 import { shellContentInClass } from "@/features/app-shell/app-shell-ui";
 import { cn } from "@/lib/utils";
 
-export function DashboardPage() {
+export function CanvasPage() {
   const canvasRef = useRef<InfiniteCanvasHandle | null>(null);
   const navigate = useNavigate();
   const session = authClient.useSession();
@@ -174,7 +174,7 @@ export function DashboardPage() {
             />
           </>
         ) : (
-          <LogoLoader label="Loading dashboard" />
+          <LogoLoader label="Loading canvas" />
         )}
       </div>
     </AppShellPage>

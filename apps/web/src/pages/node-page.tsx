@@ -95,7 +95,7 @@ export function NodePage() {
               Node not found. It may have been removed or the link is invalid.
             </div>
             <Button variant="secondary" asChild>
-              <Link to="/dashboard">Return to dashboard</Link>
+              <Link to="/canvas">Return to canvas</Link>
             </Button>
           </div>
         ) : null}

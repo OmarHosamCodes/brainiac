@@ -110,7 +110,7 @@ export function LandingPricing({ isAuthenticated }: LandingPricingProps) {
                   <p className="text-3xl font-bold tabular-nums">$0</p>
                   <p className="mt-1 text-xs text-muted-foreground">10 nodes, single user</p>
                   <Button asChild variant="outline" size="sm" className="mt-4 w-full max-w-[10rem]">
-                    <Link to={isAuthenticated ? "/dashboard" : "/login"}>Get started</Link>
+                    <Link to={isAuthenticated ? "/canvas" : "/login"}>Get started</Link>
                   </Button>
                 </td>
                 <td className="bg-primary/5 px-5 py-6 text-center align-top">

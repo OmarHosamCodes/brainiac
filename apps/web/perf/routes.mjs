@@ -6,7 +6,7 @@ const ALL_ROUTES = [
   { id: "privacy", path: "/privacy", tier: "marketing", auth: false, ci: true },
   { id: "terms", path: "/terms", tier: "marketing", auth: false, ci: true },
   { id: "login", path: "/login", tier: "auth", auth: false, ci: true },
-  { id: "dashboard", path: "/dashboard", tier: "app-heavy", auth: true, ci: true },
+  { id: "canvas", path: "/canvas", tier: "app-heavy", auth: true, ci: true },
   {
     id: "marketplace",
     path: "/marketplace",
@@ -36,7 +36,7 @@ const ALL_ROUTES = [
     tier: "agency",
     auth: true,
     ci: true,
-    label: "Agency / Work",
+    label: "Agency / Tracker",
   },
   {
     id: "agency-dashboard",
