@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 439 |
+| golden-feature | 446 |
 | server-operation | 12 |
 | shared-infrastructure | 240 |
 | static-presentation | 15 |
@@ -29,7 +29,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | Domain | Artifacts |
 | --- | ---: |
 | agency-shared | 78 |
-| agent | 39 |
+| agent | 46 |
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 11 |
@@ -403,10 +403,13 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/time-tracking/timer-validation.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/time-tracking/tracker-draft.test.ts` | time-tracking | test | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/time-tracking/tracker-draft.ts` | time-tracking | domain-logic | golden-feature | time-tracking-domain | Feature-owned time-tracking artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/workspace-agent/agent-turn-stream.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations, server runtime wiring; structure: test filename |
+| `apps/web/src/features/workspace-agent/agent-turn-stream.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: server runtime wiring, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/chat-panel-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/composer-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/containers/workspace-agent-container.tsx` | agent | container | golden-feature | agent-domain | Feature-owned agent artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/workspace-agent/hooks/use-agent-scope-mode-listener.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
+| `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-chat-scroll.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-data.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-model-preferences.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-model-preset.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
@@ -568,6 +571,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/agent/src/model-routing.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/agent/src/model-routing.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/agent/src/models.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: Zod contracts, exported declarations; structure: source role and exported behavior |
+| `packages/agent/src/stream-events.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/agent/src/stream-turn.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `packages/agent/src/stream-turn.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/agent/src/tool-catalog.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `packages/agent/src/tool-catalog.ts` | agent | domain-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-service layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/agent/src/tools.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
@@ -645,6 +651,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `packages/api/src/routers/agent/schemas.ts` | agent | api-contract | golden-feature | agent-domain | Feature-owned agent artifact in the canonical api-contract layer. | content: exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/agent/service.integration.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations, database access, environment contract; structure: test filename |
 | `packages/api/src/routers/agent/service.ts` | agent | api-service | golden-feature | agent-domain | Feature-owned agent artifact in the canonical api-service layer. | content: database access, exported declarations; structure: service role or data-access behavior |
+| `packages/api/src/routers/agent/stream.integration.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations, database access, environment contract; structure: test filename |
 | `packages/api/src/routers/billing/router.ts` | billing | api-router | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-router layer. | content: oRPC procedures or clients, exported declarations; structure: router role and procedure declarations |
 | `packages/api/src/routers/billing/schemas.ts` | billing | api-contract | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-contract layer. | content: Zod contracts, exported declarations; structure: source role and exported behavior |
 | `packages/api/src/routers/billing/service.ts` | billing | api-service | golden-feature | billing-domain | Feature-owned billing artifact in the canonical api-service layer. | content: exported declarations; structure: service role or data-access behavior |
