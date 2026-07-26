@@ -4,6 +4,11 @@ import { buildAgencyAgentTools } from "./agency-tools";
 import { createOpenRouterClient } from "./client";
 import { resolveOpenRouterModel } from "./models";
 import {
+  mergeToolCallFromStreamMessage,
+  orderedToolCalls,
+  type DashboardAgentStreamEvent,
+} from "./stream-turn";
+import {
   buildDashboardAgentTools,
   buildWorkspaceOverview,
   createDashboardAgentWorkspaceRuntime,
@@ -364,7 +369,7 @@ function resolveAgentExecutionConfig(
   }
 }
 
-async function runToolEnabledPass(args: {
+type ToolPassArgs = {
   model: string;
   workspace: DashboardAgentWorkspaceContext;
   workspaceRuntime: DashboardAgentWorkspaceRuntime;
@@ -376,7 +381,21 @@ async function runToolEnabledPass(args: {
   temperature?: number;
   maxOutputTokens?: number;
   contextLength: number | null;
-}) {
+  signal?: AbortSignal;
+};
+
+type ToolPassLiveEvent = { type: "token"; delta: string } | { type: "tool"; tool: AgentToolCall };
+
+type ToolPassResult = {
+  responseText: string;
+  toolCalls: AgentToolCall[];
+  usage: DashboardConversationUsageLatest | null;
+  stopped: boolean;
+};
+
+async function* streamToolEnabledPass(
+  args: ToolPassArgs,
+): AsyncGenerator<ToolPassLiveEvent, ToolPassResult> {
   const tools =
     args.workspace.surface === "agency" && args.agencyRuntime
       ? buildAgencyAgentTools(args.agencyRuntime)
@@ -397,72 +416,54 @@ async function runToolEnabledPass(args: {
     ...(args.maxOutputTokens === undefined ? {} : { maxOutputTokens: args.maxOutputTokens }),
   });
 
-  const recordToolStream = (async () => {
+  const queue: ToolPassLiveEvent[] = [];
+  let wake: (() => void) | null = null;
+  let pumpsDone = false;
+  let accumulated = "";
+  let stopped = Boolean(args.signal?.aborted);
+
+  const notify = () => {
+    wake?.();
+    wake = null;
+  };
+  const enqueue = (event: ToolPassLiveEvent) => {
+    queue.push(event);
+    notify();
+  };
+
+  const cancelOnAbort = () => {
+    stopped = true;
+    void result.cancel();
+    notify();
+  };
+  args.signal?.addEventListener("abort", cancelOnAbort, { once: true });
+
+  const textPump = (async () => {
+    try {
+      for await (const delta of result.getTextStream()) {
+        if (args.signal?.aborted) {
+          stopped = true;
+          break;
+        }
+        if (!delta) continue;
+        accumulated += delta;
+        enqueue({ type: "token", delta });
+      }
+    } catch {
+      // cancel / stream end surfaced via getResponse below
+    }
+  })();
+
+  const toolPump = (async () => {
     try {
       for await (const message of result.getNewMessagesStream()) {
-        if (message.type === "function_call") {
-          const callId = message.callId ?? message.id ?? `call_${callOrder.length}`;
-          let parsedInput: unknown = message.arguments;
-          try {
-            parsedInput = JSON.parse(message.arguments);
-          } catch {
-            // keep raw string if not JSON
-          }
-          if (!calls.has(callId)) {
-            callOrder.push(callId);
-          }
-          const existing = calls.get(callId);
-          calls.set(callId, {
-            id: callId,
-            name: message.name,
-            input: parsedInput,
-            output: existing?.output,
-            status: existing?.status === "error" ? "error" : "in_progress",
-            error: existing?.error ?? null,
-          });
-        } else if (message.type === "function_call_output") {
-          const callId = message.callId;
-          let parsedOutput: unknown = message.output;
-          if (typeof message.output === "string") {
-            try {
-              parsedOutput = JSON.parse(message.output);
-            } catch {
-              parsedOutput = message.output;
-            }
-          }
-
-          // Heuristic: detect tool errors when output payload has an `error` field.
-          const rawErrorMessage =
-            parsedOutput &&
-            typeof parsedOutput === "object" &&
-            !Array.isArray(parsedOutput) &&
-            "error" in parsedOutput &&
-            typeof (parsedOutput as { error?: unknown }).error === "string"
-              ? (parsedOutput as { error?: string }).error?.trim() || null
-              : null;
-          const errorMessage =
-            rawErrorMessage && rawErrorMessage.length > 2000
-              ? `${rawErrorMessage.slice(0, 1999)}…`
-              : rawErrorMessage;
-
-          if (!calls.has(callId)) {
-            callOrder.push(callId);
-            calls.set(callId, {
-              id: callId,
-              name: "unknown_tool",
-              output: parsedOutput,
-              status: errorMessage ? "error" : "completed",
-              error: errorMessage,
-            });
-          } else {
-            const existing = calls.get(callId)!;
-            calls.set(callId, {
-              ...existing,
-              output: parsedOutput,
-              status: errorMessage ? "error" : "completed",
-              error: errorMessage,
-            });
-          }
+        if (args.signal?.aborted) {
+          stopped = true;
+          break;
+        }
+        const tool = mergeToolCallFromStreamMessage(message, calls, callOrder);
+        if (tool) {
+          enqueue({ type: "tool", tool: { ...tool } });
         }
       }
     } catch {
@@ -470,20 +471,98 @@ async function runToolEnabledPass(args: {
     }
   })();
 
-  const [responseText, response] = await Promise.all([
-    result.getText(),
-    result.getResponse(),
-    recordToolStream,
-  ]);
+  const pumps = Promise.all([textPump, toolPump]).finally(() => {
+    pumpsDone = true;
+    notify();
+  });
 
-  const orderedCalls = callOrder
-    .map((id) => calls.get(id))
-    .filter((call): call is AgentToolCall => Boolean(call));
+  while (!pumpsDone || queue.length > 0) {
+    if (queue.length === 0) {
+      if (pumpsDone) break;
+      await new Promise<void>((resolve) => {
+        wake = resolve;
+      });
+      continue;
+    }
+    yield queue.shift()!;
+  }
+
+  await pumps;
+
+  let usage: DashboardConversationUsageLatest | null = null;
+  try {
+    const [responseText, response] = await Promise.all([result.getText(), result.getResponse()]);
+    accumulated = responseText || accumulated;
+    usage = normalizeUsage(response.usage, args.model, args.contextLength);
+  } catch {
+    // cancelled mid-stream: keep accumulated tokens
+  } finally {
+    args.signal?.removeEventListener("abort", cancelOnAbort);
+  }
 
   return {
-    responseText: responseText.trim(),
-    toolCalls: orderedCalls,
-    usage: normalizeUsage(response.usage, args.model, args.contextLength),
+    responseText: accumulated.trim(),
+    toolCalls: orderedToolCalls(callOrder, calls),
+    usage,
+    stopped: stopped || Boolean(args.signal?.aborted),
+  };
+}
+
+async function* streamTextOnlyPass(args: {
+  model: string;
+  instructions: string;
+  normalizedMessages: ReturnType<typeof normalizeMessages>;
+  temperature?: number;
+  maxOutputTokens?: number;
+  contextLength: number | null;
+  signal?: AbortSignal;
+}): AsyncGenerator<ToolPassLiveEvent, ToolPassResult> {
+  const result = createOpenRouterClient().callModel({
+    model: args.model,
+    instructions: args.instructions,
+    input: args.normalizedMessages,
+    ...(args.temperature === undefined ? {} : { temperature: args.temperature }),
+    ...(args.maxOutputTokens === undefined ? {} : { maxOutputTokens: args.maxOutputTokens }),
+  });
+
+  let accumulated = "";
+  let stopped = Boolean(args.signal?.aborted);
+  const cancelOnAbort = () => {
+    stopped = true;
+    void result.cancel();
+  };
+  args.signal?.addEventListener("abort", cancelOnAbort, { once: true });
+
+  try {
+    for await (const delta of result.getTextStream()) {
+      if (args.signal?.aborted) {
+        stopped = true;
+        break;
+      }
+      if (!delta) continue;
+      accumulated += delta;
+      yield { type: "token", delta };
+    }
+  } catch {
+    // cancelled
+  }
+
+  let usage: DashboardConversationUsageLatest | null = null;
+  try {
+    const [responseText, response] = await Promise.all([result.getText(), result.getResponse()]);
+    accumulated = responseText || accumulated;
+    usage = normalizeUsage(response.usage, args.model, args.contextLength);
+  } catch {
+    // keep accumulated
+  } finally {
+    args.signal?.removeEventListener("abort", cancelOnAbort);
+  }
+
+  return {
+    responseText: accumulated.trim(),
+    toolCalls: [],
+    usage,
+    stopped: stopped || Boolean(args.signal?.aborted),
   };
 }
 
@@ -513,7 +592,39 @@ export async function runDashboardAgent(
   workspace: DashboardAgentWorkspaceContext,
   config: DashboardAgentConfig = {},
 ): Promise<AgentChatResponse> {
-  const client = createOpenRouterClient();
+  let done: Extract<DashboardAgentStreamEvent, { type: "done" }> | null = null;
+  for await (const event of streamDashboardAgent(messages, workspace, config)) {
+    if (event.type === "done") {
+      done = event;
+    }
+  }
+  if (!done) {
+    return {
+      response: "I couldn't generate a response.",
+      messagesCount: messages.length + 1,
+      model: config.model?.trim() || DEFAULT_AGENT_MODEL,
+      toolsCalled: [],
+      workspaceNodeCount: workspace.nodes.length,
+      usage: null,
+      workspaceSnapshot: null,
+    };
+  }
+  return {
+    response: done.responseText || "I couldn't generate a response.",
+    messagesCount: messages.length + 1,
+    model: done.model,
+    toolsCalled: done.toolCalls,
+    workspaceNodeCount: done.workspaceNodeCount,
+    usage: done.usage,
+    workspaceSnapshot: done.workspaceSnapshot,
+  };
+}
+
+export async function* streamDashboardAgent(
+  messages: AgentMessage[],
+  workspace: DashboardAgentWorkspaceContext,
+  config: DashboardAgentConfig & { signal?: AbortSignal } = {},
+): AsyncGenerator<DashboardAgentStreamEvent, void, void> {
   const toolCalls: AgentToolCall[] = [];
   const normalizedMessages = normalizeMessages(messages);
   const workspaceRuntime = createDashboardAgentWorkspaceRuntime({
@@ -531,12 +642,12 @@ export async function runDashboardAgent(
     supportsTools,
   );
   let usage: DashboardConversationUsageLatest | null = null;
-
   let responseText = "";
+  let stopped = Boolean(config.signal?.aborted);
 
-  if (executionConfig.shouldUseTools) {
+  if (executionConfig.shouldUseTools && !stopped) {
     try {
-      const initialPass = await runToolEnabledPass({
+      const initialIterator = streamToolEnabledPass({
         model,
         workspace: { ...workspace, surface },
         workspaceRuntime,
@@ -548,19 +659,26 @@ export async function runDashboardAgent(
         temperature: config.temperature,
         maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
         contextLength: selectedModel?.contextLength ?? null,
+        signal: config.signal,
       });
-
-      responseText = initialPass.responseText;
-      usage = initialPass.usage;
-      toolCalls.push(...initialPass.toolCalls);
+      let initialNext = await initialIterator.next();
+      while (!initialNext.done) {
+        yield initialNext.value;
+        initialNext = await initialIterator.next();
+      }
+      responseText = initialNext.value.responseText;
+      usage = initialNext.value.usage;
+      stopped = stopped || initialNext.value.stopped;
+      toolCalls.push(...initialNext.value.toolCalls);
 
       if (
+        !stopped &&
         executionConfig.shouldRetryForInspection &&
         toolCalls.length === 0 &&
         workspace.nodes.length > 0 &&
         surface !== "agency"
       ) {
-        const retryPass = await runToolEnabledPass({
+        const retryIterator = streamToolEnabledPass({
           model,
           workspace: { ...workspace, surface },
           workspaceRuntime,
@@ -572,17 +690,21 @@ export async function runDashboardAgent(
           temperature: config.temperature,
           maxOutputTokens: executionConfig.maxOutputTokens ?? config.maxOutputTokens,
           contextLength: selectedModel?.contextLength ?? null,
+          signal: config.signal,
         });
-
-        if (retryPass.responseText) {
-          responseText = retryPass.responseText;
+        let retryNext = await retryIterator.next();
+        while (!retryNext.done) {
+          yield retryNext.value;
+          retryNext = await retryIterator.next();
         }
-
-        if (retryPass.usage) {
-          usage = retryPass.usage;
+        if (retryNext.value.responseText) {
+          responseText = retryNext.value.responseText;
         }
-
-        toolCalls.push(...retryPass.toolCalls);
+        if (retryNext.value.usage) {
+          usage = retryNext.value.usage;
+        }
+        stopped = stopped || retryNext.value.stopped;
+        toolCalls.push(...retryNext.value.toolCalls);
       }
     } catch {
       responseText = "";
@@ -592,7 +714,7 @@ export async function runDashboardAgent(
 
   let finalResponse = responseText.trim();
 
-  if (!finalResponse) {
+  if (!finalResponse && !stopped) {
     const toolsWereCalled = toolCalls.length > 0;
     const runtimeHasChanges = workspaceRuntime.hasChanges();
     const fallbackMaxOutputTokens = executionConfig.maxOutputTokens ?? config.maxOutputTokens;
@@ -606,31 +728,32 @@ export async function runDashboardAgent(
         ].join("\n")
       : executionConfig.fallbackInstructions;
 
-    const fallbackResult = client.callModel({
+    const fallbackIterator = streamTextOnlyPass({
       model,
       instructions: fallbackInstructions,
-      input: normalizedMessages,
-      ...(config.temperature === undefined ? {} : { temperature: config.temperature }),
-      ...(fallbackMaxOutputTokens === undefined
-        ? {}
-        : { maxOutputTokens: fallbackMaxOutputTokens }),
+      normalizedMessages,
+      temperature: config.temperature,
+      maxOutputTokens: fallbackMaxOutputTokens,
+      contextLength: selectedModel?.contextLength ?? null,
+      signal: config.signal,
     });
-    const [fallbackText, fallbackResponse] = await Promise.all([
-      fallbackResult.getText(),
-      fallbackResult.getResponse(),
-    ]);
-
-    finalResponse = fallbackText.trim();
-    usage = normalizeUsage(fallbackResponse.usage, model, selectedModel?.contextLength ?? null);
+    let fallbackNext = await fallbackIterator.next();
+    while (!fallbackNext.done) {
+      yield fallbackNext.value;
+      fallbackNext = await fallbackIterator.next();
+    }
+    finalResponse = fallbackNext.value.responseText;
+    usage = fallbackNext.value.usage;
+    stopped = stopped || fallbackNext.value.stopped;
   }
 
-  return {
-    response: finalResponse || "I couldn't generate a response.",
-    messagesCount: normalizedMessages.length + 1,
-    model,
-    toolsCalled: toolCalls,
-    workspaceNodeCount: workspaceRuntime.getNodes().length,
+  yield {
+    type: "done",
+    responseText: finalResponse || (stopped ? "" : "I couldn't generate a response."),
+    toolCalls,
     usage,
+    model,
+    workspaceNodeCount: workspaceRuntime.getNodes().length,
     workspaceSnapshot: workspaceRuntime.hasChanges() ? workspaceRuntime.toSnapshot() : null,
   };
 }
@@ -694,5 +817,6 @@ export async function runTaskAgent(
 
 export * from "./models";
 export * from "./model-routing";
+export * from "./stream-turn";
 export * from "./types";
 export { listAgentToolCatalog } from "./tool-catalog";
