@@ -19,9 +19,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 446 |
+| golden-feature | 448 |
 | server-operation | 12 |
-| shared-infrastructure | 240 |
+| shared-infrastructure | 250 |
 | static-presentation | 15 |
 
 ## Counts by domain
@@ -29,7 +29,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | Domain | Artifacts |
 | --- | ---: |
 | agency-shared | 78 |
-| agent | 46 |
+| agent | 48 |
 | api-platform | 13 |
 | architecture | 4 |
 | auth | 11 |
@@ -54,7 +54,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | task-management | 41 |
 | team | 18 |
 | time-tracking | 85 |
-| web-platform | 78 |
+| web-platform | 88 |
 | workspace | 104 |
 
 ## Artifacts
@@ -114,6 +114,9 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/scripts/write-railway-server.mjs` | deployment | build-tooling | shared-infrastructure | platform-operations | Cross-cutting deployment build-tooling support rather than a feature-owned business workflow. | content: server runtime wiring, process or filesystem tooling, environment contract; structure: source-controlled script path |
 | `apps/web/src/app.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/authenticated-routes.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/components/ai-elements/code-block.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/components/ai-elements/prompt-input.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/components/ai-elements/tool.tsx` | web-platform | presentational-view | shared-infrastructure | web-platform | Cross-cutting web-platform presentational-view support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/components/marketing-page-shell.tsx` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/components/marketing/bits/AnimatedContent.tsx` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/components/marketing/bits/Aurora.tsx` | marketing | static-presentation | static-presentation | web-experience | Marketing or legal presentation with no server query or mutation orchestration. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
@@ -409,13 +412,15 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/workspace-agent/composer-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/containers/workspace-agent-container.tsx` | agent | container | golden-feature | agent-domain | Feature-owned agent artifact in the canonical container layer. | content: React component or hook code, exported declarations; structure: container naming |
 | `apps/web/src/features/workspace-agent/hooks/use-agent-scope-mode-listener.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
-| `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-chat-scroll.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-data.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-model-preferences.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent-model-preset.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/hooks/use-workspace-agent.ts` | agent | feature-hook | golden-feature | agent-domain | Feature-owned agent artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/workspace-agent/model-library-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/model-preset-menu-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/workspace-agent/orch-turn-stream-transport.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
+| `apps/web/src/features/workspace-agent/orch-ui-message.test.ts` | agent | test | golden-feature | agent-domain | Feature-owned agent artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
+| `apps/web/src/features/workspace-agent/orch-ui-message.ts` | agent | domain-logic | golden-feature | agent-domain | Feature-owned agent artifact in the canonical domain-logic layer. | content: exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/scope-chip-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/workspace-agent/stores/workspace-agent-store.ts` | agent | client-state | golden-feature | agent-domain | Feature-owned agent artifact in the canonical client-state layer. | content: Zustand client state, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/features/workspace-agent/tool-menu-view.tsx` | agent | presentational-view | golden-feature | agent-domain | Feature-owned agent artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -537,17 +542,24 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/styles/workspace-flow.css` | workspace | presentational-view | golden-feature | workspace-domain | Feature-owned workspace artifact in the canonical presentational-view layer. | content: CSS selectors and declarations; structure: view or component role |
 | `apps/web/src/ui/badge.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/breadcrumb.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/ui/bubble.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/button.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/card.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/ui/collapsible.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/command.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/context-menu.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/dialog.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/dropdown-menu.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/form.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/ui/hover-card.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/input-group.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/input.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/label.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/ui/marker.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/ui/message-scroller.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/ui/message.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/popover.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
+| `apps/web/src/ui/select.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/separator.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/sheet.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
 | `apps/web/src/ui/skeleton.tsx` | web-platform | shared-ui | shared-infrastructure | web-platform | Cross-cutting web-platform shared-ui support rather than a feature-owned business workflow. | content: React component or hook code, exported declarations; structure: source role and exported behavior |
