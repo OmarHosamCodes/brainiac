@@ -921,7 +921,7 @@ export async function listMyAgencyTimeEntries(
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
 
   const page = Math.max(1, input.page ?? 1);
-  const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 25));
+  const pageSize = Math.min(500, Math.max(1, input.pageSize ?? 25));
   const offset = (page - 1) * pageSize;
 
   const rows = await db
