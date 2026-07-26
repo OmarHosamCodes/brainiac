@@ -1,4 +1,4 @@
-import type { AgentScopeRef } from "@orch/agent";
+import type { AgentScopeRef } from "@orch/agent/types";
 import { create } from "zustand";
 
 type WorkspaceAgentUiState = {

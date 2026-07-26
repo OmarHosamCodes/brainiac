@@ -1,4 +1,4 @@
-import type { AgentToolCallEntry } from "@orch/agent";
+import type { AgentToolCallEntry } from "@orch/agent/types";
 
 export type WorkspaceAgentToolTraceViewModel = {
   name: string;

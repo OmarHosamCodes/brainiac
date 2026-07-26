@@ -1,4 +1,4 @@
-import type { OpenRouterCatalogModel } from "@orch/agent";
+import type { OpenRouterCatalogModel } from "@orch/agent/models";
 import { Search, Star } from "lucide-react";
 
 import { Badge } from "@/ui/badge";

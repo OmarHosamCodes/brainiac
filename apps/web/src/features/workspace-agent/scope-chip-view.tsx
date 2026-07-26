@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import type { AgentScopeRef } from "@orch/agent";
+import type { AgentScopeRef } from "@orch/agent/types";
 
 import { Badge } from "@/ui/badge";
 

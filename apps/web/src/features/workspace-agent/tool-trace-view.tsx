@@ -1,4 +1,4 @@
-import type { AgentToolCallEntry } from "@orch/agent";
+import type { AgentToolCallEntry } from "@orch/agent/types";
 
 import { getWorkspaceAgentToolTraceViewModel } from "@/features/workspace-agent/workspace-agent-view-models";
 import { cn } from "@/lib/utils";

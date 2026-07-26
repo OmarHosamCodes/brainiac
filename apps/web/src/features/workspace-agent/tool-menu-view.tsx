@@ -1,4 +1,4 @@
-import type { AgentToolCatalogEntry } from "@orch/agent";
+import type { AgentToolCatalogEntry } from "@orch/agent/types";
 import { Loader2 } from "lucide-react";
 
 import { Skeleton } from "@/ui/skeleton";
