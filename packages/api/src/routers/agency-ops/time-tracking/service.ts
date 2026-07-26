@@ -59,6 +59,7 @@ type AgencyTimeEntryRecord = {
   source: AgencyTimeEntrySource;
   description: string;
   isBillable: boolean;
+  isWaste: boolean;
   tags: AgencyTagRecord[];
   startedAt: string;
   endedAt: string;
@@ -83,6 +84,7 @@ function mapAgencyTimeEntryRow(
     source: AgencyTimeEntrySource;
     description: string;
     isBillable: boolean;
+    isWaste: boolean;
     startedAt: Date;
     endedAt: Date;
     durationSeconds: number;
@@ -106,6 +108,7 @@ function mapAgencyTimeEntryRow(
     source: row.source,
     description: row.description,
     isBillable: row.isBillable,
+    isWaste: row.isWaste,
     tags,
     startedAt: row.startedAt.toISOString(),
     endedAt: row.endedAt.toISOString(),
@@ -552,6 +555,7 @@ async function fetchAgencyTimeEntryRecord(entryId: string) {
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
       isBillable: agencyOpsTimeEntry.isBillable,
+      isWaste: agencyOpsTimeEntry.isWaste,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -940,6 +944,7 @@ export async function listMyAgencyTimeEntries(
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
       isBillable: agencyOpsTimeEntry.isBillable,
+      isWaste: agencyOpsTimeEntry.isWaste,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1148,6 +1153,7 @@ export async function createManualAgencyTimeEntry(
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
       isBillable: agencyOpsTimeEntry.isBillable,
+      isWaste: agencyOpsTimeEntry.isWaste,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1181,6 +1187,7 @@ export async function updateMyAgencyTimeEntry(
     description?: string;
     tagIds?: string[];
     isBillable?: boolean;
+    isWaste?: boolean;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "viewer");
@@ -1251,6 +1258,7 @@ export async function updateMyAgencyTimeEntry(
         durationSeconds,
         description: input.description?.trim(),
         ...(input.isBillable !== undefined ? { isBillable: input.isBillable } : {}),
+        ...(input.isWaste !== undefined ? { isWaste: input.isWaste } : {}),
         updatedAt: now,
       })
       .where(
@@ -1293,6 +1301,7 @@ export async function updateMyAgencyTimeEntry(
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
       isBillable: agencyOpsTimeEntry.isBillable,
+      isWaste: agencyOpsTimeEntry.isWaste,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1325,6 +1334,7 @@ export async function updateMyAgencyTimeEntriesBulk(
       description?: string;
       tagIds?: string[];
       isBillable?: boolean;
+      isWaste?: boolean;
     };
   },
 ) {
@@ -1396,6 +1406,7 @@ export async function updateMyAgencyTimeEntriesBulk(
             ? { description: input.patch.description.trim() }
             : {}),
           ...(input.patch.isBillable !== undefined ? { isBillable: input.patch.isBillable } : {}),
+          ...(input.patch.isWaste !== undefined ? { isWaste: input.patch.isWaste } : {}),
           updatedAt: now,
         })
         .where(eq(agencyOpsTimeEntry.id, entry.id));
@@ -1619,6 +1630,7 @@ export async function listAllAgencyTimeEntries(
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
       isBillable: agencyOpsTimeEntry.isBillable,
+      isWaste: agencyOpsTimeEntry.isWaste,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,
@@ -1668,6 +1680,7 @@ export async function updateAnyAgencyTimeEntry(
     taskId?: string | null;
     tagIds?: string[];
     isBillable?: boolean;
+    isWaste?: boolean;
   },
 ) {
   await requireTeamMembership(actorUserId, input.teamId, "owner");
@@ -1737,6 +1750,7 @@ export async function updateAnyAgencyTimeEntry(
         durationSeconds,
         description: input.description?.trim(),
         ...(input.isBillable !== undefined ? { isBillable: input.isBillable } : {}),
+        ...(input.isWaste !== undefined ? { isWaste: input.isWaste } : {}),
         updatedAt: now,
       })
       .where(
@@ -1778,6 +1792,7 @@ export async function updateAnyAgencyTimeEntry(
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
       isBillable: agencyOpsTimeEntry.isBillable,
+      isWaste: agencyOpsTimeEntry.isWaste,
       startedAt: agencyOpsTimeEntry.startedAt,
       endedAt: agencyOpsTimeEntry.endedAt,
       durationSeconds: agencyOpsTimeEntry.durationSeconds,

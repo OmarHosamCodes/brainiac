@@ -158,6 +158,7 @@ async function getReportRows(
       taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
       isBillable: agencyOpsTimeEntry.isBillable,
+      isWaste: agencyOpsTimeEntry.isWaste,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
     })
@@ -465,6 +466,7 @@ export async function getAgencyDashboardSummary(
         taskTitle: row.taskTitle,
         projectName: row.projectName,
         isBillable: row.isBillable,
+        isWaste: row.isWaste,
       })),
     ),
     totalEntries: rows.length,

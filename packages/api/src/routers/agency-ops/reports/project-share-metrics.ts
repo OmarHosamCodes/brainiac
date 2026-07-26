@@ -4,12 +4,14 @@ export function isWasteLabel(label: string | null | undefined): boolean {
   return /\bwaste\b/i.test(label);
 }
 
-/** Waste = task isWaste flag, or task/project name contains "waste". */
+/** Waste = entry isWaste flag, task isWaste flag, or task/project name contains "waste". */
 export function isReportEntryWaste(
   taskIsWaste: boolean | null | undefined,
   taskTitle: string | null | undefined,
   projectName: string | null | undefined,
+  entryIsWaste?: boolean | null,
 ): boolean {
+  if (entryIsWaste === true) return true;
   if (taskIsWaste === true) return true;
   return isWasteLabel(taskTitle) || isWasteLabel(projectName);
 }
@@ -30,6 +32,7 @@ export function computeProjectShareMetrics(
     taskTitle: string | null;
     projectName: string;
     isBillable?: boolean;
+    isWaste?: boolean;
   }>,
 ): ProjectShareMetrics {
   let externalSeconds = 0;
@@ -47,7 +50,7 @@ export function computeProjectShareMetrics(
     }
 
     externalSeconds += row.durationSeconds;
-    if (isReportEntryWaste(row.taskIsWaste, row.taskTitle, row.projectName)) {
+    if (isReportEntryWaste(row.taskIsWaste, row.taskTitle, row.projectName, row.isWaste)) {
       externalWasteSeconds += row.durationSeconds;
     }
   }

@@ -386,12 +386,12 @@ function ReportCreatorRow({
         <AgencyReportCreatorRowActions
           label={rowLabel}
           taskId={row.taskId}
-          taskIsWaste={row.taskIsWaste}
+          taskIsWaste={isReportEntryWaste(row)}
           disabled={isEditing || isSaving}
           wastePending={wastePending}
           onEdit={() => onEdit(primaryEntryId)}
           onRemove={() => onRemove(primaryEntryId)}
-          onToggleWaste={row.taskId ? () => onToggleWaste(primaryEntryId) : undefined}
+          onToggleWaste={() => onToggleWaste(primaryEntryId)}
         />
       </td>
     </motion.tr>
@@ -403,7 +403,7 @@ function ReportCreatorRow({
       taskTitle={row.taskTitle}
       durationSeconds={row.durationSeconds}
       taskId={row.taskId}
-      taskIsWaste={row.taskIsWaste}
+      taskIsWaste={isReportEntryWaste(row)}
       disabled={isEditing || isSaving}
       wastePending={wastePending}
       onSelectEntry={onSelectEntry}

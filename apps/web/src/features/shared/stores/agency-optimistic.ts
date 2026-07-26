@@ -74,6 +74,7 @@ export type AgencyOptimisticTimeEntry = {
   description: string;
   tags: AgencyOptimisticTag[];
   isBillable: boolean;
+  isWaste: boolean;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;

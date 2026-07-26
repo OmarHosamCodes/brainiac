@@ -193,6 +193,7 @@ export const agencyTimeEntrySchema = z.object({
   source: agencyTimeEntrySourceSchema,
   description: z.string(),
   isBillable: z.boolean(),
+  isWaste: z.boolean(),
   startedAt: z.string().datetime(),
   endedAt: z.string().datetime(),
   durationSeconds: z.number().int().nonnegative(),

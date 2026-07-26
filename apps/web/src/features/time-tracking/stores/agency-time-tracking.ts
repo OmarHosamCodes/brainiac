@@ -84,6 +84,7 @@ type AgencyTimeEntry = {
   description: string;
   tags: AgencyTag[];
   isBillable: boolean;
+  isWaste: boolean;
   startedAt: string;
   endedAt: string;
   durationSeconds: number;
@@ -206,6 +207,7 @@ type UpdateEntriesBulkPayload = {
     description?: string;
     tagIds?: string[];
     isBillable?: boolean;
+    isWaste?: boolean;
   };
 };
 
@@ -1294,6 +1296,7 @@ function createAgencyTimeTrackingActions(
       description: overrides.description ?? timer.description,
       tags: timer.tags,
       isBillable: timer.isBillable,
+      isWaste: false,
       startedAt: timer.startedAt,
       endedAt: overrides.endedAt,
       durationSeconds: getDurationSeconds(timer.startedAt, overrides.endedAt),
@@ -1333,6 +1336,7 @@ function createAgencyTimeTrackingActions(
       description,
       tags: [],
       isBillable: payload.isBillable ?? true,
+      isWaste: false,
       startedAt: payload.startAt,
       endedAt: payload.endAt,
       durationSeconds: getDurationSeconds(payload.startAt, payload.endAt),
@@ -1802,6 +1806,7 @@ function createAgencyTimeTrackingActions(
         ? { description: payload.patch.description.trim() }
         : {}),
       ...(payload.patch.isBillable !== undefined ? { isBillable: payload.patch.isBillable } : {}),
+      ...(payload.patch.isWaste !== undefined ? { isWaste: payload.patch.isWaste } : {}),
       updatedAt: new Date().toISOString(),
     }));
 

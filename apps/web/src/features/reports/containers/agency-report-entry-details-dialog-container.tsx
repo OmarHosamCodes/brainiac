@@ -40,6 +40,7 @@ export function AgencyReportEntryDetailsDialogContainer(
       onDeleteGroup={viewModel.onDeleteGroup}
       onDeleteEntry={viewModel.onDeleteEntry}
       onDuplicate={viewModel.onDuplicate}
+      onToggleWaste={viewModel.onToggleWaste}
       onSaveEdit={viewModel.onSaveEdit}
       onBulkPatch={viewModel.onBulkPatch}
     />

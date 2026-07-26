@@ -195,6 +195,7 @@ export const timeTrackingRouter = {
           description: z.string().max(2_000).optional(),
           tagIds: z.array(z.string().min(1)).optional(),
           isBillable: z.boolean().optional(),
+          isWaste: z.boolean().optional(),
         }),
       )
       .handler(async ({ context, input }) => {
@@ -213,6 +214,7 @@ export const timeTrackingRouter = {
             description: z.string().max(2_000).optional(),
             tagIds: z.array(z.string().min(1)).optional(),
             isBillable: z.boolean().optional(),
+            isWaste: z.boolean().optional(),
           }),
         }),
       )

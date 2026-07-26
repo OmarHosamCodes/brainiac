@@ -160,21 +160,27 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
 
   const handleToggleWaste = useCallback(
     async (row: AggregatedReportRow) => {
-      if (!teamId || !row.taskId) return;
+      if (!teamId || row.entries.length === 0) return;
 
-      const nextIsWaste = !(row.taskIsWaste === true);
+      const nextIsWaste = !(
+        row.entries.every((entry) => entry.isWaste === true) || row.taskIsWaste === true
+      );
       setWastePendingRowKeys((current) => new Set(current).add(row.key));
       try {
-        await orpcClient.agencyOps.projectTasks.update({
-          teamId,
-          taskId: row.taskId,
-          isWaste: nextIsWaste,
-        });
+        await Promise.all(
+          row.entries.map((entry) =>
+            orpcClient.agencyOps.reports.updateEntry({
+              teamId,
+              entryId: entry.id,
+              isWaste: nextIsWaste,
+            }),
+          ),
+        );
         void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
         void invalidateAgencyTeamQueries(teamId);
         toast.success(nextIsWaste ? "Marked as waste" : "Unmarked as waste");
       } catch (error) {
-        toast.error("Couldn't update task", {
+        toast.error("Couldn't update entry", {
           description: getErrorMessage(error, "Try again."),
         });
       } finally {

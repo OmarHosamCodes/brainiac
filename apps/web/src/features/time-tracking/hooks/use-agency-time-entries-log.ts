@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { useAgencyTimeEntriesLogStore } from "@/features/time-tracking/stores/agency-time-entries-log";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import {
-  invalidateAgencyTeamQueries,
   useAgencyProjectTasksForChooserQuery,
   useAgencyProjectsQuery,
   useAgencyTimeEntriesQuery,
@@ -31,7 +30,6 @@ import {
 } from "@/features/time-tracking/hooks/use-agency-tags";
 import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-tag-chooser";
 import type { AgencyDayBulkDraft } from "@/features/time-tracking/entries/agency-time-entry-day-group-view";
-import { orpcClient } from "@/lib/orpc";
 
 const PAGE_SIZE_OPTIONS = [20, 50, 100, 200, 500] as const;
 const HIGHLIGHT_CLEAR_MS = 2_500;
@@ -64,6 +62,7 @@ export type AgencyTimeEntriesLogViewModel = {
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
   onDuplicate: (entryId: string) => void;
+  onToggleWaste: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
   onBulkPatch: (
     entryIds: string[],
@@ -73,6 +72,7 @@ export type AgencyTimeEntriesLogViewModel = {
       description?: string;
       tagIds?: string[];
       isBillable?: boolean;
+      isWaste?: boolean;
     },
   ) => Promise<void>;
   selectedEntryIds: Set<string>;
@@ -344,35 +344,11 @@ export function useAgencyTimeEntriesLog({
   async function markSelectedAsWaste(entryIds: string[]) {
     if (!teamId || entryIds.length === 0 || wastePending) return;
 
-    const taskIds = [
-      ...new Set(
-        entries
-          .filter((entry) => entryIds.includes(entry.id) && entry.taskId)
-          .map((entry) => entry.taskId as string),
-      ),
-    ];
-    if (taskIds.length === 0) {
-      toast.error("Couldn't mark as waste", {
-        description: "Selected entries need a task.",
-      });
-      return;
-    }
-
     setWastePending(true);
     try {
-      await Promise.all(
-        taskIds.map((taskId) =>
-          orpcClient.agencyOps.projectTasks.update({
-            teamId,
-            taskId,
-            isWaste: true,
-          }),
-        ),
-      );
-      void invalidateAgencyTeamQueries(teamId);
-      void entriesQuery.refetch();
+      await saveBulkPatch(entryIds, { isWaste: true });
       toast.success(
-        taskIds.length === 1 ? "Marked as waste" : `Marked ${taskIds.length} tasks as waste`,
+        entryIds.length === 1 ? "Marked as waste" : `Marked ${entryIds.length} entries as waste`,
       );
     } catch (error) {
       toast.error("Couldn't mark as waste", {
@@ -383,6 +359,15 @@ export function useAgencyTimeEntriesLog({
     }
   }
 
+  async function toggleEntryWaste(entryId: string) {
+    if (!teamId || wastePending) return;
+    const entry = entries.find((item) => item.id === entryId);
+    if (!entry) return;
+    const nextIsWaste = entry.isWaste !== true;
+    await saveBulkPatch([entryId], { isWaste: nextIsWaste });
+    toast.success(nextIsWaste ? "Marked as waste" : "Unmarked as waste");
+  }
+
   async function saveBulkPatch(
     entryIds: string[],
     patch: {
@@ -391,6 +376,7 @@ export function useAgencyTimeEntriesLog({
       description?: string;
       tagIds?: string[];
       isBillable?: boolean;
+      isWaste?: boolean;
     },
   ) {
     if (!teamId || entryIds.length === 0 || Object.keys(patch).length === 0) return;
@@ -462,6 +448,7 @@ export function useAgencyTimeEntriesLog({
     onDeleteGroup: (entryIds) => void deleteGroupEntries(entryIds),
     onDeleteEntry: (entryId) => void deleteEntry(entryId),
     onDuplicate: (entryId) => void duplicateEntry(entryId),
+    onToggleWaste: (entryId) => void toggleEntryWaste(entryId),
     onSaveEdit: saveEdit,
     onBulkPatch: saveBulkPatch,
     selectedEntryIds,

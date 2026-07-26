@@ -29,7 +29,7 @@ type AgencyReportRowActionsProps = {
 export function AgencyReportRowActions({
   label,
   entryCount,
-  taskId,
+  taskId: _taskId,
   taskIsWaste,
   deleting = false,
   wastePending = false,
@@ -39,7 +39,7 @@ export function AgencyReportRowActions({
 }: AgencyReportRowActionsProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const canToggleWaste = Boolean(taskId && onToggleWaste);
+  const canToggleWaste = Boolean(onToggleWaste);
   const isWaste = taskIsWaste === true;
   const pending = deleting || wastePending;
   const entryLabel = entryCount === 1 ? "1 time entry" : `${entryCount} time entries`;

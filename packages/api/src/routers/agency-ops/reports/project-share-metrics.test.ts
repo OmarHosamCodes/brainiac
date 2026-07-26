@@ -20,6 +20,11 @@ describe("isWasteLabel", () => {
 });
 
 describe("isReportEntryWaste", () => {
+  test("uses entry isWaste flag", () => {
+    expect(isReportEntryWaste(false, "Research", "Ship", true)).toBe(true);
+    expect(isReportEntryWaste(false, "Research", "Ship", false)).toBe(false);
+  });
+
   test("uses isWaste flag", () => {
     expect(isReportEntryWaste(true, "Research", "Ship")).toBe(true);
     expect(isReportEntryWaste(false, "Research", "Ship")).toBe(false);

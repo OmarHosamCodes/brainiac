@@ -31,7 +31,6 @@ import {
   useAgencyTimeTrackingStore,
 } from "@/features/time-tracking/stores/agency-time-tracking";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
-import { orpcClient } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
 
 export function selectEntriesForDetailsRow(
@@ -82,6 +81,7 @@ export type AgencyReportEntryDetailsDialogViewModel = {
   onDeleteGroup: (entryIds: string[]) => void;
   onDeleteEntry: (entryId: string) => void;
   onDuplicate: (entryId: string) => void;
+  onToggleWaste: (entryId: string) => void;
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
   onBulkPatch: (
     entryIds: string[],
@@ -91,6 +91,7 @@ export type AgencyReportEntryDetailsDialogViewModel = {
       description?: string;
       tagIds?: string[];
       isBillable?: boolean;
+      isWaste?: boolean;
     },
   ) => Promise<void>;
   onBulkDraftChange: (patch: Partial<AgencyDayBulkDraft>) => void;
@@ -314,34 +315,11 @@ export function useAgencyReportEntryDetailsDialog({
   async function markSelectedAsWaste(entryIds: string[]) {
     if (!teamId || entryIds.length === 0 || wastePending) return;
 
-    const taskIds = [
-      ...new Set(
-        entries
-          .filter((entry) => entryIds.includes(entry.id) && entry.taskId)
-          .map((entry) => entry.taskId as string),
-      ),
-    ];
-    if (taskIds.length === 0) {
-      toast.error("Couldn't mark as waste", {
-        description: "Selected entries need a task.",
-      });
-      return;
-    }
-
     setWastePending(true);
     try {
-      await Promise.all(
-        taskIds.map((taskId) =>
-          orpcClient.agencyOps.projectTasks.update({
-            teamId,
-            taskId,
-            isWaste: true,
-          }),
-        ),
-      );
-      invalidateReportsEntries(queryClient, teamId);
+      await saveBulkPatch(entryIds, { isWaste: true });
       toast.success(
-        taskIds.length === 1 ? "Marked as waste" : `Marked ${taskIds.length} tasks as waste`,
+        entryIds.length === 1 ? "Marked as waste" : `Marked ${entryIds.length} entries as waste`,
       );
     } catch (error) {
       toast.error("Couldn't mark as waste", {
@@ -352,6 +330,15 @@ export function useAgencyReportEntryDetailsDialog({
     }
   }
 
+  async function toggleEntryWaste(entryId: string) {
+    if (!teamId || wastePending) return;
+    const entry = entries.find((item) => item.id === entryId);
+    if (!entry) return;
+    const nextIsWaste = entry.isWaste !== true;
+    await saveBulkPatch([entryId], { isWaste: nextIsWaste });
+    toast.success(nextIsWaste ? "Marked as waste" : "Unmarked as waste");
+  }
+
   async function saveBulkPatch(
     entryIds: string[],
     patch: {
@@ -360,12 +347,14 @@ export function useAgencyReportEntryDetailsDialog({
       description?: string;
       tagIds?: string[];
       isBillable?: boolean;
+      isWaste?: boolean;
     },
   ) {
     if (!teamId || entryIds.length === 0 || Object.keys(patch).length === 0) return;
     await agencyTimeTrackingStore.updateEntriesBulk({
       teamId,
       entryIds,
+      previousEntries: entries.filter((entry) => entryIds.includes(entry.id)),
       patch,
     });
     invalidateReportsEntries(queryClient, teamId);
@@ -430,6 +419,7 @@ export function useAgencyReportEntryDetailsDialog({
     onDeleteGroup: (entryIds) => void deleteGroupEntries(entryIds),
     onDeleteEntry: (entryId) => void deleteEntry(entryId),
     onDuplicate: (entryId) => void duplicateEntry(entryId),
+    onToggleWaste: (entryId) => void toggleEntryWaste(entryId),
     onSaveEdit: saveEdit,
     onBulkPatch: saveBulkPatch,
     onBulkDraftChange: (patch) => setBulkDraft((current) => ({ ...current, ...patch })),

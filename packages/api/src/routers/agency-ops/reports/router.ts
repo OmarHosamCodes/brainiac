@@ -86,6 +86,7 @@ export const reportsRouter = {
           taskId: z.string().min(1).nullable().optional(),
           tagIds: z.array(z.string().min(1)).optional(),
           isBillable: z.boolean().optional(),
+          isWaste: z.boolean().optional(),
         }),
       )
       .handler(async ({ context, input }) => {

@@ -162,23 +162,23 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
       const entry =
         (entryId ? creator.visibleEntries.find((item) => item.id === entryId) : null) ??
         creator.selectedEntry;
-      if (!entry?.taskId || !teamId) return;
+      if (!entry || !teamId) return;
 
-      const nextIsWaste = !(entry.taskIsWaste === true);
+      const nextIsWaste = !(entry.isWaste === true);
       setWastePending(true);
       try {
-        await orpcClient.agencyOps.projectTasks.update({
+        await orpcClient.agencyOps.reports.updateEntry({
           teamId,
-          taskId: entry.taskId,
+          entryId: entry.id,
           isWaste: nextIsWaste,
         });
-        creator.setTaskWaste(entry.id, entry.taskId, nextIsWaste);
+        creator.setTaskWaste(entry.id, entry.taskId ?? "", nextIsWaste);
         autosave.queueActivity({ action: "waste_toggled", payload: { isWaste: nextIsWaste } });
         void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
         void invalidateAgencyTeamQueries(teamId);
         toast.success(nextIsWaste ? "Marked as waste" : "Unmarked as waste");
       } catch (error) {
-        toast.error("Couldn't update task", {
+        toast.error("Couldn't update entry", {
           description: getErrorMessage(error, "Try again."),
         });
       } finally {

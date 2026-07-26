@@ -161,8 +161,16 @@ export function groupEntriesForDisplay(entries: AgencyReportEntry[]): DisplayCli
   }));
 }
 
-export function isReportEntryWaste(entry: Pick<AgencyReportEntry, "taskIsWaste">): boolean {
-  return entry.taskIsWaste === true;
+export function isReportEntryWaste(
+  entry:
+    | Pick<AgencyReportEntry, "taskIsWaste" | "isWaste">
+    | Pick<AggregatedReportRow, "taskIsWaste" | "entries">,
+): boolean {
+  if ("entries" in entry) {
+    if (entry.entries.length === 0) return entry.taskIsWaste === true;
+    return entry.entries.every((item) => item.isWaste === true || item.taskIsWaste === true);
+  }
+  return entry.isWaste === true || entry.taskIsWaste === true;
 }
 
 export const reportEntryWasteRowClass = "text-muted line-through decoration-muted/60 opacity-70";

@@ -330,6 +330,7 @@ export const agencyOpsTimeEntry = pgTable(
     source: text("source").$type<AgencyOpsTimeEntrySource>().notNull().default("timer"),
     description: text("description").notNull().default(""),
     isBillable: boolean("is_billable").notNull().default(true),
+    isWaste: boolean("is_waste").notNull().default(false),
     startedAt: timestamp("started_at").notNull(),
     endedAt: timestamp("ended_at").notNull(),
     durationSeconds: integer("duration_seconds").notNull(),

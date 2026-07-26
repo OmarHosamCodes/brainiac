@@ -135,7 +135,7 @@ export function useAgencyReportCreator(
     setEntryOverrides((current) => {
       const next = new Map(current);
       const base = current.get(entryId);
-      next.set(entryId, { ...base, taskIsWaste: isWaste });
+      next.set(entryId, { ...base, isWaste, taskIsWaste: base?.taskIsWaste ?? null });
       return next;
     });
   }, []);

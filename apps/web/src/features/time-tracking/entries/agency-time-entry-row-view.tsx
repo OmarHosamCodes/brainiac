@@ -30,6 +30,7 @@ import {
   agencyWorkTimeRangeClass,
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
+import { reportEntryWasteRowClass } from "@/features/reports/agency-report-grouping";
 import { agentScopeableProps } from "@/features/shared/agent-scopeable";
 import { cn } from "@/lib/utils";
 
@@ -59,6 +60,8 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     rowDeleting,
     rowUpdating,
     rowDuplicating,
+    rowWastePending,
+    isWaste,
     timeRange,
     durationLabel,
     editingDescription,
@@ -67,6 +70,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     onRestart,
     onDeleteGroup,
     onDuplicate,
+    onToggleWaste,
     onDescriptionChange,
     onDescriptionBlur,
     onDescriptionKeyDown,
@@ -99,6 +103,7 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         agencyTimeEntryRowClass,
         highlighted && agencyTimeEntryRowHighlightClass,
         (editingDescription || editingDuration) && agencyTimeEntryRowEditingClass,
+        isWaste && reportEntryWasteRowClass,
         className,
       )}
       {...agentScopeableProps({
@@ -332,11 +337,14 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
                 id: primaryEntryId,
                 projectName: group.projectName,
                 taskTitle: group.taskTitle,
+                isWaste,
               }}
               deleting={rowDeleting || rowUpdating || editSaving}
               duplicating={rowDuplicating}
+              wastePending={rowWastePending}
               onDelete={() => onDeleteGroup()}
               onDuplicate={!isMulti ? onDuplicate : undefined}
+              onToggleWaste={!isMulti ? onToggleWaste : undefined}
             />
           )}
         </div>

@@ -32,7 +32,7 @@ export function AgencyReportEntryContextMenu({
   entryId,
   taskTitle,
   durationSeconds,
-  taskId,
+  taskId: _taskId,
   taskIsWaste,
   disabled = false,
   wastePending = false,
@@ -47,7 +47,7 @@ export function AgencyReportEntryContextMenu({
   }
 
   const isWaste = taskIsWaste === true;
-  const canMarkWaste = Boolean(taskId);
+  const canMarkWaste = true;
 
   return (
     <ContextMenu

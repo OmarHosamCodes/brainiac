@@ -19,7 +19,7 @@ type AgencyReportCreatorRowActionsProps = {
 
 export function AgencyReportCreatorRowActions({
   label,
-  taskId,
+  taskId: _taskId,
   taskIsWaste,
   disabled = false,
   wastePending = false,
@@ -28,7 +28,7 @@ export function AgencyReportCreatorRowActions({
   onToggleWaste,
 }: AgencyReportCreatorRowActionsProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const canToggleWaste = Boolean(taskId && onToggleWaste);
+  const canToggleWaste = Boolean(onToggleWaste);
   const isWaste = taskIsWaste === true;
 
   return (
