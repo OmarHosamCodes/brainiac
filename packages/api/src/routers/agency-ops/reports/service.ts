@@ -48,6 +48,7 @@ type AgencyDashboardSummary = AgencyReportSummary & {
   projectShareMetrics: {
     externalSeconds: number;
     internalSeconds: number;
+    internalBillableSeconds: number;
     paidSeconds: number;
   };
   activeTimerCount: number;
@@ -156,6 +157,7 @@ async function getReportRows(
       taskTitle: agencyOpsProjectTask.title,
       taskIsWaste: agencyOpsProjectTask.isWaste,
       projectName: agencyOpsProject.name,
+      isBillable: agencyOpsTimeEntry.isBillable,
       source: agencyOpsTimeEntry.source,
       description: agencyOpsTimeEntry.description,
     })
@@ -462,6 +464,7 @@ export async function getAgencyDashboardSummary(
         taskIsWaste: row.taskIsWaste,
         taskTitle: row.taskTitle,
         projectName: row.projectName,
+        isBillable: row.isBillable,
       })),
     ),
     totalEntries: rows.length,

@@ -17,6 +17,8 @@ export function isReportEntryWaste(
 export type ProjectShareMetrics = {
   externalSeconds: number;
   internalSeconds: number;
+  /** Internal hours with isBillable=true. */
+  internalBillableSeconds: number;
   paidSeconds: number;
 };
 
@@ -27,15 +29,20 @@ export function computeProjectShareMetrics(
     taskIsWaste: boolean | null;
     taskTitle: string | null;
     projectName: string;
+    isBillable?: boolean;
   }>,
 ): ProjectShareMetrics {
   let externalSeconds = 0;
   let internalSeconds = 0;
+  let internalBillableSeconds = 0;
   let externalWasteSeconds = 0;
 
   for (const row of rows) {
     if (row.clientCategory === "internal") {
       internalSeconds += row.durationSeconds;
+      if (row.isBillable !== false) {
+        internalBillableSeconds += row.durationSeconds;
+      }
       continue;
     }
 
@@ -48,6 +55,7 @@ export function computeProjectShareMetrics(
   return {
     externalSeconds,
     internalSeconds,
+    internalBillableSeconds,
     // paid = external hours − waste on external clients
     paidSeconds: Math.max(0, externalSeconds - externalWasteSeconds),
   };

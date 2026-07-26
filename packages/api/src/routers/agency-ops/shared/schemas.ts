@@ -171,6 +171,7 @@ export const reportsDashboardSummarySchema = reportsSummarySchema.extend({
   projectShareMetrics: z.object({
     externalSeconds: z.number().int().nonnegative(),
     internalSeconds: z.number().int().nonnegative(),
+    internalBillableSeconds: z.number().int().nonnegative(),
     paidSeconds: z.number().int().nonnegative(),
   }),
   activeTimerCount: z.number().int().nonnegative(),
