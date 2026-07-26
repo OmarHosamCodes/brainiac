@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AgentSurface, DashboardAgentToolPreset } from "@orch/agent";
+import type { AgentSurface, DashboardAgentToolPreset } from "@orch/agent/types";
 
 import { authClient } from "@/lib/auth-client";
 import { orpc } from "@/lib/orpc";
@@ -50,7 +50,6 @@ export function useWorkspaceAgentData(args: {
     accountStatusQuery,
     activeConversationQuery,
     toolsCatalogQuery,
-    chatTurnMutation: useMutation(orpc.agent.chat.turn.mutationOptions()),
     renameConversationMutation: useMutation(orpc.agent.conversations.rename.mutationOptions()),
     deleteConversationMutation: useMutation(orpc.agent.conversations.delete.mutationOptions()),
   };

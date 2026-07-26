@@ -1,14 +1,18 @@
 import type {
+  AgentChatTurnStreamEvent,
   AgentScopeRef,
   AgentSurface,
+  AgentToolCall,
   DashboardAgentToolPreset,
   DashboardConversationMessage,
-} from "@orch/agent";
+} from "@orch/agent/types";
 import type { WorkspaceNode } from "@orch/workspace";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 
+import { streamAgentChatTurn } from "@/features/workspace-agent/agent-turn-stream";
 import { useAgentScopeModeListener } from "@/features/workspace-agent/hooks/use-agent-scope-mode-listener";
+import { useWorkspaceAgentChatScroll } from "@/features/workspace-agent/hooks/use-workspace-agent-chat-scroll";
 import { useCurrentAgencyTeamStore } from "@/features/time-tracking/stores/agency-timer";
 import { useWorkspaceStore } from "@/features/workspace/workspace-local-state";
 import {
@@ -22,6 +26,22 @@ import { useWorkspaceAgentModelPreset } from "@/features/workspace-agent/hooks/u
 import { useWorkspaceAgentStore } from "@/features/workspace-agent/stores/workspace-agent-store";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
+
+type StreamingChatMessage = Omit<DashboardConversationMessage, "content" | "toolsCalled"> & {
+  content: string;
+  toolsCalled: AgentToolCall[];
+};
+
+function upsertToolCall(tools: AgentToolCall[], tool: AgentToolCall): AgentToolCall[] {
+  const toolId = tool.id ?? tool.name;
+  const index = tools.findIndex((entry) => (entry.id ?? entry.name) === toolId);
+  if (index === -1) {
+    return [...tools, tool];
+  }
+  const next = [...tools];
+  next[index] = tool;
+  return next;
+}
 
 function resolveAgentSurface(pathname: string): AgentSurface {
   if (pathname.startsWith("/agency")) return "agency";
@@ -52,7 +72,12 @@ export function useWorkspaceAgent() {
 
   const [error, setError] = useState<string | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [pendingMessages, setPendingMessages] = useState<DashboardConversationMessage[]>([]);
+  const [pendingMessages, setPendingMessages] = useState<StreamingChatMessage[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamStopped, setStreamStopped] = useState(false);
+  const [followOutput, setFollowOutput] = useState(true);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const streamAbortRef = useRef<AbortController | null>(null);
   const [selectedToolPreset, setSelectedToolPreset] = useState<DashboardAgentToolPreset>("agent");
   const [modelLibraryOpen, setModelLibraryOpen] = useState(false);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
@@ -80,7 +105,6 @@ export function useWorkspaceAgent() {
     accountStatusQuery,
     activeConversationQuery,
     toolsCatalogQuery,
-    chatTurnMutation,
     renameConversationMutation,
     deleteConversationMutation,
   } = data;
@@ -91,6 +115,15 @@ export function useWorkspaceAgent() {
     () => [...(activeConversation?.messages ?? []), ...pendingMessages],
     [activeConversation?.messages, pendingMessages],
   );
+  const streamingContentLength =
+    pendingMessages.find((message) => message.role === "assistant")?.content.length ?? 0;
+  const chatScroll = useWorkspaceAgentChatScroll({
+    followOutput,
+    isStreaming,
+    messageCount: messages.length,
+    streamingContentLength,
+    onFollowOutputChange: setFollowOutput,
+  });
 
   const modelOptions = useMemo(() => {
     const rawModels = modelCatalogQuery.data?.models ?? [];
@@ -124,7 +157,7 @@ export function useWorkspaceAgent() {
     modelPresetState.lastResolvedModelId ??
     modelCatalogQuery.data?.defaultModel ??
     modelOptions[0]?.id;
-  const canSend = draft.trim().length > 0 && !chatTurnMutation.isPending;
+  const canSend = draft.trim().length > 0 && !isStreaming;
   const activeMention = getActiveWorkspaceAgentMention(draft);
   const mentionSuggestions = useMemo(
     () =>
@@ -223,25 +256,47 @@ export function useWorkspaceAgent() {
     [addScopeChip, draft, setDraft],
   );
 
+  const stopGeneration = useCallback(() => {
+    streamAbortRef.current?.abort();
+  }, []);
+
   const sendMessage = useCallback(async () => {
     const content = draft.trim();
     const model = modelPresetState.outboundModelId?.trim();
     const modelPreset = modelPresetState.modelPreset;
     const lastResolvedModelId = modelPresetState.lastResolvedModelId;
-    if (!content || chatTurnMutation.isPending) return;
+    if (!content || isStreaming) return;
     if (surface === "agency" && !teamId) {
       setError("Select an Agency team before asking about time.");
       return;
     }
 
+    const pendingUserId = `pending-user-${crypto.randomUUID()}`;
+    const pendingAssistantId = `pending-assistant-${crypto.randomUUID()}`;
+    const abortController = new AbortController();
+    streamAbortRef.current = abortController;
+
     setDraft("");
     setError(null);
+    setStreamStopped(false);
+    setFollowOutput(true);
+    setIsStreaming(true);
+    setStreamingMessageId(pendingAssistantId);
     setPendingMessages([
       {
-        id: `pending-${crypto.randomUUID()}`,
+        id: pendingUserId,
         role: "user",
         content,
         contextNodeTitles: scopeChips.map((chip) => chip.label),
+        model: model ?? lastResolvedModelId ?? null,
+        toolsCalled: [],
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: pendingAssistantId,
+        role: "assistant",
+        content: "",
+        contextNodeTitles: [],
         model: model ?? lastResolvedModelId ?? null,
         toolsCalled: [],
         createdAt: new Date().toISOString(),
@@ -255,51 +310,126 @@ export function useWorkspaceAgent() {
           )
         : [];
 
-    try {
-      const result = await chatTurnMutation.mutateAsync({
-        conversationId: activeConversationId ?? undefined,
-        content,
-        surface,
-        toolPreset: effectiveToolPreset,
-        modelPreset,
-        scopeRefs: scopeChips,
-        contextNodeTitles: scopeChips.map((chip) => chip.label),
-        ...(surface === "agency" && teamId ? { teamId } : {}),
-        ...(surface === "canvas"
-          ? {
-              nodes: workspaceNodes,
-              scopeNodes: scopedNodes.length > 0 ? scopedNodes : workspaceNodes,
-            }
-          : {}),
-        ...(model ? { model } : {}),
-      });
-      setPendingMessages([]);
-      setActiveConversationId(result.conversation.id);
-      rememberResolvedModel(result.assistantMessage.model ?? result.conversation.model);
-      if (result.workspaceSnapshot) {
-        useWorkspaceStore
-          .getState()
-          .applyWorkspaceSnapshot(
-            result.workspaceSnapshot.nodes,
-            result.workspaceSnapshot.updatedAt,
+    let startedConversationId: string | null = null;
+    let completed = false;
+
+    const applyStreamEvent = (event: AgentChatTurnStreamEvent) => {
+      switch (event.type) {
+        case "started":
+          startedConversationId = event.conversationId;
+          setActiveConversationId(event.conversationId);
+          setStreamingMessageId(event.assistantMessageId);
+          setPendingMessages((current) =>
+            current.map((message) => {
+              if (message.role === "user") {
+                return { ...message, id: event.userMessageId, model: event.model };
+              }
+              return { ...message, id: event.assistantMessageId, model: event.model };
+            }),
           );
+          return;
+        case "token":
+          setPendingMessages((current) =>
+            current.map((message) =>
+              message.role === "assistant"
+                ? { ...message, content: `${message.content}${event.delta}` }
+                : message,
+            ),
+          );
+          return;
+        case "tool":
+          setPendingMessages((current) =>
+            current.map((message) =>
+              message.role === "assistant"
+                ? { ...message, toolsCalled: upsertToolCall(message.toolsCalled, event.tool) }
+                : message,
+            ),
+          );
+          return;
+        case "error":
+          setError(event.message);
+          return;
+        case "completed": {
+          completed = true;
+          setPendingMessages([]);
+          setActiveConversationId(event.conversation.id);
+          setStreamStopped(event.stopped);
+          rememberResolvedModel(event.assistantMessage.model ?? event.conversation.model);
+          if (event.workspaceSnapshot) {
+            useWorkspaceStore
+              .getState()
+              .applyWorkspaceSnapshot(
+                event.workspaceSnapshot.nodes,
+                event.workspaceSnapshot.updatedAt,
+              );
+          }
+          void queryClient.invalidateQueries({ queryKey: conversationsListQueryOptions.queryKey });
+          void queryClient.invalidateQueries({
+            queryKey: orpc.agent.conversations.get.queryKey({
+              input: { conversationId: event.conversation.id },
+            }),
+          });
+          return;
+        }
+        default: {
+          const _exhaustive: never = event;
+          return _exhaustive;
+        }
       }
-      void queryClient.invalidateQueries({ queryKey: conversationsListQueryOptions.queryKey });
-      void queryClient.invalidateQueries({
-        queryKey: orpc.agent.conversations.get.queryKey({
-          input: { conversationId: result.conversation.id },
-        }),
-      });
-    } catch (mutationError) {
+    };
+
+    try {
+      await streamAgentChatTurn(
+        {
+          conversationId: activeConversationId ?? undefined,
+          content,
+          surface,
+          toolPreset: effectiveToolPreset,
+          modelPreset,
+          scopeRefs: scopeChips,
+          contextNodeTitles: scopeChips.map((chip) => chip.label),
+          ...(surface === "agency" && teamId ? { teamId } : {}),
+          ...(surface === "canvas"
+            ? {
+                nodes: workspaceNodes,
+                scopeNodes: scopedNodes.length > 0 ? scopedNodes : workspaceNodes,
+              }
+            : {}),
+          ...(model ? { model } : {}),
+        },
+        {
+          signal: abortController.signal,
+          onEvent: applyStreamEvent,
+        },
+      );
+      if (!completed && abortController.signal.aborted) {
+        setStreamStopped(true);
+        if (startedConversationId) {
+          void queryClient.invalidateQueries({ queryKey: conversationsListQueryOptions.queryKey });
+          void queryClient.invalidateQueries({
+            queryKey: orpc.agent.conversations.get.queryKey({
+              input: { conversationId: startedConversationId },
+            }),
+          });
+          setPendingMessages([]);
+        }
+      }
+    } catch (streamError) {
       setPendingMessages([]);
-      setDraft(content);
-      setError(getErrorMessage(mutationError, "Failed to reach the agent."));
+      if (!startedConversationId) {
+        setDraft(content);
+      }
+      setError(getErrorMessage(streamError, "Failed to reach the agent."));
+    } finally {
+      setIsStreaming(false);
+      setStreamingMessageId(null);
+      streamAbortRef.current = null;
     }
   }, [
     activeConversationId,
-    chatTurnMutation,
     draft,
     effectiveToolPreset,
+    isStreaming,
     modelPresetState.lastResolvedModelId,
     modelPresetState.modelPreset,
     modelPresetState.outboundModelId,
@@ -382,8 +512,17 @@ export function useWorkspaceAgent() {
     error,
     messages,
     canSend,
-    isPending: chatTurnMutation.isPending,
+    isPending: isStreaming,
+    isStreaming,
+    streamStopped,
+    followOutput,
+    setFollowOutput,
+    streamingMessageId,
+    chatScrollRef: chatScroll.scrollRef,
+    chatEndRef: chatScroll.endRef,
+    onChatScroll: chatScroll.onScroll,
     sendMessage,
+    stopGeneration,
     selectedToolPreset: effectiveToolPreset,
     setSelectedToolPreset,
     agentModeDisabled: surface === "agency",
