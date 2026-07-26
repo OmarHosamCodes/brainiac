@@ -271,7 +271,7 @@ export function AgencyNotifications({ teamId, variant = "icon" }: AgencyNotifica
           <button
             type="button"
             className={cn(
-              "app-shell__rail-link text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+              "app-shell__rail-link text-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               shellFocusRingClass,
             )}
             aria-label={`${sidebarUnread} unread notification${sidebarUnread === 1 ? "" : "s"}`}

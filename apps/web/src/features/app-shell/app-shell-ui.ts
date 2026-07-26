@@ -20,11 +20,12 @@ export const shellLoadingPanelClass = "rounded-2xl border border-default bg-mute
 export const shellRailIconClass = "size-4 shrink-0";
 
 export const shellRailLinkClass = cn(
-  "app-shell__rail-link text-muted transition-colors hover:bg-elevated hover:text-highlighted active:scale-[0.98]",
+  "app-shell__rail-link text-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-[0.98]",
   shellFocusRingClass,
 );
 
-export const shellRailLinkActiveClass = "bg-primary/10 text-primary";
+export const shellRailLinkActiveClass =
+  "bg-sidebar-accent text-sidebar-accent-foreground font-medium";
 
 export const shellRailFooterClass = "app-shell__rail-footer";
 

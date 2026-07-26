@@ -131,13 +131,14 @@
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
+  /* Elevated step vs page paper — chrome must read as a distinct surface. */
+  --sidebar: oklch(0.94 0.015 270);
+  --sidebar-foreground: oklch(0.22 0.02 269);
+  --sidebar-primary: oklch(0.22 0.02 269);
+  --sidebar-primary-foreground: oklch(0.985 0.006 269);
+  --sidebar-accent: oklch(0.91 0.016 270);
+  --sidebar-accent-foreground: oklch(0.22 0.02 269);
+  --sidebar-border: oklch(0.88 0.012 269);
   --sidebar-ring: oklch(0.708 0 0);
 
   --font-sans: "Poppins", "IBM Plex Sans Arabic", ui-sans-serif, system-ui, sans-serif;
@@ -681,8 +682,7 @@ body {
   flex-direction: column;
   align-items: stretch;
   gap: 0.25rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--color-sidebar-border);
+  padding-top: 0.25rem;
 }
 
 .app-shell--rail-pinned .app-shell__rail-link {
@@ -738,7 +738,8 @@ body {
   gap: 0.75rem;
   padding-inline: 0.75rem;
   pointer-events: auto;
-  box-shadow: inset 1px 0 0 var(--color-sidebar-border);
+  background: var(--color-default);
+  color: var(--color-highlighted);
 }
 
 .app-shell__context-bar-left {

@@ -1,4 +1,4 @@
-import { Menu, Search } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -7,7 +7,6 @@ import { AppShellAccountMenu } from "@/features/app-shell/app-shell-account-menu
 import { AppShellAgencyNav } from "@/features/app-shell/app-shell-agency-nav";
 import { AppShellCommandPalette } from "@/features/app-shell/app-shell-command-palette";
 import { AppShellNotifications } from "@/features/app-shell/app-shell-notifications";
-import { useAppShellStore } from "@/features/app-shell/app-shell-store";
 import { AppShellTeamControl } from "@/features/app-shell/app-shell-team-control";
 import {
   shellFocusRingClass,
@@ -24,19 +23,14 @@ import { Button } from "@/ui/button";
 import { Separator } from "@/ui/separator";
 import { Sheet, SheetContent, SheetTitle } from "@/ui/sheet";
 
-function isMacPlatform() {
-  return /mac|iphone|ipad/i.test(navigator.platform);
-}
-
 export function AppShellRail() {
   const location = useLocation();
-  const setCommandPaletteOpen = useAppShellStore((s) => s.setCommandPaletteOpen);
-  const modKey = isMacPlatform() ? "⌘" : "Ctrl";
   useAgencySegmentShortcuts();
 
   return (
     <nav className="app-shell__rail" aria-label="Primary">
       <AppShellTeamControl variant="sidebar" />
+      <Separator className="bg-sidebar-border" />
 
       <div className="app-shell__rail-nav">
         {APP_NAV_ITEMS.map((item) => {
@@ -57,18 +51,6 @@ export function AppShellRail() {
             </Link>
           );
         })}
-
-        <button
-          type="button"
-          className={shellRailLinkClass}
-          onClick={() => setCommandPaletteOpen(true)}
-          aria-label="Search"
-          aria-keyshortcuts="Control+K Meta+K"
-          title={`Search (${modKey}K)`}
-        >
-          <Search className={cn(shellRailIconClass, "rail-icon")} aria-hidden="true" />
-          <span className="rail-label">Search</span>
-        </button>
       </div>
 
       <div className={shellRailFooterClass}>
@@ -107,11 +89,11 @@ export function AppShellRailOverlays() {
         <SheetContent
           side="left"
           showCloseButton={false}
-          className="app-shell__drawer-static flex w-[min(100vw,17rem)] flex-col gap-2 p-2"
+          className="app-shell__drawer-static flex w-[min(100vw,17rem)] flex-col gap-2 bg-sidebar p-2 text-sidebar-foreground"
         >
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <AppShellTeamControl variant="sidebar" />
-          <Separator />
+          <Separator className="bg-sidebar-border" />
           <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto" aria-label="Sections">
             {APP_NAV_ITEMS.map((item) => {
               if (item.to === "/agency") {
@@ -119,6 +101,7 @@ export function AppShellRailOverlays() {
                   <AppShellAgencyNav
                     key={item.to}
                     variant="rail"
+                    expanded
                     onNavigate={() => setMobileNavOpen(false)}
                   />
                 );
@@ -138,7 +121,7 @@ export function AppShellRailOverlays() {
               );
             })}
           </nav>
-          <div className="flex flex-col gap-1 border-t border-default pt-2">
+          <div className="flex flex-col gap-1 pt-2">
             <AppShellNotifications variant="sidebar" />
             <AppShellAccountMenu variant="sidebar" />
             {showUpgrade ? (

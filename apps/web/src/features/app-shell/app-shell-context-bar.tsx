@@ -41,7 +41,7 @@ export function AppShellContextBar() {
         <button
           type="button"
           className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+            "flex size-7 shrink-0 items-center justify-center rounded-lg text-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
             shellFocusRingClass,
           )}
           onClick={toggleRailPinned}

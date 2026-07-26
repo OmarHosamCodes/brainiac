@@ -137,7 +137,7 @@ export function AppShellAccountMenu({ variant = "icon" }: AppShellAccountMenuPro
         <Link
           to="/login"
           className={cn(
-            "app-shell__rail-link text-muted transition-colors hover:bg-elevated hover:text-highlighted",
+            "app-shell__rail-link text-muted transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
             shellFocusRingClass,
           )}
           aria-label="Sign in"
@@ -171,7 +171,7 @@ export function AppShellAccountMenu({ variant = "icon" }: AppShellAccountMenuPro
             <button
               type="button"
               className={cn(
-                "app-shell__rail-link app-shell__rail-header text-muted transition-colors hover:bg-elevated",
+                "app-shell__rail-link app-shell__rail-header text-muted transition-colors hover:bg-sidebar-accent",
                 shellFocusRingClass,
               )}
               aria-label={`Account menu for ${userName}`}

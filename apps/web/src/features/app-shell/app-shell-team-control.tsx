@@ -101,7 +101,7 @@ export function AppShellTeamControl({ className, variant = "compact" }: AppShell
             <button
               type="button"
               className={cn(
-                "app-shell__rail-link app-shell__rail-header text-muted transition-colors hover:bg-elevated",
+                "app-shell__rail-link app-shell__rail-header text-muted transition-colors hover:bg-sidebar-accent",
                 shellFocusRingClass,
                 className,
               )}
