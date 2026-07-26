@@ -17,9 +17,12 @@ export function resolveDefaultDashboardRangePreset(
   return policy?.enabled ? "tenure" : "last30";
 }
 
-/** Short range-chooser label, e.g. "Q1 2026". */
-export function simpleTenurePeriodLabel(fiscalYear: number, fiscalQuarter: number): string {
-  return `Q${fiscalQuarter} ${fiscalYear}`;
+/** Short range-chooser label, e.g. "Q1 2026".
+ * Uses the calendar year of the quarter's midpoint so off-calendar fiscal
+ * years (e.g. Dec 26 start → FY2025 Q3 spans Jun–Sep 2026) still read as
+ * the year the range mostly falls in. */
+export function simpleTenurePeriodLabel(year: number, fiscalQuarter: number): string {
+  return `Q${fiscalQuarter} ${year}`;
 }
 
 export function getCurrentTenurePeriodRange(
@@ -34,12 +37,14 @@ export function getCurrentTenurePeriodRange(
   const to = new Date(
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
   );
+  const midpoint = new Date((range.start.getTime() + range.end.getTime()) / 2);
+  const displayYear = midpoint.getUTCFullYear();
 
   return {
     from: range.start.toISOString(),
     to: to.toISOString(),
     label: fiscalQuarterLabel(ref.fiscalYear, ref.fiscalQuarter),
-    simpleLabel: simpleTenurePeriodLabel(ref.fiscalYear, ref.fiscalQuarter),
+    simpleLabel: simpleTenurePeriodLabel(displayYear, ref.fiscalQuarter),
   };
 }
 

@@ -49,6 +49,19 @@ describe("getCurrentTenurePeriodRange", () => {
     expect(range?.simpleLabel).toBe("Q1 2026");
   });
 
+  test("labels Dec-26 fiscal Q3 by the calendar year the range spans", () => {
+    const range = getCurrentTenurePeriodRange(
+      { fiscalYearStartMonth: 12, fiscalYearStartDay: 26, enabled: true },
+      new Date("2026-07-26T12:00:00.000Z"),
+    );
+
+    expect(range).not.toBeNull();
+    expect(range?.from).toBe("2026-06-26T00:00:00.000Z");
+    expect(range?.to).toBe("2026-07-26T23:59:59.999Z");
+    expect(range?.label).toBe("FY25 Q3");
+    expect(range?.simpleLabel).toBe("Q3 2026");
+  });
+
   test("returns null when tenure tracking is unavailable", () => {
     expect(getCurrentTenurePeriodRange(null)).toBeNull();
   });
