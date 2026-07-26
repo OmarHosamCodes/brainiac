@@ -234,6 +234,48 @@ export const agentChatTurnResponseSchema = z.object({
   workspaceSnapshot: agentChatResponseSchema.shape.workspaceSnapshot,
 });
 
+export const agentChatTurnStreamStartedEventSchema = z.object({
+  type: z.literal("started"),
+  conversationId: z.string().trim().min(1),
+  createdConversation: z.boolean(),
+  userMessageId: z.string().trim().min(1),
+  assistantMessageId: z.string().trim().min(1),
+  model: z.string().trim().min(1),
+});
+
+export const agentChatTurnStreamTokenEventSchema = z.object({
+  type: z.literal("token"),
+  delta: z.string().min(1).max(8_000),
+});
+
+export const agentChatTurnStreamToolEventSchema = z.object({
+  type: z.literal("tool"),
+  tool: agentToolCallSchema,
+});
+
+export const agentChatTurnStreamErrorEventSchema = z.object({
+  type: z.literal("error"),
+  message: z.string().trim().min(1).max(2_000),
+});
+
+export const agentChatTurnStreamCompletedEventSchema = z.object({
+  type: z.literal("completed"),
+  conversation: dashboardConversationSummarySchema,
+  userMessage: dashboardConversationMessageSchema,
+  assistantMessage: dashboardConversationMessageSchema,
+  createdConversation: z.boolean(),
+  workspaceSnapshot: agentChatResponseSchema.shape.workspaceSnapshot,
+  stopped: z.boolean(),
+});
+
+export const agentChatTurnStreamEventSchema = z.discriminatedUnion("type", [
+  agentChatTurnStreamStartedEventSchema,
+  agentChatTurnStreamTokenEventSchema,
+  agentChatTurnStreamToolEventSchema,
+  agentChatTurnStreamErrorEventSchema,
+  agentChatTurnStreamCompletedEventSchema,
+]);
+
 export type AgentMessage = z.infer<typeof agentMessageSchema>;
 export type AgentChatResponse = z.infer<typeof agentChatResponseSchema>;
 export type AgentToolCall = z.infer<typeof agentToolCallSchema>;
@@ -253,6 +295,7 @@ export type DashboardConversationMessage = z.infer<typeof dashboardConversationM
 export type DashboardConversationDetail = z.infer<typeof dashboardConversationDetailSchema>;
 export type AgentChatTurnInput = z.infer<typeof agentChatTurnInputSchema>;
 export type AgentChatTurnResponse = z.infer<typeof agentChatTurnResponseSchema>;
+export type AgentChatTurnStreamEvent = z.infer<typeof agentChatTurnStreamEventSchema>;
 export type AgentSurface = z.infer<typeof agentSurfaceSchema>;
 export type AgentScopeRef = z.infer<typeof agentScopeRefSchema>;
 export type AgentToolCatalogEntry = z.infer<typeof agentToolCatalogEntrySchema>;
