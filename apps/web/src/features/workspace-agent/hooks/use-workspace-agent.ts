@@ -1,4 +1,9 @@
-import type { AgentScopeRef, AgentSurface, DashboardAgentToolPreset } from "@orch/agent/types";
+import type {
+  AgentScopeRef,
+  AgentSurface,
+  AgentTextAttachment,
+  DashboardAgentToolPreset,
+} from "@orch/agent/types";
 import type { WorkspaceNode } from "@orch/workspace";
 import { useChat } from "@ai-sdk/react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -155,7 +160,7 @@ export function useWorkspaceAgent() {
   });
 
   const isStreaming = status === "streaming" || status === "submitted";
-  const canSend = draft.trim().length > 0 && !isStreaming;
+  const canSend = !isStreaming;
   const displayError =
     error ?? (chatError ? getErrorMessage(chatError, "Failed to reach the agent.") : null);
 
@@ -287,66 +292,72 @@ export function useWorkspaceAgent() {
     void stop();
   }, [stop]);
 
-  const sendMessage = useCallback(async () => {
-    const content = draft.trim();
-    const model = modelPresetState.outboundModelId?.trim();
-    if (!content || isStreaming) return;
-    if (surface === "agency" && !teamId) {
-      setError("Select an Agency team before asking about time.");
-      return;
-    }
+  const sendMessage = useCallback(
+    async (input: { text: string; attachments?: AgentTextAttachment[] } = { text: draft }) => {
+      const content = input.text.trim();
+      const attachments = input.attachments ?? [];
+      const model = modelPresetState.outboundModelId?.trim();
+      if ((!content && attachments.length === 0) || isStreaming) return;
+      if (surface === "agency" && !teamId) {
+        setError("Select an Agency team before asking about time.");
+        return;
+      }
 
-    const scopedNodes =
-      surface === "canvas"
-        ? workspaceNodes.filter((node) =>
-            scopeChips.some((chip) => chip.kind === "node" && chip.id === node.id),
-          )
-        : [];
+      const scopedNodes =
+        surface === "canvas"
+          ? workspaceNodes.filter((node) =>
+              scopeChips.some((chip) => chip.kind === "node" && chip.id === node.id),
+            )
+          : [];
 
-    setDraft("");
-    setError(null);
-    setStreamStopped(false);
+      setDraft("");
+      setError(null);
+      setStreamStopped(false);
 
-    try {
-      await chatSendMessage(
-        { text: content },
-        {
-          body: {
-            conversationId: activeConversationId ?? undefined,
-            surface,
-            toolPreset: effectiveToolPreset,
-            modelPreset: modelPresetState.modelPreset,
-            scopeRefs: scopeChips,
-            contextNodeTitles: scopeChips.map((chip) => chip.label),
-            ...(surface === "agency" && teamId ? { teamId } : {}),
-            ...(surface === "canvas"
-              ? {
-                  nodes: workspaceNodes,
-                  scopeNodes: scopedNodes.length > 0 ? scopedNodes : workspaceNodes,
-                }
-              : {}),
-            ...(model ? { model } : {}),
+      try {
+        await chatSendMessage(
+          { text: content },
+          {
+            body: {
+              content,
+              attachments,
+              conversationId: activeConversationId ?? undefined,
+              surface,
+              toolPreset: effectiveToolPreset,
+              modelPreset: modelPresetState.modelPreset,
+              scopeRefs: scopeChips,
+              contextNodeTitles: scopeChips.map((chip) => chip.label),
+              ...(surface === "agency" && teamId ? { teamId } : {}),
+              ...(surface === "canvas"
+                ? {
+                    nodes: workspaceNodes,
+                    scopeNodes: scopedNodes.length > 0 ? scopedNodes : workspaceNodes,
+                  }
+                : {}),
+              ...(model ? { model } : {}),
+            },
           },
-        },
-      );
-    } catch (streamError) {
-      setDraft(content);
-      setError(getErrorMessage(streamError, "Failed to reach the agent."));
-    }
-  }, [
-    activeConversationId,
-    chatSendMessage,
-    draft,
-    effectiveToolPreset,
-    isStreaming,
-    modelPresetState.modelPreset,
-    modelPresetState.outboundModelId,
-    scopeChips,
-    setDraft,
-    surface,
-    teamId,
-    workspaceNodes,
-  ]);
+        );
+      } catch (streamError) {
+        setDraft(content);
+        setError(getErrorMessage(streamError, "Failed to reach the agent."));
+      }
+    },
+    [
+      activeConversationId,
+      chatSendMessage,
+      draft,
+      effectiveToolPreset,
+      isStreaming,
+      modelPresetState.modelPreset,
+      modelPresetState.outboundModelId,
+      scopeChips,
+      setDraft,
+      surface,
+      teamId,
+      workspaceNodes,
+    ],
+  );
 
   const submitRenameConversation = useCallback(async () => {
     const title = renameDraft.trim();

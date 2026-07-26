@@ -5,6 +5,8 @@ import {
   agentChatTurnResponseSchema,
   agentChatTurnStreamEventSchema,
   agentToolCatalogResponseSchema,
+  buildAgentModelUserContent,
+  modelContentLength,
   dashboardConversationDetailSchema,
   dashboardConversationListResponseSchema,
   dashboardConversationMessageSchema,
@@ -15,10 +17,12 @@ import {
   resolveOpenRouterModelForTurn,
   runDashboardAgent,
   streamDashboardAgent,
+  titleSeedFromAgentTurn,
   type AgencyAgentRuntime,
   type AgentChatTurnInput,
   type AgentChatTurnStreamEvent,
   type AgentSurface,
+  type AgentTextAttachment,
   type AgentToolCall,
   type AgentToolCatalogInput,
   type DashboardConversationSummary,
@@ -29,6 +33,7 @@ import { db } from "@orch/db";
 import {
   dashboardConversation,
   dashboardConversationMessage,
+  type DashboardConversationMessageAttachmentRecord,
   type DashboardConversationMessageContextNodeTitlesRecord,
   type DashboardConversationMessageToolsCalledRecord,
   type DashboardConversationUsageSummaryRecord,
@@ -53,6 +58,16 @@ import {
   buildDashboardMessagePreview,
   normalizeDashboardConversationTitle,
 } from "./conversation-contracts";
+
+function attachmentsFromRow(
+  value: DashboardConversationMessageAttachmentRecord[] | null | undefined,
+): AgentTextAttachment[] {
+  return (value ?? []) as AgentTextAttachment[];
+}
+
+function modelUserContent(content: string, attachments: AgentTextAttachment[]) {
+  return buildAgentModelUserContent(content, attachments);
+}
 
 function createAgencyAgentRuntime(actorUserId: string, teamId: string): AgencyAgentRuntime {
   return {
@@ -244,6 +259,7 @@ function mapConversationMessage(row: typeof dashboardConversationMessage.$inferS
     id: row.id,
     role: row.role,
     content: row.content,
+    attachments: attachmentsFromRow(row.attachments),
     contextNodeTitles:
       (row.contextNodeTitles as DashboardConversationMessageContextNodeTitlesRecord | null) ?? [],
     model: row.model,
@@ -356,7 +372,12 @@ export async function getDashboardConversation(
 
 export async function createDashboardConversation(
   actorUserId: string,
-  input: Pick<AgentChatTurnInput, "content" | "model" | "toolPreset">,
+  input: {
+    content: string;
+    attachments?: AgentTextAttachment[];
+    model?: string | null;
+    toolPreset: AgentChatTurnInput["toolPreset"];
+  },
 ) {
   const now = new Date();
   const conversationId = createWorkspaceId("conversation");
@@ -364,7 +385,9 @@ export async function createDashboardConversation(
   await db.insert(dashboardConversation).values({
     id: conversationId,
     userId: actorUserId,
-    title: buildDashboardConversationTitle(input.content),
+    title: buildDashboardConversationTitle(
+      titleSeedFromAgentTurn(input.content, input.attachments ?? []),
+    ),
     model: input.model?.trim() || null,
     toolPreset: input.toolPreset,
     usageSummary: normalizeConversationUsageSummary(null),
@@ -454,13 +477,15 @@ export async function appendDashboardConversationTurn(
       : getWorkspaceMarketplaceItems(userId, { limit: 200, kind: "all" }),
   ]);
 
+  const turnAttachments = turn.attachments ?? [];
+  const turnModelContent = modelUserContent(turn.content, turnAttachments);
   const modelPreset = turn.modelPreset ?? DEFAULT_AGENT_MODEL_PRESET;
   const resolvedModel = await resolveOpenRouterModelForTurn({
     preset: modelPreset,
     pinnedModelId: turn.model,
-    content: turn.content,
+    content: typeof turnModelContent === "string" ? turnModelContent : turn.content,
     signals: {
-      contentLength: turn.content.trim().length,
+      contentLength: modelContentLength(turnModelContent),
       scopeCount: turn.scopeRefs?.length ?? turn.scopeNodes?.length ?? 0,
       mentionCount: turn.contextNodeTitles?.length ?? 0,
       toolPreset,
@@ -472,6 +497,7 @@ export async function appendDashboardConversationTurn(
     ? await getConversationRecord(userId, turn.conversationId)
     : await createDashboardConversation(userId, {
         content: turn.content,
+        attachments: turnAttachments,
         model: resolvedModelId,
         toolPreset,
       });
@@ -490,7 +516,10 @@ export async function appendDashboardConversationTurn(
     .limit(Math.max(0, DASHBOARD_CONVERSATION_MESSAGE_WINDOW - 1));
   const recentMessages = [...recentMessagesDesc].reverse().map((message) => ({
     role: message.role as "user" | "assistant",
-    content: message.content,
+    content:
+      message.role === "user"
+        ? modelUserContent(message.content, attachmentsFromRow(message.attachments))
+        : message.content,
   }));
   const scopeNodes = turn.scopeNodes ?? turn.nodes;
   const agencyRuntime =
@@ -501,7 +530,7 @@ export async function appendDashboardConversationTurn(
       ...recentMessages,
       {
         role: "user",
-        content: turn.content,
+        content: turnModelContent,
       },
     ],
     {
@@ -545,6 +574,7 @@ export async function appendDashboardConversationTurn(
     userId,
     role: "user" as const,
     content: turn.content,
+    attachments: turnAttachments,
     contextNodeTitles: contextTitles,
     model: resolvedModelId,
     toolsCalled: [],
@@ -557,6 +587,7 @@ export async function appendDashboardConversationTurn(
     userId,
     role: "assistant" as const,
     content: result.response,
+    attachments: [] as AgentTextAttachment[],
     contextNodeTitles: [],
     model: result.model,
     toolsCalled: result.toolsCalled,
@@ -635,13 +666,15 @@ export async function* streamDashboardConversationTurn(
       : getWorkspaceMarketplaceItems(userId, { limit: 200, kind: "all" }),
   ]);
 
+  const turnAttachments = turn.attachments ?? [];
+  const turnModelContent = modelUserContent(turn.content, turnAttachments);
   const modelPreset = turn.modelPreset ?? DEFAULT_AGENT_MODEL_PRESET;
   const resolvedModel = await resolveOpenRouterModelForTurn({
     preset: modelPreset,
     pinnedModelId: turn.model,
-    content: turn.content,
+    content: typeof turnModelContent === "string" ? turnModelContent : turn.content,
     signals: {
-      contentLength: turn.content.trim().length,
+      contentLength: modelContentLength(turnModelContent),
       scopeCount: turn.scopeRefs?.length ?? turn.scopeNodes?.length ?? 0,
       mentionCount: turn.contextNodeTitles?.length ?? 0,
       toolPreset,
@@ -653,6 +686,7 @@ export async function* streamDashboardConversationTurn(
     ? await getConversationRecord(userId, turn.conversationId)
     : await createDashboardConversation(userId, {
         content: turn.content,
+        attachments: turnAttachments,
         model: resolvedModelId,
         toolPreset,
       });
@@ -671,7 +705,10 @@ export async function* streamDashboardConversationTurn(
     .limit(Math.max(0, DASHBOARD_CONVERSATION_MESSAGE_WINDOW - 1));
   const recentMessages = [...recentMessagesDesc].reverse().map((message) => ({
     role: message.role as "user" | "assistant",
-    content: message.content,
+    content:
+      message.role === "user"
+        ? modelUserContent(message.content, attachmentsFromRow(message.attachments))
+        : message.content,
   }));
   const scopeNodes = turn.scopeNodes ?? turn.nodes;
   const agencyRuntime =
@@ -687,6 +724,7 @@ export async function* streamDashboardConversationTurn(
     userId,
     role: "user" as const,
     content: turn.content,
+    attachments: turnAttachments,
     contextNodeTitles: contextTitles,
     model: resolvedModelId,
     toolsCalled: [] as AgentToolCall[],
@@ -715,7 +753,7 @@ export async function* streamDashboardConversationTurn(
         ...recentMessages,
         {
           role: "user",
-          content: turn.content,
+          content: turnModelContent,
         },
       ],
       {
@@ -790,6 +828,7 @@ export async function* streamDashboardConversationTurn(
           userId,
           role: "assistant" as const,
           content: responseText,
+          attachments: [] as AgentTextAttachment[],
           contextNodeTitles: [] as string[],
           model: event.model || resolvedModelId,
           toolsCalled: finalTools,

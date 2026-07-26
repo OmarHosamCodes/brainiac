@@ -61,6 +61,7 @@ describe("dashboard agent append persistence", () => {
       actorUserName: "Append User",
       turn: {
         content: "Plan the next sprint",
+        attachments: [],
         model: "test-model",
         toolPreset: "ask",
         surface: "canvas",
@@ -95,6 +96,7 @@ describe("dashboard agent append persistence", () => {
         turn: {
           conversationId: conversation.id,
           content: "Append to the owner's conversation",
+          attachments: [],
           model: "test-model",
           toolPreset: "ask",
           surface: "canvas",

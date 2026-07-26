@@ -18,6 +18,18 @@ export type DashboardConversationMessageToolCallRecord = {
 export type DashboardConversationMessageToolsCalledRecord = Array<
   string | DashboardConversationMessageToolCallRecord
 >;
+export type DashboardConversationMessageAttachmentRecord = {
+  filename: string;
+  mediaType:
+    | "text/plain"
+    | "text/markdown"
+    | "application/json"
+    | "image/png"
+    | "image/jpeg"
+    | "image/webp"
+    | "image/gif";
+  text: string;
+};
 export type DashboardConversationUsageLatestRecord = {
   modelId: string;
   contextLength: number | null;
@@ -129,6 +141,10 @@ export const dashboardConversationMessage = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     role: text("role").notNull(),
     content: text("content").notNull(),
+    attachments: jsonb("attachments")
+      .$type<DashboardConversationMessageAttachmentRecord[]>()
+      .notNull()
+      .default([]),
     contextNodeTitles: jsonb("context_node_titles")
       .$type<DashboardConversationMessageContextNodeTitlesRecord>()
       .notNull()

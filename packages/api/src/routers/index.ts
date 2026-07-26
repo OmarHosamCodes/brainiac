@@ -8,7 +8,18 @@ import { systemRouter } from "./system";
 import { teamRouter } from "./team/router";
 import { workspaceRouter } from "./workspace/router";
 
-export const appRouter = {
+type AppRouterShape = {
+  agent: typeof agentRouter;
+  agencyOps: typeof agencyOpsRouter;
+  billing: typeof billingRouter;
+  notifications: typeof notificationsRouter;
+  healthCheck: (typeof systemRouter)["healthCheck"];
+  privateData: (typeof systemRouter)["privateData"];
+  team: typeof teamRouter;
+  workspace: typeof workspaceRouter;
+};
+
+export const appRouter: AppRouterShape = {
   agent: agentRouter,
   agencyOps: agencyOpsRouter,
   billing: billingRouter,

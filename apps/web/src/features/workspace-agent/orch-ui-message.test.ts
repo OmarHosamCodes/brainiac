@@ -77,6 +77,7 @@ describe("orch-ui-message", () => {
           id: "u1",
           role: "user",
           content: "Hi",
+          attachments: [],
           contextNodeTitles: [],
           model: "test-model",
           toolsCalled: [],
@@ -86,6 +87,7 @@ describe("orch-ui-message", () => {
           id: "a1",
           role: "assistant",
           content: "Hello",
+          attachments: [],
           contextNodeTitles: [],
           model: "test-model",
           toolsCalled: [],
@@ -118,6 +120,7 @@ describe("orch-ui-message", () => {
         id: "u1",
         role: "user",
         content: "Hi",
+        attachments: [],
         contextNodeTitles: [],
         model: null,
         toolsCalled: [],
@@ -125,5 +128,26 @@ describe("orch-ui-message", () => {
       },
     ]);
     expect(messages[0]?.parts[0]).toEqual({ type: "text", text: "Hi", state: "done" });
+  });
+
+  test("dashboardMessagesToUIMessages seeds attachment data parts", () => {
+    const messages = dashboardMessagesToUIMessages([
+      {
+        id: "u1",
+        role: "user",
+        content: "",
+        attachments: [{ filename: "notes.md", mediaType: "text/markdown", text: "# Hi" }],
+        contextNodeTitles: [],
+        model: null,
+        toolsCalled: [],
+        createdAt: "2026-07-26T00:00:00.000Z",
+      },
+    ]);
+    expect(messages[0]?.parts).toEqual([
+      {
+        type: "data-orchAttachment",
+        data: { filename: "notes.md", mediaType: "text/markdown" },
+      },
+    ]);
   });
 });

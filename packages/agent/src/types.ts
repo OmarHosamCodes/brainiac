@@ -101,6 +101,28 @@ export const dashboardAgentToolPresetInputSchema = z
   .union([dashboardAgentCanonicalToolPresetSchema, dashboardAgentLegacyToolPresetSchema])
   .transform((preset) => normalizeDashboardAgentToolPreset(preset));
 
+export const AGENT_TEXT_ATTACHMENT_MAX_FILES = 5;
+export const AGENT_ATTACHMENT_MAX_FILES = AGENT_TEXT_ATTACHMENT_MAX_FILES;
+export const AGENT_TEXT_ATTACHMENT_MAX_BYTES = 100_000;
+export const AGENT_IMAGE_ATTACHMENT_MAX_BYTES = 2_000_000;
+
+export const agentTextAttachmentMediaTypeSchema = z.enum([
+  "text/plain",
+  "text/markdown",
+  "application/json",
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+]);
+
+export const agentTextAttachmentSchema = z.object({
+  filename: z.string().trim().min(1).max(255),
+  mediaType: agentTextAttachmentMediaTypeSchema,
+  /** UTF-8 text for documents, or a data:image/... URL for images. */
+  text: z.string().max(AGENT_IMAGE_ATTACHMENT_MAX_BYTES),
+});
+
 export const agentMessageSchema = z.object({
   role: agentMessageRoleSchema,
   content: z.string().trim().min(1).max(20_000),
@@ -147,7 +169,8 @@ export const dashboardConversationSummarySchema = z.object({
 export const dashboardConversationMessageSchema = z.object({
   id: z.string().trim().min(1),
   role: dashboardConversationMessageRoleSchema,
-  content: z.string().trim().min(1).max(20_000),
+  content: z.string().trim().max(20_000),
+  attachments: z.array(agentTextAttachmentSchema).max(AGENT_TEXT_ATTACHMENT_MAX_FILES).default([]),
   contextNodeTitles: z.array(z.string().trim().min(1).max(120)).max(24).default([]),
   model: z.string().trim().min(1).nullable(),
   toolsCalled: z.array(agentToolCallEntrySchema).max(48).default([]),
@@ -211,20 +234,34 @@ export const agentToolCatalogResponseSchema = z.object({
   tools: z.array(agentToolCatalogEntrySchema).max(64),
 });
 
-export const agentChatTurnInputSchema = z.object({
-  conversationId: z.string().trim().min(1).optional(),
-  content: z.string().trim().min(1).max(20_000),
-  surface: agentSurfaceSchema.optional().default("canvas"),
-  teamId: z.string().trim().min(1).optional(),
-  nodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
-  scopeNodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
-  scopeRefs: z.array(agentScopeRefSchema).max(24).optional(),
-  contextNodeTitles: z.array(z.string().trim().min(1).max(120)).max(24).optional(),
-  activeTabId: z.string().trim().min(1).optional(),
-  model: z.string().trim().min(1).optional(),
-  modelPreset: agentModelPresetSchema.optional(),
-  toolPreset: dashboardAgentToolPresetInputSchema,
-});
+export const agentChatTurnInputSchema = z
+  .object({
+    conversationId: z.string().trim().min(1).optional(),
+    content: z.string().trim().max(20_000).default(""),
+    attachments: z
+      .array(agentTextAttachmentSchema)
+      .max(AGENT_TEXT_ATTACHMENT_MAX_FILES)
+      .default([]),
+    surface: agentSurfaceSchema.optional().default("canvas"),
+    teamId: z.string().trim().min(1).optional(),
+    nodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
+    scopeNodes: z.array(workspaceNodeSchema).max(WORKSPACE_NODE_LIMIT).optional(),
+    scopeRefs: z.array(agentScopeRefSchema).max(24).optional(),
+    contextNodeTitles: z.array(z.string().trim().min(1).max(120)).max(24).optional(),
+    activeTabId: z.string().trim().min(1).optional(),
+    model: z.string().trim().min(1).optional(),
+    modelPreset: agentModelPresetSchema.optional(),
+    toolPreset: dashboardAgentToolPresetInputSchema,
+  })
+  .superRefine((value, ctx) => {
+    if (value.content.trim().length === 0 && value.attachments.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Message is empty.",
+        path: ["content"],
+      });
+    }
+  });
 
 export const agentChatTurnResponseSchema = z.object({
   conversation: dashboardConversationSummarySchema,
@@ -277,6 +314,18 @@ export const agentChatTurnStreamEventSchema = z.discriminatedUnion("type", [
 ]);
 
 export type AgentMessage = z.infer<typeof agentMessageSchema>;
+export type AgentTextAttachment = z.infer<typeof agentTextAttachmentSchema>;
+export type AgentTextAttachmentMediaType = z.infer<typeof agentTextAttachmentMediaTypeSchema>;
+export type AgentAttachment = AgentTextAttachment;
+
+export type AgentModelContentPart =
+  | { type: "input_text"; text: string }
+  | { type: "input_image"; imageUrl: string; detail: "auto" };
+
+export type AgentModelInputMessage = {
+  role: "user" | "assistant" | "system";
+  content: string | AgentModelContentPart[];
+};
 export type AgentChatResponse = z.infer<typeof agentChatResponseSchema>;
 export type AgentToolCall = z.infer<typeof agentToolCallSchema>;
 export type AgentToolCallEntry = z.infer<typeof agentToolCallEntrySchema>;

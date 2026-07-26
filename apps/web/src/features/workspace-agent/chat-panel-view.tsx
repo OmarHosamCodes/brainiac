@@ -1,4 +1,4 @@
-import { History, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { History, MoreHorizontal, Paperclip, Plus, Trash2 } from "lucide-react";
 
 import {
   Tool,
@@ -7,7 +7,11 @@ import {
   ToolInput,
   ToolOutput,
 } from "@/components/ai-elements/tool";
-import { getMessageText, type OrchUIMessage } from "@/features/workspace-agent/orch-ui-message";
+import {
+  getMessageAttachments,
+  getMessageText,
+  type OrchUIMessage,
+} from "@/features/workspace-agent/orch-ui-message";
 import { Bubble, BubbleContent } from "@/ui/bubble";
 import { Button } from "@/ui/button";
 import {
@@ -65,10 +69,46 @@ function WorkspaceAgentMessagePartsView({
   isStreamingMessage: boolean;
 }) {
   const text = getMessageText(message);
+  const attachments = getMessageAttachments(message);
   const toolParts = message.parts.filter((part) => part.type === "dynamic-tool");
 
   return (
     <>
+      {attachments.length > 0 ? (
+        <div
+          className={
+            message.role === "user"
+              ? "flex max-w-[min(100%,36rem)] flex-wrap justify-end gap-1.5"
+              : "flex max-w-[min(100%,36rem)] flex-wrap gap-1.5"
+          }
+        >
+          {attachments.map((attachment) =>
+            attachment.previewUrl ? (
+              <span
+                key={`${attachment.filename}-${attachment.mediaType}`}
+                className="inline-flex overflow-hidden rounded-md border border-border"
+                title={attachment.filename}
+              >
+                <img
+                  src={attachment.previewUrl}
+                  alt={attachment.filename}
+                  className="size-14 object-cover"
+                />
+              </span>
+            ) : (
+              <span
+                key={`${attachment.filename}-${attachment.mediaType}`}
+                className="inline-flex h-7 max-w-full items-center gap-1.5 rounded-md border border-border bg-secondary px-2 text-xs font-medium text-secondary-foreground"
+                title={attachment.mediaType}
+              >
+                <Paperclip className="size-3 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="truncate">{attachment.filename}</span>
+              </span>
+            ),
+          )}
+        </div>
+      ) : null}
+
       {text ? (
         <Bubble
           variant={message.role === "user" ? "secondary" : "muted"}

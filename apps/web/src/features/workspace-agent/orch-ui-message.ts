@@ -24,6 +24,11 @@ export type OrchUIDataParts = {
     assistantMessageId: string;
     userMessageId: string;
   };
+  orchAttachment: {
+    filename: string;
+    mediaType: string;
+    previewUrl?: string;
+  };
 };
 
 export type OrchUIMessage = UIMessage<unknown, OrchUIDataParts>;
@@ -48,7 +53,28 @@ export function dashboardMessagesToUIMessages(
   messages: DashboardConversationMessage[],
 ): OrchUIMessage[] {
   return messages.map((message) => {
-    const parts: OrchUIMessage["parts"] = [{ type: "text", text: message.content, state: "done" }];
+    const parts: OrchUIMessage["parts"] = [];
+
+    if (message.content.trim()) {
+      parts.push({ type: "text", text: message.content, state: "done" });
+    }
+
+    for (const attachment of message.attachments ?? []) {
+      parts.push({
+        type: "data-orchAttachment",
+        data: {
+          filename: attachment.filename,
+          mediaType: attachment.mediaType,
+          ...(attachment.mediaType.startsWith("image/") && attachment.text.startsWith("data:image/")
+            ? { previewUrl: attachment.text }
+            : {}),
+        },
+      });
+    }
+
+    if (parts.length === 0) {
+      parts.push({ type: "text", text: "", state: "done" });
+    }
 
     if (message.role === "assistant") {
       for (const entry of message.toolsCalled) {
@@ -213,4 +239,15 @@ export function getMessageText(message: UIMessage): string {
     .filter((part): part is { type: "text"; text: string } => part.type === "text")
     .map((part) => part.text)
     .join("");
+}
+
+export function getMessageAttachments(message: OrchUIMessage): Array<{
+  filename: string;
+  mediaType: string;
+  previewUrl?: string;
+}> {
+  return message.parts.flatMap((part) => {
+    if (part.type !== "data-orchAttachment") return [];
+    return [part.data];
+  });
 }

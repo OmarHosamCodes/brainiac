@@ -1,12 +1,12 @@
 import type {
   AgentModelTier,
+  AgentTextAttachment,
   AgentToolCatalogEntry,
   DashboardAgentToolPreset,
 } from "@orch/agent/types";
 import type { WorkspaceNode } from "@orch/workspace";
-import type { ChatStatus } from "ai";
+import type { ChatStatus, FileUIPart } from "ai";
 import {
-  Box,
   Check,
   ChevronDown,
   Crosshair,
@@ -16,17 +16,29 @@ import {
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { toast } from "sonner";
 
 import {
   PromptInput,
+  PromptInputAttachment,
+  PromptInputAttachments,
   PromptInputBody,
   PromptInputButton,
   PromptInputFooter,
   PromptInputHeader,
-  PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
+import {
+  AGENT_ATTACHMENT_ACCEPT,
+  AGENT_IMAGE_ATTACHMENT_MAX_BYTES,
+  AGENT_TEXT_ATTACHMENT_MAX_FILES,
+  filePartsToAgentAttachments,
+} from "@/features/workspace-agent/agent-attachments";
+import {
+  WorkspaceAgentAttachButton,
+  WorkspaceAgentComposerSubmitGate,
+} from "@/features/workspace-agent/composer-attachment-controls";
 import { WorkspaceAgentModelPresetMenuView } from "@/features/workspace-agent/model-preset-menu-view";
 import { WorkspaceAgentScopeChipView } from "@/features/workspace-agent/scope-chip-view";
 import { WorkspaceAgentToolMenuView } from "@/features/workspace-agent/tool-menu-view";
@@ -68,7 +80,7 @@ type WorkspaceAgentComposerViewProps = {
   canSend: boolean;
   isPending: boolean;
   chatStatus: ChatStatus;
-  onSend: () => void;
+  onSend: (input: { text: string; attachments: AgentTextAttachment[] }) => void;
   onStop: () => void;
   dimmed: boolean;
   shellLayoutId?: string;
@@ -171,12 +183,51 @@ export function WorkspaceAgentComposerView({
               "border-0 bg-transparent shadow-none",
               "[&_[data-slot=input-group]]:rounded-none [&_[data-slot=input-group]]:border-0 [&_[data-slot=input-group]]:bg-transparent [&_[data-slot=input-group]]:shadow-none",
             )}
-            onSubmit={() => {
+            accept={AGENT_ATTACHMENT_ACCEPT}
+            multiple
+            maxFiles={AGENT_TEXT_ATTACHMENT_MAX_FILES}
+            maxFileSize={AGENT_IMAGE_ATTACHMENT_MAX_BYTES}
+            onError={(error) => {
+              switch (error.code) {
+                case "accept":
+                  toast.error("Only .txt, .md, .json, and image files.");
+                  break;
+                case "max_files":
+                  toast.error(`Up to ${AGENT_TEXT_ATTACHMENT_MAX_FILES} files.`);
+                  break;
+                case "max_file_size":
+                  toast.error(
+                    `Each file must be ${AGENT_IMAGE_ATTACHMENT_MAX_BYTES / 1_000_000} MB or less.`,
+                  );
+                  break;
+                default: {
+                  const _exhaustive: never = error.code;
+                  return _exhaustive;
+                }
+              }
+            }}
+            onSubmit={(message) => {
               if (isPending) return;
-              onSend();
+              try {
+                const attachments = filePartsToAgentAttachments(
+                  (message.files ?? []) as FileUIPart[],
+                );
+                const text = message.text.trim();
+                if (!text && attachments.length === 0) return;
+                onSend({ text, attachments });
+              } catch (submitError) {
+                toast.error(
+                  submitError instanceof Error
+                    ? submitError.message
+                    : "Could not attach that file.",
+                );
+              }
             }}
           >
             <PromptInputHeader className="px-1.5 pt-1.5 empty:hidden">
+              <PromptInputAttachments>
+                {(attachment) => <PromptInputAttachment data={attachment} />}
+              </PromptInputAttachments>
               <WorkspaceAgentScopeChipView chips={scopeChips} onRemove={onRemoveChip} />
             </PromptInputHeader>
 
@@ -221,6 +272,7 @@ export function WorkspaceAgentComposerView({
 
             <PromptInputFooter className="px-1.5 pb-1.5">
               <PromptInputTools>
+                <WorkspaceAgentAttachButton />
                 <Popover open={toolsMenuOpen} onOpenChange={onToolsMenuOpenChange}>
                   <PopoverTrigger asChild>
                     <PromptInputButton aria-label="Modes, context, and tools">
@@ -279,25 +331,8 @@ export function WorkspaceAgentComposerView({
 
                     <Separator />
 
-                    <div className="flex flex-col gap-1 py-1">
-                      <p className="px-3 pt-1 text-xs font-semibold text-muted-foreground">Tools</p>
+                    <div className="py-1">
                       <WorkspaceAgentToolMenuView tools={tools} loading={toolsLoading} />
-                    </div>
-
-                    <Separator />
-
-                    <div className="p-1">
-                      <button
-                        type="button"
-                        className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm text-foreground hover:bg-accent hover:text-accent-foreground motion-safe:transition-colors motion-safe:duration-150"
-                        onClick={() => {
-                          onToolsMenuOpenChange(false);
-                          onModelMenuOpenChange(true);
-                        }}
-                      >
-                        <Box className="size-4 text-muted-foreground" aria-hidden />
-                        Models
-                      </button>
                     </div>
                   </PopoverContent>
                 </Popover>
@@ -388,13 +423,12 @@ export function WorkspaceAgentComposerView({
                   <Crosshair />
                 </PromptInputButton>
 
-                <PromptInputSubmit
-                  status={isPending ? chatStatus : undefined}
-                  disabled={isPending ? false : !canSend}
-                  variant={isPending ? "secondary" : "default"}
-                  aria-label={isPending ? "Stop" : "Send message"}
-                  type={isPending ? "button" : "submit"}
-                  onClick={isPending ? onStop : undefined}
+                <WorkspaceAgentComposerSubmitGate
+                  canSend={canSend}
+                  isPending={isPending}
+                  chatStatus={chatStatus}
+                  draft={draft}
+                  onStop={onStop}
                 />
               </PromptInputTools>
             </PromptInputFooter>

@@ -198,7 +198,7 @@ export function WorkspaceAgentView({ view }: WorkspaceAgentViewProps) {
                     canSend={view.canSend}
                     isPending={view.isPending}
                     chatStatus={view.chatStatus}
-                    onSend={() => void view.sendMessage()}
+                    onSend={(input) => void view.sendMessage(input)}
                     onStop={view.stopGeneration}
                     dimmed={view.scopeModeActive}
                     shellLayoutId={showChat ? undefined : SHELL_LAYOUT_ID}

@@ -1,4 +1,4 @@
-import type { AgentChatTurnInput } from "@orch/agent/types";
+import type { AgentChatTurnInput, AgentTextAttachment } from "@orch/agent/types";
 import type { ChatTransport } from "ai";
 
 import { streamAgentChatTurn } from "@/features/workspace-agent/agent-turn-stream";
@@ -9,7 +9,10 @@ import {
   type OrchUIMessageChunk,
 } from "@/features/workspace-agent/orch-ui-message";
 
-export type OrchTurnTransportBody = Omit<AgentChatTurnInput, "content">;
+export type OrchTurnTransportBody = Omit<AgentChatTurnInput, "content" | "attachments"> & {
+  content?: string;
+  attachments?: AgentTextAttachment[];
+};
 
 export class OrchTurnStreamTransport implements ChatTransport<OrchUIMessage> {
   async sendMessages({
@@ -19,15 +22,19 @@ export class OrchTurnStreamTransport implements ChatTransport<OrchUIMessage> {
   }: Parameters<ChatTransport<OrchUIMessage>["sendMessages"]>[0]): Promise<
     ReadableStream<OrchUIMessageChunk>
   > {
-    const content = getLastUserText(messages);
-    if (!content) {
+    const orchBody = (body ?? {}) as OrchTurnTransportBody;
+    const content =
+      typeof orchBody.content === "string" ? orchBody.content : getLastUserText(messages);
+    const attachments = orchBody.attachments ?? [];
+
+    if (!content.trim() && attachments.length === 0) {
       throw new Error("Message is empty.");
     }
 
-    const orchBody = (body ?? {}) as OrchTurnTransportBody;
     const input: AgentChatTurnInput = {
       ...orchBody,
       content,
+      attachments,
       toolPreset: orchBody.toolPreset ?? "ask",
     };
 

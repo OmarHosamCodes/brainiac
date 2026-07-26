@@ -18,7 +18,7 @@ import {
 import {
   DEFAULT_AGENT_MODEL,
   type AgentChatResponse,
-  type AgentMessage,
+  type AgentModelInputMessage,
   type AgentToolCall,
   type DashboardAgentConfig,
   type DashboardAgentToolPreset,
@@ -318,10 +318,10 @@ function buildAgentOnlyInstructions(
   ].join("\n");
 }
 
-function normalizeMessages(messages: AgentMessage[]) {
+function normalizeMessages(messages: AgentModelInputMessage[]) {
   return messages.map((message) => ({
     role: message.role,
-    content: message.content.trim(),
+    content: typeof message.content === "string" ? message.content.trim() : message.content,
   }));
 }
 
@@ -588,7 +588,7 @@ function normalizeUsage(
 }
 
 export async function runDashboardAgent(
-  messages: AgentMessage[],
+  messages: AgentModelInputMessage[],
   workspace: DashboardAgentWorkspaceContext,
   config: DashboardAgentConfig = {},
 ): Promise<AgentChatResponse> {
@@ -621,7 +621,7 @@ export async function runDashboardAgent(
 }
 
 export async function* streamDashboardAgent(
-  messages: AgentMessage[],
+  messages: AgentModelInputMessage[],
   workspace: DashboardAgentWorkspaceContext,
   config: DashboardAgentConfig & { signal?: AbortSignal } = {},
 ): AsyncGenerator<DashboardAgentStreamEvent, void, void> {
@@ -815,6 +815,7 @@ export async function runTaskAgent(
   };
 }
 
+export * from "./attachment-content";
 export * from "./models";
 export * from "./model-routing";
 export * from "./stream-turn";

@@ -78,6 +78,7 @@ describe("dashboard agent stream persistence", () => {
       actorUserName: "Stream User",
       turn: {
         content: "Hello stream",
+        attachments: [],
         model: "test-model",
         toolPreset: "ask",
         surface: "canvas",
