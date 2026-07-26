@@ -1,9 +1,14 @@
-import type { DashboardConversationMessage } from "@orch/agent/types";
 import { History, MoreHorizontal, Plus, Trash2 } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import type { RefObject } from "react";
 
-import { WorkspaceAgentToolTraceListView } from "@/features/workspace-agent/tool-trace-view";
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@/components/ai-elements/tool";
+import { getMessageText, type OrchUIMessage } from "@/features/workspace-agent/orch-ui-message";
+import { Bubble, BubbleContent } from "@/ui/bubble";
 import { Button } from "@/ui/button";
 import {
   Dialog,
@@ -14,16 +19,21 @@ import {
   DialogTitle,
 } from "@/ui/dialog";
 import { Input } from "@/ui/input";
+import { Marker, MarkerContent } from "@/ui/marker";
+import { Message, MessageContent } from "@/ui/message";
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from "@/ui/message-scroller";
 import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
-import { cn } from "@/lib/utils";
-
-type ChatPanelMessage = Omit<DashboardConversationMessage, "content"> & {
-  content: string;
-};
 
 type WorkspaceAgentChatPanelViewProps = {
   title: string;
-  messages: ChatPanelMessage[];
+  messages: OrchUIMessage[];
   conversationOptions: Array<{ id: string; label: string; preview: string }>;
   threadMenuOpen: boolean;
   onThreadMenuOpenChange: (open: boolean) => void;
@@ -45,12 +55,71 @@ type WorkspaceAgentChatPanelViewProps = {
   isStreaming: boolean;
   streamingMessageId: string | null;
   streamStopped: boolean;
-  followOutput: boolean;
-  onFollowOutputChange: (follow: boolean) => void;
-  scrollRef: RefObject<HTMLDivElement | null>;
-  endRef: RefObject<HTMLDivElement | null>;
-  onScroll: () => void;
 };
+
+function WorkspaceAgentMessagePartsView({
+  message,
+  isStreamingMessage,
+}: {
+  message: OrchUIMessage;
+  isStreamingMessage: boolean;
+}) {
+  const text = getMessageText(message);
+  const toolParts = message.parts.filter((part) => part.type === "dynamic-tool");
+
+  return (
+    <>
+      {text ? (
+        <Bubble
+          variant={message.role === "user" ? "secondary" : "muted"}
+          align={message.role === "user" ? "end" : "start"}
+          className="max-w-[min(100%,36rem)]"
+        >
+          <BubbleContent className="whitespace-pre-wrap text-pretty">
+            {text}
+            {isStreamingMessage ? (
+              <span
+                aria-hidden
+                className="ml-0.5 inline-block text-foreground motion-safe:animate-pulse motion-reduce:animate-none"
+              >
+                ▍
+              </span>
+            ) : null}
+          </BubbleContent>
+        </Bubble>
+      ) : isStreamingMessage ? (
+        <Marker>
+          <MarkerContent className="text-muted-foreground">
+            <span
+              aria-hidden
+              className="inline-block text-foreground motion-safe:animate-pulse motion-reduce:animate-none"
+            >
+              ▍
+            </span>
+          </MarkerContent>
+        </Marker>
+      ) : null}
+
+      {toolParts.map((part) => {
+        const open = part.state === "input-available" || part.state === "input-streaming";
+        return (
+          <Tool key={part.toolCallId} defaultOpen={open}>
+            <ToolHeader title={part.toolName} type={`tool-${part.toolName}`} state={part.state} />
+            <ToolContent>
+              {"input" in part && part.input != null ? <ToolInput input={part.input} /> : null}
+              {part.state === "output-available" ? (
+                <ToolOutput output={part.output} errorText={undefined} />
+              ) : null}
+              {part.state === "output-error" ? (
+                <ToolOutput output={undefined} errorText={part.errorText} />
+              ) : null}
+            </ToolContent>
+          </Tool>
+        );
+      })}
+    </>
+  );
+}
 
 export function WorkspaceAgentChatPanelView({
   title,
@@ -76,12 +145,15 @@ export function WorkspaceAgentChatPanelView({
   isStreaming,
   streamingMessageId,
   streamStopped,
-  followOutput,
-  onFollowOutputChange,
-  scrollRef,
-  endRef,
-  onScroll,
 }: WorkspaceAgentChatPanelViewProps) {
+  let lastAssistantIndex = -1;
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    if (messages[i]?.role === "assistant") {
+      lastAssistantIndex = i;
+      break;
+    }
+  }
+
   return (
     <div className="flex max-h-[min(60vh,520px)] min-h-0 flex-col border-b border-border">
       <div className="flex items-center gap-2 border-b border-border px-3 py-2">
@@ -168,99 +240,50 @@ export function WorkspaceAgentChatPanelView({
         ) : null}
       </div>
 
-      <div className="relative min-h-0 flex-1">
-        <div ref={scrollRef} className="h-full overflow-y-auto px-3 py-3" onScroll={onScroll}>
-          {messages.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              Send a message to start.
-            </p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <AnimatePresence initial={false}>
-                {(() => {
-                  let lastAssistantIndex = -1;
-                  for (let i = messages.length - 1; i >= 0; i -= 1) {
-                    if (messages[i]?.role === "assistant") {
-                      lastAssistantIndex = i;
-                      break;
-                    }
-                  }
-                  return messages.map((message, index) => {
-                    const isStreamingMessage =
-                      isStreaming &&
-                      message.role === "assistant" &&
-                      message.id === streamingMessageId;
-                    const isLastAssistant =
-                      message.role === "assistant" && index === lastAssistantIndex;
-                    return (
-                      <motion.div
-                        key={message.id}
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{
-                          duration: 0.2,
-                          ease: [0.25, 1, 0.5, 1],
-                          delay: Math.min(index, 4) * 0.04,
-                        }}
-                        className={cn(
-                          "rounded-xl border px-3 py-2 text-sm text-foreground",
-                          message.role === "user"
-                            ? "ml-8 border-border bg-secondary text-secondary-foreground"
-                            : "mr-4 border-border bg-muted text-foreground",
-                        )}
-                      >
-                        {message.content ? (
-                          <p className="whitespace-pre-wrap">
-                            {message.content}
-                            {isStreamingMessage ? (
-                              <span
-                                aria-hidden
-                                className="ml-0.5 inline-block text-foreground motion-safe:animate-pulse motion-reduce:animate-none"
-                              >
-                                ▍
-                              </span>
-                            ) : null}
-                          </p>
-                        ) : isStreamingMessage ? (
-                          <p className="text-muted-foreground">
-                            <span
-                              aria-hidden
-                              className="inline-block text-foreground motion-safe:animate-pulse motion-reduce:animate-none"
-                            >
-                              ▍
-                            </span>
-                          </p>
-                        ) : null}
-                        {message.role === "assistant" ? (
-                          <WorkspaceAgentToolTraceListView toolsCalled={message.toolsCalled} />
-                        ) : null}
-                        {streamStopped && !isStreaming && isLastAssistant ? (
-                          <p className="mt-1 text-xs text-muted-foreground">Stopped</p>
-                        ) : null}
-                      </motion.div>
-                    );
-                  });
-                })()}
-              </AnimatePresence>
-              <div ref={endRef} />
-            </div>
-          )}
-        </div>
+      <MessageScrollerProvider>
+        <MessageScroller className="min-h-0 flex-1">
+          <MessageScrollerViewport className="px-3 py-3">
+            <MessageScrollerContent className="gap-3">
+              {messages.length === 0 ? (
+                <p className="py-8 text-center text-sm text-foreground/70">
+                  Send a message to start.
+                </p>
+              ) : (
+                messages.map((message, index) => {
+                  const isStreamingMessage =
+                    isStreaming &&
+                    message.role === "assistant" &&
+                    message.id === streamingMessageId;
+                  const isLastAssistant =
+                    message.role === "assistant" && index === lastAssistantIndex;
+                  const isLast = index === messages.length - 1;
 
-        {isStreaming && !followOutput ? (
-          <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
-            <Button
-              type="button"
-              size="sm"
-              variant="secondary"
-              className="pointer-events-auto rounded-full"
-              onClick={() => onFollowOutputChange(true)}
-            >
-              Jump to latest
-            </Button>
-          </div>
-        ) : null}
-      </div>
+                  return (
+                    <MessageScrollerItem key={message.id} scrollAnchor={isLast}>
+                      <Message align={message.role === "user" ? "end" : "start"}>
+                        <MessageContent>
+                          <WorkspaceAgentMessagePartsView
+                            message={message}
+                            isStreamingMessage={isStreamingMessage}
+                          />
+                          {streamStopped && !isStreaming && isLastAssistant ? (
+                            <Marker>
+                              <MarkerContent className="text-muted-foreground">
+                                Stopped
+                              </MarkerContent>
+                            </Marker>
+                          ) : null}
+                        </MessageContent>
+                      </Message>
+                    </MessageScrollerItem>
+                  );
+                })
+              )}
+            </MessageScrollerContent>
+          </MessageScrollerViewport>
+          <MessageScrollerButton direction="end" />
+        </MessageScroller>
+      </MessageScrollerProvider>
 
       <Dialog open={isRenameDialogOpen} onOpenChange={(open) => !open && onCloseRename()}>
         <DialogContent data-workspace-agent-overlay>
