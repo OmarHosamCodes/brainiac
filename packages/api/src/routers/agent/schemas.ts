@@ -2,6 +2,7 @@
 export {
   agentChatTurnInputSchema,
   agentChatTurnResponseSchema,
+  agentChatTurnStreamEventSchema,
   agentToolCatalogInputSchema,
   agentToolCatalogResponseSchema,
   dashboardConversationDeleteInputSchema,

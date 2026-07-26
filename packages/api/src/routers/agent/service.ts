@@ -3,6 +3,7 @@ import {
   DASHBOARD_CONVERSATION_MESSAGE_WINDOW,
   DEFAULT_AGENT_MODEL_PRESET,
   agentChatTurnResponseSchema,
+  agentChatTurnStreamEventSchema,
   agentToolCatalogResponseSchema,
   dashboardConversationDetailSchema,
   dashboardConversationListResponseSchema,
@@ -13,9 +14,12 @@ import {
   normalizeDashboardAgentToolPreset,
   resolveOpenRouterModelForTurn,
   runDashboardAgent,
+  streamDashboardAgent,
   type AgencyAgentRuntime,
   type AgentChatTurnInput,
+  type AgentChatTurnStreamEvent,
   type AgentSurface,
+  type AgentToolCall,
   type AgentToolCatalogInput,
   type DashboardConversationSummary,
   type DashboardConversationUsageLatest,
@@ -593,4 +597,253 @@ export async function appendDashboardConversationTurn(
     createdConversation,
     workspaceSnapshot,
   });
+}
+
+export async function* streamDashboardConversationTurn(
+  actorUserId: string,
+  input: { actorUserName: string; turn: AgentChatTurnInput; signal?: AbortSignal },
+): AsyncGenerator<AgentChatTurnStreamEvent, void, void> {
+  const userId = actorUserId;
+  const { actorUserName: userName, turn } = input;
+  const surface: AgentSurface = turn.surface ?? "canvas";
+  const toolPreset = surface === "agency" ? "ask" : turn.toolPreset;
+
+  if (surface === "agency" && !turn.teamId?.trim()) {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Agency agent turns require a teamId.",
+    });
+  }
+
+  if (surface === "agency" && turn.toolPreset === "agent") {
+    throw new ORPCError("BAD_REQUEST", {
+      message: "Agent edits are canvas-only for now.",
+    });
+  }
+
+  const now = new Date();
+  const [fullWorkspaceSnapshot, marketplaceResult] = await Promise.all([
+    surface === "agency"
+      ? Promise.resolve({ nodes: [], updatedAt: null as string | null })
+      : turn.nodes
+        ? Promise.resolve({
+            nodes: turn.nodes,
+            updatedAt: null as string | null,
+          })
+        : getWorkspaceSnapshot(userId, {}),
+    surface === "agency"
+      ? Promise.resolve({ items: [] })
+      : getWorkspaceMarketplaceItems(userId, { limit: 200, kind: "all" }),
+  ]);
+
+  const modelPreset = turn.modelPreset ?? DEFAULT_AGENT_MODEL_PRESET;
+  const resolvedModel = await resolveOpenRouterModelForTurn({
+    preset: modelPreset,
+    pinnedModelId: turn.model,
+    content: turn.content,
+    signals: {
+      contentLength: turn.content.trim().length,
+      scopeCount: turn.scopeRefs?.length ?? turn.scopeNodes?.length ?? 0,
+      mentionCount: turn.contextNodeTitles?.length ?? 0,
+      toolPreset,
+    },
+  });
+  const resolvedModelId = resolvedModel.modelId;
+
+  const conversation = turn.conversationId
+    ? await getConversationRecord(userId, turn.conversationId)
+    : await createDashboardConversation(userId, {
+        content: turn.content,
+        model: resolvedModelId,
+        toolPreset,
+      });
+  const createdConversation = !turn.conversationId;
+
+  const recentMessagesDesc = await db
+    .select()
+    .from(dashboardConversationMessage)
+    .where(
+      and(
+        eq(dashboardConversationMessage.conversationId, conversation.id),
+        eq(dashboardConversationMessage.userId, userId),
+      ),
+    )
+    .orderBy(desc(dashboardConversationMessage.createdAt), desc(dashboardConversationMessage.id))
+    .limit(Math.max(0, DASHBOARD_CONVERSATION_MESSAGE_WINDOW - 1));
+  const recentMessages = [...recentMessagesDesc].reverse().map((message) => ({
+    role: message.role as "user" | "assistant",
+    content: message.content,
+  }));
+  const scopeNodes = turn.scopeNodes ?? turn.nodes;
+  const agencyRuntime =
+    surface === "agency" && turn.teamId ? createAgencyAgentRuntime(userId, turn.teamId) : null;
+
+  const contextTitles = turn.contextNodeTitles ?? turn.scopeRefs?.map((ref) => ref.label) ?? [];
+  const userMessageId = createWorkspaceId("message");
+  const assistantMessageId = createWorkspaceId("message");
+
+  const userMessageRow = {
+    id: userMessageId,
+    conversationId: conversation.id,
+    userId,
+    role: "user" as const,
+    content: turn.content,
+    contextNodeTitles: contextTitles,
+    model: resolvedModelId,
+    toolsCalled: [] as AgentToolCall[],
+    createdAt: now,
+  };
+
+  await db.insert(dashboardConversationMessage).values(userMessageRow);
+
+  yield agentChatTurnStreamEventSchema.parse({
+    type: "started",
+    conversationId: conversation.id,
+    createdConversation,
+    userMessageId,
+    assistantMessageId,
+    model: resolvedModelId,
+  });
+
+  let accumulated = "";
+  const toolsById = new Map<string, AgentToolCall>();
+  const toolOrder: string[] = [];
+  let stopped = Boolean(input.signal?.aborted);
+
+  try {
+    for await (const event of streamDashboardAgent(
+      [
+        ...recentMessages,
+        {
+          role: "user",
+          content: turn.content,
+        },
+      ],
+      {
+        nodes: fullWorkspaceSnapshot.nodes,
+        scopeNodes,
+        marketplaceItems: marketplaceResult.items,
+        updatedAt: fullWorkspaceSnapshot.updatedAt,
+        userName,
+        activeTabId: turn.activeTabId,
+        surface,
+        scopeRefs: turn.scopeRefs,
+        teamId: turn.teamId ?? null,
+      },
+      {
+        model: resolvedModelId,
+        modelPreset,
+        toolPreset,
+        agencyRuntime,
+        signal: input.signal,
+      },
+    )) {
+      if (event.type === "token") {
+        accumulated += event.delta;
+        yield agentChatTurnStreamEventSchema.parse(event);
+        continue;
+      }
+      if (event.type === "tool") {
+        const toolId = event.tool.id ?? `tool_${toolOrder.length}`;
+        if (!toolsById.has(toolId)) {
+          toolOrder.push(toolId);
+        }
+        toolsById.set(toolId, { ...event.tool, id: toolId });
+        yield agentChatTurnStreamEventSchema.parse({
+          type: "tool",
+          tool: { ...event.tool, id: toolId },
+        });
+        continue;
+      }
+      if (event.type === "done") {
+        stopped = stopped || Boolean(input.signal?.aborted);
+        const toolsCalled = toolOrder
+          .map((id) => toolsById.get(id))
+          .filter((tool): tool is AgentToolCall => Boolean(tool));
+        const finalTools = event.toolCalls.length > 0 ? event.toolCalls : toolsCalled;
+        const responseText =
+          event.responseText.trim().length > 0
+            ? event.responseText.trim().slice(0, 20_000)
+            : stopped
+              ? "Stopped before a reply."
+              : "I couldn't generate a response.";
+
+        const nextUsageSummary = buildNextConversationUsageSummary(
+          conversation.usageSummary,
+          event.usage,
+        );
+        const workspaceSnapshot =
+          surface === "agency"
+            ? null
+            : event.workspaceSnapshot
+              ? {
+                  nodes: event.workspaceSnapshot.nodes,
+                  updatedAt: (
+                    await saveWorkspaceNodes(userId, { nodes: event.workspaceSnapshot.nodes })
+                  ).updatedAt,
+                }
+              : null;
+
+        const assistantCreatedAt = new Date();
+        const assistantMessageRow = {
+          id: assistantMessageId,
+          conversationId: conversation.id,
+          userId,
+          role: "assistant" as const,
+          content: responseText,
+          contextNodeTitles: [] as string[],
+          model: event.model || resolvedModelId,
+          toolsCalled: finalTools,
+          createdAt: assistantCreatedAt,
+        };
+
+        await db.insert(dashboardConversationMessage).values(assistantMessageRow);
+        await db
+          .update(dashboardConversation)
+          .set({
+            model: event.model || resolvedModelId,
+            toolPreset,
+            usageSummary: nextUsageSummary,
+            updatedAt: assistantCreatedAt,
+            lastMessageAt: assistantCreatedAt,
+          })
+          .where(
+            and(
+              eq(dashboardConversation.id, conversation.id),
+              eq(dashboardConversation.userId, userId),
+            ),
+          );
+
+        const conversationSummary = mapConversationSummary({
+          row: {
+            ...conversation,
+            model: event.model || resolvedModelId,
+            toolPreset,
+            usageSummary: nextUsageSummary,
+            updatedAt: assistantCreatedAt,
+            lastMessageAt: assistantCreatedAt,
+          },
+          lastMessagePreview: buildDashboardMessagePreview(responseText),
+        });
+
+        yield agentChatTurnStreamEventSchema.parse({
+          type: "completed",
+          conversation: conversationSummary,
+          userMessage: mapConversationMessage(userMessageRow),
+          assistantMessage: mapConversationMessage(assistantMessageRow),
+          createdConversation,
+          workspaceSnapshot,
+          stopped,
+        });
+      }
+    }
+  } catch (error) {
+    const message =
+      error instanceof Error && error.message.trim()
+        ? error.message.trim().slice(0, 2_000)
+        : "Failed to stream the agent reply.";
+    yield agentChatTurnStreamEventSchema.parse({
+      type: "error",
+      message,
+    });
+  }
 }

@@ -1,0 +1,106 @@
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { eq } from "drizzle-orm";
+
+Bun.env.DATABASE_URL ??= "postgresql://postgres:password@localhost:5440/orch";
+
+const realAgent = await import("@orch/agent");
+const streamDashboardAgent = mock(async function* () {
+  yield { type: "token" as const, delta: "Hi" };
+  yield {
+    type: "done" as const,
+    responseText: "Hi",
+    toolCalls: [],
+    usage: {
+      modelId: "test-model",
+      contextLength: null,
+      inputTokens: 4,
+      cachedTokens: 0,
+      outputTokens: 2,
+      reasoningTokens: 0,
+      totalTokens: 6,
+      costUsd: 0,
+    },
+    model: "test-model",
+    workspaceNodeCount: 0,
+    workspaceSnapshot: null,
+  };
+});
+
+mock.module("@orch/agent", () => ({
+  ...realAgent,
+  streamDashboardAgent,
+  runDashboardAgent: mock(async () => ({
+    response: "unused",
+    model: "test-model",
+    toolsCalled: [],
+    workspaceNodeCount: 0,
+    usage: null,
+    workspaceSnapshot: null,
+    messagesCount: 1,
+  })),
+}));
+
+const [{ db }, { user }, service] = await Promise.all([
+  import("@orch/db"),
+  import("@orch/db/schema/auth"),
+  import("./service"),
+]);
+
+const fixtureUsers: string[] = [];
+
+beforeEach(() => {
+  streamDashboardAgent.mockClear();
+});
+
+afterEach(async () => {
+  for (const userId of fixtureUsers.splice(0)) {
+    await db.delete(user).where(eq(user.id, userId));
+  }
+});
+
+async function createFixtureUser() {
+  const userId = `integration-stream-${crypto.randomUUID()}`;
+  await db.insert(user).values({
+    id: userId,
+    name: "Stream Integration User",
+    email: `${userId}@example.test`,
+  });
+  fixtureUsers.push(userId);
+  return userId;
+}
+
+describe("dashboard agent stream persistence", () => {
+  test("streamDashboardConversationTurn persists messages and yields completed", async () => {
+    const userId = await createFixtureUser();
+    const events = [];
+
+    for await (const event of service.streamDashboardConversationTurn(userId, {
+      actorUserName: "Stream User",
+      turn: {
+        content: "Hello stream",
+        model: "test-model",
+        toolPreset: "ask",
+        surface: "canvas",
+        nodes: [],
+      },
+    })) {
+      events.push(event);
+    }
+
+    expect(streamDashboardAgent).toHaveBeenCalledTimes(1);
+    expect(events.some((event) => event.type === "started")).toBe(true);
+    expect(events.some((event) => event.type === "token")).toBe(true);
+    const completed = events.find((event) => event.type === "completed");
+    expect(completed?.type).toBe("completed");
+    if (completed?.type === "completed") {
+      expect(completed.assistantMessage.content).toBe("Hi");
+      expect(completed.stopped).toBe(false);
+      expect(completed.createdConversation).toBe(true);
+    }
+
+    const detail = await service.getDashboardConversation(userId, {
+      conversationId: completed?.type === "completed" ? completed.conversation.id : "",
+    });
+    expect(detail.messages.map((message) => message.role)).toEqual(["user", "assistant"]);
+  });
+});

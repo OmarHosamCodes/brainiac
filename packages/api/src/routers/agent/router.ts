@@ -1,6 +1,7 @@
 import {
   agentChatTurnInputSchema,
   agentChatTurnResponseSchema,
+  agentChatTurnStreamEventSchema,
   agentToolCatalogInputSchema,
   agentToolCatalogResponseSchema,
   dashboardConversationDeleteInputSchema,
@@ -29,6 +30,7 @@ import {
   getDashboardConversation,
   listDashboardConversations,
   renameDashboardConversation,
+  streamDashboardConversationTurn,
 } from "./service";
 
 export const agentRouter = {
@@ -84,6 +86,34 @@ export const agentRouter = {
         );
       } catch (error) {
         throw toInternalServerError("agent.chat.turn", error, {
+          conversationId: input.conversationId ?? null,
+          requestedNodesCount: input.nodes?.length,
+          workspaceSource: input.nodes ? "request" : "database",
+          requestedModel: input.model ?? null,
+          toolPreset: input.toolPreset,
+          surface: input.surface,
+        });
+      }
+    }),
+    turnStream: protectedProcedure.input(agentChatTurnInputSchema).handler(async function* ({
+      input,
+      context,
+      signal,
+    }) {
+      try {
+        if (!input.conversationId) {
+          await assertCanCreateDashboardConversation(context.session.user.id, {});
+        }
+
+        for await (const event of streamDashboardConversationTurn(context.session.user.id, {
+          actorUserName: context.session.user.name,
+          turn: input,
+          signal,
+        })) {
+          yield agentChatTurnStreamEventSchema.parse(event);
+        }
+      } catch (error) {
+        throw toInternalServerError("agent.chat.turnStream", error, {
           conversationId: input.conversationId ?? null,
           requestedNodesCount: input.nodes?.length,
           workspaceSource: input.nodes ? "request" : "database",
