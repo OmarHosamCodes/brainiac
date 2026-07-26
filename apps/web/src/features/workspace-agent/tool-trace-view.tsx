@@ -1,72 +1,63 @@
-import type { AgentToolCallEntry } from "@orch/agent/types";
+import type { AgentToolCall, AgentToolCallEntry } from "@orch/agent/types";
+import { Wrench } from "lucide-react";
 
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@/components/ai-elements/tool";
 import { getWorkspaceAgentToolTraceViewModel } from "@/features/workspace-agent/workspace-agent-view-models";
-import { cn } from "@/lib/utils";
+import { Marker, MarkerContent, MarkerIcon } from "@/ui/marker";
 
 type WorkspaceAgentToolTraceProps = {
   entry: AgentToolCallEntry;
 };
 
+function toolStateFromCall(tool: AgentToolCall) {
+  switch (tool.status) {
+    case "in_progress":
+      return "input-available" as const;
+    case "error":
+      return "output-error" as const;
+    case "completed":
+      return "output-available" as const;
+    default: {
+      const _exhaustive: never = tool.status;
+      return _exhaustive;
+    }
+  }
+}
+
 export function WorkspaceAgentToolTraceView({ entry }: WorkspaceAgentToolTraceProps) {
   const viewModel = getWorkspaceAgentToolTraceViewModel(entry);
 
-  if (!viewModel.isStructured) {
+  if (!viewModel.isStructured || typeof entry === "string") {
     return (
-      <div className="rounded-lg border border-border bg-background px-2.5 py-2 font-mono text-xs">
-        <span className="font-semibold text-muted-foreground">{viewModel.name}</span>
-      </div>
+      <Marker>
+        <MarkerIcon>
+          <Wrench className="size-3.5" />
+        </MarkerIcon>
+        <MarkerContent className="font-mono text-xs">{viewModel.name}</MarkerContent>
+      </Marker>
     );
   }
 
-  const isRunning = viewModel.status === "in_progress";
+  const state = toolStateFromCall(entry);
 
   return (
-    <details
-      className="rounded-lg border border-border bg-background px-2.5 py-2 font-mono text-xs"
-      open={isRunning}
-    >
-      <summary className="flex cursor-pointer list-none items-center gap-2 text-muted-foreground [&::-webkit-details-marker]:hidden">
-        <span
-          className={cn(
-            "size-1.5 shrink-0 rounded-full",
-            isRunning
-              ? "bg-foreground"
-              : viewModel.status === "error"
-                ? "bg-destructive"
-                : "bg-muted-foreground",
-          )}
-          aria-hidden="true"
-        />
-        <span className="font-semibold text-foreground">{viewModel.name}</span>
-        {viewModel.durationMs !== undefined ? (
-          <span className="text-muted-foreground">{viewModel.durationMs}ms</span>
+    <Tool defaultOpen={entry.status === "in_progress"}>
+      <ToolHeader title={entry.name} type={`tool-${entry.name}`} state={state} />
+      <ToolContent>
+        {entry.input != null ? <ToolInput input={entry.input} /> : null}
+        {entry.status === "error" ? (
+          <ToolOutput output={undefined} errorText={entry.error ?? "Tool failed"} />
+        ) : entry.output != null ? (
+          <ToolOutput output={entry.output} errorText={undefined} />
         ) : null}
-        {isRunning ? <span className="text-foreground">running</span> : null}
-      </summary>
-      {viewModel.inputText ? (
-        <div className="mt-2 border-t border-border pt-2">
-          <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Input
-          </p>
-          <pre className="max-h-40 overflow-auto whitespace-pre-wrap text-muted-foreground">
-            {viewModel.inputText}
-          </pre>
-        </div>
-      ) : null}
-      {viewModel.outputText ? (
-        <div className="mt-2 border-t border-border pt-2">
-          <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Output
-          </p>
-          <pre className="max-h-48 overflow-auto whitespace-pre-wrap text-foreground">
-            {viewModel.outputText}
-          </pre>
-        </div>
-      ) : null}
-      {viewModel.error ? (
-        <div className="mt-2 border-t border-border pt-2 text-destructive">{viewModel.error}</div>
-      ) : null}
-    </details>
+      </ToolContent>
+    </Tool>
   );
 }
 
