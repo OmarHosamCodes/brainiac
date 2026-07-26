@@ -1,8 +1,9 @@
-import { AlertTriangle, BarChart3, X } from "lucide-react";
+import { AlertTriangle, BarChart3 } from "lucide-react";
 import { type CSSProperties } from "react";
 
 import { AgencyMemberAvatar } from "@/features/shared/agency-member-avatar";
 import { AgencyProjectHueDot } from "@/features/shared/agency-project-hue-dot";
+import { AgencyProjectShareMorph } from "@/features/dashboard/agency-project-share-morph";
 import {
   agencyEmptyPanelClass,
   agencyErrorPanelClass,
@@ -83,256 +84,6 @@ function AllocationSegment({
         </p>
       </TooltipContent>
     </Tooltip>
-  );
-}
-
-function polarToCartesian(cx: number, cy: number, radius: number, angleDeg: number) {
-  const angleRad = (angleDeg * Math.PI) / 180;
-  return {
-    x: cx + radius * Math.cos(angleRad),
-    y: cy + radius * Math.sin(angleRad),
-  };
-}
-
-function describeArc(
-  cx: number,
-  cy: number,
-  radius: number,
-  startAngleDeg: number,
-  endAngleDeg: number,
-): string {
-  const start = polarToCartesian(cx, cy, radius, startAngleDeg);
-  const end = polarToCartesian(cx, cy, radius, endAngleDeg);
-  const sweep = endAngleDeg - startAngleDeg;
-  if (sweep <= 0) return "";
-  const largeArc = sweep > 180 ? 1 : 0;
-  return `M ${start.x.toFixed(3)} ${start.y.toFixed(3)} A ${radius} ${radius} 0 ${largeArc} 1 ${end.x.toFixed(3)} ${end.y.toFixed(3)}`;
-}
-
-function ProjectShareDonut({
-  projects,
-  totalSeconds,
-  isDark,
-  totalButtonId,
-  breakdownPanelId,
-  onTotalClick,
-}: {
-  projects: Array<{ projectId: string; hours: number }>;
-  totalSeconds: number;
-  isDark: boolean;
-  totalButtonId: string;
-  breakdownPanelId: string;
-  onTotalClick: () => void;
-}) {
-  const size = 100;
-  const cx = 50;
-  const cy = 50;
-  const radius = 42;
-  const strokeWidth = 11;
-  const gapDeg = 2.8;
-
-  const slices = projects.slice(0, 8).map((project) => {
-    const hue = projectHueFor(project.projectId);
-    return {
-      projectId: project.projectId,
-      seconds: Math.round(project.hours * 3_600),
-      color: isDark ? hue.dark : hue.light,
-    };
-  });
-
-  const trackedSeconds = slices.reduce((sum, slice) => sum + slice.seconds, 0);
-  const total = Math.max(totalSeconds, 1);
-  const trackedSweep = (trackedSeconds / total) * 360;
-  const totalGap = slices.length > 1 ? (slices.length - 1) * gapDeg : 0;
-  const drawableSweep = Math.max(0, trackedSweep - totalGap);
-
-  let angle = -90;
-  const arcs = slices
-    .map((slice, index) => {
-      const share = trackedSeconds > 0 ? slice.seconds / trackedSeconds : 0;
-      const sweep = drawableSweep * share;
-      const start = angle;
-      const end = angle + sweep;
-      angle = end + (index < slices.length - 1 ? gapDeg : 0);
-      const path = describeArc(cx, cy, radius, start, end);
-      if (!path) return null;
-      return { ...slice, path };
-    })
-    .filter((arc): arc is NonNullable<typeof arc> => arc !== null);
-
-  return (
-    <div className="relative mt-6 flex aspect-square max-h-72 items-center justify-center">
-      <svg
-        viewBox={`0 0 ${size} ${size}`}
-        className="size-full"
-        role="img"
-        aria-label="Project time share"
-      >
-        <circle
-          cx={cx}
-          cy={cy}
-          r={radius}
-          fill="none"
-          stroke="var(--muted)"
-          strokeOpacity={0.35}
-          strokeWidth={strokeWidth}
-        />
-        {arcs.map((arc) => (
-          <path
-            key={arc.projectId}
-            d={arc.path}
-            fill="none"
-            stroke={arc.color}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-          />
-        ))}
-      </svg>
-      <div className="absolute flex size-32 items-center justify-center rounded-full border border-default bg-default text-center">
-        <button
-          id={totalButtonId}
-          type="button"
-          className={cn(
-            "rounded-full px-3 py-2 transition-colors hover:bg-elevated",
-            agencyFocusRingClass,
-          )}
-          aria-expanded={false}
-          aria-controls={breakdownPanelId}
-          onClick={onTotalClick}
-        >
-          <p className={cn(agencyMetricClass, "text-lg")}>{formatDuration(totalSeconds)}</p>
-          <p className="mt-1 text-xs text-muted">Total</p>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-type HourBreakdownSegment = {
-  id: string;
-  label: string;
-  purpose: string;
-  seconds: number;
-  barClass: string;
-  dotClass: string;
-};
-
-function HourBreakdownChart({
-  panelId,
-  totalSeconds,
-  externalSeconds,
-  internalSeconds,
-  paidSeconds,
-  onClose,
-}: {
-  panelId: string;
-  totalSeconds: number;
-  externalSeconds: number;
-  internalSeconds: number;
-  paidSeconds: number;
-  onClose: () => void;
-}) {
-  const wasteSeconds = Math.max(0, externalSeconds - paidSeconds);
-  const segments: HourBreakdownSegment[] = [
-    {
-      id: "paid",
-      label: "Paid",
-      purpose: "External hours minus waste — the billable client share.",
-      seconds: paidSeconds,
-      barClass: "bg-primary",
-      dotClass: "bg-primary",
-    },
-    {
-      id: "waste",
-      label: "Waste",
-      purpose: "External time marked as non-billable or waste.",
-      seconds: wasteSeconds,
-      barClass: "bg-warning",
-      dotClass: "bg-warning",
-    },
-    {
-      id: "internal",
-      label: "Internal",
-      purpose: "Agency and internal-client work, not client-billable.",
-      seconds: internalSeconds,
-      barClass: "bg-info",
-      dotClass: "bg-info",
-    },
-  ];
-  const chartTotal = Math.max(
-    1,
-    segments.reduce((sum, segment) => sum + segment.seconds, 0),
-  );
-
-  return (
-    <div id={panelId} className="mt-4" role="region" aria-label="Hour breakdown chart">
-      <div className="flex items-center justify-between gap-2">
-        <p className={agencyLabelClass}>Hour breakdown</p>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="size-7 text-toned hover:text-highlighted"
-          aria-label="Close hour breakdown"
-          onClick={onClose}
-        >
-          <X className="size-4" />
-        </Button>
-      </div>
-
-      <div className="mt-4 flex items-baseline justify-between gap-3">
-        <p className="text-xs text-muted">Total time in range</p>
-        <p className={cn(agencyMetricClass, "text-base tabular-nums")}>
-          {formatDuration(totalSeconds)}
-        </p>
-      </div>
-
-      <div
-        className="mt-3 flex h-3 overflow-hidden rounded-full bg-elevated"
-        role="img"
-        aria-label="Paid, waste, and internal time share"
-      >
-        {segments.map((segment) => {
-          if (segment.seconds <= 0) return null;
-          const width = Math.max(2, (segment.seconds / chartTotal) * 100);
-          return (
-            <span
-              key={segment.id}
-              className={cn("h-full", segment.barClass)}
-              style={{ width: `${width}%` }}
-              title={`${segment.label}: ${formatDuration(segment.seconds)}`}
-            />
-          );
-        })}
-      </div>
-
-      <ul className="mt-5 space-y-4">
-        {segments.map((segment) => {
-          const share = totalSeconds > 0 ? (segment.seconds / totalSeconds) * 100 : 0;
-          return (
-            <li key={segment.id} className="min-w-0">
-              <div className="flex items-baseline justify-between gap-3">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className={cn("size-2.5 shrink-0 rounded-full", segment.dotClass)} />
-                  <span className="text-sm font-semibold text-highlighted">{segment.label}</span>
-                </div>
-                <span className={cn(agencyMetricClass, "shrink-0 tabular-nums text-muted")}>
-                  {formatDuration(segment.seconds)}
-                  <span className="ml-1.5 text-[10px] font-medium">{share.toFixed(0)}%</span>
-                </span>
-              </div>
-              <p className="mt-1 pl-4.5 text-xs leading-snug text-muted">{segment.purpose}</p>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-elevated">
-                <span
-                  className={cn("block h-full rounded-full", segment.barClass)}
-                  style={{ width: `${Math.max(segment.seconds > 0 ? 2 : 0, share)}%` }}
-                />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
   );
 }
 
@@ -427,25 +178,20 @@ export function AgencyDashboardSurfaceView({ viewModel }: AgencyDashboardSurface
           <section className="grid gap-4 [content-visibility:auto] lg:grid-cols-[22rem_minmax(0,1fr)]">
             <div className={cn(agencyPanelClass, "relative overflow-hidden p-4")}>
               <p className={agencyLabelClass}>Project share</p>
-              {hourBreakdownOpen ? (
-                <HourBreakdownChart
-                  panelId={breakdownPanelId}
-                  totalSeconds={summary.totalSeconds}
-                  externalSeconds={summary.projectShareMetrics.externalSeconds}
-                  internalSeconds={summary.projectShareMetrics.internalSeconds}
-                  paidSeconds={summary.projectShareMetrics.paidSeconds}
-                  onClose={() => setHourBreakdownOpen(false)}
-                />
-              ) : (
-                <ProjectShareDonut
-                  projects={rankedProjects}
-                  totalSeconds={summary.totalSeconds}
-                  isDark={isDark}
-                  totalButtonId={totalButtonId}
-                  breakdownPanelId={breakdownPanelId}
-                  onTotalClick={() => setHourBreakdownOpen(true)}
-                />
-              )}
+              <AgencyProjectShareMorph
+                projects={rankedProjects}
+                totalSeconds={summary.totalSeconds}
+                externalSeconds={summary.projectShareMetrics.externalSeconds}
+                internalSeconds={summary.projectShareMetrics.internalSeconds}
+                internalBillableSeconds={summary.projectShareMetrics.internalBillableSeconds}
+                paidSeconds={summary.projectShareMetrics.paidSeconds}
+                isDark={isDark}
+                open={hourBreakdownOpen}
+                onOpen={() => setHourBreakdownOpen(true)}
+                onClose={() => setHourBreakdownOpen(false)}
+                totalButtonId={totalButtonId}
+                breakdownPanelId={breakdownPanelId}
+              />
             </div>
             <div className={cn(agencyPanelClass, "p-4")}>
               <p className={agencyLabelClass}>Ranked projects</p>
