@@ -52,7 +52,7 @@ export function useWorkspaceAgent() {
   const [error, setError] = useState<string | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [pendingMessages, setPendingMessages] = useState<DashboardConversationMessage[]>([]);
-  const [selectedToolPreset, setSelectedToolPreset] = useState<DashboardAgentToolPreset>("ask");
+  const [selectedToolPreset, setSelectedToolPreset] = useState<DashboardAgentToolPreset>("agent");
   const [conversationDraftModelId, setConversationDraftModelId] = useState<string | undefined>();
   const [modelLibraryOpen, setModelLibraryOpen] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
@@ -162,8 +162,24 @@ export function useWorkspaceAgent() {
       }
     }
 
+    function onPointerDown(event: PointerEvent) {
+      if (!expanded || scopeModeActive) return;
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (target.closest("[data-workspace-agent-root]")) return;
+      if (target.closest("[data-workspace-agent-overlay]")) return;
+      if (target.closest('[data-slot="popover-content"]')) return;
+      if (target.closest('[data-slot="dialog-content"]')) return;
+      if (target.closest('[data-slot="dialog-overlay"]')) return;
+      setExpanded(false);
+    }
+
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown, true);
+    };
   }, [expanded, scopeModeActive, setExpanded, setScopeModeActive, toggleExpanded]);
 
   const switchConversation = useCallback(
