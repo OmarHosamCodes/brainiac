@@ -1,5 +1,6 @@
 import type { DashboardConversationMessage } from "@orch/agent";
 import { History, MoreHorizontal, Plus, Trash2 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
 import { WorkspaceAgentToolTraceListView } from "@/features/workspace-agent/tool-trace-view";
 import { Button } from "@/ui/button";
@@ -61,16 +62,16 @@ export function WorkspaceAgentChatPanelView({
   isDeleting,
 }: WorkspaceAgentChatPanelViewProps) {
   return (
-    <div className="flex max-h-[min(60vh,520px)] min-h-0 flex-col border-b border-default">
-      <div className="flex items-center gap-2 border-b border-default px-3 py-2">
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-highlighted">{title}</p>
+    <div className="flex max-h-[min(60vh,520px)] min-h-0 flex-col border-b border-border">
+      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">{title}</p>
         <Popover open={threadMenuOpen} onOpenChange={onThreadMenuOpenChange}>
           <PopoverTrigger asChild>
             <Button type="button" variant="ghost" size="icon-sm" aria-label="Conversation history">
               <History />
             </Button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-72 p-2">
+          <PopoverContent align="end" data-workspace-agent-overlay className="w-72 gap-1 p-2">
             <Button
               type="button"
               variant="ghost"
@@ -85,22 +86,26 @@ export function WorkspaceAgentChatPanelView({
             </Button>
             <div className="max-h-64 overflow-y-auto">
               {conversationOptions.length === 0 ? (
-                <p className="px-2 py-4 text-center text-sm text-muted">No conversations yet</p>
+                <p className="px-2 py-4 text-center text-sm text-muted-foreground">
+                  No conversations yet
+                </p>
               ) : (
                 conversationOptions.map((conversation) => (
                   <button
                     key={conversation.id}
                     type="button"
-                    className="flex w-full flex-col gap-0.5 rounded-lg px-2 py-2 text-left hover:bg-muted/40"
+                    className="flex w-full flex-col gap-0.5 rounded-lg px-2 py-2 text-left hover:bg-accent hover:text-accent-foreground"
                     onClick={() => {
                       onSelectConversation(conversation.id);
                       onThreadMenuOpenChange(false);
                     }}
                   >
-                    <span className="truncate text-sm font-medium text-highlighted">
+                    <span className="truncate text-sm font-medium text-foreground">
                       {conversation.label}
                     </span>
-                    <span className="truncate text-xs text-muted">{conversation.preview}</span>
+                    <span className="truncate text-xs text-muted-foreground">
+                      {conversation.preview}
+                    </span>
                   </button>
                 ))
               )}
@@ -119,7 +124,7 @@ export function WorkspaceAgentChatPanelView({
                 <MoreHorizontal />
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-44 p-1">
+            <PopoverContent align="end" data-workspace-agent-overlay className="w-44 gap-0 p-1">
               <Button
                 type="button"
                 variant="ghost"
@@ -144,31 +149,40 @@ export function WorkspaceAgentChatPanelView({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
         {messages.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted">Send a message to start.</p>
+          <p className="py-8 text-center text-sm text-muted-foreground">Send a message to start.</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={cn(
-                  "rounded-xl border px-3 py-2 text-sm",
-                  message.role === "user"
-                    ? "ml-8 border-primary/20 bg-primary/5 text-highlighted"
-                    : "mr-4 border-default bg-muted/20 text-highlighted",
-                )}
-              >
-                <p className="whitespace-pre-wrap">{message.content}</p>
-                {message.role === "assistant" ? (
-                  <WorkspaceAgentToolTraceListView toolsCalled={message.toolsCalled} />
-                ) : null}
-              </div>
-            ))}
+            <AnimatePresence initial={false}>
+              {messages.map((message, index) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    duration: 0.2,
+                    ease: [0.25, 1, 0.5, 1],
+                    delay: Math.min(index, 4) * 0.04,
+                  }}
+                  className={cn(
+                    "rounded-xl border px-3 py-2 text-sm text-foreground",
+                    message.role === "user"
+                      ? "ml-8 border-border bg-secondary text-secondary-foreground"
+                      : "mr-4 border-border bg-muted text-foreground",
+                  )}
+                >
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                  {message.role === "assistant" ? (
+                    <WorkspaceAgentToolTraceListView toolsCalled={message.toolsCalled} />
+                  ) : null}
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         )}
       </div>
 
       <Dialog open={isRenameDialogOpen} onOpenChange={(open) => !open && onCloseRename()}>
-        <DialogContent>
+        <DialogContent data-workspace-agent-overlay>
           <DialogHeader>
             <DialogTitle>Rename conversation</DialogTitle>
             <DialogDescription>Update the title for this thread.</DialogDescription>
@@ -189,7 +203,7 @@ export function WorkspaceAgentChatPanelView({
       </Dialog>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={(open) => !open && onCloseDelete()}>
-        <DialogContent>
+        <DialogContent data-workspace-agent-overlay>
           <DialogHeader>
             <DialogTitle>Delete conversation</DialogTitle>
             <DialogDescription>This removes the thread permanently.</DialogDescription>
