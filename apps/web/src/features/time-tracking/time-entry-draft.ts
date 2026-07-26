@@ -32,12 +32,14 @@ function toDateInputValue(date: Date) {
 }
 
 function toTimeInputValue(date: Date) {
-  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+  return `${pad2(date.getHours())}:${pad2(date.getMinutes())}:${pad2(date.getSeconds())}`;
 }
 
-/** Display label for draft `HH:MM` — e.g. `5:17AM` (Clockify-style, no space). */
+const DRAFT_CLOCK_TIME_RE = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
+
+/** Display label for draft `HH:MM` / `HH:MM:SS` — e.g. `5:17AM` (Clockify-style, no seconds). */
 export function formatClockTimeLabel(timeHhMm: string): string {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(timeHhMm.trim());
+  const match = DRAFT_CLOCK_TIME_RE.exec(timeHhMm.trim());
   if (!match) return timeHhMm;
   const hours = Number(match[1]);
   const minutes = Number(match[2]);
@@ -48,9 +50,9 @@ export function formatClockTimeLabel(timeHhMm: string): string {
     .replace(/\s/g, "");
 }
 
-/** AM/PM from draft `HH:MM` — used so numpad digit edits keep the field's meridiem. */
+/** AM/PM from draft `HH:MM` / `HH:MM:SS` — used so numpad digit edits keep the field's meridiem. */
 export function meridiemFromDraftTime(timeHhMm: string): "AM" | "PM" | null {
-  const match = /^(\d{1,2}):(\d{2})$/.exec(timeHhMm.trim());
+  const match = DRAFT_CLOCK_TIME_RE.exec(timeHhMm.trim());
   if (!match) return null;
   const hours = Number(match[1]);
   if (!Number.isFinite(hours) || hours < 0 || hours > 23) return null;
@@ -58,9 +60,10 @@ export function meridiemFromDraftTime(timeHhMm: string): "AM" | "PM" | null {
 }
 
 /**
- * Parse free-text clock times into draft `HH:MM`.
+ * Parse free-text clock times into draft `HH:MM:SS`.
  * Accepts `5:17AM`, `5:17 pm`, `17:17`, `5:17`, `517am`, and numpad forms like `12.48` / `1248`.
- * When digits have no meridiem and hours are 1–12, `preferMeridiem` keeps AM/PM from the prior value.
+ * Minute-only input snaps seconds to `:00`. When digits have no meridiem and hours are 1–12,
+ * `preferMeridiem` keeps AM/PM from the prior value.
  */
 export function parseClockTimeLabel(
   value: string,
@@ -120,7 +123,7 @@ export function parseClockTimeLabel(
     return null;
   }
 
-  return `${pad2(hours)}:${pad2(minutes)}`;
+  return `${pad2(hours)}:${pad2(minutes)}:00`;
 }
 
 export function formatDurationInput(seconds: number): string {
@@ -336,14 +339,15 @@ if (import.meta.main) {
   }
   const window = createDefaultManualTimeWindow(now);
   console.assert(window.date === "2026-07-06");
-  console.assert(window.startTime === "11:00");
-  console.assert(window.endTime === "12:00");
+  console.assert(window.startTime === "11:00:00");
+  console.assert(window.endTime === "12:00:00");
   console.assert(formatClockTimeLabel("05:17") === "5:17AM");
+  console.assert(formatClockTimeLabel("05:17:27") === "5:17AM");
   console.assert(formatClockTimeLabel("22:38") === "10:38PM");
-  console.assert(parseClockTimeLabel("5:17AM") === "05:17");
-  console.assert(parseClockTimeLabel("10:38 pm") === "22:38");
-  console.assert(parseClockTimeLabel("17:17") === "17:17");
-  console.assert(parseClockTimeLabel("12.48") === "12:48");
-  console.assert(parseClockTimeLabel("130", { preferMeridiem: "PM" }) === "13:30");
+  console.assert(parseClockTimeLabel("5:17AM") === "05:17:00");
+  console.assert(parseClockTimeLabel("10:38 pm") === "22:38:00");
+  console.assert(parseClockTimeLabel("17:17") === "17:17:00");
+  console.assert(parseClockTimeLabel("12.48") === "12:48:00");
+  console.assert(parseClockTimeLabel("130", { preferMeridiem: "PM" }) === "13:30:00");
   console.assert(parseClockTimeLabel("bogus") === null);
 }

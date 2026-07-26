@@ -5,6 +5,7 @@ import {
   applyStartTimeToDraft,
   draftSpansNextDay,
   draftToIsoRange,
+  entryToDraft,
   formatClockTimeLabel,
   formatDurationInput,
   parseClockTimeLabel,
@@ -60,7 +61,7 @@ describe("time-entry-draft", () => {
       "2:00",
     );
     expect(durationDraft.date).toBe("2026-07-04");
-    expect(durationDraft.endTime).toBe("01:00");
+    expect(durationDraft.endTime).toBe("01:00:00");
     expect(durationDraft.durationInput).toBe("02:00:00");
   });
 
@@ -123,21 +124,65 @@ describe("time-entry-draft", () => {
     expect(startDraft.durationInput).toBe("02:32:00");
   });
 
+  test("entryToDraft preserves seconds", () => {
+    const draft = entryToDraft({
+      projectId: "project-1",
+      taskId: "task-1",
+      tags: [],
+      isBillable: true,
+      startedAt: new Date(2026, 6, 4, 10, 43, 27).toISOString(),
+      endedAt: new Date(2026, 6, 4, 11, 0, 35).toISOString(),
+      durationSeconds: 1_028,
+      description: "precise",
+    });
+    expect(draft.startTime).toBe("10:43:27");
+    expect(draft.endTime).toBe("11:00:35");
+    expect(draft.durationInput).toBe("00:17:08");
+
+    const range = draftToIsoRange(draft);
+    expect("error" in range).toBe(false);
+    if (!("error" in range)) {
+      expect(range.durationSeconds).toBe(1_028);
+    }
+  });
+
+  test("applyDurationToDraft keeps second precision on save", () => {
+    const durationDraft = applyDurationToDraft(
+      {
+        ...baseDraft,
+        startTime: "10:43:27",
+        endTime: "11:00:35",
+        durationInput: "00:17:08",
+      },
+      "00:14:08",
+    );
+    expect(durationDraft.endTime).toBe("10:57:35");
+    expect(durationDraft.durationInput).toBe("00:14:08");
+
+    const range = draftToIsoRange(durationDraft);
+    expect("error" in range).toBe(false);
+    if (!("error" in range)) {
+      expect(range.durationSeconds).toBe(848);
+    }
+  });
+
   test("formatClockTimeLabel and parseClockTimeLabel", () => {
     expect(formatClockTimeLabel("05:17")).toBe("5:17AM");
+    expect(formatClockTimeLabel("05:17:27")).toBe("5:17AM");
     expect(formatClockTimeLabel("22:38")).toBe("10:38PM");
-    expect(parseClockTimeLabel("5:17AM")).toBe("05:17");
-    expect(parseClockTimeLabel("10:38 pm")).toBe("22:38");
-    expect(parseClockTimeLabel("17:17")).toBe("17:17");
-    expect(parseClockTimeLabel("517am")).toBe("05:17");
+    expect(formatClockTimeLabel("22:38:09")).toBe("10:38PM");
+    expect(parseClockTimeLabel("5:17AM")).toBe("05:17:00");
+    expect(parseClockTimeLabel("10:38 pm")).toBe("22:38:00");
+    expect(parseClockTimeLabel("17:17")).toBe("17:17:00");
+    expect(parseClockTimeLabel("517am")).toBe("05:17:00");
     expect(parseClockTimeLabel("bogus")).toBeNull();
   });
 
   test("parseClockTimeLabel accepts numpad decimal separators", () => {
-    expect(parseClockTimeLabel("12.48")).toBe("12:48");
-    expect(parseClockTimeLabel("12,48PM")).toBe("12:48");
-    expect(parseClockTimeLabel("1.30", { preferMeridiem: "PM" })).toBe("13:30");
-    expect(parseClockTimeLabel("130", { preferMeridiem: "PM" })).toBe("13:30");
-    expect(parseClockTimeLabel("130", { preferMeridiem: "AM" })).toBe("01:30");
+    expect(parseClockTimeLabel("12.48")).toBe("12:48:00");
+    expect(parseClockTimeLabel("12,48PM")).toBe("12:48:00");
+    expect(parseClockTimeLabel("1.30", { preferMeridiem: "PM" })).toBe("13:30:00");
+    expect(parseClockTimeLabel("130", { preferMeridiem: "PM" })).toBe("13:30:00");
+    expect(parseClockTimeLabel("130", { preferMeridiem: "AM" })).toBe("01:30:00");
   });
 });
