@@ -1,4 +1,4 @@
-import { Loader2, MoreVertical, Trash2, TrashIcon } from "lucide-react";
+import { Loader2, MoreVertical, Pencil, Trash2, TrashIcon } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/ui/button";
@@ -21,6 +21,7 @@ type AgencyReportRowActionsProps = {
   taskIsWaste: boolean | null;
   deleting?: boolean;
   wastePending?: boolean;
+  onEditDetails?: () => void;
   onDelete: () => void;
   onToggleWaste?: () => void;
 };
@@ -32,6 +33,7 @@ export function AgencyReportRowActions({
   taskIsWaste,
   deleting = false,
   wastePending = false,
+  onEditDetails,
   onDelete,
   onToggleWaste,
 }: AgencyReportRowActionsProps) {
@@ -52,6 +54,7 @@ export function AgencyReportRowActions({
             className={cn("h-8 w-8 p-0", agencyFocusRingClass)}
             disabled={pending}
             aria-label={`Actions for ${label}`}
+            onClick={(event) => event.stopPropagation()}
           >
             {pending ? (
               <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
@@ -61,7 +64,25 @@ export function AgencyReportRowActions({
           </Button>
         </PopoverTrigger>
 
-        <PopoverContent align="end" className="w-44 p-1">
+        <PopoverContent
+          align="end"
+          className="w-48 p-1"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {onEditDetails ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start"
+              onClick={() => {
+                setMenuOpen(false);
+                onEditDetails();
+              }}
+            >
+              <Pencil className="size-3.5" />
+              Edit details
+            </Button>
+          ) : null}
           {canToggleWaste ? (
             <Button
               variant="ghost"

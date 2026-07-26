@@ -3,7 +3,12 @@ import { AlertTriangle, BarChart2 } from "lucide-react";
 import { AgencyReportsTable } from "@/features/reports/agency-reports-table";
 import { Button } from "@/ui/button";
 import { Skeleton } from "@/ui/skeleton";
-import { agencyEmptyPanelClass, agencyErrorPanelClass } from "@/features/shared/agency-ui";
+import {
+  agencyEmptyPanelClass,
+  agencyErrorPanelClass,
+  agencyMetricClass,
+} from "@/features/shared/agency-ui";
+import { formatDuration } from "@/lib/utils/format-duration";
 import type { AgencyReportsSurfaceViewModel } from "./hooks/use-agency-reports-surface";
 
 export type AgencyReportsSurfaceViewProps = {
@@ -60,20 +65,27 @@ export function AgencyReportsSurfaceView({ vm }: AgencyReportsSurfaceViewProps) 
   }
 
   return (
-    <AgencyReportsTable
-      teamId={vm.teamId}
-      entries={vm.entries}
-      visibleFields={vm.visibleFields}
-      projects={vm.projects}
-      tasks={vm.tasks}
-      tasksLoading={vm.tasksLoading}
-      updatingRowKeys={vm.updatingRowKeys}
-      deletingEntryIds={vm.deletingEntryIds}
-      wastePendingRowKeys={vm.wastePendingRowKeys}
-      onTaskChange={vm.onTaskChange}
-      onDescriptionChange={vm.onDescriptionChange}
-      onDeleteRow={vm.onDeleteRow}
-      onToggleWaste={vm.onToggleWaste}
-    />
+    <div className="space-y-4">
+      <p className="px-1 text-xs text-muted">
+        Total in filtered range{" "}
+        <span className={agencyMetricClass}>{formatDuration(vm.totalSeconds, "clock")}</span>
+      </p>
+      <AgencyReportsTable
+        teamId={vm.teamId}
+        entries={vm.entries}
+        visibleFields={vm.visibleFields}
+        projects={vm.projects}
+        tasks={vm.tasks}
+        tasksLoading={vm.tasksLoading}
+        updatingRowKeys={vm.updatingRowKeys}
+        deletingEntryIds={vm.deletingEntryIds}
+        wastePendingRowKeys={vm.wastePendingRowKeys}
+        onTaskChange={vm.onTaskChange}
+        onDescriptionChange={vm.onDescriptionChange}
+        onEditDetails={vm.onEditDetails}
+        onDeleteRow={vm.onDeleteRow}
+        onToggleWaste={vm.onToggleWaste}
+      />
+    </div>
   );
 }

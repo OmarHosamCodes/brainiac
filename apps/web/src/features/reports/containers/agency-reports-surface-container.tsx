@@ -1,4 +1,5 @@
 import type { AgencyTimeRangeFilters } from "@/features/shared/use-agency-time-range-filters";
+import { AgencyReportEntryDetailsDialog } from "@/features/reports/agency-report-entry-details-dialog";
 import { useAgencyReportsSurface } from "../hooks/use-agency-reports-surface";
 import { AgencyReportsSurfaceView } from "../agency-reports-surface-view";
 
@@ -12,5 +13,18 @@ export function AgencyReportsSurfaceContainer({
   filters,
 }: AgencyReportsSurfaceContainerProps) {
   const vm = useAgencyReportsSurface({ teamId, filters });
-  return <AgencyReportsSurfaceView vm={vm} />;
+  return (
+    <>
+      <AgencyReportsSurfaceView vm={vm} />
+      {vm.detailsOpen ? (
+        <AgencyReportEntryDetailsDialog
+          teamId={vm.teamId}
+          entries={vm.detailsEntries}
+          title={vm.detailsLabel}
+          open={vm.detailsOpen}
+          onOpenChange={vm.onDetailsOpenChange}
+        />
+      ) : null}
+    </>
+  );
 }

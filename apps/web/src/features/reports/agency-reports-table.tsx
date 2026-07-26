@@ -44,6 +44,7 @@ type AgencyReportsTableProps = {
   wastePendingRowKeys?: ReadonlySet<string>;
   onTaskChange?: (row: AggregatedReportRow, taskId: string) => void;
   onDescriptionChange?: (row: AggregatedReportRow, description: string) => void;
+  onEditDetails?: (row: AggregatedReportRow) => void;
   onDeleteRow?: (row: AggregatedReportRow) => void;
   onToggleWaste?: (row: AggregatedReportRow) => void;
 };
@@ -62,6 +63,7 @@ export function AgencyReportsTable({
   wastePendingRowKeys,
   onTaskChange,
   onDescriptionChange,
+  onEditDetails,
   onDeleteRow,
   onToggleWaste,
 }: AgencyReportsTableProps) {
@@ -72,7 +74,7 @@ export function AgencyReportsTable({
   const showDescription = isReportFieldVisible(visibleFields, "description");
   const showDuration = isReportFieldVisible(visibleFields, "duration");
   const showAssignee = isReportFieldVisible(visibleFields, "assignee");
-  const showActions = Boolean(onDeleteRow || onToggleWaste);
+  const showActions = Boolean(onEditDetails || onDeleteRow || onToggleWaste);
   const deletingEntryIdSet = new Set(deletingEntryIds);
 
   return (
@@ -205,6 +207,11 @@ export function AgencyReportsTable({
                             taskIsWaste={row.taskIsWaste}
                             deleting={row.entries.some((entry) => deletingEntryIdSet.has(entry.id))}
                             wastePending={wastePendingRowKeys?.has(row.key)}
+                            onEditDetails={
+                              onEditDetails && row.entries.length > 0
+                                ? () => onEditDetails(row)
+                                : undefined
+                            }
                             onDelete={() => onDeleteRow?.(row)}
                             onToggleWaste={
                               row.taskId && onToggleWaste ? () => onToggleWaste(row) : undefined
