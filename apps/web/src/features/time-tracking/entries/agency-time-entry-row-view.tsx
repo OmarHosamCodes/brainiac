@@ -60,7 +60,6 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
     rowDuplicating,
     timeRange,
     durationLabel,
-    displayTitle,
     editingDescription,
     editingDuration,
     onToggleExpand,
@@ -115,36 +114,28 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
             </button>
           </div>
         ) : null}
-        {isMulti ? (
-          <span
-            className={cn(agencyWorkTitleClass, "min-w-0 shrink truncate text-left font-normal")}
-          >
-            {displayTitle}
-          </span>
-        ) : (
-          <Input
-            value={descriptionDraft}
-            onChange={(e) => onDescriptionChange(e.target.value)}
-            onFocus={() => onEditingDescriptionChange(true)}
-            onBlur={() => {
+        <Input
+          value={descriptionDraft}
+          onChange={(e) => onDescriptionChange(e.target.value)}
+          onFocus={() => onEditingDescriptionChange(true)}
+          onBlur={() => {
+            onEditingDescriptionChange(false);
+            onDescriptionBlur();
+          }}
+          onKeyDown={(event) => {
+            onDescriptionKeyDown(event);
+            if (event.key === "Enter" || event.key === "Escape") {
               onEditingDescriptionChange(false);
-              onDescriptionBlur();
-            }}
-            onKeyDown={(event) => {
-              onDescriptionKeyDown(event);
-              if (event.key === "Enter" || event.key === "Escape") {
-                onEditingDescriptionChange(false);
-              }
-            }}
-            disabled={editSaving || rowUpdating}
-            placeholder="Add description"
-            className={cn(
-              agencyWorkTitleClass,
-              "field-sizing-content h-[40px] w-auto min-w-0 max-w-[14rem] shrink border-0 bg-transparent px-0 font-normal shadow-none focus-visible:ring-0",
-            )}
-            aria-label="Add description"
-          />
-        )}
+            }
+          }}
+          disabled={editSaving || rowUpdating}
+          placeholder="Add description"
+          className={cn(
+            agencyWorkTitleClass,
+            "field-sizing-content h-[40px] w-auto min-w-0 max-w-[14rem] shrink border-0 bg-transparent px-0 font-normal shadow-none focus-visible:ring-0",
+          )}
+          aria-label={isMulti ? "Edit description for all entries in group" : "Add description"}
+        />
         <div className="min-w-0 max-w-[min(100%,18rem)] shrink truncate">
           <AgencyTaskChooser
             teamId={view.teamId}

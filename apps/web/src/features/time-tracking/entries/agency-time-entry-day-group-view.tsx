@@ -15,7 +15,10 @@ import {
 } from "@/features/shared/agency-ui";
 import { formatAgencyDayLabel } from "@/features/time-tracking/format-agency-day-label";
 import { formatDuration } from "@/lib/utils/format-duration";
-import type { TimeEntryDayGroup } from "@/features/time-tracking/group-time-entries";
+import {
+  flattenCollapsedGroupsForBulkEdit,
+  type TimeEntryDayGroup,
+} from "@/features/time-tracking/group-time-entries";
 import type { AgencyTimeEntryGroupRowRenderer } from "@/features/time-tracking/entries/agency-time-entry-row-renderer";
 import type { AgencyProject, AgencyProjectTask } from "@/features/task-management/agency-work";
 import type { AgencyTagOption } from "@/features/time-tracking/choosers/agency-tag-chooser";
@@ -81,7 +84,6 @@ export function AgencyTimeEntryDayGroupView({
   tasks = [],
   wastePending = false,
 }: AgencyTimeEntryDayGroupViewProps) {
-  const lastGroupIndex = day.groups.length - 1;
   const dayEntryIds = day.groups.flatMap((group) => group.entries.map((entry) => entry.id));
   const selectedDayEntryIds = dayEntryIds.filter((id) => selectedEntryIds?.has(id));
   const selectedCount = selectedDayEntryIds.length;
@@ -96,6 +98,10 @@ export function AgencyTimeEntryDayGroupView({
     bulkDraft?.isBillable === true ||
     bulkDraft?.isBillable === false,
   );
+  // Bulk mode selects entries one-by-one; flatten so expanded multi-groups
+  // don't hide child checkboxes behind a single vertically-centered control.
+  const displayGroups = bulkEditActive ? flattenCollapsedGroupsForBulkEdit(day.groups) : day.groups;
+  const lastDisplayIndex = displayGroups.length - 1;
 
   return (
     <section
@@ -284,7 +290,7 @@ export function AgencyTimeEntryDayGroupView({
       ) : null}
 
       <ul className="flex min-w-0 flex-col">
-        {day.groups.map((group, index) => {
+        {displayGroups.map((group, index) => {
           const primaryEntry = group.entries[0];
           if (!primaryEntry) return null;
           const groupExpandKey = `${day.dateKey}||${group.collapseKey}`;
@@ -315,7 +321,7 @@ export function AgencyTimeEntryDayGroupView({
                   group,
                   groupExpandKey,
                   highlighted: highlightedEntryId === primaryEntry.id,
-                  omitBottomBorder: index === lastGroupIndex,
+                  omitBottomBorder: index === lastDisplayIndex,
                 })}
               </div>
             </li>

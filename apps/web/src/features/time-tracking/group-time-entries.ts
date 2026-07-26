@@ -89,6 +89,29 @@ export function collapseDuplicatesWithinDay(entries: TimeEntryRecord[]): Collaps
   );
 }
 
+/**
+ * Bulk edit selects entries, not collapsed groups. Expand multi-entry
+ * groups into one selectable row per entry so every row gets a checkbox.
+ */
+export function flattenCollapsedGroupsForBulkEdit(
+  groups: CollapsedEntryGroup[],
+): CollapsedEntryGroup[] {
+  return groups.flatMap((group) => {
+    if (group.entries.length <= 1) return [group];
+    return group.entries.map((entry) => ({
+      collapseKey: `${group.collapseKey}||${entry.id}`,
+      projectId: entry.projectId,
+      taskId: entry.taskId,
+      taskTitle: entry.taskTitle ?? group.taskTitle,
+      projectName: entry.projectName,
+      clientName: entry.clientName,
+      description: entry.description,
+      totalSeconds: entry.durationSeconds,
+      entries: [entry],
+    }));
+  });
+}
+
 export function groupEntriesByDay(entries: TimeEntryRecord[]): TimeEntryDayGroup[] {
   const byDay = new Map<string, TimeEntryRecord[]>();
 

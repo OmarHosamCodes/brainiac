@@ -273,6 +273,7 @@ export function useAgencyTimeEntryRow({
     async (patch: {
       projectId?: string;
       taskId?: string | null;
+      description?: string;
       tagIds?: string[];
       isBillable?: boolean;
     }) => {
@@ -312,10 +313,15 @@ export function useAgencyTimeEntryRow({
     const trimmed = descriptionDraft.trim();
     if (trimmed === resolvedTitle) return;
 
+    if (isMulti) {
+      await saveBulkFieldPatch({ description: trimmed });
+      return;
+    }
+
     const draft = entryToDraft(primaryEntry);
     draft.description = trimmed;
     await saveDraft(draft);
-  }, [descriptionDraft, primaryEntry, resolvedTitle, saveDraft]);
+  }, [descriptionDraft, isMulti, primaryEntry, resolvedTitle, saveBulkFieldPatch, saveDraft]);
 
   const cancelDescriptionEdit = useCallback(() => {
     setDescriptionDraft(resolvedTitle);
