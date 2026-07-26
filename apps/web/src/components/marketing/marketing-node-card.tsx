@@ -22,7 +22,7 @@ export function MarketingNodeCard({ node, selected = false, className }: Marketi
       )}
       style={tintStyle}
     >
-      <div className="border-b border-default/80 px-3 py-2 font-semibold text-highlighted">
+      <div className="border-b border-default px-3 py-2 font-semibold text-highlighted">
         {node.title}
       </div>
       <div className="flex-1 px-3 py-2 text-[11px] leading-relaxed text-muted line-clamp-5">

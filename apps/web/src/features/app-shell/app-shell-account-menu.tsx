@@ -209,7 +209,7 @@ export function AppShellAccountMenu({ variant = "icon" }: AppShellAccountMenuPro
             <button
               type="button"
               className={cn(
-                "group relative flex size-8 items-center justify-center overflow-hidden rounded-full border border-default bg-default text-[11px] font-semibold text-highlighted transition-colors hover:border-accented hover:bg-elevated focus-visible:border-accented focus-visible:bg-elevated active:scale-95",
+                "group relative flex size-8 items-center justify-center overflow-hidden rounded-full border border-default bg-default text-[11px] font-semibold text-highlighted transition-colors hover:border-ring hover:bg-elevated focus-visible:border-ring focus-visible:bg-elevated active:scale-95",
                 shellFocusRingClass,
               )}
               aria-label={`Account menu for ${userName}`}

@@ -117,7 +117,7 @@ export function AgencyMemberChooserView({ view }: AgencyMemberChooserViewProps) 
               className={cn(
                 "relative z-20 flex size-6 shrink-0 items-center justify-center rounded-full",
                 "border border-dashed border-default bg-elevated text-muted",
-                "transition-colors hover:border-accented hover:bg-default hover:text-highlighted",
+                "transition-colors hover:border-ring hover:bg-default hover:text-highlighted",
                 "motion-reduce:transition-none",
                 "-ml-1",
               )}
