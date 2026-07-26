@@ -5,6 +5,11 @@ import { toast } from "sonner";
 
 import { useAppUpdateStore } from "@/features/app-shell/app-update-store";
 import { useBilling } from "@/features/billing/billing-queries";
+import {
+  useAgencyNotificationPreferencesQuery,
+  useSetNotificationPreferencesMutation,
+} from "@/features/notifications/notifications-queries";
+import { useTeamStore } from "@/features/team/team-store";
 import { authClient } from "@/lib/auth-client";
 import { getServerUrl } from "@/lib/env";
 import { getUserAvatarPublicUrl } from "@/lib/user-avatar-url";
@@ -12,6 +17,19 @@ import { getErrorMessage } from "@/lib/utils/get-error-message";
 import { useTheme } from "@/stores/theme";
 
 import { useUserSettingsModalState, type UserSettingsPane } from "./use-user-settings-modal-state";
+
+export type NotificationPreferenceType =
+  | "task.assigned"
+  | "task.message"
+  | "journey.milestone"
+  | "timer.activity"
+  | "team.digest";
+
+export type NotificationPreferenceItem = {
+  type: NotificationPreferenceType;
+  inApp: boolean;
+  push: boolean;
+};
 
 export type UserSettingsModalInput = {
   open: boolean;
@@ -27,6 +45,12 @@ export function useUserSettingsModalActions(input: UserSettingsModalInput) {
   const updateAvailable = useAppUpdateStore((s) => s.updateAvailable);
   const isRefreshing = useAppUpdateStore((s) => s.isRefreshing);
   const beginRefresh = useAppUpdateStore((s) => s.beginRefresh);
+  const teamId = useTeamStore((s) => s.selectedTeamId) ?? "";
+  const preferencesQuery = useAgencyNotificationPreferencesQuery(
+    teamId,
+    input.open && Boolean(teamId),
+  );
+  const setPreferencesMutation = useSetNotificationPreferencesMutation(teamId);
   const state = useUserSettingsModalState();
 
   const user = session.data?.user;
@@ -167,6 +191,11 @@ export function useUserSettingsModalActions(input: UserSettingsModalInput) {
     void beginRefresh();
   }
 
+  function togglePreferenceChannel(pref: NotificationPreferenceItem, channel: "inApp" | "push") {
+    if (!teamId || setPreferencesMutation.isPending) return;
+    void setPreferencesMutation.mutateAsync([{ ...pref, [channel]: !pref[channel] }]);
+  }
+
   return {
     open: input.open,
     userId: user?.id ?? null,
@@ -184,6 +213,10 @@ export function useUserSettingsModalActions(input: UserSettingsModalInput) {
     isPro,
     updateAvailable,
     isRefreshing,
+    hasTeam: Boolean(teamId),
+    notificationPreferences: (preferencesQuery.data?.items ?? []) as NotificationPreferenceItem[],
+    notificationPreferencesLoading: preferencesQuery.isPending && !preferencesQuery.data,
+    notificationPreferencesSaving: setPreferencesMutation.isPending,
     onOpenChange: handleOpenChange,
     onPaneChange: handlePaneChange,
     onNameDraftChange: handleNameDraftChange,
@@ -193,6 +226,7 @@ export function useUserSettingsModalActions(input: UserSettingsModalInput) {
     onBillingAction: handleBillingAction,
     onSignOut: () => void signOut(),
     onRefresh: handleRefresh,
+    onTogglePreferenceChannel: togglePreferenceChannel,
   };
 }
 

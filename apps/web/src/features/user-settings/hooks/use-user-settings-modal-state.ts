@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export type UserSettingsPane = "profile" | "preferences" | "billing" | "account";
+export type UserSettingsPane = "profile" | "preferences" | "billing";
 
 export function useUserSettingsModalState() {
   const [pane, setPane] = useState<UserSettingsPane>("profile");
