@@ -394,9 +394,13 @@ export function useAgencyTimeEntriesLog({
     },
   ) {
     if (!teamId || entryIds.length === 0 || Object.keys(patch).length === 0) return;
+    const previousEntries = entryIds
+      .map((entryId) => entries.find((item) => item.id === entryId))
+      .filter((entry): entry is (typeof entries)[number] => entry != null);
     await agencyTimeTrackingStore.updateEntriesBulk({
       teamId,
       entryIds,
+      previousEntries,
       patch,
     });
   }

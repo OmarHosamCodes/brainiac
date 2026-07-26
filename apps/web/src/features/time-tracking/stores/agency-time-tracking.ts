@@ -198,6 +198,8 @@ type UpdateEntryPayload = {
 type UpdateEntriesBulkPayload = {
   teamId: string;
   entryIds: string[];
+  /** Baselines from the UI list; preferred over cache lookup (same as updateEntry.previousEntry). */
+  previousEntries?: AgencyTimeEntry[];
   patch: {
     projectId?: string;
     taskId?: string | null;
@@ -1770,8 +1772,11 @@ function createAgencyTimeTrackingActions(
     const entryIds = [...new Set(payload.entryIds)];
     if (entryIds.length === 0) return;
 
+    const previousById = new Map(
+      (payload.previousEntries ?? []).map((entry) => [entry.id, entry] as const),
+    );
     const previousEntries = entryIds
-      .map((entryId) => findTimeEntry(payload.teamId, entryId))
+      .map((entryId) => previousById.get(entryId) ?? findTimeEntry(payload.teamId, entryId))
       .filter((entry): entry is AgencyTimeEntry => entry !== null);
     if (previousEntries.length !== entryIds.length) {
       toast.error("Unable to update entries", {
