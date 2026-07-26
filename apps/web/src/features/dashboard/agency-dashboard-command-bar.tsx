@@ -77,6 +77,7 @@ type AgencyDashboardCommandBarProps = {
   onFieldIdsChange?: (fieldIds: AgencyReportFieldId[]) => void;
   defaultFieldIds?: AgencyReportFieldId[];
   trailingActions?: ReactNode;
+  shellClassName?: string;
 };
 
 function RangePresetChooser({
@@ -157,6 +158,7 @@ export function AgencyDashboardCommandBar({
   onFieldIdsChange,
   defaultFieldIds = allAgencyReportFieldIds(),
   trailingActions,
+  shellClassName,
 }: AgencyDashboardCommandBarProps) {
   const showClientFilter = Boolean(clients && onClientIdsChange);
   const showFieldsFilter = Boolean(onFieldIdsChange && fieldIds);
@@ -176,7 +178,7 @@ export function AgencyDashboardCommandBar({
   }));
 
   return (
-    <div className={agencyCommandBarShellClass}>
+    <div className={cn(agencyCommandBarShellClass, shellClassName)}>
       {showClientFilter ? (
         <AgencyMultiSelectFilter
           label="All Clients"

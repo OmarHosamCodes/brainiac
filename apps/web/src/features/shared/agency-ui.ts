@@ -493,7 +493,7 @@ export const agencyTimeSuggestionChipClass = cn(
 );
 
 export const agencyTimeWeekFooterClass = cn(
-  "flex h-[40px] shrink-0 items-center justify-between border-t border-default px-[20px]",
+  "mt-[20px] flex h-[40px] shrink-0 items-center justify-between border-t border-default px-[20px]",
   "bg-elevated/40",
 );
 

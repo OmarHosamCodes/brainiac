@@ -1,11 +1,30 @@
 import type { AgencyTimeEntry } from "@orch/api/schemas/agency-ops";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import type { AgencyReportEntry } from "@/features/reports/agency-report-grouping";
 
 type UseAgencyReportCreatorOptions = {
   initialExcludedEntryIds?: string[];
 };
+
+export function applyStartEditing(entryId: string) {
+  return { selectedEntryId: entryId, editingEntryId: entryId };
+}
+
+export function applyExcludeEntry(args: {
+  excludedEntryIds: Set<string>;
+  excludeUndoStack: string[];
+  selectedEntryId: string | null;
+  editingEntryId: string | null;
+  entryId: string;
+}) {
+  return {
+    excludedEntryIds: new Set([...args.excludedEntryIds, args.entryId]),
+    excludeUndoStack: [...args.excludeUndoStack, args.entryId],
+    selectedEntryId: args.selectedEntryId === args.entryId ? null : args.selectedEntryId,
+    editingEntryId: args.editingEntryId === args.entryId ? null : args.editingEntryId,
+  };
+}
 
 export function useAgencyReportCreator(
   entries: AgencyReportEntry[],
@@ -20,6 +39,19 @@ export function useAgencyReportCreator(
   const [entryOverrides, setEntryOverrides] = useState<Map<string, Partial<AgencyTimeEntry>>>(
     () => new Map(),
   );
+
+  const targetingRef = useRef({
+    excludedEntryIds,
+    excludeUndoStack,
+    selectedEntryId,
+    editingEntryId,
+  });
+  targetingRef.current = {
+    excludedEntryIds,
+    excludeUndoStack,
+    selectedEntryId,
+    editingEntryId,
+  };
 
   const visibleEntries = useMemo(() => {
     return entries
@@ -45,15 +77,19 @@ export function useAgencyReportCreator(
     setEditingEntryId(null);
   }, []);
 
+  const excludeEntry = useCallback((entryId: string) => {
+    const next = applyExcludeEntry({ ...targetingRef.current, entryId });
+    setExcludedEntryIds(next.excludedEntryIds);
+    setExcludeUndoStack(next.excludeUndoStack);
+    setSelectedEntryId(next.selectedEntryId);
+    setEditingEntryId(next.editingEntryId);
+    return entryId;
+  }, []);
+
   const excludeSelectedEntry = useCallback(() => {
     if (!selectedEntryId) return;
-    const entryId = selectedEntryId;
-    setExcludedEntryIds((current) => new Set([...current, entryId]));
-    setExcludeUndoStack((current) => [...current, entryId]);
-    setSelectedEntryId(null);
-    setEditingEntryId(null);
-    return entryId;
-  }, [selectedEntryId]);
+    return excludeEntry(selectedEntryId);
+  }, [excludeEntry, selectedEntryId]);
 
   const undoLastExclude = useCallback(() => {
     let restoredId: string | undefined;
@@ -71,10 +107,16 @@ export function useAgencyReportCreator(
     return restoredId;
   }, []);
 
+  const startEditing = useCallback((entryId: string) => {
+    const next = applyStartEditing(entryId);
+    setSelectedEntryId(next.selectedEntryId);
+    setEditingEntryId(next.editingEntryId);
+  }, []);
+
   const startEditingSelected = useCallback(() => {
     if (!selectedEntryId) return;
-    setEditingEntryId(selectedEntryId);
-  }, [selectedEntryId]);
+    startEditing(selectedEntryId);
+  }, [selectedEntryId, startEditing]);
 
   const cancelEditing = useCallback(() => {
     setEditingEntryId(null);
@@ -109,8 +151,10 @@ export function useAgencyReportCreator(
     selectedEntry,
     selectEntry,
     clearSelection,
+    excludeEntry,
     excludeSelectedEntry,
     undoLastExclude,
+    startEditing,
     startEditingSelected,
     cancelEditing,
     applyEntryOverride,

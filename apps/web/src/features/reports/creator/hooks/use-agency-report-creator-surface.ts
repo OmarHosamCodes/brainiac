@@ -45,6 +45,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
   const [exporting, setExporting] = useState(false);
   const [savingEntryId, setSavingEntryId] = useState<string | null>(null);
   const [wastePending, setWastePending] = useState(false);
+  const [deletingReport, setDeletingReport] = useState(false);
   const [reportName, setReportName] = useState("");
 
   useEffect(() => {
@@ -156,38 +157,51 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     [saveEditMutation],
   );
 
-  const handleToggleWaste = useCallback(async () => {
-    const entry = creator.selectedEntry;
-    if (!entry?.taskId || !teamId) return;
+  const handleToggleWaste = useCallback(
+    async (entryId?: string) => {
+      const entry =
+        (entryId ? creator.visibleEntries.find((item) => item.id === entryId) : null) ??
+        creator.selectedEntry;
+      if (!entry?.taskId || !teamId) return;
 
-    const nextIsWaste = !(entry.taskIsWaste === true);
-    setWastePending(true);
-    try {
-      await orpcClient.agencyOps.projectTasks.update({
-        teamId,
-        taskId: entry.taskId,
-        isWaste: nextIsWaste,
-      });
-      creator.setTaskWaste(entry.id, entry.taskId, nextIsWaste);
-      autosave.queueActivity({ action: "waste_toggled", payload: { isWaste: nextIsWaste } });
-      void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
-      void invalidateAgencyTeamQueries(teamId);
-      toast.success(nextIsWaste ? "Marked as waste" : "Unmarked as waste");
-    } catch (error) {
-      toast.error("Couldn't update task", {
-        description: getErrorMessage(error, "Try again."),
-      });
-    } finally {
-      setWastePending(false);
-    }
-  }, [autosave, creator, queryClient, teamId]);
+      const nextIsWaste = !(entry.taskIsWaste === true);
+      setWastePending(true);
+      try {
+        await orpcClient.agencyOps.projectTasks.update({
+          teamId,
+          taskId: entry.taskId,
+          isWaste: nextIsWaste,
+        });
+        creator.setTaskWaste(entry.id, entry.taskId, nextIsWaste);
+        autosave.queueActivity({ action: "waste_toggled", payload: { isWaste: nextIsWaste } });
+        void queryClient.invalidateQueries({ queryKey: ["agency-reports", "entries"] });
+        void invalidateAgencyTeamQueries(teamId);
+        toast.success(nextIsWaste ? "Marked as waste" : "Unmarked as waste");
+      } catch (error) {
+        toast.error("Couldn't update task", {
+          description: getErrorMessage(error, "Try again."),
+        });
+      } finally {
+        setWastePending(false);
+      }
+    },
+    [autosave, creator, queryClient, teamId],
+  );
+
+  const handleExcludeEntry = useCallback(
+    (entryId: string) => {
+      const excludedId = creator.excludeEntry(entryId);
+      if (excludedId) {
+        autosave.queueActivity({ action: "entries_excluded", payload: { count: 1 } });
+      }
+    },
+    [autosave, creator],
+  );
 
   const handleExcludeSelected = useCallback(() => {
-    const excludedId = creator.excludeSelectedEntry();
-    if (excludedId) {
-      autosave.queueActivity({ action: "entries_excluded", payload: { count: 1 } });
-    }
-  }, [autosave, creator]);
+    if (!creator.selectedEntryId) return;
+    handleExcludeEntry(creator.selectedEntryId);
+  }, [creator.selectedEntryId, handleExcludeEntry]);
 
   const handleUndoExclude = useCallback(() => {
     const restoredId = creator.undoLastExclude();
@@ -236,14 +250,14 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
 
       if (event.key === "e" || event.key === "E") {
         event.preventDefault();
-        creator.startEditingSelected();
+        creator.startEditing(creator.selectedEntryId);
         return;
       }
 
       if (event.key === "w" || event.key === "W") {
         if (!creator.selectedEntry?.taskId) return;
         event.preventDefault();
-        void handleToggleWaste();
+        void handleToggleWaste(creator.selectedEntryId);
       }
     }
 
@@ -288,6 +302,30 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     }
   }
 
+  const handleDeleteReport = useCallback(async () => {
+    if (!teamId || !reportId || deletingReport) return;
+    if (autosave.state === "pending" || autosave.state === "saving") {
+      toast.error("Wait for save to finish", {
+        description: "The report is still saving. Try again in a moment.",
+      });
+      return;
+    }
+
+    setDeletingReport(true);
+    try {
+      await orpcClient.agencyOps.reports.saved.delete({ teamId, reportId });
+      void queryClient.invalidateQueries({ queryKey: ["agency-reports", "saved", teamId] });
+      toast.success("Report deleted");
+      navigate(`/agency?${backParams}`);
+    } catch (error) {
+      toast.error("Couldn't delete report", {
+        description: getErrorMessage(error, "Try again."),
+      });
+    } finally {
+      setDeletingReport(false);
+    }
+  }, [autosave.state, backParams, deletingReport, navigate, queryClient, reportId, teamId]);
+
   const isPending = reportQuery.isPending;
   const isError = reportQuery.isError;
   const errorMessage = getErrorMessage(reportQuery.error, "Try going back to Reports.");
@@ -310,6 +348,7 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     exporting,
     savingEntryId,
     wastePending,
+    deletingReport,
     reportName,
     setReportName,
     labelContext,
@@ -325,9 +364,11 @@ export function useAgencyReportCreatorSurface({ teamId }: UseAgencyReportCreator
     autosave,
     handleSaveEdit,
     handleToggleWaste,
+    handleExcludeEntry,
     handleUndoExclude,
     handleExport,
     handleRenameCommitted,
+    handleDeleteReport,
   };
 }
 

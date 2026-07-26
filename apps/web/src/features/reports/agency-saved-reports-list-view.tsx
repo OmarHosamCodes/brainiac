@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import type { SavedReportsListBodyViewModel } from "./hooks/use-agency-saved-reports-list";
 
 const reportItemClass = cn(
-  "flex w-full flex-col gap-0.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-default/80",
+  "flex w-full flex-col gap-0.5 rounded-dense px-2 py-2 text-left transition-colors hover:bg-default/80",
   agencyFocusRingClass,
   "motion-reduce:transition-none",
 );
@@ -45,7 +45,7 @@ export function SavedReportsListBodyView({
             value={vm.searchTerm}
             onChange={(event) => vm.setSearchTerm(event.target.value)}
             placeholder="Search reports…"
-            className="h-8 rounded-lg border-default bg-default text-xs"
+            className="h-8 rounded-dense border-default bg-default text-xs"
           />
         </div>
       ) : null}
@@ -85,7 +85,7 @@ export function SavedReportsListSkeletonView() {
   return (
     <div className="space-y-2 p-2">
       {Array.from({ length: 4 }, (_, index) => (
-        <Skeleton key={index} className="h-10 w-full rounded-lg" />
+        <Skeleton key={index} className="h-10 w-full rounded-dense" />
       ))}
     </div>
   );

@@ -193,6 +193,7 @@ function ReportsFiltersRoot({
           ) : (
             <AgencyDashboardCommandBar
               {...timeRange.barProps}
+              shellClassName="rounded-dense"
               trailingActions={
                 <>
                   <Button

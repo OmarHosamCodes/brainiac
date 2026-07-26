@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Input } from "@/ui/input";
+import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
 type AgencyReportDescriptionCellProps = {
@@ -16,10 +17,16 @@ export function AgencyReportDescriptionCell({
 }: AgencyReportDescriptionCellProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
+  const readRef = useRef<HTMLSpanElement>(null);
+  const restoreFocusRef = useRef(false);
 
   useEffect(() => {
     if (!editing) {
       setDraft(value);
+      if (restoreFocusRef.current) {
+        restoreFocusRef.current = false;
+        readRef.current?.focus();
+      }
     }
   }, [editing, value]);
 
@@ -53,32 +60,50 @@ export function AgencyReportDescriptionCell({
         onKeyDown={(event) => {
           if (event.key === "Enter") {
             event.preventDefault();
+            restoreFocusRef.current = true;
             void saveEdit();
           }
           if (event.key === "Escape") {
             event.preventDefault();
+            restoreFocusRef.current = true;
             cancelEdit();
           }
         }}
         disabled={disabled}
         autoFocus
-        className="h-7 text-xs"
+        className="h-7 rounded-dense text-xs"
         aria-label="Description"
       />
     );
   }
 
+  const startEditing = () => {
+    if (disabled) return;
+    setDraft(value);
+    setEditing(true);
+  };
+
   return (
     <span
-      className={cn("block truncate", !disabled && "cursor-text")}
+      ref={readRef}
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      className={cn(
+        "-mx-1 block truncate rounded px-1 transition-colors motion-reduce:transition-none",
+        !disabled && "cursor-text hover:bg-muted/60",
+        agencyFocusRingClass,
+      )}
       title={value || undefined}
-      onDoubleClick={() => {
-        if (disabled) return;
-        setDraft(value);
-        setEditing(true);
+      aria-label={value ? `Edit description: ${value}` : "Add description"}
+      onDoubleClick={startEditing}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          startEditing();
+        }
       }}
     >
-      {value || "—"}
+      {value || <span className="text-muted">Add description</span>}
     </span>
   );
 }

@@ -1,8 +1,17 @@
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { Button } from "@/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/ui/dialog";
 import { Input } from "@/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/ui/popover";
 import { Skeleton } from "@/ui/skeleton";
 import {
   formatRelativeReportTime,
@@ -91,24 +100,36 @@ function ReportTitleEditor({ value, fallbackName, onChange, onCommit }: ReportTi
           }
         }}
         aria-label="Report name"
-        className="h-9 max-w-md border-default bg-default px-2 text-base font-bold"
+        className="h-9 max-w-md rounded-dense border-default bg-default px-2 text-base font-semibold"
       />
     );
   }
 
   return (
-    <button
-      type="button"
-      className={cn(
-        "truncate text-left text-base font-bold text-highlighted hover:underline",
-        agencyFocusRingClass,
-        "motion-reduce:transition-none",
-      )}
-      onClick={() => setEditing(true)}
-      title="Click to rename"
-    >
-      {value || fallbackName}
-    </button>
+    <div className="flex min-w-0 items-center gap-1">
+      <button
+        type="button"
+        className={cn(
+          "min-w-0 truncate text-left text-base font-semibold text-highlighted hover:underline",
+          agencyFocusRingClass,
+          "motion-reduce:transition-none",
+        )}
+        onClick={() => setEditing(true)}
+        title="Click to rename"
+      >
+        {value || fallbackName}
+      </button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className={cn("h-8 w-8 shrink-0 p-0", agencyFocusRingClass)}
+        aria-label="Rename report"
+        title="Rename"
+        onClick={() => setEditing(true)}
+      >
+        <Pencil className="size-3.5" />
+      </Button>
+    </div>
   );
 }
 
@@ -132,7 +153,7 @@ function ReportHeaderMeta({
   );
 
   return (
-    <div className="space-y-0.5">
+    <div className="flex flex-col gap-0.5">
       <p className="text-xs text-muted">{scopeLine}</p>
       <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted">
         <span>{attributionLine}</span>
@@ -156,6 +177,9 @@ type ReportHeaderActionsProps = {
   exportDisabled: boolean;
   onExport: () => void;
   activityMenu: ReactNode;
+  deleteDisabled: boolean;
+  deletingReport: boolean;
+  onRequestDelete: () => void;
 };
 
 function ReportHeaderActions({
@@ -165,7 +189,12 @@ function ReportHeaderActions({
   exportDisabled,
   onExport,
   activityMenu,
+  deleteDisabled,
+  deletingReport,
+  onRequestDelete,
 }: ReportHeaderActionsProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5 pl-10 sm:pl-0">
       {canUndo ? (
@@ -191,6 +220,38 @@ function ReportHeaderActions({
           "Export to Sheets"
         )}
       </Button>
+      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn("h-9 w-9 p-0", agencyFocusRingClass)}
+            aria-label="Report options"
+            disabled={deletingReport}
+          >
+            {deletingReport ? (
+              <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
+            ) : (
+              <MoreVertical className="size-3.5" />
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-44 p-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-error"
+            disabled={deleteDisabled || deletingReport}
+            onClick={() => {
+              setMenuOpen(false);
+              onRequestDelete();
+            }}
+          >
+            <Trash2 className="size-3.5" />
+            Delete report
+          </Button>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
@@ -219,6 +280,8 @@ export type AgencyReportCreatorHeaderProps = {
   exporting: boolean;
   onExport: () => void;
   activityMenu: ReactNode;
+  deletingReport: boolean;
+  onDeleteReport: () => void;
 };
 
 export function AgencyReportCreatorHeader({
@@ -238,7 +301,13 @@ export function AgencyReportCreatorHeader({
   exporting,
   onExport,
   activityMenu,
+  deletingReport,
+  onDeleteReport,
 }: AgencyReportCreatorHeaderProps) {
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const autosaveBusy = autosaveState === "pending" || autosaveState === "saving";
+  const deleteDisabled = autosaveBusy || deletingReport;
+
   const meta = useMemo(
     () =>
       formatReportHeaderMeta(
@@ -257,63 +326,111 @@ export function AgencyReportCreatorHeader({
   );
 
   return (
-    <header className="rounded-2xl border border-default bg-elevated px-3 py-3 sm:px-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 items-start gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-9 shrink-0 px-2"
-            onClick={onBack}
-            aria-label="Back to reports"
-          >
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div className="min-w-0 flex-1 space-y-1">
-            <ReportTitleEditor
-              value={reportName}
-              fallbackName={fallbackName}
-              onChange={onReportNameChange}
-              onCommit={onRenameCommitted}
-            />
-            <ReportHeaderMeta
-              scopeLine={meta.scopeLine}
-              attributionLine={meta.attributionLine}
-              saveState={autosaveState}
-              lastSavedAt={lastSavedAt}
-              onRetrySave={onRetrySave}
-            />
+    <>
+      <header className="rounded-dense border border-default bg-elevated px-3 py-3 sm:px-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 items-start gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-9 shrink-0 px-2"
+              onClick={onBack}
+              aria-label="Back to reports"
+            >
+              <ArrowLeft className="size-4" />
+            </Button>
+            <div className="min-w-0 flex-1 flex flex-col gap-1">
+              <ReportTitleEditor
+                value={reportName}
+                fallbackName={fallbackName}
+                onChange={onReportNameChange}
+                onCommit={onRenameCommitted}
+              />
+              <ReportHeaderMeta
+                scopeLine={meta.scopeLine}
+                attributionLine={meta.attributionLine}
+                saveState={autosaveState}
+                lastSavedAt={lastSavedAt}
+                onRetrySave={onRetrySave}
+              />
+            </div>
           </div>
+          <ReportHeaderActions
+            canUndo={canUndo}
+            onUndo={onUndo}
+            exporting={exporting}
+            exportDisabled={visibleEntryCount === 0}
+            onExport={onExport}
+            activityMenu={activityMenu}
+            deleteDisabled={deleteDisabled}
+            deletingReport={deletingReport}
+            onRequestDelete={() => setConfirmDeleteOpen(true)}
+          />
         </div>
-        <ReportHeaderActions
-          canUndo={canUndo}
-          onUndo={onUndo}
-          exporting={exporting}
-          exportDisabled={visibleEntryCount === 0}
-          onExport={onExport}
-          activityMenu={activityMenu}
-        />
-      </div>
-    </header>
+      </header>
+
+      <Dialog
+        open={confirmDeleteOpen}
+        onOpenChange={(open) => {
+          if (deletingReport) return;
+          setConfirmDeleteOpen(open);
+        }}
+      >
+        <DialogContent className="max-w-md" showCloseButton={!deletingReport}>
+          <DialogHeader>
+            <DialogTitle>Delete this report?</DialogTitle>
+            <DialogDescription>
+              Deletes the saved report "{reportName || fallbackName}". Time entries are not deleted.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              disabled={deletingReport}
+              onClick={() => setConfirmDeleteOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteDisabled}
+              onClick={() => {
+                onDeleteReport();
+                setConfirmDeleteOpen(false);
+              }}
+            >
+              {deletingReport ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin motion-reduce:animate-none" />
+                  Deleting…
+                </>
+              ) : (
+                "Delete report"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
 export function AgencyReportCreatorHeaderSkeleton() {
   return (
-    <div className="rounded-2xl border border-default bg-elevated px-3 py-3 sm:px-4">
+    <div className="rounded-dense border border-default bg-elevated px-3 py-3 sm:px-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 flex-1 items-start gap-2">
-          <Skeleton className="size-9 shrink-0 rounded-lg" />
-          <div className="min-w-0 flex-1 space-y-2">
+          <Skeleton className="size-9 shrink-0 rounded-dense" />
+          <div className="min-w-0 flex-1 flex flex-col gap-2">
             <Skeleton className="h-5 w-48 max-w-full" />
             <Skeleton className="h-3 w-full max-w-md" />
             <Skeleton className="h-3 w-40" />
           </div>
         </div>
         <div className="flex items-center gap-1.5 pl-10 sm:pl-0">
-          <Skeleton className="h-9 w-20 rounded-lg" />
-          <Skeleton className="h-9 w-24 rounded-lg" />
-          <Skeleton className="h-9 w-28 rounded-lg" />
+          <Skeleton className="h-9 w-20 rounded-dense" />
+          <Skeleton className="h-9 w-24 rounded-dense" />
+          <Skeleton className="h-9 w-28 rounded-dense" />
         </div>
       </div>
     </div>

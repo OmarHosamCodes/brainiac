@@ -37,7 +37,7 @@ export function AgencyReportActivityMenuView({
           {vm.isPending ? (
             <div className="space-y-2">
               {Array.from({ length: 4 }, (_, index) => (
-                <Skeleton key={index} className="h-8 w-full rounded-lg" />
+                <Skeleton key={index} className="h-8 w-full rounded-dense" />
               ))}
             </div>
           ) : vm.isError ? (
@@ -49,7 +49,7 @@ export function AgencyReportActivityMenuView({
               <div
                 key={item.id}
                 className={cn(
-                  "flex flex-col gap-0.5 rounded-lg px-2 py-1.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-1",
+                  "flex flex-col gap-0.5 rounded-dense px-2 py-1.5 sm:flex-row sm:flex-wrap sm:items-baseline sm:gap-x-1",
                   agencyFocusRingClass,
                 )}
               >

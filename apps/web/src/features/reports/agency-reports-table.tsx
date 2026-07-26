@@ -80,7 +80,7 @@ export function AgencyReportsTable({
       {clientGroups.map((clientGroup) => (
         <section key={clientGroup.clientId} className="space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-            <h3 className="text-sm font-bold text-highlighted">{clientGroup.clientName}</h3>
+            <h3 className="text-sm font-semibold text-highlighted">{clientGroup.clientName}</h3>
             <p className="text-xs text-muted">
               <span className={agencyMetricClass}>
                 {formatDuration(clientGroup.totalSeconds, "clock")}
@@ -88,35 +88,35 @@ export function AgencyReportsTable({
               {" total"}
             </p>
           </div>
-          <div className="overflow-x-auto rounded-2xl border border-default bg-default">
+          <div className="overflow-x-auto rounded-dense border border-default bg-default">
             <table className="w-full min-w-[48rem] text-xs">
               <caption className="sr-only">
                 Time entries for {clientGroup.clientName}, grouped by project and task
               </caption>
-              <thead className="border-b border-default bg-muted/55">
-                <tr className="text-left text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+              <thead className="border-b border-default bg-elevated/65">
+                <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
                   {showProject ? (
-                    <th scope="col" className="w-40 px-4 py-2.5 font-bold">
+                    <th scope="col" className="w-40 px-4 py-2.5 font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.project}
                     </th>
                   ) : null}
                   {showTask ? (
-                    <th scope="col" className="w-40 px-4 py-2.5 font-bold">
+                    <th scope="col" className="w-40 px-4 py-2.5 font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.task}
                     </th>
                   ) : null}
                   {showDescription ? (
-                    <th scope="col" className="px-4 py-2.5 font-bold">
+                    <th scope="col" className="px-4 py-2.5 font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.description}
                     </th>
                   ) : null}
                   {showDuration ? (
-                    <th scope="col" className="w-28 px-4 py-2.5 text-right font-bold">
+                    <th scope="col" className="w-28 px-4 py-2.5 text-right font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.duration}
                     </th>
                   ) : null}
                   {showAssignee ? (
-                    <th scope="col" className="w-36 px-4 py-2.5 font-bold">
+                    <th scope="col" className="w-36 px-4 py-2.5 font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.assignee}
                     </th>
                   ) : null}
@@ -143,7 +143,7 @@ export function AgencyReportsTable({
                           className="border-r border-default bg-elevated/40 px-4 py-3 align-top text-xs"
                         >
                           <div className="flex flex-col gap-1.5">
-                            <span className="font-bold text-highlighted">
+                            <span className="font-semibold text-highlighted">
                               {project.projectName}
                             </span>
                             {showDuration ? (
@@ -200,6 +200,7 @@ export function AgencyReportsTable({
                         <td className="px-2 py-3 text-right">
                           <AgencyReportRowActions
                             label={row.taskTitle || row.description || row.projectName}
+                            entryCount={row.entryCount}
                             taskId={row.taskId}
                             taskIsWaste={row.taskIsWaste}
                             deleting={row.entries.some((entry) => deletingEntryIdSet.has(entry.id))}

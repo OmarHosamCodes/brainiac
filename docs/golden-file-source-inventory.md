@@ -1,6 +1,6 @@
 # Golden File Source Inventory
 
-Generated on 2026-07-25 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
+Generated on 2026-07-26 by `scripts/generate-golden-file-inventory.mjs`. Every semantic field is recomputed from the current path and file content by `scripts/check-golden-file-inventory.mjs`.
 
 ## Scope policy
 
@@ -19,7 +19,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 
 | Classification | Artifacts |
 | --- | ---: |
-| golden-feature | 425 |
+| golden-feature | 427 |
 | server-operation | 12 |
 | shared-infrastructure | 236 |
 | static-presentation | 15 |
@@ -46,7 +46,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | notifications | 20 |
 | performance | 8 |
 | projects | 23 |
-| reports | 41 |
+| reports | 43 |
 | repository | 13 |
 | resourcing | 16 |
 | server-platform | 20 |
@@ -235,6 +235,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/reports/creator/agency-report-activity-menu-view.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/reports/creator/agency-report-activity-menu.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/reports/creator/agency-report-creator-header.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
+| `apps/web/src/features/reports/creator/agency-report-creator-row-actions.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/reports/creator/agency-report-creator-surface-view.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/reports/creator/agency-report-creator-surface.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
 | `apps/web/src/features/reports/creator/agency-report-creator-table.tsx` | reports | presentational-view | golden-feature | reports-domain | Feature-owned reports artifact in the canonical presentational-view layer. | content: React component or hook code, exported declarations; structure: view or component role |
@@ -248,6 +249,7 @@ Unknown source roots and unrecognized extensions inside an included source, migr
 | `apps/web/src/features/reports/hooks/use-agency-reports-surface.ts` | reports | feature-hook | golden-feature | reports-domain | Feature-owned reports artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
 | `apps/web/src/features/reports/hooks/use-agency-saved-reports-list.ts` | reports | feature-hook | golden-feature | reports-domain | Feature-owned reports artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
 | `apps/web/src/features/reports/use-agency-report-autosave.ts` | reports | feature-hook | golden-feature | reports-domain | Feature-owned reports artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, React component or hook code; structure: hook naming |
+| `apps/web/src/features/reports/use-agency-report-creator.test.ts` | reports | test | golden-feature | reports-domain | Feature-owned reports artifact in the canonical test layer. | content: Bun test declarations; structure: test filename |
 | `apps/web/src/features/reports/use-agency-report-creator.ts` | reports | feature-hook | golden-feature | reports-domain | Feature-owned reports artifact in the canonical feature-hook layer. | content: React component or hook code, exported declarations; structure: hook naming |
 | `apps/web/src/features/reports/use-agency-report-label-context.ts` | reports | feature-hook | golden-feature | reports-domain | Feature-owned reports artifact in the canonical feature-hook layer. | content: oRPC procedures or clients, TanStack Query orchestration, feature query orchestration; structure: hook naming |
 | `apps/web/src/features/resourcing/agency-resourcing-surface.tsx` | resourcing | web-query | golden-feature | resourcing-domain | Feature-owned resourcing artifact in the canonical web-query layer. | content: feature query orchestration, React component or hook code, exported declarations; structure: source role and exported behavior |

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { AgencyReportDurationCell } from "@/features/reports/cells/agency-report-duration-cell";
 import { AgencyReportEntryContextMenu } from "@/features/reports/agency-report-entry-context-menu";
+import { AgencyReportCreatorRowActions } from "@/features/reports/creator/agency-report-creator-row-actions";
 import { Input } from "@/ui/input";
 import { usePrefersReducedMotion } from "@/lib/hooks/use-prefers-reduced-motion";
 import {
@@ -44,7 +45,8 @@ type AgencyReportCreatorTableProps = {
   creator: AgencyReportCreatorState;
   visibleFields?: AgencyReportFieldId[];
   onSaveEdit: (entryId: string, draft: TimeEntryDraft) => Promise<void>;
-  onToggleWaste: () => void;
+  onExcludeEntry: (entryId: string) => void;
+  onToggleWaste: (entryId: string) => void;
   savingEntryId?: string | null;
   wastePending?: boolean;
 };
@@ -53,6 +55,7 @@ export function AgencyReportCreatorTable({
   creator,
   visibleFields = allAgencyReportFieldIds(),
   onSaveEdit,
+  onExcludeEntry,
   onToggleWaste,
   savingEntryId = null,
   wastePending = false,
@@ -74,7 +77,7 @@ export function AgencyReportCreatorTable({
       {clientGroups.map((clientGroup) => (
         <section key={clientGroup.clientId} className="space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-            <h3 className="text-sm font-bold text-highlighted">{clientGroup.clientName}</h3>
+            <h3 className="text-sm font-semibold text-highlighted">{clientGroup.clientName}</h3>
             <p className="text-xs text-muted">
               <span className={agencyMetricClass}>
                 {formatDuration(clientGroup.totalSeconds, "clock")}
@@ -82,38 +85,41 @@ export function AgencyReportCreatorTable({
               {" total"}
             </p>
           </div>
-          <div className="overflow-x-auto rounded-2xl border border-default bg-default">
+          <div className="overflow-x-auto rounded-dense border border-default bg-default">
             <table className="w-full min-w-[40rem] text-xs">
               <caption className="sr-only">
                 Time entries for {clientGroup.clientName}, grouped by project and task
               </caption>
-              <thead className="border-b border-default bg-muted/55">
-                <tr className="text-left text-[10px] font-bold uppercase tracking-[0.16em] text-muted">
+              <thead className="border-b border-default bg-elevated/65">
+                <tr className="text-left text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
                   {showProject ? (
-                    <th scope="col" className="w-48 px-4 py-2.5 font-bold">
+                    <th scope="col" className="w-48 px-4 py-2.5 font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.project}
                     </th>
                   ) : null}
                   {showTask ? (
-                    <th scope="col" className="w-40 px-4 py-2.5 font-bold">
+                    <th scope="col" className="w-40 px-4 py-2.5 font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.task}
                     </th>
                   ) : null}
                   {showDescription ? (
-                    <th scope="col" className="px-4 py-2.5 font-bold">
+                    <th scope="col" className="px-4 py-2.5 font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.description}
                     </th>
                   ) : null}
                   {showDuration ? (
-                    <th scope="col" className="w-28 px-4 py-2.5 text-right font-bold">
+                    <th scope="col" className="w-28 px-4 py-2.5 text-right font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.duration}
                     </th>
                   ) : null}
                   {showAssignee ? (
-                    <th scope="col" className="w-36 px-4 py-2.5 font-bold">
+                    <th scope="col" className="w-36 px-4 py-2.5 font-semibold">
                       {AGENCY_REPORT_FIELD_LABELS.assignee}
                     </th>
                   ) : null}
+                  <th scope="col" className="w-10 px-2 py-2.5">
+                    <span className="sr-only">Actions</span>
+                  </th>
                 </tr>
               </thead>
               <motion.tbody layout={!prefersReducedMotion}>
@@ -157,8 +163,8 @@ export function AgencyReportCreatorTable({
                           prefersReducedMotion={prefersReducedMotion}
                           wastePending={wastePending}
                           onSelectEntry={creator.selectEntry}
-                          onEdit={creator.startEditingSelected}
-                          onRemove={creator.excludeSelectedEntry}
+                          onEdit={(entryId) => creator.startEditing(entryId)}
+                          onRemove={onExcludeEntry}
                           onToggleWaste={onToggleWaste}
                           onCancelEdit={creator.cancelEditing}
                           onSaveEdit={(draft) => {
@@ -183,7 +189,7 @@ export function AgencyReportCreatorTable({
         <span className={agencyMetricClass}>{formatDuration(totalSeconds, "clock")}</span>
         {" total"}
         <span aria-hidden="true"> · </span>
-        Right-click a row for actions. Delete, E, and W work on the last opened row.
+        Use the row menu to edit or remove. Removed entries stay in time tracking.
       </p>
     </div>
   );
@@ -206,9 +212,9 @@ type ReportCreatorRowProps = {
   prefersReducedMotion: boolean;
   wastePending: boolean;
   onSelectEntry: (entryId: string) => void;
-  onEdit: () => void;
-  onRemove: () => void;
-  onToggleWaste: () => void;
+  onEdit: (entryId: string) => void;
+  onRemove: (entryId: string) => void;
+  onToggleWaste: (entryId: string) => void;
   onCancelEdit: () => void;
   onSaveEdit: (draft: TimeEntryDraft) => Promise<void>;
 };
@@ -242,6 +248,7 @@ function ReportCreatorRow({
     row.entries[0]!;
   const [draft, setDraft] = useState<TimeEntryDraft>(() => entryToDraft(editingEntry));
   const [editError, setEditError] = useState<string | null>(null);
+  const rowLabel = row.taskTitle || row.description || row.projectName;
 
   useEffect(() => {
     if (isEditing) {
@@ -292,7 +299,7 @@ function ReportCreatorRow({
       {showProject && rowIndex === 0 ? (
         <td
           rowSpan={projectRowSpan}
-          className="border-r border-default bg-elevated/40 px-4 py-3 align-middle text-xs font-bold text-highlighted"
+          className="border-r border-default bg-elevated/40 px-4 py-3 align-middle text-xs font-semibold text-highlighted"
         >
           {row.projectName}
         </td>
@@ -325,7 +332,7 @@ function ReportCreatorRow({
               }
               onKeyDown={handleKeyDown}
               disabled={isSaving}
-              className="h-7 text-xs"
+              className="h-7 rounded-dense text-xs"
               aria-label="Description"
               autoFocus
               onClick={(event) => event.stopPropagation()}
@@ -354,7 +361,7 @@ function ReportCreatorRow({
                 onBlur={() => void saveDraft()}
                 onKeyDown={handleKeyDown}
                 disabled={isSaving}
-                className="h-7 text-right font-mono text-xs tabular-nums"
+                className="h-7 rounded-dense text-right font-mono text-xs tabular-nums"
                 aria-label="Duration"
                 onClick={(event) => event.stopPropagation()}
               />
@@ -375,6 +382,18 @@ function ReportCreatorRow({
           {row.userName}
         </td>
       ) : null}
+      <td className="px-2 py-3 text-right">
+        <AgencyReportCreatorRowActions
+          label={rowLabel}
+          taskId={row.taskId}
+          taskIsWaste={row.taskIsWaste}
+          disabled={isEditing || isSaving}
+          wastePending={wastePending}
+          onEdit={() => onEdit(primaryEntryId)}
+          onRemove={() => onRemove(primaryEntryId)}
+          onToggleWaste={row.taskId ? () => onToggleWaste(primaryEntryId) : undefined}
+        />
+      </td>
     </motion.tr>
   );
 
@@ -388,9 +407,9 @@ function ReportCreatorRow({
       disabled={isEditing || isSaving}
       wastePending={wastePending}
       onSelectEntry={onSelectEntry}
-      onEdit={onEdit}
-      onRemove={onRemove}
-      onToggleWaste={onToggleWaste}
+      onEdit={() => onEdit(primaryEntryId)}
+      onRemove={() => onRemove(primaryEntryId)}
+      onToggleWaste={() => onToggleWaste(primaryEntryId)}
     >
       {rowElement}
     </AgencyReportEntryContextMenu>
