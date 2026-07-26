@@ -2,6 +2,7 @@ import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 import { findActiveNavItem } from "@/features/app-shell/app-navigation";
+import { AppShellAgencySegmentMenu } from "@/features/app-shell/app-shell-agency-segment-menu";
 import { AppShellNotifications } from "@/features/app-shell/app-shell-notifications";
 import { useAppShellStore } from "@/features/app-shell/app-shell-store";
 import {
@@ -11,7 +12,7 @@ import {
   shellHeaderContextRegionClass,
   shellUtilityClusterClass,
 } from "@/features/app-shell/app-shell-ui";
-import { agencySegmentFromSearch, agencySegmentLabel } from "@/features/shared/agency-segments";
+import { agencySegmentFromSearch } from "@/features/shared/agency-segments";
 import { AgencySubtitleBreadcrumb } from "@/features/shared/agency-subtitle-breadcrumb";
 import { useTeamStore } from "@/features/team/team-store";
 import { cn } from "@/lib/utils";
@@ -67,10 +68,8 @@ export function AppShellContextBar() {
                   </BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
-                <BreadcrumbItem className="min-w-0">
-                  <BreadcrumbPage className="truncate font-semibold text-highlighted">
-                    {agencySegmentLabel(segment)}
-                  </BreadcrumbPage>
+                <BreadcrumbItem>
+                  <AppShellAgencySegmentMenu segment={segment} />
                 </BreadcrumbItem>
               </>
             ) : (
