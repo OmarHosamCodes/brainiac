@@ -1,18 +1,10 @@
-import type {
-  AgentChatTurnStreamEvent,
-  AgentScopeRef,
-  AgentSurface,
-  AgentToolCall,
-  DashboardAgentToolPreset,
-  DashboardConversationMessage,
-} from "@orch/agent/types";
+import type { AgentScopeRef, AgentSurface, DashboardAgentToolPreset } from "@orch/agent/types";
 import type { WorkspaceNode } from "@orch/workspace";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useChat } from "@ai-sdk/react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 
-import { streamAgentChatTurn } from "@/features/workspace-agent/agent-turn-stream";
 import { useAgentScopeModeListener } from "@/features/workspace-agent/hooks/use-agent-scope-mode-listener";
-import { useWorkspaceAgentChatScroll } from "@/features/workspace-agent/hooks/use-workspace-agent-chat-scroll";
 import { useCurrentAgencyTeamStore } from "@/features/time-tracking/stores/agency-timer";
 import { useWorkspaceStore } from "@/features/workspace/workspace-local-state";
 import {
@@ -23,25 +15,15 @@ import {
 import { useWorkspaceAgentData } from "@/features/workspace-agent/hooks/use-workspace-agent-data";
 import { useWorkspaceAgentModelPreferences } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preferences";
 import { useWorkspaceAgentModelPreset } from "@/features/workspace-agent/hooks/use-workspace-agent-model-preset";
+import { OrchTurnStreamTransport } from "@/features/workspace-agent/orch-turn-stream-transport";
+import {
+  dashboardMessagesToUIMessages,
+  type OrchUIMessage,
+} from "@/features/workspace-agent/orch-ui-message";
 import { useWorkspaceAgentStore } from "@/features/workspace-agent/stores/workspace-agent-store";
+import { applyBoundWorkspaceSnapshot } from "@/features/workspace/workspace-snapshot-handler";
 import { orpc } from "@/lib/orpc";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
-
-type StreamingChatMessage = Omit<DashboardConversationMessage, "content" | "toolsCalled"> & {
-  content: string;
-  toolsCalled: AgentToolCall[];
-};
-
-function upsertToolCall(tools: AgentToolCall[], tool: AgentToolCall): AgentToolCall[] {
-  const toolId = tool.id ?? tool.name;
-  const index = tools.findIndex((entry) => (entry.id ?? entry.name) === toolId);
-  if (index === -1) {
-    return [...tools, tool];
-  }
-  const next = [...tools];
-  next[index] = tool;
-  return next;
-}
 
 function resolveAgentSurface(pathname: string): AgentSurface {
   if (pathname.startsWith("/agency")) return "agency";
@@ -72,12 +54,7 @@ export function useWorkspaceAgent() {
 
   const [error, setError] = useState<string | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [pendingMessages, setPendingMessages] = useState<StreamingChatMessage[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
   const [streamStopped, setStreamStopped] = useState(false);
-  const [followOutput, setFollowOutput] = useState(true);
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
-  const streamAbortRef = useRef<AbortController | null>(null);
   const [selectedToolPreset, setSelectedToolPreset] = useState<DashboardAgentToolPreset>("agent");
   const [modelLibraryOpen, setModelLibraryOpen] = useState(false);
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
@@ -111,19 +88,8 @@ export function useWorkspaceAgent() {
 
   const conversationList = conversationsQuery.data?.conversations ?? [];
   const activeConversation = activeConversationQuery.data ?? null;
-  const messages = useMemo(
-    () => [...(activeConversation?.messages ?? []), ...pendingMessages],
-    [activeConversation?.messages, pendingMessages],
-  );
-  const streamingContentLength =
-    pendingMessages.find((message) => message.role === "assistant")?.content.length ?? 0;
-  const chatScroll = useWorkspaceAgentChatScroll({
-    followOutput,
-    isStreaming,
-    messageCount: messages.length,
-    streamingContentLength,
-    onFollowOutputChange: setFollowOutput,
-  });
+
+  const transport = useMemo(() => new OrchTurnStreamTransport(), []);
 
   const modelOptions = useMemo(() => {
     const rawModels = modelCatalogQuery.data?.models ?? [];
@@ -149,6 +115,50 @@ export function useWorkspaceAgent() {
     isFreeTier: accountStatusQuery.data?.isFreeTier,
     modelOptions,
   });
+
+  const {
+    messages,
+    sendMessage: chatSendMessage,
+    status,
+    stop,
+    setMessages,
+    error: chatError,
+  } = useChat<OrchUIMessage>({
+    id: "workspace-agent-chat",
+    transport,
+    onData: (dataPart) => {
+      if (dataPart.type === "data-orchMeta") {
+        setActiveConversationId(dataPart.data.conversationId);
+        modelPresetState.rememberResolvedModel(dataPart.data.model);
+        return;
+      }
+      if (dataPart.type === "data-orchCompleted") {
+        setStreamStopped(dataPart.data.stopped);
+        setActiveConversationId(dataPart.data.conversationId);
+        if (dataPart.data.workspaceSnapshot) {
+          applyBoundWorkspaceSnapshot(
+            dataPart.data.workspaceSnapshot.nodes as WorkspaceNode[],
+            dataPart.data.workspaceSnapshot.updatedAt,
+          );
+        }
+        void queryClient.invalidateQueries({ queryKey: conversationsListQueryOptions.queryKey });
+        void queryClient.invalidateQueries({
+          queryKey: orpc.agent.conversations.get.queryKey({
+            input: { conversationId: dataPart.data.conversationId },
+          }),
+        });
+      }
+    },
+    onError: (streamError) => {
+      setError(getErrorMessage(streamError, "Failed to reach the agent."));
+    },
+  });
+
+  const isStreaming = status === "streaming" || status === "submitted";
+  const canSend = draft.trim().length > 0 && !isStreaming;
+  const displayError =
+    error ?? (chatError ? getErrorMessage(chatError, "Failed to reach the agent.") : null);
+
   const modelPreferences = useWorkspaceAgentModelPreferences(modelOptions, {
     freeOnly: modelPresetState.free,
   });
@@ -157,7 +167,7 @@ export function useWorkspaceAgent() {
     modelPresetState.lastResolvedModelId ??
     modelCatalogQuery.data?.defaultModel ??
     modelOptions[0]?.id;
-  const canSend = draft.trim().length > 0 && !isStreaming;
+
   const activeMention = getActiveWorkspaceAgentMention(draft);
   const mentionSuggestions = useMemo(
     () =>
@@ -177,21 +187,35 @@ export function useWorkspaceAgent() {
     }
   }, [selectedToolPreset, surface]);
 
-  const rememberResolvedModel = modelPresetState.rememberResolvedModel;
-
   useEffect(() => {
     if (activeConversation?.toolPreset && surface !== "agency") {
       setSelectedToolPreset(activeConversation.toolPreset);
     }
     if (activeConversation?.model) {
-      rememberResolvedModel(activeConversation.model);
+      modelPresetState.rememberResolvedModel(activeConversation.model);
     }
   }, [
     activeConversation?.id,
     activeConversation?.model,
     activeConversation?.toolPreset,
-    rememberResolvedModel,
+    modelPresetState.rememberResolvedModel,
     surface,
+  ]);
+
+  useEffect(() => {
+    if (isStreaming) return;
+    if (!activeConversationId) {
+      setMessages([]);
+      return;
+    }
+    if (activeConversation?.id !== activeConversationId) return;
+    setMessages(dashboardMessagesToUIMessages(activeConversation.messages));
+  }, [
+    activeConversation?.id,
+    activeConversation?.messages,
+    activeConversationId,
+    isStreaming,
+    setMessages,
   ]);
 
   useEffect(() => {
@@ -237,11 +261,14 @@ export function useWorkspaceAgent() {
   const switchConversation = useCallback(
     (conversationId: string | null) => {
       setActiveConversationId(conversationId);
-      setPendingMessages([]);
       setError(null);
+      setStreamStopped(false);
       setDraft("");
+      if (!conversationId) {
+        setMessages([]);
+      }
     },
-    [setDraft],
+    [setDraft, setMessages],
   );
 
   const startNewConversation = useCallback(() => {
@@ -257,51 +284,17 @@ export function useWorkspaceAgent() {
   );
 
   const stopGeneration = useCallback(() => {
-    streamAbortRef.current?.abort();
-  }, []);
+    void stop();
+  }, [stop]);
 
   const sendMessage = useCallback(async () => {
     const content = draft.trim();
     const model = modelPresetState.outboundModelId?.trim();
-    const modelPreset = modelPresetState.modelPreset;
-    const lastResolvedModelId = modelPresetState.lastResolvedModelId;
     if (!content || isStreaming) return;
     if (surface === "agency" && !teamId) {
       setError("Select an Agency team before asking about time.");
       return;
     }
-
-    const pendingUserId = `pending-user-${crypto.randomUUID()}`;
-    const pendingAssistantId = `pending-assistant-${crypto.randomUUID()}`;
-    const abortController = new AbortController();
-    streamAbortRef.current = abortController;
-
-    setDraft("");
-    setError(null);
-    setStreamStopped(false);
-    setFollowOutput(true);
-    setIsStreaming(true);
-    setStreamingMessageId(pendingAssistantId);
-    setPendingMessages([
-      {
-        id: pendingUserId,
-        role: "user",
-        content,
-        contextNodeTitles: scopeChips.map((chip) => chip.label),
-        model: model ?? lastResolvedModelId ?? null,
-        toolsCalled: [],
-        createdAt: new Date().toISOString(),
-      },
-      {
-        id: pendingAssistantId,
-        role: "assistant",
-        content: "",
-        contextNodeTitles: [],
-        model: model ?? lastResolvedModelId ?? null,
-        toolsCalled: [],
-        createdAt: new Date().toISOString(),
-      },
-    ]);
 
     const scopedNodes =
       surface === "canvas"
@@ -310,132 +303,44 @@ export function useWorkspaceAgent() {
           )
         : [];
 
-    let startedConversationId: string | null = null;
-    let completed = false;
-
-    const applyStreamEvent = (event: AgentChatTurnStreamEvent) => {
-      switch (event.type) {
-        case "started":
-          startedConversationId = event.conversationId;
-          setActiveConversationId(event.conversationId);
-          setStreamingMessageId(event.assistantMessageId);
-          setPendingMessages((current) =>
-            current.map((message) => {
-              if (message.role === "user") {
-                return { ...message, id: event.userMessageId, model: event.model };
-              }
-              return { ...message, id: event.assistantMessageId, model: event.model };
-            }),
-          );
-          return;
-        case "token":
-          setPendingMessages((current) =>
-            current.map((message) =>
-              message.role === "assistant"
-                ? { ...message, content: `${message.content}${event.delta}` }
-                : message,
-            ),
-          );
-          return;
-        case "tool":
-          setPendingMessages((current) =>
-            current.map((message) =>
-              message.role === "assistant"
-                ? { ...message, toolsCalled: upsertToolCall(message.toolsCalled, event.tool) }
-                : message,
-            ),
-          );
-          return;
-        case "error":
-          setError(event.message);
-          return;
-        case "completed": {
-          completed = true;
-          setPendingMessages([]);
-          setActiveConversationId(event.conversation.id);
-          setStreamStopped(event.stopped);
-          rememberResolvedModel(event.assistantMessage.model ?? event.conversation.model);
-          if (event.workspaceSnapshot) {
-            useWorkspaceStore
-              .getState()
-              .applyWorkspaceSnapshot(
-                event.workspaceSnapshot.nodes,
-                event.workspaceSnapshot.updatedAt,
-              );
-          }
-          void queryClient.invalidateQueries({ queryKey: conversationsListQueryOptions.queryKey });
-          void queryClient.invalidateQueries({
-            queryKey: orpc.agent.conversations.get.queryKey({
-              input: { conversationId: event.conversation.id },
-            }),
-          });
-          return;
-        }
-        default: {
-          const _exhaustive: never = event;
-          return _exhaustive;
-        }
-      }
-    };
+    setDraft("");
+    setError(null);
+    setStreamStopped(false);
 
     try {
-      await streamAgentChatTurn(
+      await chatSendMessage(
+        { text: content },
         {
-          conversationId: activeConversationId ?? undefined,
-          content,
-          surface,
-          toolPreset: effectiveToolPreset,
-          modelPreset,
-          scopeRefs: scopeChips,
-          contextNodeTitles: scopeChips.map((chip) => chip.label),
-          ...(surface === "agency" && teamId ? { teamId } : {}),
-          ...(surface === "canvas"
-            ? {
-                nodes: workspaceNodes,
-                scopeNodes: scopedNodes.length > 0 ? scopedNodes : workspaceNodes,
-              }
-            : {}),
-          ...(model ? { model } : {}),
-        },
-        {
-          signal: abortController.signal,
-          onEvent: applyStreamEvent,
+          body: {
+            conversationId: activeConversationId ?? undefined,
+            surface,
+            toolPreset: effectiveToolPreset,
+            modelPreset: modelPresetState.modelPreset,
+            scopeRefs: scopeChips,
+            contextNodeTitles: scopeChips.map((chip) => chip.label),
+            ...(surface === "agency" && teamId ? { teamId } : {}),
+            ...(surface === "canvas"
+              ? {
+                  nodes: workspaceNodes,
+                  scopeNodes: scopedNodes.length > 0 ? scopedNodes : workspaceNodes,
+                }
+              : {}),
+            ...(model ? { model } : {}),
+          },
         },
       );
-      if (!completed && abortController.signal.aborted) {
-        setStreamStopped(true);
-        if (startedConversationId) {
-          void queryClient.invalidateQueries({ queryKey: conversationsListQueryOptions.queryKey });
-          void queryClient.invalidateQueries({
-            queryKey: orpc.agent.conversations.get.queryKey({
-              input: { conversationId: startedConversationId },
-            }),
-          });
-          setPendingMessages([]);
-        }
-      }
     } catch (streamError) {
-      setPendingMessages([]);
-      if (!startedConversationId) {
-        setDraft(content);
-      }
+      setDraft(content);
       setError(getErrorMessage(streamError, "Failed to reach the agent."));
-    } finally {
-      setIsStreaming(false);
-      setStreamingMessageId(null);
-      streamAbortRef.current = null;
     }
   }, [
     activeConversationId,
+    chatSendMessage,
     draft,
     effectiveToolPreset,
     isStreaming,
-    modelPresetState.lastResolvedModelId,
     modelPresetState.modelPreset,
     modelPresetState.outboundModelId,
-    queryClient,
-    conversationsListQueryOptions.queryKey,
-    rememberResolvedModel,
     scopeChips,
     setDraft,
     surface,
@@ -451,13 +356,13 @@ export function useWorkspaceAgent() {
         conversationId: activeConversationId,
         title,
       });
+      setIsRenameDialogOpen(false);
       void queryClient.invalidateQueries({ queryKey: conversationsListQueryOptions.queryKey });
       void queryClient.invalidateQueries({
         queryKey: orpc.agent.conversations.get.queryKey({
           input: { conversationId: activeConversationId },
         }),
       });
-      setIsRenameDialogOpen(false);
     } catch (mutationError) {
       setError(getErrorMessage(mutationError, "Failed to rename conversation."));
     }
@@ -471,12 +376,11 @@ export function useWorkspaceAgent() {
 
   const confirmDeleteConversation = useCallback(async () => {
     if (!activeConversationId) return;
-    const deletedId = activeConversationId;
     try {
-      await deleteConversationMutation.mutateAsync({ conversationId: deletedId });
-      void queryClient.invalidateQueries({ queryKey: conversationsListQueryOptions.queryKey });
+      await deleteConversationMutation.mutateAsync({ conversationId: activeConversationId });
       setIsDeleteDialogOpen(false);
       startNewConversation();
+      void queryClient.invalidateQueries({ queryKey: conversationsListQueryOptions.queryKey });
     } catch (mutationError) {
       setError(getErrorMessage(mutationError, "Failed to delete conversation."));
     }
@@ -489,8 +393,11 @@ export function useWorkspaceAgent() {
   ]);
 
   const placeholder = surface === "agency" ? "Ask about your time" : "Ask about this canvas";
-
   const bottomOffsetClass = surface === "agency" ? "bottom-20" : "bottom-6";
+  const streamingMessageId =
+    isStreaming && messages[messages.length - 1]?.role === "assistant"
+      ? (messages[messages.length - 1]?.id ?? null)
+      : null;
 
   return {
     surface,
@@ -509,18 +416,14 @@ export function useWorkspaceAgent() {
     addMentionedNode,
     mentionSuggestions,
     activeMention,
-    error,
+    error: displayError,
     messages,
     canSend,
     isPending: isStreaming,
     isStreaming,
     streamStopped,
-    followOutput,
-    setFollowOutput,
     streamingMessageId,
-    chatScrollRef: chatScroll.scrollRef,
-    chatEndRef: chatScroll.endRef,
-    onChatScroll: chatScroll.onScroll,
+    chatStatus: status,
     sendMessage,
     stopGeneration,
     selectedToolPreset: effectiveToolPreset,
