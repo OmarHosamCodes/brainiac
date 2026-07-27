@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  formatTenureMonthSelectionLabel,
   getCurrentTenurePeriodRange,
+  getCurrentTenureQuarterMonths,
   resolveDefaultDashboardRangePreset,
   simpleTenurePeriodLabel,
 } from "./tenure-utils";
@@ -64,5 +66,73 @@ describe("getCurrentTenurePeriodRange", () => {
 
   test("returns null when tenure tracking is unavailable", () => {
     expect(getCurrentTenurePeriodRange(null)).toBeNull();
+  });
+
+  test("narrows the range to selected fiscal months", () => {
+    const range = getCurrentTenurePeriodRange(
+      { fiscalYearStartMonth: 1, fiscalYearStartDay: 1, enabled: true },
+      new Date("2026-08-20T12:00:00.000Z"),
+      [0],
+    );
+
+    expect(range).not.toBeNull();
+    expect(range?.from).toBe("2026-07-01T00:00:00.000Z");
+    expect(range?.to).toBe("2026-07-31T23:59:59.999Z");
+    expect(range?.simpleLabel).toBe("Jul 2026");
+  });
+
+  test("treats all three months as the full quarter", () => {
+    const range = getCurrentTenurePeriodRange(
+      { fiscalYearStartMonth: 1, fiscalYearStartDay: 1, enabled: true },
+      new Date("2026-08-20T12:00:00.000Z"),
+      [0, 1, 2],
+    );
+
+    expect(range?.simpleLabel).toBe("Q3 2026");
+    expect(range?.from).toBe("2026-07-01T00:00:00.000Z");
+    expect(range?.to).toBe("2026-08-20T23:59:59.999Z");
+  });
+});
+
+describe("getCurrentTenureQuarterMonths", () => {
+  test("returns the three fiscal months for the current quarter", () => {
+    const months = getCurrentTenureQuarterMonths(
+      { fiscalYearStartMonth: 1, fiscalYearStartDay: 1, enabled: true },
+      new Date("2026-08-20T12:00:00.000Z"),
+    );
+
+    expect(months).toEqual([
+      {
+        index: 0,
+        label: "July",
+        from: "2026-07-01T00:00:00.000Z",
+        toExclusive: "2026-08-01T00:00:00.000Z",
+      },
+      {
+        index: 1,
+        label: "August",
+        from: "2026-08-01T00:00:00.000Z",
+        toExclusive: "2026-09-01T00:00:00.000Z",
+      },
+      {
+        index: 2,
+        label: "September",
+        from: "2026-09-01T00:00:00.000Z",
+        toExclusive: "2026-10-01T00:00:00.000Z",
+      },
+    ]);
+  });
+});
+
+describe("formatTenureMonthSelectionLabel", () => {
+  test("formats contiguous and gapped month selections", () => {
+    const months = getCurrentTenureQuarterMonths(
+      { fiscalYearStartMonth: 1, fiscalYearStartDay: 1, enabled: true },
+      new Date("2026-08-20T12:00:00.000Z"),
+    );
+    expect(months).not.toBeNull();
+    expect(formatTenureMonthSelectionLabel([months![0]!], 2026)).toBe("Jul 2026");
+    expect(formatTenureMonthSelectionLabel([months![0]!, months![1]!], 2026)).toBe("Jul–Aug 2026");
+    expect(formatTenureMonthSelectionLabel([months![0]!, months![2]!], 2026)).toBe("Jul, Sep 2026");
   });
 });

@@ -1,4 +1,5 @@
 import {
+  addFiscalMonths,
   fiscalQuarterLabel,
   getFiscalQuarterForDate,
   getFiscalQuarterRange,
@@ -9,6 +10,20 @@ export type TenurePolicyCalendar = {
   fiscalYearStartMonth: number;
   fiscalYearStartDay: number;
   enabled: boolean;
+};
+
+export type TenureQuarterMonth = {
+  index: 0 | 1 | 2;
+  label: string;
+  from: string;
+  toExclusive: string;
+};
+
+export type TenurePeriodRange = {
+  from: string;
+  to: string;
+  label: string;
+  simpleLabel: string;
 };
 
 export function resolveDefaultDashboardRangePreset(
@@ -25,26 +40,117 @@ export function simpleTenurePeriodLabel(year: number, fiscalQuarter: number): st
   return `Q${fiscalQuarter} ${year}`;
 }
 
-export function getCurrentTenurePeriodRange(
+function endOfUtcDay(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999),
+  );
+}
+
+function monthShortLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
+}
+
+function monthLongLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "long", timeZone: "UTC" });
+}
+
+export function formatTenureMonthSelectionLabel(
+  months: TenureQuarterMonth[],
+  displayYear: number,
+): string {
+  if (months.length === 0) return "";
+  const shorts = months.map((month) => monthShortLabel(month.from));
+  if (shorts.length === 1) return `${shorts[0]} ${displayYear}`;
+
+  const indexes = months.map((month) => month.index);
+  const contiguous = indexes.every(
+    (index, offset) => offset === 0 || index === (indexes[offset - 1] ?? 0) + 1,
+  );
+  if (contiguous) {
+    return `${shorts[0]}–${shorts[shorts.length - 1]} ${displayYear}`;
+  }
+  return `${shorts.join(", ")} ${displayYear}`;
+}
+
+export function getCurrentTenureQuarterMonths(
   policy: TenurePolicyCalendar | null | undefined,
   now = new Date(),
-): { from: string; to: string; label: string; simpleLabel: string } | null {
+): TenureQuarterMonth[] | null {
   if (!policy?.enabled) return null;
 
   const calendar = toFiscalCalendar(policy);
   const ref = getFiscalQuarterForDate(now, calendar);
   const range = getFiscalQuarterRange(calendar, ref.fiscalYear, ref.fiscalQuarter);
-  const to = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 23, 59, 59, 999),
-  );
+
+  return ([0, 1, 2] as const).map((index) => {
+    const start = addFiscalMonths(range.start, index, calendar.fiscalYearStartDay);
+    const end = addFiscalMonths(range.start, index + 1, calendar.fiscalYearStartDay);
+    return {
+      index,
+      label: monthLongLabel(start.toISOString()),
+      from: start.toISOString(),
+      toExclusive: end.toISOString(),
+    };
+  });
+}
+
+export function getCurrentTenurePeriodRange(
+  policy: TenurePolicyCalendar | null | undefined,
+  now = new Date(),
+  monthIndexes: number[] = [],
+): TenurePeriodRange | null {
+  if (!policy?.enabled) return null;
+
+  const calendar = toFiscalCalendar(policy);
+  const ref = getFiscalQuarterForDate(now, calendar);
+  const range = getFiscalQuarterRange(calendar, ref.fiscalYear, ref.fiscalQuarter);
+  const todayEnd = endOfUtcDay(now);
   const midpoint = new Date((range.start.getTime() + range.end.getTime()) / 2);
   const displayYear = midpoint.getUTCFullYear();
+  const quarterLabel = fiscalQuarterLabel(ref.fiscalYear, ref.fiscalQuarter);
+  const quarterSimpleLabel = simpleTenurePeriodLabel(displayYear, ref.fiscalQuarter);
+
+  const uniqueIndexes = [...new Set(monthIndexes)]
+    .filter((index): index is 0 | 1 | 2 => index === 0 || index === 1 || index === 2)
+    .sort((left, right) => left - right);
+
+  if (uniqueIndexes.length === 0 || uniqueIndexes.length === 3) {
+    return {
+      from: range.start.toISOString(),
+      to: todayEnd.toISOString(),
+      label: quarterLabel,
+      simpleLabel: quarterSimpleLabel,
+    };
+  }
+
+  const months = getCurrentTenureQuarterMonths(policy, now);
+  if (!months) return null;
+  const selected = months.filter((month) => uniqueIndexes.includes(month.index));
+  if (selected.length === 0) {
+    return {
+      from: range.start.toISOString(),
+      to: todayEnd.toISOString(),
+      label: quarterLabel,
+      simpleLabel: quarterSimpleLabel,
+    };
+  }
+
+  const from = selected.reduce(
+    (earliest, month) => (month.from < earliest ? month.from : earliest),
+    selected[0]!.from,
+  );
+  const latestExclusive = selected.reduce(
+    (latest, month) => (month.toExclusive > latest ? month.toExclusive : latest),
+    selected[0]!.toExclusive,
+  );
+  const monthEnd = new Date(new Date(latestExclusive).getTime() - 1);
+  const to = new Date(Math.min(todayEnd.getTime(), monthEnd.getTime()));
 
   return {
-    from: range.start.toISOString(),
+    from,
     to: to.toISOString(),
-    label: fiscalQuarterLabel(ref.fiscalYear, ref.fiscalQuarter),
-    simpleLabel: simpleTenurePeriodLabel(displayYear, ref.fiscalQuarter),
+    label: quarterLabel,
+    simpleLabel: formatTenureMonthSelectionLabel(selected, displayYear),
   };
 }
 
