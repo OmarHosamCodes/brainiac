@@ -1,5 +1,13 @@
 import { Plus } from "lucide-react";
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  startTransition,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -137,6 +145,14 @@ function ReportsFiltersRoot({
 
   const syncReportFilterParams = useCallback(
     (fieldIds: typeof initialFieldIds, showWaste: typeof initialShowWaste) => {
+      const currentFields = parseReportFieldsParam(searchParams.get("fields"));
+      const currentShowWaste = parseShowWasteParam(searchParams.get("showWaste"));
+      if (
+        areSameReportFieldSets(fieldIds, currentFields) &&
+        areSameShowWaste(showWaste, currentShowWaste)
+      ) {
+        return;
+      }
       const next = new URLSearchParams(searchParams);
       next.set("section", "reports");
       if (areSameReportFieldSets(fieldIds, allAgencyReportFieldIds())) {
@@ -149,7 +165,10 @@ function ReportsFiltersRoot({
       } else {
         next.set("showWaste", serializeShowWasteParam(showWaste));
       }
-      navigate(`/agency?${next.toString()}`, { replace: true });
+      // Router updates are secondary; don't block the table paint.
+      startTransition(() => {
+        navigate(`/agency?${next.toString()}`, { replace: true });
+      });
     },
     [navigate, searchParams],
   );
@@ -161,8 +180,8 @@ function ReportsFiltersRoot({
     fetchEntries: true,
     initialFieldIds,
     initialShowWaste,
-    onFiltersApplied: (snapshot) => {
-      syncReportFilterParams(snapshot.fieldIds, snapshot.showWaste);
+    onViewOptionsChange: ({ fieldIds, showWaste }) => {
+      syncReportFilterParams(fieldIds, showWaste);
     },
   });
 
@@ -242,10 +261,6 @@ function ReportsFiltersRoot({
             <AgencyDashboardCommandBar
               {...timeRange.barProps}
               shellClassName="rounded-dense"
-              onReset={() => {
-                timeRange.barProps.onReset();
-                syncReportFilterParams(allAgencyReportFieldIds(), DEFAULT_AGENCY_REPORT_SHOW_WASTE);
-              }}
               trailingActions={
                 <>
                   <Button

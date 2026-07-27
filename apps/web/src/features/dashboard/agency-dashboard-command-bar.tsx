@@ -282,6 +282,9 @@ function ReportsOptionsMenu({
   showWaste: AgencyReportShowWaste;
   onShowWasteChange: (showWaste: AgencyReportShowWaste) => void;
 }) {
+  const allFieldsSelected = areSameReportFieldSets(fieldIds, defaultFieldIds);
+  const allWasteSelected = AGENCY_REPORT_SHOW_WASTE_SOURCES.every((source) => showWaste[source]);
+
   function toggleField(field: AgencyReportFieldId, enabled: boolean) {
     const next = enabled
       ? [...new Set([...fieldIds, field])]
@@ -290,8 +293,20 @@ function ReportsOptionsMenu({
     onFieldIdsChange(normalized.length > 0 ? normalized : defaultFieldIds);
   }
 
+  function selectAllFields() {
+    onFieldIdsChange(defaultFieldIds);
+  }
+
   function toggleShowWaste(source: AgencyReportShowWasteSource, enabled: boolean) {
     onShowWasteChange({ ...showWaste, [source]: enabled });
+  }
+
+  function selectAllWaste() {
+    onShowWasteChange({
+      projects: true,
+      tasks: true,
+      entries: true,
+    });
   }
 
   return (
@@ -319,6 +334,25 @@ function ReportsOptionsMenu({
               className="flex flex-col gap-0.5"
               onPointerDown={(event) => event.preventDefault()}
             >
+              <RadioGroup
+                value={allFieldsSelected ? "all" : ""}
+                onValueChange={(next) => {
+                  if (next === "all") selectAllFields();
+                }}
+                className="gap-0.5"
+              >
+                <label
+                  className={cn(
+                    filterOptionButtonClass,
+                    "justify-start gap-2.5",
+                    allFieldsSelected && "bg-primary/10 text-primary",
+                  )}
+                >
+                  <RadioGroupItem value="all" className="size-3.5" aria-label="Select all fields" />
+                  <span className="min-w-0 flex-1 truncate">Select all</span>
+                </label>
+              </RadioGroup>
+
               {defaultFieldIds.map((field) => {
                 const checked = fieldIds.includes(field);
                 return (
@@ -357,6 +391,25 @@ function ReportsOptionsMenu({
               className="flex flex-col gap-0.5"
               onPointerDown={(event) => event.preventDefault()}
             >
+              <RadioGroup
+                value={allWasteSelected ? "all" : ""}
+                onValueChange={(next) => {
+                  if (next === "all") selectAllWaste();
+                }}
+                className="gap-0.5"
+              >
+                <label
+                  className={cn(
+                    filterOptionButtonClass,
+                    "justify-start gap-2.5",
+                    allWasteSelected && "bg-primary/10 text-primary",
+                  )}
+                >
+                  <RadioGroupItem value="all" className="size-3.5" aria-label="Select all waste" />
+                  <span className="min-w-0 flex-1 truncate">Select all</span>
+                </label>
+              </RadioGroup>
+
               {AGENCY_REPORT_SHOW_WASTE_SOURCES.map((source) => {
                 const checked = showWaste[source];
                 return (

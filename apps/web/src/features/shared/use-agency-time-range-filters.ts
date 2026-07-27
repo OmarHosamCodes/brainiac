@@ -1,15 +1,13 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { startTransition, useMemo, useRef, useState } from "react";
 
 import type { RangePreset } from "@/features/dashboard/agency-dashboard-command-bar";
 import type { AgencyFilterOptionGroup } from "@/features/shared/filters/agency-multi-select-filter";
 import {
   allAgencyReportFieldIds,
-  areSameReportFieldSets,
   type AgencyReportFieldId,
 } from "@/features/reports/agency-report-fields";
 import {
-  areSameShowWaste,
   DEFAULT_AGENCY_REPORT_SHOW_WASTE,
   type AgencyReportShowWaste,
 } from "@/features/reports/agency-report-show-waste";
@@ -81,6 +79,11 @@ type UseAgencyTimeRangeFiltersOptions = {
   initialFieldIds?: AgencyReportFieldId[];
   initialShowWaste?: AgencyReportShowWaste;
   onFiltersApplied?: (snapshot: Omit<AgencyTimeRangeFilterSnapshot, "id" | "savedAt">) => void;
+  /** Instant view-option changes (fields / show waste) — keep URL sync off the Apply path. */
+  onViewOptionsChange?: (options: {
+    fieldIds: AgencyReportFieldId[];
+    showWaste: AgencyReportShowWaste;
+  }) => void;
 };
 
 function sameIdList(left: string[], right: string[]): boolean {
@@ -174,11 +177,46 @@ export function useAgencyTimeRangeFilters({
   initialFieldIds,
   initialShowWaste,
   onFiltersApplied,
+  onViewOptionsChange,
 }: UseAgencyTimeRangeFiltersOptions) {
   const defaultFieldIds = allAgencyReportFieldIds();
   const startingFieldIds = initialFieldIds ?? defaultFieldIds;
   const startingShowWaste = initialShowWaste ?? DEFAULT_AGENCY_REPORT_SHOW_WASTE;
   const now = useMemo(() => new Date(), []);
+  const viewOptionsRef = useRef({
+    fieldIds: startingFieldIds,
+    showWaste: startingShowWaste,
+  });
+  const viewOptionsSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function scheduleViewOptionsSync(
+    fieldIds: AgencyReportFieldId[],
+    showWaste: AgencyReportShowWaste,
+  ) {
+    viewOptionsRef.current = { fieldIds, showWaste };
+    if (!onViewOptionsChange) return;
+    if (viewOptionsSyncTimerRef.current) clearTimeout(viewOptionsSyncTimerRef.current);
+    // Debounce URL writes so checkbox spam doesn't thrash the router.
+    viewOptionsSyncTimerRef.current = setTimeout(() => {
+      onViewOptionsChange(viewOptionsRef.current);
+    }, 120);
+  }
+
+  function commitFieldIds(fieldIds: AgencyReportFieldId[]) {
+    setDraftFieldIds(fieldIds);
+    startTransition(() => {
+      setAppliedFieldIds(fieldIds);
+    });
+    scheduleViewOptionsSync(fieldIds, viewOptionsRef.current.showWaste);
+  }
+
+  function commitShowWaste(showWaste: AgencyReportShowWaste) {
+    setDraftShowWaste(showWaste);
+    startTransition(() => {
+      setAppliedShowWaste(showWaste);
+    });
+    scheduleViewOptionsSync(viewOptionsRef.current.fieldIds, showWaste);
+  }
 
   const tenurePolicyQuery = useQuery({
     ...orpc.agencyOps.tenure.policy.get.queryOptions({ input: { teamId } }),
@@ -237,8 +275,6 @@ export function useAgencyTimeRangeFilters({
     !sameIdList(draftMemberUserIds, appliedMemberUserIds) ||
     !sameIdList(draftTenureMonthIndexes.map(String), appliedTenureMonthIndexes.map(String)) ||
     (includeClientFilter && !sameIdList(draftClientIds, appliedClientIds)) ||
-    (includeFieldsFilter && !areSameReportFieldSets(draftFieldIds, appliedFieldIds)) ||
-    (includeFieldsFilter && !areSameShowWaste(draftShowWaste, appliedShowWaste)) ||
     (effectiveDraftRangePreset === "custom" &&
       (draftCustomFromDate !== appliedCustomFromDate || draftCustomToDate !== appliedCustomToDate));
 
@@ -391,8 +427,8 @@ export function useAgencyTimeRangeFilters({
           draftClientIds,
           draftProjectIds,
           draftMemberUserIds,
-          draftFieldIds,
-          draftShowWaste,
+          appliedFieldIds,
+          appliedShowWaste,
           draftTenureMonthIndexes,
         ),
       );
@@ -404,10 +440,6 @@ export function useAgencyTimeRangeFilters({
     setAppliedProjectIds(draftProjectIds);
     setAppliedMemberUserIds(draftMemberUserIds);
     setAppliedTenureMonthIndexes(draftTenureMonthIndexes);
-    if (includeFieldsFilter) {
-      setAppliedFieldIds(draftFieldIds);
-      setAppliedShowWaste(draftShowWaste);
-    }
   }
 
   function handleReset() {
@@ -425,6 +457,12 @@ export function useAgencyTimeRangeFilters({
       setAppliedFieldIds(defaultFieldIds);
       setDraftShowWaste(DEFAULT_AGENCY_REPORT_SHOW_WASTE);
       setAppliedShowWaste(DEFAULT_AGENCY_REPORT_SHOW_WASTE);
+      if (viewOptionsSyncTimerRef.current) clearTimeout(viewOptionsSyncTimerRef.current);
+      viewOptionsRef.current = {
+        fieldIds: defaultFieldIds,
+        showWaste: DEFAULT_AGENCY_REPORT_SHOW_WASTE,
+      };
+      onViewOptionsChange?.(viewOptionsRef.current);
     }
     setAppliedRangePreset(null);
   }
@@ -484,6 +522,7 @@ export function useAgencyTimeRangeFilters({
     setAppliedFieldIds(snapshot.fieldIds);
     setAppliedShowWaste(showWaste);
     setAppliedTenureMonthIndexes(tenureMonthIndexes);
+    viewOptionsRef.current = { fieldIds: snapshot.fieldIds, showWaste };
   }
 
   const isLoading =
@@ -526,10 +565,10 @@ export function useAgencyTimeRangeFilters({
     ...(includeFieldsFilter
       ? {
           fieldIds: draftFieldIds,
-          onFieldIdsChange: setDraftFieldIds,
+          onFieldIdsChange: commitFieldIds,
           defaultFieldIds,
           showWaste: draftShowWaste,
-          onShowWasteChange: setDraftShowWaste,
+          onShowWasteChange: commitShowWaste,
         }
       : {}),
   };

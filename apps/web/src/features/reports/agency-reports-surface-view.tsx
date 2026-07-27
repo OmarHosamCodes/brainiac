@@ -73,6 +73,7 @@ export function AgencyReportsSurfaceView({ vm }: AgencyReportsSurfaceViewProps) 
       <AgencyReportsTable
         teamId={vm.teamId}
         entries={vm.entries}
+        clientGroups={vm.clientGroups}
         visibleFields={vm.visibleFields}
         projects={vm.projects}
         tasks={vm.tasks}

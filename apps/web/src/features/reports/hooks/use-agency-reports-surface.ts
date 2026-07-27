@@ -11,7 +11,10 @@ import {
   useAgencyProjectsQuery,
 } from "@/features/shared/agency-queries";
 import type { AggregatedReportRow } from "@/features/reports/agency-report-grouping";
-import { filterEntriesByShowWaste } from "@/features/reports/agency-report-grouping";
+import {
+  filterEntriesByShowWaste,
+  groupEntriesForDisplay,
+} from "@/features/reports/agency-report-grouping";
 import { DEFAULT_AGENCY_REPORT_SHOW_WASTE } from "@/features/reports/agency-report-show-waste";
 import { selectEntriesForDetailsRow } from "@/features/reports/hooks/use-agency-report-entry-details-dialog";
 import { getErrorMessage } from "@/lib/utils/get-error-message";
@@ -226,6 +229,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
       ),
     [entriesQuery.data, showWaste],
   );
+  const clientGroups = useMemo(() => groupEntriesForDisplay(entries), [entries]);
   const detailsEntries = useMemo(
     () => selectEntriesForDetailsRow(entriesQuery.data ?? [], detailsRowKey),
     [detailsRowKey, entriesQuery.data],
@@ -233,7 +237,10 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
   const isPending = entriesQuery.isPending && !entriesQuery.isPlaceholderData;
   const isError = entriesQuery.isError;
   const error = getErrorMessage(entriesQuery.error, "Try refreshing.");
-  const totalSeconds = entries.reduce((sum, entry) => sum + entry.durationSeconds, 0);
+  const totalSeconds = useMemo(
+    () => entries.reduce((sum, entry) => sum + entry.durationSeconds, 0),
+    [entries],
+  );
   const refetch = () => {
     void entriesQuery.refetch();
   };
@@ -241,6 +248,7 @@ export function useAgencyReportsSurface({ teamId, filters }: UseAgencyReportsSur
   return {
     teamId,
     entries,
+    clientGroups,
     isPending,
     isError,
     error,

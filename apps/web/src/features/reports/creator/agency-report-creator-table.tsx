@@ -23,7 +23,7 @@ import { agencyMetricClass } from "@/features/shared/agency-ui";
 import {
   groupEntriesForDisplay,
   isReportEntryWaste,
-  reportEntryWasteRowClass,
+  reportEntryWasteTextClass,
   type AggregatedReportRow,
 } from "@/features/reports/agency-report-grouping";
 import { applyDurationToDraft, entryToDraft } from "@/features/time-tracking/time-entry-draft";
@@ -283,6 +283,7 @@ function ReportCreatorRow({
     }
   }
 
+  const isWaste = isReportEntryWaste(row);
   const rowElement = (
     <motion.tr
       layout={!prefersReducedMotion}
@@ -291,10 +292,7 @@ function ReportCreatorRow({
       exit={
         prefersReducedMotion ? undefined : { opacity: 0, height: 0, transition: { duration: 0.2 } }
       }
-      className={cn(
-        "border-b border-default transition-colors duration-150 last:border-b-0",
-        isReportEntryWaste(row) && reportEntryWasteRowClass,
-      )}
+      className="border-b border-default transition-colors duration-150 last:border-b-0"
     >
       {showProject && rowIndex === 0 ? (
         <td
@@ -309,6 +307,7 @@ function ReportCreatorRow({
           className={cn(
             "max-w-48 truncate px-4 py-3 text-highlighted",
             reportCreatorCellSelectionClass(isSelected, "task"),
+            isWaste && reportEntryWasteTextClass,
           )}
           title={row.taskTitle || undefined}
           dir="auto"
@@ -321,6 +320,7 @@ function ReportCreatorRow({
           className={cn(
             "max-w-md px-4 py-3",
             reportCreatorCellSelectionClass(isSelected, "description"),
+            isWaste && !isEditing && reportEntryWasteTextClass,
           )}
           dir="auto"
         >
@@ -349,6 +349,7 @@ function ReportCreatorRow({
           className={cn(
             "px-4 py-3 text-right text-muted",
             reportCreatorCellSelectionClass(isSelected, "duration"),
+            isWaste && !isEditing && reportEntryWasteTextClass,
           )}
         >
           {isEditing ? (
@@ -377,6 +378,7 @@ function ReportCreatorRow({
           className={cn(
             "px-4 py-3 text-highlighted",
             reportCreatorCellSelectionClass(isSelected, "assignee"),
+            isWaste && reportEntryWasteTextClass,
           )}
         >
           {row.userName}
@@ -386,7 +388,7 @@ function ReportCreatorRow({
         <AgencyReportCreatorRowActions
           label={rowLabel}
           taskId={row.taskId}
-          taskIsWaste={isReportEntryWaste(row)}
+          taskIsWaste={isWaste}
           disabled={isEditing || isSaving}
           wastePending={wastePending}
           onEdit={() => onEdit(primaryEntryId)}
@@ -403,7 +405,7 @@ function ReportCreatorRow({
       taskTitle={row.taskTitle}
       durationSeconds={row.durationSeconds}
       taskId={row.taskId}
-      taskIsWaste={isReportEntryWaste(row)}
+      taskIsWaste={isWaste}
       disabled={isEditing || isSaving}
       wastePending={wastePending}
       onSelectEntry={onSelectEntry}

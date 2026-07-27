@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { AgencyReportDescriptionCell } from "@/features/reports/cells/agency-report-description-cell";
 import { AgencyReportDurationCell } from "@/features/reports/cells/agency-report-duration-cell";
@@ -15,7 +15,7 @@ import {
 import {
   groupEntriesForDisplay,
   isReportEntryWaste,
-  reportEntryWasteRowClass,
+  reportEntryWasteTextClass,
   type AgencyReportEntry,
   type AggregatedReportRow,
   type DisplayClientGroup,
@@ -67,8 +67,17 @@ export function AgencyReportsTable({
   onDeleteRow,
   onToggleWaste,
 }: AgencyReportsTableProps) {
-  const clientGroups = clientGroupsProp ?? groupEntriesForDisplay(entries);
-  const totalSeconds = entries.reduce((sum, entry) => sum + entry.durationSeconds, 0);
+  const clientGroups = useMemo(
+    () => clientGroupsProp ?? groupEntriesForDisplay(entries),
+    [clientGroupsProp, entries],
+  );
+  const totalSeconds = useMemo(
+    () =>
+      clientGroupsProp
+        ? clientGroups.reduce((sum, group) => sum + group.totalSeconds, 0)
+        : entries.reduce((sum, entry) => sum + entry.durationSeconds, 0),
+    [clientGroups, clientGroupsProp, entries],
+  );
   const showProject = isReportFieldVisible(visibleFields, "project");
   const showTask = isReportFieldVisible(visibleFields, "task");
   const showDescription = isReportFieldVisible(visibleFields, "description");
@@ -131,97 +140,120 @@ export function AgencyReportsTable({
               </thead>
               <tbody>
                 {clientGroup.projects.flatMap((project) =>
-                  project.rows.map((row, rowIndex) => (
-                    <tr
-                      key={row.key}
-                      className={cn(
-                        "border-b border-default last:border-b-0",
-                        isReportEntryWaste(row) && reportEntryWasteRowClass,
-                      )}
-                    >
-                      {showProject && rowIndex === 0 ? (
-                        <td
-                          rowSpan={project.rows.length}
-                          className="border-r border-default bg-elevated/40 px-4 py-3 align-top text-xs"
-                        >
-                          <div className="flex flex-col gap-1.5">
-                            <span className="font-semibold text-highlighted">
-                              {project.projectName}
-                            </span>
-                            {showDuration ? (
-                              <span className={cn("text-[10px] text-muted", agencyMetricClass)}>
-                                {formatDuration(project.totalSeconds, "clock")}
+                  project.rows.map((row, rowIndex) => {
+                    const isWaste = isReportEntryWaste(row);
+                    return (
+                      <tr key={row.key} className="border-b border-default last:border-b-0">
+                        {showProject && rowIndex === 0 ? (
+                          <td
+                            rowSpan={project.rows.length}
+                            className="border-r border-default bg-elevated/40 px-4 py-3 align-top text-xs"
+                          >
+                            <div className="flex flex-col gap-1.5">
+                              <span className="font-semibold text-highlighted">
+                                {project.projectName}
                               </span>
-                            ) : null}
-                          </div>
-                        </td>
-                      ) : null}
-                      {showTask ? (
-                        <td className="max-w-48 px-4 py-3 text-highlighted" dir="auto">
-                          {onTaskChange ? (
-                            <AgencyReportTaskCell
-                              teamId={teamId}
-                              row={row}
-                              projects={projects}
-                              tasks={tasks}
-                              loading={tasksLoading}
-                              disabled={updatingRowKeys?.has(row.key)}
-                              onTaskChange={(taskId) => onTaskChange(row, taskId)}
+                              {showDuration ? (
+                                <span className={cn("text-[10px] text-muted", agencyMetricClass)}>
+                                  {formatDuration(project.totalSeconds, "clock")}
+                                </span>
+                              ) : null}
+                            </div>
+                          </td>
+                        ) : null}
+                        {showTask ? (
+                          <td
+                            className={cn(
+                              "max-w-48 px-4 py-3 text-highlighted",
+                              isWaste && reportEntryWasteTextClass,
+                            )}
+                            dir="auto"
+                          >
+                            {onTaskChange ? (
+                              <AgencyReportTaskCell
+                                teamId={teamId}
+                                row={row}
+                                projects={projects}
+                                tasks={tasks}
+                                loading={tasksLoading}
+                                disabled={updatingRowKeys?.has(row.key)}
+                                onTaskChange={(taskId) => onTaskChange(row, taskId)}
+                              />
+                            ) : (
+                              <span className="block truncate" title={row.taskTitle || undefined}>
+                                {row.taskTitle || "—"}
+                              </span>
+                            )}
+                          </td>
+                        ) : null}
+                        {showDescription ? (
+                          <td
+                            className={cn(
+                              "max-w-md px-4 py-3 text-highlighted",
+                              isWaste && reportEntryWasteTextClass,
+                            )}
+                            dir="auto"
+                          >
+                            {onDescriptionChange ? (
+                              <AgencyReportDescriptionCell
+                                value={row.description}
+                                disabled={updatingRowKeys?.has(row.key)}
+                                onSave={(description) => onDescriptionChange(row, description)}
+                              />
+                            ) : (
+                              <span className="block truncate" title={row.description || undefined}>
+                                {row.description || "—"}
+                              </span>
+                            )}
+                          </td>
+                        ) : null}
+                        {showDuration ? (
+                          <td
+                            className={cn(
+                              "px-4 py-3 text-right text-muted",
+                              isWaste && reportEntryWasteTextClass,
+                            )}
+                          >
+                            <AgencyReportDurationCell row={row} />
+                          </td>
+                        ) : null}
+                        {showAssignee ? (
+                          <td
+                            className={cn(
+                              "px-4 py-3 text-highlighted",
+                              isWaste && reportEntryWasteTextClass,
+                            )}
+                          >
+                            {row.userName}
+                          </td>
+                        ) : null}
+                        {showActions ? (
+                          <td className="px-2 py-3 text-right">
+                            <AgencyReportRowActions
+                              label={row.taskTitle || row.description || row.projectName}
+                              entryCount={row.entryCount}
+                              taskId={row.taskId}
+                              taskIsWaste={
+                                row.entries.every((entry) => entry.isWaste === true) ||
+                                row.taskIsWaste
+                              }
+                              deleting={row.entries.some((entry) =>
+                                deletingEntryIdSet.has(entry.id),
+                              )}
+                              wastePending={wastePendingRowKeys?.has(row.key)}
+                              onEditDetails={
+                                onEditDetails && row.entries.length > 0
+                                  ? () => onEditDetails(row)
+                                  : undefined
+                              }
+                              onDelete={() => onDeleteRow?.(row)}
+                              onToggleWaste={onToggleWaste ? () => onToggleWaste(row) : undefined}
                             />
-                          ) : (
-                            <span className="block truncate" title={row.taskTitle || undefined}>
-                              {row.taskTitle || "—"}
-                            </span>
-                          )}
-                        </td>
-                      ) : null}
-                      {showDescription ? (
-                        <td className="max-w-md px-4 py-3 text-highlighted" dir="auto">
-                          {onDescriptionChange ? (
-                            <AgencyReportDescriptionCell
-                              value={row.description}
-                              disabled={updatingRowKeys?.has(row.key)}
-                              onSave={(description) => onDescriptionChange(row, description)}
-                            />
-                          ) : (
-                            <span className="block truncate" title={row.description || undefined}>
-                              {row.description || "—"}
-                            </span>
-                          )}
-                        </td>
-                      ) : null}
-                      {showDuration ? (
-                        <td className="px-4 py-3 text-right text-muted">
-                          <AgencyReportDurationCell row={row} />
-                        </td>
-                      ) : null}
-                      {showAssignee ? (
-                        <td className="px-4 py-3 text-highlighted">{row.userName}</td>
-                      ) : null}
-                      {showActions ? (
-                        <td className="px-2 py-3 text-right">
-                          <AgencyReportRowActions
-                            label={row.taskTitle || row.description || row.projectName}
-                            entryCount={row.entryCount}
-                            taskId={row.taskId}
-                            taskIsWaste={
-                              row.entries.every((entry) => entry.isWaste === true) ||
-                              row.taskIsWaste
-                            }
-                            deleting={row.entries.some((entry) => deletingEntryIdSet.has(entry.id))}
-                            wastePending={wastePendingRowKeys?.has(row.key)}
-                            onEditDetails={
-                              onEditDetails && row.entries.length > 0
-                                ? () => onEditDetails(row)
-                                : undefined
-                            }
-                            onDelete={() => onDeleteRow?.(row)}
-                            onToggleWaste={onToggleWaste ? () => onToggleWaste(row) : undefined}
-                          />
-                        </td>
-                      ) : null}
-                    </tr>
-                  )),
+                          </td>
+                        ) : null}
+                      </tr>
+                    );
+                  }),
                 )}
               </tbody>
             </table>

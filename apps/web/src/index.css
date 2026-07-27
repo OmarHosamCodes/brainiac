@@ -915,47 +915,13 @@ html[data-agent-scope-mode="true"] [data-agent-scope][data-agent-scope-hover="tr
   animation: agency-task-row-complete 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Playful wavy strikethrough for waste-marked report / tracker rows */
+/* Playful wavy strikethrough for waste-marked report / tracker rows.
+   Static decoration only — animated SVG overlay was thrashing paint when many waste rows appear. */
 .agency-waste-strike {
-  position: relative;
-}
-
-.agency-waste-strike::after {
-  content: "";
-  pointer-events: none;
-  position: absolute;
-  inset-inline: 0.75rem;
-  top: 50%;
-  height: 0.35rem;
-  translate: 0 -50%;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 8' fill='none'%3E%3Cpath d='M0 4 Q 10 0 20 4 T 40 4 T 60 4 T 80 4 T 100 4 T 120 4' stroke='%23888899' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")
-    center / 7.5rem 0.35rem repeat-x;
-  opacity: 0.65;
-  transform-origin: left center;
-  animation: agency-waste-strike-draw 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes agency-waste-strike-draw {
-  from {
-    clip-path: inset(0 100% 0 0);
-  }
-  to {
-    clip-path: inset(0 0 0 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .agency-waste-strike {
-    text-decoration-line: line-through;
-    text-decoration-style: wavy;
-    text-decoration-thickness: 1.5px;
-    text-decoration-color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
-  }
-
-  .agency-waste-strike::after {
-    display: none;
-    animation: none;
-  }
+  text-decoration-line: line-through;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: color-mix(in oklab, var(--muted-foreground) 70%, transparent);
 }
 
 @keyframes project-share-panel-in {

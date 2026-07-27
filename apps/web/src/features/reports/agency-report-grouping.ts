@@ -227,5 +227,5 @@ export function filterEntriesByShowWaste(
   return entries.filter((entry) => isReportEntryWasteVisible(entry, showWaste));
 }
 
-/** Playful wavy strike — see `.agency-waste-strike` in index.css. */
-export const reportEntryWasteRowClass = "agency-waste-strike text-muted";
+/** Playful wavy strike for waste text cells only — not project or row actions. */
+export const reportEntryWasteTextClass = "agency-waste-strike text-muted";

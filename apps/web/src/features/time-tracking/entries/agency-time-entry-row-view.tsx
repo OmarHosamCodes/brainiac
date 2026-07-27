@@ -30,7 +30,7 @@ import {
   agencyWorkTimeRangeClass,
   agencyWorkTitleClass,
 } from "@/features/shared/agency-ui";
-import { reportEntryWasteRowClass } from "@/features/reports/agency-report-grouping";
+import { reportEntryWasteTextClass } from "@/features/reports/agency-report-grouping";
 import { agentScopeableProps } from "@/features/shared/agent-scopeable";
 import { cn } from "@/lib/utils";
 
@@ -103,7 +103,6 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         agencyTimeEntryRowClass,
         highlighted && agencyTimeEntryRowHighlightClass,
         (editingDescription || editingDuration) && agencyTimeEntryRowEditingClass,
-        isWaste && reportEntryWasteRowClass,
         className,
       )}
       {...agentScopeableProps({
@@ -112,7 +111,9 @@ export function AgencyTimeEntryRowView({ view, className }: AgencyTimeEntryRowVi
         label: descriptionDraft.trim() || durationLabel || "Time entry",
       })}
     >
-      <div className={cn(agencyTimeEntryMainClass, "gap-3 pr-2")}>
+      <div
+        className={cn(agencyTimeEntryMainClass, "gap-3 pr-2", isWaste && reportEntryWasteTextClass)}
+      >
         {isMulti ? (
           <div className={descriptionLeadingSlotClass}>
             <button
