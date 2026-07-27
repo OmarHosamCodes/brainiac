@@ -43,7 +43,7 @@ export function AgencyReportTaskCell({
       highlightSearch
       disabled={disabled}
       className={cn(
-        "h-auto min-h-0 w-full max-w-full justify-start border-0 bg-transparent px-0 py-0 text-xs font-normal shadow-none hover:bg-muted/60",
+        "-mx-4 -my-3 h-auto min-h-10 w-[calc(100%+2rem)] justify-start rounded-none border-0 bg-transparent px-4 py-3 text-xs font-normal shadow-none hover:bg-muted/60",
         agencyFocusRingClass,
         "motion-reduce:transition-none",
       )}

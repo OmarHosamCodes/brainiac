@@ -214,7 +214,14 @@ export function AgencyReportsTable({
                               isWaste && reportEntryWasteTextClass,
                             )}
                           >
-                            <AgencyReportDurationCell row={row} />
+                            <AgencyReportDurationCell
+                              row={row}
+                              onEditDetails={
+                                onEditDetails && row.entries.length > 0
+                                  ? () => onEditDetails(row)
+                                  : undefined
+                              }
+                            />
                           </td>
                         ) : null}
                         {showAssignee ? (

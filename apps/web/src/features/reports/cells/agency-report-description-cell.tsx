@@ -4,6 +4,9 @@ import { Input } from "@/ui/input";
 import { agencyFocusRingClass } from "@/features/shared/agency-ui";
 import { cn } from "@/lib/utils";
 
+/** Stretch interactive control to the full table-cell hit area (cancels td px-4 py-3). */
+const reportCellHitClass = "-mx-4 -my-3 flex w-[calc(100%+2rem)] min-h-10 items-center px-4 py-3";
+
 type AgencyReportDescriptionCellProps = {
   value: string;
   disabled?: boolean;
@@ -71,7 +74,9 @@ export function AgencyReportDescriptionCell({
         }}
         disabled={disabled}
         autoFocus
-        className="h-7 rounded-dense text-xs"
+        className={cn(
+          "-mx-4 -my-3 h-auto min-h-10 w-[calc(100%+2rem)] rounded-none border-0 bg-transparent px-4 py-3 text-xs shadow-none focus-visible:bg-muted/40 focus-visible:ring-0",
+        )}
         aria-label="Description"
       />
     );
@@ -89,7 +94,8 @@ export function AgencyReportDescriptionCell({
       role="button"
       tabIndex={disabled ? -1 : 0}
       className={cn(
-        "-mx-1 block truncate rounded px-1 transition-colors motion-reduce:transition-none",
+        reportCellHitClass,
+        "rounded-none transition-colors motion-reduce:transition-none",
         !disabled && "cursor-text hover:bg-muted/60",
         agencyFocusRingClass,
       )}
@@ -103,7 +109,9 @@ export function AgencyReportDescriptionCell({
         }
       }}
     >
-      {value || <span className="text-muted">Add description</span>}
+      <span className="min-w-0 flex-1 truncate">
+        {value || <span className="text-muted">Add description</span>}
+      </span>
     </span>
   );
 }
