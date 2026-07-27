@@ -553,6 +553,15 @@ body {
   box-shadow: 0 0 0 1px var(--color-sidebar-border);
 }
 
+/* Spatial: drop the L-ring so the top bar can flush into the canvas surface. */
+.app-shell--spatial .app-shell__chrome-surface {
+  box-shadow: none;
+}
+
+.app-shell--spatial .app-shell__rail {
+  box-shadow: 1px 0 0 0 var(--color-sidebar-border);
+}
+
 /* One L-shaped nest: rail column + context row share border/shadow. Flush to viewport. */
 .app-shell__chrome {
   position: fixed;
@@ -744,6 +753,11 @@ body {
   pointer-events: auto;
   background: var(--color-background);
   color: var(--color-foreground);
+}
+
+/* Canvas / spatial: top bar shares the workspace surface (bg-default), not sidebar chrome. */
+.app-shell--spatial .app-shell__context-bar {
+  background: var(--color-default);
 }
 
 .app-shell__context-bar-left {

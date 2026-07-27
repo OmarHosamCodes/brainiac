@@ -74,7 +74,9 @@ export function AppShellRailOverlays() {
         variant="ghost"
         size="icon"
         className={cn(
-          "app-shell__mobile-nav-trigger ui-chrome-glass md:hidden",
+          "app-shell__mobile-nav-trigger md:hidden",
+          "border border-default bg-default text-highlighted shadow-sm",
+          "hover:bg-elevated hover:text-highlighted",
           shellFocusRingClass,
         )}
         aria-label="Open navigation"

@@ -130,15 +130,19 @@ export function WorkspaceNodeShell({
     return "Viewer";
   }, [activeTeamRole]);
   return (
-    <div className="flex h-full w-full gap-0 overflow-hidden">
+    <div className="flex h-full w-full gap-0 overflow-hidden bg-default">
       <aside
         className={cn(
-          "flex flex-col border-r border-default bg-muted/20 transition-all duration-300",
+          "flex flex-col border-r border-default bg-background transition-all duration-300",
           isSidebarOpen ? "w-80" : "w-0 opacity-0",
         )}
       >
         <div className="flex flex-1 flex-col overflow-y-auto p-6">
-          <Button variant="ghost" className="justify-start px-0" asChild>
+          <Button
+            variant="ghost"
+            className="justify-start px-0 text-highlighted hover:bg-elevated hover:text-highlighted"
+            asChild
+          >
             <Link to="/canvas">
               <ArrowLeft className="size-4" />
               Canvas
@@ -177,7 +181,7 @@ export function WorkspaceNodeShell({
                 <div className="mt-2.5 flex items-center gap-2">
                   <select
                     value={nodeShareTeamId}
-                    className="h-8 w-full rounded-xl border border-muted/40 bg-default px-2.5 text-xs"
+                    className="h-8 w-full rounded-xl border border-default bg-background px-2.5 text-xs text-foreground"
                     disabled={teams.length === 0}
                     onChange={(event) => onNodeShareTeamIdChange(event.target.value)}
                   >
@@ -213,7 +217,7 @@ export function WorkspaceNodeShell({
                   "group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition-all",
                   tab.id === activeTabId
                     ? "bg-primary/10 text-primary ring-1 ring-primary/20"
-                    : "text-toned hover:bg-elevated/50 hover:text-highlighted",
+                    : "text-toned hover:bg-elevated hover:text-highlighted",
                 )}
                 onClick={() => setActiveTab(tab.id)}
               >
@@ -227,7 +231,7 @@ export function WorkspaceNodeShell({
             ))}
             <button
               type="button"
-              className="mt-2 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-muted hover:bg-elevated/50"
+              className="mt-2 flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium text-muted hover:bg-elevated hover:text-highlighted"
               onClick={() => openTabEditor("create")}
             >
               <Plus className="size-4.5" />
@@ -237,7 +241,7 @@ export function WorkspaceNodeShell({
           <div className="mt-auto space-y-1">
             <Button
               variant="ghost"
-              className="w-full justify-start rounded-2xl"
+              className="w-full justify-start rounded-2xl text-toned hover:bg-elevated hover:text-highlighted"
               onClick={() => void saveActiveTabToMarketplace()}
             >
               <Store className="size-4" />
@@ -245,7 +249,7 @@ export function WorkspaceNodeShell({
             </Button>
             <Button
               variant="ghost"
-              className="w-full justify-start rounded-2xl"
+              className="w-full justify-start rounded-2xl text-toned hover:bg-elevated hover:text-highlighted"
               onClick={() => openTabEditor("rename")}
             >
               <Pencil className="size-4" />
@@ -253,7 +257,7 @@ export function WorkspaceNodeShell({
             </Button>
             <Button
               variant="ghost"
-              className="w-full justify-start rounded-2xl hover:text-error"
+              className="w-full justify-start rounded-2xl text-toned hover:bg-elevated hover:text-error"
               onClick={() => deleteActiveTab()}
             >
               <Trash2 className="size-4" />
@@ -262,10 +266,15 @@ export function WorkspaceNodeShell({
           </div>
         </div>
       </aside>
-      <main className="relative flex flex-1 flex-col overflow-hidden bg-elevated/5">
+      <main className="relative flex flex-1 flex-col overflow-hidden bg-background">
         <header className="flex min-h-16 shrink-0 items-center justify-between gap-4 border-b border-default bg-default px-4 py-4 sm:px-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen((open) => !open)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-highlighted hover:bg-elevated hover:text-highlighted"
+              onClick={() => setIsSidebarOpen((open) => !open)}
+            >
               {isSidebarOpen ? (
                 <PanelLeftClose className="size-4" />
               ) : (
@@ -282,7 +291,7 @@ export function WorkspaceNodeShell({
           <Button disabled={!canEditNodeContent} onClick={() => openAddBlockCommand("search")}>
             <Blocks className="size-4" />
             Add block
-            <kbd className="ml-1 hidden rounded-md border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground sm:inline">
+            <kbd className="ml-1 hidden rounded-md border border-primary-foreground/25 bg-primary-foreground/10 px-1.5 py-0.5 font-mono text-[10px] font-medium text-primary-foreground sm:inline">
               ⌘K
             </kbd>
           </Button>

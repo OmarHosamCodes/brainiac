@@ -34,6 +34,8 @@ import {
   createWorkspaceMessageHouseBlock,
   createWorkspaceNodeTab,
   createWorkspaceNotesBlock,
+  createWorkspaceOkrKeyResult,
+  createWorkspaceOkrObjective,
   createWorkspaceOkrTrackerBlock,
   createWorkspacePipelineFunnelBlock,
   createWorkspacePricingSimulatorBlock,
@@ -44,6 +46,7 @@ import {
   createWorkspaceScorecardMetric,
   createWorkspaceSeatPlannerBlock,
   createWorkspaceSkillsHeatMapBlock,
+  createWorkspaceStrategicAssumption,
   createWorkspaceSwotBlock,
   createWorkspaceTableBlock,
   createWorkspaceTalentGridBlock,
@@ -62,7 +65,10 @@ import {
   type WorkspaceKanbanBlock,
   type WorkspaceMarketplaceItem,
   type WorkspaceNode,
+  type WorkspaceNodeConnection,
   type WorkspaceNodeTab,
+  type WorkspaceNodeTint,
+  type WorkspaceNodeType,
   type WorkspaceScorecardBlock,
 } from "@orch/workspace";
 import { eq, inArray } from "drizzle-orm";
@@ -238,6 +244,10 @@ function createSeedNode({
   updatedAt,
   tabs,
   customBlockTemplates = [],
+  nodeType = "standard",
+  connections = [],
+  tint = "neutral",
+  featuredBlocks = [],
 }: {
   id: string;
   title: string;
@@ -249,12 +259,16 @@ function createSeedNode({
   updatedAt: string;
   tabs: WorkspaceNodeTab[];
   customBlockTemplates?: WorkspaceCustomBlockTemplate[];
+  nodeType?: WorkspaceNodeType;
+  connections?: WorkspaceNodeConnection[];
+  tint?: WorkspaceNodeTint;
+  featuredBlocks?: WorkspaceNode["dashboard"]["featuredBlocks"];
 }) {
   return normalizeWorkspaceNode({
     id,
     title,
     content: "",
-    nodeType: "standard",
+    nodeType,
     visibility: "private",
     ownerUserId: null,
     teamId: null,
@@ -267,21 +281,123 @@ function createSeedNode({
     updatedAt,
     tabs,
     customBlockTemplates,
-    connections: [],
+    connections,
     viewState: {
       activeTabId: tabs[0]?.id ?? null,
       notePreviewState: {},
     },
     dashboard: {
-      tint: "neutral",
-      featuredBlocks: [],
+      tint,
+      featuredBlocks,
     },
   });
 }
 
 function createBlockCatalogNode(now: Date) {
-  const tabs = workspaceBlockCategories.map((category, categoryIndex) =>
-    createWorkspaceNodeTab({
+  const strategyObjectiveId = seedId("catalog", "okr", "objective", "scale");
+  const strategyOkrBlockId = seedId("catalog", "block", "strategy", "okr-tracker");
+  const strategyDecisionBlockId = seedId("catalog", "block", "strategy", "decision-matrix");
+  const strategyBmcBlockId = seedId("catalog", "block", "strategy", "business-model-canvas");
+  const strategyAssumptionBlockId = seedId("catalog", "block", "strategy", "assumption-tracker");
+  const strategyTabId = seedId("catalog", "tab", "strategy");
+
+  const tabs = workspaceBlockCategories.map((category, categoryIndex) => {
+    if (category.id === "strategy") {
+      return createWorkspaceNodeTab({
+        id: strategyTabId,
+        title: category.label,
+        createdAt: isoTimestampFromNow(now, { days: -1 }),
+        updatedAt: isoTimestampFromNow(now, { hours: -(categoryIndex + 1) }),
+        blocks: [
+          createWorkspaceOkrTrackerBlock({
+            id: strategyOkrBlockId,
+            title: "OKR tracker",
+            createdAt: isoTimestampFromNow(now, { days: -1 }),
+            updatedAt: isoTimestampFromNow(now, { hours: -(categoryIndex + 1) }),
+            objectives: [
+              createWorkspaceOkrObjective({
+                id: strategyObjectiveId,
+                title: "Scale to 250K EGP/month",
+                keyResults: [
+                  createWorkspaceOkrKeyResult({ title: "Close 3 retainers", progress: 33 }),
+                  createWorkspaceOkrKeyResult({
+                    title: "Average deal size reaches 18K",
+                    progress: 60,
+                  }),
+                  createWorkspaceOkrKeyResult({ title: "Keep churn below 10%", progress: 80 }),
+                ],
+              }),
+              createWorkspaceOkrObjective({
+                id: seedId("catalog", "okr", "objective", "course"),
+                title: "Launch course Q2",
+                keyResults: [
+                  createWorkspaceOkrKeyResult({ title: "Finalize curriculum", progress: 70 }),
+                  createWorkspaceOkrKeyResult({ title: "Record 6 modules", progress: 33 }),
+                  createWorkspaceOkrKeyResult({ title: "Ship sales funnel", progress: 10 }),
+                ],
+              }),
+            ],
+          }),
+          createWorkspaceDecisionMatrixBlock({
+            id: strategyDecisionBlockId,
+            title: "Decision matrix",
+            question: "Should we open enterprise demand capture this launch week?",
+            createdAt: isoTimestampFromNow(now, { days: -1 }),
+            updatedAt: isoTimestampFromNow(now, { hours: -(categoryIndex + 2) }),
+          }),
+          createWorkspaceBusinessModelCanvasBlock({
+            id: strategyBmcBlockId,
+            title: "Business model canvas",
+            createdAt: isoTimestampFromNow(now, { days: -1 }),
+            updatedAt: isoTimestampFromNow(now, { hours: -(categoryIndex + 3) }),
+          }),
+          createWorkspaceAssumptionTrackerBlock({
+            id: strategyAssumptionBlockId,
+            title: "Assumption tracker",
+            createdAt: isoTimestampFromNow(now, { days: -1 }),
+            updatedAt: isoTimestampFromNow(now, { hours: -(categoryIndex + 4) }),
+            assumptions: [
+              createWorkspaceStrategicAssumption({
+                id: seedId("catalog", "assumption", "okr"),
+                statement: "Premium practical training can fund the next growth tranche",
+                linkType: "okr",
+                linkId: strategyObjectiveId,
+                status: "validating",
+                confidence: 4,
+                owner: "Growth lead",
+                reviewDate: isoDateFromNow(now, 14),
+                evidenceNotes: "Discovery calls show willingness to pay for case-based programs.",
+              }),
+              createWorkspaceStrategicAssumption({
+                id: seedId("catalog", "assumption", "decision"),
+                statement: "Enterprise demand capture will not dilute the self-serve story",
+                linkType: "decision",
+                linkId: strategyDecisionBlockId,
+                status: "at-risk",
+                confidence: 3,
+                owner: "Product marketing",
+                reviewDate: isoDateFromNow(now, 7),
+                evidenceNotes: "Sales wants outbound now; support macros are still immature.",
+              }),
+              createWorkspaceStrategicAssumption({
+                id: seedId("catalog", "assumption", "bmc"),
+                statement:
+                  "Authority content plus practical programs is the core value proposition",
+                linkType: "bmc",
+                linkId: "valuePropositions",
+                status: "confirmed",
+                confidence: 5,
+                owner: "Founder",
+                reviewDate: isoDateFromNow(now, 21),
+                evidenceNotes: "Closed deals repeatedly cite practical case studies as the reason.",
+              }),
+            ],
+          }),
+        ],
+      });
+    }
+
+    return createWorkspaceNodeTab({
       id: seedId("catalog", "tab", category.id),
       title: category.label,
       createdAt: isoTimestampFromNow(now, { days: -1 }),
@@ -296,19 +412,26 @@ function createBlockCatalogNode(now: Date) {
           }),
         }),
       ),
-    }),
-  );
+    });
+  });
 
   return createSeedNode({
     id: seedId("node", "block-catalog"),
     title: "Block Catalog",
     x: 40,
-    y: 380,
+    y: 640,
     width: 400,
-    height: 260,
+    height: 280,
     createdAt: isoTimestampFromNow(now, { days: -1 }),
     updatedAt: isoTimestampFromNow(now, { hours: -1 }),
     tabs,
+    tint: "neutral",
+    featuredBlocks: [
+      { tabId: strategyTabId, blockId: strategyOkrBlockId },
+      { tabId: strategyTabId, blockId: strategyDecisionBlockId },
+      { tabId: strategyTabId, blockId: strategyBmcBlockId },
+      { tabId: strategyTabId, blockId: strategyAssumptionBlockId },
+    ],
   });
 }
 
@@ -383,18 +506,23 @@ function printUsage() {
   console.log("Usage:");
   console.log("  bun run db:seed");
   console.log("  bun run db:seed --email you@example.com");
+  console.log("  bun run db:seed -- --email you@example.com --scale massive");
   console.log("");
   console.log("Modes:");
   console.log(
     "  default       Rebuild reserved demo users, their workspaces, and curated marketplace items.",
   );
   console.log(
-    "  --email/-e    Seed the full testing workspace into an existing user account and assign curated marketplace items to that user.",
+    "  --email/-e    Seed the full marketing canvas (orchestrator links, all block types, featured cards) into an existing user account and assign curated marketplace items to that user.",
+  );
+  console.log(
+    "  --scale massive  Add viz nodes (and expanded marketplace for demo users). Works with --email.",
   );
   console.log("");
   console.log("Root workspace command:");
   console.log("  bun run db:seed");
   console.log("  bun run db:seed -- --scale massive");
+  console.log("  bun run db:seed -- --email you@example.com --scale massive");
 }
 
 function buildSeedContent(now: Date): SeedContent {
@@ -652,11 +780,26 @@ function buildSeedContent(now: Date): SeedContent {
     title: "Launch War Room",
     x: 40,
     y: 32,
-    width: 380,
-    height: 260,
+    width: 400,
+    height: 280,
     createdAt: isoTimestampFromNow(now, { days: -8 }),
     updatedAt: isoTimestampFromNow(now, { hours: -1 }),
     tabs: [launchOverviewTab, launchDeliveryTab, launchPromptTab],
+    nodeType: "orchestrator",
+    tint: "emerald",
+    connections: [
+      { targetNodeId: seedId("node", "decision-desk") },
+      { targetNodeId: seedId("node", "growth-lab") },
+      { targetNodeId: seedId("node", "weekly-ops-review") },
+      { targetNodeId: seedId("node", "support-queue") },
+      { targetNodeId: seedId("node", "research-hub") },
+    ],
+    featuredBlocks: [
+      { tabId: launchOverviewTab.id, blockId: seedId("launch", "block", "tasks") },
+      { tabId: launchOverviewTab.id, blockId: seedId("launch", "block", "scorecard") },
+      { tabId: launchDeliveryTab.id, blockId: seedId("launch", "block", "board") },
+      { tabId: launchOverviewTab.id, blockId: seedId("launch", "block", "orchestrator") },
+    ],
   });
 
   const decisionTab = createWorkspaceNodeTab({
@@ -762,13 +905,19 @@ function buildSeedContent(now: Date): SeedContent {
   const decisionNode = createSeedNode({
     id: seedId("node", "decision-desk"),
     title: "Executive Decision Desk",
-    x: 460,
-    y: 64,
-    width: 360,
-    height: 250,
+    x: 500,
+    y: 48,
+    width: 380,
+    height: 270,
     createdAt: isoTimestampFromNow(now, { days: -6 }),
     updatedAt: isoTimestampFromNow(now, { hours: -4 }),
     tabs: [decisionTab],
+    tint: "indigo",
+    featuredBlocks: [
+      { tabId: decisionTab.id, blockId: seedId("decision", "block", "matrix") },
+      { tabId: decisionTab.id, blockId: seedId("decision", "block", "tasks") },
+      { tabId: decisionTab.id, blockId: seedId("decision", "block", "timeline") },
+    ],
   });
 
   const experimentTemplate = createWorkspaceCustomBlockTemplate({
@@ -920,25 +1069,46 @@ function buildSeedContent(now: Date): SeedContent {
   const experimentNode = createSeedNode({
     id: seedId("node", "growth-lab"),
     title: "Growth Experiment Lab",
-    x: 880,
-    y: 112,
-    width: 360,
-    height: 250,
+    x: 940,
+    y: 72,
+    width: 380,
+    height: 270,
     createdAt: isoTimestampFromNow(now, { days: -4 }),
     updatedAt: isoTimestampFromNow(now, { hours: -5 }),
     tabs: [experimentDiscoveryTab, experimentInsightsTab],
     customBlockTemplates: [experimentTemplate],
+    tint: "rose",
+    featuredBlocks: [
+      { tabId: experimentDiscoveryTab.id, blockId: seedId("experiment", "block", "brief") },
+      { tabId: experimentDiscoveryTab.id, blockId: seedId("experiment", "block", "tracker") },
+      { tabId: experimentInsightsTab.id, blockId: seedId("experiment", "block", "prompt") },
+    ],
   });
 
   const opsReviewNode = createSeedNode({
     id: seedId("node", "weekly-ops-review"),
     title: "Weekly Ops Review",
-    x: 56,
-    y: 48,
-    width: 360,
-    height: 240,
+    x: 500,
+    y: 360,
+    width: 380,
+    height: 260,
     createdAt: isoTimestampFromNow(now, { days: -5 }),
     updatedAt: isoTimestampFromNow(now, { hours: -3 }),
+    tint: "amber",
+    featuredBlocks: [
+      {
+        tabId: seedId("ops-review", "tab", "overview"),
+        blockId: seedId("ops-review", "block", "tasks"),
+      },
+      {
+        tabId: seedId("ops-review", "tab", "overview"),
+        blockId: seedId("ops-review", "block", "tracker"),
+      },
+      {
+        tabId: seedId("ops-review", "tab", "overview"),
+        blockId: seedId("ops-review", "block", "notes"),
+      },
+    ],
     tabs: [
       createWorkspaceNodeTab({
         id: seedId("ops-review", "tab", "overview"),
@@ -1064,12 +1234,20 @@ function buildSeedContent(now: Date): SeedContent {
   const supportQueueNode = createSeedNode({
     id: seedId("node", "support-queue"),
     title: "Support Queue",
-    x: 456,
-    y: 104,
-    width: 360,
-    height: 240,
+    x: 940,
+    y: 380,
+    width: 380,
+    height: 260,
     createdAt: isoTimestampFromNow(now, { days: -3 }),
     updatedAt: isoTimestampFromNow(now, { hours: -1 }),
+    tint: "sky",
+    featuredBlocks: [
+      { tabId: seedId("support", "tab", "queue"), blockId: seedId("support", "block", "queue") },
+      {
+        tabId: seedId("support", "tab", "queue"),
+        blockId: seedId("support", "block", "timeline"),
+      },
+    ],
     tabs: [
       createWorkspaceNodeTab({
         id: seedId("support", "tab", "queue"),
@@ -1138,12 +1316,27 @@ function buildSeedContent(now: Date): SeedContent {
   const researchNode = createSeedNode({
     id: seedId("node", "research-hub"),
     title: "Research Hub",
-    x: 72,
-    y: 72,
-    width: 360,
-    height: 240,
+    x: 40,
+    y: 360,
+    width: 380,
+    height: 260,
     createdAt: isoTimestampFromNow(now, { days: -2 }),
     updatedAt: isoTimestampFromNow(now, { hours: -2 }),
+    tint: "sky",
+    featuredBlocks: [
+      {
+        tabId: seedId("research", "tab", "summary"),
+        blockId: seedId("research", "block", "scorecard"),
+      },
+      {
+        tabId: seedId("research", "tab", "summary"),
+        blockId: seedId("research", "block", "notes"),
+      },
+      {
+        tabId: seedId("research", "tab", "prompting"),
+        blockId: seedId("research", "block", "prompt"),
+      },
+    ],
     tabs: [
       createWorkspaceNodeTab({
         id: seedId("research", "tab", "summary"),
@@ -1301,7 +1494,9 @@ function buildMassiveFounderVizNodes(now: Date): WorkspaceNode[] {
     },
   ] as const;
 
-  return vizNodes.map((entry) =>
+  const massiveTints: WorkspaceNodeTint[] = ["amber", "sky", "rose", "indigo", "emerald"];
+
+  return vizNodes.map((entry, index) =>
     createSeedNode({
       id: entry.id,
       title: entry.title,
@@ -1311,6 +1506,13 @@ function buildMassiveFounderVizNodes(now: Date): WorkspaceNode[] {
       height: 240,
       createdAt: isoTimestampFromNow(now, { days: -3 }),
       updatedAt: isoTimestampFromNow(now, { hours: -1 }),
+      tint: massiveTints[index % massiveTints.length],
+      featuredBlocks: [
+        {
+          tabId: seedId(entry.id, "tab", "main"),
+          blockId: entry.block.id,
+        },
+      ],
       tabs: [
         createWorkspaceNodeTab({
           id: seedId(entry.id, "tab", "main"),
@@ -1419,9 +1621,9 @@ async function findUserByEmail(email: string) {
   return existingUser satisfies SeedActor;
 }
 
-function layoutWorkspaceNodes(nodes: WorkspaceNode[]) {
+function layoutWorkspaceNodes(nodes: WorkspaceNode[], startY = GRID_START_Y) {
   let currentX = GRID_START_X;
-  let currentY = GRID_START_Y;
+  let currentY = startY;
   let currentRowHeight = 0;
 
   return cloneWorkspaceNodes(nodes).map((node) => {
@@ -1444,8 +1646,24 @@ function layoutWorkspaceNodes(nodes: WorkspaceNode[]) {
   });
 }
 
-function buildExistingUserWorkspace(content: SeedContent) {
-  return layoutWorkspaceNodes([content.shared.blockCatalogNode]);
+const MARKETING_OVERFLOW_START_Y = 680;
+
+function buildExistingUserWorkspace(
+  content: SeedContent,
+  scale: SeedCliOptions["scale"],
+  now: Date,
+) {
+  const warRoomCluster = [...content.founder.nodes, ...content.ops.nodes, ...content.analyst.nodes];
+
+  const overflowNodes = layoutWorkspaceNodes(
+    [
+      content.shared.blockCatalogNode,
+      ...(scale === "massive" ? buildMassiveFounderVizNodes(now) : []),
+    ],
+    MARKETING_OVERFLOW_START_Y,
+  );
+
+  return [...warRoomCluster, ...overflowNodes];
 }
 
 async function saveWorkspaceSnapshot(userId: string, nodes: WorkspaceNode[]) {
@@ -1611,12 +1829,26 @@ async function replaceMarketplaceItems(items: WorkspaceMarketplaceItem[]) {
   );
 }
 
-async function seedExistingUser(email: string, content: SeedContent, now: Date) {
+async function seedExistingUser(
+  email: string,
+  content: SeedContent,
+  now: Date,
+  scale: SeedCliOptions["scale"],
+) {
   const targetUser = await findUserByEmail(email);
-  const targetNodes = buildExistingUserWorkspace(content);
-  const marketplaceItems = buildMarketplaceItems(content, buildSeedActorAliases(targetUser), now);
+  const targetNodes = buildExistingUserWorkspace(content, scale, now);
+  const marketplaceItems =
+    scale === "massive"
+      ? expandMarketplaceItems(
+          buildMarketplaceItems(content, buildSeedActorAliases(targetUser), now),
+          buildSeedActorAliases(targetUser),
+          now,
+          50,
+        )
+      : buildMarketplaceItems(content, buildSeedActorAliases(targetUser), now);
 
-  console.log(`Seeding testing workspace into existing user: ${targetUser.email}`);
+  console.log(`Seeding marketing canvas into existing user: ${targetUser.email}`);
+  console.log(`Scale: ${scale}`);
 
   await saveWorkspaceSnapshot(targetUser.id, targetNodes);
   await replaceMarketplaceItems(marketplaceItems);
@@ -1641,11 +1873,7 @@ async function seedDemoUsers(content: SeedContent, now: Date, scale: SeedCliOpti
 
   const founderNodes =
     scale === "massive"
-      ? layoutWorkspaceNodes([
-          content.shared.blockCatalogNode,
-          ...content.founder.nodes,
-          ...buildMassiveFounderVizNodes(now),
-        ])
+      ? buildExistingUserWorkspace(content, "massive", now)
       : [content.shared.blockCatalogNode];
 
   await Promise.all([
@@ -1689,7 +1917,7 @@ async function seed() {
   const content = buildSeedContent(now);
 
   if (options.email) {
-    await seedExistingUser(options.email, content, now);
+    await seedExistingUser(options.email, content, now, options.scale);
     return;
   }
 
